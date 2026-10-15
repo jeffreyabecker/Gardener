@@ -1,15 +1,19 @@
 # Refactor plan: layering, folders, and deleting `AppContext`
 
-Status: **proposed** · revision 3 · owner: unassigned · scope: `libraries/VacuumCore` only
+Status: **proposed** · revision 4 · owner: unassigned · scope: `libraries/VacuumCore` only
 
-Revision 2: script hosting moved out of `services/` into `io/`, because the runtime
-is an outside interface rather than machine policy. See §3.2.
+Revision 2: script hosting moved out of `services/` into the outside-interface layer,
+because the runtime is no longer machine policy. See §3.2.
 
 Revision 3: no shared util. `Util.h` is dissolved into per-owner files (§3.3), and the
 plan gains a leak sweep for details that are visible too high up the stack (§3.4).
 
-Annotation guide: open questions are numbered **Q1…Q8**, decisions taken in this
-document are marked `DECISION:`. Edit this file in place and the plan will be
+Revision 4: Q1–Q11 answered and folded in (§10). The layer is named `hosts/`, the
+clock seam is gone, `SnapshotBuilder` is a free function, and JSON is dropped for
+`key=value` replies (§9) — which deletes the encoder instead of relocating it.
+
+Annotation guide: review questions are numbered **Q1…Q11** and resolved in §10 with the
+decision taken; `DECISION:` marks calls made inside the plan itself. Edit this file in place and the plan will be
 picked up from your edits.
 
 ## 1. Goals
@@ -24,12 +28,13 @@ virtual interfaces.** Drivers stay concrete classes injected by reference. Where
 this leaves a coupling (command routing reaches for telemetry state) the plan
 resolves it with plain data rather than a back-pointer or a vtable, and notes the
 forward-declaration fallback you approved. Script hosting is grouped with the other
-outside interfaces (`io/`) instead of `services/` — see §3.2.
+outside interfaces (`hosts/`) instead of `services/` — see §3.2.
 
 ### Non-goals
 
-- No behaviour change in phases 0–6: same pins, same BLE protocol and framing,
-  same UI pages, same button mapping.
+- No behaviour change in phases 0–6: same pins, same BLE protocol, same framing,
+  same UI pages, same button mapping. The two exceptions are both in phase 7: the
+  pump suction semantics (§8) and the reply encoding (§9).
 - No Berry VM work here (separate task).
 - No host unit tests: this machine has no C++ toolchain (no gcc/clang), so
   verification stays `arduino-cli compile` for the ESP32-C3 target.
@@ -71,7 +76,7 @@ One-way dependencies, strictly downward. Nothing below includes anything above i
 core/       pure logic: no drivers, no NimBLE, no Adafruit, no Arduino peripherals
 hal/        one file per physical device, plus the board pin map
 services/   machine policy: what the vacuum system does, driven by the main loop
-io/         how the outside world drives it: command grammar, BLE, script host
+hosts/      how the outside world drives it: command grammar, BLE, script host
 ui/         local presentation: renders the snapshot, emits intents
 app/        composition root: the only place that knows the whole graph
 ```
@@ -91,7 +96,6 @@ libraries/VacuumCore/src/
   hal/
     Pins.h                  GPIO map, I2C addresses, display geometry, PWM settings
     Device.h / Device.cpp   chip model, SDK version, free heap (ESP facts)
-    Clock.h                 nowMs(): wraps millis()
     Pump.h / Pump.cpp
     Tachometer.h / .cpp     optional, split out of Pump
     PressureSensor.h / .cpp
@@ -102,9 +106,9 @@ libraries/VacuumCore/src/
     ProgramStore.h / .cpp   programs, staged writes, autostart, checksum (private)
     ProgramUploader.h / .cpp frame grammar + upload session, checksum compare
     VacuumControl.h / .cpp  PID + safety state machine
-    SnapshotBuilder.h / .cpp hardware and policy state -> SystemSnapshot
-    SnapshotJson.h / .cpp    SystemSnapshot -> status, info and program list JSON
-  io/
+    SnapshotBuilder.h / .cpp buildSnapshot(...): free functions, no state
+    SnapshotText.h / .cpp    SystemSnapshot -> key=value status, info and rows
+  hosts/
     commands/
       CommandRouter.h / .cpp   line grammar (today's Protocol.cpp)
     ble/
@@ -135,12 +139,12 @@ libraries/VacuumCore/src/
 | `core/` | `core/` only |
 | `hal/` | `core/` |
 | `services/` | `core/`, `hal/` |
-| `io/` | `core/`, `hal/`, `services/` |
+| `hosts/` | `core/`, `hal/`, `services/` |
 | `ui/` | `core/`, `hal/` |
 | `app/` | everything; nothing includes `app/` |
 
-Within `io/` the subfolders are one-way as well: `ble/ -> commands/ -> script/`.
-`script/` includes nothing else from `io/`, which is what keeps the host
+Within `hosts/` the subfolders are one-way as well: `ble/ -> commands/ -> script/`.
+`script/` includes nothing else from `hosts/`, which is what keeps the host
 independent of the transport it happens to be driven through.
 
 `ui/` never including `services/` is possible without interfaces because
@@ -184,23 +188,23 @@ The dependency graph says the same thing:
 
 So the host sits *above* `services/` (`VacuumControl` is a service) and *below*
 whatever issues commands. That is precisely the position that would make
-`services/ -> io/ -> services/` a folder-level cycle if the command grammar stayed
+`services/ -> hosts/ -> services/` a folder-level cycle if the command grammar stayed
 in `services/`, even though the classes themselves stay acyclic. Moving the grammar
 with the host is what keeps the rule mechanical.
 
-`DECISION:` the three outside interfaces are grouped as `io/`: `io/commands/`,
-`io/ble/`, `io/script/`. A future serial console lands as `io/serial/` without
-touching anything else.
+`DECISION:` the three outside interfaces are grouped as `hosts/` (Q9):
+`hosts/commands/`, `hosts/ble/`, `hosts/script/`. A future serial console lands as
+`hosts/serial/` without touching anything else.
 
 `DECISION:` `ScriptRuntime` stays an abstract class — the one vtable in the
 project. It is what keeps Berry headers, which are vendored and macro heavy, out of
-`io/commands/CommandRouter.h`. The alternative, a single class selected at compile
+`hosts/commands/CommandRouter.h`. The alternative, a single class selected at compile
 time with `#if EGGPLAN_WITH_BERRY`, would drag `be_vm*` into the router's include
 chain and force `NullRuntime` out of the build entirely; not worth it for one
 vtable.
 
 The vendored VM source stays a separate Arduino library (`libraries/Berry/`) so its
-licence and build flags remain independent of ours; `io/script/berry/` holds only
+licence and build flags remain independent of ours; `hosts/script/berry/` holds only
 our glue.
 
 ### 3.3 Where today's `Util.h` goes
@@ -214,7 +218,7 @@ published to every layer. Each one moves to its owner.
 | `crc32`, `crc32Update` | program transfer integrity | private in `services/ProgramStore.cpp` + `services/ProgramUploader.cpp` |
 | `formatFloat` | number to string for JSON and the OLED | `core/Format.h` |
 | `kpaToHpa`, `kpaToBar`, `kpaToPsi`, `kpaToInHg`, `kpaToMmHg` | the pressure domain | `core/Pressure.h/.cpp` |
-| `jsonEscape` | JSON encoding | private to `services/SnapshotJson.cpp`, which also takes over the program list encoding, so the router emits no JSON of its own |
+| `jsonEscape` | JSON encoding | **deleted** — replies are `key=value` with token values, so there is nothing to escape (§9) |
 
 Note what the checksum change actually buys: the client's CRC becomes an opaque
 `ProgramChecksum` that the router unpacks and hands to the store without ever
@@ -231,8 +235,9 @@ or two too high.
 | Leak | Why it leaks | Fix |
 | --- | --- | --- |
 | `progproto::kBegin/kData/kEnd/kAbort` in `Protocol.h` | published in a header, but referenced only inside `Protocol.cpp`; `BleService` forwards raw bytes and never sees them | constants become file-private in `ProgramUploader.cpp` — a header is a contract, so keep the frame grammar out of it |
-| `CommandRouter::statusJson()` / `infoJson()` read `ESP.getChipModel()`, `runtime->name()`, `store->totalBytes()` | a text view reaching into four modules, so none of them can change alone | every field becomes part of `SystemSnapshot`; `SnapshotJson` is a pure function of the snapshot |
-| `CommandRouter::emitList()` encodes program JSON with `jsonEscape` | a second JSON producer, so two layers share an encoder both must keep correct | `SnapshotJson::programs(snapshot)`; the router returns lines and never encodes |
+| `CommandRouter::status()` / `info()` read `ESP.getChipModel()`, `runtime->name()`, `store->totalBytes()` | the wire view reaching into four modules, so none of them can change alone | those fields move onto `SystemSnapshot`; `SnapshotText` is a pure function of the snapshot |
+| `CommandRouter::emitList()` encodes program JSON with `jsonEscape` | a second encoder, so two layers share one that both must keep correct | `SnapshotText::programRows(snapshot)`; the router returns lines and encodes nothing |
+| `Pump::faultReason()` (a human log string) reaching the wire | a log message becoming a machine contract | wire reports a token (`fault=max_run`); the readable string stays in the log |
 | `ProgramStore::pathFor()` public | exposes the `/programs/<name>.be` layout to callers | private; `validName()` stays public because it is the name contract |
 | `DisplayUI` overlay buffer (`overlayLines_[7]`) | script layout policy inside the display driver, and `ScriptApi` reaches into the driver to write it | `ScriptOverlay` plain data in `core/Snapshot.h`, owned by `App`, written by `ScriptApi`, drawn by `ui/Renderer` — the same pattern as `TelemetrySettings` |
 | `Pump::tachIsr(void*)` public static | ISR plumbing is driver internals | private |
@@ -240,7 +245,7 @@ or two too high.
 | `Storage` exposing `fs::File` in its header | a port would hide it, but we chose no interfaces | **accepted exception**, documented in the header; `ProgramStore` is the only consumer |
 
 `ScriptOverlay` and `DeviceInfo` joining `SystemSnapshot` is what makes the
-unification work: one plain-data view of the machine, three consumers (`SnapshotJson`,
+unification work: one plain-data view of the machine, three consumers (`SnapshotText`,
 `ui/Renderer`, the script host's overlay), and nothing outside `App` holding a module
 pointer.
 
@@ -253,6 +258,8 @@ A missing dependency becomes a compile error.
 
 ```cpp
 // app/App.cpp — the only file that knows the graph
+
+// construction, once
 Storage storage;                                               // hal
 PressureSensor sensor{Wire, Pins::MPRLS_I2C_ADDR};
 Pump pump{Pins::PUMP_PWM, Pins::PUMP_PWM_FREQ_HZ, Pins::PUMP_PWM_RESOLUTION};
@@ -264,17 +271,24 @@ ScriptApi api{pump, sensor, display, buttons, control};
 NullRuntime runtime{api};
 Renderer renderer{display};
 UiController ui{renderer, buttons};
-SnapshotBuilder snapshots{pump, sensor, control, store};    // services
-TelemetrySettings telemetry{};                              // core; io/commands writes, io/ble reads
+TelemetrySettings telemetry{};              // core; hosts/commands writes, hosts/ble reads
 CommandRouter router{store, runtime, control, pump, sensor, telemetry};
-BleService ble{router, telemetry, snapshots};               // io/*
+BleService ble{router, telemetry};          // hosts/*
+
+// every loop
+SystemSnapshot snapshot = buildSnapshot(pump, sensor, control, store);  // free function
+snapshot.scriptRunning = runtime.running();   // App fills the script fields
+snapshot.program = runtime.currentProgram();
+ui.render(snapshot);
+ble.poll(now, snapshot);
 ```
 
 `UiController` is constructed without `ProgramStore`: the program list reaches it
 through `SystemSnapshot`, which is what keeps `ui/` out of `services/`. For the same
-reason `SnapshotBuilder` does not take the runtime: it would be a `services/` ->
-`io/` include. `App` fills the two script fields (`scriptRunning`, `program`) after
-building the snapshot, since it is the only place allowed to see both layers.
+reason `buildSnapshot()` does not take the runtime: it would be a `services/` ->
+`hosts/` include. `App` fills the two script fields after building, since it is the
+only place allowed to see both layers. `BleService::poll()` receives the snapshot as a
+parameter rather than holding the builder, so the transport owns no view state.
 
 ### 4.2 Where each `AppContext` field goes
 
@@ -282,13 +296,13 @@ building the snapshot, since it is the only place allowed to see both layers.
 | --- | --- |
 | `pump` | `hal/Pump`, injected into `VacuumControl`, `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
 | `sensor` | `hal/PressureSensor`, injected into `VacuumControl`, `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
-| `buttons` | `hal/Buttons`, injected into `ui/UiController`, `io/script/ScriptApi` |
-| `ui` | `hal/Display` injected into `ui/Renderer`; `io/script/ScriptApi` gets `Display&` for the overlay |
+| `buttons` | `hal/Buttons`, injected into `ui/UiController`, `hosts/script/ScriptApi` |
+| `ui` | `hal/Display` injected into `ui/Renderer`; `hosts/script/ScriptApi` gets `Display&` for the overlay |
 | `store` | `services/ProgramStore`, injected into `CommandRouter`, `SnapshotBuilder` |
 | `control` | `services/VacuumControl`, injected into `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
-| `runtime` | `io/script/ScriptRuntime`, injected into `CommandRouter`; `App` reads it for the snapshot |
-| `api` | `io/script/ScriptApi`, owned by `App`, injected into the runtime |
-| `ble` | `io/ble/BleService`; **nothing points back at it** (section 4.3) |
+| `runtime` | `hosts/script/ScriptRuntime`, injected into `CommandRouter`; `App` reads it for the snapshot |
+| `api` | `hosts/script/ScriptApi`, owned by `App`, injected into the runtime |
+| `ble` | `hosts/ble/BleService`; **nothing points back at it** (section 4.3) |
 
 `AppContext.h` is deleted in phase 7.
 
@@ -306,8 +320,9 @@ struct TelemetrySettings {          // core/Snapshot.h
 ```
 
 - `CommandRouter` **writes** `TelemetrySettings&`; it reads `const SystemSnapshot&`
-  (which carries `bleConnected`) for its `status`/`info` JSON.
-- `BleService` **reads** both and owns the send loop.
+  (which carries `bleConnected`) to build its `status`/`info` replies.
+- `BleService` **reads** the settings and takes the same snapshot as a poll
+  parameter, so it owns the send loop without owning the builder.
 
 No cycle, no header coupling, no vtable, and the dependency direction stays
 `BleService -> CommandRouter`. Ownership is also acyclic: `App` owns the router,
@@ -325,17 +340,17 @@ coupling at the same cost.
 | `AppContext.h` | **deleted** |
 | `App.h/.cpp` | `app/App.h/.cpp` (+ `services/SnapshotBuilder`, `hal/Device`) |
 | `VacuumConfig.h` | split: `core/Config.h` (policy) + `hal/Pins.h` (wiring) — see Q2 |
-| `Util.h` | split by owner: `core/Math.h` (clamp), `core/Pressure.*` (kPa), `core/Format.h` (numbers); `crc32` private to `services/`; `jsonEscape` private to `services/SnapshotJson.cpp` (§3.3) |
+| `Util.h` | split by owner: `core/Math.h` (clamp), `core/Pressure.*` (kPa), `core/Format.h` (numbers); `crc32` private to `services/`; `jsonEscape` deleted (§3.3, §9) |
 | `Log.h` | `core/Log.h/.cpp`, sink installed by `App` |
 | `Pump.h/.cpp` | `hal/Pump.h/.cpp` (+ new `hal/Tachometer.h/.cpp`) |
 | `PressureSensor.h/.cpp` | `hal/PressureSensor.h/.cpp` |
 | `DisplayUI.h/.cpp` | split: `hal/Display.*` (draw + flush), `ui/Renderer.*`, `ui/pages/*.cpp`, `ui/UiController.*`; the 7 line overlay buffer becomes `ScriptOverlay` data in `core/Snapshot.h` |
 | `Buttons.h/.cpp` | `hal/Buttons.h/.cpp` |
 | `ProgramStore.h/.cpp` | `services/ProgramStore.h/.cpp` over new `hal/Storage.h/.cpp` |
-| `Protocol.h/.cpp` | split: `io/commands/CommandRouter.*`, `services/ProgramUploader.*` (owns the frame grammar), `services/SnapshotJson.*`, `core/Math.h` |
+| `Protocol.h/.cpp` | split: `hosts/commands/CommandRouter.*`, `services/ProgramUploader.*` (owns the frame grammar), `services/SnapshotText.*` |
 | `VacuumController.h/.cpp` | `services/VacuumControl.h/.cpp` + `core/Pid.h/.cpp` |
-| `ScriptRuntime.h/.cpp` | split: `io/script/ScriptRuntime.h`, `io/script/ScriptApi.h/.cpp`, `io/script/NullRuntime.h/.cpp` (+ `io/script/berry/` later) |
-| `BleService.h/.cpp` | `io/ble/BleService.h/.cpp`, telemetry send loop folded in |
+| `ScriptRuntime.h/.cpp` | split: `hosts/script/ScriptRuntime.h`, `hosts/script/ScriptApi.h/.cpp`, `hosts/script/NullRuntime.h/.cpp` (+ `hosts/script/berry/` later) |
+| `BleService.h/.cpp` | `hosts/ble/BleService.h/.cpp`, telemetry send loop folded in, snapshot passed per poll |
 | `DisplayUI::Model` | `core/Snapshot.h` → `SystemSnapshot` |
 
 ## 6. Phases
@@ -349,10 +364,10 @@ reverted independently.
 | 1 | Folders | `git mv` into the tree above, include fixes only, no edits | green, zero behaviour change |
 | 2 | `core/` | split `Config.h` / `Pins.h`; extract `Math`, `Pressure`, `Format`, `Log` (sink, no `Serial`), `Pid`; make the checksum private to `services/` | green |
 | 3 | `hal/` | drivers become self-contained classes with constructor config; `Tachometer` split out; `Display` reduced to primitives + flush | green |
-| 4 | `services/` | `Snapshot` + `SnapshotBuilder` + `SnapshotJson`; `VacuumControl`, `ProgramStore`, `ProgramUploader` take concrete references; `DisplayUI::Model` → `SystemSnapshot`; §3.4 leak sweep | green |
-| 5 | `io/` | `CommandRouter` out of `Protocol.cpp`; `Telemetry` JSON to `core/`; `ScriptApi` + `ScriptRuntime` + `NullRuntime`; `BleService` takes router + settings + snapshots with telemetry folded in | green, BLE commands byte-identical |
+| 4 | `services/` | `Snapshot` + `buildSnapshot()` + `SnapshotText`; `VacuumControl`, `ProgramStore`, `ProgramUploader` take concrete references; `DisplayUI::Model` → `SystemSnapshot`; §3.4 leak sweep | green |
+| 5 | `hosts/` | `CommandRouter` out of `Protocol.cpp`; `ScriptApi` + `ScriptRuntime` + `NullRuntime`; `BleService` takes router + settings, snapshot per poll, telemetry folded in | green, wire format unchanged |
 | 6 | `ui/` | `Renderer` + per-page files + `UiController` intents; `App` executes intents | green, same pages and buttons |
-| 7 | Cleanup + suction fix | delete `AppContext.h`; section 8 changes; README layout and dependency table | green + docs match |
+| 7 | Cleanup + behaviour | delete `AppContext.h`; §8 suction semantics; §9 `key=value` replies and the host tool update; docs | green + docs match |
 
 ### 6.1 Definition of done
 
@@ -361,6 +376,7 @@ reverted independently.
 - [ ] `arduino-cli compile --fqbn esp32:esp32:esp32c3` green with no new warnings
 - [ ] every class header names its collaborators; no nullable design pointers
 - [ ] no `util`, `common` or `helpers` header or folder exists
+- [ ] replies are `key=value` and no JSON encoder exists anywhere in the firmware
 - [ ] no layer reaches into a module through a struct, snapshot or settings object it does not own
 - [ ] every §3.4 leak sweep row is closed, or explicitly accepted with a note in the header
 - [ ] pins, BLE protocol and UI are unchanged from today
@@ -382,6 +398,8 @@ any phase leaves a coherent tree.
 | R3 | Splitting `DisplayUI` risks visual regressions | move code unchanged, edits only where a signature changes; review diff for edits-as-opposed-to-moves |
 | R4 | `AppContext` removal touches every module's signature | no port layer to introduce; each phase hands modules the same references they already use internally |
 | R5 | `Storage` indirection changes LittleFS error paths | keep mount/format calls byte-identical in phase 3, only relocate them |
+| R6 | dropping JSON is a wire change, so any existing client parsing `status` breaks | it is confined to phase 7 and lands with `docs/ble-protocol.md` and the README tables; the bundled CLI prints replies verbatim and needs only the `ok programs` prefix added |
+| R7 | no clock seam means `millis()` is called from `core/`-adjacent code, so PID timing cannot be faked later | accepted (Q1); the PID math stays pure and takes `dt` as a parameter, so only the scheduler is untestable |
 
 ## 8. Pump suction semantics (phase 7)
 
@@ -405,46 +423,96 @@ Changes:
 - delete `WORKING_RANGE_MAX_KPA`
 - `setTarget()` warns only when the target is below the reachable floor, and says
   what the floor is; it does not reject
-- `status` JSON gains `floor_kpa`
+- `status` gains `floor=…` in kPa (§9)
 - SETPOINT page shows a `> pump` hint when the target is unreachable
 - `programs/hold_vacuum.be` moves to 50 kPa with a comment explaining the floor
 
-## 9. Open questions
+## 9. Dropping JSON for key=value replies
 
-- **Q1** — keep a clock seam at all? `millis()` is a hardware fact, so if it is kept
-  it belongs in `hal/Clock.h`, not `core/` (revision 3 moved it). Recommendation:
-  keep it — it is the one thing that makes the PID and the scheduling paths testable
-  off target later.
-- **Q2** — do the pump's duty cap, ramp and max-run-time limits belong in
-  `core/Config.h` as safety policy, or in `hal/Pump` as motor characteristics?
-  Recommendation: `core/Config.h`, because the control loop is what must respect
-  them.
-- **Q3** — rename `DisplayUI` to `Display` (`hal/Display` + `ui/Renderer`)?
-  Recommendation: yes.
-- **Q4** — `SnapshotBuilder` as a class or a free function
-  `buildSnapshot(pump, sensor, control, store, runtime)`? Recommendation: free
-  function, it holds no state.
-- **Q5** — confirm the `UiIntent` set:
-  `None, Stop, CyclePage, MoveCursor, AdjustTarget, ToggleHold, RunSelected`.
-- **Q6** — does the suction fix land in phase 7 of this refactor, or as its own
-  commit *before* phase 1? Recommendation: phase 7, since `VacuumConfig.h` is
-  being split there anyway.
-- **Q7** — keep `ProgramUploader` (`services/`) and `CommandRouter`
-  (`io/commands/`) separate, or fold the upload session into the router?
-  Recommendation: separate — the BLE `prog` characteristic talks to the uploader,
-  not to the router.
-- **Q8** — should `services/` be split further? Recommendation: not yet, and
-  revision 2 removed the script host from it, so the pressure is off.
-- **Q9** — is `io/` the right name for the outside-interface layer, versus
-  `hosts/`, `interfaces/` or `transport/`? And is grouping **all three** interfaces
-  there right, or should only the script host move out of `services/` and the
-  command grammar stay put — which reintroduces the `services/ -> io/ ->
-  services/` folder cycle described in §3.2? Recommendation: keep the three
-  together under `io/`.
-- **Q10** — should the JSON encoders live in `services/SnapshotJson` (proposed, keeps
-  its counterpart `SnapshotBuilder` company and keeps `io/` thin) or in
-  `io/commands/` (they are consumed only by the two text interfaces)? Recommendation:
-  `services/`, so that `io/` stays a thin adapter layer.
-- **Q11** — `ScriptOverlay` as a fixed 7 line buffer in `SystemSnapshot`, or a
-  `core/ScriptOverlay.h` of its own once it grows past lines and a bar?
-  Recommendation: keep it in `Snapshot.h` while it is nine fields.
+Q10 asked where the JSON encoder should live. The better answer is that there is no
+encoder: the only consumers of `status`, `info` and `list` are our own host tool and a
+human with a BLE terminal, and neither needs JSON.
+
+### 9.1 Format
+
+One line of space separated `key=value` tokens, stable key order, values are space-free
+tokens, and `-` means "not applicable".
+
+    ok kpa=41.23 vac=60.10 pct=59.3 duty=72.0 state=PUMP target=41.0 fault=- up=123456
+    tel kpa=41.23 vac=60.10 pct=59.3 duty=72.0 state=PUMP target=41.0 fault=- up=123456
+    ok fw=0.1.0 chip=ESP32-C3 runtime=none progs=2 store_kb=1440 sensor=1 tach=0 heap=298412
+
+Lists reuse the multi-line convention `cat` already uses: a header, one row per item,
+then `eof`.
+
+    -> list
+    <- ok programs 2
+    <- p hold_vacuum 137 0x1A2B3C4D auto
+    <- p pulse 331 0xDEADBEEF -
+    <- eof
+
+`cat` and `log` keep their `ok file …` / `ok log` + body + `eof` shape.
+
+Rule: a value that could contain a space is sanitised to `_` at the source. That is why
+the pump fault reaches the wire as a token while the readable string stays in the log —
+a log message was never a machine contract.
+
+### 9.2 Why
+
+- **No heap at 4 Hz.** `statusJson()` concatenates `String`s today, so every telemetry
+  notification reallocates. `snprintf` into a fixed `char[192]` allocates nothing.
+- **No escaping, so `jsonEscape` is deleted** rather than relocated — the leak §3.3
+  flagged.
+- **One producer.** `SnapshotText` encodes; the router returns lines and encodes
+  nothing (§3.4).
+- **Still machine readable.** `dict(t.split("=", 1) for t in line.split())`, and a host
+  that wants JSON converts it in one line.
+- **Readable in the middle.** Typing `status` into a BLE terminal shows something a
+  human can read without a parser first.
+
+### 9.3 What it costs
+
+Nested and typed values. There are none today — the program list is the only nested
+case and it is already line oriented, exactly like `cat`. A third party that wants JSON
+gets it from the host tool instead of from the firmware.
+
+### 9.4 Scheduled work (phase 7)
+
+- `services/SnapshotText` replaces `SnapshotJson`; `jsonEscape` is deleted
+- `info`, `status` and `list` change shape; `Pump::faultCode()` joins `faultReason()`
+- `docs/ble-protocol.md` and the README field tables
+- `tools/vacuum_cli.py` prints replies verbatim, so the only change needed is adding
+  `ok programs` to `MULTILINE_PREFIXES` so `list` reassembles as a single reply
+
+### 9.5 Proposed keys (see §10.1)
+
+| Reply | Keys |
+| --- | --- |
+| `status`, `tel` | `kpa` `vac` `pct` `duty` `state` `target` `floor` `fault` `up` `ble` |
+| `info` | `fw` `chip` `runtime` `progs` `store_kb` `sensor` `tach` `heap` |
+| `list` row | `p <name> <size> <checksum> <auto\|->` |
+
+## 10. Decisions
+
+All eleven review questions are answered; the answers are folded into the plan above.
+
+| # | Question | Decision |
+| --- | --- | --- |
+| Q1 | clock seam? | **No seam.** Modules call `millis()` directly and `hal/Clock.h` is dropped (§3, R7). |
+| Q2 | duty cap, ramp and max run time? | `core/Config.h`, as safety policy the control loop must respect. |
+| Q3 | rename `DisplayUI`? | Yes: `hal/Display` (draw + flush) + `ui/Renderer` + `ui/UiController`. |
+| Q4 | `SnapshotBuilder` class or free function? | Free functions: `buildSnapshot(...)`. |
+| Q5 | `UiIntent` set? | As proposed: `None, Stop, CyclePage, MoveCursor, AdjustTarget, ToggleHold, RunSelected`. |
+| Q6 | suction fix timing? | Phase 7, alongside the `VacuumConfig.h` split. |
+| Q7 | uploader vs router? | Separate: `services/ProgramUploader` and `hosts/commands/CommandRouter`. |
+| Q8 | split `services/` further? | Not yet. |
+| Q9 | layer name? | `hosts/`, with all three outside interfaces grouped there. |
+| Q10 | where does the JSON encoder live? | Nowhere — JSON is dropped for `key=value` replies (§9), so the encoder and `jsonEscape` are deleted rather than placed. |
+| Q11 | `ScriptOverlay` location? | In `core/Snapshot.h`. |
+
+### 10.1 Still open
+
+- the §9.5 key names, to be confirmed before phase 7 changes the wire
+- the fault token set: only the run time limit exists today, so the proposal is
+  `fault=max_run|sensor|none`; any fault path added to `Pump` needs a token, not a log
+  string
