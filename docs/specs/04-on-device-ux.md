@@ -56,12 +56,13 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 
 - While a program runs and no host is attached, Up, Down and OK events are delivered to
   the program's `buttons.on` callbacks (spec 03 §5).
-- **Back is never delivered** to a program. It is device-owned:
+- Back is delivered to the program **only when it claims it** with `buttons.on(3, fn)`;
+  otherwise the device owns it:
 
 | Gesture | Effect |
 | --- | --- |
-| Back click | `programs.home()` — stop current, vent, run `default` |
-| Back long-press | `programs.run("browser")` — stop current, vent, run `browser` |
+| Back click (unclaimed) | `programs.home()` — stop current, vent, run `default` |
+| Back long-press (unclaimed) | `programs.run("browser")` — stop current, vent, run `browser` |
 
 - While a host is attached, all buttons are ignored — the panel is host-drawn (§5).
 
@@ -85,7 +86,8 @@ by boot and the two Back gestures.
 ## 6. Acceptance criteria
 
 - A program's frame reaches the glass with only the battery composited on top.
-- Back click homes to `default` and Back long runs `browser`, from any program.
+- Back click homes to `default` and Back long runs `browser`, from any program that has
+  not claimed Back.
 - Up/Down/OK reach the program's `buttons.on` callbacks and are never consumed by the
   device.
 - Host attach/detach swaps between host-drawn and program-drawn without losing local

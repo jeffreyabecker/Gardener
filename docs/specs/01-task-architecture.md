@@ -124,8 +124,9 @@ drops queued records when it is off).
 
 `QueueHandle_t` of `ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`,
 depth 16. `plantTask` pushes after each `Buttons::update()`. While a program is running,
-the plant forwards Up/Down/OK events to the VM's queue (spec 03 §5); Back stays with the
-device. With no program running, the plant consumes events itself for the UI.
+the plant forwards Up/Down/OK (and Back when claimed, spec 03 §5) events to the VM's
+queue; unclaimed Back stays with the device. With no program running, the plant consumes
+events itself for the UI.
 
 ### 3.6 Request/response (serial, single-flight)
 

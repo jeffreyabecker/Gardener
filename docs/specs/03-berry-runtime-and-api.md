@@ -155,11 +155,15 @@ Rules:
 ## 5. Button callbacks
 
 Buttons are exposed as callbacks, not polling: registering a callback is owning input
-(full API in §6.4). While a program runs, the plant forwards Up, Down and OK events to the
-VM's button queue (spec 01 §3.5); `BerryRuntime::update()` drains it and invokes the
-matching callbacks. **Back is never delivered** — it always belongs to the device
-(break-out, spec 05 §4). A program with no registered callbacks is purely a readout and
-ignores the events.
+(full API in §6.4). While a program runs, the plant forwards Up, Down, OK — and Back when
+claimed — to the VM's button queue (spec 01 §3.5); `BerryRuntime::update()` drains it and
+invokes the matching callbacks.
+
+Back is special: it is device-owned (break-out, spec 05 §4) **unless the program claims
+it** by registering `buttons.on(3, fn)`. Claiming Back takes the break-out gestures;
+releasing it (`buttons.off(3)` / `buttons.clear()`) returns them to the device. A program
+that claims Back and stops yielding is still stopped and vented by the runaway watchdog
+(spec 01 §5).
 
 ## 6. Berry binding
 
@@ -227,7 +231,8 @@ firmware exposes no formatter.
 | `buttons.off(index)` | remove the callback for `index` |
 | `buttons.clear()` | remove all callbacks |
 
-`index` is 0=up, 1=down, 2=ok. Back (3) is reserved for the device and never delivered.
+`index` is 0=up, 1=down, 2=ok. Back (3) is device-owned unless claimed with
+`buttons.on(3, fn)` (§5).
 
 ## 7. Error and stop semantics
 

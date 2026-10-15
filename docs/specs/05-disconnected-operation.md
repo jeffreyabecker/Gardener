@@ -42,14 +42,16 @@ On attach:
 
 ## 4. Break-out gestures
 
-From any running program:
+From any running program that has not claimed Back (spec 03 §5):
 
 - **Back click** — vent and return to `default` (stop current program → vent → start
   `default`).
 - **Back long-press** — vent and run the `browser` program (stop current program → vent →
   run `browser`).
 
-Both are device-owned and cannot be consumed by a program (spec 03 §5).
+A program that registers `buttons.on(3, fn)` takes these gestures for itself; the device
+stops delivering them. A program that claims Back and never yields is still stopped and
+vented by the runaway watchdog (spec 01 §5).
 
 ## 5. Takeover semantics
 
