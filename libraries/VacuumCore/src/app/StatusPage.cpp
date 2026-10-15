@@ -5,7 +5,6 @@
 namespace eggplan {
 namespace {
 
-constexpr int16_t kGlyphWidth = 6;  // advance of the classic 5x7 font at size 1
 constexpr int16_t kBatteryBodyWidth = 10;
 constexpr int16_t kBatteryBodyHeight = 7;
 constexpr int16_t kBannerHeight = 9;
@@ -49,7 +48,7 @@ void StatusPage::drawBattery(const SystemSnapshot& snapshot) {
   if (!snapshot.batteryPresent) return;  // nothing fitted, so leave the corner empty
   String label = String(snapshot.batteryPercent) + '%';
   bool blinkOff = snapshot.batteryLow && ((snapshot.uptimeMs / kLowBatteryBlinkMs) % 2u) == 0u;
-  int16_t percentWidth = textWidth(label);
+  int16_t percentWidth = widthOf(label);
   int16_t iconX = gfx_.width() - percentWidth - 4 - kBatteryIconWidth;
   battery(iconX, 1, blinkOff ? 0 : snapshot.batteryPercent);
   text(gfx_.width() - percentWidth, kStateY, label);
@@ -62,8 +61,8 @@ void StatusPage::drawPressure(const SystemSnapshot& snapshot) {
   }
   String number(snapshot.kpa, 1);
   constexpr const char* kUnit = "kPa";
-  int16_t numberWidth = textWidth(number, 2);
-  int16_t x = (gfx_.width() - (numberWidth + 4 + textWidth(kUnit))) / 2;
+  int16_t numberWidth = widthOf(number, 2);
+  int16_t x = (gfx_.width() - (numberWidth + 4 + widthOf(kUnit))) / 2;
   if (x < 0) x = 0;
   text(x, kPressureY, number, 2);
   // +8 lands the unit on the baseline of the size 2 digits.
@@ -102,8 +101,17 @@ void StatusPage::drawCountdown(const SystemSnapshot& snapshot) {
 
 // --- drawing ---------------------------------------------------------------
 
-int16_t StatusPage::textWidth(const String& value, uint8_t size) const {
-  return (int16_t)value.length() * kGlyphWidth * (int16_t)size;
+// Adafruit_GFX measures text at the current text size, so the size has to be set before
+// asking. Doing it here rather than assuming six pixels per character means a different font
+// or size still centres correctly.
+int16_t StatusPage::widthOf(const String& value, uint8_t size) {
+  int16_t x1 = 0;
+  int16_t y1 = 0;
+  uint16_t width = 0;
+  uint16_t height = 0;
+  gfx_.setTextSize(size);
+  gfx_.getTextBounds(value, 0, 0, &x1, &y1, &width, &height);
+  return (int16_t)width;
 }
 
 void StatusPage::text(int16_t x, int16_t y, const String& value, uint8_t size, bool invert) {
@@ -120,12 +128,12 @@ void StatusPage::text(int16_t x, int16_t y, const String& value, uint8_t size, b
 }
 
 void StatusPage::textRight(const String& value, int16_t y, uint8_t size) {
-  int16_t x = gfx_.width() - textWidth(value, size);
+  int16_t x = gfx_.width() - widthOf(value, size);
   text(x < 0 ? 0 : x, y, value, size);
 }
 
 void StatusPage::centered(const String& value, int16_t y, uint8_t size, bool invert) {
-  int16_t x = (gfx_.width() - textWidth(value, size)) / 2;
+  int16_t x = (gfx_.width() - widthOf(value, size)) / 2;
   text(x < 0 ? 0 : x, y, value, size, invert);
 }
 

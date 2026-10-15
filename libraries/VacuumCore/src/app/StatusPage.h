@@ -16,8 +16,8 @@ namespace eggplan {
 // that knows which one it is: it brings the panel up and flushes it, and this class just
 // draws the machine through the base class.
 //
-// The page reads only the snapshot, so it can never reach into a module. Row positions
-// assume the classic 5x7 font: 8 px of pitch at size 1, 16 px at size 2.
+// The page reads only the snapshot, so it can never reach into a module. Row positions assume
+// the classic 5x7 font: 8 px of pitch at size 1, 16 px at size 2.
 class StatusPage {
  public:
   explicit StatusPage(Adafruit_GFX& gfx) : gfx_(gfx) {}
@@ -32,7 +32,10 @@ class StatusPage {
   static constexpr uint16_t kPaper = 0;
   static constexpr int16_t kBatteryIconWidth = 12;
 
-  int16_t textWidth(const String& value, uint8_t size = 1) const;
+  // Adafruit_GFX draws text at a cursor and measures it (getTextBounds): what it has no
+  // opinion about is alignment, so that is all these helpers add. Nothing here reimplements
+  // font metrics.
+  int16_t widthOf(const String& value, uint8_t size = 1);
   void text(int16_t x, int16_t y, const String& value, uint8_t size = 1, bool invert = false);
   void textRight(const String& value, int16_t y, uint8_t size = 1);
   void centered(const String& value, int16_t y, uint8_t size = 1, bool invert = false);
