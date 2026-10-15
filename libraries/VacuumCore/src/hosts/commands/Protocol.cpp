@@ -1,16 +1,16 @@
-#include "Protocol.h"
+#include "hosts/commands/Protocol.h"
 
 #include <ctype.h>
 
-#include "BleService.h"
-#include "Buttons.h"
-#include "DisplayUI.h"
-#include "Log.h"
-#include "PressureSensor.h"
-#include "Pump.h"
-#include "ScriptRuntime.h"
-#include "Util.h"
-#include "VacuumController.h"
+#include "hosts/ble/BleService.h"
+#include "hal/Buttons.h"
+#include "ui/DisplayUI.h"
+#include "core/Log.h"
+#include "hal/PressureSensor.h"
+#include "hal/Pump.h"
+#include "hosts/script/ScriptRuntime.h"
+#include "core/Util.h"
+#include "services/VacuumController.h"
 
 namespace eggplan {
 namespace {

@@ -1,7 +1,7 @@
-#include "DisplayUI.h"
+#include "ui/DisplayUI.h"
 
-#include "Log.h"
-#include "Util.h"
+#include "core/Log.h"
+#include "core/Util.h"
 
 namespace eggplan {
 namespace {

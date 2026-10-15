@@ -3,10 +3,10 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
-#include "AppContext.h"
-#include "ProgramStore.h"
-#include "Protocol.h"
-#include "VacuumConfig.h"
+#include "core/AppContext.h"
+#include "services/ProgramStore.h"
+#include "hosts/commands/Protocol.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 

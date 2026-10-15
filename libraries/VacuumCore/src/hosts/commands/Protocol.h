@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 
-#include "AppContext.h"
-#include "ProgramStore.h"
+#include "core/AppContext.h"
+#include "services/ProgramStore.h"
 
 namespace eggplan {
 

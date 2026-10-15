@@ -1,9 +1,9 @@
-#include "ProgramStore.h"
+#include "services/ProgramStore.h"
 
 #include <LittleFS.h>
 
-#include "Log.h"
-#include "Util.h"
+#include "core/Log.h"
+#include "core/Util.h"
 
 namespace eggplan {
 namespace {

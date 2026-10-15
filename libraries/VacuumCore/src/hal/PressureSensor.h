@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "VacuumConfig.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 

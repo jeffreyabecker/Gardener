@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 
-#include "AppContext.h"
-#include "VacuumConfig.h"
+#include "core/AppContext.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 

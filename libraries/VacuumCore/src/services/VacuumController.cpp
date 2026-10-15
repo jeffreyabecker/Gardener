@@ -1,9 +1,9 @@
-#include "VacuumController.h"
+#include "services/VacuumController.h"
 
-#include "Log.h"
-#include "PressureSensor.h"
-#include "Pump.h"
-#include "Util.h"
+#include "core/Log.h"
+#include "hal/PressureSensor.h"
+#include "hal/Pump.h"
+#include "core/Util.h"
 
 namespace eggplan {
 

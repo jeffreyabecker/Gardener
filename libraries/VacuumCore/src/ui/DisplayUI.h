@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include "ProgramStore.h"
-#include "VacuumConfig.h"
+#include "services/ProgramStore.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 

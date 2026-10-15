@@ -1,6 +1,6 @@
-#include "Buttons.h"
+#include "hal/Buttons.h"
 
-#include "Log.h"
+#include "core/Log.h"
 
 namespace eggplan {
 

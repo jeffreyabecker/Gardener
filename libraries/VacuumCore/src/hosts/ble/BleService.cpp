@@ -1,6 +1,6 @@
-#include "BleService.h"
+#include "hosts/ble/BleService.h"
 
-#include "Log.h"
+#include "core/Log.h"
 
 namespace eggplan {
 namespace {

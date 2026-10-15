@@ -2,15 +2,15 @@
 
 #include <Arduino.h>
 
-#include "AppContext.h"
-#include "BleService.h"
-#include "Buttons.h"
-#include "DisplayUI.h"
-#include "PressureSensor.h"
-#include "ProgramStore.h"
-#include "Pump.h"
-#include "ScriptRuntime.h"
-#include "VacuumController.h"
+#include "core/AppContext.h"
+#include "hosts/ble/BleService.h"
+#include "hal/Buttons.h"
+#include "ui/DisplayUI.h"
+#include "hal/PressureSensor.h"
+#include "services/ProgramStore.h"
+#include "hal/Pump.h"
+#include "hosts/script/ScriptRuntime.h"
+#include "services/VacuumController.h"
 
 namespace eggplan {
 

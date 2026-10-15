@@ -1,9 +1,9 @@
-#include "App.h"
+#include "app/App.h"
 
 #include <Wire.h>
 
-#include "Log.h"
-#include "Util.h"
+#include "core/Log.h"
+#include "core/Util.h"
 
 namespace eggplan {
 

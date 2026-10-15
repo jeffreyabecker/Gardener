@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "VacuumConfig.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <FS.h>
 
-#include "VacuumConfig.h"
+#include "core/VacuumConfig.h"
 
 namespace eggplan {
 
