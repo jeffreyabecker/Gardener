@@ -36,7 +36,6 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 | --- | --- |
 | [firmware/eggplan_vacuum/](./firmware/eggplan_vacuum) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
-| [tools/vacuum_cli.py](./tools/vacuum_cli.py) | Host side serial client: status, start/stop, settings, watch |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [scripts/check-layers.ps1](./scripts/check-layers.ps1) | Enforces the dependency rule below |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, states, rates |
@@ -243,17 +242,9 @@ That last pair is the whole run model in miniature: the device reaches the targe
 has no duration of its own and will hold until told.
 
 The full grammar, key tables, error codes and state model are in
-[docs/serial-protocol.md](./docs/serial-protocol.md). Quick start with the bundled client:
-
-```powershell
-python -m pip install -r tools/requirements.txt
-python tools/vacuum_cli.py --list
-python tools/vacuum_cli.py info
-python tools/vacuum_cli.py set target 40
-python tools/vacuum_cli.py start
-python tools/vacuum_cli.py watch          # polls status, Ctrl+C to stop
-python tools/vacuum_cli.py stop
-```
+[docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and
+send a line works as a client: there is none in this repository at the moment, deliberately,
+while the interface is being reworked.
 
 ## Vacuum control model
 
@@ -323,6 +314,8 @@ valve to the same output.
 
 ## Roadmap
 
+* **No host client in this build.** The serial client that used to live in `tools/` was deleted
+  while the interface is in churn — it is in git at commit `85f3cbb` if it is wanted back.
 * **No scripting in this build.** An earlier revision stored Berry programs in LittleFS and
   ran them from the device; it is in git at commit `f35a3bb` if it is ever wanted again.
 * The line grammar is the whole interface, so anything that can carry newline terminated
@@ -339,4 +332,3 @@ valve to the same output.
 * [x] 1S Li-ion battery gauge
 * [x] Single page SH1106 readout, including a controller-fed countdown
 * [x] Line protocol over USB CDC, with polled status and diagnostics on the same stream
-* [x] Host side Python client
