@@ -285,15 +285,15 @@ void SerialLink::emitHelp() {
   // One line, because every command produces exactly one reply and that is what lets a
   // controller match replies to commands by counting. Argument syntax lives in
   // docs/serial-protocol.md rather than on the wire, and the drawing ops are their own list
-  // because there are seventeen of them.
+  // because there are eighteen of them.
   ok("help=info|status|help|start|stop|reset|reboot|ambient|set|draw|flush");
 }
 
 // --- drawing ---------------------------------------------------------------
 
 // Takes the numbers an op asks for and refuses anything left over, so `draw pixel 1 2 3` is an
-// error rather than a pixel. The reply lives in apply() so seventeen ops cannot each get it
-// slightly wrong.
+// error rather than a pixel. The reply lives in apply() so the sixteen ops that take coordinates
+// cannot each get it slightly wrong.
 bool SerialLink::coords(Tokens& tokens, size_t count, int16_t* out) {
   for (size_t i = 0; i < count; i++) {
     char* token = tokens.next();

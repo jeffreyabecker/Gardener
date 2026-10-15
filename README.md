@@ -38,7 +38,7 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [scripts/check-layers.ps1](./scripts/check-layers.ps1) | Enforces the dependency rule below |
-| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, states, rates |
+| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, the panel, states, rates |
 
 ### Architecture
 
@@ -236,7 +236,7 @@ replies:
 
 ```
 -> info
-<- ok fw=0.3.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
+<- ok fw=0.4.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
 -> set target 40
 <- ok target=40.0
 -> start
