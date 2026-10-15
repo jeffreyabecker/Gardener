@@ -1,0 +1,7 @@
+{
+  "board": "esp32:esp32:esp32c3",
+  "sketch": "firmware/eggplan_vacuum/eggplan_vacuum.ino",
+  "output": "build",
+  "port": "",
+  "configuration": ""
+}

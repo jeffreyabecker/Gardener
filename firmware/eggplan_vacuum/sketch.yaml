@@ -1,0 +1,2 @@
+# Pin the board so `arduino-cli compile firmware/eggplan_vacuum` needs no FQBN.
+default_fqbn: esp32:esp32:esp32c3

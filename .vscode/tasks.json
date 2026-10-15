@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "arduino: build",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/arduino.ps1",
+        "-Task",
+        "build"
+      ],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "arduino: upload",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/arduino.ps1",
+        "-Task",
+        "upload"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "arduino: monitor",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/arduino.ps1",
+        "-Task",
+        "monitor"
+      ],
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "arduino: install libraries",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/arduino.ps1",
+        "-Task",
+        "libs"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

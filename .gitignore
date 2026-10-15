@@ -1,0 +1,23 @@
+# Arduino / arduino-cli build output
+build/
+firmware/**/build/
+*.elf
+*.bin
+*.hex
+*.map
+*.uf2
+*.o
+*.d
+*.a
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/arduino/
