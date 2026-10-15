@@ -49,7 +49,8 @@ From any running program that has not claimed Back (spec 03 §5):
 - **Back long-press** — vent and run the `browser` program (stop current program → vent →
   run `browser`).
 
-A program that registers `buttons.on(3, fn)` takes these gestures for itself; the device
+A program that registers `buttons.on(buttons.BACK, fn)` takes these gestures for itself;
+the device
 stops delivering them. A program that claims Back and never yields is still stopped and
 vented by the runaway watchdog (spec 01 §5).
 

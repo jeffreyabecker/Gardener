@@ -1,6 +1,8 @@
 # Gardener serial protocol
 
-Pressures are **kPa** everywhere. There is no wire version: `info` reports `fw`, and that is
+Pressures are **kPa** everywhere. `kpa` is the sensor's absolute reading; a **target** is a
+depth below the ambient reference, and the device captures that reference rather than accepting
+one over the wire (`ambient`, §7). There is no wire version: `info` reports `fw`, and that is
 the only marker for which firmware a controller is talking to.
 
 The device is a serial peripheral in the strict sense: it never initiates, keeps no session,
@@ -80,8 +82,8 @@ diagnostics entirely, so a controller that wants a strictly quiet channel can ha
 | `kpa` | kPa | filtered absolute pressure, 2 dp |
 | `vac` | kPa | `ambient - kpa`, clamped at 0, 2 dp |
 | `pct` | % | `vac / ambient * 100`, 1 dp |
-| `target` | kPa | `-` when unset |
-| `floor` | kPa | deepest reachable target, `ambient - 60 kPa` |
+| `target` | kPa | depth below the ambient reference the loop pulls to; `-` when unset |
+| `floor` | kPa | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
 | `duty` | % | pump duty, 1 dp |
 | `state` | — | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT` |
 | `batt` | % | `-` when no battery is fitted |
@@ -90,7 +92,7 @@ diagnostics entirely, so a controller that wants a strictly quiet channel can ha
 | `up` | ms | uptime |
 
 ```text
-ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+ok kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
 ```
 
 ## 6. Info payload
@@ -115,12 +117,11 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 | `status` | `ok <status payload>` | one shot; poll it for a readout |
 | `start` | `ok started` / `err not_ready` | closes the valve, then pulls to the target |
 | `stop` | `ok stopped` | pump off, then vent. The normal way a run ends |
-| `set target <kPa\|off>` | `ok target=40.0` / `ok target=off` | the only actuator command |
-| `set ambient <kPa>` | `ok ambient=101.33` | rejected when outside what the part can measure |
+| `set target <kPa\|off>` | `ok target=40.0` / `ok target=off` | the only actuator command: kPa **below the ambient reference**, rejected below `CONTROL_MIN_TARGET_KPA` |
 | `set log <on\|off>` | `ok log=on` / `ok log=off` | diagnostics on this stream |
 | `set rotation <0-3>` | `ok rotation=1` | panel orientation; `out_of_range` outside 0-3 |
 | `set invert <on\|off>` | `ok invert=on` / `ok invert=off` | swap ink and paper on the whole panel |
-| `ambient` | `ok ambient=101.33` | capture the current reading as the reference |
+| `ambient` | `ok ambient=101.33` | capture the current reading as the reference: the only way one is ever set |
 | `draw <op> <arguments…>` | `ok drawn` | one drawing operation into the panel's buffer (§8) |
 | `draw help` | `ok ops=clear\|pixel\|…` | the drawing operators, since `help` has no room for them |
 | `flush` | `ok flushed` | the frame boundary: buffer to glass, battery composited |
@@ -133,7 +134,7 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 -> start
 <- ok started
 -> status
-<- ok kpa=40.21 vac=61.07 pct=60.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
+<- ok kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
 -> stop
 <- ok stopped
 ```
@@ -146,7 +147,9 @@ raw duty command that is not there.
 Vent margin and timeout, the PID gains, the deadband, the duty cap, the slew limit and the
 battery thresholds are all in `core/Config.h`. They are not commands, so the command surface
 stays this table. The deadband matters to a controller: it is what decides that the target has
-been reached, and it is not on the wire.
+been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the other one worth
+knowing: it is the shallowest target the loop will accept, and `set target` below it is
+`out_of_range` rather than a very gentle pull.
 
 ### Error codes
 
@@ -157,9 +160,9 @@ prose:
 | --- | --- |
 | `unknown_command` | not a command, an unknown `set` field, or an unknown `draw` operator |
 | `bad_argument` | an argument is missing, does not parse, is outside a coordinate's range, or is left over; or the line was too long |
-| `out_of_range` | the value parses but is not acceptable: `set rotation` outside 0-3, `draw text` size outside 1-8, a target below the loop's floor, an ambient the part cannot measure |
+| `out_of_range` | the value parses but is not acceptable: `set rotation` outside 0-3, `draw text` size outside 1-8, a target shallower than `CONTROL_MIN_TARGET_KPA` |
 | `not_ready` | valid request that cannot be honoured now: `start` with no target, no reading, or a latched fault |
-| `unsupported` | the feature does not exist in this firmware: `set duty`, `set period`, `telemetry` |
+| `unsupported` | the feature does not exist in this firmware: `set duty`, `set period`, `set ambient`, `ambient <kPa>`, `telemetry` |
 
 ## 8. Drawing on the panel
 
@@ -285,9 +288,9 @@ What a controller has to know:
   holds until something stops it.
 * Link loss releases the chamber, but it only detects a controller that leaves. One that hangs
   with the port open holds the run open.
-* Duty is capped and slew limited, and those are the pump's only protections. A target below
-  `floor` pins the duty at the cap and nothing stops it, so keep targets above `floor` if you
-  want a ceiling.
+* Duty is capped and slew limited, and those are the pump's only protections. A target deeper
+  than `floor` — the pump's own reach, reported in `status` — pins the duty at the cap and
+  nothing stops it, so read `floor` and keep targets no deeper than it.
 * **Nothing but the splash and the battery appears on the panel unless you draw it.** The device
   has no page of its own, so a fault, a vent timeout, a low battery and the state itself are only
   on the wire. Poll `status` to see them, and draw them if you want them on the glass.

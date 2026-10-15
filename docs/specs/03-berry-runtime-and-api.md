@@ -160,10 +160,10 @@ claimed — to the VM's button queue (spec 01 §3.5); `BerryRuntime::update()` d
 invokes the matching callbacks.
 
 Back is special: it is device-owned (break-out, spec 05 §4) **unless the program claims
-it** by registering `buttons.on(3, fn)`. Claiming Back takes the break-out gestures;
-releasing it (`buttons.off(3)` / `buttons.clear()`) returns them to the device. A program
-that claims Back and stops yielding is still stopped and vented by the runaway watchdog
-(spec 01 §5).
+it** by registering `buttons.on(buttons.BACK, fn)`. Claiming Back takes the break-out
+gestures; releasing it (`buttons.off(buttons.BACK)` / `buttons.clear()`) returns them to
+the device. A program that claims Back and stops yielding is still stopped and vented by
+the runaway watchdog (spec 01 §5).
 
 ## 6. Berry binding
 
@@ -227,12 +227,17 @@ firmware exposes no formatter.
 
 | Berry call | Notes |
 | --- | --- |
-| `buttons.on(index, fn)` | register `fn(kind)`; kind is `"click"`, `"long"`, `"repeat"` |
-| `buttons.off(index)` | remove the callback for `index` |
+The module exposes named constants for the button ids: `buttons.UP` (0), `buttons.DOWN`
+(1), `buttons.OK` (2), `buttons.BACK` (3).
+
+| Berry call | Notes |
+| --- | --- |
+| `buttons.on(button, fn)` | register `fn(kind)`; kind is `"click"`, `"long"`, `"repeat"` |
+| `buttons.off(button)` | remove the callback for `button` |
 | `buttons.clear()` | remove all callbacks |
 
-`index` is 0=up, 1=down, 2=ok. Back (3) is device-owned unless claimed with
-`buttons.on(3, fn)` (§5).
+`button` is one of the named constants. `buttons.BACK` is device-owned unless claimed
+with `buttons.on(buttons.BACK, fn)` (§5).
 
 ## 7. Error and stop semantics
 
@@ -248,7 +253,7 @@ firmware exposes no formatter.
 - `hold` and `pulse` example programs run on core 1; `status` keeps answering on core 0.
 - `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map within
   one plant tick.
-- `buttons.on(2, fn)` fires `fn("click")` when OK is clicked while the program runs.
+- `buttons.on(buttons.OK, fn)` fires `fn("click")` when OK is clicked while the program runs.
 - A program that calls `vacuum.delay(10)` in a loop can be stopped by Back click within
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.

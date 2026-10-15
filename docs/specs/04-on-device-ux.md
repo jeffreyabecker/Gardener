@@ -56,7 +56,8 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 
 - While a program runs and no host is attached, Up, Down and OK events are delivered to
   the program's `buttons.on` callbacks (spec 03 §5).
-- Back is delivered to the program **only when it claims it** with `buttons.on(3, fn)`;
+- Back is delivered to the program **only when it claims it** with
+  `buttons.on(buttons.BACK, fn)`;
   otherwise the device owns it:
 
 | Gesture | Effect |

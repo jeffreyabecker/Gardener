@@ -188,7 +188,7 @@ Programs own the screen; the device owns only the battery and the two Back gestu
 - `hal/Buttons` debounces the four buttons into click / long-press / repeat events.
 - While a program runs and no host is attached, Up, Down and OK are delivered to the
   program's `buttons.on` callbacks (spec 03 §5). Back is delivered only when the program
-  claims it with `buttons.on(3, fn)`; otherwise it is device-owned.
+  claims it with `buttons.on(buttons.BACK, fn)`; otherwise it is device-owned.
 
 ### 7.3 The two device-owned gestures
 
