@@ -62,7 +62,7 @@ Example:
 | `host` | `0`/`1` |
 | `s0` / `s0v` … `s7` / `s7v` | program state table (spec 07 §4), key then value |
 
-`info` gains `runtime=berry|none`.
+`info` is unchanged (the runtime is always Berry).
 
 `help` becomes:
 

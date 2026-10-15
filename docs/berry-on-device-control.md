@@ -347,8 +347,7 @@ hal/      Pins.h (S3), Display.h, AdafruitDisplay, Pump, VentValve, Battery,
           PressureSensor, Buttons, Storage (LittleFS wrapper)
 services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
-hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime,
-          program/NullRuntime
+hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime
 app/      App (composition root + task creation), AppDisplay
 ```
 
@@ -366,9 +365,9 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 | Phase | Content | Gate |
 | --- | --- | --- |
 | 1 | Task architecture: plant + serial tasks, command mailbox, snapshot slot, log queue | Protocol behavior parity on dual-core |
-| 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` (NullRuntime) | Buttons scanned and stored programs listed via serial; no VM yet |
-| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`run`/`params`/`set params`/upload) | Programs storable and runnable over the wire (NullRuntime: `run` → "runtime not built in") |
-| 4 | Berry VM vendored + `ProgramApi`/`BerryRuntime` on core 1, `screen`/`buttons`/`programs` modules, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |
+| 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
+| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
+| 4 | Vendor Berry + `BerryRuntime`/`ProgramApi` on core 1, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |
 | 5 | Disconnected operation, reserved-program boot, break-out semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back gestures escape |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 

@@ -3,33 +3,11 @@
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §5.3, §7.6 and
 the Berry half of constraint 2.
 
-## 1. Runtime abstraction
+## 1. Runtime
 
-The rest of the firmware depends on an abstract runtime, never on Berry headers, so a
-build without the VM still ships and the command router never sees Berry:
-
-```cpp
-class ProgramRuntime {
- public:
-  virtual ~ProgramRuntime() = default;
-  virtual const char* name() const = 0;               // "berry" | "none"
-  virtual bool available() const = 0;                 // false for NullRuntime
-  virtual bool start(const char* programName, const String& source,
-                     const String& effectiveParams, String& error) = 0;
-  virtual void stop(const char* reason) = 0;          // async; sets stop flag
-  virtual bool running() const = 0;
-  virtual const char* currentProgram() const = 0;
-  virtual const char* lastError() const = 0;
-  virtual void update() = 0;                          // called by vmTask
-  virtual bool evaluate(const String& line, String& out) = 0;  // optional REPL
-};
-```
-
-Two implementations:
-
-- `NullRuntime` — `available() == false`; `start()` returns false with
-  `"runtime not built in"`. Lets phases 2–3 land before the VM exists.
-- `BerryRuntime` — the real thing, below.
+The firmware depends on Berry directly; there is no runtime abstraction and no
+"build without the VM" variant. `BerryRuntime` is the single concrete runtime, owned by
+`vmTask` (spec 01 §1).
 
 ## 2. Vendoring and compile
 
@@ -44,14 +22,19 @@ Two implementations:
 ## 3. `BerryRuntime`
 
 ```cpp
-class BerryRuntime : public ProgramRuntime {
+class BerryRuntime {
  public:
+  explicit BerryRuntime(ProgramApi& api);
+
   bool start(const char* programName, const String& source,
-             const String& effectiveParams, String& error) override;
-  void stop(const char* reason) override;
-  bool running() const override;
-  void update() override;             // drain button events → callbacks; on stop: unwind
-  ...
+             const String& effectiveParams, String& error);
+  void stop(const char* reason);      // async; sets stop flag
+  bool running() const;
+  const char* currentProgram() const;
+  const char* lastError() const;
+  void update();                      // drain button events → callbacks; on stop: unwind
+  bool evaluate(const String& line, String& out);  // optional REPL
+
  private:
   bvm* vm_ = nullptr;
   ProgramApi& api_;
