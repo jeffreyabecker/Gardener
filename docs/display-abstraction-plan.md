@@ -212,6 +212,10 @@ the bits and a value that is much longer than anything else on the line.
    content.
 5. **The wire format is now a drawing API**, so it needs the same care as the rest of the
    protocol: documented, versioned by `fw`, and stable.
+6. **The fat interface costs real flash once something implements it.** Referencing every verb in
+   a vtable pulls in every Adafruit_GFX primitive the adapter wraps, used or not: instantiating
+   the adapter in phase 1d took the image from 336,028 to 344,344 bytes. Phase 2 uses most of them
+   anyway, but the number belongs in the plan rather than in a surprise.
 
 ## 7. Phases
 
@@ -268,6 +272,7 @@ context.
 | Q18 | Cap the lines serviced per poll so a flood cannot starve the control loop? | **yes, at 8**: a burst then spreads over a few iterations, and the sensor and the PID keep their cadence |
 | Q19 | Does the device draw its own splash at startup, then hold it until a host draws? | **yes**: `App::splash()` from `begin()`, which a `reboot` re-enters. It is the one screen the device owns, and it has no timeout because a timeout would be a device clock |
 | Q20 | `fw` to 0.4.0? | **yes**: with no `proto` left, `fw` is the only marker, and the wire is gaining a command family |
+| Q23 | With the page gone, `set hold <seconds>` sets a value nothing draws. Delete it, or leave it? | **leave it**: the countdown is the host's job, and that is the end of it. No device-side work either way |
 | Q21 | Is the splash reachable as a command too, so a host can bring it back? | **no**: it is what the device says about itself before anyone asks. A host that wants a boot screen can draw one, and then it is the host's screen and not the device's |
 | Q22 | The splash flushes through the overlay, so the battery is drawn on it — and the gauge may not have sampled yet, so the number could be its initial value. Sample once before drawing? | **yes**: sample the battery once in `begin()` before the splash, so the number on the boot screen is a reading rather than a placeholder. If it cannot be sampled that early, the splash flushes straight to the adapter instead, without a battery |
 

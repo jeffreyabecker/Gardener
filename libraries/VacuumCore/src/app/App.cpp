@@ -15,9 +15,10 @@ bool serialAttached() { return (bool)Serial; }
 
 App::App()
     : panel_(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1),
+      display_(panel_),
+      overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
       control_(system_),
-      page_(panel_),
       link_(control_, system_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
@@ -32,7 +33,7 @@ bool App::begin() {
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
   // The STEMMA QT breakout has no reset line, so do not let the library poke one.
-  displayOk_ = panel_.begin(pins::OLED_I2C_ADDR, false);
+  displayOk_ = display_.begin();
   bool sensorOk = sensor_.begin(Wire);
   bool pumpOk = pump_.begin();
   vent_.begin();
@@ -55,11 +56,18 @@ bool App::begin() {
   refreshSnapshot();
   link_.begin();
   lastState_ = control_.state();
-  if (displayOk_) {
-    page_.splash();
-    panel_.display();
-  }
+  if (displayOk_) splash();
   return true;
+}
+
+// Drawn once, at startup, and again after a reboot because that command restarts the device and
+// begin() runs again. The battery is on it because it flushes through the overlay - and it is a
+// real reading, since battery_.begin() takes a sample before this point.
+void App::splash() {
+  overlay_.clear();
+  overlay_.text(0, 0, "Eggplan Vacuum", 1, false);
+  overlay_.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
+  overlay_.flush();
 }
 
 void App::refreshSnapshot() {
@@ -141,10 +149,8 @@ void App::update() {
 
   logRunChanges(now);
   refreshSnapshot();
-  if (displayOk_) {
-    page_.render(snapshot_);
-    panel_.display();
-  }
+  // Nothing is drawn here. The panel belongs to the host from now on, and the device only puts
+  // its own two things on it: the splash, once, and the battery, on the way to every flush.
 }
 
 }  // namespace eggplan

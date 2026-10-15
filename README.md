@@ -44,9 +44,9 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    one file per physical device, plus the board pin map
+hal/    one file per physical device, plus the board pin map and the panel interface
 app/    the instrument: the plant and the run on top of it, the snapshot, the serial
-        interface, the page, the composition root
+        interface, the display overlay, the composition root
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -192,29 +192,41 @@ Policy tunables live in [core/Config.h](./libraries/VacuumCore/src/core/Config.h
 
 ### Display
 
-One page, no interaction — the display is the only local feedback, and everything an operator
-can do is a command on the serial line:
+The panel is a peripheral: the host draws it over the serial line, and the device draws exactly
+two things of its own — the boot splash, and the battery on top of every frame.
 
 ```
-  IDLE                                    ▐███▐ 78%
-                41.3 kPa
-  tgt 40.0 kPa                    duty 72%
-                   09:32
-  [######################----------------]
+  Eggplan Vacuum
+  fw 0.4.0                              ▐███▐ 78%      <- device: splash, then the battery
 ```
 
-| Element | Notes |
+Everything else is whatever the host sent: `draw` commands fill the panel's buffer, and `flush`
+puts it on the glass. A host that wants the readout the old page drew sends about twenty lines
+per frame:
+
+```
+-> draw clear
+<- ok drawn
+-> draw text 0 0 1 0 IDLE
+<- ok drawn
+-> draw text 48 16 2 0 41.3
+<- ok drawn
+-> draw rect 0 40 100 8
+<- ok drawn
+-> draw fillrect 1 41 72 6
+<- ok drawn
+-> flush
+<- ok flushed
+```
+
+| Who draws | What |
 | --- | --- |
-| state | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT`; inverted when faulted |
-| battery | fill by percent, blinks below 20 % |
-| pressure | current absolute pressure, size 2 |
-| target / duty | `tgt --` when no target is set |
-| countdown | the controller's hold countdown as `mm:ss`, `--:--` when it has not sent one or no run is in progress, inverted in the last minute |
-| duty bar | across the bottom |
+| the device | the splash at boot, and the battery on every frame, both through the overlay so a host cannot erase them |
+| the host | everything else: pressure, target, state, countdown, bars, icons, in whatever layout it likes |
 
-A fault replaces the target row with an inverted banner (`FAULT sensor`), and a missing
-sensor banners `NO SENSOR`. Boot is safe: pump off, valve open, `IDLE`, and nothing is
-remembered across a reset.
+Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
+across a reset. With no host talking, the panel holds the last frame it was given — the splash,
+if a host never drew.
 
 ### Over the serial line
 
@@ -277,8 +289,8 @@ IDLE ──────────> PULL ──(target reached)──> HOLD ─
   controller to start timing, and the run continues until the controller sends `stop`.
 * Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
   run time, so an unattended hold holds until someone stops it.
-* The countdown on the panel is the controller's number, pushed down with `set hold`. The
-  device draws it and never counts it.
+* The countdown is the host's job: the host holds the timer and draws it, and the device renders
+  nothing of its own except the splash and the battery.
 * The coil is energised through `PULL` and `HOLD`, and released in `IDLE` and `VENT`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
@@ -330,5 +342,5 @@ valve to the same output.
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
-* [x] Single page SH1106 readout, including a controller-fed countdown
+* [x] Host drawn panel: a `Display` interface, an Adafruit adapter, and a battery overlay
 * [x] Line protocol over USB CDC, with polled status and diagnostics on the same stream
