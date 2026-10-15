@@ -5,7 +5,6 @@
 #include "core/Config.h"
 #include "core/Math.h"
 #include "core/Snapshot.h"
-
 namespace eggplan {
 
 class PressureSensor;

@@ -4,7 +4,6 @@
 
 #include "core/Text.h"
 #include "hal/Pins.h"
-#include "services/SnapshotBuilder.h"
 
 namespace eggplan {
 namespace {
@@ -18,10 +17,8 @@ bool serialAttached() { return (bool)Serial; }
 App::App()
     : display_(Wire),
       control_(pump_, sensor_, vent_),
-      link_(),
-      renderer_(display_),
-      router_(control_, pump_, sensor_, link_),
-      serial_(router_, Serial, serialAttached, link_, snapshot_) {}
+      page_(display_),
+      link_(pump_, sensor_, control_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
@@ -30,7 +27,7 @@ bool App::begin() {
   char line[96];
   text::Buf boot(line, sizeof(line));
   boot << "eggplan-vacuum " << cfg::FIRMWARE_VERSION << " booting";
-  serial_.info(line);
+  link_.info(line);
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
@@ -40,30 +37,30 @@ bool App::begin() {
   vent_.begin();
   bool batteryOk = battery_.begin();
   control_.begin();
-  renderer_.begin();
+  page_.begin();
 
   if (sensorOk) sensor_.captureAmbient();
 
   // What came up, and what did not. This is the composition root's job now: the drivers
   // report as values and one place decides what is worth saying.
-  serial_.info(displayOk ? "oled: online" : "oled: not found");
-  serial_.info(sensorOk ? "mprls: online" : "mprls: not found");
-  serial_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
-  serial_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
+  link_.info(displayOk ? "oled: online" : "oled: not found");
+  link_.info(sensorOk ? "mprls: online" : "mprls: not found");
+  link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
 
   text::Buf ready(line, sizeof(line));
   ready << "app: ready, heap " << (uint32_t)ESP.getFreeHeap();
-  serial_.info(line);
+  link_.info(line);
 
   refreshSnapshot();
-  serial_.begin();
+  link_.begin();
   lastState_ = control_.state();
-  if (displayOk) renderer_.render(snapshot_);
+  if (displayOk) page_.render(snapshot_);
   return true;
 }
 
 void App::refreshSnapshot() {
-  snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_);
+  buildSnapshot(pump_, sensor_, control_, battery_, snapshot_);
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state
@@ -83,13 +80,13 @@ void App::logRunChanges(uint32_t nowMs) {
     message << " after " << ventMs << " ms";
     if (ventMs >= cfg::VENT_TIMEOUT_MS) {
       message << ", vent timed out";
-      serial_.warn(line);
+      link_.warn(line);
       lastState_ = state;
       return;
     }
   }
   if (state == RunState::Venting) ventStartMs_ = nowMs;
-  serial_.info(line);
+  link_.info(line);
   lastState_ = state;
 }
 
@@ -103,17 +100,17 @@ void App::update() {
 
   // Commands first, against the machine as the last control tick left it, so a reply
   // describes something that actually happened rather than a view built mid-command.
-  serial_.poll(now);
+  link_.poll(now);
 
   // A controller that goes away releases the chamber (Q4).
-  if (serial_.consumeLinkLost()) {
-    serial_.warn("app: controller left, stopping and venting");
+  if (link_.consumeLinkLost()) {
+    link_.warn("app: controller left, stopping and venting");
     control_.stopRun();
   }
 
   logRunChanges(now);
   refreshSnapshot();
-  renderer_.render(snapshot_);
+  page_.render(snapshot_);
 }
 
 }  // namespace eggplan

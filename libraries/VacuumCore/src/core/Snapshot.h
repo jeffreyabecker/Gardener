@@ -8,7 +8,6 @@
 // Plain data shared between layers. The device is a serial peripheral, so this is the
 // machine's read-only view: what a controller, the display or the log can see without
 // holding a pointer into a module.
-
 namespace eggplan {
 
 // What the device is doing, which is also the state a controller watches. There is no DONE
@@ -26,13 +25,6 @@ inline const char* runStateName(RunState state) {
     default: return "?";
   }
 }
-
-// Written by the command grammar, read by the transport and by the payload renderer: the
-// one interface setting a controller can change. Plain data, so the transport never holds
-// a pointer into the grammar that answers it.
-struct LinkSettings {
-  bool logEnabled = true;
-};
 
 struct SystemSnapshot {
   // pressure

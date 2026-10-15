@@ -1,18 +1,16 @@
-#include "services/SnapshotBuilder.h"
+#include "app/SnapshotBuilder.h"
 
 #include <Arduino.h>
 
+#include "app/VacuumControl.h"
 #include "hal/Battery.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
-#include "services/VacuumControl.h"
 
 namespace eggplan {
 
-SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
-                            const VacuumControl& control, const Battery& battery) {
-  SystemSnapshot snapshot;
-
+void buildSnapshot(const Pump& pump, const PressureSensor& sensor, const VacuumControl& control,
+                   const Battery& battery, SystemSnapshot& snapshot) {
   snapshot.kpa = sensor.kpa();
   snapshot.vacuumKpa = sensor.vacuumKpa();
   snapshot.vacuumPercent = sensor.vacuumPercent();
@@ -37,8 +35,6 @@ SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
   snapshot.batteryPercent = battery.percent();
 
   snapshot.uptimeMs = millis();
-
-  return snapshot;
 }
 
 }  // namespace eggplan
