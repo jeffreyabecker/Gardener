@@ -1,4 +1,4 @@
-# Spec 07 — Snapshot extensibility and the ProgramScreen
+# Spec 07 — Snapshot extensibility and program drawing
 
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §9, §10 and
 constraints 5 and 6.
@@ -32,35 +32,43 @@ struct ProgramStatePair {
   char value[12];     // canonical text; floats formatted with 2 dp
 };
 
-struct ProgramOverlay {
-  char lines[5][22];  // ProgramScreen rows, empty rows unused
-  uint8_t lineCount;
-  float bar;          // < 0 means "no bar"
-  char toast[40];
-  uint32_t toastUntilMs;
-};
-
 struct SystemSnapshot {
   // ... existing pressure/pump/run/battery/device fields unchanged ...
 
   ProgramStatus program;
   uint8_t programCount;
   ProgramInfo programs[24];       // sorted, default first (spec 02 §3)
-  ProgramOverlay overlay;         // written by VM, read by plant
   uint8_t stateCount;
   ProgramStatePair state[8];      // program state table
 };
 ```
+
+There is no program-overlay or screen struct: programs draw with commands (§3), not by
+publishing a screen into the snapshot.
 
 Publication rules:
 
 - The plant publishes a fresh snapshot every 50 ms tick.
 - The program list (`programs[]`, `programCount`) is rebuilt by `ProgramStore::refresh()`
   and republished when the store changes; the plant fills the rest every tick.
-- `overlay` is produced by the VM into the overlay slot (spec 01 §3.3); the plant copies
-  it into the snapshot at publish time.
+- `program` and `state[]` are filled by the plant from the VM's stop/start and
+  `state_set` reports; the VM does not write the snapshot directly.
 
-## 3. Program state table
+## 3. Display ownership and program drawing
+
+- The `Display` instance (I2C + framebuffer) stays on the plant task. It is **never**
+  handed to the VM, the serial task, or a program.
+- Programs draw through the same **draw commands** the host uses: each
+  `vacuum.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
+  and `vacuum.flush()` becomes a `Flush` command. The plant applies them to the buffer in
+  arrival order and pushes on flush, so host drawing and program drawing are serialized by
+  one owner and can never race.
+- `AppDisplay` composites the battery on every flush, so the battery (like the splash)
+  remains the device's and cannot be erased.
+- Program draw calls are no-ops while a host is attached: the host owns the glass
+  (spec 04 §8), and a program launched over the wire runs headless.
+
+## 4. Program state table
 
 Programs publish their own telemetry through a fixed-capacity table, without any C++
 change:
@@ -72,55 +80,26 @@ change:
 - The table surfaces in `status` as `s0=key s0v=value …` (spec 06 §4) and is available to
   the program via `program.state_get`.
 
-## 4. Display ownership
+## 5. Rendering pipeline
 
-- The `Display` instance (I2C + framebuffer) stays on the plant task. It is **never**
-  handed to the VM, the serial task, or a program.
-- Serial `draw` ops arrive as validated `Command` entries (spec 01 §3.1) and are applied
-  by the plant to the shared buffer; `flush` composites the battery and pushes.
-- Programs get the **ProgramScreen** instead of a display:
+Local mode (no host):
 
-| Berry call | Effect |
-| --- | --- |
-| `vacuum.screen_clear()` | clear all five rows + bar |
-| `vacuum.screen_line(row, text)` | set row 0..4, truncated to 21 chars |
-| `vacuum.screen_bar(fraction)` | bar fill 0..1 |
-| `vacuum.toast(text, ms)` | centered overlay for `ms` |
+- RUN: the program draws. The plant drains `Draw`/`Flush` commands and, on `Flush`,
+  composites the battery and pushes to the glass. No device chrome is drawn.
+- BROWSER / PARAMS: the device draws with `ui.render()` and flushes through `AppDisplay`.
 
-The overlay is a small value struct written by the VM into the overlay slot; the plant
-composites it between the device header and footer, then `AppDisplay::flush()` puts the
-battery on last. A program therefore cannot clobber the battery, the splash, or another
-task's frame.
+Host mode (host attached):
 
-## 5. Rendering pipeline (Local mode)
+- The plant applies the host's serial `draw`/`flush` commands; the UI render step is
+  skipped and program draw calls are dropped.
 
-```
-plant tick, Local mode:
-  ui.render():
-    header(program name + runStateName)
-    for each of overlay.lines[]: row(r, text)
-    if overlay.bar >= 0: bar(overlay.bar)
-    footer(escape hints)
-  overlay_.flush():   # AppDisplay
-    drawBattery()
-    panel.display()
-```
+Both sources share one buffer and one flush path, so the frame is always one owner's.
 
-In Host mode the plant applies serial `draw`/`flush` instead; the UI render step is
-skipped, and the program overlay is not shown (the host draws).
-
-## 6. Stretch: full drawing for programs
-
-If arbitrary program drawing is ever needed, route the existing `draw` op set through the
-same `Command` mailbox the serial link uses, so the plant serializes all drawing. The
-ProgramScreen covers the readout use case, so this is optional and not in the first cut.
-
-## 7. Acceptance criteria
+## 6. Acceptance criteria
 
 - `status` on the wire reports the program name, running flag, host flag, and the state
   table keys while a program runs.
-- The RUN screen shows program rows, bar, and toast within one plant tick of the VM
-  writing them.
-- The battery and the header/footer chrome cannot be erased by a program.
-- Serial `draw`/`flush` and the ProgramScreen never race: both are serialized by the
-  plant.
+- `vacuum.draw_text(…)` output reaches the glass within one plant tick of `vacuum.flush()`.
+- The battery cannot be erased by a program, a host, or a page.
+- Serial `draw`/`flush` and program `draw`/`flush` never race: the plant is the single
+  drawer.

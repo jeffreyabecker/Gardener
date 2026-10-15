@@ -25,7 +25,7 @@ There is no separate autostart marker: `default` is the boot program (spec 05).
 | `kMaxCount` | 24 | max stored programs |
 
 - Names match `[A-Za-z0-9_-]+`. Anything else is refused (`err bad_argument` on the wire,
-  a toast in the UI).
+  a status line in the UI).
 - The dot files used for staging can never be addressed, because `.` is not in the name
   alphabet.
 
@@ -82,7 +82,7 @@ class ProgramStore {
 
 - Reserved name: `default`.
 - Seeded source is a passive readout program (no `vacuum.pump`, `vacuum.start`,
-  `vacuum.target`), drawing pressure, state, duty and battery via `vacuum.screen_line`.
+  `vacuum.target`), drawing pressure, state, duty and battery via `vacuum.draw_text`.
 - Seeding happens in `begin()` and after `remove("default")`. An owner's upload of a
   program named `default` overwrites the seeded source and becomes the boot behavior.
 

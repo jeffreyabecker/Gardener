@@ -99,9 +99,10 @@ class Renderer {
 };
 ```
 
-The RUN screen composites: device header (program name + state) → the program's five
-`ProgramOverlay` lines → optional bar → footer. `AppDisplay::flush()` puts the battery on
-last, so a program can never erase it.
+The RUN screen is drawn entirely by the program with its `vacuum.draw_*` verbs; the
+device does not composite a header or footer there. `AppDisplay::flush()` puts the battery
+on last, so a program can never erase it. BROWSER and PARAMS are device-drawn and use the
+renderer helpers above.
 
 ## 5. Browser layout
 
@@ -165,11 +166,10 @@ homes. A program with no declared params skips PARAMS (OK long-press in BROWSER 
 - Host detaches → back to **Local mode**, showing the RUN screen of whatever is running
   (or `default` after the home gesture).
 
-## 9. Toasts
+## 9. No toasts
 
-`vacuum.toast(text, ms)` and device toasts (`"running pulse"`, `"stopped"`, `"read
-failed"`) render centered, size 2, over the current frame for their duration, then the
-frame is redrawn.
+There is no toast facility. Transient feedback is the program's own drawing on RUN, and
+BROWSER/PARAMS show their state inline (cursor, value) rather than as an overlay.
 
 ## 10. Acceptance criteria
 

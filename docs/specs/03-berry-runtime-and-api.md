@@ -87,8 +87,8 @@ command path, the UI, and (later) tests.
 ```cpp
 class ProgramApi {
  public:
-  ProgramApi(VacuumSystem& system, ProgramOverlay& overlay,
-             Buttons& buttons, ProgramParams::Context& params);
+  ProgramApi(VacuumSystem& system, Buttons& buttons,
+             ProgramParams::Context& params);
 
   // --- plant (reads from local snapshot copy, writes are commands) ---
   void pump(float percent);          // 0..100
@@ -114,11 +114,28 @@ class ProgramApi {
   bool buttonDown(int index) const;        // 0=up 1=down 2=ok 3=back
   int buttonWait(int index, int timeoutMs); // 0=timeout 1=click 2=long 3=repeat
 
-  // --- ProgramScreen (spec 07) ---
-  void screenClear();
-  void screenLine(int row, const char* text);
-  void screenBar(float fraction);
-  void toast(const char* text, uint32_t ms);
+  // --- drawing (spec 07) ---
+  void drawClear();
+  void drawPixel(int16_t x, int16_t y);
+  void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
+  void drawHLine(int16_t x, int16_t y, int16_t w);
+  void drawVLine(int16_t x, int16_t y, int16_t h);
+  void drawRect(int16_t x, int16_t y, int16_t w, int16_t h);
+  void drawFillRect(int16_t x, int16_t y, int16_t w, int16_t h);
+  void drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r);
+  void drawFillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r);
+  void drawCircle(int16_t x, int16_t y, int16_t r);
+  void drawFillCircle(int16_t x, int16_t y, int16_t r);
+  void drawEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh);
+  void drawFillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh);
+  void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
+                    int16_t y2);
+  void drawFillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
+                        int16_t y2);
+  void drawRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle);
+  void drawFillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle);
+  void drawText(int16_t x, int16_t y, uint8_t size, bool inverted, const char* text);
+  void flush();
 
   // --- identity / params / state ---
   const char* programName() const;
@@ -194,10 +211,15 @@ Two modules, registered once per VM:
 | `vacuum.button_wait(i, ms)` | `buttonWait` | 0/1/2/3; claims input |
 | `vacuum.input(on)` | — | explicit ownership |
 | `vacuum.host_present()` | `hostPresent` | bool |
-| `vacuum.screen_clear()` | `screenClear` | |
-| `vacuum.screen_line(row, text)` | `screenLine` | rows 0..4 |
-| `vacuum.screen_bar(fraction)` | `screenBar` | 0..1 |
-| `vacuum.toast(text, ms)` | `toast` | |
+| `vacuum.draw_clear()` | `drawClear` | |
+| `vacuum.draw_pixel(x, y)` | `drawPixel` | |
+| `vacuum.draw_line(x0,y0,x1,y1)` | `drawLine` | |
+| `vacuum.draw_rect(x,y,w,h)` | `drawRect` | |
+| `vacuum.draw_fillrect(x,y,w,h)` | `drawFillRect` | |
+| `vacuum.draw_circle(x,y,r)` | `drawCircle` | |
+| `vacuum.draw_fillcircle(x,y,r)` | `drawFillCircle` | |
+| `vacuum.draw_text(x,y,size,inverted,str)` | `drawText` | |
+| `vacuum.flush()` | `flush` | frame boundary, battery composited |
 | `vacuum.log(text)` | `log` | `[I]` record |
 | `vacuum.fmt(v, decimals)` | `fmt` | String |
 | `vacuum.now_ms()` | `nowMs` | |
@@ -208,6 +230,11 @@ Two modules, registered once per VM:
 | `program.param(name)` | `param` | typed manifest value |
 | `program.state_set(k, v)` | `stateSet` | float or string |
 | `program.state_get(k)` | `stateGet` | |
+
+The remaining shape ops follow the same naming (`vacuum.draw_hline`, `draw_vline`,
+`draw_roundrect`, `draw_fillroundrect`, `draw_ellipse`, `draw_fillellipse`,
+`draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`) with
+the same argument order as the host `draw` ops.
 
 ## 7. Error and stop semantics
 
@@ -225,4 +252,5 @@ Two modules, registered once per VM:
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.
 - `program.param("cycles")` returns the effective value (persisted over default).
-- `vacuum.screen_line` output appears on the RUN screen within one plant tick.
+- `vacuum.draw_text(…)` output appears on the RUN screen within one plant tick of
+  `vacuum.flush()`.

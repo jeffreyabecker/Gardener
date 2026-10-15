@@ -40,7 +40,6 @@ the primitives in §3.
 | `Buttons` scan | plant | consume button events |
 | `ProgramStore` (LittleFS) | plant | enqueue store commands |
 | snapshot | plant (publisher) | copy out |
-| program overlay | VM (writer) | plant (reader, compositor) |
 | `Serial` stream | serial | plant sends log records |
 | Berry VM | VM | plant sends stop requests |
 
@@ -108,10 +107,11 @@ class SnapshotSlot {
 `copyOut()` copies the live buffer out under the lock. Both are short memcpys (~1.5 KiB),
 so the critical section is a few microseconds.
 
-### 3.3 Program overlay slot
+### 3.3 Program drawing
 
-Same double-buffer pattern, but writer is `vmTask` and reader is `plantTask`. Carries
-`ProgramOverlay` (spec 07): five text lines, a bar fraction, and a toast.
+There is no program overlay slot. A program draws by enqueueing `Command { kind = Draw,
+… }` entries (§3.1) exactly like the serial task does; the plant is the single drawer and
+applies them to the buffer in order.
 
 ### 3.4 Log queue
 
@@ -158,7 +158,7 @@ loop:
   system.service(now)
   publish button events (queue / UI consumption)
   if display mode is Local: ui.update(now, snapshot)
-  else if a flush command was drained: apply buffered draw ops, overlay.flush()
+  else if a flush command was drained: apply buffered draw ops, appDisplay.flush()
   refresh snapshot; snapshotSlot.publish(snapshot)
   check vm heartbeat; if stale > 2000 ms: request VM stop
   delay to next 50 ms tick
@@ -186,7 +186,7 @@ loop:
 ```
 loop:
   if not running: block on start notification
-  programApi.tick(): if stopRequested → stop program, publish overlay, notify plant
+  programApi.tick(): if stopRequested → stop program, notify plant
   heartbeat update on every yield
 ```
 

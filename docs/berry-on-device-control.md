@@ -33,7 +33,7 @@ device boots into.
 | Board | **ESP32-S3** (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`) | Done. Dual-core **and** native USB via the USB-Serial-JTAG CDC on GPIO19/20, which keeps `(bool)Serial` host-presence detection and the ROM downloader on the same cable. |
 | Core split | Plant and serial link on core 0, Berry VM on core 1 | Plant and serial are both short, bounded work; the VM is the only unbounded work and gets core 1 to itself. |
 | Plant ownership | Sensor, pump, valve, battery, display and buttons stay on **one** task, on core 0 with the serial link | The control loop is the safety-critical code and must stay off the VM's core so a runaway program cannot touch it. |
-| Display to programs | Programs get a **ProgramScreen** overlay, never the `Display` instance | `Display` is non-thread-safe I2C plus a framebuffer; handing it across cores invites races and lets a program clobber the battery overlay. |
+| Display to programs | Programs draw with the same display verbs as the host, routed through the plant; they never hold the `Display` instance | `Display` is non-thread-safe I2C plus a framebuffer; the plant serializes all drawing, and the battery stays composited on every flush. |
 | Boot behavior | The reserved program `default` is always present, and is loaded **and started** at boot | The device always comes up doing something; that something is the home screen and the headless fallback. |
 | Run model | One program at a time; the plant is the single owner; switching programs always vents first | Keeps one writer to the pump and valve, and every program change starts from a released chamber. |
 | Parameter model | Manifest-declared typed params; "last run" values persisted; running is easy, editing is deliberate | See sections 6 and 8. |
@@ -69,7 +69,7 @@ Replace the single-threaded `loop()` model with three FreeRTOS tasks created in
 | --- | --- | --- | --- | --- |
 | **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery`, the display framebuffer + `AppDisplay` flush, the `Buttons` scan, local UI render, snapshot publication | command queue (consumer), snapshot slot (publisher), button-event queue, log queue |
 | **Serial link** | 0 | 6 | `SerialLink` grammar, the stream (replies + diagnostics), `logEnabled_` | command queue (producer), snapshot slot (reader), log queue (consumer) |
-| **Berry VM** | 1 | 3 (alone on core 1) | Berry VM, `ProgramApi` | command queue (producer), snapshot slot (reader), program-overlay slot (writer), button-event queue (consumer) |
+| **Berry VM** | 1 | 3 (alone on core 1) | Berry VM, `ProgramApi` | command queue (producer), snapshot slot (reader), button-event queue (consumer) |
 
 The USB-Serial-JTAG CDC (`hwcdc`) is a hardware peripheral with no FreeRTOS task of its
 own, so the serial task is the only consumer of `Serial` and can be pinned to core 0
@@ -84,8 +84,8 @@ the only unbounded job, the Berry VM.
 
 - Exactly one owner per piece of hardware. Nothing else touches I2C, LEDC, GPIO or the
   display buffer.
-- All cross-task state moves through FreeRTOS queues, or through two small "latest value"
-  slots (snapshot, program overlay) protected by a `portMUX` critical section.
+- All cross-task state moves through FreeRTOS queues, or through one small "latest value"
+  slot (the snapshot) protected by a `portMUX` critical section.
 - The serial stream has one writer: the serial task. Plant diagnostics go through a
   **log queue** to it, so replies and `[I]/[W]/[E]` records stay ordered and
   `set log off` stays race-free.
@@ -180,7 +180,7 @@ There are exactly three screens:
 
 | Screen | When | Purpose |
 | --- | --- | --- |
-| **RUN** | a program is executing | the program's `ProgramScreen`, framed by device chrome |
+| **RUN** | a program is executing | the screen the program draws itself |
 | **BROWSER** | selector open, nothing running | pick a program to run or edit |
 | **PARAMS** | editor open | step through and change one program's parameters |
 
@@ -290,23 +290,23 @@ A program with no declared parameters skips PARAMS: OK long-press in BROWSER sho
 
 ### 7.5 RUN screen
 
-The device draws the chrome; the program draws the middle:
+The program draws the whole screen with the `vacuum.draw_*` verbs, then `vacuum.flush()`
+pushes the frame — exactly like a host drawing over the wire:
 
 ```
 pulse             HOLD
 cycle 3/10
   41.3 kPa
 [███████████-----]
-BACK stop  BACK^ browser
 ```
 
-- **Header** — program name (device-drawn) plus the live run state.
-- **Program area** — the program's `ProgramScreen`: up to five text lines
-  (`vacuum.screen_line(row, text)`), an optional bar (`vacuum.screen_bar(fraction)`), and
-  toasts (`vacuum.toast(text, ms)`).
+- **The program owns the RUN screen** — there is no device chrome. A readout program draws
+  its own header, rows and bar; a program that draws nothing leaves the buffer as it was.
 - **Battery** — composited on every flush by `AppDisplay`, as today; programs cannot erase
   it.
-- **Footer** — the two escape hints, always present, because Back is always the way out.
+- **Escape hints** are not drawn on the RUN screen (the program owns it). The two Back
+  gestures still work regardless of what is on screen, and the hints appear on BROWSER and
+  PARAMS.
 
 ### 7.6 Input ownership
 
@@ -399,7 +399,6 @@ additively:
   `hostAttached`.
 - `ProgramInfo[]`: name, size, params summary, running/default flags (bounded, e.g. 24),
   published by `ProgramStore::refresh()`.
-- `ProgramOverlay` value: program screen lines, bar fraction, toast + expiry.
 - A fixed-capacity **program state table** a program can write and read:
   `program.state_set("label", 42.5)` / `program.state_get("label")`. These keys are
   appended to the `status` payload (`s0=label s0v=42.5 …`) and available to the program's
@@ -407,21 +406,19 @@ additively:
 - The whole snapshot is exposed read-only to Berry as typed accessors (`vacuum.kpa()`,
   `vacuum.state()`, `vacuum.duty()`, …) served from the VM task's local copy.
 
-## 10. Exposing the Display instance to programs
+## 10. Exposing the Display to programs
 
-- Do **not** hand `Display` to the VM task. The instance stays on the plant task.
-- Programs get the **ProgramScreen**:
-  - `vacuum.screen_clear()`
-  - `vacuum.screen_line(row, text)` (five rows)
-  - `vacuum.screen_bar(fraction)`
-  - `vacuum.toast(text, ms)`
-- The plant task composites the ProgramScreen between the device-drawn header and footer;
-  `AppDisplay` puts the battery on last. The overlay travels through the program-overlay
-  slot as a small value struct, never as a pointer.
-- Stretch goal, if arbitrary drawing is ever needed: route the existing `draw` op set
-  through the same command mailbox the serial link uses, so the plant task serializes all
-  drawing. The bar + lines + toast cover the on-device readout use case, so this is
-  optional.
+- Do **not** hand the `Display` instance to the VM task. It stays on the plant task.
+- Programs draw through the same **draw commands** the host uses: each
+  `vacuum.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
+  and `vacuum.flush()` becomes a `Flush` command. The plant applies them to the buffer and
+  pushes the frame, so host drawing and program drawing are serialized by one owner and
+  can never race.
+- The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
+  fillrect, roundrect, fillroundrect, circle, fillcircle, ellipse, fillellipse, triangle,
+  filltriangle, rotatedrect, fillrotatedrect, text — plus `flush`.
+- `AppDisplay` composites the battery on every flush, so the battery (like the splash)
+  remains the device's and cannot be erased.
 
 ## 11. Serial protocol changes
 
@@ -459,7 +456,7 @@ services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
 hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime,
           program/NullRuntime
-ui/       UiController, Renderer, pages/{Programs,Params,ProgramScreen}
+ui/       UiController, Renderer, pages/{Programs,Params}
 app/      App (composition root + task creation), AppDisplay
 ```
 
@@ -479,7 +476,7 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 | 1 | Task architecture: plant + serial tasks, command mailbox, snapshot slot, log queue | Protocol behavior parity on dual-core |
 | 2 | `hal/Buttons`, `hal/Storage`, UI framework: BROWSER, PARAMS, RUN screens, `default` seeding (NullRuntime) | Button navigation works with no VM; host-drawn mode still works |
 | 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`run`/`params`/`set params`/upload) | Programs storable, browsable and runnable (NullRuntime: `run` → "runtime not built in") |
-| 4 | Berry VM vendored + `ProgramApi`/`BerryRuntime` on core 1, ProgramScreen overlay, run from UI and CLI | `default` and `pulse` examples run on core 1 while plant + serial run on core 0 |
+| 4 | Berry VM vendored + `ProgramApi`/`BerryRuntime` on core 1, program draw access, run from UI and CLI | `default` and `pulse` examples run and draw on core 1 while plant + serial run on core 0 |
 | 5 | Disconnected operation, magic-default boot, break-out semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back gestures escape |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 
@@ -512,4 +509,4 @@ One spec per feature, under [docs/specs/](specs/):
 | [04-on-device-ux](specs/04-on-device-ux.md) | Buttons, browser, params editor, run screen, break-out |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
-| [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, ProgramScreen, display ownership |
+| [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |
