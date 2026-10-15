@@ -4,16 +4,22 @@
 
 #include "core/Config.h"
 #include "core/Snapshot.h"
+#include "hal/Display.h"
 
 namespace eggplan {
 
 class VacuumControl;
 class VacuumSystem;
+class Tokens;
 
 // The serial interface to the controller: the bytes, the command grammar and the payload
 // text, in one place because they are three faces of one protocol. On a wire the byte half is
 // available/read/write — three calls — so splitting it from the grammar the way a transport
 // with tasks, callbacks and MTU negotiation needed to would buy nothing.
+//
+// It is also the display driver: the host draws the panel with `draw` commands and puts a frame
+// on the glass with `flush`. The display it holds is the overlay, so every flush composites the
+// battery on the way out and a host cannot erase it.
 //
 // Everything runs on the main loop: lines are assembled here and dispatched inline, and
 // replies go straight back out. There is no second task, no queue, and no framing above the
@@ -28,8 +34,8 @@ class SerialLink {
   // in which case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(VacuumControl& control, VacuumSystem& system, Stream& stream, PresenceFn present,
-             const SystemSnapshot& snapshot);
+  SerialLink(VacuumControl& control, VacuumSystem& system, Display& display, Stream& stream,
+             PresenceFn present, const SystemSnapshot& snapshot);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -57,12 +63,31 @@ class SerialLink {
   void ok(const char* payload);
   void err(const char* code);
 
+  // --- drawing -------------------------------------------------------------
+  // The op, then the numbers it takes, then the rest of the line for the one op that draws a
+  // string. Split lazily rather than up front, because a string can contain spaces.
+  void draw(Tokens& tokens);
+  bool coords(Tokens& tokens, size_t count, int16_t* out);
+  // Reads `count` coordinates, refuses anything left over, calls, and answers. The reply logic
+  // lives here so seventeen ops cannot each get it slightly wrong.
+  template <typename Fn>
+  void apply(Tokens& tokens, size_t count, Fn call) {
+    int16_t args[6];  // the widest op is a triangle
+    if (!coords(tokens, count, args) || tokens.rest() != nullptr) {
+      err("bad_argument");
+      return;
+    }
+    call(display_, args);
+    ok("drawn");
+  }
+
   // --- payload text --------------------------------------------------------
   String statusBody() const;
   String infoBody() const;
 
   VacuumControl& control_;
   VacuumSystem& system_;
+  Display& display_;
   Stream& stream_;
   PresenceFn present_;
   const SystemSnapshot& snapshot_;

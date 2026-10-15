@@ -19,7 +19,7 @@ App::App()
       overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
       control_(system_),
-      link_(control_, system_, Serial, serialAttached, snapshot_) {}
+      link_(control_, system_, overlay_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
