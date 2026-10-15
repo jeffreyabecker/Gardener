@@ -72,10 +72,10 @@ Back is always device-owned. The two break-out gestures (spec 05 §4) are global
 
 | Gesture | RUN | BROWSER | PARAMS |
 | --- | --- | --- | --- |
-| Up / Down click | program input if owned; else no-op | `MoveCursor` (wraps) | `AdjustValue` (one step) |
-| Up / Down repeat | program input if owned; else no-op | fast scroll | `AdjustValue` (×10) |
-| OK click | program input if owned; else no-op | `RunSelected` | `NextParam` (wraps) |
-| OK long-press | program input if owned; else no-op | `EditSelected` | `CommitRun` (persist + run) |
+| Up / Down click | program button callbacks | `MoveCursor` (wraps) | `AdjustValue` (one step) |
+| Up / Down repeat | program button callbacks | fast scroll | `AdjustValue` (×10) |
+| OK click | program button callbacks | `RunSelected` | `NextParam` (wraps) |
+| OK long-press | program button callbacks | `EditSelected` | `CommitRun` (persist + run) |
 
 `Back` in BROWSER and PARAMS also homes to `default`; the long-press there re-initializes
 the browser. Programs receive Up/Down/OK through `buttons.on` callbacks (spec 03 §5);
@@ -103,6 +103,23 @@ The RUN screen is drawn entirely by the program with its `screen.draw_*` verbs; 
 device does not composite a header or footer there. `AppDisplay::flush()` puts the battery
 on last, so a program can never erase it. BROWSER and PARAMS are device-drawn and use the
 renderer helpers above.
+
+The seeded `default` is a readout in exactly those terms:
+
+```berry
+while true
+  var s = vacuum.state()
+  screen.draw_clear()
+  screen.draw_text(0, 0, 1, 0, s.state)
+  screen.draw_text(0, 12, 2, 0, string.format("%.1f", s.kpa))
+  screen.draw_text(0, 32, 1, 0, string.format("vac %.1f  %d%%", s.vac, s.pct))
+  screen.flush()
+  vacuum.delay(100)
+end
+```
+
+It registers no `buttons.on` callbacks, so Up/Down/OK are ignored and the screen is a
+pure readout.
 
 ## 5. Browser layout
 
