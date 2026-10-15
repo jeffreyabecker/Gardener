@@ -16,6 +16,7 @@ namespace {
 const char* const kServiceUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f00";
 const char* const kCmdUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f01";
 const char* const kRspUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f02";
+const char* const kStateUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f03";
 const char* const kInfoUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f04";
 
 // Long replies are split: 0x01 + sequence byte + payload, terminated by 0x02.
@@ -39,10 +40,12 @@ class BleService::ServerCallbacks : public NimBLEServerCallbacks {
 
 class BleService::CharCallbacks : public NimBLECharacteristicCallbacks {
  public:
-  enum class Role { Command, Info };
+  enum class Role { Command, Info, State };
   CharCallbacks(BleService* owner, Role role) : owner_(owner), role_(role) {}
   void onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo& connInfo) override;
   void onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo& connInfo) override;
+  void onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& connInfo,
+                   uint16_t subValue) override;
 
  private:
   BleService* owner_;
@@ -84,9 +87,12 @@ void BleService::begin() {
       kCmdUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   rspChar_ = service->createCharacteristic(
       kRspUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+  stateChar_ = service->createCharacteristic(
+      kStateUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
   infoChar_ = service->createCharacteristic(kInfoUuid, NIMBLE_PROPERTY::READ);
 
   cmdChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::Command));
+  stateChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::State));
   infoChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::Info));
   cmdChar_->setValue("");
 
@@ -130,7 +136,7 @@ void BleService::poll(uint32_t nowMs) {
   drainInbound();
   drainReplies();
 
-  if (!telemetry_.enabled || !connected()) return;
+  if (stateSubscribers_ == 0 || !connected()) return;
   if (lastTelemetryMs_ != 0 && (nowMs - lastTelemetryMs_) < telemetry_.periodMs) return;
   lastTelemetryMs_ = nowMs;
   sendTelemetry();
@@ -146,20 +152,20 @@ void BleService::drainInbound() {
 void BleService::drainReplies() {
   String line;
   while (replies_.pop(line)) {
-    send(line);
+    transmit(rspChar_, line);
   }
 }
 
-void BleService::send(const String& text) {
-  if (!rspChar_ || !connected()) {
-    LOGD("ble: dropped reply (no client): %s", text.c_str());
+void BleService::transmit(NimBLECharacteristic* characteristic, const String& text) {
+  if (!characteristic || !connected()) {
+    LOGD("ble: dropped notification (no client): %s", text.c_str());
     return;
   }
 
   const uint16_t maxChunk = chunkSize();
   if (text.length() <= maxChunk) {
-    rspChar_->setValue((const uint8_t*)text.c_str(), text.length());
-    rspChar_->notify();
+    characteristic->setValue((const uint8_t*)text.c_str(), text.length());
+    characteristic->notify();
     return;
   }
 
@@ -172,20 +178,28 @@ void BleService::send(const String& text) {
     frame[0] = kChunkMarker;
     frame[1] = sequence++;
     memcpy(frame + 2, text.c_str() + offset, take);
-    rspChar_->setValue(frame, take + 2);
-    rspChar_->notify();
+    characteristic->setValue(frame, take + 2);
+    characteristic->notify();
     offset += take;
     delay(4);  // let the stack drain its notification queue
   }
   uint8_t endFrame[2] = {kEndMarker, sequence};
-  rspChar_->setValue(endFrame, sizeof(endFrame));
-  rspChar_->notify();
+  characteristic->setValue(endFrame, sizeof(endFrame));
+  characteristic->notify();
+}
+
+void BleService::refreshStateValue() {
+  if (!stateChar_) return;
+  char body[224];
+  size_t size = snapshottext::statusBody(snapshot_, body, sizeof(body));
+  stateChar_->setValue((const uint8_t*)body, size);
 }
 
 void BleService::sendTelemetry() {
+  if (!stateChar_) return;
   char body[224];
   snapshottext::statusBody(snapshot_, body, sizeof(body));
-  send(String("tel ") + body);
+  transmit(stateChar_, String(body));
 }
 
 void BleService::onCommandData(const uint8_t* data, size_t length) {
@@ -222,8 +236,10 @@ void BleService::handleConnect(uint16_t mtu) {
   lineBuffer_ = "";
   lastWriteMs_ = millis();
   linkLost_ = false;
+  stateSubscribers_ = 0;
   LOGI("ble: client connected (mtu %u)", (unsigned)mtu);
-  replies_.push("ok hello " + String(cfg::FIRMWARE_VERSION));
+  // Fill the state characteristic so a client can read it before subscribing.
+  refreshStateValue();
 }
 
 void BleService::handleDisconnect(int reason) {
@@ -231,7 +247,20 @@ void BleService::handleDisconnect(int reason) {
   replies_.clear();
   inbound_.clear();
   linkLost_ = true;
+  // Subscriptions belong to the connection, so the stack has already dropped it.
+  stateSubscribers_ = 0;
   LOGI("ble: client disconnected (reason %d)", reason);
+}
+
+// subValue is 0 for unsubscribe, 1 for notify and 2 for indicate.
+void BleService::onStateSubscribe(uint16_t subValue) {
+  if (subValue == 0) {
+    if (stateSubscribers_ > 0) stateSubscribers_--;
+    LOGI("ble: state telemetry unsubscribed");
+    return;
+  }
+  stateSubscribers_++;
+  LOGI("ble: state telemetry subscribed (%u client(s))", (unsigned)stateSubscribers_);
 }
 
 void BleService::handleMtuChange(uint16_t mtu) {
@@ -270,7 +299,18 @@ void BleService::CharCallbacks::onRead(NimBLECharacteristic* characteristic,
                                        NimBLEConnInfo& connInfo) {
   (void)characteristic;
   (void)connInfo;
-  if (role_ == Role::Info) owner_->onInfoRead();
+  if (role_ == Role::Info) {
+    owner_->onInfoRead();
+  } else if (role_ == Role::State) {
+    owner_->refreshStateValue();
+  }
+}
+
+void BleService::CharCallbacks::onSubscribe(NimBLECharacteristic* characteristic,
+                                            NimBLEConnInfo& connInfo, uint16_t subValue) {
+  (void)characteristic;
+  (void)connInfo;
+  if (role_ == Role::State) owner_->onStateSubscribe(subValue);
 }
 
 }  // namespace eggplan

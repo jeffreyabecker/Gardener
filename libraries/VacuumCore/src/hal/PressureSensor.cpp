@@ -86,13 +86,14 @@ float PressureSensor::vacuumPercent() const {
   return clampf(vacuumKpa() / ambientKpa_ * 100.0f, 0.0f, 100.0f);
 }
 
-void PressureSensor::setAmbientKpa(float kpa) {
+bool PressureSensor::setAmbientKpa(float kpa) {
   if (kpa < 10.0f || kpa > config_.maxKpa) {
     LOGW("mprls: rejected ambient reference %.2f kPa", kpa);
-    return;
+    return false;
   }
   ambientKpa_ = kpa;
   LOGI("mprls: ambient reference set to %.2f kPa", kpa);
+  return true;
 }
 
 void PressureSensor::captureAmbient() {

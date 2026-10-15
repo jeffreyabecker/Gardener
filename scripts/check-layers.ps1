@@ -8,7 +8,7 @@
 
         app  ->  ui, hosts, services, hal, core
         ui   ->  hal, core
-        hosts->  services, hal, core   (and inside hosts: ble -> commands -> script)
+        hosts->  services, hal, core   (and inside hosts: ble -> commands)
         services -> hal, core
         hal  ->  core
         core ->  core

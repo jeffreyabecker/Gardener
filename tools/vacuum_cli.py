@@ -3,23 +3,25 @@
 
 Usage:
     python tools/vacuum_cli.py scan
+    python tools/vacuum_cli.py info
     python tools/vacuum_cli.py status
-    python tools/vacuum_cli.py upload programs/hold_vacuum.be
-    python tools/vacuum_cli.py list
-    python tools/vacuum_cli.py run hold_vacuum
+    python tools/vacuum_cli.py set target 40
+    python tools/vacuum_cli.py set timer 600
+    python tools/vacuum_cli.py start
     python tools/vacuum_cli.py watch
+    python tools/vacuum_cli.py stop
 
-The protocol is documented in docs/ble-protocol.md.
+The protocol is documented in docs/ble-protocol.md. The device is a BLE peripheral: it
+never initiates, every state it has is either a command it was given or something it had
+to do for safety, and every command produces exactly one reply line.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import struct
 import sys
-import zlib
-from pathlib import Path
+import time
 
 try:
     from bleak import BleakClient, BleakScanner
@@ -29,151 +31,116 @@ except ImportError:  # pragma: no cover - dependency hint only
 SERVICE_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f00"
 CMD_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f01"
 RSP_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f02"
-PROG_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f03"
+STATE_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f03"
 INFO_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f04"
 
 DEVICE_NAME_PREFIX = "EggplanVac"
 CHUNK_MARKER = 0x01
 END_MARKER = 0x02
-UPLOAD_CHUNK = 160
-MAX_PROGRAM_BYTES = 64 * 1024
-
-# Replies that are followed by a body and an "eof" line.
-MULTILINE_PREFIXES = ("ok file", "ok log", "ok programs")
-
-
-def sanitize_name(path: str) -> str:
-    name = Path(path).stem
-    clean = "".join(c for c in name if c.isalnum() or c in "_-")
-    if not clean or len(clean) > 31:
-        raise SystemExit(f"cannot derive a valid program name from {path!r}")
-    return clean
 
 
 class VacuumClient:
-    """Minimal client: one command channel, one notification channel."""
+    """One command channel, one reply channel, one telemetry channel."""
 
     def __init__(self, address: str, verbose: bool = False) -> None:
         self.address = address
         self.verbose = verbose
         self._client = BleakClient(address, timeout=20.0)
         self._queue: asyncio.Queue[str] = asyncio.Queue()
-        self._buffer = bytearray()
-        self._telemetry = None
+        self._state_queue: asyncio.Queue[str] | None = None
+        self._buffers: dict[str, bytearray] = {}
 
     async def __aenter__(self) -> "VacuumClient":
         await self._client.connect()
-        await self._client.start_notify(RSP_UUID, self._on_notify)
+        await self._client.start_notify(RSP_UUID, self._on_reply)
         return self
 
     async def __aexit__(self, *exc_info) -> None:
         if self._client.is_connected:
-            try:
-                await self._client.stop_notify(RSP_UUID)
-            except Exception:
-                pass
+            for uuid in (RSP_UUID, STATE_UUID):
+                try:
+                    await self._client.stop_notify(uuid)
+                except Exception:
+                    pass
             await self._client.disconnect()
 
-    def _on_notify(self, _characteristic, data: bytearray) -> None:
+    # --- notifications ----------------------------------------------------
+
+    def _reassemble(self, key: str, data: bytearray) -> str | None:
+        """Undo the device's chunking, or return a whole line."""
         if not data:
-            return
+            return None
         if data[0] == CHUNK_MARKER:
             if len(data) < 2:
-                return
+                return None
+            buffer = self._buffers.setdefault(key, bytearray())
             if data[1] == 0:
-                self._buffer.clear()
-            self._buffer.extend(data[2:])
-            return
+                buffer.clear()
+            buffer.extend(data[2:])
+            return None
         if data[0] == END_MARKER:
-            text = self._buffer.decode("utf-8", "replace")
-            self._buffer.clear()
-            self._deliver(text)
-            return
-        self._deliver(bytes(data).decode("utf-8", "replace"))
+            buffer = self._buffers.pop(key, bytearray())
+            return buffer.decode("utf-8", "replace")
+        return bytes(data).decode("utf-8", "replace")
 
-    def _deliver(self, text: str) -> None:
-        if self.verbose:
-            print(f"<- {text}", file=sys.stderr)
-        if text.startswith("tel ") and self._telemetry is not None:
-            self._telemetry.put_nowait(text[4:])
-            return
-        self._queue.put_nowait(text)
+    def _on_reply(self, _characteristic, data: bytearray) -> None:
+        text = self._reassemble("rsp", data)
+        if text is not None:
+            if self.verbose:
+                print(f"<- {text}", file=sys.stderr)
+            self._queue.put_nowait(text)
 
-    async def _next_reply(self, timeout: float) -> str:
-        return await asyncio.wait_for(self._queue.get(), timeout)
+    def _on_state(self, _characteristic, data: bytearray) -> None:
+        text = self._reassemble("state", data)
+        if text is not None and self._state_queue is not None:
+            self._state_queue.put_nowait(text)
 
-    async def command(self, line: str, timeout: float = 15.0) -> list[str]:
-        """Send one command line and collect its reply (including any body)."""
+    # --- commands ---------------------------------------------------------
+
+    async def command(self, line: str, timeout: float = 15.0) -> str:
+        """Send one command line and return its single reply line."""
         while not self._queue.empty():
             self._queue.get_nowait()
         await self._client.write_gatt_char(
             CMD_UUID, (line.strip() + "\n").encode(), response=False
         )
-        replies: list[str] = []
-        while True:
-            text = await self._next_reply(timeout)
-            if text.startswith("tel "):
-                continue
-            replies.append(text)
-            if text == "eof":
-                break
-            if text.startswith("ok ") and text.startswith(MULTILINE_PREFIXES):
-                continue
-            if text.startswith("ok ") or text.startswith("err "):
-                break
-        return replies
+        return await asyncio.wait_for(self._queue.get(), timeout)
 
-    async def _prog(self, frame: bytes, timeout: float = 15.0) -> str:
-        while not self._queue.empty():
-            self._queue.get_nowait()
-        await self._client.write_gatt_char(PROG_UUID, frame, response=False)
-        while True:
-            text = await self._next_reply(timeout)
-            if text.startswith("tel "):
-                continue
-            return text
+    async def read_info(self) -> str:
+        raw = await self._client.read_gatt_char(INFO_UUID)
+        return bytes(raw).decode("utf-8", "replace")
 
-    async def upload(self, path: str, name: str | None = None) -> str:
-        program = name or sanitize_name(path)
-        data = Path(path).read_bytes()
-        if len(data) > MAX_PROGRAM_BYTES:
-            raise SystemExit(f"{path} is larger than {MAX_PROGRAM_BYTES} bytes")
+    async def watch(self, period_ms: int | None, seconds: float | None) -> None:
+        self._state_queue = asyncio.Queue()
+        await self._client.start_notify(STATE_UUID, self._on_state)
+        if period_ms is not None:
+            reply = await self.command(f"set period {period_ms}")
+            if reply.startswith("err"):
+                raise SystemExit(reply)
+        print("streaming state, Ctrl+C to stop", file=sys.stderr)
 
-        reply = await self._prog(b"B" + program.encode())
-        if not reply.startswith("ok"):
-            return reply
-        for offset in range(0, len(data), UPLOAD_CHUNK):
-            chunk = data[offset : offset + UPLOAD_CHUNK]
-            reply = await self._prog(b"D" + chunk)
-            if not reply.startswith("ok"):
-                return reply
-        crc = zlib.crc32(data) & 0xFFFFFFFF
-        return await self._prog(b"E" + struct.pack("<II", crc, len(data)))
-
-    async def watch(self, seconds: float | None) -> None:
-        self._telemetry = asyncio.Queue()
-        await self.command("telemetry on")
-        print("streaming telemetry, Ctrl+C to stop")
         loop = asyncio.get_running_loop()
         deadline = loop.time() + seconds if seconds else None
         while deadline is None or loop.time() < deadline:
             timeout = 1.0 if deadline is None else max(0.1, deadline - loop.time())
             try:
-                print(await asyncio.wait_for(self._telemetry.get(), timeout))
+                line = await asyncio.wait_for(self._state_queue.get(), timeout)
             except asyncio.TimeoutError:
                 if deadline is not None:
                     break
+                continue
+            print(f"{time.strftime('%H:%M:%S')} {line}")
 
 
 async def find_device(address: str | None, name: str | None) -> str:
     if address:
         return address
-    print("scanning for an EggplanVac device (10 s)...")
+    print("scanning for an EggplanVac device (10 s)...", file=sys.stderr)
     devices = await BleakScanner.discover(timeout=10.0)
     wanted = name or DEVICE_NAME_PREFIX
     for device in devices:
         if device.name and device.name.startswith(wanted):
-            print(f"found {device.name} at {device.address}")
+            print(f"found {device.name} at {device.address}", file=sys.stderr)
             return device.address
     known = ", ".join(sorted(d.name for d in devices if d.name)) or "none"
     raise SystemExit(f"no EggplanVac device found. Visible devices: {known}")
@@ -187,80 +154,55 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("scan", help="list nearby BLE devices")
-    sub.add_parser("info", help="device information")
-    sub.add_parser("status", help="current pressure/pump status")
-    sub.add_parser("list", help="stored programs")
-    for name in ("ping", "help", "reset", "reboot"):
-        sub.add_parser(name)
+    sub.add_parser("info", help="read the info characteristic")
+    sub.add_parser("status", help="live status")
+    sub.add_parser("start", help="close the valve and pull to the target")
+    sub.add_parser("stop", help="stop the pump and vent the chamber")
+    sub.add_parser("reset", help="clear the latched fault and vent")
+    sub.add_parser("reboot", help="restart the device, then boot safe")
+    sub.add_parser("help", help="the device's own command list")
+    sub.add_parser("ambient", help="capture the ambient reference now")
 
-    cat = sub.add_parser("cat", help="print a stored program")
-    cat.add_argument("program")
-    cat.add_argument("--offset", type=int, default=0)
-    cat.add_argument("--length", type=int, default=0)
+    setter = sub.add_parser("set", help="change one setting")
+    setter.add_argument("field", choices=("target", "timer", "ambient", "period"))
+    setter.add_argument("value", help="kPa, seconds, ms, or off")
 
-    remove = sub.add_parser("rm", help="delete a stored program")
-    remove.add_argument("program")
+    watch = sub.add_parser("watch", help="stream state notifications")
+    watch.add_argument("--period", type=int, help="telemetry period in ms")
+    watch.add_argument("--seconds", type=float, default=None, help="stop after this long")
 
-    upload = sub.add_parser("upload", help="upload a program")
-    upload.add_argument("path")
-    upload.add_argument("--as", dest="name", help="override the program name")
-
-    run = sub.add_parser("run", help="run a stored program")
-    run.add_argument("program")
-    run.add_argument("args", nargs="*")
-
-    sub.add_parser("stop", help="stop program and pump")
-    sub.add_parser("watch", help="stream telemetry").add_argument(
-        "--seconds", type=float, default=None
-    )
-
-    value_help = {
-        "pump": "0-100 duty percent, or off",
-        "target": "hold target in kPa, or off",
-        "ambient": "ambient reference in kPa, or omit to capture",
-        "autostart": "program to run on boot, or none",
-        "telemetry": "on, off, or a period in ms",
-        "eval": "Berry expression (needs the Berry runtime)",
-        "log": "number of log lines to return",
-    }
-    for name in ("pump", "target", "ambient", "autostart", "telemetry", "eval", "log"):
-        child = sub.add_parser(name, help=value_help[name])
-        child.add_argument("value", nargs="?", help=value_help[name])
+    raw = sub.add_parser("raw", help="send a command line verbatim")
+    raw.add_argument("line", nargs="+")
     return parser
 
 
 async def run(args: argparse.Namespace) -> int:
     if args.command == "scan":
-        devices = await BleakScanner.discover(timeout=5.0)
-        for device in devices:
+        for device in await BleakScanner.discover(timeout=5.0):
             print(f"{device.address}  {device.name or ''}")
         return 0
 
     address = await find_device(args.address, args.name)
     async with VacuumClient(address, args.verbose) as client:
         if args.command == "watch":
-            await client.watch(args.seconds)
+            await client.watch(args.period, args.seconds)
             return 0
-        if args.command == "upload":
-            reply = await client.upload(args.path, args.name)
-            print(reply)
-            return 0 if reply.startswith("ok") else 1
+        if args.command == "info":
+            # The characteristic and the `info` command carry the same payload; reading
+            # the characteristic is what a client does on connect.
+            print(await client.read_info())
+            return 0
 
-        if args.command == "cat":
-            line = f"cat {args.program} {args.offset} {args.length}"
-        elif args.command == "rm":
-            line = f"rm {args.program}"
-        elif args.command == "run":
-            line = "run " + " ".join([args.program] + args.args)
-        elif args.command in ("pump", "target", "ambient", "autostart", "telemetry", "eval", "log"):
-            line = args.command + (f" {args.value}" if args.value else "")
+        if args.command == "set":
+            line = f"set {args.field} {args.value}"
+        elif args.command == "raw":
+            line = " ".join(args.line)
         else:
             line = args.command
 
-        replies = await client.command(line)
-        for reply in replies:
-            print(reply)
-        return 0 if replies and replies[-1].startswith("ok") else 1
+        reply = await client.command(line)
+        print(reply)
+    return 0 if reply.startswith("ok") else 1
 
 
 def main() -> int:

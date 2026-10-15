@@ -9,7 +9,7 @@
 namespace eggplan {
 
 // SH1106 panel access: drawing primitives and a flush, nothing else. Page layout,
-// headers, bars and the graph live in ui/Renderer, so this class has no opinion
+// headers, bars and the battery icon live in ui/Renderer, so this class has no opinion
 // about what the screen looks like.
 class Display {
  public:

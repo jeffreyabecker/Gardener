@@ -36,14 +36,24 @@ void splitArgs(const String& line, String* argv, size_t maxArgs, size_t& argc,
   }
 }
 
-uint32_t parseU32Or(const String& s, uint32_t fallback) {
-  if (s.length() == 0) return fallback;
-  return (uint32_t)strtoul(s.c_str(), nullptr, 0);
+// An argument that does not parse in full is a bad_argument, never a silent zero.
+bool parseFloat(const String& text, float& out) {
+  if (text.length() == 0) return false;
+  if (!isdigit((unsigned char)text[0]) && text[0] != '-' && text[0] != '.') return false;
+  char* end = nullptr;
+  float value = strtof(text.c_str(), &end);
+  if (end == text.c_str() || *end != '\0') return false;
+  out = value;
+  return true;
 }
 
-float parseFloatOr(const String& s, float fallback) {
-  if (s.length() == 0) return fallback;
-  return strtof(s.c_str(), nullptr);
+bool parseU32(const String& text, uint32_t& out) {
+  if (text.length() == 0 || !isdigit((unsigned char)text[0])) return false;
+  char* end = nullptr;
+  unsigned long value = strtoul(text.c_str(), &end, 10);
+  if (end == text.c_str() || *end != '\0') return false;
+  out = (uint32_t)value;
+  return true;
 }
 
 }  // namespace
@@ -61,11 +71,10 @@ void CommandRouter::fail(ReplyQueue& out, const String& text) {
 }
 
 void CommandRouter::emitHelp(ReplyQueue& out) {
-  reply(out, "help");
-  reply(out, "  ping | info | status | help");
-  reply(out, "  start | stop | reset | reboot");
-  reply(out, "  set target <kPa|off> | set timer <seconds|off>");
-  reply(out, "  set ambient <kPa> | ambient | telemetry <on|off|ms>");
+  // One line, because every command produces exactly one reply and that is what lets a
+  // client match replies to commands by counting. Argument syntax lives in
+  // docs/ble-protocol.md rather than on the wire.
+  reply(out, "help=info|status|help|start|stop|reset|reboot|ambient|set");
 }
 
 void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
@@ -81,12 +90,8 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
   String command = argv[0];
   command.toLowerCase();
 
-  if (command == "help" || command == "?") {
+  if (command == "help") {
     emitHelp(out);
-    return;
-  }
-  if (command == "ping") {
-    reply(out, "pong " + String(cfg::FIRMWARE_VERSION));
     return;
   }
   if (command == "info" || command == "status") {
@@ -114,7 +119,7 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
   }
   if (command == "set") {
     if (argc < 3) {
-      fail(out, "usage: set <target|timer|ambient> <value>");
+      fail(out, "bad_argument");
       return;
     }
     String key = argv[1];
@@ -125,32 +130,68 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     if (key == "target") {
       if (value == "off") {
         control_.clearTarget();
-        reply(out, "target off");
+        reply(out, "target=off");
         return;
       }
-      float kpa = parseFloatOr(argv[2], -1.0f);
+      float kpa = 0.0f;
+      if (!parseFloat(argv[2], kpa)) {
+        fail(out, "bad_argument");
+        return;
+      }
       if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
         fail(out, "out_of_range");
         return;
       }
       control_.setTarget(kpa);
-      reply(out, "target " + formatFloat(kpa, 1));
+      reply(out, "target=" + formatFloat(kpa, 1));
       return;
     }
     if (key == "timer") {
       if (value == "off") {
         control_.setDurationSeconds(0);
-        reply(out, "timer off");
+        reply(out, "timer=off");
         return;
       }
-      uint32_t seconds = parseU32Or(argv[2], 0);
+      uint32_t seconds = 0;
+      if (!parseU32(argv[2], seconds)) {
+        fail(out, "bad_argument");
+        return;
+      }
       control_.setDurationSeconds(seconds);
-      reply(out, "timer " + String((unsigned)seconds));
+      reply(out, "timer=" + String((unsigned)seconds));
       return;
     }
     if (key == "ambient") {
-      sensor_.setAmbientKpa(parseFloatOr(argv[2], -1.0f));
-      reply(out, "ambient " + formatFloat(sensor_.ambientKpa(), 2));
+      float kpa = 0.0f;
+      if (!parseFloat(argv[2], kpa)) {
+        fail(out, "bad_argument");
+        return;
+      }
+      if (!sensor_.setAmbientKpa(kpa)) {
+        fail(out, "out_of_range");
+        return;
+      }
+      reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
+      return;
+    }
+    if (key == "period") {
+      uint32_t period = 0;
+      if (!parseU32(argv[2], period)) {
+        fail(out, "bad_argument");
+        return;
+      }
+      if (period < cfg::TELEMETRY_MIN_MS) {
+        fail(out, "out_of_range");
+        return;
+      }
+      telemetry_.periodMs = period;
+      reply(out, "period=" + String((unsigned)period));
+      return;
+    }
+    // v1 could drive the pump directly. A client that still asks gets told the feature
+    // is gone rather than that it typed something wrong (Q15).
+    if (key == "duty") {
+      fail(out, "unsupported");
       return;
     }
     fail(out, "unknown_command");
@@ -158,32 +199,25 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
   }
   if (command == "ambient") {
     if (argc > 1) {
-      sensor_.setAmbientKpa(parseFloatOr(argv[1], -1.0f));
+      float kpa = 0.0f;
+      if (!parseFloat(argv[1], kpa)) {
+        fail(out, "bad_argument");
+        return;
+      }
+      if (!sensor_.setAmbientKpa(kpa)) {
+        fail(out, "out_of_range");
+        return;
+      }
     } else {
       sensor_.captureAmbient();
     }
-    reply(out, "ambient " + formatFloat(sensor_.ambientKpa(), 2));
+    reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
     return;
   }
+  // v1 turned telemetry on and off by command; the characteristic subscription does
+  // that now, so only the period is left. Old clients get a straight answer.
   if (command == "telemetry" || command == "tel") {
-    if (argc < 2) {
-      fail(out, "usage: telemetry <on|off|ms>");
-      return;
-    }
-    String value = argv[1];
-    value.toLowerCase();
-    if (value == "on") {
-      telemetry_.enabled = true;
-    } else if (value == "off") {
-      telemetry_.enabled = false;
-    } else {
-      uint32_t period = parseU32Or(argv[1], 0);
-      if (period < cfg::TELEMETRY_MIN_MS) period = cfg::TELEMETRY_MIN_MS;
-      telemetry_.periodMs = period;
-      telemetry_.enabled = true;
-    }
-    reply(out, String("telemetry ") + (telemetry_.enabled ? "on " : "off ") +
-                   String((unsigned)telemetry_.periodMs));
+    fail(out, "unsupported");
     return;
   }
   if (command == "reset") {
@@ -193,7 +227,7 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     reply(out, "reset");
     return;
   }
-  if (command == "reboot" || command == "restart") {
+  if (command == "reboot") {
     reply(out, "rebooting");
     delay(50);
     ESP.restart();

@@ -17,6 +17,10 @@ class CommandRouter;
 // runs on the main loop while the NimBLE task only hands over bytes. Replies go the
 // other way through a queue; the machine view arrives as a constructor reference, so
 // the transport owns no view state and nothing points back at it.
+//
+// Telemetry leaves on its own characteristic, and the client's CCCD subscription is
+// what turns it on: the subscription is the only enable, so it can never disagree with
+// a command.
 class BleService {
  public:
   BleService(CommandRouter& router, TelemetrySettings& telemetry, ReplyQueue& replies,
@@ -39,9 +43,11 @@ class BleService {
   void handleMtuChange(uint16_t mtu);
   void onCommandData(const uint8_t* data, size_t length);
   void onInfoRead();
+  void onStateSubscribe(uint16_t subValue);
   void drainInbound();
   void drainReplies();
-  void send(const String& text);
+  void refreshStateValue();
+  void transmit(NimBLECharacteristic* characteristic, const String& text);
   void sendTelemetry();
   uint16_t chunkSize() const;
 
@@ -54,6 +60,7 @@ class BleService {
   NimBLEServer* server_ = nullptr;
   NimBLECharacteristic* cmdChar_ = nullptr;
   NimBLECharacteristic* rspChar_ = nullptr;
+  NimBLECharacteristic* stateChar_ = nullptr;
   NimBLECharacteristic* infoChar_ = nullptr;
 
   String name_;
@@ -61,6 +68,7 @@ class BleService {
   bool started_ = false;
   bool linkLost_ = false;
   uint16_t mtu_ = 23;
+  uint16_t stateSubscribers_ = 0;
   uint32_t lastTelemetryMs_ = 0;
   uint32_t lastWriteMs_ = 0;
 };

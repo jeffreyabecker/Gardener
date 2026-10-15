@@ -90,7 +90,6 @@ bool App::begin() {
 
 void App::refreshSnapshot() {
   snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_, device_);
-  snapshot_.bleConnected = ble_.connected();
 }
 
 void App::update() {

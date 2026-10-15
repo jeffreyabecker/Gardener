@@ -12,6 +12,10 @@ namespace cfg {
 
 constexpr const char* FIRMWARE_VERSION = "0.1.0";
 
+// Bumped when the wire format breaks: proto=2 is what tells a client the program
+// characteristic is gone and telemetry has its own characteristic.
+constexpr const char* PROTOCOL_VERSION = "2";
+
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
 // Floor for the loop target. Below the pump's ultimate vacuum the duty would simply

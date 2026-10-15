@@ -39,7 +39,10 @@ class PressureSensor {
   float vacuumKpa() const;
   float vacuumPercent() const;
 
-  void setAmbientKpa(float kpa);
+  // False when the value is outside what the part can measure; the reference is then
+  // left alone, so a client that sends nonsense learns about it instead of silently
+  // getting the old ambient back.
+  bool setAmbientKpa(float kpa);
   void captureAmbient();
 
   uint32_t lastSampleMs() const { return lastSampleMs_; }

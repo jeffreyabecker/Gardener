@@ -63,14 +63,14 @@ size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size) {
     appendToken(out, size, "remain", "-");
     appendToken(out, size, "total", "-");
   }
-  appendToken(out, size, "fault", faultToken(snapshot));
   if (snapshot.batteryPresent) {
     appendToken(out, size, "batt", (int)snapshot.batteryPercent);
   } else {
     appendToken(out, size, "batt", "-");
   }
+  appendToken(out, size, "sensor", snapshot.sensorOk ? 1 : 0);
+  appendToken(out, size, "fault", faultToken(snapshot));
   appendToken(out, size, "up", (int)snapshot.uptimeMs);
-  appendToken(out, size, "ble", snapshot.bleConnected ? 1 : 0);
 
   trimTrailingSpace(out);
   return strlen(out);
@@ -80,6 +80,7 @@ size_t infoBody(const SystemSnapshot& snapshot, char* out, size_t size) {
   if (size == 0) return 0;
   out[0] = '\0';
 
+  appendToken(out, size, "proto", cfg::PROTOCOL_VERSION);
   appendToken(out, size, "fw", cfg::FIRMWARE_VERSION);
   appendToken(out, size, "chip", snapshot.device ? snapshot.device->chip : "-");
   appendToken(out, size, "heap", snapshot.device ? (int)snapshot.device->freeHeap : 0);

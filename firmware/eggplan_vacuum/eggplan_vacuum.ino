@@ -1,9 +1,8 @@
-// Eggplan Vacuum - Bluetooth controllable vacuum pump with downloadable,
-// scriptable programs.
+// Eggplan Vacuum - Bluetooth controllable vacuum pump controller.
 //
-// ESP32-C3 + NimBLE-Arduino + Berry (optional) + Adafruit MPRLS + SH1106 OLED.
-// All of the interesting code lives in the VacuumCore library so the sketch
-// stays this small.
+// ESP32-C3 + NimBLE-Arduino + Adafruit MPRLS + SH1106 OLED, with a vent valve and a
+// 1S Li-ion battery gauge. All of the interesting code lives in the VacuumCore library
+// so the sketch stays this small.
 
 #include <VacuumCore.h>
 

@@ -34,9 +34,10 @@ struct DeviceInfo {
 };
 
 // Written by a host, read by the transport, so a command can change the telemetry rate
-// without holding a pointer into the service that sends it.
+// without holding a pointer into the service that sends it. There is no enable flag:
+// subscribing to the `state` characteristic is what asks for telemetry, so the
+// subscription can never disagree with a command.
 struct TelemetrySettings {
-  bool enabled = false;
   uint32_t periodMs = cfg::TELEMETRY_DEFAULT_MS;
 };
 
@@ -67,9 +68,8 @@ struct SystemSnapshot {
   bool batteryLow = false;
   float batteryVolts = 0.0f;
   uint8_t batteryPercent = 0;
-  // device and link
+  // device
   const DeviceInfo* device = nullptr;
-  bool bleConnected = false;
   uint32_t uptimeMs = 0;
 };
 
