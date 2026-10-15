@@ -101,15 +101,27 @@ cannot erase the battery, because the battery is not there yet when the host dra
 
 ## 4. StatusPage goes away
 
-Everything it did moves to the host: the splash, the pressure and target rows, the countdown, the
-duty bar, the `FAULT` and `NO SENSOR` banners, the alignment helpers, the row constants and
+Everything else it did moves to the host: the pressure and target rows, the countdown, the duty
+bar, the `FAULT` and `NO SENSOR` banners, the alignment helpers, the row constants and
 `twoDigits`.
 
-`StatusPage.{h,cpp}` are deleted, along with its `splash()` and `render()` calls in `App`.
+The splash does not move to the host and does not disappear. It becomes `App::splash()`, drawn
+from `App::begin()` — which is also the path a `reboot` takes, since that command restarts the
+device and `begin()` runs again. So "at startup or reboot" is one method and one call site.
 
-`DECISION:` the device boots to a blank panel rather than to a page of its own. Boot clears and
-flushes, so the glass shows nothing instead of whatever its RAM held, and a device nobody is
-talking to is honestly blank.
+`DECISION:` the splash is the device's own, and it is the exception that proves §4's rule. The
+host owns the panel after boot, but before a host has said anything the panel is the only thing
+that can tell a person at the rig that this device is alive at all, and which firmware it is
+running. `App::splash()` draws the product name and `fw <version>`, clears first, and flushes
+through the overlay so it gets the battery too.
+
+`StatusPage.{h,cpp}` are deleted, along with its `render()` call in `App`.
+
+`DECISION:` the device boots to its own splash and nothing more: cleared, splash drawn, flushed,
+and then no further drawing until a host asks for some. Rev 4 said "boots to a blank panel",
+which this supersedes — the honest statement is that the panel shows the boot screen and then
+holds it. There is no timeout on it, because a timeout would be a device clock and this device
+does not keep one.
 
 `DECISION:` nothing is annunciated locally, not even a fault. A fault, a low battery and a vent
 timeout all live in `status` and on the battery icon, which is the only thing the device draws
@@ -176,8 +188,8 @@ the bits and a value that is much longer than anything else on the line.
 
 1. **The host owns every pixel except the battery.** Any layout, any language, any redraw rate.
 2. **The device shrinks**: no page, no layout constants, no text metrics of our own, no
-   `twoDigits`, no splash. Roughly 200 lines leave with `StatusPage`, and what replaces them is a
-   command table.
+   `twoDigits`. Roughly 200 lines leave with `StatusPage`, and what replaces them is `App::splash()`
+   and a command table.
 3. **The interface is still worth having**, but its justification moves. It was "so `StatusPage`
    can be tested"; it is now "so the drawing commands can be tested against a fake, and so the
    panel can be swapped". Phase 5 is that test, and it is now testing the wire rather than a page.
@@ -193,9 +205,9 @@ the bits and a value that is much longer than anything else on the line.
 | 1a | The interface | `hal/Display.h` — **done** | header compiles, layer rule ok |
 | 1b | The battery overlay | `app/AppDisplay.{h,cpp}` — **done** | green; deleting one forward fails the build |
 | 1c | The adapter | `hal/AdafruitDisplay.{h,cpp}`, one line per verb, colours supplied | green, layer rule ok, flash reported |
-| 1d | Wire the display in | App constructs the panel, the adapter and the overlay; boot clears and flushes; nothing draws a page any more | green; the panel comes up blank and stays blank with no host |
+| 1d | Wire the display in and draw the splash | App constructs the panel, the adapter and the overlay; `App::splash()` draws the boot screen from `begin()`, which a `reboot` re-enters; nothing else draws | green; the panel shows the splash at startup and holds it with no host |
 | 2 | The drawing commands | `SerialLink` gains `draw` and `flush`, `set rotation` and `set invert`; `splitLine` learns to hand back the rest of the line; the argument cap rises from 3 | green; each op answers one reply, and `draw text` keeps its spaces |
-| 3 | StatusPage goes away | delete `StatusPage.{h,cpp}`; App loses `splash` and `render`; README's display section says the host draws | green, layer rule ok, flash reported |
+| 3 | StatusPage goes away | delete `StatusPage.{h,cpp}`; App keeps only `splash()` and loses `render()`; README's display section says the host draws | green, layer rule ok, flash reported |
 | 4 | The protocol doc | `docs/serial-protocol.md`: the `draw` family, the frame model, the cost arithmetic, `fw` to 0.4.0 | green |
 | 5 | The fake and a host test | `tests/fake_display.h` and a test for the command layer: parsing, the rest-of-line tail, and the calls each op makes | the test fails when an op is miswired |
 
@@ -211,7 +223,7 @@ the bits and a value that is much longer than anything else on the line.
 | R6 | ~~a host fake needs `GFXfont` to implement `setFont`~~ | **dissolved in rev 5**: `setFont` is out of the interface, so the header names no library type and the fake needs no stub |
 | R7 | a host that floods the line starves the control loop: `poll()` drains every buffered line before returning, and the pump's loop is what keeps pressure sane | cap the lines serviced per poll (Q18), so a burst is spread over iterations instead of blocking one |
 | R8 | nothing is annunciated locally any more: a fault used to invert a banner on the panel, and now the panel says whatever the last frame said | accepted and documented. The device keeps the one indication it can be trusted to produce alone — the valve releasing — and the fault is in `status` on the next poll |
-| R9 | without a host the panel is blank, and a host that stops mid-page leaves a stale frame frozen | accepted: it is the same trade as the clock, and the alternative is a page the device has to maintain |
+| R9 | the panel holds whatever was drawn last: the splash at boot, then the host's last frame, with nothing to correct either | accepted: it is the same trade as the clock, and the alternative is a page the device has to maintain. The splash is the one screen the device owns outright, and it stays until the host draws over it |
 | R10 | the wire now carries geometry, so a malformed line is a drawing instruction | the op name, the argument count and the numeric parse are all checked; coordinates are clipped by the library, and nothing a host can draw can reach the pump or the valve |
 
 ## 9. Questions
@@ -239,8 +251,10 @@ context.
 | Q16 | Is `flush` its own command and the only thing that updates the glass? | **yes**: it is the frame boundary, and the only place the battery overlay can land |
 | Q17 | Bitmaps on the wire in this change? | **no**: the interface keeps the verb, the wire gets it when something needs it |
 | Q18 | Cap the lines serviced per poll so a flood cannot starve the control loop? | **yes, at 8**: a burst then spreads over a few iterations, and the sensor and the PID keep their cadence |
-| Q19 | Does the device boot to a blank panel — clear and flush at startup? | **yes**: the alternative is a glass showing whatever its RAM held |
+| Q19 | Does the device draw its own splash at startup, then hold it until a host draws? | **yes**: `App::splash()` from `begin()`, which a `reboot` re-enters. It is the one screen the device owns, and it has no timeout because a timeout would be a device clock |
 | Q20 | `fw` to 0.4.0? | **yes**: with no `proto` left, `fw` is the only marker, and the wire is gaining a command family |
+| Q21 | Is the splash reachable as a command too, so a host can bring it back? | **no**: it is what the device says about itself before anyone asks. A host that wants a boot screen can draw one, and then it is the host's screen and not the device's |
+| Q22 | The splash flushes through the overlay, so the battery is drawn on it — and the gauge may not have sampled yet, so the number could be its initial value. Sample once before drawing? | **yes**: sample the battery once in `begin()` before the splash, so the number on the boot screen is a reading rather than a placeholder. If it cannot be sampled that early, the splash flushes straight to the adapter instead, without a battery |
 
 ## 10. Status
 
@@ -251,6 +265,7 @@ context.
 | rev 3 | the header reworked by hand: `Print`, `setCursor`, `setTextSize`, `setTextWrap`, `cp437`, `textWidth` and `xBitmap` out, `setFont` in, so the header includes `<Adafruit_GFX.h>` for `GFXfont` | §1, §2, §3, §6, §7 |
 | rev 4 | `StatusPage` is deleted and the host draws the panel: the `draw` command family, `flush` as the frame boundary, the battery overlay compositing at flush, and the consequences of nothing being annunciated locally | §1, §3, §4, §5, §6, §7, §8, §9 |
 | rev 5 | `setFont` is deleted from the interface: the host cannot supply font data, so the built-in font scaled by `size` is the whole of what the wire can ask for. `hal/Display.h` therefore includes nothing from Adafruit, which dissolves R6, and Q13 stops being a question | §1, §8, §9 |
+| rev 6 | the splash does not go with the page: it becomes `App::splash()`, drawn from `begin()` and therefore re-drawn after a `reboot`, and it is the one screen the device owns. Rev 4's "boots to a blank panel" is superseded | §4, §6, §7, §8, §9 |
 
 ## 11. Assumption
 
