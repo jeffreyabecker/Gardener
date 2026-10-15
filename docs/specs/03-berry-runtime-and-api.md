@@ -162,8 +162,12 @@ invokes the matching callbacks.
 Back is special: it is device-owned (break-out, spec 05 §4) **unless the program claims
 it** by registering `buttons.on(buttons.BACK, fn)`. Claiming Back takes the break-out
 gestures; releasing it (`buttons.off(buttons.BACK)` / `buttons.clear()`) returns them to
-the device. A program that claims Back and stops yielding is still stopped and vented by
-the runaway watchdog (spec 01 §5).
+the device.
+
+Even when claimed, **holding Back for 5 s is always a device hard escape**: the plant
+stops the program, vents, and runs `default`. A program cannot consume or override it. A
+program that claims Back and stops yielding is likewise stopped and vented by the runaway
+watchdog (spec 01 §5).
 
 ## 6. Berry binding
 
@@ -237,7 +241,8 @@ The module exposes named constants for the button ids: `buttons.UP` (0), `button
 | `buttons.clear()` | remove all callbacks |
 
 `button` is one of the named constants. `buttons.BACK` is device-owned unless claimed
-with `buttons.on(buttons.BACK, fn)` (§5).
+with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device hard escape
+(§5).
 
 ## 7. Error and stop semantics
 

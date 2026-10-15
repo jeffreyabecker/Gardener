@@ -50,9 +50,12 @@ From any running program that has not claimed Back (spec 03 §5):
   run `browser`).
 
 A program that registers `buttons.on(buttons.BACK, fn)` takes these gestures for itself;
-the device
-stops delivering them. A program that claims Back and never yields is still stopped and
-vented by the runaway watchdog (spec 01 §5).
+the device stops delivering them.
+
+**Holding Back for 5 s is always a hard escape**, claimed or not: the device stops the
+program, vents, and runs `default`. A program cannot consume or override it. A program
+that claims Back and never yields is likewise stopped and vented by the runaway watchdog
+(spec 01 §5).
 
 ## 5. Takeover semantics
 

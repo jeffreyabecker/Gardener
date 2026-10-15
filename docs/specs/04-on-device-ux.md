@@ -57,13 +57,13 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 - While a program runs and no host is attached, Up, Down and OK events are delivered to
   the program's `buttons.on` callbacks (spec 03 §5).
 - Back is delivered to the program **only when it claims it** with
-  `buttons.on(buttons.BACK, fn)`;
-  otherwise the device owns it:
+  `buttons.on(buttons.BACK, fn)`; otherwise the device owns it:
 
 | Gesture | Effect |
 | --- | --- |
 | Back click (unclaimed) | `programs.home()` — stop current, vent, run `default` |
 | Back long-press (unclaimed) | `programs.run("browser")` — stop current, vent, run `browser` |
+| Back hold 5 s (always) | stop current, vent, run `default` — cannot be claimed |
 
 - While a host is attached, all buttons are ignored — the panel is host-drawn (§5).
 

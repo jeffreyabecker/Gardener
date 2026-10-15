@@ -190,15 +190,17 @@ Programs own the screen; the device owns only the battery and the two Back gestu
   program's `buttons.on` callbacks (spec 03 §5). Back is delivered only when the program
   claims it with `buttons.on(buttons.BACK, fn)`; otherwise it is device-owned.
 
-### 7.3 The two device-owned gestures
+### 7.3 The device-owned gestures
 
 From any running program that has not claimed Back:
 
 - **Back click** — *home*. Stop the current program, vent, then run `default`.
 - **Back long-press** — *browse*. Stop the current program, vent, then run `browser`.
 
-A program that claims Back takes these for itself. Both leave the chamber released before
-the next program acts, because every program change vents first.
+A program that claims Back takes these for itself. **Holding Back for 5 s is always a hard
+escape**, claimed or not: the device stops the program, vents, and runs `default`. Every
+program change vents first, so all of these leave the chamber released before the next
+program acts.
 
 ### 7.4 Reserved programs
 
