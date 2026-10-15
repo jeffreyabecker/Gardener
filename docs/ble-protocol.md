@@ -3,6 +3,12 @@
 Everything below is one primary service with four characteristics. All multi byte
 integers are little endian.
 
+## Units
+
+Pressures are **kPa** in telemetry, in `status`, as command arguments and in
+scripts. Ambient air is ~101.3 kPa and the sensor full scale is 172.4 kPa; the
+application works below 60 kPa.
+
 ## GATT layout
 
 | Role | UUID | Properties |
@@ -36,7 +42,7 @@ message. Reassemble by the `0x02` terminator, not by counting bytes.
 Telemetry notifications are plain text prefixed with `tel ` and are never chunked:
 
 ```
-tel {"hpa":412.31,"vacuum":601.02,"vacuum_pct":59.3,...,"uptime_ms":123456}
+tel {"kpa":41.23,"vacuum":60.10,"vacuum_pct":59.3,...,"uptime_ms":123456}
 ```
 
 ## Program transfer
@@ -80,8 +86,8 @@ bytes, and a single write may contain several commands.
 | `eval <berry>` | evaluate an expression in the script runtime |
 | `pump <0-100\|off>` | manual duty (capped at `PUMP_DUTY_MAX_PERCENT`) |
 | `manual <0-100>` | alias of `pump` |
-| `target <hpa\|off>`, `hold <hpa\|off>` | engage/release the closed loop |
-| `ambient [hpa]` | capture or set the ambient reference |
+| `target <kpa\|off>`, `hold <kpa\|off>` | engage/release the closed loop |
+| `ambient [kpa]` | capture or set the ambient reference |
 | `autostart [<name>\|none]` | program started on boot |
 | `telemetry <on\|off\|ms>` | telemetry notifications, minimum period 50 ms |
 | `log [n]` | tail of the device log (default 20 lines) |
@@ -94,14 +100,14 @@ bytes, and a single write may contain several commands.
 
 | Field | Meaning |
 | --- | --- |
-| `hpa` | filtered absolute pressure (hPa = mbar) |
-| `vacuum` | `ambient - hpa`, clamped at 0 |
+| `kpa` | filtered absolute pressure |
+| `vacuum` | `ambient - kpa`, clamped at 0 |
 | `vacuum_pct` | `vacuum / ambient * 100` |
-| `ambient` | ambient reference in hPa |
+| `ambient` | ambient reference in kPa |
 | `duty` | pump duty % |
 | `rpm` | tach reading, `0` unless `PUMP_TACH_ENABLED` |
 | `state` | `IDLE`, `PUMP`, `HOLD`, `MAN` or `FAULT` |
-| `target` | hold target in hPa, or `null` |
+| `target` | hold target in kPa, or `null` |
 | `fault` | pump fault latch reason, or `null` |
 | `running` | name of the running program, if any |
 | `ble` | a client is connected |
@@ -126,7 +132,7 @@ one-liner in `App::update()` once the BLE path is proven on hardware.
 <- ok pong 0.1.0
 -> telemetry 250
 <- ok telemetry on 250
-<- tel {"hpa":1012.8,"vacuum":0.45,...,"state":"IDLE"}
+<- tel {"kpa":101.28,"vacuum":0.05,...,"state":"IDLE"}
 -> B hold_vacuum
 <- ok begin hold_vacuum
 -> D # hold_vacuum.be…
@@ -136,7 +142,7 @@ one-liner in `App::update()` once the BLE path is proven on hardware.
 -> run hold_vacuum
 <- ok running hold_vacuum
 -> status
-<- ok {"hpa":402.11,...,"state":"HOLD",...}
+<- ok {"kpa":40.21,...,"state":"HOLD",...}
 -> stop
 <- ok stopped
 ```

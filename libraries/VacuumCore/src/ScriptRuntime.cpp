@@ -33,33 +33,33 @@ float ScriptApi::pumpDuty() const { return ctx_.pump ? ctx_.pump->dutyPercent() 
 
 uint32_t ScriptApi::pumpRunMs() const { return ctx_.pump ? ctx_.pump->runTimeMs() : 0; }
 
-float ScriptApi::pressureHpa() const { return ctx_.sensor ? ctx_.sensor->hpa() : 0.0f; }
+float ScriptApi::pressureKpa() const { return ctx_.sensor ? ctx_.sensor->kpa() : 0.0f; }
 
-float ScriptApi::vacuumHpa() const { return ctx_.sensor ? ctx_.sensor->vacuumHpa() : 0.0f; }
+float ScriptApi::vacuumKpa() const { return ctx_.sensor ? ctx_.sensor->vacuumKpa() : 0.0f; }
 
 float ScriptApi::vacuumPercent() const {
   return ctx_.sensor ? ctx_.sensor->vacuumPercent() : 0.0f;
 }
 
-float ScriptApi::ambientHpa() const { return ctx_.sensor ? ctx_.sensor->ambientHpa() : 0.0f; }
+float ScriptApi::ambientKpa() const { return ctx_.sensor ? ctx_.sensor->ambientKpa() : 0.0f; }
 
-void ScriptApi::setAmbientHpa(float hpa) {
-  if (ctx_.sensor) ctx_.sensor->setAmbientHpa(hpa);
+void ScriptApi::setAmbientKpa(float kpa) {
+  if (ctx_.sensor) ctx_.sensor->setAmbientKpa(kpa);
 }
 
 void ScriptApi::captureAmbient() {
   if (ctx_.sensor) ctx_.sensor->captureAmbient();
 }
 
-void ScriptApi::targetHpa(float hpa) {
-  if (ctx_.control) ctx_.control->setTarget(hpa);
+void ScriptApi::targetKpa(float kpa) {
+  if (ctx_.control) ctx_.control->setTarget(kpa);
 }
 
 void ScriptApi::targetOff() {
   if (ctx_.control) ctx_.control->disableTarget();
 }
 
-float ScriptApi::target() const { return ctx_.control ? ctx_.control->targetHpa() : 0.0f; }
+float ScriptApi::target() const { return ctx_.control ? ctx_.control->targetKpa() : 0.0f; }
 
 bool ScriptApi::targetActive() const {
   return ctx_.control ? ctx_.control->targetActive() : false;
@@ -98,6 +98,12 @@ int ScriptApi::buttonWait(int index, int timeoutMs) {
   if (event == ButtonEvent::LongPress) return 2;
   if (event == ButtonEvent::Repeat) return 3;
   return 0;
+}
+
+String ScriptApi::fmt(float value, int decimals) const {
+  if (decimals < 0) decimals = 0;
+  if (decimals > 4) decimals = 4;
+  return formatFloat(value, (uint8_t)decimals);
 }
 
 void ScriptApi::log(const char* message) { LOGI("script: %s", message ? message : ""); }

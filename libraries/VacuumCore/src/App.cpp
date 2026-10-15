@@ -93,12 +93,12 @@ void App::tick() {
 
 DisplayUI::Model App::buildModel() {
   DisplayUI::Model model;
-  model.pressureHpa = sensor_.hpa();
-  model.vacuumHpa = sensor_.vacuumHpa();
+  model.pressureKpa = sensor_.kpa();
+  model.vacuumKpa = sensor_.vacuumKpa();
   model.vacuumPercent = sensor_.vacuumPercent();
-  model.ambientHpa = sensor_.ambientHpa();
+  model.ambientKpa = sensor_.ambientKpa();
   model.duty = pump_.dutyPercent();
-  model.targetHpa = control_.targetHpa();
+  model.targetKpa = control_.targetKpa();
   model.targetActive = control_.targetActive();
   model.state = pump_.tripped() ? "FAULT" : control_.stateText();
   autostartCache_ = store_.autostart();
@@ -170,10 +170,10 @@ void App::onButtonEvent(ButtonId id, ButtonEvent event, uint32_t heldMs) {
 
     case DisplayUI::Page::Setpoint:
       if (id == ButtonId::Up || id == ButtonId::Down) {
-        float target = control_.targetHpa();
-        if (target <= 0.0f && ctx_.sensor) target = ctx_.sensor->hpa();
-        target += (id == ButtonId::Up ? -5.0f : 5.0f);
-        target = clampf(target, cfg::CONTROL_MIN_TARGET_HPA, 1500.0f);
+        float target = control_.targetKpa();
+        if (target <= 0.0f && ctx_.sensor) target = ctx_.sensor->kpa();
+        target += (id == ButtonId::Up ? -1.0f : 1.0f);
+        target = clampf(target, cfg::CONTROL_MIN_TARGET_KPA, 150.0f);
         control_.setTarget(target);
         String message = String("target ") + formatFloat(target, 0);
         ui_.toast(message.c_str(), 900);
@@ -182,8 +182,8 @@ void App::onButtonEvent(ButtonId id, ButtonEvent event, uint32_t heldMs) {
           control_.disableTarget();
           ui_.toast("hold off", 900);
         } else if (ctx_.sensor) {
-          control_.setTarget(clampf(ctx_.sensor->hpa() - 100.0f,
-                                    cfg::CONTROL_MIN_TARGET_HPA, 1500.0f));
+          control_.setTarget(clampf(ctx_.sensor->kpa() - 10.0f,
+                                    cfg::CONTROL_MIN_TARGET_KPA, 150.0f));
           ui_.toast("hold on", 900);
         }
       }
@@ -195,8 +195,8 @@ void App::onButtonEvent(ButtonId id, ButtonEvent event, uint32_t heldMs) {
           control_.disableTarget();
           ui_.toast("hold off", 900);
         } else if (ctx_.sensor && ctx_.sensor->readingValid()) {
-          control_.setTarget(clampf(ctx_.sensor->hpa() - 100.0f,
-                                    cfg::CONTROL_MIN_TARGET_HPA, 1500.0f));
+          control_.setTarget(clampf(ctx_.sensor->kpa() - 10.0f,
+                                    cfg::CONTROL_MIN_TARGET_KPA, 150.0f));
           ui_.toast("hold on", 900);
         }
       } else if (id == ButtonId::Up || id == ButtonId::Down) {
@@ -233,7 +233,7 @@ void App::update() {
 
   if (now - lastGraphSampleMs_ >= 100) {
     lastGraphSampleMs_ = now;
-    ui_.pushPressure(sensor_.hpa());
+    ui_.pushPressure(sensor_.kpa());
   }
 
   ui_.setModel(buildModel());

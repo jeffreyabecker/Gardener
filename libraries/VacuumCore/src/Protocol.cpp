@@ -145,10 +145,10 @@ String CommandRouter::infoJson() const {
 String CommandRouter::statusJson() const {
   String s = "{";
   if (ctx_.sensor) {
-    s += "\"hpa\":" + formatFloat(ctx_.sensor->hpa(), 2);
-    s += ",\"vacuum\":" + formatFloat(ctx_.sensor->vacuumHpa(), 2);
+    s += "\"kpa\":" + formatFloat(ctx_.sensor->kpa(), 2);
+    s += ",\"vacuum\":" + formatFloat(ctx_.sensor->vacuumKpa(), 2);
     s += ",\"vacuum_pct\":" + formatFloat(ctx_.sensor->vacuumPercent(), 1);
-    s += ",\"ambient\":" + formatFloat(ctx_.sensor->ambientHpa(), 2);
+    s += ",\"ambient\":" + formatFloat(ctx_.sensor->ambientKpa(), 2);
     s += ",\"sensor\":" + String(ctx_.sensor->present() ? "true" : "false");
   }
   if (ctx_.pump) {
@@ -158,7 +158,7 @@ String CommandRouter::statusJson() const {
   }
   if (ctx_.control) {
     s += ",\"state\":\"" + String(ctx_.control->stateText()) + "\"";
-    s += ",\"target\":" + String(ctx_.control->targetActive() ? formatFloat(ctx_.control->targetHpa(), 2) : String("null"));
+    s += ",\"target\":" + String(ctx_.control->targetActive() ? formatFloat(ctx_.control->targetKpa(), 2) : String("null"));
   }
   if (ctx_.store) {
     String autostart = ctx_.store->autostart();
@@ -180,7 +180,7 @@ void CommandRouter::emitHelp(ResponseSink& out) {
   out.emit("  ping | info | status | log [n] | help");
   out.emit("  list | cat <name> [offset] [len] | rm <name>");
   out.emit("  run <name> [args] | stop | eval <berry>");
-  out.emit("  pump <0-100|off> | target <hpa|off> | ambient [hpa]");
+  out.emit("  pump <0-100|off> | target <kpa|off> | ambient [kpa]");
   out.emit("  autostart [<name>|none] | telemetry <on|off|ms> | reset");
 }
 
@@ -377,7 +377,7 @@ void CommandRouter::handleLine(const String& rawLine, ResponseSink& out) {
   }
   if (cmd == "target" || cmd == "hold") {
     if (!ctx_.control || argc < 2) {
-      out.emit(err("usage: target <hpa|off>"));
+      out.emit(err("usage: target <kpa|off>"));
       return;
     }
     String value = argv[1];
@@ -386,13 +386,13 @@ void CommandRouter::handleLine(const String& rawLine, ResponseSink& out) {
       ctx_.control->disableTarget();
       out.emit(ok("target off"));
     } else {
-      float hpa = parseFloatOr(argv[1], -1.0f);
-      if (hpa <= cfg::CONTROL_MIN_TARGET_HPA) {
+      float kpa = parseFloatOr(argv[1], -1.0f);
+      if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
         out.emit(err("bad target"));
         return;
       }
-      ctx_.control->setTarget(hpa);
-      out.emit(ok("target " + formatFloat(hpa, 2)));
+      ctx_.control->setTarget(kpa);
+      out.emit(ok("target " + formatFloat(kpa, 2)));
     }
     return;
   }
@@ -402,11 +402,11 @@ void CommandRouter::handleLine(const String& rawLine, ResponseSink& out) {
       return;
     }
     if (argc > 1) {
-      ctx_.sensor->setAmbientHpa(parseFloatOr(argv[1], -1.0f));
+      ctx_.sensor->setAmbientKpa(parseFloatOr(argv[1], -1.0f));
     } else {
       ctx_.sensor->captureAmbient();
     }
-    out.emit(ok("ambient " + formatFloat(ctx_.sensor->ambientHpa(), 2)));
+    out.emit(ok("ambient " + formatFloat(ctx_.sensor->ambientKpa(), 2)));
     return;
   }
   if (cmd == "autostart") {

@@ -7,6 +7,6 @@ for cycle : 1 .. 10
     vacuum.delay(3000)
     vacuum.pump(0)
     vacuum.delay(3000)
-    vacuum.log("  pressure " + str(vacuum.pressure(), 1) + " hPa")
+    vacuum.log("  pressure " + vacuum.fmt(vacuum.pressure(), 1) + " kPa")
 end
 vacuum.log("pulse: done")

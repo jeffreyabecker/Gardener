@@ -28,12 +28,15 @@ constexpr uint16_t OLED_WIDTH = 128;
 constexpr uint16_t OLED_HEIGHT = 64;
 constexpr uint8_t OLED_I2C_ADDR = 0x3C;
 
-// --- Adafruit MPRLS ported pressure sensor breakout (25 PSI absolute) ------
+// --- Adafruit MPRLS ported pressure sensor breakout (0..25 PSI absolute) ---
+// kPa is the primary unit everywhere: the application lives well below 60 kPa
+// absolute, so hPa style values would only add digits without adding meaning.
 constexpr uint8_t MPRLS_I2C_ADDR = 0x18;
 constexpr uint32_t MPRLS_POLL_MS = 20;
-constexpr float DEFAULT_AMBIENT_HPA = 1013.25f;
-constexpr float MPRLS_MIN_HPA = 0.0f;
-constexpr float MPRLS_MAX_HPA = 1723.69f;  // 25 PSI
+constexpr float DEFAULT_AMBIENT_KPA = 101.325f;    // one standard atmosphere
+constexpr float MPRLS_MIN_KPA = 0.0f;
+constexpr float MPRLS_MAX_KPA = 172.369f;          // 25 PSI full scale
+constexpr float WORKING_RANGE_MAX_KPA = 60.0f;     // sensors and pump are happy below this
 
 // --- JQB2438 DC vacuum pump, driven through a low side MOSFET --------------
 // PWM  -> gate of a logic level N-MOSFET (flyback diode across the pump)
@@ -59,12 +62,14 @@ constexpr uint32_t BUTTON_REPEAT_MS = 180;
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
-constexpr float CONTROL_MIN_TARGET_HPA = 8.0f;
-constexpr float PID_KP = 0.30f;
-constexpr float PID_KI = 0.02f;
-constexpr float PID_KD = 0.05f;
+// Floor for the loop target: below the pump's ultimate vacuum the duty would
+// simply sit at the cap, so the value mostly guards against nonsense targets.
+constexpr float CONTROL_MIN_TARGET_KPA = 1.0f;
+constexpr float PID_KP = 3.0f;    // % duty per kPa of error
+constexpr float PID_KI = 0.2f;    // % duty per kPa second
+constexpr float PID_KD = 0.5f;    // % duty per kPa/s of pressure slew
 constexpr float PID_INTEGRAL_LIMIT = 150.0f;
-constexpr float CONTROL_DEADBAND_HPA = 1.5f;
+constexpr float CONTROL_DEADBAND_KPA = 0.2f;
 
 // --- Bluetooth ------------------------------------------------------------
 constexpr const char* BLE_NAME_PREFIX = "EggplanVac";

@@ -35,12 +35,12 @@ inline String formatFloat(float value, uint8_t decimals = 1) {
   return String(buf);
 }
 
-// Pressure conversions, all inputs in hPa (== mbar).
-inline float hpaToKpa(float hpa) { return hpa * 0.1f; }
-inline float hpaToMbar(float hpa) { return hpa; }
-inline float hpaToPsi(float hpa) { return hpa * 0.01450377f; }
-inline float hpaToInHg(float hpa) { return hpa * 0.02952998f; }
-inline float hpaToMmHg(float hpa) { return hpa * 0.75006168f; }
+// Pressure conversions, all inputs in kPa.
+inline float kpaToHpa(float kpa) { return kpa * 10.0f; }
+inline float kpaToBar(float kpa) { return kpa * 0.01f; }
+inline float kpaToPsi(float kpa) { return kpa * 0.14503774f; }
+inline float kpaToInHg(float kpa) { return kpa * 0.29529988f; }
+inline float kpaToMmHg(float kpa) { return kpa * 7.50061683f; }
 
 inline String jsonEscape(const String& in) {
   String out;

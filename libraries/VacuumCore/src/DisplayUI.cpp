@@ -64,8 +64,8 @@ void DisplayUI::moveCursor(int delta, size_t count) {
   dirty_ = true;
 }
 
-void DisplayUI::pushPressure(float hpa) {
-  history_[historyIndex_] = hpa;
+void DisplayUI::pushPressure(float kpa) {
+  history_[historyIndex_] = kpa;
   historyIndex_ = (uint8_t)((historyIndex_ + 1) % cfg::OLED_WIDTH);
   if (historyCount_ < cfg::OLED_WIDTH) historyCount_++;
 }
@@ -166,16 +166,16 @@ void DisplayUI::renderStatus() {
 
   char buf[24];
   if (model_.sensorOk) {
-    snprintf(buf, sizeof(buf), "%.0f", model_.pressureHpa);
+    snprintf(buf, sizeof(buf), "%.1f", model_.pressureKpa);
     drawCentered(buf, 12, 2);
     display_.setTextSize(1);
     display_.setCursor(104, 18);
-    display_.print("hPa");
+    display_.print("kPa");
   } else {
     drawCentered("NO SENSOR", 16, 1);
   }
 
-  snprintf(buf, sizeof(buf), "vac %.0f hPa  %.0f%%", model_.vacuumHpa,
+  snprintf(buf, sizeof(buf), "vac %.1f kPa  %.0f%%", model_.vacuumKpa,
            model_.vacuumPercent);
   drawLine(1, buf);
 
@@ -188,7 +188,7 @@ void DisplayUI::renderStatus() {
   display_.setTextColor(SH110X_WHITE);
 
   if (model_.targetActive) {
-    snprintf(buf, sizeof(buf), "%s -> %.0f hPa", model_.state, model_.targetHpa);
+    snprintf(buf, sizeof(buf), "%s -> %.1f kPa", model_.state, model_.targetKpa);
   } else {
     snprintf(buf, sizeof(buf), "%s", model_.state);
   }
@@ -241,26 +241,26 @@ void DisplayUI::renderSetpoint() {
 
   char buf[24];
   if (model_.targetActive) {
-    snprintf(buf, sizeof(buf), "%.0f", model_.targetHpa);
+    snprintf(buf, sizeof(buf), "%.1f", model_.targetKpa);
   } else {
     snprintf(buf, sizeof(buf), "--");
   }
   drawCentered(buf, 14, 2);
   display_.setTextSize(1);
   display_.setCursor(100, 20);
-  display_.print("hPa");
+  display_.print("kPa");
 
-  snprintf(buf, sizeof(buf), "now  %.1f hPa", model_.pressureHpa);
+  snprintf(buf, sizeof(buf), "now  %.1f kPa", model_.pressureKpa);
   drawLine(2, buf);
   snprintf(buf, sizeof(buf), "trim %.0f%%", model_.duty);
   drawLine(3, buf);
-  drawLine(4, "UP/DOWN +-5  OK=hold");
+  drawLine(4, "UP/DOWN +-1  OK=hold");
 }
 
 void DisplayUI::renderGraph() {
   display_.clearDisplay();
   char buf[28];
-  snprintf(buf, sizeof(buf), "PRESSURE %.0f hPa", model_.pressureHpa);
+  snprintf(buf, sizeof(buf), "PRESSURE %.1f kPa", model_.pressureKpa);
   drawHeader(buf);
 
   const int16_t top = 12;
@@ -272,8 +272,8 @@ void DisplayUI::renderGraph() {
     if (history_[i] > maxValue) maxValue = history_[i];
   }
   if (historyCount_ < 2 || maxValue - minValue < 1.0f) {
-    minValue = model_.pressureHpa - 5.0f;
-    maxValue = model_.pressureHpa + 5.0f;
+    minValue = model_.pressureKpa - 5.0f;
+    maxValue = model_.pressureKpa + 5.0f;
   }
 
   display_.drawRect(0, top, cfg::OLED_WIDTH, height, SH110X_WHITE);
@@ -290,7 +290,7 @@ void DisplayUI::renderGraph() {
     }
   }
 
-  snprintf(buf, sizeof(buf), "%.0f..%.0f hPa", minValue, maxValue);
+  snprintf(buf, sizeof(buf), "%.1f..%.1f kPa", minValue, maxValue);
   display_.setTextSize(1);
   display_.setCursor(0, 56);
   display_.print(buf);

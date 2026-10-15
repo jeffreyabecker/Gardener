@@ -18,12 +18,12 @@ class DisplayUI {
   enum class Page : uint8_t { Status = 0, Programs, Setpoint, Graph, Info, Count };
 
   struct Model {
-    float pressureHpa = 0.0f;
-    float vacuumHpa = 0.0f;
+    float pressureKpa = 0.0f;
+    float vacuumKpa = 0.0f;
     float vacuumPercent = 0.0f;
-    float ambientHpa = 0.0f;
+    float ambientKpa = 0.0f;
     float duty = 0.0f;
-    float targetHpa = 0.0f;
+    float targetKpa = 0.0f;
     bool targetActive = false;
     const char* state = "IDLE";
     const char* program = "";
@@ -53,7 +53,7 @@ class DisplayUI {
   void setCursor(size_t value) { cursor_ = value; }
   void moveCursor(int delta, size_t count);
 
-  void pushPressure(float hpa);
+  void pushPressure(float kpa);
   void toast(const char* text, uint32_t durationMs);
 
   // Overlay used by running scripts.

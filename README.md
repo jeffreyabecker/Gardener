@@ -6,10 +6,24 @@ LE control channel that also accepts **downloadable, scriptable programs**.
 * **MCU**: ESP32-C3 (developed against an ESP32-C3 Super Mini)
 * **Bluetooth**: [NimBLE-Arduino](https://github.com/h2zero/NimBLE-Arduino) 2.x
 * **Scripting**: [Berry](https://github.com/berry-lang/berry) (integration in progress, see [Scripting](#scripting))
-* **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–25 PSI absolute, I2C)
+* **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–172 kPa / 0–25 PSI absolute, I2C)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
 * **Input**: 4 buttons
+
+## Units
+
+**kPa is the primary unit everywhere** — firmware, BLE JSON, scripts and the OLED
+all speak kPa. Ambient air is ~101.3 kPa, the MPRLS full scale is 172.4 kPa, and
+the parts are comfortable below 60 kPa (`cfg::WORKING_RANGE_MAX_KPA`), so kPa
+keeps the numbers short and the resolution meaningful.
+
+| Term | Meaning |
+| --- | --- |
+| `1 kPa` | 10 hPa = 10 mbar = 0.145 PSI = 7.5 mmHg |
+| pressure | absolute pressure in kPa |
+| `vacuum` | deficit below the ambient reference, i.e. `ambient - pressure` |
+| `vacuum_pct` | `vacuum / ambient * 100` |
 
 ## Project layout
 
@@ -106,7 +120,7 @@ safety caps) or on the command line with `-DEGGPLAN_WITH_BERRY=1`.
 
 | Button | Action |
 | --- | --- |
-| UP / DOWN | Navigate: page up/down on STATUS/GRAPH/INFO, list cursor on PROGRAMS, ∓5 hPa on SETPOINT |
+| UP / DOWN | Navigate: page up/down on STATUS/GRAPH/INFO, list cursor on PROGRAMS, ±1 kPa on SETPOINT |
 | OK (click) | PROGRAMS: run the selected program · SETPOINT/STATUS: toggle the hold target on/off |
 | OK (hold) | Next page |
 | BACK | Stop the running program and the pump |
@@ -149,8 +163,8 @@ Scripts are stored in LittleFS as `/programs/<name>.be` and are uploaded over th
 The seams for the Berry VM are already in place:
 
 * [ScriptRuntime.h](./libraries/VacuumCore/src/ScriptRuntime.h) — `ScriptRuntime`
-  interface plus the full `ScriptApi` native surface (`pumpSet`, `pressureHpa`,
-  `vacuumPercent`, `targetHpa`, `displayLine`, `buttonWait`, `delay`, `log`, …).
+  interface plus the full `ScriptApi` native surface (`pumpSet`, `pressureKpa`,
+  `vacuumKpa`, `targetKpa`, `displayLine`, `buttonWait`, `delay`, `log`).
   Every entry point is plain C++ so the BLE command router, the local UI and the
   future Berry bindings all share one implementation.
 * `EGGPLAN_WITH_BERRY` in [VacuumConfig.h](./libraries/VacuumCore/src/VacuumConfig.h)
@@ -167,28 +181,30 @@ The intended script surface (used by the reference programs in
 vacuum.pump(percent)          # manual duty, 0..90
 vacuum.pump_stop()
 vacuum.duty()                 # current duty %
-vacuum.pressure()             # absolute pressure, hPa
-vacuum.vacuum()               # deficit vs ambient, hPa
+vacuum.pressure()             # absolute pressure, kPa
+vacuum.vacuum()               # deficit vs ambient, kPa
 vacuum.vacuum_percent()       # 0..100
-vacuum.target(hpa)            # engage the closed loop
+vacuum.target(kpa)            # engage the closed loop
 vacuum.target_off()
 vacuum.display_line(row, s)   # 7 rows, script overlay page
 vacuum.display_bar(fraction)
 vacuum.button(index)          # 0..3 is the button held down?
 vacuum.wait_button(index, ms) # 0 timeout, 1 click, 2 long, 3 repeat
 vacuum.delay(ms)              # cooperative, keeps the UI/BLE serviced
+vacuum.fmt(value, decimals)   # "40.2", for building display strings
 vacuum.log(message)
 vacuum.millis()
 ```
 
 ## Vacuum control model
 
-`VacuumController` runs a PID loop on absolute pressure with the pump as the only
-actuator, so it can pull down but never vent. When the measurement undershoots the
-target the output drops to zero and the chamber bleeds back up. Gains and the
-deadband live in `VacuumConfig.h` (`PID_KP`, `PID_KI`, `PID_KD`,
-`CONTROL_DEADBAND_HPA`) and are starting points, not tuned values — tune them for
-your chamber volume and pump.
+`VacuumController` runs a PID loop on absolute pressure (all terms in kPa) with
+the pump as the only actuator, so it can pull down but never vent. When the
+measurement undershoots the target the output drops to zero and the chamber bleeds
+back up. Gains and the deadband live in `VacuumConfig.h` (`PID_KP`, `PID_KI`,
+`PID_KD`, `CONTROL_DEADBAND_KPA`) and are starting points, not tuned values — tune
+them for your chamber volume and pump. `CONTROL_MIN_TARGET_KPA` sets the floor for
+targets, and a target above `WORKING_RANGE_MAX_KPA` only logs a warning.
 
 Protections:
 

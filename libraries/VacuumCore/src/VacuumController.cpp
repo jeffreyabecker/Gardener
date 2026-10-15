@@ -38,16 +38,20 @@ float VacuumController::duty() const {
   return ctx_ && ctx_->pump ? ctx_->pump->dutyPercent() : 0.0f;
 }
 
-void VacuumController::setTarget(float hpa) {
-  if (hpa <= cfg::CONTROL_MIN_TARGET_HPA) {
-    LOGW("control: refusing target %.2f hPa", hpa);
+void VacuumController::setTarget(float kpa) {
+  if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
+    LOGW("control: refusing target %.2f kPa", kpa);
     return;
   }
-  targetHpa_ = hpa;
+  if (kpa > cfg::WORKING_RANGE_MAX_KPA) {
+    LOGW("control: target %.1f kPa is above the %.0f kPa working range", kpa,
+         cfg::WORKING_RANGE_MAX_KPA);
+  }
+  targetKpa_ = kpa;
   targetActive_ = true;
   integral_ = 0.0f;
   if (fault_) clearFault();
-  LOGI("control: target %.2f hPa", hpa);
+  LOGI("control: target %.2f kPa", kpa);
 }
 
 void VacuumController::disableTarget() {
@@ -116,11 +120,11 @@ void VacuumController::update(uint32_t nowMs) {
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  float measured = ctx_->sensor->hpa();
-  float error = measured - targetHpa_;  // positive means "still needs vacuum"
+  float measured = ctx_->sensor->kpa();
+  float error = measured - targetKpa_;  // positive means "still needs vacuum"
   lastError_ = error;
 
-  if (error < -cfg::CONTROL_DEADBAND_HPA) {
+  if (error < -cfg::CONTROL_DEADBAND_KPA) {
     // Deeper than requested; the pump cannot vent, so coast and bleed up.
     integral_ = 0.0f;
     output_ = 0.0f;
@@ -131,7 +135,7 @@ void VacuumController::update(uint32_t nowMs) {
     return;
   }
 
-  float controlError = (fabsf(error) <= cfg::CONTROL_DEADBAND_HPA) ? 0.0f : error;
+  float controlError = (fabsf(error) <= cfg::CONTROL_DEADBAND_KPA) ? 0.0f : error;
 
   float derivative = 0.0f;
   uint32_t derivativeDt = nowMs - lastDerivativeMs_;

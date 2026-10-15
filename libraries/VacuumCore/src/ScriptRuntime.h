@@ -23,15 +23,15 @@ class ScriptApi {
   uint32_t pumpRunMs() const;
 
   // --- pressure -----------------------------------------------------------
-  float pressureHpa() const;     // absolute, filtered
-  float vacuumHpa() const;       // deficit against the ambient reference
+  float pressureKpa() const;     // absolute, filtered
+  float vacuumKpa() const;       // deficit against the ambient reference
   float vacuumPercent() const;   // 0..100
-  float ambientHpa() const;
-  void setAmbientHpa(float hpa);
+  float ambientKpa() const;
+  void setAmbientKpa(float kpa);
   void captureAmbient();
 
   // --- closed loop --------------------------------------------------------
-  void targetHpa(float hpa);
+  void targetKpa(float kpa);
   void targetOff();
   float target() const;
   bool targetActive() const;
@@ -49,6 +49,9 @@ class ScriptApi {
   int buttonWait(int index, int timeoutMs);
 
   // --- misc ---------------------------------------------------------------
+  // Formats a value for display or logging without pulling a formatter into
+  // every script.
+  String fmt(float value, int decimals) const;
   void log(const char* message);
   uint32_t nowMs() const;
   void delay(uint32_t ms);

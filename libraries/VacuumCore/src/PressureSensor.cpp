@@ -18,24 +18,25 @@ bool PressureSensor::begin(TwoWire& wire) {
     return false;
   }
   delay(15);  // first conversion after power up
-  float hpa = 0.0f;
-  if (readNow(hpa)) {
-    filteredHpa_ = hpa;
-    lastHpa_ = hpa;
+  float kpa = 0.0f;
+  if (readNow(kpa)) {
+    filteredKpa_ = kpa;
+    lastKpa_ = kpa;
     valid_ = true;
   }
-  LOGI("mprls: online, ambient reference %.1f hPa", filteredHpa_);
+  LOGI("mprls: online, ambient reference %.2f kPa", filteredKpa_);
   return true;
 }
 
-bool PressureSensor::readNow(float& outHpa) {
-  float hpa = sensor_.readPressure();
-  if (isnan(hpa) || hpa <= cfg::MPRLS_MIN_HPA || hpa > cfg::MPRLS_MAX_HPA) {
+bool PressureSensor::readNow(float& outKpa) {
+  // The Adafruit library reports hPa; everything above this boundary is kPa.
+  float kpa = sensor_.readPressure() * 0.1f;
+  if (isnan(kpa) || kpa <= cfg::MPRLS_MIN_KPA || kpa > cfg::MPRLS_MAX_KPA) {
     errorCount_++;
     return false;
   }
-  outHpa = hpa;
-  lastHpa_ = hpa;
+  outKpa = kpa;
+  lastKpa_ = kpa;
   lastSampleMs_ = millis();
   return true;
 }
@@ -45,10 +46,10 @@ void PressureSensor::update(uint32_t nowMs) {
   if (nowMs - lastPollMs_ < cfg::MPRLS_POLL_MS) return;
   lastPollMs_ = nowMs;
 
-  float hpa = 0.0f;
-  if (!readNow(hpa)) return;
+  float kpa = 0.0f;
+  if (!readNow(kpa)) return;
 
-  window_[windowIndex_] = hpa;
+  window_[windowIndex_] = kpa;
   windowIndex_ = (uint8_t)((windowIndex_ + 1) % 5);
   if (windowCount_ < 5) windowCount_++;
 
@@ -67,36 +68,36 @@ void PressureSensor::update(uint32_t nowMs) {
   float median = sorted[windowCount_ / 2];
 
   if (!valid_) {
-    filteredHpa_ = median;
+    filteredKpa_ = median;
     valid_ = true;
   } else {
-    filteredHpa_ += kFilterAlpha * (median - filteredHpa_);
+    filteredKpa_ += kFilterAlpha * (median - filteredKpa_);
   }
 }
 
-float PressureSensor::vacuumHpa() const {
+float PressureSensor::vacuumKpa() const {
   if (!valid_) return 0.0f;
-  float v = ambientHpa_ - filteredHpa_;
+  float v = ambientKpa_ - filteredKpa_;
   return v > 0.0f ? v : 0.0f;
 }
 
 float PressureSensor::vacuumPercent() const {
-  if (!valid_ || ambientHpa_ <= 0.0f) return 0.0f;
-  return clampf(vacuumHpa() / ambientHpa_ * 100.0f, 0.0f, 100.0f);
+  if (!valid_ || ambientKpa_ <= 0.0f) return 0.0f;
+  return clampf(vacuumKpa() / ambientKpa_ * 100.0f, 0.0f, 100.0f);
 }
 
-void PressureSensor::setAmbientHpa(float hpa) {
-  if (hpa < 100.0f || hpa > cfg::MPRLS_MAX_HPA) {
-    LOGW("mprls: rejected ambient reference %.1f hPa", hpa);
+void PressureSensor::setAmbientKpa(float kpa) {
+  if (kpa < 10.0f || kpa > cfg::MPRLS_MAX_KPA) {
+    LOGW("mprls: rejected ambient reference %.2f kPa", kpa);
     return;
   }
-  ambientHpa_ = hpa;
-  LOGI("mprls: ambient reference set to %.1f hPa", hpa);
+  ambientKpa_ = kpa;
+  LOGI("mprls: ambient reference set to %.2f kPa", kpa);
 }
 
 void PressureSensor::captureAmbient() {
   if (!valid_) return;
-  setAmbientHpa(filteredHpa_);
+  setAmbientKpa(filteredKpa_);
 }
 
 }  // namespace eggplan

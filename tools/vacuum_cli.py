@@ -214,9 +214,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--seconds", type=float, default=None
     )
 
+    value_help = {
+        "pump": "0-100 duty percent, or off",
+        "target": "hold target in kPa, or off",
+        "ambient": "ambient reference in kPa, or omit to capture",
+        "autostart": "program to run on boot, or none",
+        "telemetry": "on, off, or a period in ms",
+        "eval": "Berry expression (needs the Berry runtime)",
+        "log": "number of log lines to return",
+    }
     for name in ("pump", "target", "ambient", "autostart", "telemetry", "eval", "log"):
-        child = sub.add_parser(name)
-        child.add_argument("value", nargs="?")
+        child = sub.add_parser(name, help=value_help[name])
+        child.add_argument("value", nargs="?", help=value_help[name])
     return parser
 
 

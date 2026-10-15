@@ -19,7 +19,7 @@ class VacuumController {
   void begin(AppContext& ctx);
   void update(uint32_t nowMs);
 
-  void setTarget(float hpa);
+  void setTarget(float kpa);
   void disableTarget();
   void setManualDuty(float percent);
   void stop();
@@ -28,7 +28,7 @@ class VacuumController {
   ControlState state() const { return state_; }
   const char* stateText() const;
   bool targetActive() const { return targetActive_; }
-  float targetHpa() const { return targetHpa_; }
+  float targetKpa() const { return targetKpa_; }
   float error() const { return lastError_; }
   float output() const { return output_; }
   float duty() const;
@@ -40,7 +40,7 @@ class VacuumController {
   ControlState state_ = ControlState::Idle;
   bool targetActive_ = false;
   bool fault_ = false;
-  float targetHpa_ = 0.0f;
+  float targetKpa_ = 0.0f;
   float integral_ = 0.0f;
   float lastError_ = 0.0f;
   float lastMeasured_ = 0.0f;

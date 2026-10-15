@@ -13,18 +13,18 @@ const char kDefaultHoldProgram[] = R"BERRY(# hold_vacuum.be - pull down to a tar
 # Runs on the Eggplan Vacuum Berry VM. Available module: vacuum
 # (see the README for the full API surface).
 
-var target = 400      # hPa absolute
+var target = 40.0     # kPa absolute
 
-vacuum.log("hold_vacuum: target " + str(target) + " hPa")
+vacuum.log("hold_vacuum: target " + vacuum.fmt(target, 1) + " kPa")
 
 while true
     var p = vacuum.pressure()
-    vacuum.display_line(0, "hold " + str(target) + " hPa")
-    vacuum.display_line(1, "now  " + str(p, 0) + " hPa")
+    vacuum.display_line(0, "hold " + vacuum.fmt(target, 1) + " kPa")
+    vacuum.display_line(1, "now  " + vacuum.fmt(p, 1) + " kPa")
 
-    if p > target + 20
+    if p > target + 2.0
         vacuum.pump(70)
-    elif p < target - 20
+    elif p < target - 2.0
         vacuum.pump(0)
     end
     vacuum.delay(100)
@@ -40,7 +40,7 @@ for cycle : 1 .. 10
     vacuum.delay(3000)
     vacuum.pump(0)
     vacuum.delay(3000)
-    vacuum.log("  pressure " + str(vacuum.pressure(), 1) + " hPa")
+    vacuum.log("  pressure " + vacuum.fmt(vacuum.pressure(), 1) + " kPa")
 end
 vacuum.log("pulse: done")
 )BERRY";
