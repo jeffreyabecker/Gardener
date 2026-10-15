@@ -499,3 +499,17 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
   cross-task safe.
 - **The UX is only a spec until it is on glass.** The browser/params/run flow needs a
   physical pass on the real board before the gestures are locked in.
+
+## 15. Detailed specs
+
+One spec per feature, under [docs/specs/](specs/):
+
+| Spec | Feature |
+| --- | --- |
+| [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
+| [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
+| [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, input ownership |
+| [04-on-device-ux](specs/04-on-device-ux.md) | Buttons, browser, params editor, run screen, break-out |
+| [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
+| [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
+| [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, ProgramScreen, display ownership |
