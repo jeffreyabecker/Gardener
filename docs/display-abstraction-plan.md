@@ -112,8 +112,20 @@ device and `begin()` runs again. So "at startup or reboot" is one method and one
 `DECISION:` the splash is the device's own, and it is the exception that proves §4's rule. The
 host owns the panel after boot, but before a host has said anything the panel is the only thing
 that can tell a person at the rig that this device is alive at all, and which firmware it is
-running. `App::splash()` draws the product name and `fw <version>`, clears first, and flushes
-through the overlay so it gets the battery too.
+running. It draws the same two lines `StatusPage::splash()` draws today, through the interface,
+and flushes through the overlay so it gets the battery as well:
+
+```cpp
+void App::splash() {
+  display_.clear();
+  display_.text(0, 0, "Eggplan Vacuum", 1, false);
+  display_.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
+  display_.flush();
+}
+```
+
+The one thing that does *not* come across is the page's `kPaper`/`kInk`: `clear()` is paper and
+`text` is ink, which is the whole point of the interface underneath.
 
 `StatusPage.{h,cpp}` are deleted, along with its `render()` call in `App`.
 
@@ -123,10 +135,11 @@ which this supersedes — the honest statement is that the panel shows the boot 
 holds it. There is no timeout on it, because a timeout would be a device clock and this device
 does not keep one.
 
-`DECISION:` nothing is annunciated locally, not even a fault. A fault, a low battery and a vent
-timeout all live in `status` and on the battery icon, which is the only thing the device draws
-for itself. The person standing at the rig sees what the host chose to draw — and if the host
-drew nothing, they see a blank panel and the chamber venting. That is a real loss and it is R8.
+`DECISION:` nothing else is annunciated locally, not even a fault. A fault, a low battery and a
+vent timeout all live in `status`. The battery icon and the boot screen are the only two things
+the device draws for itself, and the person standing at the rig sees what the host chose to draw
+— or, if no host ever drew, whatever the last device-drawn frame was, while the chamber vents.
+That is a real loss and it is R8.
 
 ## 5. The drawing commands
 
@@ -186,7 +199,8 @@ the bits and a value that is much longer than anything else on the line.
 
 ## 6. Consequences
 
-1. **The host owns every pixel except the battery.** Any layout, any language, any redraw rate.
+1. **The host owns every pixel except the battery and the boot screen.** Any layout, any language,
+   any redraw rate.
 2. **The device shrinks**: no page, no layout constants, no text metrics of our own, no
    `twoDigits`. Roughly 200 lines leave with `StatusPage`, and what replaces them is `App::splash()`
    and a command table.
