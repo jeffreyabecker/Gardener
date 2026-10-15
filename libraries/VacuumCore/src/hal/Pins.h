@@ -39,7 +39,17 @@ constexpr uint8_t PUMP_PWM_RESOLUTION = 10;
 // flyback diode across the coil, wired like the pump.
 constexpr int VENT_VALVE = 5;
 
+// --- Battery sense ---------------------------------------------------------
+// A 1S Li-ion pack through a 100k/100k divider, so the top of the pack lands inside the
+// ADC range. GPIO4 is ADC1 channel 4, and it is the only free ADC1 pin: GPIO0..3 are
+// ADC1 as well, but they are the button pins, and a pressed button would yank the sense
+// line to ground. GPIO4 also stays clear of the GPIO2 strapping pin.
+constexpr int BATTERY_ADC = 4;
+constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
+
 // --- Four button UI, active low to GND, internal pull ups ------------------
+// Nothing reads these. They are kept wired and named so a future build can use them
+// without a board revision (Q16).
 constexpr int BTN_UP = 0;
 constexpr int BTN_DOWN = 1;
 constexpr int BTN_OK = 3;

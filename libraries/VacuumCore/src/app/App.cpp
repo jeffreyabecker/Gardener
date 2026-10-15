@@ -18,6 +18,7 @@ void serialLogSink(const char* text, size_t length) {
 App::App()
     : pump_(pumpConfig()),
       vent_(ventConfig()),
+      battery_(batteryConfig()),
       display_(Wire, pins::OLED_I2C_ADDR, pins::OLED_WIDTH, pins::OLED_HEIGHT),
       control_(pump_, sensor_, vent_, pidConfig()),
       renderer_(display_),
@@ -38,6 +39,17 @@ VentValveConfig App::ventConfig() {
   VentValveConfig config;
   config.pin = pins::VENT_VALVE;
   config.activeHigh = true;
+  return config;
+}
+
+BatteryConfig App::batteryConfig() {
+  BatteryConfig config;
+  config.adcPin = pins::BATTERY_ADC;
+  config.dividerRatio = pins::BATTERY_DIVIDER_RATIO;
+  config.emptyVolts = cfg::BATTERY_EMPTY_VOLTS;
+  config.fullVolts = cfg::BATTERY_FULL_VOLTS;
+  config.calibration = cfg::BATTERY_CALIBRATION;
+  config.lowPercent = cfg::BATTERY_LOW_PERCENT;
   return config;
 }
 
@@ -62,6 +74,7 @@ bool App::begin() {
   bool sensorOk = sensor_.begin(Wire);
   pump_.begin();
   vent_.begin();
+  battery_.begin();
   control_.begin();
   renderer_.begin();
   device_ = readDeviceInfo();
@@ -76,7 +89,7 @@ bool App::begin() {
 }
 
 void App::refreshSnapshot() {
-  snapshot_ = buildSnapshot(pump_, sensor_, control_, device_);
+  snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_, device_);
   snapshot_.bleConnected = ble_.connected();
 }
 
@@ -85,6 +98,7 @@ void App::update() {
 
   sensor_.update(now);
   pump_.update(now);
+  battery_.update(now);
   control_.update(now);
 
   // A central that leaves or goes quiet releases the chamber (Q4).

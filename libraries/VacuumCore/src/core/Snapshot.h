@@ -62,6 +62,11 @@ struct SystemSnapshot {
   float floorKpa = 0.0f;
   uint32_t remainSeconds = 0;  // totalSeconds == 0 means "no timer"
   uint32_t totalSeconds = 0;
+  // battery: a readout only, nothing acts on it (Q11)
+  bool batteryPresent = false;
+  bool batteryLow = false;
+  float batteryVolts = 0.0f;
+  uint8_t batteryPercent = 0;
   // device and link
   const DeviceInfo* device = nullptr;
   bool bleConnected = false;

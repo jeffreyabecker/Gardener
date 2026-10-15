@@ -4,6 +4,7 @@
 
 namespace eggplan {
 
+class Battery;
 class PressureSensor;
 class Pump;
 class VacuumControl;
@@ -12,6 +13,7 @@ class VacuumControl;
 // nothing to keep between calls.
 
 SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
-                            const VacuumControl& control, const DeviceInfo& device);
+                            const VacuumControl& control, const Battery& battery,
+                            const DeviceInfo& device);
 
 }  // namespace eggplan

@@ -4,6 +4,7 @@
 
 #include "core/ReplyQueue.h"
 #include "core/Snapshot.h"
+#include "hal/Battery.h"
 #include "hal/Device.h"
 #include "hal/Display.h"
 #include "hal/PressureSensor.h"
@@ -33,6 +34,7 @@ class App {
   static PumpConfig pumpConfig();
   static PidConfig pidConfig();
   static VentValveConfig ventConfig();
+  static BatteryConfig batteryConfig();
   void refreshSnapshot();
 
   // Declaration order is construction order, and several members hold references to the
@@ -40,6 +42,7 @@ class App {
   PressureSensor sensor_;
   Pump pump_;
   VentValve vent_;
+  Battery battery_;
   Display display_;
   VacuumControl control_;
   DeviceInfo device_;

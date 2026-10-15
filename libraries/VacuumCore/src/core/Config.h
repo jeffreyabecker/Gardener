@@ -37,6 +37,14 @@ constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
 
+// --- Battery ---------------------------------------------------------------
+// 1S Li-ion (Q6), a straight line between empty and full. BATTERY_CALIBRATION trims the
+// divider against a real meter because the ESP32 ADC is not lab grade.
+constexpr float BATTERY_EMPTY_VOLTS = 3.2f;
+constexpr float BATTERY_FULL_VOLTS = 4.2f;
+constexpr float BATTERY_CALIBRATION = 1.0f;
+constexpr uint8_t BATTERY_LOW_PERCENT = 20;
+
 // --- Link ------------------------------------------------------------------
 // 0 disables the silent-central timeout: a long run with a connected but quiet client is
 // legitimate, and the disconnect path already covers a client that leaves (Q17).
