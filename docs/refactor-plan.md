@@ -1,9 +1,12 @@
 # Refactor plan: layering, folders, and deleting `AppContext`
 
-Status: **proposed** · revision 2 · owner: unassigned · scope: `libraries/VacuumCore` only
+Status: **proposed** · revision 3 · owner: unassigned · scope: `libraries/VacuumCore` only
 
 Revision 2: script hosting moved out of `services/` into `io/`, because the runtime
 is an outside interface rather than machine policy. See §3.2.
+
+Revision 3: no shared util. `Util.h` is dissolved into per-owner files (§3.3), and the
+plan gains a leak sweep for details that are visible too high up the stack (§3.4).
 
 Annotation guide: open questions are numbered **Q1…Q8**, decisions taken in this
 document are marked `DECISION:`. Edit this file in place and the plan will be
@@ -78,16 +81,17 @@ libraries/VacuumCore/src/
   VacuumCore.h              includes app/App.h only
   core/
     Config.h                policy tunables, leaf (includes nothing)
-    Snapshot.h              SystemSnapshot, ProgramInfo, TelemetrySettings, UiIntent
-    Units.h / Units.cpp     kPa conversions, clamp, number formatting
-    Crc32.h / Crc32.cpp
-    Clock.h                 nowMs(): OPTIONAL, see Q1
+    Snapshot.h              SystemSnapshot, DeviceInfo, ProgramInfo, ScriptOverlay,
+                            TelemetrySettings, UiIntent, ProgramChecksum
+    Math.h                  clamp, and nothing else
+    Pressure.h / .cpp       kPa conversions and pressure formatting
+    Format.h                number -> string, shared by JSON and the OLED
     Log.h / Log.cpp         level + ring buffer, writes to an installed sink
     Pid.h / Pid.cpp         pure controller math
-    Telemetry.h / .cpp      SystemSnapshot -> JSON
-    UploadFrames.h / .cpp   B / D / E / X frame decode, pure
   hal/
     Pins.h                  GPIO map, I2C addresses, display geometry, PWM settings
+    Device.h / Device.cpp   chip model, SDK version, free heap (ESP facts)
+    Clock.h                 nowMs(): wraps millis()
     Pump.h / Pump.cpp
     Tachometer.h / .cpp     optional, split out of Pump
     PressureSensor.h / .cpp
@@ -95,10 +99,11 @@ libraries/VacuumCore/src/
     Buttons.h / Buttons.cpp
     Storage.h / Storage.cpp LittleFS mount / file handles
   services/
-    ProgramStore.h / .cpp   program list, staged writes, autostart
-    ProgramUploader.h / .cpp chunked upload session (uses UploadFrames + ProgramStore)
+    ProgramStore.h / .cpp   programs, staged writes, autostart, checksum (private)
+    ProgramUploader.h / .cpp frame grammar + upload session, checksum compare
     VacuumControl.h / .cpp  PID + safety state machine
-    SnapshotBuilder.h / .cpp pump, sensor, control, store -> SystemSnapshot
+    SnapshotBuilder.h / .cpp hardware and policy state -> SystemSnapshot
+    SnapshotJson.h / .cpp    SystemSnapshot -> status, info and program list JSON
   io/
     commands/
       CommandRouter.h / .cpp   line grammar (today's Protocol.cpp)
@@ -150,6 +155,18 @@ loop. That struct already exists as `DisplayUI::Model`.
 `scripts/check-layers.ps1` parses every `#include "…"` and fails on an upward
 include. It is wired into the build task so a rotted graph cannot compile.
 
+**Rule: no `util`, `common`, `helpers` or `misc` folder or header.** A helper lives
+with its single owner, in that owner's folder, and is private unless a second layer
+legitimately needs it. When a second consumer does appear, the helper moves *down* a
+layer in a commit of its own — that is the cheap direction, and the point where the
+move is justified rather than guessed.
+
+Corollary: **`core/` is visible to every layer**, so anything parked there is public
+API whether or not that was the intent. Weight `core/` towards plain data and
+domain-neutral math, and treat a new file there as a design decision rather than a
+convenience. `clamp` stays because every layer may include `core/` and it carries no
+domain knowledge; `crc32` does not, because only two files need it.
+
 ### 3.2 Why the script host is not a service
 
 `ScriptRuntime`, `ScriptApi` and the concrete runtimes hold no vacuum state,
@@ -185,6 +202,47 @@ vtable.
 The vendored VM source stays a separate Arduino library (`libraries/Berry/`) so its
 licence and build flags remain independent of ours; `io/script/berry/` holds only
 our glue.
+
+### 3.3 Where today's `Util.h` goes
+
+`Util.h` is the leak in its purest form: five helpers with five different owners,
+published to every layer. Each one moves to its owner.
+
+| Today | Single owner | New home |
+| --- | --- | --- |
+| `clampf` | genuinely generic; no domain knowledge | `core/Math.h` |
+| `crc32`, `crc32Update` | program transfer integrity | private in `services/ProgramStore.cpp` + `services/ProgramUploader.cpp` |
+| `formatFloat` | number to string for JSON and the OLED | `core/Format.h` |
+| `kpaToHpa`, `kpaToBar`, `kpaToPsi`, `kpaToInHg`, `kpaToMmHg` | the pressure domain | `core/Pressure.h/.cpp` |
+| `jsonEscape` | JSON encoding | private to `services/SnapshotJson.cpp`, which also takes over the program list encoding, so the router emits no JSON of its own |
+
+Note what the checksum change actually buys: the client's CRC becomes an opaque
+`ProgramChecksum` that the router unpacks and hands to the store without ever
+knowing the polynomial, the initial value or the final XOR. Those live in two `.cpp`
+files. The `docs/ble-protocol.md` specification stays the only other place the
+algorithm is written down, because the host tool has to reproduce it — a protocol
+document, not a header.
+
+### 3.4 Leak sweep
+
+Same lens applied to the rest of the plan. Each of these is a detail visible a layer
+or two too high.
+
+| Leak | Why it leaks | Fix |
+| --- | --- | --- |
+| `progproto::kBegin/kData/kEnd/kAbort` in `Protocol.h` | published in a header, but referenced only inside `Protocol.cpp`; `BleService` forwards raw bytes and never sees them | constants become file-private in `ProgramUploader.cpp` — a header is a contract, so keep the frame grammar out of it |
+| `CommandRouter::statusJson()` / `infoJson()` read `ESP.getChipModel()`, `runtime->name()`, `store->totalBytes()` | a text view reaching into four modules, so none of them can change alone | every field becomes part of `SystemSnapshot`; `SnapshotJson` is a pure function of the snapshot |
+| `CommandRouter::emitList()` encodes program JSON with `jsonEscape` | a second JSON producer, so two layers share an encoder both must keep correct | `SnapshotJson::programs(snapshot)`; the router returns lines and never encodes |
+| `ProgramStore::pathFor()` public | exposes the `/programs/<name>.be` layout to callers | private; `validName()` stays public because it is the name contract |
+| `DisplayUI` overlay buffer (`overlayLines_[7]`) | script layout policy inside the display driver, and `ScriptApi` reaches into the driver to write it | `ScriptOverlay` plain data in `core/Snapshot.h`, owned by `App`, written by `ScriptApi`, drawn by `ui/Renderer` — the same pattern as `TelemetrySettings` |
+| `Pump::tachIsr(void*)` public static | ISR plumbing is driver internals | private |
+| `Pump::setDutyNow()` public | published escape hatch past the ramp | **no callers at all** (verified: declaration + definition only) — delete it; `emergencyStop()` writes zero directly |
+| `Storage` exposing `fs::File` in its header | a port would hide it, but we chose no interfaces | **accepted exception**, documented in the header; `ProgramStore` is the only consumer |
+
+`ScriptOverlay` and `DeviceInfo` joining `SystemSnapshot` is what makes the
+unification work: one plain-data view of the machine, three consumers (`SnapshotJson`,
+`ui/Renderer`, the script host's overlay), and nothing outside `App` holding a module
+pointer.
 
 ## 4. Replacing `AppContext`
 
@@ -265,16 +323,16 @@ coupling at the same cost.
 | Today | Becomes |
 | --- | --- |
 | `AppContext.h` | **deleted** |
-| `App.h/.cpp` | `app/App.h/.cpp` (+ `services/SnapshotBuilder`) |
+| `App.h/.cpp` | `app/App.h/.cpp` (+ `services/SnapshotBuilder`, `hal/Device`) |
 | `VacuumConfig.h` | split: `core/Config.h` (policy) + `hal/Pins.h` (wiring) — see Q2 |
-| `Util.h` | `core/Units.h/.cpp` + `core/Crc32.h/.cpp` |
+| `Util.h` | split by owner: `core/Math.h` (clamp), `core/Pressure.*` (kPa), `core/Format.h` (numbers); `crc32` private to `services/`; `jsonEscape` private to `services/SnapshotJson.cpp` (§3.3) |
 | `Log.h` | `core/Log.h/.cpp`, sink installed by `App` |
 | `Pump.h/.cpp` | `hal/Pump.h/.cpp` (+ new `hal/Tachometer.h/.cpp`) |
 | `PressureSensor.h/.cpp` | `hal/PressureSensor.h/.cpp` |
-| `DisplayUI.h/.cpp` | split: `hal/Display.*` (draw + flush), `ui/Renderer.*`, `ui/pages/*.cpp`, `ui/UiController.*` |
+| `DisplayUI.h/.cpp` | split: `hal/Display.*` (draw + flush), `ui/Renderer.*`, `ui/pages/*.cpp`, `ui/UiController.*`; the 7 line overlay buffer becomes `ScriptOverlay` data in `core/Snapshot.h` |
 | `Buttons.h/.cpp` | `hal/Buttons.h/.cpp` |
 | `ProgramStore.h/.cpp` | `services/ProgramStore.h/.cpp` over new `hal/Storage.h/.cpp` |
-| `Protocol.h/.cpp` | split: `io/commands/CommandRouter.*`, `services/ProgramUploader.*`, `core/Telemetry.*`, `core/UploadFrames.*` |
+| `Protocol.h/.cpp` | split: `io/commands/CommandRouter.*`, `services/ProgramUploader.*` (owns the frame grammar), `services/SnapshotJson.*`, `core/Math.h` |
 | `VacuumController.h/.cpp` | `services/VacuumControl.h/.cpp` + `core/Pid.h/.cpp` |
 | `ScriptRuntime.h/.cpp` | split: `io/script/ScriptRuntime.h`, `io/script/ScriptApi.h/.cpp`, `io/script/NullRuntime.h/.cpp` (+ `io/script/berry/` later) |
 | `BleService.h/.cpp` | `io/ble/BleService.h/.cpp`, telemetry send loop folded in |
@@ -289,9 +347,9 @@ reverted independently.
 | --- | --- | --- | --- |
 | 0 | Probe + guardrail | prove subfolder include paths in the Arduino build; add `scripts/check-layers.ps1`; baseline `arduino-cli compile` | green |
 | 1 | Folders | `git mv` into the tree above, include fixes only, no edits | green, zero behaviour change |
-| 2 | `core/` | split `Config.h`/`Pins.h`; extract `Units`, `Crc32`, `Log` (sink, no `Serial`), `Pid`, `UploadFrames`, `Telemetry` | green |
+| 2 | `core/` | split `Config.h` / `Pins.h`; extract `Math`, `Pressure`, `Format`, `Log` (sink, no `Serial`), `Pid`; make the checksum private to `services/` | green |
 | 3 | `hal/` | drivers become self-contained classes with constructor config; `Tachometer` split out; `Display` reduced to primitives + flush | green |
-| 4 | `services/` | `Snapshot` + `SnapshotBuilder`; `VacuumControl`, `ProgramStore`, `ProgramUploader` take concrete references; `DisplayUI::Model` → `SystemSnapshot` | green |
+| 4 | `services/` | `Snapshot` + `SnapshotBuilder` + `SnapshotJson`; `VacuumControl`, `ProgramStore`, `ProgramUploader` take concrete references; `DisplayUI::Model` → `SystemSnapshot`; §3.4 leak sweep | green |
 | 5 | `io/` | `CommandRouter` out of `Protocol.cpp`; `Telemetry` JSON to `core/`; `ScriptApi` + `ScriptRuntime` + `NullRuntime`; `BleService` takes router + settings + snapshots with telemetry folded in | green, BLE commands byte-identical |
 | 6 | `ui/` | `Renderer` + per-page files + `UiController` intents; `App` executes intents | green, same pages and buttons |
 | 7 | Cleanup + suction fix | delete `AppContext.h`; section 8 changes; README layout and dependency table | green + docs match |
@@ -302,6 +360,9 @@ reverted independently.
 - [ ] `scripts/check-layers.ps1` passes and runs in the build task
 - [ ] `arduino-cli compile --fqbn esp32:esp32:esp32c3` green with no new warnings
 - [ ] every class header names its collaborators; no nullable design pointers
+- [ ] no `util`, `common` or `helpers` header or folder exists
+- [ ] no layer reaches into a module through a struct, snapshot or settings object it does not own
+- [ ] every §3.4 leak sweep row is closed, or explicitly accepted with a note in the header
 - [ ] pins, BLE protocol and UI are unchanged from today
 - [ ] README structure table matches the tree
 
@@ -350,9 +411,10 @@ Changes:
 
 ## 9. Open questions
 
-- **Q1** — keep `core/Clock.h` (`nowMs()` with a fakeable tick source) or let
-  modules call `millis()` directly? Recommendation: keep it; it is one small file
-  and it removes wall-clock access from `core/`.
+- **Q1** — keep a clock seam at all? `millis()` is a hardware fact, so if it is kept
+  it belongs in `hal/Clock.h`, not `core/` (revision 3 moved it). Recommendation:
+  keep it — it is the one thing that makes the PID and the scheduling paths testable
+  off target later.
 - **Q2** — do the pump's duty cap, ramp and max-run-time limits belong in
   `core/Config.h` as safety policy, or in `hal/Pump` as motor characteristics?
   Recommendation: `core/Config.h`, because the control loop is what must respect
@@ -379,3 +441,10 @@ Changes:
   command grammar stay put — which reintroduces the `services/ -> io/ ->
   services/` folder cycle described in §3.2? Recommendation: keep the three
   together under `io/`.
+- **Q10** — should the JSON encoders live in `services/SnapshotJson` (proposed, keeps
+  its counterpart `SnapshotBuilder` company and keeps `io/` thin) or in
+  `io/commands/` (they are consumed only by the two text interfaces)? Recommendation:
+  `services/`, so that `io/` stays a thin adapter layer.
+- **Q11** — `ScriptOverlay` as a fixed 7 line buffer in `SystemSnapshot`, or a
+  `core/ScriptOverlay.h` of its own once it grows past lines and a bar?
+  Recommendation: keep it in `Snapshot.h` while it is nine fields.
