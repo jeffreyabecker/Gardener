@@ -95,11 +95,11 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 
 ## 6. Info payload
 
-`fw=0.4.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
+`fw=0.5.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
 
 | Key | Notes |
 | --- | --- |
-| `fw` | firmware version, and the only version marker there is. `0.4.0` is the revision that added the drawing commands (§8) |
+| `fw` | firmware version, and the only version marker there is: `0.4.0` added the drawing commands (§8), `0.5.0` dropped `set hold` |
 | `chip` | chip model |
 | `heap` | free heap in bytes |
 | `batt_v` | pack volts, 2 dp, `-` when no pack is fitted |
@@ -111,12 +111,11 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 | Command | Reply | Notes |
 | --- | --- | --- |
 | `help` | `ok help=info\|status\|help\|start\|stop\|reset\|reboot\|ambient\|set\|draw\|flush` | the one list-valued payload |
-| `info` | `ok fw=0.4.0 …` | device identity |
+| `info` | `ok fw=0.5.0 …` | device identity |
 | `status` | `ok <status payload>` | one shot; poll it for a readout |
 | `start` | `ok started` / `err not_ready` | closes the valve, then pulls to the target |
 | `stop` | `ok stopped` | pump off, then vent. The normal way a run ends |
 | `set target <kPa\|off>` | `ok target=40.0` / `ok target=off` | the only actuator command |
-| `set hold <seconds\|off>` | `ok hold=572` / `ok hold=off` | stored and never acted on; cleared by `start` (§9) |
 | `set ambient <kPa>` | `ok ambient=101.33` | rejected when outside what the part can measure |
 | `set log <on\|off>` | `ok log=on` / `ok log=off` | diagnostics on this stream |
 | `set rotation <0-3>` | `ok rotation=1` | panel orientation; `out_of_range` outside 0-3 |
@@ -135,8 +134,6 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 <- ok started
 -> status
 <- ok kpa=40.21 vac=61.07 pct=60.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
--> set hold 592
-<- ok hold=592
 -> stop
 <- ok stopped
 ```
@@ -275,11 +272,8 @@ What a controller has to know:
   time, so a run continues until you send `stop`. `HOLD` is the cue, not a countdown: it means
   the device's own deadband has decided the target is reached, which is the moment to start
   timing and the one thing you cannot work out for yourself, because the deadband is the
-  device's loop.
-* **`set hold <seconds>` is stored and nothing else.** The device never acts on it, `start`
-  clears it, and nothing happens when it reaches zero — you send `stop`. It is not drawn and not
-  reported back, so a countdown on the panel is entirely the host's: its own timer, its own
-  `draw text`.
+  device's loop. Timing it and drawing it are both yours: the device is not told how long a
+  hold is, and has no command that takes a duration.
 * **Faults latch.** Only `reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.

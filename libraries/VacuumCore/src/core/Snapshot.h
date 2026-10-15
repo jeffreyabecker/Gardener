@@ -44,9 +44,6 @@ struct SystemSnapshot {
   bool targetActive = false;
   float targetKpa = 0.0f;
   float floorKpa = 0.0f;
-  // The countdown the controller is running, pushed down for the panel to draw. The device
-  // keeps no clock: this is a display value, and 0 means "show nothing" (Q5).
-  uint32_t holdSeconds = 0;
   // battery: a readout only, nothing acts on it (Q11)
   bool batteryPresent = false;
   bool batteryLow = false;

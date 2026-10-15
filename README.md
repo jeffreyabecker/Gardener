@@ -197,7 +197,7 @@ two things of its own — the boot splash, and the battery on top of every frame
 
 ```
   Eggplan Vacuum
-  fw 0.4.0                              ▐███▐ 78%      <- device: splash, then the battery
+  fw 0.5.0                              ▐███▐ 78%      <- device: splash, then the battery
 ```
 
 Everything else is whatever the host sent: `draw` commands fill the panel's buffer, and `flush`
@@ -236,22 +236,20 @@ replies:
 
 ```
 -> info
-<- ok fw=0.4.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
+<- ok fw=0.5.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
 -> set target 40
 <- ok target=40.0
 -> start
 <- ok started
 -> status
 <- ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
--> set hold 572
-<- ok hold=572
 -> stop
 <- ok stopped
 ```
 
 That last pair is the whole run model in miniature: the device reaches the target, reports
 `HOLD`, and waits. The controller times the hold and sends `stop` when it is done — the device
-has no duration of its own and will hold until told.
+has no duration of its own and will hold until told, and no command that takes one.
 
 The full grammar, key tables, error codes and state model are in
 [docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and

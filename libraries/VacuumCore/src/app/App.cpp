@@ -87,7 +87,6 @@ void App::refreshSnapshot() {
   snapshot_.targetActive = system_.targetActive();
   snapshot_.targetKpa = system_.targetKpa();
   snapshot_.floorKpa = system_.minReachableKpa();
-  snapshot_.holdSeconds = link_.holdSeconds();
 
   snapshot_.batteryPresent = battery_.present();
   snapshot_.batteryLow = battery_.low();

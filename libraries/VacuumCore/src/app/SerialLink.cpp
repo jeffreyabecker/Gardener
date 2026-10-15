@@ -83,18 +83,6 @@ bool parseFloat(const char* text, float& out) {
   return true;
 }
 
-bool parseU32(const char* text, uint32_t& out) {
-  if (!text || *text < '0' || *text > '9') return false;
-  uint32_t value = 0;
-  for (const char* cursor = text; *cursor != '\0'; cursor++) {
-    if (*cursor < '0' || *cursor > '9') return false;
-    if (value > 429496729u) return false;  // would wrap
-    value = value * 10u + (uint32_t)(*cursor - '0');
-  }
-  out = value;
-  return true;
-}
-
 // A coordinate. Out of range is refused rather than wrapped: the library clips anything off the
 // panel, but a coordinate that does not fit in an int16_t is a client bug worth telling about.
 bool parseCoord(const char* text, int16_t& out) {
@@ -461,8 +449,6 @@ void SerialLink::dispatch(char* line) {
       err("not_ready");
       return;
     }
-    // A countdown belongs to the run it was set for, so a new run starts without one.
-    holdSeconds_ = 0;
     ok("started");
     return;
   }
@@ -498,24 +484,6 @@ void SerialLink::dispatch(char* line) {
       }
       system_.setTarget(kpa);
       String payload = "target=" + String(kpa, 1);
-      ok(payload.c_str());
-      return;
-    }
-    if (same(key, "hold")) {
-      // The countdown the controller is running, in seconds. The device renders it and never
-      // counts it, so this changes nothing about the run.
-      if (same(value, "off")) {
-        holdSeconds_ = 0;
-        ok("hold=off");
-        return;
-      }
-      uint32_t seconds = 0;
-      if (!parseU32(value, seconds)) {
-        err("bad_argument");
-        return;
-      }
-      holdSeconds_ = seconds;
-      String payload = "hold=" + String(seconds);
       ok(payload.c_str());
       return;
     }

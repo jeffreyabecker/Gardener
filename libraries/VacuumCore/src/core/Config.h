@@ -10,7 +10,7 @@
 namespace eggplan {
 namespace cfg {
 
-constexpr const char* FIRMWARE_VERSION = "0.4.0";
+constexpr const char* FIRMWARE_VERSION = "0.5.0";
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
