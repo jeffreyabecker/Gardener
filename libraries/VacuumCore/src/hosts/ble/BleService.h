@@ -3,37 +3,30 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 
-#include "core/AppContext.h"
-#include "services/ProgramStore.h"
-#include "hosts/commands/Protocol.h"
-#include "core/VacuumConfig.h"
+#include "core/ReplyQueue.h"
+#include "core/Snapshot.h"
 
 namespace eggplan {
 
-// Bluetooth LE transport.
+class CommandRouter;
+class ProgramUploader;
+
+// Bluetooth LE transport: NimBLE wiring, notification chunking and inbound line
+// assembly. Nothing else.
 //
-// Four characteristics under one service:
-//   cmd   write     newline terminated command lines (same grammar as serial)
-//   rsp   notify    replies; long replies are split into 0x01-tagged chunks and
-//                   terminated by a 0x02 byte
-//   prog  write     program transfer frames, one opcode per write
-//   info  read      device information JSON
-//
-// Telemetry notifications are prefixed with "tel " so a client can tell them
-// apart from command replies.
-class BleService : public ResponseSink {
+// Inbound command bytes are parked in a queue and drained from poll(), so all policy
+// runs on the main loop while the NimBLE task only hands over bytes. Replies go the
+// other way through a queue; the machine view arrives as a constructor reference, so
+// the transport owns no view state and nothing points back at it.
+class BleService {
  public:
-  void begin(AppContext& ctx);
-  void update(uint32_t nowMs);
+  BleService(CommandRouter& router, ProgramUploader& uploader,
+             TelemetrySettings& telemetry, ReplyQueue& replies, ReplyQueue& inbound,
+             const SystemSnapshot& snapshot);
 
+  void begin();
+  void poll(uint32_t nowMs);
   bool connected() const;
-  void setTelemetry(bool enabled, uint32_t periodMs);
-  bool telemetryEnabled() const { return telemetry_; }
-  uint32_t telemetryPeriodMs() const { return telemetryPeriodMs_; }
-
-  void emit(const String& text) override;
-  void notifyTelemetry();
-
   const char* deviceName() const { return name_.c_str(); }
 
  private:
@@ -43,28 +36,33 @@ class BleService : public ResponseSink {
   void handleConnect(uint16_t mtu);
   void handleDisconnect(int reason);
   void handleMtuChange(uint16_t mtu);
-  void onCommandData(const uint8_t* data, size_t len);
-  void onProgramData(const uint8_t* data, size_t len);
-  void readInfo();
+  void onCommandData(const uint8_t* data, size_t length);
+  void onProgramData(const uint8_t* data, size_t length);
+  void onInfoRead();
+  void drainInbound();
+  void drainReplies();
+  void send(const String& text);
+  void sendTelemetry();
   uint16_t chunkSize() const;
 
-  AppContext ctx_;
+  CommandRouter& router_;
+  ProgramUploader& uploader_;
+  TelemetrySettings& telemetry_;
+  ReplyQueue& replies_;
+  ReplyQueue& inbound_;
+  const SystemSnapshot& snapshot_;
+
   NimBLEServer* server_ = nullptr;
   NimBLECharacteristic* cmdChar_ = nullptr;
   NimBLECharacteristic* rspChar_ = nullptr;
   NimBLECharacteristic* progChar_ = nullptr;
   NimBLECharacteristic* infoChar_ = nullptr;
-  CommandRouter router_{ctx_};
-  ProgramUploader uploader_;
 
   String name_;
   String lineBuffer_;
   bool started_ = false;
-  bool telemetry_ = false;
-  uint32_t telemetryPeriodMs_ = cfg::TELEMETRY_DEFAULT_MS;
-  uint32_t lastTelemetryMs_ = 0;
   uint16_t mtu_ = 23;
-  CommandRouter* routerPtr_ = nullptr;
+  uint32_t lastTelemetryMs_ = 0;
 };
 
 }  // namespace eggplan

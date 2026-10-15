@@ -2,19 +2,20 @@
 
 #include <math.h>
 
+#include "core/Config.h"
 #include "core/Log.h"
-#include "core/Util.h"
+#include "core/Math.h"
 
 namespace eggplan {
 namespace {
 constexpr float kFilterAlpha = 0.3f;
-constexpr uint32_t kStaleSampleMs = 1000;
 }
 
 bool PressureSensor::begin(TwoWire& wire) {
-  present_ = sensor_.begin(cfg::MPRLS_I2C_ADDR, &wire);
+  ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
+  present_ = sensor_.begin(config_.address, &wire);
   if (!present_) {
-    LOGE("mprls: not found at 0x%02X", cfg::MPRLS_I2C_ADDR);
+    LOGE("mprls: not found at 0x%02X", config_.address);
     return false;
   }
   delay(15);  // first conversion after power up
@@ -29,9 +30,8 @@ bool PressureSensor::begin(TwoWire& wire) {
 }
 
 bool PressureSensor::readNow(float& outKpa) {
-  // The Adafruit library reports hPa; everything above this boundary is kPa.
-  float kpa = sensor_.readPressure() * 0.1f;
-  if (isnan(kpa) || kpa <= cfg::MPRLS_MIN_KPA || kpa > cfg::MPRLS_MAX_KPA) {
+  float kpa = sensor_.readPressure() * 0.1f;  // the library reports hPa
+  if (isnan(kpa) || kpa <= config_.minKpa || kpa > config_.maxKpa) {
     errorCount_++;
     return false;
   }
@@ -43,7 +43,7 @@ bool PressureSensor::readNow(float& outKpa) {
 
 void PressureSensor::update(uint32_t nowMs) {
   if (!present_) return;
-  if (nowMs - lastPollMs_ < cfg::MPRLS_POLL_MS) return;
+  if (nowMs - lastPollMs_ < config_.pollMs) return;
   lastPollMs_ = nowMs;
 
   float kpa = 0.0f;
@@ -77,8 +77,8 @@ void PressureSensor::update(uint32_t nowMs) {
 
 float PressureSensor::vacuumKpa() const {
   if (!valid_) return 0.0f;
-  float v = ambientKpa_ - filteredKpa_;
-  return v > 0.0f ? v : 0.0f;
+  float deficit = ambientKpa_ - filteredKpa_;
+  return deficit > 0.0f ? deficit : 0.0f;
 }
 
 float PressureSensor::vacuumPercent() const {
@@ -87,7 +87,7 @@ float PressureSensor::vacuumPercent() const {
 }
 
 void PressureSensor::setAmbientKpa(float kpa) {
-  if (kpa < 10.0f || kpa > cfg::MPRLS_MAX_KPA) {
+  if (kpa < 10.0f || kpa > config_.maxKpa) {
     LOGW("mprls: rejected ambient reference %.2f kPa", kpa);
     return;
   }

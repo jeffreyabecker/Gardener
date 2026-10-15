@@ -2,51 +2,74 @@
 
 #include <Arduino.h>
 
-#include "core/AppContext.h"
-#include "hosts/ble/BleService.h"
+#include "core/ReplyQueue.h"
+#include "core/Snapshot.h"
 #include "hal/Buttons.h"
-#include "ui/DisplayUI.h"
+#include "hal/Device.h"
+#include "hal/Display.h"
 #include "hal/PressureSensor.h"
-#include "services/ProgramStore.h"
 #include "hal/Pump.h"
-#include "hosts/script/ScriptRuntime.h"
-#include "services/VacuumController.h"
+#include "hal/Storage.h"
+#include "hosts/ble/BleService.h"
+#include "hosts/commands/CommandRouter.h"
+#include "hosts/script/NullRuntime.h"
+#include "hosts/script/ScriptApi.h"
+#include "services/ProgramStore.h"
+#include "services/ProgramUploader.h"
+#include "services/VacuumControl.h"
+#include "ui/UiController.h"
+
+// Composition root. This is the only class that knows the whole graph: every other
+// module is handed exactly what it uses, by reference, at construction.
 
 namespace eggplan {
 
-// Wires the modules together and owns the main loop.
 class App {
  public:
+  App();
+
   bool begin();
   void update();
 
-  AppContext& ctx() { return ctx_; }
-
-  // Safe to call from blocking waits (buttons, script delay) so the rest of
-  // the firmware keeps running.
+  // Safe to call from blocking waits (buttons, script delay) so sensors, UI and the
+  // transport keep running.
   static void tick();
 
  private:
-  DisplayUI::Model buildModel();
-  void onButtonEvent(ButtonId id, ButtonEvent event, uint32_t heldMs);
-  void startSelectedProgram();
-  void stopEverything(const char* reason);
+  static PumpConfig pumpConfig();
+  static PidConfig pidConfig();
 
-  AppContext ctx_;
-  Pump pump_;
-  PressureSensor sensor_;
-  Buttons buttons_;
-  DisplayUI ui_;
-  ProgramStore store_;
-  VacuumController control_;
-  NullRuntime nullRuntime_;
-  ScriptApi api_{ctx_};
-  BleService ble_;
-  String autostartCache_;
-  uint32_t lastGraphSampleMs_ = 0;
-  bool ready_ = false;
+  void onIntent(const Intent& intent);
+  void startProgram(size_t index);
+  void stopEverything(const char* reason);
+  void refreshSnapshot();
 
   static App* instance_;
+
+  // Declaration order is construction order, and several members hold references to
+  // the ones above them.
+  Storage storage_;
+  PressureSensor sensor_;
+  Pump pump_;
+  Buttons buttons_;
+  Display display_;
+  ProgramStore store_;
+  VacuumControl control_;
+  DeviceInfo device_;
+  SystemSnapshot snapshot_;
+  ScriptOverlay overlay_;
+  UiSettings uiSettings_;
+  TelemetrySettings telemetry_;
+  ScriptApi api_;
+  NullRuntime runtime_;
+  Renderer renderer_;
+  UiController ui_;
+  ReplyQueue replies_;
+  ReplyQueue inbound_;
+  CommandRouter router_;
+  ProgramUploader uploader_;
+  BleService ble_;
+  bool ready_ = false;
 };
 
 }  // namespace eggplan

@@ -1,21 +1,34 @@
 #pragma once
 
 #include <Arduino.h>
+#include <stdint.h>
 
-#include "core/VacuumConfig.h"
+#include "hal/Pins.h"
 
 namespace eggplan {
 
 enum class ButtonId : uint8_t { Up = 0, Down = 1, Ok = 2, Back = 3, Count = 4 };
 enum class ButtonEvent : uint8_t { None = 0, Click, LongPress, Repeat };
 
+struct ButtonsConfig {
+  int up = pins::BTN_UP;
+  int down = pins::BTN_DOWN;
+  int ok = pins::BTN_OK;
+  int back = pins::BTN_BACK;
+  uint32_t debounceMs = pins::BUTTON_DEBOUNCE_MS;
+  uint32_t longPressMs = pins::BUTTON_LONGPRESS_MS;
+  uint32_t repeatMs = pins::BUTTON_REPEAT_MS;
+};
+
 // Four active low buttons with debounce, long press and auto repeat.
 //
-// Events are queued so that a press that happens while the firmware is busy is
-// not lost, and long/blocking waits keep the rest of the application alive via
-// an optional service hook.
+// Events are queued so a press that happens while the firmware is busy is not lost,
+// and a blocking wait keeps the rest of the application alive through an optional
+// service hook.
 class Buttons {
  public:
+  explicit Buttons(const ButtonsConfig& config = ButtonsConfig()) : config_(config) {}
+
   void begin();
   void update(uint32_t nowMs);
 
@@ -26,7 +39,6 @@ class Buttons {
   bool popEvent(ButtonId& id, ButtonEvent& event, uint32_t& heldMs);
   bool waitForEvent(ButtonId id, ButtonEvent& event, uint32_t timeoutMs);
 
-  // Called from waitForEvent() so sensors, UI and BLE keep running.
   void setServiceHook(void (*hook)()) { serviceHook_ = hook; }
 
   static const char* idName(ButtonId id);
@@ -54,6 +66,7 @@ class Buttons {
 
   void push(ButtonId id, ButtonEvent event, uint32_t heldMs);
 
+  ButtonsConfig config_;
   State states_[kButtonCount];
   QueuedEvent queue_[kQueueSize];
   uint8_t queueHead_ = 0;

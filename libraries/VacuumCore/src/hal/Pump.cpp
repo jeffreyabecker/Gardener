@@ -1,7 +1,9 @@
 #include "hal/Pump.h"
 
+#include <math.h>
+
 #include "core/Log.h"
-#include "core/Util.h"
+#include "core/Math.h"
 
 namespace eggplan {
 namespace {
@@ -9,33 +11,27 @@ constexpr uint32_t kMaxStepMs = 250;
 }
 
 void Pump::begin() {
-  pinMode(cfg::PIN_PUMP_PWM, OUTPUT);
-  digitalWrite(cfg::PIN_PUMP_PWM, LOW);
-
-  if (!ledcAttach(cfg::PIN_PUMP_PWM, cfg::PUMP_PWM_FREQ_HZ, cfg::PUMP_PWM_RESOLUTION)) {
-    LOGE("pump: ledcAttach failed on GPIO%d", cfg::PIN_PUMP_PWM);
+  if (config_.pwmPin < 0) {
+    LOGE("pump: no PWM pin configured");
+    return;
+  }
+  pinMode(config_.pwmPin, OUTPUT);
+  digitalWrite(config_.pwmPin, LOW);
+  if (!ledcAttach(config_.pwmPin, config_.pwmFreqHz, config_.pwmResolution)) {
+    LOGE("pump: ledcAttach failed on GPIO%d", config_.pwmPin);
   }
   write(0.0f);
-
-  if (cfg::PUMP_TACH_ENABLED) {
-    pinMode(cfg::PIN_PUMP_TACH, INPUT_PULLUP);
-    attachInterruptArg(digitalPinToInterrupt(cfg::PIN_PUMP_TACH), &Pump::tachIsr, this,
-                       FALLING);
-  }
-  LOGI("pump: PWM on GPIO%d at %uHz, cap %.0f%%", cfg::PIN_PUMP_PWM,
-       (unsigned)cfg::PUMP_PWM_FREQ_HZ, cfg::PUMP_DUTY_MAX_PERCENT);
-}
-
-void Pump::tachIsr(void* arg) {
-  Pump* self = static_cast<Pump*>(arg);
-  self->tachPulses_++;
+  tach_.begin(config_.tachPin, config_.tachPulsesPerRev);
+  LOGI("pump: PWM on GPIO%d at %uHz, cap %.0f%%", config_.pwmPin,
+       (unsigned)config_.pwmFreqHz, config_.maxDutyPercent);
 }
 
 void Pump::write(float percent) {
-  const uint32_t maxDuty = (1u << cfg::PUMP_PWM_RESOLUTION) - 1u;
-  percent = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
-  uint32_t duty = (uint32_t)((percent / 100.0f) * (float)maxDuty + 0.5f);
-  ledcWrite(cfg::PIN_PUMP_PWM, duty);
+  if (config_.pwmPin < 0) return;
+  const uint32_t maxDuty = (1u << config_.pwmResolution) - 1u;
+  float limited = clampf(percent, 0.0f, config_.maxDutyPercent);
+  uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
+  ledcWrite(config_.pwmPin, duty);
 }
 
 void Pump::setDuty(float percent) {
@@ -43,30 +39,24 @@ void Pump::setDuty(float percent) {
     target_ = 0.0f;
     return;
   }
-  target_ = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
+  target_ = clampf(percent, 0.0f, config_.maxDutyPercent);
 }
 
-void Pump::setDutyNow(float percent) {
-  target_ = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
-  duty_ = target_;
-  write(duty_);
-}
-
-void Pump::stop() { setDuty(0.0f); }
-
-void Pump::emergencyStop(const char* reason) {
+void Pump::emergencyStop(const char* code, const char* text) {
   target_ = 0.0f;
   duty_ = 0.0f;
   write(0.0f);
   tripped_ = true;
-  faultReason_ = reason ? reason : "unspecified";
+  faultCode_ = code ? code : "unknown";
+  faultText_ = text ? text : "unspecified";
   running_ = false;
-  LOGW("pump: emergency stop (%s)", faultReason_);
+  LOGW("pump: emergency stop (%s)", faultText_);
 }
 
 bool Pump::resetFault() {
   tripped_ = false;
-  faultReason_ = "";
+  faultCode_ = "";
+  faultText_ = "";
   LOGI("pump: fault cleared");
   return true;
 }
@@ -93,38 +83,23 @@ void Pump::update(uint32_t nowMs) {
 
   // Slew rate limited approach to the requested duty.
   if (duty_ != target_) {
-    float maxStep = cfg::PUMP_RAMP_PERCENT_PER_SEC * ((float)dt / 1000.0f);
+    float maxStep = config_.rampPercentPerSec * ((float)dt / 1000.0f);
     if (maxStep < 0.5f) maxStep = 0.5f;
-    float delta = target_ - duty_;
-    duty_ += clampf(delta, -maxStep, maxStep);
+    duty_ += clampf(target_ - duty_, -maxStep, maxStep);
     if (fabsf(duty_ - target_) < 0.05f) duty_ = target_;
     write(duty_);
   }
 
   bool wasRunning = running_;
   running_ = duty_ >= 0.5f;
-  if (running_ && !wasRunning) {
-    runStartMs_ = nowMs;
-  }
+  if (running_ && !wasRunning) runStartMs_ = nowMs;
 
-  if (running_ && (nowMs - runStartMs_) > cfg::PUMP_MAX_RUN_MS) {
-    emergencyStop("max run time exceeded");
+  if (running_ && (nowMs - runStartMs_) > config_.maxRunMs) {
+    emergencyStop("max_run", "max run time exceeded");
     return;
   }
 
-  if (cfg::PUMP_TACH_ENABLED) {
-    uint32_t windowMs = nowMs - tachWindowStartMs_;
-    if (windowMs >= 500) {
-      noInterrupts();
-      uint32_t pulses = tachPulses_;
-      interrupts();
-      uint32_t delta = pulses - tachWindowPulses_;
-      tachWindowPulses_ = pulses;
-      float revs = (float)delta / (float)cfg::PUMP_TACH_PULSES_PER_REV;
-      rpm_ = revs * (60000.0f / (float)windowMs);
-      tachWindowStartMs_ = nowMs;
-    }
-  }
+  tach_.update(nowMs);
 }
 
 }  // namespace eggplan

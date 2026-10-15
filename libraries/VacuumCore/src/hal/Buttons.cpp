@@ -24,8 +24,7 @@ const char* Buttons::eventName(ButtonEvent event) {
 }
 
 void Buttons::begin() {
-  const int pins[kButtonCount] = {cfg::PIN_BTN_UP, cfg::PIN_BTN_DOWN, cfg::PIN_BTN_OK,
-                                  cfg::PIN_BTN_BACK};
+  const int pins[kButtonCount] = {config_.up, config_.down, config_.ok, config_.back};
   for (uint8_t i = 0; i < kButtonCount; i++) {
     states_[i].pin = pins[i];
     pinMode(pins[i], INPUT_PULLUP);
@@ -33,12 +32,10 @@ void Buttons::begin() {
     states_[i].stable = down;
     states_[i].raw = down;
     states_[i].rawChangedMs = millis();
-    if (down) {
-      states_[i].pressedMs = millis();
-    }
+    if (down) states_[i].pressedMs = millis();
   }
-  LOGI("buttons: up=%d down=%d ok=%d back=%d", cfg::PIN_BTN_UP, cfg::PIN_BTN_DOWN,
-       cfg::PIN_BTN_OK, cfg::PIN_BTN_BACK);
+  LOGI("buttons: up=%d down=%d ok=%d back=%d", config_.up, config_.down, config_.ok,
+       config_.back);
 }
 
 void Buttons::push(ButtonId id, ButtonEvent event, uint32_t heldMs) {
@@ -53,10 +50,10 @@ void Buttons::push(ButtonId id, ButtonEvent event, uint32_t heldMs) {
 
 bool Buttons::popEvent(ButtonId& id, ButtonEvent& event, uint32_t& heldMs) {
   if (queueHead_ == queueTail_) return false;
-  const QueuedEvent& e = queue_[queueHead_];
-  id = e.id;
-  event = e.event;
-  heldMs = e.heldMs;
+  const QueuedEvent& queued = queue_[queueHead_];
+  id = queued.id;
+  event = queued.event;
+  heldMs = queued.heldMs;
   queueHead_ = (uint8_t)((queueHead_ + 1) % kQueueSize);
   return true;
 }
@@ -64,38 +61,35 @@ bool Buttons::popEvent(ButtonId& id, ButtonEvent& event, uint32_t& heldMs) {
 void Buttons::update(uint32_t nowMs) {
   nowMs_ = nowMs;
   for (uint8_t i = 0; i < kButtonCount; i++) {
-    State& s = states_[i];
+    State& state = states_[i];
     ButtonId id = (ButtonId)i;
-    bool down = digitalRead(s.pin) == LOW;
+    bool down = digitalRead(state.pin) == LOW;
 
-    if (down != s.raw) {
-      s.raw = down;
-      s.rawChangedMs = nowMs;
+    if (down != state.raw) {
+      state.raw = down;
+      state.rawChangedMs = nowMs;
     }
 
-    if (s.raw != s.stable && (nowMs - s.rawChangedMs) >= cfg::BUTTON_DEBOUNCE_MS) {
-      s.stable = s.raw;
+    if (state.raw != state.stable && (nowMs - state.rawChangedMs) >= config_.debounceMs) {
+      state.stable = state.raw;
       lastChanged_ = id;
-      if (s.stable) {
-        s.pressedMs = nowMs;
-        s.longFired = false;
-        s.nextRepeatMs = nowMs + cfg::BUTTON_LONGPRESS_MS;
-      } else {
-        uint32_t held = nowMs - s.pressedMs;
-        if (!s.longFired) {
-          push(id, ButtonEvent::Click, held);
-        }
+      if (state.stable) {
+        state.pressedMs = nowMs;
+        state.longFired = false;
+        state.nextRepeatMs = nowMs + config_.longPressMs;
+      } else if (!state.longFired) {
+        push(id, ButtonEvent::Click, nowMs - state.pressedMs);
       }
     }
 
-    if (s.stable) {
-      uint32_t held = nowMs - s.pressedMs;
-      if (!s.longFired && held >= cfg::BUTTON_LONGPRESS_MS) {
-        s.longFired = true;
-        s.nextRepeatMs = nowMs + cfg::BUTTON_REPEAT_MS;
+    if (state.stable) {
+      uint32_t held = nowMs - state.pressedMs;
+      if (!state.longFired && held >= config_.longPressMs) {
+        state.longFired = true;
+        state.nextRepeatMs = nowMs + config_.repeatMs;
         push(id, ButtonEvent::LongPress, held);
-      } else if (s.longFired && nowMs >= s.nextRepeatMs) {
-        s.nextRepeatMs = nowMs + cfg::BUTTON_REPEAT_MS;
+      } else if (state.longFired && nowMs >= state.nextRepeatMs) {
+        state.nextRepeatMs = nowMs + config_.repeatMs;
         push(id, ButtonEvent::Repeat, held);
       }
     }
@@ -103,15 +97,15 @@ void Buttons::update(uint32_t nowMs) {
 }
 
 bool Buttons::isDown(ButtonId id) const {
-  uint8_t i = (uint8_t)id;
-  if (i >= kButtonCount) return false;
-  return states_[i].stable;
+  uint8_t index = (uint8_t)id;
+  if (index >= kButtonCount) return false;
+  return states_[index].stable;
 }
 
 uint32_t Buttons::heldMs(ButtonId id) const {
-  uint8_t i = (uint8_t)id;
-  if (i >= kButtonCount || !states_[i].stable) return 0;
-  return nowMs_ - states_[i].pressedMs;
+  uint8_t index = (uint8_t)id;
+  if (index >= kButtonCount || !states_[index].stable) return 0;
+  return nowMs_ - states_[index].pressedMs;
 }
 
 bool Buttons::waitForEvent(ButtonId id, ButtonEvent& event, uint32_t timeoutMs) {
