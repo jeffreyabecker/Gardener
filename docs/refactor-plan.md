@@ -1,6 +1,9 @@
 # Refactor plan: layering, folders, and deleting `AppContext`
 
-Status: **proposed** · owner: unassigned · scope: `libraries/VacuumCore` only
+Status: **proposed** · revision 2 · owner: unassigned · scope: `libraries/VacuumCore` only
+
+Revision 2: script hosting moved out of `services/` into `io/`, because the runtime
+is an outside interface rather than machine policy. See §3.2.
 
 Annotation guide: open questions are numbered **Q1…Q8**, decisions taken in this
 document are marked `DECISION:`. Edit this file in place and the plan will be
@@ -17,17 +20,18 @@ Chosen approach: **folders + one-way layer rule + constructor injection, with no
 virtual interfaces.** Drivers stay concrete classes injected by reference. Where
 this leaves a coupling (command routing reaches for telemetry state) the plan
 resolves it with plain data rather than a back-pointer or a vtable, and notes the
-forward-declaration fallback you approved.
+forward-declaration fallback you approved. Script hosting is grouped with the other
+outside interfaces (`io/`) instead of `services/` — see §3.2.
 
 ### Non-goals
 
-- No behaviour change in phases 0–5: same pins, same BLE protocol and framing,
+- No behaviour change in phases 0–6: same pins, same BLE protocol and framing,
   same UI pages, same button mapping.
 - No Berry VM work here (separate task).
 - No host unit tests: this machine has no C++ toolchain (no gcc/clang), so
   verification stays `arduino-cli compile` for the ESP32-C3 target.
 - No new features. The one intentional behaviour change is the pump suction fix
-  in phase 6, which is config semantics only (section 8).
+  in phase 7, which is config semantics only (section 8).
 
 ## 2. Diagnosis
 
@@ -63,8 +67,9 @@ One-way dependencies, strictly downward. Nothing below includes anything above i
 ```
 core/       pure logic: no drivers, no NimBLE, no Adafruit, no Arduino peripherals
 hal/        one file per physical device, plus the board pin map
-services/   policy: control loop, storage, scripts, commands, telemetry, BLE transport
-ui/         presentation: renders through the display HAL, emits intents
+services/   machine policy: what the vacuum system does, driven by the main loop
+io/         how the outside world drives it: command grammar, BLE, script host
+ui/         local presentation: renders the snapshot, emits intents
 app/        composition root: the only place that knows the whole graph
 ```
 
@@ -93,13 +98,19 @@ libraries/VacuumCore/src/
     ProgramStore.h / .cpp   program list, staged writes, autostart
     ProgramUploader.h / .cpp chunked upload session (uses UploadFrames + ProgramStore)
     VacuumControl.h / .cpp  PID + safety state machine
-    SnapshotBuilder.h / .cpp ports and concrete modules -> SystemSnapshot
-    ScriptRuntime.h         abstract runtime
-    ScriptApi.h / .cpp      native surface handed to scripts
-    runtimes/NullRuntime.h / .cpp
-    runtimes/BerryRuntime.h / .cpp      later
-    CommandRouter.h / .cpp  line dispatch (today's Protocol.cpp)
-    transport/BleService.h / .cpp       NimBLE only, no policy
+    SnapshotBuilder.h / .cpp pump, sensor, control, store -> SystemSnapshot
+  io/
+    commands/
+      CommandRouter.h / .cpp   line grammar (today's Protocol.cpp)
+    ble/
+      BleService.h / .cpp      NimBLE only; telemetry send loop
+    script/
+      ScriptRuntime.h          abstract host interface
+      ScriptApi.h / .cpp       the machine surface handed to guest code
+      NullRuntime.h / .cpp     build without a VM
+      berry/                   glue for libraries/Berry, later
+        BerryRuntime.h / .cpp
+        VacuumModule.h / .cpp
   ui/
     Renderer.h / Renderer.cpp
     UiController.h / .cpp
@@ -119,8 +130,13 @@ libraries/VacuumCore/src/
 | `core/` | `core/` only |
 | `hal/` | `core/` |
 | `services/` | `core/`, `hal/` |
+| `io/` | `core/`, `hal/`, `services/` |
 | `ui/` | `core/`, `hal/` |
 | `app/` | everything; nothing includes `app/` |
+
+Within `io/` the subfolders are one-way as well: `ble/ -> commands/ -> script/`.
+`script/` includes nothing else from `io/`, which is what keeps the host
+independent of the transport it happens to be driven through.
 
 `ui/` never including `services/` is possible without interfaces because
 `SystemSnapshot` carries pressure, vacuum, duty, state, program list and BLE state
@@ -133,6 +149,42 @@ loop. That struct already exists as `DisplayUI::Model`.
 
 `scripts/check-layers.ps1` parses every `#include "…"` and fails on an upward
 include. It is wired into the build task so a rotted graph cannot compile.
+
+### 3.2 Why the script host is not a service
+
+`ScriptRuntime`, `ScriptApi` and the concrete runtimes hold no vacuum state,
+nothing in the main loop depends on them, and no policy decision lives in them.
+They are an **adapter at the machine boundary**: a way for foreign code (Berry
+today, possibly a macro recorder or a rule engine later) to drive the machine. That
+puts them in the same family as the BLE transport — one speaks GATT, the other
+speaks Berry — and not in the same family as `VacuumControl` or `ProgramStore`.
+
+The dependency graph says the same thing:
+
+- **inbound**: `CommandRouter` (`run`, `stop`, `eval`) and `App` (autostart, cancel)
+- **outbound**: `ScriptApi` -> `Pump`, `PressureSensor`, `Display`, `Buttons`,
+  `VacuumControl`
+
+So the host sits *above* `services/` (`VacuumControl` is a service) and *below*
+whatever issues commands. That is precisely the position that would make
+`services/ -> io/ -> services/` a folder-level cycle if the command grammar stayed
+in `services/`, even though the classes themselves stay acyclic. Moving the grammar
+with the host is what keeps the rule mechanical.
+
+`DECISION:` the three outside interfaces are grouped as `io/`: `io/commands/`,
+`io/ble/`, `io/script/`. A future serial console lands as `io/serial/` without
+touching anything else.
+
+`DECISION:` `ScriptRuntime` stays an abstract class — the one vtable in the
+project. It is what keeps Berry headers, which are vendored and macro heavy, out of
+`io/commands/CommandRouter.h`. The alternative, a single class selected at compile
+time with `#if EGGPLAN_WITH_BERRY`, would drag `be_vm*` into the router's include
+chain and force `NullRuntime` out of the build entirely; not worth it for one
+vtable.
+
+The vendored VM source stays a separate Arduino library (`libraries/Berry/`) so its
+licence and build flags remain independent of ours; `io/script/berry/` holds only
+our glue.
 
 ## 4. Replacing `AppContext`
 
@@ -154,14 +206,17 @@ ScriptApi api{pump, sensor, display, buttons, control};
 NullRuntime runtime{api};
 Renderer renderer{display};
 UiController ui{renderer, buttons};
-SnapshotBuilder snapshots{pump, sensor, control, store, runtime};
-TelemetrySettings telemetry{};
+SnapshotBuilder snapshots{pump, sensor, control, store};    // services
+TelemetrySettings telemetry{};                              // core; io/commands writes, io/ble reads
 CommandRouter router{store, runtime, control, pump, sensor, telemetry};
-BleService ble{router, telemetry, snapshots};
+BleService ble{router, telemetry, snapshots};               // io/*
 ```
 
 `UiController` is constructed without `ProgramStore`: the program list reaches it
-through `SystemSnapshot`, which is what keeps `ui/` out of `services/`.
+through `SystemSnapshot`, which is what keeps `ui/` out of `services/`. For the same
+reason `SnapshotBuilder` does not take the runtime: it would be a `services/` ->
+`io/` include. `App` fills the two script fields (`scriptRunning`, `program`) after
+building the snapshot, since it is the only place allowed to see both layers.
 
 ### 4.2 Where each `AppContext` field goes
 
@@ -169,15 +224,15 @@ through `SystemSnapshot`, which is what keeps `ui/` out of `services/`.
 | --- | --- |
 | `pump` | `hal/Pump`, injected into `VacuumControl`, `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
 | `sensor` | `hal/PressureSensor`, injected into `VacuumControl`, `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
-| `buttons` | `hal/Buttons`, injected into `ui/UiController`, `services/ScriptApi` |
-| `ui` | `hal/Display` injected into `ui/Renderer`; `ScriptApi` gets `Display&` for the overlay |
+| `buttons` | `hal/Buttons`, injected into `ui/UiController`, `io/script/ScriptApi` |
+| `ui` | `hal/Display` injected into `ui/Renderer`; `io/script/ScriptApi` gets `Display&` for the overlay |
 | `store` | `services/ProgramStore`, injected into `CommandRouter`, `SnapshotBuilder` |
 | `control` | `services/VacuumControl`, injected into `ScriptApi`, `CommandRouter`, `SnapshotBuilder` |
-| `runtime` | `services/ScriptRuntime`, injected into `CommandRouter`, `SnapshotBuilder` |
-| `api` | `services/ScriptApi`, owned by `App`, injected into the runtime |
-| `ble` | `services/transport/BleService`; **nothing points back at it** (section 4.3) |
+| `runtime` | `io/script/ScriptRuntime`, injected into `CommandRouter`; `App` reads it for the snapshot |
+| `api` | `io/script/ScriptApi`, owned by `App`, injected into the runtime |
+| `ble` | `io/ble/BleService`; **nothing points back at it** (section 4.3) |
 
-`AppContext.h` is deleted in phase 6.
+`AppContext.h` is deleted in phase 7.
 
 ### 4.3 The command router / BLE coupling
 
@@ -219,10 +274,10 @@ coupling at the same cost.
 | `DisplayUI.h/.cpp` | split: `hal/Display.*` (draw + flush), `ui/Renderer.*`, `ui/pages/*.cpp`, `ui/UiController.*` |
 | `Buttons.h/.cpp` | `hal/Buttons.h/.cpp` |
 | `ProgramStore.h/.cpp` | `services/ProgramStore.h/.cpp` over new `hal/Storage.h/.cpp` |
-| `Protocol.h/.cpp` | split: `services/ProgramUploader.*`, `services/CommandRouter.*`, `core/Telemetry.*`, `core/UploadFrames.*` |
+| `Protocol.h/.cpp` | split: `io/commands/CommandRouter.*`, `services/ProgramUploader.*`, `core/Telemetry.*`, `core/UploadFrames.*` |
 | `VacuumController.h/.cpp` | `services/VacuumControl.h/.cpp` + `core/Pid.h/.cpp` |
-| `ScriptRuntime.h/.cpp` | `services/ScriptRuntime.h`, `services/ScriptApi.h/.cpp`, `services/runtimes/NullRuntime.h/.cpp` |
-| `BleService.h/.cpp` | `services/transport/BleService.h/.cpp`, telemetry send loop folded in |
+| `ScriptRuntime.h/.cpp` | split: `io/script/ScriptRuntime.h`, `io/script/ScriptApi.h/.cpp`, `io/script/NullRuntime.h/.cpp` (+ `io/script/berry/` later) |
+| `BleService.h/.cpp` | `io/ble/BleService.h/.cpp`, telemetry send loop folded in |
 | `DisplayUI::Model` | `core/Snapshot.h` → `SystemSnapshot` |
 
 ## 6. Phases
@@ -236,9 +291,10 @@ reverted independently.
 | 1 | Folders | `git mv` into the tree above, include fixes only, no edits | green, zero behaviour change |
 | 2 | `core/` | split `Config.h`/`Pins.h`; extract `Units`, `Crc32`, `Log` (sink, no `Serial`), `Pid`, `UploadFrames`, `Telemetry` | green |
 | 3 | `hal/` | drivers become self-contained classes with constructor config; `Tachometer` split out; `Display` reduced to primitives + flush | green |
-| 4 | `services/` | `Snapshot` + `SnapshotBuilder`; `VacuumControl`, `ScriptApi`, `CommandRouter` take concrete references; `BleService` takes router + settings + snapshots; `DisplayUI::Model` → `SystemSnapshot` | green, BLE commands byte-identical |
-| 5 | `ui/` | `Renderer` + per-page files + `UiController` intents; `App` executes intents | green, same pages and buttons |
-| 6 | Cleanup + suction fix | delete `AppContext.h`; section 8 changes; README layout and dependency table | green + docs match |
+| 4 | `services/` | `Snapshot` + `SnapshotBuilder`; `VacuumControl`, `ProgramStore`, `ProgramUploader` take concrete references; `DisplayUI::Model` → `SystemSnapshot` | green |
+| 5 | `io/` | `CommandRouter` out of `Protocol.cpp`; `Telemetry` JSON to `core/`; `ScriptApi` + `ScriptRuntime` + `NullRuntime`; `BleService` takes router + settings + snapshots with telemetry folded in | green, BLE commands byte-identical |
+| 6 | `ui/` | `Renderer` + per-page files + `UiController` intents; `App` executes intents | green, same pages and buttons |
+| 7 | Cleanup + suction fix | delete `AppContext.h`; section 8 changes; README layout and dependency table | green + docs match |
 
 ### 6.1 Definition of done
 
@@ -251,8 +307,8 @@ reverted independently.
 
 ### 6.2 Reduced scope
 
-If this is more churn than you want right now, **phases 1 and 6 alone** (folders +
-delete `AppContext` + the suction fix) capture most of the benefit; phases 2–5 are
+If this is more churn than you want right now, **phases 1 and 7 alone** (folders +
+delete `AppContext` + the suction fix) capture most of the benefit; phases 2–6 are
 the part that buys the clean layering. The plan is ordered so that stopping after
 any phase leaves a coherent tree.
 
@@ -266,7 +322,7 @@ any phase leaves a coherent tree.
 | R4 | `AppContext` removal touches every module's signature | no port layer to introduce; each phase hands modules the same references they already use internally |
 | R5 | `Storage` indirection changes LittleFS error paths | keep mount/format calls byte-identical in phase 3, only relocate them |
 
-## 8. Pump suction semantics (phase 6)
+## 8. Pump suction semantics (phase 7)
 
 Measured pump capability: **-60 kPa**, i.e. 60 kPa of suction *below ambient*.
 Today's config treats 60 as `WORKING_RANGE_MAX_KPA`, a ceiling on target pressure —
@@ -308,12 +364,18 @@ Changes:
   function, it holds no state.
 - **Q5** — confirm the `UiIntent` set:
   `None, Stop, CyclePage, MoveCursor, AdjustTarget, ToggleHold, RunSelected`.
-- **Q6** — does the suction fix land in phase 6 of this refactor, or as its own
-  commit *before* phase 1? Recommendation: phase 6, since `VacuumConfig.h` is
+- **Q6** — does the suction fix land in phase 7 of this refactor, or as its own
+  commit *before* phase 1? Recommendation: phase 7, since `VacuumConfig.h` is
   being split there anyway.
-- **Q7** — keep `ProgramUploader` and `CommandRouter` as separate services, or
-  fold the upload session back into `CommandRouter`? Recommendation: separate —
-  the BLE `prog` characteristic talks to the uploader, not to the router.
-- **Q8** — should `services/` be split further into `services/system` and
-  `services/script`? Recommendation: not yet; revisit if `services/` passes 12
-  files.
+- **Q7** — keep `ProgramUploader` (`services/`) and `CommandRouter`
+  (`io/commands/`) separate, or fold the upload session into the router?
+  Recommendation: separate — the BLE `prog` characteristic talks to the uploader,
+  not to the router.
+- **Q8** — should `services/` be split further? Recommendation: not yet, and
+  revision 2 removed the script host from it, so the pressure is off.
+- **Q9** — is `io/` the right name for the outside-interface layer, versus
+  `hosts/`, `interfaces/` or `transport/`? And is grouping **all three** interfaces
+  there right, or should only the script host move out of `services/` and the
+  command grammar stay put — which reintroduces the `services/ -> io/ ->
+  services/` folder cycle described in §3.2? Recommendation: keep the three
+  together under `io/`.
