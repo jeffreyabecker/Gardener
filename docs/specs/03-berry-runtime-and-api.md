@@ -137,7 +137,6 @@ class ProgramApi {
 
   // --- misc ---
   bool hostPresent() const;
-  String fmt(float value, int decimals) const;
   void log(const char* message);
   uint32_t nowMs() const;
   void delay(uint32_t ms);           // yields; aborts on stopRequested
@@ -189,7 +188,6 @@ Three modules, registered once per VM:
 | `vacuum.input(on)` | — | explicit ownership |
 | `vacuum.host_present()` | `hostPresent` | bool |
 | `vacuum.log(text)` | `log` | `[I]` record |
-| `vacuum.fmt(v, decimals)` | `fmt` | String |
 | `vacuum.now_ms()` | `nowMs` | |
 | `vacuum.delay(ms)` | `delay` | yields, aborts on stop |
 | `program.name()` | `programName` | |
@@ -199,7 +197,8 @@ Three modules, registered once per VM:
 
 `vacuum.state()` returns a Berry map with keys `kpa`, `vac`, `pct`, `ambient`, `target`,
 `target_active`, `duty`, `floor`, `state`, `sensor_ok`, `reading_valid`, `faulted`,
-`fault`.
+`fault`. Programs format numbers with Berry's built-in `string.format`
+(e.g. `string.format("%.1f", s.kpa)`) and `str`; the firmware exposes no formatter.
 
 The `screen` module:
 
