@@ -63,7 +63,31 @@ bool App::begin() {
 }
 
 void App::refreshSnapshot() {
-  buildSnapshot(system_, control_, battery_, snapshot_);
+  snapshot_.kpa = system_.kpa();
+  snapshot_.vacuumKpa = system_.vacuumKpa();
+  snapshot_.vacuumPercent = system_.vacuumPercent();
+  snapshot_.ambientKpa = system_.ambientKpa();
+  snapshot_.sensorOk = system_.sensorOk();
+  snapshot_.readingValid = system_.readingValid();
+
+  // faulted() is the trip as the plant sees it: it latches when the trip is observed and
+  // clears with resetFault, so it says the same thing pump.tripped() said.
+  snapshot_.duty = system_.duty();
+  snapshot_.pumpTripped = system_.faulted();
+  snapshot_.faultCode = system_.faultCode();
+
+  snapshot_.state = control_.state();
+  snapshot_.targetActive = system_.targetActive();
+  snapshot_.targetKpa = system_.targetKpa();
+  snapshot_.floorKpa = system_.minReachableKpa();
+  snapshot_.holdSeconds = control_.holdSeconds();
+
+  snapshot_.batteryPresent = battery_.present();
+  snapshot_.batteryLow = battery_.low();
+  snapshot_.batteryVolts = battery_.volts();
+  snapshot_.batteryPercent = battery_.percent();
+
+  snapshot_.uptimeMs = millis();
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state

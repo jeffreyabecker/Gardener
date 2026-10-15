@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 #include "app/SerialLink.h"
-#include "app/SnapshotBuilder.h"
 #include "app/StatusPage.h"
 #include "app/VacuumControl.h"
 #include "app/VacuumSystem.h"
@@ -36,6 +35,8 @@ class App {
   void update();
 
  private:
+  // Fills the machine view from the modules that own the state, in place: one snapshot is
+  // rebuilt per loop iteration, and the page and a reply both read that one instant.
   void refreshSnapshot();
   void logRunChanges(uint32_t nowMs);
 
