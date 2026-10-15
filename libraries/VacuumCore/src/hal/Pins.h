@@ -34,6 +34,11 @@ constexpr uint8_t TACH_PULSES_PER_REV = 2;
 constexpr uint32_t PUMP_PWM_FREQ_HZ = 20000;
 constexpr uint8_t PUMP_PWM_RESOLUTION = 10;
 
+// --- Vent valve ------------------------------------------------------------
+// The valve is normally open (Q10): energise to close. A logic level MOSFET with a
+// flyback diode across the coil, wired like the pump.
+constexpr int VENT_VALVE = 5;
+
 // --- Four button UI, active low to GND, internal pull ups ------------------
 constexpr int BTN_UP = 0;
 constexpr int BTN_DOWN = 1;

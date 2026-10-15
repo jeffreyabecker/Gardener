@@ -24,15 +24,18 @@ void renderStatus(Renderer& renderer, const SystemSnapshot& snapshot) {
   renderer.bar(0, 42, renderer.width(), 7, snapshot.duty / 100.0f);
 
   if (snapshot.targetActive) {
-    snprintf(buffer, sizeof(buffer), "%s %.1f  %.0f%%", controlStateName(snapshot.state),
+    snprintf(buffer, sizeof(buffer), "%s %.1f  %.0f%%", runStateName(snapshot.state),
              snapshot.targetKpa, snapshot.duty);
   } else {
-    snprintf(buffer, sizeof(buffer), "%s  %.0f%%", controlStateName(snapshot.state),
+    snprintf(buffer, sizeof(buffer), "%s  %.0f%%", runStateName(snapshot.state),
              snapshot.duty);
   }
   renderer.line(5, buffer);
 
-  if (snapshot.pumpTripped) {
+  if (snapshot.totalSeconds > 0) {
+    snprintf(buffer, sizeof(buffer), "hold %02u:%02u", (unsigned)(snapshot.remainSeconds / 60),
+             (unsigned)(snapshot.remainSeconds % 60));
+  } else if (snapshot.pumpTripped) {
     snprintf(buffer, sizeof(buffer), "fault %s", snapshot.faultCode);
   } else {
     snprintf(buffer, sizeof(buffer), "floor %.1f kPa", snapshot.floorKpa);

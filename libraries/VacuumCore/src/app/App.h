@@ -8,6 +8,7 @@
 #include "hal/Display.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
+#include "hal/VentValve.h"
 #include "hosts/ble/BleService.h"
 #include "hosts/commands/CommandRouter.h"
 #include "services/VacuumControl.h"
@@ -31,12 +32,14 @@ class App {
  private:
   static PumpConfig pumpConfig();
   static PidConfig pidConfig();
+  static VentValveConfig ventConfig();
   void refreshSnapshot();
 
   // Declaration order is construction order, and several members hold references to the
   // ones above them.
   PressureSensor sensor_;
   Pump pump_;
+  VentValve vent_;
   Display display_;
   VacuumControl control_;
   DeviceInfo device_;

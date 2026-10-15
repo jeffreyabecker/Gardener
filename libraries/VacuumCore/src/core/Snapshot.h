@@ -11,15 +11,18 @@
 
 namespace eggplan {
 
-enum class ControlState : uint8_t { Idle, Pumping, Holding, Manual, Fault };
+// What the device is doing, which is also the state a central watches. There is no DONE
+// (after venting it is IDLE, and the countdown reaching zero is what said it finished)
+// and no MANUAL (raw duty is not part of the interface, Q15).
+enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
-inline const char* controlStateName(ControlState state) {
+inline const char* runStateName(RunState state) {
   switch (state) {
-    case ControlState::Idle: return "IDLE";
-    case ControlState::Pumping: return "PUMP";
-    case ControlState::Holding: return "HOLD";
-    case ControlState::Manual: return "MAN";
-    case ControlState::Fault: return "FAULT";
+    case RunState::Idle: return "IDLE";
+    case RunState::Pulling: return "PULL";
+    case RunState::Holding: return "HOLD";
+    case RunState::Venting: return "VENT";
+    case RunState::Fault: return "FAULT";
     default: return "?";
   }
 }
@@ -52,11 +55,13 @@ struct SystemSnapshot {
   bool pumpTripped = false;
   const char* faultCode = "";
   const char* faultText = "";
-  // control
-  ControlState state = ControlState::Idle;
+  // run
+  RunState state = RunState::Idle;
   bool targetActive = false;
   float targetKpa = 0.0f;
   float floorKpa = 0.0f;
+  uint32_t remainSeconds = 0;  // totalSeconds == 0 means "no timer"
+  uint32_t totalSeconds = 0;
   // device and link
   const DeviceInfo* device = nullptr;
   bool bleConnected = false;

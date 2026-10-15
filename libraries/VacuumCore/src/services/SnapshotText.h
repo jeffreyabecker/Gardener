@@ -21,7 +21,7 @@ size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size);
 // "fw=0.1.0 chip=ESP32-C3 heap=298412 tach=0"
 size_t infoBody(const SystemSnapshot& snapshot, char* out, size_t size);
 
-const char* stateToken(ControlState state);
+const char* stateToken(RunState state);
 const char* faultToken(const SystemSnapshot& snapshot);
 
 }  // namespace snapshottext

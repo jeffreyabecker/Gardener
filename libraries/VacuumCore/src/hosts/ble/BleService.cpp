@@ -111,8 +111,22 @@ uint16_t BleService::chunkSize() const {
   return size > kMaxNotification ? (uint16_t)kMaxNotification : size;
 }
 
+bool BleService::consumeLinkLost() {
+  bool lost = linkLost_;
+  linkLost_ = false;
+  return lost;
+}
+
 void BleService::poll(uint32_t nowMs) {
   if (!started_) return;
+
+  // A connected but silent central only matters if the build says it does (Q17).
+  if (cfg::LINK_TIMEOUT_MS > 0 && connected() && lastWriteMs_ != 0 &&
+      (nowMs - lastWriteMs_) > cfg::LINK_TIMEOUT_MS) {
+    linkLost_ = true;
+    lastWriteMs_ = nowMs;  // report once per window rather than once per loop
+  }
+
   drainInbound();
   drainReplies();
 
@@ -176,6 +190,7 @@ void BleService::sendTelemetry() {
 
 void BleService::onCommandData(const uint8_t* data, size_t length) {
   // Runs on the NimBLE task: assemble lines here, act on them in poll().
+  lastWriteMs_ = millis();
   for (size_t i = 0; i < length; i++) {
     char c = (char)data[i];
     if (c == '\r') continue;
@@ -205,6 +220,8 @@ void BleService::onInfoRead() {
 void BleService::handleConnect(uint16_t mtu) {
   mtu_ = mtu;
   lineBuffer_ = "";
+  lastWriteMs_ = millis();
+  linkLost_ = false;
   LOGI("ble: client connected (mtu %u)", (unsigned)mtu);
   replies_.push("ok hello " + String(cfg::FIRMWARE_VERSION));
 }
@@ -213,6 +230,7 @@ void BleService::handleDisconnect(int reason) {
   lineBuffer_ = "";
   replies_.clear();
   inbound_.clear();
+  linkLost_ = true;
   LOGI("ble: client disconnected (reason %d)", reason);
 }
 

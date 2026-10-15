@@ -25,6 +25,9 @@ class BleService {
   void begin();
   void poll(uint32_t nowMs);
   bool connected() const;
+  // One shot: the link was lost, by disconnect or by silence from a connected central.
+  // App decides what that means (stop and vent); the transport only reports it.
+  bool consumeLinkLost();
   const char* deviceName() const { return name_.c_str(); }
 
  private:
@@ -56,8 +59,10 @@ class BleService {
   String name_;
   String lineBuffer_;
   bool started_ = false;
+  bool linkLost_ = false;
   uint16_t mtu_ = 23;
   uint32_t lastTelemetryMs_ = 0;
+  uint32_t lastWriteMs_ = 0;
 };
 
 }  // namespace eggplan

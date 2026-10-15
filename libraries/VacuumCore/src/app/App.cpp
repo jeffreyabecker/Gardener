@@ -17,8 +17,9 @@ void serialLogSink(const char* text, size_t length) {
 
 App::App()
     : pump_(pumpConfig()),
+      vent_(ventConfig()),
       display_(Wire, pins::OLED_I2C_ADDR, pins::OLED_WIDTH, pins::OLED_HEIGHT),
-      control_(pump_, sensor_, pidConfig()),
+      control_(pump_, sensor_, vent_, pidConfig()),
       renderer_(display_),
       router_(control_, pump_, sensor_, telemetry_),
       ble_(router_, telemetry_, replies_, inbound_, snapshot_) {}
@@ -30,6 +31,13 @@ PumpConfig App::pumpConfig() {
   config.tachPulsesPerRev = pins::TACH_PULSES_PER_REV;
   config.pwmFreqHz = pins::PUMP_PWM_FREQ_HZ;
   config.pwmResolution = pins::PUMP_PWM_RESOLUTION;
+  return config;
+}
+
+VentValveConfig App::ventConfig() {
+  VentValveConfig config;
+  config.pin = pins::VENT_VALVE;
+  config.activeHigh = true;
   return config;
 }
 
@@ -53,6 +61,7 @@ bool App::begin() {
   bool displayOk = display_.begin();
   bool sensorOk = sensor_.begin(Wire);
   pump_.begin();
+  vent_.begin();
   control_.begin();
   renderer_.begin();
   device_ = readDeviceInfo();
@@ -77,6 +86,12 @@ void App::update() {
   sensor_.update(now);
   pump_.update(now);
   control_.update(now);
+
+  // A central that leaves or goes quiet releases the chamber (Q4).
+  if (ble_.consumeLinkLost()) {
+    LOGW("app: link lost, stopping and venting");
+    control_.stopRun();
+  }
 
   refreshSnapshot();
   renderer_.render(snapshot_);

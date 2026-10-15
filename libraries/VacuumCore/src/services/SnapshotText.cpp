@@ -35,7 +35,7 @@ void trimTrailingSpace(char* out) {
 
 }  // namespace
 
-const char* stateToken(ControlState state) { return controlStateName(state); }
+const char* stateToken(RunState state) { return runStateName(state); }
 
 const char* faultToken(const SystemSnapshot& snapshot) {
   return snapshot.pumpTripped ? snapshot.faultCode : "none";
@@ -56,6 +56,13 @@ size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size) {
   appendToken(out, size, "floor", snapshot.floorKpa, 1);
   appendToken(out, size, "duty", snapshot.duty, 1);
   appendToken(out, size, "state", stateToken(snapshot.state));
+  if (snapshot.totalSeconds > 0) {
+    appendToken(out, size, "remain", (int)snapshot.remainSeconds);
+    appendToken(out, size, "total", (int)snapshot.totalSeconds);
+  } else {
+    appendToken(out, size, "remain", "-");
+    appendToken(out, size, "total", "-");
+  }
   appendToken(out, size, "fault", faultToken(snapshot));
   appendToken(out, size, "up", (int)snapshot.uptimeMs);
   appendToken(out, size, "ble", snapshot.bleConnected ? 1 : 0);

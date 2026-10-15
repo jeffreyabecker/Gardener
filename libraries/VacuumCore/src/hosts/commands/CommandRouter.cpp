@@ -6,7 +6,6 @@
 #include "core/Config.h"
 #include "core/Format.h"
 #include "core/Log.h"
-#include "core/Math.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "services/SnapshotText.h"
@@ -64,9 +63,9 @@ void CommandRouter::fail(ReplyQueue& out, const String& text) {
 void CommandRouter::emitHelp(ReplyQueue& out) {
   reply(out, "help");
   reply(out, "  ping | info | status | help");
-  reply(out, "  stop | reset | reboot");
-  reply(out, "  pump <0-100|off> | target <kPa|off> | ambient [kPa]");
-  reply(out, "  telemetry <on|off|ms>");
+  reply(out, "  start | stop | reset | reboot");
+  reply(out, "  set target <kPa|off> | set timer <seconds|off>");
+  reply(out, "  set ambient <kPa> | ambient | telemetry <on|off|ms>");
 }
 
 void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
@@ -100,52 +99,61 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     reply(out, String(body));
     return;
   }
+  if (command == "start") {
+    if (!control_.startRun()) {
+      fail(out, "not_ready");
+      return;
+    }
+    reply(out, "started");
+    return;
+  }
   if (command == "stop") {
-    control_.stop();
+    control_.stopRun();
     reply(out, "stopped");
     return;
   }
-  if (command == "pump" || command == "manual") {
-    if (argc < 2) {
-      fail(out, "usage: pump <0-100|off>");
+  if (command == "set") {
+    if (argc < 3) {
+      fail(out, "usage: set <target|timer|ambient> <value>");
       return;
     }
-    String value = argv[1];
+    String key = argv[1];
+    key.toLowerCase();
+    String value = argv[2];
     value.toLowerCase();
-    if (value == "off" || value == "stop") {
-      control_.stop();
-      reply(out, "pump off");
+
+    if (key == "target") {
+      if (value == "off") {
+        control_.clearTarget();
+        reply(out, "target off");
+        return;
+      }
+      float kpa = parseFloatOr(argv[2], -1.0f);
+      if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
+        fail(out, "out_of_range");
+        return;
+      }
+      control_.setTarget(kpa);
+      reply(out, "target " + formatFloat(kpa, 1));
       return;
     }
-    float percent = parseFloatOr(argv[1], -1.0f);
-    if (percent < 0.0f) {
-      fail(out, "bad_argument");
+    if (key == "timer") {
+      if (value == "off") {
+        control_.setDurationSeconds(0);
+        reply(out, "timer off");
+        return;
+      }
+      uint32_t seconds = parseU32Or(argv[2], 0);
+      control_.setDurationSeconds(seconds);
+      reply(out, "timer " + String((unsigned)seconds));
       return;
     }
-    control_.setManualDuty(percent);
-    reply(out,
-          "duty " + formatFloat(clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT), 1));
-    return;
-  }
-  if (command == "target" || command == "hold") {
-    if (argc < 2) {
-      fail(out, "usage: target <kPa|off>");
+    if (key == "ambient") {
+      sensor_.setAmbientKpa(parseFloatOr(argv[2], -1.0f));
+      reply(out, "ambient " + formatFloat(sensor_.ambientKpa(), 2));
       return;
     }
-    String value = argv[1];
-    value.toLowerCase();
-    if (value == "off") {
-      control_.disableTarget();
-      reply(out, "target off");
-      return;
-    }
-    float kpa = parseFloatOr(argv[1], -1.0f);
-    if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
-      fail(out, "out_of_range");
-      return;
-    }
-    control_.setTarget(kpa);
-    reply(out, "target " + formatFloat(kpa, 1));
+    fail(out, "unknown_command");
     return;
   }
   if (command == "ambient") {

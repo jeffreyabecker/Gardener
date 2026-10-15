@@ -30,6 +30,8 @@ SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
   snapshot.targetActive = control.targetActive();
   snapshot.targetKpa = control.targetKpa();
   snapshot.floorKpa = control.minReachableKpa();
+  snapshot.remainSeconds = control.remainingSeconds();
+  snapshot.totalSeconds = control.durationSeconds();
 
   snapshot.device = &device;
   snapshot.uptimeMs = millis();

@@ -31,6 +31,17 @@ constexpr uint32_t PUMP_MAX_RUN_MS = 15UL * 60UL * 1000UL;
 // absolute floor is ambient dependent, not a fixed number.
 constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;
 
+// --- Vent valve ------------------------------------------------------------
+// The valve is normally open (Q10): energise to close, so venting is the de-energised
+// state and a fault is fail-safe by construction.
+constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
+constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
+
+// --- Link ------------------------------------------------------------------
+// 0 disables the silent-central timeout: a long run with a connected but quiet client is
+// legitimate, and the disconnect path already covers a client that leaves (Q17).
+constexpr uint32_t LINK_TIMEOUT_MS = 0;
+
 // --- Pressure --------------------------------------------------------------
 constexpr float DEFAULT_AMBIENT_KPA = 101.325f;  // one standard atmosphere
 
