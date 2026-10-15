@@ -1,17 +1,17 @@
 # Plan: remove programmability, simplify the instrument
 
-Status: **reviewed** · revision 3 · owner: unassigned · scope: `libraries/VacuumCore`, `docs/`, `tools/`
+Status: **ready to execute** · revision 4 · owner: unassigned · scope: `libraries/VacuumCore`, `docs/`, `tools/`
 
-Revision 2 folded in the answers to Q1–Q9, recorded in §10. Revision 3 adds the scope
-decision that the **device is a BLE peripheral with no local control surface**: every
-decision comes from the central, the display is a readout, and the firmware keeps only
-what must be fast or safe. That makes some of revision 2 moot (the buttons become
-non-existent rather than merely unread, and persistence stops being obvious) and drops
-one state. See §1 for what the device owns, and Q14–Q17 in §11 for what it reopened.
+Revision 2 folded in Q1–Q9, revision 3 added the remote-only control model, and revision 4
+closes Q10–Q17, so **there are no open questions left** (§11). Three of the last answers
+changed the design rather than confirming it: the valve is **normally open** (Q10), which
+makes the fail-safe physical and inverts the coil logic; **raw duty is gone** (Q15), which
+removes the `MANUAL` state; and **nothing is persisted** (Q14), which removes
+`hal/Settings` from the plan entirely.
 
-Annotation guide: decisions taken here are marked `DECISION:`, open questions are
-numbered **Q10…Q17** at the end. Edit in place and the plan will be picked up from your
-edits. Delete this file when the work is done.
+Annotation guide: decisions taken here are marked `DECISION:`. Everything decided is
+tabulated in §10. Edit in place and the plan will be picked up from your edits; delete
+this file when the work is done.
 
 ## 1. Goal
 
@@ -41,8 +41,10 @@ run, and clears faults. The firmware keeps only what must be fast or safe to kee
 | logging, recipes, notifications, history | none of it belongs on a bench instrument |
 
 Two consequences worth stating plainly: on boot the device is **safe** (pump off, valve
-open, `IDLE`, nothing restored), and when the central goes away the device **stops and
-vents** rather than holding a vacuum nobody is watching.
+de-energised and therefore open, `IDLE`, nothing restored), and when the central goes away
+the device **stops and vents** rather than holding a vacuum nobody is watching. Because
+the valve is normally open (Q10) that second one is not a promise the firmware has to
+keep: it is what the hardware does when the firmware stops.
 
 In the same pass:
 
@@ -81,11 +83,11 @@ In the same pass:
 | `hosts/commands`: `run`, `stop`→keep (now means the run), `eval`, `list`, `cat`, `rm`, `autostart` | command surface shrinks by half |
 | `ui/Renderer`: the overlay path, `UiController`: `RunSelected` intent and cursor state | the overlay only existed for scripts; with one page there is no cursor |
 | `tools/vacuum_cli.py`: `upload`, `list`, `cat`, `rm`, `run` | nothing to transfer |
-| `hal/Buttons.*` and the four button pins | there is no local control surface, so the buttons are not part of this device (revision 3); Q16 asks whether the pins are deleted or left documented |
+| `hal/Buttons.*` | no local control surface (revision 3), so the driver goes; Q16 keeps the pins for a future override |
 | `ui/UiController.*`, and `UiSettings` (page step, toast) in the snapshot | with no buttons there are no events, so no intents, no cursor and no page navigation |
 | `ui/pages/{Graph,Info,Programs}Page.cpp` | one page (§6) |
 | `core/Log`: the ring buffer, `logTail()` and the `log` command | nothing to debug remotely now (Q8); the sink stays |
-| `hal/Settings` (never written) | the central owns intent, so the device has nothing of its own to remember: it boots safe (Q14) |
+| `hal/Settings` (never written) | boot safe, remember nothing (Q14): a device whose intent lives in the central has nothing of its own to remember |
 | README's Scripting section, `docs/ble-protocol.md`'s transfer section | replaced by a roadmap note |
 
 `scripts/check-layers.ps1` also loses `script` from the allowed `hosts/` order, so the
@@ -120,9 +122,9 @@ app/       App
 
 Two additions rather than removals (`hal/Battery`, `hal/VentValve`) and one collapse:
 `ui/` becomes a renderer, because with no local control surface there is no interaction
-state left to own. `hal/Settings` was planned to take over the filesystem's one
-remaining job — remembering a few settings across a reboot — but revision 3 has the
-device boot safe and remember nothing, so it is only needed if Q14 says otherwise.
+state left to own. `hal/Settings` was planned to take over the filesystem's one remaining
+job, remembering a few settings across a reboot, but Q14 has the device boot safe and
+remember nothing, so it is not written at all.
 
 ## 4. New hardware
 
@@ -135,7 +137,7 @@ device boot safe and remember nothing, so it is only needed if Q14 says otherwis
 | Pump PWM | 6 | unchanged, MOSFET gate |
 | Pump tach | 7 | optional, still disabled by default |
 | **Battery sense** | **4** | ADC1 channel 4, ÷2 divider for a 1S Li-ion cell |
-| **Vent valve** | **5** | digital output, MOSFET gate |
+| **Vent valve** | **5** | digital output, MOSFET gate; **energise to close** (Q10) |
 | spare | 2 | strapping pin, leave alone |
 
 `DECISION:` battery on GPIO4 and vent valve on GPIO5 (Q3, Q9). ESP32-C3 ADC1 is
@@ -170,17 +172,23 @@ BAT+ ── 100k ──┬── GPIO4
 
 ### 4.3 Vent valve
 
-A solenoid valve on the chamber, driven exactly like the pump: a logic level MOSFET with
-a flyback diode across the coil (or a relay module if the coil is hungry).
+**The valve is normally open (Q10).** De-energised means open, so the chamber vents, and
+*running a vacuum means energising the coil to close the valve*. That makes the fail-safe
+physical rather than logical: a crash, a watchdog reset, a brownout or a cut wire all
+de-energise the coil, and the chamber vents whether or not the firmware noticed.
 
-* `hal/VentValve.h`: `VentValve(const VentValveConfig&)` with `pin`, `activeHigh`,
+Wiring matches the pump: a logic level MOSFET with a flyback diode across the coil (or a
+relay module if the coil is hungry).
+
+* `hal/VentValve.h`: `VentValve(const VentValveConfig&)` with `pin` and `activeHigh`,
   then `void open()`, `void close()`, `bool isOpen()`, `void update(uint32_t nowMs)`.
-* The valve is driven by firmware only. There is no manual override and no button to
-  hold it open, so the run model in §5 owns it and every exit from a run funnels through
-  it.
-* `activeHigh` is an electrical detail; whether a *de-energised* valve is open or closed
-  is a fail-safe decision, and it is Q10. The docs have to state which we chose, because
-  it decides what the rig does when the power fails.
+  `close()` energises the coil and `open()` releases it, and the header says so out loud,
+  because this is exactly the inversion that gets wired backwards.
+* **Sequencing**: close the valve before the pump starts and open it after the pump stops,
+  so the pump never pulls against an open port.
+* **Hold current**: a solenoid draws continuously while energised, so a long hold is the
+  dominant battery cost on a 1S cell — the battery plan has to budget for the valve and
+  not just the pump (R7).
 
 ## 5. Run model
 
@@ -199,21 +207,24 @@ IDLE ────────────────────────> P
 * `VacuumControl` gains: `startRun()`, `stopRun()`, `setTarget(kpa)`,
   `setDurationSeconds(uint32_t)`, `remainingSeconds()`, `RunState state()`,
   `bool consumeCompleted()`.
-* **States**: `IDLE`, `PULL`, `HOLD`, `VENT`, `MANUAL`, `FAULT`. Revision 3 drops
-  `DONE`: after venting the device is `IDLE`, and "did it finish" is already observable
-  as `remain` reaching 0 on the way through, so a terminal state only added a second way
-  to say the same thing.
+* **States**: `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT`. Revision 3 dropped `DONE` (after
+  venting the device is `IDLE`, and "did it finish" is already observable as `remain`
+  reaching 0 on the way through), and Q15 dropped `MANUAL`: with raw duty gone,
+  `set target` is the only actuator surface.
 * `DECISION:` the countdown starts when the pressure first reaches the target (Q1), so
   the number on the screen is "hold time remaining". `target off` means pull down and
   stay there with no timer.
-* **Boot is safe**: pump off, valve open, `IDLE`, unchanged by anything that happened
-  before the reboot. The central re-establishes what it wants (Q14).
+* **Boot is safe**: pump off, valve de-energised and therefore open, `IDLE`, nothing
+  restored. The central re-establishes whatever it wants (Q14).
+* **The coil is energised through `PULL` and `HOLD`** and released in `IDLE` and `VENT`
+  (Q10), so hold current is a run cost, not an idle one.
 * **Vent closes** when `kpa >= ambient - VENT_MARGIN_KPA` or after `VENT_TIMEOUT_MS`,
   whichever comes first. A timeout is not an error on its own (a leaky rig takes longer),
   but it is logged and the state still returns to `IDLE`.
 * `DECISION:` stop, abort, link loss (Q4) and fault all funnel through `VENT` rather than
   stopping in place, so there is exactly one "release the chamber" path to reason about.
-  A fault opens the valve: that is the fail-safe direction, subject to Q10.
+  With a normally open valve (Q10) a fault is safe by construction: de-energising the
+  coil opens the chamber whether the firmware decides to vent or simply stops running.
 * **Faults latch** and only the central clears them. The device does not decide to retry.
 * Existing protections remain, and act without consulting the central: duty cap, slew
   limit, max run time, sensor-loss latch.
@@ -225,11 +236,10 @@ will carry this table:
 
 | Command | From | To |
 | --- | --- | --- |
-| `start` | `IDLE`, `MANUAL` | `PULL` |
-| `stop` | `PULL`, `HOLD`, `MANUAL` | `VENT` then `IDLE` |
+| `start` | `IDLE` | closes the valve, then `PULL`; `err not_ready` when venting or faulted |
+| `stop` | `PULL`, `HOLD`, `VENT` | opens the valve, stops the pump, `VENT` then `IDLE` |
 | `set target <kPa\|off>` | anything but `FAULT` | unchanged; the loop pulls to the new target |
 | `set timer <seconds\|off>` | any | unchanged; used by the countdown when it starts |
-| `set duty <0-100\|off>` | anything but `FAULT` | `MANUAL`, or `IDLE` when off (Q15) |
 | target reached | `PULL` | `HOLD`, and the countdown starts |
 | timer expires | `HOLD` | `VENT` then `IDLE` |
 | link loss, sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
@@ -254,7 +264,7 @@ diagnostics come over BLE.
 
 | Element | Source | Notes |
 | --- | --- | --- |
-| state token | `RunState` | `IDLE`, `PULL`, `HOLD`, `VENT`, `MAN`, `FAULT`; `FAULT` is inverted |
+| state token | `RunState` | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT`; `FAULT` is inverted |
 | battery | `hal/Battery` | 12x7 icon, fill by percent, `%` text; blinks below the low threshold |
 | current kPa | `PressureSensor` | size 2, one decimal, `kPa` in size 1 beside it |
 | target kPa | `VacuumControl` | `target 40.0 kPa`, or `target --` when unset |
@@ -307,8 +317,9 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
      than by tagging requests. Request ids are the documented fallback if pipelining ever
      matters.
    * **Link loss**: on disconnect, and after `LINK_TIMEOUT_MS` of no writes while still
-     connected (`0` disables it, Q17), the device stops the run and vents (Q4). A client
-     that walks away does not leave a chamber under vacuum.
+     connected, the device stops the run and vents (Q4). The timeout defaults to `0`,
+     meaning off (Q17): a one hour run with a connected but quiet central is legitimate,
+     and the disconnect path already covers a client that leaves.
    * **Faults latch** until the central sends `reset`. A failed pump or a lost sensor
      stays failed until somebody says otherwise.
    * **State transitions** are the table in §5.1, repeated in the document, because that
@@ -337,7 +348,7 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
    | `target` | kPa | `-` when unset |
    | `floor` | kPa | deepest reachable target, `ambient - 60 kPa` |
    | `duty` | % | pump duty |
-   | `state` | — | `IDLE`, `PULL`, `HOLD`, `VENT`, `MAN`, `FAULT` |
+   | `state` | — | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT` |
    | `remain` | s | countdown, `-` when no timer |
    | `total` | s | configured timer, `-` when none |
    | `batt` | % | `-` when no battery is fitted |
@@ -359,10 +370,13 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
    | `set timer <seconds\|off>` | `ok timer=600` |
    | `set ambient <kPa>` | `ok ambient=101.33` |
    | `ambient` | `ok ambient=101.33` (capture now) |
-   | `set duty <0-100\|off>` | `ok duty=70.0` (raw pump speed for bring-up; Q15) |
    | `set period <ms>` | `ok period=250` |
    | `reset` | `ok reset` (clear the pump latch and sensor errors, then vent) |
    | `reboot` | `ok rebooting` |
+
+   `set target` is the **only** actuator command (Q15): there is no raw duty, because a
+   second way to drive the pump would mean a second control path to reason about. The
+   accepted cost is that characterizing the pump needs a temporary build (R8).
 
    There is no `telemetry on`/`off`: the notifications are driven by the CCCD, so
    subscribing to `state` *is* asking for telemetry and the subscription can never
@@ -390,8 +404,8 @@ Each phase builds green, passes `check-layers.ps1`, and is its own commit.
 | # | Phase | Content | Verify |
 | --- | --- | --- | --- |
 | 1 | Rip out | §2.1 deletions (programmability, buttons, `UiController`, the log ring, three pages), `check-layers.ps1` hosts order, command router, snapshot, CLI, docs stubs | green, layer rule ok |
-| 2 | Run model, vent, link loss | `VacuumControl` target + timer + `VENT` + `RunState`, `hal/VentValve`, snapshot fields, `start`/`stop`/`set`, link-loss policy, `LINK_TIMEOUT_MS` (`hal/Settings` only if Q14 keeps persistence) | green |
-| 3 | Battery | `hal/Battery`, `hal/Pins.h`, snapshot fields, `batt` keys, low battery handling per Q11 | green |
+| 2 | Run model, vent, link loss | `VacuumControl` target + timer + `VENT` + `RunState`, `hal/VentValve` (energise to close), snapshot fields, `start`/`stop`/`set`, link-loss policy, `LINK_TIMEOUT_MS` | green |
+| 3 | Battery | `hal/Battery`, `hal/Pins.h`, snapshot fields, `batt` keys; no action on a low battery beyond the icon and the key (Q11) | green |
 | 4 | Simplified UI | single page, `Renderer` helpers for battery and right aligned text, `StatusPage` rewrite, layout matching §6 | green |
 | 5 | Protocol & docs | rewrite `docs/ble-protocol.md`, README (wiring, valve polarity, battery), CLI, `proto=2` | green, docs match code |
 
@@ -402,12 +416,14 @@ them.
 
 | id | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | Persistence: Q7 said persist, and revision 3 reopened it by making the device boot safe | settle Q14 before phase 2; if the answer is "boot safe", `hal/Settings` is never written at all |
+| R1 | ~~Persistence~~ **closed by Q14**: boot safe, remember nothing, so `hal/Settings` is never written | — |
 | R2 | ADC noise or a wrong divider makes the battery read nonsense | `analogReadMilliVolts` + averaging, `present()` gating, documented ±3–5 % and a calibration factor |
-| R3 | Valve polarity is a safety decision, not a wiring detail | decide before wiring (Q10) and state the consequence in the README |
+| R3 | ~~Valve polarity~~ **closed by Q10**: normally open, so the fail-safe is physical rather than logical | label the drive as energise-to-close in the README and in the header |
 | R4 | Dropping the `prog` characteristic breaks any existing client | `proto=2` in `info`, and the §7.9 migration table |
 | R5 | Venting on every disconnect (Q4) surprises a client that reconnects into a vented chamber | document it in §7.1, and expose `state=VENT` and `remain=-` in the status payload so a client can see what happened |
 | R6 | Revisiting scripting later re-adds complexity | §2.3: the code is a revert of one commit, and the `set` grammar is additive |
+| R7 | A solenoid draws continuously while closed, so a long hold is the dominant battery cost, not the pump | budget the battery for hold current (Q10) and state the number in the README |
+| R8 | Q15 removes raw duty, so characterizing the pump needs a temporary build | accepted; say so in the protocol doc, so nobody hunts for a command that is not there |
 
 ## 10. Decisions
 
@@ -415,14 +431,22 @@ them.
 | --- | --- | --- | --- |
 | Q1 | what the countdown means | hold time remaining, starting when the target is first reached | §5; `target off` means no timer |
 | Q2 | vent valve | plan for one | §4.3 output on GPIO5, §5 `VENT` leg |
-| Q3 | buttons | unused at this time | superseded by revision 3: no local control at all (§2.1, §6.1); Q16 decides the pins |
+| Q3 | buttons | unused at this time | superseded by revision 3: no local control at all (§2.1, §6.1); Q16 keeps the pins |
 | Q4 | BLE disconnect | stop and vent | §5 policy, §7.1 |
 | Q5 | pages | one page | §6; three page files deleted |
 | Q6 | battery | 1S Li-ion, ÷2 divider, 3.2–4.2 V | §4.2; `batt` in the status payload |
-| Q7 | persistence | yes | reopened by revision 3 as Q14: a device that boots safe has nothing to remember |
+| Q7 | persistence | yes | **superseded by Q14**: boot safe, remember nothing |
 | Q8 | `log` command and tail | drop | §2.1; `core/Log` keeps the sink, loses the ring and `logTail()` |
 | Q9 | buzzer | drop, keep the battery | no `hal/Buzzer`; `hal/Pins.h` changes |
 | **rev 3** | control model | the device is a BLE peripheral with no local control surface; the display is a readout | §1 control split, §5 state machine, §6, §7 protocol |
+| Q10 | valve fail-safe | **normally open**: energise to close, so any loss of control vents the chamber | §4.3, §5, R3, R7 |
+| Q11 | low battery | no specific action; the icon and the `batt` key are the whole story | §4.2, §7.5 |
+| Q12 | button pins | *(superseded by Q16)* | — |
+| Q13 | vent timing | config only (`VENT_MARGIN_KPA`, `VENT_TIMEOUT_MS`) | §7.5 |
+| Q14 | persistence | boot safe and remember nothing; `hal/Settings` is never written | §5 boot, §3, R1 |
+| Q15 | raw duty | no: `set target` is the only actuator surface, and `MANUAL` goes with it | §5, §5.1, §7.5, R8 |
+| Q16 | button pins | keep them in `hal/Pins.h` for a future local override | §2.1, §4.1 |
+| Q17 | link timeout | default off, `LINK_TIMEOUT_MS = 0` | §7.1 |
 
 Revision 3's knock-ons, recorded here so they do not read as oversights:
 
@@ -436,34 +460,7 @@ Revision 3's knock-ons, recorded here so they do not read as oversights:
 Net effect: a pressure sensing pump controller with a valve, a battery gauge, a display
 and a BLE interface. Everything else is gone.
 
-## 11. Open questions (new)
+## 11. Status
 
-* **Q10** — valve fail-safe polarity, which is a safety decision rather than a wiring
-  detail: a normally closed valve (energise to open) leaves the chamber sealed if the
-  board crashes or the power fails, a normally open one vents it. Recommendation:
-  normally closed, because firmware that has stopped cannot be trusted to hold a valve
-  open, and because venting on a brownout can ruin a process. Whichever we pick goes in
-  the README, since it decides what the rig does when the lights go out.
-* **Q11** — what should a low battery *do* beyond being visible? Options: warn only
-  (recommended), refuse to start a new run, or stop a run in progress. With the buzzer
-  gone the warning is the battery icon plus the `batt` key, so it only helps a client
-  that is watching.
-* **Q12** — *(superseded by Q16, kept for the trail)* the four button pins, before
-  revision 3 removed the control surface they served.
-* **Q13** — vent timing: config only (`VENT_MARGIN_KPA`, `VENT_TIMEOUT_MS`), or also a
-  `set vent <ms>` command? Recommendation: config only, to keep the command surface to
-  the §7.5 table.
-* **Q14** — boot safe and remember nothing (recommended, and the honest consequence of
-  remote-only control: `hal/Settings` disappears), or persist the target and timer so a
-  central that reconnects finds the run still configured? Note that persisting a *run*
-  would also mean deciding whether a reboot resumes it, which is a safety question, not
-  a convenience one.
-* **Q15** — keep a raw `set duty <0-100|off>` for characterizing the pump (recommended:
-  yes, it is one `MANUAL` state and the only way to measure what the pump does), or is
-  `set target` the whole actuator surface?
-* **Q16** — delete the four button pins from `hal/Pins.h` (recommended now that there is
-  no local control, and it shrinks the BOM), or leave them documented as reserved for a
-  future local override?
-* **Q17** — `LINK_TIMEOUT_MS`: default `0`/off (recommended — a one hour run with a
-  connected but quiet central is legitimate), or a default like 60 s so a frozen central
-  cannot leave the pump pulling?
+No open questions: Q1–Q17 are all answered and tabulated in §10. The plan is ready to
+execute phase by phase per §8. Delete this file when the work is done.
