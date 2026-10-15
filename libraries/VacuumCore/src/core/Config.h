@@ -4,17 +4,17 @@
 
 // Policy tunables: what the machine does, not how it is wired (see hal/Pins.h).
 //
-// The device is a BLE peripheral: every decision comes from the central, so what lives
-// here is only what the firmware must own to be fast or safe.
+// The device is a serial peripheral: every decision comes from the controller, so what
+// lives here is only what the firmware must own to be fast or safe.
 
 namespace eggplan {
 namespace cfg {
 
 constexpr const char* FIRMWARE_VERSION = "0.1.0";
 
-// Bumped when the wire format breaks: proto=2 is what tells a client the program
-// characteristic is gone and telemetry has its own characteristic.
-constexpr const char* PROTOCOL_VERSION = "2";
+// Bumped when the wire format breaks: proto=3 is the serial interface, with telemetry
+// polled instead of pushed and the log sharing the stream.
+constexpr const char* PROTOCOL_VERSION = "3";
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
@@ -49,21 +49,17 @@ constexpr float BATTERY_FULL_VOLTS = 4.2f;
 constexpr float BATTERY_CALIBRATION = 1.0f;
 constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 
-// --- Link ------------------------------------------------------------------
-// 0 disables the silent-central timeout: a long run with a connected but quiet client is
-// legitimate, and the disconnect path already covers a client that leaves (Q17).
-constexpr uint32_t LINK_TIMEOUT_MS = 0;
+// --- Controller link --------------------------------------------------------
+// The device is a serial peripheral: every decision comes from the controller, so what
+// lives here is only what the firmware must own to be fast or safe.
+constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB CDC ignores it
+// A command line is verb, key, value. Anything longer is refused rather than truncated.
+constexpr uint16_t COMMAND_LINE_MAX = 128;
+// With USB CDC the presence of a host is observable and its loss stops the run. On a plain
+// UART it is not, so a lost link is simply never reported.
 
 // --- Pressure --------------------------------------------------------------
 constexpr float DEFAULT_AMBIENT_KPA = 101.325f;  // one standard atmosphere
-
-// --- Bluetooth -------------------------------------------------------------
-constexpr const char* BLE_NAME_PREFIX = "EggplanVac";
-constexpr uint16_t BLE_MTU = 517;
-
-// --- Telemetry -------------------------------------------------------------
-constexpr uint32_t TELEMETRY_DEFAULT_MS = 250;
-constexpr uint32_t TELEMETRY_MIN_MS = 50;
 
 }  // namespace cfg
 }  // namespace eggplan

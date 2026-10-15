@@ -59,25 +59,29 @@ bool parseU32(const String& text, uint32_t& out) {
 }  // namespace
 
 CommandRouter::CommandRouter(VacuumControl& control, Pump& pump, PressureSensor& sensor,
-                             TelemetrySettings& telemetry)
-    : control_(control), pump_(pump), sensor_(sensor), telemetry_(telemetry) {}
+                             LinkSettings& settings)
+    : control_(control), pump_(pump), sensor_(sensor), settings_(settings) {}
 
-void CommandRouter::reply(ReplyQueue& out, const String& text) {
-  if (!out.push("ok " + text)) LOGW("router: reply queue full");
+void CommandRouter::reply(Print& out, const String& text) {
+  out.print("ok ");
+  out.print(text);
+  out.print('\n');
 }
 
-void CommandRouter::fail(ReplyQueue& out, const String& text) {
-  if (!out.push("err " + text)) LOGW("router: reply queue full");
+void CommandRouter::fail(Print& out, const String& text) {
+  out.print("err ");
+  out.print(text);
+  out.print('\n');
 }
 
-void CommandRouter::emitHelp(ReplyQueue& out) {
+void CommandRouter::emitHelp(Print& out) {
   // One line, because every command produces exactly one reply and that is what lets a
-  // client match replies to commands by counting. Argument syntax lives in
-  // docs/ble-protocol.md rather than on the wire.
+  // controller match replies to commands by counting. Argument syntax lives in
+  // docs/serial-protocol.md rather than on the wire.
   reply(out, "help=info|status|help|start|stop|reset|reboot|ambient|set");
 }
 
-void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
+void CommandRouter::handleLine(const String& rawLine, Print& out,
                                const SystemSnapshot& snapshot) {
   String line = rawLine;
   line.trim();
@@ -97,7 +101,7 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
   if (command == "info" || command == "status") {
     char body[224];
     if (command == "info") {
-      snapshottext::infoBody(snapshot, body, sizeof(body));
+      snapshottext::infoBody(snapshot, settings_, body, sizeof(body));
     } else {
       snapshottext::statusBody(snapshot, body, sizeof(body));
     }
@@ -174,22 +178,23 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
       reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
       return;
     }
+    // v2 configured the telemetry period; telemetry is polled now, so the whole family
+    // answers the same way an old `set duty` does.
     if (key == "period") {
-      uint32_t period = 0;
-      if (!parseU32(argv[2], period)) {
+      fail(out, "unsupported");
+      return;
+    }
+    if (key == "log") {
+      if (value != "on" && value != "off") {
         fail(out, "bad_argument");
         return;
       }
-      if (period < cfg::TELEMETRY_MIN_MS) {
-        fail(out, "out_of_range");
-        return;
-      }
-      telemetry_.periodMs = period;
-      reply(out, "period=" + String((unsigned)period));
+      settings_.logEnabled = (value == "on");
+      reply(out, value == "on" ? "log=on" : "log=off");
       return;
     }
-    // v1 could drive the pump directly. A client that still asks gets told the feature
-    // is gone rather than that it typed something wrong (Q15).
+    // v2 could send commands with a `pump`/`manual` verb; the removed ones answer
+    // unsupported rather than unknown_command so an old client learns why.
     if (key == "duty") {
       fail(out, "unsupported");
       return;
@@ -214,8 +219,8 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
     return;
   }
-  // v1 turned telemetry on and off by command; the characteristic subscription does
-  // that now, so only the period is left. Old clients get a straight answer.
+  // v2 turned telemetry on and off by command; a controller polls `status` now. Old
+  // clients get a straight answer.
   if (command == "telemetry" || command == "tel") {
     fail(out, "unsupported");
     return;

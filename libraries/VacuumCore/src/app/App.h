@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-#include "core/ReplyQueue.h"
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
 #include "hal/Device.h"
@@ -10,16 +9,16 @@
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
-#include "hosts/ble/BleService.h"
 #include "hosts/commands/CommandRouter.h"
+#include "hosts/serial/SerialService.h"
 #include "services/VacuumControl.h"
 #include "ui/Renderer.h"
 
 // Composition root. This is the only class that knows the whole graph: every other
 // module is handed exactly what it uses, by reference, at construction.
 //
-// The device is a BLE peripheral with no local control surface, so the loop only has to
-// service the sensor, the control loop and the transport.
+// The device is a serial peripheral with no local control surface, so the loop services
+// the sensor, the control loop and the link, in that order.
 
 namespace eggplan {
 
@@ -47,12 +46,10 @@ class App {
   VacuumControl control_;
   DeviceInfo device_;
   SystemSnapshot snapshot_;
-  TelemetrySettings telemetry_;
+  LinkSettings link_;
   Renderer renderer_;
-  ReplyQueue replies_;
-  ReplyQueue inbound_;
   CommandRouter router_;
-  BleService ble_;
+  SerialService serial_;
 };
 
 }  // namespace eggplan

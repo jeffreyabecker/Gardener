@@ -1,2 +1,6 @@
 # Pin the board so `arduino-cli compile firmware/eggplan_vacuum` needs no FQBN.
-default_fqbn: esp32:esp32:esp32c3
+#
+# CDCOnBoot=cdc is not optional: it maps Serial to the native USB CDC, which is where the
+# controller interface lives. Without it Serial is UART0 on GPIO20/21 and the interface
+# never reaches the USB-C socket.
+default_fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc

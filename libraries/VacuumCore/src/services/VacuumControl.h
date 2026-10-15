@@ -15,7 +15,7 @@ class VentValve;
 // The pressure loop, the run timer and the valve: everything the device has to own to
 // be fast or safe.
 //
-// The central owns the target, the timer, and when to start and stop. The device owns
+// The controller owns the target, the timer, and when to start and stop. The device owns
 // what happens when nobody is watching: pulling to the target, expiring the countdown,
 // and releasing the chamber through one path on stop, abort, link loss or fault.
 class VacuumControl {
@@ -26,7 +26,7 @@ class VacuumControl {
   void begin();
   void update(uint32_t nowMs);
 
-  // --- commands from the central -----------------------------------------
+  // --- commands from the controller -----------------------------------------
   void setTarget(float kpa);
   void clearTarget();
   void setDurationSeconds(uint32_t seconds);

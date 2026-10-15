@@ -176,7 +176,7 @@ float VacuumControl::step(uint32_t nowMs) {
 }
 
 void VacuumControl::update(uint32_t nowMs) {
-  // A latched pump fault is terminal until the central resets it.
+  // A latched pump fault is terminal until the controller resets it.
   if (pump_.tripped()) {
     if (state_ != RunState::Fault) fault(pump_.faultCode(), pump_.faultText());
     return;

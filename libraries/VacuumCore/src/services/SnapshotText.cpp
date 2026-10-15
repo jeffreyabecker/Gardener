@@ -76,7 +76,8 @@ size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size) {
   return strlen(out);
 }
 
-size_t infoBody(const SystemSnapshot& snapshot, char* out, size_t size) {
+size_t infoBody(const SystemSnapshot& snapshot, const LinkSettings& settings, char* out,
+                size_t size) {
   if (size == 0) return 0;
   out[0] = '\0';
 
@@ -92,6 +93,7 @@ size_t infoBody(const SystemSnapshot& snapshot, char* out, size_t size) {
     appendToken(out, size, "batt_v", "-");
     appendToken(out, size, "batt_pct", "-");
   }
+  appendToken(out, size, "log", settings.logEnabled ? "on" : "off");
 
   trimTrailingSpace(out);
   return strlen(out);

@@ -20,7 +20,10 @@ param(
     [string]$Task = 'build',
 
     [string]$Port = '',
-    [string]$Fqbn = 'esp32:esp32:esp32c3',
+    # CDCOnBoot=cdc maps Serial to the native USB CDC, which is what puts the interface on
+    # the USB-C socket. Without it Serial is UART0 on GPIO20/21 and the interface is
+    # invisible to a USB cable.
+    [string]$Fqbn = 'esp32:esp32:esp32c3:CDCOnBoot=cdc',
     [switch]$VerboseOutput
 )
 
@@ -31,7 +34,6 @@ $sketch = Join-Path $root 'firmware\eggplan_vacuum'
 $projectLibs = Join-Path $root 'libraries'
 
 $thirdPartyLibs = @(
-    'NimBLE-Arduino',
     'Adafruit SH110X',
     'Adafruit MPRLS Library',
     'Adafruit BusIO',

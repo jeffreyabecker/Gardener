@@ -5,13 +5,13 @@
 
 #include "core/Config.h"
 
-// Plain data shared between layers. The device is a BLE peripheral, so this is the
-// machine's read-only view: what a host, the display or the log can see without holding
-// a pointer into a module.
+// Plain data shared between layers. The device is a serial peripheral, so this is the
+// machine's read-only view: what a controller, the display or the log can see without
+// holding a pointer into a module.
 
 namespace eggplan {
 
-// What the device is doing, which is also the state a central watches. There is no DONE
+// What the device is doing, which is also the state a controller watches. There is no DONE
 // (after venting it is IDLE, and the countdown reaching zero is what said it finished)
 // and no MANUAL (raw duty is not part of the interface, Q15).
 enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
@@ -33,12 +33,11 @@ struct DeviceInfo {
   uint32_t freeHeap = 0;
 };
 
-// Written by a host, read by the transport, so a command can change the telemetry rate
-// without holding a pointer into the service that sends it. There is no enable flag:
-// subscribing to the `state` characteristic is what asks for telemetry, so the
-// subscription can never disagree with a command.
-struct TelemetrySettings {
-  uint32_t periodMs = cfg::TELEMETRY_DEFAULT_MS;
+// Written by the command grammar, read by the transport and by the payload renderer: the
+// one interface setting a controller can change. Plain data, so the transport never holds
+// a pointer into the grammar that answers it.
+struct LinkSettings {
+  bool logEnabled = true;
 };
 
 struct SystemSnapshot {

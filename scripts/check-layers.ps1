@@ -8,7 +8,7 @@
 
         app  ->  ui, hosts, services, hal, core
         ui   ->  hal, core
-        hosts->  services, hal, core   (and inside hosts: ble -> commands)
+        hosts->  services, hal, core   (and inside hosts: serial -> commands)
         services -> hal, core
         hal  ->  core
         core ->  core
@@ -41,7 +41,7 @@ $allowed = @{
 }
 
 # Within hosts/ the subfolders are one-way too.
-$hostsOrder = @{ 'ble' = @('ble', 'commands'); 'commands' = @('commands') }
+$hostsOrder = @{ 'serial' = @('serial', 'commands'); 'commands' = @('commands') }
 
 if (-not (Test-Path $Src)) { throw "source folder not found: $Src" }
 

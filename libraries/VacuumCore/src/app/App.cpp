@@ -9,9 +9,17 @@
 namespace eggplan {
 namespace {
 
+SerialService* logTarget = nullptr;
+
+// The log shares the stream with the protocol, so its lines go through the interface that
+// owns the stream: that is also what lets a controller silence them.
 void serialLogSink(const char* text, size_t length) {
-  Serial.write((const uint8_t*)text, length);
+  if (logTarget) logTarget->writeLog(text, length);
 }
+
+// True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
+// plain UART it is always true, so a lost link is never reported.
+bool serialAttached() { return (bool)Serial; }
 
 }  // namespace
 
@@ -21,9 +29,10 @@ App::App()
       battery_(batteryConfig()),
       display_(Wire, pins::OLED_I2C_ADDR, pins::OLED_WIDTH, pins::OLED_HEIGHT),
       control_(pump_, sensor_, vent_, pidConfig()),
+      link_(),
       renderer_(display_),
-      router_(control_, pump_, sensor_, telemetry_),
-      ble_(router_, telemetry_, replies_, inbound_, snapshot_) {}
+      router_(control_, pump_, sensor_, link_),
+      serial_(router_, Serial, serialAttached, link_, snapshot_) {}
 
 PumpConfig App::pumpConfig() {
   PumpConfig config;
@@ -63,7 +72,8 @@ PidConfig App::pidConfig() {
 }
 
 bool App::begin() {
-  Serial.begin(115200);
+  Serial.begin(cfg::SERIAL_BAUD);
+  logTarget = &serial_;
   logBegin(&serialLogSink);
   delay(200);
   LOGI("eggplan-vacuum %s booting", cfg::FIRMWARE_VERSION);
@@ -81,7 +91,7 @@ bool App::begin() {
 
   if (sensorOk) sensor_.captureAmbient();
   refreshSnapshot();
-  ble_.begin();
+  serial_.begin();
 
   LOGI("app: ready, heap %u bytes", (unsigned)ESP.getFreeHeap());
   if (displayOk) renderer_.render(snapshot_);
@@ -100,15 +110,18 @@ void App::update() {
   battery_.update(now);
   control_.update(now);
 
-  // A central that leaves or goes quiet releases the chamber (Q4).
-  if (ble_.consumeLinkLost()) {
-    LOGW("app: link lost, stopping and venting");
+  // Commands first, against the machine as the last control tick left it, so a reply
+  // describes something that actually happened rather than a view built mid-command.
+  serial_.poll(now);
+
+  // A controller that goes away releases the chamber (Q4).
+  if (serial_.consumeLinkLost()) {
+    LOGW("app: controller left, stopping and venting");
     control_.stopRun();
   }
 
   refreshSnapshot();
   renderer_.render(snapshot_);
-  ble_.poll(now);
 }
 
 }  // namespace eggplan
