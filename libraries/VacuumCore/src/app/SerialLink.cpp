@@ -487,20 +487,6 @@ void SerialLink::dispatch(char* line) {
       ok(payload.c_str());
       return;
     }
-    if (same(key, "ambient")) {
-      float kpa = 0.0f;
-      if (!parseFloat(value, kpa)) {
-        err("bad_argument");
-        return;
-      }
-      if (!system_.setAmbient(kpa)) {
-        err("out_of_range");
-        return;
-      }
-      String payload = "ambient=" + String(system_.state().ambientKpa, 2);
-      ok(payload.c_str());
-      return;
-    }
     if (same(key, "invert")) {
       if (!same(value, "on") && !same(value, "off")) {
         err("bad_argument");
@@ -534,9 +520,10 @@ void SerialLink::dispatch(char* line) {
       ok(logEnabled_ ? "log=on" : "log=off");
       return;
     }
-    // v2 configured a telemetry period and could drive the pump directly. Both are gone,
-    // and a controller that still asks gets told that rather than that it typed it wrong.
-    if (same(key, "period") || same(key, "duty")) {
+    // v2 configured a telemetry period and could drive the pump directly, and the ambient
+    // reference used to be typed in. All three are gone, and a controller that still asks gets
+    // told that rather than that it typed it wrong.
+    if (same(key, "period") || same(key, "duty") || same(key, "ambient")) {
       err("unsupported");
       return;
     }
@@ -544,20 +531,13 @@ void SerialLink::dispatch(char* line) {
     return;
   }
   if (same(command, "ambient")) {
+    // The reference is taken from the sensor and never typed in: a second way to set it was one
+    // more way for the rig to be holding against a number nobody measured.
     if (argc > 1) {
-      lower(argv[1]);
-      float kpa = 0.0f;
-      if (!parseFloat(argv[1], kpa)) {
-        err("bad_argument");
-        return;
-      }
-      if (!system_.setAmbient(kpa)) {
-        err("out_of_range");
-        return;
-      }
-    } else {
-      system_.captureAmbient();
+      err("unsupported");
+      return;
     }
+    system_.captureAmbient();
     String payload = "ambient=" + String(system_.state().ambientKpa, 2);
     ok(payload.c_str());
     return;

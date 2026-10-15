@@ -28,14 +28,15 @@ class PressureSensor {
   float vacuumKpa() const;
   float vacuumPercent() const;
 
-  // False when the value is outside what the part can measure; the reference is then
-  // left alone, so a caller that sends nonsense learns about it instead of silently
-  // getting the old ambient back.
-  bool setAmbientKpa(float kpa);
   void captureAmbient();
 
  private:
   bool readNow(float& outKpa);
+
+  // False when the value is outside what the part can measure; the reference is then left
+  // alone, so a capture taken while the chamber was already pumped down is refused rather than
+  // adopted. Only captureAmbient() calls it, so the reference can be taken but never dialled in.
+  bool setAmbientKpa(float kpa);
 
   Adafruit_MPRLS sensor_;
   bool present_ = false;

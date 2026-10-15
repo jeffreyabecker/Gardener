@@ -1,7 +1,7 @@
 # Gardener
 
-An ESP32-S3 vacuum pump controller. It pulls a chamber to a target pressure, holds it for a
-timer, then vents it — driven over a serial line by a controller at the other end.
+An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it
+for a timer, then vents it — driven over a serial line by a controller at the other end.
 
 * **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
 * **Interface**: USB CDC, one line oriented protocol ([docs/serial-protocol.md](./docs/serial-protocol.md))
@@ -28,10 +28,15 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 | Term | Meaning |
 | --- | --- |
 | `1 kPa` | 10 hPa = 10 mbar = 0.145 PSI = 7.5 mmHg |
-| pressure | absolute pressure in kPa |
+| pressure | absolute pressure in kPa, reported as `kpa` |
 | `vac` | deficit below the ambient reference, i.e. `ambient - pressure` |
+| `target` | depth below the same reference the loop pulls to, so a target and a reading are on one ruler |
 | `pct` | `vac / ambient * 100` |
-| `floor` | deepest target the pump can reach, `ambient - 60 kPa` |
+| `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below the reference |
+
+The ambient reference is **captured, never dialled in** — the device takes it from the sensor
+(`ambient`), at boot and on request, and nothing else can set one. Targets are relative to it,
+so capturing a new one restates every target, and both want the rig at rest when it happens.
 
 ## Project layout
 
@@ -249,7 +254,7 @@ replies:
 -> start
 <- ok started
 -> status
-<- ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+<- ok kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
 -> stop
 <- ok stopped
 ```
@@ -269,10 +274,11 @@ One class, because the state the chamber is in and the state the run is in turne
 same state.
 
 [VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant and the machine on
-top of it: the target, the PID on absolute pressure (all terms in kPa), the valve, the pump, the
-run state in the diagram below and the fault latch. The pump is the only actuator, so the loop
-can pull down but never vent — the vent valve is the only way back up. When the measurement
-undershoots the target the output drops to zero and the chamber bleeds back up.
+top of it: the target, the PID on pressure relative to the captured ambient (all terms in kPa,
+and the same frame a target is set in), the valve, the pump, the run state in the diagram below
+and the fault latch. The pump is the only actuator, so the loop can pull down but never vent —
+the vent valve is the only way back up. When the measurement undershoots the target the output
+drops to zero and the chamber bleeds back up.
 
 It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
 the duty, the state. Both of the transitions it makes for itself are facts about the chamber
@@ -314,11 +320,11 @@ Protections, all of which act without consulting the controller:
 * a slew rate limit avoids step changes into the diaphragm pump
 * if the pressure sensor stops answering mid-run, the pump is cut and the state latches to
   `FAULT` (clear with `reset`)
-* targets below `ambient - PUMP_MAX_SUCTION_KPA` only log a warning and pin the duty
+* targets deeper than `floor` only log a warning and pin the duty
 
 Those four are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
-`status` and stay above it.
+`status` and keep targets no deeper than it.
 
 ## Safety
 

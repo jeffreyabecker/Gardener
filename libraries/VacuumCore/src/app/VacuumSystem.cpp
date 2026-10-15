@@ -41,8 +41,10 @@ PlantState VacuumSystem::state() const {
   return plant;
 }
 
-bool VacuumSystem::setAmbient(float kpa) { return sensor_.setAmbientKpa(kpa); }
+float VacuumSystem::currentKpa() const { return sensor_.vacuumKpa(); }
 
+// The reference is captured and never dialled in: one source for it, so nothing can leave the
+// rig regulating against a number nobody measured.
 void VacuumSystem::captureAmbient() { sensor_.captureAmbient(); }
 
 void VacuumSystem::rest() {
@@ -88,17 +90,20 @@ void VacuumSystem::stop() {
 
 bool VacuumSystem::vented() const {
   bool settled = sensor_.present() && sensor_.readingValid() &&
-                 sensor_.kpa() >= sensor_.ambientKpa() - cfg::VENT_MARGIN_KPA;
+                 currentKpa() <= cfg::VENT_MARGIN_KPA;
   return settled || (millis() - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
 }
 
 float VacuumSystem::minReachableKpa() const {
-  float ambient = sensor_.ambientKpa();
-  float floorKpa = ambient - cfg::PUMP_MAX_SUCTION_KPA;
-  return floorKpa > cfg::CONTROL_MIN_TARGET_KPA ? floorKpa : cfg::CONTROL_MIN_TARGET_KPA;
+  // The pump's own reach, measured from the same reference a target is, so it no longer walks
+  // around with the weather the way `ambient - suction` did.
+  return cfg::PUMP_MAX_SUCTION_KPA > cfg::CONTROL_MIN_TARGET_KPA ? cfg::PUMP_MAX_SUCTION_KPA
+                                                               : cfg::CONTROL_MIN_TARGET_KPA;
 }
 
 void VacuumSystem::setTarget(float kpa) {
+  // Shallower than the loop's floor is not a target. Deeper than the pump can reach still is
+  // one: the duty pins at the cap and the run simply never gets there.
   if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   targetActive_ = true;
@@ -120,7 +125,7 @@ void VacuumSystem::clearTarget() {
 }
 
 bool VacuumSystem::atTarget() const {
-  return sensor_.kpa() <= targetKpa_ + cfg::CONTROL_DEADBAND_KPA;
+  return currentKpa() >= targetKpa_ - cfg::CONTROL_DEADBAND_KPA;
 }
 
 void VacuumSystem::resetFault() {
@@ -168,9 +173,9 @@ void VacuumSystem::service(uint32_t nowMs) {
   if (regulating) regulate(nowMs);
 }
 
-// error is measured - target, so positive means "still needs vacuum"; the derivative term
-// uses the measurement slew rather than the error slope, which keeps a setpoint change
-// from kicking the output.
+// error is how far the chamber still is from the target, so positive means "still needs
+// vacuum"; the derivative term uses the measurement slew rather than the error slope, which
+// keeps a setpoint change from kicking the output.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
   if (dt <= 0.0f) return cfg::PID_KP * error + pidIntegral_;
   pidIntegral_ = clampf(pidIntegral_ + cfg::PID_KI * error * dt, -cfg::PID_INTEGRAL_LIMIT,
@@ -185,8 +190,10 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
+  // The slew comes off the raw reading: the deficit is that reading offset by the reference, so
+  // the two move in opposite directions and PID_KD is signed against this one.
   float measured = sensor_.kpa();
-  float error = measured - targetKpa_;  // positive means "still needs vacuum"
+  float error = targetKpa_ - currentKpa();  // positive means "still needs vacuum"
 
   if (error < -cfg::CONTROL_DEADBAND_KPA) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.

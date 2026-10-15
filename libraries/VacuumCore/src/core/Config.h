@@ -14,8 +14,8 @@ constexpr const char* FIRMWARE_VERSION = "0.5.0";
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
-// Floor for the loop target. Below the pump's ultimate vacuum the duty would simply
-// sit at the cap, so this mostly guards against nonsense targets.
+// Shallowest target the loop will accept, in kPa below the ambient reference. A pull gentler
+// than this is not one worth making, so setTarget() refuses it rather than regulating it.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
 constexpr float PID_KP = 3.0f;    // % duty per kPa of error
 constexpr float PID_KI = 0.2f;    // % duty per kPa second
@@ -28,8 +28,8 @@ constexpr float CONTROL_DEADBAND_KPA = 0.2f;
 // stops one.
 constexpr float PUMP_DUTY_MAX_PERCENT = 90.0f;
 constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
-// Measured capability: about 60 kPa of suction below ambient, so the reachable
-// absolute floor is ambient dependent, not a fixed number.
+// Measured capability: about 60 kPa of suction below ambient. Targets are relative to the
+// captured ambient too, so this is also the deepest one the pump can reach — the floor.
 constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;
 
 // --- Vent valve ------------------------------------------------------------

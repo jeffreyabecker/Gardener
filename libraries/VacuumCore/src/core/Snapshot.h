@@ -29,11 +29,13 @@ inline const char* runStateName(RunState state) {
 
 struct PlantState {
   RunState runState = RunState::Idle;
+  // kpa is the sensor's own absolute reading. Every other pressure here is measured from the
+  // captured reference, which is the frame the target is stated in.
   float kpa = 0.0f, vacuumKpa = 0.0f, vacuumPercent = 0.0f, ambientKpa = 0.0f;
-  float targetKpa = 0.0f;
+  float targetKpa = 0.0f;  // depth below the reference; only meaningful while targetActive
   bool targetActive = false;
   float duty = 0.0f;
-  float floorKpa = 0.0f;  // deepest reachable target
+  float floorKpa = 0.0f;  // deepest reachable target, in the same frame
   bool sensorOk = false, readingValid = false;
   bool faulted = false;
   const char* faultCode = "";
