@@ -66,8 +66,9 @@ Start flow:
 
 1. Compile `source` with `be_loadbuffer` (or equivalent). Compile error → `error` set,
    `lastError_` set, return false.
-2. Bind the `vacuum` and `program` modules (one global `be_map`, native functions).
-3. Set `program.name`, `program.args`, and the effective params.
+2. Bind the `vacuum`, `program`, and `screen` modules (one global `be_map`, native
+   functions).
+3. Set `program.name` and the effective params.
 4. Run the top-level call. `start()` returns as soon as the program begins; the VM task
    keeps it alive via `update()`.
 
@@ -127,8 +128,6 @@ class ProgramApi {
 
   // --- identity / params / state ---
   const char* programName() const;
-  const char* arg(int index) const;
-  String args() const;
   bool param(const char* name, float& out) const;      // number/int
   bool param(const char* name, String& out) const;     // choice/bool/text
   void stateSet(const char* key, float value);
@@ -194,8 +193,6 @@ Three modules, registered once per VM:
 | `vacuum.now_ms()` | `nowMs` | |
 | `vacuum.delay(ms)` | `delay` | yields, aborts on stop |
 | `program.name()` | `programName` | |
-| `program.arg(n)` | `arg` | raw CLI arg |
-| `program.args()` | `args` | |
 | `program.param(name)` | `param` | typed manifest value |
 | `program.state_set(k, v)` | `stateSet` | float or string |
 | `program.state_get(k)` | `stateGet` | |
