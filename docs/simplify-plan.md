@@ -1,9 +1,14 @@
 # Plan: remove programmability, simplify the instrument
 
-Status: **proposed** · owner: unassigned · scope: `libraries/VacuumCore`, `docs/`, `tools/`
+Status: **reviewed** · revision 2 · owner: unassigned · scope: `libraries/VacuumCore`, `docs/`, `tools/`
+
+Revision 2 folds in the answers to Q1–Q9, recorded in §10. Three of them changed the
+shape of the job: a **vent valve** is now part of the design (Q2), and the **buttons and
+the buzzer are gone** (Q3, Q9), which deletes as much code as the programmability rip
+out does and rearranges the pin map. New questions raised by those answers are §11.
 
 Annotation guide: decisions taken here are marked `DECISION:`, open questions are
-numbered **Q1…Q9** at the end. Edit in place and the plan will be picked up from your
+numbered **Q10…Q13** at the end. Edit in place and the plan will be picked up from your
 edits. Delete this file when the work is done.
 
 ## 1. Goal
@@ -19,8 +24,12 @@ In the same pass:
 
 * a **clearly documented BLE protocol**: small enough to read in one sitting, with a
   formal grammar and one status payload shape
-* a **simplified display**: battery, current kPa, target kPa, countdown timer
-* a **piezo buzzer** for start, target reached, complete, fault and low battery
+* a **simplified display**: battery, current kPa, target kPa, countdown timer — and the
+  only local feedback the operator has
+* a **vent valve**, so a stopped, completed, faulted or disconnected run releases the
+  chamber instead of bleeding away through a leak
+* **no buttons and no buzzer**: the four buttons are not read at this time (Q3) and the
+  piezo is dropped (Q9), which makes the protocol the only control surface
 
 ### Non-goals
 
@@ -47,6 +56,10 @@ In the same pass:
 | `hosts/commands`: `run`, `stop`→keep (now means the run), `eval`, `list`, `cat`, `rm`, `autostart` | command surface shrinks by half |
 | `ui/Renderer`: the overlay path, `UiController`: `RunSelected` intent and cursor state | the overlay only existed for scripts; with one page there is no cursor |
 | `tools/vacuum_cli.py`: `upload`, `list`, `cat`, `rm`, `run` | nothing to transfer |
+| `hal/Buttons.*` | the four buttons are not read at this time (Q3); the pins stay reserved |
+| `ui/UiController.*`, and `UiSettings` (page step, toast) in the snapshot | with no buttons there are no events, so no intents, no cursor and no page navigation |
+| `ui/pages/{Graph,Info,Programs}Page.cpp` | one page (§6) |
+| `core/Log`: the ring buffer, `logTail()` and the `log` command | nothing to debug remotely now (Q8); the sink stays |
 | README's Scripting section, `docs/ble-protocol.md`'s transfer section | replaced by a roadmap note |
 
 `scripts/check-layers.ps1` also loses `script` from the allowed `hosts/` order, so the
@@ -55,10 +68,10 @@ guardrail keeps describing the design rather than the plan.
 ### 2.2 What stays
 
 Everything that makes it an instrument: MPRLS sensing with filtering, the PWM pump
-driver with ramp/duty/run-time protection, the PID hold, the SH1106 UI, four buttons,
-the BLE command/reply/telemetry transport, the layered layout with its enforced
-dependency rule, and `core/ReplyQueue` (the transport still needs to hand command
-lines to the main loop).
+driver with ramp/duty/run-time protection, the PID hold, the SH1106 display, the BLE
+command/reply/telemetry transport, the layered layout with its enforced dependency rule,
+and `core/ReplyQueue` (the transport still needs to hand command lines to the main
+loop). New rather than kept: a vent valve output, a battery gauge and NVS settings.
 
 ### 2.3 Where the removed code lives
 
@@ -71,17 +84,19 @@ snapshot are all still there to hang it from.
 ## 3. Shape after removal
 
 ```
-core/      Config, Snapshot, Math, Pressure, Format, Log, Pid, ReplyQueue
-hal/       Pins, Device, Battery, Pump, Tachometer, PressureSensor, Display, Buttons, Buzzer, Settings
-services/  VacuumControl (target + timer + safe stop), SnapshotBuilder, SnapshotText
+core/      Config, Snapshot, Math, Pressure, Format, Log (sink only), Pid, ReplyQueue
+hal/       Pins, Device, Battery, Pump, VentValve, Tachometer, PressureSensor, Display, Settings
+services/  VacuumControl (target + timer + vent + safe stop), SnapshotBuilder, SnapshotText
 hosts/     commands/CommandRouter, ble/BleService
-ui/        Renderer, UiController, pages/StatusPage.cpp
+ui/        Renderer, pages/StatusPage.cpp
 app/       App
 ```
 
-Two additions rather than removals (`hal/Battery`, `hal/Buzzer`) and one replacement:
-`hal/Settings` (NVS via `Preferences`) takes over the one job the filesystem still had
-— remembering a few settings across a reboot — without a filesystem. See Q7.
+Three additions rather than removals (`hal/Battery`, `hal/VentValve`, `hal/Settings`),
+one replacement and one collapse: `hal/Settings` (NVS via `Preferences`) takes over the
+one job the filesystem still had — remembering a few settings across a reboot — without
+a filesystem, and `ui/` collapses to a renderer, because with no buttons there is no
+interaction state left to own.
 
 ## 4. New hardware
 
@@ -89,24 +104,30 @@ Two additions rather than removals (`hal/Battery`, `hal/Buzzer`) and one replace
 
 | Signal | GPIO | Notes |
 | --- | --- | --- |
-| Button UP / DOWN / OK / BACK | 0 / 1 / 3 / 10 | unchanged, active low |
+| Button UP / DOWN / OK / BACK | 0 / 1 / 3 / 10 | **reserved, not read** (Q3) |
 | I2C SDA / SCL | 8 / 9 | unchanged, MPRLS + OLED |
 | Pump PWM | 6 | unchanged, MOSFET gate |
 | Pump tach | 7 | optional, still disabled by default |
-| **Battery sense** | **4** | ADC1 channel 4, through a divider |
-| **Buzzer** | **5** | LEDC tone output |
+| **Battery sense** | **4** | ADC1 channel 4, ÷2 divider for a 1S Li-ion cell |
+| **Vent valve** | **5** | digital output, MOSFET gate |
 | spare | 2 | strapping pin, leave alone |
 
-`DECISION:` battery on GPIO4 and buzzer on GPIO5. ESP32-C3 ADC1 is GPIO0..4 and three
-of those are buttons, so GPIO4 is the only free ADC1 pin; GPIO5 sits on ADC2, which we
-do not want, but it drives an LEDC channel perfectly.
+`DECISION:` battery on GPIO4 and vent valve on GPIO5 (Q3, Q9). ESP32-C3 ADC1 is
+GPIO0..4 and three of those are button pins — a fitted button pulls its pin to ground
+when pressed, so the battery sense must not inherit a freed button pin even though the
+buttons are unread. GPIO4 is clear of both the buttons and the strapping pin. GPIO5 is
+free now that the buzzer is dropped, and it drives a valve as happily as a piezo.
+
+`hal/Pins.h` changes are therefore: add `BATTERY_ADC` and `VENT_VALVE`, drop the buzzer
+before it is ever added, and keep the button pins with a comment that nothing reads
+them yet (Q12).
 
 ### 4.2 Battery
 
 ```
 BAT+ ── 100k ──┬── GPIO4
                │
-              22k ── GND            (÷5.5, good for a 12 V pack)
+              100k ── GND           (÷2, 1S Li-ion, 3.2–4.2 V)
 ```
 
 * `hal/Battery.h`: `Battery(const BatteryConfig&)` with `adcPin`, `dividerRatio`,
@@ -114,51 +135,68 @@ BAT+ ── 100k ──┬── GPIO4
   `float volts()`, `uint8_t percent()`, `bool low()`, `bool present()`.
 * Reads with `analogReadMilliVolts()` (the calibrated path in the ESP32 core) and
   averages, because a single ADC sample on this part is noisy.
-* Percent from a straight line between the configured empty and full volts. The ESP32
-  ADC is not lab grade; the plan documents ±3–5 % and a `BATTERY_CALIBRATION` factor
-  for trimming. Q6 asks about chemistry.
+* Percent from a straight line between the configured empty and full volts:
+  **1S Li-ion, 3.2 V empty and 4.2 V full** (Q6), so 3.2 V reads 0 % and 4.2 V reads
+  100 %. The ESP32 ADC is not lab grade; expect ±3–5 % and a `BATTERY_CALIBRATION`
+  factor for trimming. What a low battery should *do* beyond being visible is Q11.
 * `present()` is false when the reading is below a plausible minimum, so a
   mains-powered build does not show a permanent 0 % warning.
 
-### 4.3 Buzzer
+### 4.3 Vent valve
 
-* `hal/Buzzer.h`: passive piezo on LEDC, so it can play tones rather than click:
-  `Buzzer(const BuzzerConfig&)`, `update(nowMs)`, `play(Pattern)`, `beep(hz, ms)`,
-  `setEnabled(bool)`, `bool enabled()`.
-* **Non-blocking.** Patterns are a short list of tones with durations that `update()`
-  walks; a blocking `delay()` in the buzzer would stall the control loop.
-* Patterns: `Start` (short, 2 kHz), `Reached` (two short), `Complete` (three short),
-  `Fault` (one long, 400 Hz), `LowBattery` (two low). All configurable in `core/Config.h`.
-* Muting is a setting (BACK long-press and a BLE command), persisted through
-  `hal/Settings`.
+A solenoid valve on the chamber, driven exactly like the pump: a logic level MOSFET with
+a flyback diode across the coil (or a relay module if the coil is hungry).
+
+* `hal/VentValve.h`: `VentValve(const VentValveConfig&)` with `pin`, `activeHigh`,
+  then `void open()`, `void close()`, `bool isOpen()`, `void update(uint32_t nowMs)`.
+* The valve is driven by firmware only. There is no manual override and no button to
+  hold it open, so the run model in §5 owns it and every exit from a run funnels through
+  it.
+* `activeHigh` is an electrical detail; whether a *de-energised* valve is open or closed
+  is a fail-safe decision, and it is Q10. The docs have to state which we chose, because
+  it decides what the rig does when the power fails.
 
 ## 5. Run model
 
-Today the controller only knows a target. The countdown timer needs it to know about a
-*run*:
+Today the controller only knows a target. A countdown timer and a vent valve both need
+it to know about a *run*:
 
 ```
-IDLE ──start(target, seconds)──> PULLING ──pressure <= target──> HOLDING ──timer 0──> COMPLETE
-  ^                                  │                              │
-  └────────── stop() / abort ────────┴──────────────────────────────┘
-                                   FAULT (sensor lost, pump latch)
+        start(target, timer)
+IDLE ────────────────────────> PULL ──(target reached)──> HOLD ──(timer 0)──┐
+  ^                              │                          │                │
+  │                              │  stop / abort / BLE disconnect            │
+  │                              v                          v                v
+  └────(vent complete)───────── VENT <───────────────────────────────────────┘
+                                 ^
+        FAULT (sensor lost, pump latch, max run time) ────────┘
 ```
 
 * `VacuumControl` gains: `startRun()`, `stopRun()`, `setTarget(kpa)`,
   `setDurationSeconds(uint32_t)`, `remainingSeconds()`, `RunState state()`,
   `bool consumeCompleted()`.
-* `DECISION:` the countdown starts when the pressure first reaches the target, so the
-  number on the screen means "hold time remaining". Q3 asks to confirm.
-* On expiry: pump off, state `COMPLETE`, `consumeCompleted()` returns true once, which
-  is what `App` uses to play the buzzer pattern. No new event machinery: `App` already
-  owns the wiring.
-* `target off` (or `set target off`) means pull down and stay there with no timer.
+* **States**: `IDLE`, `PULL`, `HOLD`, `VENT`, `DONE`, `FAULT`. `DONE` means "the run
+  finished and the chamber has been vented"; it clears on the next start. With no buzzer
+  and no buttons, `DONE` is how the operator learns the run is over (§6.1).
+* `DECISION:` the countdown starts when the pressure first reaches the target (Q1), so
+  the number on the screen is "hold time remaining". `target off` means pull down and
+  stay there with no timer.
+* **Vent closes** when `kpa >= ambient - VENT_MARGIN_KPA` or after `VENT_TIMEOUT_MS`,
+  whichever comes first. A timeout is not an error on its own (a leaky rig takes longer),
+  but it is logged and the state still returns to `IDLE`/`DONE`.
+* `DECISION:` stop, abort, BLE disconnect (Q4) and fault all funnel through `VENT`
+  rather than stopping in place, so there is exactly one "release the chamber" path to
+  reason about. A fault opens the valve: it is the fail-safe direction.
+* `App` fires nothing when a run completes beyond the display change; the buzzer was the
+  only consumer of `consumeCompleted()` and it is gone (Q9). The call stays because
+  restarting a repeated run or a future notification would want it.
 * Existing protections remain: duty cap, slew limit, max run time, sensor-loss latch.
 
 ## 6. Simplified display
 
-One page. No page navigation, so no cursor, no graphs, no info page — diagnostics are
-available over BLE.
+One page, and no interaction at all: nothing reads the buttons, so the display is purely
+informational and every control is a BLE command. No cursor, no graphs, no info page —
+diagnostics come over BLE.
 
 ```
   x=0                                                            x=127
@@ -183,23 +221,20 @@ available over BLE.
 `textRight(const char* text, int16_t y, uint8_t size)` for right-aligned values, and
 `banner(const char* text)` for the fault row. Layout constants live in the page.
 
-### 6.1 Buttons
+### 6.1 No interaction
 
-| Button | Action |
-| --- | --- |
-| UP / DOWN | target ∓1 kPa (auto-repeat comes free from `hal/Buttons`) |
-| OK click | start the run / stop the run |
-| OK long | cycle the timer preset: off, 1, 5, 10, 30 min |
-| BACK click | abort: pump off, timer cleared, state `IDLE` |
-| BACK long | mute or unmute the buzzer |
+Q3: the buttons are unused at this time, so `hal/Buttons` is deleted and nothing reads
+GPIO0/1/3/10. The consequences are worth naming, because they change how the instrument
+behaves rather than just how it is built:
 
-Q5 asks to confirm this mapping.
+* the display is the only local feedback, so the state token and the fault banner carry
+  more weight than they did in a multi page UI
+* a fault, a vent timeout or a low battery can only be *seen*, never acknowledged
+* everything an operator can do is a BLE command (§7), which makes the protocol the
+  primary interface rather than a debugging aid
 
-### 6.2 Buzzer events
-
-Fired by `App` from state transitions, never from inside a driver:
-`start` → `Start`, reached target → `Reached`, timer expiry → `Complete`, `FAULT`
-entry → `Fault`, battery crossing the low threshold (with hysteresis) → `LowBattery`.
+Re-adding buttons is a revert of that deletion plus a mapping, and the pins stay
+reserved in `hal/Pins.h` for it (Q12).
 
 ## 7. BLE protocol v2
 
@@ -220,7 +255,8 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
 ### 7.1 The document will contain
 
 1. **Roles and flow** — connect, read `info`, write `cmd`, subscribe to `rsp` and
-   `state`; what happens on disconnect (Q4).
+   `state`; and on disconnect the device stops the run and vents (Q4), so a client that
+   walks away does not leave a chamber under vacuum.
 2. **Grammar**, in EBNF, small enough to be unambiguous:
 
    ```
@@ -245,7 +281,7 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
    | `target` | kPa | `-` when unset |
    | `floor` | kPa | deepest reachable target, `ambient - 60 kPa` |
    | `duty` | % | pump duty |
-   | `state` | — | `IDLE`, `PULL`, `HOLD`, `DONE`, `FAULT` |
+   | `state` | — | `IDLE`, `PULL`, `HOLD`, `VENT`, `DONE`, `FAULT` |
    | `remain` | s | countdown, `-` when no timer |
    | `total` | s | configured timer, `-` when none |
    | `batt` | % | `-` when no battery is fitted |
@@ -262,16 +298,17 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
    | `info` | `ok proto=2 …` |
    | `status` | `ok <status payload>` |
    | `start` | `ok started` / `err not_ready` |
-   | `stop` | `ok stopped` |
+   | `stop` | `ok stopped` (pump off, then vent) |
    | `set target <kPa\|off>` | `ok target=40.0` |
    | `set timer <seconds\|off>` | `ok timer=600` |
    | `set ambient <kPa>` | `ok ambient=101.33` |
    | `ambient` | `ok ambient=101.33` (capture now) |
-   | `set buzzer <on\|off>` | `ok buzzer=off` |
    | `telemetry <on\|off\|ms>` | `ok telemetry=on period=250` |
-   | `reset` | `ok reset` (clear the pump latch and sensor errors) |
+   | `reset` | `ok reset` (clear the pump latch and sensor errors, then vent) |
    | `reboot` | `ok rebooting` |
-   | `log [n]` | `ok` then the tail, then `eof` |
+
+   Vent timings are `core/Config.h` values rather than commands, to keep the surface to
+   this table (Q13).
 6. **Error codes**: `unknown_command`, `bad_argument`, `out_of_range`, `not_ready`,
    `unsupported`. Every `err` is one of these five, so clients can switch on it.
 7. **Framing**: none needed when the payload fits the negotiated MTU. The 0x01/0x02
@@ -280,7 +317,7 @@ program characteristic; `proto=2` in `info` is how a client detects the break.
 8. **Worked examples**: a complete session per command group, plus a telemetry burst,
    plus what a client sees on connect and on disconnect.
 9. **Migration from v1**: the table of what changed (characteristics, telemetry
-   prefix, command names, the removed transfer section).
+   prefix, command names, the removed transfer section, the removed `log`).
 
 `tools/vacuum_cli.py` follows: `status`, `start`, `stop`, `set …`, `telemetry`, `watch`,
 `info`, `log`, `reset`, `reboot`. Its `--help` text mirrors §7.5.
@@ -291,50 +328,58 @@ Each phase builds green, passes `check-layers.ps1`, and is its own commit.
 
 | # | Phase | Content | Verify |
 | --- | --- | --- | --- |
-| 1 | Rip out programmability | §2.1 deletions, `check-layers.ps1` hosts order, command router, snapshot, CLI, docs stubs | green, layer rule ok, `status` unchanged in shape |
-| 2 | Run model | `VacuumControl` target + timer + `RunState`; snapshot fields; `start`/`stop`/`set timer` | green |
-| 3 | Battery | `hal/Battery`, `hal/Pins` pins, snapshot fields, `batt` keys | green |
-| 4 | Buzzer | `hal/Buzzer`, patterns, `App` event wiring, mute setting + `set buzzer` | green |
-| 5 | Simplified UI | single page, `Renderer` helpers, delete `Graph`/`Info`/`Programs` pages, button mapping, `hal/Settings` | green, layout matches §6 |
-| 6 | Protocol & docs | rewrite `docs/ble-protocol.md`, README, CLI, `proto=2` | green, docs match code |
+| 1 | Rip out | §2.1 deletions (programmability, buttons, `UiController`, the log ring, three pages), `check-layers.ps1` hosts order, command router, snapshot, CLI, docs stubs | green, layer rule ok |
+| 2 | Run model, vent, settings | `VacuumControl` target + timer + `VENT` + `RunState`, `hal/VentValve`, `hal/Settings` (NVS), snapshot fields, `start`/`stop`/`set timer`, disconnect and fault policy | green |
+| 3 | Battery | `hal/Battery`, `hal/Pins.h`, snapshot fields, `batt` keys, low battery handling per Q11 | green |
+| 4 | Simplified UI | single page, `Renderer` helpers for battery and right aligned text, `StatusPage` rewrite, layout matching §6 | green |
+| 5 | Protocol & docs | rewrite `docs/ble-protocol.md`, README (wiring, valve polarity, battery), CLI, `proto=2` | green, docs match code |
 
-Once phase 1 lands, phases 2–6 are independent of each other and can be reordered.
+Phases 3 and 4 are independent of each other once phase 2 lands; phase 5 wants all of
+them.
 
 ## 9. Risks
 
 | id | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | Deleting the store loses the only persistence, so the target resets on every reboot | `hal/Settings` (NVS) in phase 5, or earlier if it annoys us; Q7 |
-| R2 | ADC noise or a wrong divider makes the battery read nonsense | `analogReadMilliVolts` + averaging, `present()` gating, documented calibration, Q6 |
-| R3 | A blocking buzzer stalls the control loop | pattern player is pumped from `update()`, never `delay()` |
-| R4 | Dropping the `prog` characteristic breaks any existing client | `proto=2` in `info`, and §7.9 migration table |
-| R5 | Revisiting scripting later re-adds complexity | §2.3: the code is a revert of one commit, and the `set` grammar is additive |
+| R1 | ~~Deleting the store loses the only persistence~~ **closed by Q7**: persist, so `hal/Settings` lands with the run model in phase 2 | — |
+| R2 | ADC noise or a wrong divider makes the battery read nonsense | `analogReadMilliVolts` + averaging, `present()` gating, documented ±3–5 % and a calibration factor |
+| R3 | Valve polarity is a safety decision, not a wiring detail | decide before wiring (Q10) and state the consequence in the README |
+| R4 | Dropping the `prog` characteristic breaks any existing client | `proto=2` in `info`, and the §7.9 migration table |
+| R5 | Venting on every disconnect (Q4) surprises a client that reconnects into a vented chamber | document it in §7.1, and expose `state=VENT`/`DONE` in the status payload so a client can see it |
+| R6 | Revisiting scripting later re-adds complexity | §2.3: the code is a revert of one commit, and the `set` grammar is additive |
 
-## 10. Open questions
+## 10. Decisions
 
-* **Q1** — confirm the run model in §5: does the countdown start when the target is
-  first reached (recommended, "hold time remaining"), or the moment the run starts
-  ("total run time")? Recommendation: on reaching target, with `target off` meaning
-  "no timer".
-* **Q2** — should reaching the target and completing the timer also *vent*? There is no
-  vent valve in the BOM, so the answer is "coast and bleed up" today. If a vent valve is
-  planned, it changes the state machine now rather than later.
-* **Q3** — button mapping in §6.1: is "OK long = cycle timer preset" the right place for
-  the timer, or would you rather set the duration only over BLE and keep OK long free?
-* **Q4** — on BLE disconnect, should a running pump keep running (recommended, the timer
-  and max run time protect it) or stop (safer for an unattended rig)?
-* **Q5** — one page only, or keep a second screen for faults and firmware/heap now that
-  there is no page cursor? Recommendation: one page, faults as an inverted banner.
-* **Q6** — battery chemistry and pack voltage: Li-ion (3.0–4.2 V, ÷2 divider), 12 V
-  lead/AGM (10.5–12.8 V, ÷5.5) or something else? This sets the divider and the empty/full
-  volts, and whether a low-battery warning should stop a run.
-* **Q7** — persist settings (target, timer, buzzer mute, ambient) in NVS with
-  `hal/Settings`? Recommendation: yes, it is ~30 lines and it is the one thing the
-  filesystem was still doing for us.
-* **Q8** — keep the `log` command and the in-RAM log tail, or drop it now that there is
-  no `eval`/script debugging? Recommendation: keep, it is the only way to pull a trace
-  from a sealed unit.
-* **Q9** — the buzzer and battery are new hardware: is this a new board revision (then
-  `hal/Pins.h` changes and the old build stops matching), or a bodge on the existing
-  one? It only matters for how loudly the docs have to say "your board may not have
-  these".
+| # | Question | Answer | Where it lands |
+| --- | --- | --- | --- |
+| Q1 | what the countdown means | hold time remaining, starting when the target is first reached | §5; `target off` means no timer |
+| Q2 | vent valve | plan for one | §4.3 output on GPIO5, §5 `VENT` leg |
+| Q3 | buttons | unused at this time | §2.1 deletions and §6.1; pins stay reserved |
+| Q4 | BLE disconnect | stop and vent | §5 policy, §7.1 |
+| Q5 | pages | one page | §6; three page files deleted |
+| Q6 | battery | 1S Li-ion, ÷2 divider, 3.2–4.2 V | §4.2; `batt` in the status payload |
+| Q7 | persistence | yes | `hal/Settings` over NVS in phase 2 |
+| Q8 | `log` command and tail | drop | §2.1; `core/Log` keeps the sink, loses the ring and `logTail()` |
+| Q9 | buzzer | drop, keep the battery | no `hal/Buzzer`; `hal/Pins.h` changes |
+
+Net effect: a pressure sensing pump controller with a valve, a battery gauge, a display
+and a BLE interface. Everything else is gone.
+
+## 11. Open questions (new)
+
+* **Q10** — valve fail-safe polarity, which is a safety decision rather than a wiring
+  detail: a normally closed valve (energise to open) leaves the chamber sealed if the
+  board crashes or the power fails, a normally open one vents it. Recommendation:
+  normally closed, because firmware that has stopped cannot be trusted to hold a valve
+  open, and because venting on a brownout can ruin a process. Whichever we pick goes in
+  the README, since it decides what the rig does when the lights go out.
+* **Q11** — what should a low battery *do* beyond being visible? Options: warn only
+  (recommended), refuse to start a new run, or stop a run in progress. With the buzzer
+  gone the warning is the battery icon plus the `batt` key, so it only helps a client
+  that is watching.
+* **Q12** — the four button pins: keep them reserved in `hal/Pins.h` with a comment
+  (recommended — it documents the planned hardware and makes re-adding trivial), or free
+  them for something else?
+* **Q13** — vent timing: config only (`VENT_MARGIN_KPA`, `VENT_TIMEOUT_MS`), or also a
+  `set vent <ms>` command? Recommendation: config only, to keep the command surface to
+  the §7.5 table.
