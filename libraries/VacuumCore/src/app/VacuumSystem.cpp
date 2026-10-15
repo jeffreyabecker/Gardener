@@ -23,6 +23,28 @@ void VacuumSystem::begin() {
   lastDerivativeMs_ = lastControlMs_;
 }
 
+PlantState VacuumSystem::state() const {
+  PlantState plant;
+  plant.runState = state_;
+  plant.kpa = sensor_.kpa();
+  plant.vacuumKpa = sensor_.vacuumKpa();
+  plant.vacuumPercent = sensor_.vacuumPercent();
+  plant.ambientKpa = sensor_.ambientKpa();
+  plant.targetKpa = targetKpa_;
+  plant.targetActive = targetActive_;
+  plant.duty = pump_.dutyPercent();
+  plant.floorKpa = minReachableKpa();
+  plant.sensorOk = sensor_.present();
+  plant.readingValid = sensor_.readingValid();
+  plant.faulted = faulted_;
+  plant.faultCode = pump_.faultCode();
+  return plant;
+}
+
+bool VacuumSystem::setAmbient(float kpa) { return sensor_.setAmbientKpa(kpa); }
+
+void VacuumSystem::captureAmbient() { sensor_.captureAmbient(); }
+
 void VacuumSystem::rest() {
   pump_.stop();
   vent_.open();  // normally open, but assert the safe resting state when asked

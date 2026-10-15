@@ -54,7 +54,7 @@ bool App::begin() {
 
   refreshSnapshot();
   link_.begin();
-  lastState_ = system_.state();
+  lastState_ = system_.state().runState;
   if (displayOk_) splash();
   return true;
 }
@@ -70,23 +70,7 @@ void App::splash() {
 }
 
 void App::refreshSnapshot() {
-  snapshot_.kpa = system_.kpa();
-  snapshot_.vacuumKpa = system_.vacuumKpa();
-  snapshot_.vacuumPercent = system_.vacuumPercent();
-  snapshot_.ambientKpa = system_.ambientKpa();
-  snapshot_.sensorOk = system_.sensorOk();
-  snapshot_.readingValid = system_.readingValid();
-
-  // faulted() is the trip as the plant sees it: it latches when the trip is observed and
-  // clears with resetFault, so it says the same thing pump.tripped() said.
-  snapshot_.duty = system_.duty();
-  snapshot_.pumpTripped = system_.faulted();
-  snapshot_.faultCode = system_.faultCode();
-
-  snapshot_.state = system_.state();
-  snapshot_.targetActive = system_.targetActive();
-  snapshot_.targetKpa = system_.targetKpa();
-  snapshot_.floorKpa = system_.minReachableKpa();
+  snapshot_.plant = system_.state();
 
   snapshot_.batteryPresent = battery_.present();
   snapshot_.batteryLow = battery_.low();
@@ -99,7 +83,7 @@ void App::refreshSnapshot() {
 // The drivers stopped narrating, so the run is reported from here: one line per state
 // change, timed when it leaves a vent, plus the fault code when one latches.
 void App::logRunChanges(uint32_t nowMs) {
-  RunState state = system_.state();
+  RunState state = system_.state().runState;
   if (state == lastState_) return;
 
   String message = runStateName(lastState_);

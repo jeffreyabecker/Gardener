@@ -27,23 +27,20 @@ inline const char* runStateName(RunState state) {
   }
 }
 
-struct SystemSnapshot {
-  // pressure
-  float kpa = 0.0f;
-  float vacuumKpa = 0.0f;
-  float vacuumPercent = 0.0f;
-  float ambientKpa = 0.0f;
-  bool sensorOk = false;
-  bool readingValid = false;
-  // pump
-  float duty = 0.0f;
-  bool pumpTripped = false;
-  const char* faultCode = "";
-  // run
-  RunState state = RunState::Idle;
-  bool targetActive = false;
+struct PlantState {
+  RunState runState = RunState::Idle;
+  float kpa = 0.0f, vacuumKpa = 0.0f, vacuumPercent = 0.0f, ambientKpa = 0.0f;
   float targetKpa = 0.0f;
-  float floorKpa = 0.0f;
+  bool targetActive = false;
+  float duty = 0.0f;
+  float floorKpa = 0.0f;  // deepest reachable target
+  bool sensorOk = false, readingValid = false;
+  bool faulted = false;
+  const char* faultCode = "";
+};
+
+struct SystemSnapshot {
+  PlantState plant;
   // battery: a readout only, nothing acts on it (Q11)
   bool batteryPresent = false;
   bool batteryLow = false;

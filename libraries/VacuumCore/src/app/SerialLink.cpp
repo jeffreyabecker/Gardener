@@ -493,11 +493,11 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      if (!system_.setAmbientKpa(kpa)) {
+      if (!system_.setAmbient(kpa)) {
         err("out_of_range");
         return;
       }
-      String payload = "ambient=" + String(system_.ambientKpa(), 2);
+      String payload = "ambient=" + String(system_.state().ambientKpa, 2);
       ok(payload.c_str());
       return;
     }
@@ -551,14 +551,14 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      if (!system_.setAmbientKpa(kpa)) {
+      if (!system_.setAmbient(kpa)) {
         err("out_of_range");
         return;
       }
     } else {
       system_.captureAmbient();
     }
-    String payload = "ambient=" + String(system_.ambientKpa(), 2);
+    String payload = "ambient=" + String(system_.state().ambientKpa, 2);
     ok(payload.c_str());
     return;
   }
@@ -587,24 +587,24 @@ void SerialLink::dispatch(char* line) {
 String SerialLink::statusBody() const {
   String buf;
 
-  addFloatToken(buf, "kpa", snapshot_.kpa, 2);
-  addFloatToken(buf, "vac", snapshot_.vacuumKpa, 2);
-  addFloatToken(buf, "pct", snapshot_.vacuumPercent, 1);
-  if (snapshot_.targetActive) {
-    addFloatToken(buf, "target", snapshot_.targetKpa, 1);
+  addFloatToken(buf, "kpa", snapshot_.plant.kpa, 2);
+  addFloatToken(buf, "vac", snapshot_.plant.vacuumKpa, 2);
+  addFloatToken(buf, "pct", snapshot_.plant.vacuumPercent, 1);
+  if (snapshot_.plant.targetActive) {
+    addFloatToken(buf, "target", snapshot_.plant.targetKpa, 1);
   } else {
     addToken(buf, "target", "-");
   }
-  addFloatToken(buf, "floor", snapshot_.floorKpa, 1);
-  addFloatToken(buf, "duty", snapshot_.duty, 1);
-  addToken(buf, "state", runStateName(snapshot_.state));
+  addFloatToken(buf, "floor", snapshot_.plant.floorKpa, 1);
+  addFloatToken(buf, "duty", snapshot_.plant.duty, 1);
+  addToken(buf, "state", runStateName(snapshot_.plant.runState));
   if (snapshot_.batteryPresent) {
     addU32Token(buf, "batt", snapshot_.batteryPercent);
   } else {
     addToken(buf, "batt", "-");
   }
-  addToken(buf, "sensor", snapshot_.sensorOk ? "1" : "0");
-  addToken(buf, "fault", snapshot_.pumpTripped ? snapshot_.faultCode : "none");
+  addToken(buf, "sensor", snapshot_.plant.sensorOk ? "1" : "0");
+  addToken(buf, "fault", snapshot_.plant.faulted ? snapshot_.plant.faultCode : "none");
   addU32Token(buf, "up", snapshot_.uptimeMs);
 
   return buf;

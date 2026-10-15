@@ -33,48 +33,18 @@ class VacuumSystem {
   void begin();                  // pump off, valve open: the safe resting state
   void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
 
-  // --- the target ---------------------------------------------------------
+  // --- commands -----------------------------------------------------------
   void setTarget(float kpa);
   // A run without a target is not a run, so clearing one releases the chamber.
   void clearTarget();
-  bool targetActive() const { return targetActive_; }
-  float targetKpa() const { return targetKpa_; }
-
-  // --- the loop and the release path --------------------------------------
-  bool start();  // false when there is no target, no reading, or a latched fault
-  void stop();   // stop and release
-  void vent();   // stop, then open: the one release path
-  void rest();   // the resting state without releasing: pump off, valve open
-
-  // --- the run state ------------------------------------------------------
-  // What the device is doing. Each value is set by the command that caused it, or by
-  // service() when the chamber settles into it.
-  RunState state() const { return state_; }
-
-  // --- what the chamber is doing ------------------------------------------
-  float kpa() const { return sensor_.kpa(); }
-  float vacuumKpa() const { return sensor_.vacuumKpa(); }
-  float vacuumPercent() const { return sensor_.vacuumPercent(); }
-  float ambientKpa() const { return sensor_.ambientKpa(); }
-  bool sensorOk() const { return sensor_.present(); }
-  bool readingValid() const { return sensor_.readingValid(); }
-  float duty() const { return pump_.dutyPercent(); }
-
-  // Deepest target the pump can actually reach: ambient minus its suction rating,
-  // floored by the sanity limit.
-  float minReachableKpa() const;
-
-  // The reference "vacuum" is measured against, so the definition sits with the loop.
-  bool setAmbientKpa(float kpa) { return sensor_.setAmbientKpa(kpa); }
-  void captureAmbient() { sensor_.captureAmbient(); }
-
-  // --- what went wrong ----------------------------------------------------
-  // True once the plant has failed and its outputs are safe. The latch is here and only
-  // resetFault() clears it, so a fault is permanent until someone asks; state() says the same
-  // thing as Fault while it is held.
-  bool faulted() const { return faulted_; }
-  const char* faultCode() const { return pump_.faultCode(); }
+  bool start();                   // false: no target/reading, or faulted
+  void stop();                    // the one release path: stop + vent
   void resetFault();
+  bool setAmbient(float kpa);     // false when out of range
+  void captureAmbient();
+
+  // --- the one read -------------------------------------------------------
+  PlantState state() const;
 
  private:
   void setState(RunState state);
@@ -84,9 +54,15 @@ class VacuumSystem {
   // they are asked.
   bool atTarget() const;  // close enough to the target, deadband included
   bool vented() const;    // settled within VENT_MARGIN_KPA, or VENT_TIMEOUT_MS elapsed
+  void vent();            // stop, then open: the one release path
+  void rest();            // the resting state without releasing: pump off, valve open
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
+
+  // Deepest target the pump can actually reach: ambient minus its suction rating,
+  // floored by the sanity limit.
+  float minReachableKpa() const;
 
   void pidReset() { pidIntegral_ = 0.0f; }
   float pidUpdate(float dt, float error, float measurementSlew);
