@@ -117,18 +117,26 @@ in one function, instead of a field, a producer line and two readers.
 ## 5. Protocol v3
 
 Grammar, status keys, info keys, the five error codes and the state model survive
-verbatim. Three changes:
+verbatim. Four changes:
 
-1. `proto=3`.
-2. **Telemetry is polled, not pushed** — the CCCD subscription was the radio's way of
+1. `proto=3`, and `docs/serial-protocol.md` documents **only** the serial protocol. No
+   Bluetooth vocabulary survives anywhere in the deliverables: not in the protocol doc,
+   not in the README, not as a "replaced the radio" note. The removed transport is a git
+   history question, not a documentation question (Q16).
+2. **Telemetry is polled, not pushed** — the subscription model was the radio's way of
    asking "does anyone want this", so `TelemetrySettings`, `set period` and the push path
    go. A controller that wants 4 Hz sends 4 `status` a second, which is nothing at
    115200, and the device's behaviour stays a pure function of the commands it received.
-3. `set log <on|off>` and `log=on|off` in `info`.
+3. `set log <on|off>` and `log=on|off` in `info` (Q3).
+4. No `proto=2` migration table. There is no released client to migrate, and writing one
+   would mean describing the transport being removed, which Q16 rules out.
 
 `reset` also changes meaning slightly, as a consequence of the dead-surface sweep: with
 the sensor error counter gone (nothing read it) it is the pump latch and the controller
 fault, nothing else.
+
+The display is **unchanged**: Q15 says no link token, so the state row stays as it is and
+the layout in the README does not move.
 
 ## 6. What must not change
 
@@ -149,28 +157,28 @@ Phases 1 and 2 change behaviour; phase 3 must not, so a regression has somewhere
 | 1 | Serial transport | `SerialService` over `Stream&`, delete `hosts/ble` and `core/ReplyQueue.h`, router writes to `Print&`, `proto=3`, delete `TelemetrySettings`/`set period`/`LINK_TIMEOUT_MS`/`BLE_*`/`TELEMETRY_*`, add `set log` and `log=` in `info`, FQBN in three files, `libs` drops NimBLE, `check-layers.ps1` `ble` → `serial` | green, layer rule ok, **flash and RAM measured** to price the radio |
 | 2 | Dead surface sweep | the inventory in §1, minus the structural items: `Pressure.h`, `Tachometer`, `Device` (router calls `ESP.*`), the unconsumed accessors, the four `*Config` structs and `App::*Config()`, button timings, `Pid` folded into `VacuumControl`, three-token parsing | green |
 | 3 | Collapse and delete the snapshot | move to `core/`+`hal/`+`app/`, delete `Snapshot.h`/`SnapshotBuilder`/`SnapshotText`, page and router read modules, `Renderer`+`Pages.h`+`StatusPage` → one `StatusPage`, `RunState` moves to `VacuumControl.h`, `App` slims, `check-layers.ps1` rewritten small | green, layer rule ok, **no value changed**: same payloads, same display, verified by diff-reading the router's output |
-| 4 | Docs and tools | `docs/serial-protocol.md` replaces `docs/ble-protocol.md`, README rewritten for three layers and no snapshot, `tools/vacuum_cli.py` on pyserial, `requirements.txt`, `FIRMWARE_VERSION` → `0.2.0`, this plan deleted | green, `python -m py_compile` |
+| 4 | Docs and tools | `docs/ble-protocol.md` deleted, `docs/serial-protocol.md` written standalone (Q16: no transport history in it), README rewritten for three layers with no snapshot and no transport mentions, `tools/vacuum_cli.py` on pyserial, `requirements.txt`, `FIRMWARE_VERSION` → `0.2.0`, this plan deleted | green, `python -m py_compile` |
 
 ## 8. Risks
 
 | id | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | the tethered instrument; no phone can drive it | accepted. The line grammar is unchanged, so a wireless bridge later is a transport, not a redesign |
+| R1 | the tethered instrument; nothing wireless can drive it | accepted. The line grammar is unchanged, so a bridge to any other link later is a transport, not a redesign |
 | R2 | a controller that dies mid-run leaves a sealed chamber | unchanged device protections: timer expiry, `PUMP_MAX_RUN_MS`, fault latch, and a valve that fails open |
 | R3 | building without `CDCOnBoot=cdc` sends the console to GPIO20/21 and looks dead | FQBN pinned in three files, README states the failure mode, boot banner goes to the stream in use |
 | R4 | opening the port from the host may reset the ESP32-C3 (USB-Serial-JTAG reset sequences) | verify on hardware; boot-safe means an aborted run and a vented chamber, so document it either way |
 | R5 | the log corrupts a parsing controller's replies | documented `[` rule, `set log off`, and no unmarked line is ever emitted |
-| R6 | losing the snapshot removes a seam a future second transport would want | accepted and named: the collapse is the point. If a second transport arrives (a radio bridge, a second MCU), the seam to reintroduce is a *view for the transport*, not a view for the UI and the transport and everything else |
+| R6 | losing the snapshot removes a seam a future second transport would want | accepted and named: the collapse is the point. If a second transport arrives (a bridge, a second MCU), the seam to reintroduce is a *view for the transport*, not a view for the UI and the transport and everything else |
 | R7 | losing the `*Config` structs removes the DI seam for a board variant | `hal/Pins.h` becomes that seam explicitly, which is where a board variant edits today anyway |
 | R8 | deleting a driver for hardware that is not fitted looks like losing capability | the tach is a revert of one commit when a wire is fitted, exactly like the Berry removal; say so in the commit |
 | R9 | phase 3 is large and could hide a behaviour change in a reshuffle | keep it behaviour-free by contract, and keep the wire-visible changes in phases 1 and 2 |
 
-## 9. Questions
+## 9. Decisions
 
-Recommendations are marked, so "all as recommended" is a valid answer. Q1–Q5 restate
-revision 1's questions, unchanged by this revision.
+Answered on 2026-10-15: **Q1–Q14 yes, Q15 no, Q16 with the "drop the mentions" amendment,
+Q17 confirmed.** Every answer is folded into the sections above; this table is the record.
 
-| # | Question | Recommendation |
+| # | Question | Answer |
 | --- | --- | --- |
 | Q1 | Port and seam: USB CDC via `CDCOnBoot=cdc`, reached through a `Stream&`? | **yes** |
 | Q2 | Telemetry: poll `status` only, deleting `TelemetrySettings` and `set period`? | **yes** |
@@ -178,17 +186,17 @@ revision 1's questions, unchanged by this revision.
 | Q4 | Link: dropped USB CDC link stops and vents; silent-link watchdog dropped? | **yes** |
 | Q5 | Parsing: `\r` or `\n` terminates; 128-byte line cap? | **yes** |
 | Q6 | Layers: collapse `services/`, `hosts/`, `ui/` into `app/`, leaving `core/`, `hal/`, `app/`? | **yes** |
-| Q7 | The snapshot: delete `Snapshot.h`, `SnapshotBuilder`, `SnapshotText` and let the page and the router read modules? | **yes** — this is the big one, and the trade-off is R6 |
-| Q8 | `Pid`: fold into `VacuumControl` (one consumer, no tests, gains already in `core/Config.h`)? | **yes** |
-| Q9 | Tachometer: delete the driver, its pin, its config, the `tach=` key and `rpm` until a tach is fitted? | **yes** |
+| Q7 | The snapshot: delete `Snapshot.h`, `SnapshotBuilder`, `SnapshotText` and let the page and the router read modules? | **yes** — the trade-off is R6, taken knowingly |
+| Q8 | `Pid`: fold into `VacuumControl`? | **yes** |
+| Q9 | Tachometer | **remove it totally**: driver, ISR, pin, three constants, config fields, the accessors on `Pump`, the `tach=` key and `rpm` |
 | Q10 | `hal/Device`: delete it and let the router call `ESP.getChipModel()`/`getFreeHeap()` for `info`? | **yes** |
 | Q11 | The four `*Config` structs and `App::*Config()` helpers: delete, with `hal/` reading `pins::`/`cfg::` directly? | **yes** (R7) |
-| Q12 | The dead accessors in §1, plus `Pump::resetFault()` becoming `void` and `PressureSensor::readNow()` becoming private, and `reset` losing its sensor-counter line? | **yes** |
+| Q12 | The dead accessors in §1, plus `Pump::resetFault()` becoming `void`, `PressureSensor::readNow()` becoming private, and `reset` losing its sensor-counter line? | **yes** |
 | Q13 | UI: `Renderer` + `pages/Pages.h` + `StatusPage` → one `app/StatusPage.{h,cpp}`? | **yes** |
-| Q14 | `scripts/arduino.ps1`: drop `-Task link` (the IDE 2 junction, never exercised here) and keep build/upload/monitor/libs/clean? | **yes** |
-| Q15 | Display: add the small `USB` token on the state row when a controller is attached? | **yes** — the display is a readout, and "is anyone listening" is the one thing it cannot otherwise tell you |
-| Q16 | Versions and tools: firmware `0.2.0`, `proto=3`, `docs/serial-protocol.md` replaces `docs/ble-protocol.md`, `tools/vacuum_cli.py` rewritten on pyserial, this plan deleted at the end? | **yes** |
-| Q17 | Button pins: keep the four pin numbers with a "nothing reads them" comment? | **yes** (Q16 from the earlier plan stands) |
+| Q14 | `scripts/arduino.ps1`: drop `-Task link`, keep build/upload/monitor/libs/clean? | **yes** |
+| Q15 | Display: add a `USB` token on the state row? | **no** — the layout does not move |
+| Q16 | Versions and tools | **yes**, plus: **drop the mentions entirely** — `docs/ble-protocol.md` is deleted rather than superseded, `docs/serial-protocol.md` describes only the serial protocol, and no deliverable (README, doc, script, source comment) refers to the removed transport |
+| Q17 | Button pins: keep the four pin numbers with a "nothing reads them" comment? | **yes** (Q16 of the earlier plan stands) |
 
 ## 10. Status
 
@@ -196,3 +204,4 @@ revision 1's questions, unchanged by this revision.
 | --- | --- | --- |
 | rev 1 | transport swap to serial, polling telemetry, log sharing, link policy, five phases | all |
 | rev 2 | adds the cruft inventory, the three-layer collapse, the snapshot deletion, the dead-surface sweep, `0.2.0`/`proto=3`, renumbers the questions | §1–§3, §7–§9 |
+| rev 3 | answers folded in: Q1–Q14 yes, Q15 no (display unchanged), Q16 with "drop the mentions entirely" (no transport vocabulary in any deliverable, no migration table), Q17 confirmed; Q9 strengthened to "remove it totally" | §5, §7, §9 |
