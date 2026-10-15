@@ -36,23 +36,26 @@ is a wrapper with one implementation and should be deleted again.
 | pixels and lines | `pixel`, `clearRect`, `line`, `hLine`, `vLine` |
 | shapes | `rect`, `fillRect`, `roundRect`, `fillRoundRect`, `circle`, `fillCircle`, `ellipse`, `fillEllipse`, `triangle`, `fillTriangle`, `rotatedRect`, `fillRotatedRect` |
 | images | `bitmap` |
-| text | `setFont`, `text`, `textBounds` |
+| text | `text`, `textBounds` |
 
 `DECISION:` this is the library's whole drawing surface, not the calls a page happens to make, so
 that a host drawing something new does not have to wait for a firmware change. Rev 1 proposed the
 narrow list and was wrong about what the abstraction is for; rev 4 makes the mistake worse to
 repeat, because the set of things a host might draw is not knowable from here.
 
-`DECISION:` (rev 3, by hand) text is stateless apart from the font: `setFont` plus `text` and
-`textBounds` taking the scale at the call. `Print`, `setCursor`, `setTextSize`, `setTextWrap`,
-`cp437`, `textWidth` and `xBitmap` are gone.
+`DECISION:` (rev 3, by hand; settled in rev 5) text is stateless: `text` and `textBounds` taking
+the scale at the call, and nothing else. `setFont` was in and is now out, because the host has no
+business choosing a font: it has no way to supply the font data, so the built-in 5x7 font scaled
+by `size` is the whole of what the wire can ask for.
 
-Two consequences, stated rather than objected to:
+That removes the one library type the header ever named:
 
-* **`GFXfont` is named in the header**, and cannot be forward declared, because `gfxfont.h`
-  typedefs it from an anonymous struct. So `hal/Display.h` includes `<Adafruit_GFX.h>`. See R6.
-* **`size` stops meaning anything once a font is loaded**, because Adafruit ignores it in favour
-  of the font's own. See Q13.
+* **`hal/Display.h` includes nothing from Adafruit.** Rev 4 had it including `<Adafruit_GFX.h>`
+  for `GFXfont`, which cannot be forward declared because `gfxfont.h` typedefs it from an
+  anonymous struct. With the font gone the include goes, and R6 with it: a host fake implements
+  this header with no library and no stub structs.
+* **`size` means one thing again**, the scale of the built-in font, so Q13 stops being a question
+  and "the parameter is conditional" stops being true.
 
 `DECISION:` paper has two spellings — `clear()` for the whole panel, `clearRect()` for part of it
 — because a host that blinks or updates a field wants to erase without repainting everything.
@@ -205,7 +208,7 @@ the bits and a value that is much longer than anything else on the line.
 | R3 | a virtual call per primitive, and now a *host-driven* number of them | a frame is one `flush` plus a few dozen calls; the I2C burst next to it is orders of magnitude larger, and the counts are in §5.3 |
 | R4 | `textBounds` cannot be `const` because Adafruit's measurement is not | stated in the header |
 | R5 | App keeps the panel and passes a `GrayOLED&` into the adapter: two objects for one display | accepted: App is the composition root and the only place that knows which panel is fitted |
-| R6 | a host fake needs `GFXfont` to implement `setFont`, and the type is a typedef of an anonymous struct, so no forward declaration exists to hide behind | the fake defines its own matching struct and does not include Adafruit, which keeps the test free of the library but couples it to the shape of one small type |
+| R6 | ~~a host fake needs `GFXfont` to implement `setFont`~~ | **dissolved in rev 5**: `setFont` is out of the interface, so the header names no library type and the fake needs no stub |
 | R7 | a host that floods the line starves the control loop: `poll()` drains every buffered line before returning, and the pump's loop is what keeps pressure sane | cap the lines serviced per poll (Q18), so a burst is spread over iterations instead of blocking one |
 | R8 | nothing is annunciated locally any more: a fault used to invert a banner on the panel, and now the panel says whatever the last frame said | accepted and documented. The device keeps the one indication it can be trusted to produce alone — the valve releasing — and the fault is in `status` on the next poll |
 | R9 | without a host the panel is blank, and a host that stops mid-page leaves a stale frame frozen | accepted: it is the same trade as the clock, and the alternative is a page the device has to maintain |
@@ -228,9 +231,9 @@ context.
 | Q8 | The page keeps its layout and helpers untouched? | **superseded**: the page is deleted, so this is moot |
 | Q9 | Keep the name `Display`? | yes |
 | Q10 | No firmware version bump? | **superseded by Q20**: the wire gains commands, so `fw` moves |
-| Q11 | Are the exclusions right? | revised by hand in rev 3: `setFont` is in, `xBitmap` out, grayscale/RGB bitmaps and the `startWrite` family stay out |
+| Q11 | Are the exclusions right? | settled in rev 5: `setFont` is **out** — the host cannot supply font data, so offering it invites a command nobody can serve — `xBitmap` out, grayscale/RGB bitmaps and the `startWrite` family out |
 | Q12 | Do the text verbs also take a `const char*`? | **now clearly yes, and for a better reason**: with the page gone the only caller is the wire, which always has a `const char*` from the line buffer. A `String` overload would convert on every text op for nothing |
-| Q13 | `size` is ignored once a font is loaded: document or drop? | document. The host can set a font, and it is Adafruit's behaviour either way |
+| Q13 | `size` is ignored once a font is loaded: document or drop? | **moot in rev 5**: with no font to load, `size` scales the built-in font and always applies |
 | Q14 | One `draw <op> …` verb, or a flat verb per op? | **one verb**: it matches `set <key> <value>`, keeps `help` readable, and the op list is a second question the host can ask |
 | Q15 | Does `draw text` take the rest of the line verbatim, spaces and all? | **yes**: inventing an escape for one command is worse than teaching the splitter to hand back a tail |
 | Q16 | Is `flush` its own command and the only thing that updates the glass? | **yes**: it is the frame boundary, and the only place the battery overlay can land |
@@ -247,6 +250,7 @@ context.
 | rev 2 | the interface is the library's drawing surface rather than the page's eight calls; `Display` gains `Print`; the absences are written down | §1, §2, §6, §7 |
 | rev 3 | the header reworked by hand: `Print`, `setCursor`, `setTextSize`, `setTextWrap`, `cp437`, `textWidth` and `xBitmap` out, `setFont` in, so the header includes `<Adafruit_GFX.h>` for `GFXfont` | §1, §2, §3, §6, §7 |
 | rev 4 | `StatusPage` is deleted and the host draws the panel: the `draw` command family, `flush` as the frame boundary, the battery overlay compositing at flush, and the consequences of nothing being annunciated locally | §1, §3, §4, §5, §6, §7, §8, §9 |
+| rev 5 | `setFont` is deleted from the interface: the host cannot supply font data, so the built-in font scaled by `size` is the whole of what the wire can ask for. `hal/Display.h` therefore includes nothing from Adafruit, which dissolves R6, and Q13 stops being a question | §1, §8, §9 |
 
 ## 11. Assumption
 
