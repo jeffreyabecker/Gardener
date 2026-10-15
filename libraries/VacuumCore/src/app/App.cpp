@@ -2,7 +2,6 @@
 
 #include <Wire.h>
 
-#include "core/Text.h"
 #include "hal/Pins.h"
 
 namespace eggplan {
@@ -25,10 +24,10 @@ bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
   delay(200);
 
-  char line[96];
-  text::Buf boot(line, sizeof(line));
-  boot << "eggplan-vacuum " << cfg::FIRMWARE_VERSION << " booting";
-  link_.info(line);
+  String boot = "eggplan-vacuum ";
+  boot += cfg::FIRMWARE_VERSION;
+  boot += " booting";
+  link_.info(boot.c_str());
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
@@ -49,9 +48,9 @@ bool App::begin() {
   link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
 
-  text::Buf ready(line, sizeof(line));
-  ready << "app: ready, heap " << (uint32_t)ESP.getFreeHeap();
-  link_.info(line);
+  String ready = "app: ready, heap ";
+  ready += String((uint32_t)ESP.getFreeHeap());
+  link_.info(ready.c_str());
 
   refreshSnapshot();
   link_.begin();
@@ -73,24 +72,28 @@ void App::logRunChanges(uint32_t nowMs) {
   RunState state = control_.state();
   if (state == lastState_) return;
 
-  char line[96];
-  text::Buf message(line, sizeof(line));
-  message << runStateName(lastState_) << " -> " << runStateName(state);
+  String message = runStateName(lastState_);
+  message += " -> ";
+  message += runStateName(state);
   if (state == RunState::Fault) {
-    message << " (fault " << pump_.faultCode() << ')';
+    message += " (fault ";
+    message += pump_.faultCode();
+    message += ')';
   }
   if (lastState_ == RunState::Venting) {
     uint32_t ventMs = nowMs - ventStartMs_;
-    message << " after " << ventMs << " ms";
+    message += " after ";
+    message += String(ventMs);
+    message += " ms";
     if (ventMs >= cfg::VENT_TIMEOUT_MS) {
-      message << ", vent timed out";
-      link_.warn(line);
+      message += ", vent timed out";
+      link_.warn(message.c_str());
       lastState_ = state;
       return;
     }
   }
   if (state == RunState::Venting) ventStartMs_ = nowMs;
-  link_.info(line);
+  link_.info(message.c_str());
   lastState_ = state;
 }
 

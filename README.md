@@ -44,7 +44,7 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 ### Architecture
 
 ```
-core/   shared foundations: config, math, text formatting, the machine view
+core/   shared foundations: config, math, the machine view
 hal/    one file per physical device, plus the board pin map
 app/    the instrument: the plant and the run on top of it, the snapshot, the serial
         interface, the page, the composition root

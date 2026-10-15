@@ -80,28 +80,34 @@ bool parseU32(const char* text, uint32_t& out) {
 // Every value is a space free token, so '-' can mean "not applicable" without any quoting
 // or escaping. This is also where the "no spaces in a value" rule is enforced, because a
 // library string is the one value the firmware does not control.
-void addToken(text::Buf& buf, const char* key, const char* value) {
-  if (buf.length() > 0) buf << ' ';
-  buf << key << '=';
+void addToken(String& buf, const char* key, const char* value) {
+  if (buf.length() > 0) buf += ' ';
+  buf += key;
+  buf += '=';
   if (!value || !value[0]) {
-    buf << '-';
+    buf += '-';
     return;
   }
   for (const char* cursor = value; *cursor != '\0'; cursor++) {
     char c = *cursor;
-    buf << (c == ' ' || c == '\t' || c == '\n' || c == '\r' ? '_' : c);
+    buf += (c == ' ' || c == '\t' || c == '\n' || c == '\r') ? '_' : c;
   }
 }
 
-void addFloatToken(text::Buf& buf, const char* key, float value, uint8_t decimals) {
-  if (buf.length() > 0) buf << ' ';
-  buf << key << '=';
-  buf.add(value, decimals);
+void addFloatToken(String& buf, const char* key, float value, uint8_t decimals) {
+  if (buf.length() > 0) buf += ' ';
+  buf += key;
+  buf += '=';
+  // The cast picks String(float, decimals) out of the overload set: a uint8_t also matches
+  // the integer constructors, whose base parameter is an unsigned char.
+  buf += String(value, (unsigned int)decimals);
 }
 
-void addU32Token(text::Buf& buf, const char* key, uint32_t value) {
-  if (buf.length() > 0) buf << ' ';
-  buf << key << '=' << value;
+void addU32Token(String& buf, const char* key, uint32_t value) {
+  if (buf.length() > 0) buf += ' ';
+  buf += key;
+  buf += '=';
+  buf += String(value);
 }
 
 }  // namespace
@@ -233,12 +239,8 @@ void SerialLink::dispatch(char* line) {
     return;
   }
   if (same(command, "info") || same(command, "status")) {
-    if (same(command, "info")) {
-      infoBody(body_, sizeof(body_));
-    } else {
-      statusBody(body_, sizeof(body_));
-    }
-    ok(body_);
+    String payload = same(command, "info") ? infoBody() : statusBody();
+    ok(payload.c_str());
     return;
   }
   if (same(command, "start")) {
@@ -280,10 +282,8 @@ void SerialLink::dispatch(char* line) {
         return;
       }
       control_.setTarget(kpa);
-      text::Buf payload(body_, sizeof(body_));
-      payload << "target=";
-      payload.add(kpa, 1);
-      ok(body_);
+      String payload = "target=" + String(kpa, 1);
+      ok(payload.c_str());
       return;
     }
     if (same(key, "timer")) {
@@ -298,9 +298,8 @@ void SerialLink::dispatch(char* line) {
         return;
       }
       control_.setDurationSeconds(seconds);
-      text::Buf payload(body_, sizeof(body_));
-      payload << "timer=" << seconds;
-      ok(body_);
+      String payload = "timer=" + String(seconds);
+      ok(payload.c_str());
       return;
     }
     if (same(key, "ambient")) {
@@ -313,10 +312,8 @@ void SerialLink::dispatch(char* line) {
         err("out_of_range");
         return;
       }
-      text::Buf payload(body_, sizeof(body_));
-      payload << "ambient=";
-      payload.add(system_.ambientKpa(), 2);
-      ok(body_);
+      String payload = "ambient=" + String(system_.ambientKpa(), 2);
+      ok(payload.c_str());
       return;
     }
     if (same(key, "log")) {
@@ -352,10 +349,8 @@ void SerialLink::dispatch(char* line) {
     } else {
       system_.captureAmbient();
     }
-    text::Buf payload(body_, sizeof(body_));
-    payload << "ambient=";
-    payload.add(system_.ambientKpa(), 2);
-    ok(body_);
+    String payload = "ambient=" + String(system_.ambientKpa(), 2);
+    ok(payload.c_str());
     return;
   }
   // v2 turned telemetry on and off by command; a controller polls `status` now.
@@ -380,9 +375,8 @@ void SerialLink::dispatch(char* line) {
 
 // --- payload text ----------------------------------------------------------
 
-size_t SerialLink::statusBody(char* out, size_t size) const {
-  if (size == 0) return 0;
-  text::Buf buf(out, size);
+String SerialLink::statusBody() const {
+  String buf;
 
   addFloatToken(buf, "kpa", snapshot_.kpa, 2);
   addFloatToken(buf, "vac", snapshot_.vacuumKpa, 2);
@@ -411,12 +405,11 @@ size_t SerialLink::statusBody(char* out, size_t size) const {
   addToken(buf, "fault", snapshot_.pumpTripped ? snapshot_.faultCode : "none");
   addU32Token(buf, "up", snapshot_.uptimeMs);
 
-  return buf.length();
+  return buf;
 }
 
-size_t SerialLink::infoBody(char* out, size_t size) const {
-  if (size == 0) return 0;
-  text::Buf buf(out, size);
+String SerialLink::infoBody() const {
+  String buf;
 
   addToken(buf, "proto", cfg::PROTOCOL_VERSION);
   addToken(buf, "fw", cfg::FIRMWARE_VERSION);
@@ -432,7 +425,7 @@ size_t SerialLink::infoBody(char* out, size_t size) const {
   }
   addToken(buf, "log", logEnabled_ ? "on" : "off");
 
-  return buf.length();
+  return buf;
 }
 
 }  // namespace eggplan

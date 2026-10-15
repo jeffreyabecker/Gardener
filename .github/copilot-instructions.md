@@ -22,8 +22,10 @@ provides the utilities this firmware needs. Prefer them to hand-rolled equivalen
   a measured memory ceiling — and say what the reason is in a comment.
 
 This applies to new code and to code you are already changing. Existing hand-rolled code is
-not a rewrite-on-sight target: `core/Text.h` and the `char`-buffer command parsing are
-earlier decisions that this guidance supersedes for new work, not a task to schedule.
+not a rewrite-on-sight target: the `char`-buffer command parsing in `app/SerialLink.cpp` is an
+earlier decision that this guidance supersedes for new work, not a task to schedule. The
+hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
+the only way text is formatted in this firmware.
 
 ## Where to look
 

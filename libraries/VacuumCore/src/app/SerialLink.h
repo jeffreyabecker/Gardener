@@ -4,7 +4,6 @@
 
 #include "core/Config.h"
 #include "core/Snapshot.h"
-#include "core/Text.h"
 
 namespace eggplan {
 
@@ -59,8 +58,8 @@ class SerialLink {
   void err(const char* code);
 
   // --- payload text --------------------------------------------------------
-  size_t statusBody(char* out, size_t size) const;
-  size_t infoBody(char* out, size_t size) const;
+  String statusBody() const;
+  String infoBody() const;
 
   VacuumControl& control_;
   VacuumSystem& system_;
@@ -74,7 +73,6 @@ class SerialLink {
   bool oversize_ = false;  // the current line is too long and was answered already
   bool attached_ = false;
   bool linkLost_ = false;
-  char body_[224];
 };
 
 }  // namespace eggplan
