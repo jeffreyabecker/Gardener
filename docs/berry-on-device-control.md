@@ -167,164 +167,53 @@ are the **last run** values. The merge is deterministic:
 - An owner can replace `default` by uploading a program of that name; that program then
   becomes the boot behavior. `rm default` restores the built-in passive source, so the
   device can never be left without a home program.
-- Everything else about `default` is ordinary: it appears in the browser (pinned first,
-  marked `*`), can take parameters, and runs like any other program.
+- Everything else about `default` is ordinary: the store pins it first in the program
+  list, it can take parameters, and it runs like any other program.
 
 ## 7. On-device UX
 
-Four buttons, active-low with internal pull-ups, debounced into three event kinds by
-`hal/Buttons`: **click** (< 500 ms), **long-press** (≥ 800 ms), and **repeat** (every
-~200 ms while held after the long-press).
+Programs own the screen; the device owns only the battery and the two Back gestures.
 
-There are exactly three screens:
+### 7.1 Screen ownership
 
-| Screen | When | Purpose |
-| --- | --- | --- |
-| **RUN** | a program is executing | the screen the program draws itself |
-| **BROWSER** | selector open, nothing running | pick a program to run or edit |
-| **PARAMS** | editor open | step through and change one program's parameters |
+- A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
+  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
+  so a program can never erase it.
+- There are no device-drawn pages. The browser, the params editor and the home shell are
+  all Berry programs. A reusable list/menu abstraction, if one is wanted, is written in
+  Berry — it is not firmware.
 
-There is no separate status page: the seeded `default` **is** the status screen.
+### 7.2 Buttons
 
-### 7.1 Button grammar
+- `hal/Buttons` debounces the four buttons into click / long-press / repeat events.
+- While a program runs and no host is attached, Up, Down and OK are delivered to the
+  program's `buttons.on` callbacks (spec 03 §5). Back is never delivered to a program.
 
-Two gestures are global and belong to the device no matter what a program is doing:
-
-- **Back click** — *go home*. Stop the running program (if any), vent, then load and
-  start `default`.
-- **Back long-press** — *open the selector*. Stop the running program (if any), vent,
-  then open BROWSER with the cursor on `default`.
-
-Everything else is context-dependent:
-
-| Gesture | RUN (program executing) | BROWSER | PARAMS |
-| --- | --- | --- | --- |
-| Up / Down click | program button callbacks | move cursor (wraps) | step value by one step |
-| Up / Down repeat | program button callbacks | fast scroll | coarse step (×10) |
-| OK click | program button callbacks | **run the selected program** | next parameter (wraps) |
-| OK long-press | program button callbacks | **edit the selected program's params** | **persist params and run** |
-
-Notes:
-
-- **Running is one press.** In BROWSER, OK click runs the selected program with its last
-  used (or default) parameters.
-- **Editing is deliberately clunkier.** Reaching PARAMS is an extra long-press, each
-  parameter is one screen, and changes only take effect when you run.
-- **Back can never be taken by a program.** A program with `buttons.on` callbacks gets
-  Up, Down and OK; Back always escapes, so no program can trap the user.
-
-### 7.2 Break-out paths
+### 7.3 The two device-owned gestures
 
 From any running program:
 
-- **Vent and return to the default program** — **Back click**. The current program is
-  stopped, the chamber vents, and `default` is loaded and started. One press gets back to
-  the known-good home screen.
-- **Vent and initialize the program selector** — **Back long-press**. The current program
-  is stopped, the chamber vents, and BROWSER opens with nothing running and the cursor on
-  `default`, ready to pick the next program.
+- **Back click** — *home*. Stop the current program, vent, then run `default`.
+- **Back long-press** — *browse*. Stop the current program, vent, then run `browser`.
 
-Because every program change vents first, both paths leave the machine in the released
-state before anything new can act.
+Both leave the chamber released before the next program acts, because every program
+change vents first.
 
-### 7.3 Program browser, in detail
+### 7.4 Reserved programs
 
-128x64 layout:
+- `default` — the boot and home program (seeded as a passive readout; an owner can
+  replace it).
+- `browser` — the program selector and params editor (also seeded).
 
-```
-PROGRAMS 3/12
-* default
-  pulse
-> hold
-  cycle
-OK run  OK^ edit  BACK home
-```
+They are ordinary stored programs; only the names are reserved by boot and the two Back
+gestures.
 
-- **Header** — title plus cursor index / total.
-- **List** — programs sorted alphabetically with `default` pinned first. Each row is the
-  name (truncated to fit). Markers: `*` on `default`, `>` on the cursor, a `R` suffix on
-  the program currently running (only reachable while running if browsing is entered
-  non-destructively; with the grammar above BROWSER is always entered post-vent, so `R`
-  is the common case when returning from PARAMS of a running program).
-- **Cursor** — the selected row is inverted (paper-on-ink), so the selection is readable at
-  arm's length. The list scrolls with the cursor and wraps at both ends; Up/Down repeat
-  fast-scrolls.
-- **Footer** — hints for the three available actions.
+### 7.5 Host-attached vs local
 
-Interactions:
-
-- OK click runs the selected program and returns to RUN.
-- OK long-press opens PARAMS for the selected program.
-- Back click leaves the browser and homes to `default`.
-
-### 7.4 Parameter editor, in detail
-
-One parameter per screen, stepped with OK:
-
-```
-TARGET 2/3
-Target absolute pressure
-  40.0 kPa
-min 5  max 150  step 0.5
-OK next  OK^ run  BACK back
-```
-
-- **Header** — parameter name (uppercased) and index/total.
-- **Description** — the manifest's `"…"` text, truncated to one line.
-- **Value** — large (size 2) and inverted while it is the active field; the unit from
-  `unit=` is appended.
-- **Range** — `min`/`max`/`step`, or the choices for a `choice` param, or on/off for a
-  `bool`.
-- **Footer** — hints.
-
-Interactions:
-
-- Up/Down click steps the value; repeat steps by ×10 (numeric) or just cycles (choice,
-  bool).
-- OK click moves to the next parameter, wrapping to the first after the last.
-- OK long-press persists the values to `/programs/.params/<name>` and starts the program.
-- Back click discards edits and returns to BROWSER.
-
-A program with no declared parameters skips PARAMS: OK long-press in BROWSER shows
-"no params", and OK click runs it directly.
-
-### 7.5 RUN screen
-
-The program draws the whole screen with the `screen.draw_*` verbs, then `screen.flush()`
-pushes the frame — exactly like a host drawing over the wire:
-
-```
-pulse             HOLD
-cycle 3/10
-  41.3 kPa
-[███████████-----]
-```
-
-- **The program owns the RUN screen** — there is no device chrome. A readout program draws
-  its own header, rows and bar; a program that draws nothing leaves the buffer as it was.
-- **Battery** — composited on every flush by `AppDisplay`, as today; programs cannot erase
-  it.
-- **Escape hints** are not drawn on the RUN screen (the program owns it). The two Back
-  gestures still work regardless of what is on screen, and the hints appear on BROWSER and
-  PARAMS.
-
-### 7.6 Button callbacks
-
-A program receives buttons by registering callbacks on the `buttons` module
-(`buttons.on(index, fn)`, spec 03 §5). While it runs, Up, Down and OK events are delivered
-to those callbacks; Back remains device-owned. A program that registers no callbacks is
-purely a readout — the seeded `default` is exactly such a readout.
-
-### 7.7 Host-attached vs local
-
-- **No host** → the local UI owns the panel (RUN / BROWSER / PARAMS as above).
-- **Host attaches** → the panel becomes host-drawn exactly as today; local rendering
-  suspends. A program launched over the wire still runs on the VM core, but its screen is
-  not shown — the host draws the panel and polls `status`.
-- **Host detaches** → the panel returns to the local UI, showing the RUN screen of whatever
-  is running (or `default` after the home gesture).
-- Buttons pressed while the host is attached are ignored, so the local UI never fights the
-  host for the glass; the host remains authoritative while present.
+- **No host** → the running program draws (local mode).
+- **Host attaches** → the panel becomes host-drawn exactly as today; the program's
+  drawing is suppressed and buttons are ignored.
+- **Host detaches** → the running program draws again.
 
 ## 8. Disconnected operation and parameterized programs
 
@@ -344,10 +233,11 @@ fail-safe, and the fault latch plus sensor-loss trip still act with no owner in 
 
 ### 8.2 Running is easy, editing is deliberate
 
-The split is explicit in the button grammar:
+The split is explicit in the `browser` program:
 
-- **Run with last parameters** = BROWSER → OK click. One press, nothing to retype.
-- **Run with different parameters** = BROWSER → OK long → step through PARAMS → OK long.
+- **Run with last parameters** = select the program, OK click. One press, nothing to
+  retype.
+- **Run with different parameters** = open its params, step through them, then run.
   Multi-step by design.
 
 Persisted "last run" values are what make disconnected use easy: tune a program once (or
@@ -357,8 +247,8 @@ them.
 ### 8.3 A disconnected walkthrough
 
 1. Device boots unplugged → `default` starts and shows the live readout.
-2. Back long-press → current program stops, chamber vents, BROWSER opens.
-3. Up/Down to `pulse`, OK long-press → PARAMS.
+2. Back long-press → current program stops, chamber vents, the `browser` program runs.
+3. Up/Down to `pulse`, OK long-press → the `browser` opens its params.
 4. OK to reach `cycles`, Up/Down (repeat for coarse) to set 5.
 5. OK long-press → params persist, `pulse` runs with `cycles=5`.
 6. Back click → `pulse` stops, chamber vents, `default` runs again.
@@ -369,8 +259,8 @@ source (or set `default`'s own params), not a separate autostart knob.
 
 ### 8.4 Persistence and merge rules
 
-- Persisted per-program values are written when a program is run from PARAMS or via
-  `set params <name> …`. They survive reboot in LittleFS.
+- Persisted per-program values are written when a program is run from the `browser`
+  program's params editor or via `set params <name> …`. They survive reboot in LittleFS.
 - On start, effective params = manifest defaults overlaid with persisted values, as in
   section 6.2. A re-uploaded program with a changed manifest loses obsolete keys and fills
   missing ones with defaults — never a crash, never a silent type mismatch.
@@ -379,8 +269,8 @@ source (or set `default`'s own params), not a separate autostart knob.
 
 ### 8.5 Edge cases
 
-- **Zero-parameter program** — BROWSER → OK click runs it directly; there is nothing to
-  edit.
+- **Zero-parameter program** — select it and OK click runs it directly; there is nothing
+  to edit.
 - **Store has only `default`** — the browser lists one row; Back click and OK click both
   effectively keep the device home.
 - **`default` deleted** — the store re-seeds the passive source on next refresh; the device
@@ -456,7 +346,6 @@ services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
 hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime,
           program/NullRuntime
-ui/       UiController, Renderer, pages/{Programs,Params}
 app/      App (composition root + task creation), AppDisplay
 ```
 
@@ -474,10 +363,10 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 | Phase | Content | Gate |
 | --- | --- | --- |
 | 1 | Task architecture: plant + serial tasks, command mailbox, snapshot slot, log queue | Protocol behavior parity on dual-core |
-| 2 | `hal/Buttons`, `hal/Storage`, UI framework: BROWSER, PARAMS, RUN screens, `default` seeding (NullRuntime) | Button navigation works with no VM; host-drawn mode still works |
-| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`run`/`params`/`set params`/upload) | Programs storable, browsable and runnable (NullRuntime: `run` → "runtime not built in") |
-| 4 | Berry VM vendored + `ProgramApi`/`BerryRuntime` on core 1, program draw access, run from UI and CLI | `default` and `pulse` examples run and draw on core 1 while plant + serial run on core 0 |
-| 5 | Disconnected operation, magic-default boot, break-out semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back gestures escape |
+| 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` (NullRuntime) | Buttons scanned and stored programs listed via serial; no VM yet |
+| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`run`/`params`/`set params`/upload) | Programs storable and runnable over the wire (NullRuntime: `run` → "runtime not built in") |
+| 4 | Berry VM vendored + `ProgramApi`/`BerryRuntime` on core 1, `screen`/`buttons`/`programs` modules, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |
+| 5 | Disconnected operation, reserved-program boot, break-out semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back gestures escape |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 
 ## 14. Risks to verify during implementation
@@ -506,7 +395,7 @@ One spec per feature, under [docs/specs/](specs/):
 | [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
 | [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, button callbacks |
-| [04-on-device-ux](specs/04-on-device-ux.md) | Buttons, browser, params editor, run screen, break-out |
+| [04-on-device-ux](specs/04-on-device-ux.md) | Screen ownership, buttons, reserved `default`/`browser` programs |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
 | [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |

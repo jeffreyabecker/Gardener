@@ -78,14 +78,16 @@ class ProgramStore {
 - Upload commit refuses when the name is invalid, the size does not match, the CRC does
   not match, or the store is full; the staging file is deleted on any failure.
 
-## 4. The magic default program
+## 4. Reserved programs: `default` and `browser`
 
-- Reserved name: `default`.
-- Seeded source is a passive readout program (never calls `vacuum.start` or
-  `vacuum.target`), drawing pressure, state and duty from `vacuum.state()` via
-  `screen.draw_text`.
-- Seeding happens in `begin()` and after `remove("default")`. An owner's upload of a
-  program named `default` overwrites the seeded source and becomes the boot behavior.
+- `default` — the boot and home program. Seeded source is a passive readout (never calls
+  `vacuum.start` or `vacuum.target`), drawing pressure, state and duty from
+  `vacuum.state()` via `screen.draw_text`.
+- `browser` — the program selector and params editor. Seeded source lists and navigates
+  the store via the `programs` module and launches the selection with `programs.run`.
+- Both are seeded in `begin()` and re-seeded after `remove()`, so the device never lacks
+  a home or a selector. An owner's upload of a program with either name overwrites the
+  seeded source.
 
 ## 5. Parameter manifest
 
@@ -160,7 +162,7 @@ Persistence:
 
 - File `/programs/.params/<name>`, one `key=value` per line, written atomically
   (temp + rename) by the plant task.
-- Written when a program is run from PARAMS (`OK` long-press) or by
+- Written when a program is run from the `browser` program's params editor or by
   `set params <name> k=v …` over the wire.
 - Merge is deterministic:
   1. start from manifest defaults,

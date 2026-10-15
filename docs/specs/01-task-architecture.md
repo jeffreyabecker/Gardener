@@ -156,9 +156,8 @@ loop:
   sensor.update(now); pump.update(now); battery.update(now); buttons.update(now)
   drain command mailbox (all pending commands, in order)
   system.service(now)
-  publish button events (queue / UI consumption)
-  if display mode is Local: ui.update(now, snapshot)
-  else if a flush command was drained: apply buffered draw ops, appDisplay.flush()
+  publish button events (forward to the VM while a program runs; Back is break-out)
+  apply buffered draw ops; on a flush command: appDisplay.flush()
   refresh snapshot; snapshotSlot.publish(snapshot)
   check vm heartbeat; if stale > 2000 ms: request VM stop
   delay to next 50 ms tick

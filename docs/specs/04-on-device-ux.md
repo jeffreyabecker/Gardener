@@ -1,9 +1,20 @@
-# Spec 04 — On-device UX: buttons, browser, params, run screen
+# Spec 04 — On-device UX: screen ownership and buttons
 
-Status: draft spec. Implements [the plan](../berry-on-device-control.md) §7 and
-constraints 2 (parameter UX) and 3 (buttons + browser).
+Status: draft spec. Implements [the plan](../berry-on-device-control.md) §7.
 
-## 1. `hal/Buttons`
+Programs own the screen. The device owns only the battery overlay and the two Back
+gestures. There is no device-drawn UI layer; anything reusable is a Berry program.
+
+## 1. Screen ownership
+
+- A running program draws the entire panel with the `screen.draw_*` verbs and pushes the
+  frame with `screen.flush()`. The device composites only the battery (`AppDisplay`) on
+  every flush, so a program can never erase it.
+- There are no device-drawn pages — no browser, params editor, or status page in C++.
+  Those are Berry programs (spec 02 §4). A reusable list/menu abstraction, if one is
+  wanted, is written in Berry, not firmware.
+
+## 2. `hal/Buttons`
 
 Four active-low buttons with internal pull-ups, pins from
 [Pins.h](../../libraries/VacuumCore/src/hal/Pins.h) (UP=1, DOWN=2, OK=10, BACK=11).
@@ -41,159 +52,41 @@ Timings:
 
 Events are queued (depth 16) so a press during a busy tick is not lost.
 
-## 2. Screens and state machine
+## 3. Button routing
 
-Three screens, one `ViewState` owned by `UiController`:
+- While a program runs and no host is attached, Up, Down and OK events are delivered to
+  the program's `buttons.on` callbacks (spec 03 §5).
+- **Back is never delivered** to a program. It is device-owned:
 
-```cpp
-enum class Screen : uint8_t { Run, Browser, Params };
+| Gesture | Effect |
+| --- | --- |
+| Back click | `programs.home()` — stop current, vent, run `default` |
+| Back long-press | `programs.run("browser")` — stop current, vent, run `browser` |
 
-struct ViewState {
-  Screen screen = Screen::Run;
-  size_t cursor = 0;          // browser: selected program; params: selected param
-  size_t listTop = 0;         // browser: first visible row
-};
-```
+- While a host is attached, all buttons are ignored — the panel is host-drawn (§5).
 
-`UiController` turns button events into intents, and the plant task applies them:
+## 4. Reserved programs
 
-```cpp
-enum class UiIntent : uint8_t { None, Home, OpenBrowser, RunSelected,
-                                EditSelected, MoveCursor, AdjustValue, NextParam,
-                                CommitRun };
-```
+- `default` — the boot and home program. Seeded as a passive readout; an owner can
+  replace it (spec 02 §4).
+- `browser` — the program selector and params editor, also seeded. Reached by Back
+  long-press.
 
-## 3. Button grammar
+They are ordinary stored programs to the store and runtime; only the names are reserved
+by boot and the two Back gestures.
 
-Back is always device-owned. The two break-out gestures (spec 05 §4) are global:
+## 5. Display mode switch
 
-- **Back click** → `Home`: stop program (if any), vent, load + start `default`.
-- **Back long-press** → `OpenBrowser`: stop program (if any), vent, open the browser
-  with the cursor on `default`.
+- **No host** → the running program draws (local mode).
+- **Host attaches** → the panel becomes host-drawn exactly as today (serial `draw`/
+  `flush`); the program's drawing is suppressed and buttons are ignored.
+- **Host detaches** → the running program draws again.
 
-| Gesture | RUN | BROWSER | PARAMS |
-| --- | --- | --- | --- |
-| Up / Down click | program button callbacks | `MoveCursor` (wraps) | `AdjustValue` (one step) |
-| Up / Down repeat | program button callbacks | fast scroll | `AdjustValue` (×10) |
-| OK click | program button callbacks | `RunSelected` | `NextParam` (wraps) |
-| OK long-press | program button callbacks | `EditSelected` | `CommitRun` (persist + run) |
+## 6. Acceptance criteria
 
-`Back` in BROWSER and PARAMS also homes to `default`; the long-press there re-initializes
-the browser. Programs receive Up/Down/OK through `buttons.on` callbacks (spec 03 §5);
-Back is always device-owned.
-
-## 4. Rendering
-
-`Renderer` draws through `hal/Display`, never through `AppDisplay` directly (the battery
-is composited by `App` on flush):
-
-```cpp
-class Renderer {
- public:
-  explicit Renderer(Display& display);
-  void header(const char* title, const char* right);
-  void row(uint8_t row, const char* text, bool inverted);
-  void value(const char* text);          // large (size 2), centered
-  void hint(const char* text);           // small, left
-  void footer(const char* text);
-  void bar(float fraction);
-};
-```
-
-The RUN screen is drawn entirely by the program with its `screen.draw_*` verbs; the
-device does not composite a header or footer there. `AppDisplay::flush()` puts the battery
-on last, so a program can never erase it. BROWSER and PARAMS are device-drawn and use the
-renderer helpers above.
-
-The seeded `default` is a readout in exactly those terms:
-
-```berry
-while true
-  var s = vacuum.state()
-  screen.draw_clear()
-  screen.draw_text(0, 0, 1, 0, s.state)
-  screen.draw_text(0, 12, 2, 0, string.format("%.1f", s.kpa))
-  screen.draw_text(0, 32, 1, 0, string.format("vac %.1f  %d%%", s.vac, s.pct))
-  screen.flush()
-  vacuum.delay(100)
-end
-```
-
-It registers no `buttons.on` callbacks, so Up/Down/OK are ignored and the screen is a
-pure readout.
-
-## 5. Browser layout
-
-128x64, built-in font size 1:
-
-```
-PROGRAMS 3/12
-* default
-  pulse
-> hold
-  cycle
-OK run  OK^ edit  BACK home
-```
-
-- Row 0: header, `PROGRAMS <cursor+1>/<count>`.
-- Rows 1–5: five program names (truncated to 18 chars). `*` suffix on `default`, `R`
-  suffix on the running program, cursor row inverted.
-- Row 6: footer hints.
-- Scrolling: the window slides so the cursor stays visible; wraps at both ends.
-- Order: alphabetical with `default` pinned first (store does this, spec 02 §3).
-
-## 6. Break-out paths (from a running program)
-
-- **Vent and return to the default program** — Back click. Stop current program, vent,
-  load + start `default`. One press to the known-good home screen.
-- **Vent and initialize the program selector** — Back long-press. Stop current program,
-  vent, open BROWSER with nothing running and the cursor on `default`.
-
-Both leave the chamber released before anything new can act, because every program change
-vents first.
-
-## 7. Params editor layout
-
-One parameter per screen:
-
-```
-TARGET 2/3
-Target absolute pressure
-  40.0 kPa
-min 5  max 150  step 0.5
-OK next  OK^ run  BACK back
-```
-
-- Row 0: header, parameter name (uppercased) + index/total.
-- Row 1: description (truncated to one line).
-- Rows 2–3: value, size 2, inverted while active, with `unit` appended.
-- Row 4: range line — `min/max/step` for numbers, the choices for `choice`, on/off for
-  `bool`.
-- Row 5: footer hints.
-
-Interactions: Up/Down step the value (repeat ×10 for numbers, cycles for choice/bool);
-OK advances to the next parameter; OK long-press persists and runs; Back discards and
-homes. A program with no declared params skips PARAMS (OK long-press in BROWSER shows
-"no params", OK click runs directly).
-
-## 8. Display mode switch
-
-- No host → **Local mode**: the UI owns the glass.
-- Host attaches → **Host mode**: the panel is host-drawn exactly as today; local
-  rendering suspends. Buttons pressed while attached are ignored.
-- Host detaches → back to **Local mode**, showing the RUN screen of whatever is running
-  (or `default` after the home gesture).
-
-## 9. No toasts
-
-There is no toast facility. Transient feedback is the program's own drawing on RUN, and
-BROWSER/PARAMS show their state inline (cursor, value) rather than as an overlay.
-
-## 10. Acceptance criteria
-
-- From boot (default running), Back long → browser → Up/Down → OK runs a program in
-  three button presses.
-- Back click from any running program vents and lands on `default` within one plant tick.
-- A program with `buttons.on` callbacks still responds to Back click and Back long.
-- Cursor wraps, fast-scrolls, and the window keeps the cursor visible at the list ends.
-- Host attach swaps to host-drawn panel and back without losing local state.
+- A program's frame reaches the glass with only the battery composited on top.
+- Back click homes to `default` and Back long runs `browser`, from any program.
+- Up/Down/OK reach the program's `buttons.on` callbacks and are never consumed by the
+  device.
+- Host attach/detach swaps between host-drawn and program-drawn without losing local
+  state.

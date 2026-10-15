@@ -90,14 +90,14 @@ change:
 
 Local mode (no host):
 
-- RUN: the program draws. The plant drains `Draw`/`Flush` commands and, on `Flush`,
-  composites the battery and pushes to the glass. No device chrome is drawn.
-- BROWSER / PARAMS: the device draws with `ui.render()` and flushes through `AppDisplay`.
+- The running program draws. The plant drains `Draw`/`Flush` commands and, on `Flush`,
+  composites the battery and pushes to the glass. There is no device-drawn UI: the
+  `browser` and `default` programs draw themselves the same way.
 
 Host mode (host attached):
 
-- The plant applies the host's serial `draw`/`flush` commands; the UI render step is
-  skipped and program draw calls are dropped.
+- The plant applies the host's serial `draw`/`flush` commands; program draw calls are
+  dropped (the host owns the glass).
 
 Both sources share one buffer and one flush path, so the frame is always one owner's.
 

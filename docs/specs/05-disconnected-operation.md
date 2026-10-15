@@ -17,7 +17,7 @@ path.
 ## 2. Boot sequence
 
 1. Hardware init and `system_.begin()` (pump off, valve open) — the safe resting state.
-2. `ProgramStore::begin()` (seeds `default` if missing, spec 02 §4).
+2. `ProgramStore::begin()` (seeds `default` and `browser` if missing, spec 02 §4).
 3. Load `default`'s persisted params and start `default`.
 
 Boot therefore always lands in a running program; the seeded `default` is passive, so a
@@ -46,8 +46,8 @@ From any running program:
 
 - **Back click** — vent and return to `default` (stop current program → vent → start
   `default`).
-- **Back long-press** — vent and initialize the program selector (stop current program →
-  vent → open BROWSER, cursor on `default`, nothing running).
+- **Back long-press** — vent and run the `browser` program (stop current program → vent →
+  run `browser`).
 
 Both are device-owned and cannot be consumed by a program (spec 03 §5).
 
@@ -55,7 +55,7 @@ Both are device-owned and cannot be consumed by a program (spec 03 §5).
 
 | Event | Effect |
 | --- | --- |
-| Local `run` (BROWSER → OK) | stop current program/run → vent → start selected program with effective params |
+| Local `run` (the `browser` program) | stop current program/run → vent → start selected program with effective params |
 | Host `run <name> [k=v]` | same, plus the host is now present and authoritative |
 | Host `stop` | stop current program/run → vent → **idle** (does not start `default`) |
 | Local Back click | stop → vent → start `default` |
@@ -76,7 +76,7 @@ the device idle, because the host is present and decides what happens next.
 ## 7. Headless operation
 
 `default` is the boot program, so a device with no host is fully self-contained: power on
-→ `default` runs; Back long → browser → pick a program; Back click → home. No host is
+→ `default` runs; Back long → `browser` → pick a program; Back click → home. No host is
 ever required, and no state is lost across a power cycle except the running program
 (which restarts as `default`).
 
@@ -85,8 +85,8 @@ ever required, and no state is lost across a power cycle except the running prog
 - Unplugging USB while `pulse` runs leaves `pulse` running; `status` (after reattach)
   shows `host=0 running=1 program=pulse`.
 - Unplugging USB with no program running vents the chamber.
-- Back click from a running program vents and starts `default`; Back long vents and opens
-  the browser.
+- Back click from a running program vents and starts `default`; Back long vents and runs
+  `browser`.
 - Host `stop` during a running program vents and leaves the device idle, not running
   `default`.
 - Boot with a deleted `default` still boots into the re-seeded passive `default`.

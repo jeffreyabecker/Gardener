@@ -164,7 +164,7 @@ and no explicit input claim: registering a callback is owning input.
 
 While a program runs, the plant forwards Up, Down and OK events to the VM's button queue
 (spec 01 §3.5); `BerryRuntime::update()` drains it and invokes the matching callbacks.
-**Back is never delivered** — it always belongs to the device (break-out, spec 04 §6). A
+**Back is never delivered** — it always belongs to the device (break-out, spec 05 §4). A
 program with no registered callbacks is purely a readout and ignores the events.
 
 ## 6. Berry binding
