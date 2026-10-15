@@ -15,7 +15,7 @@ provides the utilities this firmware needs. Prefer them to hand-rolled equivalen
   `indexOf`, `lastIndexOf`, `toInt`, `toFloat`, `toLowerCase`, `startsWith`, `+` — for
   parsing command lines, building replies and formatting values. It is good enough, it is
   what the rest of the ecosystem uses, and a hand-written tokeniser or fixed `char` buffer
-  buys very little on an ESP32-C3 with hundreds of kilobytes of free heap.
+  buys very little on an ESP32-S3 with hundreds of kilobytes of free heap.
 - The same applies to other core facilities: reach for the platform's own helper rather
   than writing a bespoke one.
 - Hand-roll only with a reason you can point at — a hard real-time path, a proven hot loop,
@@ -31,4 +31,5 @@ the only way text is formatted in this firmware.
 
 - [README.md](../README.md) — wiring, build and upload flow, control model, safety notes.
 - [docs/serial-protocol.md](../docs/serial-protocol.md) — the interface the firmware serves.
+- [docs/bom.md](../docs/bom.md) — the parts the firmware's limits and pin map assume.
 - `scripts/check-layers.ps1` — the three layer dependency rule, enforced at build time.

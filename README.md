@@ -1,15 +1,18 @@
 # Gardener
 
-An ESP32-C3 vacuum pump controller. It pulls a chamber to a target pressure, holds it for a
+An ESP32-S3 vacuum pump controller. It pulls a chamber to a target pressure, holds it for a
 timer, then vents it — driven over a serial line by a controller at the other end.
 
-* **MCU**: ESP32-C3 (developed against an ESP32-C3 Super Mini)
+* **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
 * **Interface**: USB CDC, one line oriented protocol ([docs/serial-protocol.md](./docs/serial-protocol.md))
 * **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–172 kPa / 0–25 PSI absolute, I2C)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
 * **Vent valve**: normally open solenoid on a low side MOSFET
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
 * **Battery**: 1S Li-ion pack sensed through a divider on GPIO4
+
+The parts list, and the firmware constant each one is tied to, is in
+[docs/bom.md](./docs/bom.md).
 
 There is no local control surface: the display is a readout and the controller decides
 everything. What the device owns is what has to happen when nobody is watching — pulling to
@@ -39,6 +42,7 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [scripts/check-layers.ps1](./scripts/check-layers.ps1) | Enforces the dependency rule below |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, the panel, states, rates |
+| [docs/bom.md](./docs/bom.md) | The bill of materials: every part, and the constant each one is tied to |
 
 ### Architecture
 
@@ -81,25 +85,28 @@ is the only thing that says it out loud.
 
 | Signal | GPIO | Notes |
 | --- | --- | --- |
-| I2C SDA | 8 | STEMMA QT bus, MPRLS + OLED (ESP32-C3 `Wire` default) |
+| I2C SDA | 8 | STEMMA QT bus, MPRLS + OLED (ESP32-S3 `Wire` default) |
 | I2C SCL | 9 | same bus |
 | Pump PWM | 6 | to the MOSFET gate |
 | Vent valve | 5 | MOSFET gate; **energise to close** |
-| Battery sense | 4 | 1S Li-ion through a ÷2 divider |
-| Button UP | 0 | reserved, nothing reads it |
-| Button DOWN | 1 | reserved, nothing reads it |
-| Button OK | 3 | reserved, nothing reads it |
-| Button BACK | 10 | reserved, nothing reads it |
-| USB D-/D+ | 18/19 | native USB: this is the control interface |
-| UART0 | 20/21 | alternative control interface, 115200 |
+| Battery sense | 4 | 1S Li-ion through a ÷2 divider (ADC1 channel 3) |
+| Button UP | 1 | reserved, nothing reads it |
+| Button DOWN | 2 | reserved, nothing reads it |
+| Button OK | 10 | reserved, nothing reads it |
+| Button BACK | 11 | reserved, nothing reads it |
+| USB D-/D+ | 19/20 | native USB: this is the control interface |
+| UART0 | 43/44 | alternative control interface, 115200 |
+| RGB LED | 48 | on board, not wired to anything |
 
-Pin 7 is free, and the four button pins are wired and named for a future local override but
-no code reads them. GPIO0–3 are also ADC1 channels, which is why the battery sense is on
-GPIO4: a pressed button would pull the sense line to ground. I2C addresses: MPRLS `0x18`,
-OLED `0x3C`. Pins live in [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h).
+Pins 7 and 12–18 are free, and the four button pins are wired and named for a future local
+override but no code reads them. The battery sense is on GPIO4 because it is the one ADC1 pin
+that is not a button — a pressed button would pull the sense line to ground. Nothing in the
+firmware touches the pins that have to be left alone at reset (strapping 0, 3, 45, 46) or the
+USB pins (19/20), and on a Super Mini GPIO0 is only the BOOT button. I2C addresses: MPRLS
+`0x18`, OLED `0x3C`. Pins live in [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h).
 
-If your C3 board has a NeoPixel on GPIO8, either accept that the LED will flicker with I2C
-traffic or move the bus to two spare pins.
+The on-board addressable RGB LED is on GPIO48, which is clear of the I2C bus, so it needs no
+special handling.
 
 ### Pump driver
 
@@ -117,7 +124,7 @@ ESP32 GPIO6 ──┬── 100R ──┬── GATE
    470–1000 µF bulk capacitor across the pump supply
 ```
 
-Use a **logic level** MOSFET: the C3 drives the gate with 3.3 V. Give the pump its own supply
+Use a **logic level** MOSFET: the S3 drives the gate with 3.3 V. Give the pump its own supply
 and tie the grounds together. `PUMP_DUTY_MAX_PERCENT` (90 %) and `PUMP_RAMP_PERCENT_PER_SEC` in
 [core/Config.h](./libraries/VacuumCore/src/core/Config.h) are the firmware's hard limits, and
 they are the pump's only protections: the device never ends a run of its own accord, so whoever
@@ -179,11 +186,11 @@ instead of the global sketchbook copy, and it runs `check-layers.ps1` first. In 
 same commands are tasks (`arduino: build`, `arduino: upload`, `arduino: monitor`,
 `arduino: install libraries`).
 
-**The board option matters**: the build pins
-`esp32:esp32:esp32c3:CDCOnBoot=cdc`, which is what maps `Serial` to the native USB CDC. Build
-without it and the whole interface goes to UART0 on GPIO20/21 instead, so a USB cable sees
-nothing at all. It is pinned in `firmware/gardener/sketch.yaml`, `scripts/arduino.ps1`
-and `.vscode/arduino.json`.
+**The board options matter**: the build pins
+`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, which is what maps `Serial` to the chip's
+native USB CDC. Build without `CDCOnBoot` and the whole interface goes to UART0 on GPIO43/44
+instead, so a USB cable sees nothing at all. It is pinned in `firmware/gardener/sketch.yaml`,
+`scripts/arduino.ps1` and `.vscode/arduino.json`.
 
 Policy tunables live in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) and wiring in
 [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h).
@@ -236,7 +243,7 @@ replies:
 
 ```
 -> info
-<- ok fw=0.5.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
+<- ok fw=0.5.0 chip=ESP32-S3 heap=279384 log=on batt_v=3.94 batt_pct=78
 -> set target 40
 <- ok target=40.0
 -> start
@@ -334,7 +341,7 @@ valve to the same output.
 
 ## Status
 
-* [x] ESP32-C3 project skeleton, build and upload flow
+* [x] ESP32-S3 project skeleton, build and upload flow
 * [x] Layered core/hal/app layout with an enforced dependency rule
 * [x] MPRLS driver with median + EMA filtering and ambient reference handling
 * [x] PWM pump driver with ramp and duty cap

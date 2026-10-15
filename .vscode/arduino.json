@@ -1,5 +1,5 @@
 {
-  "board": "esp32:esp32:esp32c3:CDCOnBoot=cdc",
+  "board": "esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc",
   "sketch": "firmware/gardener/gardener.ino",
   "output": "build",
   "port": "",

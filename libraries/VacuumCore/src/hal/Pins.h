@@ -9,8 +9,8 @@ namespace gardener {
 namespace pins {
 
 // --- I2C bus, shared by the OLED and the MPRLS sensor ----------------------
-// GPIO8/9 are the ESP32-C3 Wire defaults. GPIO8 also drives the on board NeoPixel on
-// some C3 Super Mini clones; move the bus to 4/5 if that matters.
+// GPIO8/9 are the ESP32-S3 Wire defaults (`SDA`/`SCL` in the board variant). The bus
+// stays clear of the S3 strapping pins (0, 3, 45, 46) and of the USB pins (19/20).
 constexpr int I2C_SDA = 8;
 constexpr int I2C_SCL = 9;
 constexpr uint32_t I2C_FREQ_HZ = 400000;
@@ -38,19 +38,22 @@ constexpr int VENT_VALVE = 5;
 
 // --- Battery sense ---------------------------------------------------------
 // A 1S Li-ion pack through a 100k/100k divider, so the top of the pack lands inside the
-// ADC range. GPIO4 is ADC1 channel 4, and it is the only free ADC1 pin: GPIO0..3 are
-// ADC1 as well, but they are the button pins, and a pressed button would yank the sense
-// line to ground. GPIO4 also stays clear of the GPIO2 strapping pin.
+// ADC range. GPIO4 is ADC1 channel 3, and it is the one ADC1 pin that is neither a button
+// nor a strapping pin: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, and a pressed
+// button would yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay
+// clear too.
 constexpr int BATTERY_ADC = 4;
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
 // --- Four button UI, active low to GND, internal pull ups ------------------
 // Nothing reads these, and nothing times them: they are kept wired and named so a future
-// build can use them without a board revision (Q16).
-constexpr int BTN_UP = 0;
-constexpr int BTN_DOWN = 1;
-constexpr int BTN_OK = 3;
-constexpr int BTN_BACK = 10;
+// build can use them without a board revision (Q16). They sit away from the S3 strapping
+// pins (0, 3, 45, 46) and from the USB pins (19/20). GPIO10/11 are the variant's default
+// SS/MOSI, which costs nothing here: this firmware never starts SPI.
+constexpr int BTN_UP = 1;
+constexpr int BTN_DOWN = 2;
+constexpr int BTN_OK = 10;
+constexpr int BTN_BACK = 11;
 
 }  // namespace pins
 }  // namespace gardener

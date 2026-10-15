@@ -1,6 +1,9 @@
 # Pin the board so `arduino-cli compile firmware/gardener` needs no FQBN.
 #
-# CDCOnBoot=cdc is not optional: it maps Serial to the native USB CDC, which is where the
-# controller interface lives. Without it Serial is UART0 on GPIO20/21 and the interface
-# never reaches the USB-C socket.
-default_fqbn: esp32:esp32:esp32c3:CDCOnBoot=cdc
+# The S3 needs both options spelled out. USBMode=hwcdc routes USB to the chip's
+# USB-Serial-JTAG CDC, which is the peripheral on GPIO19/20 that both the ROM downloader
+# and the sketch share, so `(bool)Serial` is a real host-presence signal and esptool
+# uploads keep working over the same cable. CDCOnBoot=cdc is not optional: it maps Serial
+# to that CDC. Without it Serial is UART0 on GPIO43/44 and the interface never reaches the
+# USB-C socket.
+default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc

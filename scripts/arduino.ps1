@@ -19,10 +19,11 @@ param(
     [string]$Task = 'build',
 
     [string]$Port = '',
-    # CDCOnBoot=cdc maps Serial to the native USB CDC, which is what puts the interface on
-    # the USB-C socket. Without it Serial is UART0 on GPIO20/21 and the interface is
-    # invisible to a USB cable.
-    [string]$Fqbn = 'esp32:esp32:esp32c3:CDCOnBoot=cdc',
+    # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial
+    # to it, which is what puts the interface on the USB-C socket while leaving the ROM
+    # downloader on the same port. Without CDCOnBoot Serial is UART0 on GPIO43/44 and the
+    # interface is invisible to a USB cable.
+    [string]$Fqbn = 'esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc',
     [switch]$VerboseOutput
 )
 

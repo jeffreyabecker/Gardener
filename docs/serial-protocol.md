@@ -12,16 +12,16 @@ a run lasts.
 
 | Setting | Value |
 | --- | --- |
-| Transport | USB CDC (native USB, the USB-C socket) by default; UART0 on GPIO20/21 is a one line change in `App` |
+| Transport | USB CDC (native USB, the USB-C socket) by default; UART0 on GPIO43/44 is a one line change in `App` |
 | Baud | 115200, 8N1 — only meaningful on a real UART: USB CDC ignores it |
 | Terminator | `\n`, or `\r` alone; `\r\n` is accepted and yields one empty line |
 | Line limit | 128 bytes. A longer line is answered `err bad_argument` and swallowed, never truncated |
 
-`CDCOnBoot=cdc` is part of the build, not a preference: it is what maps `Serial` to the
-native USB CDC. Building without it (`esp32:esp32:esp32c3` alone) sends the whole interface
-to UART0 on GPIO20/21, which is not the USB socket, and the device looks dead to a cable.
-The FQBN is pinned in `firmware/gardener/sketch.yaml`, `scripts/arduino.ps1` and
-`.vscode/arduino.json` for exactly that reason.
+`USBMode=hwcdc,CDCOnBoot=cdc` is part of the build, not a preference: `CDCOnBoot` is what
+maps `Serial` to the chip's native USB CDC. Building without it (`esp32:esp32:esp32s3`
+alone) sends the whole interface to UART0 on GPIO43/44, which is not the USB socket, and the
+device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.yaml`,
+`scripts/arduino.ps1` and `.vscode/arduino.json` for exactly that reason.
 
 ## 2. Connecting
 
@@ -95,7 +95,7 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt
 
 ## 6. Info payload
 
-`fw=0.5.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
+`fw=0.5.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
 
 | Key | Notes |
 | --- | --- |
