@@ -185,6 +185,12 @@ the system, which owns them.
 
 Recommendations are marked, so "all as recommended" is a valid answer.
 
+**Answered (rev 2): all fourteen as recommended, so no design changes and no section is
+rewritten.** The four worth re-reading before the split lands, because they are the ones that
+decide where code ends up: the valve moves down wholly and the control stops touching it (Q2),
+fault *detection* splits from the fault *latch* (Q3), the ambient reference moves with the loop
+(Q10), and `App` keeps polling the drivers (Q12).
+
 | # | Question | Recommendation |
 | --- | --- | --- |
 | Q1 | Name and place: `app/VacuumSystem.{h,cpp}`? | **yes**; `hal/` stays drivers only, since this coordinates three of them and runs a loop. Alternatives if you dislike the name: `VacuumPlant`, `Chamber`, `PressureLoop` |
@@ -207,3 +213,4 @@ Recommendations are marked, so "all as recommended" is a valid answer.
 | Revision | Change | Sections |
 | --- | --- | --- |
 | rev 1 | initial plan: `VacuumSystem` split, run-aware delegates kept, reader retargeting as P2 | all |
+| rev 2 | Q1–Q14 answered as recommended; no design changes | §8 |
