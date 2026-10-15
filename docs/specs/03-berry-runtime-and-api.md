@@ -96,8 +96,6 @@ class ProgramApi {
   bool start();                      // false when snapshot says not ready
   void stop();                       // stop + vent
   void resetFault();
-  bool setAmbient(float kpa);        // false when out of range
-  void captureAmbient();
   PlantState state() const;          // the whole plant readout
 
   // --- input ---
@@ -154,10 +152,10 @@ Rules:
 
 - `state()` (and `hostPresent()`, `param()`, `stateGet()`) reads the VM task's local
   snapshot copy plus the effective param set captured at start. It never blocks.
-- Writes (`setTarget`, `clearTarget`, `start`, `stop`, `resetFault`, `setAmbient`,
-  `captureAmbient`) enqueue a `Command` to the plant and return immediately. `start()`
-  returns the local prediction from the snapshot and may disagree with the plant's
-  authoritative decision; programs that care poll `state()`.
+- Writes (`setTarget`, `clearTarget`, `start`, `stop`, `resetFault`) enqueue a `Command`
+  to the plant and return immediately. `start()` returns the local prediction from the
+  snapshot and may disagree with the plant's authoritative decision; programs that care
+  poll `state()`.
 - `delay()` and `buttonWait()` yield: they call `serviceHook()` (which services the
   snapshot copy) and check `stopRequested()` every ~2 ms.
 - `buttonWait` requires input ownership (next section).
@@ -186,8 +184,6 @@ Three modules, registered once per VM:
 | `vacuum.start()` | `start` | bool (local prediction) |
 | `vacuum.stop()` | `stop` | stop + vent |
 | `vacuum.reset()` | `resetFault` | clears latched fault, then vents |
-| `vacuum.set_ambient(kpa)` | `setAmbient` | false when out of range |
-| `vacuum.capture_ambient()` | `captureAmbient` | |
 | `vacuum.state()` | `state` | plant readout as a Berry map |
 | `vacuum.button_down(i)` | `buttonDown` | claims input |
 | `vacuum.button_wait(i, ms)` | `buttonWait` | 0/1/2/3; claims input |
