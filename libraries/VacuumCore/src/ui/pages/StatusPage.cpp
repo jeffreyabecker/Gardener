@@ -32,12 +32,10 @@ void renderStatus(Renderer& renderer, const SystemSnapshot& snapshot) {
   }
   renderer.line(5, buffer);
 
-  if (snapshot.scriptRunning) {
-    snprintf(buffer, sizeof(buffer), "run %s", snapshot.program);
-  } else if (snapshot.autostart[0] != '\0') {
-    snprintf(buffer, sizeof(buffer), "auto %s", snapshot.autostart);
+  if (snapshot.pumpTripped) {
+    snprintf(buffer, sizeof(buffer), "fault %s", snapshot.faultCode);
   } else {
-    snprintf(buffer, sizeof(buffer), "no autostart");
+    snprintf(buffer, sizeof(buffer), "floor %.1f kPa", snapshot.floorKpa);
   }
   renderer.line(6, buffer);
 }

@@ -9,9 +9,6 @@
 #include "core/Math.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
-#include "hosts/script/ScriptApi.h"
-#include "hosts/script/ScriptRuntime.h"
-#include "services/ProgramStore.h"
 #include "services/SnapshotText.h"
 #include "services/VacuumControl.h"
 
@@ -19,9 +16,6 @@ namespace eggplan {
 namespace {
 
 constexpr size_t kMaxArgs = 8;
-// cat is paged: a reply that big would have to sit in the reply queue whole.
-constexpr uint32_t kCatDefaultBytes = 512;
-constexpr uint32_t kCatMaxBytes = 2048;
 
 void splitArgs(const String& line, String* argv, size_t maxArgs, size_t& argc,
                String& rest) {
@@ -43,13 +37,6 @@ void splitArgs(const String& line, String* argv, size_t maxArgs, size_t& argc,
   }
 }
 
-int parseIntOr(const String& s, int fallback) {
-  if (s.length() == 0) return fallback;
-  char* end = nullptr;
-  long value = strtol(s.c_str(), &end, 10);
-  return end == s.c_str() ? fallback : (int)value;
-}
-
 uint32_t parseU32Or(const String& s, uint32_t fallback) {
   if (s.length() == 0) return fallback;
   return (uint32_t)strtoul(s.c_str(), nullptr, 0);
@@ -62,17 +49,9 @@ float parseFloatOr(const String& s, float fallback) {
 
 }  // namespace
 
-CommandRouter::CommandRouter(ProgramStore& store, ScriptApi& api, ScriptRuntime& runtime,
-                             VacuumControl& control, Pump& pump, PressureSensor& sensor,
-                             TelemetrySettings& telemetry, UiSettings& ui)
-    : store_(store),
-      api_(api),
-      runtime_(runtime),
-      control_(control),
-      pump_(pump),
-      sensor_(sensor),
-      telemetry_(telemetry),
-      ui_(ui) {}
+CommandRouter::CommandRouter(VacuumControl& control, Pump& pump, PressureSensor& sensor,
+                             TelemetrySettings& telemetry)
+    : control_(control), pump_(pump), sensor_(sensor), telemetry_(telemetry) {}
 
 void CommandRouter::reply(ReplyQueue& out, const String& text) {
   if (!out.push("ok " + text)) LOGW("router: reply queue full");
@@ -84,75 +63,10 @@ void CommandRouter::fail(ReplyQueue& out, const String& text) {
 
 void CommandRouter::emitHelp(ReplyQueue& out) {
   reply(out, "help");
-  reply(out, "  ping | info | status | log [n] | help");
-  reply(out, "  list | cat <name> [offset] [len] | rm <name>");
-  reply(out, "  run <name> [args] | stop | eval <berry>");
+  reply(out, "  ping | info | status | help");
+  reply(out, "  stop | reset | reboot");
   reply(out, "  pump <0-100|off> | target <kPa|off> | ambient [kPa]");
-  reply(out, "  autostart [<name>|none] | telemetry <on|off|ms> | reset");
-}
-
-void CommandRouter::emitList(ReplyQueue& out, const SystemSnapshot& snapshot) {
-  String rows = snapshottext::programRows(snapshot);
-  reply(out, "programs " + String((unsigned)snapshot.programCount));
-  if (rows.length()) out.push(rows);
-  out.push("eof");
-}
-
-void CommandRouter::emitCat(const String& name, uint32_t offset, uint32_t length,
-                            ReplyQueue& out) {
-  String contents;
-  if (!store_.read(name.c_str(), contents)) {
-    fail(out, "not found");
-    return;
-  }
-  uint32_t total = contents.length();
-  if (offset > total) offset = total;
-  uint32_t available = total - offset;
-  if (length == 0) length = kCatDefaultBytes;
-  if (length > kCatMaxBytes) length = kCatMaxBytes;
-  if (length > available) length = available;
-
-  char header[96];
-  snprintf(header, sizeof(header), "file %s %u %u %u", name.c_str(), (unsigned)offset,
-           (unsigned)length, (unsigned)total);
-  reply(out, String(header));
-  out.push(contents.substring(offset, offset + length));
-  out.push("eof");
-}
-
-void CommandRouter::emitLog(int lines, ReplyQueue& out) {
-  if (lines <= 0) lines = 20;
-  const char* tail = logTail();
-  int count = 0;
-  size_t length = strlen(tail);
-  size_t index = length;
-  while (index > 0 && count <= lines) {
-    index--;
-    if (tail[index] == '\n' && index != length - 1) count++;
-  }
-  reply(out, "log");
-  out.push(String(tail + index));
-  out.push("eof");
-}
-
-void CommandRouter::cmdRun(const String& name, const String& args, ReplyQueue& out) {
-  if (!runtime_.available()) {
-    fail(out, "script runtime not built in");
-    return;
-  }
-  String source;
-  if (!store_.read(name.c_str(), source)) {
-    fail(out, "not found");
-    return;
-  }
-  if (runtime_.running()) runtime_.stop("replaced");
-  api_.setProgramArgs(args);
-  String error;
-  if (!runtime_.start(name.c_str(), source, error)) {
-    fail(out, error);
-    return;
-  }
-  reply(out, "running " + name);
+  reply(out, "  telemetry <on|off|ms>");
 }
 
 void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
@@ -186,57 +100,9 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     reply(out, String(body));
     return;
   }
-  if (command == "log") {
-    emitLog(argc > 1 ? parseIntOr(argv[1], 20) : 20, out);
-    return;
-  }
-  if (command == "list" || command == "ls") {
-    emitList(out, snapshot);
-    return;
-  }
-  if (command == "cat") {
-    if (argc < 2) {
-      fail(out, "usage: cat <name> [offset] [len]");
-      return;
-    }
-    emitCat(argv[1], argc > 2 ? parseU32Or(argv[2], 0) : 0,
-            argc > 3 ? parseU32Or(argv[3], 0) : 0, out);
-    return;
-  }
-  if (command == "rm" || command == "del") {
-    if (argc < 2 || !store_.remove(argv[1].c_str())) {
-      fail(out, "not found");
-      return;
-    }
-    reply(out, "removed " + argv[1]);
-    return;
-  }
-  if (command == "run") {
-    if (argc < 2) {
-      fail(out, "usage: run <name> [args]");
-      return;
-    }
-    cmdRun(argv[1], rest, out);
-    return;
-  }
   if (command == "stop") {
-    runtime_.stop("stopped by command");
     control_.stop();
-    pump_.stop();
     reply(out, "stopped");
-    return;
-  }
-  if (command == "eval" || command == "repl") {
-    if (!runtime_.available()) {
-      fail(out, "script runtime not built in");
-      return;
-    }
-    String result;
-    if (!runtime_.evaluate(rest, result)) {
-      fail(out, result);
-      return;
-    }
-    reply(out, result);
     return;
   }
   if (command == "pump" || command == "manual") {
@@ -253,11 +119,12 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     }
     float percent = parseFloatOr(argv[1], -1.0f);
     if (percent < 0.0f) {
-      fail(out, "bad duty");
+      fail(out, "bad_argument");
       return;
     }
     control_.setManualDuty(percent);
-    reply(out, "duty " + formatFloat(clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT), 1));
+    reply(out,
+          "duty " + formatFloat(clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT), 1));
     return;
   }
   if (command == "target" || command == "hold") {
@@ -274,7 +141,7 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     }
     float kpa = parseFloatOr(argv[1], -1.0f);
     if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
-      fail(out, "bad target");
+      fail(out, "out_of_range");
       return;
     }
     control_.setTarget(kpa);
@@ -288,20 +155,6 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
       sensor_.captureAmbient();
     }
     reply(out, "ambient " + formatFloat(sensor_.ambientKpa(), 2));
-    return;
-  }
-  if (command == "autostart") {
-    if (argc < 2) {
-      const char* current = store_.autostartName();
-      reply(out, String("autostart ") + (current[0] ? current : "none"));
-      return;
-    }
-    String value = argv[1];
-    if (!store_.setAutostart(value == "none" ? "" : value.c_str())) {
-      fail(out, "not found");
-      return;
-    }
-    reply(out, "autostart " + value);
     return;
   }
   if (command == "telemetry" || command == "tel") {
@@ -325,12 +178,6 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
                    String((unsigned)telemetry_.periodMs));
     return;
   }
-  if (command == "buttons") {
-    // Asks the local UI to move on; the router does not know what a page is.
-    ui_.pageStep = 1;
-    reply(out, "page next");
-    return;
-  }
   if (command == "reset") {
     pump_.resetFault();
     control_.clearFault();
@@ -345,7 +192,7 @@ void CommandRouter::handleLine(const String& rawLine, ReplyQueue& out,
     return;
   }
 
-  fail(out, "unknown command");
+  fail(out, "unknown_command");
 }
 
 }  // namespace eggplan

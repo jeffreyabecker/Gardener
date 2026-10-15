@@ -9,7 +9,6 @@
 namespace eggplan {
 
 class CommandRouter;
-class ProgramUploader;
 
 // Bluetooth LE transport: NimBLE wiring, notification chunking and inbound line
 // assembly. Nothing else.
@@ -20,9 +19,8 @@ class ProgramUploader;
 // the transport owns no view state and nothing points back at it.
 class BleService {
  public:
-  BleService(CommandRouter& router, ProgramUploader& uploader,
-             TelemetrySettings& telemetry, ReplyQueue& replies, ReplyQueue& inbound,
-             const SystemSnapshot& snapshot);
+  BleService(CommandRouter& router, TelemetrySettings& telemetry, ReplyQueue& replies,
+             ReplyQueue& inbound, const SystemSnapshot& snapshot);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -37,7 +35,6 @@ class BleService {
   void handleDisconnect(int reason);
   void handleMtuChange(uint16_t mtu);
   void onCommandData(const uint8_t* data, size_t length);
-  void onProgramData(const uint8_t* data, size_t length);
   void onInfoRead();
   void drainInbound();
   void drainReplies();
@@ -46,7 +43,6 @@ class BleService {
   uint16_t chunkSize() const;
 
   CommandRouter& router_;
-  ProgramUploader& uploader_;
   TelemetrySettings& telemetry_;
   ReplyQueue& replies_;
   ReplyQueue& inbound_;
@@ -55,7 +51,6 @@ class BleService {
   NimBLEServer* server_ = nullptr;
   NimBLECharacteristic* cmdChar_ = nullptr;
   NimBLECharacteristic* rspChar_ = nullptr;
-  NimBLECharacteristic* progChar_ = nullptr;
   NimBLECharacteristic* infoChar_ = nullptr;
 
   String name_;

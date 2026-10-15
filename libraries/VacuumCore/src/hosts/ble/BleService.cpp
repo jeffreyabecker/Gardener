@@ -7,7 +7,6 @@
 #include "core/Config.h"
 #include "core/Log.h"
 #include "hosts/commands/CommandRouter.h"
-#include "services/ProgramUploader.h"
 #include "services/SnapshotText.h"
 
 namespace eggplan {
@@ -17,7 +16,6 @@ namespace {
 const char* const kServiceUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f00";
 const char* const kCmdUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f01";
 const char* const kRspUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f02";
-const char* const kProgUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f03";
 const char* const kInfoUuid = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f04";
 
 // Long replies are split: 0x01 + sequence byte + payload, terminated by 0x02.
@@ -41,7 +39,7 @@ class BleService::ServerCallbacks : public NimBLEServerCallbacks {
 
 class BleService::CharCallbacks : public NimBLECharacteristicCallbacks {
  public:
-  enum class Role { Command, Program, Info };
+  enum class Role { Command, Info };
   CharCallbacks(BleService* owner, Role role) : owner_(owner), role_(role) {}
   void onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo& connInfo) override;
   void onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo& connInfo) override;
@@ -51,11 +49,10 @@ class BleService::CharCallbacks : public NimBLECharacteristicCallbacks {
   Role role_;
 };
 
-BleService::BleService(CommandRouter& router, ProgramUploader& uploader,
-                       TelemetrySettings& telemetry, ReplyQueue& replies,
-                       ReplyQueue& inbound, const SystemSnapshot& snapshot)
+BleService::BleService(CommandRouter& router, TelemetrySettings& telemetry,
+                       ReplyQueue& replies, ReplyQueue& inbound,
+                       const SystemSnapshot& snapshot)
     : router_(router),
-      uploader_(uploader),
       telemetry_(telemetry),
       replies_(replies),
       inbound_(inbound),
@@ -87,12 +84,9 @@ void BleService::begin() {
       kCmdUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   rspChar_ = service->createCharacteristic(
       kRspUuid, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
-  progChar_ = service->createCharacteristic(
-      kProgUuid, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR);
   infoChar_ = service->createCharacteristic(kInfoUuid, NIMBLE_PROPERTY::READ);
 
   cmdChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::Command));
-  progChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::Program));
   infoChar_->setCallbacks(new CharCallbacks(this, CharCallbacks::Role::Info));
   cmdChar_->setValue("");
 
@@ -201,12 +195,6 @@ void BleService::onCommandData(const uint8_t* data, size_t length) {
   }
 }
 
-void BleService::onProgramData(const uint8_t* data, size_t length) {
-  // Program frames go straight to the uploader: it only touches the program store,
-  // whose file access the filesystem itself serialises.
-  replies_.push(uploader_.handle(data, length));
-}
-
 void BleService::onInfoRead() {
   if (!infoChar_) return;
   char body[224];
@@ -225,7 +213,6 @@ void BleService::handleDisconnect(int reason) {
   lineBuffer_ = "";
   replies_.clear();
   inbound_.clear();
-  if (uploader_.active()) uploader_.abort("client disconnected");
   LOGI("ble: client disconnected (reason %d)", reason);
 }
 
@@ -258,11 +245,7 @@ void BleService::CharCallbacks::onWrite(NimBLECharacteristic* characteristic,
   const uint8_t* data = value.data();
   size_t length = value.length();
   if (length == 0) return;
-  switch (role_) {
-    case Role::Command: owner_->onCommandData(data, length); break;
-    case Role::Program: owner_->onProgramData(data, length); break;
-    case Role::Info: break;
-  }
+  if (role_ == Role::Command) owner_->onCommandData(data, length);
 }
 
 void BleService::CharCallbacks::onRead(NimBLECharacteristic* characteristic,

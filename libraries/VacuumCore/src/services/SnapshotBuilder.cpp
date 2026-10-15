@@ -4,14 +4,12 @@
 
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
-#include "services/ProgramStore.h"
 #include "services/VacuumControl.h"
 
 namespace eggplan {
 
 SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
-                            const VacuumControl& control, const ProgramStore& store,
-                            const DeviceInfo& device) {
+                            const VacuumControl& control, const DeviceInfo& device) {
   SystemSnapshot snapshot;
 
   snapshot.kpa = sensor.kpa();
@@ -32,12 +30,6 @@ SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
   snapshot.targetActive = control.targetActive();
   snapshot.targetKpa = control.targetKpa();
   snapshot.floorKpa = control.minReachableKpa();
-
-  snapshot.programs = store.list();
-  snapshot.programCount = store.count();
-  snapshot.storeUsedKb = store.usedKb();
-  snapshot.storeTotalKb = store.totalKb();
-  snapshot.autostart = store.autostartName();
 
   snapshot.device = &device;
   snapshot.uptimeMs = millis();

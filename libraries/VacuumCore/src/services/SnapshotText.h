@@ -8,21 +8,18 @@
 // Encodes the machine view for the wire: space separated key=value tokens with token
 // values and a fixed key order, built into a caller supplied buffer.
 //
-// No JSON anywhere: it would need escaping and allocation per telemetry
-// notification, and the only consumers are our own host tool and a human with a BLE
-// terminal. See docs/ble-protocol.md.
+// No JSON: it would need escaping and an allocation per telemetry notification, and the
+// only consumers are a host tool and a human with a BLE terminal. The same payload
+// shape is used by the `status` reply and by telemetry, so a client writes one parser.
 
 namespace eggplan {
 namespace snapshottext {
 
-// "kpa=41.23 vac=60.10 pct=59.3 duty=72.0 state=PUMP target=41.0 floor=41.3 fault=- up=123456"
+// "kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD fault=- up=123456 ble=1"
 size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size);
 
-// "fw=0.1.0 chip=ESP32-C3 runtime=none progs=2 store_kb=1440 sensor=1 tach=0 heap=298412"
+// "fw=0.1.0 chip=ESP32-C3 heap=298412 tach=0"
 size_t infoBody(const SystemSnapshot& snapshot, char* out, size_t size);
-
-// "p hold_vacuum 137 0x1A2B3C4D auto\np pulse 331 0xDEADBEEF -"
-String programRows(const SystemSnapshot& snapshot);
 
 const char* stateToken(ControlState state);
 const char* faultToken(const SystemSnapshot& snapshot);

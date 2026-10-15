@@ -2,9 +2,10 @@
 
 #include <stdint.h>
 
-// Policy tunables: what the machine does, not how it is wired. Board wiring lives
-// in hal/Pins.h. This header includes no project code, so it can never take part in
-// a cycle.
+// Policy tunables: what the machine does, not how it is wired (see hal/Pins.h).
+//
+// The device is a BLE peripheral: every decision comes from the central, so what lives
+// here is only what the firmware must own to be fast or safe.
 
 namespace eggplan {
 namespace cfg {

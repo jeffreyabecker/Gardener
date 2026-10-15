@@ -41,7 +41,7 @@ $allowed = @{
 }
 
 # Within hosts/ the subfolders are one-way too.
-$hostsOrder = @{ 'ble' = @('ble', 'commands', 'script'); 'commands' = @('commands', 'script'); 'script' = @('script') }
+$hostsOrder = @{ 'ble' = @('ble', 'commands'); 'commands' = @('commands') }
 
 if (-not (Test-Path $Src)) { throw "source folder not found: $Src" }
 
