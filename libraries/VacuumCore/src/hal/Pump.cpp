@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#include "core/Log.h"
 #include "core/Math.h"
 
 namespace eggplan {
@@ -10,20 +9,14 @@ namespace {
 constexpr uint32_t kMaxStepMs = 250;
 }
 
-void Pump::begin() {
-  if (config_.pwmPin < 0) {
-    LOGE("pump: no PWM pin configured");
-    return;
-  }
+bool Pump::begin() {
+  if (config_.pwmPin < 0) return false;
   pinMode(config_.pwmPin, OUTPUT);
   digitalWrite(config_.pwmPin, LOW);
-  if (!ledcAttach(config_.pwmPin, config_.pwmFreqHz, config_.pwmResolution)) {
-    LOGE("pump: ledcAttach failed on GPIO%d", config_.pwmPin);
-  }
+  if (!ledcAttach(config_.pwmPin, config_.pwmFreqHz, config_.pwmResolution)) return false;
   write(0.0f);
   tach_.begin(config_.tachPin, config_.tachPulsesPerRev);
-  LOGI("pump: PWM on GPIO%d at %uHz, cap %.0f%%", config_.pwmPin,
-       (unsigned)config_.pwmFreqHz, config_.maxDutyPercent);
+  return true;
 }
 
 void Pump::write(float percent) {
@@ -50,15 +43,12 @@ void Pump::emergencyStop(const char* code, const char* text) {
   faultCode_ = code ? code : "unknown";
   faultText_ = text ? text : "unspecified";
   running_ = false;
-  LOGW("pump: emergency stop (%s)", faultText_);
 }
 
-bool Pump::resetFault() {
+void Pump::resetFault() {
   tripped_ = false;
   faultCode_ = "";
   faultText_ = "";
-  LOGI("pump: fault cleared");
-  return true;
 }
 
 uint32_t Pump::runTimeMs() const {

@@ -1,11 +1,9 @@
 #include "hosts/commands/CommandRouter.h"
 
-#include <ctype.h>
 #include <string.h>
 
 #include "core/Config.h"
-#include "core/Format.h"
-#include "core/Log.h"
+#include "core/Text.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "services/SnapshotText.h"
@@ -14,45 +12,72 @@
 namespace eggplan {
 namespace {
 
-constexpr size_t kMaxArgs = 8;
+constexpr size_t kMaxArgs = 3;  // verb [key] [value]; the grammar has nothing else
 
-void splitArgs(const String& line, String* argv, size_t maxArgs, size_t& argc,
-               String& rest) {
-  argc = 0;
-  rest = "";
-  int i = 0;
-  int length = (int)line.length();
-  while (i < length) {
-    while (i < length && isspace((unsigned char)line[i])) i++;
-    if (i >= length) break;
-    int start = i;
-    while (i < length && !isspace((unsigned char)line[i])) i++;
-    if (argc < maxArgs) {
-      argv[argc++] = line.substring(start, i);
-    } else {
-      rest = line.substring(start);
-      break;
-    }
+// Splits in place: every token is NUL terminated, so the caller's buffer is the token
+// storage and nothing is allocated.
+size_t splitLine(char* line, char* argv[], size_t maxArgs) {
+  size_t argc = 0;
+  char* cursor = line;
+  while (*cursor != '\0' && argc < maxArgs) {
+    while (*cursor == ' ' || *cursor == '\t') cursor++;
+    if (*cursor == '\0') break;
+    argv[argc++] = cursor;
+    while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t') cursor++;
+    if (*cursor != '\0') *cursor++ = '\0';
+  }
+  return argc;
+}
+
+void lower(char* text) {
+  for (; *text != '\0'; text++) {
+    if (*text >= 'A' && *text <= 'Z') *text = (char)(*text - 'A' + 'a');
   }
 }
 
+bool same(const char* a, const char* b) { return strcmp(a, b) == 0; }
+
 // An argument that does not parse in full is a bad_argument, never a silent zero.
-bool parseFloat(const String& text, float& out) {
-  if (text.length() == 0) return false;
-  if (!isdigit((unsigned char)text[0]) && text[0] != '-' && text[0] != '.') return false;
-  char* end = nullptr;
-  float value = strtof(text.c_str(), &end);
-  if (end == text.c_str() || *end != '\0') return false;
-  out = value;
+bool parseFloat(const char* text, float& out) {
+  if (!text || *text == '\0') return false;
+  const char* cursor = text;
+  bool negative = false;
+  if (*cursor == '+' || *cursor == '-') {
+    negative = (*cursor == '-');
+    cursor++;
+  }
+
+  float value = 0.0f;
+  bool any = false;
+  while (*cursor >= '0' && *cursor <= '9') {
+    value = value * 10.0f + (float)(*cursor - '0');
+    cursor++;
+    any = true;
+  }
+  if (*cursor == '.') {
+    cursor++;
+    float scale = 0.1f;
+    while (*cursor >= '0' && *cursor <= '9') {
+      value += (float)(*cursor - '0') * scale;
+      scale *= 0.1f;
+      cursor++;
+      any = true;
+    }
+  }
+  if (!any || *cursor != '\0') return false;
+  out = negative ? -value : value;
   return true;
 }
 
-bool parseU32(const String& text, uint32_t& out) {
-  if (text.length() == 0 || !isdigit((unsigned char)text[0])) return false;
-  char* end = nullptr;
-  unsigned long value = strtoul(text.c_str(), &end, 10);
-  if (end == text.c_str() || *end != '\0') return false;
-  out = (uint32_t)value;
+bool parseU32(const char* text, uint32_t& out) {
+  if (!text || *text < '0' || *text > '9') return false;
+  uint32_t value = 0;
+  for (const char* cursor = text; *cursor != '\0'; cursor++) {
+    if (*cursor < '0' || *cursor > '9') return false;
+    if (value > 429496729u) return false;  // would wrap
+    value = value * 10u + (uint32_t)(*cursor - '0');
+  }
+  out = value;
   return true;
 }
 
@@ -62,16 +87,16 @@ CommandRouter::CommandRouter(VacuumControl& control, Pump& pump, PressureSensor&
                              LinkSettings& settings)
     : control_(control), pump_(pump), sensor_(sensor), settings_(settings) {}
 
-void CommandRouter::reply(Print& out, const String& text) {
-  out.print("ok ");
-  out.print(text);
-  out.print('\n');
+void CommandRouter::reply(Print& out, const char* payload) {
+  out.write((const uint8_t*)"ok ", 3);
+  out.write((const uint8_t*)payload, strlen(payload));
+  out.write((uint8_t)'\n');
 }
 
-void CommandRouter::fail(Print& out, const String& text) {
-  out.print("err ");
-  out.print(text);
-  out.print('\n');
+void CommandRouter::fail(Print& out, const char* code) {
+  out.write((const uint8_t*)"err ", 4);
+  out.write((const uint8_t*)code, strlen(code));
+  out.write((uint8_t)'\n');
 }
 
 void CommandRouter::emitHelp(Print& out) {
@@ -81,34 +106,28 @@ void CommandRouter::emitHelp(Print& out) {
   reply(out, "help=info|status|help|start|stop|reset|reboot|ambient|set");
 }
 
-void CommandRouter::handleLine(const String& rawLine, Print& out,
-                               const SystemSnapshot& snapshot) {
-  String line = rawLine;
-  line.trim();
-  if (line.length() == 0 || line.startsWith("#")) return;
+void CommandRouter::handleLine(char* line, Print& out, const SystemSnapshot& snapshot) {
+  char* argv[kMaxArgs];
+  size_t argc = splitLine(line, argv, kMaxArgs);
+  if (argc == 0 || argv[0][0] == '#') return;  // blank line or a comment
 
-  String argv[kMaxArgs];
-  size_t argc = 0;
-  String rest;
-  splitArgs(line, argv, kMaxArgs, argc, rest);
-  String command = argv[0];
-  command.toLowerCase();
+  lower(argv[0]);
+  const char* command = argv[0];
 
-  if (command == "help") {
+  if (same(command, "help")) {
     emitHelp(out);
     return;
   }
-  if (command == "info" || command == "status") {
-    char body[224];
-    if (command == "info") {
-      snapshottext::infoBody(snapshot, settings_, body, sizeof(body));
+  if (same(command, "info") || same(command, "status")) {
+    if (same(command, "info")) {
+      snapshottext::infoBody(snapshot, settings_, body_, sizeof(body_));
     } else {
-      snapshottext::statusBody(snapshot, body, sizeof(body));
+      snapshottext::statusBody(snapshot, body_, sizeof(body_));
     }
-    reply(out, String(body));
+    reply(out, body_);
     return;
   }
-  if (command == "start") {
+  if (same(command, "start")) {
     if (!control_.startRun()) {
       fail(out, "not_ready");
       return;
@@ -116,29 +135,29 @@ void CommandRouter::handleLine(const String& rawLine, Print& out,
     reply(out, "started");
     return;
   }
-  if (command == "stop") {
+  if (same(command, "stop")) {
     control_.stopRun();
     reply(out, "stopped");
     return;
   }
-  if (command == "set") {
+  if (same(command, "set")) {
     if (argc < 3) {
       fail(out, "bad_argument");
       return;
     }
-    String key = argv[1];
-    key.toLowerCase();
-    String value = argv[2];
-    value.toLowerCase();
+    lower(argv[1]);
+    lower(argv[2]);
+    const char* key = argv[1];
+    const char* value = argv[2];
 
-    if (key == "target") {
-      if (value == "off") {
+    if (same(key, "target")) {
+      if (same(value, "off")) {
         control_.clearTarget();
         reply(out, "target=off");
         return;
       }
       float kpa = 0.0f;
-      if (!parseFloat(argv[2], kpa)) {
+      if (!parseFloat(value, kpa)) {
         fail(out, "bad_argument");
         return;
       }
@@ -147,27 +166,32 @@ void CommandRouter::handleLine(const String& rawLine, Print& out,
         return;
       }
       control_.setTarget(kpa);
-      reply(out, "target=" + formatFloat(kpa, 1));
+      text::Buf payload(body_, sizeof(body_));
+      payload << "target=";
+      payload.add(kpa, 1);
+      reply(out, body_);
       return;
     }
-    if (key == "timer") {
-      if (value == "off") {
+    if (same(key, "timer")) {
+      if (same(value, "off")) {
         control_.setDurationSeconds(0);
         reply(out, "timer=off");
         return;
       }
       uint32_t seconds = 0;
-      if (!parseU32(argv[2], seconds)) {
+      if (!parseU32(value, seconds)) {
         fail(out, "bad_argument");
         return;
       }
       control_.setDurationSeconds(seconds);
-      reply(out, "timer=" + String((unsigned)seconds));
+      text::Buf payload(body_, sizeof(body_));
+      payload << "timer=" << seconds;
+      reply(out, body_);
       return;
     }
-    if (key == "ambient") {
+    if (same(key, "ambient")) {
       float kpa = 0.0f;
-      if (!parseFloat(argv[2], kpa)) {
+      if (!parseFloat(value, kpa)) {
         fail(out, "bad_argument");
         return;
       }
@@ -175,35 +199,33 @@ void CommandRouter::handleLine(const String& rawLine, Print& out,
         fail(out, "out_of_range");
         return;
       }
-      reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
+      text::Buf payload(body_, sizeof(body_));
+      payload << "ambient=";
+      payload.add(sensor_.ambientKpa(), 2);
+      reply(out, body_);
       return;
     }
-    // v2 configured the telemetry period; telemetry is polled now, so the whole family
-    // answers the same way an old `set duty` does.
-    if (key == "period") {
-      fail(out, "unsupported");
-      return;
-    }
-    if (key == "log") {
-      if (value != "on" && value != "off") {
+    if (same(key, "log")) {
+      if (!same(value, "on") && !same(value, "off")) {
         fail(out, "bad_argument");
         return;
       }
-      settings_.logEnabled = (value == "on");
-      reply(out, value == "on" ? "log=on" : "log=off");
+      settings_.logEnabled = same(value, "on");
+      reply(out, settings_.logEnabled ? "log=on" : "log=off");
       return;
     }
-    // v2 could send commands with a `pump`/`manual` verb; the removed ones answer
-    // unsupported rather than unknown_command so an old client learns why.
-    if (key == "duty") {
+    // v2 configured a telemetry period and could drive the pump directly. Both are gone,
+    // and a client that still asks gets told that rather than that it typed it wrong.
+    if (same(key, "period") || same(key, "duty")) {
       fail(out, "unsupported");
       return;
     }
     fail(out, "unknown_command");
     return;
   }
-  if (command == "ambient") {
+  if (same(command, "ambient")) {
     if (argc > 1) {
+      lower(argv[1]);
       float kpa = 0.0f;
       if (!parseFloat(argv[1], kpa)) {
         fail(out, "bad_argument");
@@ -216,23 +238,25 @@ void CommandRouter::handleLine(const String& rawLine, Print& out,
     } else {
       sensor_.captureAmbient();
     }
-    reply(out, "ambient=" + formatFloat(sensor_.ambientKpa(), 2));
+    text::Buf payload(body_, sizeof(body_));
+    payload << "ambient=";
+    payload.add(sensor_.ambientKpa(), 2);
+    reply(out, body_);
     return;
   }
-  // v2 turned telemetry on and off by command; a controller polls `status` now. Old
-  // clients get a straight answer.
-  if (command == "telemetry" || command == "tel") {
+  // v2 turned telemetry on and off by command; a controller polls `status` now.
+  if (same(command, "telemetry") || same(command, "tel")) {
     fail(out, "unsupported");
     return;
   }
-  if (command == "reset") {
+  if (same(command, "reset")) {
     pump_.resetFault();
     control_.clearFault();
     sensor_.clearErrors();
     reply(out, "reset");
     return;
   }
-  if (command == "reboot") {
+  if (same(command, "reboot")) {
     reply(out, "rebooting");
     delay(50);
     ESP.restart();

@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "core/Log.h"
 #include "hosts/commands/CommandRouter.h"
 
 namespace eggplan {
@@ -16,10 +15,10 @@ SerialService::SerialService(CommandRouter& router, Stream& stream, PresenceFn p
       snapshot_(snapshot) {}
 
 void SerialService::begin() {
-  attached_ = present_ ? present_() : false;
+  attached_ = controllerAttached();
   length_ = 0;
   oversize_ = false;
-  LOGI("serial: interface ready%s", attached_ ? ", controller attached" : "");
+  info("serial: interface ready");
 }
 
 bool SerialService::controllerAttached() const { return present_ ? present_() : true; }
@@ -30,10 +29,21 @@ bool SerialService::consumeLinkLost() {
   return lost;
 }
 
-void SerialService::writeLog(const char* text, size_t length) {
-  if (!settings_.logEnabled || !text || length == 0) return;
-  stream_.write((const uint8_t*)text, length);
+void SerialService::logLine(char level, const char* text) {
+  if (!settings_.logEnabled || !text) return;
+  stream_.write((uint8_t)'[');
+  stream_.write((uint8_t)level);
+  stream_.write((uint8_t)']');
+  stream_.write((uint8_t)' ');
+  stream_.write((const uint8_t*)text, strlen(text));
+  stream_.write((uint8_t)'\n');
 }
+
+void SerialService::info(const char* text) { logLine('I', text); }
+
+void SerialService::warn(const char* text) { logLine('W', text); }
+
+void SerialService::error(const char* text) { logLine('E', text); }
 
 void SerialService::writeLine(const char* prefix, const char* text) {
   stream_.write((const uint8_t*)prefix, strlen(prefix));
@@ -43,7 +53,7 @@ void SerialService::writeLine(const char* prefix, const char* text) {
 
 void SerialService::handleLine() {
   line_[length_] = '\0';
-  router_.handleLine(String(line_), stream_, snapshot_);
+  router_.handleLine(line_, stream_, snapshot_);
   length_ = 0;
 }
 
@@ -86,7 +96,7 @@ void SerialService::poll(uint32_t nowMs) {
     linkLost_ = true;
     length_ = 0;
     oversize_ = false;
-    LOGW("serial: controller detached");
+    warn("serial: controller detached");
   }
   attached_ = attached;
 }

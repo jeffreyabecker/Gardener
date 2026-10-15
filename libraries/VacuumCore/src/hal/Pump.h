@@ -28,7 +28,8 @@ class Pump {
  public:
   explicit Pump(const PumpConfig& config) : config_(config) {}
 
-  void begin();
+  // False when there is no usable PWM pin or the LEDC channel could not be attached.
+  bool begin();
   void update(uint32_t nowMs);
 
   void setDuty(float percent);
@@ -36,7 +37,7 @@ class Pump {
   // Cut the output immediately and latch a fault. code is a wire token, text is for
   // humans and never leaves the log.
   void emergencyStop(const char* code, const char* text);
-  bool resetFault();
+  void resetFault();
 
   bool tripped() const { return tripped_; }
   const char* faultCode() const { return faultCode_; }

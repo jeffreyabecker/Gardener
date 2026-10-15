@@ -1,19 +1,13 @@
 #include "hal/Display.h"
 
-#include "core/Log.h"
-
 namespace eggplan {
 
 bool Display::begin() {
   // The STEMMA QT breakout has no reset line, so do not let the library poke one.
   present_ = gfx_.begin(address_, false);
-  if (!present_) {
-    LOGE("oled: not found at 0x%02X", address_);
-    return false;
-  }
+  if (!present_) return false;
   clear();
   flush();
-  LOGI("oled: SH1106 online at 0x%02X", address_);
   return true;
 }
 

@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include "core/Config.h"
-#include "core/Log.h"
 #include "core/Math.h"
 
 namespace eggplan {
@@ -14,10 +13,7 @@ constexpr float kFilterAlpha = 0.3f;
 bool PressureSensor::begin(TwoWire& wire) {
   ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
   present_ = sensor_.begin(config_.address, &wire);
-  if (!present_) {
-    LOGE("mprls: not found at 0x%02X", config_.address);
-    return false;
-  }
+  if (!present_) return false;
   delay(15);  // first conversion after power up
   float kpa = 0.0f;
   if (readNow(kpa)) {
@@ -25,7 +21,6 @@ bool PressureSensor::begin(TwoWire& wire) {
     lastKpa_ = kpa;
     valid_ = true;
   }
-  LOGI("mprls: online, ambient reference %.2f kPa", filteredKpa_);
   return true;
 }
 
@@ -87,12 +82,8 @@ float PressureSensor::vacuumPercent() const {
 }
 
 bool PressureSensor::setAmbientKpa(float kpa) {
-  if (kpa < 10.0f || kpa > config_.maxKpa) {
-    LOGW("mprls: rejected ambient reference %.2f kPa", kpa);
-    return false;
-  }
+  if (kpa < 10.0f || kpa > config_.maxKpa) return false;
   ambientKpa_ = kpa;
-  LOGI("mprls: ambient reference set to %.2f kPa", kpa);
   return true;
 }
 

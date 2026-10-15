@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#include "core/Log.h"
 #include "core/Math.h"
 #include "hal/Pump.h"
 #include "hal/PressureSensor.h"
@@ -29,23 +28,14 @@ float VacuumControl::minReachableKpa() const {
 
 void VacuumControl::setState(RunState state) {
   if (state_ == state) return;
-  LOGI("control: %s -> %s", runStateName(state_), runStateName(state));
   state_ = state;
 }
 
 void VacuumControl::setTarget(float kpa) {
-  if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) {
-    LOGW("control: refusing target %.2f kPa", kpa);
-    return;
-  }
-  float reachable = minReachableKpa();
-  if (kpa < reachable) {
-    LOGW("control: target %.1f kPa is beyond the pump, floor is %.1f kPa", kpa, reachable);
-  }
+  if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   targetActive_ = true;
   pid_.reset();
-  LOGI("control: target %.2f kPa", kpa);
 }
 
 void VacuumControl::clearTarget() {
@@ -72,18 +62,9 @@ void VacuumControl::setDurationSeconds(uint32_t seconds) {
 }
 
 bool VacuumControl::startRun() {
-  if (faultLatched_ || state_ == RunState::Fault) {
-    LOGW("control: start refused, fault is latched (send reset)");
-    return false;
-  }
-  if (!targetActive_) {
-    LOGW("control: start refused, no target set");
-    return false;
-  }
-  if (!sensor_.present() || !sensor_.readingValid()) {
-    LOGW("control: start refused, no pressure reading");
-    return false;
-  }
+  if (faultLatched_ || state_ == RunState::Fault) return false;
+  if (!targetActive_) return false;
+  if (!sensor_.present() || !sensor_.readingValid()) return false;
 
   // Close before pumping, so the pump never pulls against an open port.
   vent_.close();
@@ -93,8 +74,6 @@ bool VacuumControl::startRun() {
   lastControlMs_ = millis();
   lastDerivativeMs_ = lastControlMs_;
   setState(RunState::Pulling);
-  LOGI("control: run started, target %.2f kPa, timer %us", targetKpa_,
-       (unsigned)durationSeconds_);
   return true;
 }
 
@@ -190,7 +169,6 @@ void VacuumControl::update(uint32_t nowMs) {
     case RunState::Pulling:
     case RunState::Holding: {
       if (!sensor_.present() || !sensor_.readingValid()) {
-        LOGE("control: pressure reading lost, stopping and venting");
         fault("sensor", "pressure sensor unavailable");
         return;
       }
@@ -202,7 +180,6 @@ void VacuumControl::update(uint32_t nowMs) {
         // The countdown starts here (Q1), so the number means "hold time remaining".
         countdownEndMs_ = nowMs + durationSeconds_ * 1000UL;
         remainingSeconds_ = durationSeconds_;
-        LOGI("control: target reached at %.2f kPa", measured);
         setState(RunState::Holding);
         return;
       }
@@ -215,7 +192,6 @@ void VacuumControl::update(uint32_t nowMs) {
         uint32_t leftMs = countdownEndMs_ > nowMs ? countdownEndMs_ - nowMs : 0;
         remainingSeconds_ = (leftMs + 999) / 1000;
         if (leftMs == 0) {
-          LOGI("control: timer expired, venting");
           completed_ = true;
           beginVent();
         }
@@ -229,10 +205,6 @@ void VacuumControl::update(uint32_t nowMs) {
       bool timedOut = (nowMs - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
       if (!settled && !timedOut) return;
 
-      if (timedOut && !settled) {
-        LOGW("control: vent timed out after %ums, releasing anyway",
-             (unsigned)cfg::VENT_TIMEOUT_MS);
-      }
       remainingSeconds_ = 0;
       setState(RunState::Idle);
       return;

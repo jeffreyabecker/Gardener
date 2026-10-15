@@ -35,12 +35,16 @@ class SerialService {
   // interface only reports it.
   bool consumeLinkLost();
 
-  // The log sink: writes a diagnostic record unless the controller asked for silence, so
-  // the whole stream is one place and `[` still means "not a reply".
-  void writeLog(const char* text, size_t length);
+  // Diagnostics: the log shares the stream with the protocol, distinguished by the `[`
+  // prefix, so a controller can tell a record from a reply. Everything that wants to say
+  // something does it through here, which is also what makes `set log off` total.
+  void info(const char* text);
+  void warn(const char* text);
+  void error(const char* text);
 
  private:
   void handleLine();
+  void logLine(char level, const char* text);
   void writeLine(const char* prefix, const char* text);
 
   CommandRouter& router_;

@@ -2,24 +2,18 @@
 
 #include <Wire.h>
 
-#include "core/Log.h"
+#include "core/Text.h"
 #include "hal/Pins.h"
 #include "services/SnapshotBuilder.h"
 
 namespace eggplan {
 namespace {
 
-SerialService* logTarget = nullptr;
-
-// The log shares the stream with the protocol, so its lines go through the interface that
-// owns the stream: that is also what lets a controller silence them.
-void serialLogSink(const char* text, size_t length) {
-  if (logTarget) logTarget->writeLog(text, length);
-}
-
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
 // plain UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
+
+const char* boolToken(bool value) { return value ? "1" : "0"; }
 
 }  // namespace
 
@@ -73,33 +67,73 @@ PidConfig App::pidConfig() {
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
-  logTarget = &serial_;
-  logBegin(&serialLogSink);
   delay(200);
-  LOGI("eggplan-vacuum %s booting", cfg::FIRMWARE_VERSION);
+
+  char line[96];
+  text::Buf boot(line, sizeof(line));
+  boot << "eggplan-vacuum " << cfg::FIRMWARE_VERSION << " booting";
+  serial_.info(line);
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
   bool displayOk = display_.begin();
   bool sensorOk = sensor_.begin(Wire);
-  pump_.begin();
+  bool pumpOk = pump_.begin();
   vent_.begin();
-  battery_.begin();
+  bool batteryOk = battery_.begin();
   control_.begin();
   renderer_.begin();
   device_ = readDeviceInfo();
 
   if (sensorOk) sensor_.captureAmbient();
+
+  // What came up, and what did not. This is the composition root's job now: the drivers
+  // report as values and one place decides what is worth saying.
+  serial_.info(displayOk ? "oled: online" : "oled: not found");
+  serial_.info(sensorOk ? "mprls: online" : "mprls: not found");
+  serial_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  serial_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
+
+  text::Buf ready(line, sizeof(line));
+  ready << "app: ready, heap " << (uint32_t)ESP.getFreeHeap();
+  serial_.info(line);
+
   refreshSnapshot();
   serial_.begin();
-
-  LOGI("app: ready, heap %u bytes", (unsigned)ESP.getFreeHeap());
+  lastState_ = control_.state();
   if (displayOk) renderer_.render(snapshot_);
   return true;
 }
 
 void App::refreshSnapshot() {
   snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_, device_);
+}
+
+// The drivers stopped narrating, so the run is reported from here: one line per state
+// change, timed when it leaves a vent, plus the fault code when one latches.
+void App::logRunChanges(uint32_t nowMs) {
+  RunState state = control_.state();
+  if (state == lastState_) return;
+
+  char line[96];
+  text::Buf message(line, sizeof(line));
+  message << runStateName(lastState_) << " -> " << runStateName(state);
+  if (state == RunState::Fault) {
+    message << " (fault " << pump_.faultCode() << ')';
+  }
+  if (lastState_ == RunState::Venting) {
+    uint32_t ventMs = nowMs - ventStartMs_;
+    message << " after " << ventMs << " ms";
+    if (ventMs >= cfg::VENT_TIMEOUT_MS) {
+      message << ", vent timed out";
+      serial_.warn(line);
+      lastState_ = state;
+      return;
+    }
+  }
+  if (state == RunState::Venting) ventStartMs_ = nowMs;
+  serial_.info(line);
+  lastState_ = state;
 }
 
 void App::update() {
@@ -116,10 +150,11 @@ void App::update() {
 
   // A controller that goes away releases the chamber (Q4).
   if (serial_.consumeLinkLost()) {
-    LOGW("app: controller left, stopping and venting");
+    serial_.warn("app: controller left, stopping and venting");
     control_.stopRun();
   }
 
+  logRunChanges(now);
   refreshSnapshot();
   renderer_.render(snapshot_);
 }

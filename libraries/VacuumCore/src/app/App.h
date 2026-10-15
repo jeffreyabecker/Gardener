@@ -35,6 +35,7 @@ class App {
   static VentValveConfig ventConfig();
   static BatteryConfig batteryConfig();
   void refreshSnapshot();
+  void logRunChanges(uint32_t nowMs);
 
   // Declaration order is construction order, and several members hold references to the
   // ones above them.
@@ -50,6 +51,9 @@ class App {
   Renderer renderer_;
   CommandRouter router_;
   SerialService serial_;
+
+  RunState lastState_ = RunState::Idle;
+  uint32_t ventStartMs_ = 0;
 };
 
 }  // namespace eggplan

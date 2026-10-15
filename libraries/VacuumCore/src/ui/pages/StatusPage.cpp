@@ -1,5 +1,6 @@
-#include <stdio.h>
+#include <string.h>
 
+#include "core/Text.h"
 #include "ui/Renderer.h"
 #include "ui/pages/Pages.h"
 
@@ -22,7 +23,8 @@ constexpr uint32_t kLowBatteryBlinkMs = 500;
 
 void drawBattery(Renderer& renderer, const SystemSnapshot& snapshot, char* buffer, size_t size) {
   if (!snapshot.batteryPresent) return;  // nothing fitted, so leave the corner empty
-  snprintf(buffer, size, "%u%%", (unsigned)snapshot.batteryPercent);
+  text::Buf label(buffer, size);
+  label << (uint32_t)snapshot.batteryPercent << '%';
   bool blinkOff = snapshot.batteryLow && ((snapshot.uptimeMs / kLowBatteryBlinkMs) % 2u) == 0u;
   int16_t percentWidth = renderer.textWidth(buffer);
   int16_t iconX = renderer.width() - percentWidth - 4 - Renderer::kBatteryIconWidth;
@@ -35,7 +37,8 @@ void drawPressure(Renderer& renderer, const SystemSnapshot& snapshot, char* buff
     renderer.centered("--.-", kPressureY, 2);
     return;
   }
-  snprintf(buffer, size, "%.1f", snapshot.kpa);
+  text::Buf number(buffer, size);
+  number.add(snapshot.kpa, 1);
   constexpr const char* kUnit = "kPa";
   int16_t numberWidth = renderer.textWidth(buffer, 2);
   int16_t x = (renderer.width() - (numberWidth + 4 + renderer.textWidth(kUnit))) / 2;
@@ -47,7 +50,8 @@ void drawPressure(Renderer& renderer, const SystemSnapshot& snapshot, char* buff
 
 void drawTargetRow(Renderer& renderer, const SystemSnapshot& snapshot, char* buffer, size_t size) {
   if (snapshot.state == RunState::Fault) {
-    snprintf(buffer, size, "FAULT %s", snapshot.faultCode);
+    text::Buf banner(buffer, size);
+    banner << "FAULT " << snapshot.faultCode;
     renderer.banner(buffer, kTargetY);
     return;
   }
@@ -55,13 +59,18 @@ void drawTargetRow(Renderer& renderer, const SystemSnapshot& snapshot, char* buf
     renderer.banner("NO SENSOR", kTargetY);
     return;
   }
+  text::Buf target(buffer, size);
+  target << "tgt ";
   if (snapshot.targetActive) {
-    snprintf(buffer, size, "tgt %.1f kPa", snapshot.targetKpa);
+    target.add(snapshot.targetKpa, 1);
+    target << " kPa";
   } else {
-    snprintf(buffer, size, "tgt --");
+    target << "--";
   }
   renderer.text(0, kTargetY, buffer);
-  snprintf(buffer, size, "duty %.0f%%", snapshot.duty);
+
+  text::Buf duty(buffer, size);
+  duty << "duty " << (uint32_t)(snapshot.duty + 0.5f) << '%';
   renderer.textRight(buffer, kTargetY);
 }
 
@@ -74,8 +83,12 @@ void drawCountdown(Renderer& renderer, const SystemSnapshot& snapshot, char* buf
     renderer.centered("--:--", kCountdownY, 2);
     return;
   }
-  snprintf(buffer, size, "%02u:%02u", (unsigned)(snapshot.remainSeconds / 60),
-           (unsigned)(snapshot.remainSeconds % 60));
+  text::Buf clock(buffer, size);
+  char minutes[8];
+  char seconds[4];
+  text::unum(minutes, sizeof(minutes), snapshot.remainSeconds / 60, 2);
+  text::unum(seconds, sizeof(seconds), snapshot.remainSeconds % 60, 2);
+  clock << minutes << ':' << seconds;
   // The last minute inverts: it is the one an operator is actually watching.
   renderer.centered(buffer, kCountdownY, 2, snapshot.remainSeconds <= 60);
 }

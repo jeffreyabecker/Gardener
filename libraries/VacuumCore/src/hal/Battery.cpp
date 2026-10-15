@@ -2,21 +2,13 @@
 
 #include <Arduino.h>
 
-#include "core/Log.h"
-
 namespace eggplan {
 
 bool Battery::begin() {
-  if (config_.adcPin < 0) {
-    LOGI("batt: no sense pin configured, gauge disabled");
-    return false;
-  }
+  if (config_.adcPin < 0) return false;
   pinMode(config_.adcPin, INPUT);
   configured_ = true;
   update(millis());
-  LOGI("batt: sense on GPIO%d, %.2f-%.2f V behind a %.1f divider%s", config_.adcPin,
-       config_.emptyVolts, config_.fullVolts, config_.dividerRatio,
-       present_ ? "" : " (no pack detected)");
   return true;
 }
 
