@@ -39,7 +39,7 @@ UPLOAD_CHUNK = 160
 MAX_PROGRAM_BYTES = 64 * 1024
 
 # Replies that are followed by a body and an "eof" line.
-MULTILINE_PREFIXES = ("ok file", "ok log")
+MULTILINE_PREFIXES = ("ok file", "ok log", "ok programs")
 
 
 def sanitize_name(path: str) -> str:
