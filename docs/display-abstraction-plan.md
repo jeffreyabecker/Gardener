@@ -26,42 +26,36 @@ never written, this is a wrapper with one implementation and should be deleted a
 
 ## 1. The interface
 
-`hal/Display.h`, no colour arguments anywhere:
+`hal/Display.h`, no colour arguments anywhere, and eight groups of verbs:
 
-```cpp
-namespace eggplan {
+| Group | Verbs |
+| --- | --- |
+| the panel | `begin`, `flush` |
+| geometry | `width`, `height`, `rotation`, `setRotation` |
+| the screen | `clear`, `invert` |
+| pixels and lines | `pixel`, `clearRect`, `line`, `hLine`, `vLine` |
+| shapes | `rect`, `fillRect`, `roundRect`, `fillRoundRect`, `circle`, `fillCircle`, `ellipse`, `fillEllipse`, `triangle`, `fillTriangle`, `rotatedRect`, `fillRotatedRect` |
+| images | `bitmap`, `xBitmap` |
+| text state | `setTextSize` (one and two axis), `setCursor`, `setTextWrap`, `cp437`, and `print` through `Print` |
+| text without state | `text`, `textWidth`, `textBounds` |
 
-// A monochrome panel. Ink and paper are the implementation's business, so nothing here takes a
-// colour; `inverted` is the one thing layout code needs to say about them.
-class Display {
- public:
-  virtual ~Display() = default;
+`DECISION:` this is the library's whole drawing surface, not the eight calls the page makes
+today, so that a page written later does not have to come back and widen it. Rev 1 proposed the
+narrow list and was wrong about what the abstraction is for.
 
-  // False when the panel is not there. Drawing before this succeeds is not an error, it is
-  // just invisible.
-  virtual bool begin() = 0;
-  virtual void flush() = 0;  // push what has been drawn to the glass
+`DECISION:` `class Display : public Print`, which is how `Adafruit_GFX` is built and what makes
+`display.print(value, 2)` work without building a `String` first.
 
-  virtual int16_t width() const = 0;
-  virtual int16_t height() const = 0;
+Three things are deliberately absent, and the header says why: `drawGrayscaleBitmap` and
+`drawRGBBitmap` need a depth this panel does not have; the `startWrite`/`writePixel` family
+exists to batch pin work on an SPI panel and does nothing on I2C; and `setFont` takes a
+`GFXfont*`, which would put a library type in the one header that exists to keep it out.
 
-  virtual void clear() = 0;
-  virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
-  virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
-  virtual void text(int16_t x, int16_t y, const String& value, uint8_t size,
-                    bool inverted) = 0;
-  virtual int16_t textWidth(const String& value, uint8_t size) = 0;
-};
+`DECISION:` paper has two spellings — `clear()` for the whole panel and `clearRect()` for part of
+it — because a page that blinks or updates a field needs to erase without repainting everything.
 
-}  // namespace eggplan
-```
-
-Eight verbs, which is every call the page makes today and nothing else. The interface is
-deliberately not a mirror of `Adafruit_GFX`: if a future page needs a circle, that is a new verb
-here, not a `gfx()` escape hatch.
-
-`DECISION:` `textWidth(value, size)` replaces the set-then-ask sequence, and it cannot be `const`,
-because `getTextBounds` is non-const in Adafruit_GFX. Documented rather than cast away.
+`DECISION:` `text` and its measurement are not `const`, because `getTextBounds` is not. Documented
+rather than cast away.
 
 ## 2. The Adafruit implementation
 
@@ -85,6 +79,12 @@ class AdafruitDisplay : public Display {
 * `Adafruit_GrayOLED` rather than `Adafruit_GFX`, because `SH1106G : Adafruit_GrayOLED :
   Adafruit_GFX` and only the middle one has both the draw verbs and `begin`/`display`. It also
   means any GrayOLED panel — SSD1306, SH1106, SSD1315 — drops in without the adapter changing.
+* Every verb in §1 is one line here. The shapes, the rotated rects, the ellipses and the bitmaps
+  are all public on `Adafruit_GFX`, virtual or not, so the adapter only forwards; the two
+  `setTextSize` overloads and the two bitmap spellings are the only places a name has to be
+  chosen.
+* `Print` comes across as a one-line bridge: the adapter implements `write(uint8_t)` by handing
+  the byte to the panel, which is the same `Print` the panel already is.
 * `App` still constructs the panel, so it stays the only place that knows *which* panel is
   fitted, which is a property its own header already claims.
 * The `false` in `begin` is not incidental: the STEMMA QT breakout has no reset line, so the
@@ -110,7 +110,8 @@ class AdafruitDisplay : public Display {
 
 | # | Phase | Content | Verify |
 | --- | --- | --- | --- |
-| 1 | The interface and the adapter | add `hal/Display.h` and `hal/AdafruitDisplay.{h,cpp}`; retarget `StatusPage` to `Display&`; App constructs the adapter and draws through it | green, layer rule ok, flash and RAM deltas reported, the page's output unchanged |
+| 1a | The interface | `hal/Display.h` alone: the abstract class, no implementation and no caller yet | the header compiles (checked with a temporary include, which is then removed), layer rule ok |
+| 1b | The adapter and the retarget | `hal/AdafruitDisplay.{h,cpp}`; `StatusPage` takes `Display&`; App constructs the adapter and draws through it | green, layer rule ok, flash and RAM deltas reported, the page's output unchanged |
 | 2 | A fake and a host test | `tests/fake_display.h` plus a test for the page's arithmetic, run by a new `scripts/arduino.ps1` host task | the test fails when the arithmetic is broken |
 | 3 | Docs | README: the display section and the architecture note, since `hal/` now holds the panel | green |
 
@@ -119,7 +120,8 @@ class AdafruitDisplay : public Display {
 | id | Risk | Mitigation |
 | --- | --- | --- |
 | R1 | an abstraction with one implementation is speculative, and this project deleted one already | the second implementation is phase 2, and the plan says plainly that without it this should be deleted again |
-| R2 | the interface grows into a mirror of `Adafruit_GFX` | it is the eight calls the page makes; a new verb is a deliberate addition, and there is no `gfx()` accessor to escape through |
+| R2 | a fat interface is a commitment: every verb has to be implemented by every implementation, and a fake has to fake all of them | accepted deliberately, because the alternative was coming back to widen it. Two things keep it honest: the list is the library's surface rather than invention, and the three absences are written down with reasons so the next reader sees a decision and not an omission |
+| R2b | a verb nobody draws earns nothing and still has to be implemented | the adapter implementations are one line each, so the cost is the diff, not the design. If a verb turns out to be wrong, deleting it is a smaller change than adding it to a shipped interface |
 | R3 | a virtual call per primitive, about fifty per render, and the page renders every loop | measured and reported in phase 1. The I2C flush next to it is orders of magnitude larger, but the claim gets a number rather than an assurance |
 | R4 | `textWidth` cannot be `const` because Adafruit's measurement is not, which looks like an oversight | stated in the header comment, so the next reader sees the reason rather than a mistake |
 | R5 | App keeps the panel and passes a `GrayOLED&` into the adapter, which is two objects for one display | accepted: App is the composition root and it is the only place that knows which panel is fitted. The alternative, an adapter that constructs the panel itself, hides the choice in `hal/` but takes the I2C address, the reset flag and `Wire` with it |
@@ -131,7 +133,7 @@ Recommendations are marked, so "all as recommended" is a valid answer.
 | # | Question | Recommendation |
 | --- | --- | --- |
 | Q1 | Place: `hal/Display.h` with `hal/AdafruitDisplay.{h,cpp}`? | **yes**: `hal/` is one file per physical device, and other drivers there already wrap an Adafruit library |
-| Q2 | Are `begin` and `flush` in the interface rather than left on the panel? | **yes**: one type to pass around, and it lets a fake report that it is absent |
+| Q2 | Is the interface the page's own calls, or the library's whole drawing surface? | **the library's surface** (answered in rev 2, against rev 1): a page written later should not have to come back and widen it |
 | Q3 | No colour parameter anywhere in the interface: ink and paper are the adapter's constants and inversion is a `bool`? | **yes**: that is the leak this change is for |
 | Q4 | The adapter wraps `Adafruit_GrayOLED&` and App keeps owning the concrete panel? | **yes**: App stays the only place that knows which panel is fitted, as its header claims |
 | Q5 | `textWidth(value, size)` instead of exposing `setTextSize` plus `getTextBounds`? | **yes**: the measurement should not depend on cursor state the page had to set up first |
@@ -140,9 +142,12 @@ Recommendations are marked, so "all as recommended" is a valid answer.
 | Q8 | Does the page keep its layout constants and alignment helpers untouched? | **yes**: the abstraction is verbs and colour only, so nothing about the layout moves |
 | Q9 | Keep the name `Display`, rather than `Panel`, `Screen` or `MonoDisplay`? | **yes**: it is the name this project used before, and the role is "the thing we draw on" |
 | Q10 | No firmware version bump, since nothing on the wire changes? | **yes**: `fw` now marks wire changes, and this is not one |
+| Q11 | Are the three exclusions right — no grayscale or RGB bitmaps, no `startWrite` family, no `setFont`? | **yes**: the first needs a depth the panel lacks, the second is SPI bookkeeping, and the third would name a library type in this header |
+| Q12 | Do the text verbs take `const String&` only, or also a `const char*` overload so the page's literals (`"--:--"`, `"NO SENSOR"`) stop allocating a `String` on every render? | **add the overload**: the page draws literals every loop iteration, and this is the one place the "prefer String" guidance costs something measurable. It is three methods, not a second text API |
 
 ## 8. Status
 
 | Revision | Change | Sections |
 | --- | --- | --- |
 | rev 1 | initial plan: `Display` interface, Adafruit adapter, optional host test as phase 2 | all |
+| rev 2 | the interface is the library's drawing surface rather than the page's eight calls; `Display` gains `Print`; the three deliberate absences are written down; the `const char*` question is raised | §1, §2, §6, §7 |
