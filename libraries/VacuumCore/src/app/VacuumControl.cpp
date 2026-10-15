@@ -24,12 +24,6 @@ void VacuumControl::clearTarget() {
   }
 }
 
-bool VacuumControl::targetActive() const { return system_.targetActive(); }
-
-float VacuumControl::targetKpa() const { return system_.targetKpa(); }
-
-float VacuumControl::minReachableKpa() const { return system_.minReachableKpa(); }
-
 void VacuumControl::setDurationSeconds(uint32_t seconds) {
   durationSeconds_ = seconds;
   if (state_ == RunState::Holding) {

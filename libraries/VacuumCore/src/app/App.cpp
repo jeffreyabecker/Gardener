@@ -19,7 +19,7 @@ App::App()
       system_(pump_, sensor_, vent_),
       control_(system_),
       page_(panel_),
-      link_(pump_, sensor_, control_, Serial, serialAttached, snapshot_) {}
+      link_(control_, system_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
@@ -64,7 +64,7 @@ bool App::begin() {
 }
 
 void App::refreshSnapshot() {
-  buildSnapshot(pump_, sensor_, control_, battery_, snapshot_);
+  buildSnapshot(system_, control_, battery_, snapshot_);
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state

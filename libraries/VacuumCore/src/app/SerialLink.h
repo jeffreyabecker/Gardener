@@ -8,9 +8,8 @@
 
 namespace eggplan {
 
-class PressureSensor;
-class Pump;
 class VacuumControl;
+class VacuumSystem;
 
 // The serial interface to the controller: the bytes, the command grammar and the payload
 // text, in one place because they are three faces of one protocol. On a wire the byte half is
@@ -30,8 +29,8 @@ class SerialLink {
   // in which case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(Pump& pump, PressureSensor& sensor, VacuumControl& control, Stream& stream,
-             PresenceFn present, const SystemSnapshot& snapshot);
+  SerialLink(VacuumControl& control, VacuumSystem& system, Stream& stream, PresenceFn present,
+             const SystemSnapshot& snapshot);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -63,9 +62,8 @@ class SerialLink {
   size_t statusBody(char* out, size_t size) const;
   size_t infoBody(char* out, size_t size) const;
 
-  Pump& pump_;
-  PressureSensor& sensor_;
   VacuumControl& control_;
+  VacuumSystem& system_;
   Stream& stream_;
   PresenceFn present_;
   const SystemSnapshot& snapshot_;

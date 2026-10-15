@@ -3,29 +3,30 @@
 #include <Arduino.h>
 
 #include "app/VacuumControl.h"
+#include "app/VacuumSystem.h"
 #include "hal/Battery.h"
-#include "hal/PressureSensor.h"
-#include "hal/Pump.h"
 
 namespace eggplan {
 
-void buildSnapshot(const Pump& pump, const PressureSensor& sensor, const VacuumControl& control,
+void buildSnapshot(const VacuumSystem& system, const VacuumControl& control,
                    const Battery& battery, SystemSnapshot& snapshot) {
-  snapshot.kpa = sensor.kpa();
-  snapshot.vacuumKpa = sensor.vacuumKpa();
-  snapshot.vacuumPercent = sensor.vacuumPercent();
-  snapshot.ambientKpa = sensor.ambientKpa();
-  snapshot.sensorOk = sensor.present();
-  snapshot.readingValid = sensor.readingValid();
+  snapshot.kpa = system.kpa();
+  snapshot.vacuumKpa = system.vacuumKpa();
+  snapshot.vacuumPercent = system.vacuumPercent();
+  snapshot.ambientKpa = system.ambientKpa();
+  snapshot.sensorOk = system.sensorOk();
+  snapshot.readingValid = system.readingValid();
 
-  snapshot.duty = pump.dutyPercent();
-  snapshot.pumpTripped = pump.tripped();
-  snapshot.faultCode = pump.faultCode();
+  // faulted() is the trip as the plant sees it: it latches when the trip is observed and
+  // clears with resetFault, so it says the same thing pump.tripped() said.
+  snapshot.duty = system.duty();
+  snapshot.pumpTripped = system.faulted();
+  snapshot.faultCode = system.faultCode();
 
   snapshot.state = control.state();
-  snapshot.targetActive = control.targetActive();
-  snapshot.targetKpa = control.targetKpa();
-  snapshot.floorKpa = control.minReachableKpa();
+  snapshot.targetActive = system.targetActive();
+  snapshot.targetKpa = system.targetKpa();
+  snapshot.floorKpa = system.minReachableKpa();
   snapshot.remainSeconds = control.remainingSeconds();
   snapshot.totalSeconds = control.durationSeconds();
 

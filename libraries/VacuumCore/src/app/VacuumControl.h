@@ -34,11 +34,6 @@ class VacuumControl {
   uint32_t durationSeconds() const { return durationSeconds_; }
   uint32_t remainingSeconds() const { return remainingSeconds_; }
 
-  // Delegates, kept so the readers can be retargeted in one step rather than two.
-  bool targetActive() const;
-  float targetKpa() const;
-  float minReachableKpa() const;
-
  private:
   void setState(RunState state);
   void beginVent();

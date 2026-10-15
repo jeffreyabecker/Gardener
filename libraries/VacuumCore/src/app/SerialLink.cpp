@@ -3,8 +3,7 @@
 #include <string.h>
 
 #include "app/VacuumControl.h"
-#include "hal/PressureSensor.h"
-#include "hal/Pump.h"
+#include "app/VacuumSystem.h"
 
 namespace eggplan {
 namespace {
@@ -107,11 +106,10 @@ void addU32Token(text::Buf& buf, const char* key, uint32_t value) {
 
 }  // namespace
 
-SerialLink::SerialLink(Pump& pump, PressureSensor& sensor, VacuumControl& control,
-                       Stream& stream, PresenceFn present, const SystemSnapshot& snapshot)
-    : pump_(pump),
-      sensor_(sensor),
-      control_(control),
+SerialLink::SerialLink(VacuumControl& control, VacuumSystem& system, Stream& stream,
+                       PresenceFn present, const SystemSnapshot& snapshot)
+    : control_(control),
+      system_(system),
       stream_(stream),
       present_(present),
       snapshot_(snapshot) {}
@@ -311,13 +309,13 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      if (!sensor_.setAmbientKpa(kpa)) {
+      if (!system_.setAmbientKpa(kpa)) {
         err("out_of_range");
         return;
       }
       text::Buf payload(body_, sizeof(body_));
       payload << "ambient=";
-      payload.add(sensor_.ambientKpa(), 2);
+      payload.add(system_.ambientKpa(), 2);
       ok(body_);
       return;
     }
@@ -347,16 +345,16 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      if (!sensor_.setAmbientKpa(kpa)) {
+      if (!system_.setAmbientKpa(kpa)) {
         err("out_of_range");
         return;
       }
     } else {
-      sensor_.captureAmbient();
+      system_.captureAmbient();
     }
     text::Buf payload(body_, sizeof(body_));
     payload << "ambient=";
-    payload.add(sensor_.ambientKpa(), 2);
+    payload.add(system_.ambientKpa(), 2);
     ok(body_);
     return;
   }
@@ -366,7 +364,6 @@ void SerialLink::dispatch(char* line) {
     return;
   }
   if (same(command, "reset")) {
-    pump_.resetFault();
     control_.clearFault();
     ok("reset");
     return;
