@@ -18,8 +18,7 @@ App::App()
       display_(panel_),
       overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
-      control_(system_),
-      link_(control_, system_, overlay_, Serial, serialAttached, snapshot_) {}
+      link_(system_, overlay_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
@@ -55,7 +54,7 @@ bool App::begin() {
 
   refreshSnapshot();
   link_.begin();
-  lastState_ = control_.state();
+  lastState_ = system_.state();
   if (displayOk_) splash();
   return true;
 }
@@ -84,11 +83,11 @@ void App::refreshSnapshot() {
   snapshot_.pumpTripped = system_.faulted();
   snapshot_.faultCode = system_.faultCode();
 
-  snapshot_.state = control_.state();
+  snapshot_.state = system_.state();
   snapshot_.targetActive = system_.targetActive();
   snapshot_.targetKpa = system_.targetKpa();
   snapshot_.floorKpa = system_.minReachableKpa();
-  snapshot_.holdSeconds = control_.holdSeconds();
+  snapshot_.holdSeconds = link_.holdSeconds();
 
   snapshot_.batteryPresent = battery_.present();
   snapshot_.batteryLow = battery_.low();
@@ -101,7 +100,7 @@ void App::refreshSnapshot() {
 // The drivers stopped narrating, so the run is reported from here: one line per state
 // change, timed when it leaves a vent, plus the fault code when one latches.
 void App::logRunChanges(uint32_t nowMs) {
-  RunState state = control_.state();
+  RunState state = system_.state();
   if (state == lastState_) return;
 
   String message = runStateName(lastState_);
@@ -135,7 +134,7 @@ void App::update() {
   sensor_.update(now);
   pump_.update(now);
   battery_.update(now);
-  control_.update(now);
+  system_.service(now);
 
   // Commands first, against the machine as the last control tick left it, so a reply
   // describes something that actually happened rather than a view built mid-command.
@@ -144,7 +143,7 @@ void App::update() {
   // A controller that goes away releases the chamber (Q4).
   if (link_.consumeLinkLost()) {
     link_.warn("app: controller left, stopping and venting");
-    control_.stopRun();
+    system_.stop();
   }
 
   logRunChanges(now);

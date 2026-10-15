@@ -45,8 +45,8 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 ```
 core/   shared foundations: config, math, the machine view
 hal/    one file per physical device, plus the board pin map and the panel interface
-app/    the instrument: the plant and the run on top of it, the snapshot, the serial
-        interface, the display overlay, the composition root
+app/    the instrument: the plant, the snapshot, the serial interface, the display
+        overlay, the composition root
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -260,21 +260,22 @@ while the interface is being reworked.
 
 ## Vacuum control model
 
-Two classes, because the chamber and the run on top of it have different reasons to change.
+One class, because the state the chamber is in and the state the run is in turned out to be the
+same state.
 
-[VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant: the target, the
-PID on absolute pressure (all terms in kPa), the valve and the pump. The pump is the only
-actuator, so the loop can pull down but never vent — the vent valve is the only way back up.
-When the measurement undershoots the target the output drops to zero and the chamber bleeds
-back up. It is told what to do and reports what is true: regulate to this, vent, rest; here is
-the pressure, the duty, whether the release has finished, whether the pump has failed. It
-decides nothing, and it never asks who is holding the run.
+[VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant and the machine on
+top of it: the target, the PID on absolute pressure (all terms in kPa), the valve, the pump, the
+run state in the diagram below and the fault latch. The pump is the only actuator, so the loop
+can pull down but never vent — the vent valve is the only way back up. When the measurement
+undershoots the target the output drops to zero and the chamber bleeds back up.
 
-[VacuumControl](./libraries/VacuumCore/src/app/VacuumControl.cpp) is the run on top of it: the
-state machine in the diagram below and the fault latch. Every "should" lives here — when to
-start, what a stop means, whether a fault is permanent — and the run's *duration* lives at the
-other end of the cable, with the controller. Clearing the target releases the chamber, because a
-run without a target is not a run.
+It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
+the duty, the state. Both of the transitions it makes for itself are facts about the chamber
+rather than orders — the target has been reached, the release is over — so they are decided where
+the measurements are, and each command sets the state it causes. Every "should" is still a
+command's: when to start, what a stop means, whether a fault is permanent. The run's *duration*
+lives at the other end of the cable, with the controller. Clearing the target releases the
+chamber, because a run without a target is not a run.
 
 ```
         start                                              stop / link loss / fault

@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "app/VacuumControl.h"
 #include "app/VacuumSystem.h"
 
 namespace eggplan {
@@ -170,10 +169,9 @@ class Tokens {
   char* cursor_;
 };
 
-SerialLink::SerialLink(VacuumControl& control, VacuumSystem& system, Display& display,
-                       Stream& stream, PresenceFn present, const SystemSnapshot& snapshot)
-    : control_(control),
-      system_(system),
+SerialLink::SerialLink(VacuumSystem& system, Display& display, Stream& stream, PresenceFn present,
+                       const SystemSnapshot& snapshot)
+    : system_(system),
       display_(display),
       stream_(stream),
       present_(present),
@@ -459,15 +457,17 @@ void SerialLink::dispatch(char* line) {
     return;
   }
   if (same(command, "start")) {
-    if (!control_.startRun()) {
+    if (!system_.start()) {
       err("not_ready");
       return;
     }
+    // A countdown belongs to the run it was set for, so a new run starts without one.
+    holdSeconds_ = 0;
     ok("started");
     return;
   }
   if (same(command, "stop")) {
-    control_.stopRun();
+    system_.stop();
     ok("stopped");
     return;
   }
@@ -483,7 +483,7 @@ void SerialLink::dispatch(char* line) {
 
     if (same(key, "target")) {
       if (same(value, "off")) {
-        control_.clearTarget();
+        system_.clearTarget();
         ok("target=off");
         return;
       }
@@ -496,7 +496,7 @@ void SerialLink::dispatch(char* line) {
         err("out_of_range");
         return;
       }
-      control_.setTarget(kpa);
+      system_.setTarget(kpa);
       String payload = "target=" + String(kpa, 1);
       ok(payload.c_str());
       return;
@@ -505,7 +505,7 @@ void SerialLink::dispatch(char* line) {
       // The countdown the controller is running, in seconds. The device renders it and never
       // counts it, so this changes nothing about the run.
       if (same(value, "off")) {
-        control_.setHoldSeconds(0);
+        holdSeconds_ = 0;
         ok("hold=off");
         return;
       }
@@ -514,7 +514,7 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      control_.setHoldSeconds(seconds);
+      holdSeconds_ = seconds;
       String payload = "hold=" + String(seconds);
       ok(payload.c_str());
       return;
@@ -600,7 +600,7 @@ void SerialLink::dispatch(char* line) {
     return;
   }
   if (same(command, "reset")) {
-    control_.clearFault();
+    system_.resetFault();
     ok("reset");
     return;
   }

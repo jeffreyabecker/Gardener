@@ -8,7 +8,6 @@
 
 namespace eggplan {
 
-class VacuumControl;
 class VacuumSystem;
 class Tokens;
 
@@ -34,8 +33,8 @@ class SerialLink {
   // in which case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(VacuumControl& control, VacuumSystem& system, Display& display, Stream& stream,
-             PresenceFn present, const SystemSnapshot& snapshot);
+  SerialLink(VacuumSystem& system, Display& display, Stream& stream, PresenceFn present,
+             const SystemSnapshot& snapshot);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -44,6 +43,11 @@ class SerialLink {
   // One shot: the controller went away. App decides what that means (stop and vent); the
   // interface only reports it.
   bool consumeLinkLost();
+
+  // The countdown the controller is running, in seconds, for the panel to draw. The device
+  // never counts it and never acts on it; 0 means "show nothing". It is stored here because
+  // this is the end of the wire the value arrives on.
+  uint32_t holdSeconds() const { return holdSeconds_; }
 
   // Diagnostics, through the interface that owns the stream, which is what makes
   // `set log off` total.
@@ -85,7 +89,6 @@ class SerialLink {
   String statusBody() const;
   String infoBody() const;
 
-  VacuumControl& control_;
   VacuumSystem& system_;
   Display& display_;
   Stream& stream_;
@@ -93,6 +96,7 @@ class SerialLink {
   const SystemSnapshot& snapshot_;
 
   bool logEnabled_ = true;
+  uint32_t holdSeconds_ = 0;
   char line_[cfg::COMMAND_LINE_MAX];
   size_t length_ = 0;
   bool oversize_ = false;  // the current line is too long and was answered already

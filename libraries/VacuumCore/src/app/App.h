@@ -5,7 +5,6 @@
 
 #include "app/AppDisplay.h"
 #include "app/SerialLink.h"
-#include "app/VacuumControl.h"
 #include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/AdafruitDisplay.h"
@@ -57,7 +56,6 @@ class App {
   AdafruitDisplay display_;
   AppDisplay overlay_;
   VacuumSystem system_;
-  VacuumControl control_;
   SerialLink link_;
 
   RunState lastState_ = RunState::Idle;

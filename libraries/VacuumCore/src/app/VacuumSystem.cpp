@@ -10,6 +10,13 @@ namespace {
 constexpr uint32_t kDerivativeWindowMs = 1000;
 }
 
+// A latched fault owns the state until it is reset: a command can still make the plant safe,
+// but none of them can move the state off Fault, so state() == Fault and faulted() agree.
+void VacuumSystem::setState(RunState state) {
+  if (faulted_ && state != RunState::Fault) return;
+  state_ = state;
+}
+
 void VacuumSystem::begin() {
   rest();
   lastControlMs_ = millis();
@@ -21,7 +28,7 @@ void VacuumSystem::rest() {
   vent_.open();  // normally open, but assert the safe resting state when asked
   pidReset();
   output_ = 0.0f;
-  activity_ = Activity::Resting;
+  setState(RunState::Idle);
 }
 
 void VacuumSystem::vent() {
@@ -30,17 +37,31 @@ void VacuumSystem::vent() {
   pidReset();
   output_ = 0.0f;
   ventStartMs_ = millis();
-  activity_ = Activity::Venting;
+  setState(RunState::Venting);
 }
 
-void VacuumSystem::start() {
+bool VacuumSystem::start() {
+  if (faulted_) return false;
+  if (!targetActive_) return false;
+  if (!sensor_.present() || !sensor_.readingValid()) return false;
+
   // Close before pumping, so the pump never pulls against an open port.
   vent_.close();
   pidReset();
   output_ = 0.0f;
   lastControlMs_ = millis();
   lastDerivativeMs_ = lastControlMs_;
-  activity_ = Activity::Regulating;
+  setState(RunState::Pulling);
+  return true;
+}
+
+void VacuumSystem::stop() {
+  // An idle plant is already released, so there is nothing to vent.
+  if (state_ == RunState::Idle) {
+    rest();
+    return;
+  }
+  vent();
 }
 
 bool VacuumSystem::vented() const {
@@ -66,6 +87,14 @@ void VacuumSystem::clearTarget() {
   targetActive_ = false;
   pidReset();
   output_ = 0.0f;
+
+  // A run without a target is not a run, so clearing one releases the chamber. An idle plant
+  // is already at rest, and a fault owns the state until it is reset.
+  if (state_ == RunState::Pulling || state_ == RunState::Holding) {
+    vent();
+  } else if (state_ == RunState::Idle) {
+    rest();
+  }
 }
 
 bool VacuumSystem::atTarget() const {
@@ -75,6 +104,9 @@ bool VacuumSystem::atTarget() const {
 void VacuumSystem::resetFault() {
   pump_.resetFault();
   faulted_ = false;
+  // The latch is what held the state, so clearing it has to put the machine somewhere: a
+  // fault is cleared by releasing the chamber, which is where one leaves it anyway.
+  if (state_ == RunState::Fault) vent();
 }
 
 void VacuumSystem::fail(const char* code) {
@@ -83,7 +115,7 @@ void VacuumSystem::fail(const char* code) {
   pidReset();
   output_ = 0.0f;
   faulted_ = true;
-  activity_ = Activity::Resting;
+  setState(RunState::Fault);
 }
 
 void VacuumSystem::service(uint32_t nowMs) {
@@ -94,15 +126,24 @@ void VacuumSystem::service(uint32_t nowMs) {
     return;
   }
 
-  if (activity_ != Activity::Regulating) return;
+  const bool regulating = state_ == RunState::Pulling || state_ == RunState::Holding;
 
   // Regulating on a reading nobody trusts is how the loop runs away.
-  if (!sensor_.present() || !sensor_.readingValid()) {
+  if (regulating && (!sensor_.present() || !sensor_.readingValid())) {
     fail("sensor");
     return;
   }
 
-  regulate(nowMs);
+  // The two transitions that are facts about the chamber rather than orders: the target has
+  // been reached, and the release is over. A latched fault owns the state, so neither can
+  // fire while one is held.
+  if (state_ == RunState::Pulling && atTarget()) setState(RunState::Holding);
+  if (state_ == RunState::Venting && vented()) {
+    rest();
+    return;
+  }
+
+  if (regulating) regulate(nowMs);
 }
 
 // error is measured - target, so positive means "still needs vacuum"; the derivative term
