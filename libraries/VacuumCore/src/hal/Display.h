@@ -77,8 +77,15 @@ class Display {
   // `size` scales the built-in font, and `inverted` draws paper on ink. Measurement is a question
   // about a string at a size rather than a property of wherever the cursor happens to be, and it
   // is not const because the library's own measurement is not.
+  //
+  // Both spellings exist because both callers do: a host message arrives as a `const char*` in a
+  // line buffer, and anything the device builds is a `String`. One of them would otherwise be
+  // converted on every call for nothing.
   virtual void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) = 0;
+  virtual void text(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) = 0;
   virtual void textBounds(const String& value, uint8_t size, int16_t& outWidth,
+                          int16_t& outHeight) = 0;
+  virtual void textBounds(const char* value, uint8_t size, int16_t& outWidth,
                           int16_t& outHeight) = 0;
 };
 

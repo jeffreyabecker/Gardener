@@ -85,12 +85,18 @@ class AppDisplay : public Display {
   }
 
   // --- text ----------------------------------------------------------------
-
   void text(int16_t x, int16_t y, const String& value, uint8_t size,
             bool inverted) override {
     inner_.text(x, y, value, size, inverted);
   }
+  void text(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) override {
+    inner_.text(x, y, value, size, inverted);
+  }
   void textBounds(const String& value, uint8_t size, int16_t& outWidth,
+                  int16_t& outHeight) override {
+    inner_.textBounds(value, size, outWidth, outHeight);
+  }
+  void textBounds(const char* value, uint8_t size, int16_t& outWidth,
                   int16_t& outHeight) override {
     inner_.textBounds(value, size, outWidth, outHeight);
   }

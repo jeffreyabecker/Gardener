@@ -79,9 +79,10 @@ class AdafruitDisplay : public Display {
 };
 ```
 
-* `Adafruit_GrayOLED` rather than `Adafruit_GFX`, because `SH1106G : Adafruit_GrayOLED :
-  Adafruit_GFX` and only the middle one has both the draw verbs and `begin`/`display`. Any
-  GrayOLED panel — SSD1306, SH1106, SSD1315 — drops in without the adapter changing.
+* It holds the concrete `Adafruit_SH1106G`, because bring-up is the one thing the hierarchy does
+  not share: the drawing verbs come from `Adafruit_GFX`, `display()` from `Adafruit_GrayOLED`, and
+  `begin()` from the panel class itself. Rev 6 claimed `Adafruit_GrayOLED` would do for all three;
+  it does not, so the adapter names the panel it can actually bring up.
 * Every verb in §1 is one line here: the shapes, the rotated rects, the ellipses and the bitmap
   are all public on `Adafruit_GFX`, virtual or not, so the adapter forwards.
 * `kInk`/`kPaper` land here, which is the point: nothing outside this file knows that 1 means lit.
