@@ -46,7 +46,8 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 ```
 core/   shared foundations: config, math, text formatting, the machine view
 hal/    one file per physical device, plus the board pin map
-app/    the instrument: control loop, snapshot, serial interface, page, composition root
+app/    the instrument: the plant and the run on top of it, the snapshot, the serial
+        interface, the page, the composition root
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -252,10 +253,21 @@ python tools/vacuum_cli.py stop
 
 ## Vacuum control model
 
-[VacuumControl](./libraries/VacuumCore/src/app/VacuumControl.cpp) runs a PID loop on absolute
-pressure (all terms in kPa) with the pump as the only actuator, so it can pull down but never
-vent — the vent valve is the only way back up. When the measurement undershoots the target the
-output drops to zero and the chamber bleeds back up.
+Two classes, because the chamber and the run on top of it have different reasons to change.
+
+[VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant: the target, the
+PID on absolute pressure (all terms in kPa), the valve and the pump. The pump is the only
+actuator, so the loop can pull down but never vent — the vent valve is the only way back up.
+When the measurement undershoots the target the output drops to zero and the chamber bleeds
+back up. It is told what to do and reports what is true: regulate to this, vent, rest; here is
+the pressure, the duty, whether the release has finished, whether the pump has failed. It
+decides nothing, and it never asks who is holding the run.
+
+[VacuumControl](./libraries/VacuumCore/src/app/VacuumControl.cpp) is the run on top of it: the
+state machine in the diagram below, the hold timer and the fault latch. Every "should" lives
+here — when to start, what a stop means, whether a fault is permanent — so the one distinction
+an operator cares about, `PULL` against `HOLD`, exists only here. Clearing the target releases
+the chamber, because a run without a target is not a run.
 
 ```
         start
