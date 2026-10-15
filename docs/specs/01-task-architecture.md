@@ -57,7 +57,8 @@ enum class CommandKind : uint8_t {
   SetTarget, ClearTarget, Start, Stop, ResetFault,
   SetAmbient, CaptureAmbient,
   RunProgram, StopProgram,
-  ListPrograms, CatProgram, RmProgram, SetProgramParams,
+  ListPrograms, CatProgram, RmProgram, SetProgramParams, GetProgramParams,
+  SetProgramState,
   UploadBegin, UploadAppend, UploadCommit, UploadAbort,
 };
 
@@ -77,9 +78,19 @@ struct Command {
 };
 ```
 
-- `QueueHandle_t` created with `xQueueCreate(32, sizeof(Command))`.
-- Writers: `serialTask` and `vmTask` (`xQueueSend`). Reader: `plantTask`
-  (`xQueueReceive`, timeout 0 or a short block).
+```cpp
+// Thin wrapper so producers and consumers do not see the FreeRTOS type (and tests can
+// fake it).
+class CommandQueue {
+ public:
+  bool send(const Command& c);   // false when full
+  bool receive(Command& out);    // false when empty
+};
+```
+
+- `CommandQueue` wraps a `QueueHandle_t` created with `xQueueCreate(32, sizeof(Command))`.
+- Writers: `serialTask` and `vmTask` (`send`). Reader: `plantTask` (`receive`, timeout 0
+  or a short block).
 - Multi-writer is safe because FreeRTOS queues serialize producers.
 - Queue full is a normal event under load: the producer drops the command and logs a
   `[W]` record. Plant-critical commands from the VM must not rely on unbounded
@@ -115,15 +126,16 @@ applies them to the buffer in order.
 
 ### 3.4 Log queue
 
-`QueueHandle_t` of `LogRecord { char level; char text[96]; }`, depth 32. Plant and VM
-push; `serialTask` drains and writes the `[I]/[W]/[E]` lines. This keeps the serial
+A `LogQueue` — a `QueueHandle_t` of `LogRecord { char level; char text[96]; }`, depth
+32. Plant and VM push; `serialTask` drains and writes the `[I]/[W]/[E]` lines. This keeps the serial
 stream single-writer and makes `set log off` race-free (the serial task owns the flag and
 drops queued records when it is off).
 
 ### 3.5 Button event queue
 
-`QueueHandle_t` of `ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`,
-depth 16. `plantTask` pushes after each `Buttons::update()`. While a program is running,
+A `ButtonQueue` — a `QueueHandle_t` of
+`ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`, depth 16.
+`plantTask` pushes after each `Buttons::update()`. While a program is running,
 the plant forwards Up/Down/OK (and Back when claimed, spec 03 §5) events to the VM's
 queue; unclaimed Back stays with the device. With no program running, the plant consumes
 events itself for the UI.
@@ -146,6 +158,9 @@ continues; the plant still executes the command, and a later `status` reveals th
 
 `Draw`/`Flush` skip this path: serial validates them locally (§5.2 of the plan), replies
 `ok drawn`/`ok flushed` immediately, and enqueues fire-and-forget.
+
+The VM task has the same single-flight slot, used only by `GetProgramParams`
+(`programs.params(name)`, spec 03 §6.5). Everything else the VM sends is fire-and-forget.
 
 ## 4. Task bodies
 

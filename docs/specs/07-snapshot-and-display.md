@@ -79,7 +79,9 @@ Publication rules:
 Programs publish their own telemetry through a fixed-capacity table, without any C++
 change:
 
-- `program.state_set("label", 42.5)` / `program.state_set("label", "text")`.
+- `program.state_set("label", 42.5)` / `program.state_set("label", "text")`. The write
+  travels as a `SetProgramState` command (spec 01 §3.1); the plant updates `state[]` on
+  receipt.
 - Up to 8 keys, each key ≤ 11 chars, value ≤ 11 chars (canonical).
 - Setting an existing key replaces it; a ninth key replaces the oldest (FIFO) and logs a
   `[W]` record.

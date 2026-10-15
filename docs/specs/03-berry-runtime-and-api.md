@@ -24,7 +24,7 @@ The firmware depends on Berry directly; there is no runtime abstraction and no
 ```cpp
 class BerryRuntime {
  public:
-  explicit BerryRuntime(ProgramApi& api);
+  BerryRuntime(ProgramApi& api, ButtonQueue& buttons);
 
   bool start(const char* programName, const String& source,
              const String& effectiveParams, String& error);
@@ -38,6 +38,7 @@ class BerryRuntime {
  private:
   bvm* vm_ = nullptr;
   ProgramApi& api_;
+  ButtonQueue& buttons_;
   volatile bool stopRequested_ = false;
   volatile uint32_t heartbeat_ = 0;
   String currentProgram_;
@@ -49,8 +50,8 @@ Start flow:
 
 1. Compile `source` with `be_loadbuffer` (or equivalent). Compile error → `error` set,
    `lastError_` set, return false.
-2. Bind the `vacuum`, `program`, and `screen` modules (one global `be_map`, native
-   functions).
+2. Bind the `vacuum`, `program`, `screen`, `buttons`, and `programs` modules (one global
+   `be_map`, native functions).
 3. Set `program.name` and the effective params.
 4. Run the top-level call. `start()` returns as soon as the program begins; the VM task
    keeps it alive via `update()`.
@@ -65,21 +66,34 @@ Stop flow:
 
 ## 4. Native surface: `ProgramApi`
 
-Thin, plain C++, no VM in the loop. The same behaviour is reachable from the serial
-command path, the UI, and (later) tests.
+Thin, plain C++, no VM in the loop. It reads from a local snapshot copy and enqueues
+`Command`s to the plant; the Berry bindings in §6 are a thin veneer over it.
 
 ```cpp
 class ProgramApi {
  public:
-  ProgramApi(VacuumSystem& system, ProgramParams::Context& params);
+  ProgramApi(CommandQueue& commands, SnapshotSlot& snapshot, LogQueue& logs,
+             const ProgramParams::Params& params);
 
-  // --- plant (commands are enqueued; the one read is from the local snapshot) ---
-  void setTarget(float kpa);
-  void clearTarget();
-  bool start();                      // false when snapshot says not ready
-  void stop();                       // stop + vent
-  void resetFault();
-  PlantState state() const;          // the whole plant readout
+  // --- plant (commands are enqueued; the read is from local_) ---
+  void setTarget(float kpa);          // SetTarget
+  void clearTarget();                 // ClearTarget
+  bool start();                       // false when local_ says not ready
+  void stop();                        // Stop (stop + vent)
+  void resetFault();                  // ResetFault
+  PlantState state() const;           // local_.plant
+
+  // --- programs (store + launcher, spec 02 / §6.5) ---
+  uint8_t programCount() const;                   // local_.programCount
+  const ProgramInfo* programAt(uint8_t i) const;  // local_.programs[i], or null
+  void runProgram(const char* name);              // RunProgram
+  void runProgram(const char* name, const char* paramBlob);  // RunProgram + overrides
+  void stopProgram();                             // StopProgram
+  void home();                                    // RunProgram("default")
+  bool programParams(const char* name, ProgramParams::Param* out,
+                     uint8_t max, uint8_t& count);  // GetProgramParams, request/response
+  bool setProgramParam(const char* name, const char* key,
+                       const char* value);          // SetProgramParams
 
   // --- drawing (spec 07) ---
   void drawClear();
@@ -108,31 +122,48 @@ class ProgramApi {
   const char* programName() const;
   bool param(const char* name, float& out) const;      // number/int
   bool param(const char* name, String& out) const;     // choice/bool/text
-  void stateSet(const char* key, float value);
-  void stateSet(const char* key, const char* value);
-  bool stateGet(const char* key, float& out) const;
+  void stateSet(const char* key, float value);         // SetProgramState
+  void stateSet(const char* key, const char* value);   // SetProgramState
+  bool stateGet(const char* key, float& out) const;    // local_.state[]
   bool stateGet(const char* key, String& out) const;
 
   // --- misc ---
-  bool hostPresent() const;
-  void log(const char* message);
+  bool hostPresent() const;          // local_.program.hostAttached
+  void log(const char* message);     // log queue
   uint32_t nowMs() const;
   void delay(uint32_t ms);           // yields; aborts on stopRequested
 
-  void setServiceHook(void (*hook)());
+  void setServiceHook(void (*hook)());   // hook also refreshes local_
   bool stopRequested() const;
+
+ private:
+  void refresh();                    // snapshot_.copyOut(local_)
+
+  CommandQueue& commands_;
+  SnapshotSlot& snapshot_;
+  LogQueue& logs_;
+  const ProgramParams::Params& params_;
+  SystemSnapshot local_;
+  String programName_;
+
+  // single-flight request/response for programParams (spec 01 §3.6)
+  CommandReply pending_;
+  SemaphoreHandle_t replyReady_;
 };
 ```
 
 Rules:
 
-- `state()` (and `hostPresent()`, `param()`, `stateGet()`) reads the VM task's local
-  snapshot copy plus the effective param set captured at start. It never blocks.
-- Writes (`setTarget`, `clearTarget`, `start`, `stop`, `resetFault`) enqueue a `Command`
-  to the plant and return immediately. `start()` returns the local prediction from the
-  snapshot and may disagree with the plant's authoritative decision; programs that care
-  poll `state()`.
-- `delay()` yields: it calls `serviceHook()` (which services the snapshot copy) and checks
+- `state()`, `hostPresent()`, `param()`, `stateGet()`, `programCount()`, `programAt()`
+  read `local_` (a snapshot copy refreshed by `serviceHook()`) and the captured `params_`.
+  They never block.
+- Writes (`setTarget`, `clearTarget`, `start`, `stop`, `resetFault`, `runProgram`,
+  `stopProgram`, `home`, `setProgramParam`, `stateSet`) enqueue a `Command` and return
+  immediately. `start()` returns the local prediction from `local_` and may disagree with
+  the plant's authoritative decision; programs that care poll `state()`.
+- `programParams()` is the one blocking call: it sends `GetProgramParams` and waits on
+  `replyReady_` (timeout 250 ms), like the serial request/response (spec 01 §3.6).
+- `delay()` yields: it calls `serviceHook()` (which refreshes `local_`) and checks
   `stopRequested()` every ~2 ms.
 
 ## 5. Button callbacks
@@ -154,7 +185,7 @@ watchdog (spec 01 §5).
 
 ## 6. Berry binding
 
-Four modules, registered once per VM. Argument order matches the host `draw` ops where
+Five modules, registered once per VM. Argument order matches the host `draw` ops where
 the surfaces overlap.
 
 ### 6.1 `vacuum` — the machine
@@ -226,6 +257,20 @@ The module exposes named constants for the button ids: `buttons.UP` (0), `button
 `button` is one of the named constants. `buttons.BACK` is device-owned unless claimed
 with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device hard escape
 (§5).
+
+### 6.5 `programs` — store and launcher
+
+| Berry call | Native | Notes |
+| --- | --- | --- |
+| `programs.count()` | `programCount` | from the local snapshot |
+| `programs.name(i)` | `programAt` | `.name`, or nil |
+| `programs.info(i)` | `programAt` | map of name/size/param_count/is_default/running |
+| `programs.run(name)` | `runProgram` | stop current → vent → start |
+| `programs.run(name, params)` | `runProgram` | params map overrides |
+| `programs.stop()` | `stopProgram` | stop current → vent → idle |
+| `programs.home()` | `home` | stop current → vent → start `default` |
+| `programs.params(name)` | `programParams` | list of param maps; request/response |
+| `programs.set_param(name, k, v)` | `setProgramParam` | persist one value |
 
 ## 7. Error and stop semantics
 

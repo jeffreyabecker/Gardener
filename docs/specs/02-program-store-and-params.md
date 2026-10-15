@@ -134,6 +134,8 @@ Parse rules:
 ```cpp
 class ProgramParams {
  public:
+  static constexpr uint8_t kMaxParams = 8;
+
   struct Param {
     enum class Type : uint8_t { Number, Int, Choice, Bool };
     String name;
@@ -145,13 +147,17 @@ class ProgramParams {
     String description;
   };
 
+  // The resolved parameter set handed to a running program (captured at start).
+  struct Params {
+    Param items[kMaxParams];
+    uint8_t count = 0;
+  };
+
   // Parse the header of `source` into `out` (max `maxParams`). Returns the count.
   static uint8_t parseManifest(const String& source, Param* out, uint8_t maxParams);
 
-  // Effective params = manifest defaults overlaid with persisted values.
-  // Returns the merged set; each entry's `value` is validated and coerced.
-  static void effective(const Param* manifest, uint8_t count,
-                        const String& persistedLines, Param* out, uint8_t maxParams);
+  // Manifest defaults overlaid with persisted values, validated and coerced.
+  static void resolve(const String& source, const String& persistedLines, Params& out);
 
   static bool validate(const Param& p, const String& value, String& error);
   static String format(const Param& p);     // "key=value"

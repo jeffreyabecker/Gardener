@@ -396,7 +396,7 @@ One spec per feature, under [docs/specs/](specs/):
 | --- | --- |
 | [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
-| [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, button callbacks |
+| [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, `programs` module, button callbacks |
 | [04-on-device-ux](specs/04-on-device-ux.md) | Screen ownership, buttons, reserved `default`/`browser` programs |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
