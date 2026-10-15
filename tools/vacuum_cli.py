@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Host side BLE client for the Eggplan Vacuum pump controller.
+"""Host side serial controller for the Eggplan Vacuum pump.
 
 Usage:
-    python tools/vacuum_cli.py scan
+    python tools/vacuum_cli.py --list
     python tools/vacuum_cli.py info
     python tools/vacuum_cli.py status
     python tools/vacuum_cli.py set target 40
@@ -11,164 +11,114 @@ Usage:
     python tools/vacuum_cli.py watch
     python tools/vacuum_cli.py stop
 
-The protocol is documented in docs/ble-protocol.md. The device is a BLE peripheral: it
-never initiates, every state it has is either a command it was given or something it had
-to do for safety, and every command produces exactly one reply line.
+The protocol is documented in docs/serial-protocol.md. The device is a serial peripheral:
+every command produces exactly one reply line, lines starting with '[' are diagnostics
+rather than replies, and a readout is polled rather than pushed.
 """
 
 from __future__ import annotations
 
 import argparse
-import asyncio
 import sys
 import time
 
 try:
-    from bleak import BleakClient, BleakScanner
+    import serial
+    from serial.tools import list_ports
 except ImportError:  # pragma: no cover - dependency hint only
-    sys.exit("bleak is required: python -m pip install -r tools/requirements.txt")
+    sys.exit("pyserial is required: python -m pip install -r tools/requirements.txt")
 
-SERVICE_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f00"
-CMD_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f01"
-RSP_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f02"
-STATE_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f03"
-INFO_UUID = "8ea7a000-9a3b-4a5e-8c1d-4b1c9d0e6f04"
-
-DEVICE_NAME_PREFIX = "EggplanVac"
-CHUNK_MARKER = 0x01
-END_MARKER = 0x02
+BAUD = 115200
+DEFAULT_TIMEOUT = 5.0
 
 
-class VacuumClient:
-    """One command channel, one reply channel, one telemetry channel."""
+class Controller:
+    """One command channel: write a line, read the reply line."""
 
-    def __init__(self, address: str, verbose: bool = False) -> None:
-        self.address = address
-        self.verbose = verbose
-        self._client = BleakClient(address, timeout=20.0)
-        self._queue: asyncio.Queue[str] = asyncio.Queue()
-        self._state_queue: asyncio.Queue[str] | None = None
-        self._buffers: dict[str, bytearray] = {}
+    def __init__(self, port: str, baud: int = BAUD, echo: bool = False) -> None:
+        self.port = port
+        self.echo = echo
+        self._serial = serial.Serial(port, baud, timeout=0.2)
+        time.sleep(0.1)  # let the port settle before the first command
 
-    async def __aenter__(self) -> "VacuumClient":
-        await self._client.connect()
-        await self._client.start_notify(RSP_UUID, self._on_reply)
+    def __enter__(self) -> "Controller":
         return self
 
-    async def __aexit__(self, *exc_info) -> None:
-        if self._client.is_connected:
-            for uuid in (RSP_UUID, STATE_UUID):
-                try:
-                    await self._client.stop_notify(uuid)
-                except Exception:
-                    pass
-            await self._client.disconnect()
+    def __exit__(self, *exc_info) -> None:
+        self._serial.close()
 
-    # --- notifications ----------------------------------------------------
+    def send(self, line: str) -> None:
+        if self.echo:
+            print(f"-> {line}", file=sys.stderr)
+        self._serial.write((line.strip() + "\n").encode("ascii", "replace"))
+        self._serial.flush()
 
-    def _reassemble(self, key: str, data: bytearray) -> str | None:
-        """Undo the device's chunking, or return a whole line."""
-        if not data:
-            return None
-        if data[0] == CHUNK_MARKER:
-            if len(data) < 2:
-                return None
-            buffer = self._buffers.setdefault(key, bytearray())
-            if data[1] == 0:
-                buffer.clear()
-            buffer.extend(data[2:])
-            return None
-        if data[0] == END_MARKER:
-            buffer = self._buffers.pop(key, bytearray())
-            return buffer.decode("utf-8", "replace")
-        return bytes(data).decode("utf-8", "replace")
-
-    def _on_reply(self, _characteristic, data: bytearray) -> None:
-        text = self._reassemble("rsp", data)
-        if text is not None:
-            if self.verbose:
-                print(f"<- {text}", file=sys.stderr)
-            self._queue.put_nowait(text)
-
-    def _on_state(self, _characteristic, data: bytearray) -> None:
-        text = self._reassemble("state", data)
-        if text is not None and self._state_queue is not None:
-            self._state_queue.put_nowait(text)
-
-    # --- commands ---------------------------------------------------------
-
-    async def command(self, line: str, timeout: float = 15.0) -> str:
-        """Send one command line and return its single reply line."""
-        while not self._queue.empty():
-            self._queue.get_nowait()
-        await self._client.write_gatt_char(
-            CMD_UUID, (line.strip() + "\n").encode(), response=False
-        )
-        return await asyncio.wait_for(self._queue.get(), timeout)
-
-    async def read_info(self) -> str:
-        raw = await self._client.read_gatt_char(INFO_UUID)
-        return bytes(raw).decode("utf-8", "replace")
-
-    async def watch(self, period_ms: int | None, seconds: float | None) -> None:
-        self._state_queue = asyncio.Queue()
-        await self._client.start_notify(STATE_UUID, self._on_state)
-        if period_ms is not None:
-            reply = await self.command(f"set period {period_ms}")
-            if reply.startswith("err"):
-                raise SystemExit(reply)
-        print("streaming state, Ctrl+C to stop", file=sys.stderr)
-
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + seconds if seconds else None
-        while deadline is None or loop.time() < deadline:
-            timeout = 1.0 if deadline is None else max(0.1, deadline - loop.time())
-            try:
-                line = await asyncio.wait_for(self._state_queue.get(), timeout)
-            except asyncio.TimeoutError:
-                if deadline is not None:
-                    break
+    def read_reply(self, timeout: float = DEFAULT_TIMEOUT) -> str:
+        """The next line that is a reply rather than a diagnostic record."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            raw = self._serial.readline()
+            text = raw.decode("utf-8", "replace").strip()
+            if not text:
                 continue
-            print(f"{time.strftime('%H:%M:%S')} {line}")
+            if text[0] == "[":
+                print(text, file=sys.stderr)
+                continue
+            if self.echo:
+                print(f"<- {text}", file=sys.stderr)
+            return text
+        raise TimeoutError(f"no reply from {self.port}")
+
+    def command(self, line: str, timeout: float = DEFAULT_TIMEOUT) -> str:
+        self.send(line)
+        return self.read_reply(timeout)
 
 
-async def find_device(address: str | None, name: str | None) -> str:
-    if address:
-        return address
-    print("scanning for an EggplanVac device (10 s)...", file=sys.stderr)
-    devices = await BleakScanner.discover(timeout=10.0)
-    wanted = name or DEVICE_NAME_PREFIX
-    for device in devices:
-        if device.name and device.name.startswith(wanted):
-            print(f"found {device.name} at {device.address}", file=sys.stderr)
-            return device.address
-    known = ", ".join(sorted(d.name for d in devices if d.name)) or "none"
-    raise SystemExit(f"no EggplanVac device found. Visible devices: {known}")
+def find_port(requested: str | None) -> str:
+    if requested:
+        return requested
+    ports = list(list_ports.comports())
+    if not ports:
+        raise SystemExit("no serial ports found; pass --port")
+    # Prefer a USB device: the ESP32-C3 native USB shows up as one, and a machine usually
+    # has a few unrelated COM ports.
+    usb = [p for p in ports if p.device and "USB" in (p.description or "").upper()]
+    if len(usb) == 1:
+        print(f"using {usb[0].device} ({usb[0].description})", file=sys.stderr)
+        return usb[0].device
+    if len(ports) == 1:
+        print(f"using {ports[0].device} ({ports[0].description})", file=sys.stderr)
+        return ports[0].device
+    listing = "\n".join(f"  {p.device}  {p.description or ''}" for p in ports)
+    raise SystemExit(f"several ports, pass --port:\n{listing}")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--address", help="BLE address, skips scanning")
-    parser.add_argument("--name", help="advertised name prefix to look for")
-    parser.add_argument("-v", "--verbose", action="store_true", help="log raw replies")
+    parser.add_argument("--port", help="serial port, e.g. COM5 or /dev/ttyACM0")
+    parser.add_argument("--baud", type=int, default=BAUD, help=f"baud rate (default {BAUD})")
+    parser.add_argument("--list", action="store_true", help="list serial ports and exit")
+    parser.add_argument("--echo", action="store_true", help="log commands and replies")
 
-    sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("scan", help="list nearby BLE devices")
-    sub.add_parser("info", help="read the info characteristic")
-    sub.add_parser("status", help="live status")
-    sub.add_parser("start", help="close the valve and pull to the target")
-    sub.add_parser("stop", help="stop the pump and vent the chamber")
-    sub.add_parser("reset", help="clear the latched fault and vent")
-    sub.add_parser("reboot", help="restart the device, then boot safe")
-    sub.add_parser("help", help="the device's own command list")
-    sub.add_parser("ambient", help="capture the ambient reference now")
+    sub = parser.add_subparsers(dest="command")
+    for name, help_text in (
+        ("info", "device identity, including the protocol version"),
+        ("status", "live status"),
+        ("start", "close the valve and pull to the target"),
+        ("stop", "stop the pump and vent the chamber"),
+        ("reset", "clear the latched fault and vent"),
+        ("reboot", "restart the device, then boot safe"),
+        ("help", "the device's own command list"),
+        ("ambient", "capture the current reading as the ambient reference"),
+    ):
+        sub.add_parser(name, help=help_text)
 
     setter = sub.add_parser("set", help="change one setting")
-    setter.add_argument("field", choices=("target", "timer", "ambient", "period"))
-    setter.add_argument("value", help="kPa, seconds, ms, or off")
+    setter.add_argument("field", choices=("target", "timer", "ambient", "log"))
+    setter.add_argument("value", help="kPa, seconds, on|off")
 
-    watch = sub.add_parser("watch", help="stream state notifications")
-    watch.add_argument("--period", type=int, help="telemetry period in ms")
+    watch = sub.add_parser("watch", help="poll status and print it")
+    watch.add_argument("--period", type=float, default=0.25, help="seconds between polls")
     watch.add_argument("--seconds", type=float, default=None, help="stop after this long")
 
     raw = sub.add_parser("raw", help="send a command line verbatim")
@@ -176,22 +126,36 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def run(args: argparse.Namespace) -> int:
-    if args.command == "scan":
-        for device in await BleakScanner.discover(timeout=5.0):
-            print(f"{device.address}  {device.name or ''}")
+def watch(controller: Controller, period: float, seconds: float | None) -> int:
+    print(f"polling every {period:.2f}s, Ctrl+C to stop", file=sys.stderr)
+    deadline = time.monotonic() + seconds if seconds else None
+    try:
+        while deadline is None or time.monotonic() < deadline:
+            started = time.monotonic()
+            print(f"{time.strftime('%H:%M:%S')} {controller.command('status')}")
+            remaining = period - (time.monotonic() - started)
+            if remaining > 0:
+                time.sleep(remaining)
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+
+    if args.list:
+        for port in list_ports.comports():
+            print(f"{port.device}  {port.description or ''}")
         return 0
 
-    address = await find_device(args.address, args.name)
-    async with VacuumClient(address, args.verbose) as client:
+    if not args.command:
+        build_parser().print_help()
+        return 2
+
+    with Controller(find_port(args.port), args.baud, args.echo) as controller:
         if args.command == "watch":
-            await client.watch(args.period, args.seconds)
-            return 0
-        if args.command == "info":
-            # The characteristic and the `info` command carry the same payload; reading
-            # the characteristic is what a client does on connect.
-            print(await client.read_info())
-            return 0
+            return watch(controller, args.period, args.seconds)
 
         if args.command == "set":
             line = f"set {args.field} {args.value}"
@@ -200,17 +164,9 @@ async def run(args: argparse.Namespace) -> int:
         else:
             line = args.command
 
-        reply = await client.command(line)
+        reply = controller.command(line)
         print(reply)
     return 0 if reply.startswith("ok") else 1
-
-
-def main() -> int:
-    args = build_parser().parse_args()
-    try:
-        return asyncio.run(run(args))
-    except KeyboardInterrupt:
-        return 130
 
 
 if __name__ == "__main__":

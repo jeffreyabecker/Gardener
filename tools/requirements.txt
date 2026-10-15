@@ -1,1 +1,1 @@
-bleak>=0.22
+pyserial>=3.5

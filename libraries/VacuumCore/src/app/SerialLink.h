@@ -13,9 +13,9 @@ class Pump;
 class VacuumControl;
 
 // The serial interface to the controller: the bytes, the command grammar and the payload
-// text, in one place because they are three faces of one protocol. On a wire the byte half
-// is available/read/write, so splitting it from the grammar the way a radio transport
-// needed to would buy nothing.
+// text, in one place because they are three faces of one protocol. On a wire the byte half is
+// available/read/write — three calls — so splitting it from the grammar the way a transport
+// with tasks, callbacks and MTU negotiation needed to would buy nothing.
 //
 // Everything runs on the main loop: lines are assembled here and dispatched inline, and
 // replies go straight back out. There is no second task, no queue, and no framing above the

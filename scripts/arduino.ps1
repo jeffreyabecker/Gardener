@@ -8,7 +8,6 @@
     -Task upload   compile and upload, auto-detecting the serial port
     -Task monitor  open the serial monitor at 115200 baud
     -Task libs     install the third party libraries the firmware needs
-    -Task link     junction the project library into the arduino sketchbook
     -Task clean    remove the build output
 
 .EXAMPLE
@@ -16,7 +15,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('build', 'upload', 'monitor', 'libs', 'link', 'clean')]
+    [ValidateSet('build', 'upload', 'monitor', 'libs', 'clean')]
     [string]$Task = 'build',
 
     [string]$Port = '',
@@ -75,21 +74,6 @@ switch ($Task) {
         foreach ($lib in $thirdPartyLibs) {
             Write-Host "installing $lib" -ForegroundColor Cyan
             Invoke-ArduinoCli @('lib', 'install', $lib)
-        }
-    }
-
-    'link' {
-        $sketchbook = (& arduino-cli config get directories.user).Trim().Trim('"')
-        if (-not (Test-Path $sketchbook)) { New-Item -ItemType Directory -Force -Path $sketchbook | Out-Null }
-        $target = Join-Path $sketchbook 'libraries\VacuumCore'
-        $source = Join-Path $projectLibs 'VacuumCore'
-        if (Test-Path $target) {
-            Write-Host "already linked: $target" -ForegroundColor Yellow
-        }
-        else {
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
-            New-Item -ItemType Junction -Path $target -Target $source | Out-Null
-            Write-Host "linked $target -> $source" -ForegroundColor Green
         }
     }
 
