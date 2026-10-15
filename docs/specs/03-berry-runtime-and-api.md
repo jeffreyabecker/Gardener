@@ -90,25 +90,15 @@ class ProgramApi {
   ProgramApi(VacuumSystem& system, Buttons& buttons,
              ProgramParams::Context& params);
 
-  // --- plant (reads from local snapshot copy, writes are commands) ---
-  void pump(float percent);          // 0..100
-  void pumpStop();
-  float duty() const;
-  void target(float kpa);
-  void targetOff();
-  float target() const;
-  bool targetActive() const;
+  // --- plant (commands are enqueued; the one read is from the local snapshot) ---
+  void setTarget(float kpa);
+  void clearTarget();
   bool start();                      // false when snapshot says not ready
   void stop();                       // stop + vent
-  const char* state() const;         // runStateName()
-
-  // --- pressure ---
-  float kpa() const;
-  float vacuumKpa() const;
-  float vacuumPercent() const;
-  float ambientKpa() const;
-  void setAmbientKpa(float kpa);
+  void resetFault();
+  bool setAmbient(float kpa);        // false when out of range
   void captureAmbient();
+  PlantState state() const;          // the whole plant readout
 
   // --- input ---
   bool buttonDown(int index) const;        // 0=up 1=down 2=ok 3=back
@@ -162,13 +152,12 @@ class ProgramApi {
 
 Rules:
 
-- Reads (`kpa()`, `state()`, `duty()`, `hostPresent()`, `param()`, `stateGet()`) come from
-  the VM task's local snapshot copy plus the effective param set captured at start. They
-  never block.
-- Writes (`pump`, `target`, `start`, `stop`, `setAmbientKpa`) enqueue a `Command` to the
-  plant and return immediately. `start()` returns the local prediction from the snapshot
-  and may disagree with the plant's authoritative decision; programs that care poll
-  `state()`.
+- `state()` (and `hostPresent()`, `param()`, `stateGet()`) reads the VM task's local
+  snapshot copy plus the effective param set captured at start. It never blocks.
+- Writes (`setTarget`, `clearTarget`, `start`, `stop`, `resetFault`, `setAmbient`,
+  `captureAmbient`) enqueue a `Command` to the plant and return immediately. `start()`
+  returns the local prediction from the snapshot and may disagree with the plant's
+  authoritative decision; programs that care poll `state()`.
 - `delay()` and `buttonWait()` yield: they call `serviceHook()` (which services the
   snapshot copy) and check `stopRequested()` every ~2 ms.
 - `buttonWait` requires input ownership (next section).
@@ -192,22 +181,14 @@ Three modules, registered once per VM:
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
-| `vacuum.pump(pct)` | `ProgramApi::pump` | clamps 0..100 |
-| `vacuum.pump_stop()` | `pumpStop` | |
-| `vacuum.duty()` | `duty` | percent |
-| `vacuum.target(kpa)` | `target` | |
-| `vacuum.target_off()` | `targetOff` | |
-| `vacuum.target()` | `target` | current target |
-| `vacuum.target_active()` | `targetActive` | bool |
+| `vacuum.target(kpa)` | `setTarget` | |
+| `vacuum.target_off()` | `clearTarget` | |
 | `vacuum.start()` | `start` | bool (local prediction) |
 | `vacuum.stop()` | `stop` | stop + vent |
-| `vacuum.state()` | `state` | `"IDLE"…"FAULT"` |
-| `vacuum.kpa()` | `kpa` | absolute, filtered |
-| `vacuum.vacuum_kpa()` | `vacuumKpa` | deficit |
-| `vacuum.vacuum_percent()` | `vacuumPercent` | 0..100 |
-| `vacuum.ambient_kpa()` | `ambientKpa` | |
-| `vacuum.set_ambient_kpa(kpa)` | `setAmbientKpa` | |
+| `vacuum.reset()` | `resetFault` | clears latched fault, then vents |
+| `vacuum.set_ambient(kpa)` | `setAmbient` | false when out of range |
 | `vacuum.capture_ambient()` | `captureAmbient` | |
+| `vacuum.state()` | `state` | plant readout as a Berry map |
 | `vacuum.button_down(i)` | `buttonDown` | claims input |
 | `vacuum.button_wait(i, ms)` | `buttonWait` | 0/1/2/3; claims input |
 | `vacuum.input(on)` | — | explicit ownership |
@@ -222,6 +203,10 @@ Three modules, registered once per VM:
 | `program.param(name)` | `param` | typed manifest value |
 | `program.state_set(k, v)` | `stateSet` | float or string |
 | `program.state_get(k)` | `stateGet` | |
+
+`vacuum.state()` returns a Berry map with keys `kpa`, `vac`, `pct`, `ambient`, `target`,
+`target_active`, `duty`, `floor`, `state`, `sensor_ok`, `reading_valid`, `faulted`,
+`fault`.
 
 The `screen` module:
 
@@ -262,6 +247,8 @@ shapes the same way.
 ## 8. Acceptance criteria
 
 - `hold` and `pulse` example programs run on core 1; `status` keeps answering on core 0.
+- `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map within
+  one plant tick.
 - A program that calls `vacuum.delay(10)` in a loop can be stopped by Back click within
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.

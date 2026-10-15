@@ -54,7 +54,7 @@ All cross-task state is one of these; there is no other shared mutable state.
 ```cpp
 enum class CommandKind : uint8_t {
   Draw, Flush,                 // validated locally by serial; fire-and-forget
-  SetTarget, ClearTarget, Start, Stop, Vent, ResetFault,
+  SetTarget, ClearTarget, Start, Stop, ResetFault,
   SetAmbient, CaptureAmbient,
   RunProgram, StopProgram,
   ListPrograms, CatProgram, RmProgram, SetProgramParams,

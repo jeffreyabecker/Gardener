@@ -403,8 +403,8 @@ additively:
   `program.state_set("label", 42.5)` / `program.state_get("label")`. These keys are
   appended to the `status` payload (`s0=label s0v=42.5 …`) and available to the program's
   own screen, so programs publish their own telemetry without any C++ change.
-- The whole snapshot is exposed read-only to Berry as typed accessors (`vacuum.kpa()`,
-  `vacuum.state()`, `vacuum.duty()`, …) served from the VM task's local copy.
+- The whole snapshot is exposed read-only to Berry as `vacuum.state()`, a Berry map of the
+  plant readout, served from the VM task's local copy.
 
 ## 10. Exposing the Display to programs
 

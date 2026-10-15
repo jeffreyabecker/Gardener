@@ -33,7 +33,13 @@ struct ProgramStatePair {
 };
 
 struct SystemSnapshot {
-  // ... existing pressure/pump/run/battery/device fields unchanged ...
+  PlantState plant;               // the whole plant readout (simplified VacuumSystem)
+
+  bool batteryPresent = false;
+  bool batteryLow = false;
+  float batteryVolts = 0.0f;
+  uint8_t batteryPercent = 0;
+  uint32_t uptimeMs = 0;
 
   ProgramStatus program;
   uint8_t programCount;
