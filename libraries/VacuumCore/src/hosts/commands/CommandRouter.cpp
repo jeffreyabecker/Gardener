@@ -252,7 +252,6 @@ void CommandRouter::handleLine(char* line, Print& out, const SystemSnapshot& sna
   if (same(command, "reset")) {
     pump_.resetFault();
     control_.clearFault();
-    sensor_.clearErrors();
     reply(out, "reset");
     return;
   }

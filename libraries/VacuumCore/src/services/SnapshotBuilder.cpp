@@ -10,8 +10,7 @@
 namespace eggplan {
 
 SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
-                            const VacuumControl& control, const Battery& battery,
-                            const DeviceInfo& device) {
+                            const VacuumControl& control, const Battery& battery) {
   SystemSnapshot snapshot;
 
   snapshot.kpa = sensor.kpa();
@@ -22,11 +21,8 @@ SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
   snapshot.readingValid = sensor.readingValid();
 
   snapshot.duty = pump.dutyPercent();
-  snapshot.rpm = pump.rpm();
-  snapshot.tachEnabled = pump.tachEnabled();
   snapshot.pumpTripped = pump.tripped();
   snapshot.faultCode = pump.faultCode();
-  snapshot.faultText = pump.faultText();
 
   snapshot.state = control.state();
   snapshot.targetActive = control.targetActive();
@@ -40,7 +36,6 @@ SystemSnapshot buildSnapshot(const Pump& pump, const PressureSensor& sensor,
   snapshot.batteryVolts = battery.volts();
   snapshot.batteryPercent = battery.percent();
 
-  snapshot.device = &device;
   snapshot.uptimeMs = millis();
 
   return snapshot;

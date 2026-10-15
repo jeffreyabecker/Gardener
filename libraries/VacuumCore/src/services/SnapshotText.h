@@ -19,7 +19,7 @@ namespace snapshottext {
 //  batt=78 sensor=1 fault=none up=123456"
 size_t statusBody(const SystemSnapshot& snapshot, char* out, size_t size);
 
-// "proto=3 fw=0.2.0 chip=ESP32-C3 heap=298412 tach=0 batt_v=3.94 batt_pct=78 log=on"
+// "proto=3 fw=0.2.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on"
 size_t infoBody(const SystemSnapshot& snapshot, const LinkSettings& settings, char* out,
                 size_t size);
 

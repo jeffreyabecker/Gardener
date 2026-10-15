@@ -12,13 +12,12 @@ constexpr float kFilterAlpha = 0.3f;
 
 bool PressureSensor::begin(TwoWire& wire) {
   ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
-  present_ = sensor_.begin(config_.address, &wire);
+  present_ = sensor_.begin(pins::MPRLS_I2C_ADDR, &wire);
   if (!present_) return false;
   delay(15);  // first conversion after power up
   float kpa = 0.0f;
   if (readNow(kpa)) {
     filteredKpa_ = kpa;
-    lastKpa_ = kpa;
     valid_ = true;
   }
   return true;
@@ -26,19 +25,14 @@ bool PressureSensor::begin(TwoWire& wire) {
 
 bool PressureSensor::readNow(float& outKpa) {
   float kpa = sensor_.readPressure() * 0.1f;  // the library reports hPa
-  if (isnan(kpa) || kpa <= config_.minKpa || kpa > config_.maxKpa) {
-    errorCount_++;
-    return false;
-  }
+  if (isnan(kpa) || kpa <= pins::MPRLS_MIN_KPA || kpa > pins::MPRLS_MAX_KPA) return false;
   outKpa = kpa;
-  lastKpa_ = kpa;
-  lastSampleMs_ = millis();
   return true;
 }
 
 void PressureSensor::update(uint32_t nowMs) {
   if (!present_) return;
-  if (nowMs - lastPollMs_ < config_.pollMs) return;
+  if (nowMs - lastPollMs_ < pins::MPRLS_POLL_MS) return;
   lastPollMs_ = nowMs;
 
   float kpa = 0.0f;
@@ -82,7 +76,7 @@ float PressureSensor::vacuumPercent() const {
 }
 
 bool PressureSensor::setAmbientKpa(float kpa) {
-  if (kpa < 10.0f || kpa > config_.maxKpa) return false;
+  if (kpa < 10.0f || kpa > pins::MPRLS_MAX_KPA) return false;
   ambientKpa_ = kpa;
   return true;
 }

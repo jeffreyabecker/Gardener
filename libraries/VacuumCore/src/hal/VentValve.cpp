@@ -3,8 +3,7 @@
 namespace eggplan {
 
 void VentValve::begin() {
-  if (config_.pin < 0) return;
-  pinMode(config_.pin, OUTPUT);
+  pinMode(pins::VENT_VALVE, OUTPUT);
   // Start released: a normally open valve needs no drive to be safe.
   open_ = true;
   write(false);
@@ -23,9 +22,7 @@ void VentValve::close() {
 }
 
 void VentValve::write(bool energise) {
-  if (config_.pin < 0) return;
-  bool level = config_.activeHigh ? energise : !energise;
-  digitalWrite(config_.pin, level ? HIGH : LOW);
+  digitalWrite(pins::VENT_VALVE, energise ? HIGH : LOW);
 }
 
 }  // namespace eggplan

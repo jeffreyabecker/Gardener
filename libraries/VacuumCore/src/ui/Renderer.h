@@ -26,7 +26,6 @@ class Renderer {
   void render(const SystemSnapshot& snapshot);
 
   int16_t width() const;
-  int16_t height() const;
   int16_t textWidth(const char* text, uint8_t size = 1) const;
 
   // Helpers for ui/pages/*

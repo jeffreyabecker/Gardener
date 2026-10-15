@@ -26,8 +26,6 @@ bool Renderer::begin() {
 
 int16_t Renderer::width() const { return display_.width(); }
 
-int16_t Renderer::height() const { return display_.height(); }
-
 void Renderer::render(const SystemSnapshot& snapshot) {
   if (!display_.present()) return;
   display_.clear();

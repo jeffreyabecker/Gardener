@@ -13,57 +13,15 @@ namespace {
 // plain UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
 
-const char* boolToken(bool value) { return value ? "1" : "0"; }
-
 }  // namespace
 
 App::App()
-    : pump_(pumpConfig()),
-      vent_(ventConfig()),
-      battery_(batteryConfig()),
-      display_(Wire, pins::OLED_I2C_ADDR, pins::OLED_WIDTH, pins::OLED_HEIGHT),
-      control_(pump_, sensor_, vent_, pidConfig()),
+    : display_(Wire),
+      control_(pump_, sensor_, vent_),
       link_(),
       renderer_(display_),
       router_(control_, pump_, sensor_, link_),
       serial_(router_, Serial, serialAttached, link_, snapshot_) {}
-
-PumpConfig App::pumpConfig() {
-  PumpConfig config;
-  config.pwmPin = pins::PUMP_PWM;
-  config.tachPin = pins::TACH_ENABLED ? pins::PUMP_TACH : -1;
-  config.tachPulsesPerRev = pins::TACH_PULSES_PER_REV;
-  config.pwmFreqHz = pins::PUMP_PWM_FREQ_HZ;
-  config.pwmResolution = pins::PUMP_PWM_RESOLUTION;
-  return config;
-}
-
-VentValveConfig App::ventConfig() {
-  VentValveConfig config;
-  config.pin = pins::VENT_VALVE;
-  config.activeHigh = true;
-  return config;
-}
-
-BatteryConfig App::batteryConfig() {
-  BatteryConfig config;
-  config.adcPin = pins::BATTERY_ADC;
-  config.dividerRatio = pins::BATTERY_DIVIDER_RATIO;
-  config.emptyVolts = cfg::BATTERY_EMPTY_VOLTS;
-  config.fullVolts = cfg::BATTERY_FULL_VOLTS;
-  config.calibration = cfg::BATTERY_CALIBRATION;
-  config.lowPercent = cfg::BATTERY_LOW_PERCENT;
-  return config;
-}
-
-PidConfig App::pidConfig() {
-  PidConfig config;
-  config.kp = cfg::PID_KP;
-  config.ki = cfg::PID_KI;
-  config.kd = cfg::PID_KD;
-  config.integralLimit = cfg::PID_INTEGRAL_LIMIT;
-  return config;
-}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
@@ -83,7 +41,6 @@ bool App::begin() {
   bool batteryOk = battery_.begin();
   control_.begin();
   renderer_.begin();
-  device_ = readDeviceInfo();
 
   if (sensorOk) sensor_.captureAmbient();
 
@@ -106,7 +63,7 @@ bool App::begin() {
 }
 
 void App::refreshSnapshot() {
-  snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_, device_);
+  snapshot_ = buildSnapshot(pump_, sensor_, control_, battery_);
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state

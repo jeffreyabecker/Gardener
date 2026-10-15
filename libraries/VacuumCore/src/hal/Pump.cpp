@@ -10,21 +10,20 @@ constexpr uint32_t kMaxStepMs = 250;
 }
 
 bool Pump::begin() {
-  if (config_.pwmPin < 0) return false;
-  pinMode(config_.pwmPin, OUTPUT);
-  digitalWrite(config_.pwmPin, LOW);
-  if (!ledcAttach(config_.pwmPin, config_.pwmFreqHz, config_.pwmResolution)) return false;
+  pinMode(pins::PUMP_PWM, OUTPUT);
+  digitalWrite(pins::PUMP_PWM, LOW);
+  if (!ledcAttach(pins::PUMP_PWM, pins::PUMP_PWM_FREQ_HZ, pins::PUMP_PWM_RESOLUTION)) {
+    return false;
+  }
   write(0.0f);
-  tach_.begin(config_.tachPin, config_.tachPulsesPerRev);
   return true;
 }
 
 void Pump::write(float percent) {
-  if (config_.pwmPin < 0) return;
-  const uint32_t maxDuty = (1u << config_.pwmResolution) - 1u;
-  float limited = clampf(percent, 0.0f, config_.maxDutyPercent);
+  const uint32_t maxDuty = (1u << pins::PUMP_PWM_RESOLUTION) - 1u;
+  float limited = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
-  ledcWrite(config_.pwmPin, duty);
+  ledcWrite(pins::PUMP_PWM, duty);
 }
 
 void Pump::setDuty(float percent) {
@@ -32,28 +31,21 @@ void Pump::setDuty(float percent) {
     target_ = 0.0f;
     return;
   }
-  target_ = clampf(percent, 0.0f, config_.maxDutyPercent);
+  target_ = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
 }
 
-void Pump::emergencyStop(const char* code, const char* text) {
+void Pump::emergencyStop(const char* code) {
   target_ = 0.0f;
   duty_ = 0.0f;
   write(0.0f);
   tripped_ = true;
   faultCode_ = code ? code : "unknown";
-  faultText_ = text ? text : "unspecified";
   running_ = false;
 }
 
 void Pump::resetFault() {
   tripped_ = false;
   faultCode_ = "";
-  faultText_ = "";
-}
-
-uint32_t Pump::runTimeMs() const {
-  if (!running_) return 0;
-  return millis() - runStartMs_;
 }
 
 void Pump::update(uint32_t nowMs) {
@@ -73,7 +65,7 @@ void Pump::update(uint32_t nowMs) {
 
   // Slew rate limited approach to the requested duty.
   if (duty_ != target_) {
-    float maxStep = config_.rampPercentPerSec * ((float)dt / 1000.0f);
+    float maxStep = cfg::PUMP_RAMP_PERCENT_PER_SEC * ((float)dt / 1000.0f);
     if (maxStep < 0.5f) maxStep = 0.5f;
     duty_ += clampf(target_ - duty_, -maxStep, maxStep);
     if (fabsf(duty_ - target_) < 0.05f) duty_ = target_;
@@ -84,12 +76,9 @@ void Pump::update(uint32_t nowMs) {
   running_ = duty_ >= 0.5f;
   if (running_ && !wasRunning) runStartMs_ = nowMs;
 
-  if (running_ && (nowMs - runStartMs_) > config_.maxRunMs) {
-    emergencyStop("max_run", "max run time exceeded");
-    return;
+  if (running_ && (nowMs - runStartMs_) > cfg::PUMP_MAX_RUN_MS) {
+    emergencyStop("max_run");
   }
-
-  tach_.update(nowMs);
 }
 
 }  // namespace eggplan

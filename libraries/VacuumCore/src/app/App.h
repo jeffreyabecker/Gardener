@@ -4,7 +4,6 @@
 
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
-#include "hal/Device.h"
 #include "hal/Display.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
@@ -30,10 +29,6 @@ class App {
   void update();
 
  private:
-  static PumpConfig pumpConfig();
-  static PidConfig pidConfig();
-  static VentValveConfig ventConfig();
-  static BatteryConfig batteryConfig();
   void refreshSnapshot();
   void logRunChanges(uint32_t nowMs);
 
@@ -45,7 +40,6 @@ class App {
   Battery battery_;
   Display display_;
   VacuumControl control_;
-  DeviceInfo device_;
   SystemSnapshot snapshot_;
   LinkSettings link_;
   Renderer renderer_;

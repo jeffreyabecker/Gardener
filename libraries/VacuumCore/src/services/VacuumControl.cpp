@@ -35,12 +35,12 @@ void VacuumControl::setTarget(float kpa) {
   if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   targetActive_ = true;
-  pid_.reset();
+  pidReset();
 }
 
 void VacuumControl::clearTarget() {
   targetActive_ = false;
-  pid_.reset();
+  pidReset();
   output_ = 0.0f;
   remainingSeconds_ = 0;
   // A run without a target is not a run, so clearing one releases the chamber.
@@ -68,7 +68,7 @@ bool VacuumControl::startRun() {
 
   // Close before pumping, so the pump never pulls against an open port.
   vent_.close();
-  pid_.reset();
+  pidReset();
   output_ = 0.0f;
   remainingSeconds_ = durationSeconds_;
   lastControlMs_ = millis();
@@ -92,29 +92,33 @@ void VacuumControl::clearFault() {
   if (state_ == RunState::Fault) beginVent();
 }
 
-bool VacuumControl::consumeCompleted() {
-  bool completed = completed_;
-  completed_ = false;
-  return completed;
-}
-
 void VacuumControl::beginVent() {
   pump_.stop();
   vent_.open();
-  pid_.reset();
+  pidReset();
   output_ = 0.0f;
   ventStartMs_ = millis();
   setState(RunState::Venting);
 }
 
-void VacuumControl::fault(const char* code, const char* text) {
-  pump_.emergencyStop(code, text);
+void VacuumControl::fault(const char* code) {
+  pump_.emergencyStop(code);
   vent_.open();  // release the coil: the safe direction
-  pid_.reset();
+  pidReset();
   output_ = 0.0f;
   remainingSeconds_ = 0;
   faultLatched_ = true;
   setState(RunState::Fault);
+}
+
+// error is measured - target, so positive means "still needs vacuum"; the derivative term
+// uses the measurement slew rather than the error slope, which keeps a setpoint change
+// from kicking the output.
+float VacuumControl::pidUpdate(float dt, float error, float measurementSlew) {
+  if (dt <= 0.0f) return cfg::PID_KP * error + pidIntegral_;
+  pidIntegral_ = clampf(pidIntegral_ + cfg::PID_KI * error * dt, -cfg::PID_INTEGRAL_LIMIT,
+                        cfg::PID_INTEGRAL_LIMIT);
+  return cfg::PID_KP * error + pidIntegral_ - cfg::PID_KD * measurementSlew;
 }
 
 float VacuumControl::step(uint32_t nowMs) {
@@ -126,11 +130,10 @@ float VacuumControl::step(uint32_t nowMs) {
 
   float measured = sensor_.kpa();
   float error = measured - targetKpa_;  // positive means "still needs vacuum"
-  lastError_ = error;
 
   if (error < -cfg::CONTROL_DEADBAND_KPA) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
-    pid_.reset();
+    pidReset();
     output_ = 0.0f;
     pump_.stop();
     lastMeasured_ = measured;
@@ -146,7 +149,7 @@ float VacuumControl::step(uint32_t nowMs) {
     slew = (measured - lastMeasured_) / ((float)windowMs / 1000.0f);
   }
 
-  output_ = clampf(pid_.update(dt, controlError, slew), 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
+  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
   pump_.setDuty(output_);
 
   lastMeasured_ = measured;
@@ -157,7 +160,7 @@ float VacuumControl::step(uint32_t nowMs) {
 void VacuumControl::update(uint32_t nowMs) {
   // A latched pump fault is terminal until the controller resets it.
   if (pump_.tripped()) {
-    if (state_ != RunState::Fault) fault(pump_.faultCode(), pump_.faultText());
+    if (state_ != RunState::Fault) fault(pump_.faultCode());
     return;
   }
 
@@ -169,7 +172,7 @@ void VacuumControl::update(uint32_t nowMs) {
     case RunState::Pulling:
     case RunState::Holding: {
       if (!sensor_.present() || !sensor_.readingValid()) {
-        fault("sensor", "pressure sensor unavailable");
+        fault("sensor");
         return;
       }
 
@@ -192,7 +195,6 @@ void VacuumControl::update(uint32_t nowMs) {
         uint32_t leftMs = countdownEndMs_ > nowMs ? countdownEndMs_ - nowMs : 0;
         remainingSeconds_ = (leftMs + 999) / 1000;
         if (leftMs == 0) {
-          completed_ = true;
           beginVent();
         }
       }

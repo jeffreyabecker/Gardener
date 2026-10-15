@@ -27,12 +27,6 @@ inline const char* runStateName(RunState state) {
   }
 }
 
-struct DeviceInfo {
-  char chip[16] = {0};
-  char sdk[24] = {0};
-  uint32_t freeHeap = 0;
-};
-
 // Written by the command grammar, read by the transport and by the payload renderer: the
 // one interface setting a controller can change. Plain data, so the transport never holds
 // a pointer into the grammar that answers it.
@@ -50,11 +44,8 @@ struct SystemSnapshot {
   bool readingValid = false;
   // pump
   float duty = 0.0f;
-  float rpm = 0.0f;
-  bool tachEnabled = false;
   bool pumpTripped = false;
   const char* faultCode = "";
-  const char* faultText = "";
   // run
   RunState state = RunState::Idle;
   bool targetActive = false;
@@ -68,7 +59,6 @@ struct SystemSnapshot {
   float batteryVolts = 0.0f;
   uint8_t batteryPercent = 0;
   // device
-  const DeviceInfo* device = nullptr;
   uint32_t uptimeMs = 0;
 };
 

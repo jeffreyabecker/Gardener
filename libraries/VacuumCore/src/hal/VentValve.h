@@ -3,12 +3,9 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-namespace eggplan {
+#include "hal/Pins.h"
 
-struct VentValveConfig {
-  int pin = -1;
-  bool activeHigh = true;  // GPIO level that energises the coil
-};
+namespace eggplan {
 
 // Normally open solenoid valve on the chamber.
 //
@@ -18,22 +15,19 @@ struct VentValveConfig {
 // crash, a watchdog reset, a brownout or a cut wire all release the coil and vent the
 // chamber whether or not the firmware noticed.
 //
-// Vent *timing* belongs to the run model, not here: this class only drives a pin.
+// Vent *timing* belongs to the run model, not here: this class only drives a pin, and the
+// drive is active high because the MOSFET gate is.
 class VentValve {
  public:
-  explicit VentValve(const VentValveConfig& config) : config_(config) {}
-
   void begin();
   void open();
   void close();
 
-  bool isOpen() const { return open_; }
   bool energised() const { return !open_; }
 
  private:
   void write(bool energise);
 
-  VentValveConfig config_;
   bool open_ = true;
 };
 

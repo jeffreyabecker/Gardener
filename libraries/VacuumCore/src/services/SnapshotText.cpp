@@ -1,6 +1,6 @@
 #include "services/SnapshotText.h"
 
-#include <string.h>
+#include <Arduino.h>
 
 #include "core/Config.h"
 #include "core/Text.h"
@@ -10,10 +10,20 @@ namespace snapshottext {
 namespace {
 
 // Every value is a space free token, so '-' can mean "not applicable" without any
-// quoting or escaping, and the payload is built by hand rather than by printf.
+// quoting or escaping, and the payload is built by hand rather than by printf. The token
+// writer is also where the "no spaces in a value" invariant is enforced, because a
+// library string is the one value the firmware does not control.
 void addToken(text::Buf& buf, const char* key, const char* value) {
   if (buf.length() > 0) buf << ' ';
-  buf << key << '=' << (value && value[0] ? value : "-");
+  buf << key << '=';
+  if (!value || !value[0]) {
+    buf << '-';
+    return;
+  }
+  for (const char* cursor = value; *cursor != '\0'; cursor++) {
+    char c = *cursor;
+    buf << (c == ' ' || c == '\t' || c == '\n' || c == '\r' ? '_' : c);
+  }
 }
 
 void addFloatToken(text::Buf& buf, const char* key, float value, uint8_t decimals) {
@@ -76,9 +86,9 @@ size_t infoBody(const SystemSnapshot& snapshot, const LinkSettings& settings, ch
 
   addToken(buf, "proto", cfg::PROTOCOL_VERSION);
   addToken(buf, "fw", cfg::FIRMWARE_VERSION);
-  addToken(buf, "chip", snapshot.device ? snapshot.device->chip : "-");
-  addU32Token(buf, "heap", snapshot.device ? snapshot.device->freeHeap : 0u);
-  addToken(buf, "tach", snapshot.tachEnabled ? "1" : "0");
+  // Read where they are formatted: two facts from the chip, not a module's state.
+  addToken(buf, "chip", ESP.getChipModel());
+  addU32Token(buf, "heap", (uint32_t)ESP.getFreeHeap());
   if (snapshot.batteryPresent) {
     addFloatToken(buf, "batt_v", snapshot.batteryVolts, 2);
     addU32Token(buf, "batt_pct", snapshot.batteryPercent);

@@ -4,7 +4,7 @@ namespace eggplan {
 
 bool Display::begin() {
   // The STEMMA QT breakout has no reset line, so do not let the library poke one.
-  present_ = gfx_.begin(address_, false);
+  present_ = gfx_.begin(pins::OLED_I2C_ADDR, false);
   if (!present_) return false;
   clear();
   flush();
@@ -36,14 +36,6 @@ void Display::rect(int16_t x, int16_t y, int16_t w, int16_t h, bool filled) {
   } else {
     gfx_.drawRect(x, y, w, h, SH110X_WHITE);
   }
-}
-
-void Display::hline(int16_t x, int16_t y, int16_t w) {
-  gfx_.drawFastHLine(x, y, w, SH110X_WHITE);
-}
-
-void Display::line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
-  gfx_.drawLine(x0, y0, x1, y1, SH110X_WHITE);
 }
 
 }  // namespace eggplan
