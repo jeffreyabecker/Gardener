@@ -123,9 +123,9 @@ drops queued records when it is off).
 ### 3.5 Button event queue
 
 `QueueHandle_t` of `ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`,
-depth 16. `plantTask` pushes after each `Buttons::update()`. When no program owns input,
-`plantTask` consumes events itself for the UI; when a program owns input, `plantTask`
-forwards them to the VM's queue (spec 03 §4).
+depth 16. `plantTask` pushes after each `Buttons::update()`. While a program is running,
+the plant forwards Up/Down/OK events to the VM's queue (spec 03 §5); Back stays with the
+device. With no program running, the plant consumes events itself for the UI.
 
 ### 3.6 Request/response (serial, single-flight)
 
@@ -194,9 +194,9 @@ loop:
 
 - Core separation is the primary protection: a CPU-bound Berry loop on core 1 cannot
   delay the plant on core 0 at all.
-- The VM increments a `volatile uint32_t` heartbeat on every yield (`vacuum.delay`,
-  `vacuum.button_wait`, and the Berry execution-limit hook). `plantTask` samples it each
-  tick; if unchanged for > 2000 ms it sets the VM's stop-request flag. A VM that still
+- The VM increments a `volatile uint32_t` heartbeat on every yield (`vacuum.delay` and the
+  Berry execution-limit hook). `plantTask` samples it each tick; if unchanged for
+  > 2000 ms it sets the VM's stop-request flag. A VM that still
   does not yield after a further 1000 ms has its task restarted by `App` (delete + create
   with a "vm restarted" log record).
 

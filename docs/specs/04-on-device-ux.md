@@ -78,8 +78,8 @@ Back is always device-owned. The two break-out gestures (spec 05 §4) are global
 | OK long-press | program input if owned; else no-op | `EditSelected` | `CommitRun` (persist + run) |
 
 `Back` in BROWSER and PARAMS also homes to `default`; the long-press there re-initializes
-the browser. Programs may claim Up/Down/OK via input ownership (spec 03 §5) but can never
-claim Back.
+the browser. Programs receive Up/Down/OK through `buttons.on` callbacks (spec 03 §5);
+Back is always device-owned.
 
 ## 4. Rendering
 
@@ -176,6 +176,6 @@ BROWSER/PARAMS show their state inline (cursor, value) rather than as an overlay
 - From boot (default running), Back long → browser → Up/Down → OK runs a program in
   three button presses.
 - Back click from any running program vents and lands on `default` within one plant tick.
-- A program that claims Up/Down/OK still responds to Back click and Back long.
+- A program with `buttons.on` callbacks still responds to Back click and Back long.
 - Cursor wraps, fast-scrolls, and the window keeps the cursor visible at the list ends.
 - Host attach swaps to host-drawn panel and back without losing local state.

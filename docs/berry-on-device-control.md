@@ -199,10 +199,10 @@ Everything else is context-dependent:
 
 | Gesture | RUN (program executing) | BROWSER | PARAMS |
 | --- | --- | --- | --- |
-| Up / Down click | to the program if it owns input | move cursor (wraps) | step value by one step |
-| Up / Down repeat | to the program if it owns input | fast scroll | coarse step (×10) |
-| OK click | to the program if it owns input | **run the selected program** | next parameter (wraps) |
-| OK long-press | to the program if it owns input | **edit the selected program's params** | **persist params and run** |
+| Up / Down click | program button callbacks | move cursor (wraps) | step value by one step |
+| Up / Down repeat | program button callbacks | fast scroll | coarse step (×10) |
+| OK click | program button callbacks | **run the selected program** | next parameter (wraps) |
+| OK long-press | program button callbacks | **edit the selected program's params** | **persist params and run** |
 
 Notes:
 
@@ -210,8 +210,8 @@ Notes:
   used (or default) parameters.
 - **Editing is deliberately clunkier.** Reaching PARAMS is an extra long-press, each
   parameter is one screen, and changes only take effect when you run.
-- **Back can never be taken by a program.** A program that claims input gets Up, Down and
-  OK; Back always escapes, so no program can trap the user.
+- **Back can never be taken by a program.** A program with `buttons.on` callbacks gets
+  Up, Down and OK; Back always escapes, so no program can trap the user.
 
 ### 7.2 Break-out paths
 
@@ -308,12 +308,12 @@ cycle 3/10
   gestures still work regardless of what is on screen, and the hints appear on BROWSER and
   PARAMS.
 
-### 7.6 Input ownership
+### 7.6 Button callbacks
 
-A program may claim button input by calling `vacuum.button_wait(...)` / `vacuum.button_down(...)`.
-While claimed, Up, Down and OK are delivered to it as events; Back remains device-owned.
-A program that never claims input leaves Up/Down/OK as no-ops, and its screen is purely a
-readout. The seeded `default` is exactly such a readout.
+A program receives buttons by registering callbacks on the `buttons` module
+(`buttons.on(index, fn)`, spec 03 §5). While it runs, Up, Down and OK events are delivered
+to those callbacks; Back remains device-owned. A program that registers no callbacks is
+purely a readout — the seeded `default` is exactly such a readout.
 
 ### 7.7 Host-attached vs local
 
@@ -505,7 +505,7 @@ One spec per feature, under [docs/specs/](specs/):
 | --- | --- |
 | [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
-| [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, input ownership |
+| [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, button callbacks |
 | [04-on-device-ux](specs/04-on-device-ux.md) | Buttons, browser, params editor, run screen, break-out |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |

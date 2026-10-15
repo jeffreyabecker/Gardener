@@ -50,7 +50,7 @@ class BerryRuntime : public ProgramRuntime {
              const String& effectiveParams, String& error) override;
   void stop(const char* reason) override;
   bool running() const override;
-  void update() override;             // if stopRequested: be_stop / unwind
+  void update() override;             // drain button events → callbacks; on stop: unwind
   ...
  private:
   bvm* vm_ = nullptr;
@@ -75,8 +75,8 @@ Start flow:
 Stop flow:
 
 1. `stop()` sets `stopRequested_ = true`.
-2. The program observes it at the next yield (`vacuum.delay`, `vacuum.button_wait`, or
-   the execution-limit hook) and unwinds; `update()` notices and finalizes.
+2. The program observes it at the next yield (`vacuum.delay` or the execution-limit hook)
+   and unwinds; `update()` notices and finalizes.
 3. If the heartbeat shows the program is not yielding (spec 01 §5), the plant asks `App`
    to delete and recreate `vmTask`, which abandons the VM.
 
@@ -88,8 +88,7 @@ command path, the UI, and (later) tests.
 ```cpp
 class ProgramApi {
  public:
-  ProgramApi(VacuumSystem& system, Buttons& buttons,
-             ProgramParams::Context& params);
+  ProgramApi(VacuumSystem& system, ProgramParams::Context& params);
 
   // --- plant (commands are enqueued; the one read is from the local snapshot) ---
   void setTarget(float kpa);
@@ -98,10 +97,6 @@ class ProgramApi {
   void stop();                       // stop + vent
   void resetFault();
   PlantState state() const;          // the whole plant readout
-
-  // --- input ---
-  bool buttonDown(int index) const;        // 0=up 1=down 2=ok 3=back
-  int buttonWait(int index, int timeoutMs); // 0=timeout 1=click 2=long 3=repeat
 
   // --- drawing (spec 07) ---
   void drawClear();
@@ -154,26 +149,32 @@ Rules:
   to the plant and return immediately. `start()` returns the local prediction from the
   snapshot and may disagree with the plant's authoritative decision; programs that care
   poll `state()`.
-- `delay()` and `buttonWait()` yield: they call `serviceHook()` (which services the
-  snapshot copy) and check `stopRequested()` every ~2 ms.
-- `buttonWait` requires input ownership (next section).
+- `delay()` yields: it calls `serviceHook()` (which services the snapshot copy) and checks
+  `stopRequested()` every ~2 ms.
 
-## 5. Input ownership
+## 5. Button callbacks
 
-- A program owns input from the moment it calls `buttonDown`, `buttonWait`, or an explicit
-  `vacuum.input(true)`; it can release it with `vacuum.input(false)`.
-- While owned, Up, Down and OK events flow from the plant's button queue to the VM.
-  **Back is never delivered** — it always belongs to the device (break-out, spec 04 §6).
-- If a program never owns input, Up/Down/OK are no-ops and the RUN screen is purely a
-  readout.
+Buttons are a separate Berry module, `buttons`, with a callback API. There is no polling
+and no explicit input claim: registering a callback is owning input.
+
+- `buttons.on(index, fn)` — register `fn` for events on button `index` (0=up, 1=down,
+  2=ok). `fn(kind)` receives `"click"`, `"long"`, or `"repeat"`.
+- `buttons.off(index)` — remove the callback for `index`.
+- `buttons.clear()` — remove all callbacks.
+
+While a program runs, the plant forwards Up, Down and OK events to the VM's button queue
+(spec 01 §3.5); `BerryRuntime::update()` drains it and invokes the matching callbacks.
+**Back is never delivered** — it always belongs to the device (break-out, spec 04 §6). A
+program with no registered callbacks is purely a readout and ignores the events.
 
 ## 6. Berry binding
 
-Three modules, registered once per VM:
+Four modules, registered once per VM:
 
 - `vacuum` — the machine (the table below).
 - `program` — identity and params.
 - `screen` — drawing (the `screen` table below).
+- `buttons` — button callbacks (the `buttons` table below).
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
@@ -183,9 +184,6 @@ Three modules, registered once per VM:
 | `vacuum.stop()` | `stop` | stop + vent |
 | `vacuum.reset()` | `resetFault` | clears latched fault, then vents |
 | `vacuum.state()` | `state` | plant readout as a Berry map |
-| `vacuum.button_down(i)` | `buttonDown` | claims input |
-| `vacuum.button_wait(i, ms)` | `buttonWait` | 0/1/2/3; claims input |
-| `vacuum.input(on)` | — | explicit ownership |
 | `vacuum.host_present()` | `hostPresent` | bool |
 | `vacuum.log(text)` | `log` | `[I]` record |
 | `vacuum.now_ms()` | `nowMs` | |
@@ -227,6 +225,16 @@ The `screen` module:
 The argument order matches the host `draw` ops, so a program and a host draw the same
 shapes the same way.
 
+The `buttons` module:
+
+| Berry call | Notes |
+| --- | --- |
+| `buttons.on(index, fn)` | register `fn(kind)`; kind is `"click"`, `"long"`, `"repeat"` |
+| `buttons.off(index)` | remove the callback for `index` |
+| `buttons.clear()` | remove all callbacks |
+
+`index` is 0=up, 1=down, 2=ok. Back (3) is reserved for the device and never delivered.
+
 ## 7. Error and stop semantics
 
 - A runtime error (compile failure, Berry exception) sets `lastError()`, publishes it in
@@ -241,6 +249,7 @@ shapes the same way.
 - `hold` and `pulse` example programs run on core 1; `status` keeps answering on core 0.
 - `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map within
   one plant tick.
+- `buttons.on(2, fn)` fires `fn("click")` when OK is clicked while the program runs.
 - A program that calls `vacuum.delay(10)` in a loop can be stopped by Back click within
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.
