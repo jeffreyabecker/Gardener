@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-namespace eggplan {
+namespace gardener {
 namespace {
 
 // Nothing else spells the verb list out, so a verb added to Display and not implemented here
@@ -64,4 +64,4 @@ void AdafruitDisplay::measure(const char* value, uint8_t size, int16_t& outWidth
   outHeight = (int16_t)height;
 }
 
-}  // namespace eggplan
+}  // namespace gardener

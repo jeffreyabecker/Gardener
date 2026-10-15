@@ -5,7 +5,7 @@
 
 #include "core/Math.h"
 
-namespace eggplan {
+namespace gardener {
 namespace {
 constexpr uint32_t kDerivativeWindowMs = 1000;
 }
@@ -191,4 +191,4 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastDerivativeMs_ = nowMs;
 }
 
-}  // namespace eggplan
+}  // namespace gardener

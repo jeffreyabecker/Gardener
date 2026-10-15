@@ -7,7 +7,7 @@
 // The device is a serial peripheral: every decision comes from the controller, so what
 // lives here is only what the firmware must own to be fast or safe.
 
-namespace eggplan {
+namespace gardener {
 namespace cfg {
 
 constexpr const char* FIRMWARE_VERSION = "0.5.0";
@@ -59,4 +59,4 @@ constexpr uint16_t COMMAND_LINE_MAX = 128;
 constexpr float DEFAULT_AMBIENT_KPA = 101.325f;  // one standard atmosphere
 
 }  // namespace cfg
-}  // namespace eggplan
+}  // namespace gardener

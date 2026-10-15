@@ -1,4 +1,4 @@
-# Eggplan Vacuum serial protocol
+# Gardener serial protocol
 
 Pressures are **kPa** everywhere. There is no wire version: `info` reports `fw`, and that is
 the only marker for which firmware a controller is talking to.
@@ -20,7 +20,7 @@ a run lasts.
 `CDCOnBoot=cdc` is part of the build, not a preference: it is what maps `Serial` to the
 native USB CDC. Building without it (`esp32:esp32:esp32c3` alone) sends the whole interface
 to UART0 on GPIO20/21, which is not the USB socket, and the device looks dead to a cable.
-The FQBN is pinned in `firmware/eggplan_vacuum/sketch.yaml`, `scripts/arduino.ps1` and
+The FQBN is pinned in `firmware/gardener/sketch.yaml`, `scripts/arduino.ps1` and
 `.vscode/arduino.json` for exactly that reason.
 
 ## 2. Connecting

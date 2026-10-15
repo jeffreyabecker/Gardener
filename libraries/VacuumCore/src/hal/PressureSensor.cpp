@@ -5,7 +5,7 @@
 #include "core/Config.h"
 #include "core/Math.h"
 
-namespace eggplan {
+namespace gardener {
 namespace {
 constexpr float kFilterAlpha = 0.3f;
 }
@@ -86,4 +86,4 @@ void PressureSensor::captureAmbient() {
   setAmbientKpa(filteredKpa_);
 }
 
-}  // namespace eggplan
+}  // namespace gardener

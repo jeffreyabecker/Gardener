@@ -4,7 +4,7 @@
 
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 namespace {
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
@@ -24,7 +24,7 @@ bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
   delay(200);
 
-  String boot = "eggplan-vacuum ";
+  String boot = "gardener ";
   boot += cfg::FIRMWARE_VERSION;
   boot += " booting";
   link_.info(boot.c_str());
@@ -64,7 +64,7 @@ bool App::begin() {
 // real reading, since battery_.begin() takes a sample before this point.
 void App::splash() {
   overlay_.clear();
-  overlay_.text(0, 0, "Eggplan Vacuum", 1, false);
+  overlay_.text(0, 0, "Gardener", 1, false);
   overlay_.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
   overlay_.flush();
 }
@@ -151,4 +151,4 @@ void App::update() {
   // its own two things on it: the splash, once, and the battery, on the way to every flush.
 }
 
-}  // namespace eggplan
+}  // namespace gardener

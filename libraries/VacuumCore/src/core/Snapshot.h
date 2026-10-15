@@ -8,7 +8,7 @@
 // Plain data shared between layers. The device is a serial peripheral, so this is the
 // machine's read-only view: what a controller, the display or the log can see without
 // holding a pointer into a module.
-namespace eggplan {
+namespace gardener {
 
 // What the device is doing, which is also the state a controller watches. There is no DONE:
 // after venting it is IDLE, and the controller knows when the run is over because it is the one
@@ -53,4 +53,4 @@ struct SystemSnapshot {
   uint32_t uptimeMs = 0;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

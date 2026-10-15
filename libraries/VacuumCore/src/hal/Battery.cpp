@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace eggplan {
+namespace gardener {
 namespace {
 
 // A single ADC sample on this part is noisy, and the pack does not move quickly, so one
@@ -48,4 +48,4 @@ void Battery::update(uint32_t nowMs) {
   percent_ = (uint8_t)(fraction * 100.0f + 0.5f);
 }
 
-}  // namespace eggplan
+}  // namespace gardener

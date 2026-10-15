@@ -1,4 +1,4 @@
-# Eggplan Vacuum
+# Gardener
 
 An ESP32-C3 vacuum pump controller. It pulls a chamber to a target pressure, holds it for a
 timer, then vents it — driven over a serial line by a controller at the other end.
@@ -34,7 +34,7 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 
 | Path | Purpose |
 | --- | --- |
-| [firmware/eggplan_vacuum/](./firmware/eggplan_vacuum) | The Arduino sketch (four lines) |
+| [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [scripts/check-layers.ps1](./scripts/check-layers.ps1) | Enforces the dependency rule below |
@@ -182,7 +182,7 @@ same commands are tasks (`arduino: build`, `arduino: upload`, `arduino: monitor`
 **The board option matters**: the build pins
 `esp32:esp32:esp32c3:CDCOnBoot=cdc`, which is what maps `Serial` to the native USB CDC. Build
 without it and the whole interface goes to UART0 on GPIO20/21 instead, so a USB cable sees
-nothing at all. It is pinned in `firmware/eggplan_vacuum/sketch.yaml`, `scripts/arduino.ps1`
+nothing at all. It is pinned in `firmware/gardener/sketch.yaml`, `scripts/arduino.ps1`
 and `.vscode/arduino.json`.
 
 Policy tunables live in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) and wiring in
@@ -196,7 +196,7 @@ The panel is a peripheral: the host draws it over the serial line, and the devic
 two things of its own — the boot splash, and the battery on top of every frame.
 
 ```
-  Eggplan Vacuum
+  Gardener
   fw 0.5.0                              ▐███▐ 78%      <- device: splash, then the battery
 ```
 

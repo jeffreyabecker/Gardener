@@ -5,7 +5,7 @@
 #include "core/Config.h"
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 
 // 1S Li-ion gauge on a divider into an ADC pin.
 //
@@ -32,4 +32,4 @@ class Battery {
   uint32_t lastSampleMs_ = 0;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

@@ -26,7 +26,7 @@
 // sensor, the control loop and the link, in that order. The App is also the only place that
 // reports anything: the drivers return values, and the run is logged from here.
 
-namespace eggplan {
+namespace gardener {
 
 class App {
  public:
@@ -63,4 +63,4 @@ class App {
   bool displayOk_ = false;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

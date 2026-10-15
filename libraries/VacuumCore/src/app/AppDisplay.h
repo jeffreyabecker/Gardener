@@ -5,7 +5,7 @@
 #include "core/Snapshot.h"
 #include "hal/Display.h"
 
-namespace eggplan {
+namespace gardener {
 
 // The display the app draws through: it wraps any Display, and puts the battery on top of
 // whatever was drawn there just before the frame goes to the glass.
@@ -109,4 +109,4 @@ class AppDisplay : public Display {
   const SystemSnapshot& snapshot_;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

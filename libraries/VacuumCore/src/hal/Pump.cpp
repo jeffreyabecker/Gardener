@@ -4,7 +4,7 @@
 
 #include "core/Math.h"
 
-namespace eggplan {
+namespace gardener {
 namespace {
 constexpr uint32_t kMaxStepMs = 250;
 }
@@ -72,4 +72,4 @@ void Pump::update(uint32_t nowMs) {
   }
 }
 
-}  // namespace eggplan
+}  // namespace gardener

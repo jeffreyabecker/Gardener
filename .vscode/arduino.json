@@ -1,6 +1,6 @@
 {
   "board": "esp32:esp32:esp32c3:CDCOnBoot=cdc",
-  "sketch": "firmware/eggplan_vacuum/eggplan_vacuum.ino",
+  "sketch": "firmware/gardener/gardener.ino",
   "output": "build",
   "port": "",
   "configuration": ""

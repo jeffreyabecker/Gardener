@@ -5,7 +5,7 @@
 // Board wiring: which pin is what, and the electrical characteristics of the parts.
 // Only hal/ and app/ should need this.
 
-namespace eggplan {
+namespace gardener {
 namespace pins {
 
 // --- I2C bus, shared by the OLED and the MPRLS sensor ----------------------
@@ -53,4 +53,4 @@ constexpr int BTN_OK = 3;
 constexpr int BTN_BACK = 10;
 
 }  // namespace pins
-}  // namespace eggplan
+}  // namespace gardener

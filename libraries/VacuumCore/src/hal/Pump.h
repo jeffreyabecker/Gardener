@@ -6,7 +6,7 @@
 #include "core/Config.h"
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 
 // JQB2438 DC vacuum pump driven by a PWM signal into a low side MOSFET.
 //
@@ -41,4 +41,4 @@ class Pump {
   const char* faultCode_ = "";
 };
 
-}  // namespace eggplan
+}  // namespace gardener

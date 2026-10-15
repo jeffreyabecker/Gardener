@@ -1,6 +1,6 @@
 #include "hal/VentValve.h"
 
-namespace eggplan {
+namespace gardener {
 
 void VentValve::begin() {
   pinMode(pins::VENT_VALVE, OUTPUT);
@@ -25,4 +25,4 @@ void VentValve::write(bool energise) {
   digitalWrite(pins::VENT_VALVE, energise ? HIGH : LOW);
 }
 
-}  // namespace eggplan
+}  // namespace gardener

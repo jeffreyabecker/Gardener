@@ -8,7 +8,7 @@
 #include "core/Config.h"
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 
 // Adafruit MPRLS ported pressure sensor (0..25 PSI absolute), on the I2C bus.
 //
@@ -48,4 +48,4 @@ class PressureSensor {
   uint8_t windowIndex_ = 0;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

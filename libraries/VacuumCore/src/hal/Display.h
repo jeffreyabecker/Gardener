@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-namespace eggplan {
+namespace gardener {
 
 // A monochrome panel: the surface a page draws on, with the panel itself behind it.
 //
@@ -89,4 +89,4 @@ class Display {
                           int16_t& outHeight) = 0;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

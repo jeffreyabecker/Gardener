@@ -6,7 +6,7 @@
 #include "core/Snapshot.h"
 #include "hal/Display.h"
 
-namespace eggplan {
+namespace gardener {
 
 class VacuumSystem;
 class Tokens;
@@ -98,4 +98,4 @@ class SerialLink {
   bool linkLost_ = false;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

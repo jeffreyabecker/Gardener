@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    Wrapper around arduino-cli for the Eggplan Vacuum firmware.
+    Wrapper around arduino-cli for the Gardener firmware.
 
 .DESCRIPTION
     -Task build    compile the sketch (uses the project local libraries folder)
@@ -29,7 +29,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$sketch = Join-Path $root 'firmware\eggplan_vacuum'
+$sketch = Join-Path $root 'firmware\gardener'
 $projectLibs = Join-Path $root 'libraries'
 
 $thirdPartyLibs = @(

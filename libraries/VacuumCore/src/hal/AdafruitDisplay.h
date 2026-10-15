@@ -6,7 +6,7 @@
 #include "hal/Display.h"
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 
 // The Display for this board: an Adafruit SH1106G panel, with the monochrome colours supplied
 // here so nothing outside this file has to know that 1 lights a pixel.
@@ -102,4 +102,4 @@ class AdafruitDisplay : public Display {
   Adafruit_SH1106G& panel_;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

@@ -4,7 +4,7 @@
 
 #include "app/VacuumSystem.h"
 
-namespace eggplan {
+namespace gardener {
 namespace {
 
 constexpr size_t kMaxArgs = 3;  // verb [key] [value]; the grammar has nothing else
@@ -629,4 +629,4 @@ String SerialLink::infoBody() const {
   return buf;
 }
 
-}  // namespace eggplan
+}  // namespace gardener

@@ -8,7 +8,7 @@
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
 
-namespace eggplan {
+namespace gardener {
 
 // The plant: the pressure loop, the release path and the run state, between the drivers and
 // the wire.
@@ -108,4 +108,4 @@ class VacuumSystem {
   uint32_t lastDerivativeMs_ = 0;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

@@ -5,7 +5,7 @@
 
 #include "hal/Pins.h"
 
-namespace eggplan {
+namespace gardener {
 
 // Normally open solenoid valve on the chamber.
 //
@@ -31,4 +31,4 @@ class VentValve {
   bool open_ = true;
 };
 
-}  // namespace eggplan
+}  // namespace gardener

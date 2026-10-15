@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-namespace eggplan {
+namespace gardener {
 namespace {
 
 constexpr int16_t kBatteryIconWidth = 12;
@@ -55,4 +55,4 @@ void AppDisplay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
   inner_.fillRect(x + 2, y + 2, fill, kBatteryBodyHeight - 4);
 }
 
-}  // namespace eggplan
+}  // namespace gardener
