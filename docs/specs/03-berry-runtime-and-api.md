@@ -184,10 +184,11 @@ Rules:
 
 ## 6. Berry binding
 
-Two modules, registered once per VM:
+Three modules, registered once per VM:
 
 - `vacuum` — the machine (the table below).
 - `program` — identity and params.
+- `screen` — drawing (the `screen` table below).
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
@@ -211,15 +212,6 @@ Two modules, registered once per VM:
 | `vacuum.button_wait(i, ms)` | `buttonWait` | 0/1/2/3; claims input |
 | `vacuum.input(on)` | — | explicit ownership |
 | `vacuum.host_present()` | `hostPresent` | bool |
-| `vacuum.draw_clear()` | `drawClear` | |
-| `vacuum.draw_pixel(x, y)` | `drawPixel` | |
-| `vacuum.draw_line(x0,y0,x1,y1)` | `drawLine` | |
-| `vacuum.draw_rect(x,y,w,h)` | `drawRect` | |
-| `vacuum.draw_fillrect(x,y,w,h)` | `drawFillRect` | |
-| `vacuum.draw_circle(x,y,r)` | `drawCircle` | |
-| `vacuum.draw_fillcircle(x,y,r)` | `drawFillCircle` | |
-| `vacuum.draw_text(x,y,size,inverted,str)` | `drawText` | |
-| `vacuum.flush()` | `flush` | frame boundary, battery composited |
 | `vacuum.log(text)` | `log` | `[I]` record |
 | `vacuum.fmt(v, decimals)` | `fmt` | String |
 | `vacuum.now_ms()` | `nowMs` | |
@@ -231,10 +223,32 @@ Two modules, registered once per VM:
 | `program.state_set(k, v)` | `stateSet` | float or string |
 | `program.state_get(k)` | `stateGet` | |
 
-The remaining shape ops follow the same naming (`vacuum.draw_hline`, `draw_vline`,
-`draw_roundrect`, `draw_fillroundrect`, `draw_ellipse`, `draw_fillellipse`,
-`draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`) with
-the same argument order as the host `draw` ops.
+The `screen` module:
+
+| Berry call | Native | Notes |
+| --- | --- | --- |
+| `screen.draw_clear()` | `drawClear` | |
+| `screen.draw_pixel(x, y)` | `drawPixel` | |
+| `screen.draw_line(x0,y0,x1,y1)` | `drawLine` | |
+| `screen.draw_hline(x,y,w)` | `drawHLine` | |
+| `screen.draw_vline(x,y,h)` | `drawVLine` | |
+| `screen.draw_rect(x,y,w,h)` | `drawRect` | |
+| `screen.draw_fillrect(x,y,w,h)` | `drawFillRect` | |
+| `screen.draw_roundrect(x,y,w,h,r)` | `drawRoundRect` | |
+| `screen.draw_fillroundrect(x,y,w,h,r)` | `drawFillRoundRect` | |
+| `screen.draw_circle(x,y,r)` | `drawCircle` | |
+| `screen.draw_fillcircle(x,y,r)` | `drawFillCircle` | |
+| `screen.draw_ellipse(x,y,rw,rh)` | `drawEllipse` | |
+| `screen.draw_fillellipse(x,y,rw,rh)` | `drawFillEllipse` | |
+| `screen.draw_triangle(x0,y0,x1,y1,x2,y2)` | `drawTriangle` | |
+| `screen.draw_filltriangle(x0,y0,x1,y1,x2,y2)` | `drawFillTriangle` | |
+| `screen.draw_rotatedrect(cx,cy,w,h,angle)` | `drawRotatedRect` | |
+| `screen.draw_fillrotatedrect(cx,cy,w,h,angle)` | `drawFillRotatedRect` | |
+| `screen.draw_text(x,y,size,inverted,str)` | `drawText` | |
+| `screen.flush()` | `flush` | frame boundary, battery composited |
+
+The argument order matches the host `draw` ops, so a program and a host draw the same
+shapes the same way.
 
 ## 7. Error and stop semantics
 
@@ -252,5 +266,5 @@ the same argument order as the host `draw` ops.
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.
 - `program.param("cycles")` returns the effective value (persisted over default).
-- `vacuum.draw_text(…)` output appears on the RUN screen within one plant tick of
-  `vacuum.flush()`.
+- `screen.draw_text(…)` output appears on the RUN screen within one plant tick of
+  `screen.flush()`.

@@ -290,7 +290,7 @@ A program with no declared parameters skips PARAMS: OK long-press in BROWSER sho
 
 ### 7.5 RUN screen
 
-The program draws the whole screen with the `vacuum.draw_*` verbs, then `vacuum.flush()`
+The program draws the whole screen with the `screen.draw_*` verbs, then `screen.flush()`
 pushes the frame — exactly like a host drawing over the wire:
 
 ```
@@ -410,8 +410,8 @@ additively:
 
 - Do **not** hand the `Display` instance to the VM task. It stays on the plant task.
 - Programs draw through the same **draw commands** the host uses: each
-  `vacuum.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
-  and `vacuum.flush()` becomes a `Flush` command. The plant applies them to the buffer and
+  `screen.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
+  and `screen.flush()` becomes a `Flush` command. The plant applies them to the buffer and
   pushes the frame, so host drawing and program drawing are serialized by one owner and
   can never race.
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,

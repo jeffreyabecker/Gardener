@@ -82,7 +82,7 @@ class ProgramStore {
 
 - Reserved name: `default`.
 - Seeded source is a passive readout program (no `vacuum.pump`, `vacuum.start`,
-  `vacuum.target`), drawing pressure, state, duty and battery via `vacuum.draw_text`.
+  `vacuum.target`), drawing pressure, state, duty and battery via `screen.draw_text`.
 - Seeding happens in `begin()` and after `remove("default")`. An owner's upload of a
   program named `default` overwrites the seeded source and becomes the boot behavior.
 

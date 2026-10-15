@@ -59,8 +59,8 @@ Publication rules:
 - The `Display` instance (I2C + framebuffer) stays on the plant task. It is **never**
   handed to the VM, the serial task, or a program.
 - Programs draw through the same **draw commands** the host uses: each
-  `vacuum.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
-  and `vacuum.flush()` becomes a `Flush` command. The plant applies them to the buffer in
+  `screen.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
+  and `screen.flush()` becomes a `Flush` command. The plant applies them to the buffer in
   arrival order and pushes on flush, so host drawing and program drawing are serialized by
   one owner and can never race.
 - `AppDisplay` composites the battery on every flush, so the battery (like the splash)
@@ -99,7 +99,7 @@ Both sources share one buffer and one flush path, so the frame is always one own
 
 - `status` on the wire reports the program name, running flag, host flag, and the state
   table keys while a program runs.
-- `vacuum.draw_text(…)` output reaches the glass within one plant tick of `vacuum.flush()`.
+- `screen.draw_text(…)` output reaches the glass within one plant tick of `screen.flush()`.
 - The battery cannot be erased by a program, a host, or a page.
 - Serial `draw`/`flush` and program `draw`/`flush` never race: the plant is the single
   drawer.

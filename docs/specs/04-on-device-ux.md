@@ -99,7 +99,7 @@ class Renderer {
 };
 ```
 
-The RUN screen is drawn entirely by the program with its `vacuum.draw_*` verbs; the
+The RUN screen is drawn entirely by the program with its `screen.draw_*` verbs; the
 device does not composite a header or footer there. `AppDisplay::flush()` puts the battery
 on last, so a program can never erase it. BROWSER and PARAMS are device-drawn and use the
 renderer helpers above.
