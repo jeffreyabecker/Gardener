@@ -9,7 +9,8 @@ Four active-low buttons with internal pull-ups, pins from
 [Pins.h](../../libraries/VacuumCore/src/hal/Pins.h) (UP=1, DOWN=2, OK=10, BACK=11).
 
 ```cpp
-enum class ButtonId : uint8_t { Up = 0, Down = 1, Ok = 2, Back = 3, Count = 4 };
+enum class ButtonId : uint8_t { Up = 0, Down = 1, Ok = 2, Back = 3 };
+constexpr uint8_t kButtonCount = 4;  // sizes the per-button state arrays, not a button
 enum class ButtonEventKind : uint8_t { Click, LongPress, Repeat };
 
 struct ButtonEvent {
