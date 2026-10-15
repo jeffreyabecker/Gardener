@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Adafruit_SH110X.h>
 #include <Arduino.h>
 
 #include "app/SerialLink.h"
@@ -8,7 +9,7 @@
 #include "app/VacuumControl.h"
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
-#include "hal/Display.h"
+#include "hal/Pins.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
@@ -16,6 +17,9 @@
 // Composition root. This is the only class that knows the whole graph: every other module
 // is handed exactly what it uses, by reference, at construction, and nothing includes this
 // header.
+//
+// It is also the only place that knows which display panel is fitted: the page draws through
+// Adafruit_GFX, and the panel object lives here.
 //
 // The device is a serial peripheral with no local control surface, so the loop services the
 // sensor, the control loop and the link, in that order. The App is also the only place that
@@ -40,7 +44,7 @@ class App {
   Pump pump_;
   VentValve vent_;
   Battery battery_;
-  Display display_;
+  Adafruit_SH1106G panel_;
   VacuumControl control_;
   SystemSnapshot snapshot_;
   StatusPage page_;
@@ -48,6 +52,7 @@ class App {
 
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
+  bool displayOk_ = false;
 };
 
 }  // namespace eggplan

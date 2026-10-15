@@ -15,9 +15,9 @@ bool serialAttached() { return (bool)Serial; }
 }  // namespace
 
 App::App()
-    : display_(Wire),
+    : panel_(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1),
       control_(pump_, sensor_, vent_),
-      page_(display_),
+      page_(panel_),
       link_(pump_, sensor_, control_, Serial, serialAttached, snapshot_) {}
 
 bool App::begin() {
@@ -31,19 +31,19 @@ bool App::begin() {
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
-  bool displayOk = display_.begin();
+  // The STEMMA QT breakout has no reset line, so do not let the library poke one.
+  displayOk_ = panel_.begin(pins::OLED_I2C_ADDR, false);
   bool sensorOk = sensor_.begin(Wire);
   bool pumpOk = pump_.begin();
   vent_.begin();
   bool batteryOk = battery_.begin();
   control_.begin();
-  page_.begin();
 
   if (sensorOk) sensor_.captureAmbient();
 
   // What came up, and what did not. This is the composition root's job now: the drivers
   // report as values and one place decides what is worth saying.
-  link_.info(displayOk ? "oled: online" : "oled: not found");
+  link_.info(displayOk_ ? "oled: online" : "oled: not found");
   link_.info(sensorOk ? "mprls: online" : "mprls: not found");
   link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
@@ -55,7 +55,10 @@ bool App::begin() {
   refreshSnapshot();
   link_.begin();
   lastState_ = control_.state();
-  if (displayOk) page_.render(snapshot_);
+  if (displayOk_) {
+    page_.splash();
+    panel_.display();
+  }
   return true;
 }
 
@@ -110,7 +113,10 @@ void App::update() {
 
   logRunChanges(now);
   refreshSnapshot();
-  page_.render(snapshot_);
+  if (displayOk_) {
+    page_.render(snapshot_);
+    panel_.display();
+  }
 }
 
 }  // namespace eggplan
