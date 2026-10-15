@@ -87,7 +87,8 @@ void VacuumSystem::fail(const char* code) {
 }
 
 void VacuumSystem::service(uint32_t nowMs) {
-  // A latched pump fault is terminal until the controller resets it.
+  // The pump latches its own output off after an emergency stop, and a latch the system did
+  // not ask for still has to become a fault. Today fail() is the only thing that trips it.
   if (pump_.tripped()) {
     if (!faulted_) fail(pump_.faultCode());
     return;

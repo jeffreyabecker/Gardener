@@ -24,9 +24,10 @@ constexpr float PID_INTEGRAL_LIMIT = 150.0f;
 constexpr float CONTROL_DEADBAND_KPA = 0.2f;
 
 // --- Pump limits the control loop must respect -----------------------------
+// The only protections the pump has: the controller owns when a run ends, so nothing here
+// stops one.
 constexpr float PUMP_DUTY_MAX_PERCENT = 90.0f;
 constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
-constexpr uint32_t PUMP_MAX_RUN_MS = 15UL * 60UL * 1000UL;
 // Measured capability: about 60 kPa of suction below ambient, so the reachable
 // absolute floor is ambient dependent, not a fixed number.
 constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;

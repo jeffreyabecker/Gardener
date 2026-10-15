@@ -10,9 +10,9 @@ namespace eggplan {
 
 // JQB2438 DC vacuum pump driven by a PWM signal into a low side MOSFET.
 //
-// The driver owns three pieces of policy: the duty cap, the slew rate limit (a diaphragm
-// pump dislikes a step from 0 to full) and the maximum continuous run time that protects
-// the pump when a control loop misbehaves. Wiring comes from hal/Pins.h, so a board
+// The driver owns two pieces of policy: the duty cap, and the slew rate limit (a diaphragm pump
+// dislikes a step from 0 to full). It also latches its own output off after an emergency stop,
+// which is what stops a fault being pumped through. Wiring comes from hal/Pins.h, so a board
 // variant edits the pin map and nothing else.
 class Pump {
  public:
@@ -37,8 +37,6 @@ class Pump {
   float duty_ = 0.0f;
   float target_ = 0.0f;
   uint32_t lastUpdateMs_ = 0;
-  uint32_t runStartMs_ = 0;
-  bool running_ = false;
   bool tripped_ = false;
   const char* faultCode_ = "";
 };

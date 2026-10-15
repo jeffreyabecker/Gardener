@@ -40,7 +40,6 @@ void Pump::emergencyStop(const char* code) {
   write(0.0f);
   tripped_ = true;
   faultCode_ = code ? code : "unknown";
-  running_ = false;
 }
 
 void Pump::resetFault() {
@@ -54,12 +53,12 @@ void Pump::update(uint32_t nowMs) {
   if (dt > kMaxStepMs) dt = kMaxStepMs;
   lastUpdateMs_ = nowMs;
 
+  // A latched emergency stop holds the output at zero until it is reset.
   if (tripped_) {
     if (duty_ != 0.0f) {
       duty_ = 0.0f;
       write(duty_);
     }
-    running_ = false;
     return;
   }
 
@@ -70,14 +69,6 @@ void Pump::update(uint32_t nowMs) {
     duty_ += clampf(target_ - duty_, -maxStep, maxStep);
     if (fabsf(duty_ - target_) < 0.05f) duty_ = target_;
     write(duty_);
-  }
-
-  bool wasRunning = running_;
-  running_ = duty_ >= 0.5f;
-  if (running_ && !wasRunning) runStartMs_ = nowMs;
-
-  if (running_ && (nowMs - runStartMs_) > cfg::PUMP_MAX_RUN_MS) {
-    emergencyStop("max_run");
   }
 }
 
