@@ -6,14 +6,15 @@ Usage:
     python tools/vacuum_cli.py info
     python tools/vacuum_cli.py status
     python tools/vacuum_cli.py set target 40
-    python tools/vacuum_cli.py set timer 600
     python tools/vacuum_cli.py start
+    python tools/vacuum_cli.py set hold 572
     python tools/vacuum_cli.py watch
     python tools/vacuum_cli.py stop
 
 The protocol is documented in docs/serial-protocol.md. The device is a serial peripheral:
 every command produces exactly one reply line, lines starting with '[' are diagnostics
-rather than replies, and a readout is polled rather than pushed.
+rather than replies, and a readout is polled rather than pushed. The device keeps no clock, so
+the hold's duration is this program's business: time it here and send `stop` when it is done.
 """
 
 from __future__ import annotations
@@ -102,7 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command")
     for name, help_text in (
-        ("info", "device identity, including the protocol version"),
+        ("info", "device identity, including the firmware version"),
         ("status", "live status"),
         ("start", "close the valve and pull to the target"),
         ("stop", "stop the pump and vent the chamber"),
@@ -114,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_parser(name, help=help_text)
 
     setter = sub.add_parser("set", help="change one setting")
-    setter.add_argument("field", choices=("target", "timer", "ambient", "log"))
+    setter.add_argument("field", choices=("target", "hold", "ambient", "log"))
     setter.add_argument("value", help="kPa, seconds, on|off")
 
     watch = sub.add_parser("watch", help="poll status and print it")

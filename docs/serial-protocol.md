@@ -1,10 +1,12 @@
 # Eggplan Vacuum serial protocol
 
-Version **3**. Pressures are **kPa** everywhere.
+Pressures are **kPa** everywhere. There is no wire version: `info` reports `fw`, and that is
+the only marker for which firmware a controller is talking to.
 
 The device is a serial peripheral in the strict sense: it never initiates, keeps no session,
 and every state it has is either a command it was given or something it had to do for
-safety. All control comes from the controller at the other end of the line.
+safety. All control comes from the controller at the other end of the line, including how long
+a run lasts.
 
 ## 1. The port
 
@@ -25,7 +27,7 @@ The FQBN is pinned in `firmware/eggplan_vacuum/sketch.yaml`, `scripts/arduino.ps
 
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
-2. Send `info` and check `proto=3`.
+2. Send `info` and check `fw`.
 3. Subscribe to nothing: `status` is polled (§9).
 
 **Disconnecting stops the run and vents the chamber** (§8), because a controller that goes
@@ -79,25 +81,22 @@ diagnostics entirely, so a controller that wants a strictly quiet channel can ha
 | `floor` | kPa | deepest reachable target, `ambient - 60 kPa` |
 | `duty` | % | pump duty, 1 dp |
 | `state` | — | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT` |
-| `remain` | s | hold time remaining, `-` when no timer |
-| `total` | s | configured timer, `-` when none |
 | `batt` | % | `-` when no battery is fitted |
 | `sensor` | — | `1` when the MPRLS is answering |
-| `fault` | — | `none`, `max_run`, `sensor` |
+| `fault` | — | `none`, `sensor` |
 | `up` | ms | uptime |
 
 ```text
-ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD remain=572 total=600 batt=78 sensor=1 fault=none up=123456
+ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
 ```
 
 ## 6. Info payload
 
-`proto=3 fw=0.2.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
+`fw=0.3.0 chip=ESP32-C3 heap=298412 batt_v=3.94 batt_pct=78 log=on`
 
 | Key | Notes |
 | --- | --- |
-| `proto` | wire version; **3** is this document |
-| `fw` | firmware version |
+| `fw` | firmware version, and the only version marker there is |
 | `chip` | chip model |
 | `heap` | free heap in bytes |
 | `batt_v` | pack volts, 2 dp, `-` when no pack is fitted |
@@ -109,12 +108,12 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD rema
 | Command | Reply | Notes |
 | --- | --- | --- |
 | `help` | `ok help=info\|status\|help\|start\|stop\|reset\|reboot\|ambient\|set` | the one list-valued payload |
-| `info` | `ok proto=3 …` | device identity |
+| `info` | `ok fw=0.3.0 …` | device identity |
 | `status` | `ok <status payload>` | one shot; poll it for a readout |
 | `start` | `ok started` / `err not_ready` | closes the valve, then pulls to the target |
-| `stop` | `ok stopped` | pump off, then vent |
+| `stop` | `ok stopped` | pump off, then vent. The normal way a run ends |
 | `set target <kPa\|off>` | `ok target=40.0` / `ok target=off` | the only actuator command |
-| `set timer <seconds\|off>` | `ok timer=600` / `ok timer=off` | `0` and `off` are the same thing |
+| `set hold <seconds\|off>` | `ok hold=572` / `ok hold=off` | the controller's countdown, for the panel. The device stores it and never counts it |
 | `set ambient <kPa>` | `ok ambient=101.33` | rejected when outside what the part can measure |
 | `set log <on\|off>` | `ok log=on` / `ok log=off` | diagnostics on this stream |
 | `ambient` | `ok ambient=101.33` | capture the current reading as the reference |
@@ -124,12 +123,12 @@ ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD rema
 ```text
 -> set target 40
 <- ok target=40.0
--> set timer 600
-<- ok timer=600
 -> start
 <- ok started
 -> status
-<- ok kpa=40.21 vac=61.07 pct=60.3 target=40.0 floor=41.3 duty=72.0 state=HOLD remain=592 total=600 batt=78 sensor=1 fault=none up=45000
+<- ok kpa=40.21 vac=61.07 pct=60.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
+-> set hold 592
+<- ok hold=592
 -> stop
 <- ok stopped
 ```
@@ -158,16 +157,15 @@ prose:
 
 ## 8. State model
 
-The controller owns the target, the timer and when to start and stop. The device owns what
-happens when nobody is watching.
+The controller owns the target, the duration and when to start and stop. The device owns what
+happens when nobody is watching, and nothing else.
 
 ```
-        start
-IDLE ──────────> PULL ──(target reached)──> HOLD ──(timer 0)──┐
-  ^               │        countdown starts                    │
-  │               │  stop / link loss / fault                  │
-  │               v                    v                       v
-  └──(vent complete)──────────────── VENT <─────────────────────┘
+        start                                              stop / link loss / fault
+IDLE ──────────> PULL ──(target reached)──> HOLD ───────────────────> VENT ──(complete)──> IDLE
+  ^                                              │                      │
+  │                                              │                      v
+  └──────────────────── reset ───────────────────┴─────────────────── FAULT
 ```
 
 | Event | From | To |
@@ -175,17 +173,21 @@ IDLE ──────────> PULL ──(target reached)──> HOLD ─
 | `start` | `IDLE` | closes the valve, then `PULL`; `err not_ready` while venting or faulted |
 | `stop` | `PULL`, `HOLD`, `VENT` | opens the valve, stops the pump, `VENT` then `IDLE` |
 | `set target <kPa\|off>` | anything but `FAULT` | the target changes; `off` while pulling or holding releases the chamber |
-| `set timer <seconds\|off>` | any | used when the countdown starts |
-| target reached | `PULL` | `HOLD`, and the countdown starts |
-| timer expires | `HOLD` | `VENT` then `IDLE` |
+| target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | link loss, sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
 | `reset` | `FAULT` | `VENT` then `IDLE` |
 | `reboot` | any | safe boot, i.e. `IDLE` with the valve open |
 
 What a controller has to know:
 
-* `remain` is **hold time remaining** and starts when the target is first reached, so it sits
-  at `total` for the whole pull.
+* **The hold's duration is yours.** The device has no timer, no timeout and no maximum run
+  time, so a run continues until you send `stop`. `HOLD` is the cue, not a countdown: it means
+  the device's own deadband has decided the target is reached, which is the moment to start
+  timing and the one thing you cannot work out for yourself, because the deadband is the
+  device's loop.
+* **`set hold <seconds>` is a display value.** It is what the panel's countdown shows, it is
+  cleared by `start`, and the device never acts on it. Nothing happens when it reaches zero —
+  you send `stop`.
 * **Faults latch.** Only `reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
@@ -193,13 +195,19 @@ What a controller has to know:
   energising the coil to close it. A crash, a brownout or a cut wire therefore vents the
   chamber whether or not the firmware noticed.
 * A normally open solenoid draws current for the whole hold, which is why a long hold is the
-  dominant battery cost rather than the pump.
+  dominant battery cost rather than the pump. With no timer in the device, an unattended run
+  holds until something stops it.
+* Link loss releases the chamber, but it only detects a controller that leaves. One that hangs
+  with the port open holds the run open.
+* Duty is capped and slew limited, and those are the pump's only protections. A target below
+  `floor` pins the duty at the cap and nothing stops it, so keep targets above `floor` if you
+  want a ceiling.
 * The display is a readout with no controls, so anything that can only be *seen* — a fault, a
   vent timeout, a low battery — is waiting for a controller to notice it.
 
 ## 9. Rates
 
-Nothing is pushed: a controller that wants a readout polls `status`. Each poll is a ~140 byte
+Nothing is pushed: a controller that wants a readout polls `status`. Each poll is a ~120 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout
 than the device could produce on its own. Each reply describes the machine as of the last
 control tick (50 ms), so polling faster than that repeats itself.

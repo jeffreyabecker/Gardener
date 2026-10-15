@@ -119,9 +119,10 @@ ESP32 GPIO6 ──┬── 100R ──┬── GATE
 ```
 
 Use a **logic level** MOSFET: the C3 drives the gate with 3.3 V. Give the pump its own supply
-and tie the grounds together. `PUMP_DUTY_MAX_PERCENT` (90 %), `PUMP_RAMP_PERCENT_PER_SEC` and
-`PUMP_MAX_RUN_MS` (15 minutes) in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) are
-the firmware's hard limits.
+and tie the grounds together. `PUMP_DUTY_MAX_PERCENT` (90 %) and `PUMP_RAMP_PERCENT_PER_SEC` in
+[core/Config.h](./libraries/VacuumCore/src/core/Config.h) are the firmware's hard limits, and
+they are the pump's only protections: the device never ends a run of its own accord, so whoever
+is driving it decides when the pump stops.
 
 ### Vent valve
 
@@ -209,10 +210,10 @@ can do is a command on the serial line:
 | battery | fill by percent, blinks below 20 % |
 | pressure | current absolute pressure, size 2 |
 | target / duty | `tgt --` when no target is set |
-| countdown | hold time remaining, `--:--` when no timer is running, inverted in the last minute |
+| countdown | the controller's hold countdown as `mm:ss`, `--:--` when it has not sent one or no run is in progress, inverted in the last minute |
 | duty bar | across the bottom |
 
-A fault replaces the target row with an inverted banner (`FAULT max_run`), and a missing
+A fault replaces the target row with an inverted banner (`FAULT sensor`), and a missing
 sensor banners `NO SENSOR`. Boot is safe: pump off, valve open, `IDLE`, and nothing is
 remembered across a reset.
 
@@ -224,18 +225,22 @@ replies:
 
 ```
 -> info
-<- ok proto=3 fw=0.2.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
+<- ok fw=0.3.0 chip=ESP32-C3 heap=279384 log=on batt_v=3.94 batt_pct=78
 -> set target 40
 <- ok target=40.0
--> set timer 600
-<- ok timer=600
 -> start
 <- ok started
 -> status
-<- ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD remain=572 total=600 batt=78 sensor=1 fault=none up=123456
+<- ok kpa=41.23 vac=60.10 pct=59.3 target=40.0 floor=41.3 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+-> set hold 572
+<- ok hold=572
 -> stop
 <- ok stopped
 ```
+
+That last pair is the whole run model in miniature: the device reaches the target, reports
+`HOLD`, and waits. The controller times the hold and sends `stop` when it is done — the device
+has no duration of its own and will hold until told.
 
 The full grammar, key tables, error codes and state model are in
 [docs/serial-protocol.md](./docs/serial-protocol.md). Quick start with the bundled client:
@@ -245,7 +250,6 @@ python -m pip install -r tools/requirements.txt
 python tools/vacuum_cli.py --list
 python tools/vacuum_cli.py info
 python tools/vacuum_cli.py set target 40
-python tools/vacuum_cli.py set timer 600
 python tools/vacuum_cli.py start
 python tools/vacuum_cli.py watch          # polls status, Ctrl+C to stop
 python tools/vacuum_cli.py stop
@@ -264,27 +268,32 @@ the pressure, the duty, whether the release has finished, whether the pump has f
 decides nothing, and it never asks who is holding the run.
 
 [VacuumControl](./libraries/VacuumCore/src/app/VacuumControl.cpp) is the run on top of it: the
-state machine in the diagram below, the hold timer and the fault latch. Every "should" lives
-here — when to start, what a stop means, whether a fault is permanent — so the one distinction
-an operator cares about, `PULL` against `HOLD`, exists only here. Clearing the target releases
-the chamber, because a run without a target is not a run.
+state machine in the diagram below and the fault latch. Every "should" lives here — when to
+start, what a stop means, whether a fault is permanent — and the run's *duration* lives at the
+other end of the cable, with the controller. Clearing the target releases the chamber, because a
+run without a target is not a run.
 
 ```
-        start
-IDLE ──────────> PULL ──(target reached)──> HOLD ──(timer 0)──┐
-  ^               │        countdown starts                    │
-  │               │  stop / link loss / fault                  │
-  │               v                    v                       v
-  └──(vent complete)──────────────── VENT <─────────────────────┘
+        start                                              stop / link loss / fault
+IDLE ──────────> PULL ──(target reached)──> HOLD ───────────────────> VENT ──(complete)──> IDLE
+  ^                                              │                      │
+  │                                              │                      v
+  └──────────────────── reset ───────────────────┴─────────────────── FAULT
 ```
 
-* The countdown is **hold time remaining** and starts when the target is first reached, so it
-  sits at its full value while pulling. No timer means pull down and stay there.
+* The controller owns how long a hold lasts. The device goes to `HOLD` when its own deadband
+  says the target has been reached, and that is all `HOLD` now means: it is the cue for the
+  controller to start timing, and the run continues until the controller sends `stop`.
+* Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
+  run time, so an unattended hold holds until someone stops it.
+* The countdown on the panel is the controller's number, pushed down with `set hold`. The
+  device draws it and never counts it.
 * The coil is energised through `PULL` and `HOLD`, and released in `IDLE` and `VENT`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
 * Faults latch. Only `reset` clears one; the device never retries on its own.
-* Disconnecting the controller stops the run and vents.
+* Disconnecting the controller stops the run and vents. That is the one automatic ending left,
+  and it does not help with a controller that hangs with the port open.
 
 Gains and the deadband live in `core/Config.h` (`PID_KP`, `PID_KI`, `PID_KD`,
 `CONTROL_DEADBAND_KPA`) and are starting points, not tuned values — tune them for your chamber
@@ -294,10 +303,13 @@ Protections, all of which act without consulting the controller:
 
 * duty is hard capped at `PUMP_DUTY_MAX_PERCENT`
 * a slew rate limit avoids step changes into the diaphragm pump
-* `PUMP_MAX_RUN_MS` trips an emergency stop on a runaway control loop
 * if the pressure sensor stops answering mid-run, the pump is cut and the state latches to
   `FAULT` (clear with `reset`)
 * targets below `ambient - PUMP_MAX_SUCTION_KPA` only log a warning and pin the duty
+
+Those four are the whole list. A target the pump cannot reach pins the duty at the cap and
+nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
+`status` and stay above it.
 
 ## Safety
 
@@ -321,10 +333,10 @@ valve to the same output.
 * [x] ESP32-C3 project skeleton, build and upload flow
 * [x] Layered core/hal/app layout with an enforced dependency rule
 * [x] MPRLS driver with median + EMA filtering and ambient reference handling
-* [x] PWM pump driver with ramp, duty cap and run time protection
+* [x] PWM pump driver with ramp and duty cap
 * [x] PID vacuum controller with a reachable-floor check
-* [x] Run model: target, hold timer, vent valve and link-loss release
+* [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
-* [x] Single page SH1106 readout
-* [x] Line protocol v3 over USB CDC, with polled status and diagnostics on the same stream
+* [x] Single page SH1106 readout, including a controller-fed countdown
+* [x] Line protocol over USB CDC, with polled status and diagnostics on the same stream
 * [x] Host side Python client
