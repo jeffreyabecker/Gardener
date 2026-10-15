@@ -6,9 +6,10 @@ dependency graph that no longer match what the firmware does:
 
 * **42 files** under `src/`, of which the instrument itself is about a dozen: a pump, a
   pressure sensor, a valve, a battery gauge, a display, a control loop, a command
-  grammar and a transport.
-* **six layers** for those files, one of which (`services/`) will hold a single file once
-  the snapshot mechanism goes, and another (`ui/`) holds one screen.
+  grammar and a transport. Under this plan that becomes **30**.
+* **six layers** for those files, including a `services/` that ends up holding two files, a
+  `ui/` that holds one screen, and a `hosts/` that holds a transport and a grammar which
+  are two halves of one protocol.
 * **an audit found more than a dozen dead surfaces**, including a whole driver (the
   tachometer), a whole file (five unit conversions with zero consumers), four unused
   display primitives, and accessors whose only reader is the snapshot mechanism itself.
@@ -29,33 +30,37 @@ occurrence of the symbol is its own declaration and definition.
 | `hal/Tachometer.{h,cpp}` | `TACH_ENABLED = false`, no wire fitted, ISR + RPM window + smoothing for a signal nobody reads | 50 lines, 2 files |
 | `pins::PUMP_TACH`, `TACH_ENABLED`, `TACH_PULSES_PER_REV`, `PumpConfig::tach*`, `Pump::rpm()`, `Pump::tachEnabled()`, `tach=` in `info`, `rpm` in the snapshot | all of it exists to serve the above | ~20 more lines |
 | `hal/Device.{h,cpp}` | `readDeviceInfo()` returns 3 fields; `sdk` is **never emitted**, so 2 live fields | 2 files, 40 lines |
-| `snapshot.device` | a `const DeviceInfo*` in a struct that is copied every loop, to reach 2 strings | — |
+| `snapshot.device` | a `const DeviceInfo*` inside otherwise plain data, to reach 2 strings the formatter can read for itself | — |
 | `Display::hline()`, `Display::line()`, `Display::height()`, `Renderer::height()` | 0 consumers; `height()` on both dies together | ~10 lines |
 | `Pump::targetPercent()`, `Pump::running()`, `Pump::runTimeMs()`, `Pump::faultText()`, `Pump::resetFault()`'s unused `bool` return | 0 consumers (`faultText` only fed the snapshot; the log can use the parameter) | ~14 lines |
 | `PressureSensor::healthy()`, `kpaRaw()`, `errorCount()`, `lastSampleMs()`, `clearErrors()`, and a public `readNow()` nothing outside the class calls | 0 consumers; the counter is incremented and never read | ~12 lines |
 | `VacuumControl::consumeCompleted()`, `completed_` | its own comment says "nothing consumes it today" | ~8 lines |
 | `pins::BUTTON_DEBOUNCE_MS`, `BUTTON_LONGPRESS_MS`, `BUTTON_REPEAT_MS` | nothing reads them since `hal/Buttons` was deleted | 3 lines |
 | 4 `*Config` structs and 4 `App::*Config()` helpers | every caller passes the defaults; the only real variation is the pin number, which `hal/Pins.h` already owns | ~60 lines |
-| `core/Snapshot.h`, `services/SnapshotBuilder.{h,cpp}`, `services/SnapshotText.{h,cpp}` | a 40-field struct re-traversed and copied **every loop iteration**, for two consumers | 6 files |
+| `services/SnapshotText.{h,cpp}` | the wire payload encoder living in `services/`, so a service encodes a transport's format. The two payloads it builds belong with the protocol that defines them | 2 files |
+| `buildSnapshot()` returning `SystemSnapshot` **by value** | a struct copy back into `App::snapshot_` every loop iteration, for nothing | 1 signature |
 | `ui/Renderer.{h,cpp}`, `ui/pages/Pages.h`, `ui/pages/StatusPage.cpp` | three levels of indirection for one screen | 4 files |
 | `String argv[8]` + `splitArgs()` with an unused `rest` out-parameter | the grammar needs verb, key, value; 8 heap-allocated `String`s per command line to produce 2 | ~25 lines |
 | 6-layer rule with a sub-folder ordering map | 90 lines of PowerShell to police 42 files | — |
 
+`Snapshot.h` and `SnapshotBuilder` are **not** on this list: they stay, and §3 argues why.
+
 ## 2. What the radical version looks like
 
 ```
-core/     Config, Math, Format, Log(+cpp), Pid(+cpp)          shared foundations
+core/     Config, Math, Format, Log(+cpp), Snapshot            shared foundations
 hal/      Pins, Display, PressureSensor, Pump, VentValve, Battery, + .cpp each
-app/      App, VacuumControl, CommandRouter, SerialService, StatusPage
+app/      App, VacuumControl, SnapshotBuilder, SerialLink, StatusPage
 ```
 
 * `core/` and `hal/` keep their meaning: **`hal/` is the base hardware abstraction, and
   that is the delineation that has to survive.** What goes is the middle: `services/`,
   `hosts/` and `ui/` are all "the instrument", and they stop being three folders with a
   graph between them.
-* The page draws, the controller controls, the router parses, the transport moves bytes,
-  and `App` wires them: five collaborators in one folder beats sixteen files spread over
-  four layers that each may include a subset of the others.
+* `app/` holds the instrument's five collaborators: the control loop, the snapshot
+  builder, the serial interface (bytes, grammar and payload text — §4), the status page
+  and `App` that wires them. Sixteen files spread over four layers that each may include a
+  subset of the others become five units in one folder.
 * The layer rule becomes three lines of intent, checked by a script a third of the size:
 
 ```
@@ -69,47 +74,40 @@ not "pure logic", because `Log` and `Format` already use `Arduino.h` and `String
 README claims purity today and it was already only half true — the honest version is
 "`hal/` never sees `app/`", which is the rule that actually protects the design.
 
-## 3. What replaces the snapshot
+## 3. The snapshot stays; its encoder moves
 
-`SystemSnapshot` exists so `ui/` and `hosts/` can read the machine without depending on
-the modules that produce it. It is a real seam, and it costs:
+Q7 as amended: `core/Snapshot.h` and the builder that fills it are **kept**. The snapshot
+is the seam that keeps whoever reads the machine out of the modules that produce it, and
+the collapse in §2 does not remove the need for it — the page and the serial interface
+both want the machine as plain data at one instant, rather than each holding four driver
+references to read six numbers.
 
-* a struct with ~40 fields, kept in sync by hand in three places (producer, wire encoder,
-  page)
-* `buildSnapshot()` returning ~100 bytes **by value**, copied into `App::snapshot_` on
-  every trip round the main loop
-* a full traversal of pump, sensor, control, battery and device per iteration to rebuild
-  what the readers could have read
-* four fields nobody reads (`rpm`, `tachEnabled`, `faultText`, `bleConnected` before it
-  went) because keeping the struct complete was easier than auditing it
+Two things about it change, and they are the real findings:
 
-In the collapsed tree both consumers live in `app/`, beside the modules, so the seam
-protects nothing:
+1. **The encoder moves out of `services/`.** `SnapshotText` rendered a transport's payload
+   format from a service folder: a transport concern wearing a service's clothes. The
+   `key=value` payload text folds into the serial interface (§4), so the format lives with
+   the protocol that defines it, and adding a key becomes one edit in one file.
+2. **No by-value copy.** `buildSnapshot()` gains an out-parameter and fills
+   `App::snapshot_` in place, instead of returning ~100 bytes for `App` to copy.
 
-* **`CommandRouter`** already holds `VacuumControl&`, `Pump&`, `PressureSensor&` and
-  `TelemetrySettings&`; `status`/`info` become `snprintf` over those references plus
-  `Battery&` and two `ESP.*` calls. This also fixes a layering smell: the **wire payload
-  encoder** stops living in `services/` (where it encoded a transport's format) and lives
-  with the grammar that produces it.
-* **`StatusPage`** takes `const` references to the pump, sensor, control and battery and
-  draws. It gained nothing from a copied snapshot it had to be told how to fill.
+It also gains an argument: `snapshot.device` goes with `hal/Device` (Q10), so the two
+`ESP.*` facts the `info` payload needs are read where they are formatted.
 
-The consistency the snapshot bought — every reader seeing one instant — is worth naming
-and dismissing: the sensor itself re-samples every 20 ms and is median+EMA filtered, and
-the display and a reply are microseconds apart. Values that move slowly do not need a
-frozen sample.
+`DECISION:` keep the mechanism, fix the two things that were wrong with it. The snapshot
+is still rebuilt once per loop before anything reads it, so the page and a reply describe
+the same instant — the consistency the *delete it* variant would have given up for no
+gain.
 
-`DECISION:` delete the mechanism. Adding one value to the status payload becomes one edit
-in one function, instead of a field, a producer line and two readers.
-
-## 4. The transport (from revision 1, unchanged)
+## 4. The transport and the grammar
 
 | Concern | Decision |
 | --- | --- |
 | Port | **USB CDC**, reached through a `Stream&` seam; FQBN gains `CDCOnBoot=cdc`, pinned in `sketch.yaml`, `scripts/arduino.ps1` and `.vscode/arduino.json` |
 | Why not UART0 | `esp32:esp32:esp32c3` ships `CDCOnBoot=Disabled`, so `Serial` is `Serial0` = UART0 on GPIO20/21, which is **not** the USB-C socket: today's console output never reaches a USB cable. A UART also cannot detect a host (`HardwareSerial::operator bool()` is `uartIsDriverInstalled()`, true forever), while `HWCDC`'s is real presence (`isCDC_Connected()`) |
 | Framing | none above the line: newline terminated, `Stream&`, bounded line buffer, `\r` or `\n` terminates, `COMMAND_LINE_MAX = 128` |
-| Replies | the router writes finished lines to a `Print&`; `ReplyQueue` and the whole producer/consumer dance go |
+| Replies | the serial interface writes finished lines to its `Stream&`; `ReplyQueue` and the whole producer/consumer dance go |
+| Grammar and text | one file pair, `app/SerialLink.{h,cpp}`, holds line assembly, the command grammar **and** the `key=value` payload text. On a wire the transport half is `available()`/`read()`/`print()` — three calls — so the "thin transport, separate grammar" split that existed for a radio with tasks, MTUs and callbacks buys nothing here, while the *protocol* half (commands, payloads, error codes) is one coherent thing. `CommandRouter.{h,cpp}` and `SnapshotText.{h,cpp}` are deleted by the merge; the two halves stay sectioned in the file |
 | Log | shares the stream under its existing `[I]` prefix: lines starting with `[` are log records, `ok `/`err ` are replies. `set log <on\|off>` and `log=on\|off` in `info` let a controller insist on a clean channel |
 | Link loss | a dropped USB CDC link stops the run and vents (mirrors Q4/Q10); the silent-link watchdog is dropped, because a cable that is present and quiet is the normal case |
 | Parsing | in-place three-token parse (`verb [key] [value]`) instead of `String argv[8]` and an unused `rest` |
@@ -135,6 +133,10 @@ verbatim. Four changes:
 the sensor error counter gone (nothing read it) it is the pump latch and the controller
 fault, nothing else.
 
+The two payload renderers (`status`, `info`) are functions in `SerialLink` (§3, §4), so a
+new key is one edit in the one file that defines the format. Both render from the
+snapshot, which is why the payload cannot disagree with what the display is showing.
+
 The display is **unchanged**: Q15 says no link token, so the state row stays as it is and
 the layout in the README does not move.
 
@@ -154,9 +156,9 @@ Phases 1 and 2 change behaviour; phase 3 must not, so a regression has somewhere
 
 | # | Phase | Content | Verify |
 | --- | --- | --- | --- |
-| 1 | Serial transport | `SerialService` over `Stream&`, delete `hosts/ble` and `core/ReplyQueue.h`, router writes to `Print&`, `proto=3`, delete `TelemetrySettings`/`set period`/`LINK_TIMEOUT_MS`/`BLE_*`/`TELEMETRY_*`, add `set log` and `log=` in `info`, FQBN in three files, `libs` drops NimBLE, `check-layers.ps1` `ble` → `serial` | green, layer rule ok, **flash and RAM measured** to price the radio |
-| 2 | Dead surface sweep | the inventory in §1, minus the structural items: `Pressure.h`, `Tachometer`, `Device` (router calls `ESP.*`), the unconsumed accessors, the four `*Config` structs and `App::*Config()`, button timings, `Pid` folded into `VacuumControl`, three-token parsing | green |
-| 3 | Collapse and delete the snapshot | move to `core/`+`hal/`+`app/`, delete `Snapshot.h`/`SnapshotBuilder`/`SnapshotText`, page and router read modules, `Renderer`+`Pages.h`+`StatusPage` → one `StatusPage`, `RunState` moves to `VacuumControl.h`, `App` slims, `check-layers.ps1` rewritten small | green, layer rule ok, **no value changed**: same payloads, same display, verified by diff-reading the router's output |
+| 1 | Serial transport | `SerialLink` over `Stream&`, delete `hosts/ble` and `core/ReplyQueue.h`, `CommandRouter` keeps the grammar but writes to the stream, `SnapshotText` untouched for now, `proto=3`, delete `TelemetrySettings`/`set period`/`LINK_TIMEOUT_MS`/`BLE_*`/`TELEMETRY_*`, add `set log` and `log=` in `info`, FQBN in three files, `libs` drops NimBLE, `check-layers.ps1` `ble` → `serial` | green, layer rule ok, **flash and RAM measured** to price the radio |
+| 2 | Dead surface sweep | the inventory in §1, minus the structural items: `Pressure.h`, `Tachometer` (totally, Q9), `Device` (the `info` payload reads `ESP.*` where it formats), the unconsumed accessors, the four `*Config` structs and `App::*Config()`, button timings, `Pid` folded into `VacuumControl`, three-token parsing | green |
+| 3 | Collapse, and fold the encoder into the serial interface | move to `core/`+`hal/`+`app/`, merge the grammar and the payload text into `app/SerialLink.{h,cpp}`, delete `CommandRouter`/`SnapshotText`, keep `Snapshot.h` + `app/SnapshotBuilder`, fill the snapshot in place, `Renderer`+`Pages.h`+`StatusPage` → one `StatusPage`, `App` slims, `check-layers.ps1` rewritten small | green, layer rule ok, **no value changed**: byte-identical payloads and an unchanged display, checked by reading the new `SerialLink` against the old `SnapshotText` |
 | 4 | Docs and tools | `docs/ble-protocol.md` deleted, `docs/serial-protocol.md` written standalone (Q16: no transport history in it), README rewritten for three layers with no snapshot and no transport mentions, `tools/vacuum_cli.py` on pyserial, `requirements.txt`, `FIRMWARE_VERSION` → `0.2.0`, this plan deleted | green, `python -m py_compile` |
 
 ## 8. Risks
@@ -168,7 +170,7 @@ Phases 1 and 2 change behaviour; phase 3 must not, so a regression has somewhere
 | R3 | building without `CDCOnBoot=cdc` sends the console to GPIO20/21 and looks dead | FQBN pinned in three files, README states the failure mode, boot banner goes to the stream in use |
 | R4 | opening the port from the host may reset the ESP32-C3 (USB-Serial-JTAG reset sequences) | verify on hardware; boot-safe means an aborted run and a vented chamber, so document it either way |
 | R5 | the log corrupts a parsing controller's replies | documented `[` rule, `set log off`, and no unmarked line is ever emitted |
-| R6 | losing the snapshot removes a seam a future second transport would want | accepted and named: the collapse is the point. If a second transport arrives (a bridge, a second MCU), the seam to reintroduce is a *view for the transport*, not a view for the UI and the transport and everything else |
+| R6 | folding the grammar and the payload text into one file makes "transport" and "protocol" one unit | accepted: the byte half is three calls, the two halves are sectioned, and keeping the snapshot (Q7) means a second transport still has a seam for the machine view |
 | R7 | losing the `*Config` structs removes the DI seam for a board variant | `hal/Pins.h` becomes that seam explicitly, which is where a board variant edits today anyway |
 | R8 | deleting a driver for hardware that is not fitted looks like losing capability | the tach is a revert of one commit when a wire is fitted, exactly like the Berry removal; say so in the commit |
 | R9 | phase 3 is large and could hide a behaviour change in a reshuffle | keep it behaviour-free by contract, and keep the wire-visible changes in phases 1 and 2 |
@@ -186,10 +188,10 @@ Q17 confirmed.** Every answer is folded into the sections above; this table is t
 | Q4 | Link: dropped USB CDC link stops and vents; silent-link watchdog dropped? | **yes** |
 | Q5 | Parsing: `\r` or `\n` terminates; 128-byte line cap? | **yes** |
 | Q6 | Layers: collapse `services/`, `hosts/`, `ui/` into `app/`, leaving `core/`, `hal/`, `app/`? | **yes** |
-| Q7 | The snapshot: delete `Snapshot.h`, `SnapshotBuilder`, `SnapshotText` and let the page and the router read modules? | **yes** — the trade-off is R6, taken knowingly |
+| Q7 | The snapshot: delete `Snapshot.h`, `SnapshotBuilder`, `SnapshotText` and let the page and the router read modules? | **amended**: keep `Snapshot.h` and `SnapshotBuilder`, **fold the payload text into the serial interface**, and drop the by-value return. `SnapshotText` is deleted as a file, its format lives with the protocol (§3, §4) |
 | Q8 | `Pid`: fold into `VacuumControl`? | **yes** |
 | Q9 | Tachometer | **remove it totally**: driver, ISR, pin, three constants, config fields, the accessors on `Pump`, the `tach=` key and `rpm` |
-| Q10 | `hal/Device`: delete it and let the router call `ESP.getChipModel()`/`getFreeHeap()` for `info`? | **yes** |
+| Q10 | `hal/Device`: delete it and let the `info` payload read `ESP.getChipModel()`/`getFreeHeap()` where it formats? | **yes** |
 | Q11 | The four `*Config` structs and `App::*Config()` helpers: delete, with `hal/` reading `pins::`/`cfg::` directly? | **yes** (R7) |
 | Q12 | The dead accessors in §1, plus `Pump::resetFault()` becoming `void`, `PressureSensor::readNow()` becoming private, and `reset` losing its sensor-counter line? | **yes** |
 | Q13 | UI: `Renderer` + `pages/Pages.h` + `StatusPage` → one `app/StatusPage.{h,cpp}`? | **yes** |
@@ -205,3 +207,4 @@ Q17 confirmed.** Every answer is folded into the sections above; this table is t
 | rev 1 | transport swap to serial, polling telemetry, log sharing, link policy, five phases | all |
 | rev 2 | adds the cruft inventory, the three-layer collapse, the snapshot deletion, the dead-surface sweep, `0.2.0`/`proto=3`, renumbers the questions | §1–§3, §7–§9 |
 | rev 3 | answers folded in: Q1–Q14 yes, Q15 no (display unchanged), Q16 with "drop the mentions entirely" (no transport vocabulary in any deliverable, no migration table), Q17 confirmed; Q9 strengthened to "remove it totally" | §5, §7, §9 |
+| rev 4 | Q7 amended: the snapshot and its builder are **kept**, and only the payload encoder folds into the serial interface. The grammar and the payload text merge into one `app/SerialLink.{h,cpp}`; the by-value snapshot copy is fixed instead of deleted; file count 42 → 30 rather than 29 | §1–§4, §7–§9 |
