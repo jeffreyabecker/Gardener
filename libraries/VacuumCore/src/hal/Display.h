@@ -1,7 +1,9 @@
 #pragma once
 
+// Adafruit_GFX is here for exactly one type: GFXfont, which cannot be forward declared because
+// it is a typedef of an anonymous struct. Nothing else in this header names the library.
+#include <Adafruit_GFX.h>
 #include <Arduino.h>
-#include <Print.h>
 #include <stdint.h>
 
 namespace eggplan {
@@ -17,15 +19,14 @@ namespace eggplan {
 //
 // Otherwise the list is the library's drawing surface in those terms, so that a page written
 // later does not have to come back and widen it. Deliberately absent, with reasons:
-// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have; the
+// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have, and the
 // startWrite/writePixel family exists to batch pin work on an SPI panel and does nothing on
-// I2C; setFont takes a `GFXfont*`, and a header that names the library's types is the one thing
-// this abstraction exists to avoid.
+// I2C. The one library type that does appear is `GFXfont`, for setFont, because changing the
+// font is worth more than the rule it breaks.
 //
-// Text keeps both spellings the library has: the stateful one (setTextSize, setCursor,
-// setTextWrap, then print, through Print) and the state free one (text, textWidth, textBounds)
-// that layout code wants.
-class Display : public Print {
+// Text is stateless apart from the font: `text` and `textBounds` take the scale they draw at, so
+// nothing has to park a cursor, set a size and remember to undo it.
+class Display {
  public:
   virtual ~Display() = default;
 
@@ -72,28 +73,18 @@ class Display : public Print {
 
   // --- images --------------------------------------------------------------
   // One bit per pixel, row major, most significant bit first, in program memory. A set bit is
-  // ink. `xBitmap` reads the same layout with the bit order reversed, for a tool that emits it
-  // that way.
+  // ink.
   virtual void bitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) = 0;
-  virtual void xBitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) = 0;
 
-  // --- text state ----------------------------------------------------------
-  // Set a size, park the cursor, print. `print` and its whole family come from Print, so a
-  // number does not have to be built into a string first.
-  virtual void setTextSize(uint8_t size) = 0;
-  virtual void setTextSize(uint8_t sx, uint8_t sy) = 0;
-  virtual void setCursor(int16_t x, int16_t y) = 0;
-  virtual void setTextWrap(bool wrap) = 0;
-  virtual void cp437(bool on) = 0;
+  // --- text ----------------------------------------------------------------
+  // The font is the only text state there is, and null means the built-in fixed one.
+  virtual void setFont(const GFXfont *f = NULL) = 0;
 
-  // --- text, without the state --------------------------------------------
-  // `size` is the text scale and `inverted` draws paper on ink. Measurement is a question about
-  // a string at a size rather than a property of wherever the cursor happens to be. Neither is
-  // const, because the library's own measurement is not.
+  // `size` scales the built-in font and is ignored once a bitmap font is loaded, because such a
+  // font carries its own size; `inverted` draws paper on ink. Measurement is a question about a
+  // string at a size rather than a property of wherever the cursor happens to be, and it is not
+  // const because the library's own measurement is not.
   virtual void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) = 0;
-  virtual int16_t textWidth(const String& value, uint8_t size) = 0;
-  // Both dimensions, for stacking rows: height is not always the scale times eight once a
-  // bitmap font is in play, which is why it is asked for rather than assumed.
   virtual void textBounds(const String& value, uint8_t size, int16_t& outWidth,
                           int16_t& outHeight) = 0;
 };
