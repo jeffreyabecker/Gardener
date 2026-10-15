@@ -36,7 +36,7 @@ class Buttons {
   void update(uint32_t nowMs);       // called by plantTask every tick
   bool isDown(ButtonId id) const;
   uint32_t heldMs(ButtonId id) const;
-  bool popEvent(ButtonEvent& out);   // plant consumes for the UI or forwards to the VM
+  bool popEvent(ButtonEvent& out);   // plant forwards to the VM while a program runs
  private:
   // debounce, long-press and repeat state per pin (port of the f35a3bb driver)
 };

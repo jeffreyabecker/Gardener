@@ -95,7 +95,7 @@ class ProgramApi {
   bool setProgramParam(const char* name, const char* key,
                        const char* value);          // SetProgramParams
 
-  // --- drawing (spec 07) ---
+  // --- drawing (spec 07): each call enqueues a Draw command; flush() enqueues Flush ---
   void drawClear();
   void drawPixel(int16_t x, int16_t y);
   void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1);

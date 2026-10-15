@@ -36,7 +36,7 @@ the primitives in §3.
 | --- | --- | --- |
 | `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery` | plant | read the snapshot |
 | `Wire` / I2C (OLED + MPRLS) | plant | never |
-| display framebuffer + `AppDisplay` | plant | never |
+| display framebuffer + `AppDisplay` | plant | enqueue `Draw`/`Flush` commands (never call it) |
 | `Buttons` scan | plant | consume button events |
 | `ProgramStore` (LittleFS) | plant | enqueue store commands |
 | snapshot | plant (publisher) | copy out |
@@ -120,9 +120,17 @@ so the critical section is a few microseconds.
 
 ### 3.3 Program drawing
 
-There is no program overlay slot. A program draws by enqueueing `Command { kind = Draw,
-… }` entries (§3.1) exactly like the serial task does; the plant is the single drawer and
-applies them to the buffer in order.
+There is no program overlay slot. The `Display` instance stays on the plant task and is
+**never** held or called by the VM. A program draws by enqueueing `Command { kind = Draw,
+… }` entries (§3.1) exactly like the serial task does:
+
+- `screen.draw_<op>(…)` → `Command { kind = Draw, drawOp = <op>, a[] = coords }`;
+  `screen.draw_text(…)` packs x, y, size, inverted into `a[]` and the string into `text`.
+- `screen.flush()` → `Command { kind = Flush }`.
+
+The plant is the single drawer: it applies buffered draw ops to the framebuffer in arrival
+order and, on `Flush`, composites the battery and pushes to the glass. Draw commands from
+the VM are dropped while a host is attached (spec 07 §3), because the host owns the glass.
 
 ### 3.4 Log queue
 
@@ -135,10 +143,11 @@ drops queued records when it is off).
 
 A `ButtonQueue` — a `QueueHandle_t` of
 `ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`, depth 16.
-`plantTask` pushes after each `Buttons::update()`. While a program is running,
-the plant forwards Up/Down/OK (and Back when claimed, spec 03 §5) events to the VM's
-queue; unclaimed Back stays with the device. With no program running, the plant consumes
-events itself for the UI.
+`plantTask` pushes after each `Buttons::update()`. While a program is running, the plant
+forwards Up/Down/OK (and Back when claimed, spec 03 §5) events to the VM's queue;
+unclaimed Back stays with the device (break-out). With no program running there is no
+local consumer — events are dropped — and while a host is attached the buttons are
+ignored entirely (spec 04 §3).
 
 ### 3.6 Request/response (serial, single-flight)
 
@@ -201,9 +210,15 @@ loop:
 ```
 loop:
   if not running: block on start notification
-  programApi.tick(): if stopRequested → stop program, notify plant
+  run the Berry VM until it yields or stops (spec 03 §3):
+    program code calls vacuum.* / screen.* / buttons.* / programs.*,
+    which enqueue Command entries into the mailbox (§3.1)
+  if stopRequested: stop program, notify plant
   heartbeat update on every yield
 ```
+
+The display is reachable from the VM only through that mailbox — a `screen.draw_*` call
+becomes a `Draw` command, never a call into `Display`.
 
 ## 5. Runaway-program protection
 
@@ -222,5 +237,7 @@ loop:
 - A `while true` program with no `vacuum.delay` does not stop `status` replies or the
   PID tick.
 - A queued flood of draw commands never delays the control loop.
+- A program's `screen.*` calls reach the glass only via the plant; the `Display` instance
+  is never called from the VM task.
 - All state crosses tasks only through the primitives in §3 (enforceable by review and by
   keeping `App` the only file that creates tasks and queues).

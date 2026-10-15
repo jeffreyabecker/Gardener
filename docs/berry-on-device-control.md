@@ -67,7 +67,7 @@ Replace the single-threaded `loop()` model with three FreeRTOS tasks created in
 
 | Task | Core | Priority | Owns | Communicates via |
 | --- | --- | --- | --- | --- |
-| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery`, the display framebuffer + `AppDisplay` flush, the `Buttons` scan, local UI render, snapshot publication | command queue (consumer), snapshot slot (publisher), button-event queue, log queue |
+| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery`, the display framebuffer + `AppDisplay` flush, the `Buttons` scan, snapshot publication | command queue (consumer), snapshot slot (publisher), button-event queue, log queue |
 | **Serial link** | 0 | 6 | `SerialLink` grammar, the stream (replies + diagnostics), `logEnabled_` | command queue (producer), snapshot slot (reader), log queue (consumer) |
 | **Berry VM** | 1 | 3 (alone on core 1) | Berry VM, `ProgramApi` | command queue (producer), snapshot slot (reader), button-event queue (consumer) |
 
