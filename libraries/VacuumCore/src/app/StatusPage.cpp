@@ -85,18 +85,19 @@ void StatusPage::drawTargetRow(const SystemSnapshot& snapshot) {
 }
 
 void StatusPage::drawCountdown(const SystemSnapshot& snapshot) {
-  // The number is hold time remaining, so it only means something while pulling or holding:
-  // after that the run is over and nothing is counting any more.
-  bool counting = snapshot.totalSeconds > 0 && (snapshot.state == RunState::Pulling ||
-                                                snapshot.state == RunState::Holding);
+  // The number is the controller's countdown, pushed down for the panel. There is nothing to
+  // count here: the device draws the last value it was handed, and only while a run is
+  // actually in progress. After that the run is over and the number means nothing.
+  bool counting = snapshot.holdSeconds > 0 &&
+                  (snapshot.state == RunState::Pulling || snapshot.state == RunState::Holding);
   if (!counting) {
     centered("--:--", kCountdownY, 2);
     return;
   }
-  String clock = twoDigits(snapshot.remainSeconds / 60) + ':' +
-                 twoDigits(snapshot.remainSeconds % 60);
+  String clock = twoDigits(snapshot.holdSeconds / 60) + ':' +
+                 twoDigits(snapshot.holdSeconds % 60);
   // The last minute inverts: it is the one an operator is actually watching.
-  centered(clock, kCountdownY, 2, snapshot.remainSeconds <= 60);
+  centered(clock, kCountdownY, 2, snapshot.holdSeconds <= 60);
 }
 
 // --- drawing ---------------------------------------------------------------

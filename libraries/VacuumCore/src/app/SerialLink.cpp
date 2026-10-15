@@ -286,10 +286,12 @@ void SerialLink::dispatch(char* line) {
       ok(payload.c_str());
       return;
     }
-    if (same(key, "timer")) {
+    if (same(key, "hold")) {
+      // The countdown the controller is running, in seconds. The device renders it and never
+      // counts it, so this changes nothing about the run.
       if (same(value, "off")) {
-        control_.setDurationSeconds(0);
-        ok("timer=off");
+        control_.setHoldSeconds(0);
+        ok("hold=off");
         return;
       }
       uint32_t seconds = 0;
@@ -297,8 +299,8 @@ void SerialLink::dispatch(char* line) {
         err("bad_argument");
         return;
       }
-      control_.setDurationSeconds(seconds);
-      String payload = "timer=" + String(seconds);
+      control_.setHoldSeconds(seconds);
+      String payload = "hold=" + String(seconds);
       ok(payload.c_str());
       return;
     }
@@ -389,13 +391,6 @@ String SerialLink::statusBody() const {
   addFloatToken(buf, "floor", snapshot_.floorKpa, 1);
   addFloatToken(buf, "duty", snapshot_.duty, 1);
   addToken(buf, "state", runStateName(snapshot_.state));
-  if (snapshot_.totalSeconds > 0) {
-    addU32Token(buf, "remain", snapshot_.remainSeconds);
-    addU32Token(buf, "total", snapshot_.totalSeconds);
-  } else {
-    addToken(buf, "remain", "-");
-    addToken(buf, "total", "-");
-  }
   if (snapshot_.batteryPresent) {
     addU32Token(buf, "batt", snapshot_.batteryPercent);
   } else {
@@ -411,7 +406,6 @@ String SerialLink::statusBody() const {
 String SerialLink::infoBody() const {
   String buf;
 
-  addToken(buf, "proto", cfg::PROTOCOL_VERSION);
   addToken(buf, "fw", cfg::FIRMWARE_VERSION);
   // Read where they are formatted: two facts from the chip, not a module's state.
   addToken(buf, "chip", ESP.getChipModel());

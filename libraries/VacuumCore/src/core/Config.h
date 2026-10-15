@@ -10,11 +10,7 @@
 namespace eggplan {
 namespace cfg {
 
-constexpr const char* FIRMWARE_VERSION = "0.2.0";
-
-// Bumped when the wire format breaks: proto=3 is the serial interface, with telemetry
-// polled instead of pushed and the log sharing the stream.
-constexpr const char* PROTOCOL_VERSION = "3";
+constexpr const char* FIRMWARE_VERSION = "0.3.0";
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;

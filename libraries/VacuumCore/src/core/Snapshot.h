@@ -10,9 +10,10 @@
 // holding a pointer into a module.
 namespace eggplan {
 
-// What the device is doing, which is also the state a controller watches. There is no DONE
-// (after venting it is IDLE, and the countdown reaching zero is what said it finished)
-// and no MANUAL (raw duty is not part of the interface, Q15).
+// What the device is doing, which is also the state a controller watches. There is no DONE:
+// after venting it is IDLE, and the controller knows when the run is over because it is the one
+// that ended it. HOLD is the target-reached edge, and it is the cue a controller times its hold
+// from. There is no MANUAL (raw duty is not part of the interface, Q15).
 enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
 inline const char* runStateName(RunState state) {
@@ -43,8 +44,9 @@ struct SystemSnapshot {
   bool targetActive = false;
   float targetKpa = 0.0f;
   float floorKpa = 0.0f;
-  uint32_t remainSeconds = 0;  // totalSeconds == 0 means "no timer"
-  uint32_t totalSeconds = 0;
+  // The countdown the controller is running, pushed down for the panel to draw. The device
+  // keeps no clock: this is a display value, and 0 means "show nothing" (Q5).
+  uint32_t holdSeconds = 0;
   // battery: a readout only, nothing acts on it (Q11)
   bool batteryPresent = false;
   bool batteryLow = false;

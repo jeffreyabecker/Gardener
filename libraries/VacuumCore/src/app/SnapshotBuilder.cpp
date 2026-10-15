@@ -27,8 +27,7 @@ void buildSnapshot(const VacuumSystem& system, const VacuumControl& control,
   snapshot.targetActive = system.targetActive();
   snapshot.targetKpa = system.targetKpa();
   snapshot.floorKpa = system.minReachableKpa();
-  snapshot.remainSeconds = control.remainingSeconds();
-  snapshot.totalSeconds = control.durationSeconds();
+  snapshot.holdSeconds = control.holdSeconds();
 
   snapshot.batteryPresent = battery.present();
   snapshot.batteryLow = battery.low();
