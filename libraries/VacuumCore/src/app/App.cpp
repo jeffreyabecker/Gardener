@@ -16,7 +16,8 @@ bool serialAttached() { return (bool)Serial; }
 
 App::App()
     : panel_(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1),
-      control_(pump_, sensor_, vent_),
+      system_(pump_, sensor_, vent_),
+      control_(system_),
       page_(panel_),
       link_(pump_, sensor_, control_, Serial, serialAttached, snapshot_) {}
 
@@ -37,7 +38,7 @@ bool App::begin() {
   bool pumpOk = pump_.begin();
   vent_.begin();
   bool batteryOk = battery_.begin();
-  control_.begin();
+  system_.begin();
 
   if (sensorOk) sensor_.captureAmbient();
 

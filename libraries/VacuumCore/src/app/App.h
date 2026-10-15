@@ -7,6 +7,7 @@
 #include "app/SnapshotBuilder.h"
 #include "app/StatusPage.h"
 #include "app/VacuumControl.h"
+#include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
 #include "hal/Pins.h"
@@ -45,6 +46,7 @@ class App {
   VentValve vent_;
   Battery battery_;
   Adafruit_SH1106G panel_;
+  VacuumSystem system_;
   VacuumControl control_;
   SystemSnapshot snapshot_;
   StatusPage page_;

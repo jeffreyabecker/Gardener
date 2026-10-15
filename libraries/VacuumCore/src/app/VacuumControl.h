@@ -3,30 +3,22 @@
 #include <stdint.h>
 
 #include "core/Config.h"
-#include "core/Math.h"
 #include "core/Snapshot.h"
+
 namespace eggplan {
 
-class PressureSensor;
-class Pump;
-class VentValve;
+class VacuumSystem;
 
-// The pressure loop, the run timer and the valve: everything the device has to own to
-// be fast or safe.
+// The run: the target someone asked for, the hold timer, when to start and what a stop
+// means, and the fault latch that needs an explicit reset.
 //
-// The controller owns the target, the timer, and when to start and stop. The device owns
-// what happens when nobody is watching: pulling to the target, expiring the countdown,
-// and releasing the chamber through one path on stop, abort, link loss or fault.
-//
-// The loop is a plain PID on absolute pressure with the pump as the only actuator, so it
-// can pull down but never vent; the valve is the only way back up. Gains live in
-// core/Config.h.
+// The plant underneath is VacuumSystem. This class decides only in terms of runs — has the
+// target been reached, has the countdown expired, is this fault permanent — and asks the
+// system everything about the chamber rather than answering it here.
 class VacuumControl {
  public:
-  VacuumControl(Pump& pump, PressureSensor& sensor, VentValve& vent)
-      : pump_(pump), sensor_(sensor), vent_(vent) {}
+  explicit VacuumControl(VacuumSystem& system) : system_(system) {}
 
-  void begin();
   void update(uint32_t nowMs);
 
   // --- commands from the controller -----------------------------------------
@@ -39,41 +31,25 @@ class VacuumControl {
 
   // --- state --------------------------------------------------------------
   RunState state() const { return state_; }
-  bool targetActive() const { return targetActive_; }
-  float targetKpa() const { return targetKpa_; }
   uint32_t durationSeconds() const { return durationSeconds_; }
   uint32_t remainingSeconds() const { return remainingSeconds_; }
 
-  // Deepest target the pump can actually reach: ambient minus its suction rating,
-  // floored by the sanity limit.
+  // Delegates, kept so the readers can be retargeted in one step rather than two.
+  bool targetActive() const;
+  float targetKpa() const;
   float minReachableKpa() const;
 
  private:
   void setState(RunState state);
   void beginVent();
-  void fault(const char* code);
-  float step(uint32_t nowMs);
 
-  void pidReset() { pidIntegral_ = 0.0f; }
-  float pidUpdate(float dt, float error, float measurementSlew);
-
-  Pump& pump_;
-  PressureSensor& sensor_;
-  VentValve& vent_;
+  VacuumSystem& system_;
 
   RunState state_ = RunState::Idle;
-  bool targetActive_ = false;
   bool faultLatched_ = false;
-  float targetKpa_ = 0.0f;
   uint32_t durationSeconds_ = 0;
   uint32_t remainingSeconds_ = 0;
   uint32_t countdownEndMs_ = 0;
-  uint32_t ventStartMs_ = 0;
-  float pidIntegral_ = 0.0f;
-  float lastMeasured_ = 0.0f;
-  float output_ = 0.0f;
-  uint32_t lastControlMs_ = 0;
-  uint32_t lastDerivativeMs_ = 0;
 };
 
 }  // namespace eggplan

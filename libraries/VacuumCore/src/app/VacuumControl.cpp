@@ -1,56 +1,34 @@
 #include "app/VacuumControl.h"
 
-#include <math.h>
+#include <Arduino.h>
 
-#include "core/Math.h"
-#include "hal/Pump.h"
-#include "hal/PressureSensor.h"
-#include "hal/VentValve.h"
+#include "app/VacuumSystem.h"
 
 namespace eggplan {
-namespace {
-constexpr uint32_t kDerivativeWindowMs = 1000;
-}
-
-void VacuumControl::begin() {
-  state_ = RunState::Idle;
-  pump_.stop();
-  vent_.open();  // normally open, but assert the safe resting state once
-  lastControlMs_ = millis();
-  lastDerivativeMs_ = lastControlMs_;
-}
-
-float VacuumControl::minReachableKpa() const {
-  float ambient = sensor_.ambientKpa();
-  float floorKpa = ambient - cfg::PUMP_MAX_SUCTION_KPA;
-  return floorKpa > cfg::CONTROL_MIN_TARGET_KPA ? floorKpa : cfg::CONTROL_MIN_TARGET_KPA;
-}
 
 void VacuumControl::setState(RunState state) {
   if (state_ == state) return;
   state_ = state;
 }
 
-void VacuumControl::setTarget(float kpa) {
-  if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) return;
-  targetKpa_ = kpa;
-  targetActive_ = true;
-  pidReset();
-}
+void VacuumControl::setTarget(float kpa) { system_.setTarget(kpa); }
 
 void VacuumControl::clearTarget() {
-  targetActive_ = false;
-  pidReset();
-  output_ = 0.0f;
+  system_.clearTarget();
   remainingSeconds_ = 0;
   // A run without a target is not a run, so clearing one releases the chamber.
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
     beginVent();
   } else if (state_ == RunState::Idle) {
-    pump_.stop();
-    vent_.open();
+    system_.rest();
   }
 }
+
+bool VacuumControl::targetActive() const { return system_.targetActive(); }
+
+float VacuumControl::targetKpa() const { return system_.targetKpa(); }
+
+float VacuumControl::minReachableKpa() const { return system_.minReachableKpa(); }
 
 void VacuumControl::setDurationSeconds(uint32_t seconds) {
   durationSeconds_ = seconds;
@@ -63,104 +41,47 @@ void VacuumControl::setDurationSeconds(uint32_t seconds) {
 
 bool VacuumControl::startRun() {
   if (faultLatched_ || state_ == RunState::Fault) return false;
-  if (!targetActive_) return false;
-  if (!sensor_.present() || !sensor_.readingValid()) return false;
+  if (!system_.targetActive()) return false;
+  if (!system_.sensorOk() || !system_.readingValid()) return false;
 
-  // Close before pumping, so the pump never pulls against an open port.
-  vent_.close();
-  pidReset();
-  output_ = 0.0f;
+  system_.start();
   remainingSeconds_ = durationSeconds_;
-  lastControlMs_ = millis();
-  lastDerivativeMs_ = lastControlMs_;
   setState(RunState::Pulling);
   return true;
 }
 
 void VacuumControl::stopRun() {
   if (state_ == RunState::Idle) {
-    pump_.stop();
-    vent_.open();
+    system_.rest();
     return;
   }
   beginVent();
 }
 
 void VacuumControl::clearFault() {
-  pump_.resetFault();
+  system_.resetFault();
   faultLatched_ = false;
   if (state_ == RunState::Fault) beginVent();
 }
 
 void VacuumControl::beginVent() {
-  pump_.stop();
-  vent_.open();
-  pidReset();
-  output_ = 0.0f;
-  ventStartMs_ = millis();
+  system_.vent();
   setState(RunState::Venting);
 }
 
-void VacuumControl::fault(const char* code) {
-  pump_.emergencyStop(code);
-  vent_.open();  // release the coil: the safe direction
-  pidReset();
-  output_ = 0.0f;
-  remainingSeconds_ = 0;
-  faultLatched_ = true;
-  setState(RunState::Fault);
-}
-
-// error is measured - target, so positive means "still needs vacuum"; the derivative term
-// uses the measurement slew rather than the error slope, which keeps a setpoint change
-// from kicking the output.
-float VacuumControl::pidUpdate(float dt, float error, float measurementSlew) {
-  if (dt <= 0.0f) return cfg::PID_KP * error + pidIntegral_;
-  pidIntegral_ = clampf(pidIntegral_ + cfg::PID_KI * error * dt, -cfg::PID_INTEGRAL_LIMIT,
-                        cfg::PID_INTEGRAL_LIMIT);
-  return cfg::PID_KP * error + pidIntegral_ - cfg::PID_KD * measurementSlew;
-}
-
-float VacuumControl::step(uint32_t nowMs) {
-  if (nowMs - lastControlMs_ < cfg::CONTROL_PERIOD_MS) return sensor_.kpa();
-
-  float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
-  lastControlMs_ = nowMs;
-  if (dt <= 0.0f) return sensor_.kpa();
-
-  float measured = sensor_.kpa();
-  float error = measured - targetKpa_;  // positive means "still needs vacuum"
-
-  if (error < -cfg::CONTROL_DEADBAND_KPA) {
-    // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
-    pidReset();
-    output_ = 0.0f;
-    pump_.stop();
-    lastMeasured_ = measured;
-    lastDerivativeMs_ = nowMs;
-    return measured;
-  }
-
-  float controlError = fabsf(error) <= cfg::CONTROL_DEADBAND_KPA ? 0.0f : error;
-
-  float slew = 0.0f;
-  uint32_t windowMs = nowMs - lastDerivativeMs_;
-  if (windowMs > 0 && windowMs <= kDerivativeWindowMs) {
-    slew = (measured - lastMeasured_) / ((float)windowMs / 1000.0f);
-  }
-
-  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
-  pump_.setDuty(output_);
-
-  lastMeasured_ = measured;
-  lastDerivativeMs_ = nowMs;
-  return measured;
-}
-
 void VacuumControl::update(uint32_t nowMs) {
-  // A latched pump fault is terminal until the controller resets it.
-  if (pump_.tripped()) {
-    if (state_ != RunState::Fault) fault(pump_.faultCode());
+  // One entry point: the plant is serviced here and nowhere else, so the loop cannot be
+  // stepped twice, or from two places.
+  system_.service(nowMs);
+
+  // The system detects a fault and makes the plant safe. That a fault is permanent until
+  // someone resets it is a run rule, so the latch is here.
+  if (system_.faulted()) {
+    if (state_ != RunState::Fault) {
+      remainingSeconds_ = 0;
+      faultLatched_ = true;
+      setState(RunState::Fault);
+    }
     return;
   }
 
@@ -170,47 +91,36 @@ void VacuumControl::update(uint32_t nowMs) {
       return;
 
     case RunState::Pulling:
-    case RunState::Holding: {
-      if (!sensor_.present() || !sensor_.readingValid()) {
-        fault("sensor");
-        return;
-      }
-
-      float measured = step(nowMs);
-
-      if (state_ == RunState::Pulling &&
-          measured <= targetKpa_ + cfg::CONTROL_DEADBAND_KPA) {
+      if (system_.atTarget()) {
         // The countdown starts here (Q1), so the number means "hold time remaining".
         countdownEndMs_ = nowMs + durationSeconds_ * 1000UL;
         remainingSeconds_ = durationSeconds_;
         setState(RunState::Holding);
+      }
+      return;
+
+    case RunState::Holding: {
+      if (durationSeconds_ == 0) {
+        remainingSeconds_ = 0;
         return;
       }
-
-      if (state_ == RunState::Holding) {
-        if (durationSeconds_ == 0) {
-          remainingSeconds_ = 0;
-          return;
-        }
-        uint32_t leftMs = countdownEndMs_ > nowMs ? countdownEndMs_ - nowMs : 0;
-        remainingSeconds_ = (leftMs + 999) / 1000;
-        if (leftMs == 0) {
-          beginVent();
-        }
+      uint32_t leftMs = countdownEndMs_ > nowMs ? countdownEndMs_ - nowMs : 0;
+      remainingSeconds_ = (leftMs + 999) / 1000;
+      if (leftMs == 0) {
+        beginVent();
       }
       return;
     }
 
-    case RunState::Venting: {
-      bool settled = sensor_.present() && sensor_.readingValid() &&
-                     sensor_.kpa() >= sensor_.ambientKpa() - cfg::VENT_MARGIN_KPA;
-      bool timedOut = (nowMs - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
-      if (!settled && !timedOut) return;
-
-      remainingSeconds_ = 0;
-      setState(RunState::Idle);
+    case RunState::Venting:
+      if (system_.vented()) {
+        // The release is over, so the plant goes back to resting: it must not claim to be
+        // venting while the run is idle.
+        system_.rest();
+        remainingSeconds_ = 0;
+        setState(RunState::Idle);
+      }
       return;
-    }
   }
 }
 
