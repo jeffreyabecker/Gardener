@@ -1,14 +1,19 @@
-# Plan: the run's duration belongs to the controller
+# Plan: the controller owns the clock
 
-`VacuumControl` currently owns a countdown: `durationSeconds_`, `remainingSeconds_`,
-`countdownEndMs_`, `setDurationSeconds()`, a `PULL → HOLD` transition whose only side effect is
-arming the clock, a `HOLD` branch that does nothing but tick it, and an expiry that vents the
-chamber. The device decides when a hold is over. The controller asks for it.
+`VacuumControl` owns a countdown: `durationSeconds_`, `remainingSeconds_`, `countdownEndMs_`, a
+`PULL → HOLD` transition whose only side effect is arming the clock, a `HOLD` state that does
+nothing but tick it, and an expiry that vents the chamber. Underneath, `Pump` owns a second
+clock: `PUMP_MAX_RUN_MS`, a 15 minute continuous-run trip that faults the run. And `Config.h`
+owns a third thing that is really a time: `PROTOCOL_VERSION`, a number whose only job is to say
+which shape the wire is in.
 
-That is the wrong end of the cable for a duration. The device has no idea why the run exists —
-whether the hold is a 30 second check or a 20 minute degas — and the number only ever comes
-from the controller in the first place. This plan removes the device's clock and leaves the
-duration, and the decision to end the run, with the controller.
+All three come from the same place. The device is deciding things about duration that only the
+controller knows, and the duration only ever arrives from the controller in the first place.
+This plan removes every one of them.
+
+Rev 2 answers change three of my recommendations: the `HOLD` state goes, the pump's run
+protection goes rather than being documented, and the protocol version concept goes with it.
+The countdown stays on the panel, but the controller feeds it.
 
 ## 1. Who owns what
 
@@ -16,128 +21,149 @@ duration, and the decision to end the run, with the controller.
 | --- | --- | --- |
 | `durationSeconds`, the configured hold | `VacuumControl` | **gone** |
 | `remainingSeconds`, `countdownEndMs` | `VacuumControl` | **gone** |
-| when the hold started | the device, on the `PULL → HOLD` edge | the controller, watching for that same edge |
-| when the hold ends | the device, on expiry, then `VENT` | the controller, with `stop` |
-| has the target been reached (the deadband test) | `VacuumSystem` | `VacuumSystem`, unchanged |
-| that being at target is a distinct state | `RunState::Holding` | `RunState::Holding`, re-explained |
-| `set timer`, `remain`, `total` | serial interface | **gone** |
-| the countdown field on the page | `StatusPage` | **gone** |
+| when a hold ends | the device, on expiry, then `VENT` | the controller, with `stop` |
+| `atTarget()`, the public "has the target been reached" query | `VacuumSystem` | **gone**; the deadband itself stays inside the loop |
+| "at target" as a distinct state | `RunState::Holding` | **gone**: a run is `PULL` from `start` to `stop` |
+| the countdown field on the page | counted down by the device | **rendered** from a value the controller pushes |
+| the pump's 15 minute run trip | `Pump` | **gone**, with `PUMP_MAX_RUN_MS` |
+| the wire version | `cfg::PROTOCOL_VERSION`, `proto=` | **gone**; `fw` is the only version marker left |
+| fault codes | `max_run`, `sensor` | `sensor` |
+| has the target been reached | the device decides and says so | the controller reads `kpa` against `target` |
 
-`DECISION:` nothing replaces the timer in the device. No elapsed counter, no "held for" field,
-no pushed display value. The controller has a clock; a second one in the device would be the
-same number computed twice, and this device exists to hold a pressure, not to keep time.
+`DECISION:` the device owns no duration in any form — not to act on, not to report, not to
+derive. The one time-shaped thing that survives is a number the controller hands down for the
+panel to draw, and the device never does arithmetic on it.
 
-## 2. What the state machine means afterwards
+## 2. The run model afterwards
 
 ```
-        start
-IDLE ──────────> PULL ──(target reached)──> HOLD ─────────────┐
-  ^               │                                          │
-  │               │  stop / link loss / fault                 │
-  │               v                                          v
-  └──(vent complete)──────────────── VENT <───────────────────┘
-                                                      stop / fault
+        start                                    stop / link loss / fault
+IDLE ──────────> PULL ──────────────────────────────────────> VENT ──(vent complete)──> IDLE
+                   ^                                            │
+                   │                                            v
+                   └────────────── reset ──────────────────── FAULT
 ```
 
-`HOLD` stays, and it is worth keeping for a reason that gets *stronger* with this change: the
-target-reached edge is the one event the controller cannot work out for itself. It can watch
-`kpa`, but the deadband that decides "this is close enough to count as arrived" is the device's
-loop, so the `PULL → HOLD` transition is the device telling the controller "start counting now".
-After this change that is the state's whole job:
+* `start` — `IDLE` → `PULL`, valve closed before the first duty command
+* `PULL` — regulating, and there is no other run state. It lasts until the controller stops it
+* `stop`, link loss, `set target off` or a fault → `VENT`, then `IDLE` or `FAULT`
+* nothing in the device ends a run: no duration, no timeout, no run-time trip
 
-* `PULL` — regulating, still coming down
-* `HOLD` — regulating, at target, waiting for the controller to say when
-* the only ways out of `HOLD` are `stop`, `set target off`, link loss, or a fault
+Two consequences worth stating, because they are visible to a controller:
 
-`DECISION:` no rename. `Holding` still means holding; what changed is that nothing in the device
-decides when it is over.
+* **The device no longer reports the arrival edge.** With `HOLD` gone, the controller compares
+  `kpa` against `target` itself. The loop still applies `CONTROL_DEADBAND_KPA` to duty, so
+  `kpa <= target` is the arrival condition a controller should use, and it is the moment its
+  own countdown should start.
+* **`PULL` is the state for the whole run**, so the panel's state row reads `PULL` throughout.
+  The cue a person standing at the rig gets for "the hold has started" is the countdown the
+  controller pushes.
 
 ## 3. What deliberately does not move
 
-* **The deadband.** `atTarget()` still lives in `VacuumSystem` and still drives the transition
-  and the PID's zero-error band. It is the loop's definition, not a timer's.
-* **`stop` still vents.** The controller ending a hold is the normal case now, and it takes the
-  same release path it always did.
-* **Link loss still stops and vents** (the Q4 rule). It goes from "one of several endings" to
-  the device's only automatic one, and it is what stops a hold if the controller dies.
-* **The vent settle rule.** `VENT_MARGIN_KPA` or `VENT_TIMEOUT_MS`, unchanged — that timeout is
-  about the chamber, not the run.
-* **Nothing else on the wire changes shape.** `kpa vac pct target floor duty state batt sensor
-  fault up` keep their order, units and decimals.
+* **The deadband.** `CONTROL_DEADBAND_KPA` still decides where the PID's error goes to zero.
+  Only the public query that asked "have we arrived" goes.
+* **`stop` still vents**, and it is now the normal way a run ends.
+* **Link loss still stops and vents.** It is the device's only automatic ending and it is what
+  releases the chamber if the controller dies.
+* **The vent settle rule.** `VENT_MARGIN_KPA` or `VENT_TIMEOUT_MS` — that timeout is about the
+  chamber, not the run, and it stays.
+* **The pump's duty cap and slew limit.** With the run trip gone these are the pump's only
+  protections, so neither is touched.
+* **Everything else on the wire.** `kpa vac pct target floor duty state batt sensor fault up`
+  keep their order, units and decimals.
 
 ## 4. Behaviour that must not change
 
 1. `start` closes the valve before the first duty command
-2. reaching the target still moves `PULL → HOLD`, once, on the same `CONTROL_DEADBAND_KPA`
-   comparison against the same filtered pressure
-3. the PID still runs while regulating in either state, and still coasts when the chamber is
-   deeper than the target
-4. `stop` still vents, from `PULL`, `HOLD` or `VENT`
-5. `set target off` during `PULL` or `HOLD` still releases the chamber, and in `IDLE` still
-   asserts the resting state
-6. link loss still stops and vents
-7. faults still latch (`sensor`, `max_run`) and still need `reset`
-8. vent completion is still "within `VENT_MARGIN_KPA` of ambient" or "`VENT_TIMEOUT_MS` elapsed"
-9. every payload key that survives is byte identical
-10. the device no longer ends a hold by itself: after this change there is no timeout anywhere
-    in the run model
+2. the PID still steps at `CONTROL_PERIOD_MS` while regulating, and still coasts when the
+   chamber is deeper than the target
+3. `stop` still vents, from `PULL` or from `VENT`
+4. `set target off` during a run still releases the chamber, and in `IDLE` still asserts the
+   resting state
+5. link loss still stops and vents
+6. faults still latch and still need `reset`, with `sensor` the only code left
+7. vent completion is still "within `VENT_MARGIN_KPA` of ambient" or "`VENT_TIMEOUT_MS` elapsed"
+8. every surviving payload key is byte identical, in the same order
+9. duty is still capped at `PUMP_DUTY_MAX_PERCENT` and still slew limited, even though the run
+   trip that guarded the pump is gone
+10. a run that reaches the target keeps regulating there indefinitely, exactly as it does today
+    when no timer is set
+11. nothing in the firmware ends a run by itself, and no field, key or constant represents a
+    duration
 
 ## 5. Wiring, protocol and version
 
 | | Today | After |
 | --- | --- | --- |
-| Commands | `info status help start stop reset reboot ambient set target\|timer\|ambient\|log` | `set target\|ambient\|log`; `set timer` is gone |
+| Commands | `... set target\|timer\|ambient\|log` | `... set target\|ambient\|log\|hold` |
 | `status` payload | `... state remain total batt ...` | `... state batt ...` |
-| `info` payload | `proto=3` | `proto=4` |
-| Firmware version | `0.2.0` | `0.3.0` |
-| `Snapshot.h` | `remainSeconds`, `totalSeconds` | gone, so the snapshot carries no time at all |
-| `StatusPage` | `drawCountdown`, `twoDigits` | gone; the band at y=36..52 goes to the duty bar |
+| `info` payload | `proto=3 fw=0.2.0 ...` | `fw=0.3.0 ...` |
+| `fault` values | `none`, `max_run`, `sensor` | `none`, `sensor` |
+| `state` values | `IDLE`, `PULL`, `HOLD`, `VENT`, `FAULT` | `IDLE`, `PULL`, `VENT`, `FAULT` |
+| `core/Config.h` | `PROTOCOL_VERSION`, `PUMP_MAX_RUN_MS` | both gone |
+| `hal/Pump` | run-time trip, `runStartMs_`, `running_` | gone |
+| `core/Snapshot.h` | `remainSeconds`, `totalSeconds` | `holdSeconds`: pushed, drawn, never counted |
+| `app/StatusPage` | draws a clock it owns | draws the number it was handed |
 
-The wire breaks, so `proto` goes to 4 by the rule already written in `core/Config.h`, and `fw`
-moves with it because a v3 controller parsing a v4 reply would silently see fewer keys.
+`DECISION:` with `proto` gone there is no wire version, so `fw` becomes the only marker a
+controller can branch on. That is why it moves now rather than with some later change: it is
+the whole of the contract's versioning.
 
 ## 6. Phases
 
 | # | Phase | Content | Verify |
 | --- | --- | --- | --- |
-| 1 | The device stops timing | drop the countdown, its fields and `setDurationSeconds` from `VacuumControl`; drop `remain`/`total` from `Snapshot`, `SnapshotBuilder`, `SerialLink`; drop `set timer`; `proto` 4, `fw` 0.3.0 | green, layer rule ok, §4 checklist read against the diff, payload key order unchanged |
-| 2 | The page stops showing a clock | delete `drawCountdown` and `twoDigits`; give the freed band to the duty bar (y=38, height 22) | green; the page still fills the panel top to bottom |
-| 3 | Docs and the CLI | `docs/serial-protocol.md` and README: the state table, the run model, the payload tables, the examples and the version; drop `timer` from the CLI's `set` choices and its example | green, `py_compile` |
+| 1 | The device stops timing | `VacuumControl` loses the countdown and `Holding`; `VacuumSystem` loses `atTarget`; `Snapshot`/`SnapshotBuilder` swap `remain`/`total` for the pushed hold; `SerialLink` drops `set timer`, `remain`, `total` and `proto`, and gains `set hold`; `fw` 0.3.0 | green, layer rule ok, §4 read against the diff, surviving key order unchanged |
+| 2 | The pump loses its run-time protection | `PUMP_MAX_RUN_MS`, `runStartMs_`, `running_`, the trip, and the `max_run` fault code | green; no `max_run` left anywhere |
+| 3 | The page draws the controller's countdown | `drawCountdown` gates on a run in progress and renders `holdSeconds`; `twoDigits` stays, and the layout does not move | green; the panel still fills top to bottom |
+| 4 | Docs and the CLI | protocol doc and README: the run model, state table, payload tables, examples, protections and versions; CLI gains `hold` and loses `timer` | green, `py_compile` |
 
 ## 7. Risks
 
 | id | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | an unattended hold now runs until someone stops it, and a normally open valve draws coil current for the whole time | accepted and documented: the duration was always the controller's business, and link loss still releases. A controller that hangs with the port open holds forever, which is the price of the controller owning the clock |
-| R2 | the pump's `PUMP_MAX_RUN_MS` (15 minutes of continuous running) becomes the practical ceiling on a pull, and a deep target that keeps pumping will fault before the controller is done | document it, no code change: it is the pump's protection, it counts *running* time, and a hold that has settled at target with duty at zero does not accumulate it. Today a 30 minute timer hits the same wall |
-| R3 | a v3 controller silently misreads a v4 payload, because the keys it wants are simply absent | `proto` bump, and the doc, CLI and README move in the same phase as the wire |
-| R4 | the operator standing at the rig loses the only "how much longer" cue on the panel | accepted: that number was never the device's. If the rig needs it later, the controller can push a display value, which is a separate change and not part of this one |
-| R5 | `HOLD` keeps a name that used to mean "counting down", so trimming the doc's prose would leave it wrong | the state table, the diagram and the prose are rewritten in phase 3, and the state is documented as the controller's cue rather than a timer |
+| R1 | a run now has no ending of its own at all. An unattended hold runs until someone stops it, the normally open valve draws coil current the whole time, and a target below the reachable floor pins duty at the cap with nothing left to stop it | accepted and documented, with the duty cap, the slew limit and link loss as what remains. The controller can read `floor` to avoid the unreachable target, and the safety section already says the firmware's limits are software limits only |
+| R2 | link loss covers a controller that leaves, not one that hangs with the port open | accepted: that is the price of the controller owning the clock, and it is stated in the docs rather than defended against in firmware |
+| R3 | with `proto` gone a controller cannot detect the layout change from the wire itself; it would silently see fewer keys | `fw` is bumped in the same phase as the wire, and the doc, README and CLI move with it |
+| R4 | Q10 asked about keeping the `HOLD` name and Q12 about keeping the arrival transition; Q1 removes the state, which makes both moot, so the two readings cannot both be right | resolved in §8 Q13 before any code moves |
+| R5 | the protocol doc's run model is written around `HOLD` and a countdown, so it needs rewriting rather than trimming | phase 4 rewrites the model, the state table and the prose together |
 
 ## 8. Questions
 
-Recommendations are marked, so "all as recommended" is a valid answer.
+Q1–Q12 are answered as recorded. Two of them cannot both be true, which Q13 settles.
+
+| # | Question | Answer (rev 2) |
+| --- | --- | --- |
+| Q1 | Does `HOLD` survive as a state? | **no: hold goes away** |
+| Q2 | Remove `set timer`, `remain` and `total` outright? | yes |
+| Q3 | `proto` bump and `fw` bump? | **drop the protocol version concept entirely**; `fw` is covered by Q17 |
+| Q4 | Is `stop`, `set target off`, link loss and a fault the complete set of endings? | yes |
+| Q5 | Display: delete the countdown field? | **no: still display it, fed from the controller** |
+| Q6 | No time-related telemetry in its place? | **forced in from the controller** (same as Q5) |
+| Q7 | `set target off` during a run still releases the chamber? | correct |
+| Q8 | Link loss still stops and vents? | yes |
+| Q9 | Document `PUMP_MAX_RUN_MS` as the ceiling? | **drop the constant entirely** |
+| Q10 | Keep the `Holding` name? | yes — **moot**, there is no state left to name (Q13) |
+| Q11 | CLI: drop `timer`, change nothing else? | yes, plus the `hold` counterpart (Q11 in rev 1 only knew about removal) |
+| Q12 | Keep the `PULL → HOLD` transition? | yes — **moot**, the transition goes with the state (Q13) |
+
+New decisions the answers created:
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| Q1 | Does `HOLD` survive as a state, meaning "at target, waiting for the controller", with only its timer removed? | **yes**: and it matters more now, because `PULL → HOLD` is the cue the controller times from and it cannot work the deadband out for itself |
-| Q2 | Remove `set timer`, `remain` and `total` outright, with nothing in their place? | **yes** |
-| Q3 | `proto` 3 → 4 and `fw` 0.2.0 → 0.3.0? | **yes**: keys disappear, so the wire breaks |
-| Q4 | Is `stop`, `set target off`, link loss and a fault the complete set of ways a run ends? | **yes**, and the device never ends one on its own |
-| Q5 | Display: delete the countdown field and give y=36..52 to the duty bar (y=38, height 22)? | **yes**. Alternatives: pressure digits to size 3 with the rows re-spaced, or leave the band empty. The bar is the only activity indicator left, and a taller bar is a smaller change than a bigger type size |
-| Q6 | No time-related telemetry in its place — no elapsed-at-target, no "held for" key? | **yes**. If the panel ever needs a countdown again, the controller pushes it: that is a display value, not a device clock |
-| Q7 | `set target off` during `PULL`/`HOLD` still releases the chamber? | **yes**, unchanged: a run without a target is not a run |
-| Q8 | Link loss still stops and vents? | **yes**, unchanged, and now the device's only automatic ending |
-| Q9 | Document that `PUMP_MAX_RUN_MS` is the practical ceiling on a pull, rather than changing or removing it? | **yes**, document only |
-| Q10 | Keep the `Holding` name rather than renaming it `AtTarget` or `Run`? | **yes**: the protocol, the page and the docs all say `HOLD`, and it is still what the device is doing |
-| Q11 | CLI: drop `timer` from the `set` field choices and the docstring example, and change nothing else? | **yes** |
-| Q12 | Is the `PULL → HOLD` transition still worth having, given nothing happens on it but a reported state change? | **yes**: it is the only thing that tells a controller the target has been reached by the device's own deadband, which is exactly when its countdown should start |
+| Q13 | Confirm that `HOLD` is gone and that Q10 and Q12 are therefore moot? | **yes**: Q1 is the explicit statement, and a state deleted by one answer cannot be named or transitioned by two others |
+| Q14 | The controller feeds the countdown with `set hold <seconds\|off>`, answering `ok hold=572`, and `set hold off` clears it? | **yes**: the wording matches what the panel shows, and `timer` would be a lie now that the device keeps no time |
+| Q15 | Does `start` clear the pushed countdown, so a new run shows `--:--` until the controller sends one, and is the value drawn only while a run is in `PULL`? | **yes**: otherwise a value set for one run lingers into the next |
+| Q16 | Does `Pump` keep `emergencyStop`/`tripped` as its own interlock — it is what makes `setDuty` a no-op after a fault — even though the `sensor` fault is now its only producer? | **yes**: it is the driver's own protection and the reason a fault cannot be pumped through, so it stays |
+| Q17 | `fw` 0.2.0 → 0.3.0? | **yes**: with `proto` gone, `fw` is the only version marker a controller can branch on |
 
 ## 9. Status
 
 | Revision | Change | Sections |
 | --- | --- | --- |
-| rev 1 | initial plan: no device clock, `HOLD` kept as the controller's cue, wire at proto 4 | all |
+| rev 1 | initial plan: no device clock, `HOLD` kept as the controller's cue, wire at proto 4, run protection documented | all |
+| rev 2 | Q1 removes `HOLD` (making Q10 and Q12 moot), Q3 removes the protocol version concept, Q5/Q6 keep a countdown fed from the controller, Q9 removes the pump's run-time protection; display and docs phases split out | §1–§8 |
 
 ## 10. Assumption
 
