@@ -154,27 +154,19 @@ Rules:
 
 ## 5. Button callbacks
 
-Buttons are a separate Berry module, `buttons`, with a callback API. There is no polling
-and no explicit input claim: registering a callback is owning input.
-
-- `buttons.on(index, fn)` — register `fn` for events on button `index` (0=up, 1=down,
-  2=ok). `fn(kind)` receives `"click"`, `"long"`, or `"repeat"`.
-- `buttons.off(index)` — remove the callback for `index`.
-- `buttons.clear()` — remove all callbacks.
-
-While a program runs, the plant forwards Up, Down and OK events to the VM's button queue
-(spec 01 §3.5); `BerryRuntime::update()` drains it and invokes the matching callbacks.
-**Back is never delivered** — it always belongs to the device (break-out, spec 05 §4). A
-program with no registered callbacks is purely a readout and ignores the events.
+Buttons are exposed as callbacks, not polling: registering a callback is owning input
+(full API in §6.4). While a program runs, the plant forwards Up, Down and OK events to the
+VM's button queue (spec 01 §3.5); `BerryRuntime::update()` drains it and invokes the
+matching callbacks. **Back is never delivered** — it always belongs to the device
+(break-out, spec 05 §4). A program with no registered callbacks is purely a readout and
+ignores the events.
 
 ## 6. Berry binding
 
-Four modules, registered once per VM:
+Four modules, registered once per VM. Argument order matches the host `draw` ops where
+the surfaces overlap.
 
-- `vacuum` — the machine (the table below).
-- `program` — identity and params.
-- `screen` — drawing (the `screen` table below).
-- `buttons` — button callbacks (the `buttons` table below).
+### 6.1 `vacuum` — the machine
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
@@ -188,17 +180,22 @@ Four modules, registered once per VM:
 | `vacuum.log(text)` | `log` | `[I]` record |
 | `vacuum.now_ms()` | `nowMs` | |
 | `vacuum.delay(ms)` | `delay` | yields, aborts on stop |
+
+`vacuum.state()` returns a Berry map with keys `kpa`, `vac`, `pct`, `ambient`, `target`,
+`target_active`, `duty`, `floor`, `state`, `sensor_ok`, `reading_valid`, `faulted`,
+`fault`. Programs format numbers with Berry's built-in `string.format` and `str`; the
+firmware exposes no formatter.
+
+### 6.2 `program` — identity and params
+
+| Berry call | Native | Notes |
+| --- | --- | --- |
 | `program.name()` | `programName` | |
 | `program.param(name)` | `param` | typed manifest value |
 | `program.state_set(k, v)` | `stateSet` | float or string |
 | `program.state_get(k)` | `stateGet` | |
 
-`vacuum.state()` returns a Berry map with keys `kpa`, `vac`, `pct`, `ambient`, `target`,
-`target_active`, `duty`, `floor`, `state`, `sensor_ok`, `reading_valid`, `faulted`,
-`fault`. Programs format numbers with Berry's built-in `string.format`
-(e.g. `string.format("%.1f", s.kpa)`) and `str`; the firmware exposes no formatter.
-
-The `screen` module:
+### 6.3 `screen` — drawing
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
@@ -222,10 +219,7 @@ The `screen` module:
 | `screen.draw_text(x,y,size,inverted,str)` | `drawText` | |
 | `screen.flush()` | `flush` | frame boundary, battery composited |
 
-The argument order matches the host `draw` ops, so a program and a host draw the same
-shapes the same way.
-
-The `buttons` module:
+### 6.4 `buttons` — button callbacks
 
 | Berry call | Notes |
 | --- | --- |
