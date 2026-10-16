@@ -6,12 +6,12 @@
 .DESCRIPTION
     Three layers, and dependencies only ever point downwards:
 
-        app/   the instrument: control loop, snapshot, serial interface, page
-        hal/   one file per physical device, plus the board pin map
-        core/  shared foundations: config, math, text, the machine view
+        app/   how the device is driven: the serial interface, the composition root
+        hal/   the device: the panel, the battery, the pin map, the plant
+        core/  shared foundations: config, math, the machine view
 
-    hal/ never sees app/, which is the rule that keeps a driver independent of the
-    instrument built on top of it. Exits 1 and lists offenders when one points up.
+    hal/ never sees app/, which is the rule that keeps the device independent of the
+    interface in front of it. Exits 1 and lists offenders when one points up.
 
 .EXAMPLE
     powershell -File scripts/check-layers.ps1

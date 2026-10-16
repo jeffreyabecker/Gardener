@@ -346,9 +346,9 @@ absorbs a UI, a VM and a file store.
 ```
 core/     Config.h, Snapshot.h (extended), Math.h, Command.h
 hal/      Pins.h (S3), Display.h, AdafruitDisplay, Overlay, Battery, Buttons, Storage
-          (LittleFS wrapper) — Pump, VentValve and PressureSensor are inside
-          VacuumSystem now, and this plan is what would extract them again
-services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
+          (LittleFS wrapper) — VacuumSystem is here today, holding the pump, the valve
+          and the sensor, and this plan is what would move it out and re-extract them
+services/ VacuumSystem (moved from hal/), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
 hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime
 app/      App (composition root + task creation)

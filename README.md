@@ -53,11 +53,11 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    what the device presents rather than what the loop drives: the panel (its
-        interface, the Adafruit adapter and the battery overlay), the battery gauge,
-        and the board pin map
-app/    the instrument: the plant with its three devices, the snapshot, the serial
-        interface, the composition root
+hal/    the device: the panel (its interface, the Adafruit adapter and the battery
+        overlay), the battery gauge, the board pin map, and the plant that drives the
+        sensor, the pump and the valve
+app/    how it is driven: the serial interface, and the composition root that wires
+        the device together and runs the loop
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -82,12 +82,13 @@ Three rules make that hold:
   instant without either reader holding a driver reference, or a driver knowing that a display
   or a controller exists.
 
-`hal/` never sees `app/`, and what it holds is the readouts and the wiring: the panel — its
-interface, the Adafruit adapter and the battery overlay — the battery gauge and the pin map. The
-sensor, the pump and the valve are the plant's own instead — each has exactly one user, so they
-sit in [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) beside the loop that
-depends on them, and the pins, the bus traffic and the control law are read in one file. What is
-left in `hal/` is what a second `app/` file needs, or what a board variant edits.
+`hal/` never sees `app/`, which is what the split is for: the device does not know that a serial
+line exists. It holds the panel — its interface, the Adafruit adapter and the battery overlay —
+the battery gauge, the pin map, and
+[hal/VacuumSystem.h](./libraries/VacuumCore/src/hal/VacuumSystem.h). That last one is the plant:
+it owns the sensor, the pump and the valve and the loop that depends on them, so the pins, the bus
+traffic and the control law are read in one file. What `app/` adds is the way in — the serial line,
+and the root that brings the device up and runs it.
 
 ## Wiring
 
@@ -278,7 +279,7 @@ while the interface is being reworked.
 One class, because the state the chamber is in and the state the run is in turned out to be the
 same state.
 
-[VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant and the machine on
+[VacuumSystem](./libraries/VacuumCore/src/hal/VacuumSystem.cpp) is the plant and the machine on
 top of it, and it drives its own three devices: the sensor poll, the PWM output and the valve are
 inside it, so a change to a pin or a bus read sits next to the loop that depends on it. What it
 holds is the target, the PID on pressure relative to the captured ambient (all terms in kPa,

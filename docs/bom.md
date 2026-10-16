@@ -18,7 +18,7 @@ Anything the code depends on but nobody has specified a value for is in
 | # | Item | Qty | Part / spec | Firmware's view |
 | --- | --- | --- | --- | --- |
 | 1 | MCU board | 1 | ESP32-S3, developed against an ESP32-S3 Super Mini | `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, pinned in [sketch.yaml](../firmware/gardener/sketch.yaml) and [scripts/arduino.ps1](../scripts/arduino.ps1). The on-board RGB LED on GPIO48 is unused. |
-| 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `pins::MPRLS_MIN_KPA` / `MPRLS_MAX_KPA`, polled every `MPRLS_POLL_MS` in [app/VacuumSystem.cpp](../libraries/VacuumCore/src/app/VacuumSystem.cpp). The sensor, not the pump, sets the measurable range. |
+| 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `pins::MPRLS_MIN_KPA` / `MPRLS_MAX_KPA`, polled every `MPRLS_POLL_MS` in [hal/VacuumSystem.cpp](../libraries/VacuumCore/src/hal/VacuumSystem.cpp). The sensor, not the pump, sets the measurable range. |
 | 3 | Display | 1 | Monochrome 1.3" 128x64 OLED module, SH1106, 7-pin SPI breakout. A 128x32 module on the same 7-pin SPI interface is an accepted alternative | Not switched yet: [App::attachPanel()](../libraries/VacuumCore/src/app/App.cpp) still attaches an I2C panel and [Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins — see [§ 5](#5-open-items). A readout only: the host draws it over the serial line. |
 | 4 | Buttons | 1 | 4-switch module with integrated pull-ups, active low on GPIO1/2/10/11 | None. They are wired and named (`pins::BTN_*`) for a future local override and nothing reads them; the pull-ups are on the module, so the firmware configures none of its own. |
 

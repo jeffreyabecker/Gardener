@@ -4,12 +4,12 @@
 #include <Arduino.h>
 
 #include "app/SerialLink.h"
-#include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/AdafruitDisplay.h"
 #include "hal/Battery.h"
 #include "hal/Overlay.h"
 #include "hal/Pins.h"
+#include "hal/VacuumSystem.h"
 
 // Composition root. This is the only class that knows the whole graph: every other module
 // is handed exactly what it uses, by reference, at construction, and nothing includes this
@@ -17,7 +17,7 @@
 //
 // It is also the only thing that draws anything for itself: the boot splash. Everything else on
 // the panel is the host's, drawn over the serial line into the overlay, which puts the battery on
-// every frame. Which panel is fitted is hal/Panel's business; App holds it as a GrayOLED.
+// every frame. Which panel is fitted is a detail that may change; App holds it as a GrayOLED.
 //
 // The device is a serial peripheral with no local control surface, so the loop services the
 // sensor, the control loop and the link, in that order. The App is also the only place that

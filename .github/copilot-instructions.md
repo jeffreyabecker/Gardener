@@ -34,7 +34,7 @@ a couple of thousand lines, one loop. It stays that way only if new work extends
 instead of building beside it. When a design is larger than the thing it does, the extra is the
 bug, and every part of it should have a reason a reviewer can point at.
 
-**One class where one class works.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
+**One class where one class works.** [VacuumSystem](../libraries/VacuumCore/src/hal/VacuumSystem.h)
 is the plant, the machine and the three devices it drives — the sensor, the pump and the valve —
 because the chamber's state and the run's state turned out to be one state, and each of those
 devices has exactly one user. Don't split it into a plant, a controller and a driver per device, and

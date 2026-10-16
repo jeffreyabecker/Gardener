@@ -11,8 +11,8 @@
 
 namespace gardener {
 
-// The plant: the whole rig between the wire and the hardware — the sensor, the pump and the
-// valve, and the pressure loop, the release path and the run state on top of them.
+// The plant: the whole rig between the wire and the pins — the sensor, the pump and the valve,
+// and the pressure loop, the release path and the run state on top of them.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
 // true: the pressure, the duty, the state. The state is the plant's own, because both of the
@@ -34,8 +34,9 @@ namespace gardener {
 //
 // The sensor, the pump and the valve are the plant's own rather than injected: each has exactly
 // one user, this class, so folding them in keeps the pins, the bus traffic and the loop that
-// depends on them in one file. The panel and the battery stay in hal/, where more than one
-// app/ file needs them.
+// depends on them in one file. That is also why the file is in hal/ beside the panel and the
+// battery gauge: it is the device half, and nothing here knows a serial line exists. What it is
+// told to do arrives as commands from app/, and what it reports leaves as the machine view.
 class VacuumSystem {
  public:
   // Brings up the sensor, the pump and the valve, then captures the ambient reference. False

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "app/VacuumSystem.h"
+#include "hal/VacuumSystem.h"
 
 namespace gardener {
 namespace {
