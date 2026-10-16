@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <type_traits>
 
-#include "hal/Pins.h"
+#include "core/Config.h"
 
 namespace gardener {
 
@@ -15,7 +15,7 @@ static_assert(!std::is_abstract<NormallyClosedValve>::value,
               "NormallyClosedValve must implement every VentValve verb");
 
 void SolenoidValve::begin() {
-  pinMode(pins::VENT_VALVE, OUTPUT);
+  pinMode(cfg::VENT_VALVE, OUTPUT);
   // Start vented, whatever that costs in coil drive: open_ is the latch, and write() maps the
   // chamber intent onto the drive level the fitted part wants.
   open_ = true;
@@ -39,7 +39,7 @@ bool SolenoidValve::energised() const {
 }
 
 void SolenoidValve::write(bool energise) {
-  digitalWrite(pins::VENT_VALVE, energise ? HIGH : LOW);
+  digitalWrite(cfg::VENT_VALVE, energise ? HIGH : LOW);
 }
 
 }  // namespace gardener

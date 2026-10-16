@@ -6,13 +6,18 @@ none is recorded in this repository, so it says what each part is and which deci
 rather than where to buy it.
 
 Wiring detail — pin assignments, gate networks, the battery divider — lives in
-[README.md § Wiring](../README.md#wiring) and [hal/Pins.h](../libraries/VacuumCore/src/hal/Pins.h);
-a part's own numbers, which change with the part rather than with the board, live with its driver
-in [hal/impl/](../libraries/VacuumCore/src/hal/impl). Where a line is enforced or measured by
+[README.md § Wiring](../README.md#wiring) and
+[core/Config.h](../libraries/VacuumCore/src/core/Config.h); a part's own numbers, which change with
+the part rather than with the board, live with its driver in
+[hal/impl/](../libraries/VacuumCore/src/hal/impl). Where a line is enforced or measured by
 firmware, the constant is named so the two can be changed together.
 
 Anything the code depends on but nobody has specified a value for is in
 [§ 5 Open items](#5-open-items) instead of being guessed at here.
+
+The vendor half — the modules a particular build was ordered from, the rails they sit on and the
+traps in wiring them — is [prototype-build.md](./prototype-build.md). It describes one build rather
+than the machine, which is why it carries prices and this does not.
 
 ## 1. Electronics
 
@@ -20,10 +25,10 @@ Anything the code depends on but nobody has specified a value for is in
 | --- | --- | --- | --- | --- |
 | 1 | MCU board | 1 | ESP32-S3, developed against an ESP32-S3 Super Mini | `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, pinned in [sketch.yaml](../firmware/gardener/sketch.yaml) and [scripts/arduino.ps1](../scripts/arduino.ps1). The on-board RGB LED on GPIO48 is unused. |
 | 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `kMinKpa` / `kMaxKpa`, polled every `kPollMs` at `kI2cAddr`, in [hal/impl/MprlsSensor.cpp](../libraries/VacuumCore/src/hal/impl/MprlsSensor.cpp). The sensor, not the pump, sets the measurable range. |
-| 3 | Display | 1 | Monochrome 1.3" 128x64 OLED module, SH1106, 7-pin SPI breakout. A 128x32 module on the same 7-pin SPI interface is an accepted alternative | Not switched yet: [App::attachPanel()](../libraries/VacuumCore/src/app/App.cpp) still attaches an I2C panel and [Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins — see [§ 5](#5-open-items). A readout only: the host draws it over the serial line. |
-| 4 | Buttons | 1 | 4-switch module with integrated pull-ups, active low on GPIO1/2/10/11 | None. They are wired and named (`pins::BTN_*`) for a future local override and nothing reads them; the pull-ups are on the module, so the firmware configures none of its own. |
+| 3 | Display | 1 | Monochrome 1.3" 128x64 OLED module, SH1106, 7-pin SPI breakout. A 128x32 module on the same 7-pin SPI interface is an accepted alternative | Not switched yet: [App::attachPanel()](../libraries/VacuumCore/src/app/App.cpp) still attaches an I2C panel and [core/Config.h](../libraries/VacuumCore/src/core/Config.h) has no SPI pins — see [§ 5](#5-open-items). A readout only: the host draws it over the serial line. |
+| 4 | Buttons | 1 | 4-switch module with integrated pull-ups, active low on GPIO1/2/10/11 | None. They are wired and named (`cfg::BTN_*`) for a future local override and nothing reads them; the pull-ups are on the module, so the firmware configures none of its own. |
 
-The pressure sensor is the only I2C peripheral: MPRLS on `pins::I2C_FREQ_HZ` (400 kHz) at GPIO8/9,
+The pressure sensor is the only I2C peripheral: MPRLS on `cfg::I2C_FREQ_HZ` (400 kHz) at GPIO8/9,
 which is why it is a STEMMA QT part — one cable and no soldering. The display (item 3) is a 7-pin
 SPI module, so it no longer shares that bus; the firmware has not moved with it yet, see
 [§ 5](#5-open-items).
@@ -49,7 +54,7 @@ the pump can only pull down, so the valve is the only way back up.
 | # | Item | Qty | Part / spec | Notes |
 | --- | --- | --- | --- | --- |
 | 12 | Battery | 1 | 1S Li-ion pack, 3.2–4.2 V | The gauge input: mapped linearly between `BATTERY_EMPTY_VOLTS` and `BATTERY_FULL_VOLTS`. Whether it is also what feeds the board's regulator is not stated anywhere — see [§ 5](#5-open-items). |
-| 13 | Divider resistor | 2 | 100k each, pack to GPIO4 and GPIO4 to GND | `pins::BATTERY_DIVIDER_RATIO` (2.0) assumes both are equal; `BATTERY_CALIBRATION` trims the ratio against a meter because the ESP32 ADC is not lab grade. |
+| 13 | Divider resistor | 2 | 100k each, pack to GPIO4 and GPIO4 to GND | `cfg::BATTERY_DIVIDER_RATIO` (2.0) assumes both are equal; `BATTERY_CALIBRATION` trims the ratio against a meter because the ESP32 ADC is not lab grade. |
 | 14 | 12 V supply | 1 | For the pump and the valve | The pump's own supply, not the logic rail. See [§ 5](#5-open-items) for how it relates to item 12. |
 
 GPIO4 carries the sense line because it is the one ADC1 pin that is neither a button nor a
@@ -84,9 +89,10 @@ above:
 * **Chamber, tubing and catch pot ratings** (items 17–18) — the firmware's limits are software
   limits, so these are what make the rig safe, and they are not spec'd here.
 * **Display interface** (item 3): the panel is a 7-pin SPI module, but the firmware still attaches
-  an I2C SH1106 and [hal/Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins. Moving it
-  needs a map for SCK, MOSI, CS, DC and RES; the S3's SPI defaults are not all free, because
-  GPIO10/11 are `BTN_OK`/`BTN_BACK`. The free pins README lists (7, 12–18) are the candidates.
+  an I2C SH1106 and [core/Config.h](../libraries/VacuumCore/src/core/Config.h) has no SPI pins.
+  Moving it needs a map for SCK, MOSI, CS, DC and RES; the S3's SPI defaults are not all free,
+  because GPIO10/11 are `BTN_OK`/`BTN_BACK`. The free pins README lists (7, 12–18) are the
+  candidates.
 * **Display size** (item 3 alternative): the 128x32 module is a different geometry, so
   `panel::HEIGHT` in
   [hal/impl/AdafruitDisplay.h](../libraries/VacuumCore/src/hal/impl/AdafruitDisplay.h) and anything

@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "hal/Pins.h"
+#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -18,7 +18,7 @@ constexpr float kPresentMinVolts = 1.0f;
 }  // namespace
 
 bool Battery::begin() {
-  pinMode(pins::BATTERY_ADC, INPUT);
+  pinMode(cfg::BATTERY_ADC, INPUT);
   configured_ = true;
   update(millis());
   return true;
@@ -33,10 +33,10 @@ void Battery::update(uint32_t nowMs) {
   sampled_ = true;
 
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < kSamples; i++) totalMilliVolts += analogReadMilliVolts(pins::BATTERY_ADC);
+  for (uint8_t i = 0; i < kSamples; i++) totalMilliVolts += analogReadMilliVolts(cfg::BATTERY_ADC);
 
   float pinVolts = (float)totalMilliVolts / (float)kSamples / 1000.0f;
-  volts_ = pinVolts * pins::BATTERY_DIVIDER_RATIO * cfg::BATTERY_CALIBRATION;
+  volts_ = pinVolts * cfg::BATTERY_DIVIDER_RATIO * cfg::BATTERY_CALIBRATION;
   present_ = volts_ >= kPresentMinVolts;
   if (!present_) {
     percent_ = 0;

@@ -47,15 +47,16 @@ so capturing a new one restates every target, and both want the rig at rest when
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/bom.md](./docs/bom.md) | The bill of materials: every part, and the constant each one is tied to |
+| [docs/prototype-build.md](./docs/prototype-build.md) | The vendor half: the modules one build was ordered from, the rails, and the wiring traps |
 
 ### Architecture
 
 ```
-core/   shared foundations: config, math, the machine view
+core/   shared foundations: the constants the firmware owns — the board's pin map and the
+        machine's policy — plus math and the machine view
 hal/    what the instrument needs from its hardware: an abstract class per part —
-        Display, PressureSensor, Pump, VentValve — the battery gauge, and the board pin
-        map. The parts themselves are in hal/impl/, which is the only place a vendor
-        library is included
+        Display, PressureSensor, Pump, VentValve — and the battery gauge. The parts
+        themselves are in hal/impl/, which is the only place a vendor library is included
 app/    the instrument: the plant that commands them, the display overlay, the serial
         interface, and the composition root that wires it all up and runs the loop
 ```
@@ -74,7 +75,9 @@ Three rules make that hold:
   what it uses at construction, or owns it outright. `App` is the only file that knows the whole
   graph, and a missing dependency is a compile error rather than a null pointer at runtime.
 * **No shared `util`.** A helper lives with its single owner. `core/` is visible everywhere,
-  so anything parked there is public API whether or not that was the intent.
+  so anything parked there is public API whether or not that was the intent —
+  [core/Config.h](./libraries/VacuumCore/src/core/Config.h) is the one deliberate exception,
+  because the board's wiring is the same single truth for every layer that names it.
 * **The machine view is plain data.** [core/Snapshot.h](./libraries/VacuumCore/src/core/Snapshot.h)
   carries pressure, pump, run, battery and device state as values. One snapshot is rebuilt in
   place each loop iteration, so `app/` can format a reply and draw the display from the same
@@ -87,7 +90,7 @@ a control loop exists. The plant is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
 pins and the bus read in another. Each of those is an interface, and the part that satisfies it is in
-`hal/impl/`, which is where the pin map is read and where `<Adafruit_MPRLS.h>` and
+`hal/impl/`, which is where the pin is read and where `<Adafruit_MPRLS.h>` and
 `<Adafruit_GrayOLED.h>` appear and nowhere else.
 
 ## Wiring
@@ -114,9 +117,10 @@ override but no code reads them. The battery sense is on GPIO4 because it is the
 that is not a button — a pressed button would pull the sense line to ground. Nothing in the
 firmware touches the pins that have to be left alone at reset (strapping 0, 3, 45, 46) or the
 USB pins (19/20), and on a Super Mini GPIO0 is only the BOOT button. I2C addresses: MPRLS
-`0x18`, OLED `0x3C`. Pins live in [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h); a part's
-own numbers — the panel's geometry, the sensor's range, the PWM channel's setup — live with its
-driver in [hal/impl/](./libraries/VacuumCore/src/hal/impl).
+`0x18`, OLED `0x3C`. The pin map and the harness constants are in
+[core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers — the panel's
+geometry, the sensor's range, the PWM channel's setup — sit with its driver in
+[hal/impl/](./libraries/VacuumCore/src/hal/impl).
 
 The on-board addressable RGB LED is on GPIO48, which is clear of the I2C bus, so it needs no
 special handling.
@@ -209,8 +213,9 @@ native USB CDC. Build without `CDCOnBoot` and the whole interface goes to UART0 
 instead, so a USB cable sees nothing at all. It is pinned in `firmware/gardener/sketch.yaml`,
 `scripts/arduino.ps1` and `.vscode/arduino.json`.
 
-Policy tunables live in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) and wiring in
-[hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h).
+The board's wiring and the machine's policy tunables both live in
+[core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers live with its
+driver in `hal/impl/`.
 
 ## Using the device
 

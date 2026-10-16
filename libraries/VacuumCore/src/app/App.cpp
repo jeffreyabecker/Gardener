@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <stdlib.h>
 
-#include "hal/Pins.h"
+#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -51,7 +51,7 @@ bool App::begin() {
   boot += " booting";
   link_.info(boot.c_str());
 
-  Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
+  Wire.begin(cfg::I2C_SDA, cfg::I2C_SCL, cfg::I2C_FREQ_HZ);
 
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
   // panel that does not answer is fatal rather than a degraded mode.
