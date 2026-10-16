@@ -65,6 +65,12 @@ watchdog is a question to ask, not a thing to build.
 `PlantState` are the current shape of it: fifteen one-by-one getters became one read of one plain
 value, with the wire bytes unchanged.
 
+**Committing means commit.** When you are told to commit, stage what is in the tree and write the
+message: one commit, the change as it stands, in the style the history already uses. Don't re-run
+what was verified when the change was made, don't split one request into a tidier series of commits,
+and never revert files to rebuild an intermediate state so that a commit looks smaller. Verification
+belongs to the change, not to the commit.
+
 This is guidance for new code, and for code you are already changing. Existing structure is not a
 rewrite-on-sight target, and an unrequested refactor is its own decision with its own measurement.
 
