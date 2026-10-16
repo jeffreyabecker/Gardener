@@ -27,6 +27,45 @@ earlier decision that this guidance supersedes for new work, not a task to sched
 hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
 the only way text is formatted in this firmware.
 
+## Keep it simple
+
+Simplicity here is not a taste, it is what the firmware is already built to: a handful of files,
+a couple of thousand lines, one loop. It stays that way only if new work extends that shape
+instead of building beside it. When a design is larger than the thing it does, the extra is the
+bug, and every part of it should have a reason a reviewer can point at.
+
+**One class where one class works.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
+is the plant *and* the machine, because the chamber's state and the run's state turned out to be one
+state. Don't pre-split it into a plant and a controller, and don't add a base class, an interface or
+a policy object for a second implementation that does not exist.
+
+**A value beats a mechanism.** New state is a field on
+[PlantState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
+getter per fact, not a callback, not an observer, not an event queue. The reads are
+`VacuumSystem::state()` and the one snapshot; if a change wants a new public getter for something,
+carry it in the snapshot instead.
+
+**No speculative generality.** One caller means no interface. One implementation means no template,
+no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the
+second case arrives.
+
+**Delete, don't deprecate.** Unused code goes to git — not behind `#if 0`, not in a `legacy/`
+folder, not behind a flag defaulted off. The Berry runtime and the host client were both deleted
+outright and left to the history ([README](../README.md) Roadmap); do the same.
+
+**A plan is a requirement, not a design.** [docs/berry-on-device-control.md](../docs/berry-on-device-control.md)
+and [docs/specs/](../docs/specs) describe a scripting build with a VM on the second core, three
+tasks, a heartbeat watchdog and task restart. Read them for what has to be true, then answer it with
+the smallest mechanism the current single loop allows. Reaching for a task, a lock, a queue or a
+watchdog is a question to ask, not a thing to build.
+
+**Same behaviour, less surface** is the trade to look for. `VacuumSystem::state()` and
+`PlantState` are the current shape of it: fifteen one-by-one getters became one read of one plain
+value, with the wire bytes unchanged.
+
+This is guidance for new code, and for code you are already changing. Existing structure is not a
+rewrite-on-sight target, and an unrequested refactor is its own decision with its own measurement.
+
 ## Where to look
 
 - [README.md](../README.md) — wiring, build and upload flow, control model, safety notes.
