@@ -406,15 +406,17 @@ One spec per feature, under [docs/specs/](specs/):
 
 | Spec | Feature |
 | --- | --- |
-| [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs — **the one spec §5 no longer agrees with** |
+| [01-execution-model](specs/01-execution-model.md) | The loop, the program slice, the runaway gate, the fallback |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
 | [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, `programs` module, button callbacks |
 | [04-screen-and-buttons](specs/04-screen-and-buttons.md) | Screen and button ownership, the abort override |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, abort |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
 
-Spec 01 is the exception. It specifies three FreeRTOS tasks, a heartbeat and a VM restart — the
-mechanism §5.3 now defers until a measurement asks for it — so it is the one spec that has to be
-rewritten before phase 1 starts. The rest are unaffected by that delay: they are about what the
-program model does, not about where it runs.
+Spec 01 now matches §5: it is [01-execution-model](specs/01-execution-model.md), and its §6 is the
+gate that decides whether the fallback is ever needed. Three specs still describe the fallback in
+their own bodies, and want a pass before the phases that touch them: spec 03 names a `vmTask` and
+a watchdog, spec 05 has the watchdog stopping and venting a program that stops yielding, and spec
+07 has a snapshot read spanning two adjacent ticks. The rest are unaffected: they are about what
+the program model does, not about where it runs.
 | [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |
