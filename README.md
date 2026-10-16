@@ -52,9 +52,10 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    one file per physical device — the panel (its interface and the Adafruit
-        adapter), the battery gauge, the pressure sensor, the pump, the vent valve —
-        plus the board pin map
+hal/    what the instrument needs from its hardware: an abstract class per part —
+        Display, PressureSensor, Pump, VentValve — the battery gauge, and the board pin
+        map. The parts themselves are in hal/impl/, which is the only place a vendor
+        library is included
 app/    the instrument: the plant that commands them, the display overlay, the serial
         interface, and the composition root that wires it all up and runs the loop
 ```
@@ -85,7 +86,9 @@ of it: a part reports what it is doing as values, and nothing in `hal/` knows th
 a control loop exists. The plant is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
-pins and the bus read in another.
+pins and the bus read in another. Each of those is an interface, and the part that satisfies it is in
+`hal/impl/`, which is where the pin map is read and where `<Adafruit_MPRLS.h>` and
+`<Adafruit_GrayOLED.h>` appear and nowhere else.
 
 ## Wiring
 

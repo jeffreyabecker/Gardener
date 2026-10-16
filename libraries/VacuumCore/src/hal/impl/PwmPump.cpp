@@ -1,15 +1,23 @@
-#include "hal/Pump.h"
+#include "hal/impl/PwmPump.h"
 
+#include <Arduino.h>
 #include <math.h>
+#include <type_traits>
 
+#include "core/Config.h"
 #include "core/Math.h"
+#include "hal/Pins.h"
 
 namespace gardener {
 namespace {
 constexpr uint32_t kMaxStepMs = 250;
 }
 
-bool Pump::begin() {
+// Nothing else spells the interface out, so a verb added to Pump and not implemented here would
+// leave this class abstract - silently, until something tried to construct it.
+static_assert(!std::is_abstract<PwmPump>::value, "PwmPump must implement every Pump verb");
+
+bool PwmPump::begin() {
   pinMode(pins::PUMP_PWM, OUTPUT);
   digitalWrite(pins::PUMP_PWM, LOW);
   if (!ledcAttach(pins::PUMP_PWM, pins::PUMP_PWM_FREQ_HZ, pins::PUMP_PWM_RESOLUTION)) {
@@ -19,24 +27,24 @@ bool Pump::begin() {
   return true;
 }
 
-void Pump::write(float percent) {
+void PwmPump::write(float percent) {
   const uint32_t maxDuty = (1u << pins::PUMP_PWM_RESOLUTION) - 1u;
   float limited = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
   ledcWrite(pins::PUMP_PWM, duty);
 }
 
-void Pump::setDuty(float percent) {
+void PwmPump::setDuty(float percent) {
   target_ = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
 }
 
-void Pump::halt() {
+void PwmPump::halt() {
   target_ = 0.0f;
   duty_ = 0.0f;
   write(0.0f);
 }
 
-void Pump::update(uint32_t nowMs) {
+void PwmPump::update(uint32_t nowMs) {
   if (lastUpdateMs_ == 0) lastUpdateMs_ = nowMs;
   uint32_t dt = nowMs - lastUpdateMs_;
   if (dt > kMaxStepMs) dt = kMaxStepMs;

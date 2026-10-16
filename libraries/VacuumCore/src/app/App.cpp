@@ -16,7 +16,8 @@ bool serialAttached() { return (bool)Serial; }
 }  // namespace
 
 App::App()
-    : panel_(nullptr),
+    : sensor_(Wire),
+      panel_(nullptr),
       display_(panel_),
       overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
@@ -54,7 +55,7 @@ bool App::begin() {
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
   // panel that does not answer is fatal rather than a degraded mode.
   panel_ = attachPanel();
-  bool sensorOk = sensor_.begin(Wire);
+  bool sensorOk = sensor_.begin();
   bool pumpOk = pump_.begin();
   vent_.begin();
   bool batteryOk = battery_.begin();

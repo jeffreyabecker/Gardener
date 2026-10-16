@@ -1,6 +1,8 @@
-#include "hal/PressureSensor.h"
+#include "hal/impl/MprlsSensor.h"
 
 #include <math.h>
+#include <string.h>
+#include <type_traits>
 
 #include "core/Config.h"
 #include "core/Math.h"
@@ -10,9 +12,14 @@ namespace {
 constexpr float kFilterAlpha = 0.3f;
 }
 
-bool PressureSensor::begin(TwoWire& wire) {
+// Nothing else spells the interface out, so a verb added to PressureSensor and not implemented here
+// would leave this class abstract - silently, until something tried to construct it.
+static_assert(!std::is_abstract<MprlsSensor>::value,
+              "MprlsSensor must implement every PressureSensor verb");
+
+bool MprlsSensor::begin() {
   ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
-  present_ = sensor_.begin(pins::MPRLS_I2C_ADDR, &wire);
+  present_ = sensor_.begin(pins::MPRLS_I2C_ADDR, &wire_);
   if (!present_) return false;
   delay(15);  // first conversion after power up
   float kpa = 0.0f;
@@ -23,14 +30,14 @@ bool PressureSensor::begin(TwoWire& wire) {
   return true;
 }
 
-bool PressureSensor::readNow(float& outKpa) {
+bool MprlsSensor::readNow(float& outKpa) {
   float kpa = sensor_.readPressure() * 0.1f;  // the library reports hPa
   if (isnan(kpa) || kpa <= pins::MPRLS_MIN_KPA || kpa > pins::MPRLS_MAX_KPA) return false;
   outKpa = kpa;
   return true;
 }
 
-void PressureSensor::update(uint32_t nowMs) {
+void MprlsSensor::update(uint32_t nowMs) {
   if (!present_) return;
   if (nowMs - lastPollMs_ < pins::MPRLS_POLL_MS) return;
   lastPollMs_ = nowMs;
@@ -64,24 +71,24 @@ void PressureSensor::update(uint32_t nowMs) {
   }
 }
 
-float PressureSensor::vacuumKpa() const {
+float MprlsSensor::vacuumKpa() const {
   if (!valid_) return 0.0f;
   float deficit = ambientKpa_ - filteredKpa_;
   return deficit > 0.0f ? deficit : 0.0f;
 }
 
-float PressureSensor::vacuumPercent() const {
+float MprlsSensor::vacuumPercent() const {
   if (!valid_ || ambientKpa_ <= 0.0f) return 0.0f;
   return clampf(vacuumKpa() / ambientKpa_ * 100.0f, 0.0f, 100.0f);
 }
 
-bool PressureSensor::setAmbientKpa(float kpa) {
+bool MprlsSensor::setAmbientKpa(float kpa) {
   if (kpa < 10.0f || kpa > pins::MPRLS_MAX_KPA) return false;
   ambientKpa_ = kpa;
   return true;
 }
 
-void PressureSensor::captureAmbient() {
+void MprlsSensor::captureAmbient() {
   if (!valid_) return;
   setAmbientKpa(filteredKpa_);
 }

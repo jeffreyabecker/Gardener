@@ -1,34 +1,24 @@
 #pragma once
 
-#include <Arduino.h>
-#include <stdint.h>
-
-#include "hal/Pins.h"
-
 namespace gardener {
 
-// Normally open solenoid valve on the chamber.
+// The vent valve: the only way back up, since the pump can pull down and nothing else can.
 //
-// close() energises the coil and open() releases it, which is precisely the inversion
-// that gets wired backwards: the valve is **normally open**, so de-energised means the
-// chamber is vented. That is deliberate and it is the fail-safe for this rig (Q10) — a
-// crash, a watchdog reset, a brownout or a cut wire all release the coil and vent the
-// chamber whether or not the firmware noticed.
+// This is the interface the plant holds. The part on this rig is a normally open solenoid on a
+// GPIO, in hal/impl/, and that inversion is the rig's one hardware guarantee: de-energised means
+// released, so a crash, a brownout or a cut wire vents the chamber whether or not the firmware
+// noticed. It is worth saying out loud here because it is what makes `close()` the act of running a
+// vacuum rather than `open()`.
 //
-// Vent *timing* belongs to the run model, not here: this class only drives a pin, and the
-// drive is active high because the MOSFET gate is.
+// Vent *timing* is the run model's, not the valve's: this only drives the pin.
 class VentValve {
  public:
-  void begin();
-  void open();
-  void close();
+  virtual ~VentValve() = default;
 
-  bool energised() const { return !open_; }
-
- private:
-  void write(bool energise);
-
-  bool open_ = true;
+  virtual void begin() = 0;
+  virtual void open() = 0;   // release the coil: the chamber vents
+  virtual void close() = 0;  // energise it: the chamber can be pumped
+  virtual bool energised() const = 0;
 };
 
 }  // namespace gardener

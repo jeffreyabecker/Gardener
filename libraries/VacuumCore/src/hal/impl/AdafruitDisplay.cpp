@@ -1,4 +1,4 @@
-#include "hal/AdafruitDisplay.h"
+#include "hal/impl/AdafruitDisplay.h"
 
 #include <type_traits>
 

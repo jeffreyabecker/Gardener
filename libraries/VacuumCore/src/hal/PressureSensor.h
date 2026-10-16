@@ -1,52 +1,39 @@
 #pragma once
 
-#include <Adafruit_MPRLS.h>
-#include <Arduino.h>
-#include <Wire.h>
 #include <stdint.h>
-
-#include "core/Config.h"
-#include "hal/Pins.h"
 
 namespace gardener {
 
-// Adafruit MPRLS ported pressure sensor (0..25 PSI absolute), on the I2C bus.
+// Where the plant gets pressure from: an absolute reading, and a captured ambient reference for it
+// to state targets against.
 //
-// Reports kPa: the library's hPa is converted once, here, at the driver boundary.
-// The part is absolute, so ambient air sits near 101.3 kPa and a vacuum reads lower;
-// "vacuum" values are the deficit against a captured ambient reference.
+// This is the interface the plant holds. The part on this rig — an Adafruit MPRLS on I2C, with a
+// median window and an EMA over it — is in hal/impl/, which is also the only place that includes
+// the vendor library.
+//
+// Pressures are kPa. `kpa` is the absolute reading; `vacuumKpa` and `vacuumPercent` are that
+// reading measured against the reference, which is the frame a target is stated in. A reading that
+// is not valid reports zero deficit rather than a guess.
 class PressureSensor {
  public:
-  bool begin(TwoWire& wire);
-  void update(uint32_t nowMs);
+  virtual ~PressureSensor() = default;
 
-  bool present() const { return present_; }
-  bool readingValid() const { return valid_; }
+  // False when the part did not answer, so the caller can say so at boot and carry on.
+  virtual bool begin() = 0;
+  virtual void update(uint32_t nowMs) = 0;
 
-  float kpa() const { return filteredKpa_; }
-  float ambientKpa() const { return ambientKpa_; }
-  float vacuumKpa() const;
-  float vacuumPercent() const;
+  // False when the part has stopped answering, which mid-run is a fault.
+  virtual bool present() const = 0;
+  // False until a sample has been taken and filtered; regulating on one is how a loop runs away.
+  virtual bool readingValid() const = 0;
 
-  void captureAmbient();
+  virtual float kpa() const = 0;
+  virtual float ambientKpa() const = 0;
+  virtual float vacuumKpa() const = 0;
+  virtual float vacuumPercent() const = 0;
 
- private:
-  bool readNow(float& outKpa);
-
-  // False when the value is outside what the part can measure; the reference is then left
-  // alone, so a capture taken while the chamber was already pumped down is refused rather than
-  // adopted. Only captureAmbient() calls it, so the reference can be taken but never dialled in.
-  bool setAmbientKpa(float kpa);
-
-  Adafruit_MPRLS sensor_;
-  bool present_ = false;
-  bool valid_ = false;
-  uint32_t lastPollMs_ = 0;
-  float ambientKpa_ = 0.0f;
-  float filteredKpa_ = 0.0f;
-  float window_[5] = {0, 0, 0, 0, 0};
-  uint8_t windowCount_ = 0;
-  uint8_t windowIndex_ = 0;
+  // The reference is captured and never dialled in: this is the only way one is ever set.
+  virtual void captureAmbient() = 0;
 };
 
 }  // namespace gardener

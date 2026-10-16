@@ -36,11 +36,17 @@ bug, and every part of it should have a reason a reviewer can point at.
 
 **One class where one class works, and one file per device.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
 is the plant *and* the machine, because the chamber's state and the run's state turned out to be one
-state: don't split it into a plant and a controller. A device is a different thing — a pin, a bus
-and a PWM channel are a boundary a board variant edits — so the sensor, the pump and the valve each
-keep their own file in `hal/` and the plant takes them by reference, even though the plant is their
-only caller. Folding a driver into the class that drives it reads as a saving and is not one: it
-puts the register writes next to the control law, which is the one thing they are not part of.
+state: don't split it into a plant and a controller. A device is a different thing — a pin, a bus and
+a PWM channel are a boundary — so a part is an abstract class in `hal/` with its implementation in
+`hal/impl/`, and the plant takes it by reference even though the plant is its only caller. Don't fold
+a driver into the class that drives it: the register writes and the control law are the two things
+here least likely to change together.
+
+Those interfaces are not waiting for a second implementation. They are there because `hal/impl/` is
+where a vendor header is allowed to appear — `<Adafruit_MPRLS.h>`, `<Adafruit_GrayOLED.h>` — and
+because the plant reads the same whether the part behind it is an MPRLS or nothing at all. An
+interface with one implementation earns its place exactly when it is a foreign boundary like that;
+anywhere else it is a second implementation that does not exist yet.
 
 **A value beats a mechanism.** New state is a field on
 [PlantState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
