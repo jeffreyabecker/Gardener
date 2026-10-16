@@ -11,7 +11,12 @@
 namespace gardener {
 namespace {
 constexpr uint32_t kMaxStepMs = 250;
-}
+
+// The LEDC channel's own setup, which is a property of the drive rather than of the loop: a
+// switching frequency above hearing, and ten bits of resolution for the duty.
+constexpr uint32_t kPwmFreqHz = 20000;
+constexpr uint8_t kPwmResolution = 10;
+}  // namespace
 
 // Nothing else spells the interface out, so a verb added to Pump and not implemented here would
 // leave this class abstract - silently, until something tried to construct it.
@@ -20,7 +25,7 @@ static_assert(!std::is_abstract<PwmPump>::value, "PwmPump must implement every P
 bool PwmPump::begin() {
   pinMode(pins::PUMP_PWM, OUTPUT);
   digitalWrite(pins::PUMP_PWM, LOW);
-  if (!ledcAttach(pins::PUMP_PWM, pins::PUMP_PWM_FREQ_HZ, pins::PUMP_PWM_RESOLUTION)) {
+  if (!ledcAttach(pins::PUMP_PWM, kPwmFreqHz, kPwmResolution)) {
     return false;
   }
   write(0.0f);
@@ -28,7 +33,7 @@ bool PwmPump::begin() {
 }
 
 void PwmPump::write(float percent) {
-  const uint32_t maxDuty = (1u << pins::PUMP_PWM_RESOLUTION) - 1u;
+  const uint32_t maxDuty = (1u << kPwmResolution) - 1u;
   float limited = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
   ledcWrite(pins::PUMP_PWM, duty);

@@ -10,7 +10,15 @@
 namespace gardener {
 namespace {
 constexpr float kFilterAlpha = 0.3f;
-}
+
+// The part's own facts, so they move with the part rather than with the board: its address on
+// the bus, how often it is worth asking, and the range it can measure. Everything outside the
+// range is refused rather than believed, which is what keeps a dead part from reading as vacuum.
+constexpr uint8_t kI2cAddr = 0x18;
+constexpr uint32_t kPollMs = 20;
+constexpr float kMinKpa = 0.0f;
+constexpr float kMaxKpa = 172.369f;  // 25 PSI full scale
+}  // namespace
 
 // Nothing else spells the interface out, so a verb added to PressureSensor and not implemented here
 // would leave this class abstract - silently, until something tried to construct it.
@@ -19,7 +27,7 @@ static_assert(!std::is_abstract<MprlsSensor>::value,
 
 bool MprlsSensor::begin() {
   ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
-  present_ = sensor_.begin(pins::MPRLS_I2C_ADDR, &wire_);
+  present_ = sensor_.begin(kI2cAddr, &wire_);
   if (!present_) return false;
   delay(15);  // first conversion after power up
   float kpa = 0.0f;
@@ -32,14 +40,14 @@ bool MprlsSensor::begin() {
 
 bool MprlsSensor::readNow(float& outKpa) {
   float kpa = sensor_.readPressure() * 0.1f;  // the library reports hPa
-  if (isnan(kpa) || kpa <= pins::MPRLS_MIN_KPA || kpa > pins::MPRLS_MAX_KPA) return false;
+  if (isnan(kpa) || kpa <= kMinKpa || kpa > kMaxKpa) return false;
   outKpa = kpa;
   return true;
 }
 
 void MprlsSensor::update(uint32_t nowMs) {
   if (!present_) return;
-  if (nowMs - lastPollMs_ < pins::MPRLS_POLL_MS) return;
+  if (nowMs - lastPollMs_ < kPollMs) return;
   lastPollMs_ = nowMs;
 
   float kpa = 0.0f;
@@ -83,7 +91,7 @@ float MprlsSensor::vacuumPercent() const {
 }
 
 bool MprlsSensor::setAmbientKpa(float kpa) {
-  if (kpa < 10.0f || kpa > pins::MPRLS_MAX_KPA) return false;
+  if (kpa < 10.0f || kpa > kMaxKpa) return false;
   ambientKpa_ = kpa;
   return true;
 }

@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "hal/Pins.h"
+
 namespace gardener {
 namespace {
 

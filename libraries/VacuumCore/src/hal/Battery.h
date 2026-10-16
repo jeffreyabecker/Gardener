@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 #include "core/Config.h"
-#include "hal/Pins.h"
 
 namespace gardener {
 

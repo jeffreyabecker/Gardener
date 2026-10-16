@@ -2,7 +2,12 @@
 
 #include <stdint.h>
 
-// Board wiring: which pin is what, and the electrical characteristics of the parts.
+// Board wiring: which pin is what, plus the two facts about the harness itself — how fast the
+// shared bus runs and how the pack's divider is built. The characteristics of the *parts* — the
+// panel's geometry and address, the sensor's range and poll interval, the PWM channel's setup —
+// live with the driver that reads them, in hal/impl/, because they change with the part and not
+// with the board.
+//
 // Only hal/ and app/ should need this.
 
 namespace gardener {
@@ -13,23 +18,11 @@ namespace pins {
 // stays clear of the S3 strapping pins (0, 3, 45, 46) and of the USB pins (19/20).
 constexpr int I2C_SDA = 8;
 constexpr int I2C_SCL = 9;
+// The harness rather than either device on it: two parts share the bus, so the root owns its speed.
 constexpr uint32_t I2C_FREQ_HZ = 400000;
-
-// --- Adafruit 1.3" 128x64 monochrome OLED, STEMMA QT (SH1106) --------------
-constexpr uint16_t OLED_WIDTH = 128;
-constexpr uint16_t OLED_HEIGHT = 64;
-constexpr uint8_t OLED_I2C_ADDR = 0x3C;
-
-// --- Adafruit MPRLS ported pressure sensor (0..25 PSI absolute) ------------
-constexpr uint8_t MPRLS_I2C_ADDR = 0x18;
-constexpr uint32_t MPRLS_POLL_MS = 20;
-constexpr float MPRLS_MIN_KPA = 0.0f;
-constexpr float MPRLS_MAX_KPA = 172.369f;  // 25 PSI full scale
 
 // --- JQB2438 DC vacuum pump through a low side MOSFET ----------------------
 constexpr int PUMP_PWM = 6;
-constexpr uint32_t PUMP_PWM_FREQ_HZ = 20000;
-constexpr uint8_t PUMP_PWM_RESOLUTION = 10;
 
 // --- Vent valve ------------------------------------------------------------
 // A solenoid through a logic level MOSFET with a flyback diode across the coil, wired like the
@@ -44,6 +37,8 @@ constexpr int VENT_VALVE = 5;
 // button would yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay
 // clear too.
 constexpr int BATTERY_ADC = 4;
+// The board's divider, not the pack's property: two equal resistors, so the ratio is 2.0 and
+// BATTERY_CALIBRATION trims the pair against a meter.
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
 // --- Four button UI, active low to GND, pull ups on the module -------------

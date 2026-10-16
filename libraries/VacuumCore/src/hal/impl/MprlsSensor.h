@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "core/Config.h"
-#include "hal/Pins.h"
 #include "hal/PressureSensor.h"
 
 namespace gardener {

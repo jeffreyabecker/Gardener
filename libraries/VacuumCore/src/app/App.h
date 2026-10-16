@@ -8,7 +8,6 @@
 #include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
-#include "hal/Pins.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/MprlsSensor.h"
 #include "hal/impl/PwmPump.h"

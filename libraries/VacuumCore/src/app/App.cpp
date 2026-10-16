@@ -28,17 +28,18 @@ App::App()
 // runs, so nothing owns it. This runs once the I2C bus is up, which is why the panel is attached
 // from begin() and not from the constructor.
 Adafruit_GrayOLED* App::attachPanel() {
-  Adafruit_SH1106G* panel = new Adafruit_SH1106G(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1);
+  // Named `driver` rather than `panel` so the panel:: constants below stay reachable.
+  Adafruit_SH1106G* driver = new Adafruit_SH1106G(panel::WIDTH, panel::HEIGHT, &Wire, -1);
 
   // The STEMMA QT breakout has no reset line, so the library must not poke one.
-  if (!panel->begin(pins::OLED_I2C_ADDR, false)) {
+  if (!driver->begin(panel::I2C_ADDR, false)) {
     // No panel, no readout: abort() panics and the ESP32 resets on a panic, so the device keeps
     // trying rather than coming up blind and silent.
     link_.warn("oled: not found, aborting");
     delay(50);
     abort();
   }
-  return panel;
+  return driver;
 }
 
 bool App::begin() {

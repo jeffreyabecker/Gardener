@@ -114,7 +114,9 @@ override but no code reads them. The battery sense is on GPIO4 because it is the
 that is not a button — a pressed button would pull the sense line to ground. Nothing in the
 firmware touches the pins that have to be left alone at reset (strapping 0, 3, 45, 46) or the
 USB pins (19/20), and on a Super Mini GPIO0 is only the BOOT button. I2C addresses: MPRLS
-`0x18`, OLED `0x3C`. Pins live in [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h).
+`0x18`, OLED `0x3C`. Pins live in [hal/Pins.h](./libraries/VacuumCore/src/hal/Pins.h); a part's
+own numbers — the panel's geometry, the sensor's range, the PWM channel's setup — live with its
+driver in [hal/impl/](./libraries/VacuumCore/src/hal/impl).
 
 The on-board addressable RGB LED is on GPIO48, which is clear of the I2C bus, so it needs no
 special handling.

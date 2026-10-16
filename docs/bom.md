@@ -6,9 +6,10 @@ none is recorded in this repository, so it says what each part is and which deci
 rather than where to buy it.
 
 Wiring detail — pin assignments, gate networks, the battery divider — lives in
-[README.md § Wiring](../README.md#wiring) and [hal/Pins.h](../libraries/VacuumCore/src/hal/Pins.h).
-Where a line is enforced or measured by firmware, the constant is named so the two can be
-changed together.
+[README.md § Wiring](../README.md#wiring) and [hal/Pins.h](../libraries/VacuumCore/src/hal/Pins.h);
+a part's own numbers, which change with the part rather than with the board, live with its driver
+in [hal/impl/](../libraries/VacuumCore/src/hal/impl). Where a line is enforced or measured by
+firmware, the constant is named so the two can be changed together.
 
 Anything the code depends on but nobody has specified a value for is in
 [§ 5 Open items](#5-open-items) instead of being guessed at here.
@@ -18,7 +19,7 @@ Anything the code depends on but nobody has specified a value for is in
 | # | Item | Qty | Part / spec | Firmware's view |
 | --- | --- | --- | --- | --- |
 | 1 | MCU board | 1 | ESP32-S3, developed against an ESP32-S3 Super Mini | `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, pinned in [sketch.yaml](../firmware/gardener/sketch.yaml) and [scripts/arduino.ps1](../scripts/arduino.ps1). The on-board RGB LED on GPIO48 is unused. |
-| 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `pins::MPRLS_MIN_KPA` / `MPRLS_MAX_KPA`, polled every `MPRLS_POLL_MS` in [hal/impl/MprlsSensor.cpp](../libraries/VacuumCore/src/hal/impl/MprlsSensor.cpp). The sensor, not the pump, sets the measurable range. |
+| 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `kMinKpa` / `kMaxKpa`, polled every `kPollMs` at `kI2cAddr`, in [hal/impl/MprlsSensor.cpp](../libraries/VacuumCore/src/hal/impl/MprlsSensor.cpp). The sensor, not the pump, sets the measurable range. |
 | 3 | Display | 1 | Monochrome 1.3" 128x64 OLED module, SH1106, 7-pin SPI breakout. A 128x32 module on the same 7-pin SPI interface is an accepted alternative | Not switched yet: [App::attachPanel()](../libraries/VacuumCore/src/app/App.cpp) still attaches an I2C panel and [Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins — see [§ 5](#5-open-items). A readout only: the host draws it over the serial line. |
 | 4 | Buttons | 1 | 4-switch module with integrated pull-ups, active low on GPIO1/2/10/11 | None. They are wired and named (`pins::BTN_*`) for a future local override and nothing reads them; the pull-ups are on the module, so the firmware configures none of its own. |
 
@@ -87,6 +88,7 @@ above:
   needs a map for SCK, MOSI, CS, DC and RES; the S3's SPI defaults are not all free, because
   GPIO10/11 are `BTN_OK`/`BTN_BACK`. The free pins README lists (7, 12–18) are the candidates.
 * **Display size** (item 3 alternative): the 128x32 module is a different geometry, so
-  `pins::OLED_HEIGHT` and anything the host lays out would change with it — and 128x32 modules are
-  usually not SH1106, which would mean an adapter built on a different Adafruit library than the
-  `Adafruit_SH110X` one in use today.
+  `panel::HEIGHT` in
+  [hal/impl/AdafruitDisplay.h](../libraries/VacuumCore/src/hal/impl/AdafruitDisplay.h) and anything
+  the host lays out would change with it — and 128x32 modules are usually not SH1106, which would
+  mean an adapter built on a different Adafruit library than the `Adafruit_SH110X` one in use today.
