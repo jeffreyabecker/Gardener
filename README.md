@@ -52,11 +52,11 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    one file per physical device — the panel (its interface, the Adafruit adapter
-        and the battery overlay), the battery gauge, the pressure sensor, the pump, the
-        vent valve — plus the board pin map
-app/    the instrument: the plant that commands them, the serial interface, and the
-        composition root that wires it all up and runs the loop
+hal/    one file per physical device — the panel (its interface and the Adafruit
+        adapter), the battery gauge, the pressure sensor, the pump, the vent valve —
+        plus the board pin map
+app/    the instrument: the plant that commands them, the display overlay, the serial
+        interface, and the composition root that wires it all up and runs the loop
 ```
 
 Dependencies only ever point downwards. Nothing checks it — keep it that way by reading:

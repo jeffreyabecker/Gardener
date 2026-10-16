@@ -355,14 +355,13 @@ lives: `Buttons` and `Storage` (the LittleFS wrapper). The VM, the `ProgramApi` 
 way in already is, and nothing here points the other way: the rule is still `app/` → `hal/` →
 `core/`, kept by reading rather than by a script.
 
-That is a refusal to pre-split, and it is a change of position. This plan used to propose
-re-introducing the five-layer `core/hal/services/hosts/app` layout on the argument that
-otherwise `app/` absorbs a UI, a VM and a file store. It will, by the end of this plan. But five
-layers for one instrument, invented before anything in `app/` had a second consumer, is the shape
-the project has already paid for once: what actually moved `Overlay` out of `app/` was a second
-`app/` file needing it, and what split `SerialLink` was a file too long to read, not a plan. If
-`app/` becomes two problems, that is the commit that splits it — pointed at a consumer, the way
-those two were.
+That is a refusal to pre-split. This plan used to propose re-introducing the five-layer
+`core/hal/services/hosts/app` layout on the argument that otherwise `app/` absorbs a UI, a VM and a
+file store. It will, by the end of this plan. But five layers for one instrument, invented before
+anything in `app/` had a second consumer, is the shape that gets undone again: the plant and the
+overlay have each been in `hal/` and back within one week of layout calls, and what settled
+`SerialLink` was a file too long to read, not a plan. If `app/` becomes two problems, that is the
+commit that splits it.
 
 ## 13. Phasing
 
