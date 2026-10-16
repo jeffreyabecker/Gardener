@@ -33,7 +33,6 @@ class BerryRuntime {
   const char* currentProgram() const;
   const char* lastError() const;
   void update();                      // drain button events → callbacks; on stop: unwind
-  bool evaluate(const String& line, String& out);  // optional REPL
 
  private:
   bvm* vm_ = nullptr;
@@ -261,8 +260,6 @@ with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device har
   the snapshot (`program.error`), stops the program, and leaves the plant vented via the
   normal stop path.
 - `stop()` is idempotent and safe to call when nothing is running.
-- `evaluate()` is the optional REPL (`eval <expr>`); it runs on the VM task and returns
-  the printed result, capped at ~200 bytes.
 
 ## 8. Acceptance criteria
 
