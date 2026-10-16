@@ -42,21 +42,17 @@ struct SystemSnapshot {
 
 ## 3. Display ownership
 
-- The `Display` interface splits cleanly: the drawing verbs write the framebuffer (plain
-  RAM); `flush()` does I2C.
-- **The active drawer** — the serial task in host mode, the VM in local mode — calls the
-  drawing verbs directly. No commands, no queue.
-- **Only the plant flushes.** Each tick it calls `appDisplay.flush()`, which composites
-  the battery and pushes the framebuffer to the glass. The battery is therefore always
-  device-owned and a program can never erase it.
-- Berry's `screen` module is the drawing verbs only — there is no `screen.flush()`; the
-  plant pushes the frame on its own cadence.
+- `Display` draws and flushes are done by the active controller: the VM in stand-alone
+  mode, the serial task in peripheral mode. No commands, no queue — a `screen.draw_*`
+  call is a direct `Display` call, and `screen.flush()` pushes the frame (the battery is
+  composited by `AppDisplay`).
+- The modes are mutually exclusive (spec 01 §2), so the VM and the serial task never both
+  touch the display.
 
 ## 4. Rendering pipeline
 
-- Local mode: the program draws (VM, RAM) at its own pace; the plant flushes each tick.
-- Host mode: the host draws (serial, RAM) with `draw` commands; the plant flushes each
-  tick. The wire `flush` command remains the frame boundary and replies `ok flushed`.
+- Stand-alone mode: the program draws and flushes (VM) at its own pace.
+- Peripheral mode: the host draws and flushes (serial) with `draw`/`flush` commands.
 
 ## 5. Acceptance criteria
 

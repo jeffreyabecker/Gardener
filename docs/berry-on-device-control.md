@@ -80,25 +80,24 @@ display flush and button servicing) and the serial task (at most a handful of pa
 lines per pass). Neither can hold the core for long, so they share it comfortably. Core 1
 carries the only unbounded job, the Berry VM.
 
-### 5.1 Single-owner rules
+### 5.1 Modes
 
-There is no IPC layer. Three facts make direct shared state safe:
+There is no IPC layer. Two mutually exclusive modes make direct shared state safe:
 
-- **One controller** — the host or the running program commands `VacuumSystem`; takeover
-  (spec 05) stops one before the other acts.
-- **One drawer** — the host (attached) or the running program (local) draws the
-  framebuffer; never both (spec 04 §5).
-- **The plant owns I2C** — only it reads the sensor and flushes the display.
+- **Stand-alone** — the VM runs; the running program commands `VacuumSystem` and
+  draws/flushes `Display` directly.
+- **Peripheral** — the VM is stopped; the serial system does the same directly.
 
-Shared state, by design (spec 01 §3): `VacuumSystem` fields, the framebuffer, the
-snapshot, the button event ring, and `ProgramStore`. Nothing else is shared.
+`set mode` (spec 06) switches; attaching the serial link does not. Shared state, by
+design (spec 01 §3): `VacuumSystem` fields, the display, the snapshot, the button event
+ring, and `ProgramStore`. Nothing else is shared.
 
 ### 5.2 What a command is
 
 - Serial: parse the line, then call the target directly — `info`/`status` read the
-  snapshot, `draw` calls the `Display` verb (framebuffer), `flush` replies `ok flushed`
-  (the plant pushes within one tick), and `start`/`stop`/`set target`/… call
-  `VacuumSystem`.
+  snapshot, `set mode` flips modes, and in peripheral mode `draw`/`flush` call `Display`
+  and `start`/`stop`/`set target`/… call `VacuumSystem`. In stand-alone mode those
+  control/draw commands are refused.
 - Program: `vacuum.*` / `screen.*` / `programs.*` call `VacuumSystem`, `Display`, the
   snapshot, and `ProgramStore` directly. A call is fire-and-forget; the authoritative
   result is the next `status` / `vacuum.state()`.
@@ -175,9 +174,9 @@ Programs own the screen; the device owns only the battery and the two Back gestu
 
 ### 7.1 Screen ownership
 
-- A running program draws the entire panel with the `screen.draw_*` verbs; the plant
-  flushes each tick. The device composites only the battery (`AppDisplay`) on every
-  flush, so a program can never erase it.
+- A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
+  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
+  so a program can never erase it.
 - There are no device-drawn pages. The browser, the params editor and the home shell are
   all Berry programs. A reusable list/menu abstraction, if one is wanted, is written in
   Berry — it is not firmware.
@@ -210,12 +209,14 @@ program acts.
 They are ordinary stored programs; only the names are reserved by boot and the two Back
 gestures.
 
-### 7.5 Host-attached vs local
+### 7.5 Modes
 
-- **No host** → the running program draws (local mode).
-- **Host attaches** → the panel becomes host-drawn exactly as today; the program's
-  drawing is suppressed and buttons are ignored.
-- **Host detaches** → the running program draws again.
+- **Stand-alone** — the VM runs; the running program draws and commands.
+- **Peripheral** — the VM is stopped; the serial system draws and commands.
+
+Modes are switched by `set mode` (spec 06), not by attaching the serial link. Attaching
+does not change the mode; disconnecting in peripheral mode vents and switches to
+stand-alone (spec 05 §3).
 
 ## 8. Disconnected operation and parameterized programs
 
@@ -300,16 +301,14 @@ additively:
 
 ## 10. Exposing the Display to programs
 
-- The VM holds a `Display&` and draws into the framebuffer directly; it never flushes.
-  `flush()` (I2C + battery) stays on the plant task.
+- The active controller holds a `Display&` (the `AppDisplay` instance) and draws and
+  flushes directly: the VM in stand-alone mode, the serial task in peripheral mode. The
+  modes are mutually exclusive, so the VM and the serial task never both touch it.
 - Programs draw with the same **drawing verbs** the host uses: each `screen.draw_<op>(…)`
-  call is a direct `Display` call into the framebuffer. Only the plant flushes (I2C +
-  battery) each tick, so host drawing and program drawing are serialized by one drawer at
-  a time and one flusher.
+  call is a direct `Display` call, and `screen.flush()` pushes the frame.
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
   fillrect, roundrect, fillroundrect, circle, fillcircle, ellipse, fillellipse, triangle,
-  filltriangle, rotatedrect, fillrotatedrect, text. `flush` exists on the wire only; the
-  plant flushes for programs.
+  filltriangle, rotatedrect, fillrotatedrect, text, plus `flush`.
 - `AppDisplay` composites the battery on every flush, so the battery (like the splash)
   remains the device's and cannot be erased.
 

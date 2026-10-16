@@ -19,8 +19,9 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
 | `list` | `ok programs=N` + one row per program + `eof` | rows: `name size=<n> params=<n> default=<0|1> running=<0|1>` |
 | `cat <name> [offset] [len]` | `ok file <name> <offset> <len> <total>` + source lines + `eof` | paged, as the old `cat` |
 | `rm <name>` | `ok removed <name>` | `rm default` re-seeds the passive source |
-| `run <name> [k=v …]` | `ok running <name>` / `err …` | stop current → vent → start; params validated |
-| `stop` | `ok stopped` | stop current → vent → **idle** (host present, so no `default`) |
+| `set mode <standalone\|peripheral>` | `ok mode=standalone` / `ok mode=peripheral` | switch the control mode |
+| `run <name> [k=v …]` | `ok running <name>` / `err …` | stop current → vent → start; switches to stand-alone if needed |
+| `stop` | `ok stopped` | peripheral mode: stop → vent → idle |
 | `params <name>` | `ok params=<name> k=v …` | effective values (persisted over defaults) |
 | `set params <name> k=v …` | `ok params=<name> k=v …` | persist without running |
 | `prog begin <name>` | `ok uploading <name>` / `err …` | start a chunked upload |
@@ -30,6 +31,11 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
 
 `eval <expr>` stays an optional REPL behind the VM (spec 03 §1) and replies with the
 printed value.
+
+Control and drawing commands (`start`, `stop`, `set target`, `ambient`, `reset`, `draw`,
+`flush`) are **peripheral-mode only**; in stand-alone mode they are refused with `err`
+(use `set mode peripheral`). Program commands (`list`, `cat`, `rm`, `run`, `params`,
+`set params`, `prog`) work in both modes.
 
 ## 3. `run` parameter validation
 

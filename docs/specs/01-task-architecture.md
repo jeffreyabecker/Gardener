@@ -4,8 +4,9 @@ Status: draft spec. Implements [the plan](../berry-on-device-control.md) §5 and
 constraint 1 ("programs run on a different core from the serial link").
 
 Board is the ESP32-S3 (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`), which has two
-cores. There is deliberately **no IPC layer**: the system has at most one controller and
-one drawer at a time, so the three tasks share state directly.
+cores. There is deliberately **no IPC layer**: two mutually exclusive modes (stand-alone
+and peripheral) ensure only one task controls and draws at a time, so the three tasks
+share state directly.
 
 ## 1. Tasks
 
@@ -18,24 +19,28 @@ one drawer at a time, so the three tasks share state directly.
 Priorities: `plantTask` is highest on core 0 so the 50 ms safety tick is never deferred;
 `serialTask` sits above idle and below the plant; `vmTask` is alone on core 1.
 
-## 2. Single-owner rules
+## 2. Modes
 
-Three facts hold at all times, and they are what make direct sharing safe:
+Contention is resolved by two mutually exclusive modes, not by locks:
 
-- **One controller.** Either the host (serial link) or the running program commands the
-  plant — never both. Takeover (spec 05) stops one before the other acts.
-- **One drawer.** Either the host (when attached) or the running program (when not) draws
-  the panel — never both (spec 04 §5).
-- **The plant owns I2C.** Only `plantTask` talks to `Wire`: sensor reads and the display
-  `flush()`. Drawing into the framebuffer is plain RAM and is done by the active drawer.
+- **Stand-alone** — the VM task is running and has access to all resources: the running
+  program commands `VacuumSystem` and draws/flushes `Display` directly.
+- **Peripheral** — the VM task is stopped; the serial system has full control and does the
+  same directly.
+
+`set mode` (spec 06) switches modes; attaching the serial link does not. There is never a
+moment when the VM and the serial task are both controlling or both drawing.
 
 ## 3. Shared mutable state, by design
 
 - **`VacuumSystem`** — the controller (serial or VM) calls `setTarget`/`start`/`stop`/…
   directly, and `plantTask` runs `service()`. Its fields are 32-bit aligned, so reads and
   writes are atomic; a controller transition may be observed one tick late. Accepted.
-- **The framebuffer** — the active drawer writes it (RAM); the plant reads it when it
-  flushes. A torn frame is possible and self-corrects on the next flush. Accepted.
+- **The display** — the active controller (the VM in stand-alone, the serial task in
+  peripheral) draws and flushes `Display` directly, including its `Wire` traffic. Only one
+  mode is active, so only one controller ever touches it.
+- **`Wire`** — the plant reads the sensor every tick, and the active controller flushes
+  the display. Short, interleaved I2C transactions; accepted.
 - **The snapshot** — `SystemSnapshot` (spec 07) is one object the plant rewrites each
   tick; `serialTask` and `vmTask` read its fields directly for `status`,
   `vacuum.state()`, and `programs.*`. A read may span two adjacent ticks. Accepted for a
@@ -51,7 +56,6 @@ Three facts hold at all times, and they are what make direct sharing safe:
 
 ## 4. What is never shared
 
-- `Wire` / I2C — plant only.
 - The pump, valve, and battery driver update paths — plant only.
 
 ## 5. Runaway-program protection
@@ -73,7 +77,6 @@ loop:
   now = millis()
   sensor.update(now); pump.update(now); battery.update(now); buttons.update(now)
   system.service(now)                       # the PID step and fault detection
-  appDisplay.flush()                        # I2C: battery composite + push to glass
   refresh the snapshot in place             # spec 07
   check vm heartbeat; if stale > 2000 ms: request VM stop
   delay to next 50 ms tick
@@ -85,11 +88,14 @@ loop:
 loop:
   poll Serial into the line buffer (8 lines per pass, as today)
   for each complete line: dispatch
-    info/status/help → read the snapshot directly and reply
-    draw <op> …      → call the Display verb directly (framebuffer)
-    flush            → reply ok flushed (the plant pushes within one tick)
-    other commands   → call VacuumSystem directly
-  detect host attach/detach; flip display mode (spec 05)
+    info/status/help/list/params → read the snapshot / store directly and reply
+    set mode → stop the VM (peripheral) or start `default` (stand-alone)
+    in peripheral mode:
+      draw/flush → call the Display verbs directly
+      start/stop/set target/… → call VacuumSystem directly
+    in stand-alone mode:
+      control and draw commands are refused (`use set mode peripheral`)
+  on detach: if peripheral → vent + set mode stand-alone (spec 05 §3)
 ```
 
 ### 6.3 `vmTask`
@@ -105,10 +111,10 @@ loop:
 
 ## 7. Acceptance criteria
 
-- Serial protocol behaves identically to today on the S3 while a Berry program runs on
-  core 1 (`start`/`status`/`stop`/`draw`/`flush` all reply correctly).
+- `set mode peripheral` stops the VM and gives the serial system full control;
+  `set mode standalone` returns control to the VM (runs `default`).
+- Attaching the serial link does not change the mode.
 - A `while true` program with no `vacuum.delay` does not stop `status` replies or the
   PID tick.
-- A busy program drawing every loop cannot delay the control loop or block I2C.
-- `Wire` is only ever touched from `plantTask`; the framebuffer is only written by the
-  active drawer.
+- A busy program drawing every loop cannot delay the control loop.
+- Disconnecting in peripheral mode vents and returns to stand-alone (spec 05 §3).

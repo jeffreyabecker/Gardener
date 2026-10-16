@@ -93,7 +93,8 @@ class ProgramApi {
   bool setProgramParam(const char* name, const char* key,
                        const char* value);          // store writes the .params file
 
-  // --- drawing (direct framebuffer writes; no flush — the plant flushes) ---
+  // --- drawing (direct calls; the Display is the AppDisplay instance, so flush()
+  //     composites the battery) ---
   void drawClear() { display_.clear(); }
   void drawPixel(int16_t x, int16_t y) { display_.pixel(x, y); }
   void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
@@ -105,6 +106,7 @@ class ProgramApi {
   void drawText(int16_t x, int16_t y, uint8_t size, bool inverted, const char* text) {
     display_.text(x, y, text, size, inverted);
   }
+  void flush() { display_.flush(); }   // I2C: battery composite + push
 
   // --- identity / params / state ---
   const char* programName() const;
@@ -150,7 +152,7 @@ Rules:
 ## 5. Button callbacks
 
 Buttons are exposed as callbacks, not polling: registering a callback is owning input
-(full API in §6.4). While a program runs, the plant forwards Up, Down, OK — and Back when
+(full API in §6.4). In stand-alone mode, the plant forwards Up, Down, OK — and Back when
 claimed — to the VM's button queue (spec 01 §3); `BerryRuntime::update()` drains it and
 invokes the matching callbacks.
 
@@ -220,8 +222,7 @@ firmware exposes no formatter.
 | `screen.draw_rotatedrect(cx,cy,w,h,angle)` | `drawRotatedRect` | |
 | `screen.draw_fillrotatedrect(cx,cy,w,h,angle)` | `drawFillRotatedRect` | |
 | `screen.draw_text(x,y,size,inverted,str)` | `drawText` | |
-
-There is no `screen.flush()` — the plant pushes the frame each tick (spec 07 §3).
+| `screen.flush()` | `flush` | push the frame; the battery is composited by `AppDisplay` |
 
 ### 6.4 `buttons` — button callbacks
 
@@ -273,5 +274,4 @@ with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device har
   one yield interval.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.
 - `program.param("cycles")` returns the effective value (persisted over default).
-- `screen.draw_text(…)` output appears on the glass within one plant tick (the plant
-  flushes).
+- `screen.draw_text(…)` output reaches the glass after `screen.flush()`.

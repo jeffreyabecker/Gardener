@@ -7,9 +7,9 @@ gestures. There is no device-drawn UI layer; anything reusable is a Berry progra
 
 ## 1. Screen ownership
 
-- A running program draws the entire panel with the `screen.draw_*` verbs; the plant
-  flushes each tick. The device composites only the battery (`AppDisplay`) on every
-  flush, so a program can never erase it.
+- A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
+  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
+  so a program can never erase it.
 - There are no device-drawn pages — no browser, params editor, or status page in C++.
   Those are Berry programs (spec 02 §4). A reusable list/menu abstraction, if one is
   wanted, is written in Berry, not firmware.
@@ -54,8 +54,8 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 
 ## 3. Button routing
 
-- While a program runs and no host is attached, Up, Down and OK events are delivered to
-  the program's `buttons.on` callbacks (spec 03 §5).
+- In stand-alone mode, Up, Down and OK events are delivered to the program's
+  `buttons.on` callbacks (spec 03 §5).
 - Back is delivered to the program **only when it claims it** with
   `buttons.on(buttons.BACK, fn)`; otherwise the device owns it:
 
@@ -65,7 +65,7 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 | Back long-press (unclaimed) | `programs.run("browser")` — stop current, vent, run `browser` |
 | Back hold 5 s (always) | stop current, vent, run `default` — cannot be claimed |
 
-- While a host is attached, all buttons are ignored — the panel is host-drawn (§5).
+- In peripheral mode, all buttons are ignored (§5).
 
 ## 4. Reserved programs
 
@@ -77,12 +77,14 @@ Events are queued (depth 16) so a press during a busy tick is not lost.
 They are ordinary stored programs to the store and runtime; only the names are reserved
 by boot and the two Back gestures.
 
-## 5. Display mode switch
+## 5. Modes
 
-- **No host** → the running program draws (local mode).
-- **Host attaches** → the panel becomes host-drawn exactly as today (serial `draw`/
-  `flush`); the program's drawing is suppressed and buttons are ignored.
-- **Host detaches** → the running program draws again.
+- **Stand-alone** — the VM runs; the running program draws and commands directly.
+- **Peripheral** — the VM is stopped; the serial system draws and commands directly.
+
+Modes are switched by `set mode` (spec 06), not by attaching the serial link. Attaching
+does not change the mode; disconnecting in peripheral mode vents and switches to
+stand-alone (spec 05 §3).
 
 ## 6. Acceptance criteria
 
@@ -91,5 +93,4 @@ by boot and the two Back gestures.
   not claimed Back.
 - Up/Down/OK reach the program's `buttons.on` callbacks and are never consumed by the
   device.
-- Host attach/detach swaps between host-drawn and program-drawn without losing local
-  state.
+- `set mode` switches between stand-alone and peripheral; attach alone does not.
