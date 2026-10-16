@@ -346,8 +346,6 @@ valve to the same output.
 
 * **No host client in this build.** The serial client that used to live in `tools/` was deleted
   while the interface is in churn — it is in git at commit `85f3cbb` if it is wanted back.
-* **No scripting in this build.** An earlier revision stored Berry programs in LittleFS and
-  ran them from the device; it is in git at commit `f35a3bb` if it is ever wanted again.
 * The line grammar is the whole interface, so anything that can carry newline terminated
   text — another microcontroller, a bridge, a terminal — can drive the device as it stands.
 
