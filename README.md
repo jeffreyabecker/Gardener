@@ -52,11 +52,11 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    the device: the panel (its interface, the Adafruit adapter and the battery
-        overlay), the battery gauge, the board pin map, and the plant that drives the
-        sensor, the pump and the valve
-app/    how it is driven: the serial interface, and the composition root that wires
-        the device together and runs the loop
+hal/    one file per physical device — the panel (its interface, the Adafruit adapter
+        and the battery overlay), the battery gauge, the pressure sensor, the pump, the
+        vent valve — plus the board pin map
+app/    the instrument: the plant that commands them, the serial interface, and the
+        composition root that wires it all up and runs the loop
 ```
 
 Dependencies only ever point downwards. Nothing checks it — keep it that way by reading:
@@ -80,13 +80,12 @@ Three rules make that hold:
   instant without either reader holding a driver reference, or a driver knowing that a display
   or a controller exists.
 
-`hal/` never sees `app/`, which is what the split is for: the device does not know that a serial
-line exists. It holds the panel — its interface, the Adafruit adapter and the battery overlay —
-the battery gauge, the pin map, and
-[hal/VacuumSystem.h](./libraries/VacuumCore/src/hal/VacuumSystem.h). That last one is the plant:
-it owns the sensor, the pump and the valve and the loop that depends on them, so the pins, the bus
-traffic and the control law are read in one file. What `app/` adds is the way in — the serial line,
-and the root that brings the device up and runs it.
+`hal/` never sees `app/`, which is what keeps a driver independent of the instrument built on top
+of it: a part reports what it is doing as values, and nothing in `hal/` knows that a serial line or
+a control loop exists. The plant is the other side of that line —
+[app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
+and the valve and holds the loop that commands them, so the control law reads in one place and the
+pins and the bus read in another.
 
 ## Wiring
 
@@ -276,14 +275,13 @@ while the interface is being reworked.
 One class, because the state the chamber is in and the state the run is in turned out to be the
 same state.
 
-[VacuumSystem](./libraries/VacuumCore/src/hal/VacuumSystem.cpp) is the plant and the machine on
-top of it, and it drives its own three devices: the sensor poll, the PWM output and the valve are
-inside it, so a change to a pin or a bus read sits next to the loop that depends on it. What it
-holds is the target, the PID on pressure relative to the captured ambient (all terms in kPa,
+[VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant and the machine on
+top of it: the target, the PID on pressure relative to the captured ambient (all terms in kPa,
 and the same frame a target is set in), the valve, the pump, the run state in the diagram below
-and the fault latch. The pump is the only actuator, so the loop can pull down but never vent —
-the vent valve is the only way back up. When the measurement undershoots the target the output
-drops to zero and the chamber bleeds back up.
+and the fault latch. It is handed the three devices it commands — the sensor, the pump and the
+valve — so the loop is policy and the pins stay in `hal/`. The pump is the only actuator, so the
+loop can pull down but never vent — the vent valve is the only way back up. When the measurement
+undershoots the target the output drops to zero and the chamber bleeds back up.
 
 It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
 the duty, the state. Both of the transitions it makes for itself are facts about the chamber

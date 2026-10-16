@@ -4,12 +4,15 @@
 #include <Arduino.h>
 
 #include "app/SerialLink.h"
+#include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/AdafruitDisplay.h"
 #include "hal/Battery.h"
 #include "hal/Overlay.h"
 #include "hal/Pins.h"
-#include "hal/VacuumSystem.h"
+#include "hal/PressureSensor.h"
+#include "hal/Pump.h"
+#include "hal/VentValve.h"
 
 // Composition root. This is the only class that knows the whole graph: every other module
 // is handed exactly what it uses, by reference, at construction, and nothing includes this
@@ -49,6 +52,9 @@ class App {
 
   // Declaration order is construction order, and several members hold references to the
   // ones above them.
+  PressureSensor sensor_;
+  Pump pump_;
+  VentValve vent_;
   Battery battery_;
   SystemSnapshot snapshot_;
   Adafruit_GrayOLED* panel_ = nullptr;

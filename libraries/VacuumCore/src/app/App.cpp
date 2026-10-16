@@ -19,6 +19,7 @@ App::App()
     : panel_(nullptr),
       display_(panel_),
       overlay_(display_, snapshot_),
+      system_(pump_, sensor_, vent_),
       link_(system_, overlay_, Serial, serialAttached, snapshot_) {}
 
 // The one place the fitted panel is named, and the only place its concrete type appears. The
@@ -53,16 +54,19 @@ bool App::begin() {
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
   // panel that does not answer is fatal rather than a degraded mode.
   panel_ = attachPanel();
-  // The plant brings up its own three devices and captures the ambient reference if the sensor
-  // answered. The battery is not one of them: it is a readout, and the readout is the root's.
-  bool sensorOk = system_.begin(Wire);
+  bool sensorOk = sensor_.begin(Wire);
+  bool pumpOk = pump_.begin();
+  vent_.begin();
   bool batteryOk = battery_.begin();
+  system_.begin();
+
+  if (sensorOk) sensor_.captureAmbient();
 
   // What came up, and what did not. This is the composition root's job now: the drivers report as
   // values and one place decides what is worth saying.
   link_.info("oled: online");
   link_.info(sensorOk ? "mprls: online" : "mprls: not found");
-  link_.info(system_.pumpReady() ? "pump: pwm ready" : "pump: PWM unavailable");
+  link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
 
   String ready = "app: ready, heap ";
@@ -131,6 +135,8 @@ void App::logRunChanges(uint32_t nowMs) {
 void App::update() {
   uint32_t now = millis();
 
+  sensor_.update(now);
+  pump_.update(now);
   battery_.update(now);
   system_.service(now);
 

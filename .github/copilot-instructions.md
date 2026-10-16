@@ -34,12 +34,13 @@ a couple of thousand lines, one loop. It stays that way only if new work extends
 instead of building beside it. When a design is larger than the thing it does, the extra is the
 bug, and every part of it should have a reason a reviewer can point at.
 
-**One class where one class works.** [VacuumSystem](../libraries/VacuumCore/src/hal/VacuumSystem.h)
-is the plant, the machine and the three devices it drives — the sensor, the pump and the valve —
-because the chamber's state and the run's state turned out to be one state, and each of those
-devices has exactly one user. Don't split it into a plant, a controller and a driver per device, and
-don't add a base class, an interface or a policy object for a second implementation that does not
-exist.
+**One class where one class works, and one file per device.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
+is the plant *and* the machine, because the chamber's state and the run's state turned out to be one
+state: don't split it into a plant and a controller. A device is a different thing — a pin, a bus
+and a PWM channel are a boundary a board variant edits — so the sensor, the pump and the valve each
+keep their own file in `hal/` and the plant takes them by reference, even though the plant is their
+only caller. Folding a driver into the class that drives it reads as a saving and is not one: it
+puts the register writes next to the control law, which is the one thing they are not part of.
 
 **A value beats a mechanism.** New state is a field on
 [PlantState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a

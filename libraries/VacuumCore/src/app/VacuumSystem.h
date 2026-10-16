@@ -1,18 +1,18 @@
 #pragma once
 
-#include <Adafruit_MPRLS.h>
-#include <Arduino.h>
-#include <Wire.h>
 #include <stdint.h>
 
 #include "core/Config.h"
 #include "core/Snapshot.h"
-#include "hal/Pins.h"
+#include "hal/PressureSensor.h"
+#include "hal/Pump.h"
+#include "hal/VentValve.h"
 
 namespace gardener {
 
-// The plant: the whole rig between the wire and the pins — the sensor, the pump and the valve,
-// and the pressure loop, the release path and the run state on top of them.
+// The plant: the pressure loop, the release path and the run state, between the devices and the
+// wire. The devices are not its own — it is handed the three it commands, so the pins and the bus
+// stay in hal/ and this file stays the control law.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
 // true: the pressure, the duty, the state. The state is the plant's own, because both of the
@@ -31,22 +31,13 @@ namespace gardener {
 // The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
 // can pull down but never vent; the valve is the only way back up, which is why every release
 // path here stops the pump before it opens the valve. Gains live in core/Config.h.
-//
-// The sensor, the pump and the valve are the plant's own rather than injected: each has exactly
-// one user, this class, so folding them in keeps the pins, the bus traffic and the loop that
-// depends on them in one file. That is also why the file is in hal/ beside the panel and the
-// battery gauge: it is the device half, and nothing here knows a serial line exists. What it is
-// told to do arrives as commands from app/, and what it reports leaves as the machine view.
 class VacuumSystem {
  public:
-  // Brings up the sensor, the pump and the valve, then captures the ambient reference. False
-  // when the MPRLS did not answer: the plant still comes up, and service() will not regulate on
-  // a reading nobody trusts.
-  bool begin(TwoWire& wire);
-  bool pumpReady() const { return pumpReady_; }
+  VacuumSystem(Pump& pump, PressureSensor& sensor, VentValve& vent)
+      : pump_(pump), sensor_(sensor), vent_(vent) {}
 
-  // The sensor poll, the pump ramp, the control step and the state machine.
-  void service(uint32_t nowMs);
+  void begin();                  // pump off, valve open: the safe resting state
+  void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
 
   // --- commands -----------------------------------------------------------
   void setTarget(float kpa);  // kPa below the captured ambient
@@ -83,48 +74,10 @@ class VacuumSystem {
   void pidReset() { pidIntegral_ = 0.0f; }
   float pidUpdate(float dt, float error, float measurementSlew);
 
-  // --- the sensor ---------------------------------------------------------
-  bool readNow(float& outKpa);
-  void pollSensor(uint32_t nowMs);
-  // False when the value is outside what the part can measure; the reference is then left
-  // alone, so a capture taken while the chamber was already pumped down is refused rather than
-  // adopted. Only captureAmbient() calls it, so the reference can be taken but never dialled in.
-  bool setAmbientKpa(float kpa);
-  float vacuumPercent() const;
+  Pump& pump_;
+  PressureSensor& sensor_;
+  VentValve& vent_;
 
-  // --- the pump -----------------------------------------------------------
-  // The duty cap and the slew limit live here rather than in the loop: a diaphragm pump dislikes
-  // a step from 0 to full, and the cap is the only protection it has.
-  void setDuty(float percent);
-  void updatePump(uint32_t nowMs);
-  void writeDuty(float percent);
-
-  // --- the valve ----------------------------------------------------------
-  // Normally open, so de-energised is released, and the drive is active high because the MOSFET
-  // gate is. Vent *timing* belongs to the run model, not to the pin.
-  void openValve();
-  void closeValve();
-  void writeValve(bool energise);
-
-  // --- the devices --------------------------------------------------------
-  Adafruit_MPRLS sensor_;
-  bool sensorPresent_ = false;
-  bool readingValid_ = false;
-  uint32_t lastPollMs_ = 0;
-  float ambientKpa_ = 0.0f;
-  float filteredKpa_ = 0.0f;
-  float window_[5] = {0, 0, 0, 0, 0};
-  uint8_t windowCount_ = 0;
-  uint8_t windowIndex_ = 0;
-
-  bool pumpReady_ = false;
-  float pumpDuty_ = 0.0f;
-  float pumpTarget_ = 0.0f;
-  uint32_t lastPumpMs_ = 0;
-
-  bool valveOpen_ = true;  // de-energised is released
-
-  // --- the run ------------------------------------------------------------
   RunState state_ = RunState::Idle;
   float targetKpa_ = 0.0f;  // 0 while no target is set, which is what state() reports
   const char* faultCode_ = "";
