@@ -212,7 +212,7 @@ two things of its own — the boot splash, and the battery on top of every frame
 
 ```
   Gardener
-  fw 0.5.0                              ▐███▐ 78%      <- device: splash, then the battery
+  fw 0.5.0                              ▐███▐          <- device: splash, then the battery
 ```
 
 Everything else is whatever the host sent: `draw` commands fill the panel's buffer, and `flush`

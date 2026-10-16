@@ -8,7 +8,6 @@ namespace {
 constexpr int16_t kBatteryIconWidth = 12;
 constexpr int16_t kBatteryBodyWidth = 10;
 constexpr int16_t kBatteryBodyHeight = 7;
-constexpr int16_t kBatteryLabelY = 0;
 constexpr int16_t kBatteryIconY = 1;
 
 // Below the low threshold the fill blinks. With no buttons and no alarm, that blink is the
@@ -30,18 +29,15 @@ void Overlay::flush() {
   inner_.flush();
 }
 
+// The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `info`), so
+// the panel does not spend characters on it and the corner is the icon's: a page can use
+// everything to the left.
 void Overlay::drawBattery() {
   if (!snapshot_.batteryPresent) return;  // nothing fitted, so leave the corner empty
 
-  String label = String(snapshot_.batteryPercent) + '%';
-  int16_t labelWidth = 0;
-  int16_t labelHeight = 0;
-  inner_.textBounds(label, 1, labelWidth, labelHeight);
-
   bool blinkOff = snapshot_.batteryLow && ((snapshot_.uptimeMs / kLowBatteryBlinkMs) % 2u) == 0u;
-  int16_t iconX = inner_.width() - labelWidth - 4 - kBatteryIconWidth;
+  int16_t iconX = inner_.width() - kBatteryIconWidth;
   batteryIcon(iconX, kBatteryIconY, blinkOff ? 0 : snapshot_.batteryPercent);
-  inner_.text(inner_.width() - labelWidth, kBatteryLabelY, label, 1, false);
 }
 
 void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
