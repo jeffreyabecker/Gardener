@@ -6,18 +6,17 @@ the Berry half of constraint 2.
 ## 1. Runtime
 
 The firmware depends on Berry directly; there is no runtime abstraction and no
-"build without the VM" variant. `BerryRuntime` is the single concrete runtime, owned by
-`vmTask` (spec 01 §1).
+"build without the VM" variant. `BerryRuntime` is the single concrete runtime, owned by `App`
+and driven from the loop (spec 01 §1).
 
 ## 2. Vendoring and compile
 
 - Vendor upstream Berry (the Tasmota port is the reference) as a third-party library, not
-  a hand fork. Keep it out of `libraries/VacuumCore` if it ships headers that would leak
-  into the layer check.
+  a hand fork. Keep it out of `libraries/VacuumCore` so its headers stay third-party.
 - Compile options: single-instance VM, no `be_file` I/O (no filesystem access from
-  Berry), conservative default heap. Confirm and document the exact execution-limit /
-  yield hook name (Tasmota uses a per-call instruction budget); it backs the heartbeat in
-  spec 01 §5.
+  Berry), conservative default heap. Confirm and document the exact execution-limit hook
+  (Tasmota uses a per-call instruction budget); it is the yield point in spec 01 §5, so
+  the whole execution model rests on it being callable often and cheap.
 
 ## 3. `BerryRuntime`
 
@@ -28,19 +27,18 @@ class BerryRuntime {
 
   bool start(const char* programName, const String& source,
              const String& effectiveParams, String& error);
-  void stop(const char* reason);      // async; sets stop flag
+  void stop(const char* reason);      // sets the stop flag; the hook unwinds (spec 01 §5)
   bool running() const;
   const char* currentProgram() const;
   const char* lastError() const;
-  void update();                      // drain button events → callbacks; on stop: unwind
+  void run();                         // the VM executes; the hook services and checks stop
 
  private:
   bvm* vm_ = nullptr;
   ProgramApi& api_;
   Buttons& buttons_;
   ProgramStore& store_;
-  volatile bool stopRequested_ = false;
-  volatile uint32_t heartbeat_ = 0;
+  bool stopRequested_ = false;
   String currentProgram_;
   String lastError_;
 };
@@ -53,16 +51,16 @@ Start flow:
 2. Bind the `vacuum`, `program`, `screen`, `buttons`, and `programs` modules (one global
    `be_map`, native functions).
 3. Set `program.name` and the effective params.
-4. Run the top-level call. `start()` returns as soon as the program begins; the VM task
-   keeps it alive via `update()`.
+4. Run the top-level call. `start()` returns as soon as the program begins; the loop keeps it
+   alive through `run()` (spec 01 §1).
 
 Stop flow:
 
-1. `stop()` sets `stopRequested_ = true`.
-2. The program observes it at the next yield (`vacuum.delay` or the execution-limit hook)
-   and unwinds; `update()` notices and finalizes.
-3. If the heartbeat shows the program is not yielding (spec 01 §5), the plant asks `App`
-   to delete and recreate `vmTask`, which abandons the VM.
+1. `stop()` sets `stopRequested_`, which the program sees at the next yield or hook firing.
+2. `run()` returns when the program yields (`vacuum.delay`), ends, or is unwound.
+3. If the program is not at a yield point, the execution-limit hook unwinds the call for it
+   (spec 01 §5) — the runtime aborts the VM rather than deleting and recreating a task,
+   because there is no task.
 
 ## 4. Native surface: `ProgramApi`
 
@@ -141,26 +139,28 @@ Rules:
 - Everything is a direct call. `state()`, `hostPresent()`, `param()`, `stateGet()` read the
   plant's `snapshot_` and the captured `params_`; `programCount()`/`programAt()` read the
   store's in-RAM index (spec 02 §7). None of them block.
-- `programParams()` and `setProgramParam()` touch `ProgramStore` (LittleFS) directly; this
-  is the one shared-filesystem access, accepted in spec 01 §3.
-- `stateSet()` writes `snapshot_.state[]` directly; the plant reads it into `status`.
+- `programParams()` and `setProgramParam()` touch `ProgramStore` (LittleFS) directly. That is
+  the same call the wire's `params` and `set params` make, so it is one writer rather than two
+  (spec 01 §3).
+- `stateSet()` writes `snapshot_.state[]` directly; the serial line reads it into `status`.
 - `programs.run` / `programs.stop` / `programs.home` are program-lifecycle operations
   owned by `BerryRuntime`, not `ProgramApi` (see §3).
-- `delay()` yields: it calls `serviceHook()` and checks `stopRequested()` every ~2 ms.
+- `delay()` is the deliberate yield: it runs `serviceHook()` and checks `stopRequested()`
+  until the time is up, so a program that waits still gives the plant its ticks.
 
 ## 5. Button callbacks
 
-Buttons are exposed as callbacks, not polling (full API in §6.4). In stand-alone mode the
-plant forwards every event — Up, Down, OK and Back, all kinds — to the VM's button queue
-(spec 01 §3); `BerryRuntime::update()` drains it and invokes the matching callbacks. The
-device does not consume, withhold or claim any event: registering a callback is not a
-reservation, and Back is an ordinary button to a program.
+Buttons are exposed as callbacks, not polling (full API in §6.4). In stand-alone mode the button
+scan queues every event — Up, Down, OK and Back, all kinds — and `BerryRuntime` drains the queue
+into the matching callbacks at its next service call (spec 01 §3). The device does not consume,
+withhold or claim any event: registering a callback is not a reservation, and Back is an ordinary
+button to a program.
 
-The plant's one override is the **abort**: holding Back for 5 s stops the program, vents,
-and runs `default` (spec 04 §2). It is a plant-side hold condition, so it does not consume
-the events — the program's Back callbacks still fire for that same press — and it cannot
-be suppressed from Berry. A program that ignores the abort and stops yielding is likewise
-stopped and vented by the runaway watchdog (spec 01 §5).
+The device's one override is the **abort**: holding Back for 5 s stops the program, vents,
+and runs `default` (spec 04 §2). It is a hold condition tested by the service pass, so it does not
+consume the events — the program's Back callbacks still fire for that same press — and it cannot
+be suppressed from Berry. A program that ignores the abort and never comes up for air still stops:
+the flag it sets is checked at the hook (spec 01 §5).
 
 ## 6. Berry binding
 
@@ -260,13 +260,14 @@ device behaviour attached (§5).
 
 ## 8. Acceptance criteria
 
-- `hold` and `pulse` example programs run on core 1; `status` keeps answering on core 0.
-- `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map within
-  one plant tick.
+- `hold` and `pulse` example programs run while `status` keeps answering.
+- `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map fresh from
+  the last service pass.
 - `buttons.on(buttons.OK, fn)` fires `fn("click")` when OK is clicked while the program runs.
 - `buttons.on(buttons.BACK, fn)` fires `fn("click")` too; the device does not intercept it.
 - Holding Back for 5 s stops the program, vents, and runs `default`, whatever callbacks
   the program registered.
-- A program that never yields is stopped by the plant heartbeat and the VM restarts.
+- A program that never calls `vacuum.delay` still gets the plant its tick, and stops when
+  asked (spec 01 §5).
 - `program.param("cycles")` returns the effective value (persisted over default).
 - `screen.draw_text(…)` output reaches the glass after `screen.flush()`.

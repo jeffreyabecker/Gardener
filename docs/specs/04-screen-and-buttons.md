@@ -14,25 +14,26 @@ composites into every frame, and one abort gesture.
 - There are no device-drawn pages — no browser, no params editor, no status page in C++.
   Those are Berry programs (spec 02 §4). A reusable list/menu abstraction, if one is
   wanted, is written in Berry, not firmware.
-- Only the active controller draws: the VM in stand-alone mode, the serial task in
+- Only the active controller draws: the program in stand-alone mode, the serial line in
   peripheral mode. The two modes are mutually exclusive, so there is nothing to arbitrate
   and no device-side drawing path at all (spec 01 §3).
 
 ## 2. Button ownership
 
-- In stand-alone mode the plant forwards every event — Up, Down, OK and Back, all three
-  kinds — to the running program's `buttons.on` callbacks (spec 03 §5). The device filters
-  nothing, so Back is an ordinary button: its clicks, long-presses and repeats mean
-  whatever the program says they mean.
-- The one exception is holding Back for 5 s, which the plant implements for itself:
+- In stand-alone mode the button scan queues every event — Up, Down, OK and Back, all three
+  kinds — and the running program drains them into its `buttons.on` callbacks (spec 03 §5).
+  The device filters nothing, so Back is an ordinary button: its clicks, long-presses and
+  repeats mean whatever the program says they mean.
+- The one exception is holding Back for 5 s, which the firmware does for itself (spec 05 §4):
 
 | Gesture | Effect |
 | --- | --- |
 | Back hold 5 s | abort: `programs.home()` — stop current, vent, run `default` |
 
-- The threshold is a plant-side condition on how long the pin is held, not an event, so it
-  cannot be swallowed: a program that registers `buttons.on(buttons.BACK, fn)` still gets
-  that press's Back events, and is aborted anyway.
+- The threshold is a condition on how long the pin is held, tested by the service pass, not
+  an event, so it cannot be swallowed: a program that registers `buttons.on(buttons.BACK, fn)`
+  still gets that press's Back events, and is aborted anyway. A program that never comes up
+  for air is aborted at the hook (spec 01 §5).
 - The abort is the only action the device takes on its own initiative, and `default` is
   the only name the firmware uses — boot starts it and the abort returns to it (spec 02
   §4). No gesture opens the selector: `browser` is launched like any other program, with
@@ -59,10 +60,10 @@ struct ButtonEvent {
 class Buttons {
  public:
   void begin();
-  void update(uint32_t nowMs);       // called by plantTask every tick
+  void update(uint32_t nowMs);       // called by the service pass every tick
   bool isDown(ButtonId id) const;
   uint32_t heldMs(ButtonId id) const;
-  bool popEvent(ButtonEvent& out);   // plant forwards to the VM while a program runs
+  bool popEvent(ButtonEvent& out);   // the running program drains this (spec 03 §5)
  private:
   // debounce, long-press and repeat state per pin (port of the f35a3bb driver)
 };

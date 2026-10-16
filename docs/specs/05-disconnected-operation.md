@@ -11,7 +11,7 @@ Control is a mode, not an arrival order:
 - **Peripheral** — the VM is stopped; the serial system commands and draws.
 
 The plant is always the single writer to the pump and valve; the mode only decides which
-task is allowed to command it (spec 01 §2).
+controller is allowed to command it (spec 01 §2).
 
 ## 2. Boot sequence
 
@@ -24,7 +24,7 @@ stock boot keeps the chamber released until a program or host acts.
 
 ## 3. Link-loss policy
 
-Detected by `serialTask` (`(bool)Serial` on the hwcdc CDC). Attaching never changes the
+Detected by the serial line (`(bool)Serial` on the hwcdc CDC). Attaching never changes the
 mode. On detach:
 
 | Mode | Action |
@@ -39,14 +39,14 @@ returns to local control.
 ## 4. Abort gesture (stand-alone mode)
 
 **Holding Back for 5 s is the device's only button behaviour**, and it is hard-coded in
-the plant (spec 04 §2):
+the firmware (spec 04 §2):
 
 - **Back hold 5 s** — abort: stop the current program → vent → start `default`.
 
-It is a plant-side hold condition, not an event the program can consume: the program still
-receives the Back events of that press, and is aborted anyway. A program that ignores the
-abort and stops yielding is likewise stopped and vented by the runaway watchdog (spec 01
-§5).
+It is a hold condition the service pass tests, not an event the program can consume: the
+program still receives the Back events of that press, and is aborted anyway. A program that
+ignores the abort and never comes up for air is stopped the same way — the hook unwinds it
+(spec 01 §5).
 
 Every other Back event (click, long-press, repeat) is delivered to the program like any
 other button and has no device meaning.
@@ -62,6 +62,10 @@ other button and has no device meaning.
 | Back hold 5 s | stop → vent → start `default` |
 | Peripheral + detach | vent → switch to stand-alone |
 | Fault latch / sensor loss | vents and latches regardless of mode; only `reset` clears |
+
+A `run`, an upload or a mode switch that arrives while a program is executing is a request the
+yield point applies, rather than something done inside the program's stack (spec 01 §5). Reads
+(`status`, `info`, `list`) are answered immediately, from inside the service pass.
 
 ## 6. Safety invariants (unchanged)
 
@@ -87,4 +91,6 @@ across a power cycle except the running program (which restarts as `default`).
   whatever the program registered for Back.
 - `set mode peripheral` stops the program, vents, and halts the VM; `set mode standalone`
   runs `default`.
+- A `run` sent to a program that is busy takes effect at its next yield, and `status`
+  keeps answering in the meantime (spec 01 §6).
 - Boot with a deleted `default` still boots into the re-seeded passive `default`.

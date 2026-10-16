@@ -10,7 +10,9 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
   begin with one `ok`/`err` line.
 - `draw`/`flush` stay fire-and-forget (validated locally, replied immediately).
 - Commands call the plant directly; the reply reflects the result of that call, so `err`
-  codes remain authoritative.
+  codes remain authoritative. A command that would change what is running is applied at the
+  program's yield point rather than inside its stack (spec 01 §5); reads are answered where
+  they arrive.
 
 ## 2. New commands
 

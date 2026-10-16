@@ -38,7 +38,7 @@ device boots into.
 | Decision | Choice | Why |
 | --- | --- | --- |
 | Board | **ESP32-S3** (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`) | Done. Dual-core **and** native USB via the USB-Serial-JTAG CDC on GPIO19/20, which keeps `(bool)Serial` host-presence detection and the ROM downloader on the same cable. |
-| Execution model | The one loop the device already has, a program included, with the VM on a slice | The loop runs the plant and the serial line today. Constraint 1 may need only cooperation, and that is measurable before it is architectural — section 5. |
+| Execution model | The one loop the device already has, a program included, with the loop serviced from inside the VM by its hook | The loop runs the plant and the serial line today. Constraint 1 may need only cooperation, and that is measurable before it is architectural — section 5. |
 | Plant ownership | Sensor, pump, valve, battery and buttons keep **one** owner, and whoever is controlling — a program or the serial line — commands it | The control loop is the safety-critical code, and exactly one writer to the pump and valve is what makes it safe. |
 | Display to programs | Programs draw with the same display verbs as the host — the same `Display`, the same overlay, held by whoever is controlling | Only one mode is active, so only one controller ever draws; the overlay adds the battery to every flush, so neither the host nor a program has to know about it. |
 | Boot behavior | The reserved program `default` is always present, and is loaded **and started** at boot | The device always comes up doing something; that something is the home screen and the headless fallback. |
@@ -102,17 +102,22 @@ controller:
 guarantees about safety is counted in ticks, so a program that never returns must not be able to
 stretch one.
 
-**The smallest mechanism.** The VM runs on a slice in the loop: a bounded number of VM
-instructions, then a yield, then a tick, then the program resumes. Berry's execution-limit hook
-is where that budget lives — `vacuum.delay(ms)` is the deliberate way for a program to yield, and
-the hook is what makes an unwilling one yield anyway. The budget is an instruction count rather
-than a clock, because a counter is cheap to check and needs no timer.
+**The smallest mechanism.** The VM runs in the loop, and the loop runs from inside the VM when it
+has to. Berry's execution-limit hook fires every N instructions and calls the service pass — the
+plant tick, the serial poll, the button scan — before handing control back. Nothing is suspended
+and nothing is resumed, because a hook cannot suspend a Berry call: it calls in and returns. A
+program that never yields therefore still gets the plant its tick, and `vacuum.delay(ms)` is the
+deliberate way to say the same thing sooner. The interval is an instruction count rather than a
+clock, because a counter is cheap to check and needs no timer. The hook is also where a stop is
+noticed: the flag a `stop`, the abort gesture or a mode switch sets is read there, and the call is
+unwound.
 
 **What would force something else.** If the vendored Berry port has no execution-limit hook, or a
-budget cannot hold the tick, the program needs somewhere else to run — a second task, or a second
-core. That is the fallback, and it is not free: section 5.1 changes from ownership to
-synchronization, and a watchdog plus a task restart path come with it. None of that is worth
-building before a measurement asks for it, and the measurement is simple.
+hook interval cannot hold the tick, or the service pass turns out not to be safe to run from
+inside a Berry call, the program needs somewhere else to run — a second task, or a second core.
+That is the fallback, and it is not free: section 5.1 changes from ownership to synchronization,
+and a watchdog plus a task restart path come with it. None of that is worth building before a
+measurement asks for it, and the measurement is simple.
 
 **The measurement.** Run `default` and a deliberately hostile program — `while true`, no
 `vacuum.delay` — and watch the tick. If the period holds, the loop is the answer and this section
@@ -369,7 +374,7 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 
 | Phase | Content | Gate |
 | --- | --- | --- |
-| 1 | Execution model: the program runs on a slice in the loop that already exists, budget from the Berry hook | A `while true` program with no `vacuum.delay` cannot stretch the control tick (§5.3) |
+| 1 | Execution model: the program runs in the loop, and the service pass runs from the Berry hook | A `while true` program with no `vacuum.delay` cannot stretch the control tick, and a `run` sent to it takes effect at the yield point (§5.3) |
 | 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
 | 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
 | 4 | Vendor Berry + `BerryRuntime`/`ProgramApi`, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw, and the tick still holds with a program running |
@@ -382,9 +387,10 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
   it, boot behavior is owner-defined. The fail-safe valve and fault latch still hold; this
   is called out in the docs, not left implicit.
 - **Whether the vendored Berry port has an execution-limit hook.** This is the hinge for §5.3:
-  with it, a runaway program is a budget in the loop that already exists; without it, the program
-  needs a context of its own, which is the fallback and a piece of work in its own right. Confirm
-  against Tasmota's Berry port before phase 4.
+  with it, a runaway program is a callback inside the loop that already exists; without it, the
+  program needs a context of its own, which is the fallback and a piece of work in its own right.
+  Confirm against Tasmota's Berry port before phase 4 — and confirm the reentrancy half of it,
+  that running the service pass from inside a Berry call is safe.
 - **Button pin reachability** — the pins (1/2/10/11) are confirmed on the S3 Super Mini used
   for development, but re-check them if the device moves to a different S3 carrier.
 - **Host presence was verified on the `hwcdc` CDC in Phase 0**, but re-check it on the
@@ -406,17 +412,15 @@ One spec per feature, under [docs/specs/](specs/):
 
 | Spec | Feature |
 | --- | --- |
-| [01-execution-model](specs/01-execution-model.md) | The loop, the program slice, the runaway gate, the fallback |
+| [01-execution-model](specs/01-execution-model.md) | The loop, the program hook, the runaway gate, the fallback |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
 | [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, `programs` module, button callbacks |
 | [04-screen-and-buttons](specs/04-screen-and-buttons.md) | Screen and button ownership, the abort override |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, abort |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
 
-Spec 01 now matches §5: it is [01-execution-model](specs/01-execution-model.md), and its §6 is the
-gate that decides whether the fallback is ever needed. Three specs still describe the fallback in
-their own bodies, and want a pass before the phases that touch them: spec 03 names a `vmTask` and
-a watchdog, spec 05 has the watchdog stopping and venting a program that stops yielding, and spec
-07 has a snapshot read spanning two adjacent ticks. The rest are unaffected: they are about what
-the program model does, not about where it runs.
+All seven specs have been through the same pass as this one. Spec 01
+([01-execution-model](specs/01-execution-model.md)) is §5 written out, and is where the gate and
+its measurement live; 02 through 07 describe what the program model does in the one loop, and name
+the fallback only where it would change them.
 | [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |

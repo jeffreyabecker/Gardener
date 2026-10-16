@@ -3,8 +3,8 @@
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §6 and the
 storage half of constraint 2.
 
-Owned by the plant task (LittleFS is not cross-task safe; writes go through the plant, see
-spec 01 §3).
+Owned by `ProgramStore` alone: writes go through it and nothing else touches LittleFS, which is
+all the arbitration it needs while there is one loop (spec 01 §3).
 
 ## 1. LittleFS layout
 
@@ -168,7 +168,8 @@ class ProgramParams {
 Persistence:
 
 - File `/programs/.params/<name>`, one `key=value` per line, written atomically
-  (temp + rename) by the plant task.
+  (temp + rename) by whichever path asked for it: the `browser` program's editor, or
+  `set params <name> k=v …` over the wire.
 - Written when a program is run from the `browser` program's params editor or by
   `set params <name> k=v …` over the wire.
 - Merge is deterministic:
@@ -195,9 +196,10 @@ struct ProgramInfo {
 - `default` is `at(0)`: `refresh()` pins it first. That is what `default=1` on the wire
   (spec 06 §2) and `is_default` in Berry (spec 03 §6.5) report — derived, not stored.
 - `running` is derived too: it is the name and flag in `ProgramStatus` (spec 07 §1).
-- Reads of the in-RAM index are open to all three tasks; writes, `refresh()` and
-  everything else that touches LittleFS belong to the plant (spec 01 §3). A `list` that
-  lands mid-upload may be one entry stale — no retry logic, the next `list` is correct.
+- Reads of the in-RAM index are open to the serial line and to a running program; writes,
+  `refresh()` and everything else that touches LittleFS go through `ProgramStore` (spec 01
+  §3). A `list` cannot land mid-upload: an upload arrives as one command and runs to
+  completion inside the dispatch that carried it (spec 06 §6).
 
 ## 8. Acceptance criteria
 

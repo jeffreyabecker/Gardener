@@ -5,10 +5,9 @@ constraints 5 and 6.
 
 ## 1. Snapshot
 
-`SystemSnapshot` is plain, copyable, pointer-free data — the cross-task view of what the
-machine *is*. The plant rewrites one object each tick; `serialTask` and `vmTask` read its
-fields directly (spec 01 §3). No lock — a read may span two adjacent ticks, which is fine
-for a readout.
+`SystemSnapshot` is plain, copyable, pointer-free data — the read-only view of what the machine
+*is*. The service pass rewrites one object each time round; the serial line and a running program
+read its fields directly (spec 01 §3). No lock, and no read that spans a rewrite: it is one loop.
 
 ```cpp
 struct SystemSnapshot {
@@ -26,8 +25,8 @@ struct SystemSnapshot {
 };
 ```
 
-- The plant rewrites the object every tick. `ProgramStatus` and `state[]` are the two
-  fields it does not own: the runtime writes the first, the running program the second
+- The service pass rewrites the object every time round. `ProgramStatus` and `state[]` are the
+  two fields it does not own: the runtime writes the first, the running program the second
   (spec 03 §6).
 - **No program list.** What is *stored* is not what the machine *is*, and the store already
   answers for it on demand: `ProgramStore::count()`/`at()` back both `list` on the wire and
@@ -37,8 +36,8 @@ struct SystemSnapshot {
 
 ## 2. Program state table
 
-- `program.state_set("label", 42.5)` writes directly into `snapshot_.state[]` — the VM
-  writes, the plant reads it into `status`. Up to 8 keys, key and value each ≤ 11 chars.
+- `program.state_set("label", 42.5)` writes directly into `snapshot_.state[]` — the program
+  writes, the serial line reads it into `status`. Up to 8 keys, key and value each ≤ 11 chars.
 - Setting an existing key replaces it; a ninth key replaces the oldest (FIFO) and logs a
   `[W]` record.
 - The table surfaces in `status` as `s0=key s0v=value …` (spec 06 §4);
@@ -47,11 +46,11 @@ struct SystemSnapshot {
 ## 3. Display ownership
 
 - `Display` draws and flushes are done by the active controller and by nobody else: the
-  program (VM) in stand-alone mode at its own pace, the serial task in peripheral mode with
-  the `draw`/`flush` commands. No commands, no queue — a `screen.draw_*` call is a direct
+  program in stand-alone mode at its own pace, the serial line in peripheral mode with the
+  `draw`/`flush` commands. No commands, no queue — a `screen.draw_*` call is a direct
   `Display` call, and `screen.flush()` pushes the frame (the battery is composited by
   `Overlay`).
-- The modes are mutually exclusive (spec 01 §2), so the VM and the serial task never both
+- The modes are mutually exclusive (spec 01 §2), so the program and the serial line never both
   touch the display.
 
 ## 4. Acceptance criteria
@@ -60,6 +59,6 @@ struct SystemSnapshot {
   while a program runs.
 - A program's drawing reaches the glass when the program flushes, with only the battery
   composited on top.
-- `Wire` is touched by exactly two tasks — the plant (sensor reads every tick) and the
-  active controller (display flushes) — and the interleaving corrupts neither (spec 01 §3).
+- `Wire` is touched by exactly two things — the plant's sensor read and the active controller's
+  display flush — and with one loop they never interleave (spec 01 §3).
 - The battery and splash cannot be erased by a program or a host.
