@@ -1,5 +1,6 @@
 #include "app/SerialLink.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "app/VacuumSystem.h"
@@ -8,10 +9,6 @@ namespace gardener {
 namespace {
 
 constexpr size_t kMaxArgs = 3;  // verb [key] [value]; the grammar has nothing else
-// Drawing is the exception: a host that draws faster than the loop runs would otherwise put the
-// sensor and the PID behind a burst of lines, so a poll services this many and leaves the rest
-// in the stream for the next iteration.
-constexpr size_t kLinesPerPoll = 8;
 constexpr const char* kDrawOps =
     "clear|pixel|line|hline|vline|rect|fillrect|roundrect|fillroundrect|circle|fillcircle|"
     "ellipse|fillellipse|triangle|filltriangle|rotatedrect|fillrotatedrect|text";
@@ -50,6 +47,26 @@ void lower(char* text) {
 }
 
 bool same(const char* a, const char* b) { return strcmp(a, b) == 0; }
+
+// `set term` takes a case sensitive marker, with \n, \r, \t and \\ standing for the characters
+// a command line cannot carry directly. False for a trailing or unknown escape, never a silent
+// backslash.
+bool decodeTerminator(const char* token, String& out) {
+  for (const char* cursor = token; *cursor != '\0'; cursor++) {
+    if (*cursor != '\\') {
+      out += *cursor;
+      continue;
+    }
+    switch (*++cursor) {
+      case 'n': out += '\n'; break;
+      case 'r': out += '\r'; break;
+      case 't': out += '\t'; break;
+      case '\\': out += '\\'; break;
+      default: return false;
+    }
+  }
+  return true;
+}
 
 // An argument that does not parse in full is a bad_argument, never a silent zero.
 bool parseFloat(const char* text, float& out) {
@@ -167,8 +184,10 @@ SerialLink::SerialLink(VacuumSystem& system, Display& display, Stream& stream, P
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
-  length_ = 0;
-  oversize_ = false;
+  buffer_ = "";
+  swallowing_ = false;
+  terminator_ = cfg::LINE_TERMINATOR;
+  customTerminator_ = false;
   info("serial: interface ready");
 }
 
@@ -206,56 +225,88 @@ void SerialLink::writeLine(const char* prefix, const char* text) {
   stream_.write((uint8_t)'\n');
 }
 
-void SerialLink::handleLine() {
-  line_[length_] = '\0';
-  dispatch(line_);
-  length_ = 0;
+void SerialLink::dispatchLine(const String& line) {
+  // The grammar is parsed in place, so a line gets a writable copy. It is sized by the line
+  // rather than by a fixed maximum, because a custom terminator lets one line be a whole
+  // program's source.
+  size_t length = line.length();
+  char* text = (char*)malloc(length + 1);
+  if (!text) {
+    err("bad_argument");
+    return;
+  }
+  memcpy(text, line.c_str(), length);
+  text[length] = '\0';
+  dispatch(text);
+  free(text);
+}
+
+// Splits the buffer on the terminator and dispatches every complete line, in arrival order.
+// A '\r' immediately before the terminator is dropped, so a host that ends its lines with
+// "\r\n" still works against the default terminator. Whatever follows the last terminator is an
+// unterminated line and stays in the buffer for a later poll.
+void SerialLink::drainLines() {
+  if (terminator_.length() == 0) return;
+  const size_t limit = customTerminator_ ? cfg::COMMAND_PAYLOAD_MAX : cfg::COMMAND_LINE_MAX;
+
+  // The rest of an overlong line is thrown away up to its terminator, which may only arrive in
+  // a later poll.
+  if (swallowing_) {
+    int end = buffer_.indexOf(terminator_);
+    if (end < 0) {
+      buffer_ = "";
+      return;
+    }
+    buffer_.remove(0, (unsigned int)end + terminator_.length());
+    swallowing_ = false;
+  }
+
+  for (;;) {
+    int end = buffer_.indexOf(terminator_);
+    if (end < 0) break;
+    size_t length = (size_t)end;
+    if (length > 0 && buffer_.charAt((unsigned int)(length - 1)) == '\r') length--;
+    if (length >= limit) {
+      // Answer once and drop it rather than truncating into something that parses as a
+      // different command.
+      err("bad_argument");
+    } else if (length > 0) {
+      dispatchLine(buffer_.substring(0, (unsigned int)length));
+    }
+    buffer_.remove(0, (unsigned int)end + terminator_.length());
+  }
+
+  // A tail that already fills the whole allowance can never become a valid line. Refuse it
+  // once and swallow the rest until its terminator arrives.
+  if (!swallowing_ && buffer_.length() >= limit) {
+    err("bad_argument");
+    buffer_ = "";
+    swallowing_ = true;
+  }
 }
 
 void SerialLink::poll(uint32_t nowMs) {
   (void)nowMs;
 
-  // A host can draw faster than the loop runs, and this is where that gets refused: servicing
-  // every buffered line in one pass would put the sensor and the PID behind a burst of drawing,
-  // so a poll takes this many lines and leaves the rest in the stream.
-  size_t serviced = 0;
-  while (serviced < kLinesPerPoll && stream_.available() > 0) {
+  // Take everything the host has sent this pass. There is no per pass line budget: a burst of
+  // commands is read whole and the drain below services every one of them.
+  while (stream_.available() > 0) {
     int value = stream_.read();
     if (value < 0) break;
-    char c = (char)value;
-
-    // Both terminators are accepted: a terminal that sends CR alone is a serial console
-    // classic, and "\r\n" simply yields an empty line, which is skipped.
-    if (c == '\n' || c == '\r') {
-      bool oversize = oversize_;
-      oversize_ = false;
-      if (oversize || length_ == 0) {
-        length_ = 0;
-        continue;
-      }
-      handleLine();
-      serviced++;
-      continue;
-    }
-
-    if (length_ + 1 >= sizeof(line_)) {
-      // Answer once and swallow the rest of the line rather than truncating it into
-      // something that parses as a different command.
-      if (!oversize_) {
-        err("bad_argument");
-        oversize_ = true;
-      }
-      length_ = 0;
-      continue;
-    }
-    line_[length_++] = c;
+    buffer_ += (char)value;
   }
+
+  drainLines();
 
   bool attached = controllerAttached();
   if (attached_ && !attached) {
     linkLost_ = true;
-    length_ = 0;
-    oversize_ = false;
+    buffer_ = "";
+    swallowing_ = false;
+    // A new controller starts from newline framing rather than inheriting a marker it may not
+    // know about.
+    terminator_ = cfg::LINE_TERMINATOR;
+    customTerminator_ = false;
     warn("serial: controller detached");
   }
   attached_ = attached;
@@ -275,6 +326,37 @@ void SerialLink::emitHelp() {
   // docs/serial-protocol.md rather than on the wire, and the drawing ops are their own list
   // because there are eighteen of them.
   ok("help=info|status|help|start|stop|reset|reboot|ambient|set|draw|flush");
+}
+
+// `set term <string>` points the line terminator at a marker so a host can send a whole
+// multi-line payload as one command; `set term off` puts newline framing back.
+void SerialLink::setTerminator(const char* token) {
+  String word = token;
+  word.toLowerCase();
+  if (same(word.c_str(), "off") || same(word.c_str(), "-")) {
+    terminator_ = cfg::LINE_TERMINATOR;
+    customTerminator_ = false;
+    ok("term=off");
+    return;
+  }
+
+  String decoded;
+  if (!decodeTerminator(token, decoded)) {
+    err("bad_argument");
+    return;
+  }
+  if (decoded.length() == 0 || decoded.length() > cfg::TERMINATOR_MAX) {
+    err("out_of_range");
+    return;
+  }
+  terminator_ = decoded;
+  customTerminator_ = true;
+
+  // Echo the token as it was written: it has no spaces, and the escapes keep it round
+  // trippable, so the reply is one unambiguous item whatever the marker is.
+  String payload = "term=";
+  payload += token;
+  ok(payload.c_str());
 }
 
 // --- drawing ---------------------------------------------------------------
@@ -463,9 +545,14 @@ void SerialLink::dispatch(char* line) {
       return;
     }
     lower(argv[1]);
-    lower(argv[2]);
     const char* key = argv[1];
     const char* value = argv[2];
+    // `set term` takes a case sensitive marker, so it reads the token before it is folded.
+    if (same(key, "term")) {
+      setTerminator(value);
+      return;
+    }
+    lower(argv[2]);
 
     if (same(key, "target")) {
       if (same(value, "off")) {

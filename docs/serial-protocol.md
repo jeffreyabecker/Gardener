@@ -16,8 +16,8 @@ a run lasts.
 | --- | --- |
 | Transport | USB CDC (native USB, the USB-C socket) by default; UART0 on GPIO43/44 is a one line change in `App` |
 | Baud | 115200, 8N1 — only meaningful on a real UART: USB CDC ignores it |
-| Terminator | `\n`, or `\r` alone; `\r\n` is accepted and yields one empty line |
-| Line limit | 128 bytes. A longer line is answered `err bad_argument` and swallowed, never truncated |
+| Terminator | `\n` by default; `set term` can point it at any string of up to 16 characters (§7). A `\r` immediately before the terminator is ignored, so `\r\n` works with the default. `\r` alone no longer ends a command — set the terminator to `\r` if a console needs that |
+| Line limit | 128 bytes on a command line, or 64 KiB while a custom terminator is set. A longer line is answered `err bad_argument` and swallowed, never truncated |
 
 `USBMode=hwcdc,CDCOnBoot=cdc` is part of the build, not a preference: `CDCOnBoot` is what
 maps `Serial` to the chip's native USB CDC. Building without it (`esp32:esp32:esp32s3`
@@ -34,19 +34,25 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 
 **Disconnecting stops the run and vents the chamber** (§9), because a controller that goes
 away releases the chamber. The device only acts on it when the stream can report host
-presence, which USB CDC can and a plain UART cannot.
+presence, which USB CDC can and a plain UART cannot. A controller that detaches, like a
+`reboot`, drops back to the default terminator and an empty buffer, so the next one is never
+stranded on framing it did not choose.
 
 ## 3. Grammar
 
 ```
-command  = verb [ SP argument ] LF
+command  = verb [ SP argument ] TERM
 reply    = "ok" SP payload LF | "err" SP code [ SP detail ] LF
 payload  = item *( SP item )
 item     = key [ "=" value ]
 key      = ALPHA *( ALPHA / DIGIT / "_" )
-value    = 1*( ALPHA / DIGIT / "_" / "-" / "." / ":" / "%" / "|" )
+value    = 1*( ALPHA / DIGIT / "_" / "-" / "." / ":" / "%" / "|" / "\" )
 ```
 
+* `TERM` is `\n`, unless `set term` pointed it at a marker. A marker turns newline framing off,
+  so a whole multi-line payload — a program's source — arrives as **one** command; `set term
+  off` puts `\n` back. Replies are always `LF` terminated, whatever `TERM` is, so a controller
+  that counts them keeps counting them.
 * An item with no value is a flag: `ok started`, `ok stopped`, `err not_ready`.
 * Values never contain a space and are never empty, so nothing needs quoting or escaping.
   `-` means "not applicable". The device enforces this: whitespace inside a value is written
@@ -121,6 +127,8 @@ ok kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt
 | `set log <on\|off>` | `ok log=on` / `ok log=off` | diagnostics on this stream |
 | `set rotation <0-3>` | `ok rotation=1` | panel orientation; `out_of_range` outside 0-3 |
 | `set invert <on\|off>` | `ok invert=on` / `ok invert=off` | swap ink and paper on the whole panel |
+| `set term <string>` | `ok term=<string>` | point the line terminator at a marker, so one command can carry a whole multi-line payload. `\n`, `\r`, `\t` and `\\` stand for the characters a command line cannot carry; up to 16 characters decoded. Case sensitive, and echoed as written |
+| `set term off` | `ok term=off` | back to `\n` framing. `set term -` is the same |
 | `ambient` | `ok ambient=101.33` | capture the current reading as the reference: the only way one is ever set |
 | `draw <op> <arguments…>` | `ok drawn` | one drawing operation into the panel's buffer (§8) |
 | `draw help` | `ok ops=clear\|pixel\|…` | the drawing operators, since `help` has no room for them |
@@ -160,7 +168,7 @@ prose:
 | --- | --- |
 | `unknown_command` | not a command, an unknown `set` field, or an unknown `draw` operator |
 | `bad_argument` | an argument is missing, does not parse, is outside a coordinate's range, or is left over; or the line was too long |
-| `out_of_range` | the value parses but is not acceptable: `set rotation` outside 0-3, `draw text` size outside 1-8, a target shallower than `CONTROL_MIN_TARGET_KPA` |
+| `out_of_range` | the value parses but is not acceptable: `set rotation` outside 0-3, `draw text` size outside 1-8, a target shallower than `CONTROL_MIN_TARGET_KPA`, or a `set term` string longer than 16 characters |
 | `not_ready` | valid request that cannot be honoured now: `start` with no target, no reading, or a latched fault |
 | `unsupported` | the feature does not exist in this firmware: `set duty`, `set period`, `set ambient`, `ambient <kPa>`, `telemetry` |
 
@@ -307,10 +315,8 @@ write should read one reply per command before concluding anything about state: 
 followed immediately by `status` in the same batch may describe the machine as it was before
 the `start` was handled. Sending `status` as its own command avoids the question entirely.
 
-Drawing is the one place the volume matters. A frame is twenty lines or more, and the device
-services **eight lines per loop iteration**, so a whole frame is not consumed in one pass: the
-rest stays in the stream and is handled on later iterations, in order, with nothing dropped and
-nothing reordered. That pacing is deliberate — the sensor and the PID share the loop, and a host
-that floods the port should not put them behind a burst of drawing. A host that sends a frame
-and waits for its `flush` reply sees the frame land normally; a host that counts replies still
-reads one per line rather than assuming a batch is drained at once.
+Drawing is the one place the volume matters. A frame is twenty lines or more. Each loop
+iteration drains everything the host has sent and services **every complete line** it received,
+in arrival order, with nothing dropped and nothing reordered — so a whole frame written in one go
+is handled in one pass. Replies are still exactly one per command, so a host that counts them
+reads one per line; it just does not need to assume a batch is spread across iterations.

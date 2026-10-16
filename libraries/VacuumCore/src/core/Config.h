@@ -52,6 +52,14 @@ constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB CDC ignores it
 // A command line is verb, key, value. Anything longer is refused rather than truncated.
 constexpr uint16_t COMMAND_LINE_MAX = 128;
+// Where the device looks for the end of a command. A host can point it elsewhere with
+// `set term`, which turns off newline framing so a whole payload — a program's source — arrives
+// as one command instead of in chunks. That payload is far longer than a command line, so a
+// custom terminator raises the ceiling to COMMAND_PAYLOAD_MAX, which is also what bounds the
+// receive buffer when a host never sends its terminator.
+constexpr const char* LINE_TERMINATOR = "\n";
+constexpr uint16_t TERMINATOR_MAX = 16;      // longest a host may set it to
+constexpr uint32_t COMMAND_PAYLOAD_MAX = 64u * 1024u;
 // With USB CDC the presence of a host is observable and its loss stops the run. On a plain
 // UART it is not, so a lost link is simply never reported.
 

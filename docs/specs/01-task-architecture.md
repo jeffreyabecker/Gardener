@@ -86,7 +86,7 @@ loop:
 
 ```
 loop:
-  poll Serial into the line buffer (8 lines per pass, as today)
+  drain Serial into the line buffer and dispatch every complete line it received
   for each complete line: dispatch
     info/status/help/list/params → read the snapshot / store directly and reply
     set mode → stop the VM (peripheral) or start `default` (stand-alone)

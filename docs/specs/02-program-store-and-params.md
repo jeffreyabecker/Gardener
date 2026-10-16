@@ -47,7 +47,8 @@ class ProgramStore {
   bool read(const char* name, String& out) const;
   bool remove(const char* name);   // `default` re-seeds the passive source
 
-  // Chunked, atomic upload. Writes stage to /programs/.upload.tmp and rename on commit.
+  // Atomic upload: staged to /programs/.upload.tmp and renamed on commit. The wire sends a
+  // whole program in one command (spec 06 §6), so this is called once per upload.
   bool writeBegin(const char* name);
   bool writeAppend(const uint8_t* data, size_t length);
   bool writeCommit(uint32_t expectedSize, uint32_t expectedCrc32, String& error);

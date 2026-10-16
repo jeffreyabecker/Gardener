@@ -24,18 +24,12 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
 | `stop` | `ok stopped` | peripheral mode: stop → vent → idle |
 | `params <name>` | `ok params=<name> k=v …` | effective values (persisted over defaults) |
 | `set params <name> k=v …` | `ok params=<name> k=v …` | persist without running |
-| `prog begin <name>` | `ok uploading <name>` / `err …` | start a chunked upload |
-| `prog append <hex>` | `ok n=<bytes>` | hex-encoded chunk (case-insensitive), max 512 source bytes per line |
-| `prog commit <size> <crc32>` | `ok stored <name>` / `err crc` / `err size` | stage + rename; atomic |
-| `prog abort` | `ok aborted` | delete staging |
-
-`eval <expr>` stays an optional REPL behind the VM (spec 03 §1) and replies with the
-printed value.
+| `prog <name>` | `ok stored <name> size=<n>` / `err …` | one shot: `set term` a marker first, then the source follows the first newline and runs to the marker (§6). Not chunked and not hex encoded |
 
 Control and drawing commands (`start`, `stop`, `set target`, `ambient`, `reset`, `draw`,
 `flush`) are **peripheral-mode only**; in stand-alone mode they are refused with `err`
 (use `set mode peripheral`). Program commands (`list`, `cat`, `rm`, `run`, `params`,
-`set params`, `prog`) work in both modes.
+`set params`, `prog`) work in both modes, and so does `set term` — framing is not control.
 
 ## 3. `run` parameter validation
 
@@ -78,31 +72,49 @@ ok help=info|status|help|start|stop|reset|reboot|ambient|set|draw|flush|list|cat
 
 ## 5. Error codes
 
-The existing five stay. One is added:
+The existing five stay. Two are added:
 
 | Code | Meaning |
 | --- | --- |
 | `not_found` | `cat`/`rm`/`run`/`params`/`set params` named a program that does not exist |
+| `full` | a `prog` payload over `ProgramStore::kMaxBytes`, or a store with no room left |
 
 The full set is `unknown_command`, `bad_argument`, `out_of_range`, `not_ready`,
-`unsupported`, `not_found`.
+`unsupported`, `not_found`, `full`.
 
 ## 6. Upload framing
 
-- `prog begin <name>` validates the name and opens the staging file.
-- `prog append <hex>` appends decoded bytes; cumulative size is capped at
-  `ProgramStore::kMaxBytes` (64 KiB).
-- `prog commit <size> <crc32>` checks size and CRC-32 (standard polynomial, as in spec 02)
-  against the staged bytes, then atomically renames the staging file into place and
-  refreshes the store.
-- Any failure (bad name, full store, bad hex, oversize, CRC/size mismatch) deletes the
-  staging file; an interrupted upload never leaves a half-written program.
-- The hex encoding keeps the line grammar's "no spaces in a value" rule intact.
+- The source is **not** chunked and **not** hex encoded: the client sets a terminator that cannot
+  appear in the source, then sends the whole program as one command.
+
+```
+-> set term <<<END>>>
+<- ok term=<<<END>>>
+-> prog pulse
+   ... program source, free form, any number of lines ...
+<<<END>>>
+<- ok stored pulse size=412
+```
+
+- The first line of the payload is `prog <name>`; everything after the first newline, up to the
+  terminator, is the source. Because the terminator delimits it, the device knows the size and
+  never needs a length or CRC argument from the client.
+- The device validates the name, stages the payload to `/programs/.upload.tmp`, and renames it
+  into place (spec 02 §3). It computes the size and CRC-32 from the payload it received, so
+  neither is passed on the wire.
+- A bad name, a payload over `ProgramStore::kMaxBytes`, or a full store replies `err` and
+  deletes the staging file; an interrupted upload never leaves a half-written program.
+- `prog` carries a multiline payload, so like `draw text` it is recognised before the line is
+  split.
+- `set term off` puts newline framing back. The custom terminator is a receive-side setting:
+  replies stay `LF` terminated (protocol §3).
 
 ## 7. Backward compatibility
 
 - All existing commands keep their replies and semantics; `stop` changes meaning only in
   the program era (it already vented; it now also stops a running program).
+- There is no chunked upload: `prog begin` / `prog append` / `prog commit` / `prog abort` are
+  not commands. A program arrives whole, delimited by `set term` (§6).
 - A controller written before programs existed sees the extra `status`/`info` keys and
   must ignore unknown keys, which the protocol already requires.
 - `run`, `list`, `cat`, `rm`, `params`, `prog` were absent before and are new surface.
@@ -112,5 +124,6 @@ The full set is `unknown_command`, `bad_argument`, `out_of_range`, `not_ready`,
 - `list` returns `default` first with `default=1`.
 - `run` with a bad key replies `err bad_argument` and starts nothing.
 - `run` with an out-of-range value replies `err out_of_range` and starts nothing.
-- An upload with a wrong CRC replies `err crc` and leaves the previous program intact.
+- An upload that overruns `ProgramStore::kMaxBytes` replies `err full` and leaves the previous
+  program intact.
 - `status` shows `program`/`running`/`host` and the state table while a program runs.

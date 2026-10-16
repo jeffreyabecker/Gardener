@@ -76,8 +76,8 @@ own, so the serial task is the only consumer of `Serial` and can be pinned to co
 directly.
 
 Core 0 carries the two bounded jobs: the plant tick (a 50 ms control step plus the
-display flush and button servicing) and the serial task (at most a handful of parsed
-lines per pass). Neither can hold the core for long, so they share it comfortably. Core 1
+display flush and button servicing) and the serial task (every complete line it received in one
+pass). Neither can hold the core for long, so they share it comfortably. Core 1
 carries the only unbounded job, the Berry VM.
 
 ### 5.1 Modes
@@ -325,7 +325,7 @@ New program commands (additive; existing commands keep their meaning):
 | `stop` | `ok stopped` | stop current program/run → vent → **idle**. Does not auto-start `default` while a host is attached, so the host is never surprised |
 | `params <name>` | `ok params=<name> k=v …` | effective values (persisted over defaults) |
 | `set params <name> k=v …` | `ok params=<name> k=v …` | persist without running |
-| `prog begin <name>` / `prog append …` / `prog commit <size> <crc32>` / `prog abort` | staged, chunked upload | CRC-32, staged temp + rename on commit — the old `ProgramUploader` scheme over the line |
+| `prog <name>` (source to the `set term` marker) | `ok stored <name> size=<n>` | one shot, not chunked or hex encoded: the source follows the first newline and runs to the custom terminator, staged temp + rename on commit |
 
 `status` gains `program=<name|->`, `running=0|1`, `host=0|1`, and the program state table
 (`s0=key s0v=val …`). `help` lists the new commands.

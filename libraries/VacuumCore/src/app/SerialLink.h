@@ -25,6 +25,10 @@ class Tokens;
 // line. Diagnostics share the stream, marked with '[' so a controller can tell a record
 // from a reply.
 //
+// The end of a line is a string, not a fixed byte: `set term` can point it at a marker, which
+// is how a whole multi-line payload — a program's source — arrives as a single command rather
+// than in chunks. Replies are always newline terminated.
+//
 // The stream and the presence check are injected rather than assumed, so pointing the
 // interface at UART0 instead of USB CDC is a one line change in App.
 class SerialLink {
@@ -52,12 +56,14 @@ class SerialLink {
 
  private:
   // --- bytes ---------------------------------------------------------------
-  void handleLine();
+  void drainLines();
+  void dispatchLine(const String& line);
   void logLine(char level, const char* text);
   void writeLine(const char* prefix, const char* text);
 
   // --- grammar -------------------------------------------------------------
   void dispatch(char* line);
+  void setTerminator(const char* token);
   void emitHelp();
   void ok(const char* payload);
   void err(const char* code);
@@ -91,9 +97,15 @@ class SerialLink {
   const SystemSnapshot& snapshot_;
 
   bool logEnabled_ = true;
-  char line_[cfg::COMMAND_LINE_MAX];
-  size_t length_ = 0;
-  bool oversize_ = false;  // the current line is too long and was answered already
+  // Where the device looks for the end of a command. Newline by default; `set term` points it
+  // at a marker instead, which is how a whole multi-line payload arrives as one command.
+  String terminator_ = cfg::LINE_TERMINATOR;
+  bool customTerminator_ = false;
+  // Everything the host has sent that has not been dispatched yet: complete lines still to be
+  // serviced, then at most one line that has not been terminated. Bytes go in, lines come out.
+  String buffer_;
+  // An overlong line was answered already and the rest of it is being thrown away.
+  bool swallowing_ = false;
   bool attached_ = false;
   bool linkLost_ = false;
 };
