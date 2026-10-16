@@ -35,7 +35,7 @@ below ambient, so kPa keeps the numbers short and the resolution meaningful.
 | `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below the reference |
 
 The ambient reference is **captured, never dialled in** — the device takes it from the sensor
-(`ambient`), at boot and on request, and nothing else can set one. Targets are relative to it,
+(`plant capture`), at boot and on request, and nothing else can set one. Targets are relative to it,
 so capturing a new one restates every target, and both want the rig at rest when it happens.
 
 ## Project layout
@@ -217,23 +217,23 @@ two things of its own — the boot splash, and the battery on top of every frame
   fw 0.5.0                              ▐███▐          <- device: splash, then the battery
 ```
 
-Everything else is whatever the host sent: `draw` commands fill the panel's buffer, and `flush`
-puts it on the glass. A host that wants the readout the old page drew sends about twenty lines
-per frame:
+Everything else is whatever the host sent: `panel draw` commands fill the panel's buffer, and
+`panel flush` puts it on the glass. A host that wants the readout the old page drew sends about
+twenty lines per frame:
 
 ```
--> draw clear
-<- ok drawn
--> draw text 0 0 1 0 IDLE
-<- ok drawn
--> draw text 48 16 2 0 41.3
-<- ok drawn
--> draw rect 0 40 100 8
-<- ok drawn
--> draw fillrect 1 41 72 6
-<- ok drawn
--> flush
-<- ok flushed
+-> panel draw clear
+<- ok result=draw op=clear
+-> panel draw text 0 0 1 0 IDLE
+<- ok result=draw op=text
+-> panel draw text 48 16 2 0 41.3
+<- ok result=draw op=text
+-> panel draw rect 0 40 100 8
+<- ok result=draw op=rect
+-> panel draw fillrect 1 41 72 6
+<- ok result=draw op=fillrect
+-> panel flush
+<- ok result=flush
 ```
 
 | Who draws | What |
@@ -252,26 +252,30 @@ exactly one `ok`/`err` reply line, and lines starting with `[` are diagnostics r
 replies:
 
 ```
--> info
-<- ok fw=0.5.0 chip=ESP32-S3 heap=279384 log=on batt_v=3.94 batt_pct=78
--> set target 40
+-> device get
+<- ok proto=2 fw=0.6.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on
+-> plant target=40
 <- ok target=40.0
--> start
-<- ok started
--> status
-<- ok kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
--> stop
-<- ok stopped
+-> plant start
+<- ok result=start state=PULL
+-> plant get
+<- ok ambient=101.33 kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+-> plant stop
+<- ok result=stop state=VENT
 ```
 
 That last pair is the whole run model in miniature: the device reaches the target, reports
-`HOLD`, and waits. The controller times the hold and sends `stop` when it is done — the device
-has no duration of its own and will hold until told, and no command that takes one.
+`HOLD`, and waits. The controller times the hold and sends `plant stop` when it is done — the
+device has no duration of its own and will hold until told, and no command that takes one.
 
-The full grammar, key tables, error codes and state model are in
+The full grammar, resource tables, error codes and state model are in
 [docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and
 send a line works as a client: there is none in this repository at the moment, deliberately,
 while the interface is being reworked.
+
+A device still on `fw` 0.5.0 speaks the older spelling of the same machine — `info`, `status`,
+`start`, `stop`, `set target`, `draw`, `flush`. §18 of the protocol document maps each one onto
+the commands above.
 
 ## Vacuum control model
 
@@ -295,16 +299,16 @@ lives at the other end of the cable, with the controller. Clearing the target re
 chamber, because a run without a target is not a run.
 
 ```
-        start                                              stop / link loss / fault
-IDLE ──────────> PULL ──(target reached)──> HOLD ───────────────────> VENT ──(complete)──> IDLE
-  ^                                              │                      │
-  │                                              │                      v
-  └──────────────────── reset ───────────────────┴─────────────────── FAULT
+        plant start                                        plant stop / link loss / fault
+IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
+  ^                                                 │                           │
+  │                                                 │                           v
+  └───────────────── plant reset ───────────────────┴─────────────────────── FAULT
 ```
 
 * The controller owns how long a hold lasts. The device goes to `HOLD` when its own deadband
   says the target has been reached, and that is all `HOLD` now means: it is the cue for the
-  controller to start timing, and the run continues until the controller sends `stop`.
+  controller to start timing, and the run continues until the controller sends `plant stop`.
 * Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
   run time, so an unattended hold holds until someone stops it.
 * The countdown is the host's job: the host holds the timer and draws it, and the device renders
@@ -312,7 +316,7 @@ IDLE ──────────> PULL ──(target reached)──> HOLD ─
 * The coil is energised through `PULL` and `HOLD`, and released in `IDLE` and `VENT`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
-* Faults latch. Only `reset` clears one; the device never retries on its own.
+* Faults latch. Only `plant reset` clears one; the device never retries on its own.
 * Disconnecting the controller stops the run and vents. That is the one automatic ending left,
   and it does not help with a controller that hangs with the port open.
 
@@ -325,12 +329,12 @@ Protections, all of which act without consulting the controller:
 * duty is hard capped at `PUMP_DUTY_MAX_PERCENT`
 * a slew rate limit avoids step changes into the diaphragm pump
 * if the pressure sensor stops answering mid-run, the pump is cut and the state latches to
-  `FAULT` (clear with `reset`)
+  `FAULT` (clear with `plant reset`)
 * targets deeper than `floor` only log a warning and pin the duty
 
 Those four are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
-`status` and keep targets no deeper than it.
+`plant get` and keep targets no deeper than it.
 
 ## Safety
 

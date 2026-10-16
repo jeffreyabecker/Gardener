@@ -37,7 +37,7 @@ composites into every frame, and one abort gesture.
 - The abort is the only action the device takes on its own initiative, and `default` is
   the only name the firmware uses — boot starts it and the abort returns to it (spec 02
   §4). No gesture opens the selector: `browser` is launched like any other program, with
-  `programs.run("browser")` or `run browser` over the wire.
+  `programs.run("browser")` or `store run browser` over the wire.
 - In peripheral mode there is no program to route to: the VM is stopped, so button events
   are never delivered anywhere (spec 01 §2).
 

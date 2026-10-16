@@ -82,19 +82,19 @@ controller:
   draws/flushes `Display` directly.
 - **Peripheral** — the VM is stopped; the serial system does the same directly.
 
-`set mode` (spec 06) switches; attaching the serial link does not. What both of them reach
+`vm mode` (spec 06) switches; attaching the serial link does not. What both of them reach
 (spec 01 §3): `VacuumSystem`, the display, the snapshot, the button event ring, and
 `ProgramStore`. Nothing else.
 
 ### 5.2 What a command is
 
-- Serial: parse the line, then call the target directly — `info`/`status` read the
-  snapshot, `set mode` flips modes, and in peripheral mode `draw`/`flush` call `Display`
-  and `start`/`stop`/`set target`/… call `VacuumSystem`. In stand-alone mode those
-  control/draw commands are refused.
+- Serial: parse the line, then call the target directly — `device get`/`plant get` read the
+  snapshot, `vm mode` flips modes, and in peripheral mode `panel draw`/`panel flush` call
+  `Display` and `plant start`/`plant stop`/`plant target=…` call `VacuumSystem`. In stand-alone
+  mode those control/draw commands are refused.
 - Program: `vacuum.*` / `screen.*` / `programs.*` call `VacuumSystem`, `Display`, the
   snapshot, and `ProgramStore` directly. A call is fire-and-forget; the authoritative
-  result is the next `status` / `vacuum.state()`.
+  result is the next `plant get` / `vacuum.state()`.
 
 ### 5.3 Runaway programs
 
@@ -109,7 +109,7 @@ and nothing is resumed, because a hook cannot suspend a Berry call: it calls in 
 program that never yields therefore still gets the plant its tick, and `vacuum.delay(ms)` is the
 deliberate way to say the same thing sooner. The interval is an instruction count rather than a
 clock, because a counter is cheap to check and needs no timer. The hook is also where a stop is
-noticed: the flag a `stop`, the abort gesture or a mode switch sets is read there, and the call is
+noticed: the flag a `plant stop`, the abort gesture or a mode switch sets is read there, and the call is
 unwound.
 
 **What would force something else.** If the vendored Berry port has no execution-limit hook, or a
@@ -174,7 +174,7 @@ are the **last run** values. The merge is deterministic:
   battery) and never touches the pump or valve, so boot stays safe (pump off, valve open)
   by construction.
 - An owner can replace `default` by uploading a program of that name; that program then
-  becomes the boot behavior. `rm default` restores the built-in passive source, so the
+  becomes the boot behavior. `store rm default` restores the built-in passive source, so the
   device can never be left without a home program.
 - Everything else about `default` is ordinary: the store pins it first in the program
   list, it can take parameters, and it runs like any other program.
@@ -218,7 +218,7 @@ anyway.
 
 They are ordinary stored programs, and the runtime reserves nothing. Only `default` is
 named by the device — boot starts it and the abort returns to it. `browser` is reached the
-way any program is: `programs.run("browser")` from a running program, or `run browser` over
+way any program is: `programs.run("browser")` from a running program, or `store run browser` over
 the wire.
 
 ### 7.5 Modes
@@ -226,7 +226,7 @@ the wire.
 - **Stand-alone** — the VM runs; the running program draws and commands.
 - **Peripheral** — the VM is stopped; the serial system draws and commands.
 
-Modes are switched by `set mode` (spec 06), not by attaching the serial link. Attaching
+Modes are switched by `vm mode` (spec 06), not by attaching the serial link. Attaching
 does not change the mode; disconnecting in peripheral mode vents and switches to
 stand-alone (spec 05 §3).
 
@@ -240,8 +240,8 @@ The link-loss rule changes from "always stop and vent" to:
   running. It sees `vacuum.host_present()` go false and may react, but the default is
   simply to carry on.
 - **No program running** → stop and vent as today (safety default).
-- `status` exposes `host=0|1`, `program=<name|->` and `running=0|1` so a reattached host
-  can see what happened while it was away and take over (`run` / `stop` both work).
+- `vm get` exposes `host=0|1`, `program=<name|->` and `running=0|1` so a reattached host
+  can see what happened while it was away and take over (`store run` / `plant stop` both work).
 
 Safety stays intact regardless of the owner: the vent valve remains normally-open
 fail-safe, and the fault latch plus sensor-loss trip still act with no owner in the loop.
@@ -276,7 +276,7 @@ source (or set `default`'s own params), not a separate autostart knob.
 ### 8.4 Persistence and merge rules
 
 - Persisted per-program values are written when a program is run from the `browser`
-  program's params editor or via `set params <name> …`. They survive reboot in LittleFS.
+  program's params editor or via `store params <name> …`. They survive reboot in LittleFS.
 - On start, effective params = manifest defaults overlaid with persisted values, as in
   section 6.2. A re-uploaded program with a changed manifest loses obsolete keys and fills
   missing ones with defaults — never a crash, never a silent type mismatch.
@@ -291,7 +291,7 @@ source (or set `default`'s own params), not a separate autostart knob.
   and effectively keeps the device home.
 - **`default` deleted** — the store re-seeds the passive source on next refresh; the device
   is never without a boot program.
-- **Host attached while a program runs** — the host can `stop`, `run` another program, or
+- **Host attached while a program runs** — the host can `plant stop`, `store run` another program, or
   draw its own panel; the local buttons are ignored until it leaves.
 - **Program consumes every button it can** — Back hold 5 s still aborts, so the user can
   always vent and get home.
@@ -303,11 +303,11 @@ source (or set `default`'s own params), not a separate autostart knob.
 - `ProgramStatus` sub-struct: `running`, `programName`, `error` / last error,
   `hostAttached`.
 - **No program list.** The snapshot does not carry the store: `ProgramStore` owns the list
-  and `count()`/`at()` answer `list` and the `programs.*` verbs on demand (spec 02 §7), so
+  and `count()`/`at()` answer `store list` and the `programs.*` verbs on demand (spec 02 §7), so
   there is nothing to keep in sync.
 - A fixed-capacity **program state table** a program can write and read:
   `program.state_set("label", 42.5)` / `program.state_get("label")`. These keys are
-  appended to the `status` payload (`s0=label s0v=42.5 …`) and available to the program's
+  appended to the `vm get` payload (`s0=label s0v=42.5 …`) and available to the program's
   own screen, so programs publish their own telemetry without any C++ change.
 - The whole snapshot is exposed read-only to Berry as `vacuum.state()`, a Berry map of the
   plant readout built when a program asks for it.
@@ -321,30 +321,36 @@ source (or set `default`'s own params), not a separate autostart knob.
   call is a direct `Display` call, and `screen.flush()` pushes the frame.
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
   fillrect, roundrect, fillroundrect, circle, fillcircle, ellipse, fillellipse, triangle,
-  filltriangle, rotatedrect, fillrotatedrect, text, plus `flush`.
+  filltriangle, rotatedrect, fillrotatedrect, text, plus `panel flush`.
 - `Overlay` composites the battery on every flush, so the battery (like the splash)
   remains the device's and cannot be erased.
 
 ## 11. Serial protocol changes
 
-New program commands (additive; existing commands keep their meaning):
+Program commands and the runtime, in the proto 2 spelling — resource first, then the op
+([the protocol](serial-protocol.md) §3) — and written up as [spec 06](specs/06-serial-protocol.md).
+`store` is the program store; `vm` is the runtime that runs one. The rename replaces the 0.5.0
+wire rather than extending it, so this table is also the map from the `run` / `list` / `set mode`
+spellings this plan first used.
 
 | Command | Reply | Notes |
 | --- | --- | --- |
-| `list` | `ok programs=N` then one row per program, then `eof` | rows carry name, size, param count, `default`/`running` flags, read from the store (spec 02 §7) |
-| `cat <name>` | paged source | as the old `cat` |
-| `rm <name>` | `ok removed <name>` | `rm default` re-seeds the passive source |
-| `run <name> [k=v …]` | `ok running <name>` / `err …` | stop current program → vent → start; named params validated against the manifest |
-| `stop` | `ok stopped` | stop current program/run → vent → **idle**. Does not auto-start `default` while a host is attached, so the host is never surprised |
-| `params <name>` | `ok params=<name> k=v …` | effective values (persisted over defaults) |
-| `set params <name> k=v …` | `ok params=<name> k=v …` | persist without running |
-| `prog <name>` (source to the `set term` marker) | `ok stored <name> size=<n>` | one shot, not chunked or hex encoded: the source follows the first newline and runs to the custom terminator, staged temp + rename on commit |
+| `store list` | `ok result=list programs=<n>` then one row per program, then `end result=list rows=<n>` | rows carry name, size, param count, `default`/`running` flags, read from the store (spec 02 §7) |
+| `store cat <name> [offset] [len]` | `ok result=cat program=<name> offset=<n> len=<n> total=<n>` then the source, then `end` | a page, as the old `cat` was paged |
+| `store rm <name>` | `ok result=rm program=<name>` | `store rm default` re-seeds the passive source |
+| `store run <name> [k=v …]` | `ok result=run program=<name> state=<state>` / `err …` | stop current program → vent → start; named params validated against the manifest |
+| `store params <name>` | `ok program=<name> k=v …` | effective values (persisted over defaults) |
+| `store params <name> k=v …` | `ok program=<name> k=v …` | persist without running |
+| `store put <name>` (source to the `link term` marker) | `ok result=put program=<name> size=<n> crc=<n>` | one shot, not chunked or hex encoded: the source follows the first newline and runs to the custom terminator, staged temp + rename on commit |
+| `plant stop` | `ok result=stop state=VENT` | stop current program/run → vent → **idle**. Does not auto-start `default` while a host is attached, so the host is never surprised |
+| `vm mode=<standalone\|peripheral>` | `ok mode=<standalone\|peripheral>` | stop the program and hand the plant to the host, or hand it back and run `default` |
 
-`status` gains `program=<name|->`, `running=0|1`, `host=0|1`, and the program state table
-(`s0=key s0v=val …`). `help` lists the new commands.
+`vm get` gains `program=<name|->`, `running=0|1`, `host=0|1` and the program state table
+(`s0=key s0v=val …`); `plant get` stays about the plant. `help` is a page that lists every
+resource, field and op (spec 06 §4).
 
-The abort and serial `stop` differ on purpose: Back hold 5 s always homes to `default`
-(the device's own home), while serial `stop` leaves the device idle (the host is present
+The abort and serial `plant stop` differ on purpose: Back hold 5 s always homes to `default`
+(the device's own home), while `plant stop` leaves the device idle (the host is present
 and decides what happens next).
 
 ## 12. Layer layout
@@ -373,11 +379,11 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 
 | Phase | Content | Gate |
 | --- | --- | --- |
-| 1 | Execution model: the program runs in the loop, and the service pass runs from the Berry hook | A `while true` program with no `vacuum.delay` cannot stretch the control tick, and a `run` sent to it takes effect at the yield point (§5.3) |
+| 1 | Execution model: the program runs in the loop, and the service pass runs from the Berry hook | A `while true` program with no `vacuum.delay` cannot stretch the control tick, and a `store run` sent to it takes effect at the yield point (§5.3) |
 | 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
-| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
-| 4 | Vendor Berry + `BerryRuntime`/`ProgramApi`, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw, and the tick still holds with a program running |
-| 5 | Disconnected operation, reserved-program boot, abort semantics, program state table, runaway handling | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back hold 5 s aborts home |
+| 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`store list`, `store cat`, `store rm`, `store params`, `store put`) | Programs storable and listable over the wire; `store run` waits for the VM |
+| 4 | Vendor Berry + `BerryRuntime`/`ProgramApi`, `vacuum`/`screen`/`buttons`/`program` modules, `store run` command, seeded `default` and `browser` | `default` and `browser` run and draw, and the tick still holds with a program running |
+| 5 | Disconnected operation, reserved-program boot, abort semantics, program state table, runaway handling | Unplug USB mid-program → program continues; `vm get` shows `host`/`program`; Back hold 5 s aborts home |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 
 ## 14. Risks to verify during implementation
@@ -401,7 +407,7 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 - **The UX is only a spec until it is on glass.** The browser/params/run flow needs a
   physical pass on the real board before the interaction is locked in.
 - **Nothing on the device reaches `browser`.** With no selector gesture, the way in is
-  `programs.run("browser")` from a program or `run browser` over the wire, so the seeded
+  `programs.run("browser")` from a program or `store run browser` over the wire, so the seeded
   `default` has to offer one. Confirm it does — otherwise the stock device ships a selector
   it cannot open.
 

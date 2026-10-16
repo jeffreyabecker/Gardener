@@ -140,9 +140,9 @@ Rules:
   plant's `snapshot_` and the captured `params_`; `programCount()`/`programAt()` read the
   store's in-RAM index (spec 02 §7). None of them block.
 - `programParams()` and `setProgramParam()` touch `ProgramStore` (LittleFS) directly. That is
-  the same call the wire's `params` and `set params` make, so it is one writer rather than two
+  the same call the wire's `store params` makes, so it is one writer rather than two
   (spec 01 §3).
-- `stateSet()` writes `snapshot_.state[]` directly; the serial line reads it into `status`.
+- `stateSet()` writes `snapshot_.state[]` directly; the serial line reads it into `vm get`.
 - `programs.run` / `programs.stop` / `programs.home` are program-lifecycle operations
   owned by `BerryRuntime`, not `ProgramApi` (see §3).
 - `delay()` is the deliberate yield: it runs `serviceHook()` and checks `stopRequested()`
@@ -164,7 +164,7 @@ the flag it sets is checked at the hook (spec 01 §5).
 
 ## 6. Berry binding
 
-Five modules, registered once per VM. Argument order matches the host `draw` ops where
+Five modules, registered once per VM. Argument order matches the host `panel draw` ops where
 the surfaces overlap.
 
 ### 6.1 `vacuum` — the machine
@@ -260,7 +260,7 @@ device behaviour attached (§5).
 
 ## 8. Acceptance criteria
 
-- `hold` and `pulse` example programs run while `status` keeps answering.
+- `hold` and `pulse` example programs run while `plant get` keeps answering.
 - `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map fresh from
   the last service pass.
 - `buttons.on(buttons.OK, fn)` fires `fn("click")` when OK is clicked while the program runs.

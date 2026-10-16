@@ -169,9 +169,9 @@ Persistence:
 
 - File `/programs/.params/<name>`, one `key=value` per line, written atomically
   (temp + rename) by whichever path asked for it: the `browser` program's editor, or
-  `set params <name> k=v …` over the wire.
+  `store params <name> k=v …` over the wire.
 - Written when a program is run from the `browser` program's params editor or by
-  `set params <name> k=v …` over the wire.
+  `store params <name> k=v …` over the wire.
 - Merge is deterministic:
   1. start from manifest defaults,
   2. overlay persisted values (persisted wins),
@@ -198,7 +198,7 @@ struct ProgramInfo {
 - `running` is derived too: it is the name and flag in `ProgramStatus` (spec 07 §1).
 - Reads of the in-RAM index are open to the serial line and to a running program; writes,
   `refresh()` and everything else that touches LittleFS go through `ProgramStore` (spec 01
-  §3). A `list` cannot land mid-upload: an upload arrives as one command and runs to
+  §3). A `store list` cannot land mid-upload: an upload arrives as one command and runs to
   completion inside the dispatch that carried it (spec 06 §6).
 
 ## 8. Acceptance criteria
@@ -208,4 +208,4 @@ struct ProgramInfo {
 - A manifest with a bad line still yields a runnable program and a `[W]` log line.
 - Persisted params that a re-uploaded manifest no longer declares are dropped silently;
   missing ones fall back to defaults; out-of-range persisted numbers are clamped.
-- `default` is first in `list` and in the browser, marked `*`.
+- `default` is first in `store list` and in the browser, marked `*`.

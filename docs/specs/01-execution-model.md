@@ -36,7 +36,7 @@ Contention is resolved by two mutually exclusive modes, not by locks:
 - **Peripheral** — the VM is stopped; the serial system has full control and does the same
   directly.
 
-`set mode` (spec 06) switches modes; attaching the serial link does not. There is never a moment
+`vm mode` (spec 06) switches modes; attaching the serial link does not. There is never a moment
 when the program and the serial line are both controlling or both drawing, which is the whole
 reason nothing below needs a lock.
 
@@ -46,7 +46,7 @@ What both of them reach: `VacuumSystem`, the display, the snapshot, the button e
 `ProgramStore`. Nothing else.
 
 "Shared" means reachable by both, and never at the same instant: everything above runs in one
-loop. The service pass can be triggered from inside a program's execution (§5), so a `status`
+loop. The service pass can be triggered from inside a program's execution (§5), so a `plant get`
 reply may be produced while the VM is on the stack — but it only reads the snapshot and writes the
 stream, and neither is being written by the program at that instant. The previous draft had to
 argue for a list of tolerated races (adjacent-tick snapshot reads, interleaved `Wire` traffic, log
@@ -84,7 +84,7 @@ A program that never yields cannot starve the service pass; the hook drags it in
   `CONTROL_PERIOD_MS`, and no smaller than that needs.
 - The interval is an instruction count rather than a wall-clock deadline — a counter is cheap to
   check and needs no timer. `vacuum.delay(ms)` is the deliberate way to hand the pass over sooner.
-- The hook is also where a stop is noticed: `stop`, a mode switch and the Back-hold abort set a
+- The hook is also where a stop is noticed: `plant stop`, a mode switch and the Back-hold abort set a
   flag, and the hook unwinds the VM out of its call at the next firing (spec 03 §3). This is the
   one place the VM is aborted rather than asked nicely, and it is why an unwilling program still
   stops.
@@ -93,19 +93,19 @@ A program that never yields cannot starve the service pass; the hook drags it in
 
 **Reentrancy is the thing the gate also has to answer.** The service pass runs from inside a
 program's execution, so a command that arrives while one runs is executing reentrantly. Reads
-(`status`, `info`, `list`) are safe; a command that would change what is running — `run`, an
-upload, `set mode` — asks for a program rather than starting one, and the yield point applies it
-(spec 05 §3). If that turns out to be unworkable, it belongs to the fallback below rather than to
-a lock here.
+(`plant get`, `device get`, `store list`) are safe; a command that would change what is running —
+`store run`, an upload, `vm mode` — asks for a program rather than starting one, and the yield
+point applies it (spec 05 §3). If that turns out to be unworkable, it belongs to the fallback
+below rather than to a lock here.
 
 ## 6. The gate, and the fallback
 
 **The gate.** With `default` and a deliberately hostile program (`while true`, no
-`vacuum.delay`) both running, `status` keeps answering and the control step keeps
+`vacuum.delay`) both running, `plant get` keeps answering and the control step keeps
 `CONTROL_PERIOD_MS`. Measure it on the bench: count control steps against `millis()` over a
 minute with the hostile program running, and size `VM_HOOK_INSTRUCTIONS` from what it says.
 Answer the reentrancy question at the same time: with the hostile program running, send
-`status` (must reply) and `run other` (must take effect at the yield point, not inside the
+`plant get` (must reply) and `store run other` (must take effect at the yield point, not inside the
 program's stack).
 
 **The fallback.** If the gate fails — no execution-limit hook in the vendored port, a hook
@@ -119,10 +119,10 @@ asks for it.
 
 ## 7. Acceptance criteria
 
-- `set mode peripheral` stops the VM and gives the serial system full control;
-  `set mode standalone` returns control to the VM (runs `default`).
+- `vm mode=peripheral` stops the VM and gives the serial system full control;
+  `vm mode=standalone` returns control to the VM (runs `default`).
 - Attaching the serial link does not change the mode.
-- A `while true` program with no `vacuum.delay` does not stop `status` replies or the
+- A `while true` program with no `vacuum.delay` does not stop `plant get` replies or the
   PID tick.
 - A busy program drawing as fast as it can cannot delay the control loop.
 - Disconnecting in peripheral mode vents and returns to stand-alone (spec 05 §3).

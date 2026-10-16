@@ -55,17 +55,18 @@ other button and has no device meaning.
 
 | Event | Effect |
 | --- | --- |
-| `set mode peripheral` | stop the program, vent, halt the VM |
-| `set mode standalone` | start `default` (home) if nothing is running |
-| `run <name>` (stand-alone) | stop current program → vent → start `name` |
-| `run <name>` (peripheral) | switch to stand-alone, then the same |
+| `vm mode=peripheral` | stop the program, vent, halt the VM |
+| `vm mode=standalone` | start `default` (home) if nothing is running |
+| `store run <name>` (stand-alone) | stop current program → vent → start `name` |
+| `store run <name>` (peripheral) | switch to stand-alone, then the same |
 | Back hold 5 s | stop → vent → start `default` |
 | Peripheral + detach | vent → switch to stand-alone |
-| Fault latch / sensor loss | vents and latches regardless of mode; only `reset` clears |
+| Fault latch / sensor loss | vents and latches regardless of mode; only `plant reset` clears |
 
-A `run`, an upload or a mode switch that arrives while a program is executing is a request the
-yield point applies, rather than something done inside the program's stack (spec 01 §5). Reads
-(`status`, `info`, `list`) are answered immediately, from inside the service pass.
+A `store run`, an upload or a mode switch that arrives while a program is executing is a request
+the yield point applies, rather than something done inside the program's stack (spec 01 §5).
+Reads (`plant get`, `device get`, `store list`) are answered immediately, from inside the service
+pass.
 
 ## 6. Safety invariants (unchanged)
 
@@ -89,8 +90,8 @@ across a power cycle except the running program (which restarts as `default`).
 - Unplugging USB in stand-alone mode leaves the running program running.
 - Holding Back for 5 s from a running program stops it, vents, and starts `default`,
   whatever the program registered for Back.
-- `set mode peripheral` stops the program, vents, and halts the VM; `set mode standalone`
+- `vm mode=peripheral` stops the program, vents, and halts the VM; `vm mode=standalone`
   runs `default`.
-- A `run` sent to a program that is busy takes effect at its next yield, and `status`
+- A `store run` sent to a program that is busy takes effect at its next yield, and `plant get`
   keeps answering in the meantime (spec 01 §6).
 - Boot with a deleted `default` still boots into the re-seeded passive `default`.
