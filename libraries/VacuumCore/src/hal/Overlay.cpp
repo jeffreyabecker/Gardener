@@ -41,6 +41,10 @@ void Overlay::drawBattery() {
 }
 
 void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
+  // The icon owns its whole footprint, so it erases it first: a page may have drawn anything
+  // under it, and filling over the page without clearing would read as a battery with the page's
+  // pixels still visible inside it.
+  inner_.clearRect(x, y, kBatteryIconWidth, kBatteryBodyHeight);
   inner_.rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight);
   inner_.fillRect(x + kBatteryBodyWidth, y + 2, 2, 3);  // nub
   if (percent == 0) return;

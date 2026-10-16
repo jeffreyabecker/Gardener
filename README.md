@@ -236,7 +236,7 @@ per frame:
 
 | Who draws | What |
 | --- | --- |
-| the device | the splash at boot, and the battery on every frame, both through the overlay so a host cannot erase them |
+| the device | the splash at boot, and the battery on every frame, both through the overlay so a host cannot erase them — the battery clears its own footprint first, so a host cannot draw into it either |
 | the host | everything else: pressure, target, state, countdown, bars, icons, in whatever layout it likes |
 
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
