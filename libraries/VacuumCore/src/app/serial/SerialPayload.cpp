@@ -1,9 +1,9 @@
-#include "app/SerialLink.h"
+#include "app/serial/SerialLink.h"
 
 #include <Arduino.h>
 
-#include "app/Items.h"
-#include "app/SerialSurface.h"
+#include "app/serial/Items.h"
+#include "app/serial/SerialSurface.h"
 #include "core/Config.h"
 #include "core/Snapshot.h"
 

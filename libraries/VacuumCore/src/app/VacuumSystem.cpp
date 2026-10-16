@@ -45,7 +45,7 @@ void VacuumSystem::captureAmbient() { sensor_.captureAmbient(); }
 
 void VacuumSystem::rest() {
   pump_.stop();
-  vent_.open();  // normally open, but assert the safe resting state when asked
+  vent_.open();  // assert the vented resting state when asked
   pidReset();
   output_ = 0.0f;
   setState(RunState::Idle);
@@ -129,12 +129,12 @@ void VacuumSystem::resetFault() {
   if (state_ == RunState::Fault) vent();
 }
 
-// The latch and the safe state, in that order: the output is cut now rather than ramped, the coil
-// is released, and the code is what `plant get` reports until resetFault(). Nothing writes a duty
+// The latch and the safe state, in that order: the output is cut now rather than ramped, the valve
+// is opened, and the code is what `plant get` reports until resetFault(). Nothing writes a duty
 // again while it is set, because nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
   pump_.halt();
-  vent_.open();  // release the coil: the safe direction
+  vent_.open();  // drive the valve open: the safe direction
   pidReset();
   output_ = 0.0f;
   faultCode_ = code ? code : "unknown";

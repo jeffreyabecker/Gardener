@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "app/Items.h"
+#include "app/serial/Items.h"
 #include "core/Snapshot.h"
 #include "hal/Display.h"
 
@@ -58,7 +58,7 @@ struct DrawOp {
   void (*call)(Display& display, const int16_t* args, const char* text);
 };
 
-// The operators, in the order `help panel draw` lists them. Defined in app/SerialDraw.cpp beside
+// The operators, in the order `help panel draw` lists them. Defined in app/serial/SerialDraw.cpp beside
 // the calls themselves.
 const DrawOp* drawOpTable(uint8_t& count);
 

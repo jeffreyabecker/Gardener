@@ -32,8 +32,9 @@ constexpr uint32_t PUMP_PWM_FREQ_HZ = 20000;
 constexpr uint8_t PUMP_PWM_RESOLUTION = 10;
 
 // --- Vent valve ------------------------------------------------------------
-// The valve is normally open (Q10): energise to close. A logic level MOSFET with a
-// flyback diode across the coil, wired like the pump.
+// A solenoid through a logic level MOSFET with a flyback diode across the coil, wired like the
+// pump. Which coil level means "open" is chosen in app/App.h by the valve class it constructs;
+// normally open is the fail-safe default.
 constexpr int VENT_VALVE = 5;
 
 // --- Battery sense ---------------------------------------------------------

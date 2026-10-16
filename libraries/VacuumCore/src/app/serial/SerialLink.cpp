@@ -1,9 +1,9 @@
-#include "app/SerialLink.h"
+#include "app/serial/SerialLink.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "app/Items.h"
+#include "app/serial/Items.h"
 #include "app/VacuumSystem.h"
 
 namespace gardener {

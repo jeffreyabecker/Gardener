@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 #include "app/Overlay.h"
-#include "app/SerialLink.h"
+#include "app/serial/SerialLink.h"
 #include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
@@ -54,7 +54,9 @@ class App {
   // ones above them.
   MprlsSensor sensor_;
   PwmPump pump_;
-  SolenoidValve vent_;
+  // The one place the fitted valve is named: NormallyOpenValve is the fail-safe part (energise to
+  // close), NormallyClosedValve is for holding vacuum through a power loss (energise to open).
+  NormallyOpenValve vent_;
   Battery battery_;
   SystemSnapshot snapshot_;
   Adafruit_GrayOLED* panel_ = nullptr;

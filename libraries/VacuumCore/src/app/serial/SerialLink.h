@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
-#include "app/Items.h"
-#include "app/LineGrammar.h"
-#include "app/SerialSurface.h"
+#include "app/serial/Items.h"
+#include "app/serial/LineGrammar.h"
+#include "app/serial/SerialSurface.h"
 #include "core/Config.h"
 #include "core/Snapshot.h"
 #include "hal/Display.h"
@@ -14,10 +14,11 @@ namespace gardener {
 class VacuumSystem;
 
 // The serial interface to the controller: the bytes, the dispatch, the replies and the diagnostics.
-// One protocol over several files — the line grammar in app/LineGrammar.h, the wire surface as data
-// in app/SerialSurface.h, the payload text in app/SerialPayload.cpp, the discovery pages in
-// app/SerialHelp.cpp, the panel verbs in app/SerialDraw.cpp — because text is what makes a single
-// file hard to read. The byte half stays here: on a wire it is available/read/write, three calls,
+// One protocol over several files — the line grammar in app/serial/LineGrammar.h, the wire surface as
+// data in app/serial/SerialSurface.h, the payload text in app/serial/SerialPayload.cpp, the discovery
+// pages in app/serial/SerialHelp.cpp, the panel verbs in app/serial/SerialDraw.cpp — because text is
+// what makes a single file hard to read. The byte half stays here: on a wire it is
+// available/read/write, three calls,
 // and a transport split would need tasks, callbacks and an MTU before it bought anything.
 //
 // A command is a resource and an op: `plant target=40`, `panel draw clear`, `link term=off`. The
@@ -82,7 +83,7 @@ class SerialLink {
   // actions, a write, or `get`.
   void command(Tokens& tokens);
   void resourceCommand(const ResourceSpec& resource, Tokens& tokens);
-  // The whole surface, as data, in the order `help` lists it. Defined in app/SerialPayload.cpp.
+  // The whole surface, as data, in the order `help` lists it. Defined in app/serial/SerialPayload.cpp.
   static const ResourceSpec* resources(uint8_t& count);
   static const FieldSpec* findField(const ResourceSpec& resource, const char* name);
   void renderFields(const ResourceSpec& resource, Items& out) const;
@@ -136,7 +137,7 @@ class SerialLink {
 
   // --- drawing -------------------------------------------------------------
   // `panel draw <op> …`: the op and its coordinates, which are positional by design. Defined in
-  // app/SerialDraw.cpp.
+  // app/serial/SerialDraw.cpp.
   void drawOps(char* rest);
   void applyOp(const DrawOp& op, Tokens& tokens);
 

@@ -68,6 +68,7 @@ bool App::begin() {
   link_.info("oled: online");
   link_.info(sensorOk ? "mprls: online" : "mprls: not found");
   link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  link_.info(vent_.energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
   link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
 
   String ready = "app: ready, heap ";

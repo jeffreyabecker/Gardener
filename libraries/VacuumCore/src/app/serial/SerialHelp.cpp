@@ -1,9 +1,9 @@
-#include "app/SerialLink.h"
+#include "app/serial/SerialLink.h"
 
 #include <Arduino.h>
 
-#include "app/Items.h"
-#include "app/SerialSurface.h"
+#include "app/serial/Items.h"
+#include "app/serial/SerialSurface.h"
 
 namespace gardener {
 
@@ -11,7 +11,7 @@ namespace gardener {
 // in the protocol has, and it is what lets a value hold any printable character — a separator that
 // can appear inside a value is a separator that has to be escaped.
 //
-// Every row is derived from the tables in app/SerialPayload.cpp and app/SerialDraw.cpp, so a host
+// Every row is derived from the tables in app/serial/SerialPayload.cpp and app/serial/SerialDraw.cpp, so a host
 // that enumerates `help` and replays what it finds can never be told `unknown_command`, and a bound
 // printed here is the same constant the validator refuses with.
 

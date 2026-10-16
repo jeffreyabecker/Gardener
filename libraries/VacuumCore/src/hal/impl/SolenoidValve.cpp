@@ -8,27 +8,34 @@
 namespace gardener {
 
 // Nothing else spells the interface out, so a verb added to VentValve and not implemented here would
-// leave this class abstract - silently, until something tried to construct it.
-static_assert(!std::is_abstract<SolenoidValve>::value,
-              "SolenoidValve must implement every VentValve verb");
+// leave these classes abstract - silently, until something tried to construct one.
+static_assert(!std::is_abstract<NormallyOpenValve>::value,
+              "NormallyOpenValve must implement every VentValve verb");
+static_assert(!std::is_abstract<NormallyClosedValve>::value,
+              "NormallyClosedValve must implement every VentValve verb");
 
 void SolenoidValve::begin() {
   pinMode(pins::VENT_VALVE, OUTPUT);
-  // Start released: a normally open valve needs no drive to be safe.
+  // Start vented, whatever that costs in coil drive: open_ is the latch, and write() maps the
+  // chamber intent onto the drive level the fitted part wants.
   open_ = true;
-  write(false);
+  write(energiseWhenOpen());
 }
 
 void SolenoidValve::open() {
   if (open_) return;
   open_ = true;
-  write(false);
+  write(energiseWhenOpen());
 }
 
 void SolenoidValve::close() {
   if (!open_) return;
   open_ = false;
-  write(true);
+  write(!energiseWhenOpen());
+}
+
+bool SolenoidValve::energised() const {
+  return open_ ? energiseWhenOpen() : !energiseWhenOpen();
 }
 
 void SolenoidValve::write(bool energise) {

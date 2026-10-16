@@ -7,7 +7,7 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 * **Interface**: USB CDC, one line oriented protocol ([docs/serial-protocol.md](./docs/serial-protocol.md))
 * **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–172 kPa / 0–25 PSI absolute, I2C)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
-* **Vent valve**: normally open solenoid on a low side MOSFET
+* **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
 * **Battery**: 1S Li-ion pack sensed through a divider on GPIO4
 
@@ -99,7 +99,7 @@ pins and the bus read in another. Each of those is an interface, and the part th
 | I2C SDA | 8 | STEMMA QT bus, MPRLS + OLED (ESP32-S3 `Wire` default) |
 | I2C SCL | 9 | same bus |
 | Pump PWM | 6 | to the MOSFET gate |
-| Vent valve | 5 | MOSFET gate; **energise to close** |
+| Vent valve | 5 | MOSFET gate; **energise to close** for the default normally open part |
 | Battery sense | 4 | 1S Li-ion through a ÷2 divider (ADC1 channel 3) |
 | Button UP | 1 | reserved, nothing reads it |
 | Button DOWN | 2 | reserved, nothing reads it |
@@ -143,11 +143,14 @@ is driving it decides when the pump stops.
 
 ### Vent valve
 
-**The valve is normally open.** De-energised means open, which means the chamber vents — so
-*running a vacuum means energising the coil to close the valve*. That makes the fail-safe
-physical rather than logical: a crash, a watchdog reset, a brownout or a cut wire all
-de-energise the coil and the chamber vents whether or not the firmware noticed. Wire it like
-the pump (GPIO5, logic level MOSFET, flyback diode across the coil):
+**The valve is normally open by default.** De-energised means open, which means the chamber
+vents — so *running a vacuum means energising the coil to close the valve*. That makes the
+fail-safe physical rather than logical: a crash, a watchdog reset, a brownout or a cut wire
+all de-energise the coil and the chamber vents whether or not the firmware noticed. The part
+is named in [app/App.h](./libraries/VacuumCore/src/app/App.h): `NormallyOpenValve` is the safe
+default, and `NormallyClosedValve` is the alternative for holding vacuum through a power loss —
+it inverts the relationship, so de-energised means *sealed* and the fail-safe above is gone.
+Wire it like the pump (GPIO5, logic level MOSFET, flyback diode across the coil):
 
 ```
 ESP32 GPIO5 ──┬── 100R ──┬── GATE
@@ -160,9 +163,11 @@ ESP32 GPIO5 ──┬── 100R ──┬── GATE
     flyback diode across the coil (cathode to +12V)
 ```
 
-A solenoid holds current for as long as it is closed, so **the valve, not the pump, is the
-dominant battery cost on a long hold** — a 1S cell will not last an hour of solenoid duty.
-Prefer a latching or low-power valve if a long hold has to run on battery.
+A normally open solenoid holds current for as long as it is closed, so **the valve, not the pump,
+is the dominant battery cost on a long hold** — a 1S cell will not last an hour of solenoid duty.
+A normally closed part pays that cost at rest instead, because holding the valve open to keep the
+chamber vented is what needs current. Prefer a latching or low-power valve if a long hold has to
+run on battery.
 
 ### Battery
 
@@ -309,7 +314,8 @@ IDLE ──────────────> PULL ──(target reached)─�
   run time, so an unattended hold holds until someone stops it.
 * The countdown is the host's job: the host holds the timer and draws it, and the device renders
   nothing of its own except the splash and the battery.
-* The coil is energised through `PULL` and `HOLD`, and released in `IDLE` and `VENT`.
+* The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
+  means energised or de-energised is the fitted part's, and is named in `app/App.h`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
 * Faults latch. Only `plant reset` clears one; the device never retries on its own.
@@ -339,8 +345,9 @@ can hurt people and destroy hardware. Keep a rated catch pot and filter in line,
 that the firmware's limits are software limits only.
 
 The one hardware guarantee is the valve: it is normally open, so losing power or losing
-control releases the chamber. Do not invert that relationship by wiring a normally closed
-valve to the same output.
+control releases the chamber. That guarantee belongs to `NormallyOpenValve` in `app/App.h` —
+fitting a `NormallyClosedValve` instead removes it, because a dead normally closed valve holds
+the vacuum. Do not expect the fail-safe to survive that swap.
 
 ## Roadmap
 

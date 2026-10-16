@@ -32,7 +32,7 @@ SPI module, so it no longer shares that bus; the firmware has not moved with it 
 | # | Item | Qty | Part / spec | Notes |
 | --- | --- | --- | --- | --- |
 | 5 | Vacuum pump | 1 | JQB2438 DC vacuum pump, 12 V, brushed | The source of the `PUMP_MAX_SUCTION_KPA` (60 kPa) figure. `PUMP_DUTY_MAX_PERCENT` and `PUMP_RAMP_PERCENT_PER_SEC` are its only protections — the device never ends a run on its own. |
-| 6 | Vent valve | 1 | Normally **open** solenoid, 12 V | Energise to close, so a brownout, a watchdog reset or a cut wire vents the chamber. It is the only hardware guarantee on the rig. |
+| 6 | Vent valve | 1 | 12 V solenoid, **normally open** (default) or **normally closed** | The firmware picks: `NormallyOpenValve` or `NormallyClosedValve` in `app/App.h`. Energise-to-close is the safe default — a brownout, a watchdog reset or a cut wire vents the chamber. A normally closed part holds the vacuum through a power loss instead: it is the only hardware guarantee on the rig, and it does not survive that swap. |
 | 7 | MOSFET | 2 | Logic level N-channel, AO3400 / IRLZ44N class | One per load. Must be logic level: the S3 gates at 3.3 V. Never drive either load from a GPIO. |
 | 8 | Gate resistor | 2 | 100R, one per MOSFET | Series with the gate, to the GPIO. |
 | 9 | Gate pull-down resistor | 2 | Value not fixed | Keeps the gate defined while the S3 is in reset. See [§ 5](#5-open-items). |
@@ -77,7 +77,7 @@ above:
   load, cathode to +12 V".
 * **MOSFET part number** (item 7) — the repository records a class, not a part.
 * **Pump supply bulk capacitance** (item 11) within the 470–1000 µF range the wiring notes give.
-* **Vent valve part number** (item 6), given the normally-open and hold-current constraints.
+* **Vent valve part number** (item 6), given the normally-open default and hold-current constraints.
 * **Charging and protection** for the Li-ion pack (item 12). Nothing acts on a low battery: the
   reading is reported and drawn, and that is all.
 * **Chamber, tubing and catch pot ratings** (items 17–18) — the firmware's limits are software

@@ -1,4 +1,4 @@
-#include "app/LineGrammar.h"
+#include "app/serial/LineGrammar.h"
 
 #include <string.h>
 

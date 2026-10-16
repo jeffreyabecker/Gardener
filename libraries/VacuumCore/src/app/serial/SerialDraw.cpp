@@ -1,9 +1,9 @@
-#include "app/SerialLink.h"
+#include "app/serial/SerialLink.h"
 
 #include <Arduino.h>
 
-#include "app/LineGrammar.h"
-#include "app/SerialSurface.h"
+#include "app/serial/LineGrammar.h"
+#include "app/serial/SerialSurface.h"
 
 namespace gardener {
 namespace {

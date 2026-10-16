@@ -42,8 +42,8 @@ constexpr float CONTROL_FLOOR_KPA =
     PUMP_MAX_SUCTION_KPA > CONTROL_MIN_TARGET_KPA ? PUMP_MAX_SUCTION_KPA : CONTROL_MIN_TARGET_KPA;
 
 // --- Vent valve ------------------------------------------------------------
-// The valve is normally open (Q10): energise to close, so venting is the de-energised
-// state and a fault is fail-safe by construction.
+// Timing only; which part is fitted, and therefore which coil level means "open", is the
+// composition root's call in app/App.h — normally open is the fail-safe default.
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
 

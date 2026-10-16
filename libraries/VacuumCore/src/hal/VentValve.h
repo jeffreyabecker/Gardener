@@ -4,11 +4,13 @@ namespace gardener {
 
 // The vent valve: the only way back up, since the pump can pull down and nothing else can.
 //
-// This is the interface the plant holds. The part on this rig is a normally open solenoid on a
-// GPIO, in hal/impl/, and that inversion is the rig's one hardware guarantee: de-energised means
-// released, so a crash, a brownout or a cut wire vents the chamber whether or not the firmware
-// noticed. It is worth saying out loud here because it is what makes `close()` the act of running a
-// vacuum rather than `open()`.
+// This is the interface the plant holds. The verbs are the chamber's, not the coil's: `open()`
+// vents and `close()` makes the chamber pumpable, whichever way the fitted solenoid happens to wire
+// them. The part on this rig is a normally open solenoid on a GPIO, in hal/impl/, so de-energised
+// means vented and a crash, a brownout or a cut wire vents the chamber whether or not the firmware
+// noticed — the rig's one hardware guarantee. A normally closed part drives the same interface but
+// inverts that relationship, so it only earns its place when holding vacuum through a power loss is
+// what you want.
 //
 // Vent *timing* is the run model's, not the valve's: this only drives the pin.
 class VentValve {
@@ -16,8 +18,8 @@ class VentValve {
   virtual ~VentValve() = default;
 
   virtual void begin() = 0;
-  virtual void open() = 0;   // release the coil: the chamber vents
-  virtual void close() = 0;  // energise it: the chamber can be pumped
+  virtual void open() = 0;   // vent: the chamber returns to ambient
+  virtual void close() = 0;  // seal: the chamber can be pumped
   virtual bool energised() const = 0;
 };
 
