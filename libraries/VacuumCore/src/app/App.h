@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Adafruit_SH110X.h>
+#include <Adafruit_GrayOLED.h>
 #include <Arduino.h>
 
 #include "app/AppDisplay.h"
@@ -18,9 +18,9 @@
 // is handed exactly what it uses, by reference, at construction, and nothing includes this
 // header.
 //
-// It is also the only place that knows which display panel is fitted, and now the only thing
-// that draws anything: the boot splash. Everything else on the panel is the host's, drawn over
-// the serial line into the overlay, which puts the battery on every frame.
+// It is also the only thing that draws anything for itself: the boot splash. Everything else on
+// the panel is the host's, drawn over the serial line into the overlay, which puts the battery on
+// every frame. Which panel is fitted is hal/Panel's business; App holds it as a GrayOLED.
 //
 // The device is a serial peripheral with no local control surface, so the loop services the
 // sensor, the control loop and the link, in that order. The App is also the only place that
@@ -36,6 +36,11 @@ class App {
   void update();
 
  private:
+  // The one place the fitted panel is named: it new's the driver, brings it up on the I2C bus, and
+  // hands it back as the drawing base. A panel that does not answer is fatal, so this never
+  // returns null.
+  Adafruit_GrayOLED* attachPanel();
+
   // Fills the machine view from the modules that own the state, in place: one snapshot is
   // rebuilt per loop iteration, and the battery overlay and a reply both read that one instant.
   void refreshSnapshot();
@@ -52,7 +57,7 @@ class App {
   VentValve vent_;
   Battery battery_;
   SystemSnapshot snapshot_;
-  Adafruit_SH1106G panel_;
+  Adafruit_GrayOLED* panel_ = nullptr;
   AdafruitDisplay display_;
   AppDisplay overlay_;
   VacuumSystem system_;
@@ -60,7 +65,6 @@ class App {
 
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
-  bool displayOk_ = false;
 };
 
 }  // namespace gardener

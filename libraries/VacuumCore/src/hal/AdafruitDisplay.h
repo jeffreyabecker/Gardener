@@ -11,77 +11,77 @@ namespace gardener {
 // so nothing outside this file has to know that 1 lights a pixel.
 //
 // It takes the GrayOLED base rather than the fitted panel, because every verb it needs is on the
-// base: the drawing from Adafruit_GFX, `display()` from Adafruit_GrayOLED. A different SH110x
-// panel is then a change at the composition root, and nothing here.
+// base: the drawing from Adafruit_GFX, `display()` from Adafruit_GrayOLED.
 //
-// Bring-up is deliberately not here. `begin()` takes the I2C address and the reset line, so it
-// lives on the panel class, and the panel class is the one thing App knows by name.
+// The panel is held by pointer reference: the composition root builds the driver up once the I2C
+// bus is running, which is after this adapter and everything holding it already exist. The pointer
+// is null until then, and nothing draws before the root has attached a panel.
 class AdafruitDisplay : public Display {
  public:
-  explicit AdafruitDisplay(Adafruit_GrayOLED& panel) : panel_(panel) {}
+  explicit AdafruitDisplay(Adafruit_GrayOLED*& panel) : panel_(panel) {}
 
   // --- the panel -----------------------------------------------------------
-  void flush() override { panel_.display(); }
+  void flush() override { panel_->display(); }
 
   // --- geometry ------------------------------------------------------------
-  int16_t width() const override { return panel_.width(); }
-  int16_t height() const override { return panel_.height(); }
-  uint8_t rotation() const override { return panel_.getRotation(); }
-  void setRotation(uint8_t rotation) override { panel_.setRotation(rotation); }
+  int16_t width() const override { return panel_->width(); }
+  int16_t height() const override { return panel_->height(); }
+  uint8_t rotation() const override { return panel_->getRotation(); }
+  void setRotation(uint8_t rotation) override { panel_->setRotation(rotation); }
 
   // --- the screen ----------------------------------------------------------
-  void clear() override { panel_.fillScreen(kPaper); }
-  void invert(bool on) override { panel_.invertDisplay(on); }
+  void clear() override { panel_->fillScreen(kPaper); }
+  void invert(bool on) override { panel_->invertDisplay(on); }
 
   // --- pixels, lines and shapes --------------------------------------------
-  void pixel(int16_t x, int16_t y) override { panel_.drawPixel(x, y, kInk); }
+  void pixel(int16_t x, int16_t y) override { panel_->drawPixel(x, y, kInk); }
   void clearRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.fillRect(x, y, w, h, kPaper);
+    panel_->fillRect(x, y, w, h, kPaper);
   }
   void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) override {
-    panel_.drawLine(x0, y0, x1, y1, kInk);
+    panel_->drawLine(x0, y0, x1, y1, kInk);
   }
-  void hLine(int16_t x, int16_t y, int16_t w) override { panel_.drawFastHLine(x, y, w, kInk); }
-  void vLine(int16_t x, int16_t y, int16_t h) override { panel_.drawFastVLine(x, y, h, kInk); }
+  void hLine(int16_t x, int16_t y, int16_t w) override { panel_->drawFastHLine(x, y, w, kInk); }
+  void vLine(int16_t x, int16_t y, int16_t h) override { panel_->drawFastVLine(x, y, h, kInk); }
   void rect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.drawRect(x, y, w, h, kInk);
+    panel_->drawRect(x, y, w, h, kInk);
   }
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.fillRect(x, y, w, h, kInk);
+    panel_->fillRect(x, y, w, h, kInk);
   }
   void roundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    panel_.drawRoundRect(x, y, w, h, r, kInk);
+    panel_->drawRoundRect(x, y, w, h, r, kInk);
   }
   void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    panel_.fillRoundRect(x, y, w, h, r, kInk);
+    panel_->fillRoundRect(x, y, w, h, r, kInk);
   }
-  void circle(int16_t x, int16_t y, int16_t r) override { panel_.drawCircle(x, y, r, kInk); }
-  void fillCircle(int16_t x, int16_t y, int16_t r) override { panel_.fillCircle(x, y, r, kInk); }
+  void circle(int16_t x, int16_t y, int16_t r) override { panel_->drawCircle(x, y, r, kInk); }
+  void fillCircle(int16_t x, int16_t y, int16_t r) override { panel_->fillCircle(x, y, r, kInk); }
   void ellipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    panel_.drawEllipse(x, y, rw, rh, kInk);
+    panel_->drawEllipse(x, y, rw, rh, kInk);
   }
   void fillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    panel_.fillEllipse(x, y, rw, rh, kInk);
+    panel_->fillEllipse(x, y, rw, rh, kInk);
   }
   void triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
                 int16_t y2) override {
-    panel_.drawTriangle(x0, y0, x1, y1, x2, y2, kInk);
+    panel_->drawTriangle(x0, y0, x1, y1, x2, y2, kInk);
   }
   void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
                     int16_t y2) override {
-    panel_.fillTriangle(x0, y0, x1, y1, x2, y2, kInk);
+    panel_->fillTriangle(x0, y0, x1, y1, x2, y2, kInk);
   }
   void rotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle) override {
-    panel_.drawRotatedRect(cx, cy, w, h, angle, kInk);
+    panel_->drawRotatedRect(cx, cy, w, h, angle, kInk);
   }
   void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h,
                        int16_t angle) override {
-    panel_.fillRotatedRect(cx, cy, w, h, angle, kInk);
+    panel_->fillRotatedRect(cx, cy, w, h, angle, kInk);
   }
 
   // --- images --------------------------------------------------------------
   void bitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) override {
-    panel_.drawBitmap(x, y, bitmap, w, h, kInk);
+    panel_->drawBitmap(x, y, bitmap, w, h, kInk);
   }
 
   // --- text ----------------------------------------------------------------
@@ -99,7 +99,7 @@ class AdafruitDisplay : public Display {
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted);
   void measure(const char* value, uint8_t size, int16_t& outWidth, int16_t& outHeight);
 
-  Adafruit_GrayOLED& panel_;
+  Adafruit_GrayOLED*& panel_;
 };
 
 }  // namespace gardener

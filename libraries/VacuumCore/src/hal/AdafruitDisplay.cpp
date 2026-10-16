@@ -34,27 +34,27 @@ void AdafruitDisplay::textBounds(const char* value, uint8_t size, int16_t& outWi
 
 void AdafruitDisplay::draw(int16_t x, int16_t y, const char* value, uint8_t size,
                            bool inverted) {
-  panel_.setTextSize(size);
+  panel_->setTextSize(size);
   // An opaque background is what makes inverted text readable; Adafruit_GFX spells "no
   // background" by setting the ink and the paper to the same value.
   if (inverted) {
-    panel_.setTextColor(kPaper, kInk);
+    panel_->setTextColor(kPaper, kInk);
   } else {
-    panel_.setTextColor(kInk);
+    panel_->setTextColor(kInk);
   }
-  panel_.setCursor(x, y);
-  panel_.print(value);
+  panel_->setCursor(x, y);
+  panel_->print(value);
 }
 
 void AdafruitDisplay::measure(const char* value, uint8_t size, int16_t& outWidth,
                               int16_t& outHeight) {
   // Adafruit_GFX measures at the size the cursor is set to, so the size has to be set first.
-  panel_.setTextSize(size);
+  panel_->setTextSize(size);
   int16_t boxX = 0;
   int16_t boxY = 0;
   uint16_t width = 0;
   uint16_t height = 0;
-  panel_.getTextBounds(value, 0, 0, &boxX, &boxY, &width, &height);
+  panel_->getTextBounds(value, 0, 0, &boxX, &boxY, &width, &height);
   outWidth = (int16_t)width;
   outHeight = (int16_t)height;
 }

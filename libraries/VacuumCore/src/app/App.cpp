@@ -1,6 +1,8 @@
 #include "app/App.h"
 
+#include <Adafruit_SH110X.h>
 #include <Wire.h>
+#include <stdlib.h>
 
 #include "hal/Pins.h"
 
@@ -14,11 +16,29 @@ bool serialAttached() { return (bool)Serial; }
 }  // namespace
 
 App::App()
-    : panel_(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1),
+    : panel_(nullptr),
       display_(panel_),
       overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
       link_(system_, overlay_, Serial, serialAttached, snapshot_) {}
+
+// The one place the fitted panel is named, and the only place its concrete type appears. The
+// driver is new'd and never deleted: it lives for the life of the device, whose destructor never
+// runs, so nothing owns it. This runs once the I2C bus is up, which is why the panel is attached
+// from begin() and not from the constructor.
+Adafruit_GrayOLED* App::attachPanel() {
+  Adafruit_SH1106G* panel = new Adafruit_SH1106G(pins::OLED_WIDTH, pins::OLED_HEIGHT, &Wire, -1);
+
+  // The STEMMA QT breakout has no reset line, so the library must not poke one.
+  if (!panel->begin(pins::OLED_I2C_ADDR, false)) {
+    // No panel, no readout: abort() panics and the ESP32 resets on a panic, so the device keeps
+    // trying rather than coming up blind and silent.
+    link_.warn("oled: not found, aborting");
+    delay(50);
+    abort();
+  }
+  return panel;
+}
 
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
@@ -31,9 +51,9 @@ bool App::begin() {
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
-  // The panel is the one thing this root knows by name, so it is the one that brings it up.
-  // The STEMMA QT breakout has no reset line, so do not let the library poke one.
-  displayOk_ = panel_.begin(pins::OLED_I2C_ADDR, false);
+  // The panel is the one part with no fallback: nothing on the device can draw without it, so a
+  // panel that does not answer is fatal rather than a degraded mode.
+  panel_ = attachPanel();
   bool sensorOk = sensor_.begin(Wire);
   bool pumpOk = pump_.begin();
   vent_.begin();
@@ -42,9 +62,9 @@ bool App::begin() {
 
   if (sensorOk) sensor_.captureAmbient();
 
-  // What came up, and what did not. This is the composition root's job now: the drivers
-  // report as values and one place decides what is worth saying.
-  link_.info(displayOk_ ? "oled: online" : "oled: not found");
+  // What came up, and what did not. This is the composition root's job now: the drivers report as
+  // values and one place decides what is worth saying.
+  link_.info("oled: online");
   link_.info(sensorOk ? "mprls: online" : "mprls: not found");
   link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
@@ -56,7 +76,7 @@ bool App::begin() {
   refreshSnapshot();
   link_.begin();
   lastState_ = system_.state().runState;
-  if (displayOk_) splash();
+  splash();
   return true;
 }
 
