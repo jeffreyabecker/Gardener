@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "app/LineGrammar.h"
 #include "core/Config.h"
 #include "core/Snapshot.h"
 #include "hal/Display.h"
@@ -9,12 +10,13 @@
 namespace gardener {
 
 class VacuumSystem;
-class Tokens;
 
-// The serial interface to the controller: the bytes, the command grammar and the payload
-// text, in one place because they are three faces of one protocol. On a wire the byte half is
-// available/read/write — three calls — so splitting it from the grammar the way a transport
-// with tasks, callbacks and MTU negotiation needed to would buy nothing.
+// The serial interface to the controller: the bytes, the dispatch, the commands that are not
+// about the panel, and the diagnostics. One protocol over four files — the line grammar in
+// app/LineGrammar.h, the panel verbs in app/SerialDraw.cpp, the readout text in
+// app/SerialPayload.cpp — because text is what makes a single file hard to read. The byte half
+// stays here: on a wire it is available/read/write, three calls, and a transport split would need
+// tasks, callbacks and an MTU before it bought anything.
 //
 // It is also the display driver: the host draws the panel with `draw` commands and puts a frame
 // on the glass with `flush`. The display it holds is the overlay, so every flush composites the
@@ -71,6 +73,7 @@ class SerialLink {
   // --- drawing -------------------------------------------------------------
   // The op, then the numbers it takes, then the rest of the line for the one op that draws a
   // string. Split lazily rather than up front, because a string can contain spaces.
+  // Defined in app/SerialDraw.cpp.
   void draw(Tokens& tokens);
   bool coords(Tokens& tokens, size_t count, int16_t* out);
   // Reads `count` coordinates, refuses anything left over, calls, and answers. The reply logic
@@ -87,6 +90,7 @@ class SerialLink {
   }
 
   // --- payload text --------------------------------------------------------
+  // Defined in app/SerialPayload.cpp.
   String statusBody() const;
   String infoBody() const;
 

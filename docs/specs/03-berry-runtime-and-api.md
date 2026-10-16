@@ -92,7 +92,7 @@ class ProgramApi {
   bool setProgramParam(const char* name, const char* key,
                        const char* value);          // store writes the .params file
 
-  // --- drawing (direct calls; the Display is the AppDisplay instance, so flush()
+  // --- drawing (direct calls; the Display is the Overlay instance, so flush()
   //     composites the battery) ---
   void drawClear() { display_.clear(); }
   void drawPixel(int16_t x, int16_t y) { display_.pixel(x, y); }
@@ -218,7 +218,7 @@ built-in `string.format` and `str`; the firmware exposes no formatter.
 | `screen.draw_rotatedrect(cx,cy,w,h,angle)` | `drawRotatedRect` | |
 | `screen.draw_fillrotatedrect(cx,cy,w,h,angle)` | `drawFillRotatedRect` | |
 | `screen.draw_text(x,y,size,inverted,str)` | `drawText` | |
-| `screen.flush()` | `flush` | push the frame; the battery is composited by `AppDisplay` |
+| `screen.flush()` | `flush` | push the frame; the battery is composited by `Overlay` |
 
 ### 6.4 `buttons` — button callbacks
 

@@ -175,7 +175,7 @@ Programs own the screen; the device owns only the battery and the Back-hold abor
 ### 7.1 Screen ownership
 
 - A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
-  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
+  `screen.flush()`. The device composites only the battery (`Overlay`) on every flush,
   so a program can never erase it.
 - There are no device-drawn pages. The browser, the params editor and the home shell are
   all Berry programs. A reusable list/menu abstraction, if one is wanted, is written in
@@ -304,7 +304,7 @@ additively:
 
 ## 10. Exposing the Display to programs
 
-- The active controller holds a `Display&` (the `AppDisplay` instance) and draws and
+- The active controller holds a `Display&` (the `Overlay` instance) and draws and
   flushes directly: the VM in stand-alone mode, the serial task in peripheral mode. The
   modes are mutually exclusive, so the VM and the serial task never both touch it.
 - Programs draw with the same **drawing verbs** the host uses: each `screen.draw_<op>(…)`
@@ -312,7 +312,7 @@ additively:
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
   fillrect, roundrect, fillroundrect, circle, fillcircle, ellipse, fillellipse, triangle,
   filltriangle, rotatedrect, fillrotatedrect, text, plus `flush`.
-- `AppDisplay` composites the battery on every flush, so the battery (like the splash)
+- `Overlay` composites the battery on every flush, so the battery (like the splash)
   remains the device's and cannot be erased.
 
 ## 11. Serial protocol changes
@@ -351,7 +351,7 @@ hal/      Pins.h (S3), Display.h, AdafruitDisplay, Battery, Buttons, Storage
 services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
 hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime
-app/      App (composition root + task creation), AppDisplay
+app/      App (composition root + task creation), Overlay
 ```
 
 [VacuumCore.h](../libraries/VacuumCore/src/VacuumCore.h) remains the single umbrella include

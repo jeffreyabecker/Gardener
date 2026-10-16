@@ -9,7 +9,7 @@ composites into every frame, and one abort gesture.
 ## 1. Screen ownership
 
 - A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
-  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
+  `screen.flush()`. The device composites only the battery (`Overlay`) on every flush,
   so a program can never erase it.
 - There are no device-drawn pages — no browser, no params editor, no status page in C++.
   Those are Berry programs (spec 02 §4). A reusable list/menu abstraction, if one is

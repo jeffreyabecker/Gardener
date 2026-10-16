@@ -50,7 +50,7 @@ struct SystemSnapshot {
   program (VM) in stand-alone mode at its own pace, the serial task in peripheral mode with
   the `draw`/`flush` commands. No commands, no queue — a `screen.draw_*` call is a direct
   `Display` call, and `screen.flush()` pushes the frame (the battery is composited by
-  `AppDisplay`).
+  `Overlay`).
 - The modes are mutually exclusive (spec 01 §2), so the VM and the serial task never both
   touch the display.
 

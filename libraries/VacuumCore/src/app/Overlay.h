@@ -14,9 +14,9 @@ namespace gardener {
 // the point. The battery is the one thing that has to be on the panel whatever page is showing,
 // and nothing that draws a page should have to remember it. It reads the snapshot like every
 // other reader, so it cannot reach into a module either.
-class AppDisplay : public Display {
+class Overlay : public Display {
  public:
-  AppDisplay(Display& inner, const SystemSnapshot& snapshot)
+  Overlay(Display& inner, const SystemSnapshot& snapshot)
       : inner_(inner), snapshot_(snapshot) {}
 
   // --- the panel -----------------------------------------------------------

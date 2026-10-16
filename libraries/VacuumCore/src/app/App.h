@@ -3,7 +3,7 @@
 #include <Adafruit_GrayOLED.h>
 #include <Arduino.h>
 
-#include "app/AppDisplay.h"
+#include "app/Overlay.h"
 #include "app/SerialLink.h"
 #include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
@@ -53,7 +53,7 @@ class App {
   SystemSnapshot snapshot_;
   Adafruit_GrayOLED* panel_ = nullptr;
   AdafruitDisplay display_;
-  AppDisplay overlay_;
+  Overlay overlay_;
   VacuumSystem system_;
   SerialLink link_;
 
