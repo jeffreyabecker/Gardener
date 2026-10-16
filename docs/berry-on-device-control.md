@@ -432,5 +432,6 @@ the fallback only where it would change them.
 
 [Reentrancy and resumption](berry-reentrancy-and-resumption.md) is not one of them. It is §5.3 read
 against the VM's own source, and it holds the reentrancy and resumption questions open rather than
-answered: what the vendored port actually guarantees, where an upcall re-enters the VM, and the
-three shapes a program could have.
+answered: what the vendored port actually guarantees, where an upcall re-enters the VM, the three
+shapes a program could have, and what requiring one of them — a class with named entry points, that
+only the runtime enters — would remove and what it would cost.
