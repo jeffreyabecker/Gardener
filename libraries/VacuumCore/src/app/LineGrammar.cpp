@@ -4,28 +4,6 @@
 
 namespace gardener {
 
-bool startsWith(const char* line, const char* word) {
-  for (; *word != '\0'; word++, line++) {
-    char c = *line;
-    if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
-    if (c != *word) return false;
-  }
-  return *line == '\0' || *line == ' ' || *line == '\t';
-}
-
-size_t splitLine(char* line, char* argv[], size_t maxArgs) {
-  size_t argc = 0;
-  char* cursor = line;
-  while (*cursor != '\0' && argc < maxArgs) {
-    while (*cursor == ' ' || *cursor == '\t') cursor++;
-    if (*cursor == '\0') break;
-    argv[argc++] = cursor;
-    while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t') cursor++;
-    if (*cursor != '\0') *cursor++ = '\0';
-  }
-  return argc;
-}
-
 void lower(char* text) {
   for (; *text != '\0'; text++) {
     if (*text >= 'A' && *text <= 'Z') *text = (char)(*text - 'A' + 'a');
@@ -33,6 +11,29 @@ void lower(char* text) {
 }
 
 bool same(const char* a, const char* b) { return strcmp(a, b) == 0; }
+
+bool sameFold(const char* a, const char* b) {
+  for (;; a++, b++) {
+    char ca = *a;
+    char cb = *b;
+    if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+    if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+    if (ca != cb) return false;
+    if (ca == '\0') return true;
+  }
+}
+
+bool parseFlag(const char* text, bool& out) {
+  if (sameFold(text, "on")) {
+    out = true;
+    return true;
+  }
+  if (sameFold(text, "off")) {
+    out = false;
+    return true;
+  }
+  return false;
+}
 
 bool parseFloat(const char* text, float& out) {
   if (!text || *text == '\0') return false;
@@ -63,6 +64,13 @@ bool parseFloat(const char* text, float& out) {
   if (!any || *cursor != '\0') return false;
   out = negative ? -value : value;
   return true;
+}
+
+char* splitValue(char* token) {
+  char* equals = strchr(token, '=');
+  if (!equals) return nullptr;
+  *equals = '\0';
+  return equals + 1;
 }
 
 bool parseCoord(const char* text, int16_t& out) {

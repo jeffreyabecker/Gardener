@@ -40,6 +40,9 @@ class Display {
   // --- the screen ----------------------------------------------------------
   virtual void clear() = 0;          // paper everywhere
   virtual void invert(bool on) = 0;  // the whole panel, not the next thing drawn
+  // What invert() was last given. The wire reports it — `panel get` has to answer with the state
+  // the panel is in, and a host that attaches mid-session has no other way to learn it.
+  virtual bool inverted() const = 0;
 
   // --- pixels, lines and shapes --------------------------------------------
   // Panel pixels, origin top left. Ink unless the name says otherwise.

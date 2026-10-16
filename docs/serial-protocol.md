@@ -15,6 +15,11 @@ This document is the proto 2 surface: commands are resource-first and every repl
 shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §18 lists the old
 spellings next to their replacements so a controller can be migrated mechanically.
 
+`plant`, `panel`, `link` and `device` are what fw 0.6.0 answers. `vm` and `store` (§9, §10) are
+[spec 06](specs/06-serial-protocol.md) and arrive with the program runtime, so a command naming one
+of them in this build is `err unknown_command token=store` — which is what the missing key in
+`help` says too.
+
 ## 1. The port
 
 | Setting | Value |
@@ -99,7 +104,7 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   field that can be written but not read.
 * A write validates every field in the command before applying any of them, and a repeated
   field is `bad_argument`. `panel rotation=1 invert=on` is one command that either sets both or
-  neither.
+  neither. One command may carry at most four fields, which is more than any resource writes.
 * Values the device formats from a library string have whitespace written as `_`, so an item is
   still one token.
 * A rejected command replies `err <code>` plus items that say what was wrong: the field, the
@@ -154,7 +159,7 @@ it is the one reply that describes something that has not happened yet.
 | `kpa` | r | kPa, 2 dp | filtered absolute pressure |
 | `vac` | r | kPa, 2 dp | `ambient - kpa`, clamped at 0 |
 | `pct` | r | %, 1 dp | `vac / ambient * 100` |
-| `target` | rw | kPa below ambient, or `-` | `plant target=40` pulls to 40 kPa below the reference; `plant target=-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target min=…` |
+| `target` | rw | kPa below ambient, or `-` | `plant target=40` pulls to 40 kPa below the reference; `plant target=-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target min=…`; deeper than `floor` is accepted, and only pins the duty at the cap |
 | `floor` | r | kPa, 1 dp | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
 | `duty` | r | %, 1 dp | pump duty |
 | `state` | r | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
@@ -232,7 +237,7 @@ that attaches mid-session can ask instead of assuming.
 how the device reads bytes rather than what it does with them. It is not a mode: framing works
 in every mode, which is why `store put` can upload a program while the VM is running or not.
 
-## 9. `vm` — the program runtime
+## 9. `vm` — the program runtime (spec 06)
 
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
@@ -251,7 +256,7 @@ in every mode, which is why `store put` can upload a program while the VM is run
 <- ok mode=peripheral program=- running=0 host=1
 ```
 
-## 10. `store` — the programs on the device
+## 10. `store` — the programs on the device (spec 06)
 
 | Op | Reply | Notes |
 | --- | --- | --- |
@@ -370,8 +375,8 @@ a program's source — arrives as **one** command rather than in chunks:
 * `\n`, `\r`, `\t` and `\\` stand for the characters a command line cannot carry. Up to 16
   characters decoded, and the token is echoed as it was written, so the marker is round
   trippable: `ok term=\n\n` names the marker that was set.
-* Case sensitive, and `off` is reserved — `link term=off` puts newline framing back, so a marker
-  cannot be the literal word `off`. Any other marker of up to 16 characters is available, and
+* Case sensitive, and `off` is reserved whatever its case — `link term=off` puts newline framing
+  back, so a marker cannot be the literal word `off`. Any other marker of up to 16 characters is available, and
   `link term` reads back which one is in force. `-` is not an alias: `-` means unset and there is
   no unset marker.
 * A marker turns newline framing off, so a whole multi-line payload arrives as one command. The
@@ -405,21 +410,19 @@ are abridged: a real one carries a row per field and a row per action.
 
 ```
 -> help
-<- ok result=help rows=6
+<- ok result=help rows=4
 <- resource=plant fields=12 actions=4
 <- resource=panel fields=4 actions=2
 <- resource=link fields=2 actions=0
-<- resource=vm fields=20 actions=0
-<- resource=store fields=0 actions=6
 <- resource=device fields=7 actions=1
-<- end result=help rows=6
+<- end result=help rows=4
 -> help plant
 <- ok result=help resource=plant rows=16
 <- field=ambient type=float access=r unit=kPa
-<- field=target type=float access=rw unit=kPa min=5 max=150
+<- field=target type=float access=rw unit=kPa min=5.0
 <- field=state type=choice access=r choices=IDLE,PULL,HOLD,VENT,FAULT
-<- action=start args=0
-<- action=capture args=0
+<- action=start
+<- action=capture
 <- end result=help resource=plant rows=16
 -> help panel draw
 <- ok result=help resource=panel op=draw rows=18
@@ -428,13 +431,17 @@ are abridged: a real one carries a row per field and a row per action.
 <- end result=help resource=panel op=draw rows=18
 ```
 
-Three row shapes, and one of them carries the bounds a write enforces:
+Four row shapes, and the field one carries the bounds a write is held to:
 
 | Row | Shape |
 | --- | --- |
 | resource | `resource=<name> fields=<n> actions=<n>` |
 | field | `field=<name> type=<int\|float\|bool\|choice\|text> access=<r\|rw>` and, where the field has one, `min=` / `max=` / `choices=` / `unit=` |
-| action or op | `action=<name> args=<n> [payload=<none\|string>]`, or `op=<name> args=<n> [string=1]` for `panel draw` |
+| action | `action=<name>`, plus `rest=1` when the argument is the rest of the line — which is what `help <resource> <action>` is for |
+| op | `op=<name> args=<n>`, plus `string=1` when the last argument is a string to the end of the line |
+
+The firmware answers four of these six resources; `vm` and `store` are spec 06 and add their rows
+when they land.
 
 `help` is the only multi-line reply a controller can get without asking for one, and every
 resource, field, action and op a page names is something the device knows — enumerating `help` and
@@ -444,8 +451,7 @@ publishes a program's own manifest bounds, so a controller stops hardcoding them
 ## 14. Errors
 
 Every `err` is one of these seven, so a controller can switch on the code instead of parsing
-prose, and every one of them carries items that say which field, value, bound, reason or mode was
-involved:
+prose, and each carries items naming what was involved, where there is something to name:
 
 | Code | Meaning |
 | --- | --- |
@@ -474,7 +480,9 @@ The rule that separates the first two is the one the old protocol could not stat
 device does not know at all is `unknown_command`, and a token it knows but has no use for in this
 place is `bad_argument` or `unsupported`. A spelling that used to work in 0.5.0 is neither — it
 is `unknown_command token=<what it was>`, so a controller written against the old wire fails on
-its first command instead of misreading a reply.
+its first command instead of misreading a reply. A field named with no value to give it is
+`bad_argument token=<the field>`, and a command with no op at all is `bad_argument` with nothing to
+name.
 
 ## 15. State model
 

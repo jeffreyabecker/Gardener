@@ -423,9 +423,14 @@ One spec per feature, under [docs/specs/](specs/):
 | [04-screen-and-buttons](specs/04-screen-and-buttons.md) | Screen and button ownership, the abort override |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, abort |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
+| [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |
 
 All seven specs have been through the same pass as this one. Spec 01
 ([01-execution-model](specs/01-execution-model.md)) is §5 written out, and is where the gate and
 its measurement live; 02 through 07 describe what the program model does in the one loop, and name
 the fallback only where it would change them.
-| [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |
+
+[Reentrancy and resumption](berry-reentrancy-and-resumption.md) is not one of them. It is §5.3 read
+against the VM's own source, and it holds the reentrancy and resumption questions open rather than
+answered: what the vendored port actually guarantees, where an upcall re-enters the VM, and the
+three shapes a program could have.

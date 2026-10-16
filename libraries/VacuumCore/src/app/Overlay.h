@@ -31,6 +31,7 @@ class Overlay : public Display {
   // --- the screen ----------------------------------------------------------
   void clear() override { inner_.clear(); }
   void invert(bool on) override { inner_.invert(on); }
+  bool inverted() const override { return inner_.inverted(); }
 
   // --- pixels, lines and shapes --------------------------------------------
   void pixel(int16_t x, int16_t y) override { inner_.pixel(x, y); }

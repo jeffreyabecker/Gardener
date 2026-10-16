@@ -3,152 +3,125 @@
 #include <Arduino.h>
 
 #include "app/LineGrammar.h"
+#include "app/SerialSurface.h"
 
 namespace gardener {
 namespace {
 
-constexpr const char* kDrawOps =
-    "clear|pixel|line|hline|vline|rect|fillrect|roundrect|fillroundrect|circle|fillcircle|"
-    "ellipse|fillellipse|triangle|filltriangle|rotatedrect|fillrotatedrect|text";
+// The eighteen operators, and the only place they are listed: the name, the coordinates that
+// follow, whether a string follows those, and the call itself. Seventeen of them are the same
+// shape, which is what makes a table worth having over seventeen blocks that each have to remember
+// to refuse a stray argument; the eighteenth is `text`, whose last argument is a string to the end
+// of the line and whose scale is checked before anything is drawn.
+const DrawOp kOps[] = {
+    {"clear", 0, false, [](Display& d, const int16_t*, const char*) { d.clear(); }},
+    {"pixel", 2, false, [](Display& d, const int16_t* a, const char*) { d.pixel(a[0], a[1]); }},
+    {"line", 4, false,
+     [](Display& d, const int16_t* a, const char*) { d.line(a[0], a[1], a[2], a[3]); }},
+    {"hline", 3, false, [](Display& d, const int16_t* a, const char*) { d.hLine(a[0], a[1], a[2]); }},
+    {"vline", 3, false, [](Display& d, const int16_t* a, const char*) { d.vLine(a[0], a[1], a[2]); }},
+    {"rect", 4, false,
+     [](Display& d, const int16_t* a, const char*) { d.rect(a[0], a[1], a[2], a[3]); }},
+    {"fillrect", 4, false,
+     [](Display& d, const int16_t* a, const char*) { d.fillRect(a[0], a[1], a[2], a[3]); }},
+    {"roundrect", 5, false,
+     [](Display& d, const int16_t* a, const char*) { d.roundRect(a[0], a[1], a[2], a[3], a[4]); }},
+    {"fillroundrect", 5, false, [](Display& d, const int16_t* a, const char*) {
+       d.fillRoundRect(a[0], a[1], a[2], a[3], a[4]);
+     }},
+    {"circle", 3, false, [](Display& d, const int16_t* a, const char*) { d.circle(a[0], a[1], a[2]); }},
+    {"fillcircle", 3, false,
+     [](Display& d, const int16_t* a, const char*) { d.fillCircle(a[0], a[1], a[2]); }},
+    {"ellipse", 4, false,
+     [](Display& d, const int16_t* a, const char*) { d.ellipse(a[0], a[1], a[2], a[3]); }},
+    {"fillellipse", 4, false,
+     [](Display& d, const int16_t* a, const char*) { d.fillEllipse(a[0], a[1], a[2], a[3]); }},
+    {"triangle", 6, false, [](Display& d, const int16_t* a, const char*) {
+       d.triangle(a[0], a[1], a[2], a[3], a[4], a[5]);
+     }},
+    {"filltriangle", 6, false, [](Display& d, const int16_t* a, const char*) {
+       d.fillTriangle(a[0], a[1], a[2], a[3], a[4], a[5]);
+     }},
+    {"rotatedrect", 5, false, [](Display& d, const int16_t* a, const char*) {
+       d.rotatedRect(a[0], a[1], a[2], a[3], a[4]);
+     }},
+    {"fillrotatedrect", 5, false, [](Display& d, const int16_t* a, const char*) {
+       d.fillRotatedRect(a[0], a[1], a[2], a[3], a[4]);
+     }},
+    // `x y size inverted <string>`: the string is the rest of the line, and `size` scales the font
+    // the device ships rather than choosing one.
+    {"text", 4, true, [](Display& d, const int16_t* a, const char* text) {
+       d.text(a[0], a[1], text, (uint8_t)a[2], a[3] != 0);
+     }},
+};
 
 }  // namespace
 
-// --- drawing ---------------------------------------------------------------
-//
-// The panel half of the protocol: `draw <op> <numbers>`, and `flush` to put the frame on the
-// glass. This is a display driver reached over the wire rather than through a call, which is why
-// the op list reads like the verbs on hal/Display.h and has to be kept in step with them.
-
-// Takes the numbers an op asks for and refuses anything left over, so `draw pixel 1 2 3` is an
-// error rather than a pixel. The reply lives in apply() so the sixteen ops that take coordinates
-// cannot each get it slightly wrong.
-bool SerialLink::coords(Tokens& tokens, size_t count, int16_t* out) {
-  for (size_t i = 0; i < count; i++) {
-    char* token = tokens.next();
-    if (!token || !parseCoord(token, out[i])) return false;
-  }
-  return true;
+const DrawOp* drawOpTable(uint8_t& count) {
+  count = (uint8_t)(sizeof(kOps) / sizeof(kOps[0]));
+  return kOps;
 }
 
-void SerialLink::draw(Tokens& tokens) {
-  tokens.next();  // the verb, already recognised
-
-  char* opToken = tokens.next();
-  if (!opToken) {
-    err("bad_argument");
-    return;
-  }
-  lower(opToken);
-  const char* op = opToken;
-
-  if (same(op, "help")) {
-    String payload = "ops=";
-    payload += kDrawOps;
-    ok(payload.c_str());
-    return;
-  }
-  if (same(op, "clear")) {
-    if (tokens.rest() != nullptr) {
-      err("bad_argument");
-      return;
-    }
-    display_.clear();
-    ok("drawn");
-    return;
-  }
-  if (same(op, "pixel")) {
-    apply(tokens, 2, [](Display& d, const int16_t* a) { d.pixel(a[0], a[1]); });
-    return;
-  }
-  if (same(op, "line")) {
-    apply(tokens, 4, [](Display& d, const int16_t* a) { d.line(a[0], a[1], a[2], a[3]); });
-    return;
-  }
-  if (same(op, "hline")) {
-    apply(tokens, 3, [](Display& d, const int16_t* a) { d.hLine(a[0], a[1], a[2]); });
-    return;
-  }
-  if (same(op, "vline")) {
-    apply(tokens, 3, [](Display& d, const int16_t* a) { d.vLine(a[0], a[1], a[2]); });
-    return;
-  }
-  if (same(op, "rect")) {
-    apply(tokens, 4, [](Display& d, const int16_t* a) { d.rect(a[0], a[1], a[2], a[3]); });
-    return;
-  }
-  if (same(op, "fillrect")) {
-    apply(tokens, 4, [](Display& d, const int16_t* a) { d.fillRect(a[0], a[1], a[2], a[3]); });
-    return;
-  }
-  if (same(op, "roundrect")) {
-    apply(tokens, 5,
-          [](Display& d, const int16_t* a) { d.roundRect(a[0], a[1], a[2], a[3], a[4]); });
-    return;
-  }
-  if (same(op, "fillroundrect")) {
-    apply(tokens, 5,
-          [](Display& d, const int16_t* a) { d.fillRoundRect(a[0], a[1], a[2], a[3], a[4]); });
-    return;
-  }
-  if (same(op, "circle")) {
-    apply(tokens, 3, [](Display& d, const int16_t* a) { d.circle(a[0], a[1], a[2]); });
-    return;
-  }
-  if (same(op, "fillcircle")) {
-    apply(tokens, 3, [](Display& d, const int16_t* a) { d.fillCircle(a[0], a[1], a[2]); });
-    return;
-  }
-  if (same(op, "ellipse")) {
-    apply(tokens, 4, [](Display& d, const int16_t* a) { d.ellipse(a[0], a[1], a[2], a[3]); });
-    return;
-  }
-  if (same(op, "fillellipse")) {
-    apply(tokens, 4, [](Display& d, const int16_t* a) { d.fillEllipse(a[0], a[1], a[2], a[3]); });
-    return;
-  }
-  if (same(op, "triangle")) {
-    apply(tokens, 6, [](Display& d, const int16_t* a) {
-      d.triangle(a[0], a[1], a[2], a[3], a[4], a[5]);
-    });
-    return;
-  }
-  if (same(op, "filltriangle")) {
-    apply(tokens, 6, [](Display& d, const int16_t* a) {
-      d.fillTriangle(a[0], a[1], a[2], a[3], a[4], a[5]);
-    });
-    return;
-  }
-  if (same(op, "rotatedrect")) {
-    apply(tokens, 5,
-          [](Display& d, const int16_t* a) { d.rotatedRect(a[0], a[1], a[2], a[3], a[4]); });
-    return;
-  }
-  if (same(op, "fillrotatedrect")) {
-    apply(tokens, 5,
-          [](Display& d, const int16_t* a) { d.fillRotatedRect(a[0], a[1], a[2], a[3], a[4]); });
-    return;
-  }
-  if (same(op, "text")) {
-    int16_t args[4];
-    if (!coords(tokens, 4, args)) {
-      err("bad_argument");
-      return;
-    }
-    if (args[2] < 1 || args[2] > 8) {
-      err("out_of_range");
-      return;
-    }
-    const char* value = tokens.rest();
-    if (!value) {
-      err("bad_argument");
-      return;
-    }
-    display_.text(args[0], args[1], value, (uint8_t)args[2], args[3] != 0);
-    ok("drawn");
+// `panel draw <op> …`: the op is the next token, and everything after it belongs to the op. The
+// coordinates are positional by design — a frame is twenty lines or more, and spelling the geometry
+// `key=value` would multiply the bytes on the one command where volume matters.
+void SerialLink::drawOps(char* rest) {
+  if (!rest) {
+    errBadArgument(nullptr);
     return;
   }
 
-  err("unknown_command");
+  Tokens tokens(rest);
+  char* name = tokens.next();
+  lower(name);
+
+  uint8_t count = 0;
+  const DrawOp* ops = drawOpTable(count);
+  for (uint8_t i = 0; i < count; i++) {
+    if (!same(name, ops[i].name)) continue;
+    applyOp(ops[i], tokens);
+    return;
+  }
+  errUnknown(name);
+}
+
+void SerialLink::applyOp(const DrawOp& op, Tokens& tokens) {
+  int16_t args[6];  // the widest op is a triangle
+  for (uint8_t i = 0; i < op.args; i++) {
+    char* token = tokens.next();
+    if (!token || !parseCoord(token, args[i])) {
+      errBadArgument(token);
+      return;
+    }
+  }
+
+  const char* text = nullptr;
+  if (op.string) {
+    // The one op with a trailing string is also the one with a scale to check, so the range check
+    // lives here rather than in a column of the table nothing else would read.
+    if ((float)args[2] < DRAW_SIZE_MIN || (float)args[2] > DRAW_SIZE_MAX) {
+      String value = String((int)args[2]);
+      errOutOfRange("size", value.c_str(), &DRAW_SIZE_MIN, &DRAW_SIZE_MAX);
+      return;
+    }
+    text = tokens.rest();
+    if (!text) {
+      errBadArgument(nullptr);
+      return;
+    }
+  } else if (tokens.rest() != nullptr) {
+    // An argument left over is an error rather than a second drawing: `panel draw pixel 1 2 3` is
+    // not a pixel.
+    errBadArgument(tokens.rest());
+    return;
+  }
+
+  op.call(display_, args, text);
+
+  Items out;
+  out.add("result", "draw");
+  out.add("op", op.name);
+  ok(out.text());
 }
 
 }  // namespace gardener

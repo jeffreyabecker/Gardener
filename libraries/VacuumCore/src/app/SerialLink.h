@@ -2,7 +2,9 @@
 
 #include <Arduino.h>
 
+#include "app/Items.h"
 #include "app/LineGrammar.h"
+#include "app/SerialSurface.h"
 #include "core/Config.h"
 #include "core/Snapshot.h"
 #include "hal/Display.h"
@@ -11,32 +13,44 @@ namespace gardener {
 
 class VacuumSystem;
 
-// The serial interface to the controller: the bytes, the dispatch, the commands that are not
-// about the panel, and the diagnostics. One protocol over four files — the line grammar in
-// app/LineGrammar.h, the panel verbs in app/SerialDraw.cpp, the readout text in
-// app/SerialPayload.cpp — because text is what makes a single file hard to read. The byte half
-// stays here: on a wire it is available/read/write, three calls, and a transport split would need
-// tasks, callbacks and an MTU before it bought anything.
+// The serial interface to the controller: the bytes, the dispatch, the replies and the diagnostics.
+// One protocol over several files — the line grammar in app/LineGrammar.h, the wire surface as data
+// in app/SerialSurface.h, the payload text in app/SerialPayload.cpp, the discovery pages in
+// app/SerialHelp.cpp, the panel verbs in app/SerialDraw.cpp — because text is what makes a single
+// file hard to read. The byte half stays here: on a wire it is available/read/write, three calls,
+// and a transport split would need tasks, callbacks and an MTU before it bought anything.
 //
-// It is also the display driver: the host draws the panel with `draw` commands and puts a frame
-// on the glass with `flush`. The display it holds is the overlay, so every flush composites the
+// A command is a resource and an op: `plant target=40`, `panel draw clear`, `link term=off`. The
+// first token says what is being touched and the second says what to do with it, so no verb has to
+// cover a plant actuator, two panel properties, a framing setting and a diagnostics switch at once,
+// and no actuator is a bare verb while its neighbour is a `set`. Everything after the op belongs to
+// the op, which is why `panel draw text …` can carry a string with spaces in it and a write can
+// carry several fields, without the framing layer knowing about either.
+//
+// Every reply payload is `key=value` items and nothing else: an action reports `result=<action>`
+// and the fields it changed, a read reports its fields, and a write reports the field the way a
+// read would. So every field a host can write it can also read, and every refusal carries the
+// field, value, bound, reason or mode that caused it rather than leaving it in a log a client may
+// have turned off.
+//
+// It is also the display driver: the host draws the panel with `panel draw` and puts a frame on the
+// glass with `panel flush`. The display it holds is the overlay, so every flush composites the
 // battery on the way out and a host cannot erase it.
 //
-// Everything runs on the main loop: lines are assembled here and dispatched inline, and
-// replies go straight back out. There is no second task, no queue, and no framing above the
-// line. Diagnostics share the stream, marked with '[' so a controller can tell a record
-// from a reply.
+// Everything runs on the main loop: lines are assembled here and dispatched inline, and replies go
+// straight back out. There is no second task, no queue, and no framing above the line. Diagnostics
+// share the stream, marked with '[' so a controller can tell a record from a reply.
 //
-// The end of a line is a string, not a fixed byte: `set term` can point it at a marker, which
-// is how a whole multi-line payload — a program's source — arrives as a single command rather
-// than in chunks. Replies are always newline terminated.
+// The end of a line is a string, not a fixed byte: `link term` can point it at a marker, which is
+// how a whole multi-line payload — a program's source — arrives as a single command rather than in
+// chunks. Replies are always newline terminated.
 //
-// The stream and the presence check are injected rather than assumed, so pointing the
-// interface at UART0 instead of USB CDC is a one line change in App.
+// The stream and the presence check are injected rather than assumed, so pointing the interface at
+// UART0 instead of USB CDC is a one line change in App.
 class SerialLink {
  public:
-  // True while a host has the port open. Null means the stream cannot tell (a plain UART),
-  // in which case a lost link is simply never reported.
+  // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
+  // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
   SerialLink(VacuumSystem& system, Display& display, Stream& stream, PresenceFn present,
@@ -46,12 +60,12 @@ class SerialLink {
   void poll(uint32_t nowMs);
 
   bool controllerAttached() const;
-  // One shot: the controller went away. App decides what that means (stop and vent); the
-  // interface only reports it.
+  // One shot: the controller went away. App decides what that means (stop and vent); the interface
+  // only reports it.
   bool consumeLinkLost();
 
-  // Diagnostics, through the interface that owns the stream, which is what makes
-  // `set log off` total.
+  // Diagnostics, through the interface that owns the stream, which is what makes `device log=off`
+  // total.
   void info(const char* text);
   void warn(const char* text);
   void error(const char* text);
@@ -63,36 +77,68 @@ class SerialLink {
   void logLine(char level, const char* text);
   void writeLine(const char* prefix, const char* text);
 
-  // --- grammar -------------------------------------------------------------
-  void dispatch(char* line);
-  void setTerminator(const char* token);
-  void emitHelp();
-  void ok(const char* payload);
+  // --- the command surface -------------------------------------------------
+  // The resource picks a table from SerialPayload.cpp and the op is one of its fields, one of its
+  // actions, a write, or `get`.
+  void command(Tokens& tokens);
+  void resourceCommand(const ResourceSpec& resource, Tokens& tokens);
+  // The whole surface, as data, in the order `help` lists it. Defined in app/SerialPayload.cpp.
+  static const ResourceSpec* resources(uint8_t& count);
+  static const FieldSpec* findField(const ResourceSpec& resource, const char* name);
+  void renderFields(const ResourceSpec& resource, Items& out) const;
+  // One field of one resource by name, which is how an action reports what it changed without a
+  // second formatter for it.
+  void renderField(const char* resource, const char* field, Items& out) const;
+  WireView wireView() const;
+
+  // A writer applies every field of one write, or refuses the whole command: false means it has
+  // already answered with the error for the first field it would not take, and nothing was applied.
+  // Which fields a resource has is the table's business; that they are writable is checked before
+  // any writer runs, so a writer only has to know its own.
+  bool writeDevice(const FieldWrite* writes, uint8_t count);
+  bool writePlant(const FieldWrite* writes, uint8_t count);
+  bool writePanel(const FieldWrite* writes, uint8_t count);
+  bool writeLink(const FieldWrite* writes, uint8_t count);
+
+  // --- actions -------------------------------------------------------------
+  // `rest` is what follows the action on the line, and null for every action that takes nothing.
+  void deviceReboot(char* rest);
+  void plantStart(char* rest);
+  void plantStop(char* rest);
+  void plantReset(char* rest);
+  void plantCapture(char* rest);
+  void panelDraw(char* rest);
+  void panelFlush(char* rest);
+
+  // --- replies -------------------------------------------------------------
+  void ok(const String& items);
   void err(const char* code);
+  void err(const char* code, const String& items);
+  void okResult(const char* action);
+  void errUnknown(const char* token);
+  void errBadArgument(const char* token);
+  void errUnsupported(const char* field);
+  void errOutOfRange(const char* field, const char* value, const float* min, const float* max);
+  // A row of a page, and the line that closes one: `end` then the same items as the page's `ok`.
+  void row(const String& items);
+  void endPage(const String& headerItems);
+
+  // --- framing -------------------------------------------------------------
+  // Applies a marker, or answers with the error. It does not reply on success: the echo of a
+  // `link term=` write is the field read back, like every other write.
+  bool applyTerminator(const char* token);
+
+  // --- the help pages ------------------------------------------------------
+  void help(Tokens& tokens);
+  void emitResourceList();
+  void emitResourcePage(const ResourceSpec& resource);
+  void emitDrawPage(const ResourceSpec& resource, const char* action);
 
   // --- drawing -------------------------------------------------------------
-  // The op, then the numbers it takes, then the rest of the line for the one op that draws a
-  // string. Split lazily rather than up front, because a string can contain spaces.
-  // Defined in app/SerialDraw.cpp.
-  void draw(Tokens& tokens);
-  bool coords(Tokens& tokens, size_t count, int16_t* out);
-  // Reads `count` coordinates, refuses anything left over, calls, and answers. The reply logic
-  // lives here so seventeen ops cannot each get it slightly wrong.
-  template <typename Fn>
-  void apply(Tokens& tokens, size_t count, Fn call) {
-    int16_t args[6];  // the widest op is a triangle
-    if (!coords(tokens, count, args) || tokens.rest() != nullptr) {
-      err("bad_argument");
-      return;
-    }
-    call(display_, args);
-    ok("drawn");
-  }
-
-  // --- payload text --------------------------------------------------------
-  // Defined in app/SerialPayload.cpp.
-  String statusBody() const;
-  String infoBody() const;
+  // `panel draw <op> …`: the op and its coordinates, which are positional by design. Defined in
+  // app/SerialDraw.cpp.
+  void drawOps(char* rest);
+  void applyOp(const DrawOp& op, Tokens& tokens);
 
   VacuumSystem& system_;
   Display& display_;
@@ -101,8 +147,8 @@ class SerialLink {
   const SystemSnapshot& snapshot_;
 
   bool logEnabled_ = true;
-  // Where the device looks for the end of a command. Newline by default; `set term` points it
-  // at a marker instead, which is how a whole multi-line payload arrives as one command.
+  // Where the device looks for the end of a command. Newline by default; `link term` points it at a
+  // marker instead, which is how a whole multi-line payload arrives as one command.
   String terminator_ = cfg::LINE_TERMINATOR;
   bool customTerminator_ = false;
   // Everything the host has sent that has not been dispatched yet: complete lines still to be

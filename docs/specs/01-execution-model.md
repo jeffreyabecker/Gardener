@@ -106,7 +106,10 @@ below rather than to a lock here.
 minute with the hostile program running, and size `VM_HOOK_INSTRUCTIONS` from what it says.
 Answer the reentrancy question at the same time: with the hostile program running, send
 `plant get` (must reply) and `store run other` (must take effect at the yield point, not inside the
-program's stack).
+program's stack). Both of those are a read and a deferral, so neither puts a callback inside the VM:
+[reentrancy and resumption](../berry-reentrancy-and-resumption.md) is what the reentrancy question
+turns out to be about, is where the upcall half of the measurement lives, and is where §5's
+`VM_HOOK_INSTRUCTIONS` is pinned down to the exponent the vendored port actually reads.
 
 **The fallback.** If the gate fails — no execution-limit hook in the vendored port, a hook
 interval that cannot hold the tick, or service calls from inside the VM that turn out not to be

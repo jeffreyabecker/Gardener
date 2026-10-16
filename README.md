@@ -45,7 +45,7 @@ so capturing a new one restates every target, and both want the rig at rest when
 | [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
-| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, the panel, states, rates |
+| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/bom.md](./docs/bom.md) | The bill of materials: every part, and the constant each one is tied to |
 
 ### Architecture
@@ -214,7 +214,7 @@ two things of its own — the boot splash, and the battery on top of every frame
 
 ```
   Gardener
-  fw 0.5.0                              ▐███▐          <- device: splash, then the battery
+  fw 0.6.0                              ▐███▐          <- device: splash, then the battery
 ```
 
 Everything else is whatever the host sent: `panel draw` commands fill the panel's buffer, and
@@ -247,9 +247,9 @@ if a host never drew.
 
 ### Over the serial line
 
-Open the port at 115200 8N1 and send newline terminated commands. Every command produces
-exactly one `ok`/`err` reply line, and lines starting with `[` are diagnostics rather than
-replies:
+Open the port at 115200 8N1 and send newline terminated commands. Every command produces one
+`ok`/`err` line — a `help` page adds rows and an `end` line — and lines starting with `[` are
+diagnostics rather than replies:
 
 ```
 -> device get
@@ -272,10 +272,6 @@ The full grammar, resource tables, error codes and state model are in
 [docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and
 send a line works as a client: there is none in this repository at the moment, deliberately,
 while the interface is being reworked.
-
-A device still on `fw` 0.5.0 speaks the older spelling of the same machine — `info`, `status`,
-`start`, `stop`, `set target`, `draw`, `flush`. §18 of the protocol document maps each one onto
-the commands above.
 
 ## Vacuum control model
 
@@ -365,4 +361,4 @@ valve to the same output.
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
 * [x] Host drawn panel: a `Display` interface, an Adafruit adapter, and a battery overlay
-* [x] Line protocol over USB CDC, with polled status and diagnostics on the same stream
+* [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream

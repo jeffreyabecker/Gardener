@@ -61,9 +61,7 @@ void VacuumSystem::vent() {
 }
 
 bool VacuumSystem::start() {
-  if (faulted()) return false;
-  if (targetKpa_ <= 0.0f) return false;
-  if (!sensor_.present() || !sensor_.readingValid()) return false;
+  if (startRefusal() != nullptr) return false;
 
   // Close before pumping, so the pump never pulls against an open port.
   vent_.close();
@@ -73,6 +71,13 @@ bool VacuumSystem::start() {
   lastDerivativeMs_ = lastControlMs_;
   setState(RunState::Pulling);
   return true;
+}
+
+const char* VacuumSystem::startRefusal() const {
+  if (faulted()) return "latch";
+  if (targetKpa_ <= 0.0f) return "no_target";
+  if (!sensor_.present() || !sensor_.readingValid()) return "no_reading";
+  return nullptr;
 }
 
 void VacuumSystem::stop() {
@@ -91,9 +96,10 @@ bool VacuumSystem::vented() const {
 }
 
 void VacuumSystem::setTarget(float kpa) {
-  // Shallower than the loop's floor is not a target. Deeper than the pump can reach still is
-  // one: the duty pins at the cap and the run simply never gets there.
-  if (kpa <= cfg::CONTROL_MIN_TARGET_KPA) return;
+  // Shallower than the loop's floor is not a target, and the floor itself is one: the bound the
+  // wire publishes is this constant, so a target of exactly it has to be taken. Deeper than the
+  // pump can reach still is a target: the duty pins at the cap and the run simply never gets there.
+  if (kpa < cfg::CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   pidReset();
 }
@@ -124,7 +130,7 @@ void VacuumSystem::resetFault() {
 }
 
 // The latch and the safe state, in that order: the output is cut now rather than ramped, the coil
-// is released, and the code is what `status` reports until resetFault(). Nothing writes a duty
+// is released, and the code is what `plant get` reports until resetFault(). Nothing writes a duty
 // again while it is set, because nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
   pump_.halt();
@@ -137,7 +143,7 @@ void VacuumSystem::fail(const char* code) {
 
 void VacuumSystem::service(uint32_t nowMs) {
   // A latched fault owns the state until it is reset: the plant is already safe, and the code
-  // is what `status` reports.
+  // is what `plant get` reports.
   if (faulted()) return;
 
   const bool regulating = state_ == RunState::Pulling || state_ == RunState::Holding;

@@ -10,12 +10,17 @@
 namespace gardener {
 namespace cfg {
 
-constexpr const char* FIRMWARE_VERSION = "0.5.0";
+constexpr const char* FIRMWARE_VERSION = "0.6.0";
+// The wire revision, reported by `device get`. It moves when a command's meaning moves, not when
+// one is added: proto 2 is the resource-first surface, and a controller that does not know a
+// revision should stop rather than guess.
+constexpr uint32_t PROTOCOL_VERSION = 2;
 
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
-// Shallowest target the loop will accept, in kPa below the ambient reference. A pull gentler
-// than this is not one worth making, so setTarget() refuses it rather than regulating it.
+// Shallowest target the loop will accept, in kPa below the ambient reference, and inclusive: the
+// wire publishes it as the `min` of `plant target`, so a pull of exactly this much is accepted and
+// anything gentler is refused rather than regulated.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
 constexpr float PID_KP = 3.0f;    // % duty per kPa of error
 constexpr float PID_KI = 0.2f;    // % duty per kPa second
@@ -54,10 +59,10 @@ constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 // The device is a serial peripheral: every decision comes from the controller, so what
 // lives here is only what the firmware must own to be fast or safe.
 constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB CDC ignores it
-// A command line is verb, key, value. Anything longer is refused rather than truncated.
+// A command line is a resource and an op. Anything longer is refused rather than truncated.
 constexpr uint16_t COMMAND_LINE_MAX = 128;
 // Where the device looks for the end of a command. A host can point it elsewhere with
-// `set term`, which turns off newline framing so a whole payload — a program's source — arrives
+// `link term`, which turns off newline framing so a whole payload — a program's source — arrives
 // as one command instead of in chunks. That payload is far longer than a command line, so a
 // custom terminator raises the ceiling to COMMAND_PAYLOAD_MAX, which is also what bounds the
 // receive buffer when a host never sends its terminator.

@@ -29,7 +29,7 @@ void Overlay::flush() {
   inner_.flush();
 }
 
-// The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `info`), so
+// The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so
 // the panel does not spend characters on it and the corner is the icon's: a page can use
 // everything to the left.
 void Overlay::drawBattery() {

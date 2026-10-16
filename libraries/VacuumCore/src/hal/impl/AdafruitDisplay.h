@@ -31,7 +31,11 @@ class AdafruitDisplay : public Display {
 
   // --- the screen ----------------------------------------------------------
   void clear() override { panel_->fillScreen(kPaper); }
-  void invert(bool on) override { panel_->invertDisplay(on); }
+  void invert(bool on) override {
+    inverted_ = on;
+    panel_->invertDisplay(on);
+  }
+  bool inverted() const override { return inverted_; }
 
   // --- pixels, lines and shapes --------------------------------------------
   void pixel(int16_t x, int16_t y) override { panel_->drawPixel(x, y, kInk); }
@@ -95,6 +99,10 @@ class AdafruitDisplay : public Display {
  private:
   static constexpr uint16_t kInk = 1;
   static constexpr uint16_t kPaper = 0;
+
+  // The driver's own record of the inversion, because the library keeps the bit where it draws
+  // rather than somewhere it can be read back.
+  bool inverted_ = false;
 
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted);
   void measure(const char* value, uint8_t size, int16_t& outWidth, int16_t& outHeight);

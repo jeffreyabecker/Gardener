@@ -44,13 +44,16 @@ class VacuumSystem {
   // A run without a target is not a run, so clearing one releases the chamber.
   void clearTarget();
   bool start();                   // false: no target/reading, or faulted
+  // Which of the three refusals start() would answer with, or null when it would start. The wire
+  // reports this, so the reply and the refusal come from one place.
+  const char* startRefusal() const;
   void stop();                    // the one release path: stop + vent
   void resetFault();
   void captureAmbient();          // the only way a reference is ever set
 
   // --- the reads ----------------------------------------------------------
   // Depth below the captured ambient: the frame the target is stated in, and the sensor's own
-  // deficit, so it is the same number `status` reports as `vac`. Zero while a reading is invalid.
+  // deficit, so it is the same number `plant get` reports as `vac`. Zero while a reading is invalid.
   float currentKpa() const;
   PlantState state() const;
 
