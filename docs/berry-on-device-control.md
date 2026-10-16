@@ -347,8 +347,8 @@ and decides what happens next).
 The three layers stay, and this plan adds two devices to `hal/` where the rest of the device
 lives: `Buttons` and `Storage` (the LittleFS wrapper). The VM, the `ProgramApi` binding,
 `ProgramStore` and `ProgramParams` go in `app/` beside the serial interface, which is where the
-way in already is. [check-layers.ps1](../scripts/check-layers.ps1) is not touched: the rule is
-still `app/` → `hal/` → `core/`, and nothing here points the other way.
+way in already is, and nothing here points the other way: the rule is still `app/` → `hal/` →
+`core/`, kept by reading rather than by a script.
 
 That is a refusal to pre-split, and it is a change of position. This plan used to propose
 re-introducing the five-layer `core/hal/services/hosts/app` layout on the argument that

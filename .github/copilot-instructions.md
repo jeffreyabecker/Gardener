@@ -3,8 +3,8 @@
 ## Build
 
 `powershell -File scripts/arduino.ps1 -Task build` — compiles the sketch with the project
-local library, and runs `scripts/check-layers.ps1` first, so a layer violation fails the
-build rather than a later review. There is no host test suite.
+local library. There is no host test suite, and nothing checks the layer rule, so a stray
+`hal/` → `app/` include is a review catch rather than a build failure.
 
 ## Conventions
 
@@ -79,4 +79,3 @@ rewrite-on-sight target, and an unrequested refactor is its own decision with it
 - [README.md](../README.md) — wiring, build and upload flow, control model, safety notes.
 - [docs/serial-protocol.md](../docs/serial-protocol.md) — the interface the firmware serves.
 - [docs/bom.md](../docs/bom.md) — the parts the firmware's limits and pin map assume.
-- `scripts/check-layers.ps1` — the three layer dependency rule, enforced at build time.

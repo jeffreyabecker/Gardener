@@ -45,7 +45,6 @@ so capturing a new one restates every target, and both want the rig at rest when
 | [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
-| [scripts/check-layers.ps1](./scripts/check-layers.ps1) | Enforces the dependency rule below |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, keys, commands, the panel, states, rates |
 | [docs/bom.md](./docs/bom.md) | The bill of materials: every part, and the constant each one is tied to |
 
@@ -60,8 +59,7 @@ app/    how it is driven: the serial interface, and the composition root that wi
         the device together and runs the loop
 ```
 
-Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
-points up:
+Dependencies only ever point downwards. Nothing checks it — keep it that way by reading:
 
 | Layer | May include |
 | --- | --- |
@@ -193,9 +191,8 @@ powershell -File scripts/arduino.ps1 -Task monitor -Port COM5
 ```
 
 The build uses `--libraries libraries`, so the project local `libraries/VacuumCore` is used
-instead of the global sketchbook copy, and it runs `check-layers.ps1` first. In VS Code the
-same commands are tasks (`arduino: build`, `arduino: upload`, `arduino: monitor`,
-`arduino: install libraries`).
+instead of the global sketchbook copy. In VS Code the same commands are tasks (`arduino: build`,
+`arduino: upload`, `arduino: monitor`, `arduino: install libraries`).
 
 **The board options matter**: the build pins
 `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, which is what maps `Serial` to the chip's
@@ -356,7 +353,7 @@ valve to the same output.
 ## Status
 
 * [x] ESP32-S3 project skeleton, build and upload flow
-* [x] Layered core/hal/app layout with an enforced dependency rule
+* [x] Layered core/hal/app layout, with the dependency direction kept by hand
 * [x] MPRLS driver with median + EMA filtering and ambient reference handling
 * [x] PWM pump driver with ramp and duty cap
 * [x] PID vacuum controller with a reachable-floor check

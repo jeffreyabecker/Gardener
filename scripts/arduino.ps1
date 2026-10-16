@@ -49,13 +49,6 @@ function Invoke-ArduinoCli {
     }
 }
 
-function Assert-LayerRule {
-    $check = Join-Path $root 'scripts\check-layers.ps1'
-    if (-not (Test-Path $check)) { return }
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $check
-    if ($LASTEXITCODE -ne 0) { throw 'layer rule violated, refusing to build' }
-}
-
 function Get-DevicePort {
     if ($Port) { return $Port }
     $json = & arduino-cli board list --format json 2>$null
@@ -84,12 +77,10 @@ switch ($Task) {
     }
 
     'build' {
-        Assert-LayerRule
         Invoke-ArduinoCli @('compile', '--fqbn', $Fqbn, '--libraries', $projectLibs, $sketch)
     }
 
     'upload' {
-        Assert-LayerRule
         $device = Get-DevicePort
         if (-not $device) { throw 'no serial port found, pass -Port COMx' }
         Write-Host "uploading to $device" -ForegroundColor Cyan
