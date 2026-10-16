@@ -22,7 +22,6 @@ def draw()
   else
     screen.draw_text(0, 40, 1, 0, "tgt -")
   end
-  screen.flush()
 end
 
 # OK (index 2): double-click enters edit mode; single click commits while editing

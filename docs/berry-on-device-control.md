@@ -65,44 +65,43 @@ existing serial protocol runs unchanged on the S3.
 Replace the single-threaded `loop()` model with three FreeRTOS tasks created in
 `App::begin()`. The sketch's `loop()` becomes `vTaskDelete(NULL)`.
 
-| Task | Core | Priority | Owns | Communicates via |
-| --- | --- | --- | --- | --- |
-| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery`, the display framebuffer + `AppDisplay` flush, the `Buttons` scan, snapshot publication | command queue (consumer), snapshot slot (publisher), button-event queue, log queue |
-| **Serial link** | 0 | 6 | `SerialLink` grammar, the stream (replies + diagnostics), `logEnabled_` | command queue (producer), snapshot slot (reader), log queue (consumer) |
-| **Berry VM** | 1 | 3 (alone on core 1) | Berry VM, `ProgramApi` | command queue (producer), snapshot slot (reader), button-event queue (consumer) |
+| Task | Core | Priority | Owns / does |
+| --- | --- | --- | --- |
+| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem::service`, the sensor/pump/valve/battery updates, the `Buttons` scan, the snapshot, and the display `flush` (I2C + battery) |
+| **Serial link** | 0 | 6 | the `Serial` stream: replies, diagnostics, and — when a host is attached — drawing + commanding |
+| **Berry VM** | 1 | 3 (alone on core 1) | the Berry VM: programs draw and command directly |
 
 The USB-Serial-JTAG CDC (`hwcdc`) is a hardware peripheral with no FreeRTOS task of its
 own, so the serial task is the only consumer of `Serial` and can be pinned to core 0
 directly.
 
 Core 0 carries the two bounded jobs: the plant tick (a 50 ms control step plus the
-display and button servicing) and the serial task (at most a handful of parsed lines per
-pass). Neither can hold the core for long, so they share it comfortably. Core 1 carries
-the only unbounded job, the Berry VM.
+display flush and button servicing) and the serial task (at most a handful of parsed
+lines per pass). Neither can hold the core for long, so they share it comfortably. Core 1
+carries the only unbounded job, the Berry VM.
 
-### 5.1 Thread-safety rules
+### 5.1 Single-owner rules
 
-- Exactly one owner per piece of hardware. Nothing else touches I2C, LEDC, GPIO or the
-  display buffer.
-- All cross-task state moves through FreeRTOS queues, or through one small "latest value"
-  slot (the snapshot) protected by a `portMUX` critical section.
-- The serial stream has one writer: the serial task. Plant diagnostics go through a
-  **log queue** to it, so replies and `[I]/[W]/[E]` records stay ordered and
-  `set log off` stays race-free.
+There is no IPC layer. Three facts make direct shared state safe:
 
-### 5.2 Command flow
+- **One controller** — the host or the running program commands `VacuumSystem`; takeover
+  (spec 05) stops one before the other acts.
+- **One drawer** — the host (attached) or the running program (local) draws the
+  framebuffer; never both (spec 04 §5).
+- **The plant owns I2C** — only it reads the sensor and flushes the display.
 
-- The serial task parses and validates every line. `info` / `status` / `help` are answered
-  locally from the snapshot slot. `draw` / `flush` ops are validated locally and enqueued
-  fire-and-forget (they cannot fail after validation), replying `ok drawn` / `ok flushed`
-  immediately.
-- Actuator commands that can fail (`start`, `stop`, `reset`, `set target`, `ambient`,
-  `run`, `set params`) use a small **request/response mailbox**: the serial task enqueues
-  with a reply token and blocks (short timeout) for the plant's `ok` / `err`. This
-  preserves the current one-reply-per-command rule and the exact `err not_ready` semantics.
-- The VM task writes commands fire-and-forget; `ProgramApi` reads are served from a local
-  copy of the latest snapshot. Programs poll `vacuum.state()` instead of blocking on plant
-  RPC.
+Shared state, by design (spec 01 §3): `VacuumSystem` fields, the framebuffer, the
+snapshot, the button event ring, and `ProgramStore`. Nothing else is shared.
+
+### 5.2 What a command is
+
+- Serial: parse the line, then call the target directly — `info`/`status` read the
+  snapshot, `draw` calls the `Display` verb (framebuffer), `flush` replies `ok flushed`
+  (the plant pushes within one tick), and `start`/`stop`/`set target`/… call
+  `VacuumSystem`.
+- Program: `vacuum.*` / `screen.*` / `programs.*` call `VacuumSystem`, `Display`, the
+  snapshot, and `ProgramStore` directly. A call is fire-and-forget; the authoritative
+  result is the next `status` / `vacuum.state()`.
 
 ### 5.3 Runaway-program protection
 
@@ -176,9 +175,9 @@ Programs own the screen; the device owns only the battery and the two Back gestu
 
 ### 7.1 Screen ownership
 
-- A running program draws the entire panel with the `screen.draw_*` verbs and pushes with
-  `screen.flush()`. The device composites only the battery (`AppDisplay`) on every flush,
-  so a program can never erase it.
+- A running program draws the entire panel with the `screen.draw_*` verbs; the plant
+  flushes each tick. The device composites only the battery (`AppDisplay`) on every
+  flush, so a program can never erase it.
 - There are no device-drawn pages. The browser, the params editor and the home shell are
   all Berry programs. A reusable list/menu abstraction, if one is wanted, is written in
   Berry — it is not firmware.
@@ -301,15 +300,16 @@ additively:
 
 ## 10. Exposing the Display to programs
 
-- Do **not** hand the `Display` instance to the VM task. It stays on the plant task.
-- Programs draw through the same **draw commands** the host uses: each
-  `screen.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
-  and `screen.flush()` becomes a `Flush` command. The plant applies them to the buffer and
-  pushes the frame, so host drawing and program drawing are serialized by one owner and
-  can never race.
+- The VM holds a `Display&` and draws into the framebuffer directly; it never flushes.
+  `flush()` (I2C + battery) stays on the plant task.
+- Programs draw with the same **drawing verbs** the host uses: each `screen.draw_<op>(…)`
+  call is a direct `Display` call into the framebuffer. Only the plant flushes (I2C +
+  battery) each tick, so host drawing and program drawing are serialized by one drawer at
+  a time and one flusher.
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
   fillrect, roundrect, fillroundrect, circle, fillcircle, ellipse, fillellipse, triangle,
-  filltriangle, rotatedrect, fillrotatedrect, text — plus `flush`.
+  filltriangle, rotatedrect, fillrotatedrect, text. `flush` exists on the wire only; the
+  plant flushes for programs.
 - `AppDisplay` composites the battery on every flush, so the battery (like the splash)
   remains the device's and cannot be erased.
 
@@ -364,7 +364,7 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 
 | Phase | Content | Gate |
 | --- | --- | --- |
-| 1 | Task architecture: plant + serial tasks, command mailbox, snapshot slot, log queue | Protocol behavior parity on dual-core |
+| 1 | Task architecture: plant + serial tasks, direct shared state (no IPC) | Protocol behavior parity on dual-core |
 | 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
 | 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
 | 4 | Vendor Berry + `BerryRuntime`/`ProgramApi` on core 1, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |

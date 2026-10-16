@@ -3,16 +3,11 @@
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §5 and
 constraint 1 ("programs run on a different core from the serial link").
 
-Board is the ESP32-S3 (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`), which has
-two cores. The split is:
-
-- **Core 0** — the two bounded jobs: the plant task and the serial link task.
-- **Core 1** — the one unbounded job: the Berry VM task.
+Board is the ESP32-S3 (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`), which has two
+cores. There is deliberately **no IPC layer**: the system has at most one controller and
+one drawer at a time, so the three tasks share state directly.
 
 ## 1. Tasks
-
-Created in `App::begin()`. The Arduino `loop()` becomes `vTaskDelete(NULL)`; all work
-moves into these tasks.
 
 | Task | Core | Priority | Stack (start) | Function |
 | --- | --- | --- | --- | --- |
@@ -20,205 +15,44 @@ moves into these tasks.
 | `serialTask` | 0 | 6 | 4 KiB | `App::serialTask(void*)` |
 | `vmTask` | 1 | 3 | 16 KiB | `App::vmTask(void*)` |
 
-Stack sizes are starting points; the VM stack is the one most likely to need tuning
-(Berry recurses on its call stack).
+Priorities: `plantTask` is highest on core 0 so the 50 ms safety tick is never deferred;
+`serialTask` sits above idle and below the plant; `vmTask` is alone on core 1.
 
-Priorities: `plantTask` is highest on core 0 so a serial flood can never defer the
-50 ms control tick; `serialTask` sits above idle and below the plant. `vmTask` is alone
-on core 1, so its priority only matters relative to core 1's idle task.
+## 2. Single-owner rules
 
-## 2. Ownership matrix
+Three facts hold at all times, and they are what make direct sharing safe:
 
-Every piece of state has exactly one owner task. Cross-task access happens only through
-the primitives in §3.
+- **One controller.** Either the host (serial link) or the running program commands the
+  plant — never both. Takeover (spec 05) stops one before the other acts.
+- **One drawer.** Either the host (when attached) or the running program (when not) draws
+  the panel — never both (spec 04 §5).
+- **The plant owns I2C.** Only `plantTask` talks to `Wire`: sensor reads and the display
+  `flush()`. Drawing into the framebuffer is plain RAM and is done by the active drawer.
 
-| Module / state | Owner | Other tasks may |
-| --- | --- | --- |
-| `VacuumSystem`, `PressureSensor`, `Pump`, `VentValve`, `Battery` | plant | read the snapshot |
-| `Wire` / I2C (OLED + MPRLS) | plant | never |
-| display framebuffer + `AppDisplay` | plant | enqueue `Draw`/`Flush` commands (never call it) |
-| `Buttons` scan | plant | consume button events |
-| `ProgramStore` (LittleFS) | plant | enqueue store commands |
-| snapshot | plant (publisher) | copy out |
-| `Serial` stream | serial | plant sends log records |
-| Berry VM | VM | plant sends stop requests |
+## 3. Shared mutable state, by design
 
-## 3. IPC primitives
+- **`VacuumSystem`** — the controller (serial or VM) calls `setTarget`/`start`/`stop`/…
+  directly, and `plantTask` runs `service()`. Its fields are 32-bit aligned, so reads and
+  writes are atomic; a controller transition may be observed one tick late. Accepted.
+- **The framebuffer** — the active drawer writes it (RAM); the plant reads it when it
+  flushes. A torn frame is possible and self-corrects on the next flush. Accepted.
+- **The snapshot** — `SystemSnapshot` (spec 07) is one object the plant rewrites each
+  tick; `serialTask` and `vmTask` read its fields directly for `status`,
+  `vacuum.state()`, and `programs.*`. A read may span two adjacent ticks. Accepted for a
+  readout.
+- **Buttons** — `Buttons` keeps a small event ring; the plant pushes and the VM pops while
+  a program runs (spec 03 §5). Single producer, single consumer.
+- **Logs** — any task writes a `[I]/[W]/[E]` record to `Serial` under a `portMUX`, so
+  records do not interleave at the byte level.
+- **`ProgramStore` (LittleFS)** — normally touched only by the plant (refresh, upload).
+  The VM reads it for `programs.params(name)` (spec 03 §6.5); a read concurrent with an
+  upload is rare and non-safety-critical — it may return stale data or fail, and the
+  program retries.
 
-All cross-task state is one of these; there is no other shared mutable state.
+## 4. What is never shared
 
-### 3.1 Command mailbox
-
-`core/Command.h` defines plain, copyable, Arduino-free data:
-
-```cpp
-enum class CommandKind : uint8_t {
-  Draw, Flush,                 // validated locally by serial; fire-and-forget
-  SetTarget, ClearTarget, Start, Stop, ResetFault,
-  SetAmbient, CaptureAmbient,
-  RunProgram, StopProgram,
-  ListPrograms, CatProgram, RmProgram, SetProgramParams, GetProgramParams,
-  SetProgramState,
-  UploadBegin, UploadAppend, UploadCommit, UploadAbort,
-};
-
-enum class DrawOp : uint8_t {
-  Clear, Pixel, Line, HLine, VLine, Rect, FillRect, RoundRect, FillRoundRect,
-  Circle, FillCircle, Ellipse, FillEllipse, Triangle, FillTriangle,
-  RotatedRect, FillRotatedRect, Text,
-};
-
-struct Command {
-  CommandKind kind = CommandKind::Flush;
-  DrawOp drawOp = DrawOp::Clear;   // valid when kind == Draw
-  int16_t a[6] = {};               // draw coords, rotation, etc.
-  float f[4] = {};                 // target, ambient, params
-  char text[64] = {};              // draw text, program name, param blob, upload chunk
-  uint32_t token = 0;              // request id for serial request/response
-};
-```
-
-```cpp
-// Thin wrapper so producers and consumers do not see the FreeRTOS type (and tests can
-// fake it).
-class CommandQueue {
- public:
-  bool send(const Command& c);   // false when full
-  bool receive(Command& out);    // false when empty
-};
-```
-
-- `CommandQueue` wraps a `QueueHandle_t` created with `xQueueCreate(32, sizeof(Command))`.
-- Writers: `serialTask` and `vmTask` (`send`). Reader: `plantTask` (`receive`, timeout 0
-  or a short block).
-- Multi-writer is safe because FreeRTOS queues serialize producers.
-- Queue full is a normal event under load: the producer drops the command and logs a
-  `[W]` record. Plant-critical commands from the VM must not rely on unbounded
-  buffering; programs that enqueue faster than the plant drains see their writes dropped
-  and can poll `vacuum.state()` to resync.
-
-### 3.2 Snapshot slot
-
-Latest-value, one publisher (plant), many readers (serial, VM). Double buffer under a
-`portMUX`:
-
-```cpp
-class SnapshotSlot {
- public:
-  void publish(const SystemSnapshot& s);
-  void copyOut(SystemSnapshot& out) const;
- private:
-  SystemSnapshot slots_[2];
-  uint8_t live_ = 0;
-  mutable portMUX_TYPE mux_ = portMUX_INITIALIZER_UNLOCKED;
-};
-```
-
-`publish()` copies into the non-live buffer under the lock, flips `live_`, releases.
-`copyOut()` copies the live buffer out under the lock. Both are short memcpys (~1.5 KiB),
-so the critical section is a few microseconds.
-
-### 3.3 Program drawing
-
-There is no program overlay slot. The `Display` instance stays on the plant task and is
-**never** held or called by the VM. A program draws by enqueueing `Command { kind = Draw,
-… }` entries (§3.1) exactly like the serial task does:
-
-- `screen.draw_<op>(…)` → `Command { kind = Draw, drawOp = <op>, a[] = coords }`;
-  `screen.draw_text(…)` packs x, y, size, inverted into `a[]` and the string into `text`.
-- `screen.flush()` → `Command { kind = Flush }`.
-
-The plant is the single drawer: it applies buffered draw ops to the framebuffer in arrival
-order and, on `Flush`, composites the battery and pushes to the glass. Draw commands from
-the VM are dropped while a host is attached (spec 07 §3), because the host owns the glass.
-
-### 3.4 Log queue
-
-A `LogQueue` — a `QueueHandle_t` of `LogRecord { char level; char text[96]; }`, depth
-32. Plant and VM push; `serialTask` drains and writes the `[I]/[W]/[E]` lines. This keeps the serial
-stream single-writer and makes `set log off` race-free (the serial task owns the flag and
-drops queued records when it is off).
-
-### 3.5 Button event queue
-
-A `ButtonQueue` — a `QueueHandle_t` of
-`ButtonEvent { ButtonId id; ButtonEventKind kind; uint32_t heldMs; }`, depth 16.
-`plantTask` pushes after each `Buttons::update()`. While a program is running, the plant
-forwards Up/Down/OK (and Back when claimed, spec 03 §5) events to the VM's queue;
-unclaimed Back stays with the device (break-out). With no program running there is no
-local consumer — events are dropped — and while a host is attached the buttons are
-ignored entirely (spec 04 §3).
-
-### 3.6 Request/response (serial, single-flight)
-
-The serial task handles one command at a time, so one in-flight reply slot is enough:
-
-```cpp
-struct CommandReply { uint32_t token; char body[96]; };
-SemaphoreHandle_t replyReady_;   // binary semaphore
-CommandReply pending_;
-```
-
-Flow for a command that can fail (`start`, `stop`, `reset`, `set target`, `ambient`,
-`run`, `set params`, store ops): serial assigns `token`, enqueues the `Command`, blocks on
-`replyReady_` (timeout 250 ms), then writes `pending_.body` as one line. The plant fills
-`pending_` and gives the semaphore. Timeout → the serial task replies `err timeout` and
-continues; the plant still executes the command, and a later `status` reveals the truth.
-
-`Draw`/`Flush` skip this path: serial validates them locally (§5.2 of the plan), replies
-`ok drawn`/`ok flushed` immediately, and enqueues fire-and-forget.
-
-The VM task has the same single-flight slot, used only by `GetProgramParams`
-(`programs.params(name)`, spec 03 §6.5). Everything else the VM sends is fire-and-forget.
-
-## 4. Task bodies
-
-### 4.1 `plantTask` — period 50 ms
-
-```
-loop:
-  now = millis()
-  sensor.update(now); pump.update(now); battery.update(now); buttons.update(now)
-  drain command mailbox (all pending commands, in order)
-  system.service(now)
-  publish button events (forward to the VM while a program runs; Back is break-out)
-  apply buffered draw ops; on a flush command: appDisplay.flush()
-  refresh snapshot; snapshotSlot.publish(snapshot)
-  check vm heartbeat; if stale > 2000 ms: request VM stop
-  delay to next 50 ms tick
-```
-
-Ordering rule (from the plan): commands are drained against the machine as the last
-control tick left it, so a reply describes something that actually happened.
-
-### 4.2 `serialTask`
-
-```
-loop:
-  drain log queue → write [level] lines (if logEnabled)
-  poll Serial into line buffer (8 lines per pass, as today)
-  for each complete line: dispatch
-    info/status/help/draw/flush → answer locally / enqueue
-    other commands → request/response via command mailbox
-  detect host attach/detach; flip display mode; on detach:
-    if no program running → enqueue Stop (vent)
-    else → nothing (program is the local owner; spec 05)
-```
-
-### 4.3 `vmTask`
-
-```
-loop:
-  if not running: block on start notification
-  run the Berry VM until it yields or stops (spec 03 §3):
-    program code calls vacuum.* / screen.* / buttons.* / programs.*,
-    which enqueue Command entries into the mailbox (§3.1)
-  if stopRequested: stop program, notify plant
-  heartbeat update on every yield
-```
-
-The display is reachable from the VM only through that mailbox — a `screen.draw_*` call
-becomes a `Draw` command, never a call into `Display`.
+- `Wire` / I2C — plant only.
+- The pump, valve, and battery driver update paths — plant only.
 
 ## 5. Runaway-program protection
 
@@ -226,18 +60,55 @@ becomes a `Draw` command, never a call into `Display`.
   delay the plant on core 0 at all.
 - The VM increments a `volatile uint32_t` heartbeat on every yield (`vacuum.delay` and the
   Berry execution-limit hook). `plantTask` samples it each tick; if unchanged for
-  > 2000 ms it sets the VM's stop-request flag. A VM that still
-  does not yield after a further 1000 ms has its task restarted by `App` (delete + create
-  with a "vm restarted" log record).
+  > 2000 ms it sets the VM's stop-request flag. A VM that still does not yield after a
+  further 1000 ms has its task restarted by `App` (delete + create, with a "vm restarted"
+  log record).
 
-## 6. Acceptance criteria
+## 6. Task bodies
+
+### 6.1 `plantTask` — period 50 ms
+
+```
+loop:
+  now = millis()
+  sensor.update(now); pump.update(now); battery.update(now); buttons.update(now)
+  system.service(now)                       # the PID step and fault detection
+  appDisplay.flush()                        # I2C: battery composite + push to glass
+  refresh the snapshot in place             # spec 07
+  check vm heartbeat; if stale > 2000 ms: request VM stop
+  delay to next 50 ms tick
+```
+
+### 6.2 `serialTask`
+
+```
+loop:
+  poll Serial into the line buffer (8 lines per pass, as today)
+  for each complete line: dispatch
+    info/status/help → read the snapshot directly and reply
+    draw <op> …      → call the Display verb directly (framebuffer)
+    flush            → reply ok flushed (the plant pushes within one tick)
+    other commands   → call VacuumSystem directly
+  detect host attach/detach; flip display mode (spec 05)
+```
+
+### 6.3 `vmTask`
+
+```
+loop:
+  if not running: block on start notification
+  run the Berry VM until it yields or stops:
+    program code calls vacuum.* / screen.* / buttons.* / programs.* directly
+  if stopRequested: stop program, notify plant
+  heartbeat update on every yield
+```
+
+## 7. Acceptance criteria
 
 - Serial protocol behaves identically to today on the S3 while a Berry program runs on
   core 1 (`start`/`status`/`stop`/`draw`/`flush` all reply correctly).
 - A `while true` program with no `vacuum.delay` does not stop `status` replies or the
   PID tick.
-- A queued flood of draw commands never delays the control loop.
-- A program's `screen.*` calls reach the glass only via the plant; the `Display` instance
-  is never called from the VM task.
-- All state crosses tasks only through the primitives in §3 (enforceable by review and by
-  keeping `App` the only file that creates tasks and queues).
+- A busy program drawing every loop cannot delay the control loop or block I2C.
+- `Wire` is only ever touched from `plantTask`; the framebuffer is only written by the
+  active drawer.

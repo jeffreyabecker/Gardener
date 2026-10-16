@@ -1,37 +1,15 @@
-# Spec 07 — Snapshot extensibility and program drawing
+# Spec 07 — Snapshot and display ownership
 
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §9, §10 and
 constraints 5 and 6.
 
-## 1. Snapshot as the cross-task contract
+## 1. Snapshot
 
-`SystemSnapshot` remains plain, copyable, pointer-free data (spec 01 §3.2). It is the
-only view the serial task and the VM task get of the machine. It grows additively; the
-wire format is the compatibility boundary, not the struct (firmware is one build).
-
-## 2. New fields
+`SystemSnapshot` is plain, copyable, pointer-free data. The plant rewrites one object
+each tick; `serialTask` and `vmTask` read its fields directly (spec 01 §3). No lock — a
+read may span two adjacent ticks, which is fine for a readout.
 
 ```cpp
-struct ProgramInfo {
-  char name[32];
-  uint32_t size;
-  uint8_t paramCount;
-  bool isDefault;
-  bool running;
-};
-
-struct ProgramStatus {
-  bool running;
-  char name[32];      // "" when none
-  char error[48];     // last error, "" when none
-  bool hostAttached;
-};
-
-struct ProgramStatePair {
-  char key[12];
-  char value[12];     // canonical text; floats formatted with 2 dp
-};
-
 struct SystemSnapshot {
   PlantState plant;               // the whole plant readout (simplified VacuumSystem)
 
@@ -49,65 +27,42 @@ struct SystemSnapshot {
 };
 ```
 
-There is no program-overlay or screen struct: programs draw with commands (§3), not by
-publishing a screen into the snapshot.
+- The plant rewrites `snapshot_` every tick.
+- `programs[]` / `programCount` are rebuilt by `ProgramStore::refresh()` when the store
+  changes.
 
-Publication rules:
+## 2. Program state table
 
-- The plant publishes a fresh snapshot every 50 ms tick.
-- The program list (`programs[]`, `programCount`) is rebuilt by `ProgramStore::refresh()`
-  and republished when the store changes; the plant fills the rest every tick.
-- `program` and `state[]` are filled by the plant from the VM's stop/start and
-  `state_set` reports; the VM does not write the snapshot directly.
-
-## 3. Display ownership and program drawing
-
-- The `Display` instance (I2C + framebuffer) stays on the plant task. It is **never**
-  handed to the VM, the serial task, or a program.
-- Programs draw through the same **draw commands** the host uses: each
-  `screen.draw_<op>(…)` call becomes a `Command { kind = Draw, … }` in the command mailbox,
-  and `screen.flush()` becomes a `Flush` command. The plant applies them to the buffer in
-  arrival order and pushes on flush, so host drawing and program drawing are serialized by
-  one owner and can never race.
-- `AppDisplay` composites the battery on every flush, so the battery (like the splash)
-  remains the device's and cannot be erased.
-- Program draw calls are no-ops while a host is attached: the host owns the glass
-  (spec 04 §8), and a program launched over the wire runs headless.
-
-## 4. Program state table
-
-Programs publish their own telemetry through a fixed-capacity table, without any C++
-change:
-
-- `program.state_set("label", 42.5)` / `program.state_set("label", "text")`. The write
-  travels as a `SetProgramState` command (spec 01 §3.1); the plant updates `state[]` on
-  receipt.
-- Up to 8 keys, each key ≤ 11 chars, value ≤ 11 chars (canonical).
+- `program.state_set("label", 42.5)` writes directly into `snapshot_.state[]` — the VM
+  writes, the plant reads it into `status`. Up to 8 keys, key and value each ≤ 11 chars.
 - Setting an existing key replaces it; a ninth key replaces the oldest (FIFO) and logs a
   `[W]` record.
-- The table surfaces in `status` as `s0=key s0v=value …` (spec 06 §4) and is available to
-  the program via `program.state_get`.
+- The table surfaces in `status` as `s0=key s0v=value …` (spec 06 §4);
+  `program.state_get` reads it back.
 
-## 5. Rendering pipeline
+## 3. Display ownership
 
-Local mode (no host):
+- The `Display` interface splits cleanly: the drawing verbs write the framebuffer (plain
+  RAM); `flush()` does I2C.
+- **The active drawer** — the serial task in host mode, the VM in local mode — calls the
+  drawing verbs directly. No commands, no queue.
+- **Only the plant flushes.** Each tick it calls `appDisplay.flush()`, which composites
+  the battery and pushes the framebuffer to the glass. The battery is therefore always
+  device-owned and a program can never erase it.
+- Berry's `screen` module is the drawing verbs only — there is no `screen.flush()`; the
+  plant pushes the frame on its own cadence.
 
-- The running program draws. The plant drains `Draw`/`Flush` commands and, on `Flush`,
-  composites the battery and pushes to the glass. There is no device-drawn UI: the
-  `browser` and `default` programs draw themselves the same way.
+## 4. Rendering pipeline
 
-Host mode (host attached):
+- Local mode: the program draws (VM, RAM) at its own pace; the plant flushes each tick.
+- Host mode: the host draws (serial, RAM) with `draw` commands; the plant flushes each
+  tick. The wire `flush` command remains the frame boundary and replies `ok flushed`.
 
-- The plant applies the host's serial `draw`/`flush` commands; program draw calls are
-  dropped (the host owns the glass).
+## 5. Acceptance criteria
 
-Both sources share one buffer and one flush path, so the frame is always one owner's.
-
-## 6. Acceptance criteria
-
-- `status` on the wire reports the program name, running flag, host flag, and the state
-  table keys while a program runs.
-- `screen.draw_text(…)` output reaches the glass within one plant tick of `screen.flush()`.
-- The battery cannot be erased by a program, a host, or a page.
-- Serial `draw`/`flush` and program `draw`/`flush` never race: the plant is the single
-  drawer.
+- `status` reports the program name, running flag, host flag, and the state table keys
+  while a program runs.
+- A program's drawing reaches the glass on the plant's next flush, with only the battery
+  composited on top.
+- The battery and splash cannot be erased by a program, a host, or a page.
+- `Wire` is never touched by `serialTask` or `vmTask`.

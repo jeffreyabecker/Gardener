@@ -7,9 +7,9 @@ gestures. There is no device-drawn UI layer; anything reusable is a Berry progra
 
 ## 1. Screen ownership
 
-- A running program draws the entire panel with the `screen.draw_*` verbs and pushes the
-  frame with `screen.flush()`. The device composites only the battery (`AppDisplay`) on
-  every flush, so a program can never erase it.
+- A running program draws the entire panel with the `screen.draw_*` verbs; the plant
+  flushes each tick. The device composites only the battery (`AppDisplay`) on every
+  flush, so a program can never erase it.
 - There are no device-drawn pages — no browser, params editor, or status page in C++.
   Those are Berry programs (spec 02 §4). A reusable list/menu abstraction, if one is
   wanted, is written in Berry, not firmware.

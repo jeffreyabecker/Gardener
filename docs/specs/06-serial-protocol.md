@@ -9,8 +9,8 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
   paged/multi-line payloads (`list`, `cat`), which end with a single `eof` line and still
   begin with one `ok`/`err` line.
 - `draw`/`flush` stay fire-and-forget (validated locally, replied immediately).
-- Commands that can fail go through the plant request/response path (spec 01 §3.6), so
-  `err` codes remain authoritative.
+- Commands call the plant directly; the reply reflects the result of that call, so `err`
+  codes remain authoritative.
 
 ## 2. New commands
 
@@ -79,8 +79,7 @@ The existing five stay. One is added:
 | `not_found` | `cat`/`rm`/`run`/`params`/`set params` named a program that does not exist |
 
 The full set is `unknown_command`, `bad_argument`, `out_of_range`, `not_ready`,
-`unsupported`, `not_found`. `err timeout` may appear when the plant does not answer a
-request/response command within the serial task's timeout (spec 01 §3.6).
+`unsupported`, `not_found`.
 
 ## 6. Upload framing
 
