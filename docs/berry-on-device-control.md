@@ -345,13 +345,13 @@ absorbs a UI, a VM and a file store.
 
 ```
 core/     Config.h, Snapshot.h (extended), Math.h, Command.h
-hal/      Pins.h (S3), Display.h, AdafruitDisplay, Battery, Buttons, Storage
+hal/      Pins.h (S3), Display.h, AdafruitDisplay, Overlay, Battery, Buttons, Storage
           (LittleFS wrapper) — Pump, VentValve and PressureSensor are inside
           VacuumSystem now, and this plan is what would extract them again
 services/ VacuumSystem (moved), SnapshotBuilder (extracted from App),
           ProgramStore, ProgramParams
 hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime
-app/      App (composition root + task creation), Overlay
+app/      App (composition root + task creation)
 ```
 
 [VacuumCore.h](../libraries/VacuumCore/src/VacuumCore.h) remains the single umbrella include

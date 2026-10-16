@@ -3,12 +3,12 @@
 #include <Adafruit_GrayOLED.h>
 #include <Arduino.h>
 
-#include "app/Overlay.h"
 #include "app/SerialLink.h"
 #include "app/VacuumSystem.h"
 #include "core/Snapshot.h"
 #include "hal/AdafruitDisplay.h"
 #include "hal/Battery.h"
+#include "hal/Overlay.h"
 #include "hal/Pins.h"
 
 // Composition root. This is the only class that knows the whole graph: every other module

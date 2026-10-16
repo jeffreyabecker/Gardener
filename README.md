@@ -53,10 +53,11 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    what the device presents rather than what the loop drives: the panel, the
-        battery gauge, and the board pin map
+hal/    what the device presents rather than what the loop drives: the panel (its
+        interface, the Adafruit adapter and the battery overlay), the battery gauge,
+        and the board pin map
 app/    the instrument: the plant with its three devices, the snapshot, the serial
-        interface, the display overlay, the composition root
+        interface, the composition root
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -81,12 +82,12 @@ Three rules make that hold:
   instant without either reader holding a driver reference, or a driver knowing that a display
   or a controller exists.
 
-`hal/` never sees `app/`, and what it holds is the readouts and the wiring: the panel, the
-battery gauge and the pin map. The sensor, the pump and the valve are the plant's own instead —
-each has exactly one user, so they sit in
-[app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) beside the loop that depends
-on them, and the pins, the bus traffic and the control law are read in one file. What is left in
-`hal/` is what a second `app/` file needs, or what a board variant edits.
+`hal/` never sees `app/`, and what it holds is the readouts and the wiring: the panel — its
+interface, the Adafruit adapter and the battery overlay — the battery gauge and the pin map. The
+sensor, the pump and the valve are the plant's own instead — each has exactly one user, so they
+sit in [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) beside the loop that
+depends on them, and the pins, the bus traffic and the control law are read in one file. What is
+left in `hal/` is what a second `app/` file needs, or what a board variant edits.
 
 ## Wiring
 
