@@ -2,6 +2,11 @@
 
 Status: plan, not yet implemented.
 
+Read section 2 as the requirements and the rest as the smallest mechanism that answers them.
+Where a mechanism is not settled the plan says so and says what would settle it. One requirement
+is like that — constraint 1, isolation from a runaway program — and section 5 is where it is
+argued rather than assumed.
+
 ## 1. Goal
 
 Bring on-device control back to Gardener: store Berry **programs** on the device, run one
@@ -17,7 +22,9 @@ device boots into.
 
 ## 2. Constraints this plan must satisfy
 
-1. Berry programs run on a **different core** from the serial link.
+1. **A runaway program must not delay or corrupt control.** A program is unbounded work and the
+   control tick is not, so a program that never returns must not be able to hold them together.
+   This is the one requirement whose mechanism is not settled: section 5.
 2. Programs take **parameters**, and setting them has a sensible UX on both the wire and
    the buttons.
 3. The **buttons come back**, and there is a **program browser**.
@@ -31,8 +38,8 @@ device boots into.
 | Decision | Choice | Why |
 | --- | --- | --- |
 | Board | **ESP32-S3** (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`) | Done. Dual-core **and** native USB via the USB-Serial-JTAG CDC on GPIO19/20, which keeps `(bool)Serial` host-presence detection and the ROM downloader on the same cable. |
-| Core split | Plant and serial link on core 0, Berry VM on core 1 | Plant and serial are both short, bounded work; the VM is the only unbounded work and gets core 1 to itself. |
-| Plant ownership | Sensor, pump, valve, battery and buttons stay on **one** task, on core 0 with the serial link | The control loop is the safety-critical code and must stay off the VM's core so a runaway program cannot touch it. |
+| Execution model | The one loop the device already has, a program included, with the VM on a slice | The loop runs the plant and the serial line today. Constraint 1 may need only cooperation, and that is measurable before it is architectural — section 5. |
+| Plant ownership | Sensor, pump, valve, battery and buttons keep **one** owner, and whoever is controlling — a program or the serial line — commands it | The control loop is the safety-critical code, and exactly one writer to the pump and valve is what makes it safe. |
 | Display to programs | Programs draw with the same display verbs as the host — the same `Display`, the same overlay, held by whoever is controlling | Only one mode is active, so only one controller ever draws; the overlay adds the battery to every flush, so neither the host nor a program has to know about it. |
 | Boot behavior | The reserved program `default` is always present, and is loaded **and started** at boot | The device always comes up doing something; that something is the home screen and the headless fallback. |
 | Run model | One program at a time; the plant is the single owner; switching programs always vents first | Keeps one writer to the pump and valve, and every program change starts from a released chamber. |
@@ -60,37 +67,24 @@ Phase 0 has landed. The device now builds for the ESP32-S3.
 The strapping pins (0, 3, 45, 46) and the USB pins (19/20) are all avoided, and the
 existing serial protocol runs unchanged on the S3.
 
-## 5. Task architecture
+## 5. Execution model
 
-Replace the single-threaded `loop()` model with three FreeRTOS tasks created in
-`App::begin()`. The sketch's `loop()` becomes `vTaskDelete(NULL)`.
-
-| Task | Core | Priority | Owns / does |
-| --- | --- | --- | --- |
-| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem::service`, the sensor/pump/valve/battery updates, the `Buttons` scan and the Back-hold abort, the snapshot |
-| **Serial link** | 0 | 6 | the `Serial` stream: replies, diagnostics, and — when a host is attached — drawing + commanding |
-| **Berry VM** | 1 | 3 (alone on core 1) | the Berry VM: programs draw and command directly |
-
-The USB-Serial-JTAG CDC (`hwcdc`) is a hardware peripheral with no FreeRTOS task of its
-own, so the serial task is the only consumer of `Serial` and can be pinned to core 0
-directly.
-
-Core 0 carries the two bounded jobs: the plant tick (a 50 ms control step plus button
-servicing) and the serial task (every complete line it received in one
-pass). Neither can hold the core for long, so they share it comfortably. Core 1
-carries the only unbounded job, the Berry VM.
+The device runs one loop, as it does today: the plant tick, the serial line, and the program.
+Adding the VM does not have to change that, so this section is the requirement first and the
+smallest mechanism that answers it second.
 
 ### 5.1 Modes
 
-There is no IPC layer. Two mutually exclusive modes make direct shared state safe:
+There is no IPC layer and no lock, because two mutually exclusive modes mean exactly one
+controller:
 
 - **Stand-alone** — the VM runs; the running program commands `VacuumSystem` and
   draws/flushes `Display` directly.
 - **Peripheral** — the VM is stopped; the serial system does the same directly.
 
-`set mode` (spec 06) switches; attaching the serial link does not. Shared state, by
-design (spec 01 §3): `VacuumSystem` fields, the display, the snapshot, the button event
-ring, and `ProgramStore`. Nothing else is shared.
+`set mode` (spec 06) switches; attaching the serial link does not. What both of them reach
+(spec 01 §3): `VacuumSystem`, the display, the snapshot, the button event ring, and
+`ProgramStore`. Nothing else.
 
 ### 5.2 What a command is
 
@@ -102,15 +96,27 @@ ring, and `ProgramStore`. Nothing else is shared.
   snapshot, and `ProgramStore` directly. A call is fire-and-forget; the authoritative
   result is the next `status` / `vacuum.state()`.
 
-### 5.3 Runaway-program protection
+### 5.3 Runaway programs
 
-- The plant runs on core 0, so a CPU-bound Berry loop on core 1 cannot delay the control
-  loop at all — the plant's 50 ms tick is immune to the VM by construction.
-- The VM task updates a heartbeat each time it yields (`vacuum.delay` and the Berry
-  execution-limit hook). If the plant sees the heartbeat go stale (~2 s), it sets a
-  stop-request flag and, if needed, restarts the VM task. The exact Berry hook name
-  (execution/instruction budget) is confirmed during implementation; Tasmota's Berry port
-  is the reference.
+**What has to be true.** The control tick keeps `CONTROL_PERIOD_MS`. Everything the device
+guarantees about safety is counted in ticks, so a program that never returns must not be able to
+stretch one.
+
+**The smallest mechanism.** The VM runs on a slice in the loop: a bounded number of VM
+instructions, then a yield, then a tick, then the program resumes. Berry's execution-limit hook
+is where that budget lives — `vacuum.delay(ms)` is the deliberate way for a program to yield, and
+the hook is what makes an unwilling one yield anyway. The budget is an instruction count rather
+than a clock, because a counter is cheap to check and needs no timer.
+
+**What would force something else.** If the vendored Berry port has no execution-limit hook, or a
+budget cannot hold the tick, the program needs somewhere else to run — a second task, or a second
+core. That is the fallback, and it is not free: section 5.1 changes from ownership to
+synchronization, and a watchdog plus a task restart path come with it. None of that is worth
+building before a measurement asks for it, and the measurement is simple.
+
+**The measurement.** Run `default` and a deliberately hostile program — `while true`, no
+`vacuum.delay` — and watch the tick. If the period holds, the loop is the answer and this section
+is finished.
 
 ## 6. The program model
 
@@ -191,9 +197,9 @@ Programs own the screen; the device owns only the battery and the Back-hold abor
 
 ### 7.3 The hard-coded abort
 
-**Holding Back for 5 s is the device's only button behaviour**, and it is hard-coded in
-the plant: stop the current program, vent, then run `default`. Every program change vents
-first, so the chamber is left released before the next program acts.
+**Holding Back for 5 s is the device's only button behaviour, and the firmware hard-codes
+it**: stop the current program, vent, then run `default`. Every program change vents first, so
+the chamber is left released before the next program acts.
 
 The override is a hold condition, not an event, so it can neither be claimed nor
 suppressed: the program still receives the Back events of that press, and it is aborted
@@ -287,8 +293,7 @@ source (or set `default`'s own params), not a separate autostart knob.
 
 ## 9. Snapshot extensibility for programs
 
-`SystemSnapshot` stays plain, copyable data (it is the cross-task boundary) and grows
-additively:
+`SystemSnapshot` stays plain, copyable data and grows additively:
 
 - `ProgramStatus` sub-struct: `running`, `programName`, `error` / last error,
   `hostAttached`.
@@ -300,13 +305,13 @@ additively:
   appended to the `status` payload (`s0=label s0v=42.5 …`) and available to the program's
   own screen, so programs publish their own telemetry without any C++ change.
 - The whole snapshot is exposed read-only to Berry as `vacuum.state()`, a Berry map of the
-  plant readout, served from the VM task's local copy.
+  plant readout built when a program asks for it.
 
 ## 10. Exposing the Display to programs
 
 - The active controller holds a `Display&` (the `Overlay` instance) and draws and
-  flushes directly: the VM in stand-alone mode, the serial task in peripheral mode. The
-  modes are mutually exclusive, so the VM and the serial task never both touch it.
+  flushes directly: a program in stand-alone mode, the serial line in peripheral mode. The
+  modes are mutually exclusive, so exactly one of them ever touches it.
 - Programs draw with the same **drawing verbs** the host uses: each `screen.draw_<op>(…)`
   call is a direct `Display` call, and `screen.flush()` pushes the frame.
 - The op set is the one already on the wire — clear, pixel, line, hline, vline, rect,
@@ -339,23 +344,20 @@ and decides what happens next).
 
 ## 12. Layer layout
 
-Re-introduce the five-layer layout the project used before the serial simplification, and
-extend [check-layers.ps1](../scripts/check-layers.ps1) accordingly — otherwise `app/`
-absorbs a UI, a VM and a file store.
+The three layers stay, and this plan adds two devices to `hal/` where the rest of the device
+lives: `Buttons` and `Storage` (the LittleFS wrapper). The VM, the `ProgramApi` binding,
+`ProgramStore` and `ProgramParams` go in `app/` beside the serial interface, which is where the
+way in already is. [check-layers.ps1](../scripts/check-layers.ps1) is not touched: the rule is
+still `app/` → `hal/` → `core/`, and nothing here points the other way.
 
-```
-core/     Config.h, Snapshot.h (extended), Math.h, Command.h
-hal/      Pins.h (S3), Display.h, AdafruitDisplay, Overlay, Battery, Buttons, Storage
-          (LittleFS wrapper) — VacuumSystem is here today, holding the pump, the valve
-          and the sensor, and this plan is what would move it out and re-extract them
-services/ VacuumSystem (moved from hal/), SnapshotBuilder (extracted from App),
-          ProgramStore, ProgramParams
-hosts/    serial/SerialLink (moved), program/ProgramApi, program/BerryRuntime
-app/      App (composition root + task creation)
-```
-
-[VacuumCore.h](../libraries/VacuumCore/src/VacuumCore.h) remains the single umbrella include
-for the sketch.
+That is a refusal to pre-split, and it is a change of position. This plan used to propose
+re-introducing the five-layer `core/hal/services/hosts/app` layout on the argument that
+otherwise `app/` absorbs a UI, a VM and a file store. It will, by the end of this plan. But five
+layers for one instrument, invented before anything in `app/` had a second consumer, is the shape
+the project has already paid for once: what actually moved `Overlay` out of `app/` was a second
+`app/` file needing it, and what split `SerialLink` was a file too long to read, not a plan. If
+`app/` becomes two problems, that is the commit that splits it — pointed at a consumer, the way
+those two were.
 
 ## 13. Phasing
 
@@ -367,11 +369,11 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 
 | Phase | Content | Gate |
 | --- | --- | --- |
-| 1 | Task architecture: plant + serial tasks, direct shared state (no IPC) | Protocol behavior parity on dual-core |
+| 1 | Execution model: the program runs on a slice in the loop that already exists, budget from the Berry hook | A `while true` program with no `vacuum.delay` cannot stretch the control tick (§5.3) |
 | 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
 | 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
-| 4 | Vendor Berry + `BerryRuntime`/`ProgramApi` on core 1, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |
-| 5 | Disconnected operation, reserved-program boot, abort semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back hold 5 s aborts home |
+| 4 | Vendor Berry + `BerryRuntime`/`ProgramApi`, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw, and the tick still holds with a program running |
+| 5 | Disconnected operation, reserved-program boot, abort semantics, program state table, runaway handling | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back hold 5 s aborts home |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 
 ## 14. Risks to verify during implementation
@@ -379,17 +381,18 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 - **Boot now runs a program.** The seeded `default` is passive, but once an owner replaces
   it, boot behavior is owner-defined. The fail-safe valve and fault latch still hold; this
   is called out in the docs, not left implicit.
-- **Exact Berry execution-limit/yield hook name** — confirm against Tasmota's Berry port;
-  the runaway-program watchdog depends on it.
+- **Whether the vendored Berry port has an execution-limit hook.** This is the hinge for §5.3:
+  with it, a runaway program is a budget in the loop that already exists; without it, the program
+  needs a context of its own, which is the fallback and a piece of work in its own right. Confirm
+  against Tasmota's Berry port before phase 4.
 - **Button pin reachability** — the pins (1/2/10/11) are confirmed on the S3 Super Mini used
   for development, but re-check them if the device moves to a different S3 carrier.
 - **Host presence was verified on the `hwcdc` CDC in Phase 0**, but re-check it on the
   production board if the USB wiring changes, since the display-mode switch and
   disconnected-operation rules rely on it.
-- **Two tasks on `Wire`** — the plant reads the sensor and the active controller flushes
-  the display, both over the same I2C bus. This is the one deliberately shared peripheral
-  (spec 01 §3); confirm the driver tolerates the interleaving on the real board, or
-  serialize the bus.
+- **`Wire` if §5.3's fallback is ever taken.** Today one loop reads the sensor and flushes the
+  display, so nothing interleaves and there is nothing to serialize. A second context would put
+  two readers on one bus, and that would be the first thing to fix rather than a risk to carry.
 - **The UX is only a spec until it is on glass.** The browser/params/run flow needs a
   physical pass on the real board before the interaction is locked in.
 - **Nothing on the device reaches `browser`.** With no selector gesture, the way in is
@@ -403,10 +406,15 @@ One spec per feature, under [docs/specs/](specs/):
 
 | Spec | Feature |
 | --- | --- |
-| [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
+| [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs — **the one spec §5 no longer agrees with** |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
 | [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, `programs` module, button callbacks |
 | [04-screen-and-buttons](specs/04-screen-and-buttons.md) | Screen and button ownership, the abort override |
 | [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, abort |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
+
+Spec 01 is the exception. It specifies three FreeRTOS tasks, a heartbeat and a VM restart — the
+mechanism §5.3 now defers until a measurement asks for it — so it is the one spec that has to be
+rewritten before phase 1 starts. The rest are unaffected by that delay: they are about what the
+program model does, not about where it runs.
 | [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |
