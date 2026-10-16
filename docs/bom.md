@@ -19,11 +19,13 @@ Anything the code depends on but nobody has specified a value for is in
 | --- | --- | --- | --- | --- |
 | 1 | MCU board | 1 | ESP32-S3, developed against an ESP32-S3 Super Mini | `esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, pinned in [sketch.yaml](../firmware/gardener/sketch.yaml) and [scripts/arduino.ps1](../scripts/arduino.ps1). The on-board RGB LED on GPIO48 is unused. |
 | 2 | Pressure sensor | 1 | Adafruit MPRLS ported pressure breakout, 0–172.369 kPa (0–25 PSI) absolute, I2C `0x18` | `pins::MPRLS_MIN_KPA` / `MPRLS_MAX_KPA`, polled every `MPRLS_POLL_MS` in [hal/PressureSensor.cpp](../libraries/VacuumCore/src/hal/PressureSensor.cpp). The sensor, not the pump, sets the measurable range. |
-| 3 | Display | 1 | Adafruit monochrome 1.3" 128x64 OLED, SH1106, STEMMA QT / Qwiic, I2C `0x3C` | `pins::OLED_I2C_ADDR`, the module and its bring-up in [app/App.cpp](../libraries/VacuumCore/src/app/App.cpp) (`App::attachPanel`). A readout only: the host draws it over the serial line. |
-| 4 | Buttons | 4 | Tactile switches, wired to GND on GPIO1/2/10/11 | None. They are wired and named (`pins::BTN_*`) for a future local override and nothing reads them, so no pull-ups are configured either. |
+| 3 | Display | 1 | Monochrome 1.3" 128x64 OLED module, SH1106, 7-pin SPI breakout. A 128x32 module on the same 7-pin SPI interface is an accepted alternative | Not switched yet: [App::attachPanel()](../libraries/VacuumCore/src/app/App.cpp) still attaches an I2C panel and [Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins — see [§ 5](#5-open-items). A readout only: the host draws it over the serial line. |
+| 4 | Buttons | 1 | 4-switch module with integrated pull-ups, active low on GPIO1/2/10/11 | None. They are wired and named (`pins::BTN_*`) for a future local override and nothing reads them; the pull-ups are on the module, so the firmware configures none of its own. |
 
-Sensor and display share one I2C bus at `pins::I2C_FREQ_HZ` (400 kHz) on GPIO8/9, which is why
-both are STEMMA QT parts: two cables and no soldering.
+The pressure sensor is the only I2C peripheral: MPRLS on `pins::I2C_FREQ_HZ` (400 kHz) at GPIO8/9,
+which is why it is a STEMMA QT part — one cable and no soldering. The display (item 3) is a 7-pin
+SPI module, so it no longer shares that bus; the firmware has not moved with it yet, see
+[§ 5](#5-open-items).
 
 ## 2. Pump, valve and drive
 
@@ -57,7 +59,7 @@ strapping pin — a pressed button would pull the sense line to ground.
 | # | Item | Qty | Part / spec | Notes |
 | --- | --- | --- | --- | --- |
 | 15 | USB-C cable | 1 | Data capable | Power, upload and the control interface, all on the one socket: `CDCOnBoot=cdc` is what puts the protocol there. |
-| 16 | STEMMA QT / Qwiic cable | 2 | One per I2C peripheral | Sensor and display, one bus, no pull-up work to do. |
+| 16 | STEMMA QT / Qwiic cable | 1 | For the pressure sensor | The display is SPI (item 3) and does not use the I2C bus. |
 | 17 | Chamber and tubing | 1 | Vacuum rated | The load the whole thing exists to pull down. |
 | 18 | Catch pot and filter | 1 | Rated, inline | Between the chamber and the pump. Pumped liquids and vapours are the failure mode that destroys hardware, not the vacuum. |
 
@@ -80,3 +82,11 @@ above:
   reading is reported and drawn, and that is all.
 * **Chamber, tubing and catch pot ratings** (items 17–18) — the firmware's limits are software
   limits, so these are what make the rig safe, and they are not spec'd here.
+* **Display interface** (item 3): the panel is a 7-pin SPI module, but the firmware still attaches
+  an I2C SH1106 and [hal/Pins.h](../libraries/VacuumCore/src/hal/Pins.h) has no SPI pins. Moving it
+  needs a map for SCK, MOSI, CS, DC and RES; the S3's SPI defaults are not all free, because
+  GPIO10/11 are `BTN_OK`/`BTN_BACK`. The free pins README lists (7, 12–18) are the candidates.
+* **Display size** (item 3 alternative): the 128x32 module is a different geometry, so
+  `pins::OLED_HEIGHT` and anything the host lays out would change with it — and 128x32 modules are
+  usually not SH1106, which would mean an adapter built on a different Adafruit library than the
+  `Adafruit_SH110X` one in use today.

@@ -45,7 +45,7 @@ constexpr int VENT_VALVE = 5;
 constexpr int BATTERY_ADC = 4;
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
-// --- Four button UI, active low to GND, internal pull ups ------------------
+// --- Four button UI, active low to GND, pull ups on the module -------------
 // Nothing reads these, and nothing times them: they are kept wired and named so a future
 // build can use them without a board revision (Q16). They sit away from the S3 strapping
 // pins (0, 3, 45, 46) and from the USB pins (19/20). GPIO10/11 are the variant's default
