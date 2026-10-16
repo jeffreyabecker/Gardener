@@ -32,8 +32,8 @@ device boots into.
 | --- | --- | --- |
 | Board | **ESP32-S3** (`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`) | Done. Dual-core **and** native USB via the USB-Serial-JTAG CDC on GPIO19/20, which keeps `(bool)Serial` host-presence detection and the ROM downloader on the same cable. |
 | Core split | Plant and serial link on core 0, Berry VM on core 1 | Plant and serial are both short, bounded work; the VM is the only unbounded work and gets core 1 to itself. |
-| Plant ownership | Sensor, pump, valve, battery, display and buttons stay on **one** task, on core 0 with the serial link | The control loop is the safety-critical code and must stay off the VM's core so a runaway program cannot touch it. |
-| Display to programs | Programs draw with the same display verbs as the host, routed through the plant; they never hold the `Display` instance | `Display` is non-thread-safe I2C plus a framebuffer; the plant serializes all drawing, and the battery stays composited on every flush. |
+| Plant ownership | Sensor, pump, valve, battery and buttons stay on **one** task, on core 0 with the serial link | The control loop is the safety-critical code and must stay off the VM's core so a runaway program cannot touch it. |
+| Display to programs | Programs draw with the same display verbs as the host — the same `Display`, the same overlay, held by whoever is controlling | Only one mode is active, so only one controller ever draws; the overlay adds the battery to every flush, so neither the host nor a program has to know about it. |
 | Boot behavior | The reserved program `default` is always present, and is loaded **and started** at boot | The device always comes up doing something; that something is the home screen and the headless fallback. |
 | Run model | One program at a time; the plant is the single owner; switching programs always vents first | Keeps one writer to the pump and valve, and every program change starts from a released chamber. |
 | Parameter model | Manifest-declared typed params; "last run" values persisted; running is easy, editing is deliberate | See sections 6 and 8. |
@@ -67,7 +67,7 @@ Replace the single-threaded `loop()` model with three FreeRTOS tasks created in
 
 | Task | Core | Priority | Owns / does |
 | --- | --- | --- | --- |
-| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem::service`, the sensor/pump/valve/battery updates, the `Buttons` scan, the snapshot, and the display `flush` (I2C + battery) |
+| **Plant** | 0 | 10 (highest on core 0) | `VacuumSystem::service`, the sensor/pump/valve/battery updates, the `Buttons` scan and the Back-hold abort, the snapshot |
 | **Serial link** | 0 | 6 | the `Serial` stream: replies, diagnostics, and — when a host is attached — drawing + commanding |
 | **Berry VM** | 1 | 3 (alone on core 1) | the Berry VM: programs draw and command directly |
 
@@ -75,8 +75,8 @@ The USB-Serial-JTAG CDC (`hwcdc`) is a hardware peripheral with no FreeRTOS task
 own, so the serial task is the only consumer of `Serial` and can be pinned to core 0
 directly.
 
-Core 0 carries the two bounded jobs: the plant tick (a 50 ms control step plus the
-display flush and button servicing) and the serial task (every complete line it received in one
+Core 0 carries the two bounded jobs: the plant tick (a 50 ms control step plus button
+servicing) and the serial task (every complete line it received in one
 pass). Neither can hold the core for long, so they share it comfortably. Core 1
 carries the only unbounded job, the Berry VM.
 
@@ -133,9 +133,9 @@ Every program may declare typed parameters in a comment header at the top of the
 | `bool` | Up/Down toggles | — |
 
 The header runs from the first line to the first non-comment line. `ProgramParams` parses
-it into `ProgramInfo.params[]`; the Berry `program.param(name)` accessor returns the typed
-value at run time. `choice` and `bool` are the recommended types for anything that will be
-tuned without a host, because they need no numeric stepping.
+it into the typed `Param` set handed to the program; the Berry `program.param(name)`
+accessor returns the typed value at run time. `choice` and `bool` are the recommended types
+for anything that will be tuned without a host, because they need no numeric stepping.
 
 ### 6.2 Store and persistence
 
@@ -170,7 +170,7 @@ are the **last run** values. The merge is deterministic:
 
 ## 7. On-device UX
 
-Programs own the screen; the device owns only the battery and the two Back gestures.
+Programs own the screen; the device owns only the battery and the Back-hold abort.
 
 ### 7.1 Screen ownership
 
@@ -184,21 +184,20 @@ Programs own the screen; the device owns only the battery and the two Back gestu
 ### 7.2 Buttons
 
 - `hal/Buttons` debounces the four buttons into click / long-press / repeat events.
-- While a program runs and no host is attached, Up, Down and OK are delivered to the
-  program's `buttons.on` callbacks (spec 03 §5). Back is delivered only when the program
-  claims it with `buttons.on(buttons.BACK, fn)`; otherwise it is device-owned.
+- While a program runs and no host is attached, every event — Up, Down, OK and Back, all
+  kinds — is delivered to the program's `buttons.on` callbacks (spec 03 §5). Nothing is
+  claimed, consumed or withheld by the device; buttons mean whatever the program says they
+  mean.
 
-### 7.3 The device-owned gestures
+### 7.3 The hard-coded abort
 
-From any running program that has not claimed Back:
+**Holding Back for 5 s is the device's only button behaviour**, and it is hard-coded in
+the plant: stop the current program, vent, then run `default`. Every program change vents
+first, so the chamber is left released before the next program acts.
 
-- **Back click** — *home*. Stop the current program, vent, then run `default`.
-- **Back long-press** — *browse*. Stop the current program, vent, then run `browser`.
-
-A program that claims Back takes these for itself. **Holding Back for 5 s is always a hard
-escape**, claimed or not: the device stops the program, vents, and runs `default`. Every
-program change vents first, so all of these leave the chamber released before the next
-program acts.
+The override is a hold condition, not an event, so it can neither be claimed nor
+suppressed: the program still receives the Back events of that press, and it is aborted
+anyway.
 
 ### 7.4 Reserved programs
 
@@ -206,8 +205,10 @@ program acts.
   replace it).
 - `browser` — the program selector and params editor (also seeded).
 
-They are ordinary stored programs; only the names are reserved by boot and the two Back
-gestures.
+They are ordinary stored programs, and the runtime reserves nothing. Only `default` is
+named by the device — boot starts it and the abort returns to it. `browser` is reached the
+way any program is: `programs.run("browser")` from a running program, or `run browser` over
+the wire.
 
 ### 7.5 Modes
 
@@ -250,11 +251,12 @@ them.
 ### 8.3 A disconnected walkthrough
 
 1. Device boots unplugged → `default` starts and shows the live readout.
-2. Back long-press → current program stops, chamber vents, the `browser` program runs.
+2. Open the selector from `default` (`programs.run("browser")`) → the current program
+   stops, the chamber vents, and `browser` runs.
 3. Up/Down to `pulse`, OK long-press → the `browser` opens its params.
 4. OK to reach `cycles`, Up/Down (repeat for coarse) to set 5.
 5. OK long-press → params persist, `pulse` runs with `cycles=5`.
-6. Back click → `pulse` stops, chamber vents, `default` runs again.
+6. Back hold 5 s → `pulse` stops, chamber vents, `default` runs again.
 7. Power-cycle → `default` runs again, because `default` is the boot program.
 
 If the user wants `pulse`-with-5-cycles at every boot, they overwrite `default` with that
@@ -274,14 +276,14 @@ source (or set `default`'s own params), not a separate autostart knob.
 
 - **Zero-parameter program** — select it and OK click runs it directly; there is nothing
   to edit.
-- **Store has only `default`** — the browser lists one row; Back click and OK click both
-  effectively keep the device home.
+- **Store has only `default`** — the browser lists one row; OK click runs `default` again
+  and effectively keeps the device home.
 - **`default` deleted** — the store re-seeds the passive source on next refresh; the device
   is never without a boot program.
 - **Host attached while a program runs** — the host can `stop`, `run` another program, or
   draw its own panel; the local buttons are ignored until it leaves.
-- **Program consumes every button it can** — Back click and Back long always escape, so the
-  user can always vent and get home or to the selector.
+- **Program consumes every button it can** — Back hold 5 s still aborts, so the user can
+  always vent and get home.
 
 ## 9. Snapshot extensibility for programs
 
@@ -290,8 +292,9 @@ additively:
 
 - `ProgramStatus` sub-struct: `running`, `programName`, `error` / last error,
   `hostAttached`.
-- `ProgramInfo[]`: name, size, params summary, running/default flags (bounded, e.g. 24),
-  published by `ProgramStore::refresh()`.
+- **No program list.** The snapshot does not carry the store: `ProgramStore` owns the list
+  and `count()`/`at()` answer `list` and the `programs.*` verbs on demand (spec 02 §7), so
+  there is nothing to keep in sync.
 - A fixed-capacity **program state table** a program can write and read:
   `program.state_set("label", 42.5)` / `program.state_get("label")`. These keys are
   appended to the `status` payload (`s0=label s0v=42.5 …`) and available to the program's
@@ -318,7 +321,7 @@ New program commands (additive; existing commands keep their meaning):
 
 | Command | Reply | Notes |
 | --- | --- | --- |
-| `list` | `ok programs=N` then one row per program, then `eof` | rows carry name, size, param count, `default`/`running` flags |
+| `list` | `ok programs=N` then one row per program, then `eof` | rows carry name, size, param count, `default`/`running` flags, read from the store (spec 02 §7) |
 | `cat <name>` | paged source | as the old `cat` |
 | `rm <name>` | `ok removed <name>` | `rm default` re-seeds the passive source |
 | `run <name> [k=v …]` | `ok running <name>` / `err …` | stop current program → vent → start; named params validated against the manifest |
@@ -330,7 +333,7 @@ New program commands (additive; existing commands keep their meaning):
 `status` gains `program=<name|->`, `running=0|1`, `host=0|1`, and the program state table
 (`s0=key s0v=val …`). `help` lists the new commands.
 
-Local Back click and serial `stop` differ on purpose: Back click always homes to `default`
+The abort and serial `stop` differ on purpose: Back hold 5 s always homes to `default`
 (the device's own home), while serial `stop` leaves the device idle (the host is present
 and decides what happens next).
 
@@ -367,7 +370,7 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 | 2 | `hal/Buttons`, `hal/Storage`, `ProgramStore` seeding of `default` and `browser` | Buttons scanned and stored programs listed via serial |
 | 3 | `ProgramStore` + `ProgramParams` + manifest parsing + serial program commands (`list`/`cat`/`rm`/`params`/`set params`/upload) | Programs storable and listable over the wire; `run` waits for the VM |
 | 4 | Vendor Berry + `BerryRuntime`/`ProgramApi` on core 1, `vacuum`/`screen`/`buttons`/`program` modules, `run` command, seeded `default` and `browser` | `default` and `browser` run and draw on core 1 while plant + serial run on core 0 |
-| 5 | Disconnected operation, reserved-program boot, break-out semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back gestures escape |
+| 5 | Disconnected operation, reserved-program boot, abort semantics, program state table, watchdogs | Unplug USB mid-program → program continues; `status` shows `host`/`program`; Back hold 5 s aborts home |
 | 6 | Docs, version bump, cleanup | Docs match behavior |
 
 ## 14. Risks to verify during implementation
@@ -382,10 +385,16 @@ Each remaining phase keeps the build green (`powershell -File scripts/arduino.ps
 - **Host presence was verified on the `hwcdc` CDC in Phase 0**, but re-check it on the
   production board if the USB wiring changes, since the display-mode switch and
   disconnected-operation rules rely on it.
-- **Wire thread affinity** — confirm all I2C traffic stays on the plant task; Wire is not
-  cross-task safe.
+- **Two tasks on `Wire`** — the plant reads the sensor and the active controller flushes
+  the display, both over the same I2C bus. This is the one deliberately shared peripheral
+  (spec 01 §3); confirm the driver tolerates the interleaving on the real board, or
+  serialize the bus.
 - **The UX is only a spec until it is on glass.** The browser/params/run flow needs a
-  physical pass on the real board before the gestures are locked in.
+  physical pass on the real board before the interaction is locked in.
+- **Nothing on the device reaches `browser`.** With no selector gesture, the way in is
+  `programs.run("browser")` from a program or `run browser` over the wire, so the seeded
+  `default` has to offer one. Confirm it does — otherwise the stock device ships a selector
+  it cannot open.
 
 ## 15. Detailed specs
 
@@ -396,7 +405,7 @@ One spec per feature, under [docs/specs/](specs/):
 | [01-task-architecture](specs/01-task-architecture.md) | Cores, tasks, IPC, watchdogs |
 | [02-program-store-and-params](specs/02-program-store-and-params.md) | LittleFS store, manifest, params, persistence, `default` |
 | [03-berry-runtime-and-api](specs/03-berry-runtime-and-api.md) | Berry VM, `ProgramApi`, Berry binding, `programs` module, button callbacks |
-| [04-on-device-ux](specs/04-on-device-ux.md) | Screen ownership, buttons, reserved `default`/`browser` programs |
-| [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, break-out |
+| [04-screen-and-buttons](specs/04-screen-and-buttons.md) | Screen and button ownership, the abort override |
+| [05-disconnected-operation](specs/05-disconnected-operation.md) | Link loss, magic default boot, takeover, abort |
 | [06-serial-protocol](specs/06-serial-protocol.md) | Program commands, upload framing, status/info keys |
 | [07-snapshot-and-display](specs/07-snapshot-and-display.md) | Snapshot extensions, program draw access, display ownership |

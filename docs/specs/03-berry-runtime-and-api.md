@@ -84,9 +84,9 @@ class ProgramApi {
   void resetFault()          { system_.resetFault(); }
   PlantState state() const   { return system_.state(); }
 
-  // --- programs (store and snapshot, direct) ---
-  uint8_t programCount() const;                   // snapshot_.programCount
-  const ProgramInfo* programAt(uint8_t i) const;  // snapshot_.programs[i], or null
+  // --- programs (store, direct) ---
+  uint8_t programCount() const;                   // store_.count()
+  const ProgramInfo* programAt(uint8_t i) const;  // store_.at(i), or null
   bool programParams(const char* name, ProgramParams::Param* out,
                      uint8_t max, uint8_t& count);  // store read + manifest parse
   bool setProgramParam(const char* name, const char* key,
@@ -138,9 +138,9 @@ class ProgramApi {
 
 Rules:
 
-- Everything is a direct call. `state()`, `hostPresent()`, `param()`, `stateGet()`,
-  `programCount()`, `programAt()` read the plant's `snapshot_` and the captured `params_`
-  and never block.
+- Everything is a direct call. `state()`, `hostPresent()`, `param()`, `stateGet()` read the
+  plant's `snapshot_` and the captured `params_`; `programCount()`/`programAt()` read the
+  store's in-RAM index (spec 02 §7). None of them block.
 - `programParams()` and `setProgramParam()` touch `ProgramStore` (LittleFS) directly; this
   is the one shared-filesystem access, accepted in spec 01 §3.
 - `stateSet()` writes `snapshot_.state[]` directly; the plant reads it into `status`.
@@ -150,20 +150,17 @@ Rules:
 
 ## 5. Button callbacks
 
-Buttons are exposed as callbacks, not polling: registering a callback is owning input
-(full API in §6.4). In stand-alone mode, the plant forwards Up, Down, OK — and Back when
-claimed — to the VM's button queue (spec 01 §3); `BerryRuntime::update()` drains it and
-invokes the matching callbacks.
+Buttons are exposed as callbacks, not polling (full API in §6.4). In stand-alone mode the
+plant forwards every event — Up, Down, OK and Back, all kinds — to the VM's button queue
+(spec 01 §3); `BerryRuntime::update()` drains it and invokes the matching callbacks. The
+device does not consume, withhold or claim any event: registering a callback is not a
+reservation, and Back is an ordinary button to a program.
 
-Back is special: it is device-owned (break-out, spec 05 §4) **unless the program claims
-it** by registering `buttons.on(buttons.BACK, fn)`. Claiming Back takes the break-out
-gestures; releasing it (`buttons.off(buttons.BACK)` / `buttons.clear()`) returns them to
-the device.
-
-Even when claimed, **holding Back for 5 s is always a device hard escape**: the plant
-stops the program, vents, and runs `default`. A program cannot consume or override it. A
-program that claims Back and stops yielding is likewise stopped and vented by the runaway
-watchdog (spec 01 §5).
+The plant's one override is the **abort**: holding Back for 5 s stops the program, vents,
+and runs `default` (spec 04 §2). It is a plant-side hold condition, so it does not consume
+the events — the program's Back callbacks still fire for that same press — and it cannot
+be suppressed from Berry. A program that ignores the abort and stops yielding is likewise
+stopped and vented by the runaway watchdog (spec 01 §5).
 
 ## 6. Berry binding
 
@@ -236,17 +233,17 @@ The module exposes named constants for the button ids: `buttons.UP` (0), `button
 | `buttons.off(button)` | remove the callback for `button` |
 | `buttons.clear()` | remove all callbacks |
 
-`button` is one of the named constants. `buttons.BACK` is device-owned unless claimed
-with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device hard escape
-(§5).
+`button` is one of the named constants. All four are ordinary inputs to the program: the
+callbacks fire for every event the plant forwards, and only the 5 s Back hold has any
+device behaviour attached (§5).
 
 ### 6.5 `programs` — store and launcher
 
 | Berry call | Native | Notes |
 | --- | --- | --- |
-| `programs.count()` | `programCount` | reads the snapshot |
+| `programs.count()` | `programCount` | reads the store index |
 | `programs.name(i)` | `programAt` | `.name`, or nil |
-| `programs.info(i)` | `programAt` | map of name/size/param_count/is_default/running |
+| `programs.info(i)` | `programAt` | map of name/size/param_count/is_default/running — the last two derived, not stored (spec 02 §7) |
 | `programs.run(name)` | `BerryRuntime` | stop current → vent → start |
 | `programs.run(name, params)` | `BerryRuntime` | params map overrides |
 | `programs.stop()` | `BerryRuntime` | stop current → vent → idle |
@@ -267,8 +264,9 @@ with `buttons.on(buttons.BACK, fn)`; holding Back for 5 s is always a device har
 - `vacuum.state()` returns the plant readout (kpa, state, duty, …) as a Berry map within
   one plant tick.
 - `buttons.on(buttons.OK, fn)` fires `fn("click")` when OK is clicked while the program runs.
-- A program that calls `vacuum.delay(10)` in a loop can be stopped by Back click within
-  one yield interval.
+- `buttons.on(buttons.BACK, fn)` fires `fn("click")` too; the device does not intercept it.
+- Holding Back for 5 s stops the program, vents, and runs `default`, whatever callbacks
+  the program registered.
 - A program that never yields is stopped by the plant heartbeat and the VM restarts.
 - `program.param("cycles")` returns the effective value (persisted over default).
 - `screen.draw_text(…)` output reaches the glass after `screen.flush()`.

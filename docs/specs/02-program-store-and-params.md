@@ -3,8 +3,8 @@
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §6 and the
 storage half of constraint 2.
 
-Owned by the plant task (LittleFS is not cross-task safe; everything that touches it goes
-through the plant, see spec 01 §2).
+Owned by the plant task (LittleFS is not cross-task safe; writes go through the plant, see
+spec 01 §3).
 
 ## 1. LittleFS layout
 
@@ -38,7 +38,7 @@ class ProgramStore {
 
   bool begin();                    // mkdir /programs, clear stale staging, refresh,
                                    // and re-seed `default` if missing
-  void refresh();                  // rebuild programs_[] and autostart/default flags
+  void refresh();                  // re-scan the store and rebuild programs_[]
 
   size_t count() const;
   const ProgramInfo* at(size_t index) const;
@@ -178,21 +178,26 @@ Persistence:
   4. validate/coerce each value; an invalid value falls back to its default.
 - Parameters are captured at program start and do not change mid-run.
 
-## 7. ProgramInfo and snapshot publication
+## 7. `ProgramInfo` and who reads the store
+
+The store owns the list. `refresh()` re-scans LittleFS and rebuilds `programs_[]`;
+`count()`, `at()` and `indexOf()` answer from it, and nothing copies it anywhere else
+(spec 07 §1).
 
 ```cpp
 struct ProgramInfo {
   char name[32];
   uint32_t size;
-  uint8_t paramCount;
-  bool isDefault;
-  bool running;
+  uint8_t paramCount;              // manifest params, counted at refresh
 };
 ```
 
-`ProgramStore::refresh()` fills the array; the plant publishes it into the snapshot
-(spec 07) whenever the store changes, so `list` and the browser read it without touching
-LittleFS.
+- `default` is `at(0)`: `refresh()` pins it first. That is what `default=1` on the wire
+  (spec 06 §2) and `is_default` in Berry (spec 03 §6.5) report — derived, not stored.
+- `running` is derived too: it is the name and flag in `ProgramStatus` (spec 07 §1).
+- Reads of the in-RAM index are open to all three tasks; writes, `refresh()` and
+  everything else that touches LittleFS belong to the plant (spec 01 §3). A `list` that
+  lands mid-upload may be one entry stale — no retry logic, the next `list` is correct.
 
 ## 8. Acceptance criteria
 

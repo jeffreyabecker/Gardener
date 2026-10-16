@@ -16,7 +16,7 @@ half of constraint 2. Extends [the current protocol](../serial-protocol.md) addi
 
 | Command | Reply | Notes |
 | --- | --- | --- |
-| `list` | `ok programs=N` + one row per program + `eof` | rows: `name size=<n> params=<n> default=<0|1> running=<0|1>` |
+| `list` | `ok programs=N` + one row per program + `eof` | rows: `name size=<n> params=<n> default=<0|1> running=<0|1>`, read from the store index (spec 02 §7) |
 | `cat <name> [offset] [len]` | `ok file <name> <offset> <len> <total>` + source lines + `eof` | paged, as the old `cat` |
 | `rm <name>` | `ok removed <name>` | `rm default` re-seeds the passive source |
 | `set mode <standalone\|peripheral>` | `ok mode=standalone` / `ok mode=peripheral` | switch the control mode |
@@ -60,7 +60,7 @@ Example:
 | `program` | `default`, `pulse`, … or `-` when idle |
 | `running` | `0`/`1` |
 | `host` | `0`/`1` |
-| `s0` / `s0v` … `s7` / `s7v` | program state table (spec 07 §4), key then value |
+| `s0` / `s0v` … `s7` / `s7v` | program state table (spec 07 §2), key then value |
 
 `info` is unchanged (the runtime is always Berry).
 

@@ -42,17 +42,18 @@ moment when the VM and the serial task are both controlling or both drawing.
 - **`Wire`** — the plant reads the sensor every tick, and the active controller flushes
   the display. Short, interleaved I2C transactions; accepted.
 - **The snapshot** — `SystemSnapshot` (spec 07) is one object the plant rewrites each
-  tick; `serialTask` and `vmTask` read its fields directly for `status`,
-  `vacuum.state()`, and `programs.*`. A read may span two adjacent ticks. Accepted for a
-  readout.
+  tick; `serialTask` and `vmTask` read its fields directly for `status` and
+  `vacuum.state()`. A read may span two adjacent ticks. Accepted for a readout.
 - **Buttons** — `Buttons` keeps a small event ring; the plant pushes and the VM pops while
   a program runs (spec 03 §5). Single producer, single consumer.
 - **Logs** — any task writes a `[I]/[W]/[E]` record to `Serial` under a `portMUX`, so
   records do not interleave at the byte level.
-- **`ProgramStore` (LittleFS)** — normally touched only by the plant (refresh, upload).
-  The VM reads it for `programs.params(name)` (spec 03 §6.5); a read concurrent with an
-  upload is rare and non-safety-critical — it may return stale data or fail, and the
-  program retries.
+- **`ProgramStore`** — writes, `refresh()` and everything else that touches LittleFS are
+  plant-only (upload, remove, seed). Reads are open to all three tasks: the in-RAM index
+  answers `count`/`at`/`indexOf` for `list` and the `programs.*` verbs, and
+  `params`/`read` touch LittleFS for `programs.params(name)` and `run`/`cat` (spec 02 §7).
+  A read concurrent with an upload is rare and non-safety-critical — it may return stale
+  data or fail, and the caller retries.
 
 ## 4. What is never shared
 

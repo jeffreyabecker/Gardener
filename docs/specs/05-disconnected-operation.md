@@ -1,4 +1,4 @@
-# Spec 05 — Disconnected operation, magic default, break-out
+# Spec 05 — Disconnected operation, magic default, abort
 
 Status: draft spec. Implements [the plan](../berry-on-device-control.md) §6.3, §7.2, §8
 and constraint 4.
@@ -36,22 +36,20 @@ In stand-alone mode `vacuum.host_present()` simply reports false; the device is 
 locally controlled. In peripheral mode the controller left, so the device vents and
 returns to local control.
 
-## 4. Break-out gestures (stand-alone mode)
+## 4. Abort gesture (stand-alone mode)
 
-From any running program that has not claimed Back (spec 03 §5):
+**Holding Back for 5 s is the device's only button behaviour**, and it is hard-coded in
+the plant (spec 04 §2):
 
-- **Back click** — vent and return to `default` (stop current program → vent → start
-  `default`).
-- **Back long-press** — vent and run the `browser` program (stop current program → vent →
-  run `browser`).
+- **Back hold 5 s** — abort: stop the current program → vent → start `default`.
 
-A program that registers `buttons.on(buttons.BACK, fn)` takes these gestures for itself;
-the device stops delivering them.
+It is a plant-side hold condition, not an event the program can consume: the program still
+receives the Back events of that press, and is aborted anyway. A program that ignores the
+abort and stops yielding is likewise stopped and vented by the runaway watchdog (spec 01
+§5).
 
-**Holding Back for 5 s is always a hard escape**, claimed or not: the device stops the
-program, vents, and runs `default`. A program cannot consume or override it. A program
-that claims Back and never yields is likewise stopped and vented by the runaway watchdog
-(spec 01 §5).
+Every other Back event (click, long-press, repeat) is delivered to the program like any
+other button and has no device meaning.
 
 ## 5. Mode transitions
 
@@ -61,7 +59,7 @@ that claims Back and never yields is likewise stopped and vented by the runaway 
 | `set mode standalone` | start `default` (home) if nothing is running |
 | `run <name>` (stand-alone) | stop current program → vent → start `name` |
 | `run <name>` (peripheral) | switch to stand-alone, then the same |
-| Local Back click | stop → vent → start `default` |
+| Back hold 5 s | stop → vent → start `default` |
 | Peripheral + detach | vent → switch to stand-alone |
 | Fault latch / sensor loss | vents and latches regardless of mode; only `reset` clears |
 
@@ -76,17 +74,17 @@ that claims Back and never yields is likewise stopped and vented by the runaway 
 ## 7. Headless operation
 
 `default` is the boot program, so a device with no host is fully self-contained: power on
-→ `default` runs; Back long → `browser` → pick a program; Back click → home. No host is
-ever required, and no state is lost across a power cycle except the running program
-(which restarts as `default`).
+→ `default` runs; the selector (`browser`) is opened from a program, not by a device
+gesture; Back hold 5 s always aborts home. No host is ever required, and no state is lost
+across a power cycle except the running program (which restarts as `default`).
 
 ## 8. Acceptance criteria
 
 - Attaching USB does not change the mode; the device stays in whatever mode it was in.
 - Unplugging USB in peripheral mode vents and switches to stand-alone.
 - Unplugging USB in stand-alone mode leaves the running program running.
-- Back click from a running program vents and starts `default`; Back long vents and runs
-  `browser`.
+- Holding Back for 5 s from a running program stops it, vents, and starts `default`,
+  whatever the program registered for Back.
 - `set mode peripheral` stops the program, vents, and halts the VM; `set mode standalone`
   runs `default`.
 - Boot with a deleted `default` still boots into the re-seeded passive `default`.
