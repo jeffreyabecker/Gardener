@@ -657,12 +657,12 @@ String SerialLink::statusBody() const {
   addFloatToken(buf, "kpa", snapshot_.plant.kpa, 2);
   addFloatToken(buf, "vac", snapshot_.plant.vacuumKpa, 2);
   addFloatToken(buf, "pct", snapshot_.plant.vacuumPercent, 1);
-  if (snapshot_.plant.targetActive) {
+  if (snapshot_.plant.targetKpa > 0.0f) {
     addFloatToken(buf, "target", snapshot_.plant.targetKpa, 1);
   } else {
     addToken(buf, "target", "-");
   }
-  addFloatToken(buf, "floor", snapshot_.plant.floorKpa, 1);
+  addFloatToken(buf, "floor", cfg::CONTROL_FLOOR_KPA, 1);
   addFloatToken(buf, "duty", snapshot_.plant.duty, 1);
   addToken(buf, "state", runStateName(snapshot_.plant.runState));
   if (snapshot_.batteryPresent) {
@@ -671,7 +671,7 @@ String SerialLink::statusBody() const {
     addToken(buf, "batt", "-");
   }
   addToken(buf, "sensor", snapshot_.plant.sensorOk ? "1" : "0");
-  addToken(buf, "fault", snapshot_.plant.faulted ? snapshot_.plant.faultCode : "none");
+  addToken(buf, "fault", snapshot_.plant.faultCode[0] ? snapshot_.plant.faultCode : "none");
   addU32Token(buf, "up", snapshot_.uptimeMs);
 
   return buf;

@@ -31,6 +31,10 @@ constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
 // Measured capability: about 60 kPa of suction below ambient. Targets are relative to the
 // captured ambient too, so this is also the deepest one the pump can reach — the floor.
 constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;
+// The floor `status` reports: the deepest target worth offering, which is the pump's reach
+// unless the loop refuses targets that deep anyway. A constant, because both bounds are.
+constexpr float CONTROL_FLOOR_KPA =
+    PUMP_MAX_SUCTION_KPA > CONTROL_MIN_TARGET_KPA ? PUMP_MAX_SUCTION_KPA : CONTROL_MIN_TARGET_KPA;
 
 // --- Vent valve ------------------------------------------------------------
 // The valve is normally open (Q10): energise to close, so venting is the de-energised

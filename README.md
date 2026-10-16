@@ -53,9 +53,10 @@ so capturing a new one restates every target, and both want the rig at rest when
 
 ```
 core/   shared foundations: config, math, the machine view
-hal/    one file per physical device, plus the board pin map and the panel interface
-app/    the instrument: the plant, the snapshot, the serial interface, the display
-        overlay, the composition root
+hal/    what the device presents rather than what the loop drives: the panel, the
+        battery gauge, and the board pin map
+app/    the instrument: the plant with its three devices, the snapshot, the serial
+        interface, the display overlay, the composition root
 ```
 
 Dependencies only ever point downwards, and `scripts/check-layers.ps1` fails the build if one
@@ -69,9 +70,9 @@ points up:
 
 Three rules make that hold:
 
-* **No service locator.** Every class takes exactly what it uses, by reference, in its
-  constructor. `App` is the only file that knows the whole graph, and a missing dependency is
-  a compile error rather than a null pointer at runtime.
+* **No service locator.** Nothing reaches for a global to find what it needs: a class is handed
+  what it uses at construction, or owns it outright. `App` is the only file that knows the whole
+  graph, and a missing dependency is a compile error rather than a null pointer at runtime.
 * **No shared `util`.** A helper lives with its single owner. `core/` is visible everywhere,
   so anything parked there is public API whether or not that was the intent.
 * **The machine view is plain data.** [core/Snapshot.h](./libraries/VacuumCore/src/core/Snapshot.h)
@@ -80,9 +81,12 @@ Three rules make that hold:
   instant without either reader holding a driver reference, or a driver knowing that a display
   or a controller exists.
 
-`hal/` never sees `app/`, which is the rule that keeps a driver independent of the instrument
-built on top of it: the drivers report what they are doing as values, and the composition root
-is the only thing that says it out loud.
+`hal/` never sees `app/`, and what it holds is the readouts and the wiring: the panel, the
+battery gauge and the pin map. The sensor, the pump and the valve are the plant's own instead —
+each has exactly one user, so they sit in
+[app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) beside the loop that depends
+on them, and the pins, the bus traffic and the control law are read in one file. What is left in
+`hal/` is what a second `app/` file needs, or what a board variant edits.
 
 ## Wiring
 
@@ -274,7 +278,9 @@ One class, because the state the chamber is in and the state the run is in turne
 same state.
 
 [VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the plant and the machine on
-top of it: the target, the PID on pressure relative to the captured ambient (all terms in kPa,
+top of it, and it drives its own three devices: the sensor poll, the PWM output and the valve are
+inside it, so a change to a pin or a bus read sits next to the loop that depends on it. What it
+holds is the target, the PID on pressure relative to the captured ambient (all terms in kPa,
 and the same frame a target is set in), the valve, the pump, the run state in the diagram below
 and the fault latch. The pump is the only actuator, so the loop can pull down but never vent —
 the vent valve is the only way back up. When the measurement undershoots the target the output

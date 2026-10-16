@@ -183,9 +183,9 @@ the surfaces overlap.
 | `vacuum.delay(ms)` | `delay` | yields, aborts on stop |
 
 `vacuum.state()` returns a Berry map with keys `kpa`, `vac`, `pct`, `ambient`, `target`,
-`target_active`, `duty`, `floor`, `state`, `sensor_ok`, `reading_valid`, `faulted`,
-`fault`. Programs format numbers with Berry's built-in `string.format` and `str`; the
-firmware exposes no formatter.
+`duty`, `floor`, `state`, `sensor_ok`, `fault` — the plant readout, with `target` at 0 while no
+target is set and `fault` empty while nothing is latched. Programs format numbers with Berry's
+built-in `string.format` and `str`; the firmware exposes no formatter.
 
 ### 6.2 `program` — identity and params
 

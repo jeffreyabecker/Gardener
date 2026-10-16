@@ -32,12 +32,12 @@ struct PlantState {
   // kpa is the sensor's own absolute reading. Every other pressure here is measured from the
   // captured reference, which is the frame the target is stated in.
   float kpa = 0.0f, vacuumKpa = 0.0f, vacuumPercent = 0.0f, ambientKpa = 0.0f;
-  float targetKpa = 0.0f;  // depth below the reference; only meaningful while targetActive
-  bool targetActive = false;
+  // Depth below the reference, and 0 while no target is set: setTarget() refuses anything that
+  // shallow, so one number carries both facts and there is nothing to keep in step.
+  float targetKpa = 0.0f;
   float duty = 0.0f;
-  float floorKpa = 0.0f;  // deepest reachable target, in the same frame
-  bool sensorOk = false, readingValid = false;
-  bool faulted = false;
+  bool sensorOk = false;
+  // Empty while nothing is latched, which is also how a latched fault is recognised.
   const char* faultCode = "";
 };
 

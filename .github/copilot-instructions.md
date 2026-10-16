@@ -35,9 +35,11 @@ instead of building beside it. When a design is larger than the thing it does, t
 bug, and every part of it should have a reason a reviewer can point at.
 
 **One class where one class works.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
-is the plant *and* the machine, because the chamber's state and the run's state turned out to be one
-state. Don't pre-split it into a plant and a controller, and don't add a base class, an interface or
-a policy object for a second implementation that does not exist.
+is the plant, the machine and the three devices it drives — the sensor, the pump and the valve —
+because the chamber's state and the run's state turned out to be one state, and each of those
+devices has exactly one user. Don't split it into a plant, a controller and a driver per device, and
+don't add a base class, an interface or a policy object for a second implementation that does not
+exist.
 
 **A value beats a mechanism.** New state is a field on
 [PlantState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
