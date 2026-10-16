@@ -21,3 +21,6 @@ venv/
 Thumbs.db
 *.swp
 .vscode/arduino/
+
+# Shelved work (Berry, zipped for later)
+.shelved/
