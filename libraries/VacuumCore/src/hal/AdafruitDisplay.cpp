@@ -12,11 +12,6 @@ static_assert(!std::is_abstract<AdafruitDisplay>::value,
 
 }  // namespace
 
-bool AdafruitDisplay::begin() {
-  // The STEMMA QT breakout has no reset line, so the library must not poke one.
-  return panel_.begin(pins::OLED_I2C_ADDR, false);
-}
-
 void AdafruitDisplay::text(int16_t x, int16_t y, const String& value, uint8_t size,
                            bool inverted) {
   draw(x, y, value.c_str(), size, inverted);

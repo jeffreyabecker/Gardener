@@ -28,9 +28,6 @@ class Display {
   virtual ~Display() = default;
 
   // --- the panel -----------------------------------------------------------
-  // False when no panel answered. Drawing before this succeeds is not an error, it is just
-  // invisible.
-  virtual bool begin() = 0;
   virtual void flush() = 0;  // push what has been drawn to the glass
 
   // --- geometry ------------------------------------------------------------

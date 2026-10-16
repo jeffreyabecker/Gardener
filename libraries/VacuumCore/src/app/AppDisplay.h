@@ -20,7 +20,6 @@ class AppDisplay : public Display {
       : inner_(inner), snapshot_(snapshot) {}
 
   // --- the panel -----------------------------------------------------------
-  bool begin() override { return inner_.begin(); }
   void flush() override;  // draws the battery first, then flushes
 
   // --- geometry ------------------------------------------------------------

@@ -1,26 +1,26 @@
 #pragma once
 
-#include <Adafruit_SH110X.h>
+#include <Adafruit_GrayOLED.h>
 #include <stdint.h>
 
 #include "hal/Display.h"
-#include "hal/Pins.h"
 
 namespace gardener {
 
-// The Display for this board: an Adafruit SH1106G panel, with the monochrome colours supplied
-// here so nothing outside this file has to know that 1 lights a pixel.
+// The Display for a monochrome Adafruit GrayOLED panel, with the monochrome colours supplied here
+// so nothing outside this file has to know that 1 lights a pixel.
 //
-// It names the concrete panel because bring-up is the one thing that is not shared: in this
-// library every drawing verb comes from Adafruit_GFX, `display()` from Adafruit_GrayOLED, and
-// `begin()` from the panel class itself. A different panel is therefore a different adapter - or
-// a change to this one line - which is the price of a `begin()` that can actually probe.
+// It takes the GrayOLED base rather than the fitted panel, because every verb it needs is on the
+// base: the drawing from Adafruit_GFX, `display()` from Adafruit_GrayOLED. A different SH110x
+// panel is then a change at the composition root, and nothing here.
+//
+// Bring-up is deliberately not here. `begin()` takes the I2C address and the reset line, so it
+// lives on the panel class, and the panel class is the one thing App knows by name.
 class AdafruitDisplay : public Display {
  public:
-  explicit AdafruitDisplay(Adafruit_SH1106G& panel) : panel_(panel) {}
+  explicit AdafruitDisplay(Adafruit_GrayOLED& panel) : panel_(panel) {}
 
   // --- the panel -----------------------------------------------------------
-  bool begin() override;
   void flush() override { panel_.display(); }
 
   // --- geometry ------------------------------------------------------------
@@ -99,7 +99,7 @@ class AdafruitDisplay : public Display {
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted);
   void measure(const char* value, uint8_t size, int16_t& outWidth, int16_t& outHeight);
 
-  Adafruit_SH1106G& panel_;
+  Adafruit_GrayOLED& panel_;
 };
 
 }  // namespace gardener

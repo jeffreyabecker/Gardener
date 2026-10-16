@@ -31,8 +31,9 @@ bool App::begin() {
 
   Wire.begin(pins::I2C_SDA, pins::I2C_SCL, pins::I2C_FREQ_HZ);
 
+  // The panel is the one thing this root knows by name, so it is the one that brings it up.
   // The STEMMA QT breakout has no reset line, so do not let the library poke one.
-  displayOk_ = display_.begin();
+  displayOk_ = panel_.begin(pins::OLED_I2C_ADDR, false);
   bool sensorOk = sensor_.begin(Wire);
   bool pumpOk = pump_.begin();
   vent_.begin();
