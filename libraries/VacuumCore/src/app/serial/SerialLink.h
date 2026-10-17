@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "app/Logger.h"
 #include "app/serial/Items.h"
 #include "app/serial/LineGrammar.h"
 #include "app/serial/SerialSurface.h"
@@ -16,17 +17,15 @@ class VacuumSystem;
 // The serial interface to the controller: the bytes, the dispatch, the replies and the diagnostics.
 // One protocol over several files — the line grammar in app/serial/LineGrammar.h, the wire surface as
 // data in app/serial/SerialSurface.h, the payload text in app/serial/SerialPayload.cpp, the discovery
-// pages in app/serial/SerialHelp.cpp, the panel verbs in app/serial/SerialDraw.cpp — because text is
-// what makes a single file hard to read. The byte half stays here: on a wire it is
-// available/read/write, three calls,
-// and a transport split would need tasks, callbacks and an MTU before it bought anything.
+// pages in app/serial/SerialHelp.cpp, the diagnostics in app/serial/Log.h — because text is what makes
+// a single file hard to read. The byte half stays here: on a wire it is available/read/write, three
+// calls, and a transport split would need tasks, callbacks and an MTU before it bought anything.
 //
-// A command is a resource and an op: `vacuum target=40`, `panel draw clear`, `link term=off`. The
+// A command is a resource and an op: `vacuum target=40`, `device reboot`, `link term=off`. The
 // first token says what is being touched and the second says what to do with it, so no verb has to
-// cover a vacuum-system actuator, two panel properties, a framing setting and a diagnostics switch at once,
-// and no actuator is a bare verb while its neighbour is a `set`. Everything after the op belongs to
-// the op, which is why `panel draw text …` can carry a string with spaces in it and a write can
-// carry several fields, without the framing layer knowing about either.
+// cover a vacuum-system actuator, a framing setting and a diagnostics switch at once, and no
+// actuator is a bare verb while its neighbour is a `set`. Everything after the op belongs to the
+// op: a write carries several fields, and an action takes no argument at all.
 //
 // Every reply payload is `key=value` items and nothing else: an action reports `result=<action>`
 // and the fields it changed, a read reports its fields, and a write reports the field the way a
@@ -34,21 +33,18 @@ class VacuumSystem;
 // field, value, bound, reason or mode that caused it rather than leaving it in a log a client may
 // have turned off.
 //
-// It is also the display driver: the host draws the panel with `panel draw` and puts a frame on the
-// glass with `panel flush`. The display it holds is the overlay, so every flush composites the
-// battery on the way out and a host cannot erase it.
+// It also holds the display, which is where `panel get` reads the panel geometry.
 //
 // Everything runs on the main loop: lines are assembled here and dispatched inline, and replies go
 // straight back out. There is no second task, no queue, and no framing above the line. Diagnostics
 // share the stream, marked with '[' so a controller can tell a record from a reply.
 //
-// The end of a line is a string, not a fixed byte: `link term` can point it at a marker, which is
-// how a whole multi-line payload — a program's source — arrives as a single command rather than in
-// chunks. Replies are always newline terminated.
+// The end of a line is a string, not a fixed byte: `link term` can point it at a marker rather than
+// newline. Replies are always newline terminated.
 //
 // The stream and the presence check are injected rather than assumed, so pointing the interface at
 // UART0 instead of USB CDC is a one line change in App.
-class SerialLink {
+class SerialLink : public Logger {
  public:
   // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
   // case a lost link is simply never reported.
@@ -65,11 +61,12 @@ class SerialLink {
   // only reports it.
   bool consumeLinkLost();
 
+  // --- Logger --------------------------------------------------------------
   // Diagnostics, through the interface that owns the stream, which is what makes `device log=off`
   // total.
-  void info(const char* text);
-  void warn(const char* text);
-  void error(const char* text);
+  void info(const char* text) override;
+  void warn(const char* text) override;
+  void error(const char* text) override;
 
  private:
   // --- bytes ---------------------------------------------------------------
@@ -98,18 +95,14 @@ class SerialLink {
   // any writer runs, so a writer only has to know its own.
   bool writeDevice(const FieldWrite* writes, uint8_t count);
   bool writeVacuum(const FieldWrite* writes, uint8_t count);
-  bool writePanel(const FieldWrite* writes, uint8_t count);
   bool writeLink(const FieldWrite* writes, uint8_t count);
 
   // --- actions -------------------------------------------------------------
-  // `rest` is what follows the action on the line, and null for every action that takes nothing.
-  void deviceReboot(char* rest);
-  void vacuumStart(char* rest);
-  void vacuumStop(char* rest);
-  void vacuumReset(char* rest);
-  void vacuumCapture(char* rest);
-  void panelDraw(char* rest);
-  void panelFlush(char* rest);
+  void deviceReboot();
+  void vacuumStart();
+  void vacuumStop();
+  void vacuumReset();
+  void vacuumCapture();
 
   // --- replies -------------------------------------------------------------
   void ok(const String& items);
@@ -133,13 +126,6 @@ class SerialLink {
   void help(Tokens& tokens);
   void emitResourceList();
   void emitResourcePage(const ResourceSpec& resource);
-  void emitDrawPage(const ResourceSpec& resource, const char* action);
-
-  // --- drawing -------------------------------------------------------------
-  // `panel draw <op> …`: the op and its coordinates, which are positional by design. Defined in
-  // app/serial/SerialDraw.cpp.
-  void drawOps(char* rest);
-  void applyOp(const DrawOp& op, Tokens& tokens);
 
   VacuumSystem& system_;
   Display& display_;

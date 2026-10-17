@@ -29,14 +29,8 @@ bool parseFloat(const char* text, float& out);
 // reports: an empty value is there for the caller to refuse.
 char* splitValue(char* token);
 
-// A coordinate. Out of range is refused rather than wrapped: the library clips anything off the
-// panel, but a coordinate that does not fit in an int16_t is a client bug worth telling about.
-bool parseCoord(const char* text, int16_t& out);
-
 // Walks a command line one token at a time, NUL terminating as it goes, so a command takes exactly
-// as many tokens as it needs and then treats the rest of the line as text. That is the whole of the
-// tokenising: a command's arguments are its own business, and the only thing the layer above knows
-// is where they start.
+// as many tokens as it needs and the layer above can refuse anything left over.
 class Tokens {
  public:
   explicit Tokens(char* line) : cursor_(line) {}
@@ -50,8 +44,8 @@ class Tokens {
     return token;
   }
 
-  // Everything left, leading spaces skipped: the string a `draw text` carries, or null when the
-  // line is spent.
+  // Everything left, leading spaces skipped: what follows the tokens a command consumed, or null
+  // when the line is spent.
   char* rest() {
     while (*cursor_ == ' ' || *cursor_ == '\t') cursor_++;
     return *cursor_ == '\0' ? nullptr : cursor_;

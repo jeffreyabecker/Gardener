@@ -118,14 +118,6 @@ void readFault(const WireView& view, Items& out) {
 
 void readUptime(const WireView& view, Items& out) { out.addU32("up", view.snapshot.uptimeMs); }
 
-void readRotation(const WireView& view, Items& out) {
-  out.addU32("rotation", view.display.rotation());
-}
-
-void readInvert(const WireView& view, Items& out) {
-  out.addFlag("invert", view.display.inverted());
-}
-
 void readWidth(const WireView& view, Items& out) {
   out.addU32("w", (uint32_t)view.display.width());
 }
@@ -191,8 +183,6 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"up", false, "int", "ms", nullptr, nullptr, nullptr, readUptime},
   };
   static const FieldSpec kPanelFields[] = {
-      {"rotation", true, "int", nullptr, nullptr, &ROTATION_MIN, &ROTATION_MAX, readRotation},
-      {"invert", true, "bool", nullptr, "on,off", nullptr, nullptr, readInvert},
       {"w", false, "int", "px", nullptr, nullptr, nullptr, readWidth},
       {"h", false, "int", "px", nullptr, nullptr, nullptr, readHeight},
   };
@@ -202,27 +192,20 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
   };
 
   static const ActionSpec kDeviceActions[] = {
-      {"reboot", false, &SerialLink::deviceReboot},
+      {"reboot", &SerialLink::deviceReboot},
   };
   static const ActionSpec kVacuumActions[] = {
-      {"start", false, &SerialLink::vacuumStart},
-      {"stop", false, &SerialLink::vacuumStop},
-      {"reset", false, &SerialLink::vacuumReset},
-      {"capture", false, &SerialLink::vacuumCapture},
-  };
-  static const ActionSpec kPanelActions[] = {
-      // The one action whose arguments are not a fixed list: the rest of the line is an op and its
-      // coordinates, and `help panel draw` is what lists the ops.
-      {"draw", true, &SerialLink::panelDraw},
-      {"flush", false, &SerialLink::panelFlush},
+      {"start", &SerialLink::vacuumStart},
+      {"stop", &SerialLink::vacuumStop},
+      {"reset", &SerialLink::vacuumReset},
+      {"capture", &SerialLink::vacuumCapture},
   };
 
   // In the order `help` lists them.
   static const ResourceSpec kResources[] = {
       {"vacuum", kVacuumFields, countOf(kVacuumFields), kVacuumActions, countOf(kVacuumActions),
        &SerialLink::writeVacuum},
-      {"panel", kPanelFields, countOf(kPanelFields), kPanelActions, countOf(kPanelActions),
-       &SerialLink::writePanel},
+      {"panel", kPanelFields, countOf(kPanelFields), nullptr, 0, nullptr},
       {"link", kLinkFields, countOf(kLinkFields), nullptr, 0, &SerialLink::writeLink},
       {"device", kDeviceFields, countOf(kDeviceFields), kDeviceActions, countOf(kDeviceActions),
        &SerialLink::writeDevice},

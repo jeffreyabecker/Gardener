@@ -11,7 +11,7 @@ namespace gardener {
 // in the protocol has, and it is what lets a value hold any printable character — a separator that
 // can appear inside a value is a separator that has to be escaped.
 //
-// Every row is derived from the tables in app/serial/SerialPayload.cpp and app/serial/SerialDraw.cpp, so a host
+// Every row is derived from the tables in app/serial/SerialPayload.cpp, so a host
 // that enumerates `help` and replays what it finds can never be told `unknown_command`, and a bound
 // printed here is the same constant the validator refuses with.
 
@@ -28,28 +28,15 @@ void SerialLink::help(Tokens& tokens) {
   for (uint8_t i = 0; i < count; i++) {
     if (!same(resources[i].name, resource)) continue;
 
+    // One page is the whole answer: no action has a list behind it any more, so anything after a
+    // resource is as unknown as a field that does not exist.
     char* op = tokens.next();
-    if (!op) {
-      emitResourcePage(resources[i]);
+    if (op) {
+      lower(op);
+      errUnknown(op);
       return;
     }
-    lower(op);
-
-    // An action with a list behind it expands into that list, and `panel draw` is the only one: its
-    // list is the drawing operators. Anything else after a resource is as unknown as a field that
-    // does not exist, which is what stops `help vacuum draw` inventing a page of operators that
-    // `vacuum` cannot draw.
-    for (uint8_t a = 0; a < resources[i].actionCount; a++) {
-      if (!same(resources[i].actions[a].name, op)) continue;
-      if (!resources[i].actions[a].takesRest) break;
-      if (tokens.rest() != nullptr) {
-        errBadArgument(tokens.rest());
-        return;
-      }
-      emitDrawPage(resources[i], op);
-      return;
-    }
-    errUnknown(op);
+    emitResourcePage(resources[i]);
     return;
   }
   errUnknown(resource);
@@ -99,31 +86,6 @@ void SerialLink::emitResourcePage(const ResourceSpec& resource) {
   for (uint8_t i = 0; i < resource.actionCount; i++) {
     Items items;
     items.add("action", resource.actions[i].name);
-    // An action whose argument is the rest of the line says so, and its own page says what to put
-    // there.
-    if (resource.actions[i].takesRest) items.add("rest", "1");
-    row(items.text());
-  }
-  endPage(header.text());
-}
-
-// One action with a list behind it: the drawing operators, with the arguments each one takes.
-void SerialLink::emitDrawPage(const ResourceSpec& resource, const char* action) {
-  uint8_t count = 0;
-  const DrawOp* ops = drawOpTable(count);
-
-  Items header;
-  header.add("result", "help");
-  header.add("resource", resource.name);
-  header.add("op", action);
-  header.addU32("rows", count);
-  ok(header.text());
-
-  for (uint8_t i = 0; i < count; i++) {
-    Items items;
-    items.add("op", ops[i].name);
-    items.addU32("args", ops[i].args);
-    if (ops[i].string) items.add("string", "1");
     row(items.text());
   }
   endPage(header.text());

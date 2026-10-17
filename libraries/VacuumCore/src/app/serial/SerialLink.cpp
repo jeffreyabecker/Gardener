@@ -273,14 +273,13 @@ void SerialLink::resourceCommand(const ResourceSpec& resource, Tokens& tokens) {
     for (uint8_t i = 0; i < resource.actionCount; i++) {
       const ActionSpec& action = resource.actions[i];
       if (!same(op, action.name)) continue;
-      // Everything after the op belongs to the op, so an action that takes nothing refuses a line
-      // that gave it something.
+      // An action takes no argument, so anything after it is refused rather than ignored.
       char* rest = tokens.rest();
-      if (!action.takesRest && rest != nullptr) {
+      if (rest != nullptr) {
         errBadArgument(rest);
         return;
       }
-      (this->*action.run)(rest);
+      (this->*action.run)();
       return;
     }
 
@@ -420,52 +419,6 @@ bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
   return true;
 }
 
-bool SerialLink::writePanel(const FieldWrite* writes, uint8_t count) {
-  // Both fields are checked before either is applied: `panel rotation=1 invert=on` is one command,
-  // and a rotation the panel will not take does not leave the invert set.
-  bool haveRotation = false;
-  bool haveInvert = false;
-  int16_t rotation = 0;
-  bool invert = false;
-
-  for (uint8_t i = 0; i < count; i++) {
-    const FieldWrite& write = writes[i];
-
-    if (same(write.field->name, "rotation")) {
-      if (!parseCoord(write.value, rotation)) {
-        errBadArgument(write.value);
-        return false;
-      }
-      if ((float)rotation < *write.field->min || (float)rotation > *write.field->max) {
-        errOutOfRange(write.field->name, write.value, write.field->min, write.field->max);
-        return false;
-      }
-      haveRotation = true;
-      continue;
-    }
-
-    if (same(write.field->name, "invert")) {
-      if (!parseFlag(write.value, invert)) {
-        errBadArgument(write.value);
-        return false;
-      }
-      haveInvert = true;
-      continue;
-    }
-
-    // Unreachable: the dispatch only reaches a writer for a field its resource's table calls
-    // writable, and these are the panel's two.
-    errUnsupported(write.field->name);
-    return false;
-  }
-
-  // Rotation and inversion are properties of the glass rather than of a frame, so neither needs a
-  // flush and both survive one.
-  if (haveRotation) display_.setRotation((uint8_t)rotation);
-  if (haveInvert) display_.invert(invert);
-  return true;
-}
-
 bool SerialLink::writeLink(const FieldWrite* writes, uint8_t count) {
   (void)count;  // one writable field
   return applyTerminator(writes[0].value);
@@ -503,8 +456,7 @@ bool SerialLink::applyTerminator(const char* token) {
 
 // --- actions ---------------------------------------------------------------
 
-void SerialLink::deviceReboot(char* rest) {
-  (void)rest;
+void SerialLink::deviceReboot() {
   okResult("reboot");
   // The reply is out before the restart, because there is no after: a host that received it knows
   // the device is going away, and one that did not can tell from the port disappearing.
@@ -512,8 +464,7 @@ void SerialLink::deviceReboot(char* rest) {
   ESP.restart();
 }
 
-void SerialLink::vacuumStart(char* rest) {
-  (void)rest;
+void SerialLink::vacuumStart() {
   if (!system_.start()) {
     // Three ways to be refused, three reasons: the vacuum system answers with the one that applied,
     // so the reply and the refusal come from the same conditions.
@@ -528,8 +479,7 @@ void SerialLink::vacuumStart(char* rest) {
   ok(out.text());
 }
 
-void SerialLink::vacuumStop(char* rest) {
-  (void)rest;
+void SerialLink::vacuumStop() {
   system_.stop();
   Items out;
   out.add("result", "stop");
@@ -537,8 +487,7 @@ void SerialLink::vacuumStop(char* rest) {
   ok(out.text());
 }
 
-void SerialLink::vacuumReset(char* rest) {
-  (void)rest;
+void SerialLink::vacuumReset() {
   system_.resetFault();
   Items out;
   out.add("result", "reset");
@@ -546,22 +495,11 @@ void SerialLink::vacuumReset(char* rest) {
   ok(out.text());
 }
 
-void SerialLink::vacuumCapture(char* rest) {
-  (void)rest;
+void SerialLink::vacuumCapture() {
   system_.captureAmbient();
   Items out;
   renderField("vacuum", "ambient", out);
   ok(out.text());
 }
-
-void SerialLink::panelFlush(char* rest) {
-  (void)rest;
-  // The frame boundary: everything drawn since the last one goes to the glass, with the battery
-  // composited on the way out.
-  display_.flush();
-  okResult("flush");
-}
-
-void SerialLink::panelDraw(char* rest) { drawOps(rest); }
 
 }  // namespace gardener

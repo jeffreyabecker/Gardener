@@ -21,7 +21,8 @@ App::App()
       display_(panel_),
       overlay_(display_, snapshot_),
       system_(pump_, sensor_, vent_),
-      link_(system_, overlay_, Serial, serialAttached, snapshot_) {}
+      link_(system_, overlay_, Serial, serialAttached, snapshot_),
+      logger_(&link_) {}
 
 // The one place the fitted panel is named, and the only place its concrete type appears. The
 // driver is new'd and never deleted: it lives for the life of the device, whose destructor never
@@ -35,7 +36,7 @@ Adafruit_GrayOLED* App::attachPanel() {
   if (!driver->begin(panel::I2C_ADDR, false)) {
     // No panel, no readout: abort() panics and the ESP32 resets on a panic, so the device keeps
     // trying rather than coming up blind and silent.
-    link_.warn("oled: not found, aborting");
+    logger_->warn("oled: not found, aborting");
     delay(50);
     abort();
   }
@@ -49,7 +50,7 @@ bool App::begin() {
   String boot = "gardener ";
   boot += cfg::FIRMWARE_VERSION;
   boot += " booting";
-  link_.info(boot.c_str());
+  logger_->info(boot.c_str());
 
   Wire.begin(cfg::I2C_SDA, cfg::I2C_SCL, cfg::I2C_FREQ_HZ);
 
@@ -66,15 +67,15 @@ bool App::begin() {
 
   // What came up, and what did not. This is the composition root's job now: the drivers report as
   // values and one place decides what is worth saying.
-  link_.info("oled: online");
-  link_.info(sensorOk ? "mprls: online" : "mprls: not found");
-  link_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
-  link_.info(vent_.energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
-  link_.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
+  logger_->info("oled: online");
+  logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
+  logger_->info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  logger_->info(vent_.energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
+  logger_->info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
-  link_.info(ready.c_str());
+  logger_->info(ready.c_str());
 
   refreshSnapshot();
   link_.begin();
@@ -125,13 +126,13 @@ void App::logRunChanges(uint32_t nowMs) {
     message += " ms";
     if (ventMs >= cfg::VENT_TIMEOUT_MS) {
       message += ", vent timed out";
-      link_.warn(message.c_str());
+      logger_->warn(message.c_str());
       lastState_ = state;
       return;
     }
   }
   if (state == RunState::Venting) ventStartMs_ = nowMs;
-  link_.info(message.c_str());
+  logger_->info(message.c_str());
   lastState_ = state;
 }
 
@@ -149,7 +150,7 @@ void App::update() {
 
   // A controller that goes away releases the chamber (Q4).
   if (link_.consumeLinkLost()) {
-    link_.warn("app: controller left, stopping and venting");
+    logger_->warn("app: controller left, stopping and venting");
     system_.stop();
   }
 

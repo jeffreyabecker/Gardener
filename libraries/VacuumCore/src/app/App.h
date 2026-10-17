@@ -3,6 +3,7 @@
 #include <Adafruit_GrayOLED.h>
 #include <Arduino.h>
 
+#include "app/Logger.h"
 #include "app/Overlay.h"
 #include "app/serial/SerialLink.h"
 #include "app/VacuumSystem.h"
@@ -63,7 +64,10 @@ class App {
   Overlay overlay_;
   VacuumSystem system_;
   SerialLink link_;
-
+  // App reports through the Logger rather than the link, which is the sink it points at once the
+  // link exists. The nil default keeps the pointer valid and silent while the graph is built.
+  NilLogger nilLogger_;
+  Logger* logger_ = &nilLogger_;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };

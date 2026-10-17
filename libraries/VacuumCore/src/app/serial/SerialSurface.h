@@ -10,15 +10,6 @@ namespace gardener {
 
 class SerialLink;
 
-// The two numbers on the wire that are not free: the panel turns through four orientations, and the
-// built-in font scales 1 to 8. Here rather than in core/Config.h because they belong to the panel
-// and its font rather than to the machine's policy, and here rather than in the two files that
-// enforce them because the table prints one of them and the error reply the other.
-constexpr float ROTATION_MIN = 0.0f;
-constexpr float ROTATION_MAX = 3.0f;
-constexpr float DRAW_SIZE_MIN = 1.0f;
-constexpr float DRAW_SIZE_MAX = 8.0f;
-
 // How many fields one write command may carry. A limit rather than a growing buffer, because this
 // path allocates nothing; it is four because no resource has more writable fields than that, so
 // nothing a host has a reason to send is refused for it.
@@ -46,22 +37,6 @@ struct WireView {
   bool hostAttached;
 };
 
-// One drawing operator: its name, how many coordinates it takes, whether its last argument is a
-// string that runs to the end of the line, and the call it makes.
-//
-// The dispatch, the `op=` item in the reply and the rows of `help panel draw` all come from here,
-// so an operator cannot be drawn without being listed or listed without being drawn.
-struct DrawOp {
-  const char* name;
-  uint8_t args;
-  bool string;
-  void (*call)(Display& display, const int16_t* args, const char* text);
-};
-
-// The operators, in the order `help panel draw` lists them. Defined in app/serial/SerialDraw.cpp beside
-// the calls themselves.
-const DrawOp* drawOpTable(uint8_t& count);
-
 // One field of one resource.
 //
 // `type`, `unit` and `choices` are for the help page. `min` and `max` point at the constants the
@@ -78,12 +53,10 @@ struct FieldSpec {
   void (*read)(const WireView& view, Items& out);
 };
 
-// One action. `takesRest` says the action's argument is the rest of the line rather than a fixed
-// count of tokens, which is how `panel draw` receives an op and its coordinates at all.
+// One action. It takes no arguments: everything a command carries beyond the action is a write.
 struct ActionSpec {
   const char* name;
-  bool takesRest;
-  void (SerialLink::*run)(char* rest);
+  void (SerialLink::*run)();
 };
 
 // One field of one write, after the generic half of the dispatch has established that the field

@@ -73,12 +73,4 @@ char* splitValue(char* token) {
   return equals + 1;
 }
 
-bool parseCoord(const char* text, int16_t& out) {
-  float value = 0.0f;
-  if (!parseFloat(text, value)) return false;
-  if (value < -32768.0f || value > 32767.0f) return false;
-  out = (int16_t)value;
-  return true;
-}
-
 }  // namespace gardener

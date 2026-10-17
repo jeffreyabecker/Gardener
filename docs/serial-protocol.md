@@ -12,11 +12,11 @@ safety. All control comes from the controller at the other end of the line, incl
 a run lasts.
 
 This document is the proto 2 surface: commands are resource-first and every reply has the same
-shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §15 lists the old
+shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §14 lists the old
 spellings next to their replacements so a controller can be migrated mechanically.
 
 `vacuum`, `panel`, `link` and `device` are what fw 0.6.0 answers, and `help` lists them with their
-fields, actions and bounds (§11).
+fields, actions and bounds (§10).
 
 ## 1. The port
 
@@ -24,7 +24,7 @@ fields, actions and bounds (§11).
 | --- | --- |
 | Transport | USB CDC (native USB, the USB-C socket) by default; UART0 on GPIO43/44 is a one line change in `App` |
 | Baud | 115200, 8N1 — only meaningful on a real UART: USB CDC ignores it |
-| Terminator | `\n` by default; `link term` can point it at any string of up to 16 characters (§10). A `\r` immediately before the terminator is ignored, so `\r\n` works with the default. `\r` alone does not end a command — set the terminator to `\r` if a console needs that |
+| Terminator | `\n` by default; `link term` can point it at any string of up to 16 characters (§9). A `\r` immediately before the terminator is ignored, so `\r\n` works with the default. `\r` alone does not end a command — set the terminator to `\r` if a console needs that |
 | Line limit | 128 bytes on a command line, or 64 KiB while a custom terminator is set. A longer line is answered `err bad_argument` and swallowed, never truncated |
 
 `USBMode=hwcdc,CDCOnBoot=cdc` is part of the build, not a preference: `CDCOnBoot` is what
@@ -40,13 +40,13 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 2. Send `device get` and check `proto` and `fw`. `proto=2` is this document; a controller that
    does not recognise the number should stop rather than guess, because `proto` only moves when
    a command's meaning has moved.
-3. Ask for what you need: `vacuum get` is the readout, and it is polled (§14). Nothing is
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§13). Nothing is
    pushed.
 4. `help` lists the resources, and `help <resource>` lists that resource's fields and actions
-   with their bounds (§11). A controller that reads `help` once at connect has no reason to
+   with their bounds (§10). A controller that reads `help` once at connect has no reason to
    hardcode a value range again.
 
-**Disconnecting stops the run and vents the chamber** (§13), because a controller that goes
+**Disconnecting stops the run and vents the chamber** (§12), because a controller that goes
 away releases the chamber. The device only acts on it when the stream can report host
 presence, which USB CDC can and a plain UART cannot. A controller that detaches, like a
 `device reboot`, also drops back to the default terminator and an empty buffer, so the next one
@@ -73,17 +73,16 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   There is no verb that covers four unrelated layers, and no actuator that is spelled as a bare
   verb while its neighbour is spelled as a `set`.
 * Only `resource` and `op` are tokens to the framing layer. Everything after them belongs to
-  that op, which is what lets `panel draw text 0 0 2 0 41.3` carry a string with spaces in it,
-  without the grammar having a fixed arity or a special case for it.
+  that op: a write carries `field=value` pairs, and an action takes no argument at all.
 * A field with no `=` is a read; a field with `=` is a write. `get` is the reserved op that
   reads every field of the resource.
 * `resource` and `op` are case insensitive. Values are not, and `link term` is case sensitive on
   purpose — it is a marker, not a word.
 * `-` means unset or not applicable, and it is the only spelling for that. `off` means
-  explicitly disabled, and only a field whose disabled state has a name (`log`, `invert`, `term`)
+  explicitly disabled, and only a field whose disabled state has a name (`log`, `term`)
   uses it.
 * Values never contain a space, and the first `=` separates the key from the value, so a value
-  may contain `=`, `|` or `,` with no quoting. Lists are never packed into a value (§11).
+  may contain `=`, `|` or `,` with no quoting. Lists are never packed into a value (§10).
 * A line starting with `#` is ignored, so a script can carry comments.
 * A command the device does not consume is `bad_argument`: no verb quietly drops a stray
   argument, and no verb accepts one it has no use for.
@@ -95,17 +94,17 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   words, no positional payloads, no `key value` pairs.
 * An **action** replies with `result=<action>` first, then the state fields it changed, named
   exactly as `get` names them:
-  `ok result=start state=PULL`, `ok result=draw op=line`.
+  `ok result=start state=PULL`, `ok result=capture ambient=101.3`.
 * A **read or write** replies with field items only, and a write reports the field the way a
   read would: `vacuum target=40` and `vacuum target` both answer `ok target=40.0`. There is no
   field that can be written but not read.
 * A write validates every field in the command before applying any of them, and a repeated
-  field is `bad_argument`. `panel rotation=1 invert=on` is one command that either sets both or
-  neither. One command may carry at most four fields, which is more than any resource writes.
+  field is `bad_argument`. One command may carry at most four fields, which is more than any
+  resource writes.
 * Values the device formats from a library string have whitespace written as `_`, so an item is
   still one token.
 * A rejected command replies `err <code>` plus items that say what was wrong: the field, the
-  value, the bound, the reason (§12). Detail belongs on the reply channel, so
+  value, the bound, the reason (§11). Detail belongs on the reply channel, so
   `device log=off` cannot hide why a command failed.
 
 ## 4. Diagnostics
@@ -120,7 +119,7 @@ Diagnostics share the stream with replies, distinguished by the first character:
 A controller reads until it sees a line that is not a `[` record. `device log=off` silences
 diagnostics entirely, so a controller that wants a strictly quiet channel can have one, and
 `device get` reports `log=on` or `log=off` so it knows what to expect. Diagnostics are commentary: every
-reason a command failed is also on the reply line (§12).
+reason a command failed is also on the reply line (§11).
 
 ## 5. `device` — the machine and this stream
 
@@ -201,133 +200,36 @@ knowing: it is the shallowest target the loop will accept, and it is reported as
 
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
-| `rotation` | rw | `0`-`3` | panel orientation; outside 0-3 is `err out_of_range field=rotation min=0 max=3` |
-| `invert` | rw | `on` / `off` | swap ink and paper on the whole panel |
-| `w` / `h` | r | pixels | geometry, rotation aware, so a host reads it instead of hardcoding the panel |
+| `w` / `h` | r | pixels | panel geometry, so a host reads it instead of hardcoding the panel |
 
-| Action | Reply | Notes |
-| --- | --- | --- |
-| `panel draw <op> …` | `ok result=draw op=<op>` | one drawing operation into the panel's buffer (§9) |
-| `panel flush` | `ok result=flush` | the frame boundary: buffer to glass, battery composited |
-
-`rotation` and `invert` are properties of the glass rather than of a frame, so neither needs a
-`panel flush` and both survive one. They are also readable, which they were not before: a controller
-that attaches mid-session can ask instead of assuming.
+The panel is a peripheral and the device holds the display, but the wire only reports its
+geometry: there is no drawing command, and no panel setting to write.
 
 ```
 -> panel get
-<- ok rotation=1 invert=off w=64 h=128
--> panel rotation=0
-<- ok rotation=0
--> panel invert=on
-<- ok invert=on
+<- ok w=64 h=128
 ```
 
 ## 8. `link` — how commands arrive
 
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
-| `term` | rw | `off`, or a marker of up to 16 decoded characters | point the end of a command at a marker, so one command can carry a whole multi-line payload (§10). `off` is newline framing |
+| `term` | rw | `off`, or a marker of up to 16 decoded characters | point the end of a command at a marker rather than newline (§9). `off` is newline framing |
 | `attached` | r | `1` / `0` / `-` | a host has the port open; `-` when the transport cannot tell (a plain UART) |
 
 `link term` is the only command whose *value* is case sensitive, and the only one that changes
 how the device reads bytes rather than what it does with them. It is not a mode: it is a
 receive-side setting and works the same whatever the device is doing.
 
-## 9. Drawing on the panel
+## 9. Framing, terminators and payloads
 
-The display is a 128x64 monochrome OLED, and from this side of the cable it is a buffer and a
-frame boundary. `panel draw` writes into the buffer; nothing reaches the glass until
-`panel flush`, which pushes the whole buffer at once. So a frame is however many operations the
-host wants, then one `panel flush`, and a host can redraw at whatever rate it likes without a
-partial frame appearing.
-
-```
--> panel draw clear
-<- ok result=draw op=clear
--> panel draw text 0 0 2 0 41.3
-<- ok result=draw op=text
--> panel draw rect 0 40 100 8
-<- ok result=draw op=rect
--> panel draw fillrect 1 41 72 6
-<- ok result=draw op=fillrect
--> panel flush
-<- ok result=flush
-```
-
-| Operator | Arguments |
-| --- | --- |
-| `clear` | — |
-| `pixel` | `x y` |
-| `line` | `x0 y0 x1 y1` |
-| `hline` | `x y w` |
-| `vline` | `x y h` |
-| `rect` | `x y w h` |
-| `fillrect` | `x y w h` |
-| `roundrect` | `x y w h r` |
-| `fillroundrect` | `x y w h r` |
-| `circle` | `x y r` |
-| `fillcircle` | `x y r` |
-| `ellipse` | `x y rx ry` |
-| `fillellipse` | `x y rx ry` |
-| `triangle` | `x0 y0 x1 y1 x2 y2` |
-| `filltriangle` | `x0 y0 x1 y1 x2 y2` |
-| `rotatedrect` | `cx cy w h angle` |
-| `fillrotatedrect` | `cx cy w h angle` |
-| `text` | `x y size inverted string` |
-
-There are eighteen of them, and they are positional on purpose: a frame is twenty lines or
-more, and making the geometry `key=value` would multiply the bytes on the one command where
-volume matters. This is the only op whose arguments stray from the item shape, and only the
-last one does.
-
-Every operator answers `ok result=draw op=<op>`, including `clear`. An operator that is not in
-the list is `err unknown_command token=<op>`.
-
-**Coordinates** are panel pixels, origin top left, signed 16-bit. They are checked against that
-range and nothing else: a coordinate off the panel is not an error, and what becomes of it is the
-panel library's business. `panel get` reports `w` and `h`, and orientations 0 and 2 are 128 wide
-by 64 high while 1 and 3 swap that. Nothing on the wire reports the size of a string — the
-font is a known font, so layout is the host's arithmetic to do.
-
-**Text** is the one operator whose last argument is a string: everything after `inverted` is the
-string, verbatim, spaces and all, to the end of the line. That is the reason `panel draw` is
-handed the rest of the line rather than a token list, and the reason a string cannot be followed
-by anything. `size` scales the device's built-in font and is 1 to 8; anything else is
-`err out_of_range field=size min=1 max=8`. There is no font choice — the device ships one font
-and `size` is a scale — and `inverted` is `0` for ink glyphs on whatever is already there, `1`
-for paper glyphs on an ink block, which is how a label gets a filled background.
-
-**Two things on the panel are not the host's.** The device draws the boot splash before any host
-has spoken, and it composites the battery on every `panel flush`, after the host's frame.
-Drawing over either does not remove it: the battery is put back on the way out, and the splash
-only goes when the host draws a frame over it.
-
-**The buffer is not cleared for you.** A frame is whatever is in the buffer when `panel flush`
-arrives, so a redraw starts with `panel draw clear` or deliberately draws over the last frame.
-`device reboot` resets all of it: empty buffer, rotation 0, ink normal, and the splash drawn
-again.
-
-**Three things are absent on purpose.** A host should know they are not coming:
-
-* **No bitmap blit.** Icons are composed from the shape operators, not sent as images.
-* **No text measurement.** The host owns layout, so it knows or reserves the width of its own
-  strings.
-* **No `clearRect`.** The device's own drawing interface has one; the wire does not, because a
-  frame is redrawn whole and a partial erase would need a second way to express the frame.
-
-## 10. Framing, terminators and payloads
-
-`link term` points the end of a command at a marker, which is how a whole multi-line payload
-arrives as **one** command rather than in chunks:
+`link term` points the end of a command at a marker rather than at newline:
 
 ```
 -> link term=<<<END>>>
 <- ok term=<<<END>>>
--> panel draw text 0 0 2 0 a string
-   that spans two lines
-<<<END>>>
-<- ok result=draw op=text
+-> vacuum start<<<END>>>
+<- ok result=start state=PULL
 -> link term=off
 <- ok term=off
 ```
@@ -339,15 +241,14 @@ arrives as **one** command rather than in chunks:
   back, so a marker cannot be the literal word `off`. Any other marker of up to 16 characters is available, and
   `link term` reads back which one is in force. `-` is not an alias: `-` means unset and there is
   no unset marker.
-* A marker turns newline framing off, so a whole multi-line payload arrives as one command. The
-  custom terminator is a receive-side setting: replies stay `LF` terminated, whatever the marker
-  is, so a controller that counts them keeps counting them.
-* The line ceiling is 128 bytes, or `COMMAND_PAYLOAD_MAX` while a marker is set — the one case
-  where a single command can be a whole payload, and the reason the ceiling moves at all.
-* The framing is reset by link loss and by `device reboot`. A controller that dies mid-payload
+* A marker turns newline framing off: a line ends at the marker rather than at `\n`. The custom
+  terminator is a receive-side setting: replies stay `LF` terminated, whatever the marker is, so
+  a controller that counts them keeps counting them.
+* The line ceiling is 128 bytes, or `COMMAND_PAYLOAD_MAX` while a marker is set.
+* The framing is reset by link loss and by `device reboot`. A controller that dies mid-line
   therefore does not leave a marker behind for the next one.
 
-## 11. Pages
+## 10. Pages
 
 One op answers with a page: `help`. A page is one reply line, then
 any number of rows, then an `end` line:
@@ -372,7 +273,7 @@ are abridged: a real one carries a row per field and a row per action.
 -> help
 <- ok result=help rows=4
 <- resource=vacuum fields=12 actions=4
-<- resource=panel fields=4 actions=2
+<- resource=panel fields=2 actions=0
 <- resource=link fields=2 actions=0
 <- resource=device fields=7 actions=1
 <- end result=help rows=4
@@ -384,30 +285,29 @@ are abridged: a real one carries a row per field and a row per action.
 <- action=start
 <- action=capture
 <- end result=help resource=vacuum rows=16
--> help panel draw
-<- ok result=help resource=panel op=draw rows=18
-<- op=clear args=0
-<- op=text args=4 string=1
-<- end result=help resource=panel op=draw rows=18
+-> help panel
+<- ok result=help resource=panel rows=2
+<- field=w type=int access=r unit=px
+<- field=h type=int access=r unit=px
+<- end result=help resource=panel rows=2
 ```
 
-Four row shapes, and the field one carries the bounds a write is held to:
+Three row shapes, and the field one carries the bounds a write is held to:
 
 | Row | Shape |
 | --- | --- |
 | resource | `resource=<name> fields=<n> actions=<n>` |
 | field | `field=<name> type=<int\|float\|bool\|choice\|text> access=<r\|rw>` and, where the field has one, `min=` / `max=` / `choices=` / `unit=` |
-| action | `action=<name>`, plus `rest=1` when the argument is the rest of the line — which is what `help <resource> <action>` is for |
-| op | `op=<name> args=<n>`, plus `string=1` when the last argument is a string to the end of the line |
+| action | `action=<name>` |
 
-The firmware answers four resources, and `help` names every field, action and op it can be asked
-to do.
+The firmware answers four resources, and `help` names every field and action it can be asked to
+do.
 
 `help` is the only multi-line reply a controller can get without asking for one, and every
-resource, field, action and op a page names is something the device knows — enumerating `help` and
+resource, field and action a page names is something the device knows — enumerating `help` and
 replaying what it names can never produce `err unknown_command`.
 
-## 12. Errors
+## 11. Errors
 
 Every `err` is one of these five, so a controller can switch on the code instead of parsing
 prose, and each carries items naming what was involved, where there is something to name:
@@ -427,8 +327,8 @@ prose, and each carries items naming what was involved, where there is something
 <- err unsupported field=ambient
 -> set target 40
 <- err unknown_command token=set
--> panel draw text 0 0 9 0 hi
-<- err out_of_range field=size value=9 min=1 max=8
+-> vacuum target=1
+<- err out_of_range field=target value=1 min=5.0
 -> vacuum start extra
 <- err bad_argument token=extra
 ```
@@ -441,7 +341,7 @@ its first command instead of misreading a reply. A field named with no value to 
 `bad_argument token=<the field>`, and a command with no op at all is `bad_argument` with nothing to
 name.
 
-## 13. State model
+## 12. State model
 
 The controller owns the target, the duration and when to start and stop. The device owns what
 happens when nobody is watching, and nothing else.
@@ -470,8 +370,8 @@ What a controller has to know:
   time, so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it
   means the device's own deadband has decided the target is reached, which is the moment to start
   timing and the one thing you cannot work out for yourself, because the deadband is the
-  device's loop. Timing it and drawing it are both yours: the device is not told how long a
-  hold is, and has no command that takes a duration.
+  device's loop. Timing it is yours: the device is not told how long a hold is, and has no
+  command that takes a duration.
 * **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
@@ -488,11 +388,10 @@ What a controller has to know:
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
   than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
-* **Nothing but the splash and the battery appears on the panel unless you draw it.** The device
-  has no page of its own, so a fault, a vent timeout, a low battery and the state itself are only
-  on the wire. Poll `vacuum get` to see them, and draw them if you want them on the glass.
+* **The panel is the device's.** There is no drawing command, so a fault, a vent timeout, a
+  low battery and the state itself are only on the wire. Poll `vacuum get` to see them.
 
-## 14. Rates
+## 13. Rates
 
 Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~140 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout
@@ -505,13 +404,12 @@ followed immediately by `vacuum get` in the same batch may describe the machine 
 the `vacuum start` was handled. Sending `vacuum get` as its own command avoids the question
 entirely.
 
-Drawing is the one place the volume matters. A frame is twenty lines or more. Each loop
-iteration drains everything the host has sent and services **every complete line** it received,
-in arrival order, with nothing dropped and nothing reordered — so a whole frame written in one go
-is handled in one pass. Replies are still exactly one per command, so a host that counts them
+Each loop iteration drains everything the host has sent and services **every complete line** it
+received, in arrival order, with nothing dropped and nothing reordered — so a batch written in one
+go is handled in one pass. Replies are still exactly one per command, so a host that counts them
 reads one per line; it just does not need to assume a batch is spread across iterations.
 
-## 15. Migration from 0.5.0
+## 14. Migration from 0.5.0
 
 `proto=2` is a break, not an addition: every actuator moved under a resource, every reply is
 items, and `set` and the bare-verb actuators are gone. The move is mechanical.
@@ -529,24 +427,22 @@ items, and `set` and the bare-verb actuators are gone. The move is mechanical.
 | `stop` | `vacuum stop` |
 | `reset` | `vacuum reset` |
 | `ambient` | `vacuum capture` |
-| `draw <op> …` | `panel draw <op> …` |
-| `flush` | `panel flush` |
-| `set rotation 1` | `panel rotation=1` |
-| `set invert on` | `panel invert=on` |
 | `set term <<<END>>>` | `link term=<<<END>>>` |
 | `set term off`, `set term -` | `link term=off` |
 | `help` | `help`, or `help <resource>` for one resource's fields and actions |
-| `draw help` | `help panel draw` |
+
+There is no replacement for `draw <op> …`, `flush`, `set rotation` or `set invert`: the wire no
+longer draws on or configures the panel.
 
 Three things changed that are not a rename, and a migrating controller has to know about each:
 
-* **Replies changed shape.** `ok started` is `ok result=start state=PULL`; `ok drawn` is
-  `ok result=draw op=line`; `ok target=off` is `ok target=-`. A controller that parsed the old
-  payloads has to be rewritten, not re-parameterised.
+* **Replies changed shape.** `ok started` is `ok result=start state=PULL`; `ok target=off` is
+  `ok target=-`. A controller that parsed the old payloads has to be rewritten, not
+  re-parameterised.
 * **New reads exist.** `device get`, `vacuum get`, `panel get` and `link get` report
-  everything the device can be asked to do. `rotation`, `invert`, `term` and the ambient
-  reference used to be write-only or missing from the wire; a controller can now rebuild its view
-  after reconnecting instead of assuming.
+  everything the device can be asked to do. `term` and the ambient reference used to be
+  write-only or missing from the wire; a controller can now rebuild its view after reconnecting
+  instead of assuming.
 * **Failures say what was wrong.** `out_of_range` carries the field, the value and the bound;
   `not_ready` carries a reason. Nothing has to go to the diagnostics stream to be
   diagnosable, which matters because `device log=off` is a legitimate thing for a client to do.

@@ -79,7 +79,7 @@ Three rules make that hold:
   because the board's wiring is the same single truth for every layer that names it.
 * **The machine view is plain data.** [core/Snapshot.h](./libraries/VacuumCore/src/core/Snapshot.h)
   carries pressure, pump, run, battery and device state as values. One snapshot is rebuilt in
-  place each loop iteration, so `app/` can format a reply and draw the display from the same
+  place each loop iteration, so `app/` can format a reply and draw the splash from the same
   instant without either reader holding a driver reference, or a driver knowing that a display
   or a controller exists.
 
@@ -220,41 +220,19 @@ driver in `hal/impl/`.
 
 ### Display
 
-The panel is a peripheral: the host draws it over the serial line, and the device draws exactly
-two things of its own — the boot splash, and the battery on top of every frame.
+The panel is a peripheral: the device drives it, and the wire reports only its geometry, `w` and
+`h`, so a host can lay out against the real size instead of assuming it.
 
 ```
   Gardener
-  fw 0.6.0                              ▐███▐          <- device: splash, then the battery
+  fw 0.6.0                              ▐███▐          <- the splash, with the battery on it
 ```
 
-Everything else is whatever the host sent: `panel draw` commands fill the panel's buffer, and
-`panel flush` puts it on the glass. A host that wants the readout the old page drew sends about
-twenty lines per frame:
-
-```
--> panel draw clear
-<- ok result=draw op=clear
--> panel draw text 0 0 1 0 IDLE
-<- ok result=draw op=text
--> panel draw text 48 16 2 0 41.3
-<- ok result=draw op=text
--> panel draw rect 0 40 100 8
-<- ok result=draw op=rect
--> panel draw fillrect 1 41 72 6
-<- ok result=draw op=fillrect
--> panel flush
-<- ok result=flush
-```
-
-| Who draws | What |
-| --- | --- |
-| the device | the splash at boot, and the battery on every frame, both through the overlay so a host cannot erase them — the battery clears its own footprint first, so a host cannot draw into it either |
-| the host | everything else: pressure, target, state, countdown, bars, icons, in whatever layout it likes |
+The splash is the one frame the device draws, at boot, through the overlay that puts the battery
+on it. Nothing on the serial line draws into the buffer or changes the panel's configuration.
 
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
-across a reset. With no host talking, the panel holds the last frame it was given — the splash,
-if a host never drew.
+across a reset. With no host talking, the panel holds that splash.
 
 ### Over the serial line
 
@@ -318,8 +296,8 @@ IDLE ──────────────> PULL ──(target reached)─�
   controller to start timing, and the run continues until the controller sends `vacuum stop`.
 * Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
   run time, so an unattended hold holds until someone stops it.
-* The countdown is the host's job: the host holds the timer and draws it, and the device renders
-  nothing of its own except the splash and the battery.
+* The countdown is the host's job: the host holds the timer, and the device renders nothing of
+  its own except the splash and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
   means energised or de-energised is the fitted part's, and is named in `app/App.h`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
@@ -371,5 +349,5 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
-* [x] Host drawn panel: a `Display` interface, an Adafruit adapter, and a battery overlay
+* [x] Panel: a `Display` interface, an Adafruit adapter, and a battery overlay
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
