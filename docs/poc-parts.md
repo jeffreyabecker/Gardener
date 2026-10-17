@@ -93,3 +93,6 @@ Bench-only, to fix once the loop works.
 * No chamber, so no realistic pump-down time and no leak measurement.
 * The five buttons are wired but unused. The module is a 5-way switch — up, down, left, right,
   centre — so it costs five GPIOs, not four.
+
+Which of these parts move onto the alpha carrier board, and which stay modules, is in
+[alpha-pcb.md](./alpha-pcb.md).
