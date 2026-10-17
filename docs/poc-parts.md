@@ -41,7 +41,7 @@ PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ MPRLS    SDA + SC
 GPIO  8  9            I2C     MPRLS 0x18, panel 0x3C
 GPIO  6               pump
 GPIO  5               valve
-GPIO  1  2  10 11 12  buttons 5-way (unused)
+GPIO  1  2  10 11 12  buttons 5-way (four keys read)
 GPIO  4               battery sense (reserved)
 GPIO  7 13 14 15 16   spare
 GPIO 17 18            spare
@@ -91,8 +91,8 @@ Bench-only, to fix once the loop works.
   and put 100 nF at the module. First upgrade if that is not enough: an AMS1117-3.3 off the 5 V
   rail, for the sensor alone.
 * No chamber, so no realistic pump-down time and no leak measurement.
-* The five buttons are wired but unused. The module is a 5-way switch — up, down, left, right,
-  centre — so it costs five GPIOs, not four.
+* The five buttons are wired and the firmware reads four of them. The module is a 5-way switch —
+  up, down, left, right, centre — so it costs five GPIOs, not four.
 
 Which of these parts move onto the alpha carrier board, and which stay modules, is in
 [alpha-pcb.md](./alpha-pcb.md).

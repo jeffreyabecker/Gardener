@@ -4,7 +4,7 @@
 
 namespace gardener {
 
-// FreeRTOS critical section as a SharedList lock policy.
+// FreeRTOS critical section for a short handoff between an ISR or another task and the loop.
 //
 // enter() masks interrupts on this core and takes the object's spinlock, so the handoff it
 // protects is a few instructions and cannot block or inherit a priority. It is not an ISR

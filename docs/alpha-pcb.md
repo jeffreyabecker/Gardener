@@ -40,7 +40,7 @@ well inside one channel.
 | 3.3 V buck | Retained by request. Header pins mate with a 0.1" female header; check pitch and pin order. Its output is the load rail. |
 | MPRLS breakout | The bare sensor is the same calibrated part with the same port. The breakout adds only an LDO and level shifter, which are harmless at 3.3 V, and it is already tested. Revisit after the closed-loop vacuum control — sensor, PID, pump — is proven on the carrier board. |
 | OLED | Panel part; a 4-pin header is the right amount of integration. |
-| Button module | Mechanical; a header carrying 3.3 V, GND and five keys keeps it panel-mountable. The firmware names four keys today. |
+| Button module | Mechanical; a header carrying 3.3 V, GND and five keys keeps it panel-mountable. The firmware reads four keys today. |
 | Pump, valve, tube, tee | Off-board by nature. |
 
 The breadboard and jumpers are gone; the board is what replaces them.
@@ -81,5 +81,5 @@ the loop to run, but each is cheaper to add now than to retrofit:
 * The battery divider: the firmware has the pin and the constants, but no pack is fitted. Check
   the Super Mini variant first — some boards carry a BAT charger and divider, but the GPIO varies
   (GPIO1, GPIO3 and GPIO4 are all seen). If yours has one, use it instead of the external pair.
-* Reading the buttons: wired and named, still unread.
+* Reading the buttons: wired and read on change interrupts, with no action assigned.
 * The bare MPRLS and the bare OLED: both are mechanical and panel decisions, not wiring decisions.

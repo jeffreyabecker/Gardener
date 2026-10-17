@@ -13,6 +13,9 @@ namespace {
 // plain UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
 
+// The keys in the order a press is reported, which is the panel's order rather than the bit order.
+constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
+
 }  // namespace
 
 App::App()
@@ -72,6 +75,7 @@ bool App::begin() {
   logger_->info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   logger_->info(vent_.energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
   logger_->info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
+  logger_->info("buttons: four keys on interrupt");
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
@@ -136,6 +140,17 @@ void App::logRunChanges(uint32_t nowMs) {
   lastState_ = state;
 }
 
+// The keys are a local surface with no action assigned yet, so reporting a press is the whole of
+// what they do. One line per press, from here like every other report.
+void App::logButtonPresses() {
+  for (Button button : kButtons) {
+    if (!buttons_.consumePress(button)) continue;
+    String message = "btn: ";
+    message += buttonName(button);
+    logger_->info(message.c_str());
+  }
+}
+
 void App::update() {
   uint32_t now = millis();
 
@@ -155,6 +170,7 @@ void App::update() {
   }
 
   logRunChanges(now);
+  logButtonPresses();
   refreshSnapshot();
   // Nothing is drawn here. The panel belongs to the host from now on, and the device only puts
   // its own two things on it: the splash, once, and the battery, on the way to every flush.

@@ -49,11 +49,10 @@ constexpr int BATTERY_ADC = 4;
 // BATTERY_CALIBRATION trims the pair against a meter.
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
-// Four button UI, active low to GND, pull ups on the module. Nothing reads these, and nothing times
-// them: they are kept wired and named so a future build can use them without a board revision
-// (Q16). They sit away from the S3 strapping pins (0, 3, 45, 46) and from the USB pins (19/20).
-// GPIO10/11 are the variant's default SS/MOSI, which costs nothing here: this firmware never
-// starts SPI.
+// Four button UI, active low to GND with pull ups on the module. hal/impl/Buttons.h arms them on
+// change interrupts and settles the debounce on each read; no key changes what the device does yet.
+// They sit away from the S3 strapping pins (0, 3, 45, 46) and from the USB pins (19/20). GPIO10/11
+// are the variant's default SS/MOSI, which costs nothing here: this firmware never starts SPI.
 constexpr int BTN_UP = 1;
 constexpr int BTN_DOWN = 2;
 constexpr int BTN_OK = 10;

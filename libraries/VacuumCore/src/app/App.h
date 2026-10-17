@@ -10,6 +10,7 @@
 #include "core/Snapshot.h"
 #include "hal/Battery.h"
 #include "hal/impl/AdafruitDisplay.h"
+#include "hal/impl/Buttons.h"
 #include "hal/impl/MprlsSensor.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
@@ -22,9 +23,10 @@
 // the panel is the host's, drawn over the serial line into the overlay, which puts the battery on
 // every frame. Which panel is fitted is a detail that may change; App holds it as a GrayOLED.
 //
-// The device is a serial peripheral with no local control surface, so the loop services the
-// sensor, the control loop and the link, in that order. The App is also the only place that
-// reports anything: the drivers return values, and the run is logged from here.
+// The device is a serial peripheral: the front panel keys are read on demand, but no key changes
+// what the device does, so the loop services the sensor, the control loop and the link, in that
+// order. The App is also the only place that reports anything: the drivers return values, and the
+// run and the keys are logged from here.
 
 namespace gardener {
 
@@ -45,6 +47,7 @@ class App {
   // rebuilt per loop iteration, and the battery overlay and a reply both read that one instant.
   void refreshSnapshot();
   void logRunChanges(uint32_t nowMs);
+  void logButtonPresses();
 
   // The one thing the device draws for itself: what it is, and which firmware it is running,
   // before any host has said anything.
@@ -58,6 +61,7 @@ class App {
   // close), NormallyClosedValve is for holding vacuum through a power loss (energise to open).
   NormallyOpenValve vent_;
   Battery battery_;
+  Buttons buttons_;
   SystemSnapshot snapshot_;
   Adafruit_GrayOLED* panel_ = nullptr;
   AdafruitDisplay display_;

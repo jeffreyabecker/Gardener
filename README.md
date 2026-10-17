@@ -103,21 +103,22 @@ pins and the bus read in another. Each of those is an interface, and the part th
 | Pump PWM | 6 | to the MOSFET gate |
 | Vent valve | 5 | MOSFET gate; **energise to close** for the default normally open part |
 | Battery sense | 4 | 1S Li-ion through a ÷2 divider (ADC1 channel 3) |
-| Button UP | 1 | reserved, nothing reads it |
-| Button DOWN | 2 | reserved, nothing reads it |
-| Button OK | 10 | reserved, nothing reads it |
-| Button BACK | 11 | reserved, nothing reads it |
+| Button UP | 1 | active low, read on a change interrupt |
+| Button DOWN | 2 | active low, read on a change interrupt |
+| Button OK | 10 | active low, read on a change interrupt |
+| Button BACK | 11 | active low, read on a change interrupt |
 | USB D-/D+ | 19/20 | native USB: this is the control interface |
 | UART0 | 43/44 | alternative control interface, 115200 |
 | RGB LED | 48 | on board, not wired to anything |
 
-Pins 7 and 12–18 are free, and the four button pins are wired and named for a future local
-override but no code reads them. The battery sense is on GPIO4 because it is the one ADC1 pin
-that is not a button — a pressed button would pull the sense line to ground. Nothing in the
-firmware touches the pins that have to be left alone at reset (strapping 0, 3, 45, 46) or the
-USB pins (19/20), and on a Super Mini GPIO0 is only the BOOT button. I2C addresses: MPRLS
-`0x18`, OLED `0x3C`. The pin map and the harness constants are in
-[core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers — the panel's
+Pins 7 and 12–18 are free. The four button pins are wired, named in `core/Config.h` and read
+through [hal/impl/Buttons.h](./libraries/VacuumCore/src/hal/impl/Buttons.h), which arms them on
+change interrupts and settles the debounce on each read; no key is assigned an action yet. The
+battery sense is on GPIO4 because it is the one ADC1 pin that is not a button — a pressed button
+would pull the sense line to ground. Nothing in the firmware touches the pins that have to be left
+alone at reset (strapping 0, 3, 45, 46) or the USB pins (19/20), and on a Super Mini GPIO0 is only
+the BOOT button. I2C addresses: MPRLS `0x18`, OLED `0x3C`. The pin map and the harness constants
+are in [core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers — the panel's
 geometry, the sensor's range, the PWM channel's setup — sit with its driver in
 [hal/impl/](./libraries/VacuumCore/src/hal/impl).
 
@@ -351,3 +352,4 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] 1S Li-ion battery gauge
 * [x] Panel: a `Display` interface, an Adafruit adapter, and a battery overlay
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
+* [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
