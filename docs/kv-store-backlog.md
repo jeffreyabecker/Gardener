@@ -1,248 +1,290 @@
-# Key-value store backlog
+# Key-value store and link-layer backlog
 
 Status: **proposed — not started.** This document is the plan; no code has changed.
 
 ## Goal
 
-Replace the `SystemSnapshot` struct with a general key-value data structure that is the single
-source of truth for published device state, and re-point the serial link's read path at it.
+One refactor, two pieces:
 
-- **Consumers** can enumerate every key-value pair, get a value by key, and register for change
-  notifications.
-- **Producers** can upsert key-value pairs.
+1. Replace the `SystemSnapshot` struct with a general string key-value **state store** that is the
+   single source of truth for device state.
+2. Introduce a **link-layer abstraction** over an internal **publish/subscribe** core, so the
+   serial link is one of several link layers. Every link layer can **issue commands**, **read
+   state**, and **subscribe to events** — and none of them own the logic that produces a response.
+
+The serial link is not ever responsible for directly producing responses. It parses its own
+transport into a normalized command, hands it to a shared dispatcher, and renders the returned
+result to the wire. For push, it subscribes to an internal event bus and renders each event it
+receives. Other link layers do the same with different codecs.
+
+## Core principle
+
+A link layer is a **codec, not a brain**:
+
+- it parses its own transport into a normalized `Command` and submits it to a shared dispatcher;
+- the dispatcher executes against the state store and the domain modules, and returns a normalized
+  `Result`;
+- the link layer renders that `Result` in its own wire format — it never produces a response
+  itself;
+- for push, the link layer subscribes to the internal event bus and renders each `Event` to its
+  transport.
 
 ## Locked-in decisions
 
-These came out of the ideation pass and are the contract for the tasks below:
-
-1. **Strings, not types.** Keys are strings, values are strings, and the set is open at runtime —
-   no `Key` enum, no `Value` union, no fixed enumeration. The store is a fixed-capacity map of
-   `String` key to `String` value. Magic strings are accepted; the key *name* is the contract.
-   The protocol's `-` ("unset / not applicable") is stored literally as the string `"-"`, so
-   absence needs no separate flag.
+1. **Strings, not types.** Keys are strings, values are strings, and the set is open at runtime.
+   The store is a fixed-capacity map of `String` key to `String` value. Magic strings are
+   accepted; the key *name* is the contract. The protocol's `-` ("unset") is the literal string
+   `"-"`.
 2. **The store is authoritative.** Published state has one copy, in the store. After an action or
-   write mutates real state, the affected keys are re-published *before* the reply is rendered, so
-   `plant start` still answers `state=PULL` — the freshness invariant today guaranteed by
+   write mutates real state, the affected keys are re-published *before* the result is rendered,
+   so `plant start` still answers `state=PULL` — the freshness invariant today guaranteed by
    `WireView` copying `system_.state()` live.
-3. **In-process notifications only.** The local subscribe API exists because it is a stated
-   requirement. The serial link does not use it and does not push.
-4. **Existing replies stay byte-identical proto 2.** No subscription commands, no change counter,
-   and no change to any command or reply a controller uses today. The only additive surface is
-   decision 5. `serial-protocol.md` is not rewritten; the existing surface is produced byte-for-byte
-   identically by the new rendering path.
-5. **All keys are wire-visible by default.** Every store key can be queried by name, even when it is
-   not worth a `help` row. Being left out of `help` never makes a key unqueryable.
-   `battery_present` and `battery_low` are the first such keys: queryable, absent from `help`.
+3. **Link layers are renderers and parsers.** Command execution, validation, and event semantics
+   live in shared core (store + dispatcher + event bus), never in a link layer.
+4. **Push by default, suppress per link.** The serial link renders change records for every event
+   it receives, automatically. Each link layer owns an internal suppression list ("unsub") of
+   keys whose events it does not render; a controller silences a noisy key by adding it to that
+   list. Existing commands and their replies stay byte-identical proto 2; the new unsolicited
+   change records are the additive surface.
+5. **All keys are wire-visible by default.** Every store key can be queried by name, even when it
+   is not worth a `help` row. The serial layer keeps a string-keyed schema for `help` and write
+   validation; the schema is a curated subset, not the visibility boundary.
+6. **Link-local settings are per-link.** `term`, `log`, and `attached` belong to each link layer,
+   not to the global store. The dispatcher resolves link-local fields against the link that issued
+   the command.
 
-### The wire keeps its own metadata
+### Superseded decisions
 
-`help` must still list fields with types, bounds, units and choices, and writes must still be
-validated against bounds. So the serial layer keeps a **string-keyed schema table** — name to
-`type`/`unit`/`choices`/`min`/`max`/`access` — for help and write validation. It is looked up by
-string, so adding a key never means touching an enum.
+The earlier "in-process notifications only" decision is replaced by decision 3: the notification
+mechanism is now the shared event bus, and link layers subscribe to it — all events by default,
+minus a per-link suppression list.
 
-The schema is a curated subset, not the visibility boundary. Every store key is wire-visible by
-default and queryable by name; the schema decides which keys get a `help` row and how their writes
-are validated. `battery_present` and `battery_low` are store keys with no schema row: queryable,
-and absent from `help`.
-
-### Consequence for `PlantState`
-
-`VacuumSystem::state()` keeps returning a `PlantState` value — it is the module's own report and a
-plain read, not the shared structure. `PlantState` stops being embedded in a cross-layer snapshot
-and becomes the producer-side input that the plant publisher formats and upserts field by field.
-
-## Current architecture
-
-- [`core/Snapshot.h`](../libraries/VacuumCore/src/core/Snapshot.h) defines `PlantState` and
-  `SystemSnapshot`. `SystemSnapshot` wraps `PlantState` plus battery and uptime fields.
-- [`app/App.cpp`](../libraries/VacuumCore/src/app/App.cpp) — `refreshSnapshot()` rebuilds the one
-  snapshot each loop iteration from `system_.state()`, `battery_.*()`, and `millis()`.
-- [`app/Overlay.h`](../libraries/VacuumCore/src/app/Overlay.h) — holds `const SystemSnapshot&` to
-  composite the battery icon on each flush.
-- [`app/serial/SerialSurface.h`](../libraries/VacuumCore/src/app/serial/SerialSurface.h) — defines
-  `WireView` and the `FieldSpec`/`ResourceSpec`/`ActionSpec` tables. Every wire field already has
-  metadata (name, type, unit, choices, min/max) and a per-field `read` function.
-- [`app/serial/SerialPayload.cpp`](../libraries/VacuumCore/src/app/serial/SerialPayload.cpp) — one
-  hand-written `read*` function per field, plus the `resources()` table.
-- [`app/serial/SerialLink.cpp`](../libraries/VacuumCore/src/app/serial/SerialLink.cpp) — command
-  dispatch, `wireView()`, the writers (`writeDevice`/`writePlant`/`writePanel`/`writeLink`), and
-  the actions.
-- [`app/serial/LineGrammar.h`](../libraries/VacuumCore/src/app/serial/LineGrammar.h) — `Tokens`,
-  `parseFlag`, `parseFloat`, `parseCoord`, `splitValue`. These stay as-is; the write path keeps
-  using them.
-
-The duplication this change removes: the wire already has a key-value surface described by tables,
-and `SystemSnapshot` is a second, parallel, typed view of the same data. Collapsing them is the
-"same behaviour, less surface" win.
-
-## Target architecture
+## Architecture
 
 ```
-String-key store                    wire schema (serial layer)
-String key -> String value          name -> type/unit/choices/min/max/access
-+ per-key revision                   (curated help + write validation)
-+ local subscribers                         |
-        ^                                  | help + write validation
-        | upsert("kpa", "61.26")           v
-        |                          serial: get / help / write
-   producers:                      (get enumerates the store verbatim;
-   App, VacuumSystem,               any key is queryable by name)
-   Battery, link settings
+                                 application core
+producers ── upsert ──► StateStore (String -> String) ── key_changed ──┐
+(VacuumSystem,           ^                                             │
+ Battery, App)           │ read / enumerate                            ▼
+                         │                                        EventBus (pub/sub)
+                         │                                             ▲
+                    CommandDispatcher ── publish(Event) ───────────────┤
+                    (command surface,                                  │
+                     validation, writes, actions)                      │
+                         ▲                                             │
+                         │ execute(Command) ─► Result                  │
+                         │                                             │
+                    LinkLayer (interface) ── subscribe ────────────────┘
+                    parse() / renderResult() / renderEvent()
+                         │  (one per transport)
+                         ▼
+                    SerialLink (proto 2 codec)
+                    term / log / attached (link-local)
 ```
 
-- The store is a fixed-capacity list of `{ String key; String value; }` with a revision per key.
-- `upsert(key, value)` inserts or replaces; it bumps the key's revision only when the value string
-  actually changes.
-- `get(key)` and `enumerate()` are the consumer read path.
-- `subscribe(key, callback)` / `unsubscribe(key, callback)` is the bounded, in-process change
-  notification.
-- Values are the exact wire-ready string; producers own formatting (decimals, `on`/`off`, state
-  names, `-`). The serial layer does not parse values to render them.
+### Components
+
+**StateStore** — fixed-capacity `String -> String` map with per-key revision. `upsert`, `get`,
+`enumerate`. Emits a `key_changed` event only when a value actually changes. `-` is the unset
+value.
+
+**EventBus** — internal publish/subscribe. `publish(Event)` delivers to subscribers registered by
+type and/or key. Bounded subscriber list, no allocation.
+
+**Event** — `{ type, key, value }`, where `key`/`value` are optional. Types:
+
+| Type | Producer | Payload |
+| --- | --- | --- |
+| `key_changed` | StateStore | `key`, `value` |
+| `run_state` | VacuumSystem | `key=state`, `value` |
+| `fault` | VacuumSystem | `key=fault`, `value` |
+| `vent_timeout` | VacuumSystem | — |
+| `controller_attached` / `controller_lost` | link layer | link name |
+| `log` | any core component | `level`, text |
+
+**CommandDispatcher** — owns the command surface: the `ResourceSpec`/`FieldSpec`/`ActionSpec`
+tables and the write/action logic, moved out of the serial link. `execute(Command, LinkContext)`
+returns a normalized `Result` (`{ ok, code, items[] }` of `{key, value}` pairs — no text).
+Link-local fields are resolved through the `LinkContext`.
+
+**LinkLayer** — the interface: `begin()`, `poll()`, `renderResult(Result)`, `renderEvent(Event)`,
+plus references to the store, dispatcher, and event bus. Each implementation owns its transport
+codec and its link-local settings.
+
+**SerialLink** — the first `LinkLayer`. Parses proto 2 text into `Command`; renders `Result` as
+`ok key=value …` / `err code …`; renders events as pushed records by default, minus its
+suppression list. `Items` becomes the serial renderer of a canonical item list.
+
+**Overlay** — an in-process consumer of the store (and, if it wants, a subscriber); not a link
+layer.
+
+**App** — composition root: owns the store, event bus, dispatcher, link layer(s), and domain
+modules; wires subscriptions (e.g. `controller_lost` → stop and vent).
+
+## How the existing code maps
+
+| Today | Becomes |
+| --- | --- |
+| `SystemSnapshot` | `StateStore` entries |
+| `App::refreshSnapshot()` | producers upsert each loop |
+| `WireView` | removed; dispatcher reads store + domain directly |
+| `SerialLink::command()` / `resourceCommand()` | `serial parse → dispatcher.execute → serial render` |
+| `FieldSpec` / `ResourceSpec` / `ActionSpec` + `read*` / `write*` | dispatcher's transport-neutral command surface |
+| `Items` | serial renderer of a canonical item list |
+| `SerialLink::info/warn/error` | publish `log` events; serial renders them when `log` is on |
+| `SerialLink::consumeLinkLost()` | `controller_lost` event; `App` subscribes |
+| `SerialLink::term/logEnabled_/attached_` | link-local members of `SerialLink` |
 
 ## Backlog
 
 Dependencies are listed per task. "Ready" means all dependencies are done.
 
-### Epic 1 — Store core
+### Epic 1 — Core model
 
-**kv-define-key-model — Defining the string key-value model**
+**link-design-command-result — Defining normalized Command and Result**
 
-- Define the store entry as `String` key and `String` value; agree the literal `"-"` is the unset
-  value (no separate present flag).
-- Define key-name conventions and the documented-vs-undocumented distinction: keys with a
-  `help` row vs keys like `battery_present` and `battery_low`, which are queryable but not listed.
-- No enum, no union: magic strings accepted.
+- `Command` = `{ resource, op, fields[] (name/value), rest }`; `Result` = `{ ok, code, items[] }`
+  of `{key, value}` pairs. Transport-neutral; no wire text.
 - Depends on: nothing.
 
-**kv-implement-store — Implementing the string key-value store**
+**link-design-event — Defining the Event model**
 
-- Fixed-capacity list of `{ String key; String value; }` with per-key revision; `upsert` inserts or
-  replaces; `get` by key; `enumerate` all entries.
-- Revision bumps only on real value change. Define overflow behaviour once capacity is reached.
-- Depends on: kv-define-key-model.
+- `Event` = `{ type, key, value }` with the table above. Subscriber registration by type and/or
+  key.
+- Depends on: nothing.
 
-**kv-subscribe-api — Adding local change notifications**
+**link-design-interface — Defining the LinkLayer interface**
 
-- Bounded subscriber list (`String` key + callback); notify only on actual value change.
-- `subscribe` / `unsubscribe`.
-- Depends on: kv-implement-store.
+- `begin()`, `poll()`, `renderResult(Result)`, `renderEvent(Event)`, plus store/dispatcher/event
+  bus references. Each implementation owns a suppression list of keys whose events it does not
+  render, alongside its other link-local settings.
+- Depends on: link-design-command-result, link-design-event.
 
-### Epic 2 — Producers publish
+### Epic 2 — Store
 
-**kv-unified-key-table — Building the wire schema table**
+**store-implement — Implementing the string state store**
 
-- String-keyed schema for the serial layer: name to `type`/`unit`/`choices`/`min`/`max`/`access`,
-  used by `help` and write validation.
-- Looked up by string; the schema is a curated subset — keys without a row are still queryable.
-- Depends on: kv-define-key-model.
+- Fixed-capacity `String -> String` map; `upsert` inserts or replaces; `get`; `enumerate`;
+  per-key revision; `key_changed` emitted only on real change. Define overflow behaviour.
+- Depends on: link-design-event.
 
-**kv-publish-plant — Publishing plant keys**
+**store-producers — Publishing keys from their owners**
 
-- Format plant fields to wire-ready strings and upsert `kpa`/`vac`/`pct`/`duty`/`state`/`fault`/
-  `sensor`/`target`/`ambient`/`floor` from `VacuumSystem::state()` each loop.
-- Re-publish synchronously after every plant action so replies stay truthful.
-- Depends on: kv-implement-store, kv-unified-key-table.
+- Format plant/device/panel/link state to wire-ready strings and upsert each loop
+  (`kpa`/`vac`/`pct`/`duty`/`state`/`fault`/`sensor`/`target`/`ambient`/`floor`, battery,
+  uptime, heap, chip, fw, proto, rotation, invert, w/h). Internal-but-queryable keys
+  (`battery_present`, `battery_low`) included.
+- Depends on: store-implement.
 
-**kv-publish-device-panel-link — Publishing device, panel and link keys**
+### Epic 3 — Dispatcher
 
-- Upsert battery (`batt_v`/`batt_pct`/`batt` plus the undocumented `battery_present`/
-  `battery_low`), uptime, heap, chip, fw, proto, rotation, invert, w/h, term, log, attached as
-  strings from their owning modules or link state.
-- Depends on: kv-implement-store, kv-unified-key-table.
+**dispatcher-surface — Moving the command surface into the dispatcher**
 
-**kv-overlay-reads-store — Converting the overlay to read the store**
+- Move the resource/field/action tables, the readers, the writers, and the actions out of the
+  serial link. Reads come from the store and domain modules; writes keep all-or-nothing validation
+  and re-publish affected keys before returning the result.
+- Depends on: link-design-command-result, store-implement.
 
-- `Overlay` reads `battery_present`/`battery_low`/`batt_pct`/`up` strings from the store instead of
-  holding a `SystemSnapshot` reference.
-- Depends on: kv-implement-store.
+**dispatcher-link-local — Resolving link-local settings**
 
-**kv-remove-snapshot — Removing SystemSnapshot**
+- `term`, `log`, `attached` resolve against the `LinkContext` (the link that issued the command),
+  not the global store.
+- Depends on: dispatcher-surface, link-design-interface.
 
-- Delete the `SystemSnapshot` struct and `App::refreshSnapshot`; remove `PlantState` duplication if
-  superseded. Nothing may reference the snapshot once this lands.
-- Depends on: kv-publish-plant, kv-publish-device-panel-link, kv-overlay-reads-store.
+### Epic 4 — Events
 
-### Epic 3 — Consumers and wire
+**events-publish — Publishing domain events**
 
-**kv-drop-wireview — Removing WireView**
+- VacuumSystem publishes `run_state`/`fault`/`vent_timeout`; link layer publishes
+  `controller_attached`/`controller_lost`; core publishes `log`. Replaces the `info/warn/error`
+  and `consumeLinkLost` one-shots.
+- Depends on: link-design-event.
 
-- Delete `WireView`; field readers are replaced by verbatim store enumeration plus the
-  string-keyed wire schema for help and validation.
-- Depends on: kv-unified-key-table, kv-publish-plant, kv-publish-device-panel-link.
+**overlay-store — Converting the overlay to read the store**
 
-**kv-generic-get — Generic get and single-field read**
+- `Overlay` reads `battery_present`/`battery_low`/`batt_pct`/`up` from the store instead of a
+  `SystemSnapshot` reference.
+- Depends on: store-implement.
 
-- `resource get` and single-field reads enumerate the store's entries for that resource and emit
-  `key=value` verbatim; any store key is queryable by name even when it has no `help` row.
-- Acceptance: every reply is byte-identical to today's proto 2 output (same key order, same
-  decimals, same `-` handling).
-- Depends on: kv-drop-wireview.
+**app-subscriptions — Subscribing App to core events**
 
-**kv-generic-help — Deriving help pages from the wire schema**
+- `App` subscribes to `controller_lost` (stop and vent) and any other events it owns, instead of
+  calling `consumeLinkLost()`.
+- Depends on: events-publish, link-design-interface.
 
-- `help` resource/field rows come from the string-keyed schema (fields, bounds, units, choices) —
-  a curated subset, since keys without a schema row are queryable but not listed;
-  the actions table and `help <resource> <action>` (draw ops) stay as they are.
-- Depends on: kv-unified-key-table.
+### Epic 5 — Serial link layer
 
-**kv-preserve-writes — Preserving write semantics**
+**serial-parse — Parsing proto 2 into Command**
 
-- Wire writes stay all-or-nothing, validated against the wire schema (bounds/choices) with side
-  effects, still using [`LineGrammar.h`](../libraries/VacuumCore/src/app/serial/LineGrammar.h)
-  helpers.
-- After a write or action, re-publish affected keys before echoing, so `plant start` still answers
-  `state=PULL` and a write's echo still matches a read.
-- Depends on: kv-generic-get.
+- Keep the existing line grammar (`Tokens`, `splitValue`, `parseFlag`, `parseFloat`, `parseCoord`);
+  produce a normalized `Command`.
+- Depends on: link-design-interface, link-design-command-result.
 
-### Epic 4 — Docs and validation
+**serial-render-result — Rendering Result byte-identically**
 
-**kv-update-docs — Updating design docs and guidance**
+- Render `Result` as `ok key=value …` / `err code …`; `Items` becomes the renderer. Acceptance:
+  byte-identical to today's proto 2 output.
+- Depends on: serial-parse, dispatcher-surface.
 
-- Update [README.md](../README.md) and the "a value beats a mechanism" guidance in
-  [.github/copilot-instructions.md](../.github/copilot-instructions.md) for the store-based state
-  architecture.
-- [serial-protocol.md](serial-protocol.md) gains only the additive read-by-name note; every
-  existing command and reply stays byte-identical proto 2.
-- Depends on: kv-generic-get, kv-remove-snapshot.
+**serial-render-event — Rendering pushed events (default on)**
 
-**kv-build-smoke — Building and smoke-testing**
+- Render every `Event` as a change record by default; maintain the link's suppression list and a
+  command to add or remove keys from it. Define framing, throttle, and reset on link loss.
+- Depends on: serial-parse, link-design-event.
+
+**serial-link-local — Keeping term/log/attached link-local**
+
+- Move `term`/`log`/`attached` into `SerialLink` state, set and read through the dispatcher's
+  link-local path.
+- Depends on: dispatcher-link-local, serial-parse.
+
+### Epic 6 — Docs and validation
+
+**docs-update — Updating design docs and guidance**
+
+- Update [README.md](../README.md) and the guidance in
+  [.github/copilot-instructions.md](../.github/copilot-instructions.md) for the store + link-layer
+  architecture. [serial-protocol.md](serial-protocol.md) gains the additive read-by-name and
+  pushed-change-record notes (push by default, per-link suppression); every existing command and
+  reply stays byte-identical proto 2.
+- Depends on: serial-render-result, serial-render-event, dispatcher-surface.
+
+**build-smoke — Building and smoke-testing**
 
 - `powershell -File scripts/arduino.ps1 -Task build` is green.
 - Smoke test over the monitor: `help`, `help plant`, `plant get`, `device get`, `panel get`,
   `link get`, a field read, `plant target=40`, `plant start`, `plant stop`, `plant reset`,
-  `panel rotation=1 invert=on`, and `device log=off` then `device log=on`.
-- Compare output against the pre-change build for the byte-identical contract.
-- Depends on: kv-update-docs.
+  `panel rotation=1 invert=on`, `device log=off` then `device log=on`; compare against the
+  pre-change build for the byte-identical contract; verify a change record is pushed by default
+  and that a suppressed key stops producing them.
+- Depends on: docs-update.
 
 ## Execution order
 
-The ready batch is the set of tasks with no unfinished dependencies:
+1. `link-design-command-result`, `link-design-event` — always ready first.
+2. `link-design-interface`, `store-implement` unblock.
+3. `store-producers`, `dispatcher-surface`, `events-publish` unblock.
+4. `dispatcher-link-local`, `overlay-store`, `app-subscriptions`, `serial-parse` unblock.
+5. `serial-render-result`, `serial-render-event`, `serial-link-local` unblock.
+6. `docs-update`, then `build-smoke`.
 
-1. `kv-define-key-model` — always ready first.
-2. Once it lands: `kv-implement-store`, `kv-unified-key-table` become ready.
-3. Then `kv-subscribe-api`, `kv-publish-plant`, `kv-publish-device-panel-link`,
-   `kv-overlay-reads-store` unblock.
-4. `kv-remove-snapshot`, `kv-drop-wireview`, `kv-generic-help` unblock next.
-5. `kv-generic-get`, then `kv-preserve-writes`.
-6. `kv-update-docs`, then `kv-build-smoke`.
-
-A suggested first implementation slice: `kv-define-key-model` → `kv-implement-store` →
-`kv-unified-key-table` → `kv-publish-plant` + `kv-publish-device-panel-link`, ending with a build
-check that producers upsert and the store enumerates, before touching the serial render path.
+A suggested first implementation slice: `link-design-command-result` + `link-design-event` +
+`link-design-interface` + `store-implement` + `store-producers`, ending with a build check that
+producers upsert and the store enumerates and emits `key_changed`, before touching the dispatcher
+or the serial render path.
 
 ## Risks and open questions
 
-- **Reply byte-identity** is the sharpest acceptance criterion. Formatting (decimals, `on`/`off`,
-  state names) now lives with the producers, so it is scattered by design; the smoke test must
-  compare captured output against the pre-change build. A small shared formatting helper can keep
-  the decimal counts in one place if drift becomes a problem. Byte-identity applies to every
-  existing command; the only new surface is query-by-name for keys without a `help` row.
-- **Magic strings.** A typo in a key name fails at runtime, not compile time — accepted. Keeping
-  each key name's canonical spelling in one place (the wire schema) reduces drift, and the smoke
-  test exercises every name.
-- **Capacity.** An open, string-keyed set needs a bound. The store is fixed-capacity with a defined
-  overflow policy, so a runaway producer cannot grow the table without limit or fragment the heap.
-- **Notification users.** With the wire excluded, the subscribe API currently has no production
-  caller. It is delivered because it is a stated requirement, not wired into the link; the first
-  module that genuinely needs event-driven behaviour should adopt it rather than a new mechanism.
+- **Push volume.** Push is on by default, so a link layer must throttle or batch change records,
+  and the per-link suppression list is the controller's pressure valve for noisy keys like `kpa`.
+- **Reply byte-identity.** Formatting (decimals, `on`/`off`, state names) now lives with the
+  producers; the smoke test must compare captured output against the pre-change build.
+- **Dispatcher neutrality.** The command surface must not smuggle serial-specific text into the
+  dispatcher; `Result` items are `{key, value}` pairs, and each link layer owns its encoding.
+- **Link-local scoping.** `term`/`log`/`attached` must resolve per issuing link, or one link's
+  `device log=off` would silence another's diagnostics.
+- **Event ordering and volume.** `key_changed` fires per changed key per loop; a link layer that
+  subscribes to pressure keys needs a throttle or batching rule, or it will flood a slow transport.
+- **Magic strings.** A typo in a key name fails at runtime, not compile time — accepted; the
+  schema keeps each name's canonical spelling in one place.
+- **Capacity.** The store and the event bus are fixed-capacity with defined overflow behaviour.
