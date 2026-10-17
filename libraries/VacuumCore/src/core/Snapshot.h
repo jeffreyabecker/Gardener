@@ -27,7 +27,7 @@ inline const char* runStateName(RunState state) {
   }
 }
 
-struct PlantState {
+struct VacuumState {
   RunState runState = RunState::Idle;
   // kpa is the sensor's own absolute reading. Every other pressure here is measured from the
   // captured reference, which is the frame the target is stated in.
@@ -42,7 +42,7 @@ struct PlantState {
 };
 
 struct SystemSnapshot {
-  PlantState plant;
+  VacuumState vacuum;
   // battery: a readout only, nothing acts on it (Q11)
   bool batteryPresent = false;
   bool batteryLow = false;

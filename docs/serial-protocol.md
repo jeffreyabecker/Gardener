@@ -2,7 +2,7 @@
 
 Pressures are **kPa** everywhere. `kpa` is the sensor's absolute reading, `ambient` is the
 reference the machine captured, and a **target** is a depth below that reference; the device
-captures the reference rather than accepting one over the wire (`plant capture`, §6). The wire
+captures the reference rather than accepting one over the wire (`vacuum capture`, §6). The wire
 revision is `proto`, reported by `device get`: it changes when a command's *meaning* changes,
 not when commands are added. `fw` is the build.
 
@@ -15,7 +15,7 @@ This document is the proto 2 surface: commands are resource-first and every repl
 shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §15 lists the old
 spellings next to their replacements so a controller can be migrated mechanically.
 
-`plant`, `panel`, `link` and `device` are what fw 0.6.0 answers, and `help` lists them with their
+`vacuum`, `panel`, `link` and `device` are what fw 0.6.0 answers, and `help` lists them with their
 fields, actions and bounds (§11).
 
 ## 1. The port
@@ -40,7 +40,7 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 2. Send `device get` and check `proto` and `fw`. `proto=2` is this document; a controller that
    does not recognise the number should stop rather than guess, because `proto` only moves when
    a command's meaning has moved.
-3. Ask for what you need: `plant get` is the readout, and it is polled (§14). Nothing is
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§14). Nothing is
    pushed.
 4. `help` lists the resources, and `help <resource>` lists that resource's fields and actions
    with their bounds (§11). A controller that reads `help` once at connect has no reason to
@@ -63,7 +63,7 @@ item     = key "=" value                ; nothing else is a payload item
 row      = items
 key      = ALPHA *( ALPHA / DIGIT / "_" )
 value    = 1*( %x21-7E )
-resource = plant / panel / link / device / help
+resource = vacuum / panel / link / device / help
 op       = field "=" value *( SP field "=" value )   ; write one or more fields
          | field                                     ; read a field
          | action                                    ; that resource's action list
@@ -97,7 +97,7 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   exactly as `get` names them:
   `ok result=start state=PULL`, `ok result=draw op=line`.
 * A **read or write** replies with field items only, and a write reports the field the way a
-  read would: `plant target=40` and `plant target` both answer `ok target=40.0`. There is no
+  read would: `vacuum target=40` and `vacuum target` both answer `ok target=40.0`. There is no
   field that can be written but not read.
 * A write validates every field in the command before applying any of them, and a repeated
   field is `bad_argument`. `panel rotation=1 invert=on` is one command that either sets both or
@@ -148,15 +148,15 @@ it is the one reply that describes something that has not happened yet.
 <- ok log=off
 ```
 
-## 6. `plant` — the machine that holds pressure
+## 6. `vacuum` — the machine that holds pressure
 
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
-| `ambient` | r | kPa, 2 dp | the captured reference. `plant capture` is the only way one is ever set: `plant ambient=40` is `err unsupported field=ambient`, because the rig should not be holding against a number nobody measured |
+| `ambient` | r | kPa, 2 dp | the captured reference. `vacuum capture` is the only way one is ever set: `vacuum ambient=40` is `err unsupported field=ambient`, because the rig should not be holding against a number nobody measured |
 | `kpa` | r | kPa, 2 dp | filtered absolute pressure |
 | `vac` | r | kPa, 2 dp | `ambient - kpa`, clamped at 0 |
 | `pct` | r | %, 1 dp | `vac / ambient * 100` |
-| `target` | rw | kPa below ambient, or `-` | `plant target=40` pulls to 40 kPa below the reference; `plant target=-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target min=…`; deeper than `floor` is accepted, and only pins the duty at the cap |
+| `target` | rw | kPa below ambient, or `-` | `vacuum target=40` pulls to 40 kPa below the reference; `vacuum target=-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target min=…`; deeper than `floor` is accepted, and only pins the duty at the cap |
 | `floor` | r | kPa, 1 dp | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
 | `duty` | r | %, 1 dp | pump duty |
 | `state` | r | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
@@ -167,21 +167,21 @@ it is the one reply that describes something that has not happened yet.
 
 | Action | Reply | Notes |
 | --- | --- | --- |
-| `plant start` | `ok result=start state=PULL` / `err not_ready reason=…` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` — three causes, three reasons, where `not_ready` alone used to be one opaque code |
-| `plant stop` | `ok result=stop state=VENT` | pump off, then vent. The normal way a run ends |
-| `plant reset` | `ok result=reset state=VENT` | clears the latched fault, then vents |
-| `plant capture` | `ok ambient=101.33` | capture the current reading as the reference, and report the field it set |
+| `vacuum start` | `ok result=start state=PULL` / `err not_ready reason=…` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` — three causes, three reasons, where `not_ready` alone used to be one opaque code |
+| `vacuum stop` | `ok result=stop state=VENT` | pump off, then vent. The normal way a run ends |
+| `vacuum reset` | `ok result=reset state=VENT` | clears the latched fault, then vents |
+| `vacuum capture` | `ok ambient=101.33` | capture the current reading as the reference, and report the field it set |
 
 ```
--> plant get
+-> vacuum get
 <- ok ambient=101.33 kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
--> plant target=40
+-> vacuum target=40
 <- ok target=40.0
--> plant start
+-> vacuum start
 <- ok result=start state=PULL
--> plant target=-
+-> vacuum target=-
 <- ok target=-
--> plant stop
+-> vacuum stop
 <- ok result=stop state=VENT
 ```
 
@@ -195,7 +195,7 @@ battery thresholds are all in `core/Config.h`. They are not commands, so the com
 stays this table. The deadband matters to a controller: it is what decides that the target has
 been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the other one worth
 knowing: it is the shallowest target the loop will accept, and it is reported as `min=` on
-`help plant` as well as in the `out_of_range` reply.
+`help vacuum` as well as in the `out_of_range` reply.
 
 ## 7. `panel` — the glass
 
@@ -356,7 +356,7 @@ any number of rows, then an `end` line:
 page = ("ok" SP items LF) row* ("end" SP items LF)
 ```
 
-* A row is items, like every other payload: `resource=plant fields=12 actions=4`.
+* A row is items, like every other payload: `resource=vacuum fields=12 actions=4`.
 * The `end` line repeats the op and counts the rows, so a truncated page is detectable:
   `end result=help rows=4`.
 * An error replaces the whole page with a single `err` line and no rows. A controller reads rows
@@ -371,19 +371,19 @@ are abridged: a real one carries a row per field and a row per action.
 ```
 -> help
 <- ok result=help rows=4
-<- resource=plant fields=12 actions=4
+<- resource=vacuum fields=12 actions=4
 <- resource=panel fields=4 actions=2
 <- resource=link fields=2 actions=0
 <- resource=device fields=7 actions=1
 <- end result=help rows=4
--> help plant
-<- ok result=help resource=plant rows=16
+-> help vacuum
+<- ok result=help resource=vacuum rows=16
 <- field=ambient type=float access=r unit=kPa
 <- field=target type=float access=rw unit=kPa min=5.0
 <- field=state type=choice access=r choices=IDLE,PULL,HOLD,VENT,FAULT
 <- action=start
 <- action=capture
-<- end result=help resource=plant rows=16
+<- end result=help resource=vacuum rows=16
 -> help panel draw
 <- ok result=help resource=panel op=draw rows=18
 <- op=clear args=0
@@ -421,15 +421,15 @@ prose, and each carries items naming what was involved, where there is something
 | `unsupported` | the protocol defines it and this build cannot do it: writing a read-only field (`err unsupported field=ambient`), or a feature that is not compiled in |
 
 ```
--> plant start
+-> vacuum start
 <- err not_ready reason=no_target
--> plant ambient=40
+-> vacuum ambient=40
 <- err unsupported field=ambient
 -> set target 40
 <- err unknown_command token=set
 -> panel draw text 0 0 9 0 hi
 <- err out_of_range field=size value=9 min=1 max=8
--> plant start extra
+-> vacuum start extra
 <- err bad_argument token=extra
 ```
 
@@ -447,32 +447,32 @@ The controller owns the target, the duration and when to start and stop. The dev
 happens when nobody is watching, and nothing else.
 
 ```
-        plant start                                        plant stop / link loss / fault
+       vacuum start                                         vacuum stop / link loss / fault
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
-  └───────────────── plant reset ───────────────────┴─────────────────────── FAULT
+  └───────────────── vacuum reset ──────────────────┴─────────────────────── FAULT
 ```
 
 | Event | From | To |
 | --- | --- | --- |
-| `plant start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `reason=no_target`, `reason=no_reading` or `reason=latch`. From `VENT` it abandons the release and pulls again |
-| `plant stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
-| `plant target=<kPa\|->` | anything but `FAULT` | the target changes; `-` while pulling or holding releases the chamber |
+| `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `reason=no_target`, `reason=no_reading` or `reason=latch`. From `VENT` it abandons the release and pulls again |
+| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
+| `vacuum target=<kPa\|->` | anything but `FAULT` | the target changes; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | link loss, sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
-| `plant reset` | `FAULT` | `VENT` then `IDLE` |
+| `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
 | `device reboot` | any | safe boot, i.e. `IDLE` with the valve open |
 
 What a controller has to know:
 
 * **The hold's duration is yours.** The device has no timer, no timeout and no maximum run
-  time, so a run continues until you send `plant stop`. `HOLD` is the cue, not a countdown: it
+  time, so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it
   means the device's own deadband has decided the target is reached, which is the moment to start
   timing and the one thing you cannot work out for yourself, because the deadband is the
   device's loop. Timing it and drawing it are both yours: the device is not told how long a
   hold is, and has no command that takes a duration.
-* **Faults latch.** Only `plant reset` clears one; the device never retries on its own.
+* **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
 * **The vent valve is normally open by default**: de-energised is open, so running a vacuum means
@@ -486,23 +486,23 @@ What a controller has to know:
 * Link loss releases the chamber, but it only detects a controller that leaves. One that hangs
   with the port open holds the run open.
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
-  than `floor` — the pump's own reach, reported in `plant get` — pins the duty at the cap and
+  than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
 * **Nothing but the splash and the battery appears on the panel unless you draw it.** The device
   has no page of its own, so a fault, a vent timeout, a low battery and the state itself are only
-  on the wire. Poll `plant get` to see them, and draw them if you want them on the glass.
+  on the wire. Poll `vacuum get` to see them, and draw them if you want them on the glass.
 
 ## 14. Rates
 
-Nothing is pushed: a controller that wants a readout polls `plant get`. Each poll is a ~140 byte
+Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~140 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout
 than the device could produce on its own. Each reply describes the machine as of the last
 control tick (50 ms), so polling faster than that repeats itself.
 
 Because replies are matched by counting, a controller that pipelines several commands in one
-write should read one reply per command before concluding anything about state: `plant start`
-followed immediately by `plant get` in the same batch may describe the machine as it was before
-the `plant start` was handled. Sending `plant get` as its own command avoids the question
+write should read one reply per command before concluding anything about state: `vacuum start`
+followed immediately by `vacuum get` in the same batch may describe the machine as it was before
+the `vacuum start` was handled. Sending `vacuum get` as its own command avoids the question
 entirely.
 
 Drawing is the one place the volume matters. A frame is twenty lines or more. Each loop
@@ -522,13 +522,13 @@ items, and `set` and the bare-verb actuators are gone. The move is mechanical.
 | `set log on` | `device log=on` |
 | `set log off` | `device log=off` |
 | `reboot` | `device reboot` |
-| `status` | `plant get` |
-| `set target 40` | `plant target=40` |
-| `set target off` | `plant target=-` |
-| `start` | `plant start` |
-| `stop` | `plant stop` |
-| `reset` | `plant reset` |
-| `ambient` | `plant capture` |
+| `status` | `vacuum get` |
+| `set target 40` | `vacuum target=40` |
+| `set target off` | `vacuum target=-` |
+| `start` | `vacuum start` |
+| `stop` | `vacuum stop` |
+| `reset` | `vacuum reset` |
+| `ambient` | `vacuum capture` |
 | `draw <op> …` | `panel draw <op> …` |
 | `flush` | `panel flush` |
 | `set rotation 1` | `panel rotation=1` |
@@ -543,7 +543,7 @@ Three things changed that are not a rename, and a migrating controller has to kn
 * **Replies changed shape.** `ok started` is `ok result=start state=PULL`; `ok drawn` is
   `ok result=draw op=line`; `ok target=off` is `ok target=-`. A controller that parsed the old
   payloads has to be rewritten, not re-parameterised.
-* **New reads exist.** `device get`, `plant get`, `panel get` and `link get` report
+* **New reads exist.** `device get`, `vacuum get`, `panel get` and `link get` report
   everything the device can be asked to do. `rotation`, `invert`, `term` and the ambient
   reference used to be write-only or missing from the wire; a controller can now rebuild its view
   after reconnecting instead of assuming.

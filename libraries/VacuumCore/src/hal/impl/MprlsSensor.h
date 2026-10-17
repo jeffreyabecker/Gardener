@@ -15,7 +15,7 @@ namespace gardener {
 // This is the only file in the firmware that includes the vendor library, and the only one that
 // knows the part reports hPa: the conversion to kPa happens here, at the driver boundary. The part
 // is absolute, so ambient air sits near 101.3 kPa and a vacuum reads lower, and the deficit against
-// a captured reference is what the plant regulates on. Readings are median filtered over a short
+// a captured reference is what the vacuum system regulates on. Readings are median filtered over a short
 // window, then EMA filtered.
 class MprlsSensor : public PressureSensor {
  public:

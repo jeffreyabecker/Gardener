@@ -10,7 +10,7 @@ namespace {
 constexpr uint32_t kDerivativeWindowMs = 1000;
 }  // namespace
 
-// A latched fault owns the state until it is reset: a command can still make the plant safe,
+// A latched fault owns the state until it is reset: a command can still make the vacuum system safe,
 // but none of them can move the state off Fault, so state() == Fault and faulted() agree.
 void VacuumSystem::setState(RunState state) {
   if (faulted() && state != RunState::Fault) return;
@@ -23,18 +23,18 @@ void VacuumSystem::begin() {
   lastDerivativeMs_ = lastControlMs_;
 }
 
-PlantState VacuumSystem::state() const {
-  PlantState plant;
-  plant.runState = state_;
-  plant.kpa = sensor_.kpa();
-  plant.vacuumKpa = sensor_.vacuumKpa();
-  plant.vacuumPercent = sensor_.vacuumPercent();
-  plant.ambientKpa = sensor_.ambientKpa();
-  plant.targetKpa = targetKpa_;
-  plant.duty = pump_.dutyPercent();
-  plant.sensorOk = sensor_.present();
-  plant.faultCode = faultCode_;
-  return plant;
+VacuumState VacuumSystem::state() const {
+  VacuumState vacuum;
+  vacuum.runState = state_;
+  vacuum.kpa = sensor_.kpa();
+  vacuum.vacuumKpa = sensor_.vacuumKpa();
+  vacuum.vacuumPercent = sensor_.vacuumPercent();
+  vacuum.ambientKpa = sensor_.ambientKpa();
+  vacuum.targetKpa = targetKpa_;
+  vacuum.duty = pump_.dutyPercent();
+  vacuum.sensorOk = sensor_.present();
+  vacuum.faultCode = faultCode_;
+  return vacuum;
 }
 
 float VacuumSystem::currentKpa() const { return sensor_.vacuumKpa(); }
@@ -81,7 +81,7 @@ const char* VacuumSystem::startRefusal() const {
 }
 
 void VacuumSystem::stop() {
-  // An idle plant is already released, so there is nothing to vent.
+  // An idle vacuum system is already released, so there is nothing to vent.
   if (state_ == RunState::Idle) {
     rest();
     return;
@@ -109,8 +109,8 @@ void VacuumSystem::clearTarget() {
   pidReset();
   output_ = 0.0f;
 
-  // A run without a target is not a run, so clearing one releases the chamber. An idle plant
-  // is already at rest, and a fault owns the state until it is reset.
+  // A run without a target is not a run, so clearing one releases the chamber. An idle vacuum
+  // system is already at rest, and a fault owns the state until it is reset.
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
     vent();
   } else if (state_ == RunState::Idle) {
@@ -130,7 +130,7 @@ void VacuumSystem::resetFault() {
 }
 
 // The latch and the safe state, in that order: the output is cut now rather than ramped, the valve
-// is opened, and the code is what `plant get` reports until resetFault(). Nothing writes a duty
+// is opened, and the code is what `vacuum get` reports until resetFault(). Nothing writes a duty
 // again while it is set, because nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
   pump_.halt();
@@ -142,8 +142,8 @@ void VacuumSystem::fail(const char* code) {
 }
 
 void VacuumSystem::service(uint32_t nowMs) {
-  // A latched fault owns the state until it is reset: the plant is already safe, and the code
-  // is what `plant get` reports.
+  // A latched fault owns the state until it is reset: the vacuum system is already safe, and the
+  // code is what `vacuum get` reports.
   if (faulted()) return;
 
   const bool regulating = state_ == RunState::Pulling || state_ == RunState::Holding;

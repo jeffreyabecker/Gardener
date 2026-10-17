@@ -21,9 +21,9 @@ class VacuumSystem;
 // available/read/write, three calls,
 // and a transport split would need tasks, callbacks and an MTU before it bought anything.
 //
-// A command is a resource and an op: `plant target=40`, `panel draw clear`, `link term=off`. The
+// A command is a resource and an op: `vacuum target=40`, `panel draw clear`, `link term=off`. The
 // first token says what is being touched and the second says what to do with it, so no verb has to
-// cover a plant actuator, two panel properties, a framing setting and a diagnostics switch at once,
+// cover a vacuum-system actuator, two panel properties, a framing setting and a diagnostics switch at once,
 // and no actuator is a bare verb while its neighbour is a `set`. Everything after the op belongs to
 // the op, which is why `panel draw text …` can carry a string with spaces in it and a write can
 // carry several fields, without the framing layer knowing about either.
@@ -97,17 +97,17 @@ class SerialLink {
   // Which fields a resource has is the table's business; that they are writable is checked before
   // any writer runs, so a writer only has to know its own.
   bool writeDevice(const FieldWrite* writes, uint8_t count);
-  bool writePlant(const FieldWrite* writes, uint8_t count);
+  bool writeVacuum(const FieldWrite* writes, uint8_t count);
   bool writePanel(const FieldWrite* writes, uint8_t count);
   bool writeLink(const FieldWrite* writes, uint8_t count);
 
   // --- actions -------------------------------------------------------------
   // `rest` is what follows the action on the line, and null for every action that takes nothing.
   void deviceReboot(char* rest);
-  void plantStart(char* rest);
-  void plantStop(char* rest);
-  void plantReset(char* rest);
-  void plantCapture(char* rest);
+  void vacuumStart(char* rest);
+  void vacuumStop(char* rest);
+  void vacuumReset(char* rest);
+  void vacuumCapture(char* rest);
   void panelDraw(char* rest);
   void panelFlush(char* rest);
 

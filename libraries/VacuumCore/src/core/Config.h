@@ -62,7 +62,7 @@ constexpr int BTN_BACK = 11;
 // --- Closed loop vacuum control -------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
 // Shallowest target the loop will accept, in kPa below the ambient reference, and inclusive: the
-// wire publishes it as the `min` of `plant target`, so a pull of exactly this much is accepted and
+// wire publishes it as the `min` of `vacuum target`, so a pull of exactly this much is accepted and
 // anything gentler is refused rather than regulated.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
 constexpr float PID_KP = 3.0f;    // % duty per kPa of error

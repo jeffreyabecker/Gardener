@@ -65,39 +65,39 @@ void readBatteryPercent(const WireView& view, Items& out) {
 void readLog(const WireView& view, Items& out) { out.addFlag("log", view.logEnabled); }
 
 void readAmbient(const WireView& view, Items& out) {
-  out.addFloat("ambient", view.plant.ambientKpa, 2);
+  out.addFloat("ambient", view.vacuum.ambientKpa, 2);
 }
 
 void readPressure(const WireView& view, Items& out) {
-  out.addFloat("kpa", view.plant.kpa, 2);
+  out.addFloat("kpa", view.vacuum.kpa, 2);
 }
 
 void readVacuum(const WireView& view, Items& out) {
-  out.addFloat("vac", view.plant.vacuumKpa, 2);
+  out.addFloat("vac", view.vacuum.vacuumKpa, 2);
 }
 
 void readVacuumPercent(const WireView& view, Items& out) {
-  out.addFloat("pct", view.plant.vacuumPercent, 1);
+  out.addFloat("pct", view.vacuum.vacuumPercent, 1);
 }
 
 void readTarget(const WireView& view, Items& out) {
-  // 0 is how the plant holds "no target", and the protocol writes that `-`: a target of nothing is
-  // not a target, and there is no 0 kPa one for it to be confused with.
-  if (view.plant.targetKpa <= 0.0f) {
+  // 0 is how the vacuum system holds "no target", and the protocol writes that `-`: a target of
+  // nothing is not a target, and there is no 0 kPa one for it to be confused with.
+  if (view.vacuum.targetKpa <= 0.0f) {
     out.add("target", nullptr);
     return;
   }
-  out.addFloat("target", view.plant.targetKpa, 1);
+  out.addFloat("target", view.vacuum.targetKpa, 1);
 }
 
 void readFloor(const WireView&, Items& out) { out.addFloat("floor", cfg::CONTROL_FLOOR_KPA, 1); }
 
 void readDuty(const WireView& view, Items& out) {
-  out.addFloat("duty", view.plant.duty, 1);
+  out.addFloat("duty", view.vacuum.duty, 1);
 }
 
 void readRunState(const WireView& view, Items& out) {
-  out.add("state", runStateName(view.plant.runState));
+  out.add("state", runStateName(view.vacuum.runState));
 }
 
 void readBattery(const WireView& view, Items& out) {
@@ -109,11 +109,11 @@ void readBattery(const WireView& view, Items& out) {
 }
 
 void readSensor(const WireView& view, Items& out) {
-  out.add("sensor", view.plant.sensorOk ? "1" : "0");
+  out.add("sensor", view.vacuum.sensorOk ? "1" : "0");
 }
 
 void readFault(const WireView& view, Items& out) {
-  out.add("fault", view.plant.faultCode[0] ? view.plant.faultCode : "none");
+  out.add("fault", view.vacuum.faultCode[0] ? view.vacuum.faultCode : "none");
 }
 
 void readUptime(const WireView& view, Items& out) { out.addU32("up", view.snapshot.uptimeMs); }
@@ -172,7 +172,7 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"batt_pct", false, "int", "%", nullptr, nullptr, nullptr, readBatteryPercent},
       {"log", true, "bool", nullptr, "on,off", nullptr, nullptr, readLog},
   };
-  static const FieldSpec kPlantFields[] = {
+  static const FieldSpec kVacuumFields[] = {
       {"ambient", false, "float", "kPa", nullptr, nullptr, nullptr, readAmbient},
       {"kpa", false, "float", "kPa", nullptr, nullptr, nullptr, readPressure},
       {"vac", false, "float", "kPa", nullptr, nullptr, nullptr, readVacuum},
@@ -204,11 +204,11 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
   static const ActionSpec kDeviceActions[] = {
       {"reboot", false, &SerialLink::deviceReboot},
   };
-  static const ActionSpec kPlantActions[] = {
-      {"start", false, &SerialLink::plantStart},
-      {"stop", false, &SerialLink::plantStop},
-      {"reset", false, &SerialLink::plantReset},
-      {"capture", false, &SerialLink::plantCapture},
+  static const ActionSpec kVacuumActions[] = {
+      {"start", false, &SerialLink::vacuumStart},
+      {"stop", false, &SerialLink::vacuumStop},
+      {"reset", false, &SerialLink::vacuumReset},
+      {"capture", false, &SerialLink::vacuumCapture},
   };
   static const ActionSpec kPanelActions[] = {
       // The one action whose arguments are not a fixed list: the rest of the line is an op and its
@@ -219,8 +219,8 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
 
   // In the order `help` lists them.
   static const ResourceSpec kResources[] = {
-      {"plant", kPlantFields, countOf(kPlantFields), kPlantActions, countOf(kPlantActions),
-       &SerialLink::writePlant},
+      {"vacuum", kVacuumFields, countOf(kVacuumFields), kVacuumActions, countOf(kVacuumActions),
+       &SerialLink::writeVacuum},
       {"panel", kPanelFields, countOf(kPanelFields), kPanelActions, countOf(kPanelActions),
        &SerialLink::writePanel},
       {"link", kLinkFields, countOf(kLinkFields), nullptr, 0, &SerialLink::writeLink},

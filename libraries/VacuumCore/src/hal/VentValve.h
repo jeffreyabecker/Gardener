@@ -4,7 +4,7 @@ namespace gardener {
 
 // The vent valve: the only way back up, since the pump can pull down and nothing else can.
 //
-// This is the interface the plant holds. The verbs are the chamber's, not the coil's: `open()`
+// This is the interface the vacuum system holds. The verbs are the chamber's, not the coil's: `open()`
 // vents and `close()` makes the chamber pumpable, whichever way the fitted solenoid happens to wire
 // them. The part on this rig is a normally open solenoid on a GPIO, in hal/impl/, so de-energised
 // means vented and a crash, a brownout or a cut wire vents the chamber whether or not the firmware

@@ -37,7 +37,7 @@ A link layer is a **codec, not a brain**:
    `"-"`.
 2. **The store is authoritative.** Published state has one copy, in the store. After an action or
    write mutates real state, the affected keys are re-published *before* the result is rendered,
-   so `plant start` still answers `state=PULL` — the freshness invariant today guaranteed by
+   so `vacuum start` still answers `state=PULL` — the freshness invariant today guaranteed by
    `WireView` copying `system_.state()` live.
 3. **Link layers are renderers and parsers.** Command execution, validation, and event semantics
    live in shared core (store + dispatcher + event bus), never in a link layer.
@@ -170,7 +170,7 @@ Dependencies are listed per task. "Ready" means all dependencies are done.
 
 **store-producers — Publishing keys from their owners**
 
-- Format plant/device/panel/link state to wire-ready strings and upsert each loop
+- Format vacuum/device/panel/link state to wire-ready strings and upsert each loop
   (`kpa`/`vac`/`pct`/`duty`/`state`/`fault`/`sensor`/`target`/`ambient`/`floor`, battery,
   uptime, heap, chip, fw, proto, rotation, invert, w/h). Internal-but-queryable keys
   (`battery_present`, `battery_low`) included.
@@ -252,8 +252,8 @@ Dependencies are listed per task. "Ready" means all dependencies are done.
 **build-smoke — Building and smoke-testing**
 
 - `powershell -File scripts/arduino.ps1 -Task build` is green.
-- Smoke test over the monitor: `help`, `help plant`, `plant get`, `device get`, `panel get`,
-  `link get`, a field read, `plant target=40`, `plant start`, `plant stop`, `plant reset`,
+- Smoke test over the monitor: `help`, `help vacuum`, `vacuum get`, `device get`, `panel get`,
+  `link get`, a field read, `vacuum target=40`, `vacuum start`, `vacuum stop`, `vacuum reset`,
   `panel rotation=1 invert=on`, `device log=off` then `device log=on`; compare against the
   pre-change build for the byte-identical contract; verify a change record is pushed by default
   and that a suppressed key stops producing them.

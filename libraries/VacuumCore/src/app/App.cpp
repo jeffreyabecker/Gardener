@@ -94,7 +94,7 @@ void App::splash() {
 }
 
 void App::refreshSnapshot() {
-  snapshot_.plant = system_.state();
+  snapshot_.vacuum = system_.state();
 
   snapshot_.batteryPresent = battery_.present();
   snapshot_.batteryLow = battery_.low();

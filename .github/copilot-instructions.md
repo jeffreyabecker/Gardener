@@ -35,21 +35,22 @@ instead of building beside it. When a design is larger than the thing it does, t
 bug, and every part of it should have a reason a reviewer can point at.
 
 **One class where one class works, and one file per device.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
-is the plant *and* the machine, because the chamber's state and the run's state turned out to be one
-state: don't split it into a plant and a controller. A device is a different thing — a pin, a bus and
-a PWM channel are a boundary — so a part is an abstract class in `hal/` with its implementation in
-`hal/impl/`, and the plant takes it by reference even though the plant is its only caller. Don't fold
+is the vacuum system *and* the machine, because the chamber's state and the run's state turned out to be
+one state: don't split it into a vacuum system and a controller. A device is a different thing — a pin,
+a bus and a PWM channel are a boundary — so a part is an abstract class in `hal/` with its
+implementation in `hal/impl/`, and the vacuum system takes it by reference even though the vacuum
+system is its only caller. Don't fold
 a driver into the class that drives it: the register writes and the control law are the two things
 here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because `hal/impl/` is
 where a vendor header is allowed to appear — `<Adafruit_MPRLS.h>`, `<Adafruit_GrayOLED.h>` — and
-because the plant reads the same whether the part behind it is an MPRLS or nothing at all. An
+because the vacuum system reads the same whether the part behind it is an MPRLS or nothing at all. An
 interface with one implementation earns its place exactly when it is a foreign boundary like that;
 anywhere else it is a second implementation that does not exist yet.
 
 **A value beats a mechanism.** New state is a field on
-[PlantState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
+[VacuumState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
 getter per fact, not a callback, not an observer, not an event queue. The reads are
 `VacuumSystem::state()` and the one snapshot; if a change wants a new public getter for something,
 carry it in the snapshot instead.
@@ -69,7 +70,7 @@ the smallest mechanism the current single loop allows. Reaching for a task, a lo
 watchdog is a question to ask, not a thing to build.
 
 **Same behaviour, less surface** is the trade to look for. `VacuumSystem::state()` and
-`PlantState` are the current shape of it: fifteen one-by-one getters became one read of one plain
+`VacuumState` are the current shape of it: fifteen one-by-one getters became one read of one plain
 value, with the wire bytes unchanged.
 
 **Committing means commit.** When you are told to commit, stage what is in the tree and write the

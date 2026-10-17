@@ -28,11 +28,11 @@ constexpr uint8_t kMaxFieldWrites = 4;
 // the panel, and the interface's own settings. A field reader is a plain function of this, which is
 // what lets the field tables be built at file scope instead of naming a member per field.
 struct WireView {
-  // The plant is copied in rather than referenced. A reply has to describe the machine as the
-  // command just left it, and the snapshot below is only rebuilt once per loop iteration, so
-  // `plant start` reporting the state it started *from* is exactly the bug this avoids. It is one
+  // The vacuum state is copied in rather than referenced. A reply has to describe the machine as
+  // the command just left it, and the snapshot below is only rebuilt once per loop iteration, so
+  // `vacuum start` reporting the state it started *from* is exactly the bug this avoids. It is one
   // small copy per reply, and the readers are then plain functions of their inputs.
-  PlantState plant;
+  VacuumState vacuum;
   const SystemSnapshot& snapshot;
   const Display& display;
   bool logEnabled;

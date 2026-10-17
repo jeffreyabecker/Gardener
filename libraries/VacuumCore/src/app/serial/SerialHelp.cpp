@@ -37,8 +37,8 @@ void SerialLink::help(Tokens& tokens) {
 
     // An action with a list behind it expands into that list, and `panel draw` is the only one: its
     // list is the drawing operators. Anything else after a resource is as unknown as a field that
-    // does not exist, which is what stops `help plant draw` inventing a page of operators that
-    // `plant` cannot draw.
+    // does not exist, which is what stops `help vacuum draw` inventing a page of operators that
+    // `vacuum` cannot draw.
     for (uint8_t a = 0; a < resources[i].actionCount; a++) {
       if (!same(resources[i].actions[a].name, op)) continue;
       if (!resources[i].actions[a].takesRest) break;

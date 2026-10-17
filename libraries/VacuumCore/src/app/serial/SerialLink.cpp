@@ -363,7 +363,7 @@ void SerialLink::resourceCommand(const ResourceSpec& resource, Tokens& tokens) {
 }
 
 WireView SerialLink::wireView() const {
-  // The plant is read live: the snapshot is rebuilt once per loop iteration, and a reply has to
+  // The vacuum state is read live: the snapshot is rebuilt once per loop iteration, and a reply has to
   // describe the machine as the command left it rather than as the previous tick left it.
   WireView view = {system_.state(),  snapshot_,          display_,     logEnabled_,
                    terminator_,      customTerminator_, present_ != nullptr, attached_};
@@ -394,7 +394,7 @@ bool SerialLink::writeDevice(const FieldWrite* writes, uint8_t count) {
   return true;
 }
 
-bool SerialLink::writePlant(const FieldWrite* writes, uint8_t count) {
+bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
   (void)count;  // one writable field
   const FieldWrite& write = writes[0];
 
@@ -512,11 +512,11 @@ void SerialLink::deviceReboot(char* rest) {
   ESP.restart();
 }
 
-void SerialLink::plantStart(char* rest) {
+void SerialLink::vacuumStart(char* rest) {
   (void)rest;
   if (!system_.start()) {
-    // Three ways to be refused, three reasons: the plant answers with the one that applied, so the
-    // reply and the refusal come from the same conditions.
+    // Three ways to be refused, three reasons: the vacuum system answers with the one that applied,
+    // so the reply and the refusal come from the same conditions.
     Items detail;
     detail.add("reason", system_.startRefusal());
     err("not_ready", detail.text());
@@ -524,33 +524,33 @@ void SerialLink::plantStart(char* rest) {
   }
   Items out;
   out.add("result", "start");
-  renderField("plant", "state", out);
+  renderField("vacuum", "state", out);
   ok(out.text());
 }
 
-void SerialLink::plantStop(char* rest) {
+void SerialLink::vacuumStop(char* rest) {
   (void)rest;
   system_.stop();
   Items out;
   out.add("result", "stop");
-  renderField("plant", "state", out);
+  renderField("vacuum", "state", out);
   ok(out.text());
 }
 
-void SerialLink::plantReset(char* rest) {
+void SerialLink::vacuumReset(char* rest) {
   (void)rest;
   system_.resetFault();
   Items out;
   out.add("result", "reset");
-  renderField("plant", "state", out);
+  renderField("vacuum", "state", out);
   ok(out.text());
 }
 
-void SerialLink::plantCapture(char* rest) {
+void SerialLink::vacuumCapture(char* rest) {
   (void)rest;
   system_.captureAmbient();
   Items out;
-  renderField("plant", "ambient", out);
+  renderField("vacuum", "ambient", out);
   ok(out.text());
 }
 

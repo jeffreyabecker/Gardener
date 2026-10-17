@@ -4,10 +4,10 @@
 
 namespace gardener {
 
-// Where the plant gets pressure from: an absolute reading, and a captured ambient reference for it
+// Where the vacuum system gets pressure from: an absolute reading, and a captured ambient reference for it
 // to state targets against.
 //
-// This is the interface the plant holds. The part on this rig — an Adafruit MPRLS on I2C, with a
+// This is the interface the vacuum system holds. The part on this rig — an Adafruit MPRLS on I2C, with a
 // median window and an EMA over it — is in hal/impl/, which is also the only place that includes
 // the vendor library.
 //

@@ -10,17 +10,17 @@
 
 namespace gardener {
 
-// The plant: the pressure loop, the release path and the run state, between the devices and the
-// wire. The devices are not its own — it is handed the three it commands, so the pins and the bus
-// stay in hal/ and this file stays the control law.
+// The vacuum system: the pressure loop, the release path and the run state, between the devices and
+// the wire. The devices are not its own — it is handed the three it commands, so the pins and the
+// bus stay in hal/ and this file stays the control law.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
-// true: the pressure, the duty, the state. The state is the plant's own, because both of the
+// true: the pressure, the duty, the state. The state is the vacuum system's own, because both of the
 // things that advance it are facts about the chamber rather than orders: the target has been
 // reached, and the release is over. So each command sets the state it causes and service()
 // moves the other two, which keeps one machine with one owner.
 //
-// The run's duration is not a plant fact and is not here: the device holds until it is told to
+// The run's duration is not a fact about the vacuum system and is not here: the device holds until it is told to
 // stop, and nothing times a run.
 //
 // Pressures here are relative to the ambient the sensor captured, in kPa below it: a target is
@@ -53,9 +53,9 @@ class VacuumSystem {
 
   // --- the reads ----------------------------------------------------------
   // Depth below the captured ambient: the frame the target is stated in, and the sensor's own
-  // deficit, so it is the same number `plant get` reports as `vac`. Zero while a reading is invalid.
+  // deficit, so it is the same number `vacuum get` reports as `vac`. Zero while a reading is invalid.
   float currentKpa() const;
-  PlantState state() const;
+  VacuumState state() const;
 
  private:
   void setState(RunState state);
