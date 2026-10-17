@@ -85,4 +85,4 @@ rewrite-on-sight target, and an unrequested refactor is its own decision with it
 
 - [README.md](../README.md) — wiring, build and upload flow, control model, safety notes.
 - [docs/serial-protocol.md](../docs/serial-protocol.md) — the interface the firmware serves.
-- [docs/bom.md](../docs/bom.md) — the parts the firmware's limits and pin map assume.
+- [docs/poc-parts.md](../docs/poc-parts.md) — the parts a build is assembled from, with prices.

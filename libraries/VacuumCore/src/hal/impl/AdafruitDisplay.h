@@ -9,7 +9,7 @@ namespace gardener {
 
 // The fitted panel: an Adafruit 1.3" 128x64 monochrome SH1106 on the STEMMA QT bus. Its geometry
 // and address are the part's own, which is why they sit beside its driver rather than in the
-// board's pin map — the 128x32 alternative in the BOM is the same wiring with different numbers.
+// board's pin map — the 128x32 alternative is the same wiring with different numbers.
 namespace panel {
 constexpr uint16_t WIDTH = 128;
 constexpr uint16_t HEIGHT = 64;

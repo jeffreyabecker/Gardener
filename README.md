@@ -11,8 +11,8 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
 * **Battery**: 1S Li-ion pack sensed through a divider on GPIO4
 
-The parts list, and the firmware constant each one is tied to, is in
-[docs/bom.md](./docs/bom.md).
+The parts, what they cost and where to buy them, are in
+[docs/poc-parts.md](./docs/poc-parts.md).
 
 There is no local control surface: the display is a readout and the controller decides
 everything. What the device owns is what has to happen when nobody is watching — pulling to
@@ -46,8 +46,7 @@ so capturing a new one restates every target, and both want the rig at rest when
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
-| [docs/bom.md](./docs/bom.md) | The bill of materials: every part, and the constant each one is tied to |
-| [docs/prototype-build.md](./docs/prototype-build.md) | The vendor half: the modules one build was ordered from, the rails, and the wiring traps |
+| [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
 ### Architecture
 
