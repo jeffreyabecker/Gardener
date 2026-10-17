@@ -3,13 +3,13 @@
 Everything the rig is built from, in one list. One 5 V rail with a 3.3 V load rail off it, one
 switch module, one tube size. Bench use, dry air, attended.
 
-**Total to buy: $128.91.**
+**Total to buy: $132.93.**
 
 ## Parts
 
 | # | Part | What it is | Get it |
 | --- | --- | --- | --- |
-| 1 | **ESP32-C3 Super Mini** | The MCU, 3-pack. Native USB Serial/JTAG CDC is the control interface | **$12.97** — [B0GX966R9R](https://www.amazon.com/dp/B0GX966R9R) |
+| 1 | ESP32-S3 Super Mini | The MCU, 4-pack. Native USB CDC is the control interface | **$16.99** — [B0H8MV4RGZ](https://www.amazon.com/dp/B0H8MV4RGZ) |
 | 2 | JQB2438 pump | Micro diaphragm vacuum pump, 3 V/3.7 V winding, 0.45 A | **$16.84** — [B0GR4K9K4P](https://www.amazon.com/dp/B0GR4K9K4P) |
 | 3 | Solenoid valve | Mini 2-way **normally open**, 3.0–5.0 V, ~180 mA at 3.3 V. Ports 1 and 2 in use; port 3 capped | **$9.63** — [B0HDRX4C44](https://www.amazon.com/dp/B0HDRX4C44) |
 | 4 | **MPRLS module** | Adafruit MPRLS ported pressure sensor breakout. 24-bit I2C, 0–25 PSI (0–172 kPa) absolute, `VIN / GND / SDA / SCL`, address `0x18`. Pre-calibrated, so no bridge ADC | **$29.95** — [3965](https://www.adafruit.com/product/3965) |
@@ -38,12 +38,13 @@ PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ MPRLS    SDA + SC
 ```
 
 ```
-GPIO  6  7            I2C     MPRLS 0x18, panel 0x3C
-GPIO 10               pump
-GPIO 20               valve
-GPIO  0  1  3  5  21  buttons 5-way (unused)
+GPIO  8  9            I2C     MPRLS 0x18, panel 0x3C
+GPIO  6               pump
+GPIO  5               valve
+GPIO  1  2  10 11 12  buttons 5-way (unused)
 GPIO  4               battery sense (reserved)
-GPIO  2  8  9         do not use   strapping; 8 = LED, 9 = BOOT
+GPIO  7 13 14 15 16   spare
+GPIO 17 18            spare
 ```
 
 ```
@@ -92,9 +93,3 @@ Bench-only, to fix once the loop works.
 * No chamber, so no realistic pump-down time and no leak measurement.
 * The five buttons are wired but unused. The module is a 5-way switch — up, down, left, right,
   centre — so it costs five GPIOs, not four.
-* The C3 Super Mini exposes 13 GPIOs and no underside pads. GPIO2, 8 and 9 are strapping; 8 also
-  carries the onboard LED and 9 is BOOT, which is why I2C is on 6/7. The five buttons take the
-  remaining non-strapping pins, including 21 (U0TXD), which is harmless only because nothing
-  reads them.
-* This wiring is the C3 map. The firmware's pin map still names the S3 rig, so it has to move to
-  match before the rig will run.
