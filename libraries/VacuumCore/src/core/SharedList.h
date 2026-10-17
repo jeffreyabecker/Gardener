@@ -151,6 +151,25 @@ class SharedList {
     release(old);
   }
 
+  // Writer: take `source`'s chain as this list's contents, leaving `source` empty. The old
+  // chain is released outside the lock, so open Handles keep it. `source` must not have a
+  // concurrent writer.
+  void replace(SharedList& source) {
+    Node* incoming;
+    source.lock_.enter();
+    incoming = source.head_;
+    source.head_ = nullptr;
+    source.lock_.exit();
+
+    Node* old;
+    lock_.enter();
+    old = head_;
+    head_ = incoming;
+    lock_.exit();
+
+    release(old);
+  }
+
   // Reader: take an owning snapshot, then walk it without the lock.
   Handle snapshot() const {
     lock_.enter();
