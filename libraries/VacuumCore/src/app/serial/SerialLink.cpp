@@ -49,9 +49,8 @@ void SerialLink::begin() {
   swallowing_ = false;
   terminator_ = cfg::LINE_TERMINATOR;
   customTerminator_ = false;
-  // SerialLink's own records go straight to the stream it owns, and honour the same `device log`
-  // switch App's reports do.
-  if (logEnabled_) writeLine("[I] ", "serial: interface ready");
+  // SerialLink's own records go straight to the stream it owns, regardless of `device log`.
+  writeLine("[I] ", "serial: interface ready");
 }
 
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
@@ -153,7 +152,7 @@ void SerialLink::poll(uint32_t nowMs) {
     // about.
     terminator_ = cfg::LINE_TERMINATOR;
     customTerminator_ = false;
-    if (logEnabled_) writeLine("[W] ", "serial: controller detached");
+    writeLine("[W] ", "serial: controller detached");
   }
   attached_ = attached;
 }
