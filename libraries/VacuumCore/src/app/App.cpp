@@ -134,6 +134,9 @@ void App::update() {
 
   logRunChanges(now);
   logButtonPresses();
+  // The overlay reports the ways in, and the loop is the only thing that can see the serial link.
+  // Bluetooth is not fitted, so it stays false.
+  context_.overlay().setConnections(serialAttached(), false);
   // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
   // the screen is never allowed to hold up the loop in front of them.
   if (ui_) ui_->update();

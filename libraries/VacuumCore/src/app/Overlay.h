@@ -8,12 +8,13 @@
 
 namespace gardener {
 
-// The display the app draws through: it wraps any Display, and puts the device's own two things on
-// top of whatever was drawn there just before the frame goes to the glass.
+// The display the app draws through: it wraps any Display, and puts the device's own status on top
+// of whatever was drawn there just before the frame goes to the glass.
 //
 // Everything else is passed straight through, so a page cannot tell the difference — which is
-// the point. The battery and the run state's icon have to be on the panel whatever page is
-// showing, and nothing that draws a page should have to remember them.
+// the point. The battery, the run state's icon and the two ways a controller can reach the device
+// have to be on the panel whatever page is showing, and nothing that draws a page should have to
+// remember them.
 class Overlay : public Display {
  public:
   Overlay(Display* inner, const Battery* battery, const VacuumSystem* vacuum)
@@ -23,6 +24,10 @@ class Overlay : public Display {
   // --- the panel -----------------------------------------------------------
   bool begin() override { return inner_->begin(); }
   void display() override;  // draws the overlay first, then sends the frame
+
+  // Which ways in are up. The loop is the one that can see the serial link; Bluetooth is not fitted,
+  // so it is false until a radio is.
+  void setConnections(bool serial, bool bluetooth);
 
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return inner_->width(); }
@@ -107,12 +112,17 @@ class Overlay : public Display {
  private:
   void drawStateIcon();
   void chevrons(int16_t x, int16_t y, bool down);
+  void drawConnections();
+  void serialIcon(int16_t x, int16_t y);
+  void bluetoothIcon(int16_t x, int16_t y);
   void drawBattery();
   void batteryIcon(int16_t x, int16_t y, uint8_t percent);
 
   Display* inner_;
   const Battery* battery_;
   const VacuumSystem* vacuum_;
+  bool serial_ = false;
+  bool bluetooth_ = false;
 };
 
 }  // namespace gardener

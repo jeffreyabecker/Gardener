@@ -14,6 +14,12 @@ constexpr int16_t kBatteryIconY = 1;
 constexpr int16_t kStateIconX = 64;
 constexpr int16_t kStateIconY = 0;
 
+// The status column down the right edge: the battery at the top, then the two ways in.
+constexpr int16_t kConnectionIconX = 116;
+constexpr int16_t kSerialIconY = 10;
+constexpr int16_t kBluetoothIconY = 24;
+constexpr int16_t kConnectionIconSize = 12;
+
 // Below the low threshold the fill blinks. With no buttons and no alarm, that blink is the
 // entire low battery notification.
 constexpr uint32_t kLowBatteryBlinkMs = 500;
@@ -30,8 +36,14 @@ static_assert(!std::is_abstract<Overlay>::value,
 // it exists.
 void Overlay::display() {
   drawStateIcon();
+  drawConnections();
   drawBattery();
   inner_->display();
+}
+
+void Overlay::setConnections(bool serial, bool bluetooth) {
+  serial_ = serial;
+  bluetooth_ = bluetooth;
 }
 
 // One icon per state, so the mode reads without the word beside it: chevrons down while the pump
@@ -72,6 +84,31 @@ void Overlay::chevrons(int16_t x, int16_t y, bool down) {
       inner_->line(x + 7, top, x + 14, top + 6);
     }
   }
+}
+
+// Both slots own their footprint and are drawn only while the connection is up, so the column says
+// what is true now rather than what was true when the page was painted.
+void Overlay::drawConnections() {
+  inner_->clearRect(kConnectionIconX, kSerialIconY, kConnectionIconSize, kConnectionIconSize);
+  inner_->clearRect(kConnectionIconX, kBluetoothIconY, kConnectionIconSize, kConnectionIconSize);
+  if (serial_) serialIcon(kConnectionIconX, kSerialIconY);
+  if (bluetooth_) bluetoothIcon(kConnectionIconX, kBluetoothIconY);
+}
+
+// A plug: body, tongue and the cable leaving it.
+void Overlay::serialIcon(int16_t x, int16_t y) {
+  inner_->rect(x + 2, y + 1, 8, 6);
+  inner_->rect(x + 4, y + 3, 4, 2);
+  inner_->vLine(x + 6, y + 7, 4);
+}
+
+// The Bluetooth rune: the stem, and the two triangles on it.
+void Overlay::bluetoothIcon(int16_t x, int16_t y) {
+  inner_->vLine(x + 3, y, 12);
+  inner_->line(x + 3, y, x + 10, y + 3);
+  inner_->line(x + 10, y + 3, x + 3, y + 6);
+  inner_->line(x + 3, y + 6, x + 10, y + 9);
+  inner_->line(x + 10, y + 9, x + 3, y + 11);
 }
 
 // The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so

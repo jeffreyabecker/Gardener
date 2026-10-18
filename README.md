@@ -233,14 +233,16 @@ The panel is a peripheral: the device drives it, and the wire reports only its g
 `h`, so a host can lay out against the real size instead of assuming it.
 
 ```
-  PULL  vv                    ▐███▐         <- the state and its icon, the battery in the corner
+  PULL  vv                    ▐███▐         <- the state and its icon, the status column
   12.3 kPa                                  <- how deep the chamber is, 18 pt
   TGT 30.0                                  <- what the loop is pulling to
 ```
 
 The boot splash is the first frame; after a second and a half it gives way to that readout,
-repainted four times a second so the battery blink keeps moving. Nothing on the serial line draws
-into the buffer or changes the panel's configuration.
+repainted four times a second so the battery blink keeps moving. Down the right edge is the
+device's status: the battery, then a plug for the serial link and the Bluetooth rune beside it.
+An icon is drawn only while its connection is up. Nothing on the serial line draws into the
+buffer or changes the panel's configuration.
 
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
 across a reset. With no host talking, the panel shows the pressure and no target.
@@ -360,7 +362,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
-* [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery and run state
+* [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery, the run state and the connections
 * [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
