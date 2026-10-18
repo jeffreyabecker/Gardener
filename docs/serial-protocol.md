@@ -133,11 +133,11 @@ reason a command failed is also on the reply line (§11).
 | `batt_v` | r | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | r | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | rw | `on` / `off` | diagnostics on this stream |
-| `unit` | rw | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Parsed and echoed, but nothing stores it yet: a write is accepted and dropped, so the reply answers the unit the device still shows |
+| `unit` | rw | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in LittleFS and restored at boot |
 
 | Action | Reply | Notes |
 | --- | --- | --- |
-| `device reboot` | `ok result=reboot` | boots safe: pump off, valve open, nothing restored, terminator back to `\n`, panel back to rotation 0, ink normal, splash drawn |
+| `device reboot` | `ok result=reboot` | boots safe: pump off, valve open, the run is not restored (the display unit is), terminator back to `\n`, panel back to rotation 0, ink normal, splash drawn |
 
 The reply is written before the restart, so `result=reboot` means "restarting", not "restarted":
 it is the one reply that describes something that has not happened yet.
@@ -148,13 +148,13 @@ it is the one reply that describes something that has not happened yet.
 -> device log=off
 <- ok log=off
 -> device unit=mmhg
-<- ok unit=kpa
+<- ok unit=mmhg
 ```
 
-`device unit=` is the one write that changes nothing: there is no store behind it yet, so the
-value is parsed, discarded, and the echo reports what the panel is actually showing. The machine
-and this wire stay in kPa either way — a display unit is a preference about the glass, not a
-second way to state a pressure.
+`device unit=` is the one write that survives a reset: the value is written to the `[device]`
+section of `/settings.ini` and read back at boot. A filesystem that will not take the write still answers with the unit in force
+for this session, and the boot log reports the failed mount. The machine and this wire stay in kPa
+either way — a display unit is a preference about the glass, not a second way to state a pressure.
 
 ## 6. `vacuum` — the machine that holds pressure
 

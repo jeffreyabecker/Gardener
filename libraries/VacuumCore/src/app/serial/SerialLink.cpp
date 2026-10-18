@@ -381,8 +381,8 @@ bool SerialLink::writeDevice(const FieldWrite* writes, uint8_t count) {
     }
   }
   logEnabled_ = logEnabled;
-  // No store yet, so this drops the value; the echo then answers what the device still prints,
-  // which is the honest answer rather than the one the host asked for.
+  // The unit is the device's one stored preference, written through to the filesystem. The echo
+  // below reads it back, so a write that could not be stored still answers with the value in force.
   context_->settings().setUnit(unit);
   return true;
 }

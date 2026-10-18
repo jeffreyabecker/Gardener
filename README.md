@@ -41,7 +41,7 @@ reference, so the rig needs to be at rest when the device boots.
 | --- | --- |
 | [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
-| [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
+| [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
@@ -213,12 +213,13 @@ powershell -File scripts/arduino.ps1 -Task monitor -Port COM5
 
 The build uses `--libraries libraries`, so the project local `libraries/VacuumCore` is used
 instead of the global sketchbook copy. In VS Code the same commands are tasks (`arduino: build`,
-`arduino: upload`, `arduino: monitor`, `arduino: install libraries`).
+`arduino: upload`, `arduino: upload data`, `arduino: monitor`, `arduino: install libraries`).
 
 **The board options matter**: the build pins
-`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc`, which is what maps `Serial` to the chip's
-native USB CDC. Build without `CDCOnBoot` and the whole interface goes to UART0 on GPIO43/44
-instead, so a USB cable sees nothing at all. It is pinned in `firmware/gardener/sketch.yaml`,
+`esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default`, which is
+what maps `Serial` to the chip's native USB CDC and fixes the partition table the data upload
+writes. Build without `CDCOnBoot` and the whole interface goes to UART0 on GPIO43/44 instead, so a
+USB cable sees nothing at all. It is pinned in `firmware/gardener/sketch.yaml`,
 `scripts/arduino.ps1` and `.vscode/arduino.json`.
 
 The board's wiring and the machine's policy tunables both live in
@@ -244,9 +245,36 @@ device's status: the battery, then a plug for the serial link and the Bluetooth 
 An icon is drawn only while its connection is up. Nothing on the serial line draws into the
 buffer or changes the panel's configuration.
 
-Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
-across a reset. The screen follows the link: the readout while a controller is attached, and the
-plain mark while none is.
+Boot is safe: pump off, valve open, `IDLE`, the splash on the panel. Nothing about a run is
+remembered across a reset; the display unit is the one setting that is, from LittleFS. The screen
+follows the link: the readout while a controller is attached, and the plain mark while none is.
+
+### Files on the device
+
+The build reserves the core's `default` 4 MB partition table, which leaves a 1.5 MB `spiffs`
+partition at `0x290000`. The firmware mounts it as LittleFS at boot and formats it if there is no
+filesystem yet. Everything under `firmware/gardener/data/` is packed into an image and written to
+that partition over the same USB cable:
+
+```powershell
+powershell -File scripts/arduino.ps1 -Task data -Port COM5
+```
+
+The task creates the folder if it is missing, builds the image with the core's `mklittlefs`, writes
+it with `esptool` at the offset the pinned partition table names, and resets the device so it
+mounts the new filesystem. It replaces the whole filesystem, so a file the device wrote itself is
+gone unless the data folder carries a copy. There is no per-file command on the serial line yet:
+this is a whole-image upload.
+
+The display unit is stored in `/settings.ini` and restored at boot:
+
+```ini
+[device]
+unit=mmhg
+```
+
+So `device unit=mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
+are carried through a write rather than dropped; comments and spacing are not kept.
 
 ### Over the serial line
 
@@ -368,3 +396,4 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
+* [x] LittleFS storage: a mount at boot, a persistent display unit, and a data-folder upload task

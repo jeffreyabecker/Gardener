@@ -6,4 +6,7 @@
 # uploads keep working over the same cable. CDCOnBoot=cdc is not optional: it maps Serial
 # to that CDC. Without it Serial is UART0 on GPIO43/44 and the interface never reaches the
 # USB-C socket.
-default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc
+#
+# FlashSize and PartitionScheme are pinned as well: the LittleFS partition the firmware mounts
+# is the one `scripts/arduino.ps1 -Task data` writes, and its offset comes from this table.
+default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default

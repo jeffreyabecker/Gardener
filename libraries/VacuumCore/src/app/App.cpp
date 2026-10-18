@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "core/Config.h"
+#include "core/Units.h"
 
 namespace gardener {
 namespace {
@@ -59,6 +60,11 @@ bool App::begin() {
   bool batteryOk = context_.battery().begin();
   context_.vacuum().begin();
 
+  // The device's files are mounted once, before anything that reads a preference. A partition with
+  // no filesystem is formatted, which is reported rather than assumed: whatever was there is gone.
+  Storage::Mount mount = context_.storage().begin();
+  context_.settings().begin();
+
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
   logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
@@ -67,6 +73,29 @@ bool App::begin() {
                                                    : "vent: normally open");
   logger_->info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   logger_->info("buttons: four keys on interrupt");
+
+  switch (mount) {
+    case Storage::Mount::Mounted:
+      logger_->info("fs: littlefs mounted");
+      break;
+    case Storage::Mount::Formatted:
+      logger_->info("fs: littlefs formatted, no filesystem found");
+      break;
+    case Storage::Mount::Failed:
+      logger_->warn("fs: littlefs mount failed, settings will not persist");
+      break;
+  }
+  if (mount != Storage::Mount::Failed) {
+    String usage = "fs: ";
+    usage += String((uint32_t)context_.storage().usedBytes());
+    usage += " of ";
+    usage += String((uint32_t)context_.storage().totalBytes());
+    usage += " bytes used";
+    logger_->info(usage.c_str());
+  }
+  String stored = "settings: unit=";
+  stored += displayUnitInfo(context_.settings().unit()).name;
+  logger_->info(stored.c_str());
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
