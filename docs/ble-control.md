@@ -50,6 +50,34 @@ lease is ever wanted — "stop if nobody has refreshed me in N seconds" — it s
 characteristic the app writes, not a property of the connection, so the behaviour is visible in the
 contract instead of implied by it.
 
+### 3.1 The screen, which is a different question
+
+The firmware chooses its page from the link: `App::screenFor()` returns `ConnectedUI` while a
+controller is attached and `DisconnectedUI` while none is, and today "attached" means
+`serialAttached()`.
+
+BLE makes that a two-source question. **A connected central is a viewer even though it is not an
+owner**, so the switch has to become `serialAttached() || ble_->connected()` — otherwise a phone can
+subscribe to every value and watch a live run while the panel in front of the operator still shows
+the boot mark, and the device looks dead while it is being driven.
+
+The two rules must not be conflated, because they answer different questions:
+
+| Question | Sources | Effect |
+| --- | --- | --- |
+| Is anyone watching? | serial attached **or** a central connected | which page is drawn |
+| Has the controller gone away? | serial presence only | whether the run is released (Q4) |
+| Does a BLE disconnect stop a run? | — | no (§3) |
+
+So `BleLink` owes the loop a `connected()` the screen can be chosen from, and `screenFor()` takes
+both flags rather than reaching for `Serial` itself. A change on either transport repaints; both
+pages are cheap to repaint and neither carries state that a swap would lose.
+
+There is a subtle failure worth naming: because BLE connects without venting, a central can appear
+during an unattended run. The screen switching to the readout is correct — something is now looking
+at a machine that is already working — and it must not be mistaken for a session starting, because
+nothing about the run changed when the radio connected.
+
 ## 4. The GATT contract
 
 One primary service with a project-owned 128-bit base UUID. The last 16 bits select the
@@ -137,6 +165,7 @@ way to command the instrument, which is what `SerialLink` is.
 AppContext context_;
 SerialLink* link_;    // serial, unchanged, keeps Q4
 BleLink* ble_;        // own contract; no link-loss rule
+UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
 ```
 
 * `BleLink` holds the `AppContext*`, the NimBLE server, the characteristics, and a snapshot.
@@ -211,6 +240,8 @@ the battery.
   before it subscribes to anything.
 * A pressure is always kPa, whether the panel is showing kPa, psi, inHg or mmHg. `unit` says what
   the glass prints; it never changes what `kpa` or `target` mean.
+* Connecting puts the readout on the panel and disconnecting returns it to the mark (§3.1), even
+  though neither touches the run.
 
 ## 9. Build and configuration
 
@@ -239,6 +270,9 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 * Write-to-notify latency for `target` and `command`.
 * The safety claim: start a run from BLE, disconnect the phone, confirm the run continues and the
   pump state is unchanged.
+* The screen switch: with USB unplugged, a BLE connection puts the readout on the panel, and the
+  panel goes back to the mark when the phone disconnects — including when that lands mid-run, where
+  the run must keep going while the page changes.
 * Pair, reboot, reconnect without re-pairing.
 * A serial session and a BLE session at once: neither disturbs the other, and a serial detach still
   stops and vents.
@@ -261,8 +295,9 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 ## 12. Phases
 
 1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`unit`/`fw`/`ble_proto`, the snapshot
-   and the notification rates. Prove a phone shows live values and that a serial session is
-   unaffected.
+   and the notification rates, and `BleLink::connected()` feeding `screenFor()` so the panel shows
+   the readout for a phone with no USB attached (§3.1). Prove a phone shows live values and that a
+   serial session is unaffected.
 2. **P1 — control.** `target` writes, `unit` writes, the command mailbox and opcodes, result
    notifications, and the `startRefusal()` mapping.
 3. **P2 — security.** Passkey on the panel, bonding, encryption on the three writable
