@@ -22,9 +22,9 @@ constexpr uint8_t kPwmResolution = 10;
 static_assert(!std::is_abstract<PwmPump>::value, "PwmPump must implement every Pump verb");
 
 bool PwmPump::begin() {
-  pinMode(cfg::PUMP_PWM, OUTPUT);
-  digitalWrite(cfg::PUMP_PWM, LOW);
-  if (!ledcAttach(cfg::PUMP_PWM, kPwmFreqHz, kPwmResolution)) {
+  pinMode(pin_, OUTPUT);
+  digitalWrite(pin_, LOW);
+  if (!ledcAttach(pin_, kPwmFreqHz, kPwmResolution)) {
     return false;
   }
   write(0.0f);
@@ -35,7 +35,7 @@ void PwmPump::write(float percent) {
   const uint32_t maxDuty = (1u << kPwmResolution) - 1u;
   float limited = clampf(percent, 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
-  ledcWrite(cfg::PUMP_PWM, duty);
+  ledcWrite(pin_, duty);
 }
 
 void PwmPump::setDuty(float percent) {

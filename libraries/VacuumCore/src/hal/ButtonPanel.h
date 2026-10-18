@@ -5,7 +5,7 @@
 namespace gardener {
 
 // The front panel keys, as the rest of the firmware sees them. The GPIO and the interrupts are in
-// hal/impl/, where the pins live.
+// hal/impl/, where the pins it is given are armed.
 class ButtonPanel {
  public:
   virtual ~ButtonPanel() = default;

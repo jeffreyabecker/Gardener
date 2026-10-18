@@ -12,24 +12,29 @@ namespace gardener {
 // The front panel keys: four active low switches with pull ups on the module, read through GPIO
 // change interrupts.
 //
-// The constructor arms the pins, and from then on the ISR samples them and hands the reader one
-// packed mask: an edge is captured even if the loop is busy, and nothing polls a pin. That mask has
-// one writer, the ISR, and a read takes it in a short critical section; the debounce settles on the
-// read, so the class needs no service call of its own.
+// The constructor arms the pins it is given, and from then on the ISR samples them and hands the
+// reader one packed mask: an edge is captured even if the loop is busy, and nothing polls a pin.
+// That mask has one writer, the ISR, and a read takes it in a short critical section; the debounce
+// settles on the read, so the class needs no service call of its own.
 class Buttons : public ButtonPanel {
  public:
-  Buttons();
+  Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back);
 
   bool pressed(Button button) override;
   bool consumePress(Button button) override;
 
  private:
   static void ARDUINO_ISR_ATTR isr(void* arg);
-  static uint32_t ARDUINO_ISR_ATTR readPins();
+  uint32_t ARDUINO_ISR_ATTR readPins() const;
   static constexpr uint32_t bitOf(Button button) { return 1u << (uint8_t)button; }
 
   // Takes the level the ISR left and accepts it once it has held still.
   uint32_t settle();
+
+  const uint8_t upPin_;
+  const uint8_t downPin_;
+  const uint8_t okPin_;
+  const uint8_t backPin_;
 
   PortMux lock_;
   // Written only by the ISR, read by settle() under the lock.

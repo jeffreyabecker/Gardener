@@ -1,7 +1,5 @@
 #include "hal/impl/Buttons.h"
 
-#include "core/Config.h"
-
 namespace gardener {
 namespace {
 
@@ -12,23 +10,24 @@ constexpr uint32_t kDebounceMs = 20;
 
 }  // namespace
 
-Buttons::Buttons() {
+Buttons::Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back)
+    : upPin_(up), downPin_(down), okPin_(ok), backPin_(back) {
   // The module carries pull ups; the internal ones are the fallback when a key is fitted without
   // it, and either way the pin reads high until the switch pulls it to ground.
-  pinMode(cfg::BTN_UP, INPUT_PULLUP);
-  pinMode(cfg::BTN_DOWN, INPUT_PULLUP);
-  pinMode(cfg::BTN_OK, INPUT_PULLUP);
-  pinMode(cfg::BTN_BACK, INPUT_PULLUP);
+  pinMode(upPin_, INPUT_PULLUP);
+  pinMode(downPin_, INPUT_PULLUP);
+  pinMode(okPin_, INPUT_PULLUP);
+  pinMode(backPin_, INPUT_PULLUP);
 
   // A key held at boot is the initial level, not a press: there is nobody to have pressed it.
   stable_ = readPins();
   pending_ = stable_;
   raw_ = stable_;
 
-  attachInterruptArg(digitalPinToInterrupt(cfg::BTN_UP), isr, this, CHANGE);
-  attachInterruptArg(digitalPinToInterrupt(cfg::BTN_DOWN), isr, this, CHANGE);
-  attachInterruptArg(digitalPinToInterrupt(cfg::BTN_OK), isr, this, CHANGE);
-  attachInterruptArg(digitalPinToInterrupt(cfg::BTN_BACK), isr, this, CHANGE);
+  attachInterruptArg(digitalPinToInterrupt(upPin_), isr, this, CHANGE);
+  attachInterruptArg(digitalPinToInterrupt(downPin_), isr, this, CHANGE);
+  attachInterruptArg(digitalPinToInterrupt(okPin_), isr, this, CHANGE);
+  attachInterruptArg(digitalPinToInterrupt(backPin_), isr, this, CHANGE);
 }
 
 uint32_t Buttons::settle() {
@@ -62,17 +61,18 @@ bool Buttons::consumePress(Button button) {
   return true;
 }
 
-uint32_t ARDUINO_ISR_ATTR Buttons::readPins() {
+uint32_t ARDUINO_ISR_ATTR Buttons::readPins() const {
   uint32_t mask = 0;
-  if (digitalRead(cfg::BTN_UP) == LOW) mask |= bitOf(Button::Up);
-  if (digitalRead(cfg::BTN_DOWN) == LOW) mask |= bitOf(Button::Down);
-  if (digitalRead(cfg::BTN_OK) == LOW) mask |= bitOf(Button::Ok);
-  if (digitalRead(cfg::BTN_BACK) == LOW) mask |= bitOf(Button::Back);
+  if (digitalRead(upPin_) == LOW) mask |= bitOf(Button::Up);
+  if (digitalRead(downPin_) == LOW) mask |= bitOf(Button::Down);
+  if (digitalRead(okPin_) == LOW) mask |= bitOf(Button::Ok);
+  if (digitalRead(backPin_) == LOW) mask |= bitOf(Button::Back);
   return mask;
 }
 
 void ARDUINO_ISR_ATTR Buttons::isr(void* arg) {
-  static_cast<Buttons*>(arg)->raw_ = readPins();
+  auto* self = static_cast<Buttons*>(arg);
+  self->raw_ = self->readPins();
 }
 
 }  // namespace gardener

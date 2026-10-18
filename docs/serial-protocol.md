@@ -372,7 +372,7 @@ What a controller has to know:
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
 * **The vent valve is normally open by default**: de-energised is open, so running a vacuum means
   energising the coil to close it. A crash, a brownout or a cut wire therefore vents the chamber
-  whether or not the firmware noticed. `NormallyClosedValve` in `app/App.h` is the alternative and
+  whether or not the firmware noticed. `NormallyClosedValve` in `app/Build.cpp` is the alternative and
   inverts all of that — de-energised is sealed.
 * A normally open solenoid draws current for the whole hold, which is why a long hold is the
   dominant battery cost rather than the pump. A normally closed part draws it at rest instead,

@@ -1,10 +1,7 @@
 #include "hal/impl/AdafruitDisplay.h"
 
 #include <Adafruit_SH110X.h>
-#include <Wire.h>
 #include <type_traits>
-
-#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -19,11 +16,11 @@ static_assert(!std::is_abstract<AdafruitDisplay>::value,
 bool AdafruitDisplay::begin() {
   // The panel is the first part on the bus and the one with no fallback, so it brings the bus up;
   // the sensor comes up after it.
-  Wire.begin(cfg::I2C_SDA, cfg::I2C_SCL, cfg::I2C_FREQ_HZ);
+  wire_.begin(sda_, scl_, busHz_);
 
   // The driver is new'd and never deleted: it lives for the life of the device, whose destructor
   // never runs, so nothing owns it.
-  Adafruit_SH1106G* driver = new Adafruit_SH1106G(panel::WIDTH, panel::HEIGHT, &Wire, -1);
+  Adafruit_SH1106G* driver = new Adafruit_SH1106G(panel::WIDTH, panel::HEIGHT, &wire_, -1);
 
   // The STEMMA QT breakout has no reset line, so the library must not poke one.
   if (!driver->begin(panel::I2C_ADDR, false)) {

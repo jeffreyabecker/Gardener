@@ -18,7 +18,7 @@ constexpr float kPresentMinVolts = 1.0f;
 }  // namespace
 
 bool AdcBattery::begin() {
-  pinMode(cfg::BATTERY_ADC, INPUT);
+  pinMode(pin_, INPUT);
   configured_ = true;
   update(millis());
   return true;
@@ -33,7 +33,7 @@ void AdcBattery::update(uint32_t nowMs) {
   sampled_ = true;
 
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < kSamples; i++) totalMilliVolts += analogReadMilliVolts(cfg::BATTERY_ADC);
+  for (uint8_t i = 0; i < kSamples; i++) totalMilliVolts += analogReadMilliVolts(pin_);
 
   float pinVolts = (float)totalMilliVolts / (float)kSamples / 1000.0f;
   volts_ = pinVolts * cfg::BATTERY_DIVIDER_RATIO * cfg::BATTERY_CALIBRATION;

@@ -4,9 +4,9 @@
 
 // Every constant the firmware owns: the board it is wired to, and the policy it runs by.
 //
-// The board facts are here rather than in hal/ because a pin is one shared truth — the driver that
-// reads it, the composition root that brings the bus up and the wiring docs all name the same rig —
-// and this is the header every layer already includes. That width is the price of it: because
+// The board facts are here rather than in hal/ because a pin is one shared truth — the composition
+// root that hands it to the driver, the driver that reads it, and the wiring docs all name the same
+// rig — and this is the header every layer already includes. That width is the price of it: because
 // core/ is visible everywhere, the serial layer can see a GPIO too.
 //
 // The device is a serial peripheral: every decision comes from the controller, so what
@@ -36,7 +36,7 @@ constexpr uint32_t I2C_FREQ_HZ = 400000;
 constexpr int PUMP_PWM = 6;
 
 // The vent valve: a solenoid through a logic level MOSFET with a flyback diode across the coil,
-// wired like the pump. Which coil level means "open" is chosen in app/App.h by the valve class it
+// wired like the pump. Which coil level means "open" is chosen in app/Build.cpp by the valve class it
 // constructs; normally open is the fail-safe default.
 constexpr int VENT_VALVE = 5;
 

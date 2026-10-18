@@ -10,7 +10,7 @@ namespace gardener {
 // +/-3-5 % at best.
 //
 // This is the interface the rest of the firmware holds. The divider on an ADC pin is in
-// hal/impl/, where the pin and the calibration live.
+// hal/impl/, along with the calibration; the pin itself comes from the composition root.
 class Battery {
  public:
   virtual ~Battery() = default;

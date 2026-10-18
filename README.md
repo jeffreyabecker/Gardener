@@ -88,9 +88,11 @@ of it: a part reports what it is doing as values, and nothing in `hal/` knows th
 a control loop exists. The vacuum system is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
-pins and the bus read in another. Each of those is an interface, and the part that satisfies it is in
-`hal/impl/`, which is where the pin is read and where `<Adafruit_MPRLS.h>` and
-`<Adafruit_GrayOLED.h>` appear and nowhere else.
+pins and the bus are named in another. Each of those is an interface, and the part that satisfies it
+is in `hal/impl/`, which is where the part is driven and where `<Adafruit_MPRLS.h>` and
+`<Adafruit_GrayOLED.h>` appear and nowhere else. A driver is given its pins rather than reading
+them: [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp) is the one place that turns the
+numbers in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) into a fitted rig.
 
 ## Wiring
 
@@ -153,7 +155,7 @@ is driving it decides when the pump stops.
 vents — so *running a vacuum means energising the coil to close the valve*. That makes the
 fail-safe physical rather than logical: a crash, a watchdog reset, a brownout or a cut wire
 all de-energise the coil and the chamber vents whether or not the firmware noticed. The part
-is named in [app/App.h](./libraries/VacuumCore/src/app/App.h): `NormallyOpenValve` is the safe
+is named in [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp): `NormallyOpenValve` is the safe
 default, and `NormallyClosedValve` is the alternative for holding vacuum through a power loss —
 it inverts the relationship, so de-energised means *sealed* and the fail-safe above is gone.
 Wire it like the pump (GPIO5, logic level MOSFET, flyback diode across the coil):
@@ -300,7 +302,7 @@ IDLE ──────────────> PULL ──(target reached)─�
 * The countdown is the host's job: the host holds the timer, and the device renders nothing of
   its own except the splash and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
-  means energised or de-energised is the fitted part's, and is named in `app/App.h`.
+  means energised or de-energised is the fitted part's, and is named in `app/Build.cpp`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
 * Faults latch. Only `vacuum reset` clears one; the device never retries on its own.
@@ -330,7 +332,7 @@ can hurt people and destroy hardware. Keep a rated catch pot and filter in line,
 that the firmware's limits are software limits only.
 
 The one hardware guarantee is the valve: it is normally open, so losing power or losing
-control releases the chamber. That guarantee belongs to `NormallyOpenValve` in `app/App.h` —
+control releases the chamber. That guarantee belongs to `NormallyOpenValve` in `app/Build.cpp` —
 fitting a `NormallyClosedValve` instead removes it, because a dead normally closed valve holds
 the vacuum. Do not expect the fail-safe to survive that swap.
 

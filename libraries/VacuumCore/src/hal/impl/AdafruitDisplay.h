@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Adafruit_GrayOLED.h>
+#include <Wire.h>
 #include <stdint.h>
 
 #include "hal/Display.h"
@@ -26,6 +27,11 @@ constexpr uint8_t I2C_ADDR = 0x3C;
 // true.
 class AdafruitDisplay : public Display {
  public:
+  // The bus is the harness, not the panel, so it comes from the composition root along with the
+  // pins it is wired to; begin() brings it up.
+  AdafruitDisplay(TwoWire& wire, int sda, int scl, uint32_t busHz)
+      : wire_(wire), sda_(sda), scl_(scl), busHz_(busHz) {}
+
   // The driver outlives this adapter and is never deleted: Adafruit_GrayOLED has no virtual
   // destructor, and the panel lives for the life of the device.
   ~AdafruitDisplay() override = default;
@@ -118,6 +124,10 @@ class AdafruitDisplay : public Display {
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted);
   void measure(const char* value, uint8_t size, int16_t& outWidth, int16_t& outHeight);
 
+  TwoWire& wire_;
+  const int sda_;
+  const int scl_;
+  const uint32_t busHz_;
   Adafruit_GrayOLED* panel_ = nullptr;
 };
 
