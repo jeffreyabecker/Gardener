@@ -44,6 +44,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, monitor and library install wrapper |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
+| [docs/ble-control.md](./docs/ble-control.md) | Design for a BLE GATT contract: characteristics, rates, safety, concurrency and the phased plan |
 
 ### Architecture
 
@@ -346,8 +347,10 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 
 * **No host client in this build.** The serial client that used to live in `tools/` was deleted
   while the interface is in churn — it is in git at commit `85f3cbb` if it is wanted back.
-* The line grammar is the whole interface, so anything that can carry newline terminated
+* The line grammar is the whole serial interface, so anything that can carry newline terminated
   text — another microcontroller, a bridge, a terminal — can drive the device as it stands.
+  [docs/ble-control.md](./docs/ble-control.md) adds a second, deliberately different surface for a
+  phone: GATT characteristics rather than lines, because a BLE client is not a terminal.
 
 ## Status
 
