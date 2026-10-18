@@ -24,20 +24,20 @@ void VacuumSystem::begin() {
 }
 
 float VacuumSystem::currentKpa() const {
-  return sensor_.readingValid() ? sensor_.kpa() : 0.0f;
+  return sensor_->readingValid() ? sensor_->kpa() : 0.0f;
 }
 
 void VacuumSystem::rest() {
-  pump_.stop();
-  vent_.open();  // assert the vented resting state when asked
+  pump_->stop();
+  vent_->open();  // assert the vented resting state when asked
   pidReset();
   output_ = 0.0f;
   setState(RunState::Idle);
 }
 
 void VacuumSystem::release() {
-  pump_.stop();
-  vent_.open();
+  pump_->stop();
+  vent_->open();
   pidReset();
   output_ = 0.0f;
   ventStartMs_ = millis();
@@ -48,7 +48,7 @@ bool VacuumSystem::start() {
   if (startRefusal() != nullptr) return false;
 
   // Close before pumping, so the pump never pulls against an open port.
-  vent_.close();
+  vent_->close();
   pidReset();
   output_ = 0.0f;
   lastControlMs_ = millis();
@@ -60,7 +60,7 @@ bool VacuumSystem::start() {
 const char* VacuumSystem::startRefusal() const {
   if (faulted()) return "latch";
   if (targetKpa_ <= 0.0f) return "no_target";
-  if (!sensor_.present() || !sensor_.readingValid()) return "no_reading";
+  if (!sensor_->present() || !sensor_->readingValid()) return "no_reading";
   return nullptr;
 }
 
@@ -74,7 +74,7 @@ void VacuumSystem::stop() {
 }
 
 bool VacuumSystem::vented() const {
-  bool settled = sensor_.present() && sensor_.readingValid() &&
+  bool settled = sensor_->present() && sensor_->readingValid() &&
                  currentKpa() <= cfg::VENT_MARGIN_KPA;
   return settled || (millis() - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
 }
@@ -117,8 +117,8 @@ void VacuumSystem::resetFault() {
 // is opened, and the code is what `vacuum get` reports until resetFault(). Nothing writes a duty
 // again while it is set, because nothing but resetFault() leaves Fault.
 void VacuumSystem::fail(const char* code) {
-  pump_.halt();
-  vent_.open();  // drive the valve open: the safe direction
+  pump_->halt();
+  vent_->open();  // drive the valve open: the safe direction
   pidReset();
   output_ = 0.0f;
   faultCode_ = code ? code : "unknown";
@@ -133,7 +133,7 @@ void VacuumSystem::service(uint32_t nowMs) {
   const bool regulating = state_ == RunState::Pulling || state_ == RunState::Holding;
 
   // Regulating on a reading nobody trusts is how the loop runs away.
-  if (regulating && (!sensor_.present() || !sensor_.readingValid())) {
+  if (regulating && (!sensor_->present() || !sensor_->readingValid())) {
     fail("sensor");
     return;
   }
@@ -175,7 +175,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
     pidReset();
     output_ = 0.0f;
-    pump_.stop();
+    pump_->stop();
     lastMeasured_ = measured;
     lastDerivativeMs_ = nowMs;
     return;
@@ -190,7 +190,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   }
 
   output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
-  pump_.setDuty(output_);
+  pump_->setDuty(output_);
 
   lastMeasured_ = measured;
   lastDerivativeMs_ = nowMs;

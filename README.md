@@ -53,7 +53,7 @@ core/   shared foundations: the constants the firmware owns — the board's pin 
 hal/    what the instrument needs from its hardware: an abstract class per part — Display,
         PressureSensor, Pump, VentValve, Battery, ButtonPanel. The parts themselves are in
         hal/impl/, which is the only place a vendor library is included
-app/    the instrument: the vacuum system that commands them, the context factory that owns the
+app/    the instrument: the vacuum system that commands them, the build function that owns the
         parts, the application loop, the display overlay and the serial interface
 ```
 
@@ -68,16 +68,17 @@ Dependencies only ever point downwards. Nothing checks it — keep it that way b
 Three rules make that hold:
 
 * **No service locator.** Nothing reaches for a global to find what it needs: a class is handed
-  what it uses at construction, or owns it outright. `ContextFactory` is the only file that knows
-  the whole graph, and a missing dependency is a compile error rather than a null pointer at
-  runtime.
+  what it uses at construction, or owns it outright. `buildAppContext()` in
+  [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp) is the only place that knows the whole
+  graph, and every constructor still requires every dependency, so a missing dependency is a
+  compile error.
 * **No shared `util`.** A helper lives with its single owner. `core/` is visible everywhere,
   so anything parked there is public API whether or not that was the intent —
   [core/Config.h](./libraries/VacuumCore/src/core/Config.h) is the one deliberate exception,
   because the board's wiring is the same single truth for every layer that names it.
 * **Reads go through the owner.**
-  [ContextFactory](./libraries/VacuumCore/src/app/ContextFactory.h) builds and owns the parts and
-  hands out an [AppContext](./libraries/VacuumCore/src/app/AppContext.h) of interfaces.
+  [Build.cpp](./libraries/VacuumCore/src/app/Build.cpp) builds and owns the parts and hands out an
+  [AppContext](./libraries/VacuumCore/src/app/AppContext.h) of interfaces.
   [App](./libraries/VacuumCore/src/app/App.h) commands those interfaces, and `SerialLink` formats
   a reply by reading them, so there is no second copy of the machine to rebuild each loop, and a
   driver still does not know that a display or a controller exists.

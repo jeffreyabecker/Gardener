@@ -48,7 +48,7 @@ inline const char* runStateName(RunState state) {
 // path here stops the pump before it opens the valve. Gains live in core/Config.h.
 class VacuumSystem {
  public:
-  VacuumSystem(Pump& pump, PressureSensor& sensor, VentValve& vent)
+  VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent)
       : pump_(pump), sensor_(sensor), vent_(vent) {}
 
   void begin();                  // pump off, valve open: the safe resting state
@@ -74,9 +74,9 @@ class VacuumSystem {
   const char* faultCode() const { return faultCode_; }
 
   // The devices, so the serial layer can read what the loop commands without a second copy.
-  Pump& pump() { return pump_; }
-  VentValve& vent() { return vent_; }
-  PressureSensor& sensor() { return sensor_; }
+  Pump& pump() { return *pump_; }
+  VentValve& vent() { return *vent_; }
+  PressureSensor& sensor() { return *sensor_; }
 
  private:
   void setState(RunState state);
@@ -98,9 +98,9 @@ class VacuumSystem {
   void pidReset() { pidIntegral_ = 0.0f; }
   float pidUpdate(float dt, float error, float measurementSlew);
 
-  Pump& pump_;
-  PressureSensor& sensor_;
-  VentValve& vent_;
+  Pump* pump_;
+  PressureSensor* sensor_;
+  VentValve* vent_;
 
   RunState state_ = RunState::Idle;
   float targetKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports

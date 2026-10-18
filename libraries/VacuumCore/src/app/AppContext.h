@@ -14,11 +14,11 @@
 namespace gardener {
 
 // The hardware graph as interfaces: what App commands and the serial layer reads, with no fitted
-// part named. ContextFactory owns the implementations and builds this.
+// part named. Build.cpp owns the implementations and builds this.
 class AppContext {
  public:
-  AppContext(PressureSensor& sensor, Pump& pump, VentValve& vent, Battery& battery,
-             ButtonPanel& buttons, Display& display, VacuumSystem& vacuum)
+  AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
+             ButtonPanel* buttons, Display* display, VacuumSystem* vacuum)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -27,23 +27,23 @@ class AppContext {
         display_(display),
         vacuum_(vacuum) {}
 
-  PressureSensor& sensor() { return sensor_; }
-  Pump& pump() { return pump_; }
-  VentValve& vent() { return vent_; }
-  Battery& battery() { return battery_; }
-  ButtonPanel& buttons() { return buttons_; }
-  Display& display() { return display_; }
-  VacuumSystem& vacuum() { return vacuum_; }
+  PressureSensor& sensor() { return *sensor_; }
+  Pump& pump() { return *pump_; }
+  VentValve& vent() { return *vent_; }
+  Battery& battery() { return *battery_; }
+  ButtonPanel& buttons() { return *buttons_; }
+  Display& display() { return *display_; }
+  VacuumSystem& vacuum() { return *vacuum_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
-  PressureSensor& sensor_;
-  Pump& pump_;
-  VentValve& vent_;
-  Battery& battery_;
-  ButtonPanel& buttons_;
-  Display& display_;
-  VacuumSystem& vacuum_;
+  PressureSensor* sensor_;
+  Pump* pump_;
+  VentValve* vent_;
+  Battery* battery_;
+  ButtonPanel* buttons_;
+  Display* display_;
+  VacuumSystem* vacuum_;
 };
 
 }  // namespace gardener

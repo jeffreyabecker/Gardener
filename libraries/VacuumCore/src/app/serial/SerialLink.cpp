@@ -39,7 +39,7 @@ String named(const char* key, const char* value) {
 
 }  // namespace
 
-SerialLink::SerialLink(AppContext& context, Stream& stream, PresenceFn present)
+SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present)
     : context_(context), stream_(stream), present_(present) {}
 
 void SerialLink::begin() {
@@ -360,7 +360,7 @@ void SerialLink::resourceCommand(const ResourceSpec& resource, Tokens& tokens) {
 WireView SerialLink::wireView() const {
   // The machine is read live: a reply has to describe it as the command left it rather than as the
   // previous loop iteration left it.
-  WireView view = {context_, logEnabled_, terminator_, customTerminator_, present_ != nullptr,
+  WireView view = {*context_, logEnabled_, terminator_, customTerminator_, present_ != nullptr,
                    attached_};
   return view;
 }
@@ -396,7 +396,7 @@ bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
   // `-` is the protocol's word for unset, and an unset target releases the chamber: a run without a
   // target is not a run.
   if (same(write.value, "-")) {
-    context_.vacuum().clearTarget();
+    context_->vacuum().clearTarget();
     return true;
   }
 
@@ -411,7 +411,7 @@ bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
     errOutOfRange(write.field->name, write.value, write.field->min, write.field->max);
     return false;
   }
-  context_.vacuum().setTarget(kpa);
+  context_->vacuum().setTarget(kpa);
   return true;
 }
 
@@ -461,11 +461,11 @@ void SerialLink::deviceReboot() {
 }
 
 void SerialLink::vacuumStart() {
-  if (!context_.vacuum().start()) {
+  if (!context_->vacuum().start()) {
     // Three ways to be refused, three reasons: the vacuum system answers with the one that applied,
     // so the reply and the refusal come from the same conditions.
     Items detail;
-    detail.add("reason", context_.vacuum().startRefusal());
+    detail.add("reason", context_->vacuum().startRefusal());
     err("not_ready", detail.text());
     return;
   }
@@ -476,7 +476,7 @@ void SerialLink::vacuumStart() {
 }
 
 void SerialLink::vacuumStop() {
-  context_.vacuum().stop();
+  context_->vacuum().stop();
   Items out;
   out.add("result", "stop");
   renderField("vacuum", "state", out);
@@ -484,7 +484,7 @@ void SerialLink::vacuumStop() {
 }
 
 void SerialLink::vacuumReset() {
-  context_.vacuum().resetFault();
+  context_->vacuum().resetFault();
   Items out;
   out.add("result", "reset");
   renderField("vacuum", "state", out);

@@ -49,7 +49,7 @@ class SerialLink : public Logger {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(AppContext& context, Stream& stream, PresenceFn present);
+  SerialLink(AppContext* context, Stream& stream, PresenceFn present);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -124,7 +124,7 @@ class SerialLink : public Logger {
   void emitResourceList();
   void emitResourcePage(const ResourceSpec& resource);
 
-  AppContext& context_;
+  AppContext* context_;
   Stream& stream_;
   PresenceFn present_;
 

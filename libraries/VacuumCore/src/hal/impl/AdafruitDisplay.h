@@ -26,6 +26,10 @@ constexpr uint8_t I2C_ADDR = 0x3C;
 // true.
 class AdafruitDisplay : public Display {
  public:
+  // The driver outlives this adapter and is never deleted: Adafruit_GrayOLED has no virtual
+  // destructor, and the panel lives for the life of the device.
+  ~AdafruitDisplay() override = default;
+
   // --- the panel -----------------------------------------------------------
   bool begin() override;
   void flush() override { panel_->display(); }

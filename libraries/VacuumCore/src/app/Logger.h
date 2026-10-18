@@ -14,11 +14,4 @@ class Logger {
   virtual void error(const char* text) = 0;
 };
 
-class NilLogger : public Logger {
- public:
-  void info(const char* text) override {}
-  void warn(const char* text) override {}
-  void error(const char* text) override {}
-};
-
 }  // namespace gardener
