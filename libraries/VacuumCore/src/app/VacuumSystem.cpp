@@ -26,10 +26,7 @@ void VacuumSystem::begin() {
 VacuumState VacuumSystem::state() const {
   VacuumState vacuum;
   vacuum.runState = state_;
-  vacuum.kpa = sensor_.kpa();
-  vacuum.vacuumKpa = sensor_.vacuumKpa();
-  vacuum.vacuumPercent = sensor_.vacuumPercent();
-  vacuum.ambientKpa = sensor_.ambientKpa();
+  vacuum.kpa = currentKpa();
   vacuum.targetKpa = targetKpa_;
   vacuum.duty = pump_.dutyPercent();
   vacuum.sensorOk = sensor_.present();
@@ -37,11 +34,9 @@ VacuumState VacuumSystem::state() const {
   return vacuum;
 }
 
-float VacuumSystem::currentKpa() const { return sensor_.vacuumKpa(); }
-
-// The reference is captured and never dialled in: one source for it, so nothing can leave the
-// rig regulating against a number nobody measured.
-void VacuumSystem::captureAmbient() { sensor_.captureAmbient(); }
+float VacuumSystem::currentKpa() const {
+  return sensor_.readingValid() ? sensor_.kpa() : 0.0f;
+}
 
 void VacuumSystem::rest() {
   pump_.stop();
@@ -183,10 +178,9 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  // The slew comes off the raw reading: the deficit is that reading offset by the reference, so
-  // the two move in opposite directions and PID_KD is signed against this one.
-  float measured = sensor_.kpa();
-  float error = targetKpa_ - currentKpa();  // positive means "still needs vacuum"
+  // The slew comes off the same reading the error is built from, so PID_KD is signed against it.
+  float measured = currentKpa();
+  float error = targetKpa_ - measured;  // positive means "still needs vacuum"
 
   if (error < -cfg::CONTROL_DEADBAND_KPA) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.

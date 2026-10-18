@@ -66,8 +66,6 @@ bool App::begin() {
   bool batteryOk = battery_.begin();
   system_.begin();
 
-  if (sensorOk) sensor_.captureAmbient();
-
   // What came up, and what did not. This is the composition root's job now: the drivers report as
   // values and one place decides what is worth saying.
   logger_->info("oled: online");

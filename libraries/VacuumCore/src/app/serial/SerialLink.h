@@ -102,7 +102,6 @@ class SerialLink : public Logger {
   void vacuumStart();
   void vacuumStop();
   void vacuumReset();
-  void vacuumCapture();
 
   // --- replies -------------------------------------------------------------
   void ok(const String& items);

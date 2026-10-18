@@ -4,9 +4,6 @@
 #include <string.h>
 #include <type_traits>
 
-#include "core/Config.h"
-#include "core/Math.h"
-
 namespace gardener {
 namespace {
 constexpr float kFilterAlpha = 0.3f;
@@ -26,12 +23,12 @@ static_assert(!std::is_abstract<MprlsSensor>::value,
               "MprlsSensor must implement every PressureSensor verb");
 
 bool MprlsSensor::begin() {
-  ambientKpa_ = cfg::DEFAULT_AMBIENT_KPA;
   present_ = sensor_.begin(kI2cAddr, &wire_);
   if (!present_) return false;
   delay(15);  // first conversion after power up
   float kpa = 0.0f;
   if (readNow(kpa)) {
+    ambientKpa_ = kpa;
     filteredKpa_ = kpa;
     valid_ = true;
   }
@@ -72,6 +69,8 @@ void MprlsSensor::update(uint32_t nowMs) {
   float median = sorted[windowCount_ / 2];
 
   if (!valid_) {
+    // begin()'s first read did not land, so the first sample here is the reference.
+    if (ambientKpa_ <= 0.0f) ambientKpa_ = median;
     filteredKpa_ = median;
     valid_ = true;
   } else {
@@ -79,26 +78,10 @@ void MprlsSensor::update(uint32_t nowMs) {
   }
 }
 
-float MprlsSensor::vacuumKpa() const {
+float MprlsSensor::kpa() const {
   if (!valid_) return 0.0f;
-  float deficit = ambientKpa_ - filteredKpa_;
-  return deficit > 0.0f ? deficit : 0.0f;
-}
-
-float MprlsSensor::vacuumPercent() const {
-  if (!valid_ || ambientKpa_ <= 0.0f) return 0.0f;
-  return clampf(vacuumKpa() / ambientKpa_ * 100.0f, 0.0f, 100.0f);
-}
-
-bool MprlsSensor::setAmbientKpa(float kpa) {
-  if (kpa < 10.0f || kpa > kMaxKpa) return false;
-  ambientKpa_ = kpa;
-  return true;
-}
-
-void MprlsSensor::captureAmbient() {
-  if (!valid_) return;
-  setAmbientKpa(filteredKpa_);
+  const float depth = ambientKpa_ - filteredKpa_;
+  return depth > 0.0f ? depth : 0.0f;
 }
 
 }  // namespace gardener

@@ -29,11 +29,11 @@ inline const char* runStateName(RunState state) {
 
 struct VacuumState {
   RunState runState = RunState::Idle;
-  // kpa is the sensor's own absolute reading. Every other pressure here is measured from the
-  // captured reference, which is the frame the target is stated in.
-  float kpa = 0.0f, vacuumKpa = 0.0f, vacuumPercent = 0.0f, ambientKpa = 0.0f;
-  // Depth below the reference, and 0 while no target is set: setTarget() refuses anything that
-  // shallow, so one number carries both facts and there is nothing to keep in step.
+  // Depth below the ambient the sensor took when it came up: zero at ambient, rising as the
+  // chamber is pulled down. It is the frame the target is stated in.
+  float kpa = 0.0f;
+  // Depth below the same reference, and 0 while no target is set: setTarget() refuses anything
+  // that shallow, so one number carries both facts and there is nothing to keep in step.
   float targetKpa = 0.0f;
   float duty = 0.0f;
   bool sensorOk = false;

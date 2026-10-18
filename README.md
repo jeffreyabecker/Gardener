@@ -21,22 +21,19 @@ loss or fault.
 
 ## Units
 
-**kPa is the primary unit everywhere** — firmware, replies and the OLED. Ambient air is
-~101.3 kPa, the MPRLS full scale is 172.4 kPa, and the pump reaches about 60 kPa of suction
-below ambient, so kPa keeps the numbers short and the resolution meaningful.
+**kPa is the primary unit everywhere** — firmware and replies. The pump reaches about 60 kPa of
+suction below ambient, so kPa keeps the numbers short and the resolution meaningful.
 
 | Term | Meaning |
 | --- | --- |
 | `1 kPa` | 10 hPa = 10 mbar = 0.145 PSI = 7.5 mmHg |
-| pressure | absolute pressure in kPa, reported as `kpa` |
-| `vac` | deficit below the ambient reference, i.e. `ambient - pressure` |
+| `kpa` | vacuum depth in kPa below ambient: 0 at rest, rising as the chamber is pumped down |
 | `target` | depth below the same reference the loop pulls to, so a target and a reading are on one ruler |
-| `pct` | `vac / ambient * 100` |
-| `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below the reference |
+| `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below ambient |
 
-The ambient reference is **captured, never dialled in** — the device takes it from the sensor
-(`vacuum capture`), at boot and on request, and nothing else can set one. Targets are relative to it,
-so capturing a new one restates every target, and both want the rig at rest when it happens.
+The ambient reference belongs to the sensor: the MPRLS is absolute, so it takes one from its first
+reading when it comes up and reports depth below it. Nothing on the wire sets or restates a
+reference, so the rig needs to be at rest when the device boots.
 
 ## Project layout
 
@@ -243,13 +240,13 @@ diagnostics rather than replies:
 
 ```
 -> device get
-<- ok proto=2 fw=0.6.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on
+<- ok proto=3 fw=0.6.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on
 -> vacuum target=40
 <- ok target=40.0
 -> vacuum start
 <- ok result=start state=PULL
 -> vacuum get
-<- ok ambient=101.33 kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+<- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
 -> vacuum stop
 <- ok result=stop state=VENT
 ```
@@ -269,7 +266,7 @@ One class, because the state the chamber is in and the state the run is in turne
 same state.
 
 [VacuumSystem](./libraries/VacuumCore/src/app/VacuumSystem.cpp) is the vacuum system and the machine
-on top of it: the target, the PID on pressure relative to the captured ambient (all terms in kPa,
+on top of it: the target, the PID on the vacuum depth the sensor reports (all terms in kPa,
 and the same frame a target is set in), the valve, the pump, the run state in the diagram below
 and the fault latch. It is handed the three devices it commands — the sensor, the pump and the
 valve — so the loop is policy and the pins stay in `hal/`. The pump is the only actuator, so the
@@ -345,7 +342,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 
 * [x] ESP32-S3 project skeleton, build and upload flow
 * [x] Layered core/hal/app layout, with the dependency direction kept by hand
-* [x] MPRLS driver with median + EMA filtering and ambient reference handling
+* [x] MPRLS driver with median + EMA filtering, capturing its own ambient reference
 * [x] PWM pump driver with ramp and duty cap
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller

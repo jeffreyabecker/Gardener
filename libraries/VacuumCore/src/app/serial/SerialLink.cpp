@@ -495,11 +495,4 @@ void SerialLink::vacuumReset() {
   ok(out.text());
 }
 
-void SerialLink::vacuumCapture() {
-  system_.captureAmbient();
-  Items out;
-  renderField("vacuum", "ambient", out);
-  ok(out.text());
-}
-
 }  // namespace gardener

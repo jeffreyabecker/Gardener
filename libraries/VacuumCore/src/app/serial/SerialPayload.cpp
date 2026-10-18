@@ -64,20 +64,8 @@ void readBatteryPercent(const WireView& view, Items& out) {
 
 void readLog(const WireView& view, Items& out) { out.addFlag("log", view.logEnabled); }
 
-void readAmbient(const WireView& view, Items& out) {
-  out.addFloat("ambient", view.vacuum.ambientKpa, 2);
-}
-
 void readPressure(const WireView& view, Items& out) {
   out.addFloat("kpa", view.vacuum.kpa, 2);
-}
-
-void readVacuum(const WireView& view, Items& out) {
-  out.addFloat("vac", view.vacuum.vacuumKpa, 2);
-}
-
-void readVacuumPercent(const WireView& view, Items& out) {
-  out.addFloat("pct", view.vacuum.vacuumPercent, 1);
 }
 
 void readTarget(const WireView& view, Items& out) {
@@ -165,10 +153,7 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"log", true, "bool", nullptr, "on,off", nullptr, nullptr, readLog},
   };
   static const FieldSpec kVacuumFields[] = {
-      {"ambient", false, "float", "kPa", nullptr, nullptr, nullptr, readAmbient},
       {"kpa", false, "float", "kPa", nullptr, nullptr, nullptr, readPressure},
-      {"vac", false, "float", "kPa", nullptr, nullptr, nullptr, readVacuum},
-      {"pct", false, "float", "%", nullptr, nullptr, nullptr, readVacuumPercent},
       // Only the shallow bound is a rule. A target deeper than the pump can reach is still a
       // target: the duty pins at the cap and the run simply never arrives, which is why `floor` is
       // reported rather than enforced.
@@ -198,7 +183,6 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"start", &SerialLink::vacuumStart},
       {"stop", &SerialLink::vacuumStop},
       {"reset", &SerialLink::vacuumReset},
-      {"capture", &SerialLink::vacuumCapture},
   };
 
   // In the order `help` lists them.

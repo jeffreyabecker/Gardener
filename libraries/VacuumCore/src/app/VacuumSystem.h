@@ -23,10 +23,9 @@ namespace gardener {
 // The run's duration is not a fact about the vacuum system and is not here: the device holds until it is told to
 // stop, and nothing times a run.
 //
-// Pressures here are relative to the ambient the sensor captured, in kPa below it: a target is
-// a depth to pull to, and currentKpa() is how deep the chamber is now. Nothing dials that
-// reference in — capturing is the only way to take one — so it is whatever the rig was sitting
-// at when it was taken, and it cancels out of every comparison against a target.
+// Pressures here are depths below ambient, in kPa: a target is a depth to pull to, and
+// currentKpa() is how deep the chamber is now. The reference is the sensor's own — the part takes
+// it when it comes up — so it cancels out of every comparison against a target.
 //
 // The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
 // can pull down but never vent; the valve is the only way back up, which is why every release
@@ -40,7 +39,7 @@ class VacuumSystem {
   void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
 
   // --- commands -----------------------------------------------------------
-  void setTarget(float kpa);  // kPa below the captured ambient
+  void setTarget(float kpa);  // kPa below ambient
   // A run without a target is not a run, so clearing one releases the chamber.
   void clearTarget();
   bool start();                   // false: no target/reading, or faulted
@@ -49,11 +48,10 @@ class VacuumSystem {
   const char* startRefusal() const;
   void stop();                    // the one release path: stop + vent
   void resetFault();
-  void captureAmbient();          // the only way a reference is ever set
 
   // --- the reads ----------------------------------------------------------
-  // Depth below the captured ambient: the frame the target is stated in, and the sensor's own
-  // deficit, so it is the same number `vacuum get` reports as `vac`. Zero while a reading is invalid.
+  // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
+  // same number `vacuum get` reports as `kpa`. Zero while a reading is invalid.
   float currentKpa() const;
   VacuumState state() const;
 

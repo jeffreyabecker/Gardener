@@ -1,17 +1,18 @@
 # Gardener serial protocol
 
-Pressures are **kPa** everywhere. `kpa` is the sensor's absolute reading, `ambient` is the
-reference the machine captured, and a **target** is a depth below that reference; the device
-captures the reference rather than accepting one over the wire (`vacuum capture`, §6). The wire
-revision is `proto`, reported by `device get`: it changes when a command's *meaning* changes,
-not when commands are added. `fw` is the build.
+Pressures are **kPa** everywhere. `kpa` is the vacuum depth below ambient — 0 at rest, rising as
+the chamber is pumped down — and a **target** is a depth on the same ruler. The ambient reference
+belongs to the sensor: the MPRLS is absolute, so it takes one from its first reading when it comes
+up, and nothing on the wire sets or restates one. The wire revision is `proto`, reported by
+`device get`: it changes when a command's *meaning* changes, not when commands are added. `fw` is
+the build.
 
 The device is a serial peripheral in the strict sense: it never initiates, keeps no session,
 and every state it has is either a command it was given or something it had to do for
 safety. All control comes from the controller at the other end of the line, including how long
 a run lasts.
 
-This document is the proto 2 surface: commands are resource-first and every reply has the same
+This document is the proto 3 surface: commands are resource-first and every reply has the same
 shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §14 lists the old
 spellings next to their replacements so a controller can be migrated mechanically.
 
@@ -37,7 +38,7 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
-2. Send `device get` and check `proto` and `fw`. `proto=2` is this document; a controller that
+2. Send `device get` and check `proto` and `fw`. `proto=3` is this document; a controller that
    does not recognise the number should stop rather than guess, because `proto` only moves when
    a command's meaning has moved.
 3. Ask for what you need: `vacuum get` is the readout, and it is polled (§13). Nothing is
@@ -94,7 +95,7 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   words, no positional payloads, no `key value` pairs.
 * An **action** replies with `result=<action>` first, then the state fields it changed, named
   exactly as `get` names them:
-  `ok result=start state=PULL`, `ok result=capture ambient=101.3`.
+  `ok result=start state=PULL`, `ok result=reset state=VENT`.
 * A **read or write** replies with field items only, and a write reports the field the way a
   read would: `vacuum target=40` and `vacuum target` both answer `ok target=40.0`. There is no
   field that can be written but not read.
@@ -126,7 +127,7 @@ reason a command failed is also on the reply line (§11).
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
 | `fw` | r | text | firmware version |
-| `proto` | r | int | wire revision: `2` for this document. Moved only when a command's meaning moves |
+| `proto` | r | int | wire revision: `3` for this document. Moved only when a command's meaning moves |
 | `chip` | r | text | chip model |
 | `heap` | r | bytes | free heap |
 | `batt_v` | r | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
@@ -142,7 +143,7 @@ it is the one reply that describes something that has not happened yet.
 
 ```
 -> device get
-<- ok proto=2 fw=0.6.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on
+<- ok proto=3 fw=0.6.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on
 -> device log=off
 <- ok log=off
 ```
@@ -151,10 +152,7 @@ it is the one reply that describes something that has not happened yet.
 
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
-| `ambient` | r | kPa, 2 dp | the captured reference. `vacuum capture` is the only way one is ever set: `vacuum ambient=40` is `err unsupported field=ambient`, because the rig should not be holding against a number nobody measured |
-| `kpa` | r | kPa, 2 dp | filtered absolute pressure |
-| `vac` | r | kPa, 2 dp | `ambient - kpa`, clamped at 0 |
-| `pct` | r | %, 1 dp | `vac / ambient * 100` |
+| `kpa` | r | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest, rising as the chamber is pumped down |
 | `target` | rw | kPa below ambient, or `-` | `vacuum target=40` pulls to 40 kPa below the reference; `vacuum target=-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target min=…`; deeper than `floor` is accepted, and only pins the duty at the cap |
 | `floor` | r | kPa, 1 dp | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
 | `duty` | r | %, 1 dp | pump duty |
@@ -169,11 +167,10 @@ it is the one reply that describes something that has not happened yet.
 | `vacuum start` | `ok result=start state=PULL` / `err not_ready reason=…` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` — three causes, three reasons, where `not_ready` alone used to be one opaque code |
 | `vacuum stop` | `ok result=stop state=VENT` | pump off, then vent. The normal way a run ends |
 | `vacuum reset` | `ok result=reset state=VENT` | clears the latched fault, then vents |
-| `vacuum capture` | `ok ambient=101.33` | capture the current reading as the reference, and report the field it set |
 
 ```
 -> vacuum get
-<- ok ambient=101.33 kpa=61.26 vac=40.07 pct=39.5 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
+<- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=45000
 -> vacuum target=40
 <- ok target=40.0
 -> vacuum start
@@ -257,7 +254,7 @@ any number of rows, then an `end` line:
 page = ("ok" SP items LF) row* ("end" SP items LF)
 ```
 
-* A row is items, like every other payload: `resource=vacuum fields=12 actions=4`.
+* A row is items, like every other payload: `resource=vacuum fields=9 actions=3`.
 * The `end` line repeats the op and counts the rows, so a truncated page is detectable:
   `end result=help rows=4`.
 * An error replaces the whole page with a single `err` line and no rows. A controller reads rows
@@ -272,19 +269,17 @@ are abridged: a real one carries a row per field and a row per action.
 ```
 -> help
 <- ok result=help rows=4
-<- resource=vacuum fields=12 actions=4
+<- resource=vacuum fields=9 actions=3
 <- resource=panel fields=2 actions=0
 <- resource=link fields=2 actions=0
 <- resource=device fields=7 actions=1
 <- end result=help rows=4
 -> help vacuum
-<- ok result=help resource=vacuum rows=16
-<- field=ambient type=float access=r unit=kPa
+<- ok result=help resource=vacuum rows=12
 <- field=target type=float access=rw unit=kPa min=5.0
 <- field=state type=choice access=r choices=IDLE,PULL,HOLD,VENT,FAULT
 <- action=start
-<- action=capture
-<- end result=help resource=vacuum rows=16
+<- end result=help resource=vacuum rows=12
 -> help panel
 <- ok result=help resource=panel rows=2
 <- field=w type=int access=r unit=px
@@ -318,13 +313,13 @@ prose, and each carries items naming what was involved, where there is something
 | `bad_argument` | an argument is missing, does not parse, is left over or is empty; or the line was too long |
 | `out_of_range` | the value parses but is not acceptable: `err out_of_range field=target value=999 min=5.0` |
 | `not_ready` | valid, and cannot be honoured now: `reason=no_target`, `reason=no_reading`, or `reason=latch` |
-| `unsupported` | the protocol defines it and this build cannot do it: writing a read-only field (`err unsupported field=ambient`), or a feature that is not compiled in |
+| `unsupported` | the protocol defines it and this build cannot do it: writing a read-only field (`err unsupported field=kpa`), or a feature that is not compiled in |
 
 ```
 -> vacuum start
 <- err not_ready reason=no_target
--> vacuum ambient=40
-<- err unsupported field=ambient
+-> vacuum kpa=40
+<- err unsupported field=kpa
 -> set target 40
 <- err unknown_command token=set
 -> vacuum target=1
@@ -411,10 +406,16 @@ reads one per line; it just does not need to assume a batch is spread across ite
 
 ## 14. Migration from 0.5.0
 
-`proto=2` is a break, not an addition: every actuator moved under a resource, every reply is
-items, and `set` and the bare-verb actuators are gone. The move is mechanical.
+`proto=3` is the current surface, and the 0.5.0 wire is two breaks away from it: `proto=2` moved
+every actuator under a resource and made every reply items, and `proto=3` gave the ambient
+reference to the sensor. The moves are mechanical.
 
-| 0.5.0 | proto 2 |
+`proto=3` is the pressure simplification: the MPRLS takes its own ambient reference when it comes
+up, so `vacuum capture` and the `ambient`, `vac`, and `pct` fields are gone. `kpa` is now the
+vacuum depth — it used to be the absolute reading — so a controller that treated it as absolute
+has to stop. `target` and `floor` are still depths below the same reference.
+
+| 0.5.0 | proto 2+ |
 | --- | --- |
 | `info` | `device get` |
 | `set log on` | `device log=on` |
@@ -426,7 +427,7 @@ items, and `set` and the bare-verb actuators are gone. The move is mechanical.
 | `start` | `vacuum start` |
 | `stop` | `vacuum stop` |
 | `reset` | `vacuum reset` |
-| `ambient` | `vacuum capture` |
+| `ambient` | no replacement: the sensor owns the reference |
 | `set term <<<END>>>` | `link term=<<<END>>>` |
 | `set term off`, `set term -` | `link term=off` |
 | `help` | `help`, or `help <resource>` for one resource's fields and actions |
@@ -440,9 +441,8 @@ Three things changed that are not a rename, and a migrating controller has to kn
   `ok target=-`. A controller that parsed the old payloads has to be rewritten, not
   re-parameterised.
 * **New reads exist.** `device get`, `vacuum get`, `panel get` and `link get` report
-  everything the device can be asked to do. `term` and the ambient reference used to be
-  write-only or missing from the wire; a controller can now rebuild its view after reconnecting
-  instead of assuming.
+  everything the device can be asked to do. `term` used to be write-only or missing from the
+  wire; a controller can now rebuild its view after reconnecting instead of assuming.
 * **Failures say what was wrong.** `out_of_range` carries the field, the value and the bound;
   `not_ready` carries a reason. Nothing has to go to the diagnostics stream to be
   diagnosable, which matters because `device log=off` is a legitimate thing for a client to do.

@@ -17,9 +17,9 @@ namespace cfg {
 
 constexpr const char* FIRMWARE_VERSION = "0.6.0";
 // The wire revision, reported by `device get`. It moves when a command's meaning moves, not when
-// one is added: proto 2 is the resource-first surface, and a controller that does not know a
-// revision should stop rather than guess.
-constexpr uint32_t PROTOCOL_VERSION = 2;
+// one is added: proto 3 is the resource-first surface with one pressure reading, and a controller
+// that does not know a revision should stop rather than guess.
+constexpr uint32_t PROTOCOL_VERSION = 3;
 
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
@@ -76,7 +76,7 @@ constexpr float CONTROL_DEADBAND_KPA = 0.2f;
 constexpr float PUMP_DUTY_MAX_PERCENT = 90.0f;
 constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
 // Measured capability: about 60 kPa of suction below ambient. Targets are relative to the
-// captured ambient too, so this is also the deepest one the pump can reach — the floor.
+// same ambient, so this is also the deepest one the pump can reach — the floor.
 constexpr float PUMP_MAX_SUCTION_KPA = 60.0f;
 // The floor `status` reports: the deepest target worth offering, which is the pump's reach
 // unless the loop refuses targets that deep anyway. A constant, because both bounds are.
@@ -113,9 +113,6 @@ constexpr uint16_t TERMINATOR_MAX = 16;      // longest a host may set it to
 constexpr uint32_t COMMAND_PAYLOAD_MAX = 64u * 1024u;
 // With USB CDC the presence of a host is observable and its loss stops the run. On a plain
 // UART it is not, so a lost link is simply never reported.
-
-// --- Pressure --------------------------------------------------------------
-constexpr float DEFAULT_AMBIENT_KPA = 101.325f;  // one standard atmosphere
 
 }  // namespace cfg
 }  // namespace gardener
