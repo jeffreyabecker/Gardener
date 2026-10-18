@@ -3,22 +3,11 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#include "hal/Button.h"
+#include "hal/ButtonPanel.h"
 #include "hal/PortMux.h"
 
 namespace gardener {
-
-// The keys the front panel's 5-way switch exposes to this rig.
-enum class Button : uint8_t { Up, Down, Ok, Back };
-
-inline const char* buttonName(Button button) {
-  switch (button) {
-    case Button::Up: return "up";
-    case Button::Down: return "down";
-    case Button::Ok: return "ok";
-    case Button::Back: return "back";
-    default: return "?";
-  }
-}
 
 // The front panel keys: four active low switches with pull ups on the module, read through GPIO
 // change interrupts.
@@ -27,15 +16,12 @@ inline const char* buttonName(Button button) {
 // packed mask: an edge is captured even if the loop is busy, and nothing polls a pin. That mask has
 // one writer, the ISR, and a read takes it in a short critical section; the debounce settles on the
 // read, so the class needs no service call of its own.
-class Buttons {
+class Buttons : public ButtonPanel {
  public:
   Buttons();
 
-  // The debounced level. Reading settles the debounce, so this is the level now rather than the
-  // level as of some earlier pass.
-  bool pressed(Button button);
-  // One shot: true once per press, and reading it clears it.
-  bool consumePress(Button button);
+  bool pressed(Button button) override;
+  bool consumePress(Button button) override;
 
  private:
   static void ARDUINO_ISR_ATTR isr(void* arg);

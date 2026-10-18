@@ -49,11 +49,10 @@ because the vacuum system reads the same whether the part behind it is an MPRLS 
 interface with one implementation earns its place exactly when it is a foreign boundary like that;
 anywhere else it is a second implementation that does not exist yet.
 
-**A value beats a mechanism.** New state is a field on
-[VacuumState](../libraries/VacuumCore/src/core/Snapshot.h) that the loop fills each pass — not a
-getter per fact, not a callback, not an observer, not an event queue. The reads are
-`VacuumSystem::state()` and the one snapshot; if a change wants a new public getter for something,
-carry it in the snapshot instead.
+**Reads go through the owner.** New state is a field on the module that owns it, exposed by an
+accessor; `ContextFactory` owns the parts and hands out the `AppContext` interfaces, and
+`SerialLink` reads them when it formats a reply, so there is no snapshot or second copy to keep in
+step.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the
@@ -69,9 +68,9 @@ tasks, a heartbeat watchdog and task restart. Read them for what has to be true,
 the smallest mechanism the current single loop allows. Reaching for a task, a lock, a queue or a
 watchdog is a question to ask, not a thing to build.
 
-**Same behaviour, less surface** is the trade to look for. `VacuumSystem::state()` and
-`VacuumState` are the current shape of it: fifteen one-by-one getters became one read of one plain
-value, with the wire bytes unchanged.
+**Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
+of it: one `kpa()` reading, with the ambient reference and the values derived from it left to the
+driver that can actually know them.
 
 **Committing means commit.** When you are told to commit, stage what is in the tree and write the
 message: one commit, the change as it stands, in the style the history already uses. Don't re-run

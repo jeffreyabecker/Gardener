@@ -1,51 +1,29 @@
 #pragma once
 
-#include <Adafruit_GrayOLED.h>
 #include <Arduino.h>
 
+#include "app/AppContext.h"
 #include "app/Logger.h"
-#include "app/Overlay.h"
 #include "app/serial/SerialLink.h"
-#include "app/VacuumSystem.h"
-#include "core/Snapshot.h"
-#include "hal/Battery.h"
-#include "hal/impl/AdafruitDisplay.h"
-#include "hal/impl/Buttons.h"
-#include "hal/impl/MprlsSensor.h"
-#include "hal/impl/PwmPump.h"
-#include "hal/impl/SolenoidValve.h"
 
-// Composition root. This is the only class that knows the whole graph: every other module
-// is handed exactly what it uses, by reference, at construction, and nothing includes this
-// header.
-//
-// It is also the only thing that draws anything for itself: the boot splash. Everything else on
-// the panel is the host's, drawn over the serial line into the overlay, which puts the battery on
-// every frame. Which panel is fitted is a detail that may change; App holds it as a GrayOLED.
+// The application loop: boot, the service order, the run log and the splash. It knows only the
+// AppContext, so which parts are fitted is the factory's business.
 //
 // The device is a serial peripheral: the front panel keys are read on demand, but no key changes
-// what the device does, so the loop services the sensor, the control loop and the link, in that
-// order. The App is also the only place that reports anything: the drivers return values, and the
+// what the device does, so the loop services the devices, the control loop and the link, in that
+// order. App is also the only place that reports anything: the context returns values, and the
 // run and the keys are logged from here.
 
 namespace gardener {
 
 class App {
  public:
-  App();
+  explicit App(AppContext& context);
 
   bool begin();
   void update();
 
  private:
-  // The one place the fitted panel is named: it new's the driver, brings it up on the I2C bus, and
-  // hands it back as the drawing base. A panel that does not answer is fatal, so this never
-  // returns null.
-  Adafruit_GrayOLED* attachPanel();
-
-  // Fills the machine view from the modules that own the state, in place: one snapshot is
-  // rebuilt per loop iteration, and the battery overlay and a reply both read that one instant.
-  void refreshSnapshot();
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
 
@@ -55,18 +33,7 @@ class App {
 
   // Declaration order is construction order, and several members hold references to the
   // ones above them.
-  MprlsSensor sensor_;
-  PwmPump pump_;
-  // The one place the fitted valve is named: NormallyOpenValve is the fail-safe part (energise to
-  // close), NormallyClosedValve is for holding vacuum through a power loss (energise to open).
-  NormallyOpenValve vent_;
-  Battery battery_;
-  Buttons buttons_;
-  SystemSnapshot snapshot_;
-  Adafruit_GrayOLED* panel_ = nullptr;
-  AdafruitDisplay display_;
-  Overlay overlay_;
-  VacuumSystem system_;
+  AppContext& context_;
   SerialLink link_;
   // App reports through the Logger rather than the link, which is the sink it points at once the
   // link exists. The nil default keeps the pointer valid and silent while the graph is built.

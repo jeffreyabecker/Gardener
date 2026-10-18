@@ -22,14 +22,12 @@ constexpr uint8_t I2C_ADDR = 0x3C;
 // It takes the GrayOLED base rather than the fitted panel, because every verb it needs is on the
 // base: the drawing from Adafruit_GFX, `display()` from Adafruit_GrayOLED.
 //
-// The panel is held by pointer reference: the composition root builds the driver up once the I2C
-// bus is running, which is after this adapter and everything holding it already exist. The pointer
-// is null until then, and nothing draws before the root has attached a panel.
+// The driver is built up in begin(), once the I2C bus exists; nothing draws before it returns
+// true.
 class AdafruitDisplay : public Display {
  public:
-  explicit AdafruitDisplay(Adafruit_GrayOLED*& panel) : panel_(panel) {}
-
   // --- the panel -----------------------------------------------------------
+  bool begin() override;
   void flush() override { panel_->display(); }
 
   // --- geometry ------------------------------------------------------------
@@ -116,7 +114,7 @@ class AdafruitDisplay : public Display {
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted);
   void measure(const char* value, uint8_t size, int16_t& outWidth, int16_t& outHeight);
 
-  Adafruit_GrayOLED*& panel_;
+  Adafruit_GrayOLED* panel_ = nullptr;
 };
 
 }  // namespace gardener

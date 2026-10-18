@@ -20,7 +20,7 @@ class SolenoidValve : public VentValve {
 
   // True when energising the coil opens the valve (normally closed), false when it closes it
   // (normally open). The one fact that separates the two parts this rig can be fitted with.
-  bool energiseWhenOpen() const { return energiseWhenOpen_; }
+  bool energiseWhenOpen() const override { return energiseWhenOpen_; }
 
  protected:
   explicit SolenoidValve(bool energiseWhenOpen) : energiseWhenOpen_(energiseWhenOpen) {}

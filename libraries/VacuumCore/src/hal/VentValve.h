@@ -21,6 +21,9 @@ class VentValve {
   virtual void open() = 0;   // vent: the chamber returns to ambient
   virtual void close() = 0;  // seal: the chamber can be pumped
   virtual bool energised() const = 0;
+  // True when energising the coil opens the valve (normally closed), false when it closes it
+  // (normally open). The one fact about the fitted part the boot report needs.
+  virtual bool energiseWhenOpen() const = 0;
 };
 
 }  // namespace gardener

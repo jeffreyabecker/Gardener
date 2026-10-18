@@ -27,6 +27,9 @@ class Display {
  public:
   virtual ~Display() = default;
 
+  // False when the panel did not answer; nothing draws until this returns true.
+  virtual bool begin() = 0;
+
   // --- the panel -----------------------------------------------------------
   virtual void flush() = 0;  // push what has been drawn to the glass
 

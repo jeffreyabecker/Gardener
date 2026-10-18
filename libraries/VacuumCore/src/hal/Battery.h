@@ -2,33 +2,27 @@
 
 #include <stdint.h>
 
-#include "core/Config.h"
-
 namespace gardener {
 
-// 1S Li-ion gauge on a divider into an ADC pin.
+// The pack gauge: a readout, not a protection. Nothing in the firmware acts on a low reading
+// (Q11), the icon and the battery keys are the whole story. percent() is a straight line between
+// the configured empty and full volts, which is good enough for a bar and honest about being
+// +/-3-5 % at best.
 //
-// This is a readout, not a protection: nothing in the firmware acts on a low reading
-// (Q11), the icon and the battery keys are the whole story. percent() is a straight line
-// between the configured empty and full volts, which is good enough for a bar and honest
-// about being +/-3-5 % at best.
+// This is the interface the rest of the firmware holds. The divider on an ADC pin is in
+// hal/impl/, where the pin and the calibration live.
 class Battery {
  public:
-  bool begin();
-  void update(uint32_t nowMs);
+  virtual ~Battery() = default;
 
-  bool present() const { return present_; }
-  bool low() const { return present_ && percent_ < cfg::BATTERY_LOW_PERCENT; }
-  float volts() const { return volts_; }
-  uint8_t percent() const { return percent_; }
+  // False when the sense pin could not be configured, so the caller can say so at boot.
+  virtual bool begin() = 0;
+  virtual void update(uint32_t nowMs) = 0;
 
- private:
-  bool configured_ = false;
-  bool present_ = false;
-  bool sampled_ = false;
-  float volts_ = 0.0f;
-  uint8_t percent_ = 0;
-  uint32_t lastSampleMs_ = 0;
+  virtual bool present() const = 0;
+  virtual bool low() const = 0;
+  virtual float volts() const = 0;
+  virtual uint8_t percent() const = 0;
 };
 
 }  // namespace gardener

@@ -33,11 +33,11 @@ void Overlay::flush() {
 // the panel does not spend characters on it and the corner is the icon's: a page can use
 // everything to the left.
 void Overlay::drawBattery() {
-  if (!snapshot_.batteryPresent) return;  // nothing fitted, so leave the corner empty
+  if (!battery_.present()) return;  // nothing fitted, so leave the corner empty
 
-  bool blinkOff = snapshot_.batteryLow && ((snapshot_.uptimeMs / kLowBatteryBlinkMs) % 2u) == 0u;
+  bool blinkOff = battery_.low() && ((millis() / kLowBatteryBlinkMs) % 2u) == 0u;
   int16_t iconX = inner_.width() - kBatteryIconWidth;
-  batteryIcon(iconX, kBatteryIconY, blinkOff ? 0 : snapshot_.batteryPercent);
+  batteryIcon(iconX, kBatteryIconY, blinkOff ? 0 : battery_.percent());
 }
 
 void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {

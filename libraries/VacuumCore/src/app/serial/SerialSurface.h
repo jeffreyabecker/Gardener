@@ -3,11 +3,10 @@
 #include <stdint.h>
 
 #include "app/serial/Items.h"
-#include "core/Snapshot.h"
-#include "hal/Display.h"
 
 namespace gardener {
 
+class AppContext;
 class SerialLink;
 
 // How many fields one write command may carry. A limit rather than a growing buffer, because this
@@ -15,17 +14,13 @@ class SerialLink;
 // nothing a host has a reason to send is refused for it.
 constexpr uint8_t kMaxFieldWrites = 4;
 
-// What a reply may depend on: the machine as it is now, the machine as of the last control tick,
-// the panel, and the interface's own settings. A field reader is a plain function of this, which is
-// what lets the field tables be built at file scope instead of naming a member per field.
+// What a reply may depend on: the machine as it is now and the interface's own settings. A field
+// reader is a plain function of this, which is what lets the field tables be built at file scope
+// instead of naming a member per field.
 struct WireView {
-  // The vacuum state is copied in rather than referenced. A reply has to describe the machine as
-  // the command just left it, and the snapshot below is only rebuilt once per loop iteration, so
-  // `vacuum start` reporting the state it started *from* is exactly the bug this avoids. It is one
-  // small copy per reply, and the readers are then plain functions of their inputs.
-  VacuumState vacuum;
-  const SystemSnapshot& snapshot;
-  const Display& display;
+  // The machine is read through its owners when a reply is formatted, so `vacuum start` reports
+  // the state it left the machine in rather than a copy taken on the previous loop iteration.
+  AppContext& context;
   bool logEnabled;
   // A marker is stored decoded and printed escaped, so what is here is the marker itself rather
   // than the token a host sent.

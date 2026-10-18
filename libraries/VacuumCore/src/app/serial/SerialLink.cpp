@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/AppContext.h"
 #include "app/serial/Items.h"
 #include "app/VacuumSystem.h"
 
@@ -38,13 +39,8 @@ String named(const char* key, const char* value) {
 
 }  // namespace
 
-SerialLink::SerialLink(VacuumSystem& system, Display& display, Stream& stream, PresenceFn present,
-                       const SystemSnapshot& snapshot)
-    : system_(system),
-      display_(display),
-      stream_(stream),
-      present_(present),
-      snapshot_(snapshot) {}
+SerialLink::SerialLink(AppContext& context, Stream& stream, PresenceFn present)
+    : context_(context), stream_(stream), present_(present) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
@@ -362,10 +358,10 @@ void SerialLink::resourceCommand(const ResourceSpec& resource, Tokens& tokens) {
 }
 
 WireView SerialLink::wireView() const {
-  // The vacuum state is read live: the snapshot is rebuilt once per loop iteration, and a reply has to
-  // describe the machine as the command left it rather than as the previous tick left it.
-  WireView view = {system_.state(),  snapshot_,          display_,     logEnabled_,
-                   terminator_,      customTerminator_, present_ != nullptr, attached_};
+  // The machine is read live: a reply has to describe it as the command left it rather than as the
+  // previous loop iteration left it.
+  WireView view = {context_, logEnabled_, terminator_, customTerminator_, present_ != nullptr,
+                   attached_};
   return view;
 }
 
@@ -400,7 +396,7 @@ bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
   // `-` is the protocol's word for unset, and an unset target releases the chamber: a run without a
   // target is not a run.
   if (same(write.value, "-")) {
-    system_.clearTarget();
+    context_.vacuum().clearTarget();
     return true;
   }
 
@@ -415,7 +411,7 @@ bool SerialLink::writeVacuum(const FieldWrite* writes, uint8_t count) {
     errOutOfRange(write.field->name, write.value, write.field->min, write.field->max);
     return false;
   }
-  system_.setTarget(kpa);
+  context_.vacuum().setTarget(kpa);
   return true;
 }
 
@@ -465,11 +461,11 @@ void SerialLink::deviceReboot() {
 }
 
 void SerialLink::vacuumStart() {
-  if (!system_.start()) {
+  if (!context_.vacuum().start()) {
     // Three ways to be refused, three reasons: the vacuum system answers with the one that applied,
     // so the reply and the refusal come from the same conditions.
     Items detail;
-    detail.add("reason", system_.startRefusal());
+    detail.add("reason", context_.vacuum().startRefusal());
     err("not_ready", detail.text());
     return;
   }
@@ -480,7 +476,7 @@ void SerialLink::vacuumStart() {
 }
 
 void SerialLink::vacuumStop() {
-  system_.stop();
+  context_.vacuum().stop();
   Items out;
   out.add("result", "stop");
   renderField("vacuum", "state", out);
@@ -488,7 +484,7 @@ void SerialLink::vacuumStop() {
 }
 
 void SerialLink::vacuumReset() {
-  system_.resetFault();
+  context_.vacuum().resetFault();
   Items out;
   out.add("result", "reset");
   renderField("vacuum", "state", out);

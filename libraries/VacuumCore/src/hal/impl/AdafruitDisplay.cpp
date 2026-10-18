@@ -1,6 +1,10 @@
 #include "hal/impl/AdafruitDisplay.h"
 
+#include <Adafruit_SH110X.h>
+#include <Wire.h>
 #include <type_traits>
+
+#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -11,6 +15,24 @@ static_assert(!std::is_abstract<AdafruitDisplay>::value,
               "AdafruitDisplay must implement every Display verb");
 
 }  // namespace
+
+bool AdafruitDisplay::begin() {
+  // The panel is the first part on the bus and the one with no fallback, so it brings the bus up;
+  // the sensor comes up after it.
+  Wire.begin(cfg::I2C_SDA, cfg::I2C_SCL, cfg::I2C_FREQ_HZ);
+
+  // The driver is new'd and never deleted: it lives for the life of the device, whose destructor
+  // never runs, so nothing owns it.
+  Adafruit_SH1106G* driver = new Adafruit_SH1106G(panel::WIDTH, panel::HEIGHT, &Wire, -1);
+
+  // The STEMMA QT breakout has no reset line, so the library must not poke one.
+  if (!driver->begin(panel::I2C_ADDR, false)) {
+    delete driver;
+    return false;
+  }
+  panel_ = driver;
+  return true;
+}
 
 void AdafruitDisplay::text(int16_t x, int16_t y, const String& value, uint8_t size,
                            bool inverted) {

@@ -85,7 +85,7 @@ constexpr float CONTROL_FLOOR_KPA =
 
 // --- Vent valve ------------------------------------------------------------
 // Timing only; which part is fitted, and therefore which coil level means "open", is the
-// composition root's call in app/App.h — normally open is the fail-safe default.
+// context factory's call in app/ContextFactory.h — normally open is the fail-safe default.
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
 

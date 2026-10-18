@@ -2,10 +2,10 @@
 
 #include <Arduino.h>
 
+#include "app/AppContext.h"
 #include "app/serial/Items.h"
 #include "app/serial/SerialSurface.h"
 #include "core/Config.h"
-#include "core/Snapshot.h"
 
 namespace gardener {
 namespace {
@@ -47,71 +47,73 @@ void readHeap(const WireView&, Items& out) { out.addU32("heap", (uint32_t)ESP.ge
 
 void readBatteryVolts(const WireView& view, Items& out) {
   // Both battery fields report `-` together, and only the gauge knows whether there is one.
-  if (!view.snapshot.batteryPresent) {
+  if (!view.context.battery().present()) {
     out.add("batt_v", nullptr);
     return;
   }
-  out.addFloat("batt_v", view.snapshot.batteryVolts, 2);
+  out.addFloat("batt_v", view.context.battery().volts(), 2);
 }
 
 void readBatteryPercent(const WireView& view, Items& out) {
-  if (!view.snapshot.batteryPresent) {
+  if (!view.context.battery().present()) {
     out.add("batt_pct", nullptr);
     return;
   }
-  out.addU32("batt_pct", view.snapshot.batteryPercent);
+  out.addU32("batt_pct", view.context.battery().percent());
 }
 
 void readLog(const WireView& view, Items& out) { out.addFlag("log", view.logEnabled); }
 
 void readPressure(const WireView& view, Items& out) {
-  out.addFloat("kpa", view.vacuum.kpa, 2);
+  out.addFloat("kpa", view.context.vacuum().currentKpa(), 2);
 }
 
 void readTarget(const WireView& view, Items& out) {
   // 0 is how the vacuum system holds "no target", and the protocol writes that `-`: a target of
   // nothing is not a target, and there is no 0 kPa one for it to be confused with.
-  if (view.vacuum.targetKpa <= 0.0f) {
+  float targetKpa = view.context.vacuum().targetKpa();
+  if (targetKpa <= 0.0f) {
     out.add("target", nullptr);
     return;
   }
-  out.addFloat("target", view.vacuum.targetKpa, 1);
+  out.addFloat("target", targetKpa, 1);
 }
 
 void readFloor(const WireView&, Items& out) { out.addFloat("floor", cfg::CONTROL_FLOOR_KPA, 1); }
 
 void readDuty(const WireView& view, Items& out) {
-  out.addFloat("duty", view.vacuum.duty, 1);
+  out.addFloat("duty", view.context.vacuum().pump().dutyPercent(), 1);
 }
 
 void readRunState(const WireView& view, Items& out) {
-  out.add("state", runStateName(view.vacuum.runState));
+  out.add("state", runStateName(view.context.vacuum().runState()));
 }
 
 void readBattery(const WireView& view, Items& out) {
-  if (!view.snapshot.batteryPresent) {
+  if (!view.context.battery().present()) {
     out.add("batt", nullptr);
     return;
   }
-  out.addU32("batt", view.snapshot.batteryPercent);
+  out.addU32("batt", view.context.battery().percent());
 }
 
 void readSensor(const WireView& view, Items& out) {
-  out.add("sensor", view.vacuum.sensorOk ? "1" : "0");
+  out.add("sensor", view.context.vacuum().sensor().present() ? "1" : "0");
 }
 
 void readFault(const WireView& view, Items& out) {
-  out.add("fault", view.vacuum.faultCode[0] ? view.vacuum.faultCode : "none");
+  const char* code = view.context.vacuum().faultCode();
+  out.add("fault", code[0] ? code : "none");
 }
 
-void readUptime(const WireView& view, Items& out) { out.addU32("up", view.snapshot.uptimeMs); }
+void readUptime(const WireView& view, Items& out) { out.addU32("up", view.context.uptimeMs()); }
 
 void readWidth(const WireView& view, Items& out) {
-  out.addU32("w", (uint32_t)view.display.width());
+  out.addU32("w", (uint32_t)view.context.display().width());
 }
 
 void readHeight(const WireView& view, Items& out) {
-  out.addU32("h", (uint32_t)view.display.height());
+  out.addU32("h", (uint32_t)view.context.display().height());
 }
 
 void readTerm(const WireView& view, Items& out) {

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "core/Snapshot.h"
+#include "hal/Battery.h"
 #include "hal/Display.h"
 
 namespace gardener {
@@ -12,14 +12,13 @@ namespace gardener {
 //
 // Everything else is passed straight through, so a page cannot tell the difference — which is
 // the point. The battery is the one thing that has to be on the panel whatever page is showing,
-// and nothing that draws a page should have to remember it. It reads the snapshot like every
-// other reader, so it cannot reach into a module either.
+// and nothing that draws a page should have to remember it.
 class Overlay : public Display {
  public:
-  Overlay(Display& inner, const SystemSnapshot& snapshot)
-      : inner_(inner), snapshot_(snapshot) {}
+  Overlay(Display& inner, const Battery& battery) : inner_(inner), battery_(battery) {}
 
   // --- the panel -----------------------------------------------------------
+  bool begin() override { return inner_.begin(); }
   void flush() override;  // draws the battery first, then flushes
 
   // --- geometry ------------------------------------------------------------
@@ -106,7 +105,7 @@ class Overlay : public Display {
   void batteryIcon(int16_t x, int16_t y, uint8_t percent);
 
   Display& inner_;
-  const SystemSnapshot& snapshot_;
+  const Battery& battery_;
 };
 
 }  // namespace gardener

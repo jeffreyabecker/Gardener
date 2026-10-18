@@ -7,12 +7,10 @@
 #include "app/serial/LineGrammar.h"
 #include "app/serial/SerialSurface.h"
 #include "core/Config.h"
-#include "core/Snapshot.h"
-#include "hal/Display.h"
 
 namespace gardener {
 
-class VacuumSystem;
+class AppContext;
 
 // The serial interface to the controller: the bytes, the dispatch, the replies and the diagnostics.
 // One protocol over several files — the line grammar in app/serial/LineGrammar.h, the wire surface as
@@ -33,7 +31,8 @@ class VacuumSystem;
 // field, value, bound, reason or mode that caused it rather than leaving it in a log a client may
 // have turned off.
 //
-// It also holds the display, which is where `panel get` reads the panel geometry.
+// It reads the machine through the AppContext's accessors when it formats a reply, so there is no
+// second copy of the state to keep in step.
 //
 // Everything runs on the main loop: lines are assembled here and dispatched inline, and replies go
 // straight back out. There is no second task, no queue, and no framing above the line. Diagnostics
@@ -50,8 +49,7 @@ class SerialLink : public Logger {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(VacuumSystem& system, Display& display, Stream& stream, PresenceFn present,
-             const SystemSnapshot& snapshot);
+  SerialLink(AppContext& context, Stream& stream, PresenceFn present);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -126,11 +124,9 @@ class SerialLink : public Logger {
   void emitResourceList();
   void emitResourcePage(const ResourceSpec& resource);
 
-  VacuumSystem& system_;
-  Display& display_;
+  AppContext& context_;
   Stream& stream_;
   PresenceFn present_;
-  const SystemSnapshot& snapshot_;
 
   bool logEnabled_ = true;
   // Where the device looks for the end of a command. Newline by default; `link term` points it at a

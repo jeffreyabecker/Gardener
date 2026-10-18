@@ -6,7 +6,8 @@
 
 #include <VacuumCore.h>
 
-gardener::App app;
+gardener::ContextFactory contextFactory;
+gardener::App app(contextFactory.context());
 
 void setup() { app.begin(); }
 

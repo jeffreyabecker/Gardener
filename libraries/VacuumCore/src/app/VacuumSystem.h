@@ -3,12 +3,28 @@
 #include <stdint.h>
 
 #include "core/Config.h"
-#include "core/Snapshot.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
 
 namespace gardener {
+
+// What the device is doing, which is also the state a controller watches. There is no DONE:
+// after venting it is IDLE, and the controller knows when the run is over because it is the one
+// that ended it. HOLD is the target-reached edge, and it is the cue a controller times its hold
+// from. There is no MANUAL (raw duty is not part of the interface, Q15).
+enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
+
+inline const char* runStateName(RunState state) {
+  switch (state) {
+    case RunState::Idle: return "IDLE";
+    case RunState::Pulling: return "PULL";
+    case RunState::Holding: return "HOLD";
+    case RunState::Venting: return "VENT";
+    case RunState::Fault: return "FAULT";
+    default: return "?";
+  }
+}
 
 // The vacuum system: the pressure loop, the release path and the run state, between the devices and
 // the wire. The devices are not its own — it is handed the three it commands, so the pins and the
@@ -53,7 +69,14 @@ class VacuumSystem {
   // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
   // same number `vacuum get` reports as `kpa`. Zero while a reading is invalid.
   float currentKpa() const;
-  VacuumState state() const;
+  RunState runState() const { return state_; }
+  float targetKpa() const { return targetKpa_; }
+  const char* faultCode() const { return faultCode_; }
+
+  // The devices, so the serial layer can read what the loop commands without a second copy.
+  Pump& pump() { return pump_; }
+  VentValve& vent() { return vent_; }
+  PressureSensor& sensor() { return sensor_; }
 
  private:
   void setState(RunState state);
@@ -63,7 +86,7 @@ class VacuumSystem {
   // they are asked.
   bool atTarget() const;  // close enough to the target, deadband included
   bool vented() const;    // settled within VENT_MARGIN_KPA, or VENT_TIMEOUT_MS elapsed
-  void vent();            // stop, then open: the one release path
+  void release();         // stop, then open: the one release path
   void rest();            // the resting state without releasing: pump off, valve open
 
   void regulate(uint32_t nowMs);
@@ -80,7 +103,7 @@ class VacuumSystem {
   VentValve& vent_;
 
   RunState state_ = RunState::Idle;
-  float targetKpa_ = 0.0f;  // 0 while no target is set, which is what state() reports
+  float targetKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
 

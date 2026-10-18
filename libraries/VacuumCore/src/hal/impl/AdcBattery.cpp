@@ -1,4 +1,4 @@
-#include "hal/Battery.h"
+#include "hal/impl/AdcBattery.h"
 
 #include <Arduino.h>
 
@@ -17,14 +17,14 @@ constexpr float kPresentMinVolts = 1.0f;
 
 }  // namespace
 
-bool Battery::begin() {
+bool AdcBattery::begin() {
   pinMode(cfg::BATTERY_ADC, INPUT);
   configured_ = true;
   update(millis());
   return true;
 }
 
-void Battery::update(uint32_t nowMs) {
+void AdcBattery::update(uint32_t nowMs) {
   if (!configured_) return;
   // The pack does not move quickly, so one averaged reading per period is plenty, and
   // averaging in hardware-trimmed millivolts keeps the calibration path in the core.
