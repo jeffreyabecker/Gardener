@@ -94,5 +94,14 @@ Bench-only, to fix once the loop works.
 * The five buttons are wired and the firmware reads four of them. The module is a 5-way switch —
   up, down, left, right, centre — so it costs five GPIOs, not four.
 
+## To investigate
+
+* **[CFSensor XGZP6847A100KPGN33](https://www.digikey.com/en/products/detail/cfsensor/XGZP6847A100KPGN33/22530823)** —
+  a 100 kPa gauge part in a 3.3 V variant. A 100 kPa range covers the pump's ~60 kPa pull with
+  margin, and it could be a smaller or cheaper alternative to the MPRLS. Check the datasheet for
+  the output — the XGZP6847A family looks analog, which would need an ADC channel rather than the
+  I2C bus (GPIO7 is the one free ADC1 pin) — plus its transfer function, accuracy, temperature
+  compensation and port size before adding it to the buy list.
+
 Which of these parts move onto the alpha carrier board, and which stay modules, is in
 [alpha-pcb.md](./alpha-pcb.md).

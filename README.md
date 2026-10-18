@@ -353,3 +353,4 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Panel: a `Display` interface, an Adafruit adapter, and a battery overlay
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
+* [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
