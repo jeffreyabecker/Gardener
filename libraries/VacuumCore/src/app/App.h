@@ -4,7 +4,7 @@
 
 #include "app/AppContext.h"
 #include "app/StreamLogger.h"
-#include "app/UI.h"
+#include "app/ConnectedUI.h"
 #include "app/serial/SerialLink.h"
 
 // The application loop: boot, the service order, the run log and the screen. It knows only the

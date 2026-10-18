@@ -1,4 +1,4 @@
-#include "UI.h"
+#include "app/ConnectedUI.h"
 
 #include <Fonts/FreeSansBold12pt7b.h>
 #include <Fonts/FreeSansBold18pt7b.h>
