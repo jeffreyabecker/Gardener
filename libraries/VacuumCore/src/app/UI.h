@@ -22,8 +22,9 @@ class UserInterface {
   AppContext context_;
 };
 
-// The running screen: the pressure the chamber is at, big enough to read across a bench, the target
-// underneath it, and one icon for the state the numbers do not show.
+// The running screen: the pressure the chamber is at, big enough to read across a bench, and the
+// target underneath it. Everything else on the glass — the battery, the state's icon — is the
+// overlay's, so it is there whatever page is drawn.
 class ConnectedUI : public UserInterface {
  public:
   explicit ConnectedUI(AppContext context);
@@ -33,8 +34,6 @@ class ConnectedUI : public UserInterface {
 
  private:
   void drawFrame();
-  void drawStateIcon(int16_t x, int16_t y);
-  void chevrons(int16_t x, int16_t y, bool down);
 
   uint32_t startedMs_ = 0;
   uint32_t lastFrameMs_ = 0;

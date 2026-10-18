@@ -48,8 +48,8 @@ AppContext buildAppContext() {
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
-  auto* overlay = new Overlay(display, battery);
   auto* system = new VacuumSystem(pump, sensor, vent);
+  auto* overlay = new Overlay(display, battery, system);
   return AppContext(sensor, pump, vent, battery, buttons, overlay, system);
 }
 

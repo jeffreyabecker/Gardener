@@ -360,7 +360,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
-* [x] Panel: a `Display` interface, an Adafruit adapter, and a battery overlay
+* [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery and run state
 * [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read

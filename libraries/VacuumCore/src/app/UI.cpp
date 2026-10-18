@@ -8,13 +8,6 @@
 #include "eggplant-bitmap.h"
 
 namespace gardener {
-namespace {
-
-// The icon sits on the state label's line, clear of the longest name (`FAULT`, 60 px wide).
-constexpr int16_t kStateIconX = 64;
-constexpr int16_t kStateIconY = 0;
-
-}  // namespace
 
 ConnectedUI::ConnectedUI(AppContext context) : UserInterface(context) {}
 
@@ -28,8 +21,9 @@ bool ConnectedUI::begin() {
   return true;
 }
 
-// Repainted on a fixed cadence rather than when something changes: the battery icon is drawn by
-// Overlay on the way to every frame, and a blink only happens while frames keep arriving.
+// Repainted on a fixed cadence rather than when something changes: the battery and the state icon
+// are drawn by Overlay on the way to every frame, and the battery's blink only happens while
+// frames keep arriving.
 void ConnectedUI::update() {
   uint32_t now = millis();
   if (now - startedMs_ < cfg::SPLASH_HOLD_MS) return;
@@ -64,48 +58,7 @@ void ConnectedUI::drawFrame() {
   panel.setFont(&FreeSansBold12pt7b);
   panel.text(0, 62, String("TGT ") + target, 1, false);
 
-  drawStateIcon(kStateIconX, kStateIconY);
   panel.display();
-}
-
-// One icon per state, so the mode reads without the word: chevrons down while the pump pulls, up
-// while the valve vents, a ring at target, and a warning triangle on a fault.
-void ConnectedUI::drawStateIcon(int16_t x, int16_t y) {
-  Display& panel = context_.display();
-  switch (context_.vacuum().runState()) {
-    case RunState::Pulling:
-      chevrons(x, y, true);
-      break;
-    case RunState::Venting:
-      chevrons(x, y, false);
-      break;
-    case RunState::Holding:
-      panel.circle(x + 7, y + 7, 7);
-      panel.fillCircle(x + 7, y + 7, 2);
-      break;
-    case RunState::Fault:
-      panel.triangle(x + 7, y, x, y + 14, x + 14, y + 14);
-      panel.vLine(x + 7, y + 5, 5);
-      panel.pixel(x + 7, y + 12);
-      break;
-    case RunState::Idle:
-      panel.circle(x + 7, y + 7, 7);
-      break;
-  }
-}
-
-void ConnectedUI::chevrons(int16_t x, int16_t y, bool down) {
-  Display& panel = context_.display();
-  for (int16_t i = 0; i < 2; ++i) {
-    int16_t top = y + i * 7;
-    if (down) {
-      panel.line(x, top, x + 7, top + 6);
-      panel.line(x + 7, top + 6, x + 14, top);
-    } else {
-      panel.line(x, top + 6, x + 7, top);
-      panel.line(x + 7, top, x + 14, top + 6);
-    }
-  }
 }
 
 }  // namespace gardener

@@ -10,6 +10,10 @@ constexpr int16_t kBatteryBodyWidth = 10;
 constexpr int16_t kBatteryBodyHeight = 7;
 constexpr int16_t kBatteryIconY = 1;
 
+// The state icon sits on the line a page puts its state name on, clear of the longest one.
+constexpr int16_t kStateIconX = 64;
+constexpr int16_t kStateIconY = 0;
+
 // Below the low threshold the fill blinks. With no buttons and no alarm, that blink is the
 // entire low battery notification.
 constexpr uint32_t kLowBatteryBlinkMs = 500;
@@ -22,11 +26,52 @@ static_assert(!std::is_abstract<Overlay>::value,
 
 }  // namespace
 
-// The battery goes down last, so it lands on top of whatever the page drew and no page has to
-// know it exists.
+// The overlay goes down last, so it lands on top of whatever the page drew and no page has to know
+// it exists.
 void Overlay::display() {
+  drawStateIcon();
   drawBattery();
   inner_->display();
+}
+
+// One icon per state, so the mode reads without the word beside it: chevrons down while the pump
+// pulls, up while the valve vents, a ring at target, and a warning triangle on a fault.
+void Overlay::drawStateIcon() {
+  const int16_t x = kStateIconX;
+  const int16_t y = kStateIconY;
+  switch (vacuum_->runState()) {
+    case RunState::Pulling:
+      chevrons(x, y, true);
+      break;
+    case RunState::Venting:
+      chevrons(x, y, false);
+      break;
+    case RunState::Holding:
+      inner_->circle(x + 7, y + 7, 7);
+      inner_->fillCircle(x + 7, y + 7, 2);
+      break;
+    case RunState::Fault:
+      inner_->triangle(x + 7, y, x, y + 14, x + 14, y + 14);
+      inner_->vLine(x + 7, y + 5, 5);
+      inner_->pixel(x + 7, y + 12);
+      break;
+    case RunState::Idle:
+      inner_->circle(x + 7, y + 7, 7);
+      break;
+  }
+}
+
+void Overlay::chevrons(int16_t x, int16_t y, bool down) {
+  for (int16_t i = 0; i < 2; ++i) {
+    int16_t top = y + i * 7;
+    if (down) {
+      inner_->line(x, top, x + 7, top + 6);
+      inner_->line(x + 7, top + 6, x + 14, top);
+    } else {
+      inner_->line(x, top + 6, x + 7, top);
+      inner_->line(x + 7, top, x + 14, top + 6);
+    }
+  }
 }
 
 // The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so
