@@ -1,5 +1,6 @@
 #include "app/App.h"
 
+#include <Wire.h>
 #include <stdlib.h>
 
 #include "core/Config.h"
@@ -31,7 +32,9 @@ bool App::begin() {
   logger_->info(boot.c_str());
 
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
-  // panel that does not answer is fatal rather than a degraded mode.
+  // panel that does not answer is fatal rather than a degraded mode. Its bus is the app's to bring
+  // up, because the driver takes a TwoWire and only talks to it.
+  Wire.begin(cfg::I2C_SDA, cfg::I2C_SCL, cfg::I2C_FREQ_HZ);
   bool displayOk = context_.display().begin();
   logger_->info(displayOk ? "oled: online" : "oled: not found, aborting");
   if (!displayOk) {

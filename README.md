@@ -89,10 +89,12 @@ a control loop exists. The vacuum system is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
 pins and the bus are named in another. Each of those is an interface, and the part that satisfies it
-is in `hal/impl/`, which is where the part is driven and where `<Adafruit_MPRLS.h>` and
-`<Adafruit_GrayOLED.h>` appear and nowhere else. A driver is given its pins rather than reading
-them: [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp) is the one place that turns the
-numbers in [core/Config.h](./libraries/VacuumCore/src/core/Config.h) into a fitted rig.
+is in `hal/impl/`. A vendor header appears only where a part is named: `<Adafruit_MPRLS.h>` in the
+sensor's own driver, and `<Adafruit_SH110X.h>` in
+[app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp), which picks the panel driver and hands it
+to the generic adapter. That file is also where the numbers in
+[core/Config.h](./libraries/VacuumCore/src/core/Config.h) become a fitted rig: a driver is given its
+pins rather than reading them.
 
 ## Wiring
 
