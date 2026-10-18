@@ -172,10 +172,11 @@ BleLink* ble_;        // own contract; no link-loss rule
 UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
 ```
 
-* `BleLink` holds the `AppContext*`, the NimBLE server, the characteristics, and a snapshot.
-* `BleLink::begin()` starts NimBLE, builds the service, sets the initial snapshot, and advertises.
-* `BleLink::poll(nowMs)` applies a pending command, refreshes the snapshot, and sends the
-  notifications that are due. It is called from `App::update()` beside `link_->poll(now)`.
+* `BleLink` holds the `AppContext*`, the NimBLE server, the characteristics, and the pending slots
+  a write lands in.
+* `BleLink::begin()` starts NimBLE, builds the service and advertises.
+* `BleLink::poll(nowMs)` applies whatever is pending, then sends the notifications that are due. It
+  is called from `App::update()` beside `link_->poll(now)`.
 * `App::begin()` calls `ble_->begin()` after `Serial.begin`; a BLE failure is a log line, never an
   abort, because serial still works.
 
@@ -197,43 +198,62 @@ a store arrives.
 
 ## 6. Concurrency
 
-NimBLE runs its host on **core 0**; the Arduino `loop()` runs on core 1. GATT callbacks are on the
-host task, so they must not touch the machine: `VacuumSystem` is loop-owned and a read callback has
-to answer immediately.
+NimBLE runs its host on **core 0**; the Arduino `loop()` runs on core 1. The model is deliberately
+loose: the alternative is a lock or a queue, and neither buys anything at this size.
+
+**Status reads are assumed safe.** A GATT read callback answers from the machine as it is —
+`currentKpa()`, `runState()`, `dutyPercent()`, `battery().percent()`, `settings().unit()` — with no
+snapshot and no second copy to keep in step. A float or an enum is one aligned load on this part, so
+a reader that overlaps an update sees one side of it or the other. No reading in this contract means
+anything finer than a loop iteration, so that is enough.
+
+**Writes set a flag and the loop applies them.** A GATT write callback stores the value in the slot
+for its characteristic and returns without touching the machine. `BleLink::poll()` applies whatever
+is pending at the top of its service call, before it reads anything for a notification, so a
+notified value is always one the machine actually has.
+
+What that costs, stated plainly:
+
+* A write takes effect on the next loop iteration, not inside the callback.
+* Two writes to one characteristic before the loop runs leave the last one standing; there is no
+  queue and no promise to apply the first.
+* A refused write — a target below the floor, a unit outside the closed set, an opcode that cannot
+  run now — is refused by the loop, and the answer is the characteristic's unchanged value plus, for
+  `command`, a result notification.
 
 | Shared thing | Writer | Reader | Mechanism |
 | --- | --- | --- | --- |
-| Value snapshot (`state`, `kpa`, `duty`, `fault`, `batt`) | `loop()` in `poll()` | GATT read callbacks | struct of plain fields, replaced whole |
-| Display unit (`unit`) | `loop()` in `poll()`, when a write arrived | GATT read callback | one enum byte, read as a plain load; it is a setting, so it lives outside the snapshot |
-| Pending command (opcode or target) | GATT write callbacks | `loop()` in `poll()` | one-slot mailbox with a flag |
+| Machine status (`state`, `kpa`, `duty`, `fault`, `batt`) and the display unit | `loop()` | GATT read callbacks | read live; no snapshot |
+| Pending target, unit or opcode | GATT write callbacks | `loop()` at the top of `poll()` | one slot per characteristic, last write wins |
 | Connection state | NimBLE | both | the server's connected count |
 
-This is simpler than the serial case because the contract is message-shaped: there is no byte ring,
-no framing state and no re-assembly. A write lands in the mailbox; the loop drains it next pass; the
-read callback serves the last snapshot the loop published.
+There is no mutex, no ring and no mailbox queue. A slot is a plain value and a `has` flag, written on
+one core and cleared on the other; the failure mode is a write landing one iteration late, which the
+contract already allows. If a later characteristic needs read-modify-write consistency, that is the
+point to reach for an atomic — not before.
 
 `setValue` and `notify` are called from the loop task, which NimBLE serialises onto its host task.
-Nothing is notified from inside a write callback, and no callback calls into `VacuumSystem`.
+Nothing is notified from inside a write callback, and no write callback calls into `VacuumSystem`; a
+read callback only ever reads.
 
 ## 7. Security
 
 A serial cable is physical presence; a radio is not. Starting a pump is a physical act, so an open
 GATT server is not the shipped default.
 
-Recommended shape:
+**Just Works, bonded, nothing on the panel.** The device pairs without a passkey and keeps the bond
+in NVS (NimBLE's `CONFIG_BT_NIMBLE_NVS_PERSIST` is on by default). This authenticates against a
+casual neighbour at the bench, not against an attacker with a radio — that is the price of a pairing
+flow someone will actually complete.
 
-1. **Pairing with a passkey from the panel.** The device already draws a splash and a battery;
-   while pairing it draws six digits and the controller types them. That is
-   `BLE_HS_IO_DISPLAY_ONLY`, LE Secure Connections, bonded, with the bond stored in NVS (NimBLE's
-   `CONFIG_BT_NIMBLE_NVS_PERSIST` is on by default).
-2. The writable characteristics — `target`, `command` and `unit` — require encryption
-   (`NIMBLE_PROPERTY::WRITE_ENC`), so an unencrypted write is rejected by the stack and never
-   reaches the mailbox. Reads may stay open: pressure and state are not secrets.
-3. Just Works bonding is the fallback if a passkey proves annoying on a bench. It authenticates
-   against a casual neighbour, not against an attacker with a radio.
+The writable characteristics — `target`, `command` and `unit` — require encryption
+(`NIMBLE_PROPERTY::WRITE_ENC`), so an unencrypted write is rejected by the stack and never reaches
+the slot. Reads may stay open: pressure and state are not secrets.
 
-The panel is device-owned for the seconds a passkey is on it, the same exception as the splash and
-the battery.
+A passkey was the earlier shape and is deliberately gone: it is the uncommon flow on embedded
+devices, it needs a screen to show digits and a person to type them, and it would put six of them on
+a panel whose only job is showing a pressure. If stronger pairing is ever wanted, the display-only
+flow is the thing to add — a pairing callback and one page, not a change to this contract.
 
 ## 8. What a controller sees
 
@@ -272,7 +292,8 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 
 * Flash, static RAM and boot heap against today's 384 kB / 19.8 kB / the `heap` line at boot.
 * `BleLink::poll()` cost on the loop when idle and at 5 Hz notification.
-* Write-to-notify latency for `target` and `command`.
+* Write-to-notify latency for `target` and `command`, including the one-iteration deferral the
+  concurrency model adds.
 * The safety claim: start a run from BLE, disconnect the phone, confirm the run continues and the
   pump state is unchanged.
 * The screen switch: with USB unplugged, a BLE connection puts the readout on the panel, and the
@@ -289,24 +310,24 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 | NimBLE init or server start fails | log it, keep serial working; BLE is a bonus transport, not a boot dependency |
 | Unknown opcode | result `0x04`, no state change |
 | `start` refused | the matching result code, no state change |
-| Target written below the loop's floor | rejected at the GATT layer; the bound is the `CONTROL_MIN_TARGET_KPA` in `core/Config.h`, and 0 clears the target |
-| `unit` written outside 0–3 | rejected at the GATT layer; the value is a closed set, so nothing is guessed |
+| Target written below the loop's floor | latched, then refused when the loop applies it; the target does not move, so the next read is the answer. The bound is `CONTROL_MIN_TARGET_KPA` in `core/Config.h`, and 0 clears the target |
+| `unit` written outside 0–3 | latched, then refused when the loop applies it; the value is a closed set and the unit does not move |
 | Central disconnects mid-run | the run continues (§3); advertising restarts |
 | Central not subscribed | values stay readable; nothing is queued |
 | Second central tries to connect | rejected by `MAX_CONNECTIONS=1` while the first is connected |
-| Unpaired write to `target` or `command` | rejected by the stack; the mailbox never sees it |
+| Unpaired write to `target` or `command` | rejected by the stack; the slot never sees it |
 | `reboot` opcode | result notified, then the device restarts and the central sees a disconnect |
 
 ## 12. Phases
 
-1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`unit`/`fw`/`ble_proto`, the snapshot
-   and the notification rates, and `BleLink::connected()` feeding `screenFor()` so the panel shows
-   the readout for a phone with no USB attached (§3.1). Prove a phone shows live values and that a
+1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`unit`/`fw`/`ble_proto`, the
+   notification rates, and `BleLink::connected()` feeding `screenFor()` so the panel shows the
+   readout for a phone with no USB attached (§3.1). Prove a phone shows live values and that a
    serial session is unaffected.
-2. **P1 — control.** `target` writes, `unit` writes, the command mailbox and opcodes, result
+2. **P1 — control.** The pending slots, `target` and `unit` writes, opcodes and their result
    notifications, and the `startRefusal()` mapping.
-3. **P2 — security.** Passkey on the panel, bonding, encryption on the three writable
-   characteristics (`target`, `command`, `unit`).
+3. **P2 — security.** Just Works bonding and encryption on the three writable characteristics
+   (`target`, `command`, `unit`).
 4. **P3 — documentation and budget.** README gains the interface bullet and the measured numbers;
    `sketch.yaml` and the library list pin the version.
 
