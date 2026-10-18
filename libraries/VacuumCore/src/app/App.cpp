@@ -76,11 +76,9 @@ bool App::begin() {
 // is a real reading, since App began the gauge before this point.
 void App::splash() {
   Display& panel = context_.display();
-  panel.startWrite();
   panel.clear();
   panel.text(0, 0, "Gardener", 1, false);
   panel.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
-  panel.endWrite();
   panel.display();
 }
 

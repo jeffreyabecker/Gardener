@@ -29,8 +29,6 @@ class AdafruitDisplay : public Display {
 
   // --- the panel -----------------------------------------------------------
   bool begin() override { return onBegin_(panel_); }
-  void startWrite() override { panel_.startWrite(); }
-  void endWrite() override { panel_.endWrite(); }
   void display() override { panel_.display(); }
 
   // --- geometry ------------------------------------------------------------

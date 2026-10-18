@@ -29,12 +29,10 @@ class Display {
   virtual bool begin() = 0;
 
   // --- the panel -----------------------------------------------------------
-  // A drawing sequence is bracketed by startWrite/endWrite, and display() sends what was drawn to
-  // the glass. The bracket is free on an I2C panel and is what lets an SPI one hold its select
-  // line for the whole frame, so it belongs on the panel's surface rather than in a renderer.
-  virtual void startWrite() = 0;
-  virtual void endWrite() = 0;
-  virtual void display() = 0;  // push the frame to the glass
+  // Drawing lands in the panel's own frame buffer, and display() sends that buffer to the glass.
+  // There is no bracket around a frame: the buffer keeps what was drawn until the next clear() or
+  // draw, so the only thing that ever has to run is the flush.
+  virtual void display() = 0;  // push the frame buffer to the glass
 
   // --- geometry ------------------------------------------------------------
   // Rotation aware: width() and height() swap when the panel is turned.
