@@ -20,7 +20,13 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, logEnabled_);
   link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
-  ui_ = new ConnectedUI(context_);
+  connectedUi_ = new ConnectedUI(context_);
+  disconnectedUi_ = new DisconnectedUI(context_);
+}
+
+UserInterface* App::screenFor(bool attached) {
+  if (attached) return connectedUi_;
+  return disconnectedUi_;
 }
 
 bool App::begin() {
@@ -68,6 +74,8 @@ bool App::begin() {
 
   link_->begin();
   lastState_ = context_.vacuum().runState();
+  hostAttached_ = serialAttached();
+  ui_ = screenFor(hostAttached_);
   if (ui_) ui_->begin();
   return true;
 }
@@ -134,9 +142,17 @@ void App::update() {
 
   logRunChanges(now);
   logButtonPresses();
+  // The screen follows the link: the readout while a controller is attached, the plain mark when it
+  // is not. A swap paints its own first frame.
+  const bool attached = serialAttached();
+  if (attached != hostAttached_) {
+    hostAttached_ = attached;
+    ui_ = screenFor(attached);
+    if (ui_) ui_->begin();
+  }
   // The overlay reports the ways in, and the loop is the only thing that can see the serial link.
   // Bluetooth is not fitted, so it stays false.
-  context_.overlay().setConnections(serialAttached(), false);
+  context_.overlay().setConnections(attached, false);
   // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
   // the screen is never allowed to hold up the loop in front of them.
   if (ui_) ui_->update();

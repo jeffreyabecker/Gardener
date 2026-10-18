@@ -246,7 +246,8 @@ An icon is drawn only while its connection is up. Nothing on the serial line dra
 buffer or changes the panel's configuration.
 
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
-across a reset. With no host talking, the panel shows the pressure and no target.
+across a reset. The screen follows the link: the readout while a controller is attached, and the
+plain mark while none is.
 
 ### Over the serial line
 
