@@ -16,10 +16,8 @@ namespace gardener {
 //
 // Otherwise the list is the library's drawing surface in those terms, so that whatever draws on
 // this later does not have to come back and widen it. Deliberately absent, with reasons:
-// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have, and the
-// startWrite/writePixel family exists to batch pin work on an SPI panel and does nothing on
-// I2C. Nothing here names a library type at all, so a host and a fake can implement this with no
-// Adafruit in the picture.
+// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have. Nothing here names a
+// library type at all, so a host and a fake can implement this with no Adafruit in the picture.
 //
 // Text is stateless: `text` and `textBounds` take the scale they draw at, so nothing has to park
 // a cursor, set a size and remember to undo it. The built-in font is the only one there is.
@@ -31,7 +29,12 @@ class Display {
   virtual bool begin() = 0;
 
   // --- the panel -----------------------------------------------------------
-  virtual void flush() = 0;  // push what has been drawn to the glass
+  // A drawing sequence is bracketed by startWrite/endWrite, and display() sends what was drawn to
+  // the glass. The bracket is free on an I2C panel and is what lets an SPI one hold its select
+  // line for the whole frame, so it belongs on the panel's surface rather than in a renderer.
+  virtual void startWrite() = 0;
+  virtual void endWrite() = 0;
+  virtual void display() = 0;  // push the frame to the glass
 
   // --- geometry ------------------------------------------------------------
   // Rotation aware: width() and height() swap when the panel is turned.

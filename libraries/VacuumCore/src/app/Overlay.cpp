@@ -24,9 +24,9 @@ static_assert(!std::is_abstract<Overlay>::value,
 
 // The battery goes down last, so it lands on top of whatever the page drew and no page has to
 // know it exists.
-void Overlay::flush() {
+void Overlay::display() {
   drawBattery();
-  inner_->flush();
+  inner_->display();
 }
 
 // The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so

@@ -67,14 +67,16 @@ bool App::begin() {
 }
 
 // Drawn once, at startup, and again after a reboot because that command restarts the device and
-// begin() runs again. The battery is on it because it flushes through the overlay - and it is a
-// real reading, since App began the gauge before this point.
+// begin() runs again. The battery is on it because the frame goes out through the overlay - and it
+// is a real reading, since App began the gauge before this point.
 void App::splash() {
-  Display& display = context_.display();
-  display.clear();
-  display.text(0, 0, "Gardener", 1, false);
-  display.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
-  display.flush();
+  Display& panel = context_.display();
+  panel.startWrite();
+  panel.clear();
+  panel.text(0, 0, "Gardener", 1, false);
+  panel.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
+  panel.endWrite();
+  panel.display();
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state
@@ -140,7 +142,7 @@ void App::update() {
   logRunChanges(now);
   logButtonPresses();
   // Nothing is drawn here. The panel belongs to the host from now on, and the device only puts
-  // its own two things on it: the splash, once, and the battery, on the way to every flush.
+  // its own two things on it: the splash, once, and the battery, on the way to every frame.
 }
 
 }  // namespace gardener

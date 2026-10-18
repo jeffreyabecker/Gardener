@@ -38,7 +38,9 @@ class AdafruitDisplay : public Display {
 
   // --- the panel -----------------------------------------------------------
   bool begin() override;
-  void flush() override { panel_->display(); }
+  void startWrite() override { panel_->startWrite(); }
+  void endWrite() override { panel_->endWrite(); }
+  void display() override { panel_->display(); }
 
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return panel_->width(); }

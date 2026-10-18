@@ -20,7 +20,9 @@ class Overlay : public Display {
 
   // --- the panel -----------------------------------------------------------
   bool begin() override { return inner_->begin(); }
-  void flush() override;  // draws the battery first, then flushes
+  void startWrite() override { inner_->startWrite(); }
+  void endWrite() override { inner_->endWrite(); }
+  void display() override;  // draws the battery first, then sends the frame
 
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return inner_->width(); }
