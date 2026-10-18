@@ -24,13 +24,17 @@ constexpr uint32_t PROTOCOL_VERSION = 3;
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
 //
-// I2C bus, shared by the OLED and the MPRLS sensor. GPIO8/9 are the ESP32-S3 Wire defaults
-// (`SDA`/`SCL` in the board variant). The bus stays clear of the S3 strapping pins (0, 3, 45, 46)
-// and of the USB pins (19/20).
-constexpr int I2C_SDA = 8;
-constexpr int I2C_SCL = 9;
-// The harness rather than either device on it: two parts share the bus, so the root owns its speed.
-constexpr uint32_t I2C_FREQ_HZ = 400000;
+// Two I2C buses, one per part, so neither driver can stall the other and nothing has to lock a
+// shared bus. The sensor is on the S3's `Wire` (bus 0) at the variant's default pins; the panel is
+// on `Wire1` (bus 1) at two of the free pins. Both stay clear of the S3 strapping pins (0, 3, 45,
+// 46) and of the USB pins (19/20).
+constexpr int SENSOR_I2C_SDA = 8;
+constexpr int SENSOR_I2C_SCL = 9;
+constexpr int PANEL_I2C_SDA = 17;
+constexpr int PANEL_I2C_SCL = 18;
+// Each bus's speed belongs to the harness rather than to either part on it.
+constexpr uint32_t SENSOR_I2C_FREQ_HZ = 400000;
+constexpr uint32_t PANEL_I2C_FREQ_HZ = 400000;
 
 // The pump: a JQB2438 through a low side MOSFET.
 constexpr int PUMP_PWM = 6;

@@ -13,7 +13,7 @@ switch module, one tube size. Bench use, dry air, attended.
 | 2 | JQB2438 pump | Micro diaphragm vacuum pump, 3 V/3.7 V winding, 0.45 A | **$16.84** — [B0GR4K9K4P](https://www.amazon.com/dp/B0GR4K9K4P) |
 | 3 | Solenoid valve | Mini 2-way **normally open**, 3.0–5.0 V, ~180 mA at 3.3 V. Ports 1 and 2 in use; port 3 capped | **$9.63** — [B0HDRX4C44](https://www.amazon.com/dp/B0HDRX4C44) |
 | 4 | **MPRLS module** | Adafruit MPRLS ported pressure sensor breakout. 24-bit I2C, 0–25 PSI (0–172 kPa) absolute, `VIN / GND / SDA / SCL`, address `0x18`. Pre-calibrated, so no bridge ADC | **$29.95** — [3965](https://www.adafruit.com/product/3965) |
-| 5 | **OLED** | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. Shares the bus with the MPRLS | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
+| 5 | **OLED** | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. On its own bus, separate from the MPRLS | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
 | 6 | Button module | KOOBOOK 5-way navigation switch: up, down, left, right, centre — 5 switches, 5 GPIOs. 2.0–9.0 V | **$7.29** — [B07SC1H42W](https://www.amazon.com/dp/B07SC1H42W) |
 | 7 | **DRV8833 module** | Dual H-bridge, 2 × 1.5 A, logic-level inputs. Drives the pump and the valve | **$6.99** — [B0G1RMXMSF](https://www.amazon.com/dp/B0G1RMXMSF) |
 | 8 | **Breadboard + jumpers** | 2 × 830-point board with a wire kit | **$9.99** — [B0H17GR4S5](https://www.amazon.com/dp/B0H17GR4S5) |
@@ -28,8 +28,8 @@ data-capable. A 1 A slow-blow fuse on the 5 V feed is optional, not required.
 ## Wiring
 
 ```
-PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ MPRLS    SDA + SCL
-(via USB-C) │                               ├─ OLED     SDA + SCL
+PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ MPRLS    SDA + SCL   (Wire, 8/9)
+(via USB-C) │                               ├─ OLED     SDA + SCL   (Wire1, 17/18)
             │                               └─ buttons  5-way
             └─ 3.3 V buck ── DRV8833 VM ─┬─ channel A ── pump
                                          └─ channel B ── valve
@@ -38,13 +38,13 @@ PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ MPRLS    SDA + SC
 ```
 
 ```
-GPIO  8  9            I2C     MPRLS 0x18, panel 0x3C
+GPIO  8  9            I2C     MPRLS 0x18 (Wire)
+GPIO 17 18            I2C     panel 0x3C (Wire1)
 GPIO  6               pump
 GPIO  5               valve
 GPIO  1  2  10 11 12  buttons 5-way (four keys read)
 GPIO  4               battery sense (reserved)
 GPIO  7 13 14 15 16   spare
-GPIO 17 18            spare
 ```
 
 ```

@@ -88,7 +88,7 @@ of it: a part reports what it is doing as values, and nothing in `hal/` knows th
 a control loop exists. The vacuum system is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
-pins and the bus are named in another. Each of those is an interface, and the part that satisfies it
+pins and the buses are named in another. Each of those is an interface, and the part that satisfies it
 is in `hal/impl/`. A vendor header appears only where a part is named: `<Adafruit_MPRLS.h>` in the
 sensor's own driver, and `<Adafruit_SH110X.h>` in
 [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp), which picks the panel driver and hands it
@@ -102,8 +102,10 @@ pins rather than reading them.
 
 | Signal | GPIO | Notes |
 | --- | --- | --- |
-| I2C SDA | 8 | STEMMA QT bus, MPRLS + OLED (ESP32-S3 `Wire` default) |
-| I2C SCL | 9 | same bus |
+| I2C sensor SDA | 8 | MPRLS, on `Wire` (bus 0; ESP32-S3 default pin) |
+| I2C sensor SCL | 9 | same bus |
+| I2C panel SDA | 17 | OLED, on `Wire1` (bus 1) |
+| I2C panel SCL | 18 | same bus |
 | Pump PWM | 6 | to the MOSFET gate |
 | Vent valve | 5 | MOSFET gate; **energise to close** for the default normally open part |
 | Battery sense | 4 | 1S Li-ion through a ÷2 divider (ADC1 channel 3) |
@@ -115,7 +117,9 @@ pins rather than reading them.
 | UART0 | 43/44 | alternative control interface, 115200 |
 | RGB LED | 48 | on board, not wired to anything |
 
-Pins 7 and 12–18 are free. The four button pins are wired, named in `core/Config.h` and read
+Pins 7 and 12–16 are free. The two I2C parts are on separate buses — the sensor on `Wire`, the
+panel on `Wire1` — so neither driver can stall the other. The four button pins are wired, named in
+`core/Config.h` and read
 through [hal/impl/Buttons.h](./libraries/VacuumCore/src/hal/impl/Buttons.h), which arms them on
 change interrupts and settles the debounce on each read; no key is assigned an action yet. The
 battery sense is on GPIO4 because it is the one ADC1 pin that is not a button — a pressed button

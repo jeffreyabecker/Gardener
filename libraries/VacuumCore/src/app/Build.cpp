@@ -30,24 +30,24 @@ constexpr int16_t kPanelNoResetLine = -1;
 
 // The parts are new'd once, at boot, and never deleted: the device's destructor never runs, so
 // nothing owns them — the same policy the SH1106 driver already documents. This is the one place
-// that names the rig: which pin drives what, which bus the two I2C parts share, and which valve is
+// that names the rig: which pin drives what, which bus each I2C part sits on, and which valve is
 // fitted. The drivers are handed those facts rather than reading them, so a board variant edits
 // this file and core/Config.h and nothing under hal/impl/. The AppContext itself is copied out by
 // value.
 //
-// The I2C bus is App's to bring up: the panel driver takes a TwoWire it does not own, so it is up
-// before begin() is called.
+// The two I2C buses are App's to bring up: each driver takes a TwoWire it does not own, so both are
+// up before begin() is called.
 AppContext buildAppContext() {
   auto* sensor = new MprlsSensor(Wire);
   auto* pump = new PwmPump(cfg::PUMP_PWM);
   auto* vent = new NormallyOpenValve(cfg::VENT_VALVE);
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
-  // The panel is an SH1106 on the shared bus. Its driver takes its geometry and wiring at
+  // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction; the callback is where it comes up, once App has the bus running.
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
-      kPanelWidth, kPanelHeight, &Wire, kPanelNoResetLine);
+      kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* overlay = new Overlay(display, battery);
   auto* system = new VacuumSystem(pump, sensor, vent);
   return AppContext(sensor, pump, vent, battery, buttons, overlay, system);
