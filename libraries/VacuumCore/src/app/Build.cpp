@@ -14,11 +14,11 @@
 
 namespace gardener {
 
-// The graph is new'd once, at boot, and never deleted: the device's destructor never runs, so
-// nothing owns it — the same policy the SH1106 driver already documents. Building it here rather
+// The parts are new'd once, at boot, and never deleted: the device's destructor never runs, so
+// nothing owns them — the same policy the SH1106 driver already documents. Building here rather
 // than as value members means the wiring reads top to bottom in one place, and no class's
-// declaration order has to match its dependencies.
-AppContext* buildAppContext() {
+// declaration order has to match its dependencies. The AppContext itself is copied out by value.
+AppContext buildAppContext() {
   auto* sensor = new MprlsSensor(Wire);
   auto* pump = new PwmPump;
   auto* vent = new NormallyOpenValve;
@@ -27,7 +27,7 @@ AppContext* buildAppContext() {
   auto* display = new AdafruitDisplay;
   auto* overlay = new Overlay(display, battery);
   auto* system = new VacuumSystem(pump, sensor, vent);
-  return new AppContext(sensor, pump, vent, battery, buttons, overlay, system);
+  return AppContext(sensor, pump, vent, battery, buttons, overlay, system);
 }
 
 }  // namespace gardener

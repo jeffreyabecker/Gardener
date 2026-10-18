@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/Logger.h"
+#include "app/StreamLogger.h"
 #include "app/serial/SerialLink.h"
 
 // The application loop: boot, the service order, the run log and the splash. It knows only the
@@ -18,7 +18,7 @@ namespace gardener {
 
 class App {
  public:
-  explicit App(AppContext* context);
+  explicit App(AppContext context);
 
   bool begin();
   void update();
@@ -31,11 +31,12 @@ class App {
   // before any host has said anything.
   void splash();
 
-  // App reports through the Logger rather than the link, which is the sink it points at once the
-  // link exists. Both are new'd in the constructor, so the graph below the context is App's own.
-  AppContext* context_;
+  // App owns the diagnostic switch the link toggles (`device log=`), and both the link and the
+  // logger honour it. The link and the logger are new'd over the same Serial stream.
+  AppContext context_;
+  bool logEnabled_ = true;
   SerialLink* link_ = nullptr;
-  Logger* logger_ = nullptr;
+  StreamLogger* logger_ = nullptr;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };

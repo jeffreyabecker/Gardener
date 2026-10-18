@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-#include "app/Logger.h"
 #include "app/serial/Items.h"
 #include "app/serial/LineGrammar.h"
 #include "app/serial/SerialSurface.h"
@@ -15,7 +14,7 @@ class AppContext;
 // The serial interface to the controller: the bytes, the dispatch, the replies and the diagnostics.
 // One protocol over several files — the line grammar in app/serial/LineGrammar.h, the wire surface as
 // data in app/serial/SerialSurface.h, the payload text in app/serial/SerialPayload.cpp, the discovery
-// pages in app/serial/SerialHelp.cpp, the diagnostics in app/serial/Log.h — because text is what makes
+// pages in app/serial/SerialHelp.cpp — because text is what makes
 // a single file hard to read. The byte half stays here: on a wire it is available/read/write, three
 // calls, and a transport split would need tasks, callbacks and an MTU before it bought anything.
 //
@@ -41,15 +40,15 @@ class AppContext;
 // The end of a line is a string, not a fixed byte: `link term` can point it at a marker rather than
 // newline. Replies are always newline terminated.
 //
-// The stream and the presence check are injected rather than assumed, so pointing the interface at
-// UART0 instead of USB CDC is a one line change in App.
-class SerialLink : public Logger {
+// The stream, the presence check and the log switch are injected rather than assumed, so pointing
+// the interface at UART0 instead of USB CDC is a one line change in App.
+class SerialLink {
  public:
   // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(AppContext* context, Stream& stream, PresenceFn present);
+  SerialLink(AppContext* context, Stream& stream, PresenceFn present, bool& logEnabled);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -59,18 +58,10 @@ class SerialLink : public Logger {
   // only reports it.
   bool consumeLinkLost();
 
-  // --- Logger --------------------------------------------------------------
-  // Diagnostics, through the interface that owns the stream, which is what makes `device log=off`
-  // total.
-  void info(const char* text) override;
-  void warn(const char* text) override;
-  void error(const char* text) override;
-
  private:
   // --- bytes ---------------------------------------------------------------
   void drainLines();
   void dispatchLine(const String& line);
-  void logLine(char level, const char* text);
   void writeLine(const char* prefix, const char* text);
 
   // --- the command surface -------------------------------------------------
@@ -127,8 +118,8 @@ class SerialLink : public Logger {
   AppContext* context_;
   Stream& stream_;
   PresenceFn present_;
+  bool& logEnabled_;
 
-  bool logEnabled_ = true;
   // Where the device looks for the end of a command. Newline by default; `link term` points it at a
   // marker instead, which is how a whole multi-line payload arrives as one command.
   String terminator_ = cfg::LINE_TERMINATOR;

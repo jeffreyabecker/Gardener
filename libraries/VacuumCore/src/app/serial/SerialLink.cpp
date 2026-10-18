@@ -39,8 +39,9 @@ String named(const char* key, const char* value) {
 
 }  // namespace
 
-SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present)
-    : context_(context), stream_(stream), present_(present) {}
+SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present,
+                       bool& logEnabled)
+    : context_(context), stream_(stream), present_(present), logEnabled_(logEnabled) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
@@ -48,7 +49,9 @@ void SerialLink::begin() {
   swallowing_ = false;
   terminator_ = cfg::LINE_TERMINATOR;
   customTerminator_ = false;
-  info("serial: interface ready");
+  // SerialLink's own records go straight to the stream it owns, and honour the same `device log`
+  // switch App's reports do.
+  if (logEnabled_) writeLine("[I] ", "serial: interface ready");
 }
 
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
@@ -58,24 +61,6 @@ bool SerialLink::consumeLinkLost() {
   linkLost_ = false;
   return lost;
 }
-
-// --- diagnostics -----------------------------------------------------------
-
-void SerialLink::logLine(char level, const char* text) {
-  if (!logEnabled_ || !text) return;
-  stream_.write((uint8_t)'[');
-  stream_.write((uint8_t)level);
-  stream_.write((uint8_t)']');
-  stream_.write((uint8_t)' ');
-  stream_.write((const uint8_t*)text, strlen(text));
-  stream_.write((uint8_t)'\n');
-}
-
-void SerialLink::info(const char* text) { logLine('I', text); }
-
-void SerialLink::warn(const char* text) { logLine('W', text); }
-
-void SerialLink::error(const char* text) { logLine('E', text); }
 
 // --- bytes -----------------------------------------------------------------
 
@@ -168,7 +153,7 @@ void SerialLink::poll(uint32_t nowMs) {
     // about.
     terminator_ = cfg::LINE_TERMINATOR;
     customTerminator_ = false;
-    warn("serial: controller detached");
+    if (logEnabled_) writeLine("[W] ", "serial: controller detached");
   }
   attached_ = attached;
 }
@@ -360,8 +345,8 @@ void SerialLink::resourceCommand(const ResourceSpec& resource, Tokens& tokens) {
 WireView SerialLink::wireView() const {
   // The machine is read live: a reply has to describe it as the command left it rather than as the
   // previous loop iteration left it.
-  WireView view = {*context_, logEnabled_, terminator_, customTerminator_, present_ != nullptr,
-                   attached_};
+  WireView view = {*context_, logEnabled_, terminator_, customTerminator_,
+                   present_ != nullptr, attached_};
   return view;
 }
 
