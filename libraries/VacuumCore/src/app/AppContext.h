@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#include "app/Overlay.h"
+#include "app/Settings.h"
 #include "app/VacuumSystem.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
@@ -18,22 +20,27 @@ namespace gardener {
 class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
-             ButtonPanel* buttons, Display* display, VacuumSystem* vacuum)
+             ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum, Settings* settings)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
         battery_(battery),
         buttons_(buttons),
-        display_(display),
-        vacuum_(vacuum) {}
+        overlay_(overlay),
+        vacuum_(vacuum),
+        settings_(settings) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
   VentValve& vent() { return *vent_; }
   Battery& battery() { return *battery_; }
   ButtonPanel& buttons() { return *buttons_; }
-  Display& display() { return *display_; }
+  // The overlay is the display — every drawing verb goes through it — so both views are the same
+  // object. The concrete one is here because the links are the loop's to report.
+  Display& display() { return *overlay_; }
+  Overlay& overlay() { return *overlay_; }
   VacuumSystem& vacuum() { return *vacuum_; }
+  Settings& settings() { return *settings_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -42,8 +49,9 @@ class AppContext {
   VentValve* vent_;
   Battery* battery_;
   ButtonPanel* buttons_;
-  Display* display_;
+  Overlay* overlay_;
   VacuumSystem* vacuum_;
+  Settings* settings_;
 };
 
 }  // namespace gardener

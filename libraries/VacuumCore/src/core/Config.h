@@ -101,6 +101,13 @@ constexpr float BATTERY_FULL_VOLTS = 4.2f;
 constexpr float BATTERY_CALIBRATION = 1.0f;
 constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 
+// --- The device's own screen ------------------------------------------------
+// The splash is read before the first live frame, and the panel is then repainted on a fixed
+// cadence: often enough that the battery blink is visible, slow enough that a whole frame's I2C
+// write does not crowd the control loop.
+constexpr uint32_t SPLASH_HOLD_MS = 1500;
+constexpr uint32_t UI_REFRESH_MS = 250;
+
 // --- Controller link --------------------------------------------------------
 // The device is a serial peripheral: every decision comes from the controller, so what
 // lives here is only what the firmware must own to be fast or safe.

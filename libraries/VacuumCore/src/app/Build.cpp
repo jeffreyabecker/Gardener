@@ -5,6 +5,7 @@
 
 #include "app/AppContext.h"
 #include "app/Overlay.h"
+#include "app/Settings.h"
 #include "app/VacuumSystem.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
@@ -48,9 +49,10 @@ AppContext buildAppContext() {
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
-  auto* overlay = new Overlay(display, battery);
   auto* system = new VacuumSystem(pump, sensor, vent);
-  return AppContext(sensor, pump, vent, battery, buttons, overlay, system);
+  auto* overlay = new Overlay(display, battery, system);
+  auto* settings = new Settings();
+  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, settings);
 }
 
 }  // namespace gardener

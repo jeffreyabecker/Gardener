@@ -133,6 +133,7 @@ reason a command failed is also on the reply line (§11).
 | `batt_v` | r | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | r | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | rw | `on` / `off` | diagnostics on this stream |
+| `unit` | rw | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Parsed and echoed, but nothing stores it yet: a write is accepted and dropped, so the reply answers the unit the device still shows |
 
 | Action | Reply | Notes |
 | --- | --- | --- |
@@ -143,10 +144,17 @@ it is the one reply that describes something that has not happened yet.
 
 ```
 -> device get
-<- ok proto=3 fw=0.6.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on
+<- ok proto=3 fw=0.6.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa
 -> device log=off
 <- ok log=off
+-> device unit=mmhg
+<- ok unit=kpa
 ```
+
+`device unit=` is the one write that changes nothing: there is no store behind it yet, so the
+value is parsed, discarded, and the echo reports what the panel is actually showing. The machine
+and this wire stay in kPa either way — a display unit is a preference about the glass, not a
+second way to state a pressure.
 
 ## 6. `vacuum` — the machine that holds pressure
 
@@ -383,8 +391,10 @@ What a controller has to know:
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
   than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
-* **The panel is the device's.** There is no drawing command, so a fault, a vent timeout, a
-  low battery and the state itself are only on the wire. Poll `vacuum get` to see them.
+* **The panel is the device's.** It shows the state, its icon, both pressures, the battery and the
+  two ways in — serial and Bluetooth — so those are readable at the bench. There is no drawing
+  command, so everything else — a vent timeout, the duty, the fault code — is only on the wire.
+  Poll `vacuum get` to see it.
 
 ## 13. Rates
 

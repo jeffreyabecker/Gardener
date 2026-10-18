@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Adafruit_GFX.h>
 #include <Arduino.h>
 #include <stdint.h>
 
@@ -16,11 +17,14 @@ namespace gardener {
 //
 // Otherwise the list is the library's drawing surface in those terms, so that whatever draws on
 // this later does not have to come back and widen it. Deliberately absent, with reasons:
-// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have. Nothing here names a
-// library type at all, so a host and a fake can implement this with no Adafruit in the picture.
+// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have. The font face is the
+// one library type named here, because a face is data the drawing picks rather than a part a driver
+// hides: a host or a fake needs the GFX header and nothing else.
 //
-// Text is stateless: `text` and `textBounds` take the scale they draw at, so nothing has to park
-// a cursor, set a size and remember to undo it. The built-in font is the only one there is.
+// Text is nearly stateless: `text` and `textBounds` take the scale they draw at, so nothing has to
+// park a cursor or a size and remember to undo them. The face is the exception — setFont() picks it
+// once for the page being laid out, since a page draws many strings in one face and no single
+// string owns it.
 class Display {
  public:
   virtual ~Display() = default;
@@ -29,12 +33,10 @@ class Display {
   virtual bool begin() = 0;
 
   // --- the panel -----------------------------------------------------------
-  // A drawing sequence is bracketed by startWrite/endWrite, and display() sends what was drawn to
-  // the glass. The bracket is free on an I2C panel and is what lets an SPI one hold its select
-  // line for the whole frame, so it belongs on the panel's surface rather than in a renderer.
-  virtual void startWrite() = 0;
-  virtual void endWrite() = 0;
-  virtual void display() = 0;  // push the frame to the glass
+  // Drawing lands in the panel's own frame buffer, and display() sends that buffer to the glass.
+  // There is no bracket around a frame: the buffer keeps what was drawn until the next clear() or
+  // draw, so the only thing that ever has to run is the flush.
+  virtual void display() = 0;  // push the frame buffer to the glass
 
   // --- geometry ------------------------------------------------------------
   // Rotation aware: width() and height() swap when the panel is turned.
@@ -80,13 +82,20 @@ class Display {
   virtual void bitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) = 0;
 
   // --- text ----------------------------------------------------------------
-  // `size` scales the built-in font, and `inverted` draws paper on ink. Measurement is a question
-  // about a string at a size rather than a property of wherever the cursor happens to be, and it
-  // is not const because the library's own measurement is not.
+  // The face is chosen once and stays chosen; setFont(nullptr) puts the built-in 5x7 back. With a
+  // face set, `y` is the baseline rather than the top of the glyph box, which is the font format's
+  // own rule and the one thing a caller has to know about it.
+  //
+  // `size` scales whichever face is set, and `inverted` draws paper on ink — but only the built-in
+  // face can: the library draws a custom face with no background at all, so an inverted string in
+  // one is ink on whatever was already there. Measurement is a question about a string at a size
+  // rather than a property of wherever the cursor happens to be, and it is not const because the
+  // library's own measurement is not.
   //
   // Both spellings exist because both callers do: a host message arrives as a `const char*` in a
   // line buffer, and anything the device builds is a `String`. One of them would otherwise be
   // converted on every call for nothing.
+  virtual void setFont(const GFXfont* font) = 0;
   virtual void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) = 0;
   virtual void text(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) = 0;
   virtual void textBounds(const String& value, uint8_t size, int16_t& outWidth,

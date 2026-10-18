@@ -20,6 +20,7 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, logEnabled_);
   link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
+  ui_ = new ConnectedUI(context_);
 }
 
 bool App::begin() {
@@ -67,21 +68,8 @@ bool App::begin() {
 
   link_->begin();
   lastState_ = context_.vacuum().runState();
-  splash();
+  if (ui_) ui_->begin();
   return true;
-}
-
-// Drawn once, at startup, and again after a reboot because that command restarts the device and
-// begin() runs again. The battery is on it because the frame goes out through the overlay - and it
-// is a real reading, since App began the gauge before this point.
-void App::splash() {
-  Display& panel = context_.display();
-  panel.startWrite();
-  panel.clear();
-  panel.text(0, 0, "Gardener", 1, false);
-  panel.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
-  panel.endWrite();
-  panel.display();
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state
@@ -146,8 +134,12 @@ void App::update() {
 
   logRunChanges(now);
   logButtonPresses();
-  // Nothing is drawn here. The panel belongs to the host from now on, and the device only puts
-  // its own two things on it: the splash, once, and the battery, on the way to every frame.
+  // The overlay reports the ways in, and the loop is the only thing that can see the serial link.
+  // Bluetooth is not fitted, so it stays false.
+  context_.overlay().setConnections(serialAttached(), false);
+  // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
+  // the screen is never allowed to hold up the loop in front of them.
+  if (ui_) ui_->update();
 }
 
 }  // namespace gardener
