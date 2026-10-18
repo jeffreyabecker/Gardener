@@ -133,7 +133,7 @@ reason a command failed is also on the reply line (§11).
 | `batt_v` | r | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | r | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | rw | `on` / `off` | diagnostics on this stream |
-| `unit` | rw | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Parsed and echoed, but nothing stores it yet: a write is accepted and dropped, so the reply answers the unit the device still shows |
+| `unit` | rw | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Applied at once, but not stored: a restart returns it to `kpa` |
 
 | Action | Reply | Notes |
 | --- | --- | --- |
@@ -148,13 +148,13 @@ it is the one reply that describes something that has not happened yet.
 -> device log=off
 <- ok log=off
 -> device unit=mmhg
-<- ok unit=kpa
+<- ok unit=mmhg
 ```
 
-`device unit=` is the one write that changes nothing: there is no store behind it yet, so the
-value is parsed, discarded, and the echo reports what the panel is actually showing. The machine
-and this wire stay in kPa either way — a display unit is a preference about the glass, not a
-second way to state a pressure.
+`device unit=` takes effect on the next frame but does not survive a reset: there is no store
+behind it yet, so the panel prints the chosen unit until the device restarts and then returns to
+kPa. The machine and this wire stay in kPa either way — a display unit is a preference about the
+glass, not a second way to state a pressure.
 
 ## 6. `vacuum` — the machine that holds pressure
 

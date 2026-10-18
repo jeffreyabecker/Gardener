@@ -4,8 +4,7 @@ namespace gardener {
 
 DisplayUnit Settings::unit() const { return unit_; }
 
-// No store yet, so a write is accepted and dropped. The reply echoes the field afterwards, so it
-// answers the unit the device still prints rather than the one the host asked for.
-void Settings::setUnit(DisplayUnit unit) { (void)unit; }
+// No store yet, so a write is applied but not persisted: it holds until the next restart.
+void Settings::setUnit(DisplayUnit unit) { unit_ = unit; }
 
 }  // namespace gardener

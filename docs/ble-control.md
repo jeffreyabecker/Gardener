@@ -157,11 +157,15 @@ values — see §4.
 
 ## 5. Where it sits in the code
 
-`app/BleLink.*` — app layer, not `hal/`. BLE is not a device the instrument commands; it is another
-way to command the instrument, which is what `SerialLink` is.
+`app/ble/BleLink.*` — app layer, not `hal/`, in its own folder beside `app/serial/`. BLE is not a
+device the instrument commands; it is another way to command the instrument, which is what
+`SerialLink` is. A transport is a family of files — the link, its GATT table, its payloads — so it
+gets a folder the way serial has one, rather than sitting loose in `app/` next to the machine.
 
 ```cpp
 // App.h
+#include "app/ble/BleLink.h"
+
 AppContext context_;
 SerialLink* link_;    // serial, unchanged, keeps Q4
 BleLink* ble_;        // own contract; no link-loss rule
@@ -186,9 +190,10 @@ UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
 | `unit` | `settings().unit()` / `settings().setUnit()` — the same pair the serial `device unit=` uses |
 | `command` | `startRefusal()`, `start()`, `stop()`, `resetFault()`, `ESP.restart()` |
 
-While `Settings` has no store, a `unit` write is accepted and dropped exactly as it is on serial,
-so a read after the write reports what the panel is still printing. That behaviour is the
-`Settings` file's, not this transport's, and it changes in one place when a store arrives.
+While `Settings` has no store, a `unit` write is applied at once and forgotten at the next reset,
+exactly as it is on serial: a read after the write reports the new unit, and a restart returns it to
+kPa. That behaviour is the `Settings` file's, not this transport's, and it changes in one place when
+a store arrives.
 
 ## 6. Concurrency
 

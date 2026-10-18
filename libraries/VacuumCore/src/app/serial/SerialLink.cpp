@@ -381,8 +381,8 @@ bool SerialLink::writeDevice(const FieldWrite* writes, uint8_t count) {
     }
   }
   logEnabled_ = logEnabled;
-  // No store yet, so this drops the value; the echo then answers what the device still prints,
-  // which is the honest answer rather than the one the host asked for.
+  // Applied live and not kept: the echo reports the unit the panel is printing now, and a restart
+  // returns it to the machine's own.
   context_->settings().setUnit(unit);
   return true;
 }
