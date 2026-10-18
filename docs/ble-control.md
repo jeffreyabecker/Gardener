@@ -68,9 +68,17 @@ Base: `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`
 | `command` | `...0007` | write, notify | write uint8 opcode; notify uint8 result |
 | `fw` | `...0008` | read | UTF-8: firmware version |
 | `ble_proto` | `...0009` | read | uint8: this contract's revision, `1` |
+| `unit` | `...000A` | read, write | uint8: what the panel prints pressure in — 0 kPa, 1 psi, 2 inHg, 3 mmHg |
 
 Encodings are little-endian because the part is; a float is IEEE-754, four bytes. `fw` and `fault`
-are the only text — one is a version and the other is a small closed set of codes.
+are the only text — one is a version and the other is a small closed set of codes. The `unit`
+values are the `DisplayUnit` order in `core/Units.h`, so the characteristic and the serial
+`device unit=` cannot disagree about which number means which unit.
+
+**The pressures stay in kPa whatever `unit` says.** `kpa` and `target` are the machine's own
+number, exactly as they are on the serial link; `unit` is what the glass prints, which is a
+preference about the display and not a second encoding of the same reading. A client that wants to
+show PSI converts locally with the same table, or reads `unit` so its readout matches the panel.
 
 Opcodes written to `command`:
 
@@ -103,6 +111,9 @@ Results notified on `command`:
 | `batt` | every 10 s while subscribed |
 | `command` | on every opcode, with its result |
 
+`unit` is read and written but never notified: one central at a time means the client that writes
+it already knows, and a notify would only echo its own write back.
+
 5 Hz is the radio's main cost and the only rate worth arguing about; it is also about as fast as a
 phone screen needs. A client that wants less simply does not subscribe.
 
@@ -111,6 +122,10 @@ phone screen needs. A client that wants less simply does not subscribe.
 `heap`, `chip`, `up`, `sensor`, `floor`, `panel w/h`, `log`, `term` and `attached` are bench and
 protocol concerns, not things a phone app shows or does. They stay on serial. In particular there
 is no `link` resource and no terminator, because there are no lines.
+
+The display unit is the one device setting that crosses over, because it is not a bench concern:
+an app that shows a reading wants to show it the way the panel does. It still does not move the
+values — see §4.
 
 ## 5. Where it sits in the code
 
@@ -139,7 +154,12 @@ BleLink* ble_;        // own contract; no link-loss rule
 | `duty` | `vacuum().pump().dutyPercent()` |
 | `fault` | `vacuum().faultCode()` |
 | `batt` | `battery().percent()`, `0xFF` when `!present()` |
+| `unit` | `settings().unit()` / `settings().setUnit()` — the same pair the serial `device unit=` uses |
 | `command` | `startRefusal()`, `start()`, `stop()`, `resetFault()`, `ESP.restart()` |
+
+While `Settings` has no store, a `unit` write is accepted and dropped exactly as it is on serial,
+so a read after the write reports what the panel is still printing. That behaviour is the
+`Settings` file's, not this transport's, and it changes in one place when a store arrives.
 
 ## 6. Concurrency
 
@@ -150,6 +170,7 @@ to answer immediately.
 | Shared thing | Writer | Reader | Mechanism |
 | --- | --- | --- | --- |
 | Value snapshot (`state`, `kpa`, `duty`, `fault`, `batt`) | `loop()` in `poll()` | GATT read callbacks | struct of plain fields, replaced whole |
+| Display unit (`unit`) | `loop()` in `poll()`, when a write arrived | GATT read callback | one enum byte, read as a plain load; it is a setting, so it lives outside the snapshot |
 | Pending command (opcode or target) | GATT write callbacks | `loop()` in `poll()` | one-slot mailbox with a flag |
 | Connection state | NimBLE | both | the server's connected count |
 
@@ -171,7 +192,7 @@ Recommended shape:
    while pairing it draws six digits and the controller types them. That is
    `BLE_HS_IO_DISPLAY_ONLY`, LE Secure Connections, bonded, with the bond stored in NVS (NimBLE's
    `CONFIG_BT_NIMBLE_NVS_PERSIST` is on by default).
-2. The writable characteristics — `target` and `command` — require encryption
+2. The writable characteristics — `target`, `command` and `unit` — require encryption
    (`NIMBLE_PROPERTY::WRITE_ENC`), so an unencrypted write is rejected by the stack and never
    reaches the mailbox. Reads may stay open: pressure and state are not secrets.
 3. Just Works bonding is the fallback if a passkey proves annoying on a bench. It authenticates
@@ -188,6 +209,8 @@ the battery.
   rather than guess, exactly as a serial controller does with `proto`.
 * Every value is readable at any time, so a freshly connected app builds its whole view from reads
   before it subscribes to anything.
+* A pressure is always kPa, whether the panel is showing kPa, psi, inHg or mmHg. `unit` says what
+  the glass prints; it never changes what `kpa` or `target` mean.
 
 ## 9. Build and configuration
 
@@ -228,6 +251,7 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 | Unknown opcode | result `0x04`, no state change |
 | `start` refused | the matching result code, no state change |
 | Target written below the loop's floor | rejected at the GATT layer; the bound is the `CONTROL_MIN_TARGET_KPA` in `core/Config.h`, and 0 clears the target |
+| `unit` written outside 0–3 | rejected at the GATT layer; the value is a closed set, so nothing is guessed |
 | Central disconnects mid-run | the run continues (§3); advertising restarts |
 | Central not subscribed | values stay readable; nothing is queued |
 | Second central tries to connect | rejected by `MAX_CONNECTIONS=1` while the first is connected |
@@ -236,12 +260,13 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 
 ## 12. Phases
 
-1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`fw`/`ble_proto`, the snapshot and the
-   notification rates. Prove a phone shows live values and that a serial session is unaffected.
-2. **P1 — control.** `target` writes, the command mailbox and opcodes, result notifications, and the
-   `startRefusal()` mapping.
-3. **P2 — security.** Passkey on the panel, bonding, encryption on the two writable
-   characteristics.
+1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`unit`/`fw`/`ble_proto`, the snapshot
+   and the notification rates. Prove a phone shows live values and that a serial session is
+   unaffected.
+2. **P1 — control.** `target` writes, `unit` writes, the command mailbox and opcodes, result
+   notifications, and the `startRefusal()` mapping.
+3. **P2 — security.** Passkey on the panel, bonding, encryption on the three writable
+   characteristics (`target`, `command`, `unit`).
 4. **P3 — documentation and budget.** README gains the interface bullet and the measured numbers;
    `sketch.yaml` and the library list pin the version.
 
@@ -254,4 +279,7 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
   back door? The failure codes in §4 already carry the operational truth.
 * Is a lease worth having for BLE-started runs (§3), or is an unattended run over BLE acceptable
   because the pump's own limits and the fault latch still apply?
+* Should `unit` be the device's preference or the app's own formatting choice? Today it is the
+  device's, because the panel has no settings UI of its own and a host is the only thing that can
+  change it — but an app that already formats numbers may not want to move the glass.
 * Should reads also require encryption, for privacy rather than control?
