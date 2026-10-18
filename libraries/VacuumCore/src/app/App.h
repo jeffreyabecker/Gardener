@@ -3,8 +3,9 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/StreamLogger.h"
 #include "app/ConnectedUI.h"
+#include "app/DisconnectedUI.h"
+#include "app/StreamLogger.h"
 #include "app/serial/SerialLink.h"
 
 // The application loop: boot, the service order, the run log and the screen. It knows only the
@@ -27,6 +28,8 @@ class App {
  private:
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
+  // Which screen belongs to the link as it is now.
+  UserInterface* screenFor(bool attached);
 
   // App owns the diagnostic switch the link toggles (`device log=`), and both the link and the
   // logger honour it. The link and the logger are new'd over the same Serial stream.
@@ -34,10 +37,12 @@ class App {
   bool logEnabled_ = true;
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
-  // The panel is the device's own, so the loop paints it: what the run is doing, and the two
-  // pressures it is about. A pointer, and new'd with the link and the logger, because a build with
-  // no panel has no UI at all — and nothing on the device deletes what it built at boot.
-  ConnectedUI* ui_ = nullptr;
+  // The panel is the device's own, so the loop paints it. Two screens, one showing: the live
+  // readout while a controller is attached, and the plain mark while none is.
+  ConnectedUI* connectedUi_ = nullptr;
+  DisconnectedUI* disconnectedUi_ = nullptr;
+  UserInterface* ui_ = nullptr;
+  bool hostAttached_ = false;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };
