@@ -97,6 +97,7 @@ class AdafruitDisplay : public Display {
   }
 
   // --- text ----------------------------------------------------------------
+  void setFont(const GFXfont* font) override { panel_.setFont(font); }
   void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) override {
     draw(x, y, value.c_str(), size, inverted);
   }
