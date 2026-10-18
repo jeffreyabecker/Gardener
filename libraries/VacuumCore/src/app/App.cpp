@@ -17,7 +17,7 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 
 }  // namespace
 
-App::App(AppContext context) : context_(context) {
+App::App(AppContext context) : context_(context), ui_(context) {
   logger_ = new StreamLogger(Serial, logEnabled_);
   link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
 }
@@ -67,19 +67,8 @@ bool App::begin() {
 
   link_->begin();
   lastState_ = context_.vacuum().runState();
-  splash();
+  ui_.begin();
   return true;
-}
-
-// Drawn once, at startup, and again after a reboot because that command restarts the device and
-// begin() runs again. The battery is on it because the frame goes out through the overlay - and it
-// is a real reading, since App began the gauge before this point.
-void App::splash() {
-  Display& panel = context_.display();
-  panel.clear();
-  panel.text(0, 0, "Gardener", 1, false);
-  panel.text(0, 12, String("fw ") + cfg::FIRMWARE_VERSION, 1, false);
-  panel.display();
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state
@@ -144,8 +133,9 @@ void App::update() {
 
   logRunChanges(now);
   logButtonPresses();
-  // Nothing is drawn here. The panel belongs to the host from now on, and the device only puts
-  // its own two things on it: the splash, once, and the battery, on the way to every frame.
+  // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
+  // the screen is never allowed to hold up the loop in front of them.
+  ui_.update();
 }
 
 }  // namespace gardener

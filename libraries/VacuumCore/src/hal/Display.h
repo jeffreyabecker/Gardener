@@ -86,9 +86,11 @@ class Display {
   // face set, `y` is the baseline rather than the top of the glyph box, which is the font format's
   // own rule and the one thing a caller has to know about it.
   //
-  // `size` scales whichever face is set, and `inverted` draws paper on ink. Measurement is a
-  // question about a string at a size rather than a property of wherever the cursor happens to be,
-  // and it is not const because the library's own measurement is not.
+  // `size` scales whichever face is set, and `inverted` draws paper on ink — but only the built-in
+  // face can: the library draws a custom face with no background at all, so an inverted string in
+  // one is ink on whatever was already there. Measurement is a question about a string at a size
+  // rather than a property of wherever the cursor happens to be, and it is not const because the
+  // library's own measurement is not.
   //
   // Both spellings exist because both callers do: a host message arrives as a `const char*` in a
   // line buffer, and anything the device builds is a `String`. One of them would otherwise be

@@ -4,9 +4,10 @@
 
 #include "app/AppContext.h"
 #include "app/StreamLogger.h"
+#include "app/UI.h"
 #include "app/serial/SerialLink.h"
 
-// The application loop: boot, the service order, the run log and the splash. It knows only the
+// The application loop: boot, the service order, the run log and the screen. It knows only the
 // AppContext, so which parts are fitted is the build function's business.
 //
 // The device is a serial peripheral: the front panel keys are read on demand, but no key changes
@@ -27,16 +28,15 @@ class App {
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
 
-  // The one thing the device draws for itself: what it is, and which firmware it is running,
-  // before any host has said anything.
-  void splash();
-
   // App owns the diagnostic switch the link toggles (`device log=`), and both the link and the
   // logger honour it. The link and the logger are new'd over the same Serial stream.
   AppContext context_;
   bool logEnabled_ = true;
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
+  // The panel is the device's own, so the loop paints it: what the run is doing, and the two
+  // pressures it is about.
+  ConnectedUI ui_;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };

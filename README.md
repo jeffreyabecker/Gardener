@@ -233,15 +233,17 @@ The panel is a peripheral: the device drives it, and the wire reports only its g
 `h`, so a host can lay out against the real size instead of assuming it.
 
 ```
-  Gardener
-  fw 0.6.0                              ▐███▐          <- the splash, with the battery on it
+  PULL  vv                    ▐███▐         <- the state and its icon, the battery in the corner
+  12.3 kPa                                  <- how deep the chamber is, 18 pt
+  TGT 30.0                                  <- what the loop is pulling to
 ```
 
-The splash is the one frame the device draws, at boot, through the overlay that puts the battery
-on it. Nothing on the serial line draws into the buffer or changes the panel's configuration.
+The boot splash is the first frame; after a second and a half it gives way to that readout,
+repainted four times a second so the battery blink keeps moving. Nothing on the serial line draws
+into the buffer or changes the panel's configuration.
 
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel, and nothing is remembered
-across a reset. With no host talking, the panel holds that splash.
+across a reset. With no host talking, the panel shows the pressure and no target.
 
 ### Over the serial line
 
@@ -305,8 +307,8 @@ IDLE ──────────────> PULL ──(target reached)─�
   controller to start timing, and the run continues until the controller sends `vacuum stop`.
 * Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
   run time, so an unattended hold holds until someone stops it.
-* The countdown is the host's job: the host holds the timer, and the device renders nothing of
-  its own except the splash and the battery.
+* The countdown is the host's job: the host holds the timer, and the device's own screen shows
+  only the two pressures, the state's icon and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
   means energised or de-energised is the fitted part's, and is named in `app/Build.cpp`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
@@ -359,6 +361,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
 * [x] 1S Li-ion battery gauge
 * [x] Panel: a `Display` interface, an Adafruit adapter, and a battery overlay
+* [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module

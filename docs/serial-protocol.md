@@ -383,8 +383,9 @@ What a controller has to know:
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
   than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
-* **The panel is the device's.** There is no drawing command, so a fault, a vent timeout, a
-  low battery and the state itself are only on the wire. Poll `vacuum get` to see them.
+* **The panel is the device's.** It shows the state, its icon, both pressures and the battery, so
+  those are readable at the bench. There is no drawing command, so everything else — a vent
+  timeout, the duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
 
 ## 13. Rates
 

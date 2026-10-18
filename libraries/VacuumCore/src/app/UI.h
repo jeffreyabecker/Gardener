@@ -3,33 +3,41 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/StreamLogger.h"
-#include "app/serial/SerialLink.h"
 
-
-// The application loop: boot, the service order, the run log and the splash. It knows only the
-// AppContext, so which parts are fitted is the build function's business.
-//
-// The device is a serial peripheral: the front panel keys are read on demand, but no key changes
-// what the device does, so the loop services the devices, the control loop and the link, in that
-// order. App is also the only place that reports anything: the context returns values, and the
-// run and the keys are logged from here.
+// What the device puts on its own panel, and the seam between the loop and the glass: App holds one
+// of these and drives it from the loop, and it knows only the AppContext, so which parts are fitted
+// stays the build function's business.
 
 namespace gardener {
 
-    class UserInterface {
-    public:
-        virtual ~UserInterface() = default;
+class UserInterface {
+ public:
+  explicit UserInterface(AppContext context) : context_(context) {}
+  virtual ~UserInterface() = default;
 
-        virtual bool begin() = 0;
-        virtual void update() = 0;
-    };
+  virtual bool begin() = 0;
+  virtual void update() = 0;
 
-    class ConnectedUI : public UserInterface {
-    public:
-        ConnectedUI(AppContext context);
+ protected:
+  AppContext context_;
+};
 
-        bool begin() override;
-        void update() override;
-    };
-}
+// The running screen: the pressure the chamber is at, big enough to read across a bench, the target
+// underneath it, and one icon for the state the numbers do not show.
+class ConnectedUI : public UserInterface {
+ public:
+  explicit ConnectedUI(AppContext context);
+
+  bool begin() override;
+  void update() override;
+
+ private:
+  void drawFrame();
+  void drawStateIcon(int16_t x, int16_t y);
+  void chevrons(int16_t x, int16_t y, bool down);
+
+  uint32_t startedMs_ = 0;
+  uint32_t lastFrameMs_ = 0;
+};
+
+}  // namespace gardener
