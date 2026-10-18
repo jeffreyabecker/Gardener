@@ -4,8 +4,9 @@
 #include <string.h>
 
 #include "app/AppContext.h"
-#include "app/serial/Items.h"
 #include "app/VacuumSystem.h"
+#include "app/serial/Items.h"
+#include "core/Units.h"
 
 namespace gardener {
 namespace {
@@ -363,13 +364,26 @@ void SerialLink::renderField(const char* resource, const char* field, Items& out
 // --- writers ---------------------------------------------------------------
 
 bool SerialLink::writeDevice(const FieldWrite* writes, uint8_t count) {
-  (void)count;  // one writable field, so there is nothing to stage
-  bool on = false;
-  if (!parseFlag(writes[0].value, on)) {
-    errBadArgument(writes[0].value);
-    return false;
+  // Two writable fields, so every value is parsed before any of them is applied: a command that
+  // names one the device will not take leaves it exactly as it was.
+  bool logEnabled = logEnabled_;
+  DisplayUnit unit = context_->settings().unit();
+  for (uint8_t i = 0; i < count; i++) {
+    const FieldWrite& write = writes[i];
+    if (same(write.field->name, "log")) {
+      if (!parseFlag(write.value, logEnabled)) {
+        errBadArgument(write.value);
+        return false;
+      }
+    } else if (!parseDisplayUnit(write.value, unit)) {
+      errBadArgument(write.value);
+      return false;
+    }
   }
-  logEnabled_ = on;
+  logEnabled_ = logEnabled;
+  // No store yet, so this drops the value; the echo then answers what the device still prints,
+  // which is the honest answer rather than the one the host asked for.
+  context_->settings().setUnit(unit);
   return true;
 }
 

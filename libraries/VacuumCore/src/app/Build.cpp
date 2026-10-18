@@ -5,6 +5,7 @@
 
 #include "app/AppContext.h"
 #include "app/Overlay.h"
+#include "app/Settings.h"
 #include "app/VacuumSystem.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
@@ -50,7 +51,8 @@ AppContext buildAppContext() {
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* system = new VacuumSystem(pump, sensor, vent);
   auto* overlay = new Overlay(display, battery, system);
-  return AppContext(sensor, pump, vent, battery, buttons, overlay, system);
+  auto* settings = new Settings();
+  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, settings);
 }
 
 }  // namespace gardener

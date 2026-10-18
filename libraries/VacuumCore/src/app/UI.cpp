@@ -5,6 +5,7 @@
 #include <Fonts/FreeSansBold9pt7b.h>
 
 #include "core/Config.h"
+#include "core/Units.h"
 #include "eggplant-bitmap.h"
 
 namespace gardener {
@@ -35,10 +36,17 @@ void ConnectedUI::update() {
 void ConnectedUI::drawFrame() {
   Display& panel = context_.display();
   VacuumSystem& vacuum = context_.vacuum();
+  // The machine holds kPa; the unit is the panel's, and so are the decimals it can express.
+  const DisplayUnit unit = context_.settings().unit();
+  const unsigned int decimals = displayDecimals(unit);
 
   // No valid reading is not a zero, and a target nobody set is not one either.
-  String reading = vacuum.sensor().readingValid() ? String(vacuum.currentKpa(), 1) : String("--");
-  String target = vacuum.targetKpa() > 0.0f ? String(vacuum.targetKpa(), 1) : String("--");
+  String reading = vacuum.sensor().readingValid()
+                       ? String(displayValue(vacuum.currentKpa(), unit), decimals)
+                       : String("--");
+  String target = vacuum.targetKpa() > 0.0f
+                      ? String(displayValue(vacuum.targetKpa(), unit), decimals)
+                      : String("--");
 
   panel.clear();
 
@@ -53,7 +61,7 @@ void ConnectedUI::drawFrame() {
   int16_t height = 0;
   panel.textBounds(reading, 1, width, height);
   panel.setFont(&FreeSansBold9pt7b);
-  panel.text(width + 4, 41, "kPa", 1, false);
+  panel.text(width + 4, 41, displayUnitInfo(unit).suffix, 1, false);
 
   panel.setFont(&FreeSansBold12pt7b);
   panel.text(0, 62, String("TGT ") + target, 1, false);

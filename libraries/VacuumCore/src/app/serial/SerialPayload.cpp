@@ -6,6 +6,7 @@
 #include "app/serial/Items.h"
 #include "app/serial/SerialSurface.h"
 #include "core/Config.h"
+#include "core/Units.h"
 
 namespace gardener {
 namespace {
@@ -63,6 +64,11 @@ void readBatteryPercent(const WireView& view, Items& out) {
 }
 
 void readLog(const WireView& view, Items& out) { out.addFlag("log", view.logEnabled); }
+
+// The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
+void readUnit(const WireView& view, Items& out) {
+  out.add("unit", displayUnitInfo(view.context.settings().unit()).name);
+}
 
 void readPressure(const WireView& view, Items& out) {
   out.addFloat("kpa", view.context.vacuum().currentKpa(), 2);
@@ -153,6 +159,7 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"batt_v", false, "float", "V", nullptr, nullptr, nullptr, readBatteryVolts},
       {"batt_pct", false, "int", "%", nullptr, nullptr, nullptr, readBatteryPercent},
       {"log", true, "bool", nullptr, "on,off", nullptr, nullptr, readLog},
+      {"unit", true, "choice", nullptr, "kpa,psi,inhg,mmhg", nullptr, nullptr, readUnit},
   };
   static const FieldSpec kVacuumFields[] = {
       {"kpa", false, "float", "kPa", nullptr, nullptr, nullptr, readPressure},

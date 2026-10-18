@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "app/Overlay.h"
+#include "app/Settings.h"
 #include "app/VacuumSystem.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
@@ -19,14 +20,15 @@ namespace gardener {
 class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
-             ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum)
+             ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum, Settings* settings)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
         battery_(battery),
         buttons_(buttons),
         overlay_(overlay),
-        vacuum_(vacuum) {}
+        vacuum_(vacuum),
+        settings_(settings) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -38,6 +40,7 @@ class AppContext {
   Display& display() { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
   VacuumSystem& vacuum() { return *vacuum_; }
+  Settings& settings() { return *settings_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -48,6 +51,7 @@ class AppContext {
   ButtonPanel* buttons_;
   Overlay* overlay_;
   VacuumSystem* vacuum_;
+  Settings* settings_;
 };
 
 }  // namespace gardener
