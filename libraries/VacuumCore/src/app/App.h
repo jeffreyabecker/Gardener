@@ -35,8 +35,9 @@ class App {
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
   // The panel is the device's own, so the loop paints it: what the run is doing, and the two
-  // pressures it is about.
-  ConnectedUI ui_;
+  // pressures it is about. A pointer, and new'd with the link and the logger, because a build with
+  // no panel has no UI at all — and nothing on the device deletes what it built at boot.
+  ConnectedUI* ui_ = nullptr;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };

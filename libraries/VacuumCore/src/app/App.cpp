@@ -17,9 +17,10 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 
 }  // namespace
 
-App::App(AppContext context) : context_(context), ui_(context) {
+App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, logEnabled_);
   link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
+  ui_ = new ConnectedUI(context_);
 }
 
 bool App::begin() {
@@ -67,7 +68,7 @@ bool App::begin() {
 
   link_->begin();
   lastState_ = context_.vacuum().runState();
-  ui_.begin();
+  if (ui_) ui_->begin();
   return true;
 }
 
@@ -135,7 +136,7 @@ void App::update() {
   logButtonPresses();
   // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
   // the screen is never allowed to hold up the loop in front of them.
-  ui_.update();
+  if (ui_) ui_->update();
 }
 
 }  // namespace gardener
