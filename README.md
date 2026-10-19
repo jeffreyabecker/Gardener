@@ -4,7 +4,7 @@ An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below a
 for a timer, then vents it — driven over a serial line by a controller at the other end.
 
 * **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
-* **Interface**: USB CDC, one line oriented protocol ([docs/serial-protocol.md](./docs/serial-protocol.md))
+* **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md))
 * **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–172 kPa / 0–25 PSI absolute, I2C)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
 * **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
@@ -13,7 +13,7 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 * **Buzzer**: passive piezo on GPIO12, one LEDC channel, timed tones and note sequences
 
 The parts, what they cost and where to buy them, are in
-[docs/poc-parts.md](./docs/poc-parts.md).
+[docs/guides/poc-parts.md](./docs/guides/poc-parts.md).
 
 There is almost no local control surface: the display is a readout and the controller decides
 everything, with one exception — holding Back for 3 s stops and vents. What the device owns is
@@ -45,12 +45,9 @@ reference, so the rig needs to be at rest when the device boots.
 | [libraries/RLEBitmap/](./libraries/RLEBitmap) | The run-length bitmap decoder the panel's images use (vendored) |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
-| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, domains and their commands, help topics, error items, states, modes, rates |
-| [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the six modules, and the rules that follow from the embedded interpreter |
-| [docs/gestures.md](./docs/gestures.md) | The key contract: reserved holds, the standard settings and Back gestures, and the matrix of every press |
-| [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
-| [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
-| [docs/parking-lot.md](./docs/parking-lot.md) | Deferred work: what it would buy, what it costs, and what has to be true first |
+| [docs/specs/](./docs/specs) | The contracts: serial protocol, gestures, assets and routines |
+| [docs/plans/](./docs/plans) | Proposals, design records and deferred work |
+| [docs/guides/](./docs/guides) | The parts list and build guide |
 
 ### Architecture
 
@@ -298,7 +295,7 @@ list, OK switches to the highlighted page, a **double OK** opens that page's set
 back to `default`.
 
 The matrix of every press, the reserved holds and the timing that classifies them is in
-[docs/gestures.md](./docs/gestures.md).
+[docs/specs/gestures.md](./docs/specs/gestures.md).
 
 ### Files on the device
 
@@ -335,7 +332,7 @@ it can edit them. The `default` page uses its file to bring the target back afte
 Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
 1-bit bitmap of 327 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
 `firmware/gardener/assets/` as a BMP and is converted with `scripts/asset.ps1`; the file
-format and the tool are in [docs/assets.md](./docs/assets.md).
+format and the tool are in [docs/specs/assets.md](./docs/specs/assets.md).
 
 ### Routines
 
@@ -384,7 +381,7 @@ registered object) and `store` (its own values, kept across a power cycle, or an
 routine's by name).
 
 The full surface — every call, what it returns, the fields of each record, and what the overlay
-draws over a page — is in [docs/routines.md](./docs/routines.md).
+draws over a page — is in [docs/specs/routines.md](./docs/specs/routines.md).
 
 Presses go to the active routine and are not logged while it runs. The two 3 s holds are the
 exception: Back is the device's stop and fires whatever the routine registered, and OK is the page's
@@ -420,7 +417,7 @@ That last pair is the whole run model in miniature: the device reaches the targe
 device has no duration of its own and will hold until told, and no command that takes one.
 
 The full grammar, domain commands, error codes and state model are in
-[docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and
+[docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md). Anything that can open a serial port and
 send a line works as a client: there is none in this repository at the moment, deliberately,
 while the interface is being reworked.
 

@@ -7,7 +7,7 @@ Only `src/` is here. Upstream also ships weather and moon image sets, the `bmper
 sketches; none of them are part of this build. This firmware's images live on the device rather than
 in headers, so they are built with [scripts/asset.ps1](../../scripts/asset.ps1) and stored under
 `firmware/gardener/data/assets/` — the format and the tool are described in
-[docs/assets.md](../../docs/assets.md).
+[docs/specs/assets.md](../../docs/specs/assets.md).
 
 The renderer walks a `RLEBitmapInfo` and calls `writeFastHLine` on an `RLEGraphicsContext`. The
 firmware supplies its own context over the panel in `libraries/VacuumCore/src/app/Asset.cpp`, so the

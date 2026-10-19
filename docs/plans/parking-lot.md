@@ -14,7 +14,7 @@ not taken.
 
 ### Revisit the partition scheme
 
-**What.** Change the pinned `PartitionScheme` in [scripts/arduino.ps1](../scripts/arduino.ps1) from
+**What.** Change the pinned `PartitionScheme` in [scripts/arduino.ps1](../../scripts/arduino.ps1) from
 `default` — two 1.25 MB OTA slots and a 1.375 MB LittleFS partition — to `huge_app`: one 3 MB app
 partition and 896 KB of LittleFS.
 
@@ -29,7 +29,7 @@ without edits — but the offset and size move, so the first upload after the sw
 data image again.
 
 **Before doing it.** Confirm OTA is not planned, re-check the size of `data/`, and update the build
-note in [README.md](../README.md) that says the scheme is pinned.
+note in [README.md](../../README.md) that says the scheme is pinned.
 
 ### Try `-fno-exceptions`
 

@@ -1,11 +1,11 @@
 # Assets
 
 The pictures the panel draws are files on the device, not arrays in a header: one image is a file
-under `/assets/`, written by [scripts/asset.ps1](../scripts/asset.ps1), and read when it is drawn.
+under `/assets/`, written by [scripts/asset.ps1](../../scripts/asset.ps1), and read when it is drawn.
 
 Run-length encoding is what makes this cheap. A one-bit drawing is long runs of the same pixel, so
 the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array took. The decoder is
-[MHotchin/RLEBitmap](../libraries/RLEBitmap), vendored unmodified in `libraries/RLEBitmap`.
+[MHotchin/RLEBitmap](../../libraries/RLEBitmap), vendored unmodified in `libraries/RLEBitmap`.
 
 ## Making an asset
 
@@ -78,5 +78,5 @@ A file that is not there is not fatal. `App::begin()` says `ui: /assets/eggplant
 pages have no mark` and the pages draw nothing, because the data image is where the file ships from
 and its absence is a packaging fault rather than a mode to support.
 
-The art itself lives in [firmware/gardener/assets/](../firmware/gardener/assets), outside `data/`,
+The art itself lives in [firmware/gardener/assets/](../../firmware/gardener/assets), outside `data/`,
 so a source image is never uploaded to the device.

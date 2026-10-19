@@ -9,7 +9,7 @@
 namespace gardener {
 namespace {
 
-// The container: ten bytes of header, then the palette, then the runs. See docs/assets.md.
+// The container: ten bytes of header, then the palette, then the runs. See docs/specs/assets.md.
 constexpr uint8_t kMagic[4] = {'G', 'R', 'L', '1'};
 constexpr size_t kHeaderBytes = 10;
 

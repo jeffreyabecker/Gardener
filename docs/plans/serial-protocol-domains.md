@@ -1,6 +1,6 @@
 # Domain-first serial protocol
 
-Status: implemented as `proto=4`. This is the design record; `docs/serial-protocol.md` is the
+Status: implemented as `proto=4`. This is the design record; `docs/specs/serial-protocol.md` is the
 normative surface.
 
 ## Problem
@@ -226,11 +226,11 @@ writes the top-level page; a target domain's `help(topic)` writes its own page.
 
 ## Documentation
 
-- Rewrite `docs/serial-protocol.md` as the proto 4 surface: new grammar, replies, domains and verbs,
+- Rewrite `docs/specs/serial-protocol.md` as the proto 4 surface: new grammar, replies, domains and verbs,
   help pages, errors, the unchanged pressure/state/safety model, and a proto 3 -> 4 migration table.
 - Update the serial examples in `README.md` and the `device set log off` / `device set unit <unit>`
-  mentions in `docs/routines.md`.
-- Add a status note to `docs/serial-protocol-fs.md`: it is still a proposal, written against the old
+  mentions in `docs/specs/routines.md`.
+- Add a status note to `docs/plans/serial-protocol-fs.md`: it is still a proposal, written against the old
   grammar, to be rebased on proto 4 when `fs` lands. Do not implement `fs` in this change.
 
 ## Out of scope
@@ -254,7 +254,7 @@ writes the top-level page; a target domain's `help(topic)` writes its own page.
 
 ## Todos
 
-1. Write the proto 4 grammar, reply, domain, help and error sections in `docs/serial-protocol.md`.
+1. Write the proto 4 grammar, reply, domain, help and error sections in `docs/specs/serial-protocol.md`.
 2. Add `Domain.h` (including `DomainList`, `FieldSpec`, the item builders and the opt-in reply
    helpers) and `core/Parse.h`; reduce `SerialLink` to reading the domain token, handing the
    command stream to the domain, and writing only its own errors and diagnostics.

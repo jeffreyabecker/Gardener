@@ -63,11 +63,10 @@ second case arrives.
 folder, not behind a flag defaulted off. The Berry runtime and the host client were both deleted
 outright and left to the history ([README](../README.md) Roadmap); do the same.
 
-**A plan is a requirement, not a design.** [docs/berry-on-device-control.md](../docs/berry-on-device-control.md)
-and [docs/specs/](../docs/specs) describe a scripting build with a VM on the second core, three
-tasks, a heartbeat watchdog and task restart. Read them for what has to be true, then answer it with
-the smallest mechanism the current single loop allows. Reaching for a task, a lock, a queue or a
-watchdog is a question to ask, not a thing to build.
+**A plan is a requirement, not a design.** [docs/plans/](../docs/plans) and
+[docs/specs/](../docs/specs) describe work that is proposed, agreed or already done. Read them for
+what has to be true, then answer it with the smallest mechanism the current single loop allows.
+Reaching for a task, a lock, a queue or a watchdog is a question to ask, not a thing to build.
 
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
 of it: one `kpa()` reading, with the ambient reference and the values derived from it left to the
@@ -85,5 +84,5 @@ rewrite-on-sight target, and an unrequested refactor is its own decision with it
 ## Where to look
 
 - [README.md](../README.md) — wiring, build and upload flow, control model, safety notes.
-- [docs/serial-protocol.md](../docs/serial-protocol.md) — the interface the firmware serves.
-- [docs/poc-parts.md](../docs/poc-parts.md) — the parts a build is assembled from, with prices.
+- [docs/specs/serial-protocol.md](../docs/specs/serial-protocol.md) — the interface the firmware serves.
+- [docs/guides/poc-parts.md](../docs/guides/poc-parts.md) — the parts a build is assembled from, with prices.

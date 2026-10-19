@@ -1,6 +1,6 @@
 # Alpha PCB scope
 
-Which parts of [the POC build](./poc-parts.md) are worth committing to a board, and which stay as
+Which parts of [the POC build](../guides/poc-parts.md) are worth committing to a board, and which stay as
 bought modules. One module moves onto the board — the DRV8833. Everything else is either a retained
 module or a mechanical part; the Super Mini and the 3.3 V buck are explicitly retained and plug into
 headers.

@@ -109,4 +109,4 @@ Bench-only, to fix once the loop works.
   compensation and port size before adding it to the buy list.
 
 Which of these parts move onto the alpha carrier board, and which stay modules, is in
-[alpha-pcb.md](./alpha-pcb.md).
+[alpha-pcb.md](../plans/alpha-pcb.md).

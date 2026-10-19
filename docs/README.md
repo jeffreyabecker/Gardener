@@ -1,0 +1,29 @@
+# Documentation
+
+## Specs
+
+The contracts the firmware and its tools must satisfy.
+
+- [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies, help and errors
+- [Gestures](./specs/gestures.md) — the key contract and the press matrix
+- [Assets](./specs/assets.md) — the image file format and the tool that makes one
+- [Routines](./specs/routines.md) — the Berry routine API and its embedded rules
+
+## Plans
+
+Proposals, design records and deferred work. A plan is not a commitment: it leaves when it is
+implemented or dropped.
+
+- [Domain-first serial protocol](./plans/serial-protocol-domains.md) — implemented as proto 4
+- [Proposed fs surface](./plans/serial-protocol-fs.md) — proposed, pre-proto-4
+- [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
+- [Parking lot](./plans/parking-lot.md) — deferred work and what has to be true first
+
+## Guides
+
+User-facing build and parts documentation.
+
+- [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy and what it costs
+
+See the [project README](../README.md) for wiring, build and upload flow, control model and safety
+notes.

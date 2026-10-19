@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Any uncompressed BMP -- 1, 4, 8, 24 or 32 bits per pixel -- becomes the one-bit image the panel
-    can show. The output is the container docs/assets.md describes: a ten-byte header, a two-entry
+    can show. The output is the container docs/specs/assets.md describes: a ten-byte header, a two-entry
     palette and the runs RLEBitmap walks.
 
     Colour or grey is reduced by luminance: a pixel darker than -Threshold is ink and everything else

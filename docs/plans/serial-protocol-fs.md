@@ -93,16 +93,16 @@ The write form is exactly the one requested: one command, one file, no append/ag
 
 ## Deliverable
 
-`docs/serial-protocol-fs.md` — this plan, written as the proposed spec. It is marked as a proposal,
+`docs/plans/serial-protocol-fs.md` — this plan, written as the proposed spec. It is marked as a proposal,
 as an additive extension to `proto 3` (existing command meanings do not move), and as not yet
 implemented.
 
-No other repository files change in this step. The cross-reference from `docs/serial-protocol.md`
+No other repository files change in this step. The cross-reference from `docs/specs/serial-protocol.md`
 and the firmware implementation follow once the proposal is accepted.
 
 ## Todos
 
-1. Write `docs/serial-protocol-fs.md` from this plan: the surface, framing, paths, replies, errors,
+1. Write `docs/plans/serial-protocol-fs.md` from this plan: the surface, framing, paths, replies, errors,
    discovery and behaviour above.
 2. Review the draft against the existing spec for consistent terms (`ok`/`err`, page shape, `-`,
    `proto` rule) and confirm every example parses as written.

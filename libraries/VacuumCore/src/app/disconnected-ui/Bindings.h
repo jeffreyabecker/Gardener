@@ -25,7 +25,7 @@ namespace berry {
 // compiled at boot, because only the parser can declare an instance variable on a class. The
 // `setting` class in the same block is the shape a routine's describe() builds for the browser.
 //
-// The reference a routine author reads is docs/routines.md; the tables below are the same surface
+// The reference a routine author reads is docs/specs/routines.md; the tables below are the same surface
 // as code, and the two have to move together.
 //
 // They are built at runtime rather than declared in the interpreter's module table: that table is
