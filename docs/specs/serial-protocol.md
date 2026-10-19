@@ -378,10 +378,11 @@ What a controller has to know:
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
   than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
-* **The panel is the device's.** It shows the state, its icon, both pressures, the battery and the
-  two ways in — serial and Bluetooth — so those are readable at the bench, and it falls back to
-  the boot mark when no controller is attached. There is no drawing command, so everything else — a
-  vent timeout, the duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
+* **The panel is the device's.** While a controller has control it shows that link's icon — a
+  DE-9 connector face-on for serial, the Bluetooth rune for a radio — with the run state's icon,
+  the battery and the two ways in drawn over it by the overlay. It falls back to the boot mark when
+  no controller is attached. There is no drawing command, so everything else — a vent timeout, the
+  duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
 
 ## 11. Rates
 

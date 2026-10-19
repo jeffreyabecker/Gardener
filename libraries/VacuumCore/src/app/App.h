@@ -38,8 +38,8 @@ class App {
   AppContext context_;
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
-  // The panel is the device's own, so the loop paints it. Two screens, one showing: the live
-  // readout while a controller is attached, and the plain mark while none is.
+  // The panel is the device's own, so the loop paints it. Two screens, one showing: the controlling
+  // link's icon while a controller is attached, and the plain mark while none is.
   ConnectedUI* connectedUi_ = nullptr;
   DisconnectedUI* disconnectedUi_ = nullptr;
   UserInterface* ui_ = nullptr;

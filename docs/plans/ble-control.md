@@ -66,8 +66,8 @@ The overlay's serial and BLE indicators stay presence-only: they answer “is a 
 the page.
 
 Acquiring control mid-run does not change the machine: the controller is taking authority, not
-starting a run, and it should read `vacuum get` before issuing commands. The panel switching to the
-readout is then a truthful statement that someone now owns the machine.
+starting a run, and it should read `vacuum get` before issuing commands. The panel switching to
+that link's icon is then a truthful statement that someone now owns the machine.
 
 ## 4. The GATT contract
 
@@ -304,9 +304,9 @@ flow is the thing to add — a pairing callback and one page, not a change to th
   instead of discovering the limits by rejection.
 * A pressure is always kPa, whether the panel is showing kPa, psi, inHg or mmHg. `unit` says what
   the glass prints; it never changes what `kpa` or `target` mean.
-* Acquiring control puts the readout on the panel; releasing stops and vents and returns it to the
-  mark. A drop while owning changes nothing, so the run continues and the panel stays on the
-  readout until the local reset gesture. Connecting alone does not change the page (§3.1).
+* Acquiring control puts the link's icon on the panel; releasing stops and vents and returns it to
+  the mark. A drop while owning changes nothing, so the run continues and the panel stays on that
+  icon until the local reset gesture. Connecting alone does not change the page (§3.1).
 
 ## 9. Build and configuration
 
@@ -335,12 +335,12 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 * Write-to-notify latency for `target` and `command`, including the one-iteration deferral the
   concurrency model adds.
 * The safety claim: start a run while controlling, disconnect the phone, confirm the run continues
-  unchanged and the panel stays on the readout; then use the local reset gesture and confirm it
-  stops, vents and reboots. Repeat with an explicit `control=0` write and confirm the release stops
+  unchanged and the panel stays on the link's icon; then use the local reset gesture and confirm
+  it stops, vents and reboots. Repeat with an explicit `control=0` write and confirm the release stops
   and vents without a reboot. Then run a chamber from serial or the local page and confirm a
   connected-but-not-controlling phone leaves it untouched.
 * The screen switch: with USB unplugged, a BLE connection alone leaves the disconnected page while
-  lighting the overlay's radio indicator. Acquiring control puts the readout on the panel;
+  lighting the overlay's radio indicator. Acquiring control puts the Bluetooth rune on the panel;
   releasing stops and vents and returns both. A drop while owning changes neither the run nor the
   page; the local reset gesture is what returns to the mark.
 * Read every characteristic without pairing. Then attempt `control=1` and a `target` write and

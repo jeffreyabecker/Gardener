@@ -26,7 +26,8 @@ constexpr uint32_t kBackStopMs = 3000;
 App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, context_.logEnabled());
   link_ = new SerialLink(&context_, Serial, serialAttached);
-  connectedUi_ = new ConnectedUI(context_);
+  // Serial is the only link that can take control today; a radio will pass its own icon instead.
+  connectedUi_ = new ConnectedUI(context_, Link::Serial);
   disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
 
@@ -224,8 +225,8 @@ void App::update() {
 
   logRunChanges(now);
   logButtonPresses();
-  // The screen follows the link: the readout while a controller is attached, the plain mark when it
-  // is not. A swap paints its own first frame.
+  // The screen follows the link: the controlling link's icon while a controller is attached, the
+  // plain mark when it is not. A swap paints its own first frame.
   const bool attached = serialAttached();
   if (attached != hostAttached_) {
     hostAttached_ = attached;

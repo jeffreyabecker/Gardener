@@ -260,8 +260,8 @@ screen.draw_text(box.w + 4, 41, 1, false, suffix, "sansbold9")
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |
 | `decimals` | int | digits the unit's fine step can express |
 
-The same numbers live in `core/Units.h`, so a routine and the connected page cannot disagree about
-what a psi is.
+The same numbers live in `core/Units.h`, so a routine and the panel's own formatting cannot
+disagree about what a psi is.
 
 ### The overlay owns its corners
 

@@ -94,9 +94,9 @@ The GATT table and the screen rules in [ble-control.md](./ble-control.md) follow
   reads `vacuum get` before commanding it.
 * Releasing control restores the disconnected page and its routine. A routine that was running is
   paused while the page is not showing, exactly as it is today.
-* Losing control does not change the page: a dropped controller leaves `ConnectedUI` showing a
-  machine that is still running, which is the truth. The local reset gesture clears ownership and
-  returns the disconnected page.
+* Losing the transport does not change the page: a dropped controller leaves `ConnectedUI` showing
+  the link that still owns the machine, which is the truth. The local reset gesture clears
+  ownership and returns the disconnected page.
 * A connection or disconnection that does not change ownership does not repaint the panel.
 
 ## 6. The universal reboot gesture
