@@ -14,8 +14,7 @@ The contracts the firmware and its tools must satisfy.
 Proposals, design records and deferred work. A plan is not a commitment: it leaves when it is
 implemented or dropped.
 
-- [Domain-first serial protocol](./plans/serial-protocol-domains.md) — implemented as proto 4
-- [Proposed fs surface](./plans/serial-protocol-fs.md) — proposed, pre-proto-4
+- [fs serial domain](./plans/serial-protocol-fs.md) — implementation plan, proto 4
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [Parking lot](./plans/parking-lot.md) — deferred work and what has to be true first
 

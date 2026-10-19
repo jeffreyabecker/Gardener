@@ -110,9 +110,10 @@ end    = "end" SP domain SP verb *( SP item ) LF
   line follow; a failure goes in the `end` line, not in a second header.
 * The body shapes above are the ones the protocol defines so far; a domain's help page names the
   shape it uses.
-* A row is items. `help` uses a rows body; the future `fs list` will too. A bytes body may contain
-  any byte, including `LF`; a controller reads exactly `N` bytes, then the `end` line. `body=bytes`
-  is reserved for the future `fs read`; no current domain uses it.
+* A row is items. `help` uses a rows body. The future `fs` domain is different: its `fs list`
+  carries `entries=N` and then exactly N `type name` lines, and its `fs read` carries `bytes=N` and
+  then exactly N raw bytes. `fs` replies have no `end` line; the count in the header is what tells
+  the host the reply is complete.
 * Values in headers and rows are bare unless they contain a space, `"` or `\`, in which case they
   are quoted and escaped. There is no whitespace-to-`_` substitution.
 * An action in the current domains replies with the fields it changed:
