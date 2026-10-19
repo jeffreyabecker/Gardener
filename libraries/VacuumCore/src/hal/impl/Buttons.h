@@ -5,7 +5,6 @@
 
 #include "hal/Button.h"
 #include "hal/ButtonPanel.h"
-#include "hal/PortMux.h"
 
 namespace gardener {
 
@@ -14,8 +13,9 @@ namespace gardener {
 //
 // The constructor arms the pins it is given, and from then on the ISR samples them and hands the
 // reader one packed mask: an edge is captured even if the loop is busy, and nothing polls a pin.
-// That mask has one writer, the ISR, and a read takes it in a short critical section; the debounce
-// settles on the read, so the class needs no service call of its own.
+// That mask has one writer, the ISR, and an aligned 32-bit store is atomic on this part, so the
+// reader takes it without a lock; the debounce settles on the read, so the class needs no service
+// call of its own.
 class Buttons : public ButtonPanel {
  public:
   Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back);
@@ -37,8 +37,7 @@ class Buttons : public ButtonPanel {
   const uint8_t okPin_;
   const uint8_t backPin_;
 
-  PortMux lock_;
-  // Written only by the ISR, read by settle() under the lock.
+  // Written only by the ISR, read by settle().
   volatile uint32_t raw_ = 0;
   // The reader's copy: the level it last saw, and when that level first appeared.
   uint32_t pending_ = 0;

@@ -35,10 +35,7 @@ Buttons::Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back)
 uint32_t Buttons::settle() {
   uint32_t now = millis();
 
-  uint32_t raw;
-  lock_.enter();
-  raw = raw_;
-  lock_.exit();
+  const uint32_t raw = raw_;
 
   if (raw != pending_) {
     pending_ = raw;
