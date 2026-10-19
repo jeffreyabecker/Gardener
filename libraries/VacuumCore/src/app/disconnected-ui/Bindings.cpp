@@ -431,24 +431,9 @@ int deviceSetUnit(bvm* vm) {
   be_return(vm);
 }
 
-int deviceLog(bvm* vm) {
-  be_pushbool(vm, gContext->logEnabled());
-  be_return(vm);
-}
-
-// The wire's `device set log` and this call are the same switch: a routine's `vacuum.log` honours
-// it too. It is a run-time setting, not one `/settings.ini` carries.
-int deviceSetLog(bvm* vm) {
-  gContext->logEnabled() = be_tobool(vm, 1);
-  be_pushbool(vm, gContext->logEnabled());
-  be_return(vm);
-}
-
 const bnfuncinfo kDeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
-    {"log", deviceLog},
-    {"set_log", deviceSetLog},
     {nullptr, nullptr},
 };
 

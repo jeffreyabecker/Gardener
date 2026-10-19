@@ -96,9 +96,8 @@ on Up or Down is one event and moves once; a page that does not distinguish it t
 On `static`, OK starts a cycle only from `ready`. Once the pull is under way, Back is not a stop —
 the Back hold is, and the page notices the machine's release and returns to `ready`.
 
-`system` follows the settings grammar with two rows: Up and Down move between `UNIT` and `LOG`, OK
-opens the selected value, Up/Down cycles the unit or toggles logging, OK saves, and Back cancels or
-returns to `default`.
+`system` follows the settings grammar with its one row: OK opens the unit, Up/Down cycles it, OK
+saves, and Back cancels or returns to `default`.
 
 The page columns describe the disconnected device. While a controller owns the device there is no
 routine page: presses are logged (`btn: ok short`) and only the Back hold and the Back+OK reset still

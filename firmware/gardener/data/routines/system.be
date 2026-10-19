@@ -1,33 +1,27 @@
-# system.be — the device's own settings: the unit the glass prints and the diagnostics stream.
+# system.be — the device's own settings: the unit the glass prints.
 #
-# This page is not a routine's values; it edits what the firmware says the device is, the same two
-# switches `device get/set` carries on the wire. Nothing here touches the machine, so a run keeps
+# This page is not a routine's values; it edits what the firmware says the device is, the same
+# switch `device set unit` carries on the wire. Nothing here touches the machine, so a run keeps
 # going behind it.
 #
-# A double Down on `default` opens it. Up/Down walk the two rows, OK opens the value, Up/Down
-# changes it, OK saves, and Back cancels or goes home.
+# A double Down on `default` opens it. OK opens the value, Up/Down changes it, OK saves, and Back
+# cancels or goes home.
 
 import string
 
 class System
   var units
-  var selected
   var editing
   var unit_index
-  var log_on
   var edit_unit_index
-  var edit_log
   var unit
   var last_draw
 
   def init()
     self.units = nil
-    self.selected = 0
     self.editing = false
     self.unit_index = 0
-    self.log_on = true
     self.edit_unit_index = 0
-    self.edit_log = true
     self.unit = nil
     self.last_draw = 0
   end
@@ -62,7 +56,6 @@ class System
       end
       i += 1
     end
-    self.log_on = device.log()
   end
 
   # --- drawing -------------------------------------------------------------
@@ -80,27 +73,14 @@ class System
 
   def draw_list()
     screen.draw_text(0, 0, 1, false, "SYSTEM")
-    screen.draw_text(0, 16, 1, self.selected == 0, "UNIT=" + self.unit.suffix)
-    screen.draw_text(0, 24, 1, self.selected == 1, "LOG=" + self.on_off(self.log_on))
-    screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=EDIT")
+    screen.draw_text(0, 16, 1, false, "UNIT=" + self.unit.suffix)
+    screen.draw_text(0, 56, 1, false, "OK=EDIT")
   end
 
   def draw_edit()
-    if self.selected == 0
-      screen.draw_text(0, 0, 1, false, "UNIT")
-      screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
-    else
-      screen.draw_text(0, 0, 1, false, "LOG")
-      screen.draw_text(0, 20, 3, false, self.on_off(self.edit_log))
-    end
+    screen.draw_text(0, 0, 1, false, "UNIT")
+    screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
-  end
-
-  def on_off(value)
-    if value
-      return "ON"
-    end
-    return "OFF"
   end
 
   # --- buttons -------------------------------------------------------------
@@ -123,33 +103,26 @@ class System
     if !self.editing
       return self.handle_list(ev)
     end
-    if ev.press == "short" || ev.press == "long" || ev.press == "double"
-      if ev.btn == "up"
-        self.step(1)
-        return true
-      end
-      if ev.btn == "down"
-        self.step(-1)
-        return true
-      end
-      if ev.btn == "ok"
-        self.commit()
-        return true
-      end
-      if ev.btn == "back"
-        self.editing = false
-        return true
-      end
+    if ev.btn == "up"
+      self.step(1)
+      return true
+    end
+    if ev.btn == "down"
+      self.step(-1)
+      return true
+    end
+    if ev.btn == "ok"
+      self.commit()
+      return true
+    end
+    if ev.btn == "back"
+      self.editing = false
+      return true
     end
     return false
   end
 
   def handle_list(ev)
-    # Two rows, so either direction moves to the other one and wraps.
-    if ev.btn == "up" || ev.btn == "down"
-      self.selected = 1 - self.selected
-      return true
-    end
     if ev.btn == "ok"
       self.begin_edit()
       return true
@@ -165,35 +138,18 @@ class System
 
   def begin_edit()
     self.editing = true
-    if self.selected == 0
-      self.edit_unit_index = self.unit_index
-    else
-      self.edit_log = self.log_on
-    end
+    self.edit_unit_index = self.unit_index
   end
 
   def step(direction)
-    if self.selected == 0
-      var count = self.units.size()
-      self.edit_unit_index = (self.edit_unit_index + direction + count) % count
-      return
-    end
-    if self.edit_log
-      self.edit_log = false
-    else
-      self.edit_log = true
-    end
+    var count = self.units.size()
+    self.edit_unit_index = (self.edit_unit_index + direction + count) % count
   end
 
   def commit()
     self.editing = false
-    if self.selected == 0
-      device.set_unit(self.units[self.edit_unit_index])
-      self.read()
-    else
-      device.set_log(self.edit_log)
-      self.log_on = device.log()
-    end
+    device.set_unit(self.units[self.edit_unit_index])
+    self.read()
   end
 end
 
