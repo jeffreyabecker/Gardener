@@ -7,7 +7,7 @@ namespace gardener {
 
 // The diagnostic sink for App's reports: three levels, framed as [I], [W] and [E] records on a
 // stream. Neither the stream nor the on/off switch is its own — App hands it the same Serial the
-// link writes replies to, and the one `device log` flag that silences every diagnostic.
+// link writes replies to, and the one `device set log` flag that silences every diagnostic.
 class StreamLogger {
  public:
   StreamLogger(Stream& stream, const bool& enabled) : stream_(stream), enabled_(enabled) {}

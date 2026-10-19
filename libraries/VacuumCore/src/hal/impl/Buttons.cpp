@@ -1,5 +1,7 @@
 #include "hal/impl/Buttons.h"
 
+#include "core/Config.h"
+
 namespace gardener {
 namespace {
 
@@ -33,18 +35,63 @@ Buttons::Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back)
 uint32_t Buttons::settle() {
   uint32_t now = millis();
 
-  uint32_t raw;
-  lock_.enter();
-  raw = raw_;
-  lock_.exit();
+  const uint32_t raw = raw_;
 
   if (raw != pending_) {
     pending_ = raw;
     pendingSinceMs_ = now;
   } else if (pending_ != stable_ && now - pendingSinceMs_ >= kDebounceMs) {
-    // The level held still, so it is the new state; a bit that went from up to down is one press.
-    pressLatch_ |= pending_ & ~stable_;
+    // The level held still, so it is the new state. A key that came up after its down edge was
+    // accepted is the one press to classify; a key held at boot has no down edge and is not one.
+    const uint32_t down = pending_ & ~stable_;
+    const uint32_t up = stable_ & ~pending_;
+    for (uint8_t i = 0; i < 4; i++) {
+      const uint32_t bit = 1u << i;
+      if (down & bit) {
+        tracked_ |= bit;
+        // The raw edge, not the moment the debounce accepted it, so a hold is measured from when
+        // the key actually went down.
+        pressStartMs_[i] = pendingSinceMs_;
+        // A press inside the window is the second half of a double; the first short press stays
+        // pending until this one resolves.
+        if (awaitingSecond_ & bit) {
+          awaitingSecond_ &= ~bit;
+          second_ |= bit;
+        } else {
+          second_ &= ~bit;
+        }
+      }
+      if ((up & bit) && (tracked_ & bit)) {
+        // Both ends are the raw edges, so the debounce does not shorten or lengthen the hold.
+        const uint32_t held = pendingSinceMs_ - pressStartMs_[i];
+        const bool shortPress = held < cfg::BUTTON_LONG_MS;
+        if (second_ & bit) {
+          pendingPress_[i] = shortPress ? Press::Double : Press::Long;
+          second_ &= ~bit;
+        } else {
+          pendingPress_[i] = shortPress ? Press::Short : Press::Long;
+          if (shortPress) {
+            awaitingSecond_ |= bit;
+            firstReleaseMs_[i] = pendingSinceMs_;
+          }
+        }
+        tracked_ &= ~bit;
+      }
+    }
     stable_ = pending_;
+  }
+
+  for (uint8_t i = 0; i < 4; i++) {
+    const uint32_t bit = 1u << i;
+    // A single short press is ready once the double window closes without a second press.
+    if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= cfg::BUTTON_DOUBLE_MS) {
+      awaitingSecond_ &= ~bit;
+    }
+    // A second press that becomes long is a long press, not half a double: release the first short
+    // now rather than waiting for the second to come up.
+    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= cfg::BUTTON_LONG_MS) {
+      second_ &= ~bit;
+    }
   }
   return stable_;
 }
@@ -53,12 +100,20 @@ bool Buttons::pressed(Button button) {
   return (settle() & bitOf(button)) != 0;
 }
 
-bool Buttons::consumePress(Button button) {
+Press Buttons::consumePress(Button button) {
   settle();
-  uint32_t bit = bitOf(button);
-  if (!(pressLatch_ & bit)) return false;
-  pressLatch_ &= ~bit;
-  return true;
+  // The first short of a possible double is not ready until the pair is ruled out.
+  if ((awaitingSecond_ | second_) & bitOf(button)) return Press::None;
+  const uint8_t index = (uint8_t)button;
+  const Press press = pendingPress_[index];
+  pendingPress_[index] = Press::None;
+  return press;
+}
+
+uint32_t Buttons::heldMs(Button button) {
+  settle();
+  if (!(tracked_ & bitOf(button))) return 0;
+  return millis() - pressStartMs_[(uint8_t)button];
 }
 
 uint32_t ARDUINO_ISR_ATTR Buttons::readPins() const {

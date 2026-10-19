@@ -91,11 +91,6 @@ class AdafruitDisplay : public Display {
     panel_.fillRotatedRect(cx, cy, w, h, angle, kInk);
   }
 
-  // --- images --------------------------------------------------------------
-  void bitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) override {
-    panel_.drawBitmap(x, y, bitmap, w, h, kInk);
-  }
-
   // --- text ----------------------------------------------------------------
   void setFont(const GFXfont* font) override { panel_.setFont(font); }
   void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) override {

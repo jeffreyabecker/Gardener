@@ -33,6 +33,21 @@
       "problemMatcher": []
     },
     {
+      "label": "arduino: upload data",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/arduino.ps1",
+        "-Task",
+        "data"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "arduino: monitor",
       "type": "shell",
       "command": "powershell",

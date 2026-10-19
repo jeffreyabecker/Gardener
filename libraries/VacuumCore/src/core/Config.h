@@ -15,26 +15,26 @@
 namespace gardener {
 namespace cfg {
 
-constexpr const char* FIRMWARE_VERSION = "0.6.0";
-// The wire revision, reported by `device get`. It moves when a command's meaning moves, not when
-// one is added: proto 3 is the resource-first surface with one pressure reading, and a controller
-// that does not know a revision should stop rather than guess.
-constexpr uint32_t PROTOCOL_VERSION = 3;
+constexpr const char* FIRMWARE_VERSION = "0.7.0";
+// The wire revision, reported by `device get`. The wire is still unsettled, so the number stays 1
+// and does not move per revision; a controller must not treat it as a compatibility guarantee.
+constexpr uint32_t PROTOCOL_VERSION = 1;
 
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
 //
-// Two I2C buses, one per part, so neither driver can stall the other and nothing has to lock a
-// shared bus. The sensor is on the S3's `Wire` (bus 0) at the variant's default pins; the panel is
-// on `Wire1` (bus 1) at two of the free pins. Both stay clear of the S3 strapping pins (0, 3, 45,
-// 46) and of the USB pins (19/20).
-constexpr int SENSOR_I2C_SDA = 8;
-constexpr int SENSOR_I2C_SCL = 9;
+// The panel is the only bus part: it is on `Wire1` (bus 1) at two of the free pins, clear of the
+// S3 strapping pins (0, 3, 45, 46) and of the USB pins (19/20). The sensor is not on a bus at all;
+// its amplified analog output goes to an ADC pin.
 constexpr int PANEL_I2C_SDA = 17;
 constexpr int PANEL_I2C_SCL = 18;
-// Each bus's speed belongs to the harness rather than to either part on it.
-constexpr uint32_t SENSOR_I2C_FREQ_HZ = 400000;
+// The bus speed belongs to the harness rather than to the part on it.
 constexpr uint32_t PANEL_I2C_FREQ_HZ = 400000;
+
+// The pressure sensor: a CFSensor XGZP6847A100KPGN33, whose output is 0.2..2.7 V over -100..0 kPa.
+// GPIO7 is ADC1 channel 6 and clear of the buttons (GPIO1/2/10), the battery sense (GPIO4) and the
+// strapping pins, so it is the one ADC1 pin left for the part.
+constexpr int SENSOR_ADC = 7;
 
 // The pump: a JQB2438 through a low side MOSFET.
 constexpr int PUMP_PWM = 6;
@@ -44,17 +44,23 @@ constexpr int PUMP_PWM = 6;
 // constructs; normally open is the fail-safe default.
 constexpr int VENT_VALVE = 5;
 
+// The piezo: a passive element on a spare GPIO, driven by one LEDC channel. GPIO12 is the fifth
+// key's pin on the POC 5-way module; the firmware reads only four keys, and the buzzer takes the
+// pin. A board that wants that key back has to move the buzzer.
+constexpr int BUZZER_PWM = 12;
+
 // Battery sense: a 1S Li-ion pack through a 100k/100k divider, so the top of the pack lands inside
-// the ADC range. GPIO4 is ADC1 channel 3, and it is the one ADC1 pin that is neither a button nor a
-// strapping pin: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, and a pressed button would
-// yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay clear too.
+// the ADC range. GPIO4 is ADC1 channel 3, and it is the ADC1 pin that is neither a button nor the
+// sensor: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, GPIO7 is the sensor, and a pressed
+// button would yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay clear too.
 constexpr int BATTERY_ADC = 4;
 // The board's divider, not the pack's property: two equal resistors, so the ratio is 2.0 and
 // BATTERY_CALIBRATION trims the pair against a meter.
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
 // Four button UI, active low to GND with pull ups on the module. hal/impl/Buttons.h arms them on
-// change interrupts and settles the debounce on each read; no key changes what the device does yet.
+// change interrupts and settles the debounce on each read; Back held for 3 s is the one key with an
+// action, and App owns that rule.
 // They sit away from the S3 strapping pins (0, 3, 45, 46) and from the USB pins (19/20). GPIO10/11
 // are the variant's default SS/MOSI, which costs nothing here: this firmware never starts SPI.
 constexpr int BTN_UP = 1;
@@ -101,6 +107,23 @@ constexpr float BATTERY_FULL_VOLTS = 4.2f;
 constexpr float BATTERY_CALIBRATION = 1.0f;
 constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 
+// --- Buzzer ----------------------------------------------------------------
+// A passive piezo reproduces a square wave, so the firmware offers a frequency range rather than a
+// volume. The note parser rejects a note outside it, and the serial field publishes it as the
+// `tone` bounds.
+constexpr float BUZZER_MIN_HZ = 100.0f;
+constexpr float BUZZER_MAX_HZ = 10000.0f;
+
+// --- Front panel keys -------------------------------------------------------
+// A key released before this is a short press; at or after it, a long press. Both are reported when
+// the key comes up. A consumer that wants a longer hold watches heldMs() and picks its own mark, so
+// there is no third threshold here.
+constexpr uint32_t BUTTON_LONG_MS = 600;
+// Two short presses with the second starting within this of the first release are one double
+// press. The first is held back for the window so it cannot also act as a single; a long press is
+// never part of a double.
+constexpr uint32_t BUTTON_DOUBLE_MS = 350;
+
 // --- The device's own screen ------------------------------------------------
 // The splash is read before the first live frame, and the panel is then repainted on a fixed
 // cadence: often enough that the battery blink is visible, slow enough that a whole frame's I2C
@@ -112,16 +135,13 @@ constexpr uint32_t UI_REFRESH_MS = 250;
 // The device is a serial peripheral: every decision comes from the controller, so what
 // lives here is only what the firmware must own to be fast or safe.
 constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB CDC ignores it
-// A command line is a resource and an op. Anything longer is refused rather than truncated.
+// A command header is a domain, a verb and its arguments. Anything longer is refused rather than
+// truncated. A command body, when a domain defines one, follows the header and is not bounded here.
 constexpr uint16_t COMMAND_LINE_MAX = 128;
-// Where the device looks for the end of a command. A host can point it elsewhere with
-// `link term`, which turns off newline framing so a whole payload — a program's source — arrives
-// as one command instead of in chunks. That payload is far longer than a command line, so a
-// custom terminator raises the ceiling to COMMAND_PAYLOAD_MAX, which is also what bounds the
-// receive buffer when a host never sends its terminator.
-constexpr const char* LINE_TERMINATOR = "\n";
-constexpr uint16_t TERMINATOR_MAX = 16;      // longest a host may set it to
-constexpr uint32_t COMMAND_PAYLOAD_MAX = 64u * 1024u;
+// The serial `fs` domain's write body. The declared byte count is authoritative and is capped here;
+// a body that stops arriving for this long is abandoned and its partial file removed.
+constexpr uint32_t FS_WRITE_MAX_BYTES = 1024 * 1024;
+constexpr uint32_t FS_WRITE_IDLE_MS = 2000;
 // With USB CDC the presence of a host is observable and its loss stops the run. On a plain
 // UART it is not, so a lost link is simply never reported.
 

@@ -3,7 +3,9 @@
 #include <Wire.h>
 #include <stdlib.h>
 
+#include "app/Asset.h"
 #include "core/Config.h"
+#include "core/Units.h"
 
 namespace gardener {
 namespace {
@@ -15,13 +17,17 @@ bool serialAttached() { return (bool)Serial; }
 // The keys in the order a press is reported, which is the panel's order rather than the bit order.
 constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
 
+// The local stop. It is a safety path rather than a preference, so it is a constant here and not a
+// setting: holding Back for this long ends the run and vents, whatever the controller is doing.
+constexpr uint32_t kBackStopMs = 3000;
+
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
-  logger_ = new StreamLogger(Serial, logEnabled_);
-  link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
+  logger_ = new StreamLogger(Serial, context_.logEnabled());
+  link_ = new SerialLink(&context_, Serial, serialAttached);
   connectedUi_ = new ConnectedUI(context_);
-  disconnectedUi_ = new DisconnectedUI(context_);
+  disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
 
 UserInterface* App::screenFor(bool attached) {
@@ -39,10 +45,9 @@ bool App::begin() {
   logger_->info(boot.c_str());
 
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
-  // panel that does not answer is fatal rather than a degraded mode. Both buses are the app's to
-  // bring up, because each driver takes a TwoWire it does not own; they are separate so one part
-  // cannot stall the other.
-  Wire.begin(cfg::SENSOR_I2C_SDA, cfg::SENSOR_I2C_SCL, cfg::SENSOR_I2C_FREQ_HZ);
+  // panel that does not answer is fatal rather than a degraded mode. Its bus is the app's to bring
+  // up, because the driver takes a TwoWire it does not own. The sensor is an ADC pin, not a bus,
+  // so it has nothing to bring up here.
   Wire1.begin(cfg::PANEL_I2C_SDA, cfg::PANEL_I2C_SCL, cfg::PANEL_I2C_FREQ_HZ);
   bool displayOk = context_.display().begin();
   logger_->info(displayOk ? "oled: online" : "oled: not found, aborting");
@@ -57,16 +62,61 @@ bool App::begin() {
   bool pumpOk = context_.pump().begin();
   context_.vent().begin();
   bool batteryOk = context_.battery().begin();
+  bool buzzerOk = context_.buzzer().begin();
   context_.vacuum().begin();
+
+  // The device's files are mounted once, before anything that reads a preference. A partition with
+  // no filesystem is formatted, which is reported rather than assumed: whatever was there is gone.
+  Storage::Mount mount = context_.storage().begin();
+  context_.settings().begin();
+
+  // The mark is an image on the device rather than an array in a header. Every page draws it from
+  // there when it needs it, so a data image without it is worth one line and nothing else — the pages
+  // simply have no mark.
+  if (context_.storage().size(kMarkAsset) == 0) {
+    logger_->warn("ui: /assets/eggplant.rle missing, the pages have no mark");
+  }
+
+  // The interpreter comes up here and stays: routines are loaded into it later, and a device with
+  // no routines simply never enters it.
+  bool vmOk = context_.routines().begin(context_, context_.storage(), *logger_);
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
-  logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
+  logger_->info(sensorOk ? "sensor: online" : "sensor: not found");
   logger_->info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  logger_->info(buzzerOk ? "buzzer: ready" : "buzzer: PWM unavailable");
   logger_->info(context_.vent().energiseWhenOpen() ? "vent: normally closed"
                                                    : "vent: normally open");
   logger_->info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   logger_->info("buttons: four keys on interrupt");
+
+  switch (mount) {
+    case Storage::Mount::Mounted:
+      logger_->info("fs: littlefs mounted");
+      break;
+    case Storage::Mount::Formatted:
+      logger_->info("fs: littlefs formatted, no filesystem found");
+      break;
+    case Storage::Mount::Failed:
+      logger_->warn("fs: littlefs mount failed, settings will not persist");
+      break;
+  }
+  if (mount != Storage::Mount::Failed) {
+    String usage = "fs: ";
+    usage += String((uint32_t)context_.storage().usedBytes());
+    usage += " of ";
+    usage += String((uint32_t)context_.storage().totalBytes());
+    usage += " bytes used";
+    logger_->info(usage.c_str());
+  }
+  String stored = "settings: unit=";
+  stored += displayUnitInfo(context_.settings().unit()).name;
+  logger_->info(stored.c_str());
+
+  String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";
+  vm += String((uint32_t)ESP.getFreeHeap());
+  logger_->info(vm.c_str());
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
@@ -111,15 +161,40 @@ void App::logRunChanges(uint32_t nowMs) {
   lastState_ = state;
 }
 
-// The keys are a local surface with no action assigned yet, so reporting a press is the whole of
-// what they do. One line per press, from here like every other report.
+// The keys are a local surface with no action assigned yet, so reporting the gesture is the whole
+// of what they do. One line per completed press, from here like every other report.
+// The keys belong to whoever owns the page: an active routine takes the presses, and with none the
+// loop reports them as it always has. A press is consumed either way, so it is never delivered
+// twice.
 void App::logButtonPresses() {
+  const bool toRoutine = !hostAttached_ && context_.routines().active();
   for (Button button : kButtons) {
-    if (!context_.buttons().consumePress(button)) continue;
+    const Press press = context_.buttons().consumePress(button);
+    if (press == Press::None) continue;
+    if (toRoutine) {
+      context_.routines().pushPress(button, press);
+      continue;
+    }
     String message = "btn: ";
     message += buttonName(button);
+    message += ' ';
+    message += pressName(press);
     logger_->info(message.c_str());
   }
+}
+
+// Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
+// and the latch keeps it to one stop per hold. Releasing it arms the next one.
+void App::watchBackHold() {
+  const uint32_t held = context_.buttons().heldMs(Button::Back);
+  if (held == 0) {
+    backStopFired_ = false;
+    return;
+  }
+  if (backStopFired_ || held < kBackStopMs) return;
+  backStopFired_ = true;
+  logger_->warn("app: back held, stopping and venting");
+  context_.vacuum().stop();
 }
 
 void App::update() {
@@ -134,11 +209,18 @@ void App::update() {
   // describes something that actually happened rather than a view built mid-command.
   link_->poll(now);
 
+  // The buzzer's schedule advances once per pass. A command handled above starts a tone now; a
+  // routine's poll at the end of the pass starts one that is serviced on the next pass.
+  context_.buzzer().update(now);
+
   // A controller that goes away releases the chamber (Q4).
   if (link_->consumeLinkLost()) {
     logger_->warn("app: controller left, stopping and venting");
     context_.vacuum().stop();
   }
+
+  // The keys are the device's own way out, independent of the link.
+  watchBackHold();
 
   logRunChanges(now);
   logButtonPresses();

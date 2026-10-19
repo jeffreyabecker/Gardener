@@ -76,11 +76,6 @@ class Display {
   virtual void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h,
                                int16_t angle) = 0;
 
-  // --- images --------------------------------------------------------------
-  // One bit per pixel, row major, most significant bit first, in program memory. A set bit is
-  // ink.
-  virtual void bitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w, int16_t h) = 0;
-
   // --- text ----------------------------------------------------------------
   // The face is chosen once and stays chosen; setFont(nullptr) puts the built-in 5x7 back. With a
   // face set, `y` is the baseline rather than the top of the glyph box, which is the font format's

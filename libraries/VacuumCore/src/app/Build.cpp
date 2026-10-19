@@ -4,16 +4,20 @@
 #include <Wire.h>
 
 #include "app/AppContext.h"
+#include "app/BuzzerPlayer.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
+#include "app/Storage.h"
 #include "app/VacuumSystem.h"
+#include "app/disconnected-ui/Routines.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
-#include "hal/impl/MprlsSensor.h"
+#include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
+#include "hal/impl/XgzpSensor.h"
 
 namespace gardener {
 namespace {
@@ -31,19 +35,22 @@ constexpr int16_t kPanelNoResetLine = -1;
 
 // The parts are new'd once, at boot, and never deleted: the device's destructor never runs, so
 // nothing owns them — the same policy the SH1106 driver already documents. This is the one place
-// that names the rig: which pin drives what, which bus each I2C part sits on, and which valve is
+// that names the rig: which pin drives what, which bus the panel sits on, and which valve is
 // fitted. The drivers are handed those facts rather than reading them, so a board variant edits
 // this file and core/Config.h and nothing under hal/impl/. The AppContext itself is copied out by
 // value.
 //
-// The two I2C buses are App's to bring up: each driver takes a TwoWire it does not own, so both are
-// up before begin() is called.
+// The panel's bus is App's to bring up: the driver takes a TwoWire it does not own, so it is up
+// before begin() is called. The sensor is a voltage on an ADC pin and needs no bus.
 AppContext buildAppContext() {
-  auto* sensor = new MprlsSensor(Wire);
+  auto* sensor = new XgzpSensor(cfg::SENSOR_ADC);
   auto* pump = new PwmPump(cfg::PUMP_PWM);
   auto* vent = new NormallyOpenValve(cfg::VENT_VALVE);
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
+  // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
+  auto* buzzerPart = new PwmBuzzer(cfg::BUZZER_PWM);
+  auto* buzzer = new BuzzerPlayer(*buzzerPart);
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction; the callback is where it comes up, once App has the bus running.
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
@@ -51,8 +58,11 @@ AppContext buildAppContext() {
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* system = new VacuumSystem(pump, sensor, vent);
   auto* overlay = new Overlay(display, battery, system);
-  auto* settings = new Settings();
-  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, settings);
+  auto* storage = new Storage();
+  auto* settings = new Settings(*storage);
+  auto* routines = new Routines();
+  return AppContext(sensor, pump, vent, battery, buttons, buzzer, overlay, system, storage,
+                    settings, routines);
 }
 
 }  // namespace gardener

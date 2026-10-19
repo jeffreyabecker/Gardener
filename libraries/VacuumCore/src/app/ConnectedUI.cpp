@@ -4,9 +4,9 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold9pt7b.h>
 
+#include "app/Asset.h"
 #include "core/Config.h"
 #include "core/Units.h"
-#include "eggplant-bitmap.h"
 
 namespace gardener {
 
@@ -16,7 +16,7 @@ ConnectedUI::ConnectedUI(AppContext context) : UserInterface(context) {}
 bool ConnectedUI::begin() {
   Display& panel = context_.display();
   panel.clear();
-  panel.bitmap(0, 0, splashBitmap, panel.width(), panel.height());
+  drawAsset(panel, context_.storage(), kMarkAsset, 0, 0);
   panel.display();
   startedMs_ = millis();
   return true;

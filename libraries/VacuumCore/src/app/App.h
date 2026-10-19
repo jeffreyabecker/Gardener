@@ -28,13 +28,14 @@ class App {
  private:
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
+  // The one local control: a Back hold stops and vents, whatever the link is doing.
+  void watchBackHold();
   // Which screen belongs to the link as it is now.
   UserInterface* screenFor(bool attached);
 
-  // App owns the diagnostic switch the link toggles (`device log=`), and both the link and the
-  // logger honour it. The link and the logger are new'd over the same Serial stream.
+  // The context owns the diagnostic switch (`device set log`), and both the link and the logger
+  // honour it. The link and the logger are new'd over the same Serial stream.
   AppContext context_;
-  bool logEnabled_ = true;
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
   // The panel is the device's own, so the loop paints it. Two screens, one showing: the live
@@ -43,6 +44,8 @@ class App {
   DisconnectedUI* disconnectedUi_ = nullptr;
   UserInterface* ui_ = nullptr;
   bool hostAttached_ = false;
+  // One stop per Back hold: set when the hold fires, cleared when the key comes up.
+  bool backStopFired_ = false;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };
