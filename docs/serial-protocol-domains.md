@@ -28,6 +28,8 @@ body    = %x00-FF{ N }        ; N is declared by the domain's grammar
 
 - Every command starts with a domain, then a verb owned by that domain, then positional arguments.
   There is no universal `field=value` grammar and no `get`/`set` imposed by the dispatcher.
+- The dispatcher reads only the domain token. Everything after it belongs to that domain, which
+  tokenizes its own verb and arguments — and, where it defines one, its body.
 - Domain and verb are case-insensitive; arguments are case-sensitive.
 - Quoted arguments carry spaces and quotes: `buzzer play "a4:1000 c6:500"`.
 - `-` means unset, `off` means explicitly disabled. `""` is an empty string.
@@ -40,7 +42,7 @@ body    = %x00-FF{ N }        ; N is declared by the domain's grammar
 - A command header is at most 128 bytes; the limit does not apply to a body. A longer header is
   answered `bad_argument` and discarded, never truncated into a different command.
 - `#` at the start of a line is a comment. A blank line gets no reply.
-- `help` is the one meta-command: `help`, `help <domain>`, `help <domain> <verb>`.
+- `help` is a domain with its own grammar: `help`, `help <domain>`, `help <domain> <topic>`.
 
 ### Replies
 
@@ -128,21 +130,24 @@ stops the run.
 
 ### Help
 
-Each domain exposes `describe()` and `help(verb)`:
+`help` is a domain like every other. `HelpDomain` tokenizes its own optional domain and topic
+arguments, looks the target up in the domain list, and calls its `describe()` or `help(topic)`. Each
+domain exposes those two methods; `HelpDomain` exposes them too, so `help help` works. `HelpDomain`
+writes the top-level page; a target domain's `help(topic)` writes its own page.
 
-- `help` -> `ok help domains body=rows rows=N`, rows `domain=<name> verbs=<n> about="<text>"`,
+- `help` -> `ok help domains body=rows rows=N`, rows `domain=<name> topics=<n> about="<text>"`,
   `end help domains body=rows rows=N`.
 - `help <domain>` -> `ok help <domain> body=rows rows=N`, rows
-  `verb=<name> args="<syntax>" about="<text>"`, `end help <domain> body=rows rows=N`. For example,
-  the `device` rows include `verb=get args="all|<field>"` and
-  `verb=set args="log <on|off>|unit <unit>"`.
-- `help <domain> <verb>` -> `ok help <domain> verb=<verb> body=rows rows=N`, then `arg=`, `reply=`
-  and `error=` rows, then `end help <domain> verb=<verb> body=rows rows=N`. `help device set`
-  describes both forms, `log` and `unit`.
+  `topic=<name> args="<syntax>" about="<text>"`, `end help <domain> body=rows rows=N`. For example,
+  the `device` rows include `topic=get args="all|<field>"` and
+  `topic=set args="log <on|off>|unit <unit>"`.
+- `help <domain> <topic>` -> `ok help <domain> topic=<topic> body=rows rows=N`, then `arg=`,
+  `reply=` and `error=` rows, then `end help <domain> topic=<topic> body=rows rows=N`.
+  `help device set` describes both forms, `log` and `unit`.
 - `help <domain>` for a domain that does not exist is `err help <domain> unknown_domain`; an unknown
-  verb under a real domain is `err help <domain> unknown_verb token=<verb>`.
-- Every verb a page names is a verb the domain accepts, so replaying `help` can never produce
-  `unknown_verb`.
+  topic under a real domain is `err help <domain> unknown_topic token=<topic>`.
+- Every topic a page names is a topic the domain accepts, so a topic taken from `help` never
+  produces `unknown_topic`.
 
 ### Errors
 
@@ -150,6 +155,7 @@ Each domain exposes `describe()` and `help(verb)`:
 | --- | --- |
 | `unknown_domain` | the first token is not a domain (dispatcher-level) |
 | `unknown_verb` | the domain does not accept that verb |
+| `unknown_topic` | the help domain does not have that topic |
 | `bad_argument` | missing, malformed, extra or unterminated argument |
 | `out_of_range` | parses but is outside the field's bounds |
 | `not_ready` | valid but cannot be honoured now; carries `reason=` |
@@ -168,30 +174,45 @@ Each domain exposes `describe()` and `help(verb)`:
    public:
     virtual ~Domain() {}
     virtual const char* name() const = 0;
-    virtual void execute(Tokens& tokens) = 0;  // everything after the domain token
+    virtual void execute(Stream& input) = 0;  // stream is positioned after the domain token
     virtual void describe() = 0;               // one row for `help`
-    virtual void help(const char* verb) = 0;   // null = the verb list
+    virtual void help(const char* topic) = 0;  // null = the topic list
   };
   ```
 
   `DomainContext { AppContext& app; Wire& wire; bool& logEnabled; }` is built by `SerialLink` and
-  passed to every domain at construction.
+  passed to every domain at construction. The command stream is an argument to `execute`, not part
+  of the context: the domain reads and tokenizes everything after its own name, including a body.
+
+  `DomainList` holds the domains in help order and offers `find`, `count` and `at`. `SerialLink`
+  owns it; `HelpDomain` holds a reference to it and is constructed last with the list, then added
+  to it.
 - `app/serial/Wire.h/.cpp` — headers, the rows body, the error helpers, and value quoting. It owns
-  the reply side of the stream; `SerialLink` keeps the byte/framing side. The bytes body is part of
-  the contract but is only implemented when `fs read` arrives.
-- `app/serial/FieldTable.h/.cpp` — the shared `FieldSpec` table, `get all`/`get <field>` handling,
-  and field rows for help. Shared mechanics only; each domain still owns its verb dispatch.
-- `app/serial/Domains.h` plus `app/serial/Domains/Device.cpp`, `Vacuum.cpp`, `Buzzer.cpp` — one
-  private class per domain with a factory. Each class parses its own verbs, owns its help text, and
-  lives in its own file.
-- `SerialLink` is reduced to: stream, buffer, line splitting, domain lookup, the `help` meta-command,
-  host presence, and diagnostics. It constructs the domains in help order and holds them for the
-  device's lifetime. Host presence stays here because no domain exposes it on the wire.
+  the reply side of the port; `SerialLink` owns the receive side. The bytes body is part of the
+  contract but is only implemented when `fs read` arrives.
+- `app/serial/FieldTable.h/.cpp` — the shared `FieldSpec` table, the `get all`/`get <field>` reader,
+  and field rows for help. It is a helper a domain calls after it has tokenized its own verb; the
+  link never parses fields.
+- `core/Parse.h` — the strict scalar parsers (`parseFloat`, `parseU32`, `parseFlag`) moved out of
+  the deleted `LineGrammar`. It parses values, not command lines.
+- `app/serial/Domains.h` plus `app/serial/Domains/Device.cpp`, `Vacuum.cpp`, `Buzzer.cpp`,
+  `Help.cpp` — one private class per domain with a factory. Each class tokenizes its own verbs,
+  owns its help text, and lives in its own file. `HelpDomain`'s factory also takes the
+  `DomainList&`.
+- `SerialLink` reads the first token of each command, finds the domain in the list, and hands it
+  the command stream positioned immediately after that token. The command stream is the receive
+  buffer and the port behind one `Stream`. `SerialLink` does not parse verbs, fields or arguments.
+  It also owns the receive buffer, the domain list, host presence, and diagnostics. It constructs
+  the domains in help order and holds them for the device's lifetime. Host presence stays here
+  because no domain exposes it on the wire.
 
 ### Changed pieces
 
-- `LineGrammar` gains quoted-token handling (`Tokens` decodes `"..."` with `\"`/`\\` in place and
-  reports an unterminated quote).
+- Delete `LineGrammar.h/.cpp`. There is no shared command tokenizer: each domain reads and
+  tokenizes its own stream, including quoted arguments and a body. `Tokens`, `splitValue`,
+  `same`/`sameFold` and `lower` go with it; case folding uses `String::toLowerCase` and comparison
+  uses `String::equalsIgnoreCase`. The strict `parseFloat`, `parseU32` and `parseFlag` helpers move
+  to `core/Parse.h` because more than one domain needs them.
 - `Items` quotes values that need it and stops replacing whitespace with `_`.
 - The battery readers move from the vacuum table to the device table: `device get all` owns
   `batt_v` and `batt_pct`, and `vacuum get all` no longer has `batt`.
@@ -211,17 +232,19 @@ Each domain exposes `describe()` and `help(verb)`:
 
 ## Out of scope
 
-- The `fs` domain and raw payload framing. The `Domain` interface is deliberately just
-  `execute`/`describe`/`help`; when `fs` arrives it can extend the interface with a multi-pass
-  payload hook. Its replies will use the rows body for `fs list` and the bytes body for `fs read`,
-  and its command body for `fs write`.
+- The `fs` domain and raw payload framing. `execute(Stream&)` already gives it the stream, so it
+  can read its own header and its `<bytes>` body without a new interface hook. Its replies will use
+  the rows body for `fs list` and the bytes body for `fs read`.
 - Any change to the vacuum control model, state machine, safety behaviour, or poll rates.
 
 ## Verification
 
 - `powershell -File scripts/arduino.ps1 -Task build` compiles cleanly.
 - Walk every example in the new protocol doc against the parsers; confirm each reply matches the
-  grammar and each `help` page names only accepted verbs.
+  grammar and each `help` page names only accepted topics.
+- Confirm every domain consumes exactly its command, including a body, and leaves the stream at the
+  next domain token.
+- Confirm `help` is dispatched through the same path as every other domain, including `help help`.
 - Confirm link-loss reset, `device reboot` reply-before-restart, and `device set log off` still
   behave as documented.
 - Confirm no `hal/` file includes anything under `app/`.
@@ -229,8 +252,9 @@ Each domain exposes `describe()` and `help(verb)`:
 ## Todos
 
 1. Write the proto 4 grammar, reply, domain, help and error sections in `docs/serial-protocol.md`.
-2. Add `Domain.h`, `Wire` and `FieldTable` and reduce `SerialLink` to framing and dispatch.
-3. Implement the `device`, `vacuum` and `buzzer` domains in their own files and delete the old
-   table/help files.
+2. Add `Domain.h` (including `DomainList`), `Wire`, `FieldTable` and `core/Parse.h`; reduce
+   `SerialLink` to reading the domain token and handing the command stream to the domain.
+3. Implement the `device`, `vacuum`, `buzzer` and `help` domains in their own files and delete the
+   old table/help files.
 4. Update the README and routines examples and mark the fs proposal as pre-proto-4.
 5. Build the sketch and review the doc examples against the implementation.
