@@ -86,23 +86,20 @@ fs delete <path>
 
 ## Implementation
 
-### 1. Streaming dispatch
+### 1. Reading the body
 
-`SerialLink::poll()` already reads one byte at a time and stops at the `LF`, so a `fs write`
-payload is still on the port when the domain is called. What remains is to keep the link from
-reading a new header while a body is in flight:
+`SerialLink::poll()` stops at the `LF` and hands the domain the stream, so the `fs write` payload
+is still on the port when `execute()` runs. There is no streaming state and no `service()` hook:
 
-- `execute(Stream& io)` reads the rest of its line from `io` and parses the header. If the domain
-  reports that it is streaming, record it as the active domain.
-- On later polls, call the active domain's `service(Stream&, uint32_t)` instead of reading another
-  header.
-- On link loss, call `cancel()` on the active domain so a partial file is closed and removed.
-- `Domain` gains default no-op `streaming()`, `service(Stream&, uint32_t)` and `cancel()` hooks.
-  `fs` is the only domain that overrides them; the hooks exist because a body cannot be handled
-  by a synchronous `execute()` without blocking the control loop.
+- `execute(Stream& io)` reads the rest of its line, parses the header, then reads exactly the
+  declared bytes from `io` and writes them to the file before replying.
+- `fs read` writes the header and then the file's bytes in the same call.
+- A payload that stops arriving for `FS_WRITE_IDLE_MS` is abandoned: the partial file is removed
+  and the reply is `err bad_argument`.
+- The run loop is paused for the transfer. Routines and assets are small, and moving them is a
+  bench operation; do not write a large file while a run is active.
 
-`fs write` reads and writes in small chunks (128 bytes) as bytes arrive from `io`. `fs read`
-writes one small chunk per poll. Neither loops over the whole file in one pass.
+Both verbs move the data in small chunks, so neither keeps the whole file in RAM.
 
 ### 2. Storage
 
@@ -128,18 +125,17 @@ Add `app/serial/Domains/Fs.cpp` and `createFsDomain()` in `Domains.h`.
   final path where a verb needs it. Do not add a global tokenizer.
 - Local path validation: absolute, no empty/`.`/`..` segments, no trailing slash, no spaces,
   root only for list, exact `/settings.ini` reservation.
-- `fs list` writes each row straight to `ctx.out`: `file <name>` or `dir <name>`, one `\n`.
-- State machine: `Idle`, `Reading`, `Writing`, `Discarding`. `streaming()` is true for the last
-  three. `service()` advances one chunk, enforces the 2 s idle timeout, and sends the final reply.
-- `execute()` parses the verb and arguments and either completes a synchronous command or starts a
-  state.
+- `fs list` writes each row straight to `io`: `file <name>` or `dir <name>`, one `\n`.
+- `execute()` parses the verb and arguments, then completes the whole command: a synchronous
+  directory operation, a body read for `write`, or a body write for `read`. There is no state
+  machine and no `service()`.
 - `fs get` is not defined and is `unknown_verb`.
 
 ### 4. Constants and wiring
 
 - `core/Config.h`: `FS_WRITE_MAX_BYTES = 1024 * 1024`, `FS_WRITE_IDLE_MS = 2000`.
 - `SerialLink.cpp`: add the `fs` domain after `buzzer`.
-- Keep `COMMAND_LINE_MAX = 128` for the header only.
+- Keep `COMMAND_LINE_MAX = 128` for the header; a body is bounded by `FS_WRITE_MAX_BYTES`.
 
 ### 5. Protocol documentation
 
