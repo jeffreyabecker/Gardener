@@ -322,11 +322,12 @@ to leave that page.
 
 The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
 for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
-primary action. On `default`, OK starts or opens the target editor and Back vents, a **double Up**
-opens the routine list, and a **double Down** opens `system`, the device's own settings; on
+primary action. On `default`, OK starts the run and Back vents, a **double Up** opens the routine
+list, and a **double OK** or **double Down** opens `system`, the device's own settings; on
 `browser`, Up and Down walk the list, OK switches to the highlighted page, a **double OK** opens that
-page's settings, and Back goes back to `default`. On `system`, OK opens the unit and Up/Down changes
-it until OK saves it; Back cancels an edit or goes home.
+page's settings, and Back goes back to `default`. On `system`, Up and Down walk the unit and target
+rows, OK opens the selected value, Up/Down changes it, and OK saves; Back cancels an edit or goes
+home.
 
 The Back hold tells the active routine what it did: `vacuum.stopped()` is true once after the hold,
 so a page with a phase machine resets it on the event rather than watching for `IDLE`.
@@ -351,20 +352,23 @@ mounts the new filesystem. It replaces the whole filesystem, so a file the devic
 gone unless the data folder carries a copy. Individual files can be changed without replacing the
 image through the `fs` domain: `list`, `read`, `write`, `mkdir` and `delete`.
 
-The display unit is stored in `/settings.ini` and restored at boot:
+The display unit and the default target are stored in `/settings.ini` and restored at boot:
 
 ```ini
 [device]
 unit=mmhg
+target=12.5
 ```
 
-So `device set unit mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
-are carried through a write rather than dropped; comments and spacing are not kept.
+So `device set unit mmhg` survives `device reboot` and a power cycle. `target` is the depth in kPa
+the `default` page hands the machine when it becomes visible; the `system` page writes it. Keys the
+firmware does not know are carried through a write rather than dropped; comments and spacing are not
+kept.
 
 A routine keeps its own values the same way, in one file named after it beside its source
-(`/routines/default.ini`), so a data-image upload can ship starting values. A page normally writes
+(`/routines/static.ini`), so a data-image upload can ship starting values. A page normally writes
 only its own file; the browser is the exception, reaching a routine's values by registered name so
-it can edit them. The `default` page uses its file to bring the target back after a power cycle.
+it can edit them. `default` keeps nothing of its own: its target is a device setting.
 
 Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
 1-bit bitmap of 327 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
@@ -394,16 +398,16 @@ The routine registered as **`default`** is the page. If no file registers one, t
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load.
 
-Four ship. `default` is the readout and the target editor; a double Up opens `browser`, the list
-of everything registered, which walks with Up and Down and switches with OK, and a double Down opens
+Four ship. `default` is the readout; a double Up opens `browser`, the list of everything
+registered, which walks with Up and Down and switches with OK, and a double OK or double Down opens
 `system`, the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest,
 and repeat. A hold can pulse in a band around the target. There is no fixed number of routines: the
 registry grows as files register, and the browser lists whatever boot found.
 
-`system` edits the one setting the device keeps as itself rather than as a routine's values: the
-unit the glass prints (the one write that survives a reset). OK opens the value, Up/Down changes it,
-OK saves, and Back cancels or goes home. Like `browser`, it touches nothing of the machine, so a run
-keeps going behind it.
+`system` edits the two settings the device keeps as itself rather than as a routine's values: the
+unit the glass prints (the one write the serial link also carries) and the target `default` pulls
+to. Up and Down walk the rows, OK opens the value, Up/Down changes it, OK saves, and Back cancels or
+goes home. Like `browser`, it touches nothing of the machine, so a run keeps going behind it.
 
 A routine that has values worth editing exposes `describe()`, returning a list of `setting` records
 (the key, label, kind, step, bounds and, for a choice, the values to cycle). The kinds are `real`,
@@ -419,7 +423,7 @@ without leaving its page.
 
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, the
 compiled GFX faces plus the built-in 5x7, text measurement, and the unit the panel prints), `device`
-(the display unit the device keeps as a preference), `buttons` (the presses
+(the display unit and default target kept as preferences), `buttons` (the presses
 since the last call, as a pull queue), `buzzer` (a timed tone, a note sequence, or silence),
 `routines` (register, switch, list, and get a registered object) and `store` (its own values, kept
 across a power cycle, or another registered routine's by name).

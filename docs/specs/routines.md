@@ -294,18 +294,29 @@ Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear
 
 ## `device` — the device's own settings
 
-The unit the panel prints, which belongs to the device rather than to a routine's `store` file. It
-is the same switch the serial `device` domain carries; the diagnostics switch is not here, because
-it belongs to the serial link rather than to the glass.
+The unit the panel prints and the target the default program restores. Both belong to the device
+rather than to a routine's `store` file. The unit is the same switch the serial `device` domain
+carries; the diagnostics switch is not here, because it belongs to the serial link rather than to
+the glass.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `device.units()` | list of strings | every token `device set unit` accepts, in `core/Units.h` order |
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini`; false for a token that is not one of `units()` |
+| `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
+| `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
-only to cycle it. The `/routines/system.be` page is the worked example: it edits the unit in place
-and touches nothing of the machine.
+only to cycle it. `device.target()` is the stored setting, not the machine's live target: the
+`default` page hands it to the machine when it becomes visible. The `/routines/system.be` page is
+the worked example: it edits both values in place and touches nothing of the machine.
+
+```berry
+var kpa = device.target()
+if kpa > 0.0
+  vacuum.target(vacuum.clamp(kpa))
+end
+```
 
 ## `buttons` — the presses
 
@@ -493,9 +504,9 @@ outside `/routines/`: a name that is not registered is refused.
 
 ## A complete example
 
-Four routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
-editor stepped in whole display units, OK to start or commit, Back to vent, and the target kept
-across a boot by `store`. A **double Up** on that page opens the second one, and a **double Down**
+Four routines ship. `/routines/default.be` shows the whole surface in use: the readout, OK to
+start, Back to vent, and the target restored from `device.target()` every time the page becomes
+visible. A **double Up** on that page opens the second one, and a **double OK** or **double Down**
 opens `/routines/system.be`, the device's own settings.
 
 `/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
@@ -507,9 +518,11 @@ reads `routines.names()`, so a routine that is added to the data image appears i
 to either file. It touches nothing of the machine — a run keeps going behind it — and it writes only
 through `store.set` when a setting is saved.
 
-`/routines/system.be` edits the one setting that is the device's rather than a routine's: the
-display unit, through the `device` module above. OK opens it, Up/Down cycles it, OK saves, and Back
-cancels or goes home. Like the browser it touches nothing of the machine and has no `store` file.
+`/routines/system.be` edits the two settings that are the device's rather than a routine's: the
+display unit and the default target, through the `device` module above. Up and Down walk the rows,
+OK opens a value, Up/Down cycles the unit or steps the target in whole display units, OK saves, and
+Back cancels or goes home. Like the browser it touches nothing of the machine and has no `store`
+file.
 
 `/routines/static.be` is the cycle: OK starts a pull to `target_pressure`, `HOLD` starts the work
 timer, `vacuum.stop()` vents, `IDLE` starts the rest timer, and `resume_behavior` decides whether the

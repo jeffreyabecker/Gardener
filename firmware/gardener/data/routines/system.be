@@ -1,28 +1,36 @@
-# system.be — the device's own settings: the unit the glass prints.
+# system.be — the device's own settings: the display unit and the default target pressure.
 #
-# This page is not a routine's values; it edits what the firmware says the device is, the same
-# switch `device set unit` carries on the wire. Nothing here touches the machine, so a run keeps
-# going behind it.
+# This page is not a routine's values; it edits what the device keeps across a reset: the display
+# unit, which `device set unit` also carries on the wire, and the target the default program
+# restores. It touches nothing of the machine, so a run keeps going behind it.
 #
-# A double Down on `default` opens it. OK opens the value, Up/Down changes it, OK saves, and Back
-# cancels or goes home.
+# A double OK or double Down on `default` opens it. Up/Down walk the rows, OK opens the value,
+# Up/Down changes it, OK saves, and Back cancels or goes home.
 
 import string
 
 class System
   var units
+  var selected
   var editing
   var unit_index
+  var target
   var edit_unit_index
+  var edit_kpa
   var unit
+  var fmt
   var last_draw
 
   def init()
     self.units = nil
+    self.selected = 0
     self.editing = false
     self.unit_index = 0
+    self.target = 0.0
     self.edit_unit_index = 0
+    self.edit_kpa = 0.0
     self.unit = nil
+    self.fmt = "%.1f"
     self.last_draw = 0
   end
 
@@ -45,10 +53,11 @@ class System
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
-  # device.
+  # device, and the target is what `default` will place on the machine when it comes back.
   def read()
     self.units = device.units()
     self.unit = screen.unit()
+    self.fmt = "%." + str(self.unit.decimals) + "f"
     var i = 0
     while i < self.units.size()
       if self.units[i] == self.unit.name
@@ -56,6 +65,7 @@ class System
       end
       i += 1
     end
+    self.target = device.target()
   end
 
   # --- drawing -------------------------------------------------------------
@@ -73,14 +83,32 @@ class System
 
   def draw_list()
     screen.draw_text(0, 0, 1, false, "SYSTEM")
-    screen.draw_text(0, 16, 1, false, "UNIT=" + self.unit.suffix)
-    screen.draw_text(0, 56, 1, false, "OK=EDIT")
+    screen.draw_text(0, 16, 1, self.selected == 0, "UNIT=" + self.unit.suffix)
+    screen.draw_text(0, 24, 1, self.selected == 1, self.target_text())
+    screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=EDIT")
   end
 
   def draw_edit()
-    screen.draw_text(0, 0, 1, false, "UNIT")
-    screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
+    if self.selected == 0
+      screen.draw_text(0, 0, 1, false, "UNIT")
+      screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
+    else
+      screen.draw_text(0, 0, 1, false, "TARGET " + self.unit.suffix)
+      screen.draw_text(0, 16, 3, false, self.text(self.edit_kpa))
+    end
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
+  end
+
+  def target_text()
+    if self.target > 0.0
+      return "TGT=" + self.text(self.target)
+    end
+    return "TGT=--"
+  end
+
+  # A depth in kPa as the panel's unit, at the precision that unit steps in.
+  def text(kpa)
+    return string.format(self.fmt, kpa * self.unit.per_kpa)
   end
 
   # --- buttons -------------------------------------------------------------
@@ -123,6 +151,11 @@ class System
   end
 
   def handle_list(ev)
+    # Two rows, so either direction moves to the other one and wraps.
+    if ev.btn == "up" || ev.btn == "down"
+      self.selected = 1 - self.selected
+      return true
+    end
     if ev.btn == "ok"
       self.begin_edit()
       return true
@@ -138,17 +171,36 @@ class System
 
   def begin_edit()
     self.editing = true
-    self.edit_unit_index = self.unit_index
+    if self.selected == 0
+      self.edit_unit_index = self.unit_index
+      return
+    end
+    if self.target > 0.0
+      self.edit_kpa = self.target
+    else
+      # No target yet: start from where the chamber is, which is what a first edit means.
+      self.edit_kpa = vacuum.clamp(vacuum.state().kpa)
+    end
   end
 
+  # One whole step in the panel's unit, converted back to the machine's kPa, exactly as `default`
+  # stepped its target before the setting moved here.
   def step(direction)
-    var count = self.units.size()
-    self.edit_unit_index = (self.edit_unit_index + direction + count) % count
+    if self.selected == 0
+      var count = self.units.size()
+      self.edit_unit_index = (self.edit_unit_index + direction + count) % count
+      return
+    end
+    self.edit_kpa = vacuum.clamp(self.edit_kpa + direction * self.unit.whole_step / self.unit.per_kpa)
   end
 
   def commit()
     self.editing = false
-    device.set_unit(self.units[self.edit_unit_index])
+    if self.selected == 0
+      device.set_unit(self.units[self.edit_unit_index])
+    else
+      device.set_target(self.edit_kpa)
+    end
     self.read()
   end
 end

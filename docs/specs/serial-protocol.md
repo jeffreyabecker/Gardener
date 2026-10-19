@@ -184,7 +184,7 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 
-`device set unit` is the one write that survives a reset: the value is written to the `[device]`
+`device set unit` is the one wire write that survives a reset: the value is written to the `[device]`
 section of `/settings.ini` and read back at boot. A filesystem that will not take the write still
 answers with the unit in force for this session, and the boot log reports the failed mount. The
 machine and this wire stay in kPa either way — a display unit is a preference about the glass, not

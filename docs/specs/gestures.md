@@ -59,9 +59,9 @@ away from home. The browser's short Back goes home too, but that is the browser'
 | **Double Down** | `default` opens `system`, the device's own settings. No other page is required to take it. |
 
 A page that describes settings takes double OK for the settings view even if it also has an inline
-editor: one gesture, one meaning. `default` has no `describe()` today, so double OK there opens the
-target editor, while double Down opens `system` — the device's own settings rather than a routine's.
-`system` edits its two values in place with the same OK/Up/Down/Back grammar as the shared editor.
+editor: one gesture, one meaning. `default` has no `describe()` today; both double OK and double
+Down open `system`, which holds its unit and target pressure. `system` edits its two values in place
+with the same OK/Up/Down/Back grammar as the shared editor.
 
 The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
 it, OK saves, Back closes the list or cancels the editor. A `duration` adds a stage — OK moves from
@@ -78,26 +78,27 @@ routine. The holds have their own rows because they are not presses.
 | Up short | page | — | — | move | move | step + |
 | Up long | page | — | — | move | move | step + |
 | Up double | page | open browser | — | move | move | step + |
-| Down short | page | — / step | — | move | move | step − |
-| Down long | page | — / step | — | move | move | step − |
-| Down double | page | open system settings / step | — | move | move | step − |
-| OK short | page | start / save target | start / — | switch page | edit value | save |
+| Down short | page | — | — | move | move | step − |
+| Down long | page | — | — | move | move | step − |
+| Down double | page | open system settings | — | move | move | step − |
+| OK short | page | start | start / — | switch page | edit value | save |
 | OK long | page | — | start / — | switch page | edit value | save |
-| OK double | page | open target editor | open settings | open settings | edit value | save |
-| Back short | page | vent / cancel | — | go home | close | cancel |
-| Back long | page | — / cancel | — | go home | close | cancel |
-| Back double | page | vent / cancel | — | go home | close | cancel |
+| OK double | page | open system settings | open settings | open settings | edit value | save |
+| Back short | page | vent | — | go home | close | cancel |
+| Back long | page | — | — | go home | close | cancel |
+| Back double | page | vent | — | go home | close | cancel |
 | **Hold OK 3 s** | stop, vent, `default` | same | same | same | same | same |
 | **Hold Back 3 s** | stop, vent | same | same | same | same | same |
 
-On `default`, the text after the slash is what the target editor does while it is open. A `double`
-on Up or Down is one event and moves once; a page that does not distinguish it treats it as that key.
+A `double` on Up or Down is one event and moves once; a page that does not distinguish it treats it
+as that key.
 
 On `static`, OK starts a cycle only from `ready`. Once the pull is under way, Back is not a stop —
-the Back hold is, and the page notices the machine's release and returns to `ready`.
+the Back hold is, and the page takes the `vacuum.stopped()` notice and returns to `ready`.
 
-`system` follows the settings grammar with its one row: OK opens the unit, Up/Down cycles it, OK
-saves, and Back cancels or returns to `default`.
+`system` follows the settings grammar with two rows: Up and Down move between `UNIT` and `TGT`, OK
+opens the selected value, Up/Down cycles the unit or steps the target, OK saves, and Back cancels or
+returns to `default`.
 
 The page columns describe the disconnected device. While a controller owns the device there is no
 routine page: presses are logged (`btn: ok short`) and only the Back hold and the Back+OK reset still

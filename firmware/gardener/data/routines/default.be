@@ -1,4 +1,4 @@
-# default.be — the disconnected page: the chamber's depth, the target, and the target editor.
+# default.be — the disconnected page: the chamber's depth and the target.
 #
 # A routine registers itself with a name and a title. The runtime calls activate() when it becomes
 # the active routine, and poll(now) once per loop iteration while the page is showing. Every entry
@@ -7,15 +7,11 @@
 import string
 
 class Readout
-  var editing
-  var edit_kpa
   var unit
   var fmt
   var last_draw
 
   def init()
-    self.editing = false
-    self.edit_kpa = 0.0
     self.unit = nil
     self.fmt = "%.1f"
     self.last_draw = 0
@@ -24,7 +20,6 @@ class Readout
   def activate()
     self.unit = screen.unit()
     self.fmt = "%." + str(self.unit.decimals) + "f"
-    self.editing = false
     self.restore()
     self.draw()
   end
@@ -55,10 +50,7 @@ class Readout
       screen.draw_text(0, 12, 3, false, "--")
     end
 
-    if self.editing
-      screen.draw_text(0, 44, 1, false, "SET " + self.text(self.edit_kpa) + " " + self.unit.suffix)
-      screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SET")
-    elif s.target > 0.0
+    if s.target > 0.0
       screen.draw_text(0, 44, 1, false, "TGT " + self.text(s.target) + " " + self.unit.suffix)
     else
       screen.draw_text(0, 44, 1, false, "TGT -- " + self.unit.suffix)
@@ -93,26 +85,18 @@ class Readout
   def handle(ev)
     if ev.btn == "ok"
       if ev.press == "double"
-        self.begin_edit()
+        # The page's settings — the target — live on the system settings page.
+        routines.set_active("system")
         return true
       end
       if ev.press == "short"
-        if self.editing
-          self.commit()
-        else
-          self.start()
-        end
+        self.start()
         return true
       end
       return false
     end
 
     if ev.btn == "back"
-      if self.editing
-        # While editing, Back leaves the editor without changing anything; it is not a vent.
-        self.editing = false
-        return true
-      end
       if ev.press == "short" || ev.press == "double"
         # Back is the page's one command: release the chamber. A fast double tap is classified as
         # a double rather than a short, and it means the same thing here.
@@ -124,10 +108,6 @@ class Readout
     end
 
     if ev.btn == "up"
-      if self.editing
-        self.step(1.0)
-        return true
-      end
       # The way into the browser. A double tap, so a single Up is never a page change by accident;
       # the classifier withholds the first short, so this cannot also step anything.
       if ev.press == "double"
@@ -138,34 +118,30 @@ class Readout
     end
 
     if ev.btn == "down"
-      if !self.editing
-        # The way into the device's own settings, paired with the double Up that opens the routine
-        # list so neither is a single tap away.
-        if ev.press == "double"
-          routines.set_active("system")
-          return true
-        end
-        return false
+      # The way into the device's own settings, paired with the double Up that opens the routine
+      # list so neither is a single tap away.
+      if ev.press == "double"
+        routines.set_active("system")
+        return true
       end
-      self.step(-1.0)
-      return true
+      return false
     end
     return false
   end
 
   # --- the run -------------------------------------------------------------
 
-  # The target outlives a boot: the machine holds it in RAM, so the page's own file is what puts it
-  # back on the glass. Read on every entry, so the page always shows the target last committed here.
+  # The target outlives a boot as a device setting: the system settings page owns it, and this page
+  # hands it to the machine whenever it becomes visible.
   def restore()
-    var kpa = store.get("target", 0.0)
+    var kpa = device.target()
     if kpa > 0.0
       vacuum.target(vacuum.clamp(kpa))
     end
   end
 
-  # OK outside the editor resumes the run, unless one is already going. The machine answers for
-  # itself: with no target, no reading or a latched fault, start() refuses and nothing changes.
+  # OK resumes the run, unless one is already going. The machine answers for itself: with no
+  # target, no reading or a latched fault, start() refuses and nothing changes.
   def start()
     var s = vacuum.state()
     if s.state == "PULL" || s.state == "HOLD"
@@ -174,37 +150,6 @@ class Readout
     if !vacuum.start()
       vacuum.log("default: start refused")
     end
-  end
-
-  # --- the editor ----------------------------------------------------------
-
-  # The starting point: the target if there is one, otherwise where the chamber is now. A chamber at
-  # rest, or one with no reading (its depth reads 0), clamps to the shallowest target.
-  def begin_edit()
-    var s = vacuum.state()
-    self.editing = true
-    if s.target > 0.0
-      self.edit_kpa = s.target
-    else
-      self.edit_kpa = vacuum.clamp(s.kpa)
-    end
-  end
-
-  # One whole step in the panel's unit, converted back to the machine's kPa: a psi step is the
-  # number the panel shows going up by one, not a fixed 1 kPa.
-  def step(direction)
-    self.set_edit(self.edit_kpa + direction * self.unit.whole_step / self.unit.per_kpa)
-  end
-
-  def set_edit(kpa)
-    self.edit_kpa = vacuum.clamp(kpa)
-  end
-
-  def commit()
-    self.editing = false
-    vacuum.target(self.edit_kpa)
-    store.set("target", self.edit_kpa)
-    vacuum.log("default: target " + self.text(self.edit_kpa) + " " + self.unit.suffix)
   end
 end
 
