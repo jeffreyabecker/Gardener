@@ -50,6 +50,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [docs/gestures.md](./docs/gestures.md) | The key contract: reserved holds, the standard settings and Back gestures, and the matrix of every press |
 | [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
+| [docs/parking-lot.md](./docs/parking-lot.md) | Deferred work: what it would buy, what it costs, and what has to be true first |
 
 ### Architecture
 
