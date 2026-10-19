@@ -44,6 +44,11 @@ constexpr int PUMP_PWM = 6;
 // constructs; normally open is the fail-safe default.
 constexpr int VENT_VALVE = 5;
 
+// The piezo: a passive element on a spare GPIO, driven by one LEDC channel. GPIO12 is the fifth
+// key's pin on the POC 5-way module; the firmware reads only four keys, and the buzzer takes the
+// pin. A board that wants that key back has to move the buzzer.
+constexpr int BUZZER_PWM = 12;
+
 // Battery sense: a 1S Li-ion pack through a 100k/100k divider, so the top of the pack lands inside
 // the ADC range. GPIO4 is ADC1 channel 3, and it is the one ADC1 pin that is neither a button nor a
 // strapping pin: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, and a pressed button would
@@ -101,6 +106,13 @@ constexpr float BATTERY_EMPTY_VOLTS = 3.2f;
 constexpr float BATTERY_FULL_VOLTS = 4.2f;
 constexpr float BATTERY_CALIBRATION = 1.0f;
 constexpr uint8_t BATTERY_LOW_PERCENT = 20;
+
+// --- Buzzer ----------------------------------------------------------------
+// A passive piezo reproduces a square wave, so the firmware offers a frequency range rather than a
+// volume. The note parser rejects a note outside it, and the serial field publishes it as the
+// `tone` bounds.
+constexpr float BUZZER_MIN_HZ = 100.0f;
+constexpr float BUZZER_MAX_HZ = 10000.0f;
 
 // --- Front panel keys -------------------------------------------------------
 // A key released before this is a short press; at or after it, a long press. Both are reported when

@@ -4,6 +4,7 @@
 #include <Wire.h>
 
 #include "app/AppContext.h"
+#include "app/BuzzerPlayer.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -14,6 +15,7 @@
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
 #include "hal/impl/MprlsSensor.h"
+#include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
 
@@ -46,6 +48,9 @@ AppContext buildAppContext() {
   auto* vent = new NormallyOpenValve(cfg::VENT_VALVE);
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
+  // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
+  auto* buzzerPart = new PwmBuzzer(cfg::BUZZER_PWM);
+  auto* buzzer = new BuzzerPlayer(*buzzerPart);
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction; the callback is where it comes up, once App has the bus running.
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
@@ -56,8 +61,8 @@ AppContext buildAppContext() {
   auto* storage = new Storage();
   auto* settings = new Settings(*storage);
   auto* routines = new Routines();
-  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, storage, settings,
-                    routines);
+  return AppContext(sensor, pump, vent, battery, buttons, buzzer, overlay, system, storage,
+                    settings, routines);
 }
 
 }  // namespace gardener

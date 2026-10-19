@@ -10,6 +10,7 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 * **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
 * **Battery**: 1S Li-ion pack sensed through a divider on GPIO4
+* **Buzzer**: passive piezo on GPIO12, one LEDC channel, timed tones and note sequences
 
 The parts, what they cost and where to buy them, are in
 [docs/poc-parts.md](./docs/poc-parts.md).
@@ -45,7 +46,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
-| [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the five modules, and the rules that follow from the embedded interpreter |
+| [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the six modules, and the rules that follow from the embedded interpreter |
 | [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
@@ -55,7 +56,7 @@ reference, so the rig needs to be at rest when the device boots.
 core/   shared foundations: the constants the firmware owns — the board's pin map and the
         machine's policy — plus math
 hal/    what the instrument needs from its hardware: an abstract class per part — Display,
-        PressureSensor, Pump, VentValve, Battery, ButtonPanel. The parts themselves are in
+        PressureSensor, Pump, VentValve, Battery, ButtonPanel, Buzzer. The parts themselves are in
         hal/impl/, which is the only place a vendor library is included
 app/    the instrument: the vacuum system that commands them, the build function that owns the
         parts, the application loop, the display overlay and the serial interface
@@ -117,12 +118,13 @@ pins rather than reading them.
 | Button DOWN | 2 | active low, read on a change interrupt |
 | Button OK | 10 | active low, read on a change interrupt |
 | Button BACK | 11 | active low, read on a change interrupt |
+| Piezo | 12 | passive element, one LEDC channel; the 5-way module's fifth key is not used |
 | USB D-/D+ | 19/20 | native USB: this is the control interface |
 | UART0 | 43/44 | alternative control interface, 115200 |
 | RGB LED | 48 | on board, not wired to anything |
 
-Pins 7 and 12–16 are free. The two I2C parts are on separate buses — the sensor on `Wire`, the
-panel on `Wire1` — so neither driver can stall the other. The four button pins are wired, named in
+Pins 7 and 13–16 are free; GPIO12 drives the piezo. The two I2C parts are on separate buses — the
+sensor on `Wire`, the panel on `Wire1` — so neither driver can stall the other. The four button pins are wired, named in
 `core/Config.h` and read
 through [hal/impl/Buttons.h](./libraries/VacuumCore/src/hal/impl/Buttons.h), which arms them on
 change interrupts, settles the debounce on each read, and classifies a press as short, long or
@@ -201,6 +203,23 @@ grade — expect ±3–5 % — so `BATTERY_CALIBRATION` in
 [core/Config.h](./libraries/VacuumCore/src/core/Config.h) trims the divider against a meter. A
 reading below 1 V is treated as "no pack fitted" rather than a permanent 0 %, and nothing acts
 on a low battery: the icon and the `batt` key are the whole story.
+
+### Buzzer
+
+A passive piezo on GPIO12, driven directly from one LEDC channel at 50 % duty. A series resistor
+sets the volume; no transistor is needed:
+
+```
+ESP32 GPIO12 ── 100R ── piezo ── GND
+```
+
+The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone=2000,500` and
+`buzzer play=a4:1000,c6:500`; a routine uses `buzzer.tone(2000, 500)` and
+`buzzer.play("a4 1000, c6 500")`. A tone with a 0 ms duration runs until it is stopped. The timer
+lives in the main loop, so nothing blocks.
+
+GPIO12 is the 5-way button module's fifth key on the POC rig. The firmware reads only four keys,
+so that pin is free for the piezo; a board that wants the fifth key back has to move the buzzer.
 
 ## Building
 
@@ -345,9 +364,10 @@ stay in the routine's own `/routines/<name>.ini`, read and written by `store`. A
 `describe()` simply has no settings view.
 
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
-the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `routines`
-(register, switch, list, and get a registered object) and `store` (its own values, kept across a
-power cycle, or another registered routine's by name).
+the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `buzzer`
+(a timed tone, a note sequence, or silence), `routines` (register, switch, list, and get a
+registered object) and `store` (its own values, kept across a power cycle, or another registered
+routine's by name).
 
 The full surface — every call, what it returns, the fields of each record, and what the overlay
 draws over a page — is in [docs/routines.md](./docs/routines.md).
@@ -488,4 +508,5 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
 * [x] LittleFS storage: a mount at boot, a persistent display unit, and a data-folder upload task
 * [x] Berry routines: a vendored interpreter, a `/routines/*.be` registry, and a scripted
-  disconnected page with `vacuum`, `screen`, `buttons` and `routines` bindings
+  disconnected page with `vacuum`, `screen`, `buttons`, `buzzer`, `routines` and `store` bindings
+* [x] Passive piezo: a timed tone and a non-blocking note-sequence player on GPIO12

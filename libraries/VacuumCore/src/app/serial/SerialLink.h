@@ -85,6 +85,7 @@ class SerialLink {
   bool writeDevice(const FieldWrite* writes, uint8_t count);
   bool writeVacuum(const FieldWrite* writes, uint8_t count);
   bool writeLink(const FieldWrite* writes, uint8_t count);
+  bool writeBuzzer(const FieldWrite* writes, uint8_t count);
 
   // --- actions -------------------------------------------------------------
   void deviceReboot();

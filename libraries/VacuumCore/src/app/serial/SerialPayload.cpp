@@ -142,6 +142,28 @@ void readAttached(const WireView& view, Items& out) {
   out.add("attached", view.hostAttached ? "1" : "0");
 }
 
+void readBuzzerTone(const WireView& view, Items& out) {
+  BuzzerPlayer& buzzer = view.context.buzzer();
+  if (!buzzer.sounding()) {
+    out.add("tone", nullptr);
+    return;
+  }
+  // The same compact `hz,ms` the write takes: the frequency now and what is left of it.
+  String value = String((uint32_t)buzzer.frequencyHz());
+  value += ',';
+  value += String(buzzer.remainingMs(millis()));
+  out.add("tone", value.c_str());
+}
+
+void readBuzzerPlay(const WireView& view, Items& out) {
+  const String& sequence = view.context.buzzer().sequence();
+  out.add("play", sequence.length() > 0 ? sequence.c_str() : nullptr);
+}
+
+void readBuzzerPlaying(const WireView& view, Items& out) {
+  out.addFlag("playing", view.context.buzzer().playing());
+}
+
 }  // namespace
 
 // --- the surface, as data --------------------------------------------------
@@ -184,6 +206,12 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"term", true, "text", nullptr, nullptr, nullptr, nullptr, readTerm},
       {"attached", false, "bool", nullptr, nullptr, nullptr, nullptr, readAttached},
   };
+  static const FieldSpec kBuzzerFields[] = {
+      {"tone", true, "text", "Hz", nullptr, &cfg::BUZZER_MIN_HZ, &cfg::BUZZER_MAX_HZ,
+       readBuzzerTone},
+      {"play", true, "text", nullptr, nullptr, nullptr, nullptr, readBuzzerPlay},
+      {"playing", false, "bool", nullptr, nullptr, nullptr, nullptr, readBuzzerPlaying},
+  };
 
   static const ActionSpec kDeviceActions[] = {
       {"reboot", &SerialLink::deviceReboot},
@@ -202,6 +230,7 @@ const ResourceSpec* SerialLink::resources(uint8_t& count) {
       {"link", kLinkFields, countOf(kLinkFields), nullptr, 0, &SerialLink::writeLink},
       {"device", kDeviceFields, countOf(kDeviceFields), kDeviceActions, countOf(kDeviceActions),
        &SerialLink::writeDevice},
+      {"buzzer", kBuzzerFields, countOf(kBuzzerFields), nullptr, 0, &SerialLink::writeBuzzer},
   };
 
   count = countOf(kResources);

@@ -361,6 +361,49 @@ const bnfuncinfo kButtonsLibrary[] = {
     {nullptr, nullptr},
 };
 
+// --- buzzer ----------------------------------------------------------------
+
+// A routine asks for a tone with a duration; 0 ms means until off(). A frequency outside the
+// machine's range is clamped rather than dropped, and a non-positive one is silence.
+int buzzerTone(bvm* vm) {
+  if (be_top(vm) < 2) {
+    be_raise(vm, "type_error", "buzzer.tone(hz, duration_ms)");
+  }
+  if (gContext == nullptr) be_return_nil(vm);
+
+  float hz = (float)argReal(vm, 1);
+  const bint duration = argInt(vm, 2);
+  if (hz <= 0.0f || duration < 0) {
+    gContext->buzzer().off();
+    be_return_nil(vm);
+  }
+  if (hz < cfg::BUZZER_MIN_HZ) hz = cfg::BUZZER_MIN_HZ;
+  if (hz > cfg::BUZZER_MAX_HZ) hz = cfg::BUZZER_MAX_HZ;
+  gContext->buzzer().tone((uint16_t)hz, (uint32_t)duration);
+  be_return_nil(vm);
+}
+
+int buzzerPlay(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "buzzer.play(sequence)");
+  }
+  const bool ok = gContext != nullptr && gContext->buzzer().play(argText(vm, 1));
+  be_pushbool(vm, ok);
+  be_return(vm);
+}
+
+int buzzerOff(bvm* vm) {
+  if (gContext != nullptr) gContext->buzzer().off();
+  be_return_nil(vm);
+}
+
+const bnfuncinfo kBuzzerLibrary[] = {
+    {"tone", buzzerTone},
+    {"play", buzzerPlay},
+    {"off", buzzerOff},
+    {nullptr, nullptr},
+};
+
 // --- routines --------------------------------------------------------------
 
 int routinesRegister(bvm* vm) {
@@ -511,6 +554,7 @@ void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& log
   installModule(vm, "vacuum", kVacuumLibrary);
   installModule(vm, "screen", kScreenLibrary);
   installModule(vm, "buttons", kButtonsLibrary);
+  installModule(vm, "buzzer", kBuzzerLibrary);
   installModule(vm, "routines", kRoutinesLibrary);
   installModule(vm, "store", kStoreLibrary);
 

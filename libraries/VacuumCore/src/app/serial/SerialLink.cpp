@@ -418,6 +418,65 @@ bool SerialLink::writeLink(const FieldWrite* writes, uint8_t count) {
   return applyTerminator(writes[0].value);
 }
 
+bool SerialLink::writeBuzzer(const FieldWrite* writes, uint8_t count) {
+  // `tone` and `play` are two answers to one question, so a command may carry one of them.
+  if (count != 1) {
+    errBadArgument(count > 1 ? writes[1].field->name : nullptr);
+    return false;
+  }
+
+  const FieldWrite& write = writes[0];
+  if (same(write.field->name, "tone")) {
+    if (same(write.value, "-")) {
+      context_->buzzer().off();
+      return true;
+    }
+
+    const char* comma = strchr(write.value, ',');
+    if (comma == nullptr) {
+      errBadArgument(write.value);
+      return false;
+    }
+
+    char hzText[16];
+    const size_t hzLength = (size_t)(comma - write.value);
+    if (hzLength == 0 || hzLength >= sizeof(hzText)) {
+      errBadArgument(write.value);
+      return false;
+    }
+    memcpy(hzText, write.value, hzLength);
+    hzText[hzLength] = '\0';
+
+    float hz = 0.0f;
+    uint32_t duration = 0;
+    if (!parseFloat(hzText, hz) || !parseU32(comma + 1, duration)) {
+      errBadArgument(write.value);
+      return false;
+    }
+    if (hz < *write.field->min || hz > *write.field->max) {
+      errOutOfRange(write.field->name, hzText, write.field->min, write.field->max);
+      return false;
+    }
+    context_->buzzer().tone((uint16_t)hz, duration);
+    return true;
+  }
+
+  if (same(write.field->name, "play")) {
+    if (same(write.value, "-")) {
+      context_->buzzer().off();
+      return true;
+    }
+    if (!context_->buzzer().play(write.value)) {
+      errBadArgument(write.value);
+      return false;
+    }
+    return true;
+  }
+
+  errUnsupported(write.field->name);
+  return false;
+}
+
 // --- framing ---------------------------------------------------------------
 
 bool SerialLink::applyTerminator(const char* token) {

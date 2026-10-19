@@ -215,6 +215,30 @@ Holding **OK for 3 s** is the page's way out: it stops and vents, then hands the
 same object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
 disk; a routine that was left can be brought back with `routines.set_active()`.
 
+## `buzzer` — the piezo
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `buzzer.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `buzzer.off()`; `hz` is clamped to `BUZZER_MIN_HZ` … `BUZZER_MAX_HZ` |
+| `buzzer.play(sequence)` | `bool` | a sequence of note/duration pairs; false when malformed |
+| `buzzer.off()` | — | silence and stop any sequence |
+
+`play` takes note names with an optional `#` or `b`, then one octave digit (`a4`, `c#5`, `bb3`); `r`
+is a rest. Durations are milliseconds. Note/duration pairs may be separated by spaces, commas or
+colons:
+
+```berry
+buzzer.tone(2000, 500)
+buzzer.play("a4 1000, c6 500, a4 500")
+buzzer.play("a4:1000,c6:500")
+buzzer.off()
+```
+
+The player is non-blocking: `tone` and `play` start a schedule and return, and the firmware advances
+it in the loop. A note outside the buzzer's range makes `play` return false rather than clamp. A
+non-positive `hz` means silence. A routine that starts a tone or sequence owns stopping it before it
+leaves the page; a sequence stops itself at the end.
+
 ## `routines` — the registry
 
 | Call | Returns | Notes |

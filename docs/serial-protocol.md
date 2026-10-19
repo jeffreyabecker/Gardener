@@ -16,8 +16,8 @@ This document is the proto 3 surface: commands are resource-first and every repl
 shape (§3). It replaces the 0.5.0 wire wholesale rather than adding to it; §14 lists the old
 spellings next to their replacements so a controller can be migrated mechanically.
 
-`vacuum`, `panel`, `link` and `device` are what fw 0.6.0 answers, and `help` lists them with their
-fields, actions and bounds (§10).
+`vacuum`, `panel`, `link`, `device` and `buzzer` are what fw 0.6.0 answers, and `help` lists them
+with their fields, actions and bounds (§10).
 
 ## 1. The port
 
@@ -64,7 +64,7 @@ item     = key "=" value                ; nothing else is a payload item
 row      = items
 key      = ALPHA *( ALPHA / DIGIT / "_" )
 value    = 1*( %x21-7E )
-resource = vacuum / panel / link / device / help
+resource = vacuum / panel / link / device / buzzer / help
 op       = field "=" value *( SP field "=" value )   ; write one or more fields
          | field                                     ; read a field
          | action                                    ; that resource's action list
@@ -83,7 +83,9 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   explicitly disabled, and only a field whose disabled state has a name (`log`, `term`)
   uses it.
 * Values never contain a space, and the first `=` separates the key from the value, so a value
-  may contain `=`, `|` or `,` with no quoting. Lists are never packed into a value (§10).
+  may contain `=`, `|` or `,` with no quoting. Lists are never packed into a value (§10); the
+  buzzer's compact `tone` and `play` notation is a domain value of its own, not a protocol list
+  (§15).
 * A line starting with `#` is ignored, so a script can carry comments.
 * A command the device does not consume is `bad_argument`: no verb quietly drops a stray
   argument, and no verb accepts one it has no use for.
@@ -281,12 +283,13 @@ are abridged: a real one carries a row per field and a row per action.
 
 ```
 -> help
-<- ok result=help rows=4
+<- ok result=help rows=5
 <- resource=vacuum fields=9 actions=3
 <- resource=panel fields=2 actions=0
 <- resource=link fields=2 actions=0
 <- resource=device fields=7 actions=1
-<- end result=help rows=4
+<- resource=buzzer fields=3 actions=0
+<- end result=help rows=5
 -> help vacuum
 <- ok result=help resource=vacuum rows=12
 <- field=target type=float access=rw unit=kPa min=5.0
@@ -308,7 +311,7 @@ Three row shapes, and the field one carries the bounds a write is held to:
 | field | `field=<name> type=<int\|float\|bool\|choice\|text> access=<r\|rw>` and, where the field has one, `min=` / `max=` / `choices=` / `unit=` |
 | action | `action=<name>` |
 
-The firmware answers four resources, and `help` names every field and action it can be asked to
+The firmware answers five resources, and `help` names every field and action it can be asked to
 do.
 
 `help` is the only multi-line reply a controller can get without asking for one, and every
@@ -464,3 +467,51 @@ Three things changed that are not a rename, and a migrating controller has to kn
 * **Failures say what was wrong.** `out_of_range` carries the field, the value and the bound;
   `not_ready` carries a reason. Nothing has to go to the diagnostics stream to be
   diagnosable, which matters because `device log=off` is a legitimate thing for a client to do.
+
+## 15. `buzzer` — the piezo
+
+| Field | Access | Values | Notes |
+| --- | --- | --- | --- |
+| `tone` | rw | `<hz>,<ms>` or `-` | a tone; `ms=0` runs until `tone=-`; reading reports the current frequency and remaining ms |
+| `play` | rw | `<note>:<ms>,...` or `-` | a note sequence; reading reports the canonical sequence while it runs |
+| `playing` | r | `on` / `off` | a tone or sequence is still running; a rest still counts |
+
+`buzzer tone=2000,500` starts a 500 ms tone; `buzzer tone=2000,0` runs until it is stopped.
+`buzzer tone=-` and `buzzer play=-` silence and stop. `buzzer play=a4:1000,c6:500` starts a
+sequence. Writing `tone` and `play` in one command is refused: they are two answers to one
+question.
+
+`play` takes note names with an optional `#` or `b`, then one octave digit (`a4`, `c#5`, `bb3`); `r`
+is a rest. Durations are milliseconds and must be positive. The frequency uses equal temperament
+with A4 = 440 Hz; a note outside the buzzer's 100–10000 Hz range is a bad argument, not a clamp.
+
+```
+-> help buzzer
+<- ok result=help resource=buzzer rows=3
+<- field=tone type=text access=rw unit=Hz min=100.0 max=10000.0
+<- field=play type=text access=rw
+<- field=playing type=bool access=r
+<- end result=help resource=buzzer rows=3
+```
+
+The two values are the buzzer's own compact notation: `2000,500` is a frequency and a duration, and
+`a4:1000,c6:500` is a phrase. They are single domain values, not protocol item lists, which is why
+they are allowed to contain the comma and colon the rest of the wire uses only in values.
+
+```
+-> buzzer get
+<- ok tone=- play=- playing=off
+-> buzzer tone=2000,500
+<- ok tone=2000,500
+-> buzzer get
+<- ok tone=2000,412 play=- playing=on
+-> buzzer play=a4:1000,c6:500
+<- ok play=a4:1000,c6:500
+-> buzzer get
+<- ok tone=440,610 play=a4:1000,c6:500 playing=on
+-> buzzer tone=-
+<- ok tone=-
+```
+
+A tone or sequence continues until it is stopped or its own time runs out; the controller times a
+long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop it".

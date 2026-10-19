@@ -66,6 +66,19 @@ bool parseFloat(const char* text, float& out) {
   return true;
 }
 
+bool parseU32(const char* text, uint32_t& out) {
+  if (!text || *text == '\0') return false;
+  uint32_t value = 0;
+  for (const char* cursor = text; *cursor != '\0'; cursor++) {
+    if (*cursor < '0' || *cursor > '9') return false;
+    const uint32_t digit = (uint32_t)(*cursor - '0');
+    if (value > (UINT32_MAX - digit) / 10) return false;
+    value = value * 10 + digit;
+  }
+  out = value;
+  return true;
+}
+
 char* splitValue(char* token) {
   char* equals = strchr(token, '=');
   if (!equals) return nullptr;

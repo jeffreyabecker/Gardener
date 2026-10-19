@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
+#include "app/BuzzerPlayer.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -22,13 +23,14 @@ namespace gardener {
 class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
-             ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum, Storage* storage,
-             Settings* settings, Routines* routines)
+             ButtonPanel* buttons, BuzzerPlayer* buzzer, Overlay* overlay, VacuumSystem* vacuum,
+             Storage* storage, Settings* settings, Routines* routines)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
         battery_(battery),
         buttons_(buttons),
+        buzzer_(buzzer),
         overlay_(overlay),
         vacuum_(vacuum),
         storage_(storage),
@@ -40,6 +42,7 @@ class AppContext {
   VentValve& vent() { return *vent_; }
   Battery& battery() { return *battery_; }
   ButtonPanel& buttons() { return *buttons_; }
+  BuzzerPlayer& buzzer() { return *buzzer_; }
   // The overlay is the display — every drawing verb goes through it — so both views are the same
   // object. The concrete one is here because the links are the loop's to report.
   Display& display() { return *overlay_; }
@@ -56,6 +59,7 @@ class AppContext {
   VentValve* vent_;
   Battery* battery_;
   ButtonPanel* buttons_;
+  BuzzerPlayer* buzzer_;
   Overlay* overlay_;
   VacuumSystem* vacuum_;
   Storage* storage_;

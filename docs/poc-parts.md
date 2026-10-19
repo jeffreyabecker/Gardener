@@ -42,10 +42,15 @@ GPIO  8  9            I2C     MPRLS 0x18 (Wire)
 GPIO 17 18            I2C     panel 0x3C (Wire1)
 GPIO  6               pump
 GPIO  5               valve
-GPIO  1  2  10 11 12  buttons 5-way (four keys read)
+GPIO  1  2  10 11     buttons 5-way (four keys read)
 GPIO  4               battery sense (reserved)
+GPIO 12               buzzer (passive piezo)
 GPIO  7 13 14 15 16   spare
 ```
+
+A passive piezo on GPIO12 is an add-on to this list; the firmware drives it directly from one
+LEDC channel. GPIO12 is the 5-way module's fifth key in the original wiring, but the firmware reads
+only four keys, so that key is not wired on a build that fits the buzzer.
 
 ```
    pump inlet ──────┐
@@ -91,8 +96,8 @@ Bench-only, to fix once the loop works.
   and put 100 nF at the module. First upgrade if that is not enough: an AMS1117-3.3 off the 5 V
   rail, for the sensor alone.
 * No chamber, so no realistic pump-down time and no leak measurement.
-* The five buttons are wired and the firmware reads four of them. The module is a 5-way switch —
-  up, down, left, right, centre — so it costs five GPIOs, not four.
+* The 5-way module costs five GPIOs but the firmware reads four keys. GPIO12, the fifth key's pin,
+  drives the buzzer instead; the key is not wired on a build that fits the piezo.
 
 ## To investigate
 

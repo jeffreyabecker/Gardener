@@ -23,6 +23,7 @@ bool parseFlag(const char* text, bool& out);
 
 // An argument that does not parse in full is a bad_argument, never a silent zero.
 bool parseFloat(const char* text, float& out);
+bool parseU32(const char* text, uint32_t& out);
 
 // Splits `field=value` in place at the first '=' and hands back the value, or null when the
 // token has no '=' at all — which is how a read is told from a write. The shape is all this

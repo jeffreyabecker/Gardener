@@ -63,6 +63,7 @@ bool App::begin() {
   bool pumpOk = context_.pump().begin();
   context_.vent().begin();
   bool batteryOk = context_.battery().begin();
+  bool buzzerOk = context_.buzzer().begin();
   context_.vacuum().begin();
 
   // The device's files are mounted once, before anything that reads a preference. A partition with
@@ -85,6 +86,7 @@ bool App::begin() {
   // worth saying.
   logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
   logger_->info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
+  logger_->info(buzzerOk ? "buzzer: ready" : "buzzer: PWM unavailable");
   logger_->info(context_.vent().energiseWhenOpen() ? "vent: normally closed"
                                                    : "vent: normally open");
   logger_->info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
@@ -207,6 +209,10 @@ void App::update() {
   // Commands first, against the machine as the last control tick left it, so a reply
   // describes something that actually happened rather than a view built mid-command.
   link_->poll(now);
+
+  // The buzzer's schedule advances once per pass. A command handled above starts a tone now; a
+  // routine's poll at the end of the pass starts one that is serviced on the next pass.
+  context_.buzzer().update(now);
 
   // A controller that goes away releases the chamber (Q4).
   if (link_->consumeLinkLost()) {

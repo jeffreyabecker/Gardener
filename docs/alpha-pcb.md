@@ -40,7 +40,7 @@ well inside one channel.
 | 3.3 V buck | Retained by request. Header pins mate with a 0.1" female header; check pitch and pin order. Its output is the load rail. |
 | MPRLS breakout | The bare sensor is the same calibrated part with the same port. The breakout adds only an LDO and level shifter, which are harmless at 3.3 V, and it is already tested. Revisit after the closed-loop vacuum control — sensor, PID, pump — is proven on the carrier board. |
 | OLED | Panel part; a 4-pin header is the right amount of integration. |
-| Button module | Mechanical; a header carrying 3.3 V, GND and five keys keeps it panel-mountable. The firmware reads four keys today. |
+| Button module | Mechanical; a header carrying 3.3 V, GND and five keys keeps it panel-mountable. The firmware reads four keys today; GPIO12, the fifth key's pin on the POC rig, drives the piezo instead. |
 | Pump, valve, tube, tee | Off-board by nature. |
 
 The breadboard and jumpers are gone; the board is what replaces them.
