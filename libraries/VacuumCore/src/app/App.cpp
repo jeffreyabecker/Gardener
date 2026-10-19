@@ -69,6 +69,10 @@ bool App::begin() {
   Storage::Mount mount = context_.storage().begin();
   context_.settings().begin();
 
+  // The interpreter comes up here and stays: routines are loaded into it later, and a device with
+  // no routines simply never enters it.
+  bool vmOk = context_.routines().begin();
+
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
   logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
@@ -100,6 +104,10 @@ bool App::begin() {
   String stored = "settings: unit=";
   stored += displayUnitInfo(context_.settings().unit()).name;
   logger_->info(stored.c_str());
+
+  String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";
+  vm += String((uint32_t)ESP.getFreeHeap());
+  logger_->info(vm.c_str());
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

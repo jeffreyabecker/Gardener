@@ -8,6 +8,7 @@
 #include "app/Settings.h"
 #include "app/Storage.h"
 #include "app/VacuumSystem.h"
+#include "app/disconnected-ui/Routines.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
@@ -54,7 +55,9 @@ AppContext buildAppContext() {
   auto* overlay = new Overlay(display, battery, system);
   auto* storage = new Storage();
   auto* settings = new Settings(*storage);
-  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, storage, settings);
+  auto* routines = new Routines();
+  return AppContext(sensor, pump, vent, battery, buttons, overlay, system, storage, settings,
+                    routines);
 }
 
 }  // namespace gardener

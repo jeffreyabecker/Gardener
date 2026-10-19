@@ -7,6 +7,7 @@
 #include "app/Settings.h"
 #include "app/Storage.h"
 #include "app/VacuumSystem.h"
+#include "app/disconnected-ui/Routines.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
 #include "hal/Display.h"
@@ -22,7 +23,7 @@ class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
              ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum, Storage* storage,
-             Settings* settings)
+             Settings* settings, Routines* routines)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -31,7 +32,8 @@ class AppContext {
         overlay_(overlay),
         vacuum_(vacuum),
         storage_(storage),
-        settings_(settings) {}
+        settings_(settings),
+        routines_(routines) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -45,6 +47,7 @@ class AppContext {
   VacuumSystem& vacuum() { return *vacuum_; }
   Storage& storage() { return *storage_; }
   Settings& settings() { return *settings_; }
+  Routines& routines() { return *routines_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -57,6 +60,7 @@ class AppContext {
   VacuumSystem* vacuum_;
   Storage* storage_;
   Settings* settings_;
+  Routines* routines_;
 };
 
 }  // namespace gardener
