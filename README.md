@@ -45,7 +45,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [libraries/RLEBitmap/](./libraries/RLEBitmap) | The run-length bitmap decoder the panel's images use (vendored) |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
-| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
+| [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, domains and their commands, help topics, error items, states, modes, rates |
 | [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the six modules, and the rules that follow from the embedded interpreter |
 | [docs/gestures.md](./docs/gestures.md) | The key contract: reserved holds, the standard settings and Back gestures, and the matrix of every press |
 | [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
@@ -324,7 +324,7 @@ The display unit is stored in `/settings.ini` and restored at boot:
 unit=mmhg
 ```
 
-So `device unit=mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
+So `device set unit mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
 are carried through a write rather than dropped; comments and spacing are not kept.
 
 A routine keeps its own values the same way, in one file named after it beside its source
@@ -403,23 +403,23 @@ Open the port at 115200 8N1 and send newline terminated commands. Every command 
 diagnostics rather than replies:
 
 ```
--> device get
-<- ok proto=3 fw=0.6.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on
--> vacuum target=40
-<- ok target=40.0
+-> device get all
+<- ok device get proto=4 fw=0.7.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
+-> vacuum target 40
+<- ok vacuum target target=40.0
 -> vacuum start
-<- ok result=start state=PULL
--> vacuum get
-<- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD batt=78 sensor=1 fault=none up=123456
+<- ok vacuum start state=PULL
+-> vacuum get all
+<- ok vacuum get kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=123456
 -> vacuum stop
-<- ok result=stop state=VENT
+<- ok vacuum stop state=VENT
 ```
 
 That last pair is the whole run model in miniature: the device reaches the target, reports
 `HOLD`, and waits. The controller times the hold and sends `vacuum stop` when it is done — the
 device has no duration of its own and will hold until told, and no command that takes one.
 
-The full grammar, resource tables, error codes and state model are in
+The full grammar, domain commands, error codes and state model are in
 [docs/serial-protocol.md](./docs/serial-protocol.md). Anything that can open a serial port and
 send a line works as a client: there is none in this repository at the moment, deliberately,
 while the interface is being reworked.
@@ -484,7 +484,7 @@ Protections, all of which act without consulting the controller:
 
 Those five are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
-`vacuum get` and keep targets no deeper than it.
+`vacuum get all` and keep targets no deeper than it.
 
 ## Safety
 
@@ -515,7 +515,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] 1S Li-ion battery gauge
 * [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery, the run state and the connections
 * [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
-* [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
+* [x] Line protocol over USB CDC: domain-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read,
   classifying short, long and double presses, exposing the running hold, and stopping on a 3 s Back
   hold

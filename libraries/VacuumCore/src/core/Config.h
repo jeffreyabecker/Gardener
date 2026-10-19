@@ -15,11 +15,11 @@
 namespace gardener {
 namespace cfg {
 
-constexpr const char* FIRMWARE_VERSION = "0.6.0";
+constexpr const char* FIRMWARE_VERSION = "0.7.0";
 // The wire revision, reported by `device get`. It moves when a command's meaning moves, not when
 // one is added: proto 3 is the resource-first surface with one pressure reading, and a controller
 // that does not know a revision should stop rather than guess.
-constexpr uint32_t PROTOCOL_VERSION = 3;
+constexpr uint32_t PROTOCOL_VERSION = 4;
 
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
@@ -135,16 +135,9 @@ constexpr uint32_t UI_REFRESH_MS = 250;
 // The device is a serial peripheral: every decision comes from the controller, so what
 // lives here is only what the firmware must own to be fast or safe.
 constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB CDC ignores it
-// A command line is a resource and an op. Anything longer is refused rather than truncated.
+// A command header is a domain, a verb and its arguments. Anything longer is refused rather than
+// truncated. A command body, when a domain defines one, follows the header and is not bounded here.
 constexpr uint16_t COMMAND_LINE_MAX = 128;
-// Where the device looks for the end of a command. A host can point it elsewhere with
-// `link term`, which turns off newline framing so a whole payload — a program's source — arrives
-// as one command instead of in chunks. That payload is far longer than a command line, so a
-// custom terminator raises the ceiling to COMMAND_PAYLOAD_MAX, which is also what bounds the
-// receive buffer when a host never sends its terminator.
-constexpr const char* LINE_TERMINATOR = "\n";
-constexpr uint16_t TERMINATOR_MAX = 16;      // longest a host may set it to
-constexpr uint32_t COMMAND_PAYLOAD_MAX = 64u * 1024u;
 // With USB CDC the presence of a host is observable and its loss stops the run. On a plain
 // UART it is not, so a lost link is simply never reported.
 

@@ -120,7 +120,7 @@ What that costs, stated plainly:
 - **A `poll` that never returns blocks the loop.** There is no instruction budget in this build, so
   returning is a convention the author keeps. Keep `poll` short and let it return.
 - **`print` writes nowhere.** Use `vacuum.log(text)`; it reaches the serial line as a `[I]` record
-  and honours `device log=off`.
+  and honours `device set log off`.
 - A routine that raises is **dropped**: one `[E]` line names the routine, the method and the
   message, and the page falls back to the mark until the next boot.
 
@@ -218,7 +218,7 @@ readout. `inverted` draws paper on ink.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device unit=` takes |
+| `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
 | `suffix` | string | what the glass prints after the number |
 | `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |

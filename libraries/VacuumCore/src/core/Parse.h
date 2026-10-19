@@ -1,41 +1,28 @@
-#include "app/serial/LineGrammar.h"
+#pragma once
 
-#include <string.h>
+#include <stdint.h>
+#include <strings.h>
 
 namespace gardener {
 
-void lower(char* text) {
-  for (; *text != '\0'; text++) {
-    if (*text >= 'A' && *text <= 'Z') *text = (char)(*text - 'A' + 'a');
-  }
-}
+// Strict scalar parsers. A value that does not parse in full is a bad_argument, never a silent
+// zero. Command tokenization belongs to the domains; these only turn one token into a value.
 
-bool same(const char* a, const char* b) { return strcmp(a, b) == 0; }
-
-bool sameFold(const char* a, const char* b) {
-  for (;; a++, b++) {
-    char ca = *a;
-    char cb = *b;
-    if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
-    if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
-    if (ca != cb) return false;
-    if (ca == '\0') return true;
-  }
-}
-
-bool parseFlag(const char* text, bool& out) {
-  if (sameFold(text, "on")) {
+// A flag value: `on` or `off`, either case.
+inline bool parseFlag(const char* text, bool& out) {
+  if (!text) return false;
+  if (strcasecmp(text, "on") == 0) {
     out = true;
     return true;
   }
-  if (sameFold(text, "off")) {
+  if (strcasecmp(text, "off") == 0) {
     out = false;
     return true;
   }
   return false;
 }
 
-bool parseFloat(const char* text, float& out) {
+inline bool parseFloat(const char* text, float& out) {
   if (!text || *text == '\0') return false;
   const char* cursor = text;
   bool negative = false;
@@ -66,7 +53,7 @@ bool parseFloat(const char* text, float& out) {
   return true;
 }
 
-bool parseU32(const char* text, uint32_t& out) {
+inline bool parseU32(const char* text, uint32_t& out) {
   if (!text || *text == '\0') return false;
   uint32_t value = 0;
   for (const char* cursor = text; *cursor != '\0'; cursor++) {
@@ -77,13 +64,6 @@ bool parseU32(const char* text, uint32_t& out) {
   }
   out = value;
   return true;
-}
-
-char* splitValue(char* token) {
-  char* equals = strchr(token, '=');
-  if (!equals) return nullptr;
-  *equals = '\0';
-  return equals + 1;
 }
 
 }  // namespace gardener

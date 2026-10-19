@@ -1,5 +1,8 @@
 # Plan: proposed `fs` serial surface
 
+Status: proposal written against the proto 3 grammar. Rebase it on the proto 4 domain framing when
+the `fs` domain lands.
+
 ## Problem
 
 The device's LittleFS contents — `/routines`, `/modules`, `/assets`, `/settings.ini` — can only be

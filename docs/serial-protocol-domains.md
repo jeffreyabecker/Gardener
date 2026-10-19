@@ -1,7 +1,7 @@
 # Domain-first serial protocol
 
-Status: proposed revision `proto=4`. This is the working design; `docs/serial-protocol.md` remains
-the current proto 3 surface until this is implemented.
+Status: implemented as `proto=4`. This is the design record; `docs/serial-protocol.md` is the
+normative surface.
 
 ## Problem
 
@@ -180,29 +180,31 @@ writes the top-level page; a target domain's `help(topic)` writes its own page.
   };
   ```
 
-  `DomainContext { AppContext& app; Wire& wire; bool& logEnabled; }` is built by `SerialLink` and
+  `DomainContext { AppContext& app; Stream& out; bool& logEnabled; }` is built by `SerialLink` and
   passed to every domain at construction. The command stream is an argument to `execute`, not part
   of the context: the domain reads and tokenizes everything after its own name, including a body.
+  `out` is the reply side of the port, so the domain formats its own reply.
+
+  There is no separate `Items`, `FieldTable` or `Reply` class. `Domain.h` holds the item builders
+  (`addItem`/`addItemU32`/`addItemFloat`/`addItemFlag`), the `FieldSpec` table and the
+  `findField`/`readField`/`readFields` helpers, plus the opt-in
+  `replyOk`/`replyErr`/`replyRow`/`replyEnd` helpers. A domain that needs a different reply shape —
+  the future `fs read` with its raw body — writes to `ctx.out` itself.
 
   `DomainList` holds the domains in help order and offers `find`, `count` and `at`. `SerialLink`
   owns it; `HelpDomain` holds a reference to it and is constructed last with the list, then added
   to it.
-- `app/serial/Wire.h/.cpp` — headers, the rows body, the error helpers, and value quoting. It owns
-  the reply side of the port; `SerialLink` owns the receive side. The bytes body is part of the
-  contract but is only implemented when `fs read` arrives.
-- `app/serial/FieldTable.h/.cpp` — the shared `FieldSpec` table, the `get all`/`get <field>` reader,
-  and field rows for help. It is a helper a domain calls after it has tokenized its own verb; the
-  link never parses fields.
 - `core/Parse.h` — the strict scalar parsers (`parseFloat`, `parseU32`, `parseFlag`) moved out of
   the deleted `LineGrammar`. It parses values, not command lines.
 - `app/serial/Domains.h` plus `app/serial/Domains/Device.cpp`, `Vacuum.cpp`, `Buzzer.cpp`,
   `Help.cpp` — one private class per domain with a factory. Each class tokenizes its own verbs,
-  owns its help text, and lives in its own file. `HelpDomain`'s factory also takes the
-  `DomainList&`.
+  owns its help text and its reply shape, and lives in its own file. `HelpDomain`'s factory also
+  takes the `DomainList&`.
 - `SerialLink` reads the first token of each command, finds the domain in the list, and hands it
   the command stream positioned immediately after that token. The command stream is the receive
-  buffer and the port behind one `Stream`. `SerialLink` does not parse verbs, fields or arguments.
-  It also owns the receive buffer, the domain list, host presence, and diagnostics. It constructs
+  buffer and the port behind one `Stream`. `SerialLink` does not parse verbs, fields or arguments,
+  and it does not format domain replies; it writes only the link's own errors and diagnostics. It
+  owns the receive buffer, the domain list, host presence and the diagnostics gate. It constructs
   the domains in help order and holds them for the device's lifetime. Host presence stays here
   because no domain exposes it on the wire.
 
@@ -213,12 +215,13 @@ writes the top-level page; a target domain's `help(topic)` writes its own page.
   `same`/`sameFold` and `lower` go with it; case folding uses `String::toLowerCase` and comparison
   uses `String::equalsIgnoreCase`. The strict `parseFloat`, `parseU32` and `parseFlag` helpers move
   to `core/Parse.h` because more than one domain needs them.
-- `Items` quotes values that need it and stops replacing whitespace with `_`.
+- `Items` is not a class: the item builders and the opt-in reply helpers live in `Domain.h`, and
+  each domain formats its own reply text with them.
 - The battery readers move from the vacuum table to the device table: `device get all` owns
   `batt_v` and `batt_pct`, and `vacuum get all` no longer has `batt`.
 - `Config.h`: `PROTOCOL_VERSION = 4`; `FIRMWARE_VERSION = "0.7.0"`.
-- Delete `SerialSurface.h`, `SerialPayload.cpp`, `SerialHelp.cpp`; their roles move to `Domain.h`,
-  `FieldTable`, `Wire`, and the per-domain files.
+- Delete `SerialSurface.h`, `SerialPayload.cpp`, `SerialHelp.cpp` and the old line grammar. The
+  serial directory is `Domain.h`, `Domains.h`, `SerialLink.h/.cpp` and `Domains/`.
 - `App`/`Build` construction of `SerialLink` is unchanged.
 
 ## Documentation
@@ -252,8 +255,9 @@ writes the top-level page; a target domain's `help(topic)` writes its own page.
 ## Todos
 
 1. Write the proto 4 grammar, reply, domain, help and error sections in `docs/serial-protocol.md`.
-2. Add `Domain.h` (including `DomainList`), `Wire`, `FieldTable` and `core/Parse.h`; reduce
-   `SerialLink` to reading the domain token and handing the command stream to the domain.
+2. Add `Domain.h` (including `DomainList`, `FieldSpec`, the item builders and the opt-in reply
+   helpers) and `core/Parse.h`; reduce `SerialLink` to reading the domain token, handing the
+   command stream to the domain, and writing only its own errors and diagnostics.
 3. Implement the `device`, `vacuum`, `buzzer` and `help` domains in their own files and delete the
    old table/help files.
 4. Update the README and routines examples and mark the fs proposal as pre-proto-4.
