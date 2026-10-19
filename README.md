@@ -298,7 +298,7 @@ A routine keeps its own values the same way, in one file named after it beside i
 reach another's. The `default` page uses it to bring the target back after a power cycle.
 
 Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
-1-bit bitmap of 367 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
+1-bit bitmap of 327 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
 `firmware/gardener/assets/` as a BMP and is converted with `scripts/asset.ps1`; the file
 format and the tool are in [docs/assets.md](./docs/assets.md).
 

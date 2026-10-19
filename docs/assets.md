@@ -4,7 +4,7 @@ The pictures the panel draws are files on the device, not arrays in a header: on
 under `/assets/`, written by [scripts/asset.ps1](../scripts/asset.ps1), and read once at boot.
 
 Run-length encoding is what makes this cheap. A one-bit drawing is long runs of the same pixel, so
-the 128x64 mark ships in **367 bytes** rather than the 1024 the packed array took. The decoder is
+the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array took. The decoder is
 [MHotchin/RLEBitmap](../libraries/RLEBitmap), vendored unmodified in `libraries/RLEBitmap`.
 
 ## Making an asset
@@ -28,6 +28,10 @@ there shows through.
 
 Line art wants the defaults; `-Dither` is for a photograph or a gradient, where a hard cut loses
 everything between black and white. Dithering a two-colour drawing only adds noise.
+
+The shipped mark is made with `-Threshold 224`. Its illustration is shaded, so the default cut leaves
+the lighter half of the body and the tip of the stem as paper; at 224 everything that is not the
+white background is ink, which is the whole eggplant at 1337 pixels and 327 bytes.
 
 A 16-bit BMP and a compressed one are refused with a message rather than guessed at. A 32-bit pixel
 is read as BGR with its alpha byte ignored.
