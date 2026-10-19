@@ -1,6 +1,8 @@
 # BLE control
 
 Status: design. Nothing here is implemented; the firmware today has one transport, the serial link.
+The link lifecycle is defined in [link-control.md](./link-control.md); this document applies it to
+BLE.
 
 A phone should be able to watch and drive the device over Bluetooth Low Energy. This is
 deliberately **not** the serial protocol: a phone speaks GATT, so the machine is exposed as
@@ -11,17 +13,18 @@ characteristics — typed values with directions and notifications — rather th
 * One peripheral, **one central at a time**, advertising while nothing is connected.
 * The machine's readout as readable, notifying characteristics, and its commands as writes.
 * A **separate contract from the serial protocol**, not a second encoding of it (§2).
-* Both transports live at once. USB serial stays the bench interface and keeps its own rules.
+* Both transports live at once, and share the control lifecycle in
+  [link-control.md](./link-control.md).
 
 Not in scope: OTA/DFU, a byte pipe carrying lines (that is what serial is for), push of diagnostic
 text in the first version, and more than one simultaneous central.
 
 ## 2. Why a different protocol
 
-The serial surface is built for a terminal: a line grammar, a terminator a host can move, text
-items, and `help` as the discovery mechanism. A BLE client is an app with a GATT table: it binds to
-characteristics, reads typed values, subscribes to the ones it wants, and writes a value or an
-opcode.
+The serial surface is built for a terminal: a domain-first line grammar, a fixed `LF` terminator,
+text `key=value` replies, and this document as the discovery mechanism. A BLE client is an app with
+a GATT table: it binds to characteristics, reads typed values, subscribes to the ones it wants, and
+writes a value or an opcode.
 
 Carrying the line protocol over GATT would mean framing bytes into characteristics, reassembling
 across writes, an MTU story, and a text parser in every client — while giving up the two things
@@ -30,53 +33,41 @@ GATT is good at: a typed read per field and a subscription per field.
 The cost of a second contract is real, but it is paid once, in the mapping table in §4. Both
 surfaces read the same `AppContext`, so there is still one machine and no second copy of state.
 
-## 3. Safety model: presence is not a session
+## 3. Safety model: connection is not control
 
-The serial rule is that a controller that goes away releases the chamber (Q4): USB CDC presence is
-a session, and the port is the controller.
+The lifecycle is explicit and shared with serial: connect, assume control, command, release
+([link-control.md](./link-control.md)). For BLE that means:
 
-**BLE has no such rule. A central can connect without venting, and can disconnect without venting.**
+* **Connecting is read-only.** It changes nothing about the machine, the run or the panel.
+* **Assuming control is an explicit write** to the `control` characteristic. Only then are commands
+  accepted and the panel shows `ConnectedUI`.
+* **Disconnecting while controlling does nothing.** No stop, no vent, no reboot, and ownership
+  stays held; the run continues under the last commands.
+* **A write of `0` to `control` is the graceful exit**: it stops and vents, clears ownership, and
+  does not reboot.
+* **A reconnected central is read-only.** The held ownership makes its acquire busy until the
+  local reset gesture clears it.
+* **Disconnecting while only connected changes nothing.** A read-only observer can come and go
+  without touching a run.
+* **One link owns the device at a time.** A central that connects while serial owns it can read,
+  but its acquire is refused as busy.
+* **A controller that stays connected but stops responding keeps control.** There is no idle lease
+  in this design; the local reset gesture is the escape ([link-control.md](./link-control.md) §6).
 
-* Connecting changes nothing about the machine. Connecting during a run leaves the run alone.
-* Disconnecting changes nothing either. A run started over BLE continues while the phone is out of
-  range or backgrounded, which is the normal life of a phone app.
-* The serial controller's rule is untouched: if a USB host is attached and then leaves, the device
-  still stops and vents, whether or not a phone is connected.
-* What ends a run is an explicit `stop`, a fault, or the serial controller leaving. That is the same
-  set as today, minus the BLE radio.
+### 3.1 The screen follows ownership
 
-The trade is deliberate: a phone is a viewer and a control surface, not the owner of the run. If a
-lease is ever wanted — "stop if nobody has refreshed me in N seconds" — it should be an explicit
-characteristic the app writes, not a property of the connection, so the behaviour is visible in the
-contract instead of implied by it.
+The page is chosen from the one ownership record, not from `serialAttached()` or
+`ble_->connected()`. `App::update()` calls `screenFor(control.owned())`; `ConnectedUI` is what a
+controller sees, while `DisconnectedUI` is what everyone else sees, including a central that is
+connected but has not acquired control.
 
-### 3.1 The screen, which is a different question
+The overlay's serial and BLE indicators stay presence-only: they answer “is a link there?”, not
+“is a link driving?”. A connection or disconnection that does not change ownership does not repaint
+the page.
 
-The firmware chooses its page from the link: `App::screenFor()` returns `ConnectedUI` while a
-controller is attached and `DisconnectedUI` while none is, and today "attached" means
-`serialAttached()`.
-
-BLE makes that a two-source question. **A connected central is a viewer even though it is not an
-owner**, so the switch has to become `serialAttached() || ble_->connected()` — otherwise a phone can
-subscribe to every value and watch a live run while the panel in front of the operator still shows
-the boot mark, and the device looks dead while it is being driven.
-
-The two rules must not be conflated, because they answer different questions:
-
-| Question | Sources | Effect |
-| --- | --- | --- |
-| Is anyone watching? | serial attached **or** a central connected | which page is drawn |
-| Has the controller gone away? | serial presence only | whether the run is released (Q4) |
-| Does a BLE disconnect stop a run? | — | no (§3) |
-
-So `BleLink` owes the loop a `connected()` the screen can be chosen from, and `screenFor()` takes
-both flags rather than reaching for `Serial` itself. A change on either transport repaints; both
-pages are cheap to repaint and neither carries state that a swap would lose.
-
-There is a subtle failure worth naming: because BLE connects without venting, a central can appear
-during an unattended run. The screen switching to the readout is correct — something is now looking
-at a machine that is already working — and it must not be mistaken for a session starting, because
-nothing about the run changed when the radio connected.
+Acquiring control mid-run does not change the machine: the controller is taking authority, not
+starting a run, and it should read `vacuum get` before issuing commands. The panel switching to the
+readout is then a truthful statement that someone now owns the machine.
 
 ## 4. The GATT contract
 
@@ -91,17 +82,31 @@ Base: `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`
 | `kpa` | `...0002` | read, notify | float32 LE: vacuum depth below ambient |
 | `target` | `...0003` | read, write, notify | float32 LE: depth to pull to; 0 means no target |
 | `duty` | `...0004` | read, notify | float32 LE: pump duty, percent |
-| `fault` | `...0005` | read, notify | UTF-8: `latch`, `sensor`, or empty for none |
+| `fault` | `...0005` | read, notify | UTF-8: the latched fault code — `sensor` today — or empty for none |
 | `batt` | `...0006` | read, notify | uint8: percent, or `0xFF` when no gauge is fitted |
 | `command` | `...0007` | write, notify | write uint8 opcode; notify uint8 result |
 | `fw` | `...0008` | read | UTF-8: firmware version |
 | `ble_proto` | `...0009` | read | uint8: this contract's revision, `1` |
 | `unit` | `...000A` | read, write | uint8: what the panel prints pressure in — 0 kPa, 1 psi, 2 inHg, 3 mmHg |
+| `control` | `...000B` | read, write, notify | uint8: 0 not owned by this link, 1 owned by this link. Write 1 to acquire, 0 to release |
+| `sensor` | `...000C` | read, notify | uint8: 1 when a plausible pressure reading is available, 0 otherwise |
+| `floor` | `...000D` | read, notify | float32 LE: deepest reachable target, kPa |
 
 Encodings are little-endian because the part is; a float is IEEE-754, four bytes. `fw` and `fault`
 are the only text — one is a version and the other is a small closed set of codes. The `unit`
 values are the `DisplayUnit` order in `core/Units.h`, so the characteristic and the serial
-`device unit=` cannot disagree about which number means which unit.
+`device set unit` command cannot disagree about which number means which unit. The unit is the
+device's preference, not the app's: the BLE write and the serial command move the same stored
+value, so the panel, `device get` and every client see the same unit. An app that wants different
+formatting converts locally.
+
+Reads are open at the GATT layer; only the writes require encryption (§7).
+
+`control` is the explicit toggle from §3: a write of `1` asks to own the device, a write of `0`
+releases it, and the notify reports the result. It is the caller's view, so a link that is only
+connected reads `0` even when another link owns the device; its acquire is refused as busy. While
+it reads `0` the link is a read-only observer, and every write other than `control` is refused;
+`control` and the read-only characteristics are the only things it may touch.
 
 **The pressures stay in kPa whatever `unit` says.** `kpa` and `target` are the machine's own
 number, exactly as they are on the serial link; `unit` is what the glass prints, which is a
@@ -126,6 +131,7 @@ Results notified on `command`:
 | `0x02` | no valid pressure reading |
 | `0x03` | a fault is latched; reset first |
 | `0x04` | unknown opcode |
+| `0x05` | not controlling; acquire first |
 
 `start` reports the same three refusals the serial link reports, from the same
 `VacuumSystem::startRefusal()`, so the two surfaces cannot disagree about why a run will not start.
@@ -138,6 +144,8 @@ Results notified on `command`:
 | `kpa`, `duty` | every 200 ms while subscribed (5 Hz) |
 | `batt` | every 10 s while subscribed |
 | `command` | on every opcode, with its result |
+| `control` | on acquire or release, including a refused acquire |
+| `sensor`, `floor` | on change |
 
 `unit` is read and written but never notified: one central at a time means the client that writes
 it already knows, and a notify would only echo its own write back.
@@ -147,9 +155,18 @@ phone screen needs. A client that wants less simply does not subscribe.
 
 ### 4.2 What is deliberately absent
 
-`heap`, `chip`, `up`, `sensor`, `floor`, `panel w/h`, `log`, `term` and `attached` are bench and
-protocol concerns, not things a phone app shows or does. They stay on serial. In particular there
-is no `link` resource and no terminator, because there are no lines.
+`chip`, `heap`, `up`, `batt_v`, `display-size` and `log` are bench and protocol concerns, not
+things a phone app shows or does. They stay on serial. In particular there is no `link` domain and
+no terminator control, because there are no lines, and no log notify characteristic: diagnostics
+are a bench tool, and `fault` carries the operational truth.
+
+The battery crosses over as a percentage only: `batt` is `percent()`, and `batt_v` stays on serial
+because a phone showing charge does not need a second number for the same pack.
+
+`sensor` and `floor` are characteristics rather than `command` results because a client needs them
+before it offers a control: `sensor` says whether a reading can be trusted, and `floor` is the
+deepest target worth offering. Both are read and notified so a control can grey out when the
+situation changes.
 
 The display unit is the one device setting that crosses over, because it is not a bench concern:
 an app that shows a reading wants to show it the way the panel does. It still does not move the
@@ -159,17 +176,19 @@ values — see §4.
 
 `app/ble/BleLink.*` — app layer, not `hal/`, in its own folder beside `app/serial/`. BLE is not a
 device the instrument commands; it is another way to command the instrument, which is what
-`SerialLink` is. A transport is a family of files — the link, its GATT table, its payloads — so it
-gets a folder the way serial has one, rather than sitting loose in `app/` next to the machine.
+`SerialLink` is. A transport is a family of files — the link, its domain or GATT table, its
+payloads — so it gets a folder the way serial has one (`SerialLink`, `Domains/`), rather than
+sitting loose in `app/` next to the machine.
 
 ```cpp
 // App.h
 #include "app/ble/BleLink.h"
 
 AppContext context_;
-SerialLink* link_;    // serial, unchanged, keeps Q4
-BleLink* ble_;        // own contract; no link-loss rule
-UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
+SerialLink* link_;      // serial, unchanged, keeps Q4
+BleLink* ble_;          // own contract; no link-loss rule
+UserInterface* ui_;     // the screen for the ownership record
+bool hostAttached_;     // serial presence as the loop last saw it
 ```
 
 * `BleLink` holds the `AppContext*`, the NimBLE server, the characteristics, and the pending slots
@@ -177,6 +196,10 @@ UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
 * `BleLink::begin()` starts NimBLE, builds the service and advertises.
 * `BleLink::poll(nowMs)` applies whatever is pending, then sends the notifications that are due. It
   is called from `App::update()` beside `link_->poll(now)`.
+* `App::update()` feeds `ble_->connected()` to `overlay().setConnections()` for the presence
+  indicator, and chooses the page from the ownership record. It does not feed `consumeLinkLost()`
+  directly: a BLE disconnect while controlling leaves that record held (§3), and only the local
+  reset gesture clears it.
 * `App::begin()` calls `ble_->begin()` after `Serial.begin`; a BLE failure is a log line, never an
   abort, because serial still works.
 
@@ -188,13 +211,19 @@ UserInterface* ui_;   // screenFor(serialAttached() || ble_->connected())
 | `duty` | `vacuum().pump().dutyPercent()` |
 | `fault` | `vacuum().faultCode()` |
 | `batt` | `battery().percent()`, `0xFF` when `!present()` |
-| `unit` | `settings().unit()` / `settings().setUnit()` — the same pair the serial `device unit=` uses |
-| `command` | `startRefusal()`, `start()`, `stop()`, `resetFault()`, `ESP.restart()` |
+| `sensor` | `vacuum().sensor().present() && vacuum().sensor().readingValid()` as 0/1 |
+| `floor` | `cfg::CONTROL_FLOOR_KPA` |
+| `unit` | `settings().unit()` / `settings().setUnit()` — the same pair the serial `device set unit` command uses |
+| `control` | the ownership record's `owned()`, `acquire()` and `release()` |
+| `command` | `startRefusal()`, `start()`, `stop()`, `resetFault()`, the safe reboot |
 
-While `Settings` has no store, a `unit` write is applied at once and forgotten at the next reset,
-exactly as it is on serial: a read after the write reports the new unit, and a restart returns it to
-kPa. That behaviour is the `Settings` file's, not this transport's, and it changes in one place when
-a store arrives.
+`unit`, `target` and `command` are gated on ownership just like the serial non-read verbs: while
+`control` reads `0`, their writes are refused and the value does not move.
+
+`Settings` stores the unit as `unit=<token>` in `/settings.ini` and restores it at boot, so a `unit`
+write from BLE persists exactly as `device set unit` does. A filesystem that will not take the
+write still leaves the unit in force for the session; that behaviour is the `Settings` file's, not
+this transport's.
 
 ## 6. Concurrency
 
@@ -202,8 +231,8 @@ NimBLE runs its host on **core 0**; the Arduino `loop()` runs on core 1. The mod
 loose: the alternative is a lock or a queue, and neither buys anything at this size.
 
 **Status reads are assumed safe.** A GATT read callback answers from the machine as it is —
-`currentKpa()`, `runState()`, `dutyPercent()`, `battery().percent()`, `settings().unit()` — with no
-snapshot and no second copy to keep in step. A float or an enum is one aligned load on this part, so
+`currentKpa()`, `runState()`, `dutyPercent()`, `battery().percent()`, `settings().unit()` and the
+ownership record — with no snapshot and no second copy to keep in step. A float or an enum is one aligned load on this part, so
 a reader that overlaps an update sees one side of it or the other. No reading in this contract means
 anything finer than a loop iteration, so that is enough.
 
@@ -218,13 +247,14 @@ What that costs, stated plainly:
 * Two writes to one characteristic before the loop runs leave the last one standing; there is no
   queue and no promise to apply the first.
 * A refused write — a target below the floor, a unit outside the closed set, an opcode that cannot
-  run now — is refused by the loop, and the answer is the characteristic's unchanged value plus, for
-  `command`, a result notification.
+  run now, a write while not owning, or an acquire while another link owns the device — is refused
+  by the loop. The answer is the characteristic's unchanged value plus, for `command`, a result
+  notification and, for `control`, a notification of the value still in force.
 
 | Shared thing | Writer | Reader | Mechanism |
 | --- | --- | --- | --- |
-| Machine status (`state`, `kpa`, `duty`, `fault`, `batt`) and the display unit | `loop()` | GATT read callbacks | read live; no snapshot |
-| Pending target, unit or opcode | GATT write callbacks | `loop()` at the top of `poll()` | one slot per characteristic, last write wins |
+| Machine status (`state`, `kpa`, `duty`, `fault`, `batt`), the display unit and ownership | `loop()` | GATT read callbacks | read live; no snapshot |
+| Pending target, unit, opcode or control | GATT write callbacks | `loop()` at the top of `poll()` | one slot per characteristic, last write wins |
 | Connection state | NimBLE | both | the server's connected count |
 
 There is no mutex, no ring and no mailbox queue. A slot is a plain value and a `has` flag, written on
@@ -246,9 +276,15 @@ in NVS (NimBLE's `CONFIG_BT_NIMBLE_NVS_PERSIST` is on by default). This authenti
 casual neighbour at the bench, not against an attacker with a radio — that is the price of a pairing
 flow someone will actually complete.
 
-The writable characteristics — `target`, `command` and `unit` — require encryption
+The writable characteristics — `control`, `target`, `command` and `unit` — require encryption
 (`NIMBLE_PROPERTY::WRITE_ENC`), so an unencrypted write is rejected by the stack and never reaches
-the slot. Reads may stay open: pressure and state are not secrets.
+the slot.
+
+**Reads stay open.** None of the read characteristics is a secret: pressure, state, duty, battery,
+fault, unit, sensor and floor are all bench-visible values. Leaving reads unencrypted lets a phone
+or a scanner observe without pairing, while control stays behind the encrypted write set. A client
+that wants privacy can still pair; the link is encrypted then, but pairing is not a precondition
+for reading.
 
 A passkey was the earlier shape and is deliberately gone: it is the uncommon flow on embedded
 devices, it needs a screen to show digits and a person to type them, and it would put six of them on
@@ -257,16 +293,20 @@ flow is the thing to add — a pairing callback and one page, not a change to th
 
 ## 8. What a controller sees
 
-* The GATT connection is the presence; there is no `attached` characteristic to read.
+* The GATT connection is presence; `control` is ownership. There is no `attached` characteristic
+  to read.
 * Advertising stops on connect and restarts on disconnect.
 * `ble_proto` and `fw` are the handshake. A client that does not recognise `ble_proto` should stop
   rather than guess, exactly as a serial controller does with `proto`.
-* Every value is readable at any time, so a freshly connected app builds its whole view from reads
-  before it subscribes to anything.
+* Every value is readable at any time, with or without pairing, so a freshly connected app builds
+  its whole view from reads before it subscribes to anything. In particular, `sensor` and `floor`
+  are readable before control is acquired, so a client can grey out start and target controls
+  instead of discovering the limits by rejection.
 * A pressure is always kPa, whether the panel is showing kPa, psi, inHg or mmHg. `unit` says what
   the glass prints; it never changes what `kpa` or `target` mean.
-* Connecting puts the readout on the panel and disconnecting returns it to the mark (§3.1), even
-  though neither touches the run.
+* Acquiring control puts the readout on the panel; releasing stops and vents and returns it to the
+  mark. A drop while owning changes nothing, so the run continues and the panel stays on the
+  readout until the local reset gesture. Connecting alone does not change the page (§3.1).
 
 ## 9. Build and configuration
 
@@ -290,18 +330,24 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 
 ## 10. What to measure before believing any of it
 
-* Flash, static RAM and boot heap against today's 384 kB / 19.8 kB / the `heap` line at boot.
+* Flash, static RAM and boot heap against today's 574 kB / 20.0 kB / the `heap` line at boot.
 * `BleLink::poll()` cost on the loop when idle and at 5 Hz notification.
 * Write-to-notify latency for `target` and `command`, including the one-iteration deferral the
   concurrency model adds.
-* The safety claim: start a run from BLE, disconnect the phone, confirm the run continues and the
-  pump state is unchanged.
-* The screen switch: with USB unplugged, a BLE connection puts the readout on the panel, and the
-  panel goes back to the mark when the phone disconnects — including when that lands mid-run, where
-  the run must keep going while the page changes.
+* The safety claim: start a run while controlling, disconnect the phone, confirm the run continues
+  unchanged and the panel stays on the readout; then use the local reset gesture and confirm it
+  stops, vents and reboots. Repeat with an explicit `control=0` write and confirm the release stops
+  and vents without a reboot. Then run a chamber from serial or the local page and confirm a
+  connected-but-not-controlling phone leaves it untouched.
+* The screen switch: with USB unplugged, a BLE connection alone leaves the disconnected page while
+  lighting the overlay's radio indicator. Acquiring control puts the readout on the panel;
+  releasing stops and vents and returns both. A drop while owning changes neither the run nor the
+  page; the local reset gesture is what returns to the mark.
+* Read every characteristic without pairing. Then attempt `control=1` and a `target` write and
+  confirm the stack rejects both until the link is encrypted.
 * Pair, reboot, reconnect without re-pairing.
-* A serial session and a BLE session at once: neither disturbs the other, and a serial detach still
-  stops and vents.
+* A serial session and a BLE session at once: neither disturbs the other, and a serial drop while
+  owning leaves the run and ownership held until the local reset gesture.
 
 ## 11. Failure modes and what the device does
 
@@ -312,35 +358,22 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 | `start` refused | the matching result code, no state change |
 | Target written below the loop's floor | latched, then refused when the loop applies it; the target does not move, so the next read is the answer. The bound is `CONTROL_MIN_TARGET_KPA` in `core/Config.h`, and 0 clears the target |
 | `unit` written outside 0–3 | latched, then refused when the loop applies it; the value is a closed set and the unit does not move |
-| Central disconnects mid-run | the run continues (§3); advertising restarts |
+| Central disconnects mid-run | if it was controlling, nothing changes and ownership stays held; if it was only connected, nothing changes (§3); advertising restarts, and a reconnected central is read-only until the local reset gesture |
 | Central not subscribed | values stay readable; nothing is queued |
 | Second central tries to connect | rejected by `MAX_CONNECTIONS=1` while the first is connected |
-| Unpaired write to `target` or `command` | rejected by the stack; the slot never sees it |
+| Unpaired write to any writable characteristic | rejected by the stack; the slot never sees it |
 | `reboot` opcode | result notified, then the device restarts and the central sees a disconnect |
 
 ## 12. Phases
 
-1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`unit`/`fw`/`ble_proto`, the
-   notification rates, and `BleLink::connected()` feeding `screenFor()` so the panel shows the
-   readout for a phone with no USB attached (§3.1). Prove a phone shows live values and that a
-   serial session is unaffected.
-2. **P1 — control.** The pending slots, `target` and `unit` writes, opcodes and their result
-   notifications, and the `startRefusal()` mapping.
-3. **P2 — security.** Just Works bonding and encryption on the three writable characteristics
-   (`target`, `command`, `unit`).
+1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`sensor`/`floor`/`unit`/`fw`/
+   `ble_proto`, the notification rates, and `BleLink::connected()` feeding the overlay's radio
+   indicator. Prove a phone shows live values and that a serial session is unaffected; the panel
+   stays on the disconnected page because P0 does not acquire control.
+2. **P1 — control.** The ownership record, `control` writes, the pending slots, `target` and `unit`
+   writes, opcodes and their result notifications, the `startRefusal()` mapping,
+   `screenFor(control.owned())`, and the drop path that leaves ownership held.
+3. **P2 — security.** Just Works bonding and encryption on the writable characteristics
+   (`control`, `target`, `command`, `unit`).
 4. **P3 — documentation and budget.** README gains the interface bullet and the measured numbers;
    `sketch.yaml` and the library list pin the version.
-
-## 13. Open questions
-
-* Is `batt` as a percentage enough, or does an app want pack volts too (`batt_mv`, uint16)?
-* Should `sensor` presence and the `floor` bound be characteristics, so a client can grey out
-  controls instead of discovering limits by rejection? That argues for a small `limits` set.
-* Do we want a `log` notify characteristic, or does that reintroduce the line protocol through the
-  back door? The failure codes in §4 already carry the operational truth.
-* Is a lease worth having for BLE-started runs (§3), or is an unattended run over BLE acceptable
-  because the pump's own limits and the fault latch still apply?
-* Should `unit` be the device's preference or the app's own formatting choice? Today it is the
-  device's, because the panel has no settings UI of its own and a host is the only thing that can
-  change it — but an app that already formats numbers may not want to move the glass.
-* Should reads also require encryption, for privacy rather than control?
