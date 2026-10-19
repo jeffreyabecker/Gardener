@@ -34,6 +34,14 @@ a couple of thousand lines, one loop. It stays that way only if new work extends
 instead of building beside it. When a design is larger than the thing it does, the extra is the
 bug, and every part of it should have a reason a reviewer can point at.
 
+**KISS, and write it for an Arduino programmer.** The reader knows `setup()` and `loop()`, not a
+pattern catalogue. Write the straight-line version they can follow from the top of the function to
+the bottom. Don't add a helper function, wrapper, callback or layer of indirection unless you were
+told to: each one is another name to chase before the code says what it does. Two repeated lines
+are cheaper than a function nobody asked for, and a longer file is fine when it reads plainly.
+Work out what the code has to do and write that — don't dither about the design. The `hal/`
+boundary described next is a decision already made, not a precedent for the next abstraction.
+
 **One class where one class works, and one file per device.** [VacuumSystem](../libraries/VacuumCore/src/app/VacuumSystem.h)
 is the vacuum system *and* the machine, because the chamber's state and the run's state turned out to be
 one state: don't split it into a vacuum system and a controller. A device is a different thing — a pin,
@@ -67,6 +75,10 @@ outright and left to the history ([README](../README.md) Roadmap); do the same.
 [docs/specs/](../docs/specs) describe work that is proposed, agreed or already done. Read them for
 what has to be true, then answer it with the smallest mechanism the current single loop allows.
 Reaching for a task, a lock, a queue or a watchdog is a question to ask, not a thing to build.
+
+**A parking-lot entry is a note, not a plan.** [docs/plans/parking-lot.md](../docs/plans/parking-lot.md)
+holds unrealized "what if" ideas. One or two sentences say what the idea is and what is blocking
+it; the design waits for whoever picks it up. Detail added today is detail the idea has not earned.
 
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
 of it: one `kpa()` reading, with the ambient reference and the values derived from it left to the

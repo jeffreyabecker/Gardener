@@ -15,7 +15,7 @@ Proposals, design records and deferred work. A plan is not a commitment: it leav
 implemented or dropped.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [Parking lot](./plans/parking-lot.md) — deferred work and what has to be true first
+- [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides
 
