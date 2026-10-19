@@ -329,9 +329,8 @@ the editor calls it when the settings view opens, so the list can reflect the ma
 
 ```berry
 def describe()
-  var s = vacuum.state()
   return [
-    setting("target", "Target kPa", "real", 1.0, s.min, s.floor, nil),
+    setting("target", "Target", "pressure", 1, nil, nil, nil),
     setting("hold", "Hold", "duration", 1, 0, 7200, nil),
     setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"]),
     setting("enabled", "Enabled", "bool", 0, nil, nil, nil),
@@ -346,20 +345,28 @@ end
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
 | `label` | string | the line the editor draws beside the value |
-| `kind` | string | `real`, `int`, `bool`, `choice` or `duration`; other kinds are shown read-only |
-| `step` | real | how far Up/Down moves a numeric value; for `duration`, the seconds increment in the seconds stage; ignored by `bool` and `choice` |
-| `min` / `max` | real or nil | optional bounds for a numeric value; for `duration` both are total seconds and the value never goes below 0 |
+| `kind` | string | `real`, `int`, `bool`, `choice`, `duration` or `pressure`; other kinds are shown read-only |
+| `step` | real | how far Up/Down moves a numeric value; for `duration`, the seconds increment in the seconds stage; for `pressure`, whole steps in the panel's unit; ignored by `bool` and `choice` |
+| `min` / `max` | real or nil | optional bounds for a numeric value; for `duration` both are total seconds and the value never goes below 0; ignored by `pressure`, whose bounds are the machine's |
 | `values` | list or nil | the allowed values for `choice`, in cycle order |
 
 The editor reads the current value through `store`, with a fallback whose type matches the kind:
-`0` for `int` and `duration`, `0.0` for `real`, `false` for `bool`, and `values[0]` for `choice`. A
-`choice` needs at least one value. Up/Down steps `real` and `int`, toggles `bool`, and cycles
-`choice`; OK writes the value back with `store.set` and Back leaves without writing.
+`0` for `int` and `duration`, `0.0` for `real` and `pressure`, `false` for `bool`, and `values[0]`
+for `choice`. A `choice` needs at least one value. Up/Down steps `real`, `int` and `pressure`,
+toggles `bool`, and cycles `choice`; OK writes the value back with `store.set` and Back leaves
+without writing.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
 whole minute. OK opens it in the **minutes** stage, Up/Down moves that by a minute, OK moves on to
 the **seconds** stage, and Up/Down moves that by `step` seconds (default 1); OK then writes. Back
 cancels from either stage. The value is held between `min` and `max`, and never below zero.
+
+A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
+`12.5 psi`, `0.12 inHg` or `40 mmHg`, suffix included. Up/Down moves it by `step` whole display
+steps — one psi, one inHg, ten mmHg — and every value goes through `vacuum.clamp()`, whether it was
+read, stepped or restored, so the editor cannot produce a target the machine refuses. An unset
+pressure reads as `0.0` and therefore clamps to the shallowest legal target. `min` and `max` are
+ignored: the machine's `min` … `floor` is the range.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
 return a list. A routine without `describe()`, or one whose method raises, leaves the settings view
@@ -411,7 +418,7 @@ outside `/routines/`: a name that is not registered is refused.
 
 ## A complete example
 
-Two routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
+Three routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
 editor stepped in whole display units, OK to start or commit, Back to vent, and the target kept
 across a boot by `store`. A **double Up** on that page opens the second one.
 
@@ -424,5 +431,11 @@ reads `routines.names()`, so a routine that is added to the data image appears i
 to either file. It touches nothing of the machine — a run keeps going behind it — and it writes only
 through `store.set` when a setting is saved.
 
-Between them the two pages cover what a page can do; look at them rather than at a second
+`/routines/static.be` is the cycle: OK starts a pull to `target_pressure`, `HOLD` starts the work
+timer, `vacuum.stop()` vents, `IDLE` starts the rest timer, and `resume_behavior` decides whether the
+next cycle starts by itself or on OK. It is also the worked example of a page whose state is a phase
+machine: `poll` advances a phase and never waits, and a release it did not ask for (the Back hold)
+sends it back to `ready`.
+
+Between them the three pages cover what a page can do; look at them rather than at a second
 description here.

@@ -359,17 +359,18 @@ The routine registered as **`default`** is the page. If no file registers one, t
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load.
 
-Two ship. `default` is the readout and the target editor; a double Up opens `browser`, the list of
-everything registered, which walks with Up and Down and switches with OK. There is no fixed number of
-routines: the registry grows as files register, and the browser lists whatever boot found.
+Three ship. `default` is the readout and the target editor; a double Up opens `browser`, the list
+of everything registered, which walks with Up and Down and switches with OK. `static` is the cycle:
+pull to a target, hold it, vent, rest, and repeat. There is no fixed number of routines: the registry
+grows as files register, and the browser lists whatever boot found.
 
 A routine that has values worth editing exposes `describe()`, returning a list of `setting` records
 (the key, label, kind, step, bounds and, for a choice, the values to cycle). The kinds are `real`,
-`int`, `bool`, `choice` and `duration`; a duration is stored in seconds and edited in minutes and
-seconds. A **double OK** on the browser opens that list; Up and Down walk it, OK opens a setting,
-and Up/Down changes it. The values
-stay in the routine's own `/routines/<name>.ini`, read and written by `store`. A routine without
-`describe()` simply has no settings view.
+`int`, `bool`, `choice`, `duration` and `pressure`; a duration is stored in seconds and edited in
+minutes and seconds, and a pressure is stored in kPa and edited in the unit the panel prints. A
+**double OK** on the browser opens that list; Up and Down walk it, OK opens a setting, and Up/Down
+changes it. The values stay in the routine's own `/routines/<name>.ini`, read and written by
+`store`. A routine without `describe()` simply has no settings view.
 
 Shared Berry code lives in `/modules/`, which loads before `/routines/`. The settings editor is the
 one module: `browser` uses its `Settings` class, and any page can hold one to edit its own settings

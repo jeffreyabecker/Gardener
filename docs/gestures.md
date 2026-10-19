@@ -55,32 +55,36 @@ target editor.
 
 The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
 it, OK saves, Back closes the list or cancels the editor. A `duration` adds a stage — OK moves from
-minutes to seconds before it saves.
+minutes to seconds before it saves. A `pressure` edits in the unit on the glass and stores kPa, so
+changing the display unit never rewrites a value.
 
 ## The matrix
 
 `—` means the page does nothing with the press. `page` means the event is delivered to the active
 routine. The holds have their own rows because they are not presses.
 
-| Gesture | Firmware | `default` | Browser list | Settings list | Settings editor |
-| --- | --- | --- | --- | --- | --- |
-| Up short | page | — | move | move | step + |
-| Up long | page | — | move | move | step + |
-| Up double | page | open browser | move | move | step + |
-| Down short | page | — / step | move | move | step − |
-| Down long | page | — / step | move | move | step − |
-| Down double | page | — / step | move | move | step − |
-| OK short | page | start / save target | switch page | edit value | save |
-| OK long | page | — | switch page | edit value | save |
-| OK double | page | open target editor | open settings | edit value | save |
-| Back short | page | vent / cancel | go home | close | cancel |
-| Back long | page | — / cancel | go home | close | cancel |
-| Back double | page | vent / cancel | go home | close | cancel |
-| **Hold OK 3 s** | stop, vent, `default` | same | same | same | same |
-| **Hold Back 3 s** | stop, vent | same | same | same | same |
+| Gesture | Firmware | `default` | `static` | Browser list | Settings list | Settings editor |
+| --- | --- | --- | --- | --- | --- | --- |
+| Up short | page | — | — | move | move | step + |
+| Up long | page | — | — | move | move | step + |
+| Up double | page | open browser | — | move | move | step + |
+| Down short | page | — / step | — | move | move | step − |
+| Down long | page | — / step | — | move | move | step − |
+| Down double | page | — / step | — | move | move | step − |
+| OK short | page | start / save target | start / — | switch page | edit value | save |
+| OK long | page | — | start / — | switch page | edit value | save |
+| OK double | page | open target editor | open settings | open settings | edit value | save |
+| Back short | page | vent / cancel | — | go home | close | cancel |
+| Back long | page | — / cancel | — | go home | close | cancel |
+| Back double | page | vent / cancel | — | go home | close | cancel |
+| **Hold OK 3 s** | stop, vent, `default` | same | same | same | same | same |
+| **Hold Back 3 s** | stop, vent | same | same | same | same | same |
 
 On `default`, the text after the slash is what the target editor does while it is open. A `double`
 on Up or Down is one event and moves once; a page that does not distinguish it treats it as that key.
+
+On `static`, OK starts a cycle only from `ready`. Once the pull is under way, Back is not a stop —
+the Back hold is, and the page notices the machine's release and returns to `ready`.
 
 The page columns describe the disconnected device. With a host attached there is no routine page:
 presses are logged (`btn: ok short`) and only the Back hold still stops and vents.

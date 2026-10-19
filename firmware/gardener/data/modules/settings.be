@@ -8,6 +8,8 @@
 # A page opens one on double OK, the standard settings gesture, draws it in place of the page's own
 # content while is_open(), and drops it once Back closes the top level.
 
+import string
+
 class Settings
   var name
   var rows
@@ -18,6 +20,8 @@ class Settings
   var edit_setting
   var edit_value
   var edit_stage
+  var unit
+  var fmt
 
   def init(name)
     self.name = name
@@ -30,6 +34,8 @@ class Settings
     self.edit_setting = nil
     self.edit_value = 0
     self.edit_stage = nil
+    self.unit = nil
+    self.fmt = "%.1f"
   end
 
   # Reads the routine's describe() once, so a frame does not turn six settings into six file reads.
@@ -78,6 +84,8 @@ class Settings
       return false
     end
 
+    self.unit = screen.unit()
+    self.fmt = "%." + str(self.unit.decimals) + "f"
     self.described = described
     self.values = values
     self.index = 0
@@ -115,9 +123,17 @@ class Settings
 
   def draw_edit()
     screen.draw_text(0, 0, 1, false, "EDIT")
-    screen.draw_text(0, 16, 1, false, self.edit_setting.label)
+    screen.draw_text(0, 16, 1, false, self.edit_label())
     screen.draw_text(0, 24, 3, false, self.edit_text())
     screen.draw_text(0, 56, 1, false, self.edit_hint())
+  end
+
+  # The suffix belongs on the label line: a size-3 value with a unit would run past the panel.
+  def edit_label()
+    if self.edit_setting.kind == "pressure"
+      return self.edit_setting.label + " " + self.unit.suffix
+    end
+    return self.edit_setting.label
   end
 
   def edit_hint()
@@ -146,6 +162,9 @@ class Settings
       end
       return "OFF"
     end
+    if self.described[index].kind == "pressure"
+      return self.pressure_text(value)
+    end
     if self.described[index].kind == "duration"
       return self.duration_text(value)
     end
@@ -153,6 +172,9 @@ class Settings
   end
 
   def edit_text()
+    if self.edit_setting.kind == "pressure"
+      return self.number(self.edit_value)
+    end
     if self.edit_setting.kind == "duration"
       return self.duration_text(self.edit_value)
     end
@@ -163,6 +185,16 @@ class Settings
       return "OFF"
     end
     return str(self.edit_value)
+  end
+
+  # A pressure is kPa in the store and the unit on the glass in the editor, suffix included so the
+  # number cannot be read as the wrong scale.
+  def pressure_text(kpa)
+    return self.number(kpa) + " " + self.unit.suffix
+  end
+
+  def number(kpa)
+    return string.format(self.fmt, kpa * self.unit.per_kpa)
   end
 
   # Minutes and seconds, compact: `45s`, `1m`, `1m30s`.
@@ -264,6 +296,11 @@ class Settings
     if setting.kind == "real"
       return store.get(self.name, setting.key, 0.0)
     end
+    if setting.kind == "pressure"
+      # kPa on disk; an unset value clamps to the shallowest target the machine accepts rather than
+      # showing a number the machine would refuse.
+      return vacuum.clamp(store.get(self.name, setting.key, 0.0))
+    end
     if setting.kind == "bool"
       return store.get(self.name, setting.key, false)
     end
@@ -284,6 +321,7 @@ class Settings
     var editable = setting.kind == "real" || setting.kind == "int"
     editable = editable || setting.kind == "bool" || setting.kind == "choice"
     editable = editable || setting.kind == "duration"
+    editable = editable || setting.kind == "pressure"
     if !editable
       vacuum.log("settings: " + setting.key + " is read-only")
       return false
@@ -305,6 +343,17 @@ class Settings
     end
     if self.edit_setting.kind == "choice"
       self.edit_value = self.next_choice(direction)
+      return
+    end
+    if self.edit_setting.kind == "pressure"
+      # `step` is in whole display steps: one psi, one inHg, ten mmHg. The machine's bounds are the
+      # range, so the editor cannot produce a target `vacuum.target()` would refuse.
+      var step = 1.0
+      if self.edit_setting.step != nil
+        step = self.edit_setting.step
+      end
+      var kpa = self.edit_value + direction * step * self.unit.whole_step / self.unit.per_kpa
+      self.edit_value = vacuum.clamp(kpa)
       return
     end
     if self.edit_setting.kind == "duration"
