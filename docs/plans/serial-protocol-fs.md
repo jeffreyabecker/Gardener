@@ -28,13 +28,13 @@ fs read <path>
 fs write <path> <bytes>[LF]
   <exactly `bytes` raw bytes>
   [optional CR LF]
-  ok bytes=N
+  ok
 
 fs mkdir <path>
   ok
 
 fs delete <path>
-  ok removed=N
+  ok
 ```
 
 - `fs write` is length-delimited. The header's `<bytes>` is authoritative; the device never
@@ -54,7 +54,8 @@ fs delete <path>
   ```
 - `fs` replies have no `end` line. The count in the header (`rows=N` or `bytes=N`) is
   authoritative, so the host knows when the reply is complete.
-- `fs delete` counts every entry removed, including the target; a file is `removed=1`.
+- `fs delete` removes a file, or a directory with everything under it. The reply is `ok`;
+  `fs list` shows what remains.
 - A write header that is syntactically valid but cannot be honoured still consumes the declared
   payload before replying, so the next command starts on a boundary. A header refused on syntax
   (`<bytes>` malformed or over the cap, malformed path) replies immediately and expects no payload.
