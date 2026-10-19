@@ -37,6 +37,25 @@ bool Storage::write(const char* path, const String& text) const {
   return written == text.length();
 }
 
+size_t Storage::size(const char* path) const {
+  if (!ready_) return 0;
+  File file = LittleFS.open(path, "r");
+  if (!file) return 0;
+  const size_t bytes = (size_t)file.size();
+  file.close();
+  return bytes;
+}
+
+bool Storage::read(const char* path, uint8_t* buffer, size_t capacity, size_t& length) const {
+  length = 0;
+  if (!ready_ || buffer == nullptr || capacity == 0) return false;
+  File file = LittleFS.open(path, "r");
+  if (!file) return false;
+  length = (size_t)file.read(buffer, capacity);
+  file.close();
+  return length > 0;
+}
+
 uint8_t Storage::list(const char* dir, const char* suffix, String* names, uint8_t max) const {
   if (!ready_ || !names || max == 0) return 0;
 

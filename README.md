@@ -41,9 +41,12 @@ reference, so the rig needs to be at rest when the device boots.
 | --- | --- |
 | [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
+| [libraries/RLEBitmap/](./libraries/RLEBitmap) | The run-length bitmap decoder the panel's images use (vendored) |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
+| [scripts/asset.ps1](./scripts/asset.ps1) | Converts a 1-bit BMP into an RLE image for the panel |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the five modules, and the rules that follow from the embedded interpreter |
+| [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
 ### Architecture
@@ -293,6 +296,11 @@ are carried through a write rather than dropped; comments and spacing are not ke
 A routine keeps its own values the same way, in one file named after it beside its source
 (`/routines/default.ini`), so a data-image upload can ship starting values and a routine cannot
 reach another's. The `default` page uses it to bring the target back after a power cycle.
+
+Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
+1-bit bitmap of 367 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
+`firmware/gardener/assets/` as a 1-bit BMP and is converted with `scripts/asset.ps1`; the file
+format and the tool are in [docs/assets.md](./docs/assets.md).
 
 ### Routines
 

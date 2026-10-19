@@ -1,6 +1,6 @@
 #include "app/DisconnectedUI.h"
 
-#include "app/eggplant-bitmap.h"
+#include "app/Asset.h"
 #include "app/disconnected-ui/Routines.h"
 #include "core/Config.h"
 
@@ -42,7 +42,9 @@ void DisconnectedUI::update() {
 void DisconnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  panel.bitmap(0, 0, splashBitmap, panel.width(), panel.height());
+  // Nothing when the image is not there: the page is blank rather than wrong, and the boot log is
+  // where the missing file was named.
+  context_.mark().draw(panel, 0, 0);
   panel.display();
 }
 

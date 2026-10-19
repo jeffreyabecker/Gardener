@@ -29,6 +29,12 @@ class Storage {
   bool read(const char* path, String& out) const;
   bool write(const char* path, const String& text) const;
 
+  // An image's bytes are not text — a palette is full of zero bytes, which a String read stops at —
+  // so binary files have their own size and read. `length` is what the file gave, which is the whole
+  // file unless `capacity` is smaller.
+  size_t size(const char* path) const;
+  bool read(const char* path, uint8_t* buffer, size_t capacity, size_t& length) const;
+
   // The file names in a directory, at most `max` of them, into `names`. A suffix keeps only what
   // the caller asked for, so a directory may hold other things without the filter living here.
   // Directories are skipped; a path that is not there yields zero names rather than an error,

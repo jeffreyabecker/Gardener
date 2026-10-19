@@ -20,6 +20,9 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 // setting: holding Back for this long ends the run and vents, whatever the controller is doing.
 constexpr uint32_t kBackStopMs = 3000;
 
+// The device's mark, shipped in the data image beside the routines.
+constexpr const char* kMarkPath = "/assets/eggplant.rle";
+
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
@@ -68,6 +71,13 @@ bool App::begin() {
   // no filesystem is formatted, which is reported rather than assumed: whatever was there is gone.
   Storage::Mount mount = context_.storage().begin();
   context_.settings().begin();
+
+  // The mark is an image on the device rather than an array in a header, so it is read here with the
+  // rest of what a boot restores. A missing file leaves the pages without a mark and says so; the
+  // data image is where it ships from.
+  if (!context_.mark().load(context_.storage(), kMarkPath)) {
+    logger_->warn("ui: /assets/eggplant.rle missing, the pages have no mark");
+  }
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.
