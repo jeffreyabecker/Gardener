@@ -64,6 +64,24 @@ bool Routines::begin(AppContext& context, Storage& storage, StreamLogger& logger
   return true;
 }
 
+// The page's way out: whichever routine is active is left, and `default` takes the panel again. The
+// files are not read again — everything was loaded at boot and is still registered, so what changes is
+// which routine is showing. Anything queued for the page being left goes with it.
+bool Routines::showDefault() {
+  pressHead_ = 0;
+  pressCount_ = 0;
+  pressOverflow_ = false;
+  hasPending_ = false;
+  pendingActive_ = "";
+
+  active_ = -1;
+  if (!choose("default")) {
+    logger_->warn("vm: no default routine, showing the mark");
+    return false;
+  }
+  return startActive();
+}
+
 // --- loading ---------------------------------------------------------------
 
 bool Routines::loadFile(Storage& storage, const String& file) {
@@ -199,12 +217,16 @@ bool Routines::setActive(const char* name) {
     return true;
   }
   if (!choose(name)) return false;
+  return startActive();
+}
 
-  if (!invoke((uint8_t)active_, "activate", false, 0)) {
-    active_ = -1;
-    return false;
-  }
-  return true;
+// Runs the chosen routine's activate(), which is both what makes it the visible page and what lets it
+// draw its first frame. A routine that raises here is dropped, exactly as one that raises in poll().
+bool Routines::startActive() {
+  if (active_ < 0) return false;
+  if (invoke((uint8_t)active_, "activate", false, 0)) return true;
+  active_ = -1;
+  return false;
 }
 
 void Routines::applyPending() {

@@ -36,6 +36,11 @@ class Routines {
   // False only when the interpreter cannot be allocated at all.
   bool begin(AppContext& context, Storage& storage, StreamLogger& logger);
 
+  // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
+  // files are not re-read — every routine is still registered — so this is a switch, not a load.
+  // False when nothing named `default` is registered, which leaves the mark.
+  bool showDefault();
+
   // One beat: the active routine's poll(now), or nothing when there is no active routine.
   void poll(uint32_t nowMs);
 
@@ -79,6 +84,7 @@ class Routines {
   };
 
   bool loadFile(Storage& storage, const String& file);
+  bool startActive();
   void reportError(const char* file, const char* what);
   bool invoke(uint8_t index, const char* method, bool withNow, uint32_t nowMs);
   bool choose(const char* name);

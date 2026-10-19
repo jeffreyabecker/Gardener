@@ -27,7 +27,7 @@ App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, logEnabled_);
   link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
   connectedUi_ = new ConnectedUI(context_);
-  disconnectedUi_ = new DisconnectedUI(context_);
+  disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
 
 UserInterface* App::screenFor(bool attached) {

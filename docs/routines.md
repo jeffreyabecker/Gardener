@@ -204,6 +204,11 @@ end
 Holding **Back for 3 s** is the device's own stop: it stops the pump and vents, and no routine can
 suppress it. The routine still sees the `long` Back press that follows.
 
+Holding **OK for 3 s** is the page's way out: it stops and vents, then hands the panel back to
+`default`. Whichever routine was showing is no longer polled, and `default` is activated again — the
+same object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
+disk; a routine that was left can be brought back with `routines.set_active()`.
+
 ## `routines` — the registry
 
 | Call | Returns | Notes |

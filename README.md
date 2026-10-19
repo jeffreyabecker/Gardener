@@ -263,8 +263,11 @@ of a double. There is no separate event for a longer hold — a page that wants 
 `heldMs()` while the key is down and picks its own mark. A key held at boot is not a press.
 
 While no host is attached the presses go to the active routine (`buttons.take()`); with none, the
-loop logs the gesture (`btn: ok short`). Holding Back for 3 s always stops the pump and vents — that
-rule is hard-coded in `App` and no routine can suppress it.
+loop logs the gesture (`btn: ok short`). Two holds belong to the device and no routine can suppress
+either: **Back for 3 s** stops the pump and vents, and **OK for 3 s** does the same and hands the
+panel back to the `default` routine, so a page that took it over is one hold away. The first is
+hard-coded in `App` because it applies on either page; the second belongs to the disconnected page,
+because it exists to leave that page.
 
 ### Files on the device
 
@@ -332,8 +335,10 @@ the unit the panel prints), `buttons` (the presses since the last call, as a pul
 The full surface — every call, what it returns, the fields of each record, and what the overlay
 draws over a page — is in [docs/routines.md](./docs/routines.md).
 
-Presses go to the active routine and are not logged while it runs. The 3 s Back hold is the
-exception: it is the device's own stop and fires whatever the routine registered.
+Presses go to the active routine and are not logged while it runs. The two 3 s holds are the
+exception: Back is the device's stop and fires whatever the routine registered, and OK is the page's
+way out — it stops, vents and switches the panel back to `default`, so a routine that took it over is
+one hold away.
 
 Two things worth knowing before writing one. A `poll` that never returns blocks the loop — the
 interpreter has no instruction budget, so returning is a convention the author keeps. And `print`
