@@ -8,7 +8,7 @@ dropped and the reason is in git.
 
 ## Second pump/sensor/solenoid combo
 
-Add a second pump, MPRLS and vent solenoid so the device can run two chambers. `AppContext`, the
+Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. `AppContext`, the
 `vacuum` wire domain and the alpha PCB all assume one combo today.
 
 ## Firmware size

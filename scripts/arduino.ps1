@@ -42,7 +42,6 @@ $projectLibs = Join-Path $root 'libraries'
 
 $thirdPartyLibs = @(
     'Adafruit SH110X',
-    'Adafruit MPRLS Library',
     'Adafruit BusIO',
     'Adafruit GFX Library'
 )

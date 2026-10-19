@@ -2,8 +2,8 @@
 
 Pressures are **kPa** everywhere. `kpa` is the vacuum depth below ambient — 0 at rest, rising as
 the chamber is pumped down — and a **target** is a depth on the same ruler. The ambient reference
-belongs to the sensor: the MPRLS is absolute, so it takes one from its first reading when it comes
-up, and nothing on the wire sets or restates one.
+belongs to the sensor: the gauge part's output is analog, so its driver takes one from its first
+reading when it comes up, and nothing on the wire sets or restates one.
 
 The wire is **unsettled**. `proto` is `1` and does not move with each revision yet; a controller
 must not treat it as a compatibility guarantee. `fw` is the build.
@@ -159,7 +159,7 @@ does not draw on the panel.
 | `floor` | kPa, 1 dp | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
 | `duty` | %, 1 dp | pump duty |
 | `state` | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
-| `sensor` | `1` / `0` | `1` when the MPRLS is answering |
+| `sensor` | `1` / `0` | `1` when the sensor is producing a plausible reading |
 | `fault` | `none` / `sensor` | |
 | `up` | ms | uptime |
 

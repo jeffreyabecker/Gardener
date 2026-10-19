@@ -5,7 +5,7 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 
 * **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
 * **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md))
-* **Pressure sensor**: Adafruit MPRLS Ported Pressure Sensor Breakout (0–172 kPa / 0–25 PSI absolute, I2C)
+* **Pressure sensor**: CFSensor XGZP6847A100KPGN33 (-100–0 kPa gauge, 0.2–2.7 V analog)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
 * **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
 * **Display**: Adafruit Monochrome 1.3" 128x64 OLED (SH1106, STEMMA QT / Qwiic)
@@ -32,9 +32,10 @@ suction below ambient, so kPa keeps the numbers short and the resolution meaning
 | `target` | depth below the same reference the loop pulls to, so a target and a reading are on one ruler |
 | `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below ambient |
 
-The ambient reference belongs to the sensor: the MPRLS is absolute, so it takes one from its first
-reading when it comes up and reports depth below it. Nothing on the wire sets or restates a
-reference, so the rig needs to be at rest when the device boots.
+The ambient reference belongs to the sensor: the part is a gauge sensor with an analog output, and
+its driver takes a reference from its first reading when it comes up and reports depth below it.
+Nothing on the wire sets or restates a reference, so the rig needs to be at rest when the device
+boots.
 
 ## Project layout
 
@@ -93,10 +94,10 @@ a control loop exists. The vacuum system is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
 and the valve and holds the loop that commands them, so the control law reads in one place and the
 pins and the buses are named in another. Each of those is an interface, and the part that satisfies it
-is in `hal/impl/`. A vendor header appears only where a part is named: `<Adafruit_MPRLS.h>` in the
-sensor's own driver, and `<Adafruit_SH110X.h>` in
+is in `hal/impl/`. A vendor header appears only where a part is named — `<Adafruit_SH110X.h>` in
 [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp), which picks the panel driver and hands it
-to the generic adapter. That file is also where the numbers in
+to the generic adapter. The pressure sensor needs none: its part is a pin and a transfer function,
+written in its own driver. That file is also where the numbers in
 [core/Config.h](./libraries/VacuumCore/src/core/Config.h) become a fitted rig: a driver is given its
 pins rather than reading them.
 
@@ -106,8 +107,7 @@ pins rather than reading them.
 
 | Signal | GPIO | Notes |
 | --- | --- | --- |
-| I2C sensor SDA | 8 | MPRLS, on `Wire` (bus 0; ESP32-S3 default pin) |
-| I2C sensor SCL | 9 | same bus |
+| Sensor OUT | 7 | XGZP6847A analog output, ADC1 channel 6 |
 | I2C panel SDA | 17 | OLED, on `Wire1` (bus 1) |
 | I2C panel SCL | 18 | same bus |
 | Pump PWM | 6 | to the MOSFET gate |
@@ -122,21 +122,52 @@ pins rather than reading them.
 | UART0 | 43/44 | alternative control interface, 115200 |
 | RGB LED | 48 | on board, not wired to anything |
 
-Pins 7 and 13–16 are free; GPIO12 drives the piezo. The two I2C parts are on separate buses — the
-sensor on `Wire`, the panel on `Wire1` — so neither driver can stall the other. The four button pins are wired, named in
+Pins 8, 9 and 13–16 are free; GPIO12 drives the piezo. The panel is the only I2C part left, on
+`Wire1`, and the sensor is an analog voltage on ADC1; `Wire` is unused. The four button pins are wired, named in
 `core/Config.h` and read
 through [hal/impl/Buttons.h](./libraries/VacuumCore/src/hal/impl/Buttons.h), which arms them on
 change interrupts, settles the debounce on each read, and classifies a press as short, long or
 double when it is released; no key is assigned an action yet. The battery sense is on GPIO4 because
-it is the one ADC1 pin that is not a button — a pressed button would pull the sense line to ground. Nothing in the firmware touches the pins that have to be left
+it is the ADC1 pin not taken by a button or the sensor — a pressed button would pull the sense line
+to ground. Nothing in the firmware touches the pins that have to be left
 alone at reset (strapping 0, 3, 45, 46) or the USB pins (19/20), and on a Super Mini GPIO0 is only
-the BOOT button. I2C addresses: MPRLS `0x18`, OLED `0x3C`. The pin map and the harness constants
+the BOOT button. I2C address: OLED `0x3C`. The pin map and the harness constants
 are in [core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers — the panel's
 geometry, the sensor's range, the PWM channel's setup — sit with its driver in
 [hal/impl/](./libraries/VacuumCore/src/hal/impl).
 
 The on-board addressable RGB LED is on GPIO48, which is clear of the I2C bus, so it needs no
 special handling.
+
+### Pressure sensor
+
+The sensor is the CFSensor XGZP6847A100KPGN33: a -100–0 kPa gauge part with an amplified analog
+output, so it takes one ADC pin rather than the I2C bus.
+
+```
+XGZP6847A   1  N/C
+            2  VDD ── 3V3
+            3  GND ── GND
+            4  VDD ── 3V3
+            5  OUT ──┬── GPIO7 (ADC1 channel 6)
+                     └── 10k ── GND
+            6  GND ── GND
+
+            100 nF across VDD and GND, at the part
+```
+
+At 3.3 V the output is 0.2 V at -100 kPa and 2.7 V at 0 kPa, so the depth is
+`(2.7 - V) / 0.025` kPa. The driver takes the first reading after boot as ambient and measures
+below it, which cancels the part's zero offset; the rig still has to be at rest when the device
+boots. The output is ratiometric to its supply, so keep the part on the MCU's `3V3` net rather
+than the pump and valve load rail, and keep the pump's return current out of its ground. The 10 k
+pulldown makes a disconnected sensor read 0 V, which the driver refuses as "no part" rather than
+reporting full vacuum.
+
+The part is a gauge sensor: the 3 mm port takes the chamber tube, and the small atmosphere hole in
+the side of the housing must stay open. Do not tape over the port or the hole, and keep glue out
+of both. The datasheet also warns that light reaching the die shifts the output, so an opaque tube
+is the right default.
 
 ### Pump driver
 
@@ -474,7 +505,7 @@ Protections, all of which act without consulting the controller:
 
 * duty is hard capped at `PUMP_DUTY_MAX_PERCENT`
 * a slew rate limit avoids step changes into the diaphragm pump
-* if the pressure sensor stops answering mid-run, the pump is cut and the state latches to
+* if the pressure sensor stops producing a plausible reading mid-run, the pump is cut and the state latches to
   `FAULT` (clear with `vacuum reset`)
 * targets deeper than `floor` only log a warning and pin the duty
 * holding Back for 3 s stops the pump and vents, whatever the controller is doing
@@ -505,7 +536,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 
 * [x] ESP32-S3 project skeleton, build and upload flow
 * [x] Layered core/hal/app layout, with the dependency direction kept by hand
-* [x] MPRLS driver with median + EMA filtering, capturing its own ambient reference
+* [x] XGZP6847A analog driver with averaging + EMA filtering and presence by plausibility, capturing its own ambient reference
 * [x] PWM pump driver with ramp and duty cap
 * [x] PID vacuum controller with a reachable-floor check
 * [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller

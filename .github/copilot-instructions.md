@@ -52,11 +52,10 @@ a driver into the class that drives it: the register writes and the control law 
 here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because a vendor
-header is allowed only where a part is named — `<Adafruit_MPRLS.h>` in its own driver, and the
-panel's driver in the composition root — and because the vacuum system reads the same whether the
-part behind it is an MPRLS or nothing at all. An interface with one implementation earns its place
-exactly when it is a foreign boundary like that; anywhere else it is a second implementation that
-does not exist yet.
+header is allowed only where a part is named — `<Adafruit_SH110X.h>` in the composition root, where
+the panel is picked — and because the vacuum system reads the same whether the part behind it is a
+sensor or nothing at all. An interface with one implementation earns its place exactly when it is a
+foreign boundary like that; anywhere else it is a second implementation that does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; `buildAppContext()` builds and owns the parts and hands out the `AppContext` interfaces,

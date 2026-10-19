@@ -23,17 +23,18 @@ constexpr uint32_t PROTOCOL_VERSION = 1;
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
 //
-// Two I2C buses, one per part, so neither driver can stall the other and nothing has to lock a
-// shared bus. The sensor is on the S3's `Wire` (bus 0) at the variant's default pins; the panel is
-// on `Wire1` (bus 1) at two of the free pins. Both stay clear of the S3 strapping pins (0, 3, 45,
-// 46) and of the USB pins (19/20).
-constexpr int SENSOR_I2C_SDA = 8;
-constexpr int SENSOR_I2C_SCL = 9;
+// The panel is the only bus part: it is on `Wire1` (bus 1) at two of the free pins, clear of the
+// S3 strapping pins (0, 3, 45, 46) and of the USB pins (19/20). The sensor is not on a bus at all;
+// its amplified analog output goes to an ADC pin.
 constexpr int PANEL_I2C_SDA = 17;
 constexpr int PANEL_I2C_SCL = 18;
-// Each bus's speed belongs to the harness rather than to either part on it.
-constexpr uint32_t SENSOR_I2C_FREQ_HZ = 400000;
+// The bus speed belongs to the harness rather than to the part on it.
 constexpr uint32_t PANEL_I2C_FREQ_HZ = 400000;
+
+// The pressure sensor: a CFSensor XGZP6847A100KPGN33, whose output is 0.2..2.7 V over -100..0 kPa.
+// GPIO7 is ADC1 channel 6 and clear of the buttons (GPIO1/2/10), the battery sense (GPIO4) and the
+// strapping pins, so it is the one ADC1 pin left for the part.
+constexpr int SENSOR_ADC = 7;
 
 // The pump: a JQB2438 through a low side MOSFET.
 constexpr int PUMP_PWM = 6;
@@ -49,9 +50,9 @@ constexpr int VENT_VALVE = 5;
 constexpr int BUZZER_PWM = 12;
 
 // Battery sense: a 1S Li-ion pack through a 100k/100k divider, so the top of the pack lands inside
-// the ADC range. GPIO4 is ADC1 channel 3, and it is the one ADC1 pin that is neither a button nor a
-// strapping pin: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, and a pressed button would
-// yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay clear too.
+// the ADC range. GPIO4 is ADC1 channel 3, and it is the ADC1 pin that is neither a button nor the
+// sensor: ADC1 covers GPIO1..GPIO10, GPIO1/2/10 are button pins, GPIO7 is the sensor, and a pressed
+// button would yank the sense line to ground. The S3 strapping pins (0, 3, 45, 46) stay clear too.
 constexpr int BATTERY_ADC = 4;
 // The board's divider, not the pack's property: two equal resistors, so the ratio is 2.0 and
 // BATTERY_CALIBRATION trims the pair against a meter.

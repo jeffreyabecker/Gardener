@@ -14,10 +14,10 @@
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
-#include "hal/impl/MprlsSensor.h"
 #include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
+#include "hal/impl/XgzpSensor.h"
 
 namespace gardener {
 namespace {
@@ -35,15 +35,15 @@ constexpr int16_t kPanelNoResetLine = -1;
 
 // The parts are new'd once, at boot, and never deleted: the device's destructor never runs, so
 // nothing owns them — the same policy the SH1106 driver already documents. This is the one place
-// that names the rig: which pin drives what, which bus each I2C part sits on, and which valve is
+// that names the rig: which pin drives what, which bus the panel sits on, and which valve is
 // fitted. The drivers are handed those facts rather than reading them, so a board variant edits
 // this file and core/Config.h and nothing under hal/impl/. The AppContext itself is copied out by
 // value.
 //
-// The two I2C buses are App's to bring up: each driver takes a TwoWire it does not own, so both are
-// up before begin() is called.
+// The panel's bus is App's to bring up: the driver takes a TwoWire it does not own, so it is up
+// before begin() is called. The sensor is a voltage on an ADC pin and needs no bus.
 AppContext buildAppContext() {
-  auto* sensor = new MprlsSensor(Wire);
+  auto* sensor = new XgzpSensor(cfg::SENSOR_ADC);
   auto* pump = new PwmPump(cfg::PUMP_PWM);
   auto* vent = new NormallyOpenValve(cfg::VENT_VALVE);
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);

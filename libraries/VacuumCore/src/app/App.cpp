@@ -45,10 +45,9 @@ bool App::begin() {
   logger_->info(boot.c_str());
 
   // The panel is the one part with no fallback: nothing on the device can draw without it, so a
-  // panel that does not answer is fatal rather than a degraded mode. Both buses are the app's to
-  // bring up, because each driver takes a TwoWire it does not own; they are separate so one part
-  // cannot stall the other.
-  Wire.begin(cfg::SENSOR_I2C_SDA, cfg::SENSOR_I2C_SCL, cfg::SENSOR_I2C_FREQ_HZ);
+  // panel that does not answer is fatal rather than a degraded mode. Its bus is the app's to bring
+  // up, because the driver takes a TwoWire it does not own. The sensor is an ADC pin, not a bus,
+  // so it has nothing to bring up here.
   Wire1.begin(cfg::PANEL_I2C_SDA, cfg::PANEL_I2C_SCL, cfg::PANEL_I2C_FREQ_HZ);
   bool displayOk = context_.display().begin();
   logger_->info(displayOk ? "oled: online" : "oled: not found, aborting");
@@ -84,7 +83,7 @@ bool App::begin() {
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
-  logger_->info(sensorOk ? "mprls: online" : "mprls: not found");
+  logger_->info(sensorOk ? "sensor: online" : "sensor: not found");
   logger_->info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   logger_->info(buzzerOk ? "buzzer: ready" : "buzzer: PWM unavailable");
   logger_->info(context_.vent().energiseWhenOpen() ? "vent: normally closed"
