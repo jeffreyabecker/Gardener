@@ -17,9 +17,10 @@ is no percent-encoding layer and no quoting.
 
 ```
 fs list <path>
-  ok rows=N
+  ok
   <file|dir> <name>
   ...
+  [empty line]
 
 fs read <path>
   ok bytes=N
@@ -41,19 +42,22 @@ fs delete <path>
   searches the payload for a terminator. The payload may contain `LF`, NUL and any other byte.
 - `fs read` replies with a header carrying `bytes=N`; the host reads exactly N bytes. A zero-byte
   file sends only the header.
-- `fs list` replies with a header carrying `rows=N`, then N entry lines. Each entry line is
-  `type name`: `type` is `file` or `dir`, and `name` is one token, so a listed name can be pasted
-  into `fs read` or `fs delete`. `rows=N` is the count and tells the host when the response is
-  complete.
+- `fs list` replies `ok`, then one line per entry as the directory is traversed, then an empty
+  line. Each entry line is `type name`: `type` is `file` or `dir`, and `name` is one token, so a
+  listed name can be pasted into `fs read` or `fs delete`. There is no count: the blank line is
+  the terminator, and an empty directory is `ok` then the blank line. An error reply is still one
+  line, with no blank line after it.
 
   ```
   -> fs list /tmp
-  <- ok rows=2
+  <- ok
   <- file a.txt
   <- dir sub
+  <- (blank line)
   ```
-- `fs` replies have no `end` line. The count in the header (`rows=N` or `bytes=N`) is
-  authoritative, so the host knows when the reply is complete.
+- `fs read` replies have no `end` line: `bytes=N` is authoritative, so the host knows when the
+  reply is complete. `fs list` has no count and no `end` line either; its blank line is the only
+  terminator. `fs write`, `fs mkdir` and `fs delete` reply with one line and no body.
 - `fs delete` removes a file, or a directory with everything under it. The reply is `ok`;
   `fs list` shows what remains.
 - A write header that is syntactically valid but cannot be honoured still consumes the declared
@@ -105,17 +109,20 @@ Both verbs move the data in small chunks, so neither keeps the whole file in RAM
 
 Extend `app/Storage.h/.cpp` without leaking `LittleFS` into the header:
 
-- `Entry { String name; bool directory; }`.
+- `Entry { String name; bool directory; }`, where `name` is the entry's own name, not its path.
 - `exists(path)`, `isDirectory(path)`, `freeBytes()`.
-- `listEntries(path, std::vector<Entry>&)` returning false when the path is not a directory.
+- A directory cursor: `openDirectory(path)` returns an opaque handle (null when the path cannot be
+  opened), `nextEntry(handle, Entry&)` yields one entry at a time, and `closeDirectory(handle)`
+  releases it. The handle is opaque in `Storage.h` and backed by `File` in `Storage.cpp`. This is
+  what `fs list` traverses; nothing collects entries into a container.
 - `makeDirectory(path)`.
 - `remove(path, size_t& removed)` recursive; collect child paths before deleting so iteration is
   not invalidated.
 - Streaming handles: `openRead`, `readChunk`, `closeRead`, `openWrite`, `writeChunk`,
   `closeWrite`, `abortWrite`. Use an opaque `WriteHandle`/`File*` in the `.cpp`; `Storage.h` only
   has a forward-declared handle pointer. `abortWrite` closes and removes the partial file.
-- Keep the existing text `read`/`write` and suffix `list` API; implement `list` on top of
-  `listEntries` so `Routines` keeps its behaviour.
+- Keep the existing text `read`/`write` and suffix `list` API unchanged; `Routines` still collects
+  file names for loading, which is its own shape and not `fs list`'s.
 
 ### 3. `FsDomain`
 
@@ -125,7 +132,11 @@ Add `app/serial/Domains/Fs.cpp` and `createFsDomain()` in `Domains.h`.
   final path where a verb needs it. Do not add a global tokenizer.
 - Local path validation: absolute, no empty/`.`/`..` segments, no trailing slash, no spaces,
   root only for list, exact `/settings.ini` reservation.
-- `fs list` writes each row straight to `io`: `file <name>` or `dir <name>`, one `\n`.
+- `fs list` checks the path, opens the directory, then writes `ok`; an absent path or a path that
+  is not a directory is refused before `ok`, so it gets a single `err` line. After `ok`, each row
+  is written straight to `io` as the cursor yields it: `file <name>` or `dir <name>`, one `\n`. It
+  finishes with a single `\n`, so the response ends `\n\n`. Nothing is collected, so listing memory
+  stays flat however many entries there are.
 - `execute()` parses the verb and arguments, then completes the whole command: a synchronous
   directory operation, a body read for `write`, or a body write for `read`. There is no state
   machine and no `service()`.
@@ -142,7 +153,7 @@ Add `app/serial/Domains/Fs.cpp` and `createFsDomain()` in `Domains.h`.
 Update `docs/specs/serial-protocol.md`:
 
 - Intro: add `fs` to the domain list.
-- Replies: document the `rows=N` and `bytes=N` body counts and the `fs` entry line.
+- Replies: document `bytes=N`, the `fs` entry line, and the blank-line terminator for `fs list`.
 - Add the `fs` section with the five verbs, path rules, framing, errors and behaviour.
 - Errors: add `not_found` and the `fs` reasons.
 - Renumber the sections after `fs` and update cross-references.
@@ -153,6 +164,7 @@ Update `docs/specs/serial-protocol.md`:
 - Build: `powershell -ExecutionPolicy Bypass -File scripts/arduino.ps1 -Task build`.
 - Wire checks with a serial terminal or a small host script:
   - `fs mkdir /tmp`, `fs list /`, `fs write /tmp/a 5` with `a\nb\0c`, `fs read /tmp/a`.
+  - `fs list` an empty directory and a populated one; confirm `ok`, the rows, and the blank line.
   - `fs write` with a declared count larger than the bytes sent, then wait 2 s.
   - `fs write /settings.ini 0`, `fs mkdir /tmp`, `fs delete /tmp`, `fs delete /missing`.
   - A large write (near the cap) to confirm the control loop keeps running and RAM stays flat.
@@ -162,9 +174,9 @@ Update `docs/specs/serial-protocol.md`:
 
 - The `fs` domain does not re-run the routine loader after writing under `/routines` or
   `/modules`; changes take effect at the next boot.
-- `fs list` collects the directory into a `std::vector<Entry>` before writing rows. A directory
-  with an enormous number of entries uses memory proportional to the list; the existing
-  `Routines` loader already uses the same shape.
+- `fs list` writes rows as it traverses, one entry at a time, so a directory with an enormous
+  number of entries costs no more memory than one with two. Rows come in the filesystem's order;
+  `fs list` does not sort them.
 - `fs write` never creates parent directories; `fs mkdir` is the only way to add one.
 - A failed recursive delete is not atomic. The reply is `err not_ready io`, and `fs list` shows
   what remains.
