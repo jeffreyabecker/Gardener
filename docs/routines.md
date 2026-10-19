@@ -54,7 +54,8 @@ Files within `/modules/` load in no particular order, so none may depend on anot
 level. Define classes and functions there; leave constructing them to the page that uses them.
 
 `/modules/settings.be` is the one shipped. `Settings(name)` edits the `describe()` list of the
-routine registered under that name. A page that wants the editor holds one and delegates to it:
+routine registered under that name. **Double OK** is the standard gesture for opening it; a page
+that wants the editor holds one and delegates to it:
 
 ```berry
 def activate()
@@ -269,6 +270,10 @@ Holding **OK for 3 s** is the page's way out: it stops and vents, then hands the
 `default`. Whichever routine was showing is no longer polled, and `default` is activated again — the
 same object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
 disk; a routine that was left can be brought back with `routines.set_active()`.
+
+The standard gestures a page should follow — double OK for its settings, OK for its primary action,
+Back to leave a view, and the two holds above — are in [gestures.md](./gestures.md), with the matrix
+of what every press does on the shipped pages.
 
 ## `buzzer` — the piezo
 

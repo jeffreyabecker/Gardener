@@ -5,8 +5,8 @@
 # describe() list, keeps the values for the visit, and writes a change back with
 # store.set(name, ...) and nothing else. It does not touch the machine.
 #
-# A page opens one on the key that starts the editor, draws it in place of the page's own content
-# while is_open(), and drops it once Back closes the top level.
+# A page opens one on double OK, the standard settings gesture, draws it in place of the page's own
+# content while is_open(), and drops it once Back closes the top level.
 
 class Settings
   var name

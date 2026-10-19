@@ -47,6 +47,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
 | [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the six modules, and the rules that follow from the embedded interpreter |
+| [docs/gestures.md](./docs/gestures.md) | The key contract: reserved holds, the standard settings and Back gestures, and the matrix of every press |
 | [docs/assets.md](./docs/assets.md) | The image file the panel draws, and the tool that makes one |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
@@ -288,10 +289,15 @@ panel back to the `default` routine, so a page that took it over is one hold awa
 hard-coded in `App` because it applies on either page; the second belongs to the disconnected page,
 because it exists to leave that page.
 
-The rest of the keys belong to whichever page is showing, and the two shipped pages use them this
-way: on `default`, OK starts or opens the target editor and Back vents, and a **double Up** opens the
-routine list; on `browser`, Up and Down walk the list, OK switches to the highlighted page, a
-**double OK** opens that page's settings when it describes any, and Back goes back to `default`.
+The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
+for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
+primary action. The two shipped pages use them this way: on `default`, OK starts or opens the target
+editor and Back vents, and a **double Up** opens the routine list; on `browser`, Up and Down walk the
+list, OK switches to the highlighted page, a **double OK** opens that page's settings, and Back goes
+back to `default`.
+
+The matrix of every press, the reserved holds and the timing that classifies them is in
+[docs/gestures.md](./docs/gestures.md).
 
 ### Files on the device
 
