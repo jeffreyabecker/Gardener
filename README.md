@@ -361,7 +361,7 @@ back — and a routine that registers without `activate()` or `poll()` is refuse
 
 Three ship. `default` is the readout and the target editor; a double Up opens `browser`, the list
 of everything registered, which walks with Up and Down and switches with OK. `static` is the cycle:
-pull to a target, hold it, vent, rest, and repeat. There is no fixed number of routines: the registry
+pull to a target, hold it, vent, rest, and repeat. A hold can pulse in a band around the target. There is no fixed number of routines: the registry
 grows as files register, and the browser lists whatever boot found.
 
 A routine that has values worth editing exposes `describe()`, returning a list of `setting` records

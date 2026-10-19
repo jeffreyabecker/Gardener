@@ -433,9 +433,11 @@ through `store.set` when a setting is saved.
 
 `/routines/static.be` is the cycle: OK starts a pull to `target_pressure`, `HOLD` starts the work
 timer, `vacuum.stop()` vents, `IDLE` starts the rest timer, and `resume_behavior` decides whether the
-next cycle starts by itself or on OK. It is also the worked example of a page whose state is a phase
-machine: `poll` advances a phase and never waits, and a release it did not ask for (the Back hold)
-sends it back to `ready`.
+next cycle starts by itself or on OK. `pulse` turns the work hold into a square wave inside
+`target_pressure` ± 0.5% (`low`), 1% (`med`) or 2.5% (`high`): the page vents to the lower bound and
+pulls back to the upper one until the work timer ends. It is also the worked example of a page whose
+state is a phase machine: `poll` advances a phase and never waits, and a release it did not ask for
+(the Back hold) sends it back to `ready`.
 
 Between them the three pages cover what a page can do; look at them rather than at a second
 description here.
