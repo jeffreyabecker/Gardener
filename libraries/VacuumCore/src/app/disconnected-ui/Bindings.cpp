@@ -397,6 +397,53 @@ const bnfuncinfo kScreenLibrary[] = {
     {nullptr, nullptr},
 };
 
+// --- device ----------------------------------------------------------------
+
+// The settings the device keeps as itself rather than as a routine's own values. `units()` is the
+// token table `core/Units.h` holds, so a page cycles exactly what `device set unit` accepts and
+// carries no second list.
+int deviceUnits(bvm* vm) {
+  be_newobject(vm, "list");
+  const int list = be_absindex(vm, -1);
+  for (uint8_t i = 0; i < kDisplayUnitCount; i++) {
+    be_pushstring(vm, kDisplayUnits[i].name);
+    be_data_push(vm, list);
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);
+  be_return(vm);
+}
+
+int deviceSetUnit(bvm* vm) {
+  DisplayUnit unit = DisplayUnit::Kpa;
+  const bool accepted =
+      be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
+  if (accepted) gContext->settings().setUnit(unit);
+  be_pushbool(vm, accepted);
+  be_return(vm);
+}
+
+int deviceLog(bvm* vm) {
+  be_pushbool(vm, gContext->logEnabled());
+  be_return(vm);
+}
+
+// The wire's `device set log` and this call are the same switch: a routine's `vacuum.log` honours
+// it too. It is a run-time setting, not one `/settings.ini` carries.
+int deviceSetLog(bvm* vm) {
+  gContext->logEnabled() = be_tobool(vm, 1);
+  be_pushbool(vm, gContext->logEnabled());
+  be_return(vm);
+}
+
+const bnfuncinfo kDeviceLibrary[] = {
+    {"units", deviceUnits},
+    {"set_unit", deviceSetUnit},
+    {"log", deviceLog},
+    {"set_log", deviceSetLog},
+    {nullptr, nullptr},
+};
+
 // --- buttons ---------------------------------------------------------------
 
 // A pull, not a callback: the queue is drained by the routine when it is ready, so no Berry code
@@ -611,6 +658,7 @@ void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& log
 
   installModule(vm, "vacuum", kVacuumLibrary);
   installModule(vm, "screen", kScreenLibrary);
+  installModule(vm, "device", kDeviceLibrary);
   installModule(vm, "buttons", kButtonsLibrary);
   installModule(vm, "buzzer", kBuzzerLibrary);
   installModule(vm, "routines", kRoutinesLibrary);

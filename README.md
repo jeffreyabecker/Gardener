@@ -322,10 +322,11 @@ to leave that page.
 
 The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
 for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
-primary action. The two shipped pages use them this way: on `default`, OK starts or opens the target
-editor and Back vents, and a **double Up** opens the routine list; on `browser`, Up and Down walk the
-list, OK switches to the highlighted page, a **double OK** opens that page's settings, and Back goes
-back to `default`.
+primary action. On `default`, OK starts or opens the target editor and Back vents, a **double Up**
+opens the routine list, and a **double Down** opens `system`, the device's own settings; on
+`browser`, Up and Down walk the list, OK switches to the highlighted page, a **double OK** opens that
+page's settings, and Back goes back to `default`. On `system`, Up and Down walk the two rows, OK
+edits the selected value, and Back cancels an edit or goes home.
 
 The matrix of every press, the reserved holds and the timing that classifies them is in
 [docs/specs/gestures.md](./docs/specs/gestures.md).
@@ -390,10 +391,16 @@ The routine registered as **`default`** is the page. If no file registers one, t
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load.
 
-Three ship. `default` is the readout and the target editor; a double Up opens `browser`, the list
-of everything registered, which walks with Up and Down and switches with OK. `static` is the cycle:
-pull to a target, hold it, vent, rest, and repeat. A hold can pulse in a band around the target. There is no fixed number of routines: the registry
-grows as files register, and the browser lists whatever boot found.
+Four ship. `default` is the readout and the target editor; a double Up opens `browser`, the list
+of everything registered, which walks with Up and Down and switches with OK, and a double Down opens
+`system`, the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest,
+and repeat. A hold can pulse in a band around the target. There is no fixed number of routines: the
+registry grows as files register, and the browser lists whatever boot found.
+
+`system` edits the two settings the device keeps as itself rather than as a routine's values: the
+unit the glass prints (the one write that survives a reset) and whether diagnostics reach the serial
+line. Up and Down walk the rows, OK opens a value, Up/Down changes it, OK saves, and Back cancels or
+goes home. Like `browser`, it touches nothing of the machine, so a run keeps going behind it.
 
 A routine that has values worth editing exposes `describe()`, returning a list of `setting` records
 (the key, label, kind, step, bounds and, for a choice, the values to cycle). The kinds are `real`,
@@ -408,11 +415,11 @@ one module: `browser` uses its `Settings` class, and any page can hold one to ed
 without leaving its page.
 
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, the
-compiled GFX faces plus the built-in 5x7, text measurement, and the unit the panel prints), `buttons`
-(the presses since the last call, as a pull queue), `buzzer`
-(a timed tone, a note sequence, or silence), `routines` (register, switch, list, and get a
-registered object) and `store` (its own values, kept across a power cycle, or another registered
-routine's by name).
+compiled GFX faces plus the built-in 5x7, text measurement, and the unit the panel prints), `device`
+(the settings the device keeps: the display unit and the diagnostics stream), `buttons` (the presses
+since the last call, as a pull queue), `buzzer` (a timed tone, a note sequence, or silence),
+`routines` (register, switch, list, and get a registered object) and `store` (its own values, kept
+across a power cycle, or another registered routine's by name).
 
 The full surface — every call, what it returns, the fields of each record, and what the overlay
 draws over a page — is in [docs/specs/routines.md](./docs/specs/routines.md).

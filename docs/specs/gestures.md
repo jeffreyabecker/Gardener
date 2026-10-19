@@ -54,10 +54,12 @@ away from home. The browser's short Back goes home too, but that is the browser'
 | **Back** | leave the current view without writing. The settings list closes; a value editor cancels. On `default` it vents; on the browser it goes home. |
 | **Up / Down** | move the selection, or change the value being edited. |
 | **Double Up** | `default` opens the browser. No other page is required to take it. |
+| **Double Down** | `default` opens `system`, the device's own settings. No other page is required to take it. |
 
 A page that describes settings takes double OK for the settings view even if it also has an inline
 editor: one gesture, one meaning. `default` has no `describe()` today, so double OK there opens the
-target editor.
+target editor, while double Down opens `system` — the device's own settings rather than a routine's.
+`system` edits its two values in place with the same OK/Up/Down/Back grammar as the shared editor.
 
 The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
 it, OK saves, Back closes the list or cancels the editor. A `duration` adds a stage — OK moves from
@@ -76,7 +78,7 @@ routine. The holds have their own rows because they are not presses.
 | Up double | page | open browser | — | move | move | step + |
 | Down short | page | — / step | — | move | move | step − |
 | Down long | page | — / step | — | move | move | step − |
-| Down double | page | — / step | — | move | move | step − |
+| Down double | page | open system settings / step | — | move | move | step − |
 | OK short | page | start / save target | start / — | switch page | edit value | save |
 | OK long | page | — | start / — | switch page | edit value | save |
 | OK double | page | open target editor | open settings | open settings | edit value | save |
@@ -91,6 +93,10 @@ on Up or Down is one event and moves once; a page that does not distinguish it t
 
 On `static`, OK starts a cycle only from `ready`. Once the pull is under way, Back is not a stop —
 the Back hold is, and the page notices the machine's release and returns to `ready`.
+
+`system` follows the settings grammar with two rows: Up and Down move between `UNIT` and `LOG`, OK
+opens the selected value, Up/Down cycles the unit or toggles logging, OK saves, and Back cancels or
+returns to `default`.
 
 The page columns describe the disconnected device. While a controller owns the device there is no
 routine page: presses are logged (`btn: ok short`) and only the Back hold and the Back+OK reset still

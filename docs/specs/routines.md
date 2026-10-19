@@ -273,6 +273,22 @@ The firmware draws three things on top of every `flush()`, so a routine does not
 
 Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear of the state icon.
 
+## `device` — the device's own settings
+
+The same two switches the serial `device` domain carries: the unit the panel prints and whether
+diagnostics reach the wire. They belong to the device rather than to a routine's `store` file.
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `device.units()` | list of strings | every token `device set unit` accepts, in `core/Units.h` order |
+| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini`; false for a token that is not one of `units()` |
+| `device.log()` | `bool` | whether diagnostics are on for this session |
+| `device.set_log(enabled)` | `bool` | applies the switch `device set log` also sets; not stored across a reset |
+
+`screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
+only to cycle it. The `/routines/system.be` page is the worked example: it edits both values in
+place and touches nothing of the machine.
+
 ## `buttons` — the presses
 
 | Call | Returns |
@@ -458,9 +474,10 @@ outside `/routines/`: a name that is not registered is refused.
 
 ## A complete example
 
-Three routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
+Four routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
 editor stepped in whole display units, OK to start or commit, Back to vent, and the target kept
-across a boot by `store`. A **double Up** on that page opens the second one.
+across a boot by `store`. A **double Up** on that page opens the second one, and a **double Down**
+opens `/routines/system.be`, the device's own settings.
 
 `/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
 window follows the selection, OK switches to the highlighted page and Back goes home. A **double OK**
@@ -471,6 +488,11 @@ reads `routines.names()`, so a routine that is added to the data image appears i
 to either file. It touches nothing of the machine — a run keeps going behind it — and it writes only
 through `store.set` when a setting is saved.
 
+`/routines/system.be` edits the two settings that are the device's rather than a routine's: the
+display unit and the diagnostics switch, through the `device` module above. Up and Down walk its two
+rows, OK opens a value, Up/Down cycles or toggles it, OK saves, and Back cancels or goes home. Like
+the browser it touches nothing of the machine and has no `store` file.
+
 `/routines/static.be` is the cycle: OK starts a pull to `target_pressure`, `HOLD` starts the work
 timer, `vacuum.stop()` vents, `IDLE` starts the rest timer, and `resume_behavior` decides whether the
 next cycle starts by itself or on OK. `pulse` turns the work hold into a square wave inside
@@ -479,5 +501,5 @@ pulls back to the upper one until the work timer ends. It is also the worked exa
 state is a phase machine: `poll` advances a phase and never waits, and a release it did not ask for
 (the Back hold) sends it back to `ready`.
 
-Between them the three pages cover what a page can do; look at them rather than at a second
+Between them the four pages cover what a page can do; look at them rather than at a second
 description here.

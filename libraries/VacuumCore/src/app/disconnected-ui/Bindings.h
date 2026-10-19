@@ -10,10 +10,11 @@ class StreamLogger;
 
 namespace berry {
 
-// The six native modules a routine sees, installed into a fresh VM:
+// The seven native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
+//   device.*   the settings the device keeps: the display unit and the diagnostics stream
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
 //   routines.* the registry, so a file can register itself

@@ -139,6 +139,12 @@ class Readout
 
     if ev.btn == "down"
       if !self.editing
+        # The way into the device's own settings, paired with the double Up that opens the routine
+        # list so neither is a single tap away.
+        if ev.press == "double"
+          routines.set_active("system")
+          return true
+        end
         return false
       end
       self.step(-1.0)
