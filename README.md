@@ -256,9 +256,11 @@ up: under 600 ms is `short`, at or over it is `long`. Two short presses with the
 within 350 ms of the first release are one `double`; the first is held back for that window, so a
 single tap is reported once, a little late, rather than acted on twice. A long press is never part
 of a double. There is no separate event for a longer hold — a page that wants one watches
-`heldMs()` while the key is down and picks its own mark. A key held at boot is not a press. The loop
-logs the gesture (`btn: ok short`), and holding Back for 3 s stops the pump and vents whatever the
-link is doing; that rule is hard-coded in `App`.
+`heldMs()` while the key is down and picks its own mark. A key held at boot is not a press.
+
+While no host is attached the presses go to the active routine (`buttons.take()`); with none, the
+loop logs the gesture (`btn: ok short`). Holding Back for 3 s always stops the pump and vents — that
+rule is hard-coded in `App` and no routine can suppress it.
 
 ### Files on the device
 
@@ -286,6 +288,52 @@ unit=mmhg
 
 So `device unit=mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
 are carried through a write rather than dropped; comments and spacing are not kept.
+
+### Routines
+
+With no host attached the panel runs a Berry routine. Every `/routines/*.be` is loaded at boot, and
+each file registers itself:
+
+```berry
+import string
+
+class Readout
+  def activate()          # the page became visible
+  end
+  def poll(now)           # once per loop pass; `now` is millis()
+  end
+end
+
+routines.register("default", "Pressure readout", Readout())
+return Readout
+```
+
+The routine registered as **`default`** is the page. If no file registers one, the panel shows the
+device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
+back — and a routine that registers without `activate()` or `poll()` is refused at load.
+
+What a routine can reach:
+
+| Module | Calls |
+| --- | --- |
+| `vacuum` | `target(kpa)`, `target_off()`, `start()`, `stop()`, `reset()`, `state()`, `now_ms()`, `log(text)` |
+| `screen` | `draw_clear()`, `draw_pixel`, `draw_line`, `draw_hline`, `draw_vline`, `draw_rect`, `draw_fillrect`, `draw_roundrect`, `draw_fillroundrect`, `draw_circle`, `draw_fillcircle`, `draw_ellipse`, `draw_fillellipse`, `draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`, `draw_text(x,y,size,inverted,text)`, `flush()`, `unit()` |
+| `buttons` | `take()` — one `{btn, press}` per call, or `nil` |
+| `routines` | `register(name, title, routine)`, `set_active(name)`, `names()` |
+
+`vacuum.state()` answers a map with `kpa`, `target`, `duty`, `floor`, `min`, `state`, `fault`,
+`batt` and `sensor_ok`. `screen.unit()` answers `name`, `suffix`, `per_kpa`, `whole_step` and
+`decimals` — the same numbers [core/Units.h](./libraries/VacuumCore/src/core/Units.h) holds, so a
+page steps a target in whatever the glass prints. **Berry has no dot access on a map**, so a
+routine reads `s["kpa"]`, not `s.kpa`.
+
+Presses go to the active routine and are not logged while it runs. The 3 s Back hold is the
+exception: it is the device's own stop and fires whatever the routine registered.
+
+Two things worth knowing before writing one. A `poll` that never returns blocks the loop — the
+interpreter has no instruction budget, so returning is a convention the author keeps. And `print`
+goes nowhere: a routine that wants to say something calls `vacuum.log(text)`, which reaches the
+serial line as a `[I]` record.
 
 ### Over the serial line
 
@@ -412,3 +460,5 @@ the vacuum. Do not expect the fail-safe to survive that swap.
   hold
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
 * [x] LittleFS storage: a mount at boot, a persistent display unit, and a data-folder upload task
+* [x] Berry routines: a vendored interpreter, a `/routines/*.be` registry, and a scripted
+  disconnected page with `vacuum`, `screen`, `buttons` and `routines` bindings

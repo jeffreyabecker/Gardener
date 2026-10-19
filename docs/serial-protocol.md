@@ -215,6 +215,11 @@ geometry: there is no drawing command, and no panel setting to write.
 <- ok w=64 h=128
 ```
 
+With no host attached the page is a **Berry routine** from `/routines/`, and the routine registered
+as `default` is the one drawn; with none, the panel shows the device's mark. Attaching a host takes
+the glass back for the readout, and detaching returns it to the routine, which is why `device unit=`
+changes what a routine prints even though the wire never draws.
+
 ## 8. `link` — how commands arrive
 
 | Field | Access | Values | Notes |

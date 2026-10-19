@@ -16,6 +16,10 @@ class Storage {
   // means the device just made an empty filesystem and had nothing to restore.
   enum class Mount { Mounted, Formatted, Failed };
 
+  // How many names one listing can return. A directory of the device's own files is small, and a
+  // fixed bound is what keeps the caller's buffer on its own stack.
+  static constexpr uint8_t kMaxNames = 16;
+
   Mount begin();
 
   bool ready() const { return ready_; }
@@ -24,6 +28,12 @@ class Storage {
   // default" rather than as an error to report.
   bool read(const char* path, String& out) const;
   bool write(const char* path, const String& text) const;
+
+  // The file names in a directory, at most `max` of them, into `names`. A suffix keeps only what
+  // the caller asked for, so a directory may hold other things without the filter living here.
+  // Directories are skipped; a path that is not there yields zero names rather than an error,
+  // because a device with no routines installed is a normal device.
+  uint8_t list(const char* dir, const char* suffix, String* names, uint8_t max) const;
 
   size_t usedBytes() const;
   size_t totalBytes() const;

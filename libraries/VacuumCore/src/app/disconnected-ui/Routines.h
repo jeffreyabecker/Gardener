@@ -1,33 +1,96 @@
 #pragma once
 
+#include <Arduino.h>
 #include <stdint.h>
 
-// Forward declared so the vendored interpreter's header stops at Routines.cpp, the way LittleFS.h
+#include "hal/Button.h"
+
+// The vendored interpreter's VM type, forward declared so its header stops here the way LittleFS.h
 // stops at Storage.cpp.
 struct bvm;
 
 namespace gardener {
 
+class AppContext;
+class Storage;
+class StreamLogger;
+
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
-// that is active. It is created once at boot and driven from the page's update(), and it owns the
-// only path into the interpreter.
+// that is active.
 //
-// Nothing else in the firmware includes berry.h, so no other file has to know the VM exists.
+// One entry per beat. The runtime is the only thing that enters the interpreter, and it does so
+// from its own frame — never from inside a Berry call — so there is nothing suspended, no second
+// core and no lock. `activate()` runs when a routine becomes active, and `poll(now)` once per pass
+// after that.
+//
+// A routine that raises is dropped and the page falls back to the mark: an error in a script is not
+// allowed to leave the glass blank.
 class Routines {
  public:
-  // Creates the VM. False when the interpreter cannot be allocated, which is a degraded mode
-  // rather than a boot failure: the page falls back to the mark.
-  bool begin();
+  // A device's own page is a handful of files. The bounds are what keep the registry and the press
+  // queue fixed-size; anything dropped is logged.
+  static constexpr uint8_t kMaxRoutines = 8;
+  static constexpr uint8_t kMaxPresses = 8;
 
-  // One entry into the VM: the active routine's poll(), or nothing when there is no active routine.
-  // Called from the page, once per loop pass.
+  // Creates the VM, installs the native modules, loads every `/routines/*.be` and picks `default`.
+  // False only when the interpreter cannot be allocated at all.
+  bool begin(AppContext& context, Storage& storage, StreamLogger& logger);
+
+  // One beat: the active routine's poll(now), or nothing when there is no active routine.
   void poll(uint32_t nowMs);
 
-  bool active() const { return active_ != nullptr; }
+  // The page became visible again: run the active routine's activate(), so a routine re-reads the
+  // unit and redraws rather than trusting what it knew before the host attached.
+  void enterPage();
+
+  bool active() const { return active_ >= 0; }
+
+  // --- the `routines` module's surface, called from the bindings ---
+  // `objectIndex` is the routine object's stack position in the calling native function; the
+  // runtime takes its own reference, so the value does not have to stay where it is.
+  bool registerRoutine(const char* name, const char* title, int objectIndex);
+  bool setActive(const char* name);
+  uint8_t count() const { return count_; }
+  const char* nameAt(uint8_t index) const;
+
+  // --- the `buttons` module's surface ---
+  void pushPress(Button button, Press press);
+  bool takePress(Button& button, Press& press);
 
  private:
+  struct Entry {
+    String name;
+    String title;
+  };
+
+  struct PressEvent {
+    Button button;
+    Press press;
+  };
+
+  bool loadFile(Storage& storage, const String& file);
+  void reportError(const char* file, const char* what);
+  bool invoke(uint8_t index, const char* method, bool withNow, uint32_t nowMs);
+  bool choose(const char* name);
+  void selectDefault();
+  void applyPending();
+
   bvm* vm_ = nullptr;
-  void* active_ = nullptr;
+  StreamLogger* logger_ = nullptr;
+  Entry entries_[kMaxRoutines];
+  uint8_t count_ = 0;
+  int8_t active_ = -1;
+
+  // A routine that asks to switch routines is asking from inside its own poll; the switch is
+  // applied when that call returns rather than re-entering the VM.
+  bool insideCall_ = false;
+  bool hasPending_ = false;
+  String pendingActive_;
+
+  PressEvent presses_[kMaxPresses];
+  uint8_t pressHead_ = 0;
+  uint8_t pressCount_ = 0;
+  bool pressOverflow_ = false;
 };
 
 }  // namespace gardener

@@ -37,6 +37,27 @@ bool Storage::write(const char* path, const String& text) const {
   return written == text.length();
 }
 
+uint8_t Storage::list(const char* dir, const char* suffix, String* names, uint8_t max) const {
+  if (!ready_ || !names || max == 0) return 0;
+
+  File folder = LittleFS.open(dir);
+  if (!folder.isDirectory()) return 0;
+
+  uint8_t count = 0;
+  while (count < max) {
+    File file = folder.openNextFile();
+    if (!file) break;
+    // A nested directory is not a file this class returns; the caller asked for names to read.
+    if (!file.isDirectory()) {
+      String name = file.name();
+      if (!suffix || name.endsWith(suffix)) names[count++] = name;
+    }
+    file.close();
+  }
+  folder.close();
+  return count;
+}
+
 size_t Storage::usedBytes() const { return ready_ ? LittleFS.usedBytes() : 0; }
 
 size_t Storage::totalBytes() const { return ready_ ? LittleFS.totalBytes() : 0; }

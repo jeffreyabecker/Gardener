@@ -71,7 +71,7 @@ bool App::begin() {
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.
-  bool vmOk = context_.routines().begin();
+  bool vmOk = context_.routines().begin(context_, context_.storage(), *logger_);
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
@@ -154,10 +154,18 @@ void App::logRunChanges(uint32_t nowMs) {
 
 // The keys are a local surface with no action assigned yet, so reporting the gesture is the whole
 // of what they do. One line per completed press, from here like every other report.
+// The keys belong to whoever owns the page: an active routine takes the presses, and with none the
+// loop reports them as it always has. A press is consumed either way, so it is never delivered
+// twice.
 void App::logButtonPresses() {
+  const bool toRoutine = !hostAttached_ && context_.routines().active();
   for (Button button : kButtons) {
     const Press press = context_.buttons().consumePress(button);
     if (press == Press::None) continue;
+    if (toRoutine) {
+      context_.routines().pushPress(button, press);
+      continue;
+    }
     String message = "btn: ";
     message += buttonName(button);
     message += ' ';
