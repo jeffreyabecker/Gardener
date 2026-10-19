@@ -56,25 +56,24 @@ bool Storage::read(const char* path, uint8_t* buffer, size_t capacity, size_t& l
   return length > 0;
 }
 
-uint8_t Storage::list(const char* dir, const char* suffix, String* names, uint8_t max) const {
-  if (!ready_ || !names || max == 0) return 0;
+void Storage::list(const char* dir, const char* suffix, std::vector<String>& names) const {
+  names.clear();
+  if (!ready_) return;
 
   File folder = LittleFS.open(dir);
-  if (!folder.isDirectory()) return 0;
+  if (!folder.isDirectory()) return;
 
-  uint8_t count = 0;
-  while (count < max) {
+  while (true) {
     File file = folder.openNextFile();
     if (!file) break;
     // A nested directory is not a file this class returns; the caller asked for names to read.
     if (!file.isDirectory()) {
       String name = file.name();
-      if (!suffix || name.endsWith(suffix)) names[count++] = name;
+      if (!suffix || name.endsWith(suffix)) names.push_back(name);
     }
     file.close();
   }
   folder.close();
-  return count;
 }
 
 size_t Storage::usedBytes() const { return ready_ ? LittleFS.usedBytes() : 0; }

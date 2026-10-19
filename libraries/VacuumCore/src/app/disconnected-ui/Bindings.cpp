@@ -363,13 +363,16 @@ int routinesSetActive(bvm* vm) {
 }
 
 int routinesNames(bvm* vm) {
-  be_newlist(vm);
+  // A list a routine can ask the size of and index, which means an instance of the `list` class: the
+  // entries go into the class's own backing list and that is dropped, exactly as for a record.
+  be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (uint8_t i = 0; i < gRoutines->count(); i++) {
+  for (size_t i = 0; i < gRoutines->count(); i++) {
     be_pushstring(vm, gRoutines->nameAt(i));
     be_data_push(vm, list);
     be_pop(vm, 1);
   }
+  be_pop(vm, 1);
   be_return(vm);
 }
 

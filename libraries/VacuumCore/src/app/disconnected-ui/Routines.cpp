@@ -13,8 +13,8 @@ namespace gardener {
 namespace {
 
 // The routine object is held as a global as well as in the registry: Berry's collector only walks
-// what the VM can see, and a C array is not one of those.
-void globalKey(char* out, size_t size, uint8_t slot) {
+// what the VM can see, and a std::vector is not one of those.
+void globalKey(char* out, size_t size, size_t slot) {
   snprintf(out, size, "__routine%u", (unsigned int)slot);
 }
 
@@ -41,23 +41,23 @@ bool Routines::begin(AppContext& context, Storage& storage, StreamLogger& logger
   }
   berry::install(vm_, context, *this, logger);
 
-  String files[Storage::kMaxNames];
-  const uint8_t found = storage.list("/routines", ".be", files, Storage::kMaxNames);
-  uint8_t loaded = 0;
-  for (uint8_t i = 0; i < found; i++) {
-    if (loadFile(storage, files[i])) loaded++;
+  std::vector<String> files;
+  storage.list("/routines", ".be", files);
+  size_t loaded = 0;
+  for (const String& file : files) {
+    if (loadFile(storage, file)) loaded++;
   }
 
   String summary = "vm: ";
-  summary += String((uint32_t)count_);
+  summary += String((uint32_t)entries_.size());
   summary += " routine";
-  if (count_ != 1) summary += 's';
+  if (entries_.size() != 1) summary += 's';
   summary += " from ";
   summary += String((uint32_t)loaded);
   summary += " of ";
-  summary += String((uint32_t)found);
+  summary += String((uint32_t)files.size());
   summary += " file";
-  if (found != 1) summary += 's';
+  if (files.size() != 1) summary += 's';
   logger.info(summary.c_str());
 
   selectDefault();
@@ -159,18 +159,15 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
     return false;
   }
 
-  int8_t slot = -1;
-  for (uint8_t i = 0; i < count_; i++) {
+  int slot = -1;
+  for (size_t i = 0; i < entries_.size(); i++) {
     if (entries_[i].name != name) continue;
-    slot = (int8_t)i;
+    slot = (int)i;
     break;
   }
   if (slot < 0) {
-    if (count_ == kMaxRoutines) {
-      logger_->error("vm: routine registry full, dropping the newest");
-      return false;
-    }
-    slot = (int8_t)count_++;
+    slot = (int)entries_.size();
+    entries_.push_back(Entry());
   } else {
     // A name registered twice is one routine; the later file is the one that runs.
     String message = "vm: routine ";
@@ -183,7 +180,7 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
   entries_[slot].title = title;
 
   char key[16];
-  globalKey(key, sizeof key, (uint8_t)slot);
+  globalKey(key, sizeof key, (size_t)slot);
   be_pushvalue(vm_, objectIndex);
   be_setglobal(vm_, key);
   be_pop(vm_, 1);  // be_setglobal leaves the value it stored on the stack
@@ -192,9 +189,9 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
 
 bool Routines::choose(const char* name) {
   if (name == nullptr) return false;
-  for (uint8_t i = 0; i < count_; i++) {
+  for (size_t i = 0; i < entries_.size(); i++) {
     if (entries_[i].name != name) continue;
-    active_ = (int8_t)i;
+    active_ = (int)i;
     return true;
   }
   return false;
@@ -224,7 +221,7 @@ bool Routines::setActive(const char* name) {
 // draw its first frame. A routine that raises here is dropped, exactly as one that raises in poll().
 bool Routines::startActive() {
   if (active_ < 0) return false;
-  if (invoke((uint8_t)active_, "activate", false, 0)) return true;
+  if (invoke((size_t)active_, "activate", false, 0)) return true;
   active_ = -1;
   return false;
 }
@@ -242,14 +239,14 @@ void Routines::applyPending() {
   logger_->warn(message.c_str());
 }
 
-const char* Routines::nameAt(uint8_t index) const {
-  return index < count_ ? entries_[index].name.c_str() : "";
+const char* Routines::nameAt(size_t index) const {
+  return index < entries_.size() ? entries_[index].name.c_str() : "";
 }
 
 // --- one entry per beat ----------------------------------------------------
 
-bool Routines::invoke(uint8_t index, const char* method, bool withNow, uint32_t nowMs) {
-  if (vm_ == nullptr || index >= count_) return false;
+bool Routines::invoke(size_t index, const char* method, bool withNow, uint32_t nowMs) {
+  if (vm_ == nullptr || index >= entries_.size()) return false;
 
   const int base = be_top(vm_);
   char key[16];
@@ -284,7 +281,7 @@ bool Routines::invoke(uint8_t index, const char* method, bool withNow, uint32_t 
 
 void Routines::poll(uint32_t nowMs) {
   if (vm_ == nullptr || active_ < 0) return;
-  if (!invoke((uint8_t)active_, "poll", true, nowMs)) {
+  if (!invoke((size_t)active_, "poll", true, nowMs)) {
     // A routine that raised is stopped for good: the page falls back to the mark, and the error is
     // already in the log.
     active_ = -1;
@@ -294,7 +291,7 @@ void Routines::poll(uint32_t nowMs) {
 
 void Routines::enterPage() {
   if (vm_ == nullptr || active_ < 0) return;
-  if (!invoke((uint8_t)active_, "activate", false, 0)) active_ = -1;
+  if (!invoke((size_t)active_, "activate", false, 0)) active_ = -1;
   applyPending();
 }
 

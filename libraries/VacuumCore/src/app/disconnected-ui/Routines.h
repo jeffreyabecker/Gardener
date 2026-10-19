@@ -1,7 +1,10 @@
 #pragma once
 
 #include <Arduino.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#include <vector>
 
 #include "hal/Button.h"
 
@@ -27,9 +30,8 @@ class StreamLogger;
 // allowed to leave the glass blank.
 class Routines {
  public:
-  // A device's own page is a handful of files. The bounds are what keep the registry and the press
-  // queue fixed-size; anything dropped is logged.
-  static constexpr uint8_t kMaxRoutines = 8;
+  // The press queue is a fixed ring, because a dropped press is worth a log line and nothing more. The
+  // registry is not bounded: how many routines the device has is however many files were put there.
   static constexpr uint8_t kMaxPresses = 8;
 
   // Creates the VM, installs the native modules, loads every `/routines/*.be` and picks `default`.
@@ -55,8 +57,8 @@ class Routines {
   // runtime takes its own reference, so the value does not have to stay where it is.
   bool registerRoutine(const char* name, const char* title, int objectIndex);
   bool setActive(const char* name);
-  uint8_t count() const { return count_; }
-  const char* nameAt(uint8_t index) const;
+  size_t count() const { return entries_.size(); }
+  const char* nameAt(size_t index) const;
 
   // --- the `buttons` module's surface ---
   void pushPress(Button button, Press press);
@@ -86,7 +88,7 @@ class Routines {
   bool loadFile(Storage& storage, const String& file);
   bool startActive();
   void reportError(const char* file, const char* what);
-  bool invoke(uint8_t index, const char* method, bool withNow, uint32_t nowMs);
+  bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs);
   bool choose(const char* name);
   void selectDefault();
   void applyPending();
@@ -95,9 +97,11 @@ class Routines {
   bvm* vm_ = nullptr;
   Storage* storage_ = nullptr;
   StreamLogger* logger_ = nullptr;
-  Entry entries_[kMaxRoutines];
-  uint8_t count_ = 0;
-  int8_t active_ = -1;
+  // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
+  // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
+  // the device is up.
+  std::vector<Entry> entries_;
+  int active_ = -1;
 
   // A routine that asks to switch routines is asking from inside its own poll; the switch is
   // applied when that call returns rather than re-entering the VM.

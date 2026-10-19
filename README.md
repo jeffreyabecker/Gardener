@@ -269,6 +269,11 @@ panel back to the `default` routine, so a page that took it over is one hold awa
 hard-coded in `App` because it applies on either page; the second belongs to the disconnected page,
 because it exists to leave that page.
 
+The rest of the keys belong to whichever page is showing, and the two shipped pages use them this
+way: on `default`, OK starts or opens the target editor and Back vents, and a **double Up** opens the
+routine list; on `browser`, Up and Down walk the list, OK switches to the highlighted page and Back
+goes back to `default`.
+
 ### Files on the device
 
 The build reserves the core's `default` 4 MB partition table, which leaves a 1.5 MB `spiffs`
@@ -327,6 +332,10 @@ return Readout
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load.
+
+Two ship. `default` is the readout and the target editor; a double Up opens `browser`, the list of
+everything registered, which walks with Up and Down and switches with OK. There is no fixed number of
+routines: the registry grows as files register, and the browser lists whatever boot found.
 
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
 the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `routines`

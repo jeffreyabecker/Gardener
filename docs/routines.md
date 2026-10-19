@@ -215,10 +215,14 @@ disk; a routine that was left can be brought back with `routines.set_active()`.
 | --- | --- | --- |
 | `routines.register(name, title, routine)` | `bool` | bind a routine to a name and a title. Called from a file's top level |
 | `routines.set_active(name)` | `bool` | switch pages. Called from inside a `poll` it applies when that call returns, so the VM is never re-entered |
-| `routines.names()` | list of strings | every registered name |
+| `routines.names()` | list of strings | every registered name, in registration order |
 
 Registering the same name twice is one routine: the later file wins, and the replacement is logged.
-The registry holds eight.
+
+There is no fixed number of routines: the registry grows as files register. What bounds it is the
+heap the files are loaded into, not a table, so a boot that runs out of memory while loading aborts
+and says so rather than dropping the file quietly. A name keeps the position it registered in, which
+is what `routines.names()` reports and what a page can use as an index.
 
 ## `store` — the routine's own values
 
@@ -261,7 +265,14 @@ top level runs before any routine is active, when there is no file to address.
 
 ## A complete example
 
-The shipped routine, `/routines/default.be`, shows the whole surface in use: the readout, a target
+Two routines ship. `/routines/default.be` shows the whole surface in use: the readout, a target
 editor stepped in whole display units, OK to start or commit, Back to vent, and the target kept
-across a boot by `store`. It is the place to look for a working shape rather than a second
+across a boot by `store`. A **double Up** on that page opens the second one.
+
+`/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
+window follows the selection, OK switches to the highlighted page and Back goes home. It reads
+`routines.names()`, so a routine that is added to the data image appears in it with no change to
+either file. It touches nothing of the machine — a run keeps going behind it.
+
+Between them the two pages cover what a page can do; look at them rather than at a second
 description here.

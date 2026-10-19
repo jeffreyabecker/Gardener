@@ -12,7 +12,6 @@ class Readout
   var unit
   var fmt
   var last_draw
-  var restored
 
   def init()
     self.editing = false
@@ -20,7 +19,6 @@ class Readout
     self.unit = nil
     self.fmt = "%.1f"
     self.last_draw = 0
-    self.restored = false
   end
 
   def activate()
@@ -125,14 +123,24 @@ class Readout
       return false
     end
 
-    if !self.editing
+    if ev.btn == "up"
+      if self.editing
+        self.step(1.0)
+        return true
+      end
+      # The way into the browser. A double tap, so a single Up is never a page change by accident;
+      # the classifier withholds the first short, so this cannot also step anything.
+      if ev.press == "double"
+        routines.set_active("browser")
+        return true
+      end
       return false
     end
-    if ev.btn == "up"
-      self.step(1.0)
-      return true
-    end
+
     if ev.btn == "down"
+      if !self.editing
+        return false
+      end
       self.step(-1.0)
       return true
     end
@@ -142,13 +150,8 @@ class Readout
   # --- the run -------------------------------------------------------------
 
   # The target outlives a boot: the machine holds it in RAM, so the page's own file is what puts it
-  # back on the glass. Once per boot only — re-entering the page after a host detaches must not
-  # resurrect a target the operator has since cleared.
+  # back on the glass. Read on every entry, so the page always shows the target last committed here.
   def restore()
-    if self.restored
-      return
-    end
-    self.restored = true
     var kpa = store.get("target", 0.0)
     if kpa > 0.0
       vacuum.target(vacuum.clamp(kpa))
