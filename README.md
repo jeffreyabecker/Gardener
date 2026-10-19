@@ -311,8 +311,8 @@ powershell -File scripts/arduino.ps1 -Task data -Port COM5
 The task creates the folder if it is missing, builds the image with the core's `mklittlefs`, writes
 it with `esptool` at the offset the pinned partition table names, and resets the device so it
 mounts the new filesystem. It replaces the whole filesystem, so a file the device wrote itself is
-gone unless the data folder carries a copy. There is no per-file command on the serial line yet:
-this is a whole-image upload.
+gone unless the data folder carries a copy. Individual files can be changed without replacing the
+image through the `fs` domain: `list`, `read`, `write`, `mkdir` and `delete`.
 
 The display unit is stored in `/settings.ini` and restored at boot:
 
@@ -396,7 +396,8 @@ serial line as a `[I]` record.
 ### Over the serial line
 
 Open the port at 115200 8N1 and send newline terminated commands. Every command produces exactly
-one `ok`/`err` line, and lines starting with `[` are diagnostics rather than replies:
+one reply, which starts with an `ok`/`err` line and may carry a body after it; lines starting with
+`[` are diagnostics rather than replies:
 
 ```
 -> device get

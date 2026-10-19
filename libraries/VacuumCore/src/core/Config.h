@@ -137,6 +137,10 @@ constexpr uint32_t SERIAL_BAUD = 115200;  // only meaningful on a real UART; USB
 // A command header is a domain, a verb and its arguments. Anything longer is refused rather than
 // truncated. A command body, when a domain defines one, follows the header and is not bounded here.
 constexpr uint16_t COMMAND_LINE_MAX = 128;
+// The serial `fs` domain's write body. The declared byte count is authoritative and is capped here;
+// a body that stops arriving for this long is abandoned and its partial file removed.
+constexpr uint32_t FS_WRITE_MAX_BYTES = 1024 * 1024;
+constexpr uint32_t FS_WRITE_IDLE_MS = 2000;
 // With USB CDC the presence of a host is observable and its loss stops the run. On a plain
 // UART it is not, so a lost link is simply never reported.
 

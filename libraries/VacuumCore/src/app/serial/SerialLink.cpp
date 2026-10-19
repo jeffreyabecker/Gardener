@@ -11,6 +11,7 @@ SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present)
   domains_.add(createDeviceDomain(context_));
   domains_.add(createVacuumDomain(context_));
   domains_.add(createBuzzerDomain(context_));
+  domains_.add(createFsDomain(context_));
 }
 
 void SerialLink::begin() {

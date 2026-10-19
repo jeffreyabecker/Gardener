@@ -13,8 +13,8 @@ and every state it has is either a command it was given or something it had to d
 safety. All control comes from the controller at the other end of the line, including how long
 a run lasts.
 
-The first token is a **domain**. `device`, `vacuum` and `buzzer` are the domains. There is no
-`help` domain: this document is the interface.
+The first token is a **domain**. `device`, `vacuum`, `buzzer` and `fs` are the domains. There is
+no `help` domain: this document is the interface.
 
 ## 1. The port
 
@@ -39,9 +39,9 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
 2. Send `device get` and check `proto` and `fw`. `proto=1` is this document.
-3. Ask for what you need: `vacuum get` is the readout, and it is polled (§10). Nothing is pushed.
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§11). Nothing is pushed.
 
-**Disconnecting stops the run and vents the chamber** (§9), because a controller that goes away
+**Disconnecting stops the run and vents the chamber** (§10), because a controller that goes away
 releases the chamber. The device only acts on it when the stream can report host presence, which
 USB CDC can and a plain UART cannot. There is no command that sets or reports this; it is a
 property of the transport, not a field on the wire.
@@ -68,13 +68,14 @@ body    = %x00-FF{ N }        ; N is declared by the domain's grammar
   as a keyword (`on`/`off`, unit tokens).
 * `-` means unset or not applicable. `off` means explicitly disabled.
 * A `#` at the start of a line is a comment, and a blank line gets no reply.
-* A command may have a body after its header. Most domains do not; the planned `fs write` will,
-  with the header `fs write <path> <bytes>` followed by exactly `<bytes>` raw bytes. The body may
-  contain any byte, including `LF`; the header's count is authoritative.
+* A command may have a body after its header. Most domains do not; `fs write` does, with the
+  header `fs write <path> <bytes>` followed by exactly `<bytes>` raw bytes. The body may contain
+  any byte, including `LF`; the header's count is authoritative.
 
 ## 4. Replies
 
-Every reply is one line, and a body only follows when the line says so.
+Every reply starts with one line. A body follows only when the reply defines one: a count on the
+line for `fs read`, or the rows and blank line for `fs list`.
 
 ```
 reply  = "ok"  [ SP items ] LF
@@ -93,9 +94,9 @@ detail = token / items
 * `err` carries a code and the detail that code defines. A code naming one thing takes it bare
   (`err unknown_verb frobnicate`); a code with several values uses items
   (`err out_of_range field=target value=1 min=5.0`).
-* A body is announced by `rows=N` or `bytes=N` on the `ok` line, followed by exactly N rows or N
-  raw bytes. There is no `end` line and no `body=` item; the count is the whole contract. A zero
-  count sends no body.
+* A body is announced by a count on the `ok` line. `bytes=N` is followed by exactly N raw bytes;
+  `fs read` is the only reply that uses it, and a zero count sends no body. `fs list` is the one
+  body without a count: its rows follow `ok` and a blank line ends them.
 * Values never contain a space, so a reply line splits on spaces. The one free-form command
   argument, `buzzer play`'s sequence, is never echoed back.
 * Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; `device set log off` silences
@@ -236,7 +237,68 @@ positive. The frequency uses equal temperament with A4 = 440 Hz; a note outside 
 A tone or sequence continues until it is stopped or its own time runs out; the controller times a
 long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop it".
 
-## 8. Errors
+## 8. `fs` — the device's files
+
+The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.ini`. `fs` is a bench
+interface for changing what is on the device without reflashing its data image. Writing under
+`/routines` or `/modules` does not reload anything; the change takes effect at the next boot.
+
+| Verb | Reply | Notes |
+| --- | --- | --- |
+| `list <path>` | `ok`, then entries, then a blank line | one `file <name>` or `dir <name>` per entry |
+| `read <path>` | `ok bytes=N`, then exactly N raw bytes | a zero-byte file sends only the header |
+| `write <path> <bytes>` | `ok` | the header is followed by exactly `<bytes>` raw bytes |
+| `mkdir <path>` | `ok` | creates one directory; the parent must exist |
+| `delete <path>` | `ok` | removes a file, or a directory and everything under it |
+
+All arguments are positional and unquoted. A path is one token and contains no spaces.
+
+```
+-> fs list /routines
+<- ok
+<- file default.be
+<- file static.be
+<- file static.ini
+<- (blank line)
+-> fs read /routines/static.ini
+<- ok bytes=12
+<- [12 raw bytes]
+-> fs write /routines/new.ini 5
+<- ok
+-> fs mkdir /assets/icons
+<- ok
+-> fs delete /assets/icons
+<- ok
+```
+
+`fs list` streams its rows as it traverses: there is no row count and no `end` line. The blank line
+is the terminator, so an empty directory is `ok` then a blank line. Each row is `type name`; `type`
+is `file` or `dir`, and `name` is one token that can be pasted into `fs read` or `fs delete`. Rows
+come in the filesystem's order and are not sorted.
+
+`fs read` is the one reply with a body count: the host reads exactly `bytes=N` bytes, so raw file
+content is never scanned for a terminator. `fs write` is length-delimited in the same way: the
+header's `<bytes>` is authoritative, the payload may contain any byte including `LF` and NUL, and
+the device never searches it for an end. One optional `LF` or `CRLF` after the payload is consumed.
+A write that declares more than `FS_WRITE_MAX_BYTES` (1 MiB) is
+`err out_of_range field=bytes value=… max=1048576`.
+
+A write header that is syntactically valid but cannot be honoured still consumes the declared
+payload before replying, so the next command starts on a boundary. A header refused on syntax — a
+malformed `<bytes>`, an oversized count, or a malformed path — replies immediately and expects no
+payload. A payload that stops arriving for `FS_WRITE_IDLE_MS` (2 s) is abandoned, the partial file
+is removed, and the reply is `err bad_argument`.
+
+Paths are absolute, `/`-separated and case-sensitive. `.`, `..`, empty segments and trailing
+slashes are refused. `/` is valid only for `fs list`. `/settings.ini` is reserved: `fs write` and
+`fs delete` refuse it with `err unsupported path=/settings.ini reason=reserved`; `fs read` and
+`fs list` may see it. A malformed path is `err bad_argument <token>`; a path that parses but is
+absent is `err not_found <path>`.
+
+The transfer blocks the control loop until it completes. Routines and assets are small and moving
+them is a bench operation; do not write a large file while a run is active.
+
+## 9. Errors
 
 Every `err` is one of these codes, so a controller can switch on the code instead of parsing
 prose. The detail is a bare token when the code names one thing, and items when it names several:
@@ -247,7 +309,7 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `unknown_verb` | bare token | the domain does not accept that verb: `err unknown_verb frobnicate` |
 | `bad_argument` | bare token, or nothing | an argument is missing, does not parse or is left over; or the header was too long. The token is the first one at fault |
 | `out_of_range` | `field=… value=… [min=…] [max=…]` | the value parses but is not acceptable: `err out_of_range field=target value=1 min=5.0` |
-| `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch` |
+| `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `no_space`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
 
@@ -266,7 +328,7 @@ prose. The detail is a bare token when the code names one thing, and items when 
 
 A command with no verb at all is `err bad_argument` with nothing to name.
 
-## 9. State model
+## 10. State model
 
 The controller owns the target, the duration and when to start and stop. The device owns what
 happens when nobody is watching, and nothing else.
@@ -321,7 +383,7 @@ What a controller has to know:
   the boot mark when no controller is attached. There is no drawing command, so everything else — a
   vent timeout, the duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
 
-## 10. Rates
+## 11. Rates
 
 Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~90 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout than
@@ -338,7 +400,7 @@ received, in arrival order, with nothing dropped and nothing reordered — so a 
 go is handled in one pass. Replies are still exactly one per command, so a host that counts them
 reads one per line.
 
-## 11. Stability
+## 12. Stability
 
 This is the first revision of the domain-first wire. The number is `1` and stays there until the
 protocol settles; revisions are not numbered yet, and a controller should be prepared to change
