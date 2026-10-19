@@ -3,42 +3,25 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include <RLEBitmap.h>
-
 namespace gardener {
 
 class Display;
 class Storage;
 
-// One image from the device's files: a run-length encoded bitmap the RLEBitmap renderer walks, held
-// in the heap for as long as the asset lives. A page loads it at boot and draws it as often as it
-// redraws, so nothing here opens a file twice.
+// The device's mark: the image both pages open with, shipped in the data image.
+constexpr const char* kMarkAsset = "/assets/eggplant.rle";
+
+// Draws an asset at (x, y), in ink only: the paper runs are dropped, so whatever the page already
+// drew shows through.
 //
-// The file is the renderer's own three pieces -- size, palette and runs -- behind a ten-byte header;
-// docs/assets.md is the format and scripts/asset.ps1 writes it from a 1-bit BMP.
-class Asset {
- public:
-  Asset() = default;
-  ~Asset();
-
-  // Owns heap bytes, so it is not copied.
-  Asset(const Asset&) = delete;
-  Asset& operator=(const Asset&) = delete;
-
-  // Reads and checks the whole file. False when it is not there or is not a bitmap this build can
-  // read; the caller reports that rather than treating it as fatal.
-  bool load(Storage& storage, const char* path);
-
-  bool loaded() const { return info_.pRLEBM_data_far != 0; }
-  int16_t width() const { return (int16_t)info_.width; }
-  int16_t height() const { return (int16_t)info_.height; }
-
-  // Ink only: the paper runs are dropped, so whatever the page already drew shows through.
-  void draw(Display& display, int16_t x, int16_t y) const;
-
- private:
-  uint8_t* bytes_ = nullptr;
-  RLEBitmapInfo info_{};
-};
+// The file is read whole each time rather than kept in memory. A run-length bitmap of the panel's
+// size is a few hundred bytes and a page redraws a few times a second, which is less to get wrong
+// than a loaded copy with a lifetime — a type with an owner only to hold one buffer is the state
+// this avoids.
+//
+// The format is the RLEBitmap renderer's own three pieces behind a ten-byte header: docs/assets.md
+// describes it and scripts/asset.ps1 writes it from a BMP. A file that is not there, or is not one of
+// these, draws nothing.
+void drawAsset(Display& display, Storage& storage, const char* path, int16_t x, int16_t y);
 
 }  // namespace gardener

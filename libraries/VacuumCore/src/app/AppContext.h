@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "app/Asset.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -24,7 +23,7 @@ class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
              ButtonPanel* buttons, Overlay* overlay, VacuumSystem* vacuum, Storage* storage,
-             Settings* settings, Routines* routines, Asset* mark)
+             Settings* settings, Routines* routines)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -34,8 +33,7 @@ class AppContext {
         vacuum_(vacuum),
         storage_(storage),
         settings_(settings),
-        routines_(routines),
-        mark_(mark) {}
+        routines_(routines) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -50,8 +48,6 @@ class AppContext {
   Storage& storage() { return *storage_; }
   Settings& settings() { return *settings_; }
   Routines& routines() { return *routines_; }
-  // The device's mark, the image both pages open with. Loaded from the data partition at boot.
-  Asset& mark() { return *mark_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -65,7 +61,6 @@ class AppContext {
   Storage* storage_;
   Settings* settings_;
   Routines* routines_;
-  Asset* mark_;
 };
 
 }  // namespace gardener

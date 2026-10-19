@@ -1,6 +1,6 @@
 #include "app/Asset.h"
 
-#include <new>
+#include <RLEBitmap.h>
 #include <string.h>
 
 #include "app/Storage.h"
@@ -32,50 +32,44 @@ class InkContext : public RLEGraphicsContext {
   Display& display_;
 };
 
-}  // namespace
-
-Asset::~Asset() { delete[] bytes_; }
-
-bool Asset::load(Storage& storage, const char* path) {
-  delete[] bytes_;
-  bytes_ = nullptr;
-  info_ = RLEBitmapInfo{};
-
-  const size_t size = storage.size(path);
-  if (size <= kHeaderBytes) return false;
-
-  uint8_t* bytes = new uint8_t[size];
-  if (bytes == nullptr) return false;
-
-  size_t got = 0;
-  if (!storage.read(path, bytes, size, got) || got < kHeaderBytes) {
-    delete[] bytes;
-    return false;
-  }
+// The renderer's view of the file: the size, the flags, and where the palette and the runs start.
+bool readInfo(const uint8_t* bytes, size_t length, RLEBitmapInfo& info) {
+  if (length < kHeaderBytes) return false;
 
   const uint8_t paletteEntries = bytes[9];
   const size_t paletteBytes = (size_t)paletteEntries * sizeof(uint16_t);
   const uint16_t width = read16(bytes + 4);
   const uint16_t height = read16(bytes + 6);
   if (memcmp(bytes, kMagic, sizeof kMagic) != 0 || paletteEntries == 0 || width == 0 ||
-      height == 0 || got < kHeaderBytes + paletteBytes) {
-    delete[] bytes;
+      height == 0 || length < kHeaderBytes + paletteBytes) {
     return false;
   }
 
-  bytes_ = bytes;
-  info_.pRLEBM_palette_far = (uint32_t)(uintptr_t)(bytes + kHeaderBytes);
-  info_.pRLEBM_data_far = (uint32_t)(uintptr_t)(bytes + kHeaderBytes + paletteBytes);
-  info_.width = width;
-  info_.height = height;
-  info_.flags = bytes[8];
+  info.pRLEBM_palette_far = (uint32_t)(uintptr_t)(bytes + kHeaderBytes);
+  info.pRLEBM_data_far = (uint32_t)(uintptr_t)(bytes + kHeaderBytes + paletteBytes);
+  info.width = width;
+  info.height = height;
+  info.flags = bytes[8];
   return true;
 }
 
-void Asset::draw(Display& display, int16_t x, int16_t y) const {
-  if (!loaded()) return;
-  InkContext context(display);
-  renderRLEBitmap(info_, x, y, &context, true);
+}  // namespace
+
+void drawAsset(Display& display, Storage& storage, const char* path, int16_t x, int16_t y) {
+  const size_t size = storage.size(path);
+  if (size <= kHeaderBytes) return;
+
+  uint8_t* bytes = new uint8_t[size];
+  if (bytes == nullptr) return;
+
+  size_t got = 0;
+  RLEBitmapInfo info{};
+  if (storage.read(path, bytes, size, got) && readInfo(bytes, got, info)) {
+    InkContext context(display);
+    renderRLEBitmap(info, x, y, &context, true);
+  }
+
+  delete[] bytes;
 }
 
 }  // namespace gardener

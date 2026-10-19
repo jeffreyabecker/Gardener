@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <stdlib.h>
 
+#include "app/Asset.h"
 #include "core/Config.h"
 #include "core/Units.h"
 
@@ -19,9 +20,6 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 // The local stop. It is a safety path rather than a preference, so it is a constant here and not a
 // setting: holding Back for this long ends the run and vents, whatever the controller is doing.
 constexpr uint32_t kBackStopMs = 3000;
-
-// The device's mark, shipped in the data image beside the routines.
-constexpr const char* kMarkPath = "/assets/eggplant.rle";
 
 }  // namespace
 
@@ -72,10 +70,10 @@ bool App::begin() {
   Storage::Mount mount = context_.storage().begin();
   context_.settings().begin();
 
-  // The mark is an image on the device rather than an array in a header, so it is read here with the
-  // rest of what a boot restores. A missing file leaves the pages without a mark and says so; the
-  // data image is where it ships from.
-  if (!context_.mark().load(context_.storage(), kMarkPath)) {
+  // The mark is an image on the device rather than an array in a header. Every page draws it from
+  // there when it needs it, so a data image without it is worth one line and nothing else — the pages
+  // simply have no mark.
+  if (context_.storage().size(kMarkAsset) == 0) {
     logger_->warn("ui: /assets/eggplant.rle missing, the pages have no mark");
   }
 

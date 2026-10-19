@@ -4,7 +4,6 @@
 #include <Wire.h>
 
 #include "app/AppContext.h"
-#include "app/Asset.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -57,9 +56,8 @@ AppContext buildAppContext() {
   auto* storage = new Storage();
   auto* settings = new Settings(*storage);
   auto* routines = new Routines();
-  auto* mark = new Asset();
   return AppContext(sensor, pump, vent, battery, buttons, overlay, system, storage, settings,
-                    routines, mark);
+                    routines);
 }
 
 }  // namespace gardener

@@ -1,7 +1,7 @@
 # Assets
 
 The pictures the panel draws are files on the device, not arrays in a header: one image is a file
-under `/assets/`, written by [scripts/asset.ps1](../scripts/asset.ps1), and read once at boot.
+under `/assets/`, written by [scripts/asset.ps1](../scripts/asset.ps1), and read when it is drawn.
 
 Run-length encoding is what makes this cheap. A one-bit drawing is long runs of the same pixel, so
 the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array took. The decoder is
@@ -67,13 +67,16 @@ The converter keeps both, which is why it is the tool to use rather than a hand-
 
 ## On the device
 
-`App::begin()` reads `/assets/eggplant.rle` into the heap once, after the filesystem mounts, and
-`AppContext::mark()` is what both pages draw — the disconnected page at rest, and the connected
-page's first frame. An asset is drawn whole and at its own size: there is no scaling.
+`drawAsset()` is the whole of it: it reads the file named, renders it at the point asked for, and
+lets the bytes go. Both pages call it — the disconnected page on every redraw, the connected page
+once for its first frame — so there is no loaded copy anywhere, and nothing to keep in step with the
+file. A few hundred bytes every redraw is cheaper than the state an owned buffer would need.
 
-A missing file is not fatal. The log says `ui: /assets/eggplant.rle missing, the pages have no
-mark` and the pages draw nothing, because the data image is where the file ships from and its
-absence is a packaging fault rather than a mode to support.
+An asset is drawn whole and at its own size: there is no scaling.
+
+A file that is not there is not fatal. `App::begin()` says `ui: /assets/eggplant.rle missing, the
+pages have no mark` and the pages draw nothing, because the data image is where the file ships from
+and its absence is a packaging fault rather than a mode to support.
 
 The art itself lives in [firmware/gardener/assets/](../firmware/gardener/assets), outside `data/`,
 so a source image is never uploaded to the device.

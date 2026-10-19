@@ -16,7 +16,7 @@ ConnectedUI::ConnectedUI(AppContext context) : UserInterface(context) {}
 bool ConnectedUI::begin() {
   Display& panel = context_.display();
   panel.clear();
-  context_.mark().draw(panel, 0, 0);
+  drawAsset(panel, context_.storage(), kMarkAsset, 0, 0);
   panel.display();
   startedMs_ = millis();
   return true;
