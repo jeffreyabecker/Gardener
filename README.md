@@ -121,9 +121,9 @@ Pins 7 and 12–16 are free. The two I2C parts are on separate buses — the sen
 panel on `Wire1` — so neither driver can stall the other. The four button pins are wired, named in
 `core/Config.h` and read
 through [hal/impl/Buttons.h](./libraries/VacuumCore/src/hal/impl/Buttons.h), which arms them on
-change interrupts and settles the debounce on each read; no key is assigned an action yet. The
-battery sense is on GPIO4 because it is the one ADC1 pin that is not a button — a pressed button
-would pull the sense line to ground. Nothing in the firmware touches the pins that have to be left
+change interrupts, settles the debounce on each read, and classifies a press as short or long when
+it is released; no key is assigned an action yet. The battery sense is on GPIO4 because it is the
+one ADC1 pin that is not a button — a pressed button would pull the sense line to ground. Nothing in the firmware touches the pins that have to be left
 alone at reset (strapping 0, 3, 45, 46) or the USB pins (19/20), and on a Super Mini GPIO0 is only
 the BOOT button. I2C addresses: MPRLS `0x18`, OLED `0x3C`. The pin map and the harness constants
 are in [core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers — the panel's
@@ -248,6 +248,13 @@ buffer or changes the panel's configuration.
 Boot is safe: pump off, valve open, `IDLE`, the splash on the panel. Nothing about a run is
 remembered across a reset; the display unit is the one setting that is, from LittleFS. The screen
 follows the link: the readout while a controller is attached, and the plain mark while none is.
+
+### Front panel keys
+
+The four keys are read on change interrupts and debounced. A press is classified when the key comes
+up: under 600 ms is `short`, at or over it is `long`. There is no separate event for a longer hold —
+a page that wants one watches `heldMs()` while the key is down and picks its own mark. A key held at
+boot is not a press. Today the loop logs the gesture (`btn: ok short`) and nothing else.
 
 ### Files on the device
 
@@ -394,6 +401,7 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery, the run state and the connections
 * [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
-* [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read
+* [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read,
+  classifying short and long presses and exposing the running hold
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
 * [x] LittleFS storage: a mount at boot, a persistent display unit, and a data-folder upload task

@@ -140,13 +140,16 @@ void App::logRunChanges(uint32_t nowMs) {
   lastState_ = state;
 }
 
-// The keys are a local surface with no action assigned yet, so reporting a press is the whole of
-// what they do. One line per press, from here like every other report.
+// The keys are a local surface with no action assigned yet, so reporting the gesture is the whole
+// of what they do. One line per completed press, from here like every other report.
 void App::logButtonPresses() {
   for (Button button : kButtons) {
-    if (!context_.buttons().consumePress(button)) continue;
+    const Press press = context_.buttons().consumePress(button);
+    if (press == Press::None) continue;
     String message = "btn: ";
     message += buttonName(button);
+    message += ' ';
+    message += pressName(press);
     logger_->info(message.c_str());
   }
 }

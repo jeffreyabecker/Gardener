@@ -1,5 +1,7 @@
 #include "hal/impl/Buttons.h"
 
+#include "core/Config.h"
+
 namespace gardener {
 namespace {
 
@@ -42,8 +44,25 @@ uint32_t Buttons::settle() {
     pending_ = raw;
     pendingSinceMs_ = now;
   } else if (pending_ != stable_ && now - pendingSinceMs_ >= kDebounceMs) {
-    // The level held still, so it is the new state; a bit that went from up to down is one press.
-    pressLatch_ |= pending_ & ~stable_;
+    // The level held still, so it is the new state. A key that came up after its down edge was
+    // accepted is the one press to classify; a key held at boot has no down edge and is not one.
+    const uint32_t down = pending_ & ~stable_;
+    const uint32_t up = stable_ & ~pending_;
+    for (uint8_t i = 0; i < 4; i++) {
+      const uint32_t bit = 1u << i;
+      if (down & bit) {
+        tracked_ |= bit;
+        // The raw edge, not the moment the debounce accepted it, so a hold is measured from when
+        // the key actually went down.
+        pressStartMs_[i] = pendingSinceMs_;
+      }
+      if ((up & bit) && (tracked_ & bit)) {
+        // Both ends are the raw edges, so the debounce does not shorten or lengthen the hold.
+        const uint32_t held = pendingSinceMs_ - pressStartMs_[i];
+        pendingPress_[i] = held < cfg::BUTTON_LONG_MS ? Press::Short : Press::Long;
+        tracked_ &= ~bit;
+      }
+    }
     stable_ = pending_;
   }
   return stable_;
@@ -53,12 +72,18 @@ bool Buttons::pressed(Button button) {
   return (settle() & bitOf(button)) != 0;
 }
 
-bool Buttons::consumePress(Button button) {
+Press Buttons::consumePress(Button button) {
   settle();
-  uint32_t bit = bitOf(button);
-  if (!(pressLatch_ & bit)) return false;
-  pressLatch_ &= ~bit;
-  return true;
+  const uint8_t index = (uint8_t)button;
+  const Press press = pendingPress_[index];
+  pendingPress_[index] = Press::None;
+  return press;
+}
+
+uint32_t Buttons::heldMs(Button button) {
+  settle();
+  if (!(tracked_ & bitOf(button))) return 0;
+  return millis() - pressStartMs_[(uint8_t)button];
 }
 
 uint32_t ARDUINO_ISR_ATTR Buttons::readPins() const {

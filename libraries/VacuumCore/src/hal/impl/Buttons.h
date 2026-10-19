@@ -21,7 +21,8 @@ class Buttons : public ButtonPanel {
   Buttons(uint8_t up, uint8_t down, uint8_t ok, uint8_t back);
 
   bool pressed(Button button) override;
-  bool consumePress(Button button) override;
+  Press consumePress(Button button) override;
+  uint32_t heldMs(Button button) override;
 
  private:
   static void ARDUINO_ISR_ATTR isr(void* arg);
@@ -43,7 +44,11 @@ class Buttons : public ButtonPanel {
   uint32_t pending_ = 0;
   uint32_t stable_ = 0;
   uint32_t pendingSinceMs_ = 0;
-  uint32_t pressLatch_ = 0;
+  // The keys with a press in progress: set when a debounced down edge is accepted, cleared by the
+  // release that classifies it. A key held at boot is never tracked, so it is not a press.
+  uint32_t tracked_ = 0;
+  uint32_t pressStartMs_[4] = {};
+  Press pendingPress_[4] = {};
 };
 
 }  // namespace gardener

@@ -101,6 +101,12 @@ constexpr float BATTERY_FULL_VOLTS = 4.2f;
 constexpr float BATTERY_CALIBRATION = 1.0f;
 constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 
+// --- Front panel keys -------------------------------------------------------
+// A key released before this is a short press; at or after it, a long press. Both are reported when
+// the key comes up. A consumer that wants a longer hold watches heldMs() and picks its own mark, so
+// there is no third threshold here.
+constexpr uint32_t BUTTON_LONG_MS = 600;
+
 // --- The device's own screen ------------------------------------------------
 // The splash is read before the first live frame, and the panel is then repainted on a fixed
 // cadence: often enough that the battery blink is visible, slow enough that a whole frame's I2C
