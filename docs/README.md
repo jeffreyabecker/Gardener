@@ -4,7 +4,7 @@
 
 The contracts the firmware and its tools must satisfy.
 
-- [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies, help and errors
+- [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies and errors
 - [Gestures](./specs/gestures.md) — the key contract and the press matrix
 - [Assets](./specs/assets.md) — the image file format and the tool that makes one
 - [Routines](./specs/routines.md) — the Berry routine API and its embedded rules
@@ -14,7 +14,7 @@ The contracts the firmware and its tools must satisfy.
 Proposals, design records and deferred work. A plan is not a commitment: it leaves when it is
 implemented or dropped.
 
-- [fs serial domain](./plans/serial-protocol-fs.md) — implementation plan, proto 4
+- [fs serial domain](./plans/serial-protocol-fs.md) — implementation plan
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [Parking lot](./plans/parking-lot.md) — deferred work and what has to be true first
 

@@ -24,8 +24,8 @@ constexpr uint32_t kBackStopMs = 3000;
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
-  logger_ = new StreamLogger(Serial, logEnabled_);
-  link_ = new SerialLink(&context_, Serial, serialAttached, logEnabled_);
+  logger_ = new StreamLogger(Serial, context_.logEnabled());
+  link_ = new SerialLink(&context_, Serial, serialAttached);
   connectedUi_ = new ConnectedUI(context_);
   disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }

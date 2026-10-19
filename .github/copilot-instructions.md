@@ -52,8 +52,8 @@ does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; `buildAppContext()` builds and owns the parts and hands out the `AppContext` interfaces,
-and `SerialLink` reads them when it formats a reply, so there is no snapshot or second copy to
-keep in step.
+and the serial domains read them when they format a reply, so there is no snapshot or second copy
+to keep in step.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the

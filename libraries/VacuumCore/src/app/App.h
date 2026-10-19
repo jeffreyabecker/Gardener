@@ -33,10 +33,9 @@ class App {
   // Which screen belongs to the link as it is now.
   UserInterface* screenFor(bool attached);
 
-  // App owns the diagnostic switch the link toggles (`device log=`), and both the link and the
-  // logger honour it. The link and the logger are new'd over the same Serial stream.
+  // The context owns the diagnostic switch (`device set log`), and both the link and the logger
+  // honour it. The link and the logger are new'd over the same Serial stream.
   AppContext context_;
-  bool logEnabled_ = true;
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
   // The panel is the device's own, so the loop paints it. Two screens, one showing: the live

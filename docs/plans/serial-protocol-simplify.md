@@ -204,7 +204,7 @@ byte, and a valid header whose payload stops arriving for 2 s is abandoned with
 
 ### 1. `libraries/VacuumCore/src/app/serial/Domain.h`
 
-- `Domain` shrinks to `name()` and `execute(Stream&)`.
+- `Domain` shrinks to `name()` and `execute(Stream& io)`.
 - Delete `TopicSpec`.
 - `DomainList`: keep `add`/`find`; delete `count`/`at` (only help used them).
 - `addItem`: drop the quote/escape scan; emit the value or `-` for null. Keep `addKey`,
@@ -223,6 +223,8 @@ byte, and a valid header whose payload stops arriving for 2 s is abandoned with
 
 - Remove `createHelpDomain` from `Domains.h`.
 - Remove the help registration in `SerialLink.cpp`.
+- Delete `CommandStream`: `poll()` reads only the domain token, then hands the stream to the
+  domain, which parses the rest of its command and any body.
 - `SerialLink::linkError` writes `err <code> [detail]` without the `- -` placeholders;
   `unknown_domain` passes the bare token.
 

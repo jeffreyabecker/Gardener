@@ -83,9 +83,9 @@ Three rules make that hold:
 * **Reads go through the owner.**
   [Build.cpp](./libraries/VacuumCore/src/app/Build.cpp) builds and owns the parts and hands out an
   [AppContext](./libraries/VacuumCore/src/app/AppContext.h) of interfaces.
-  [App](./libraries/VacuumCore/src/app/App.h) commands those interfaces, and `SerialLink` formats
-  a reply by reading them, so there is no second copy of the machine to rebuild each loop, and a
-  driver still does not know that a display or a controller exists.
+  [App](./libraries/VacuumCore/src/app/App.h) commands those interfaces, and the serial domains
+  format a reply by reading them, so there is no second copy of the machine to rebuild each loop,
+  and a driver still does not know that a display or a controller exists.
 
 `hal/` never sees `app/`, which is what keeps a driver independent of the instrument built on top
 of it: a part reports what it is doing as values, and nothing in `hal/` knows that a serial line or
@@ -212,8 +212,8 @@ sets the volume; no transistor is needed:
 ESP32 GPIO12 ── 100R ── piezo ── GND
 ```
 
-The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone=2000,500` and
-`buzzer play=a4:1000_c6:500`; a routine uses `buzzer.tone(2000, 500)` and
+The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone 2000 500` and
+`buzzer play a4:1000 c6:500`; a routine uses `buzzer.tone(2000, 500)` and
 `buzzer.play("a4:1000 c6:500")`. A tone with a 0 ms duration runs until it is stopped. The timer
 lives in the main loop, so nothing blocks.
 
@@ -395,21 +395,20 @@ serial line as a `[I]` record.
 
 ### Over the serial line
 
-Open the port at 115200 8N1 and send newline terminated commands. Every command produces one
-`ok`/`err` line — a `help` page adds rows and an `end` line — and lines starting with `[` are
-diagnostics rather than replies:
+Open the port at 115200 8N1 and send newline terminated commands. Every command produces exactly
+one `ok`/`err` line, and lines starting with `[` are diagnostics rather than replies:
 
 ```
--> device get all
-<- ok device get proto=4 fw=0.7.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
+-> device get
+<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
 -> vacuum target 40
-<- ok vacuum target target=40.0
+<- ok target=40.0
 -> vacuum start
-<- ok vacuum start state=PULL
--> vacuum get all
-<- ok vacuum get kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=123456
+<- ok state=PULL
+-> vacuum get
+<- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=123456
 -> vacuum stop
-<- ok vacuum stop state=VENT
+<- ok state=VENT
 ```
 
 That last pair is the whole run model in miniature: the device reaches the target, reports
@@ -481,7 +480,7 @@ Protections, all of which act without consulting the controller:
 
 Those five are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
-`vacuum get all` and keep targets no deeper than it.
+`vacuum get` and keep targets no deeper than it.
 
 ## Safety
 

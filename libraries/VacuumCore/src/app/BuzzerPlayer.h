@@ -23,8 +23,9 @@ class BuzzerPlayer {
   // durationMs 0 means until off().
   void tone(uint16_t hz, uint32_t durationMs);
   // "a4:1000 c6:500 a4:500": note:duration pairs separated by spaces, and nothing else. False when
-  // malformed; the current sound is left alone in that case.
-  bool play(const char* sequence);
+  // malformed, and `badToken` then points at the first token that did not parse; the current sound
+  // is left alone in that case.
+  bool play(const char* sequence, const char** badToken = nullptr);
   void off();
 
   bool playing() const { return playing_; }
@@ -32,8 +33,6 @@ class BuzzerPlayer {
   uint16_t frequencyHz() const { return buzzer_.frequencyHz(); }
   // Zero when nothing is playing or the tone is continuous.
   uint32_t remainingMs(uint32_t nowMs) const;
-  // The canonical compact form of the sequence currently playing, or "" when none.
-  const String& sequence() const { return sequence_; }
 
  private:
   struct Note {
@@ -41,7 +40,7 @@ class BuzzerPlayer {
     uint32_t durationMs;
   };
 
-  static bool parse(const char* text, std::vector<Note>& notes, String& canonical);
+  static bool parse(const char* text, std::vector<Note>& notes, const char** badToken);
   void startNote(size_t index, uint32_t nowMs);
 
   Buzzer& buzzer_;
@@ -50,7 +49,6 @@ class BuzzerPlayer {
   uint32_t noteEndsMs_ = 0;
   bool playing_ = false;
   bool timed_ = false;
-  String sequence_;
 };
 
 }  // namespace gardener

@@ -31,6 +31,11 @@ int semitoneFor(char note) {
   }
 }
 
+bool fail(const char** badToken, const char* at) {
+  if (badToken) *badToken = at;
+  return false;
+}
+
 }  // namespace
 
 bool BuzzerPlayer::begin() { return buzzer_.begin(); }
@@ -56,7 +61,6 @@ void BuzzerPlayer::tone(uint16_t hz, uint32_t durationMs) {
   }
 
   notes_.clear();
-  sequence_ = "";
   noteIndex_ = 0;
   buzzer_.tone(hz);
   if (!buzzer_.sounding()) {
@@ -68,13 +72,11 @@ void BuzzerPlayer::tone(uint16_t hz, uint32_t durationMs) {
   noteEndsMs_ = millis() + durationMs;
 }
 
-bool BuzzerPlayer::play(const char* sequence) {
+bool BuzzerPlayer::play(const char* sequence, const char** badToken) {
   std::vector<Note> notes;
-  String canonical;
-  if (!parse(sequence, notes, canonical) || notes.empty()) return false;
+  if (!parse(sequence, notes, badToken)) return false;
 
   notes_.swap(notes);
-  sequence_ = canonical;
   noteIndex_ = 0;
   playing_ = true;
   timed_ = true;
@@ -84,7 +86,6 @@ bool BuzzerPlayer::play(const char* sequence) {
 
 void BuzzerPlayer::off() {
   notes_.clear();
-  sequence_ = "";
   noteIndex_ = 0;
   playing_ = false;
   timed_ = false;
@@ -109,9 +110,9 @@ void BuzzerPlayer::startNote(size_t index, uint32_t nowMs) {
 // `note:duration` pairs separated by whitespace, and nothing else. Note names are a-g, optional
 // # or b, then one octave digit; `r` is a rest. The frequency uses equal temperament with A4 at
 // 440 Hz, and a note outside the buzzer's range is a malformed sequence rather than a clamp.
-bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& canonical) {
+bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, const char** badToken) {
   notes.clear();
-  canonical = "";
+  if (badToken) *badToken = nullptr;
   if (text == nullptr) return false;
 
   const char* cursor = text;
@@ -129,7 +130,7 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& can
       cursor++;
     } else {
       int semitone = semitoneFor(first);
-      if (semitone < 0) return false;
+      if (semitone < 0) return fail(badToken, noteStart);
       cursor++;
       if (*cursor == '#') {
         semitone++;
@@ -138,40 +139,37 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& can
         semitone--;
         cursor++;
       }
-      if (*cursor < '0' || *cursor > '9') return false;
+      if (*cursor < '0' || *cursor > '9') return fail(badToken, noteStart);
       const int octave = *cursor++ - '0';
       const int midi = (octave + 1) * 12 + semitone;
-      if (midi < 0 || midi > 127) return false;
+      if (midi < 0 || midi > 127) return fail(badToken, noteStart);
       const float frequency = 440.0f * powf(2.0f, (float)(midi - 69) / 12.0f);
-      if (frequency < cfg::BUZZER_MIN_HZ || frequency > cfg::BUZZER_MAX_HZ) return false;
+      if (frequency < cfg::BUZZER_MIN_HZ || frequency > cfg::BUZZER_MAX_HZ) {
+        return fail(badToken, noteStart);
+      }
       hz = (uint16_t)(frequency + 0.5f);
     }
-    const char* noteEnd = cursor;
 
-    if (*cursor != ':') return false;
+    if (*cursor != ':') return fail(badToken, noteStart);
     cursor++;
 
-    if (*cursor < '0' || *cursor > '9') return false;
+    if (*cursor < '0' || *cursor > '9') return fail(badToken, noteStart);
     uint32_t duration = 0;
     while (*cursor >= '0' && *cursor <= '9') {
       const uint32_t digit = (uint32_t)(*cursor - '0');
-      if (duration > (UINT32_MAX - digit) / 10) return false;
+      if (duration > (UINT32_MAX - digit) / 10) return fail(badToken, noteStart);
       duration = duration * 10 + digit;
       cursor++;
     }
-    if (duration == 0) return false;
-    if (*cursor != '\0' && !isSpace(*cursor)) return false;
-
-    if (!notes.empty()) canonical += ' ';
-    for (const char* p = noteStart; p < noteEnd; p++) canonical += lowerChar(*p);
-    canonical += ':';
-    canonical += String(duration);
+    if (duration == 0) return fail(badToken, noteStart);
+    if (*cursor != '\0' && !isSpace(*cursor)) return fail(badToken, noteStart);
 
     notes.push_back({hz, duration});
     any = true;
   }
 
-  return any;
+  if (!any) return fail(badToken, text);
+  return true;
 }
 
 }  // namespace gardener

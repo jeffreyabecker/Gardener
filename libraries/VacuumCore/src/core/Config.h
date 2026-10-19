@@ -16,10 +16,9 @@ namespace gardener {
 namespace cfg {
 
 constexpr const char* FIRMWARE_VERSION = "0.7.0";
-// The wire revision, reported by `device get`. It moves when a command's meaning moves, not when
-// one is added: proto 3 is the resource-first surface with one pressure reading, and a controller
-// that does not know a revision should stop rather than guess.
-constexpr uint32_t PROTOCOL_VERSION = 4;
+// The wire revision, reported by `device get`. The wire is still unsettled, so the number stays 1
+// and does not move per revision; a controller must not treat it as a compatibility guarantee.
+constexpr uint32_t PROTOCOL_VERSION = 1;
 
 // --- Board: the pin map and the harness ------------------------------------
 // The rig as it is wired. A board variant is a different set of numbers here.
