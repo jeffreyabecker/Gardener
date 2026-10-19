@@ -37,7 +37,7 @@ void VacuumDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
   if (line.length() > cfg::COMMAND_LINE_MAX) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
 
@@ -48,12 +48,15 @@ void VacuumDomain::execute(Stream& io) {
   verb.toLowerCase();
 
   if (verb.isEmpty()) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
   if (verb == "get") {
     if (!args.isEmpty()) {
-      replyBadArgument(io, firstToken(args).c_str());
+      String reply = "err bad_argument ";
+      reply += firstToken(args);
+      reply += '\n';
+      io.print(reply);
       return;
     }
     get(io);
@@ -75,35 +78,47 @@ void VacuumDomain::execute(Stream& io) {
     reset(io, args);
     return;
   }
-  replyUnknownVerb(io, verb.c_str());
+
+  String reply = "err unknown_verb ";
+  reply += verb;
+  reply += '\n';
+  io.print(reply);
 }
 
 void VacuumDomain::get(Stream& io) {
   VacuumSystem& vacuum = app_.vacuum();
-  String out;
-  addItemFloat(out, "kpa", vacuum.currentKpa(), 2);
+  String reply = "ok kpa=";
+  reply += String(vacuum.currentKpa(), 2u);
 
   // A cleared target reads as unset rather than as 0.0, which is a real depth.
+  reply += " target=";
   const float target = vacuum.targetKpa();
   if (target <= 0.0f) {
-    addItem(out, "target", nullptr);
+    reply += '-';
   } else {
-    addItemFloat(out, "target", target, 1);
+    reply += String(target, 1u);
   }
 
-  addItemFloat(out, "floor", cfg::CONTROL_FLOOR_KPA, 1);
-  addItemFloat(out, "duty", vacuum.pump().dutyPercent(), 1);
-  addItem(out, "state", runStateName(vacuum.runState()));
-  addItem(out, "sensor", vacuum.sensor().present() ? "1" : "0");
+  reply += " floor=";
+  reply += String(cfg::CONTROL_FLOOR_KPA, 1u);
+  reply += " duty=";
+  reply += String(vacuum.pump().dutyPercent(), 1u);
+  reply += " state=";
+  reply += runStateName(vacuum.runState());
+  reply += " sensor=";
+  reply += vacuum.sensor().present() ? "1" : "0";
+  reply += " fault=";
   const char* fault = vacuum.faultCode();
-  addItem(out, "fault", fault[0] ? fault : "none");
-  addItemU32(out, "up", app_.uptimeMs());
-  replyOk(io, out);
+  reply += fault[0] ? fault : "none";
+  reply += " up=";
+  reply += String(app_.uptimeMs());
+  reply += '\n';
+  io.print(reply);
 }
 
 void VacuumDomain::target(Stream& io, const String& args) {
   if (args.isEmpty()) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
 
@@ -112,75 +127,100 @@ void VacuumDomain::target(Stream& io, const String& args) {
   String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
   extra.trim();
   if (!extra.isEmpty()) {
-    replyBadArgument(io, firstToken(extra).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(extra);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   VacuumSystem& vacuum = app_.vacuum();
   if (token == "-") {
     vacuum.clearTarget();
-    String items;
-    addItem(items, "target", nullptr);
-    replyOk(io, items);
+    io.print("ok target=-\n");
     return;
   }
 
   float kpa = 0.0f;
   if (!parseFloat(token.c_str(), kpa)) {
-    replyBadArgument(io, token.c_str());
+    String reply = "err bad_argument ";
+    reply += token;
+    reply += '\n';
+    io.print(reply);
     return;
   }
   if (kpa < cfg::CONTROL_MIN_TARGET_KPA) {
-    replyOutOfRange(io, "target", token.c_str(), &cfg::CONTROL_MIN_TARGET_KPA, nullptr);
+    String reply = "err out_of_range field=target value=";
+    reply += token;
+    reply += " min=";
+    reply += String(cfg::CONTROL_MIN_TARGET_KPA, 1u);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   vacuum.setTarget(kpa);
-  String items;
-  addItemFloat(items, "target", vacuum.targetKpa(), 1);
-  replyOk(io, items);
+  String reply = "ok target=";
+  reply += String(vacuum.targetKpa(), 1u);
+  reply += '\n';
+  io.print(reply);
 }
 
 void VacuumDomain::start(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    replyBadArgument(io, firstToken(args).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(args);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   VacuumSystem& vacuum = app_.vacuum();
   if (!vacuum.start()) {
-    replyNotReady(io, vacuum.startRefusal());
+    String reply = "err not_ready ";
+    reply += vacuum.startRefusal();
+    reply += '\n';
+    io.print(reply);
     return;
   }
-  String items;
-  addItem(items, "state", runStateName(vacuum.runState()));
-  replyOk(io, items);
+  String reply = "ok state=";
+  reply += runStateName(vacuum.runState());
+  reply += '\n';
+  io.print(reply);
 }
 
 void VacuumDomain::stop(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    replyBadArgument(io, firstToken(args).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(args);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   VacuumSystem& vacuum = app_.vacuum();
   vacuum.stop();
-  String items;
-  addItem(items, "state", runStateName(vacuum.runState()));
-  replyOk(io, items);
+  String reply = "ok state=";
+  reply += runStateName(vacuum.runState());
+  reply += '\n';
+  io.print(reply);
 }
 
 void VacuumDomain::reset(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    replyBadArgument(io, firstToken(args).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(args);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   VacuumSystem& vacuum = app_.vacuum();
   vacuum.resetFault();
-  String items;
-  addItem(items, "state", runStateName(vacuum.runState()));
-  replyOk(io, items);
+  String reply = "ok state=";
+  reply += runStateName(vacuum.runState());
+  reply += '\n';
+  io.print(reply);
 }
 
 }  // namespace

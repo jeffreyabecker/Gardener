@@ -37,7 +37,7 @@ void BuzzerDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
   if (line.length() > cfg::COMMAND_LINE_MAX) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
 
@@ -48,7 +48,7 @@ void BuzzerDomain::execute(Stream& io) {
   verb.toLowerCase();
 
   if (verb.isEmpty()) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
   } else if (verb == "get") {
     get(io, args);
   } else if (verb == "tone") {
@@ -58,35 +58,42 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "stop") {
     stop(io, args);
   } else {
-    replyUnknownVerb(io, verb.c_str());
+    String reply = "err unknown_verb ";
+    reply += verb;
+    reply += '\n';
+    io.print(reply);
   }
 }
 
 void BuzzerDomain::get(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    replyBadArgument(io, firstToken(args).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(args);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   BuzzerPlayer& buzzer = app_.buzzer();
-  String out;
+  String reply = "ok tone=";
   if (!buzzer.sounding()) {
-    addItem(out, "tone", nullptr);
+    reply += '-';
   } else {
     // The same compact `hz,ms` a tone reply has always used: the frequency now and what is left.
-    String value((uint32_t)buzzer.frequencyHz());
-    value += ',';
-    value += String(buzzer.remainingMs(millis()));
-    addItem(out, "tone", value.c_str());
+    reply += String((uint32_t)buzzer.frequencyHz());
+    reply += ',';
+    reply += String(buzzer.remainingMs(millis()));
   }
-  addItemFlag(out, "playing", buzzer.playing());
-  replyOk(io, out);
+  reply += " playing=";
+  reply += buzzer.playing() ? "on" : "off";
+  reply += '\n';
+  io.print(reply);
 }
 
 void BuzzerDomain::tone(Stream& io, const String& args) {
   const int split = args.indexOf(' ');
   if (split < 0) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
 
@@ -102,69 +109,89 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     extra.trim();
   }
   if (!extra.isEmpty()) {
-    replyBadArgument(io, firstToken(extra).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(extra);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   float hz = 0.0f;
   uint32_t ms = 0;
   if (hzText.isEmpty() || msText.isEmpty()) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
   if (!parseFloat(hzText.c_str(), hz)) {
-    replyBadArgument(io, hzText.c_str());
+    String reply = "err bad_argument ";
+    reply += hzText;
+    reply += '\n';
+    io.print(reply);
     return;
   }
   if (!parseU32(msText.c_str(), ms)) {
-    replyBadArgument(io, msText.c_str());
+    String reply = "err bad_argument ";
+    reply += msText;
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   if (hz < cfg::BUZZER_MIN_HZ || hz > cfg::BUZZER_MAX_HZ) {
-    replyOutOfRange(io, "tone", hzText.c_str(), &cfg::BUZZER_MIN_HZ, &cfg::BUZZER_MAX_HZ);
+    String reply = "err out_of_range field=tone value=";
+    reply += hzText;
+    reply += " min=";
+    reply += String(cfg::BUZZER_MIN_HZ, 1u);
+    reply += " max=";
+    reply += String(cfg::BUZZER_MAX_HZ, 1u);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   app_.buzzer().tone((uint16_t)hz, ms);
 
-  String out;
-  String value((uint32_t)hz);
-  value += ',';
-  value += String(ms);
-  addItem(out, "tone", value.c_str());
-  replyOk(io, out);
+  String reply = "ok tone=";
+  reply += String((uint32_t)hz);
+  reply += ',';
+  reply += String(ms);
+  reply += '\n';
+  io.print(reply);
 }
 
 void BuzzerDomain::play(Stream& io, const String& args) {
   if (args.isEmpty()) {
-    replyBadArgument(io, nullptr);
+    io.print("err bad_argument\n");
     return;
   }
 
   // The sequence is the rest of the line: no quotes, no escapes.
   const char* badToken = nullptr;
   if (!app_.buzzer().play(args.c_str(), &badToken)) {
-    replyBadArgument(io, badToken);
+    String reply = "err bad_argument";
+    if (badToken && *badToken) {
+      reply += ' ';
+      reply += badToken;
+    }
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
-  String out;
-  addItemFlag(out, "playing", true);
-  replyOk(io, out);
+  io.print("ok playing=on\n");
 }
 
 void BuzzerDomain::stop(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    replyBadArgument(io, firstToken(args).c_str());
+    String reply = "err bad_argument ";
+    reply += firstToken(args);
+    reply += '\n';
+    io.print(reply);
     return;
   }
 
   app_.buzzer().off();
-
-  String out;
-  addItemFlag(out, "playing", false);
-  replyOk(io, out);
+  io.print("ok playing=off\n");
 }
 
 }  // namespace
