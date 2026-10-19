@@ -327,6 +327,7 @@ def describe()
   var s = vacuum.state()
   return [
     setting("target", "Target kPa", "real", 1.0, s.min, s.floor, nil),
+    setting("hold", "Hold", "duration", 1, 0, 7200, nil),
     setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"]),
     setting("enabled", "Enabled", "bool", 0, nil, nil, nil),
     setting("label", "Label", "text", 0, nil, nil, nil)
@@ -340,15 +341,20 @@ end
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
 | `label` | string | the line the editor draws beside the value |
-| `kind` | string | `real`, `int`, `bool` or `choice`; other kinds are shown read-only |
-| `step` | real | how far Up/Down moves a numeric value; ignored by the other kinds |
-| `min` / `max` | real or nil | optional bounds for a numeric value |
+| `kind` | string | `real`, `int`, `bool`, `choice` or `duration`; other kinds are shown read-only |
+| `step` | real | how far Up/Down moves a numeric value; for `duration`, the seconds increment in the seconds stage; ignored by `bool` and `choice` |
+| `min` / `max` | real or nil | optional bounds for a numeric value; for `duration` both are total seconds and the value never goes below 0 |
 | `values` | list or nil | the allowed values for `choice`, in cycle order |
 
 The editor reads the current value through `store`, with a fallback whose type matches the kind:
-`0` for `int`, `0.0` for `real`, `false` for `bool`, and `values[0]` for `choice`. A `choice` needs
-at least one value. Up/Down steps `real` and `int`, toggles `bool`, and cycles `choice`; OK writes
-the value back with `store.set` and Back leaves without writing.
+`0` for `int` and `duration`, `0.0` for `real`, `false` for `bool`, and `values[0]` for `choice`. A
+`choice` needs at least one value. Up/Down steps `real` and `int`, toggles `bool`, and cycles
+`choice`; OK writes the value back with `store.set` and Back leaves without writing.
+
+A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
+whole minute. OK opens it in the **minutes** stage, Up/Down moves that by a minute, OK moves on to
+the **seconds** stage, and Up/Down moves that by `step` seconds (default 1); OK then writes. Back
+cancels from either stage. The value is held between `min` and `max`, and never below zero.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
 return a list. A routine without `describe()`, or one whose method raises, leaves the settings view

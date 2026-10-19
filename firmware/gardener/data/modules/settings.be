@@ -17,6 +17,7 @@ class Settings
   var editing
   var edit_setting
   var edit_value
+  var edit_stage
 
   def init(name)
     self.name = name
@@ -28,6 +29,7 @@ class Settings
     self.editing = false
     self.edit_setting = nil
     self.edit_value = 0
+    self.edit_stage = nil
   end
 
   # Reads the routine's describe() once, so a frame does not turn six settings into six file reads.
@@ -115,7 +117,17 @@ class Settings
     screen.draw_text(0, 0, 1, false, "EDIT")
     screen.draw_text(0, 16, 1, false, self.edit_setting.label)
     screen.draw_text(0, 24, 3, false, self.edit_text())
-    screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
+    screen.draw_text(0, 56, 1, false, self.edit_hint())
+  end
+
+  def edit_hint()
+    if self.edit_setting.kind != "duration"
+      return "UP/DOWN  OK=SAVE"
+    end
+    if self.edit_stage == "min"
+      return "MIN UP/DOWN  OK=NEXT"
+    end
+    return "SEC UP/DOWN  OK=SAVE"
   end
 
   # The first row on the glass: a list only scrolls as far as the selection needs.
@@ -134,10 +146,16 @@ class Settings
       end
       return "OFF"
     end
+    if self.described[index].kind == "duration"
+      return self.duration_text(value)
+    end
     return str(value)
   end
 
   def edit_text()
+    if self.edit_setting.kind == "duration"
+      return self.duration_text(self.edit_value)
+    end
     if self.edit_setting.kind == "bool"
       if self.edit_value
         return "ON"
@@ -145,6 +163,23 @@ class Settings
       return "OFF"
     end
     return str(self.edit_value)
+  end
+
+  # Minutes and seconds, compact: `45s`, `1m`, `1m30s`.
+  def duration_text(seconds)
+    var whole = int(seconds)
+    if whole <= 0
+      return "0s"
+    end
+    var minutes = whole / 60
+    var rest = whole % 60
+    if minutes == 0
+      return str(rest) + "s"
+    end
+    if rest == 0
+      return str(minutes) + "m"
+    end
+    return str(minutes) + "m" + str(rest) + "s"
   end
 
   # --- buttons -------------------------------------------------------------
@@ -191,12 +226,18 @@ class Settings
       return true
     end
     if ev.btn == "ok"
+      # A duration is edited minutes first; OK moves on to the seconds without writing.
+      if self.edit_setting.kind == "duration" && self.edit_stage == "min"
+        self.edit_stage = "sec"
+        return true
+      end
       self.commit()
       return true
     end
     if ev.btn == "back"
       # Back leaves the editor without writing; the value on the glass is only a working copy.
       self.edit_setting = nil
+      self.edit_stage = nil
       self.editing = false
       return true
     end
@@ -210,10 +251,12 @@ class Settings
     self.values = nil
     self.editing = false
     self.edit_setting = nil
+    self.edit_stage = nil
   end
 
   # The type of the fallback is the type the stored text comes back as, so each kind reads its own.
-  # A choice's first value is its type as well as where an unset setting starts.
+  # A choice's first value is its type as well as where an unset setting starts. A duration is whole
+  # seconds, and is held to its bounds before it is shown.
   def read_value(setting)
     if setting.kind == "int"
       return store.get(self.name, setting.key, 0)
@@ -223,6 +266,9 @@ class Settings
     end
     if setting.kind == "bool"
       return store.get(self.name, setting.key, false)
+    end
+    if setting.kind == "duration"
+      return self.clamp_duration(setting, store.get(self.name, setting.key, 0))
     end
     if setting.kind == "choice"
       if setting.values == nil || setting.values.size() == 0
@@ -237,12 +283,17 @@ class Settings
     var setting = self.described[self.index]
     var editable = setting.kind == "real" || setting.kind == "int"
     editable = editable || setting.kind == "bool" || setting.kind == "choice"
+    editable = editable || setting.kind == "duration"
     if !editable
       vacuum.log("settings: " + setting.key + " is read-only")
       return false
     end
     self.edit_setting = setting
     self.edit_value = self.values[self.index]
+    self.edit_stage = nil
+    if setting.kind == "duration"
+      self.edit_stage = "min"
+    end
     self.editing = true
     return true
   end
@@ -254,6 +305,22 @@ class Settings
     end
     if self.edit_setting.kind == "choice"
       self.edit_value = self.next_choice(direction)
+      return
+    end
+    if self.edit_setting.kind == "duration"
+      # Minutes first, then seconds: a one-second step is the wrong tool for minutes, and a
+      # one-minute step is the wrong tool for seconds.
+      var amount = 60
+      if self.edit_stage != "min"
+        amount = 1
+        if self.edit_setting.step != nil
+          amount = int(self.edit_setting.step)
+          if amount < 1
+            amount = 1
+          end
+        end
+      end
+      self.edit_value = self.clamp_duration(self.edit_setting, self.edit_value + direction * amount)
       return
     end
     var step = self.edit_setting.step
@@ -293,6 +360,33 @@ class Settings
     end
   end
 
+  # Whole seconds, held to the setting's bounds. The floor is 0 unless a non-negative `min` raises
+  # it; a `max` below the floor pins the value there rather than leaving an empty range.
+  def clamp_duration(setting, seconds)
+    var low = 0
+    if setting.min != nil
+      low = int(setting.min)
+      if low < 0
+        low = 0
+      end
+    end
+    var high = nil
+    if setting.max != nil
+      high = int(setting.max)
+      if high < low
+        high = low
+      end
+    end
+    var value = int(seconds)
+    if value < low
+      value = low
+    end
+    if high != nil && value > high
+      value = high
+    end
+    return value
+  end
+
   def commit()
     if store.set(self.name, self.edit_setting.key, self.edit_value)
       self.values[self.index] = self.edit_value
@@ -300,6 +394,7 @@ class Settings
       vacuum.log("settings: " + self.name + " did not save " + self.edit_setting.key)
     end
     self.edit_setting = nil
+    self.edit_stage = nil
     self.editing = false
   end
 end

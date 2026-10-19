@@ -358,8 +358,10 @@ everything registered, which walks with Up and Down and switches with OK. There 
 routines: the registry grows as files register, and the browser lists whatever boot found.
 
 A routine that has values worth editing exposes `describe()`, returning a list of `setting` records
-(the key, label, kind, step, bounds and, for a choice, the values to cycle). A **double OK** on the
-browser opens that list; Up and Down walk it, OK opens a setting, and Up/Down changes it. The values
+(the key, label, kind, step, bounds and, for a choice, the values to cycle). The kinds are `real`,
+`int`, `bool`, `choice` and `duration`; a duration is stored in seconds and edited in minutes and
+seconds. A **double OK** on the browser opens that list; Up and Down walk it, OK opens a setting,
+and Up/Down changes it. The values
 stay in the routine's own `/routines/<name>.ini`, read and written by `store`. A routine without
 `describe()` simply has no settings view.
 
