@@ -128,7 +128,7 @@ What that costs, stated plainly:
 
 Berry's numbers here are 32-bit integers and single-precision reals.
 
-Three of the calls answer a **record**: a small object whose fields are read with a dot.
+Four of the calls answer a **record**: a small object whose fields are read with a dot.
 
 ```berry
 var s = vacuum.state()
@@ -208,11 +208,47 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_filltriangle(x0, y0, x1, y1, x2, y2)` |
 | `screen.draw_rotatedrect(cx, cy, w, h, angle)` |
 | `screen.draw_fillrotatedrect(cx, cy, w, h, angle)` |
-| `screen.draw_text(x, y, size, inverted, text)` |
+| `screen.draw_text(x, y, size, inverted, text [, font])` |
+| `screen.text_bounds(text, size [, font])` |
 | `screen.flush()` |
 
-`draw_text` scales the built-in face: `size` 1 is the small face, 3 is the height used by the
-readout. `inverted` draws paper on ink.
+### Faces
+
+`draw_text` takes an optional face name as its last argument, and `text_bounds` takes the same name
+as its optional third. Without one, or with `nil` or `"builtin"`, both use the built-in 5x7. The
+names are the compiled Adafruit GFX faces:
+
+| Name | Face |
+| --- | --- |
+| `sans9`, `sans12`, `sans18`, `sans24` | `FreeSans` at 9, 12, 18 and 24pt |
+| `sansbold9`, `sansbold12`, `sansbold18`, `sansbold24` | `FreeSansBold` at 9, 12, 18 and 24pt |
+| `mono9`, `mono12`, `mono18`, `mono24` | `FreeMono` at 9, 12, 18 and 24pt |
+| `monobold9`, `monobold12`, `monobold18`, `monobold24` | `FreeMonoBold` at 9, 12, 18 and 24pt |
+| `tomthumb`, `picopixel` | the tiny 3x5 and 3x6 bitmap faces |
+
+A name that is not in the table raises `value_error`, which drops the routine like any other
+mistake.
+
+With a custom face, `y` is the **baseline** of the line rather than the top of the glyph box — the
+font format's own rule. With the built-in face, `y` is the top. `size` scales whichever face is set:
+`1` is the face as designed, `3` is three times as tall. A custom face has no background, so
+`inverted` has no effect on it; fill a rectangle first when a line needs a highlight.
+
+The face belongs to the call. The firmware restores the built-in face after drawing or measuring,
+so handing the panel to the shared settings editor does not hand it a face as well.
+
+```berry
+screen.draw_text(0, 41, 1, false, value, "sansbold18")
+var box = screen.text_bounds(value, 1, "sansbold18")
+screen.draw_text(box.w + 4, 41, 1, false, suffix, "sansbold9")
+```
+
+`text_bounds` answers a `bounds` record, read with a dot:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `w` | int | the ink box width, in pixels |
+| `h` | int | the ink box height, in pixels |
 
 `screen.unit()` answers a `unit` record, read with a dot:
 

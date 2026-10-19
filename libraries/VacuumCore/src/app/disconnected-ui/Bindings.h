@@ -13,14 +13,15 @@ namespace berry {
 // The six native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
-//   screen.*   the panel, plus the unit it prints
+//   screen.*   the panel, the faces it draws in, and the unit it prints
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
 //   routines.* the registry, so a file can register itself
 //   store.*    the routine's own values, kept across a power cycle
 //
-// Three of those calls answer a *record* rather than a plain value: `vacuum.state()` a `reading`,
-// `screen.unit()` a `unit`, `buttons.take()` an `event`. A record is a class instance whose fields a
+// Four of those calls answer a *record* rather than a plain value: `vacuum.state()` a `reading`,
+// `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`, `buttons.take()` an `event`. A record
+// is a class instance whose fields a
 // routine reads with a dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and
 // compiled at boot, because only the parser can declare an instance variable on a class. The
 // `setting` class in the same block is the shape a routine's describe() builds for the browser.

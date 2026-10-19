@@ -27,6 +27,21 @@ earlier decision that this guidance supersedes for new work, not a task to sched
 hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
 the only way text is formatted in this firmware.
 
+## C++ style
+
+**Constants are PascalCase, and never carry a `k` prefix.** `PanelWidth`, `DefaultHoldMs`,
+`MarkAsset` — the prefix belongs to a convention from somewhere else, and it is not this
+codebase's. A type is PascalCase too, so a constant and a type can look alike; the declaration
+already says which one it is, and nobody has to decode a letter to read the line.
+
+The rest of the naming is what the code already does: types PascalCase, functions and variables
+camelCase, members with a trailing underscore (`count_`, `context_`). Enum values are
+PascalCase as well (`Button::Back`), so a constant needs no prefix to tell it apart.
+
+Existing `k` names are not a rewrite-on-sight target either. Rename them where you are already
+changing those lines for another reason; a sweep of the codebase for its own sake is its own
+decision with its own measurement.
+
 ## Keep it simple
 
 Simplicity here is not a taste, it is what the firmware is already built to: a handful of files,

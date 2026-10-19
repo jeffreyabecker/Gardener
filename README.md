@@ -405,8 +405,9 @@ Shared Berry code lives in `/modules/`, which loads before `/routines/`. The set
 one module: `browser` uses its `Settings` class, and any page can hold one to edit its own settings
 without leaving its page.
 
-What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
-the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `buzzer`
+What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, the
+compiled GFX faces plus the built-in 5x7, text measurement, and the unit the panel prints), `buttons`
+(the presses since the last call, as a pull queue), `buzzer`
 (a timed tone, a note sequence, or silence), `routines` (register, switch, list, and get a
 registered object) and `store` (its own values, kept across a power cycle, or another registered
 routine's by name).

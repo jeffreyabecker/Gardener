@@ -1,10 +1,7 @@
 #include "app/ConnectedUI.h"
 
-#include <Fonts/FreeSansBold12pt7b.h>
-#include <Fonts/FreeSansBold18pt7b.h>
-#include <Fonts/FreeSansBold9pt7b.h>
-
 #include "app/Asset.h"
+#include "app/Fonts.h"
 #include "core/Config.h"
 #include "core/Units.h"
 
@@ -50,20 +47,20 @@ void ConnectedUI::drawFrame() {
 
   panel.clear();
 
-  panel.setFont(&FreeSansBold9pt7b);
+  panel.setFont(fonts::SansBold9);
   panel.text(0, 12, runStateName(vacuum.runState()), 1, false);
 
-  panel.setFont(&FreeSansBold18pt7b);
+  panel.setFont(fonts::SansBold18);
   panel.text(0, 41, reading, 1, false);
   // textBounds measures in the face the panel is set to, so the unit is placed while the big face
   // is still the current one.
   int16_t width = 0;
   int16_t height = 0;
   panel.textBounds(reading, 1, width, height);
-  panel.setFont(&FreeSansBold9pt7b);
+  panel.setFont(fonts::SansBold9);
   panel.text(width + 4, 41, displayUnitInfo(unit).suffix, 1, false);
 
-  panel.setFont(&FreeSansBold12pt7b);
+  panel.setFont(fonts::SansBold12);
   panel.text(0, 62, String("TGT ") + target, 1, false);
 
   panel.display();

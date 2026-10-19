@@ -1,8 +1,10 @@
 #include "app/disconnected-ui/Bindings.h"
 
 #include <berry.h>
+#include <stdio.h>
 
 #include "app/AppContext.h"
+#include "app/Fonts.h"
 #include "app/StreamLogger.h"
 #include "app/VacuumSystem.h"
 #include "app/disconnected-ui/Routines.h"
@@ -52,6 +54,9 @@ constexpr const char* kRecords =
     "end\n"
     "class unit\n"
     "  var name, suffix, per_kpa, whole_step, decimals\n"
+    "end\n"
+    "class bounds\n"
+    "  var w, h\n"
     "end\n"
     "class event\n"
     "  var btn, press\n"
@@ -111,6 +116,27 @@ void setFlag(bvm* vm, int record, const char* field, bool value) {
 breal argReal(bvm* vm, int index) { return be_toreal(vm, index); }
 bint argInt(bvm* vm, int index) { return be_toint(vm, index); }
 const char* argText(bvm* vm, int index) { return be_tostring(vm, index); }
+
+// The face named by an optional argument; nil and "builtin" both mean the built-in 5x7, which is
+// also what an absent argument means. `function` is the Berry spelling used in the error, so a
+// mistake names the call that made it. The messages are stack buffers because be_raise longjmps
+// past any C++ destructor a String would need here.
+const GFXfont* argFont(bvm* vm, int index, const char* function) {
+  if (be_top(vm) < index || be_isnil(vm, index)) return nullptr;
+  if (!be_isstring(vm, index)) {
+    char message[64];
+    snprintf(message, sizeof(message), "screen.%s: font name expected", function);
+    be_raise(vm, "type_error", message);
+  }
+  const GFXfont* face = nullptr;
+  const char* name = argText(vm, index);
+  if (!fonts::find(name, face)) {
+    char message[64];
+    snprintf(message, sizeof(message), "screen.%s: unknown font %s", function, name);
+    be_raise(vm, "value_error", message);
+  }
+  return face;
+}
 
 // --- vacuum ----------------------------------------------------------------
 
@@ -292,11 +318,42 @@ int screenFillRotatedRect(bvm* vm) {
 }
 
 int screenText(bvm* vm) {
-  // Berry's order is the drawing's: x, y, size, inverted, text. The Display takes the string
-  // before the size, so the last two arguments swap on the way through.
+  if (be_top(vm) < 5) {
+    be_raise(vm, "type_error", "screen.draw_text(x, y, size, inverted, text[, font])");
+  }
+  // Berry's order is the drawing's: x, y, size, inverted, text, and the face is the call's rather
+  // than the display's. The Display takes the string before the size, so the last two arguments
+  // swap on the way through.
+  const GFXfont* face = argFont(vm, 6, "draw_text");
+  panel().setFont(face);
   panel().text(argInt(vm, 1), argInt(vm, 2), argText(vm, 5), (uint8_t)argInt(vm, 3),
                be_tobool(vm, 4));
+  // Restoring the built-in face is what lets a page hand the panel to the shared settings editor
+  // without the face it drew in following it there.
+  panel().setFont(nullptr);
   be_return_nil(vm);
+}
+
+// The ink box of a string in the face it will be drawn in, which is what centring a proportional
+// face or placing a suffix after it needs. The record is the same two numbers Display::textBounds
+// answers.
+int screenBounds(bvm* vm) {
+  if (be_top(vm) < 2) {
+    be_raise(vm, "type_error", "screen.text_bounds(text, size[, font])");
+  }
+  const GFXfont* face = argFont(vm, 3, "text_bounds");
+  int16_t width = 0;
+  int16_t height = 0;
+  panel().setFont(face);
+  panel().textBounds(argText(vm, 1), (uint8_t)argInt(vm, 2), width, height);
+  panel().setFont(nullptr);
+
+  const int record = beginRecord(vm, "bounds");
+  if (record < 0) be_return_nil(vm);
+  setInt(vm, record, "w", width);
+  setInt(vm, record, "h", height);
+  endRecord(vm);
+  be_return(vm);
 }
 
 // The unit the panel prints, as the same fields core/Units.h holds: a page formats and steps a
@@ -334,6 +391,7 @@ const bnfuncinfo kScreenLibrary[] = {
     {"draw_rotatedrect", screenRotatedRect},
     {"draw_fillrotatedrect", screenFillRotatedRect},
     {"draw_text", screenText},
+    {"text_bounds", screenBounds},
     {"flush", screenFlush},
     {"unit", screenUnit},
     {nullptr, nullptr},
