@@ -20,11 +20,11 @@ void globalKey(char* out, size_t size, size_t slot) {
 
 // A routine has to look like one before it is kept, so a file that registers something else is
 // refused at load rather than discovered on the first poll.
-bool hasMethod(bvm* vm, int objectIndex, const char* name) {
+bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
   const int object = be_absindex(vm, objectIndex);
-  if (!be_getmember(vm, object, name)) return false;
-  const bool function = be_isfunction(vm, -1);
-  be_pop(vm, 1);
+  const bool present = be_getmember(vm, object, name);
+  const bool function = present && be_isfunction(vm, -1);
+  be_pop(vm, 1);  // be_getmember always leaves a slot, nil when the member is not there
   return function;
 }
 
@@ -151,7 +151,8 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
     return false;
   }
 
-  if (!hasMethod(vm_, objectIndex, "activate") || !hasMethod(vm_, objectIndex, "poll")) {
+  if (!objectHasMethod(vm_, objectIndex, "activate") ||
+      !objectHasMethod(vm_, objectIndex, "poll")) {
     String message = "vm: ";
     message += name;
     message += " needs activate() and poll()";
@@ -243,6 +244,32 @@ const char* Routines::nameAt(size_t index) const {
   return index < entries_.size() ? entries_[index].name.c_str() : "";
 }
 
+bool Routines::pushObject(const char* name) const {
+  if (vm_ == nullptr || name == nullptr) return false;
+  for (size_t i = 0; i < entries_.size(); i++) {
+    if (entries_[i].name != name) continue;
+    char key[16];
+    globalKey(key, sizeof key, i);
+    const bool found = be_getglobal(vm_, key);
+    // be_getglobal pushes a nil when the name is not there; callers only want a stack slot when the
+    // object was found.
+    if (!found) be_pop(vm_, 1);
+    return found;
+  }
+  return false;
+}
+
+// The object is left to the caller's Berry frame to call. Looking a method up here is only a read:
+// the runtime still never enters the interpreter from a native call.
+bool Routines::hasMethod(const char* name, const char* method) const {
+  if (method == nullptr || !pushObject(name)) return false;
+  const int object = be_absindex(vm_, -1);
+  const bool present = be_getmember(vm_, object, method);
+  const bool function = present && be_isfunction(vm_, -1);
+  be_pop(vm_, 2);  // the member slot be_getmember always pushes, then the object
+  return function;
+}
+
 // --- one entry per beat ----------------------------------------------------
 
 bool Routines::invoke(size_t index, const char* method, bool withNow, uint32_t nowMs) {
@@ -331,17 +358,39 @@ bool Routines::takePress(Button& button, Press& press) {
 // Beside the routine rather than in a shared file: a routine's values are its own, a data-folder
 // upload can ship initial ones as `/routines/<name>.ini`, and nothing has to be namespaced inside
 // the document.
-bool Routines::storePath(String& out) const {
-  if (active_ < 0) return false;
+bool Routines::storePath(const char* routine, String& out) const {
+  if (routine == nullptr) return false;
+
+  // Only a registered name is a path: a caller that names another routine cannot address a file
+  // that is not one of the pages the device loaded.
+  bool registered = false;
+  for (const Entry& entry : entries_) {
+    if (entry.name == routine) {
+      registered = true;
+      break;
+    }
+  }
+  if (!registered) return false;
+
   out = "/routines/";
-  out += entries_[active_].name;
+  out += routine;
   out += ".ini";
   return true;
 }
 
 bool Routines::storeGet(const char* key, String& out) const {
+  if (active_ < 0) return false;
+  return storeGet(entries_[active_].name.c_str(), key, out);
+}
+
+bool Routines::storeSet(const char* key, const String& value) {
+  if (active_ < 0) return false;
+  return storeSet(entries_[active_].name.c_str(), key, value);
+}
+
+bool Routines::storeGet(const char* routine, const char* key, String& out) const {
   String path;
-  if (storage_ == nullptr || key == nullptr || !storePath(path)) return false;
+  if (storage_ == nullptr || key == nullptr || !storePath(routine, path)) return false;
 
   String text;
   if (!storage_->read(path.c_str(), text)) return false;
@@ -354,9 +403,9 @@ bool Routines::storeGet(const char* key, String& out) const {
   return true;
 }
 
-bool Routines::storeSet(const char* key, const String& value) {
+bool Routines::storeSet(const char* routine, const char* key, const String& value) {
   String path;
-  if (storage_ == nullptr || key == nullptr || !storePath(path)) return false;
+  if (storage_ == nullptr || key == nullptr || !storePath(routine, path)) return false;
 
   String text;
   Ini values;

@@ -271,8 +271,8 @@ because it exists to leave that page.
 
 The rest of the keys belong to whichever page is showing, and the two shipped pages use them this
 way: on `default`, OK starts or opens the target editor and Back vents, and a **double Up** opens the
-routine list; on `browser`, Up and Down walk the list, OK switches to the highlighted page and Back
-goes back to `default`.
+routine list; on `browser`, Up and Down walk the list, OK switches to the highlighted page, a
+**double OK** opens that page's settings when it describes any, and Back goes back to `default`.
 
 ### Files on the device
 
@@ -302,8 +302,9 @@ So `device unit=mmhg` survives `device reboot` and a power cycle. Keys the firmw
 are carried through a write rather than dropped; comments and spacing are not kept.
 
 A routine keeps its own values the same way, in one file named after it beside its source
-(`/routines/default.ini`), so a data-image upload can ship starting values and a routine cannot
-reach another's. The `default` page uses it to bring the target back after a power cycle.
+(`/routines/default.ini`), so a data-image upload can ship starting values. A page normally writes
+only its own file; the browser is the exception, reaching a routine's values by registered name so
+it can edit them. The `default` page uses its file to bring the target back after a power cycle.
 
 Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
 1-bit bitmap of 327 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
@@ -337,9 +338,16 @@ Two ship. `default` is the readout and the target editor; a double Up opens `bro
 everything registered, which walks with Up and Down and switches with OK. There is no fixed number of
 routines: the registry grows as files register, and the browser lists whatever boot found.
 
+A routine that has values worth editing exposes `describe()`, returning a list of `setting` records
+(the key, label, kind, step, bounds and, for a choice, the values to cycle). A **double OK** on the
+browser opens that list; Up and Down walk it, OK opens a setting, and Up/Down changes it. The values
+stay in the routine's own `/routines/<name>.ini`, read and written by `store`. A routine without
+`describe()` simply has no settings view.
+
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
 the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `routines`
-(register, switch, list) and `store` (its own values, kept across a power cycle).
+(register, switch, list, and get a registered object) and `store` (its own values, kept across a
+power cycle, or another registered routine's by name).
 
 The full surface — every call, what it returns, the fields of each record, and what the overlay
 draws over a page — is in [docs/routines.md](./docs/routines.md).

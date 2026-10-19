@@ -28,6 +28,9 @@ return Readout
 The object must be an **instance** with both `activate()` and `poll(now)`. A file that registers
 anything else is refused at load with the missing method named; the other files still load.
 
+An optional `describe()` gives the browser a list of settings to edit (see below). A routine without
+one simply has no settings.
+
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark and nothing runs.
 
@@ -79,6 +82,9 @@ var depth = s.kpa          # not s["kpa"]
 A record is the machine as it stood when the call returned, not a live view: writing a field
 (`s.kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
 have raises `attribute_error`, and the fields are the ones listed under each call.
+
+The `setting` record that `describe()` returns is the same kind of object, but a routine builds it
+itself rather than a call answering it; its fields are listed under `describe()` below.
 
 ## `vacuum` — the machine
 
@@ -216,6 +222,8 @@ disk; a routine that was left can be brought back with `routines.set_active()`.
 | `routines.register(name, title, routine)` | `bool` | bind a routine to a name and a title. Called from a file's top level |
 | `routines.set_active(name)` | `bool` | switch pages. Called from inside a `poll` it applies when that call returns, so the VM is never re-entered |
 | `routines.names()` | list of strings | every registered name, in registration order |
+| `routines.get(name)` | the routine object, or `nil` | the registered instance, so a page can call a method such as `describe()` in its own frame |
+| `routines.has(name, method)` | `bool` | whether that routine has a function of that name |
 
 Registering the same name twice is one routine: the later file wins, and the replacement is logged.
 
@@ -224,15 +232,58 @@ heap the files are loaded into, not a table, so a boot that runs out of memory w
 and says so rather than dropping the file quietly. A name keeps the position it registered in, which
 is what `routines.names()` reports and what a page can use as an index.
 
+`routines.get()` and `routines.has()` look through the same registry. The browser uses them to call
+another page's `describe()` without the firmware re-entering the interpreter from a native call.
+
+## `describe()` — the settings the browser edits
+
+A routine that wants editable values exposes `describe()`. It returns a list of `setting` records;
+the browser calls it when the settings view opens, so the list can reflect the machine as it is now:
+
+```berry
+def describe()
+  var s = vacuum.state()
+  return [
+    setting("target", "Target kPa", "real", 1.0, s.min, s.floor, nil),
+    setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"]),
+    setting("enabled", "Enabled", "bool", 0, nil, nil, nil),
+    setting("label", "Label", "text", 0, nil, nil, nil)
+  ]
+end
+```
+
+`setting(key, label, kind, step, min, max, values)` builds one record:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `key` | string | the key in the routine's `store` file |
+| `label` | string | the line the browser draws beside the value |
+| `kind` | string | `real`, `int`, `bool` or `choice`; other kinds are shown read-only |
+| `step` | real | how far Up/Down moves a numeric value; ignored by the other kinds |
+| `min` / `max` | real or nil | optional bounds for a numeric value |
+| `values` | list or nil | the allowed values for `choice`, in cycle order |
+
+The browser reads the current value through `store`, with a fallback whose type matches the kind:
+`0` for `int`, `0.0` for `real`, `false` for `bool`, and `values[0]` for `choice`. A `choice` needs
+at least one value. Up/Down steps `real` and `int`, toggles `bool`, and cycles `choice`; OK writes
+the value back with `store.set` and Back leaves without writing.
+
+`describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
+return a list. A routine without `describe()`, or one whose method raises, leaves the browser in its
+routine list and writes one `vacuum.log` line.
+
 ## `store` — the routine's own values
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `store.get(key, fallback)` | the fallback's type | what was written earlier, or `fallback` when the key was never set |
+| `store.get(key, fallback)` | the fallback's type | the active routine's value, or `fallback` when the key was never set |
 | `store.set(key, value)` | `bool` | false when the value could not be written |
+| `store.get(name, key, fallback)` | the fallback's type | a registered routine's value |
+| `store.set(name, key, value)` | `bool` | write a registered routine's value |
 
-A routine's values live in `/routines/<name>.ini`, named after the routine: they are that routine's
-alone, and a data-image upload can ship initial ones beside its `.be`.
+A routine's values live in `/routines/<name>.ini`, named after the routine, and a data-image upload
+can ship initial ones beside its `.be`. A routine writes its own; the named forms in the table let
+a page such as `browser` edit them.
 
 The **fallback sets the type** the stored text is read back as:
 
@@ -260,8 +311,10 @@ though only when the value actually changed: setting the same value on every pas
 while storing a *changing* value on every pass wears the partition. Write on the event, not on the
 frame.
 
-The store belongs to the routine that is **active**. Use it from `activate()` or `poll()`; a file's
-top level runs before any routine is active, when there is no file to address.
+The one- and two-argument forms belong to the routine that is **active**. Use them from `activate()`
+or `poll()`; a file's top level runs before any routine is active, when there is no file to address.
+The named forms are how a page such as `browser` reaches another routine's values. They cannot walk
+outside `/routines/`: a name that is not registered is refused.
 
 ## A complete example
 
@@ -270,9 +323,12 @@ editor stepped in whole display units, OK to start or commit, Back to vent, and 
 across a boot by `store`. A **double Up** on that page opens the second one.
 
 `/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
-window follows the selection, OK switches to the highlighted page and Back goes home. It reads
-`routines.names()`, so a routine that is added to the data image appears in it with no change to
-either file. It touches nothing of the machine — a run keeps going behind it.
+window follows the selection, OK switches to the highlighted page and Back goes home. A **double OK**
+opens the highlighted routine's settings when it has `describe()`: Up and Down walk the settings, OK
+opens one, Up/Down changes it, OK saves and Back moves up a level. It reads `routines.names()`, so a
+routine that is added to the data image appears in it with no change to either file. It touches
+nothing of the machine — a run keeps going behind it — and it writes only through `store.set` when a
+setting is saved.
 
 Between them the two pages cover what a page can do; look at them rather than at a second
 description here.

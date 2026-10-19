@@ -21,7 +21,8 @@ namespace berry {
 // Three of those calls answer a *record* rather than a plain value: `vacuum.state()` a `reading`,
 // `screen.unit()` a `unit`, `buttons.take()` an `event`. A record is a class instance whose fields a
 // routine reads with a dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and
-// compiled at boot, because only the parser can declare an instance variable on a class.
+// compiled at boot, because only the parser can declare an instance variable on a class. The
+// `setting` class in the same block is the shape a routine's describe() builds for the browser.
 //
 // The reference a routine author reads is docs/routines.md; the tables below are the same surface
 // as code, and the two have to move together.

@@ -60,6 +60,12 @@ class Routines {
   size_t count() const { return entries_.size(); }
   const char* nameAt(size_t index) const;
 
+  // The registered object, pushed onto the VM stack, and whether it has a method of that name. A
+  // page that calls the object itself stays in its own Berry frame; the runtime does not re-enter
+  // the interpreter from a native call.
+  bool pushObject(const char* name) const;
+  bool hasMethod(const char* name, const char* method) const;
+
   // --- the `buttons` module's surface ---
   void pushPress(Button button, Press press);
   bool takePress(Button& button, Press& press);
@@ -70,9 +76,13 @@ class Routines {
   // copy to keep in step.
   //
   // `storeGet` is false when there is no active routine or nothing is stored under the key;
-  // `storeSet` is false when there is no active routine or the file would not take the write.
+  // `storeSet` is false when there is no active routine or the file would not take the write. The
+  // named forms address a registered routine, which is what lets the browser edit the values of a
+  // routine that is not the one showing.
   bool storeGet(const char* key, String& out) const;
   bool storeSet(const char* key, const String& value);
+  bool storeGet(const char* routine, const char* key, String& out) const;
+  bool storeSet(const char* routine, const char* key, const String& value);
 
  private:
   struct Entry {
@@ -92,7 +102,7 @@ class Routines {
   bool choose(const char* name);
   void selectDefault();
   void applyPending();
-  bool storePath(String& out) const;
+  bool storePath(const char* routine, String& out) const;
 
   bvm* vm_ = nullptr;
   Storage* storage_ = nullptr;

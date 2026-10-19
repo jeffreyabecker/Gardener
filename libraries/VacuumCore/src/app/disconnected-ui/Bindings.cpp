@@ -38,9 +38,10 @@ void installModule(bvm* vm, const char* name, const bnfuncinfo* library) {
 //
 // A routine reads a record with dots -- `s.kpa`, `ev.btn` -- and in this interpreter that works only
 // on an instance whose class declares the field. Only the parser makes an instance variable, and
-// upstream's own class tables come from a code generator this build does not run, so the three
+// upstream's own class tables come from a code generator this build does not run, so the record
 // classes are declared once, here, in the language a routine is written in, and the firmware fills
-// instances of them.
+// the instances it answers with. `setting` is the same idea for a routine's own describe(): the
+// browser reads the fields the routine builds.
 //
 // A record is the state at the moment of the call, which is what the map it replaced was: writing
 // one of its fields changes the routine's copy and nothing else.
@@ -54,6 +55,21 @@ constexpr const char* kRecords =
     "end\n"
     "class event\n"
     "  var btn, press\n"
+    "end\n"
+    // What a routine's describe() says the browser may edit. `values` is the cycle order for a
+    // `choice`; the other kinds pass nil. The class is constructed by the routine, so its fields
+    // stay plain data.
+    "class setting\n"
+    "  var key, label, kind, step, min, max, values\n"
+    "  def init(key, label, kind, step, min, max, values)\n"
+    "    self.key = key\n"
+    "    self.label = label\n"
+    "    self.kind = kind\n"
+    "    self.step = step\n"
+    "    self.min = min\n"
+    "    self.max = max\n"
+    "    self.values = values\n"
+    "  end\n"
     "end\n";
 
 // Constructs one: the class value stays under the instance, so endRecord() removes the class and
@@ -376,10 +392,32 @@ int routinesNames(bvm* vm) {
   be_return(vm);
 }
 
+// The registered object itself, so a page can call one of its methods in its own frame. Returning
+// the instance rather than calling describe() here is what keeps the runtime from re-entering the
+// interpreter inside a native call.
+int routinesGet(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1) || gRoutines == nullptr ||
+      !gRoutines->pushObject(argText(vm, 1))) {
+    be_return_nil(vm);
+  }
+  be_return(vm);
+}
+
+int routinesHas(bvm* vm) {
+  if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
+    be_raise(vm, "type_error", "routines.has(name, method)");
+  }
+  const bool found = gRoutines != nullptr && gRoutines->hasMethod(argText(vm, 1), argText(vm, 2));
+  be_pushbool(vm, found);
+  be_return(vm);
+}
+
 const bnfuncinfo kRoutinesLibrary[] = {
     {"register", routinesRegister},
     {"set_active", routinesSetActive},
     {"names", routinesNames},
+    {"get", routinesGet},
+    {"has", routinesHas},
     {nullptr, nullptr},
 };
 
@@ -390,28 +428,42 @@ const bnfuncinfo kRoutinesLibrary[] = {
 // is not an error it has to test for.
 
 int storeGet(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "store.get(key, fallback)");
+  const int top = be_top(vm);
+  const bool named = top >= 3;
+  const int keyIndex = named ? 2 : 1;
+  const int fallbackIndex = named ? 3 : 2;
+
+  if (top < 1 || !be_isstring(vm, 1) || !be_isstring(vm, keyIndex)) {
+    be_raise(vm, "type_error", "store.get(key, fallback) or store.get(name, key, fallback)");
   }
 
+  const bool hasFallback = top >= fallbackIndex;
+  const bool fallbackInt = hasFallback && be_isint(vm, fallbackIndex);
+  const bool fallbackReal = hasFallback && be_isreal(vm, fallbackIndex);
+  const bool fallbackBool = hasFallback && be_isbool(vm, fallbackIndex);
+
+  const char* routine = named ? argText(vm, 1) : nullptr;
+  const char* key = argText(vm, keyIndex);
   String text;
-  const bool stored = gRoutines != nullptr && gRoutines->storeGet(argText(vm, 1), text);
+  const bool stored =
+      gRoutines != nullptr &&
+      (named ? gRoutines->storeGet(routine, key, text) : gRoutines->storeGet(key, text));
 
   if (!stored) {
     // Nothing under the key: the fallback the caller passed is the answer, as it stands.
-    if (be_top(vm) >= 2) {
-      be_pushvalue(vm, 2);
+    if (hasFallback) {
+      be_pushvalue(vm, fallbackIndex);
     } else {
       be_pushnil(vm);
     }
     be_return(vm);
   }
 
-  if (be_top(vm) >= 2 && be_isint(vm, 2)) {
+  if (fallbackInt) {
     be_pushint(vm, (bint)text.toInt());
-  } else if (be_top(vm) >= 2 && be_isreal(vm, 2)) {
+  } else if (fallbackReal) {
     be_pushreal(vm, (breal)text.toFloat());
-  } else if (be_top(vm) >= 2 && be_isbool(vm, 2)) {
+  } else if (fallbackBool) {
     be_pushbool(vm, text == "true" || text == "1");
   } else {
     be_pushstring(vm, text.c_str());
@@ -420,16 +472,25 @@ int storeGet(bvm* vm) {
 }
 
 int storeSet(bvm* vm) {
-  if (be_top(vm) < 2 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "store.set(key, value)");
+  const int top = be_top(vm);
+  const bool named = top >= 3;
+  const int keyIndex = named ? 2 : 1;
+  const int valueIndex = named ? 3 : 2;
+
+  if (top < 2 || !be_isstring(vm, 1) || !be_isstring(vm, keyIndex)) {
+    be_raise(vm, "type_error", "store.set(key, value) or store.set(name, key, value)");
   }
 
+  const char* routine = named ? argText(vm, 1) : nullptr;
+  const char* key = argText(vm, keyIndex);
   // be_tostring converts a number or a bool in place, so every scalar has the text form the file
   // holds. The pointer is into the VM's string table, which is why it is used before anything else
   // is pushed.
-  const char* value = be_tostring(vm, 2);
-  const bool written = value != nullptr && gRoutines != nullptr &&
-                       gRoutines->storeSet(argText(vm, 1), String(value));
+  const char* value = be_tostring(vm, valueIndex);
+  const bool written =
+      value != nullptr && gRoutines != nullptr &&
+      (named ? gRoutines->storeSet(routine, key, String(value))
+             : gRoutines->storeSet(key, String(value)));
   be_pushbool(vm, written);
   be_return(vm);
 }
