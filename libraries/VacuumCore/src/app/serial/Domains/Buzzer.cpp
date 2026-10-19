@@ -6,6 +6,7 @@
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
 #include "app/serial/Domain.h"
+#include "app/serial/Gate.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 
@@ -52,11 +53,11 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "get") {
     get(io, args);
   } else if (verb == "tone") {
-    tone(io, args);
+    if (requireControl(app_, io)) tone(io, args);
   } else if (verb == "play") {
-    play(io, args);
+    if (requireControl(app_, io)) play(io, args);
   } else if (verb == "stop") {
-    stop(io, args);
+    if (requireControl(app_, io)) stop(io, args);
   } else {
     String reply = "err unknown_verb ";
     reply += verb;

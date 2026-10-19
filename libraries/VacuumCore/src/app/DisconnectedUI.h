@@ -8,8 +8,8 @@ namespace gardener {
 
 class StreamLogger;
 
-// The screen when no controller is attached: the device's own mark and nothing else. It is what a
-// keyboard-less device shows when nobody is talking to it, and a placeholder until that state has
+// The screen when no link owns the machine: the device's own mark and nothing else. It is what a
+// keyboard-less device shows when nobody is driving it, and a placeholder until that state has
 // something worth saying.
 //
 // It also owns the one gesture that only makes sense here: holding OK stops the machine and gives the

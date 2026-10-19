@@ -113,5 +113,5 @@ Bench-only, to fix once the loop works.
 * The 5-way module costs five GPIOs but the firmware reads four keys. GPIO12, the fifth key's pin,
   drives the buzzer instead; the key is not wired on a build that fits the piezo.
 
-Which of these parts move onto the alpha carrier board, and which stay modules, is in
-[alpha-pcb.md](../plans/alpha-pcb.md).
+Which of these parts move onto the alpha carrier board, and which stay modules, is a planned
+board decision and not part of this build.

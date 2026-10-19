@@ -48,7 +48,7 @@ class Routines {
   void poll(uint32_t nowMs);
 
   // The page became visible again: run the active routine's activate(), so a routine re-reads the
-  // unit and redraws rather than trusting what it knew before the host attached.
+  // unit and redraws rather than trusting what it knew before the controller took over.
   void enterPage();
 
   bool active() const { return active_ >= 0; }

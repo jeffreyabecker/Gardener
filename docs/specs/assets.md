@@ -68,15 +68,15 @@ The converter keeps both, which is why it is the tool to use rather than a hand-
 ## On the device
 
 `drawAsset()` is the whole of it: it reads the file named, renders it at the point asked for, and
-lets the bytes go. Both pages call it — the disconnected page on every redraw, the connected page
-once for its first frame — so there is no loaded copy anywhere, and nothing to keep in step with the
-file. A few hundred bytes every redraw is cheaper than the state an owned buffer would need.
+lets the bytes go. The disconnected page calls it on every redraw, so there is no loaded copy
+anywhere and nothing to keep in step with the file. A few hundred bytes every redraw is cheaper than
+the state an owned buffer would need.
 
 An asset is drawn whole and at its own size: there is no scaling.
 
 A file that is not there is not fatal. `App::begin()` says `ui: /assets/eggplant.rle missing, the
-pages have no mark` and the pages draw nothing, because the data image is where the file ships from
-and its absence is a packaging fault rather than a mode to support.
+disconnected page has no mark` and the page draws nothing, because the data image is where the file
+ships from and its absence is a packaging fault rather than a mode to support.
 
 The art itself lives in [firmware/gardener/assets/](../../firmware/gardener/assets), outside `data/`,
 so a source image is never uploaded to the device.

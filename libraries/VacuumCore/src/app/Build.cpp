@@ -5,6 +5,7 @@
 
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
+#include "app/Ownership.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -61,8 +62,9 @@ AppContext buildAppContext() {
   auto* storage = new Storage();
   auto* settings = new Settings(*storage);
   auto* routines = new Routines();
+  auto* ownership = new Ownership();
   return AppContext(sensor, pump, vent, battery, buttons, buzzer, overlay, system, storage,
-                    settings, routines);
+                    settings, routines, ownership);
 }
 
 }  // namespace gardener

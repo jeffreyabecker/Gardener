@@ -98,6 +98,9 @@ constexpr float CONTROL_FLOOR_KPA =
 // composition root's call in app/Build.cpp — normally open is the fail-safe default.
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
+// A reset releases the chamber first, but it does not wait out the whole vent: the restart is safe
+// once the pump is off and the valve is open, and this is the margin a near-vented chamber gets.
+constexpr uint32_t REBOOT_VENT_WAIT_MS = 2000;
 
 // --- Battery ---------------------------------------------------------------
 // 1S Li-ion (Q6), a straight line between empty and full. BATTERY_CALIBRATION trims the
@@ -125,10 +128,8 @@ constexpr uint32_t BUTTON_LONG_MS = 600;
 constexpr uint32_t BUTTON_DOUBLE_MS = 350;
 
 // --- The device's own screen ------------------------------------------------
-// The splash is read before the first live frame, and the panel is then repainted on a fixed
-// cadence: often enough that the battery blink is visible, slow enough that a whole frame's I2C
-// write does not crowd the control loop.
-constexpr uint32_t SPLASH_HOLD_MS = 1500;
+// The panel is repainted on a fixed cadence: often enough that the battery blink is visible, slow
+// enough that a whole frame's I2C write does not crowd the control loop.
 constexpr uint32_t UI_REFRESH_MS = 250;
 
 // --- Controller link --------------------------------------------------------
@@ -142,8 +143,9 @@ constexpr uint16_t COMMAND_LINE_MAX = 128;
 // a body that stops arriving for this long is abandoned and its partial file removed.
 constexpr uint32_t FS_WRITE_MAX_BYTES = 1024 * 1024;
 constexpr uint32_t FS_WRITE_IDLE_MS = 2000;
-// With USB CDC the presence of a host is observable and its loss stops the run. On a plain
-// UART it is not, so a lost link is simply never reported.
+// With USB CDC the presence of a host is observable, so a drop while owning can be marked stale.
+// On a plain UART it is not, so a lost link is never reported and the local reset is the only way
+// out.
 
 }  // namespace cfg
 }  // namespace gardener

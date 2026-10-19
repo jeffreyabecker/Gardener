@@ -4,6 +4,8 @@
 #include <stdlib.h>
 
 #include "app/Asset.h"
+#include "app/Ownership.h"
+#include "app/SafeReboot.h"
 #include "core/Config.h"
 #include "core/Units.h"
 
@@ -21,18 +23,21 @@ constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Bac
 // setting: holding Back for this long ends the run and vents, whatever the controller is doing.
 constexpr uint32_t kBackStopMs = 3000;
 
+// The local reset. Back+OK together for this long release the chamber and restart, which is also
+// how a controller that dropped while owning is cleared.
+constexpr uint32_t kResetHoldMs = 5000;
+
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, context_.logEnabled());
   link_ = new SerialLink(&context_, Serial, serialAttached);
-  // Serial is the only link that can take control today; a radio will pass its own icon instead.
-  connectedUi_ = new ConnectedUI(context_, Link::Serial);
+  connectedUi_ = new ConnectedUI(context_);
   disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
 
-UserInterface* App::screenFor(bool attached) {
-  if (attached) return connectedUi_;
+UserInterface* App::screenFor(bool owned) {
+  if (owned) return connectedUi_;
   return disconnectedUi_;
 }
 
@@ -75,7 +80,7 @@ bool App::begin() {
   // there when it needs it, so a data image without it is worth one line and nothing else — the pages
   // simply have no mark.
   if (context_.storage().size(kMarkAsset) == 0) {
-    logger_->warn("ui: /assets/eggplant.rle missing, the pages have no mark");
+    logger_->warn("ui: /assets/eggplant.rle missing, the disconnected page has no mark");
   }
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
@@ -125,8 +130,10 @@ bool App::begin() {
 
   link_->begin();
   lastState_ = context_.vacuum().runState();
-  hostAttached_ = serialAttached();
-  ui_ = screenFor(hostAttached_);
+  // A fresh boot has no controller: a link that is present is only a reader until it acquires
+  // control, and that is a command the link has not sent yet.
+  ownedShown_ = context_.ownership().held();
+  ui_ = screenFor(ownedShown_);
   if (ui_) ui_->begin();
   return true;
 }
@@ -168,7 +175,7 @@ void App::logRunChanges(uint32_t nowMs) {
 // loop reports them as it always has. A press is consumed either way, so it is never delivered
 // twice.
 void App::logButtonPresses() {
-  const bool toRoutine = !hostAttached_ && context_.routines().active();
+  const bool toRoutine = !context_.ownership().held() && context_.routines().active();
   for (Button button : kButtons) {
     const Press press = context_.buttons().consumePress(button);
     if (press == Press::None) continue;
@@ -198,6 +205,15 @@ void App::watchBackHold() {
   context_.vacuum().stop();
 }
 
+// Both keys together are the local reset. It is what clears a record an absent controller left
+// held, and it runs from every page whatever a controller is doing.
+void App::watchResetHold() {
+  if (context_.buttons().heldMs(Button::Back) < kResetHoldMs) return;
+  if (context_.buttons().heldMs(Button::Ok) < kResetHoldMs) return;
+  logger_->warn("app: back and ok held, resetting");
+  safeReboot(context_);
+}
+
 void App::update() {
   uint32_t now = millis();
 
@@ -214,23 +230,31 @@ void App::update() {
   // routine's poll at the end of the pass starts one that is serviced on the next pass.
   context_.buzzer().update(now);
 
-  // A controller that goes away releases the chamber (Q4).
+  // A link that leaves while owning does not release the machine: its record stays held, the run
+  // continues and the panel keeps showing that link. A reconnected controller stays a reader until
+  // the local reset clears it.
   if (link_->consumeLinkLost()) {
-    logger_->warn("app: controller left, stopping and venting");
-    context_.vacuum().stop();
+    if (context_.ownership().ownedBy(Link::Serial)) {
+      context_.ownership().drop(Link::Serial);
+      logger_->warn("app: controller left, ownership held");
+    } else {
+      logger_->info("app: controller left");
+    }
   }
 
   // The keys are the device's own way out, independent of the link.
   watchBackHold();
+  watchResetHold();
 
   logRunChanges(now);
   logButtonPresses();
-  // The screen follows the link: the controlling link's icon while a controller is attached, the
-  // plain mark when it is not. A swap paints its own first frame.
+  // The screen follows ownership, not the cable: acquiring control paints the link's page, and a
+  // drop while owning leaves it where it was. A swap paints its own first frame.
   const bool attached = serialAttached();
-  if (attached != hostAttached_) {
-    hostAttached_ = attached;
-    ui_ = screenFor(attached);
+  const bool owned = context_.ownership().held();
+  if (owned != ownedShown_) {
+    ownedShown_ = owned;
+    ui_ = screenFor(owned);
     if (ui_) ui_->begin();
   }
   // The overlay reports the ways in, and the loop is the only thing that can see the serial link.

@@ -12,11 +12,11 @@ The contracts the firmware and its tools must satisfy.
 ## Plans
 
 Proposals, design records and deferred work. A plan is not a commitment: it leaves when it is
-implemented or dropped.
+implemented or dropped. Specs and guides never link to a plan — a contract has to stand on its own,
+and plans may reference specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [BLE control](./plans/ble-control.md) — design for a BLE GATT contract: characteristics, rates, safety, concurrency and the phased plan
-- [Link control](./plans/link-control.md) — connect, assume control, command, release; the panel follows ownership
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides

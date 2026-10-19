@@ -1,8 +1,9 @@
 # BLE control
 
 Status: design. Nothing here is implemented; the firmware today has one transport, the serial link.
-The link lifecycle is defined in [link-control.md](./link-control.md); this document applies it to
-BLE.
+The shared lifecycle is now implemented for serial and documented in
+[serial-protocol.md](../specs/serial-protocol.md) §5; this document applies the same record to BLE
+when the radio lands.
 
 A phone should be able to watch and drive the device over Bluetooth Low Energy. This is
 deliberately **not** the serial protocol: a phone speaks GATT, so the machine is exposed as
@@ -13,8 +14,8 @@ characteristics — typed values with directions and notifications — rather th
 * One peripheral, **one central at a time**, advertising while nothing is connected.
 * The machine's readout as readable, notifying characteristics, and its commands as writes.
 * A **separate contract from the serial protocol**, not a second encoding of it (§2).
-* Both transports live at once, and share the control lifecycle in
-  [link-control.md](./link-control.md).
+* Both transports live at once, and share the control lifecycle: one ownership record, acquire and
+  release, and a drop that leaves ownership held.
 
 Not in scope: OTA/DFU, a byte pipe carrying lines (that is what serial is for), push of diagnostic
 text in the first version, and more than one simultaneous central.
@@ -35,8 +36,8 @@ surfaces read the same `AppContext`, so there is still one machine and no second
 
 ## 3. Safety model: connection is not control
 
-The lifecycle is explicit and shared with serial: connect, assume control, command, release
-([link-control.md](./link-control.md)). For BLE that means:
+The lifecycle is explicit and shared with serial: connect, assume control, command, release. For
+BLE that means:
 
 * **Connecting is read-only.** It changes nothing about the machine, the run or the panel.
 * **Assuming control is an explicit write** to the `control` characteristic. Only then are commands
@@ -52,14 +53,14 @@ The lifecycle is explicit and shared with serial: connect, assume control, comma
 * **One link owns the device at a time.** A central that connects while serial owns it can read,
   but its acquire is refused as busy.
 * **A controller that stays connected but stops responding keeps control.** There is no idle lease
-  in this design; the local reset gesture is the escape ([link-control.md](./link-control.md) §6).
+  in this design; the local reset gesture (Back+OK for 5 s) is the escape.
 
 ### 3.1 The screen follows ownership
 
 The page is chosen from the one ownership record, not from `serialAttached()` or
-`ble_->connected()`. `App::update()` calls `screenFor(control.owned())`; `ConnectedUI` is what a
-controller sees, while `DisconnectedUI` is what everyone else sees, including a central that is
-connected but has not acquired control.
+`ble_->connected()`. `App::update()` calls `screenFor(ownership.held())`; `ConnectedUI` is what the
+owner sees — including a dropped owner, whose record stays held — while `DisconnectedUI` is what
+everyone else sees, including a central that is connected but has not acquired control.
 
 The overlay's serial and BLE indicators stay presence-only: they answer “is a link there?”, not
 “is a link driving?”. A connection or disconnection that does not change ownership does not repaint

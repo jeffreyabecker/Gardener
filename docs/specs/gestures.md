@@ -24,12 +24,18 @@ These belong to the device. A page must not give them another meaning, and canno
 
 | Gesture | What happens | Where |
 | --- | --- | --- |
-| **Hold Back for 3 s** | stop the pump and vent | every page, with or without a host |
+| **Hold Back for 3 s** | stop the pump and vent | every page, with or without a controller |
 | **Hold OK for 3 s** | stop the pump, vent, and show `default` | the disconnected pages |
+| **Hold Back+OK for 5 s** | stop, vent up to 2 s, restart, and clear ownership | every page, every link state |
 
 The Back hold fires at the 3 s mark while the key is still down; the release that follows arrives at
 the page as a `long` Back, which a page that does not use it can ignore. The OK hold also fires at
 the mark and switches pages, so the page being left does not have to handle the event.
+
+**Back+OK is the local reset.** It is the only way to clear an ownership record left held by a
+controller that dropped while owning, and it runs whatever a controller is doing. The Back hold and
+the disconnected page's OK hold may fire first on the way to the 5 s mark; the machine is already on
+the release path by then, so that is harmless.
 
 **Hold Back is the stop gesture.** A routine does not implement its own stop key and does not use
 short Back for it: short Back is the page's Back. The hold is why a routine never has to know about
@@ -86,12 +92,14 @@ on Up or Down is one event and moves once; a page that does not distinguish it t
 On `static`, OK starts a cycle only from `ready`. Once the pull is under way, Back is not a stop —
 the Back hold is, and the page notices the machine's release and returns to `ready`.
 
-The page columns describe the disconnected device. With a host attached there is no routine page:
-presses are logged (`btn: ok short`) and only the Back hold still stops and vents.
+The page columns describe the disconnected device. While a controller owns the device there is no
+routine page: presses are logged (`btn: ok short`) and only the Back hold and the Back+OK reset still
+act. A link that is connected but has not acquired control leaves the disconnected page — and its
+routine — in place.
 
 ## Rules for a page
 
-1. Leave the two holds alone; they are the device's.
+1. Leave the reserved holds alone; they are the device's.
 2. Double OK is the page's edit gesture. With `describe()`, it opens `Settings`.
 3. Back leaves without writing. Only `default` gives Back a machine action.
 4. OK is the primary action; Up and Down move or change.

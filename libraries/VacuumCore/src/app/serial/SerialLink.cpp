@@ -8,6 +8,7 @@ namespace gardener {
 
 SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present)
     : stream_(stream), present_(present), context_(*context) {
+  domains_.add(createControlDomain(context_));
   domains_.add(createDeviceDomain(context_));
   domains_.add(createVacuumDomain(context_));
   domains_.add(createBuzzerDomain(context_));

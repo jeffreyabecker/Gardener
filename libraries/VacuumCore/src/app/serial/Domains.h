@@ -5,6 +5,7 @@ namespace gardener {
 class AppContext;
 class Domain;
 
+Domain* createControlDomain(AppContext& app);
 Domain* createDeviceDomain(AppContext& app);
 Domain* createVacuumDomain(AppContext& app);
 Domain* createBuzzerDomain(AppContext& app);

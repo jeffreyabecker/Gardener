@@ -5,6 +5,7 @@
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Domains.h"
+#include "app/serial/Gate.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 
@@ -63,18 +64,22 @@ void VacuumDomain::execute(Stream& io) {
     return;
   }
   if (verb == "target") {
+    if (!requireControl(app_, io)) return;
     target(io, args);
     return;
   }
   if (verb == "start") {
+    if (!requireControl(app_, io)) return;
     start(io, args);
     return;
   }
   if (verb == "stop") {
+    if (!requireControl(app_, io)) return;
     stop(io, args);
     return;
   }
   if (verb == "reset") {
+    if (!requireControl(app_, io)) return;
     reset(io, args);
     return;
   }

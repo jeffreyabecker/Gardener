@@ -6,6 +6,7 @@
 #include "app/AppContext.h"
 #include "app/Storage.h"
 #include "app/serial/Domain.h"
+#include "app/serial/Gate.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 
@@ -147,9 +148,9 @@ void FsDomain::execute(Stream& io) {
   } else if (verb == "write") {
     write(io, rest);
   } else if (verb == "mkdir") {
-    makeDirectory(io, rest);
+    if (requireControl(app_, io)) makeDirectory(io, rest);
   } else if (verb == "delete") {
-    remove(io, rest);
+    if (requireControl(app_, io)) remove(io, rest);
   } else {
     String reply = "err unknown_verb ";
     reply += verb;
@@ -273,6 +274,14 @@ void FsDomain::write(Stream& io, const String& args) {
     reply += String((uint32_t)cfg::FS_WRITE_MAX_BYTES);
     reply += '\n';
     io.print(reply);
+    return;
+  }
+
+  if (!hasControl(app_)) {
+    // The header is valid, so its declared body still has to be consumed before the refusal: the
+    // next command has to start on a boundary even when this one is not allowed to run.
+    if (!discardPayload(io, bytes)) return;
+    io.print("err not_controlling\n");
     return;
   }
 

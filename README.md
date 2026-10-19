@@ -47,7 +47,7 @@ boots.
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
 | [docs/specs/](./docs/specs) | The contracts: serial protocol, gestures, assets and routines |
-| [docs/plans/](./docs/plans) | Proposals, design records and deferred work |
+| [docs/plans/](./docs/plans) | Proposals and design records; they leave when implemented or dropped |
 | [docs/guides/](./docs/guides) | The parts list and build guide |
 
 ### Architecture
@@ -291,17 +291,17 @@ The panel is a peripheral: the device drives it, and the wire reports only its g
 ```
 
 The page is static: the controller already has the readout, so the panel says which link is
-driving — a DE-9 connector face-on for serial, the Bluetooth rune for a radio. The boot splash is
-the first frame; after a second and a half it gives way to that icon, repainted four times a
-second so the battery blink keeps moving. Down the right edge is the device's status: the battery,
-then a plug for the serial link and the Bluetooth rune beside it. An icon is drawn only while its
-connection is up. Nothing on the serial line draws into the buffer or changes the panel's
-configuration.
+driving — a DE-9 connector face-on for serial, the Bluetooth rune for a radio. The disconnected
+page is the boot screen. When a controller acquires control the panel switches straight to that
+link's icon, repainted four times a second so the battery blink keeps moving. Down the right edge
+is the device's status: the battery, then a plug for the serial link and the Bluetooth rune beside
+it. An icon is drawn only while its connection is up. Nothing on the serial line draws into the
+buffer or changes the panel's configuration.
 
-Boot is safe: pump off, valve open, `IDLE`, the splash on the panel. Nothing about a run is
+Boot is safe: pump off, valve open, `IDLE`, the disconnected page on the panel. Nothing about a run is
 remembered across a reset; the display unit is the one setting that is, from LittleFS. The screen
-follows the link: the controlling link's icon while a controller has control, and the plain mark
-while none does.
+follows ownership: the controlling link's icon while a link owns the machine, and the plain mark
+while none does. It does not change when a link merely connects or disconnects.
 
 ### Front panel keys
 
@@ -312,12 +312,13 @@ single tap is reported once, a little late, rather than acted on twice. A long p
 of a double. There is no separate event for a longer hold — a page that wants one watches
 `heldMs()` while the key is down and picks its own mark. A key held at boot is not a press.
 
-While no host is attached the presses go to the active routine (`buttons.take()`); with none, the
-loop logs the gesture (`btn: ok short`). Two holds belong to the device and no routine can suppress
-either: **Back for 3 s** stops the pump and vents, and **OK for 3 s** does the same and hands the
-panel back to the `default` routine, so a page that took it over is one hold away. The first is
-hard-coded in `App` because it applies on either page; the second belongs to the disconnected page,
-because it exists to leave that page.
+While no controller owns the device the presses go to the active routine (`buttons.take()`); with
+none, the loop logs the gesture (`btn: ok short`). Three holds belong to the device and no routine
+can suppress them: **Back for 3 s** stops the pump and vents, **OK for 3 s** does the same and hands
+the panel back to the `default` routine, and **Back+OK for 5 s** releases the chamber, restarts and
+clears a held ownership record. The first and third are hard-coded in `App` because they apply on
+every page and in every link state; the second belongs to the disconnected page, because it exists
+to leave that page.
 
 The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
 for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
@@ -368,8 +369,8 @@ format and the tool are in [docs/specs/assets.md](./docs/specs/assets.md).
 
 ### Routines
 
-With no host attached the panel runs a Berry routine. Every `/routines/*.be` is loaded at boot, and
-each file registers itself:
+While no controller owns the device, the panel runs a Berry routine. Every `/routines/*.be` is
+loaded at boot, and each file registers itself:
 
 ```berry
 import string
@@ -416,10 +417,10 @@ routine's by name).
 The full surface — every call, what it returns, the fields of each record, and what the overlay
 draws over a page — is in [docs/specs/routines.md](./docs/specs/routines.md).
 
-Presses go to the active routine and are not logged while it runs. The two 3 s holds are the
-exception: Back is the device's stop and fires whatever the routine registered, and OK is the page's
-way out — it stops, vents and switches the panel back to `default`, so a routine that took it over is
-one hold away.
+Presses go to the active routine and are not logged while it runs. The reserved holds are the
+exception: Back is the device's stop and fires whatever the routine registered, OK is the page's way
+out — it stops, vents and switches the panel back to `default`, so a routine that took it over is
+one hold away — and Back+OK resets the device and clears ownership from any page.
 
 Two things worth knowing before writing one. A `poll` that never returns blocks the loop — the
 interpreter has no instruction budget, so returning is a convention the author keeps. And `print`
@@ -428,11 +429,16 @@ serial line as a `[I]` record.
 
 ### Over the serial line
 
-Open the port at 115200 8N1 and send newline terminated commands. Every command produces exactly
-one reply, which starts with an `ok`/`err` line and may carry a body after it; lines starting with
-`[` are diagnostics rather than replies:
+Open the port at 115200 8N1 and send newline terminated commands. Connecting is not controlling:
+a link can read `device get` and `vacuum get` as soon as it connects, but everything that changes
+the machine answers `err not_controlling` until it sends `control acquire`. `control release` is the
+graceful exit — it stops and vents, and gives the panel back to the disconnected page. Every
+command produces exactly one reply, which starts with an `ok`/`err` line and may carry a body after
+it; lines starting with `[` are diagnostics rather than replies:
 
 ```
+-> control acquire
+<- ok control=owned
 -> device get
 <- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=279384 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
 -> vacuum target 40
@@ -443,11 +449,14 @@ one reply, which starts with an `ok`/`err` line and may carry a body after it; l
 <- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=123456
 -> vacuum stop
 <- ok state=VENT
+-> control release
+<- ok control=none
 ```
 
-That last pair is the whole run model in miniature: the device reaches the target, reports
-`HOLD`, and waits. The controller times the hold and sends `vacuum stop` when it is done — the
-device has no duration of its own and will hold until told, and no command that takes one.
+That last run is the whole model in miniature: the device reaches the target, reports `HOLD`, and
+waits. The controller times the hold and sends `vacuum stop` when it is done — the device has no
+duration of its own and will hold until told, and no command that takes one. Releasing control is
+itself a stop-and-vent, so the graceful exit never leaves a chamber under vacuum.
 
 The full grammar, domain commands, error codes and state model are in
 [docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md). Anything that can open a serial port and
@@ -476,7 +485,7 @@ lives at the other end of the cable, with the controller. Clearing the target re
 chamber, because a run without a target is not a run.
 
 ```
-       vacuum start                              vacuum stop / link loss / fault / back hold
+       vacuum start                          vacuum stop / control release / fault / back hold
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
@@ -487,17 +496,19 @@ IDLE ──────────────> PULL ──(target reached)─�
   says the target has been reached, and that is all `HOLD` now means: it is the cue for the
   controller to start timing, and the run continues until the controller sends `vacuum stop`.
 * Nothing in the device ends a run on its own — no timer, timeout or maximum run time, so an
-  unattended hold holds until someone stops it. The one local action is a deliberate Back hold for
-  3 s: it stops and vents, even while a controller is attached.
-* The countdown is the host's job: the host holds the timer, and the device's own screen shows
-  only the two pressures, the state's icon and the battery.
+  unattended hold holds until someone stops it. The local actions are a deliberate Back hold for
+  3 s, which stops and vents, and Back+OK for 5 s, which releases the chamber and restarts. Both
+  work whatever a controller is doing.
+* The countdown is the host's job: the host holds the timer and its own UI has the readout. The
+  device's screen shows only the controlling link's icon, the state's icon and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
   means energised or de-energised is the fitted part's, and is named in `app/Build.cpp`.
 * Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
   first — a leaky rig takes longer, and that is logged rather than treated as an error.
 * Faults latch. Only `vacuum reset` clears one; the device never retries on its own.
-* Disconnecting the controller stops the run and vents. That is the one automatic ending left,
-  and it does not help with a controller that hangs with the port open.
+* A link that drops while controlling does not stop the run, and a controller that hangs with the
+  port open holds it open. Back+OK for 5 s is the local way out: it releases the chamber and
+  restarts, which also clears the held ownership record.
 
 Gains and the deadband live in `core/Config.h` (`PID_KP`, `PID_KI`, `PID_KD`,
 `CONTROL_DEADBAND_KPA`) and are starting points, not tuned values — tune them for your chamber
@@ -511,8 +522,9 @@ Protections, all of which act without consulting the controller:
   `FAULT` (clear with `vacuum reset`)
 * targets deeper than `floor` only log a warning and pin the duty
 * holding Back for 3 s stops the pump and vents, whatever the controller is doing
+* holding Back and OK for 5 s releases the chamber and restarts, whatever the controller is doing
 
-Those five are the whole list. A target the pump cannot reach pins the duty at the cap and
+Those six are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
 `vacuum get` and keep targets no deeper than it.
 
@@ -522,8 +534,8 @@ Vacuum work is not benign: imploding chambers, collapsing tubing and pumped liqu
 can hurt people and destroy hardware. Keep a rated catch pot and filter in line, and remember
 that the firmware's limits are software limits only.
 
-The one hardware guarantee is the valve: it is normally open, so losing power or losing
-control releases the chamber. That guarantee belongs to `NormallyOpenValve` in `app/Build.cpp` —
+The one hardware guarantee is the valve: it is normally open, so losing power releases the
+chamber. That guarantee belongs to `NormallyOpenValve` in `app/Build.cpp` —
 fitting a `NormallyClosedValve` instead removes it, because a dead normally closed valve holds
 the vacuum. Do not expect the fail-safe to survive that swap.
 
@@ -543,10 +555,12 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] XGZP6847A analog driver with averaging + EMA filtering and presence by plausibility, capturing its own ambient reference
 * [x] PWM pump driver with ramp and duty cap
 * [x] PID vacuum controller with a reachable-floor check
-* [x] Run model: target, vent valve and link-loss release, with the duration owned by the controller
+* [x] Run model: target, vent valve and control release, with the duration owned by the controller
+* [x] Explicit link control: one ownership record, a `control` domain, gated writes, and the
+  Back+OK reset
 * [x] 1S Li-ion battery gauge
 * [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery, the run state and the connections
-* [x] Device screen: a splash, the controlling link's icon, and an icon per run state
+* [x] Device screen: a disconnected page, the controlling link's icon, and an icon per run state
 * [x] Line protocol over USB CDC: domain-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read,
   classifying short, long and double presses, exposing the running hold, and stopping on a 3 s Back

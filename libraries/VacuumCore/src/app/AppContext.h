@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "app/BuzzerPlayer.h"
+#include "app/Ownership.h"
 #include "app/Overlay.h"
 #include "app/Settings.h"
 #include "app/Storage.h"
@@ -24,7 +25,7 @@ class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
              ButtonPanel* buttons, BuzzerPlayer* buzzer, Overlay* overlay, VacuumSystem* vacuum,
-             Storage* storage, Settings* settings, Routines* routines)
+             Storage* storage, Settings* settings, Routines* routines, Ownership* ownership)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -35,7 +36,8 @@ class AppContext {
         vacuum_(vacuum),
         storage_(storage),
         settings_(settings),
-        routines_(routines) {}
+        routines_(routines),
+        ownership_(ownership) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -51,6 +53,9 @@ class AppContext {
   Storage& storage() { return *storage_; }
   Settings& settings() { return *settings_; }
   Routines& routines() { return *routines_; }
+  // Who may command the machine. One record, shared by every link, so a second transport cannot
+  // have a second idea of who is in control.
+  Ownership& ownership() { return *ownership_; }
   uint32_t uptimeMs() const { return millis(); }
 
   // Diagnostics on the serial stream: `device get` reports it and `device set log` toggles it.
@@ -68,6 +73,7 @@ class AppContext {
   Storage* storage_;
   Settings* settings_;
   Routines* routines_;
+  Ownership* ownership_;
   bool logEnabled_ = true;
 };
 

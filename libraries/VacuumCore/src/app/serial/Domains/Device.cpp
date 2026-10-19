@@ -3,8 +3,10 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
+#include "app/SafeReboot.h"
 #include "app/Settings.h"
 #include "app/serial/Domain.h"
+#include "app/serial/Gate.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 #include "core/Units.h"
@@ -68,10 +70,12 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
+    if (!requireControl(app_, io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
+    if (!requireControl(app_, io)) return;
     reboot(io, args);
     return;
   }
@@ -211,10 +215,11 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
     return;
   }
 
-  // The reply has to leave the port before the reset takes it down.
+  // The reply has to leave the port before the reset takes it down. The safe path then releases the
+  // chamber before restarting, so a controller cannot skip that on its way out.
   io.print("ok\n");
   delay(50);
-  ESP.restart();
+  safeReboot(app_);
 }
 
 }  // namespace

@@ -24,8 +24,8 @@ class SerialLink {
   void poll(uint32_t nowMs);
 
   bool controllerAttached() const;
-  // One shot: the controller went away. App decides what that means (stop and vent); the interface
-  // only reports it.
+  // One shot: the controller went away. App decides what that means (a held ownership record); the
+  // interface only reports it.
   bool consumeLinkLost();
 
  private:

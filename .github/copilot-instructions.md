@@ -85,10 +85,11 @@ second case arrives.
 folder, not behind a flag defaulted off. The Berry runtime and the host client were both deleted
 outright and left to the history ([README](../README.md) Roadmap); do the same.
 
-**A plan is a requirement, not a design.** [docs/plans/](../docs/plans) and
-[docs/specs/](../docs/specs) describe work that is proposed, agreed or already done. Read them for
-what has to be true, then answer it with the smallest mechanism the current single loop allows.
-Reaching for a task, a lock, a queue or a watchdog is a question to ask, not a thing to build.
+**A plan is a requirement, not a design.** [docs/plans/](../docs/plans) records proposals and
+design work; [docs/specs/](../docs/specs) is what the firmware does now. Read a plan for what has
+to be true, then answer it with the smallest mechanism the current single loop allows. Reaching for
+a task, a lock, a queue or a watchdog is a question to ask, not a thing to build. A plan leaves when
+it is implemented or dropped: delete it, and carry what it established into the spec.
 
 **A parking-lot entry is a note, not a plan.** [docs/plans/parking-lot.md](../docs/plans/parking-lot.md)
 holds unrealized "what if" ideas. One or two sentences say what the idea is and what is blocking
@@ -106,6 +107,18 @@ belongs to the change, not to the commit.
 
 This is guidance for new code, and for code you are already changing. Existing structure is not a
 rewrite-on-sight target, and an unrequested refactor is its own decision with its own measurement.
+
+## Documentation
+
+**Specs and guides stand alone.** [docs/specs/](../docs/specs) and
+[docs/guides/](../docs/guides) describe what the firmware and its tools do now. They must not link
+to [docs/plans/](../docs/plans): a plan is a transient design record that leaves when it is
+implemented or dropped, and a contract that depends on one rots with it. Write the requirement into
+the spec or guide itself.
+
+A plan may reference a spec, because a proposal depends on the contract it changes. The reverse is
+never right. [docs/README.md](../docs/README.md) is the one index of plans, and the project README
+may point at a proposal from its roadmap; a spec or guide should not.
 
 ## Where to look
 

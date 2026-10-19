@@ -103,11 +103,11 @@ which remains the one description of what is editable.
 | boot, after the files load | nothing — the page's `activate()` follows |
 | the page becomes visible | `activate()` |
 | every loop pass while the page is shown | `poll(now)` |
-| a host attaches | nothing; the page stops being polled |
-| a host detaches | `activate()` — the page is visible again |
+| a controller acquires control | nothing; the page stops being polled |
+| the controller releases control, or the device resets | `activate()` — the page is visible again |
 
-`activate()` runs again on every page entry on purpose: the display unit may have changed over
-serial while a host was attached, and a routine should not trust what it cached.
+`activate()` runs again on every page entry on purpose: the display unit may have changed while the
+page was not shown, and a routine should not trust what it cached.
 
 ## One entry per beat
 
@@ -307,9 +307,13 @@ Holding **OK for 3 s** is the page's way out: it stops and vents, then hands the
 same object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
 disk; a routine that was left can be brought back with `routines.set_active()`.
 
+Holding **Back and OK together for 5 s** is the local reset: it releases the chamber, restarts, and
+clears an ownership record left held by a controller. It works from every page and link state, and a
+routine cannot suppress it.
+
 The standard gestures a page should follow — double OK for its settings, OK for its primary action,
-Back to leave a view, and the two holds above — are in [gestures.md](./gestures.md), with the matrix
-of what every press does on the shipped pages.
+Back to leave a view, and the three holds above — are in [gestures.md](./gestures.md), with the
+matrix of what every press does on the shipped pages.
 
 ## `buzzer` — the piezo
 

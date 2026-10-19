@@ -1,6 +1,6 @@
 #include "app/ConnectedUI.h"
 
-#include "app/Asset.h"
+#include "app/Ownership.h"
 #include "core/Config.h"
 
 namespace gardener {
@@ -13,16 +13,13 @@ constexpr int16_t kIconCentreY = 35;
 
 }  // namespace
 
-ConnectedUI::ConnectedUI(AppContext context, Link link)
-    : UserInterface(context), link_(link) {}
+ConnectedUI::ConnectedUI(AppContext context) : UserInterface(context) {}
 
-// The boot screen, and the only frame that is not the link's icon.
+// Taking control shows the icon straight away: the page is the statement that someone is driving,
+// and it should not arrive behind a splash.
 bool ConnectedUI::begin() {
-  Display& panel = context_.display();
-  panel.clear();
-  drawAsset(panel, context_.storage(), kMarkAsset, 0, 0);
-  panel.display();
-  startedMs_ = millis();
+  drawFrame();
+  lastFrameMs_ = millis();
   return true;
 }
 
@@ -31,7 +28,6 @@ bool ConnectedUI::begin() {
 // while frames keep arriving.
 void ConnectedUI::update() {
   uint32_t now = millis();
-  if (now - startedMs_ < cfg::SPLASH_HOLD_MS) return;
   if (now - lastFrameMs_ < cfg::UI_REFRESH_MS) return;
   lastFrameMs_ = now;
   drawFrame();
@@ -42,12 +38,14 @@ void ConnectedUI::update() {
 void ConnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  switch (link_) {
+  switch (context_.ownership().owner()) {
     case Link::Serial:
       serialIcon();
       break;
     case Link::Bluetooth:
       bluetoothIcon();
+      break;
+    case Link::None:
       break;
   }
   panel.display();

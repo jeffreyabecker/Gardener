@@ -28,10 +28,12 @@ class App {
  private:
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
-  // The one local control: a Back hold stops and vents, whatever the link is doing.
+  // The local stop: a Back hold stops and vents, whatever the link is doing.
   void watchBackHold();
-  // Which screen belongs to the link as it is now.
-  UserInterface* screenFor(bool attached);
+  // Back+OK held together: the local reset that clears a held ownership record.
+  void watchResetHold();
+  // Which screen belongs to the machine as it is now: the owner's page or the disconnected page.
+  UserInterface* screenFor(bool owned);
 
   // The context owns the diagnostic switch (`device set log`), and both the link and the logger
   // honour it. The link and the logger are new'd over the same Serial stream.
@@ -39,11 +41,12 @@ class App {
   SerialLink* link_ = nullptr;
   StreamLogger* logger_ = nullptr;
   // The panel is the device's own, so the loop paints it. Two screens, one showing: the controlling
-  // link's icon while a controller is attached, and the plain mark while none is.
+  // link's icon while a link owns the machine, and the disconnected page while none does.
   ConnectedUI* connectedUi_ = nullptr;
   DisconnectedUI* disconnectedUi_ = nullptr;
   UserInterface* ui_ = nullptr;
-  bool hostAttached_ = false;
+  // Whether the screen showing is the connected one. It follows ownership, not attachment.
+  bool ownedShown_ = false;
   // One stop per Back hold: set when the hold fires, cleared when the key comes up.
   bool backStopFired_ = false;
   RunState lastState_ = RunState::Idle;

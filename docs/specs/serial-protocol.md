@@ -13,8 +13,8 @@ and every state it has is either a command it was given or something it had to d
 safety. All control comes from the controller at the other end of the line, including how long
 a run lasts.
 
-The first token is a **domain**. `device`, `vacuum`, `buzzer` and `fs` are the domains. There is
-no `help` domain: this document is the interface.
+The first token is a **domain**. `control`, `device`, `vacuum`, `buzzer` and `fs` are the domains.
+There is no `help` domain: this document is the interface.
 
 ## 1. The port
 
@@ -39,12 +39,18 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
 2. Send `device get` and check `proto` and `fw`. `proto=1` is this document.
-3. Ask for what you need: `vacuum get` is the readout, and it is polled (§11). Nothing is pushed.
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
 
-**Disconnecting stops the run and vents the chamber** (§10), because a controller that goes away
-releases the chamber. The device only acts on it when the stream can report host presence, which
-USB CDC can and a plain UART cannot. There is no command that sets or reports this; it is a
-property of the transport, not a field on the wire.
+**Connecting is not controlling.** A link that has only connected can read; every writing verb is
+refused with `err not_controlling` until the link sends `control acquire` (§5). One link owns the
+device at a time, and `control release` is the graceful exit: it stops and vents, then returns the
+panel to the disconnected page.
+
+If the port disappears while the link owns the device, the machine keeps its state and the
+ownership record stays held. A reconnected link is a read-only observer until the local reset
+(Back+OK for 5 s) clears the record (§11). The device can only notice a drop when the stream
+reports host presence, which USB CDC can and a plain UART cannot; there is no command that sets or
+reports presence.
 
 ## 3. Grammar
 
@@ -102,7 +108,44 @@ detail = token / items
 * Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; `device set log off` silences
   them. Replies are never silenced.
 
-## 5. `device` — the machine and this stream
+## 5. `control` — who may command
+
+The ownership record. A link may read at any time; this domain is how it becomes the one controller,
+and how it gives the machine back.
+
+| Verb | Reply | Notes |
+| --- | --- | --- |
+| `get` | `ok control=owned` / `ok control=none` | the caller's view. A record left behind by a dropped link reads `none`, even though the machine is still held for that link |
+| `acquire` | `ok control=owned` / `err busy` | idempotent for the current owner. A second link, or a stale record, is `busy` |
+| `release` | `ok control=none` | idempotent; stops and vents when this link owns the device |
+
+A link acquires once and keeps control until it releases or the device is reset. Acquiring does not
+change the machine: a controller that takes over a running chamber reads `vacuum get` before
+commanding it.
+
+Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
+start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
+`fs mkdir` and `fs delete` answer `err not_controlling` until the caller owns the device. The read
+verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
+available to a connected observer. `fs write` still consumes a declared body before its refusal, so
+the next command starts on a boundary.
+
+```
+-> control get
+<- ok control=none
+-> control acquire
+<- ok control=owned
+-> control acquire
+<- ok control=owned
+-> control release
+<- ok control=none
+```
+
+After a link drops while owning, `control get` reads `none` but `control acquire` answers `err busy`
+until the local reset clears the held record. `release` while another link owns the device — or
+after a drop — is the idempotent `ok control=none` and does not touch the machine.
+
+## 6. `device` — the machine and this stream
 
 `device get` reports every field, in this order:
 
@@ -121,11 +164,13 @@ detail = token / items
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
-| `set log <on\|off>` | `ok log=<on\|off>` | diagnostics on this stream |
-| `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset |
-| `reboot` | `ok` | safe boot, then restart. The reply is written before the restart |
+| `set log <on\|off>` | `ok log=<on\|off>` | diagnostics on this stream; requires control |
+| `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
+| `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
 
 ```
+-> control acquire
+<- ok control=owned
 -> device get
 <- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
 -> device set log off
@@ -135,6 +180,9 @@ detail = token / items
 -> device reboot
 <- ok
 ```
+
+Only `get` is available without control. A `set` or `reboot` from a connected observer is
+`err not_controlling`.
 
 `device set unit` is the one write that survives a reset: the value is written to the `[device]`
 section of `/settings.ini` and read back at boot. A filesystem that will not take the write still
@@ -148,7 +196,7 @@ fields. A pack that is not fitted reads `-` for both.
 `panel` is gone as a domain. Its one wire fact is `display-size` in `device get`. The wire still
 does not draw on the panel.
 
-## 6. `vacuum` — the machine that holds pressure
+## 7. `vacuum` — the machine that holds pressure
 
 `vacuum get` reports every field, in this order:
 
@@ -171,9 +219,15 @@ does not draw on the panel.
 | `stop` | `ok state=<state>` | pump off, then vent. The normal way a run ends |
 | `reset` | `ok state=<state>` | clears the latched fault, then vents |
 
+Only `get` is available without control; `target`, `start`, `stop` and `reset` answer
+`err not_controlling` from a connected observer. `control release` is the observer's way to ask the
+device to stop and vent (§5).
+
 ```
 -> vacuum get
 <- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
+-> control acquire
+<- ok control=owned
 -> vacuum target 40
 <- ok target=40.0
 -> vacuum start
@@ -196,7 +250,7 @@ been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the other o
 knowing: it is the shallowest target the loop will accept, and it is reported as `min=` on the
 `out_of_range` reply.
 
-## 7. `buzzer` — the piezo
+## 8. `buzzer` — the piezo
 
 `buzzer get` reports `tone` then `playing`:
 
@@ -212,9 +266,14 @@ knowing: it is the shallowest target the loop will accept, and it is reported as
 | `play <sequence>` | `ok playing=on` | note/duration pairs separated by spaces; the sequence is the rest of the line |
 | `stop` | `ok playing=off` | silence and stop |
 
+Only `get` is available without control; `tone`, `play` and `stop` are `err not_controlling` from a
+connected observer.
+
 ```
 -> buzzer get
 <- ok tone=- playing=off
+-> control acquire
+<- ok control=owned
 -> buzzer tone 2000 500
 <- ok tone=2000,500
 -> buzzer get
@@ -237,7 +296,7 @@ positive. The frequency uses equal temperament with A4 = 440 Hz; a note outside 
 A tone or sequence continues until it is stopped or its own time runs out; the controller times a
 long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop it".
 
-## 8. `fs` — the device's files
+## 9. `fs` — the device's files
 
 The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.ini`. `fs` is a bench
 interface for changing what is on the device without reflashing its data image. Writing under
@@ -253,6 +312,10 @@ interface for changing what is on the device without reflashing its data image. 
 
 All arguments are positional and unquoted. A path is one token and contains no spaces.
 
+`list` and `read` are available to a connected observer; `write`, `mkdir` and `delete` answer
+`err not_controlling` until the link owns the device. A gated `write` still consumes the declared
+body before replying.
+
 ```
 -> fs list /routines
 <- ok
@@ -263,6 +326,8 @@ All arguments are positional and unquoted. A path is one token and contains no s
 -> fs read /routines/static.ini
 <- ok bytes=12
 <- [12 raw bytes]
+-> control acquire
+<- ok control=owned
 -> fs write /routines/new.ini 5
 <- ok
 -> fs mkdir /assets/icons
@@ -298,7 +363,7 @@ absent is `err not_found <path>`.
 The transfer blocks the control loop until it completes. Routines and assets are small and moving
 them is a bench operation; do not write a large file while a run is active.
 
-## 9. Errors
+## 10. Errors
 
 Every `err` is one of these codes, so a controller can switch on the code instead of parsing
 prose. The detail is a bare token when the code names one thing, and items when it names several:
@@ -312,8 +377,14 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `no_space`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
+| `busy` | nothing | another link owns the device, or a held record has not been cleared by the local reset |
+| `not_controlling` | nothing | a state-changing verb from a link that does not own the device |
 
 ```
+-> vacuum start
+<- err not_controlling
+-> control acquire
+<- ok control=owned
 -> vacuum start
 <- err not_ready no_target
 -> vacuum target 1
@@ -328,13 +399,13 @@ prose. The detail is a bare token when the code names one thing, and items when 
 
 A command with no verb at all is `err bad_argument` with nothing to name.
 
-## 10. State model
+## 11. State model
 
-The controller owns the target, the duration and when to start and stop. The device owns what
-happens when nobody is watching, and nothing else.
+The controller owns the target, the duration and when to start and stop once it has acquired
+control. The device owns what happens when nobody is watching, and nothing else.
 
 ```
-       vacuum start                              vacuum stop / link loss / fault / back hold
+       vacuum start                          vacuum stop / control release / fault / back hold
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
@@ -343,14 +414,17 @@ IDLE ──────────────> PULL ──(target reached)─�
 
 | Event | From | To |
 | --- | --- | --- |
+| `control acquire` | any | no machine change; the link becomes the one controller |
+| `control release` | any | the same as `vacuum stop`; ownership clears and the panel returns to the disconnected page |
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
 | Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
+| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
-| link loss, sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
+| sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
-| `device reboot` | any | safe boot, i.e. `IDLE` with the valve open |
+| `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
 
 What a controller has to know:
 
@@ -361,7 +435,10 @@ What a controller has to know:
   device's loop. Timing it is yours: the device is not told how long a hold is, and has no
   command that takes a duration.
 * **A Back hold is a local `vacuum stop`.** Holding the Back key for 3 s stops the pump and
-  vents, even while a controller is attached. The state moves exactly as a `vacuum stop` moves it.
+  vents, even while a controller owns the device. The state moves exactly as a `vacuum stop` moves
+  it.
+* **Back+OK for 5 s is the local reset.** It stops, vents for up to 2 s, restarts, and clears a
+  held ownership record. A link that dropped while owning cannot be recovered any other way.
 * **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
@@ -373,18 +450,19 @@ What a controller has to know:
   dominant battery cost rather than the pump. A normally closed part draws it at rest instead,
   holding the valve open to vent. With no timer in the device, an unattended run holds until
   something stops it.
-* Link loss releases the chamber, but it only detects a controller that leaves. One that hangs
-  with the port open holds the run open.
+* **A link that drops while owning does not stop the run.** Ownership stays held, the machine
+  keeps its state and the panel keeps showing that link until the local reset. The device only
+  detects a controller that leaves; one that hangs with the port open holds the run open.
 * Duty is capped and slew limited, and those are the pump's only protections. A target deeper
   than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
   nothing stops it, so read `floor` and keep targets no deeper than it.
 * **The panel is the device's.** While a controller has control it shows that link's icon — a
   DE-9 connector face-on for serial, the Bluetooth rune for a radio — with the run state's icon,
   the battery and the two ways in drawn over it by the overlay. It falls back to the boot mark when
-  no controller is attached. There is no drawing command, so everything else — a vent timeout, the
+  no link owns the device. There is no drawing command, so everything else — a vent timeout, the
   duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
 
-## 11. Rates
+## 12. Rates
 
 Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~90 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout than
@@ -401,7 +479,7 @@ received, in arrival order, with nothing dropped and nothing reordered — so a 
 go is handled in one pass. Replies are still exactly one per command, so a host that counts them
 reads one per line.
 
-## 12. Stability
+## 13. Stability
 
 This is the first revision of the domain-first wire. The number is `1` and stays there until the
 protocol settles; revisions are not numbered yet, and a controller should be prepared to change
