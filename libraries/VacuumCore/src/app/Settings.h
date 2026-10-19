@@ -23,8 +23,8 @@ class Settings {
   // The depth the default program pulls to, in kPa below ambient; 0 when none has been set.
   float targetKpa() const;
   void setTarget(float kpa);
-  // Stored for the BLE transport in docs/plans/ble-control.md; no radio reads it yet, so turning it
-  // off changes nothing in this build.
+  // Whether the radio may run. BleLink::begin() reads it at boot and stays silent when it is off, so
+  // a change takes effect on the next reset.
   bool bluetoothEnabled() const;
   void setBluetooth(bool enabled);
 

@@ -113,6 +113,10 @@ detail = token / items
 The ownership record. A link may read at any time; this domain is how it becomes the one controller,
 and how it gives the machine back.
 
+The record is not the serial link's: the Bluetooth transport acquires the same one, so a cable and
+a phone cannot both drive the machine. Whichever transport arrives, a link that has not acquired is
+a reader.
+
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | `ok control=owned` / `ok control=none` | the caller's view. A record left behind by a dropped link reads `none`, even though the machine is still held for that link |

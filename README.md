@@ -1,10 +1,11 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it
-for a timer, then vents it — driven over a serial line by a controller at the other end.
+for a timer, then vents it — driven over a serial line or Bluetooth by a controller at the other
+end.
 
 * **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
-* **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md))
+* **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md)), and a Bluetooth LE GATT table ([docs/plans/ble-control.md](./docs/plans/ble-control.md))
 * **Pressure sensor**: CFSensor XGZP6847A100KPGN33 (-100–0 kPa gauge, 0.2–2.7 V analog)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
 * **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
@@ -59,7 +60,7 @@ hal/    what the instrument needs from its hardware: an abstract class per part 
         PressureSensor, Pump, VentValve, Battery, ButtonPanel, Buzzer. The parts themselves are in
         hal/impl/, which is the only place a vendor library is included
 app/    the instrument: the vacuum system that commands them, the build function that owns the
-        parts, the application loop, the display overlay and the serial interface
+        parts, the application loop, the display overlay, the serial interface and the radio
 ```
 
 Dependencies only ever point downwards. Nothing checks it — keep it that way by reading:
@@ -279,6 +280,12 @@ The board's wiring and the machine's policy tunables both live in
 [core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers live with its
 driver in `hal/impl/`.
 
+The radio is NimBLE-Arduino 2.5.1, which `-Task libs` pins. `scripts/arduino.ps1` also passes the
+compile options that cut the stack to what the contract uses — peripheral only, no central, no
+scanning, one connection — because those have to reach the library's own sources, not just the
+sketch. With the radio in, the build is 863 kB of flash and 30.5 kB of static RAM, against 638 kB
+and 20.0 kB for the serial-only firmware; the rest of the heap is reported at boot.
+
 ## Using the device
 
 ### Display
@@ -365,9 +372,9 @@ bluetooth=on
 So `device set unit mmhg` survives `device reboot` and a power cycle. `target` is the depth in kPa
 the `default` page hands the machine when it becomes visible; the `system` page writes it.
 `bluetooth` is the stored preference for the BLE transport in
-[docs/plans/ble-control.md](./docs/plans/ble-control.md); no radio reads it yet, so turning it off
-changes nothing in this build. Keys the firmware does not know are carried through a write rather
-than dropped; comments and spacing are not kept.
+[docs/plans/ble-control.md](./docs/plans/ble-control.md): `off` leaves the radio silent. It is read
+once at boot, so a change takes effect on the next `device reboot`. Keys the firmware does not know
+are carried through a write rather than dropped; comments and spacing are not kept.
 
 A routine keeps its own values the same way, in one file named after it beside its source
 (`/routines/static.ini`), so a data-image upload can ship starting values. A page normally writes
@@ -482,6 +489,45 @@ The full grammar, domain commands, error codes and state model are in
 send a line works as a client: there is none in this repository at the moment, deliberately,
 while the interface is being reworked.
 
+### Over Bluetooth
+
+The radio is a second contract rather than the line protocol over a pipe, because a phone is a GATT
+client and not a terminal. The device advertises as `gardener` with one service,
+`6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`; the last 16 bits of a characteristic's UUID select the
+field, so `state` is `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0001`, and the table is the whole contract:
+
+| Characteristic | Properties | Payload |
+| --- | --- | --- |
+| `state` | read, notify | uint8: 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
+| `kpa` | read, notify | float32 LE, depth below ambient |
+| `target` | read, write, notify | float32 LE, depth to pull to; 0 clears |
+| `duty` | read, notify | float32 LE, pump duty in percent |
+| `fault` | read, notify | UTF-8 code, empty when none |
+| `batt` | read, notify | uint8 percent, `0xFF` when no gauge is fitted |
+| `command` | write, notify | write an opcode; notify the result |
+| `fw` | read | UTF-8 version |
+| `ble_proto` | read | uint8, this contract's revision |
+| `unit` | read, write | uint8, 0 kPa, 1 psi, 2 inHg, 3 mmHg |
+| `control` | read, write, notify | uint8: 1 owned by this link, 0 not |
+| `sensor` | read, notify | uint8: 1 when a reading can be trusted |
+| `floor` | read, notify | float32 LE, deepest target worth offering |
+
+Connecting is read-only: every value can be read without pairing, and the page does not change.
+Writing `1` to `control` acquires the machine — that is the point where commands are accepted and
+the panel switches to the Bluetooth rune — and writing `0` is the graceful exit, which stops,
+vents and gives the page back. Disconnecting while owning changes nothing: the run continues and
+the ownership record stays held, so a reconnected phone is a reader until Back+OK clears it.
+
+`command` takes `0x01` start, `0x02` stop and vent, `0x03` reset a latched fault, and `0x04`
+reboot, and notifies `0x00` applied, `0x01` no target, `0x02` no valid reading, `0x03` fault
+latched, `0x04` unknown opcode or `0x05` not controlling. `kpa`, `target` and `floor` are always
+kPa: `unit` says what the panel prints, not what the numbers mean.
+
+The writable characteristics require an encrypted link, and the device pairs Just Works and keeps
+the bond in NVS. Reads stay open, so a scanner can watch without pairing but nothing can command
+the machine until it does. `kpa` and `duty` are notified at 5 Hz; `batt` every 10 s; the rest on
+change. The whole contract is [docs/plans/ble-control.md](./docs/plans/ble-control.md).
+
 ## Vacuum control model
 
 One class, because the state the chamber is in and the state the run is in turned out to be the
@@ -563,9 +609,10 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * **No host client in this build.** The serial client that used to live in `tools/` was deleted
   while the interface is in churn — it is in git at commit `85f3cbb` if it is wanted back.
 * The line grammar is the whole serial interface, so anything that can carry newline terminated
-  text — another microcontroller, a bridge, a terminal — can drive the device as it stands.
-  [docs/plans/ble-control.md](./docs/plans/ble-control.md) adds a second, deliberately different surface for a
-  phone: GATT characteristics rather than lines, because a BLE client is not a terminal.
+  text — another microcontroller, a bridge, a terminal — can drive the device as it stands. The
+  Bluetooth surface in [docs/plans/ble-control.md](./docs/plans/ble-control.md) is the second one,
+  deliberately different: GATT characteristics rather than lines, because a BLE client is not a
+  terminal.
 
 ## Status
 
@@ -581,6 +628,8 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Panel: a `Display` interface, an Adafruit adapter, and an overlay for the battery, the run state and the connections
 * [x] Device screen: a disconnected page, the controlling link's icon, and an icon per run state
 * [x] Line protocol over USB CDC: domain-first commands, a polled readout and diagnostics on the same stream
+* [x] Bluetooth LE: a GATT table rather than a second line grammar, sharing the ownership record, with
+  Just Works bonding and encryption on the writes
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read,
   classifying short, long and double presses, exposing the running hold, and stopping on a 3 s Back
   hold

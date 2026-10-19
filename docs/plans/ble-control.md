@@ -1,9 +1,9 @@
 # BLE control
 
-Status: design. Nothing here is implemented; the firmware today has one transport, the serial link.
-The shared lifecycle is now implemented for serial and documented in
-[serial-protocol.md](../specs/serial-protocol.md) §5; this document applies the same record to BLE
-when the radio lands.
+Status: implemented. The firmware has two transports, the serial link and this GATT table, and they
+live at once and share the ownership record documented in
+[serial-protocol.md](../specs/serial-protocol.md) §5. The notes at the end of this document record
+where the build differs from the design; the bench checklist in §10 has not been run yet.
 
 A phone should be able to watch and drive the device over Bluetooth Low Energy. This is
 deliberately **not** the serial protocol: a phone speaks GATT, so the machine is exposed as
@@ -371,6 +371,8 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
 
 ## 12. Phases
 
+All four phases are in this build.
+
 1. **P0 — read-only.** Service, `state`/`kpa`/`duty`/`batt`/`sensor`/`floor`/`unit`/`fw`/
    `ble_proto`, the notification rates, and `BleLink::connected()` feeding the overlay's radio
    indicator. Prove a phone shows live values and that a serial session is unaffected; the panel
@@ -382,3 +384,20 @@ build is reproducible. NimBLE-Arduino 2.5.1 is the version this design was writt
    (`control`, `target`, `command`, `unit`).
 4. **P3 — documentation and budget.** README gains the interface bullet and the measured numbers;
    `sketch.yaml` and the library list pin the version.
+
+## 13. Where the build differs from this design
+
+* The characteristic UUIDs are the service UUID with its last 16 bits replaced, so `state` is
+  `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0001` and the base `...9e0a10` is the service alone.
+* The compile options are `--build-property build.defines=...` in `scripts/arduino.ps1`, not a
+  `nimconfig.h` in the sketch: the library's own `nimconfig.h` is `#pragma once` and cannot be
+  shadowed from the sketch folder, while `build.defines` reaches every compiled file including the
+  stack's own sources. `-Task libs` pins NimBLE-Arduino 2.5.1.
+* A central's subscriptions are tracked, and the first pass after a subscribe sends the current
+  value of every on-change field, so a client starts from the machine's state rather than waiting
+  for the first thing that moves. The rates are unchanged.
+* `describe()` is the one place a characteristic's value is built, so a read and a notification of
+  the same field cannot disagree.
+* A central's departure is applied by `BleLink::poll()` calling `Ownership::drop()` rather than by
+  `App`, so the loop stays the only place that touches the record and the panel still needs no
+  link-loss rule of its own.

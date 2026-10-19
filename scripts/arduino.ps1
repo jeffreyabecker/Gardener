@@ -43,8 +43,22 @@ $projectLibs = Join-Path $root 'libraries'
 $thirdPartyLibs = @(
     'Adafruit SH110X',
     'Adafruit BusIO',
-    'Adafruit GFX Library'
+    'Adafruit GFX Library',
+    # The BLE transport's stack. docs/plans/ble-control.md was written against this version, and
+    # the pin is what makes the NimBLE compile options below meaningful.
+    'NimBLE-Arduino@2.5.1'
 )
+
+# NimBLE builds only what the contract can use: a peripheral with one connection, no scanning and no
+# client role. These reach every compiled file, including the library's own sources, which is where
+# nimconfig.h would read them if the library name were the variable.
+$bleDefines = @(
+    '-DCONFIG_BT_NIMBLE_ROLE_CENTRAL=0',
+    '-DCONFIG_BT_NIMBLE_ROLE_OBSERVER=0',
+    '-DCONFIG_BT_NIMBLE_ROLE_BROADCASTER=1',
+    '-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL=1',
+    '-DCONFIG_BT_NIMBLE_MAX_CONNECTIONS=1'
+) -join ' '
 
 function Invoke-ArduinoCli {
     param([string[]]$Arguments)
@@ -83,15 +97,16 @@ switch ($Task) {
     }
 
     'build' {
-        Invoke-ArduinoCli @('compile', '--fqbn', $Fqbn, '--libraries', $projectLibs, $sketch)
+        Invoke-ArduinoCli @('compile', '--fqbn', $Fqbn, '--build-property', "build.defines=$bleDefines",
+            '--libraries', $projectLibs, $sketch)
     }
 
     'upload' {
         $device = Get-DevicePort
         if (-not $device) { throw 'no serial port found, pass -Port COMx' }
         Write-Host "uploading to $device" -ForegroundColor Cyan
-        Invoke-ArduinoCli @('compile', '--fqbn', $Fqbn, '--libraries', $projectLibs,
-            '--upload', '-p', $device, $sketch)
+        Invoke-ArduinoCli @('compile', '--fqbn', $Fqbn, '--build-property', "build.defines=$bleDefines",
+            '--libraries', $projectLibs, '--upload', '-p', $device, $sketch)
     }
 
     'data' {

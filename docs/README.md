@@ -16,7 +16,7 @@ implemented or dropped. Specs and guides never link to a plan — a contract has
 and plans may reference specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [BLE control](./plans/ble-control.md) — design for a BLE GATT contract: characteristics, rates, safety, concurrency and the phased plan
+- [BLE control](./plans/ble-control.md) — the implemented BLE GATT contract: characteristics, rates, safety, concurrency, and the bench checklist still to run
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides

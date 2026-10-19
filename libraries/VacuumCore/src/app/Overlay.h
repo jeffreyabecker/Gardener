@@ -25,8 +25,8 @@ class Overlay : public Display {
   bool begin() override { return inner_->begin(); }
   void display() override;  // draws the overlay first, then sends the frame
 
-  // Which ways in are up. The loop is the one that can see the serial link; Bluetooth is not fitted,
-  // so it is false until a radio is.
+  // Which ways in are up. The loop is the one that can see both links, and presence is all this
+  // says: a connected link that has not acquired control still lights its icon.
   void setConnections(bool serial, bool bluetooth);
 
   // --- geometry ------------------------------------------------------------

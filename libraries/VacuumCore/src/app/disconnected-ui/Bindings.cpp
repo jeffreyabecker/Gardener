@@ -443,8 +443,8 @@ int deviceSetTarget(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The radio preference the system page edits. It is stored for the BLE transport when that lands;
-// no radio reads it yet, so the switch changes nothing in this build.
+// The radio preference the system page edits. BleLink reads it when it starts, so the switch decides
+// whether the next boot advertises.
 int deviceBluetooth(bvm* vm) {
   be_pushbool(vm, gContext->settings().bluetoothEnabled());
   be_return(vm);

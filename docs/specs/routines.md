@@ -306,7 +306,7 @@ the glass.
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | the stored radio preference; `true` when unset |
-| `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; nothing reads it until a BLE transport lands |
+| `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; the radio reads it when it starts, so the next boot honours it |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it. `device.target()` is the stored setting, not the machine's live target: the

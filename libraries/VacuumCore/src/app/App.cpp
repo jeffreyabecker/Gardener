@@ -32,6 +32,7 @@ constexpr uint32_t kResetHoldMs = 5000;
 App::App(AppContext context) : context_(context) {
   logger_ = new StreamLogger(Serial, context_.logEnabled());
   link_ = new SerialLink(&context_, Serial, serialAttached);
+  ble_ = new BleLink(&context_);
   connectedUi_ = new ConnectedUI(context_);
   disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
@@ -124,11 +125,26 @@ bool App::begin() {
   vm += String((uint32_t)ESP.getFreeHeap());
   logger_->info(vm.c_str());
 
+  link_->begin();
+  // The radio is a bonus transport: a device with the preference off stays silent, and a failure is
+  // a line here rather than a boot that does not come up. It comes up before the ready line so that
+  // line reports the heap the firmware actually runs with.
+  switch (ble_->begin()) {
+    case BleLink::Start::Advertising:
+      logger_->info("ble: advertising as gardener");
+      break;
+    case BleLink::Start::Disabled:
+      logger_->info("ble: off");
+      break;
+    case BleLink::Start::Failed:
+      logger_->warn("ble: start failed, serial only");
+      break;
+  }
+
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
   logger_->info(ready.c_str());
 
-  link_->begin();
   lastState_ = context_.vacuum().runState();
   // A fresh boot has no controller: a link that is present is only a reader until it acquires
   // control, and that is a command the link has not sent yet.
@@ -226,6 +242,7 @@ void App::update() {
   // Commands first, against the machine as the last control tick left it, so a reply
   // describes something that actually happened rather than a view built mid-command.
   link_->poll(now);
+  ble_->poll(now);
 
   // The buzzer's schedule advances once per pass. A command handled above starts a tone now; a
   // routine's poll at the end of the pass starts one that is serviced on the next pass.
@@ -258,9 +275,8 @@ void App::update() {
     ui_ = screenFor(owned);
     if (ui_) ui_->begin();
   }
-  // The overlay reports the ways in, and the loop is the only thing that can see the serial link.
-  // Bluetooth is not fitted, so it stays false.
-  context_.overlay().setConnections(attached, false);
+  // The overlay reports the ways in, and the loop is the only thing that can see either link.
+  context_.overlay().setConnections(attached, ble_->connected());
   // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
   // the screen is never allowed to hold up the loop in front of them.
   if (ui_) ui_->update();
