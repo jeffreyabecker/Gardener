@@ -28,6 +28,8 @@ class App {
  private:
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
+  // The one local control: a Back hold stops and vents, whatever the link is doing.
+  void watchBackHold();
   // Which screen belongs to the link as it is now.
   UserInterface* screenFor(bool attached);
 
@@ -43,6 +45,8 @@ class App {
   DisconnectedUI* disconnectedUi_ = nullptr;
   UserInterface* ui_ = nullptr;
   bool hostAttached_ = false;
+  // One stop per Back hold: set when the hold fires, cleared when the key comes up.
+  bool backStopFired_ = false;
   RunState lastState_ = RunState::Idle;
   uint32_t ventStartMs_ = 0;
 };

@@ -14,10 +14,10 @@ for a timer, then vents it — driven over a serial line by a controller at the 
 The parts, what they cost and where to buy them, are in
 [docs/poc-parts.md](./docs/poc-parts.md).
 
-There is no local control surface: the display is a readout and the controller decides
-everything. What the device owns is what has to happen when nobody is watching — pulling to
-the target, expiring the timer, and venting the chamber through one path on stop, abort, link
-loss or fault.
+There is almost no local control surface: the display is a readout and the controller decides
+everything, with one exception — holding Back for 3 s stops and vents. What the device owns is
+what has to happen when nobody is watching — pulling to the target and venting the chamber through
+one path on stop, abort, link loss, fault, or that hold.
 
 ## Units
 
@@ -254,7 +254,8 @@ follows the link: the readout while a controller is attached, and the plain mark
 The four keys are read on change interrupts and debounced. A press is classified when the key comes
 up: under 600 ms is `short`, at or over it is `long`. There is no separate event for a longer hold —
 a page that wants one watches `heldMs()` while the key is down and picks its own mark. A key held at
-boot is not a press. Today the loop logs the gesture (`btn: ok short`) and nothing else.
+boot is not a press. The loop logs the gesture (`btn: ok short`), and holding Back for 3 s stops the
+pump and vents whatever the link is doing; that rule is hard-coded in `App`.
 
 ### Files on the device
 
@@ -333,7 +334,7 @@ lives at the other end of the cable, with the controller. Clearing the target re
 chamber, because a run without a target is not a run.
 
 ```
-       vacuum start                                         vacuum stop / link loss / fault
+       vacuum start                              vacuum stop / link loss / fault / back hold
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
@@ -343,8 +344,9 @@ IDLE ──────────────> PULL ──(target reached)─�
 * The controller owns how long a hold lasts. The device goes to `HOLD` when its own deadband
   says the target has been reached, and that is all `HOLD` now means: it is the cue for the
   controller to start timing, and the run continues until the controller sends `vacuum stop`.
-* Nothing in the device ends a run on its own. There is no timer, no timeout and no maximum
-  run time, so an unattended hold holds until someone stops it.
+* Nothing in the device ends a run on its own — no timer, timeout or maximum run time, so an
+  unattended hold holds until someone stops it. The one local action is a deliberate Back hold for
+  3 s: it stops and vents, even while a controller is attached.
 * The countdown is the host's job: the host holds the timer, and the device's own screen shows
   only the two pressures, the state's icon and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
@@ -366,8 +368,9 @@ Protections, all of which act without consulting the controller:
 * if the pressure sensor stops answering mid-run, the pump is cut and the state latches to
   `FAULT` (clear with `vacuum reset`)
 * targets deeper than `floor` only log a warning and pin the duty
+* holding Back for 3 s stops the pump and vents, whatever the controller is doing
 
-Those four are the whole list. A target the pump cannot reach pins the duty at the cap and
+Those five are the whole list. A target the pump cannot reach pins the duty at the cap and
 nothing stops it, so a controller that wants a ceiling has to keep it: read `floor` from
 `vacuum get` and keep targets no deeper than it.
 
@@ -402,6 +405,6 @@ the vacuum. Do not expect the fail-safe to survive that swap.
 * [x] Device screen: a splash and a live readout in GFX fonts, with an icon per run state
 * [x] Line protocol over USB CDC: resource-first commands, a polled readout and diagnostics on the same stream
 * [x] Front panel keys: four active-low buttons read on change interrupts, debounced on read,
-  classifying short and long presses and exposing the running hold
+  classifying short and long presses, exposing the running hold, and stopping on a 3 s Back hold
 * [x] HX710B 0–40 kPa gauge driver in `hal/impl/`, available to a build that fits that module
 * [x] LittleFS storage: a mount at boot, a persistent display unit, and a data-folder upload task

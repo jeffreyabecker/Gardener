@@ -350,7 +350,7 @@ The controller owns the target, the duration and when to start and stop. The dev
 happens when nobody is watching, and nothing else.
 
 ```
-       vacuum start                                         vacuum stop / link loss / fault
+       vacuum start                              vacuum stop / link loss / fault / back hold
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
@@ -361,6 +361,7 @@ IDLE ──────────────> PULL ──(target reached)─�
 | --- | --- | --- |
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `reason=no_target`, `reason=no_reading` or `reason=latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
+| Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
 | `vacuum target=<kPa\|->` | anything but `FAULT` | the target changes; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | link loss, sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
@@ -375,6 +376,8 @@ What a controller has to know:
   timing and the one thing you cannot work out for yourself, because the deadband is the
   device's loop. Timing it is yours: the device is not told how long a hold is, and has no
   command that takes a duration.
+* **A Back hold is a local `vacuum stop`.** Holding the Back key for 3 s stops the pump and
+  vents, even while a controller is attached. The state moves exactly as a `vacuum stop` moves it.
 * **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
 * Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
   comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.

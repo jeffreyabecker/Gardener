@@ -16,6 +16,10 @@ bool serialAttached() { return (bool)Serial; }
 // The keys in the order a press is reported, which is the panel's order rather than the bit order.
 constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
 
+// The local stop. It is a safety path rather than a preference, so it is a constant here and not a
+// setting: holding Back for this long ends the run and vents, whatever the controller is doing.
+constexpr uint32_t kBackStopMs = 3000;
+
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
@@ -154,6 +158,20 @@ void App::logButtonPresses() {
   }
 }
 
+// Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
+// and the latch keeps it to one stop per hold. Releasing it arms the next one.
+void App::watchBackHold() {
+  const uint32_t held = context_.buttons().heldMs(Button::Back);
+  if (held == 0) {
+    backStopFired_ = false;
+    return;
+  }
+  if (backStopFired_ || held < kBackStopMs) return;
+  backStopFired_ = true;
+  logger_->warn("app: back held, stopping and venting");
+  context_.vacuum().stop();
+}
+
 void App::update() {
   uint32_t now = millis();
 
@@ -171,6 +189,9 @@ void App::update() {
     logger_->warn("app: controller left, stopping and venting");
     context_.vacuum().stop();
   }
+
+  // The keys are the device's own way out, independent of the link.
+  watchBackHold();
 
   logRunChanges(now);
   logButtonPresses();
