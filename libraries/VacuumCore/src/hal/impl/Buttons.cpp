@@ -55,15 +55,46 @@ uint32_t Buttons::settle() {
         // The raw edge, not the moment the debounce accepted it, so a hold is measured from when
         // the key actually went down.
         pressStartMs_[i] = pendingSinceMs_;
+        // A press inside the window is the second half of a double; the first short press stays
+        // pending until this one resolves.
+        if (awaitingSecond_ & bit) {
+          awaitingSecond_ &= ~bit;
+          second_ |= bit;
+        } else {
+          second_ &= ~bit;
+        }
       }
       if ((up & bit) && (tracked_ & bit)) {
         // Both ends are the raw edges, so the debounce does not shorten or lengthen the hold.
         const uint32_t held = pendingSinceMs_ - pressStartMs_[i];
-        pendingPress_[i] = held < cfg::BUTTON_LONG_MS ? Press::Short : Press::Long;
+        const bool shortPress = held < cfg::BUTTON_LONG_MS;
+        if (second_ & bit) {
+          pendingPress_[i] = shortPress ? Press::Double : Press::Long;
+          second_ &= ~bit;
+        } else {
+          pendingPress_[i] = shortPress ? Press::Short : Press::Long;
+          if (shortPress) {
+            awaitingSecond_ |= bit;
+            firstReleaseMs_[i] = pendingSinceMs_;
+          }
+        }
         tracked_ &= ~bit;
       }
     }
     stable_ = pending_;
+  }
+
+  for (uint8_t i = 0; i < 4; i++) {
+    const uint32_t bit = 1u << i;
+    // A single short press is ready once the double window closes without a second press.
+    if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= cfg::BUTTON_DOUBLE_MS) {
+      awaitingSecond_ &= ~bit;
+    }
+    // A second press that becomes long is a long press, not half a double: release the first short
+    // now rather than waiting for the second to come up.
+    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= cfg::BUTTON_LONG_MS) {
+      second_ &= ~bit;
+    }
   }
   return stable_;
 }
@@ -74,6 +105,8 @@ bool Buttons::pressed(Button button) {
 
 Press Buttons::consumePress(Button button) {
   settle();
+  // The first short of a possible double is not ready until the pair is ruled out.
+  if ((awaitingSecond_ | second_) & bitOf(button)) return Press::None;
   const uint8_t index = (uint8_t)button;
   const Press press = pendingPress_[index];
   pendingPress_[index] = Press::None;

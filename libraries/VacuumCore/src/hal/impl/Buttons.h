@@ -49,6 +49,11 @@ class Buttons : public ButtonPanel {
   uint32_t tracked_ = 0;
   uint32_t pressStartMs_[4] = {};
   Press pendingPress_[4] = {};
+  // A short release waits out the double window before it is ready; a press that arrives inside
+  // that window is marked as the second half and decides whether the pair is a double.
+  uint32_t awaitingSecond_ = 0;
+  uint32_t second_ = 0;
+  uint32_t firstReleaseMs_[4] = {};
 };
 
 }  // namespace gardener

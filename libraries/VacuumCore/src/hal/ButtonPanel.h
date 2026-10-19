@@ -14,7 +14,8 @@ class ButtonPanel {
   // level as of some earlier pass.
   virtual bool pressed(Button button) = 0;
   // One shot: the press this key completed since the last read, or None. A press is classified
-  // when the key comes up, so a held key has no event until it is released.
+  // when the key comes up, so a held key has no event until it is released. A short press is held
+  // back for the double window, so a double is reported once rather than as two singles.
   virtual Press consumePress(Button button) = 0;
   // How long the key has been held, or 0 when it is up. This is the running hold a consumer watches
   // when it cares about a hold longer than a press.

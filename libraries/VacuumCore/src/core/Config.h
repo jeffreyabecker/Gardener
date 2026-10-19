@@ -107,6 +107,10 @@ constexpr uint8_t BATTERY_LOW_PERCENT = 20;
 // the key comes up. A consumer that wants a longer hold watches heldMs() and picks its own mark, so
 // there is no third threshold here.
 constexpr uint32_t BUTTON_LONG_MS = 600;
+// Two short presses with the second starting within this of the first release are one double
+// press. The first is held back for the window so it cannot also act as a single; a long press is
+// never part of a double.
+constexpr uint32_t BUTTON_DOUBLE_MS = 350;
 
 // --- The device's own screen ------------------------------------------------
 // The splash is read before the first live frame, and the panel is then repainted on a fixed
