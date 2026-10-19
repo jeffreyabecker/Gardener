@@ -9,17 +9,28 @@ the 128x64 mark ships in **367 bytes** rather than the 1024 the packed array too
 
 ## Making an asset
 
-Save the drawing as an **uncompressed 1-bit BMP** — two colours, which is what the panel has — and
-convert it:
+Save the drawing as an **uncompressed BMP** — 1, 4, 8, 24 or 32 bits per pixel — and convert it:
 
 ```powershell
 powershell -File scripts/asset.ps1 -Source firmware/gardener/assets/eggplant.bmp `
                                       -Out firmware/gardener/data/assets/eggplant.rle
 ```
 
-`-Ink` says which colour is the drawing. It defaults to `Black`, for art drawn dark on light; say
-`-Ink White` for art drawn light on dark. Everything that is not ink becomes paper, and paper is not
-drawn at all — whatever the page already put there shows through.
+Whatever the source depth, the output is one bit: a pixel becomes ink when its luminance falls below
+`-Threshold`, and everything else is paper, which is not drawn at all — whatever the page already put
+there shows through.
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `-Threshold` | `128` | the luminance (0–255) a pixel has to fall below to be ink |
+| `-Invert` | off | the drawing is the *light* part, for art made light on dark |
+| `-Dither` | off | spread the error of that cut over the neighbouring pixels |
+
+Line art wants the defaults; `-Dither` is for a photograph or a gradient, where a hard cut loses
+everything between black and white. Dithering a two-colour drawing only adds noise.
+
+A 16-bit BMP and a compressed one are refused with a message rather than guessed at. A 32-bit pixel
+is read as BGR with its alpha byte ignored.
 
 Then upload the data image (`-Task data`), which is how every file on the device gets there.
 
