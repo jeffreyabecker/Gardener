@@ -203,6 +203,7 @@ void App::watchBackHold() {
   backStopFired_ = true;
   logger_->warn("app: back held, stopping and venting");
   context_.vacuum().stop();
+  context_.routines().notifyStopped();
 }
 
 // Both keys together are the local reset. It is what clears a record an absent controller left

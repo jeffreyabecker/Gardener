@@ -28,9 +28,10 @@ These belong to the device. A page must not give them another meaning, and canno
 | **Hold OK for 3 s** | stop the pump, vent, and show `default` | the disconnected pages |
 | **Hold Back+OK for 5 s** | stop, vent up to 2 s, restart, and clear ownership | every page, every link state |
 
-The Back hold fires at the 3 s mark while the key is still down; the release that follows arrives at
-the page as a `long` Back, which a page that does not use it can ignore. The OK hold also fires at
-the mark and switches pages, so the page being left does not have to handle the event.
+The Back hold fires at the 3 s mark while the key is still down; the active routine is notified then
+as `vacuum.stopped()`, and the release that follows arrives at the page as a `long` Back, which a
+page that does not use it can ignore. The OK hold also fires at the mark and switches pages, so the
+page being left does not have to handle the event.
 
 **Back+OK is the local reset.** It is the only way to clear an ownership record left held by a
 controller that dropped while owning, and it runs whatever a controller is doing. The Back hold and
@@ -40,7 +41,8 @@ the release path by then, so that is harmless.
 **Hold Back is the stop gesture.** A routine does not implement its own stop key and does not use
 short Back for it: short Back is the page's Back. The hold is why a routine never has to know about
 the pump, and it is why `poll` must return — a poll that never returns blocks the loop that watches
-the hold.
+the hold. A page that needs to reset its own state when the hold fires reads `vacuum.stopped()`,
+which is true once and then false again.
 
 **Hold OK is the exit gesture.** It stops, vents and returns to `default`, so any page is one hold
 away from home. The browser's short Back goes home too, but that is the browser's own shortcut.

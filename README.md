@@ -328,6 +328,9 @@ opens the routine list, and a **double Down** opens `system`, the device's own s
 page's settings, and Back goes back to `default`. On `system`, Up and Down walk the two rows, OK
 edits the selected value, and Back cancels an edit or goes home.
 
+The Back hold tells the active routine what it did: `vacuum.stopped()` is true once after the hold,
+so a page with a phase machine resets it on the event rather than watching for `IDLE`.
+
 The matrix of every press, the reserved holds and the timing that classifies them is in
 [docs/specs/gestures.md](./docs/specs/gestures.md).
 

@@ -212,6 +212,9 @@ bool Routines::choose(const char* name) {
   for (size_t i = 0; i < entries_.size(); i++) {
     if (entries_[i].name != name) continue;
     active_ = (int)i;
+    // A stop notice belongs to the page that was showing when the hold fired; a switch drops one
+    // that page never took rather than handing it to the next one.
+    stopped_ = false;
     return true;
   }
   return false;
@@ -370,6 +373,17 @@ bool Routines::takePress(Button& button, Press& press) {
   pressHead_ = (uint8_t)((pressHead_ + 1) % kMaxPresses);
   pressCount_--;
   return true;
+}
+
+// The Back hold belongs to the device, not to the page, so the page is told after the fact. The
+// notice waits for the page's poll: the loop may fire the hold while a controller owns the device,
+// and the page that was showing is the one that has to hear about it when it resumes.
+void Routines::notifyStopped() { stopped_ = true; }
+
+bool Routines::takeStopped() {
+  const bool stopped = stopped_;
+  stopped_ = false;
+  return stopped;
 }
 
 // --- the active routine's values -------------------------------------------

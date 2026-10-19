@@ -54,6 +54,11 @@ class Static
 
   def poll(now)
     var acted = self.take_events()
+    # The device's Back hold stops and vents without asking this page. Reset the phase machine on
+    # that notice instead of waiting for the machine's state to say IDLE.
+    if vacuum.stopped() && self.phase != "ready"
+      self.abandon()
+    end
     self.advance(now)
     if acted || now - self.last_draw >= 250
       self.draw()

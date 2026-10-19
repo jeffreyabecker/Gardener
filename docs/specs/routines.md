@@ -154,6 +154,7 @@ itself rather than a call answering it; its fields are listed under `describe()`
 | `vacuum.reset()` | — | clears a latched fault, then vents |
 | `vacuum.state()` | a `reading` record | see below |
 | `vacuum.now_ms()` | `int` | `millis()` |
+| `vacuum.stopped()` | `bool` | true once after the device's 3 s Back hold stopped and vented the machine; the next call is false |
 | `vacuum.log(text)` | — | one `[I]` diagnostic record |
 
 `vacuum.state()` answers a `reading`, read with a dot:
@@ -171,6 +172,24 @@ itself rather than a call answering it; its fields are listed under `describe()`
 | `sensor_ok` | bool | a valid pressure reading is available |
 
 Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
+
+`vacuum.stopped()` is the one event the page cannot cause itself. Holding Back for 3 s is the
+device's own stop: it stops the pump and vents without asking, and queues a notice that the next
+`poll` consumes. It is a one-shot, not a level, so a page with a phase machine resets it on the
+event rather than watching for `IDLE`:
+
+```berry
+def poll(now)
+  if vacuum.stopped() && self.phase != "ready"
+    self.abandon()
+  end
+  # ...
+end
+```
+
+The notice waits for the page's next `poll`, so a hold fired while a controller owns the device
+reaches the page that was showing when control comes back. Switching pages drops a notice the old
+page never took. The release still arrives as a `long` Back press afterwards.
 
 `vacuum.clamp(kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
@@ -316,7 +335,8 @@ end
 ```
 
 Holding **Back for 3 s** is the device's own stop: it stops the pump and vents, and no routine can
-suppress it. The routine still sees the `long` Back press that follows.
+suppress it. The active routine is told with `vacuum.stopped()`, and the routine still sees the
+`long` Back press that follows.
 
 Holding **OK for 3 s** is the page's way out: it stops and vents, then hands the panel back to
 `default`. Whichever routine was showing is no longer polled, and `default` is activated again — the
@@ -499,7 +519,7 @@ next cycle starts by itself or on OK. `pulse` turns the work hold into a square 
 `target_pressure` ± 0.5% (`low`), 1% (`med`) or 2.5% (`high`): the page vents to the lower bound and
 pulls back to the upper one until the work timer ends. It is also the worked example of a page whose
 state is a phase machine: `poll` advances a phase and never waits, and a release it did not ask for
-(the Back hold) sends it back to `ready`.
+(the Back hold) arrives as `vacuum.stopped()` and sends it back to `ready`.
 
 Between them the four pages cover what a page can do; look at them rather than at a second
 description here.

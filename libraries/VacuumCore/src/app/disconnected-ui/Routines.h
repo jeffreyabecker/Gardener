@@ -71,6 +71,13 @@ class Routines {
   void pushPress(Button button, Press press);
   bool takePress(Button& button, Press& press);
 
+  // The device's Back hold stops and vents without asking the page. The notice is a one-shot:
+  // `takeStopped()` answers true once after the hold and then false again, so a page that has a
+  // phase machine resets it on the event instead of inferring the stop from the machine's state.
+  // Switching pages drops a notice the old page did not take.
+  void notifyStopped();
+  bool takeStopped();
+
   // --- the `store` module's surface ---
   // The active routine's own values, kept beside its source in `/routines/<name>.ini`. Read
   // through the file each time rather than cached: the file is the state, so there is no second
@@ -125,6 +132,8 @@ class Routines {
   uint8_t pressHead_ = 0;
   uint8_t pressCount_ = 0;
   bool pressOverflow_ = false;
+  // One device stop per hold, consumed by the page's next poll.
+  bool stopped_ = false;
 };
 
 }  // namespace gardener
