@@ -226,6 +226,10 @@ write from BLE persists exactly as `device set unit` does. A filesystem that wil
 write still leaves the unit in force for the session; that behaviour is the `Settings` file's, not
 this transport's.
 
+The radio preference is already stored, as `bluetooth=on|off` (default `on`) in the same section,
+read through `settings().bluetoothEnabled()` and edited on the panel's `system` page. Nothing reads
+it in this build; `BleLink::begin()` is what has to honour it and stay silent when it is off.
+
 ## 6. Concurrency
 
 NimBLE runs its host on **core 0**; the Arduino `loop()` runs on core 1. The model is deliberately

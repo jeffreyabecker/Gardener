@@ -305,11 +305,13 @@ the glass.
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
+| `device.bluetooth()` | `bool` | the stored radio preference; `true` when unset |
+| `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; nothing reads it until a BLE transport lands |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it. `device.target()` is the stored setting, not the machine's live target: the
 `default` page hands it to the machine when it becomes visible. The `/routines/system.be` page is
-the worked example: it edits both values in place and touches nothing of the machine.
+the worked example: it edits all three values in place and touches nothing of the machine.
 
 ```berry
 var kpa = device.target()

@@ -443,11 +443,25 @@ int deviceSetTarget(bvm* vm) {
   be_return_nil(vm);
 }
 
+// The radio preference the system page edits. It is stored for the BLE transport when that lands;
+// no radio reads it yet, so the switch changes nothing in this build.
+int deviceBluetooth(bvm* vm) {
+  be_pushbool(vm, gContext->settings().bluetoothEnabled());
+  be_return(vm);
+}
+
+int deviceSetBluetooth(bvm* vm) {
+  if (be_isbool(vm, 1)) gContext->settings().setBluetooth(be_tobool(vm, 1));
+  be_return_nil(vm);
+}
+
 const bnfuncinfo kDeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
     {"target", deviceTarget},
     {"set_target", deviceSetTarget},
+    {"bluetooth", deviceBluetooth},
+    {"set_bluetooth", deviceSetBluetooth},
     {nullptr, nullptr},
 };
 

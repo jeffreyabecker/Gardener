@@ -26,3 +26,13 @@ the data image has to be uploaded again because the offset moves.
 
 The image carries 36 KB of exception metadata, about 17 KB of it in objects this build compiles.
 Nothing throws today, but any vendored C++ added later would have to make the same choice.
+
+## Venting down to a shallower target
+
+A shallower target set while pulling or holding currently just stops the pump and coasts: the valve
+stays closed, so the reading falls only as fast as the chamber leaks
+([VacuumSystem::regulate](../../libraries/VacuumCore/src/app/VacuumSystem.cpp)). A controlled vent —
+stop, open the valve, then close and restart as the reading crosses the new target — can be composed
+from existing verbs by a routine or host, which is why it is deferred rather than designed. The open
+question is the landing: the valve is bang-bang and the chamber is small, so overshoot toward
+ambient is likely and the pump has to recover it.

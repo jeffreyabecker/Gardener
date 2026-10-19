@@ -1,8 +1,10 @@
-# system.be — the device's own settings: the display unit and the default target pressure.
+# system.be — the device's own settings: the display unit, the default target pressure and the
+# radio preference.
 #
 # This page is not a routine's values; it edits what the device keeps across a reset: the display
-# unit, which `device set unit` also carries on the wire, and the target the default program
-# restores. It touches nothing of the machine, so a run keeps going behind it.
+# unit, which `device set unit` also carries on the wire, the target the default program restores,
+# and whether the radio may run once a transport uses it. It touches nothing of the machine, so a
+# run keeps going behind it.
 #
 # A double OK or double Down on `default` opens it. Up/Down walk the rows, OK opens the value,
 # Up/Down changes it, OK saves, and Back cancels or goes home.
@@ -17,6 +19,8 @@ class System
   var target
   var edit_unit_index
   var edit_kpa
+  var bluetooth
+  var edit_bluetooth
   var unit
   var fmt
   var last_draw
@@ -29,6 +33,8 @@ class System
     self.target = 0.0
     self.edit_unit_index = 0
     self.edit_kpa = 0.0
+    self.bluetooth = true
+    self.edit_bluetooth = true
     self.unit = nil
     self.fmt = "%.1f"
     self.last_draw = 0
@@ -53,7 +59,8 @@ class System
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
-  # device, and the target is what `default` will place on the machine when it comes back.
+  # device, the target is what `default` will place on the machine when it comes back, and the radio
+  # preference is what a transport will honour.
   def read()
     self.units = device.units()
     self.unit = screen.unit()
@@ -66,6 +73,7 @@ class System
       i += 1
     end
     self.target = device.target()
+    self.bluetooth = device.bluetooth()
   end
 
   # --- drawing -------------------------------------------------------------
@@ -85,6 +93,7 @@ class System
     screen.draw_text(0, 0, 1, false, "SYSTEM")
     screen.draw_text(0, 16, 1, self.selected == 0, "UNIT=" + self.unit.suffix)
     screen.draw_text(0, 24, 1, self.selected == 1, self.target_text())
+    screen.draw_text(0, 32, 1, self.selected == 2, self.bluetooth_text())
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=EDIT")
   end
 
@@ -92,9 +101,16 @@ class System
     if self.selected == 0
       screen.draw_text(0, 0, 1, false, "UNIT")
       screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
-    else
+    elif self.selected == 1
       screen.draw_text(0, 0, 1, false, "TARGET " + self.unit.suffix)
       screen.draw_text(0, 16, 3, false, self.text(self.edit_kpa))
+    else
+      screen.draw_text(0, 0, 1, false, "BLUETOOTH")
+      var state = "OFF"
+      if self.edit_bluetooth
+        state = "ON"
+      end
+      screen.draw_text(0, 20, 2, false, state)
     end
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
   end
@@ -104,6 +120,13 @@ class System
       return "TGT=" + self.text(self.target)
     end
     return "TGT=--"
+  end
+
+  def bluetooth_text()
+    if self.bluetooth
+      return "BT=ON"
+    end
+    return "BT=OFF"
   end
 
   # A depth in kPa as the panel's unit, at the precision that unit steps in.
@@ -151,9 +174,21 @@ class System
   end
 
   def handle_list(ev)
-    # Two rows, so either direction moves to the other one and wraps.
-    if ev.btn == "up" || ev.btn == "down"
-      self.selected = 1 - self.selected
+    # Three rows, walking and wrapping in both directions.
+    if ev.btn == "up"
+      if self.selected == 0
+        self.selected = 2
+      else
+        self.selected -= 1
+      end
+      return true
+    end
+    if ev.btn == "down"
+      if self.selected == 2
+        self.selected = 0
+      else
+        self.selected += 1
+      end
       return true
     end
     if ev.btn == "ok"
@@ -175,6 +210,10 @@ class System
       self.edit_unit_index = self.unit_index
       return
     end
+    if self.selected == 2
+      self.edit_bluetooth = self.bluetooth
+      return
+    end
     if self.target > 0.0
       self.edit_kpa = self.target
     else
@@ -191,6 +230,10 @@ class System
       self.edit_unit_index = (self.edit_unit_index + direction + count) % count
       return
     end
+    if self.selected == 2
+      self.edit_bluetooth = !self.edit_bluetooth
+      return
+    end
     self.edit_kpa = vacuum.clamp(self.edit_kpa + direction * self.unit.whole_step / self.unit.per_kpa)
   end
 
@@ -198,8 +241,10 @@ class System
     self.editing = false
     if self.selected == 0
       device.set_unit(self.units[self.edit_unit_index])
-    else
+    elif self.selected == 1
       device.set_target(self.edit_kpa)
+    else
+      device.set_bluetooth(self.edit_bluetooth)
     end
     self.read()
   end

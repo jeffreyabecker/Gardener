@@ -9,6 +9,7 @@ constexpr const char* kPath = "/settings.ini";
 constexpr const char* kSection = "device";
 constexpr const char* kUnitKey = "unit";
 constexpr const char* kTargetKey = "target";
+constexpr const char* kBluetoothKey = "bluetooth";
 
 }  // namespace
 
@@ -29,6 +30,10 @@ void Settings::begin() {
   float target = 0.0f;
   String stored = ini_.get(kSection, kTargetKey, "0");
   if (parseFloat(stored.c_str(), target) && target > 0.0f) targetKpa_ = target;
+
+  bool bluetooth = true;
+  stored = ini_.get(kSection, kBluetoothKey, "on");
+  if (parseFlag(stored.c_str(), bluetooth)) bluetooth_ = bluetooth;
 }
 
 DisplayUnit Settings::unit() const { return unit_; }
@@ -51,6 +56,15 @@ void Settings::setTarget(float kpa) {
   if (kpa == targetKpa_) return;
   targetKpa_ = kpa;
   ini_.set(kSection, kTargetKey, String(kpa, 2u));
+  storage_.write(kPath, ini_.text());
+}
+
+bool Settings::bluetoothEnabled() const { return bluetooth_; }
+
+void Settings::setBluetooth(bool enabled) {
+  if (enabled == bluetooth_) return;
+  bluetooth_ = enabled;
+  ini_.set(kSection, kBluetoothKey, enabled ? "on" : "off");
   storage_.write(kPath, ini_.text());
 }
 
