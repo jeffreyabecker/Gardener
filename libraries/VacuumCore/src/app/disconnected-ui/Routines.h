@@ -34,7 +34,8 @@ class Routines {
   // registry is not bounded: how many routines the device has is however many files were put there.
   static constexpr uint8_t kMaxPresses = 8;
 
-  // Creates the VM, installs the native modules, loads every `/routines/*.be` and picks `default`.
+  // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
+  // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
   // False only when the interpreter cannot be allocated at all.
   bool begin(AppContext& context, Storage& storage, StreamLogger& logger);
 
@@ -95,7 +96,8 @@ class Routines {
     Press press;
   };
 
-  bool loadFile(Storage& storage, const String& file);
+  size_t loadAll(Storage& storage, const char* dir, size_t& found);
+  bool loadFile(Storage& storage, const String& path);
   bool startActive();
   void reportError(const char* file, const char* what);
   bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs);

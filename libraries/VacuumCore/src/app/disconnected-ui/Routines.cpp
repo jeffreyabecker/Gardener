@@ -41,23 +41,30 @@ bool Routines::begin(AppContext& context, Storage& storage, StreamLogger& logger
   }
   berry::install(vm_, context, *this, logger);
 
-  std::vector<String> files;
-  storage.list("/routines", ".be", files);
-  size_t loaded = 0;
-  for (const String& file : files) {
-    if (loadFile(storage, file)) loaded++;
-  }
+  // Modules first: a page may construct a class one of them defines, so those files have to have
+  // run before the pages do.
+  size_t moduleFiles = 0;
+  const size_t modules = loadAll(storage, "/modules", moduleFiles);
+  size_t routineFiles = 0;
+  const size_t pages = loadAll(storage, "/routines", routineFiles);
 
+  const size_t files = moduleFiles + routineFiles;
   String summary = "vm: ";
   summary += String((uint32_t)entries_.size());
   summary += " routine";
   if (entries_.size() != 1) summary += 's';
+  if (modules > 0) {
+    summary += ", ";
+    summary += String((uint32_t)modules);
+    summary += " module";
+    if (modules != 1) summary += 's';
+  }
   summary += " from ";
-  summary += String((uint32_t)loaded);
+  summary += String((uint32_t)(modules + pages));
   summary += " of ";
-  summary += String((uint32_t)files.size());
+  summary += String((uint32_t)files);
   summary += " file";
-  if (files.size() != 1) summary += 's';
+  if (files != 1) summary += 's';
   logger.info(summary.c_str());
 
   selectDefault();
@@ -84,14 +91,26 @@ bool Routines::showDefault() {
 
 // --- loading ---------------------------------------------------------------
 
-bool Routines::loadFile(Storage& storage, const String& file) {
-  String path = "/routines/";
-  path += file;
+size_t Routines::loadAll(Storage& storage, const char* dir, size_t& found) {
+  std::vector<String> files;
+  storage.list(dir, ".be", files);
+  found = files.size();
 
+  size_t loaded = 0;
+  for (const String& file : files) {
+    String path = dir;
+    path += '/';
+    path += file;
+    if (loadFile(storage, path)) loaded++;
+  }
+  return loaded;
+}
+
+bool Routines::loadFile(Storage& storage, const String& path) {
   String source;
   if (!storage.read(path.c_str(), source)) {
     String message = "vm: ";
-    message += file;
+    message += path;
     message += " unreadable";
     logger_->error(message.c_str());
     return false;
@@ -100,19 +119,19 @@ bool Routines::loadFile(Storage& storage, const String& file) {
   // Every entry records the stack depth it started at: a failure leaves whatever the interpreter
   // put there, and the VM is restored rather than trusted to be balanced.
   const int base = be_top(vm_);
-  int rc = be_loadbuffer(vm_, file.c_str(), source.c_str(), source.length());
+  int rc = be_loadbuffer(vm_, path.c_str(), source.c_str(), source.length());
   if (rc != BE_OK) {
-    reportError(file.c_str(), "compile");
+    reportError(path.c_str(), "compile");
     be_pop(vm_, be_top(vm_) - base);
     return false;
   }
   rc = be_pcall(vm_, 0);
   if (rc != BE_OK) {
-    reportError(file.c_str(), "load");
+    reportError(path.c_str(), "load");
     be_pop(vm_, be_top(vm_) - base);
     return false;
   }
-  // The top level returns the class it registered; nothing needs it back here.
+  // The top level may leave the class it registered or defined; nothing needs it back here.
   be_pop(vm_, be_top(vm_) - base);
   return true;
 }

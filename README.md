@@ -363,6 +363,10 @@ browser opens that list; Up and Down walk it, OK opens a setting, and Up/Down ch
 stay in the routine's own `/routines/<name>.ini`, read and written by `store`. A routine without
 `describe()` simply has no settings view.
 
+Shared Berry code lives in `/modules/`, which loads before `/routines/`. The settings editor is the
+one module: `browser` uses its `Settings` class, and any page can hold one to edit its own settings
+without leaving its page.
+
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
 the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `buzzer`
 (a timed tone, a note sequence, or silence), `routines` (register, switch, list, and get a

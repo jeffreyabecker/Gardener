@@ -28,8 +28,8 @@ return Readout
 The object must be an **instance** with both `activate()` and `poll(now)`. A file that registers
 anything else is refused at load with the missing method named; the other files still load.
 
-An optional `describe()` gives the browser a list of settings to edit (see below). A routine without
-one simply has no settings.
+An optional `describe()` gives the settings editor a list of values to edit (see below). A routine
+without one simply has no settings.
 
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark and nothing runs.
@@ -39,6 +39,61 @@ to be a plain word: a name containing `/` or `\` is refused at load.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
 `powershell -File scripts/arduino.ps1 -Task data`. See the README for that flow.
+
+## Shared code in `/modules`
+
+Every file under `/modules/` ending in `.be` is loaded before any file under `/routines/`. A module
+file defines classes or functions and registers nothing: it has no page, no store file and no entry
+in `routines.names()`. It is not an `import` target either — `import` reaches only the native
+modules such as `string` — its classes are simply globals by the time the pages run.
+
+Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
+data image.
+
+Files within `/modules/` load in no particular order, so none may depend on another at its top
+level. Define classes and functions there; leave constructing them to the page that uses them.
+
+`/modules/settings.be` is the one shipped. `Settings(name)` edits the `describe()` list of the
+routine registered under that name. A page that wants the editor holds one and delegates to it:
+
+```berry
+def activate()
+  self.editor = nil
+end
+
+def draw()
+  screen.draw_clear()
+  if self.editor != nil
+    self.editor.draw()
+  else
+    # the page's own content
+  end
+  screen.flush()
+end
+
+def handle(ev)
+  if self.editor != nil
+    self.editor.handle(ev)
+    if !self.editor.is_open()
+      self.editor = nil
+    end
+    return true
+  end
+  if ev.btn == "ok" && ev.press == "double"
+    var editor = Settings("mypage")
+    if editor.open()
+      self.editor = editor
+    end
+    return true
+  end
+  return false
+end
+```
+
+`open()` calls the routine's `describe()` and reads each value from its store file. `draw()` paints
+the list or the edit screen without clearing or flushing, so the page still owns the panel. Back at
+the top closes the editor and `is_open()` turns false. The routine still implements `describe()`,
+which remains the one description of what is editable.
 
 ## When the firmware calls into a routine
 
@@ -258,13 +313,14 @@ heap the files are loaded into, not a table, so a boot that runs out of memory w
 and says so rather than dropping the file quietly. A name keeps the position it registered in, which
 is what `routines.names()` reports and what a page can use as an index.
 
-`routines.get()` and `routines.has()` look through the same registry. The browser uses them to call
-another page's `describe()` without the firmware re-entering the interpreter from a native call.
+`routines.get()` and `routines.has()` look through the same registry. The shared settings editor
+uses them to call another page's `describe()` without the firmware re-entering the interpreter from
+a native call.
 
-## `describe()` — the settings the browser edits
+## `describe()` — the settings a routine describes
 
 A routine that wants editable values exposes `describe()`. It returns a list of `setting` records;
-the browser calls it when the settings view opens, so the list can reflect the machine as it is now:
+the editor calls it when the settings view opens, so the list can reflect the machine as it is now:
 
 ```berry
 def describe()
@@ -283,20 +339,20 @@ end
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
-| `label` | string | the line the browser draws beside the value |
+| `label` | string | the line the editor draws beside the value |
 | `kind` | string | `real`, `int`, `bool` or `choice`; other kinds are shown read-only |
 | `step` | real | how far Up/Down moves a numeric value; ignored by the other kinds |
 | `min` / `max` | real or nil | optional bounds for a numeric value |
 | `values` | list or nil | the allowed values for `choice`, in cycle order |
 
-The browser reads the current value through `store`, with a fallback whose type matches the kind:
+The editor reads the current value through `store`, with a fallback whose type matches the kind:
 `0` for `int`, `0.0` for `real`, `false` for `bool`, and `values[0]` for `choice`. A `choice` needs
 at least one value. Up/Down steps `real` and `int`, toggles `bool`, and cycles `choice`; OK writes
 the value back with `store.set` and Back leaves without writing.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
-return a list. A routine without `describe()`, or one whose method raises, leaves the browser in its
-routine list and writes one `vacuum.log` line.
+return a list. A routine without `describe()`, or one whose method raises, leaves the settings view
+closed — on the browser, the routine list stays as it was — and writes one `vacuum.log` line.
 
 ## `store` — the routine's own values
 
@@ -351,10 +407,11 @@ across a boot by `store`. A **double Up** on that page opens the second one.
 `/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
 window follows the selection, OK switches to the highlighted page and Back goes home. A **double OK**
 opens the highlighted routine's settings when it has `describe()`: Up and Down walk the settings, OK
-opens one, Up/Down changes it, OK saves and Back moves up a level. It reads `routines.names()`, so a
-routine that is added to the data image appears in it with no change to either file. It touches
-nothing of the machine — a run keeps going behind it — and it writes only through `store.set` when a
-setting is saved.
+opens one, Up/Down changes it, OK saves and Back moves up a level. The editor itself is
+`/modules/settings.be`; the browser hands it the panel and the keys while it is open. The browser
+reads `routines.names()`, so a routine that is added to the data image appears in it with no change
+to either file. It touches nothing of the machine — a run keeps going behind it — and it writes only
+through `store.set` when a setting is saved.
 
 Between them the two pages cover what a page can do; look at them rather than at a second
 description here.
