@@ -25,7 +25,7 @@ class Readout
 
   def activate()
     self.unit = screen.unit()
-    self.fmt = "%." + str(self.unit["decimals"]) + "f"
+    self.fmt = "%." + str(self.unit.decimals) + "f"
     self.editing = false
     self.restore()
     self.draw()
@@ -50,20 +50,20 @@ class Readout
     var s = vacuum.state()
 
     screen.draw_clear()
-    screen.draw_text(0, 0, 1, false, s["state"])
-    if s["sensor_ok"]
-      screen.draw_text(0, 12, 3, false, self.text(s["kpa"]))
+    screen.draw_text(0, 0, 1, false, s.state)
+    if s.sensor_ok
+      screen.draw_text(0, 12, 3, false, self.text(s.kpa))
     else
       screen.draw_text(0, 12, 3, false, "--")
     end
 
     if self.editing
-      screen.draw_text(0, 44, 1, false, "SET " + self.text(self.edit_kpa) + " " + self.unit["suffix"])
+      screen.draw_text(0, 44, 1, false, "SET " + self.text(self.edit_kpa) + " " + self.unit.suffix)
       screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SET")
-    elif s["target"] > 0.0
-      screen.draw_text(0, 44, 1, false, "TGT " + self.text(s["target"]) + " " + self.unit["suffix"])
+    elif s.target > 0.0
+      screen.draw_text(0, 44, 1, false, "TGT " + self.text(s.target) + " " + self.unit.suffix)
     else
-      screen.draw_text(0, 44, 1, false, "TGT -- " + self.unit["suffix"])
+      screen.draw_text(0, 44, 1, false, "TGT -- " + self.unit.suffix)
     end
 
     screen.flush()
@@ -72,7 +72,7 @@ class Readout
 
   # A depth in kPa as the panel's unit, at the precision that unit steps in.
   def text(kpa)
-    return string.format(self.fmt, kpa * self.unit["per_kpa"])
+    return string.format(self.fmt, kpa * self.unit.per_kpa)
   end
 
   # --- buttons -------------------------------------------------------------
@@ -93,12 +93,12 @@ class Readout
   end
 
   def handle(ev)
-    if ev["btn"] == "ok"
-      if ev["press"] == "double"
+    if ev.btn == "ok"
+      if ev.press == "double"
         self.begin_edit()
         return true
       end
-      if ev["press"] == "short"
+      if ev.press == "short"
         if self.editing
           self.commit()
         else
@@ -109,13 +109,13 @@ class Readout
       return false
     end
 
-    if ev["btn"] == "back"
+    if ev.btn == "back"
       if self.editing
         # While editing, Back leaves the editor without changing anything; it is not a vent.
         self.editing = false
         return true
       end
-      if ev["press"] == "short" || ev["press"] == "double"
+      if ev.press == "short" || ev.press == "double"
         # Back is the page's one command: release the chamber. A fast double tap is classified as
         # a double rather than a short, and it means the same thing here.
         vacuum.stop()
@@ -128,11 +128,11 @@ class Readout
     if !self.editing
       return false
     end
-    if ev["btn"] == "up"
+    if ev.btn == "up"
       self.step(1.0)
       return true
     end
-    if ev["btn"] == "down"
+    if ev.btn == "down"
       self.step(-1.0)
       return true
     end
@@ -159,7 +159,7 @@ class Readout
   # itself: with no target, no reading or a latched fault, start() refuses and nothing changes.
   def start()
     var s = vacuum.state()
-    if s["state"] == "PULL" || s["state"] == "HOLD"
+    if s.state == "PULL" || s.state == "HOLD"
       return
     end
     if !vacuum.start()
@@ -174,17 +174,17 @@ class Readout
   def begin_edit()
     var s = vacuum.state()
     self.editing = true
-    if s["target"] > 0.0
-      self.edit_kpa = s["target"]
+    if s.target > 0.0
+      self.edit_kpa = s.target
     else
-      self.edit_kpa = vacuum.clamp(s["kpa"])
+      self.edit_kpa = vacuum.clamp(s.kpa)
     end
   end
 
   # One whole step in the panel's unit, converted back to the machine's kPa: a psi step is the
   # number the panel shows going up by one, not a fixed 1 kPa.
   def step(direction)
-    self.set_edit(self.edit_kpa + direction * self.unit["whole_step"] / self.unit["per_kpa"])
+    self.set_edit(self.edit_kpa + direction * self.unit.whole_step / self.unit.per_kpa)
   end
 
   def set_edit(kpa)
@@ -195,7 +195,7 @@ class Readout
     self.editing = false
     vacuum.target(self.edit_kpa)
     store.set("target", self.edit_kpa)
-    vacuum.log("default: target " + self.text(self.edit_kpa) + " " + self.unit["suffix"])
+    vacuum.log("default: target " + self.text(self.edit_kpa) + " " + self.unit.suffix)
   end
 end
 

@@ -34,52 +34,61 @@ void installModule(bvm* vm, const char* name, const bnfuncinfo* library) {
   be_pop(vm, 1);
 }
 
-// --- filling a map ---------------------------------------------------------
+// --- the records -----------------------------------------------------------
 //
-// A routine reads a returned map with `m["k"]`, and in this interpreter that only works on an
-// instance of the `map` class: a bare map raises "does not support subscriptable". So the entries
-// are written into the instance's own backing map and endMap() drops that, leaving the instance —
-// which is what `map()` does when a script builds one.
+// A routine reads a record with dots -- `s.kpa`, `ev.btn` -- and in this interpreter that works only
+// on an instance whose class declares the field. Only the parser makes an instance variable, and
+// upstream's own class tables come from a code generator this build does not run, so the three
+// classes are declared once, here, in the language a routine is written in, and the firmware fills
+// instances of them.
 //
-// be_setmember does not accept a bare map, so the entries go in through the index path: key at -2,
-// value at -1, then both are popped.
+// A record is the state at the moment of the call, which is what the map it replaced was: writing
+// one of its fields changes the routine's copy and nothing else.
 
-void setReal(bvm* vm, int map, const char* key, breal value) {
-  be_pushstring(vm, key);
-  be_pushreal(vm, value);
-  be_setindex(vm, map);
-  be_pop(vm, 2);
-}
+constexpr const char* kRecords =
+    "class reading\n"
+    "  var kpa, target, duty, floor, min, state, fault, batt, sensor_ok\n"
+    "end\n"
+    "class unit\n"
+    "  var name, suffix, per_kpa, whole_step, decimals\n"
+    "end\n"
+    "class event\n"
+    "  var btn, press\n"
+    "end\n";
 
-void setInt(bvm* vm, int map, const char* key, bint value) {
-  be_pushstring(vm, key);
-  be_pushint(vm, value);
-  be_setindex(vm, map);
-  be_pop(vm, 2);
-}
-
-void setText(bvm* vm, int map, const char* key, const char* value) {
-  be_pushstring(vm, key);
-  be_pushstring(vm, value);
-  be_setindex(vm, map);
-  be_pop(vm, 2);
-}
-
-void setFlag(bvm* vm, int map, const char* key, bool value) {
-  be_pushstring(vm, key);
-  be_pushbool(vm, value);
-  be_setindex(vm, map);
-  be_pop(vm, 2);
-}
-
-// Pushes the new instance and its backing map; the returned index is the map to write into.
-int beginMap(bvm* vm) {
-  be_newobject(vm, "map");
+// Constructs one: the class value stays under the instance, so endRecord() removes the class and
+// leaves the finished record for be_return().
+int beginRecord(bvm* vm, const char* className) {
+  if (!be_getglobal(vm, className)) return -1;
+  be_call(vm, 0);
   return be_absindex(vm, -1);
 }
 
-// Drops the backing map, leaving the finished instance on top for be_return().
-void endMap(bvm* vm) { be_pop(vm, 1); }
+void endRecord(bvm* vm) { be_remove(vm, -2); }
+
+void setReal(bvm* vm, int record, const char* field, breal value) {
+  be_pushreal(vm, value);
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
+
+void setInt(bvm* vm, int record, const char* field, bint value) {
+  be_pushint(vm, value);
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
+
+void setText(bvm* vm, int record, const char* field, const char* value) {
+  be_pushstring(vm, value);
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
+
+void setFlag(bvm* vm, int record, const char* field, bool value) {
+  be_pushbool(vm, value);
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
 
 // --- argument helpers ------------------------------------------------------
 
@@ -132,18 +141,20 @@ int vacuumReset(bvm* vm) {
 int vacuumState(bvm* vm) {
   VacuumSystem& system = gContext->vacuum();
   const Battery& battery = gContext->battery();
-  const int map = beginMap(vm);
-  setReal(vm, map, "kpa", system.currentKpa());
-  setReal(vm, map, "target", system.targetKpa());
-  setReal(vm, map, "duty", system.pump().dutyPercent());
-  setReal(vm, map, "floor", cfg::CONTROL_FLOOR_KPA);
-  setReal(vm, map, "min", cfg::CONTROL_MIN_TARGET_KPA);
-  setText(vm, map, "state", runStateName(system.runState()));
-  setText(vm, map, "fault", system.faultCode());
+  const int record = beginRecord(vm, "reading");
+  if (record < 0) be_return_nil(vm);
+  setReal(vm, record, "kpa", system.currentKpa());
+  setReal(vm, record, "target", system.targetKpa());
+  setReal(vm, record, "duty", system.pump().dutyPercent());
+  setReal(vm, record, "floor", cfg::CONTROL_FLOOR_KPA);
+  setReal(vm, record, "min", cfg::CONTROL_MIN_TARGET_KPA);
+  setText(vm, record, "state", runStateName(system.runState()));
+  setText(vm, record, "fault", system.faultCode());
   // -1 rather than 0 when no gauge is fitted, so "no battery" is not "flat battery".
-  setInt(vm, map, "batt", battery.present() ? (bint)battery.percent() : (bint)-1);
-  setFlag(vm, map, "sensor_ok", system.sensor().present() && system.sensor().readingValid());
-  endMap(vm);
+  setInt(vm, record, "batt", battery.present() ? (bint)battery.percent() : (bint)-1);
+  setFlag(vm, record, "sensor_ok",
+          system.sensor().present() && system.sensor().readingValid());
+  endRecord(vm);
   be_return(vm);
 }
 
@@ -277,13 +288,14 @@ int screenText(bvm* vm) {
 int screenUnit(bvm* vm) {
   const DisplayUnit unit = gContext->settings().unit();
   const DisplayUnitInfo& info = displayUnitInfo(unit);
-  const int map = beginMap(vm);
-  setText(vm, map, "name", info.name);
-  setText(vm, map, "suffix", info.suffix);
-  setReal(vm, map, "per_kpa", info.perKpa);
-  setReal(vm, map, "whole_step", info.wholeStep);
-  setInt(vm, map, "decimals", (bint)displayDecimals(unit));
-  endMap(vm);
+  const int record = beginRecord(vm, "unit");
+  if (record < 0) be_return_nil(vm);
+  setText(vm, record, "name", info.name);
+  setText(vm, record, "suffix", info.suffix);
+  setReal(vm, record, "per_kpa", info.perKpa);
+  setReal(vm, record, "whole_step", info.wholeStep);
+  setInt(vm, record, "decimals", (bint)displayDecimals(unit));
+  endRecord(vm);
   be_return(vm);
 }
 
@@ -320,10 +332,11 @@ int buttonsTake(bvm* vm) {
   Press press = Press::None;
   if (gRoutines == nullptr || !gRoutines->takePress(button, press)) be_return_nil(vm);
 
-  const int map = beginMap(vm);
-  setText(vm, map, "btn", buttonName(button));
-  setText(vm, map, "press", pressName(press));
-  endMap(vm);
+  const int record = beginRecord(vm, "event");
+  if (record < 0) be_return_nil(vm);
+  setText(vm, record, "btn", buttonName(button));
+  setText(vm, record, "press", pressName(press));
+  endRecord(vm);
   be_return(vm);
 }
 
@@ -436,6 +449,15 @@ void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& log
   installModule(vm, "buttons", kButtonsLibrary);
   installModule(vm, "routines", kRoutinesLibrary);
   installModule(vm, "store", kStoreLibrary);
+
+  // The records are classes, not native functions, so they are compiled rather than installed from
+  // a table. Before any routine file runs, so every call that answers a record has one to answer.
+  const int base = be_top(vm);
+  if (be_loadbuffer(vm, "records", kRecords, sizeof(kRecords) - 1) != BE_OK ||
+      be_pcall(vm, 0) != BE_OK) {
+    logger.error("vm: records did not compile");
+  }
+  be_pop(vm, be_top(vm) - base);
 }
 
 }  // namespace berry

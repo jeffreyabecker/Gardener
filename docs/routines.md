@@ -67,17 +67,18 @@ What that costs, stated plainly:
 
 ## Values
 
-Berry's numbers here are 32-bit integers and single-precision reals. A map has no dot access — this
-interpreter does not support `m.key` — so read a map with a subscript:
+Berry's numbers here are 32-bit integers and single-precision reals.
+
+Three of the calls answer a **record**: a small object whose fields are read with a dot.
 
 ```berry
 var s = vacuum.state()
-var depth = s["kpa"]        # not s.kpa
+var depth = s.kpa          # not s["kpa"]
 ```
 
-A key that is not there **raises** `key_error` rather than returning `nil`. Every key the firmware
-documents is always present, so the examples here are safe; for a key of a routine's own choosing,
-read it with `m.find("key", fallback)`, which answers the fallback instead of raising.
+A record is the machine as it stood when the call returned, not a live view: writing a field
+(`s.kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
+have raises `attribute_error`, and the fields are the ones listed under each call.
 
 ## `vacuum` — the machine
 
@@ -89,13 +90,13 @@ read it with `m.find("key", fallback)`, which answers the fallback instead of ra
 | `vacuum.start()` | `bool` | false when the machine refuses: no target, no valid reading, or a latched fault |
 | `vacuum.stop()` | — | stops the pump and vents. The target is kept |
 | `vacuum.reset()` | — | clears a latched fault, then vents |
-| `vacuum.state()` | map | see below |
+| `vacuum.state()` | a `reading` record | see below |
 | `vacuum.now_ms()` | `int` | `millis()` |
 | `vacuum.log(text)` | — | one `[I]` diagnostic record |
 
-`vacuum.state()` answers:
+`vacuum.state()` answers a `reading`, read with a dot:
 
-| Key | Type | Meaning |
+| Field | Type | Meaning |
 | --- | --- | --- |
 | `kpa` | real | current depth below ambient |
 | `target` | real | the target, **0 when none is set** |
@@ -116,7 +117,7 @@ routine carries its own copy of the two constants:
 
 ```berry
 var s = vacuum.state()
-var start = vacuum.clamp(s["kpa"])      # a safe starting point for the editor
+var start = vacuum.clamp(s.kpa)         # a safe starting point for the editor
 vacuum.target(vacuum.clamp(stored))     # and a stored one it cannot trust yet
 ```
 
@@ -151,9 +152,9 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 `draw_text` scales the built-in face: `size` 1 is the small face, 3 is the height used by the
 readout. `inverted` draws paper on ink.
 
-`screen.unit()` answers the unit the panel prints:
+`screen.unit()` answers a `unit` record, read with a dot:
 
-| Key | Type | Meaning |
+| Field | Type | Meaning |
 | --- | --- | --- |
 | `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device unit=` takes |
 | `suffix` | string | what the glass prints after the number |
@@ -178,10 +179,10 @@ Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear
 
 | Call | Returns |
 | --- | --- |
-| `buttons.take()` | `{btn, press}`, or `nil` when the queue is empty |
+| `buttons.take()` | an `event` record, or `nil` when the queue is empty |
 
-`btn` is `up`, `down`, `ok` or `back`. `press` is `short`, `long` or `double` — the device's press
-classifier, so a double tap is one event and never two shorts.
+`ev.btn` is `up`, `down`, `ok` or `back`. `ev.press` is `short`, `long` or `double` — the device's
+press classifier, so a double tap is one event and never two shorts.
 
 A press is queued only while this page is showing. The queue holds eight; the oldest is dropped if a
 routine falls behind, and that is logged once.
@@ -195,7 +196,7 @@ def poll(now)
     if ev == nil
       break
     end
-    # ...
+    # ev.btn is the key that moved, ev.press the gesture
   end
 end
 ```

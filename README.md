@@ -321,8 +321,8 @@ What a routine can reach: `vacuum` (read and command the machine), `screen` (dra
 the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `routines`
 (register, switch, list) and `store` (its own values, kept across a power cycle).
 
-The full surface — every call, what it returns, the shape of each map, and what the overlay draws
-over a page — is in [docs/routines.md](./docs/routines.md).
+The full surface — every call, what it returns, the fields of each record, and what the overlay
+draws over a page — is in [docs/routines.md](./docs/routines.md).
 
 Presses go to the active routine and are not logged while it runs. The 3 s Back hold is the
 exception: it is the device's own stop and fires whatever the routine registered.

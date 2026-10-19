@@ -18,6 +18,11 @@ namespace berry {
 //   routines.* the registry, so a file can register itself
 //   store.*    the routine's own values, kept across a power cycle
 //
+// Three of those calls answer a *record* rather than a plain value: `vacuum.state()` a `reading`,
+// `screen.unit()` a `unit`, `buttons.take()` an `event`. A record is a class instance whose fields a
+// routine reads with a dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and
+// compiled at boot, because only the parser can declare an instance variable on a class.
+//
 // The reference a routine author reads is docs/routines.md; the tables below are the same surface
 // as code, and the two have to move together.
 //
