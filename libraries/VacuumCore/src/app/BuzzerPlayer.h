@@ -22,8 +22,8 @@ class BuzzerPlayer {
 
   // durationMs 0 means until off().
   void tone(uint16_t hz, uint32_t durationMs);
-  // "a4 1000, c6 500, a4 500" or "a4:1000,c6:500". False when malformed; the current sound is
-  // left alone in that case.
+  // "a4:1000 c6:500 a4:500": note:duration pairs separated by spaces, and nothing else. False when
+  // malformed; the current sound is left alone in that case.
   bool play(const char* sequence);
   void off();
 

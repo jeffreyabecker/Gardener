@@ -214,8 +214,8 @@ ESP32 GPIO12 ── 100R ── piezo ── GND
 ```
 
 The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone=2000,500` and
-`buzzer play=a4:1000,c6:500`; a routine uses `buzzer.tone(2000, 500)` and
-`buzzer.play("a4 1000, c6 500")`. A tone with a 0 ms duration runs until it is stopped. The timer
+`buzzer play=a4:1000_c6:500`; a routine uses `buzzer.tone(2000, 500)` and
+`buzzer.play("a4:1000 c6:500")`. A tone with a 0 ms duration runs until it is stopped. The timer
 lives in the main loop, so nothing blocks.
 
 GPIO12 is the 5-way button module's fifth key on the POC rig. The firmware reads only four keys,

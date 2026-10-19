@@ -7,14 +7,12 @@
 namespace gardener {
 namespace {
 
-const char* skipSeparators(const char* text) {
-  while (*text == ' ' || *text == '\t' || *text == ',' || *text == ':') text++;
+const char* skipSpaces(const char* text) {
+  while (*text == ' ' || *text == '\t') text++;
   return text;
 }
 
-bool isSeparator(char c) {
-  return c == ' ' || c == '\t' || c == ',' || c == ':';
-}
+bool isSpace(char c) { return c == ' ' || c == '\t'; }
 
 char lowerChar(char c) {
   return c >= 'A' && c <= 'Z' ? (char)(c - 'A' + 'a') : c;
@@ -108,7 +106,7 @@ void BuzzerPlayer::startNote(size_t index, uint32_t nowMs) {
   noteEndsMs_ = nowMs + notes_[index].durationMs;
 }
 
-// `note duration` pairs separated by whitespace, commas or colons. Note names are a-g, optional
+// `note:duration` pairs separated by whitespace, and nothing else. Note names are a-g, optional
 // # or b, then one octave digit; `r` is a rest. The frequency uses equal temperament with A4 at
 // 440 Hz, and a note outside the buzzer's range is a malformed sequence rather than a clamp.
 bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& canonical) {
@@ -120,7 +118,7 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& can
   bool any = false;
 
   for (;;) {
-    cursor = skipSeparators(cursor);
+    cursor = skipSpaces(cursor);
     if (*cursor == '\0') break;
 
     const char* noteStart = cursor;
@@ -150,8 +148,8 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& can
     }
     const char* noteEnd = cursor;
 
-    if (!isSeparator(*cursor)) return false;
-    cursor = skipSeparators(cursor);
+    if (*cursor != ':') return false;
+    cursor++;
 
     if (*cursor < '0' || *cursor > '9') return false;
     uint32_t duration = 0;
@@ -162,9 +160,9 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, String& can
       cursor++;
     }
     if (duration == 0) return false;
-    if (*cursor != '\0' && !isSeparator(*cursor)) return false;
+    if (*cursor != '\0' && !isSpace(*cursor)) return false;
 
-    if (!notes.empty()) canonical += ',';
+    if (!notes.empty()) canonical += ' ';
     for (const char* p = noteStart; p < noteEnd; p++) canonical += lowerChar(*p);
     canonical += ':';
     canonical += String(duration);

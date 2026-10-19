@@ -466,7 +466,11 @@ bool SerialLink::writeBuzzer(const FieldWrite* writes, uint8_t count) {
       context_->buzzer().off();
       return true;
     }
-    if (!context_->buzzer().play(write.value)) {
+    // The player's notation separates pairs with a space; a wire value cannot contain one, so `_`
+    // stands in for it and is translated back here.
+    String sequence(write.value);
+    sequence.replace('_', ' ');
+    if (!context_->buzzer().play(sequence.c_str())) {
       errBadArgument(write.value);
       return false;
     }

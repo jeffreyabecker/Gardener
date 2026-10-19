@@ -84,8 +84,8 @@ op       = field "=" value *( SP field "=" value )   ; write one or more fields
   uses it.
 * Values never contain a space, and the first `=` separates the key from the value, so a value
   may contain `=`, `|` or `,` with no quoting. Lists are never packed into a value (§10); the
-  buzzer's compact `tone` and `play` notation is a domain value of its own, not a protocol list
-  (§15).
+  buzzer's `tone` and `play` notation is a domain value of its own, not a protocol list, and its
+  space is written `_` (§15).
 * A line starting with `#` is ignored, so a script can carry comments.
 * A command the device does not consume is `bad_argument`: no verb quietly drops a stray
   argument, and no verb accepts one it has no use for.
@@ -473,17 +473,20 @@ Three things changed that are not a rename, and a migrating controller has to kn
 | Field | Access | Values | Notes |
 | --- | --- | --- | --- |
 | `tone` | rw | `<hz>,<ms>` or `-` | a tone; `ms=0` runs until `tone=-`; reading reports the current frequency and remaining ms |
-| `play` | rw | `<note>:<ms>,...` or `-` | a note sequence; reading reports the canonical sequence while it runs |
+| `play` | rw | `<note>:<ms>_<note>:<ms>` or `-` | a note sequence; `_` is the wire's space; reading reports the sequence while it runs |
 | `playing` | r | `on` / `off` | a tone or sequence is still running; a rest still counts |
 
 `buzzer tone=2000,500` starts a 500 ms tone; `buzzer tone=2000,0` runs until it is stopped.
-`buzzer tone=-` and `buzzer play=-` silence and stop. `buzzer play=a4:1000,c6:500` starts a
+`buzzer tone=-` and `buzzer play=-` silence and stop. `buzzer play=a4:1000_c6:500` starts a
 sequence. Writing `tone` and `play` in one command is refused: they are two answers to one
 question.
 
 `play` takes note names with an optional `#` or `b`, then one octave digit (`a4`, `c#5`, `bb3`); `r`
-is a rest. Durations are milliseconds and must be positive. The frequency uses equal temperament
-with A4 = 440 Hz; a note outside the buzzer's 100–10000 Hz range is a bad argument, not a clamp.
+is a rest. The notation is `note:duration` pairs separated by spaces, and nothing else — a comma, a
+missing colon, or a space between a note and its duration is refused. On the wire the space is `_`,
+because a value cannot contain one; the device translates it back before parsing. Durations are
+milliseconds and must be positive. The frequency uses equal temperament with A4 = 440 Hz; a note
+outside the buzzer's 100–10000 Hz range is a bad argument, not a clamp.
 
 ```
 -> help buzzer
@@ -494,9 +497,9 @@ with A4 = 440 Hz; a note outside the buzzer's 100–10000 Hz range is a bad argu
 <- end result=help resource=buzzer rows=3
 ```
 
-The two values are the buzzer's own compact notation: `2000,500` is a frequency and a duration, and
-`a4:1000,c6:500` is a phrase. They are single domain values, not protocol item lists, which is why
-they are allowed to contain the comma and colon the rest of the wire uses only in values.
+The two values are the buzzer's own notation: `2000,500` is a frequency and a duration, and
+`a4:1000_c6:500` is the player's `a4:1000 c6:500` after the wire has written the space as `_`. They
+are single domain values, not protocol item lists.
 
 ```
 -> buzzer get
@@ -505,10 +508,10 @@ they are allowed to contain the comma and colon the rest of the wire uses only i
 <- ok tone=2000,500
 -> buzzer get
 <- ok tone=2000,412 play=- playing=on
--> buzzer play=a4:1000,c6:500
-<- ok play=a4:1000,c6:500
+-> buzzer play=a4:1000_c6:500
+<- ok play=a4:1000_c6:500
 -> buzzer get
-<- ok tone=440,610 play=a4:1000,c6:500 playing=on
+<- ok tone=440,610 play=a4:1000_c6:500 playing=on
 -> buzzer tone=-
 <- ok tone=-
 ```

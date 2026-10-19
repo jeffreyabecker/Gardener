@@ -224,13 +224,12 @@ disk; a routine that was left can be brought back with `routines.set_active()`.
 | `buzzer.off()` | — | silence and stop any sequence |
 
 `play` takes note names with an optional `#` or `b`, then one octave digit (`a4`, `c#5`, `bb3`); `r`
-is a rest. Durations are milliseconds. Note/duration pairs may be separated by spaces, commas or
-colons:
+is a rest. Durations are milliseconds. The only valid notation is `note:duration` pairs separated by
+spaces:
 
 ```berry
 buzzer.tone(2000, 500)
-buzzer.play("a4 1000, c6 500, a4 500")
-buzzer.play("a4:1000,c6:500")
+buzzer.play("a4:1000 c6:500 a4:500")
 buzzer.off()
 ```
 
@@ -238,6 +237,9 @@ The player is non-blocking: `tone` and `play` start a schedule and return, and t
 it in the loop. A note outside the buzzer's range makes `play` return false rather than clamp. A
 non-positive `hz` means silence. A routine that starts a tone or sequence owns stopping it before it
 leaves the page; a sequence stops itself at the end.
+
+The notation is strict: a comma, a missing colon, or a space between a note and its duration makes
+the whole sequence malformed and `play` returns false.
 
 ## `routines` — the registry
 
