@@ -57,6 +57,16 @@ class Routines {
   void pushPress(Button button, Press press);
   bool takePress(Button& button, Press& press);
 
+  // --- the `store` module's surface ---
+  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. Read
+  // through the file each time rather than cached: the file is the state, so there is no second
+  // copy to keep in step.
+  //
+  // `storeGet` is false when there is no active routine or nothing is stored under the key;
+  // `storeSet` is false when there is no active routine or the file would not take the write.
+  bool storeGet(const char* key, String& out) const;
+  bool storeSet(const char* key, const String& value);
+
  private:
   struct Entry {
     String name;
@@ -74,8 +84,10 @@ class Routines {
   bool choose(const char* name);
   void selectDefault();
   void applyPending();
+  bool storePath(String& out) const;
 
   bvm* vm_ = nullptr;
+  Storage* storage_ = nullptr;
   StreamLogger* logger_ = nullptr;
   Entry entries_[kMaxRoutines];
   uint8_t count_ = 0;

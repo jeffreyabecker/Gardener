@@ -12,6 +12,7 @@ class Readout
   var unit
   var fmt
   var last_draw
+  var restored
 
   def init()
     self.editing = false
@@ -19,12 +20,14 @@ class Readout
     self.unit = nil
     self.fmt = "%.1f"
     self.last_draw = 0
+    self.restored = false
   end
 
   def activate()
     self.unit = screen.unit()
     self.fmt = "%." + str(self.unit["decimals"]) + "f"
     self.editing = false
+    self.restore()
     self.draw()
   end
 
@@ -138,6 +141,20 @@ class Readout
 
   # --- the run -------------------------------------------------------------
 
+  # The target outlives a boot: the machine holds it in RAM, so the page's own file is what puts it
+  # back on the glass. Once per boot only — re-entering the page after a host detaches must not
+  # resurrect a target the operator has since cleared.
+  def restore()
+    if self.restored
+      return
+    end
+    self.restored = true
+    var kpa = store.get("target", 0.0)
+    if kpa > 0.0
+      vacuum.target(vacuum.clamp(kpa))
+    end
+  end
+
   # OK outside the editor resumes the run, unless one is already going. The machine answers for
   # itself: with no target, no reading or a latched fault, start() refuses and nothing changes.
   def start()
@@ -152,15 +169,15 @@ class Readout
 
   # --- the editor ----------------------------------------------------------
 
+  # The starting point: the target if there is one, otherwise where the chamber is now. A chamber at
+  # rest, or one with no reading (its depth reads 0), clamps to the shallowest target.
   def begin_edit()
     var s = vacuum.state()
     self.editing = true
     if s["target"] > 0.0
       self.edit_kpa = s["target"]
-    elif s["sensor_ok"] && s["kpa"] > s["min"]
-      self.edit_kpa = s["kpa"]
     else
-      self.edit_kpa = s["min"]
+      self.edit_kpa = vacuum.clamp(s["kpa"])
     end
   end
 
@@ -171,18 +188,13 @@ class Readout
   end
 
   def set_edit(kpa)
-    var s = vacuum.state()
-    if kpa < s["min"]
-      kpa = s["min"]
-    elif kpa > s["floor"]
-      kpa = s["floor"]
-    end
-    self.edit_kpa = kpa
+    self.edit_kpa = vacuum.clamp(kpa)
   end
 
   def commit()
     self.editing = false
     vacuum.target(self.edit_kpa)
+    store.set("target", self.edit_kpa)
     vacuum.log("default: target " + self.text(self.edit_kpa) + " " + self.unit["suffix"])
   end
 end

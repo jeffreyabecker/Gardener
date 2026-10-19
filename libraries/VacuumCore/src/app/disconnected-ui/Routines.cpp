@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "app/AppContext.h"
+#include "app/Ini.h"
 #include "app/Storage.h"
 #include "app/StreamLogger.h"
 #include "app/disconnected-ui/Bindings.h"
@@ -31,6 +32,7 @@ bool hasMethod(bvm* vm, int objectIndex, const char* name) {
 
 bool Routines::begin(AppContext& context, Storage& storage, StreamLogger& logger) {
   logger_ = &logger;
+  storage_ = &storage;
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
@@ -119,6 +121,17 @@ void Routines::reportError(const char* file, const char* what) {
 
 bool Routines::registerRoutine(const char* name, const char* title, int objectIndex) {
   if (name == nullptr || title == nullptr || name[0] == '\0') return false;
+
+  // The name is also the file the routine's values are kept in, so it has to be a plain word
+  // rather than something that addresses another path.
+  const String named(name);
+  if (named.indexOf('/') >= 0 || named.indexOf('\\') >= 0) {
+    String message = "vm: routine name ";
+    message += name;
+    message += " must not contain a path separator";
+    logger_->error(message.c_str());
+    return false;
+  }
 
   if (!hasMethod(vm_, objectIndex, "activate") || !hasMethod(vm_, objectIndex, "poll")) {
     String message = "vm: ";
@@ -292,6 +305,49 @@ bool Routines::takePress(Button& button, Press& press) {
   pressHead_ = (uint8_t)((pressHead_ + 1) % kMaxPresses);
   pressCount_--;
   return true;
+}
+
+// --- the active routine's values -------------------------------------------
+
+// Beside the routine rather than in a shared file: a routine's values are its own, a data-folder
+// upload can ship initial ones as `/routines/<name>.ini`, and nothing has to be namespaced inside
+// the document.
+bool Routines::storePath(String& out) const {
+  if (active_ < 0) return false;
+  out = "/routines/";
+  out += entries_[active_].name;
+  out += ".ini";
+  return true;
+}
+
+bool Routines::storeGet(const char* key, String& out) const {
+  String path;
+  if (storage_ == nullptr || key == nullptr || !storePath(path)) return false;
+
+  String text;
+  if (!storage_->read(path.c_str(), text)) return false;
+
+  // The file has no sections, so every key is a global one.
+  Ini values;
+  values.parse(text);
+  if (!values.has("", key)) return false;
+  out = values.get("", key, "");
+  return true;
+}
+
+bool Routines::storeSet(const char* key, const String& value) {
+  String path;
+  if (storage_ == nullptr || key == nullptr || !storePath(path)) return false;
+
+  String text;
+  Ini values;
+  if (storage_->read(path.c_str(), text)) values.parse(text);
+
+  // A set that repeats what is already there is not worth a flash write, which is what lets a
+  // routine set the same value on every pass without wearing the partition.
+  if (values.has("", key) && values.get("", key, "") == value) return true;
+  if (!values.set("", key, value)) return false;
+  return storage_->write(path.c_str(), values.text());
 }
 
 }  // namespace gardener

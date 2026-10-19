@@ -43,6 +43,7 @@ reference, so the rig needs to be at rest when the device boots.
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [docs/serial-protocol.md](./docs/serial-protocol.md) | The protocol: port, grammar, resources and their fields, error items, the panel, states, modes, rates |
+| [docs/routines.md](./docs/routines.md) | The Berry routines the disconnected page runs: the contract, the five modules, and the rules that follow from the embedded interpreter |
 | [docs/poc-parts.md](./docs/poc-parts.md) | The parts list: every part, what to buy, and what it costs |
 
 ### Architecture
@@ -289,6 +290,10 @@ unit=mmhg
 So `device unit=mmhg` survives `device reboot` and a power cycle. Keys the firmware does not know
 are carried through a write rather than dropped; comments and spacing are not kept.
 
+A routine keeps its own values the same way, in one file named after it beside its source
+(`/routines/default.ini`), so a data-image upload can ship starting values and a routine cannot
+reach another's. The `default` page uses it to bring the target back after a power cycle.
+
 ### Routines
 
 With no host attached the panel runs a Berry routine. Every `/routines/*.be` is loaded at boot, and
@@ -312,20 +317,12 @@ The routine registered as **`default`** is the page. If no file registers one, t
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load.
 
-What a routine can reach:
+What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, plus
+the unit the panel prints), `buttons` (the presses since the last call, as a pull queue), `routines`
+(register, switch, list) and `store` (its own values, kept across a power cycle).
 
-| Module | Calls |
-| --- | --- |
-| `vacuum` | `target(kpa)`, `target_off()`, `start()`, `stop()`, `reset()`, `state()`, `now_ms()`, `log(text)` |
-| `screen` | `draw_clear()`, `draw_pixel`, `draw_line`, `draw_hline`, `draw_vline`, `draw_rect`, `draw_fillrect`, `draw_roundrect`, `draw_fillroundrect`, `draw_circle`, `draw_fillcircle`, `draw_ellipse`, `draw_fillellipse`, `draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`, `draw_text(x,y,size,inverted,text)`, `flush()`, `unit()` |
-| `buttons` | `take()` — one `{btn, press}` per call, or `nil` |
-| `routines` | `register(name, title, routine)`, `set_active(name)`, `names()` |
-
-`vacuum.state()` answers a map with `kpa`, `target`, `duty`, `floor`, `min`, `state`, `fault`,
-`batt` and `sensor_ok`. `screen.unit()` answers `name`, `suffix`, `per_kpa`, `whole_step` and
-`decimals` — the same numbers [core/Units.h](./libraries/VacuumCore/src/core/Units.h) holds, so a
-page steps a target in whatever the glass prints. **Berry has no dot access on a map**, so a
-routine reads `s["kpa"]`, not `s.kpa`.
+The full surface — every call, what it returns, the shape of each map, and what the overlay draws
+over a page — is in [docs/routines.md](./docs/routines.md).
 
 Presses go to the active routine and are not logged while it runs. The 3 s Back hold is the
 exception: it is the device's own stop and fires whatever the routine registered.

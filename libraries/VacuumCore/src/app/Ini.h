@@ -19,6 +19,10 @@ class Ini {
   // The value for a key, or `fallback` when the section/key is not there.
   String get(const char* section, const char* key, const char* fallback) const;
 
+  // Whether a key is there at all, which a get cannot say: an empty value and a missing key both
+  // come back as the fallback.
+  bool has(const char* section, const char* key) const { return find(section, key) != nullptr; }
+
   // Sets a key, adding it when it is new. False only when the table is full and the key is new.
   bool set(const char* section, const char* key, const String& value);
 

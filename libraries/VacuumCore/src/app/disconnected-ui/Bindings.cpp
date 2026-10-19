@@ -36,7 +36,12 @@ void installModule(bvm* vm, const char* name, const bnfuncinfo* library) {
 
 // --- filling a map ---------------------------------------------------------
 //
-// be_setmember does not accept a map, so the entries go in through the index path: key at -2,
+// A routine reads a returned map with `m["k"]`, and in this interpreter that only works on an
+// instance of the `map` class: a bare map raises "does not support subscriptable". So the entries
+// are written into the instance's own backing map and endMap() drops that, leaving the instance —
+// which is what `map()` does when a script builds one.
+//
+// be_setmember does not accept a bare map, so the entries go in through the index path: key at -2,
 // value at -1, then both are popped.
 
 void setReal(bvm* vm, int map, const char* key, breal value) {
@@ -67,10 +72,14 @@ void setFlag(bvm* vm, int map, const char* key, bool value) {
   be_pop(vm, 2);
 }
 
+// Pushes the new instance and its backing map; the returned index is the map to write into.
 int beginMap(bvm* vm) {
-  be_newmap(vm);
+  be_newobject(vm, "map");
   return be_absindex(vm, -1);
 }
+
+// Drops the backing map, leaving the finished instance on top for be_return().
+void endMap(bvm* vm) { be_pop(vm, 1); }
 
 // --- argument helpers ------------------------------------------------------
 
@@ -88,6 +97,21 @@ int vacuumTarget(bvm* vm) {
 int vacuumTargetOff(bvm* vm) {
   gContext->vacuum().clearTarget();
   be_return_nil(vm);
+}
+
+// The machine's own bounds, as two constants `state()` publishes: shallower than `min` is not a
+// target and `floor` is the deepest worth asking for. Kept here so a page steps and restores a
+// target without carrying its own copy of the bounds — and so one bound serves the editor, a
+// stored value and anything else that asks.
+int vacuumClamp(bvm* vm) {
+  float kpa = (float)argReal(vm, 1);
+  if (kpa < cfg::CONTROL_MIN_TARGET_KPA) {
+    kpa = cfg::CONTROL_MIN_TARGET_KPA;
+  } else if (kpa > cfg::CONTROL_FLOOR_KPA) {
+    kpa = cfg::CONTROL_FLOOR_KPA;
+  }
+  be_pushreal(vm, kpa);
+  be_return(vm);
 }
 
 int vacuumStart(bvm* vm) {
@@ -119,6 +143,7 @@ int vacuumState(bvm* vm) {
   // -1 rather than 0 when no gauge is fitted, so "no battery" is not "flat battery".
   setInt(vm, map, "batt", battery.present() ? (bint)battery.percent() : (bint)-1);
   setFlag(vm, map, "sensor_ok", system.sensor().present() && system.sensor().readingValid());
+  endMap(vm);
   be_return(vm);
 }
 
@@ -135,9 +160,10 @@ int vacuumLog(bvm* vm) {
 }
 
 const bnfuncinfo kVacuumLibrary[] = {
-    {"target", vacuumTarget},   {"target_off", vacuumTargetOff}, {"start", vacuumStart},
-    {"stop", vacuumStop},       {"reset", vacuumReset},          {"state", vacuumState},
-    {"now_ms", vacuumNowMs},    {"log", vacuumLog},              {nullptr, nullptr},
+    {"target", vacuumTarget},   {"target_off", vacuumTargetOff}, {"clamp", vacuumClamp},
+    {"start", vacuumStart},     {"stop", vacuumStop},            {"reset", vacuumReset},
+    {"state", vacuumState},     {"now_ms", vacuumNowMs},         {"log", vacuumLog},
+    {nullptr, nullptr},
 };
 
 // --- screen ----------------------------------------------------------------
@@ -257,6 +283,7 @@ int screenUnit(bvm* vm) {
   setReal(vm, map, "per_kpa", info.perKpa);
   setReal(vm, map, "whole_step", info.wholeStep);
   setInt(vm, map, "decimals", (bint)displayDecimals(unit));
+  endMap(vm);
   be_return(vm);
 }
 
@@ -296,6 +323,7 @@ int buttonsTake(bvm* vm) {
   const int map = beginMap(vm);
   setText(vm, map, "btn", buttonName(button));
   setText(vm, map, "press", pressName(press));
+  endMap(vm);
   be_return(vm);
 }
 
@@ -339,6 +367,63 @@ const bnfuncinfo kRoutinesLibrary[] = {
     {nullptr, nullptr},
 };
 
+// --- store -----------------------------------------------------------------
+//
+// The active routine's own values. The fallback is both the answer for a key nothing has written
+// and the type the text is read back as, so a routine reads a number as a number and a missing key
+// is not an error it has to test for.
+
+int storeGet(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "store.get(key, fallback)");
+  }
+
+  String text;
+  const bool stored = gRoutines != nullptr && gRoutines->storeGet(argText(vm, 1), text);
+
+  if (!stored) {
+    // Nothing under the key: the fallback the caller passed is the answer, as it stands.
+    if (be_top(vm) >= 2) {
+      be_pushvalue(vm, 2);
+    } else {
+      be_pushnil(vm);
+    }
+    be_return(vm);
+  }
+
+  if (be_top(vm) >= 2 && be_isint(vm, 2)) {
+    be_pushint(vm, (bint)text.toInt());
+  } else if (be_top(vm) >= 2 && be_isreal(vm, 2)) {
+    be_pushreal(vm, (breal)text.toFloat());
+  } else if (be_top(vm) >= 2 && be_isbool(vm, 2)) {
+    be_pushbool(vm, text == "true" || text == "1");
+  } else {
+    be_pushstring(vm, text.c_str());
+  }
+  be_return(vm);
+}
+
+int storeSet(bvm* vm) {
+  if (be_top(vm) < 2 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "store.set(key, value)");
+  }
+
+  // be_tostring converts a number or a bool in place, so every scalar has the text form the file
+  // holds. The pointer is into the VM's string table, which is why it is used before anything else
+  // is pushed.
+  const char* value = be_tostring(vm, 2);
+  const bool written = value != nullptr && gRoutines != nullptr &&
+                       gRoutines->storeSet(argText(vm, 1), String(value));
+  be_pushbool(vm, written);
+  be_return(vm);
+}
+
+const bnfuncinfo kStoreLibrary[] = {
+    {"get", storeGet},
+    {"set", storeSet},
+    {nullptr, nullptr},
+};
+
 }  // namespace
 
 void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& logger) {
@@ -350,6 +435,7 @@ void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& log
   installModule(vm, "screen", kScreenLibrary);
   installModule(vm, "buttons", kButtonsLibrary);
   installModule(vm, "routines", kRoutinesLibrary);
+  installModule(vm, "store", kStoreLibrary);
 }
 
 }  // namespace berry
