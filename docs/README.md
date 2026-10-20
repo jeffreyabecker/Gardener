@@ -19,6 +19,7 @@ implemented or dropped. Specs, guides and the project README never link to a pla
 to stand on its own, and plans may reference specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
+- [Nullable settings](./plans/nullable-settings.md) — a setting the editor can show, set and clear to nothing
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides
