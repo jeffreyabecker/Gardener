@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Checking the Berry data image under firmware/gardener/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under app/routines/bindings/: compile, load and drive the whole image on the host with the vendored VM, the seven native modules, the records and the settings editor. Covers the load order, the surface the test app must stub, and the failures each message means.'
+description: 'Checking the Berry data image under firmware/gardener/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under app/routines/bindings/: compile, load and drive the whole image on the host with the vendored VM, the eight native modules, the records and the settings editor. Covers the load order, the surface the test app must stub, and the failures each message means.'
 ---
 
 # Berry
@@ -37,7 +37,7 @@ Berry resolves a global name when it **compiles** a file: `'FixedText' undeclare
 error, not a run-time one. So the check loads exactly what the firmware loads, in the order it
 loads it:
 
-1. [harness.be](./harness.be) — the record classes and the seven native modules, as globals
+1. [harness.be](./harness.be) — the record classes and the eight native modules, as globals
 2. `data/modules/*.be` — in packed order, which is alphabetical
 3. [driver.be](./driver.be) — it names `Settings`, so it loads after `/modules`
 4. `data/routines/*.be` — in packed order
@@ -68,15 +68,16 @@ report a page that works on the device as `undeclared`.
 A field the class does not declare raises `attribute_error` when read, which is why the harness
 copies the field lists from `kRecords` rather than inventing an empty class.
 
-### The seven modules — the calls the bindings install
+### The eight modules — the calls the bindings install
 
 | Module | Calls |
 | --- | --- |
 | `vacuum` | `target, target_off, clamp, start, stop, reset, state, now_ms, log, stopped` |
 | `screen` | `draw_clear`, `draw_pixel`, `draw_line`, `draw_hline`, `draw_vline`, `draw_rect`, `draw_fillrect`, `draw_roundrect`, `draw_fillroundrect`, `draw_circle`, `draw_fillcircle`, `draw_ellipse`, `draw_fillellipse`, `draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`, `draw_text`, `text_bounds`, `flush`, `unit` |
-| `device` | `units, set_unit, target, set_target, bluetooth, set_bluetooth` |
+| `device` | `units, set_unit, target, set_target, bluetooth, set_bluetooth, jingle, set_jingle` |
 | `buttons` | `take` |
 | `buzzer` | `tone, play, off` |
+| `jingles` | `ids, title, label, notes, current, default_id` |
 | `routines` | `register, set_active, names, get, icon, has` |
 | `store` | `get, set` (both the two- and the three-argument forms) |
 
@@ -92,6 +93,8 @@ Values that must match the firmware:
 - `screen.unit()` and `device.set_unit()` share the four tokens `kpa`, `psi`, `inhg`, `mmhg`.
 - `store.get(key, fallback)` addresses the active routine; `store.get(name, key, fallback)` names
   one. The fallback's type is the type the text comes back as.
+- `jingles.ids()` is the identifiers from `/modules/jingles.ini`, in file order; the first is the
+  fallback for `jingles.current()`.
 
 ### The editor, the store and the files
 
@@ -99,6 +102,8 @@ Values that must match the firmware:
   `Component` and the rest are the code under review.
 - Every `data/routines/*.ini` seeds the store under its own name, and `data/settings.ini` seeds
   `device`, so a routine reads the values its image ships with.
+- `data/modules/jingles.ini` is seeded as `jinglelibrary`, so the `JinglesStub` checks the real
+  identifiers, titles, labels and note strings the image ships.
 - `page.be`, `settings.be` and the components are exercised through the same calls the device
   makes, including the settings editor's whole key sequence.
 

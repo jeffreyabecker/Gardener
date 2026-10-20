@@ -1,5 +1,7 @@
 #include "app/storage/Settings.h"
 
+#include <string.h>
+
 #include "core/Parse.h"
 
 namespace gardener {
@@ -11,6 +13,7 @@ constexpr const char* kUnitKey = "unit";
 constexpr const char* kTargetKey = "target";
 constexpr const char* kBluetoothKey = "bluetooth";
 constexpr const char* kLogKey = "log";
+constexpr const char* kJingleKey = "jingle";
 
 }  // namespace
 
@@ -39,6 +42,9 @@ void Settings::begin() {
   bool log = true;
   stored = ini_.get(kSection, kLogKey, "on");
   if (parseFlag(stored.c_str(), log)) log_ = log;
+
+  stored = ini_.get(kSection, kJingleKey, "");
+  stored.toCharArray(jingle_, sizeof jingle_);
 }
 
 DisplayUnit Settings::unit() const { return unit_; }
@@ -79,6 +85,18 @@ void Settings::setLogEnabled(bool enabled) {
   if (enabled == log_) return;
   log_ = enabled;
   ini_.set(kSection, kLogKey, enabled ? "on" : "off");
+  storage_.write(kPath, ini_.text());
+}
+
+String Settings::jingle() const { return String(jingle_); }
+
+void Settings::setJingle(const String& id) {
+  if (id == jingle_) return;
+  // Clear first so a concurrent reader always finds a terminator while the new identifier is being
+  // copied; a partial value simply fails the jingles lookup and falls back to the first entry.
+  memset(jingle_, 0, sizeof jingle_);
+  id.toCharArray(jingle_, sizeof jingle_);
+  ini_.set(kSection, kJingleKey, id);
   storage_.write(kPath, ini_.text());
 }
 

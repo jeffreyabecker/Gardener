@@ -1,7 +1,7 @@
 # harness.be — the host side of the Berry check.
 #
 # This file stands in for the firmware around a routine: the record classes
-# Bindings.cpp compiles, the seven native modules it installs, the press queue, the
+# Bindings.cpp compiles, the eight native modules it installs, the press queue, the
 # machine and the store. It is loaded before /modules and /routines, because a Berry
 # file cannot compile a name that is not declared yet.
 #
@@ -43,10 +43,15 @@ harnessActive = nil
 harnessStoreActive = ""
 harnessPresses = []
 harnessStore = {}
+harnessStoreOrder = {}
 harnessInCall = false
 harnessPending = nil
 harnessPendingSettings = nil
 harnessWrites = []
+
+# Declared before the stub classes so JinglesStub.current() can name it; assigned with the other
+# modules below.
+device = nil
 
 def harness_fail(text)
   harnessErrors += 1
@@ -479,11 +484,12 @@ def harness_switch(name, settings)
 end
 
 class DeviceStub
-  var target_kpa, bluetooth_enabled
+  var target_kpa, bluetooth_enabled, jingle_id
 
   def init()
     self.target_kpa = 0.0
     self.bluetooth_enabled = true
+    self.jingle_id = ""
   end
 
   def units()
@@ -522,6 +528,97 @@ class DeviceStub
     if type(on) == "bool"
       self.bluetooth_enabled = on
     end
+  end
+
+  def jingle()
+    return self.jingle_id
+  end
+
+  def set_jingle(id)
+    if type(id) == "string"
+      self.jingle_id = id
+    end
+  end
+end
+
+class JinglesStub
+  def entries()
+    return harnessStoreOrder.find("jinglelibrary", [])
+  end
+
+  def ids()
+    var out = []
+    for entry : self.entries()
+      out.push(entry[0])
+    end
+    return out
+  end
+
+  def find(id)
+    if type(id) != "string"
+      return nil
+    end
+    for entry : self.entries()
+      if entry[0] == id
+        return entry
+      end
+    end
+    return nil
+  end
+
+  def fields(id)
+    var entry = self.find(id)
+    if entry == nil
+      return nil
+    end
+    var parts = string.split(entry[1], "|")
+    if parts.size() < 3
+      return nil
+    end
+    return parts
+  end
+
+  def title(id)
+    var parts = self.fields(id)
+    if parts == nil
+      return nil
+    end
+    return parts[0]
+  end
+
+  def label(id)
+    var parts = self.fields(id)
+    if parts == nil
+      return nil
+    end
+    return parts[1]
+  end
+
+  def notes(id)
+    var parts = self.fields(id)
+    if parts == nil
+      return nil
+    end
+    return parts[2]
+  end
+
+  def default_id()
+    var entries = self.entries()
+    if entries.size() == 0
+      return nil
+    end
+    return entries[0][0]
+  end
+
+  def current()
+    var notes = self.notes(device.jingle())
+    if notes == nil
+      var id = self.default_id()
+      if id != nil
+        notes = self.notes(id)
+      end
+    end
+    return notes
   end
 end
 
@@ -667,6 +764,7 @@ screen = ScreenStub()
 device = DeviceStub()
 buttons = ButtonsStub()
 buzzer = BuzzerStub()
+jingles = JinglesStub()
 store = StoreStub()
 routines = RoutinesStub()
 
@@ -686,6 +784,7 @@ end
 def harness_apply_device()
   var token = store.get("device", "unit", "kpa")
   device.set_unit(token)
+  device.set_jingle(store.get("device", "jingle", ""))
 end
 
 def harness_press(btn, press)
@@ -739,18 +838,22 @@ end
 # The values a routine's file holds, read from the .ini the data image ships.
 def harness_seed(name, text)
   var file = {}
+  var order = []
   var lines = string.split(text, "\n")
   for line : lines
     var clean = string.replace(line, "\r", "")
-    if clean == "" || string.startswith(clean, "[")
+    if clean == "" || string.startswith(clean, "[") || string.startswith(clean, "#") ||
+       string.startswith(clean, ";")
       continue
     end
     var parts = string.split(clean, "=")
     if parts.size() >= 2
       file[parts[0]] = parts[1]
+      order.push([parts[0], parts[1]])
     end
   end
   harnessStore[name] = file
+  harnessStoreOrder[name] = order
 end
 
 def harness_wrote(name, key)

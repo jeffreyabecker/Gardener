@@ -75,6 +75,11 @@ modules such as `string` — its classes are simply globals by the time the page
 Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
 data image.
 
+`/modules/jingles.ini` is data rather than a module. It is not compiled or loaded as a `.be` file;
+the native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
+`jingles.title()`, `jingles.label()`, `jingles.notes()` and `jingles.current()`. Its format and the
+call list are in [bindings.md](./bindings.md#jingles--the-note-library).
+
 Files within `/modules/` load in directory order, which is the alphabetical order the image is
 packed in, so a module may only name a class a module that loads before it defines. That rule
 reaches inside methods as well as the top level: Berry compiles a name when it reads the file, so a

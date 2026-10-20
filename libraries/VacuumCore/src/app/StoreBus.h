@@ -23,7 +23,7 @@ struct StoreResult {
 // The one request the VM task sends the interface task for flash-backed reads and writes. Get and
 // Set carry the routine's registered name, already resolved by the caller.
 struct StoreRequest {
-  enum class Op : uint8_t { Get, Set, SetUnit, SetTarget, SetBluetooth };
+  enum class Op : uint8_t { Get, Set, SetUnit, SetTarget, SetBluetooth, SetJingle };
   Op op;
   String routine;                // Get/Set: the routine's registered name
   String key;                    // Get/Set
@@ -31,6 +31,7 @@ struct StoreRequest {
   uint8_t unit = 0;              // SetUnit: DisplayUnit
   float targetKpa = 0.0f;        // SetTarget
   bool bluetooth = false;        // SetBluetooth
+  String jingle;                 // SetJingle
   StoreResult* result = nullptr; // Get/Set: the client's slot, filled by the server
   TaskHandle_t waiter = nullptr; // Get/Set: the task to notify when the result is ready
 };
@@ -91,6 +92,13 @@ class StoreClient {
     xQueueSend(queue_, &request, 0);
   }
 
+  void setJingle(const String& id) {
+    StoreRequest request;
+    request.op = StoreRequest::Op::SetJingle;
+    request.jingle = id;
+    xQueueSend(queue_, &request, 0);
+  }
+
  private:
   QueueHandle_t queue_;
   StoreResult result_;  // one slot; the VM task is sequential and never has two in flight
@@ -148,6 +156,9 @@ class StoreServer {
         return;
       case StoreRequest::Op::SetBluetooth:
         settings_.setBluetooth(request.bluetooth);
+        return;
+      case StoreRequest::Op::SetJingle:
+        settings_.setJingle(request.jingle);
         return;
     }
     if (request.result) {

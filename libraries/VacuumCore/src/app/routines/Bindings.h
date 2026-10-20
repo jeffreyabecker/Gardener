@@ -11,13 +11,14 @@ class StoreClient;
 
 namespace berry {
 
-// The seven native modules a routine sees, installed into a fresh VM:
+// The eight native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
-//   device.*   the display unit and default target the device keeps as preferences
+//   device.*   the display unit, default target and jingle the device keeps as preferences
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
+//   jingles.*  the named note sequences in /modules/jingles.ini
 //   routines.* the registry, so a file can register itself
 //   store.*    the routine's own values, kept across a power cycle
 //

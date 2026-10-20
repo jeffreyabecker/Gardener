@@ -12,6 +12,7 @@ void installScreenModule(bvm* vm);
 void installDeviceModule(bvm* vm);
 void installButtonsModule(bvm* vm);
 void installBuzzerModule(bvm* vm);
+void installJinglesModule(bvm* vm);
 void installRoutinesModule(bvm* vm);
 void installStoreModule(bvm* vm);
 

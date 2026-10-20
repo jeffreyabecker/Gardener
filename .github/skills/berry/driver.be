@@ -198,6 +198,80 @@ def harness_run_page(entry)
   end
 end
 
+# The jingle library is data in /modules/jingles.ini. Every identifier must resolve to a title,
+# a short label and a non-empty note string; current() follows the device setting and falls back.
+def harness_check_jingles()
+  var ids = jingles.ids()
+  if ids.size() == 0
+    harness_fail("jingles: no identifiers")
+    return
+  end
+  for id : ids
+    if type(id) != "string"
+      harness_fail("jingles: a non-string identifier")
+      continue
+    end
+    if id == ""
+      harness_fail("jingles: an empty identifier")
+      continue
+    end
+    if jingles.title(id) == nil || jingles.label(id) == nil
+      harness_fail("jingles: " + id + " is missing a title or label")
+    end
+    if jingles.notes(id) == nil || jingles.notes(id) == ""
+      harness_fail("jingles: " + id + " has no notes")
+    end
+  end
+  if jingles.notes("no_such_jingle") != nil
+    harness_fail("jingles: an unknown identifier answered notes")
+  end
+  device.set_jingle(ids[0])
+  if jingles.current() != jingles.notes(ids[0])
+    harness_fail("jingles: current() ignored the device setting")
+  end
+  device.set_jingle("no_such_jingle")
+  if jingles.current() != jingles.notes(ids[0])
+    harness_fail("jingles: current() did not fall back")
+  end
+  device.set_jingle(store.get("device", "jingle", ""))
+end
+
+# The System page is the only editor of the global jingle, and it has no describe() for the shared
+# editor check to walk. Walk its fourth row with the real key path and make sure the identifier moves.
+def harness_check_system_jingle()
+  var entry = harness_find("system")
+  if entry == nil
+    harness_fail("system: not registered")
+    return
+  end
+  harness_activate(entry, nil)
+  # Rows: UNIT, TGT, BT, JINGLE. Three Downs select the last.
+  var row = 0
+  while row < 3
+    harness_press("down", "single")
+    if !harness_beats(1)
+      return
+    end
+    row += 1
+  end
+  harness_press("ok", "single")
+  harness_beats(1)
+  var page = entry.object
+  if !page.editing
+    harness_fail("system: OK did not open the jingle editor")
+    return
+  end
+  var before = device.jingle()
+  harness_press("up", "single")
+  harness_beats(1)
+  harness_press("ok", "single")
+  harness_beats(1)
+  if device.jingle() == before
+    harness_fail("system: the jingle did not change")
+  end
+  device.set_jingle(store.get("device", "jingle", ""))
+end
+
 # The names list is the browser's, so the hidden pages stay out of it and every other
 # registration is in it.
 def harness_check_names()
@@ -220,6 +294,8 @@ end
 
 def harness_check()
   harness_apply_device()
+  harness_check_jingles()
+  harness_check_system_jingle()
   harness_check_names()
 
   if harness_find("default") == nil

@@ -73,6 +73,7 @@ void install(bvm* vm, AppContext& context, Routines& routines, Logger& logger, S
   installDeviceModule(vm);
   installButtonsModule(vm);
   installBuzzerModule(vm);
+  installJinglesModule(vm);
   installRoutinesModule(vm);
   installStoreModule(vm);
 

@@ -56,6 +56,23 @@ int deviceSetBluetooth(bvm* vm) {
   be_return_nil(vm);
 }
 
+// The selected jingle's identifier, or "" when none has been chosen. The jingles module resolves an
+// empty or unknown value to its first entry; the system page writes one of the identifiers it read
+// from that list.
+int deviceJingle(bvm* vm) {
+  const String id = gContext->settings().jingle();
+  be_pushstring(vm, id.c_str());
+  be_return(vm);
+}
+
+int deviceSetJingle(bvm* vm) {
+  if (!be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "device.set_jingle(id)");
+  }
+  if (gStore != nullptr) gStore->setJingle(String(argText(vm, 1)));
+  be_return_nil(vm);
+}
+
 const bnfuncinfo kDeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
@@ -63,6 +80,8 @@ const bnfuncinfo kDeviceLibrary[] = {
     {"set_target", deviceSetTarget},
     {"bluetooth", deviceBluetooth},
     {"set_bluetooth", deviceSetBluetooth},
+    {"jingle", deviceJingle},
+    {"set_jingle", deviceSetJingle},
     {nullptr, nullptr},
 };
 

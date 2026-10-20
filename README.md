@@ -186,6 +186,11 @@ The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone 2000 500` and
 the 5-way module's fifth key on the POC rig; a board that wants that key back has to move the
 buzzer.
 
+The device also ships named jingles in `/modules/jingles.ini`. A routine plays the one selected on
+the System page with `buzzer.play(jingles.current())`, or a named one by identifier with
+`buzzer.play(jingles.notes("forelle"))`; `jingles.ids()`, `jingles.title()` and `jingles.label()`
+are how it finds them.
+
 ## Building
 
 Requires `arduino-cli` (or the Arduino IDE 2 with the ESP32 core installed), Python 3 for the
@@ -273,14 +278,15 @@ That replaces the whole filesystem, so a file the device wrote itself is gone un
 folder carries a copy. Individual files can be changed without replacing the image through the
 `fs` domain: `list`, `read`, `write`, `mkdir` and `delete`.
 
-The display unit, the default target and the radio preference are stored in `/settings.ini` and
-restored at boot, so `device set unit mmhg` survives a power cycle:
+The display unit, the default target, the radio preference and the selected jingle are stored in
+`/settings.ini` and restored at boot, so `device set unit mmhg` survives a power cycle:
 
 ```ini
 [device]
 unit=mmhg
 target=12.5
 bluetooth=on
+jingle=poacher
 ```
 
 Keys the firmware does not know are carried through a write; comments and spacing are not kept. A
@@ -295,9 +301,9 @@ boot and registers itself, and the one registered as `default` is the page. If n
 the panel shows the device's mark.
 
 Five ship: `default` (the readout), `browser` (the routine list), `system` (unit, default target,
-radio), `interval` (pull, hold, rest, repeat) and `ramped` (a ladder of sets). A routine reaches
-`vacuum`, `screen`, `device`, `buttons`, `buzzer`, `routines` and `store`; the surface is in
-[docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle in
+radio, jingle), `interval` (pull, hold, rest, repeat) and `ramped` (a ladder of sets). A routine
+reaches `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jingles`, `routines` and `store`; the
+surface is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle in
 [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
 
 A `poll` that never returns blocks the panel loop, so returning is a convention the author keeps,

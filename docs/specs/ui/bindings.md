@@ -1,8 +1,8 @@
 # Bindings
 
-The native surface a routine calls: seven modules — `vacuum`, `screen`, `device`, `buttons`,
-`buzzer`, `routines` and `store` — and the records those calls answer with. This is the reference
-for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
+The native surface a routine calls: eight modules — `vacuum`, `screen`, `device`, `buttons`,
+`buzzer`, `jingles`, `routines` and `store` — and the records those calls answer with. This is the
+reference for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
 
 ## Values
 
@@ -178,10 +178,10 @@ Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear
 
 ## `device` — the device's own settings
 
-The unit the panel prints and the target the default program restores. Both belong to the device
-rather than to a routine's `store` file. The unit is the same switch the serial `device` domain
-carries; the diagnostics switch is not here, because it belongs to the serial link rather than to
-the glass.
+The unit the panel prints, the target the default program restores and the selected jingle. All
+belong to the device rather than to a routine's `store` file. The unit is the same switch the serial
+`device` domain carries; the diagnostics switch is not here, because it belongs to the serial link
+rather than to the glass.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -191,6 +191,8 @@ the glass.
 | `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | the stored radio preference; `true` when unset |
 | `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; the radio reads it when it starts, so the next boot honours it |
+| `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
+| `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.ini` |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it. `device.target()` is the stored setting, not the machine's live target: a page
@@ -271,6 +273,39 @@ leaves the page; a sequence stops itself at the end.
 
 The notation is strict: a comma, a missing colon, or a space between a note and its duration makes
 the whole sequence malformed and `play` returns false.
+
+## `jingles` — the note library
+
+The device ships named note sequences in `/modules/jingles.ini`. The file is read once at boot,
+like the `.be` modules, so a change takes effect at the next reset. It is an INI file with one
+entry per jingle under `[jingles]`:
+
+```ini
+[jingles]
+poacher=Lincolnshire Poacher|Poacher|E5:200 G5:200 E6:200 ...
+```
+
+The key is the jingle's **identifier**: lowercase, stable, and the value the global setting stores.
+The value is the display name, the short panel label and the note string separated by `|`. The
+note string is in `buzzer.play()` notation.
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `jingles.ids()` | list of strings | every identifier, in file order |
+| `jingles.title(id)` | string or `nil` | the display name |
+| `jingles.label(id)` | string or `nil` | the short label the System page draws |
+| `jingles.notes(id)` | string or `nil` | the note sequence, ready for `buzzer.play()` |
+| `jingles.current()` | string or `nil` | the notes for `device.jingle()`, or the first jingle when that identifier is empty or unknown |
+| `jingles.default_id()` | string or `nil` | the first identifier |
+
+```berry
+buzzer.play(jingles.current())          # the jingle chosen on the System page
+buzzer.play(jingles.notes("forelle"))   # a named jingle
+```
+
+An identifier that is not in the file answers `nil` from `title`, `label` and `notes`. A missing
+or malformed file leaves the library empty; the System page then shows `JINGLE=--` and the rest of
+the device keeps working.
 
 ## `routines` — the registry
 
