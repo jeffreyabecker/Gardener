@@ -77,9 +77,10 @@ class Page
     return wanted == press
   end
 
-  # Double OK opens the settings; Back at the top closes them.
-  def open_settings(name)
-    var editor = Settings(name)
+  # Double OK opens the settings; Back at the top closes them. The editor is the
+  # routine's to make: /modules loads in directory order, so a page may not name a
+  # class from a file that loads after it.
+  def open_editor(editor)
     if !editor.open()
       return false
     end

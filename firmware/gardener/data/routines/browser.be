@@ -62,7 +62,7 @@ class Browser : Page
     if count == 0
       return false
     end
-    return self.open_settings(self.names[self.list.selected])
+    return self.open_editor(Settings(self.names[self.list.selected]))
   end
 
   def draw_page()

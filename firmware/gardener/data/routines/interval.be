@@ -81,7 +81,7 @@ class Interval : Page
     self.resume = "immediately"
     self.chrome = IntervalChrome(self)
 
-    self.on("ok", "double", / -> self.open_settings("interval"))
+    self.on("ok", "double", / -> self.open_editor(Settings("interval")))
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
   end
 

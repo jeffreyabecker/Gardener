@@ -109,7 +109,7 @@ class Ramped : Page
     self.rest = 45
     self.chrome = RampedChrome(self)
 
-    self.on("ok", "double", / -> self.open_settings("ramped"))
+    self.on("ok", "double", / -> self.open_editor(Settings("ramped")))
     self.on("ok", nil, / -> self.ok())
     self.on("back", "short", / -> self.pause())
   end

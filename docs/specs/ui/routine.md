@@ -75,8 +75,12 @@ modules such as `string` — its classes are simply globals by the time the page
 Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
 data image.
 
-Files within `/modules/` load in no particular order, so none may depend on another at its top
-level. Define classes and functions there; leave constructing them to the page that uses them.
+Files within `/modules/` load in directory order, which is the alphabetical order the image is
+packed in, so a module may only name a class a module that loads before it defines. That rule
+reaches inside methods as well as the top level: Berry compiles a name when it reads the file, so a
+reference to a later module's class is refused at load. Keep the dependency pointing at the earlier
+file, or move the class into the file that uses it. Define classes and functions there; leave
+constructing them to the page that uses them.
 
 The page framework ships the same way. `/modules/page.be` is `Page` — the button drain, the repaint
 cadence, the editor delegation and the gesture dispatch a routine's page extends. `/modules/
@@ -86,7 +90,8 @@ the `Icon` glyph). `/modules/list.be` is `List`, a selectable menu.
 
 The shared editor ships as `/modules/settings.be`. `Settings(name)` edits the `describe()` list of
 the routine registered under that name. **Double OK** is the standard gesture for opening it; a
-page that wants the editor holds one and delegates to it:
+page that wants the editor makes one and hands it to `Page.open_editor()`, which holds it while it
+is open and delegates the keys to it:
 
 ```berry
 def activate()
@@ -112,11 +117,7 @@ def handle(ev)
     return true
   end
   if ev.btn == "ok" && ev.press == "double"
-    var editor = Settings("mypage")
-    if editor.open()
-      self.editor = editor
-    end
-    return true
+    return self.open_editor(Settings("mypage"))
   end
   return false
 end

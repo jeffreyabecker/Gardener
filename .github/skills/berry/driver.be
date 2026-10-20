@@ -1,0 +1,238 @@
+# driver.be — what the check does after every file has loaded.
+#
+# It names Settings, so it loads after /modules: that class is one of the files there,
+# and a Berry file cannot compile a name that is not declared yet.
+
+def harness_kind_known(kind)
+  for name : ["real", "int", "bool", "choice", "duration", "pressure"]
+    if name == kind
+      return true
+    end
+  end
+  return false
+end
+
+# The map a switch carries is the routine's own settings, typed as the editor reads
+# them, so activate(settings) takes the same path as a real switch.
+def harness_setting_value(name, item)
+  if item.kind == "int"
+    return store.get(name, item.key, 0)
+  end
+  if item.kind == "real"
+    return store.get(name, item.key, 0.0)
+  end
+  if item.kind == "pressure"
+    return vacuum.clamp(store.get(name, item.key, 0.0))
+  end
+  if item.kind == "bool"
+    return store.get(name, item.key, false)
+  end
+  if item.kind == "duration"
+    var seconds = store.get(name, item.key, 0)
+    if item.min != nil && seconds < item.min
+      seconds = item.min
+    end
+    if item.max != nil && seconds > item.max
+      seconds = item.max
+    end
+    return seconds
+  end
+  if item.kind == "choice"
+    if item.values == nil || item.values.size() == 0
+      return ""
+    end
+    return store.get(name, item.key, item.values[0])
+  end
+  return store.get(name, item.key, "")
+end
+
+def harness_settings_map(entry)
+  if !harness_has_method(entry.object, "describe")
+    return nil
+  end
+  var described = nil
+  try
+    described = entry.object.describe()
+  except .. as e, m
+    harness_fail("settings: " + entry.name + " describe: " + e + ": " + m)
+    return nil
+  end
+  if !isinstance(described, list)
+    harness_fail("settings: " + entry.name + " describe() is not a list")
+    return nil
+  end
+  var settings = {}
+  for item : described
+    settings[item.key] = harness_setting_value(entry.name, item)
+  end
+  return settings
+end
+
+# The settings editor is the one path every routine with a describe() shares, and the
+# one that writes through store. Walk it: open, edit every value, close.
+def harness_editor(entry)
+  if !harness_has_method(entry.object, "describe")
+    return
+  end
+
+  var label = "settings: " + entry.name
+  try
+    entry.object.describe()
+  except .. as e, m
+    harness_fail(label + " describe: " + e + ": " + m)
+    return
+  end
+
+  var editor = Settings(entry.name)
+  var opened = false
+  try
+    opened = editor.open()
+  except .. as e, m
+    harness_fail(label + " open: " + e + ": " + m)
+    return
+  end
+  if !opened
+    harness_fail(label + " open() refused")
+    return
+  end
+
+  harness_guarded(label, / -> editor.draw())
+
+  harnessWrites = []
+  var count = editor.described.size()
+  var i = 0
+  var guard = 0
+  while i < count
+    var item = editor.described[i]
+    if type(item) != "instance"
+      harness_fail(label + " describe() returned a non-setting")
+      return
+    end
+    if !harness_kind_known(item.kind)
+      harness_fail(label + " setting " + str(item.key) + " has kind " + str(item.kind))
+    end
+    if item.kind == "choice" && (item.values == nil || item.values.size() == 0)
+      harness_fail(label + " choice " + str(item.key) + " has no values")
+    end
+
+    editor.list.selected = i
+    harness_guarded(label, / -> editor.draw())
+    harness_guarded(label, / -> editor.handle(harness_event("ok", "single")))
+
+    # OK opens the value. A duration opens twice: minutes first, then seconds.
+    guard = 0
+    while editor.editing && guard < 6
+      harness_guarded(label, / -> editor.handle(harness_event("up", "single")))
+      harness_guarded(label, / -> editor.draw())
+      harness_guarded(label, / -> editor.handle(harness_event("ok", "single")))
+      guard += 1
+    end
+    if editor.editing
+      harness_guarded(label, / -> editor.handle(harness_event("back", "single")))
+    end
+    if harness_kind_known(item.kind) && !harness_wrote(entry.name, item.key)
+      harness_fail(label + " did not write " + str(item.key))
+    end
+    i += 1
+  end
+
+  guard = 0
+  while editor.is_open() && guard < 4
+    harness_guarded(label, / -> editor.handle(harness_event("back", "single")))
+    guard += 1
+  end
+  if editor.is_open()
+    harness_fail(label + " did not close on Back")
+  end
+end
+
+# One page's life: activate, a run started by a person, 400 s of virtual time, the
+# device's own stop, every gesture, and a re-entry. `harnessActive` may change under
+# it when a page switches (the browser does), which is the point.
+def harness_run_page(entry)
+  harness_reset()
+  if !harness_activate(entry, nil)
+    return
+  end
+  if !harness_beats(8)
+    return
+  end
+
+  harness_press("ok", "single")
+  if !harness_beats(1600)
+    return
+  end
+
+  harness_press("back", "long")
+  vacuum.notice = true
+  harness_beats(8)
+  if harnessActive == nil
+    return
+  end
+
+  for btn : ["up", "down", "ok", "back"]
+    for press : ["single", "double", "long"]
+      harness_press(btn, press)
+      if !harness_beats(4)
+        return
+      end
+    end
+  end
+
+  # A re-entry after a control handover arrives as activate(nil) with the machine
+  # wherever it was left, and a switch may carry the routine's values as a map.
+  if harnessActive != nil
+    harness_activate(harnessActive, nil)
+    harness_beats(4)
+    var settings = harness_settings_map(harnessActive)
+    if settings != nil
+      harness_activate(harnessActive, settings)
+      harness_beats(8)
+    end
+  end
+end
+
+# The names list is the browser's, so the hidden pages stay out of it and every other
+# registration is in it.
+def harness_check_names()
+  var names = routines.names()
+  for entry : harnessEntries
+    var found = false
+    for name : names
+      if name == entry.name
+        found = true
+      end
+    end
+    if entry.hidden && found
+      harness_fail("routines.names() lists hidden " + entry.name)
+    end
+    if !entry.hidden && !found
+      harness_fail("routines.names() is missing " + entry.name)
+    end
+  end
+end
+
+def harness_check()
+  harness_apply_device()
+  harness_check_names()
+
+  if harness_find("default") == nil
+    harness_fail("vm: no default routine registered")
+  end
+
+  var i = 0
+  while i < harnessEntries.size()
+    var entry = harnessEntries[i]
+    try
+      harness_editor(entry)
+      harness_run_page(entry)
+    except .. as e, m
+      harness_fail("vm: " + entry.name + " check: " + e + ": " + m)
+      harnessActive = nil
+    end
+    i += 1
+  end
+  harness_note("checked " + str(harnessEntries.size()) + " routines, " +
+               str(harnessStore.size()) + " store files")
+  return harnessErrors == 0
+end
