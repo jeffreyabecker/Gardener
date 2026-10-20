@@ -16,7 +16,6 @@ implemented or dropped. Specs, guides and the project README never link to a pla
 to stand on its own, and plans may reference specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [BLE control](./plans/ble-control.md) — the implemented BLE GATT contract: characteristics, rates, safety, concurrency, and the bench checklist still to run
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides

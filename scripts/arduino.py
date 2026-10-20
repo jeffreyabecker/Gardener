@@ -40,8 +40,7 @@ THIRD_PARTY_LIBS = [
     "Adafruit SH110X",
     "Adafruit BusIO",
     "Adafruit GFX Library",
-    # The BLE transport's stack. docs/plans/ble-control.md was written against this version, and
-    # the pin is what makes the NimBLE compile options below meaningful.
+    # The BLE transport's stack. The pin is what makes the NimBLE compile options below meaningful.
     "NimBLE-Arduino@2.5.1",
 ]
 

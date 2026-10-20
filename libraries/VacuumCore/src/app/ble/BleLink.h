@@ -10,7 +10,7 @@ namespace gardener {
 //
 // This is deliberately a second contract and not the serial grammar over a pipe. A phone binds to
 // characteristics, reads typed values and subscribes to the ones it shows, so the machine is
-// exposed as typed fields with directions. The table is docs/plans/ble-control.md §4, and every
+// exposed as typed fields with directions. The table is the one in BleLink.cpp, and every
 // value is read from the same AppContext the serial link reads, so there is still one machine and
 // no second copy of its state.
 //
