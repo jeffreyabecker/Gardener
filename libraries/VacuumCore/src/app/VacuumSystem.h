@@ -10,9 +10,11 @@
 namespace gardener {
 
 // What the device is doing, which is also the state a controller watches. There is no DONE:
-// after venting it is IDLE, and the controller knows when the run is over because it is the one
+// after a release it is IDLE, and the controller knows when the run is over because it is the one
 // that ended it. HOLD is the target-reached edge, and it is the cue a controller times its hold
-// from. There is no MANUAL (raw duty is not part of the interface, Q15).
+// from. VENT is the valve open to raise pressure: a release to ambient, or a correction to a
+// shallower target, which returns to PULL/HOLD. There is no MANUAL (raw duty is not part of the
+// interface, Q15).
 enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
 inline const char* runStateName(RunState state) {
@@ -45,7 +47,9 @@ inline const char* runStateName(RunState state) {
 //
 // The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
 // can pull down but never vent; the valve is the only way back up, which is why every release
-// path here stops the pump before it opens the valve. Gains live in core/Config.h.
+// path here stops the pump before it opens the valve. A target set shallower than the chamber
+// while a run is active uses the same actuator: the valve opens until the new target is reached,
+// then the run carries on. Gains live in core/Config.h.
 class VacuumSystem {
  public:
   VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent)
@@ -85,9 +89,11 @@ class VacuumSystem {
   // transitions that are facts about the chamber instead of orders, and service() is where
   // they are asked.
   bool atTarget() const;  // close enough to the target, deadband included
-  bool vented() const;    // settled within VENT_MARGIN_KPA, or VENT_TIMEOUT_MS elapsed
+  bool released() const;  // settled within VENT_MARGIN_KPA, or VENT_TIMEOUT_MS elapsed
   void release();         // stop, then open: the one release path
   void rest();            // the resting state without releasing: pump off, valve open
+  void startTargetVent(); // stop, open, and land on the current target
+  void endTargetVent();   // close the valve and hand the run back to the PID
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
@@ -106,6 +112,9 @@ class VacuumSystem {
   float targetKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
+  // VENT is either a release to ambient or a controlled vent to the current target; this is what
+  // tells them apart when the end is decided.
+  bool targetVent_ = false;
 
   float pidIntegral_ = 0.0f;
   float lastMeasured_ = 0.0f;

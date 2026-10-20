@@ -515,7 +515,7 @@ field, so `state` is `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0001`, and the table is th
 | --- | --- | --- |
 | `state` | read, notify | uint8: 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
 | `kpa` | read, notify | float32 LE, depth below ambient |
-| `target` | read, write, notify | float32 LE, depth to pull to; 0 clears |
+| `target` | read, write, notify | float32 LE, depth to pull to; 0 clears; a shallower value while running vents to it |
 | `duty` | read, notify | float32 LE, pump duty in percent |
 | `fault` | read, notify | UTF-8 code, empty when none |
 | `batt` | read, notify | uint8 percent, `0xFF` when no gauge is fitted |
@@ -553,16 +553,17 @@ on top of it: the target, the PID on the vacuum depth the sensor reports (all te
 and the same frame a target is set in), the valve, the pump, the run state in the diagram below
 and the fault latch. It is handed the three devices it commands — the sensor, the pump and the
 valve — so the control law is policy and the pins stay in `hal/`. The pump is the only actuator, so
-the control loop can pull down but never vent — the vent valve is the only way back up. When the
-measurement undershoots the target the output drops to zero and the chamber bleeds back up.
+the control loop can pull down but never vent — the vent valve is the only way back up. A target
+set shallower than the chamber while a run is active uses that valve: the pump stops, the valve
+opens, and `VENT` holds until the reading reaches the new target, then the run resumes.
 
 It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
-the duty, the state. Both of the transitions it makes for itself are facts about the chamber
-rather than orders — the target has been reached, the release is over — so they are decided where
-the measurements are, and each command sets the state it causes. Every "should" is still a
-command's: when to start, what a stop means, whether a fault is permanent. The run's *duration*
-lives at the other end of the cable, with the controller. Clearing the target releases the
-chamber, because a run without a target is not a run.
+the duty, the state. The transitions it makes for itself are facts about the chamber rather than
+orders — the target has been reached, the release is over, a vent to a target has landed — so they
+are decided where the measurements are, and each command sets the state it causes. Every "should"
+is still a command's: when to start, what a stop means, whether a fault is permanent. The run's
+*duration* lives at the other end of the cable, with the controller. Clearing the target releases
+the chamber, because a run without a target is not a run.
 
 ```
        vacuum start                          vacuum stop / control release / fault / back hold
@@ -571,6 +572,10 @@ IDLE ──────────────> PULL ──(target reached)─�
   │                                                 │                           v
   └───────────────── vacuum reset ──────────────────┴─────────────────────── FAULT
 ```
+
+`VENT` is the valve open to raise pressure, with two endings. A release goes to `IDLE` near
+ambient (or on the timeout); a vent to a shallower target seals the chamber and returns to
+`PULL`/`HOLD`, keeping the target.
 
 * The controller owns how long a hold lasts. The device goes to `HOLD` when its own deadband
   says the target has been reached, and that is all `HOLD` now means: it is the cue for the
@@ -583,8 +588,11 @@ IDLE ──────────────> PULL ──(target reached)─�
   device's screen shows only the controlling link's icon, the state's icon and the battery.
 * The valve is closed through `PULL` and `HOLD`, and open in `IDLE` and `VENT`. Whether "closed"
   means energised or de-energised is the fitted part's, and is named in `app/Build.cpp`.
-* Venting ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
-  first — a leaky rig takes longer, and that is logged rather than treated as an error.
+* A release ends when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
+  first — a leaky rig takes longer, and that is logged rather than treated as an error. A vent to
+  a shallower target ends at its landing and returns to `PULL`/`HOLD`. `CONTROL_VENT_TO_TARGET` in
+  `core/Config.h` chooses the landing: on, the valve closes `VENT_TARGET_LEAD_KPA` above the new
+  target; off, it waits for the reading to pass the target and the pump pulls back.
 * Faults latch. Only `vacuum reset` clears one; the device never retries on its own.
 * A link that drops while controlling does not stop the run, and a controller that hangs with the
   port open holds it open. Back+OK for 5 s is the local way out: it releases the chamber and

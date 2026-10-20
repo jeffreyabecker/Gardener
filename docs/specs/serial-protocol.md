@@ -219,7 +219,7 @@ does not draw on the panel.
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the vacuum readout; takes no argument |
-| `target <kPa\|->` | `ok target=<kPa>` / `ok target=-` | `vacuum target 40` pulls to 40 kPa below ambient; `-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target value=… min=5.0`; deeper than `floor` is accepted, and only pins the duty at the cap |
+| `target <kPa\|->` | `ok target=<kPa>` / `ok target=-` | `vacuum target 40` pulls to 40 kPa below ambient. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached; `-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target value=… min=5.0`; deeper than `floor` is accepted, and only pins the duty at the cap |
 | `start` | `ok state=PULL` / `err not_ready <reason>` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` |
 | `stop` | `ok state=<state>` | pump off, then vent. The normal way a run ends |
 | `reset` | `ok state=<state>` | clears the latched fault, then vents |
@@ -417,6 +417,10 @@ IDLE ──────────────> PULL ──(target reached)─�
   └───────────────── vacuum reset ──────────────────┴─────────────────────── FAULT
 ```
 
+`VENT` is the valve open to raise pressure. It has two endings: a release goes to `IDLE` within
+2 kPa of ambient (or on the timeout), and a vent to a shallower target seals the chamber and
+returns to `PULL`/`HOLD`.
+
 | Event | From | To |
 | --- | --- | --- |
 | `control acquire` | any | no machine change; the link becomes the one controller |
@@ -425,8 +429,9 @@ IDLE ──────────────> PULL ──(target reached)─�
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
 | Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
 | Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
-| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes; `-` while pulling or holding releases the chamber |
+| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
+| vent to a shallower target | `PULL`, `HOLD` | `VENT` with `duty=0`; it returns to `PULL`/`HOLD` rather than `IDLE` |
 | sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
 | `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
@@ -445,8 +450,13 @@ What a controller has to know:
 * **Back+OK for 5 s is the local reset.** It stops, vents for up to 2 s, restarts, and clears a
   held ownership record. A link that dropped while owning cannot be recovered any other way.
 * **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
-* Venting finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever
-  comes first. A vent timeout is logged, not an error, and the state still returns to `IDLE`.
+* Venting has two endings. A **release** finishes when the pressure is within 2 kPa of ambient,
+  or after 30 s, whichever comes first; a timeout is logged, not an error, and the state still
+  returns to `IDLE`. A **vent to a shallower target** finishes at its landing and returns to
+  `PULL`/`HOLD`, keeping the target. `VENT` is the same state either way. The build chooses the
+  landing in `core/Config.h`: with `CONTROL_VENT_TO_TARGET` the valve closes
+  `VENT_TARGET_LEAD_KPA` above the target so the travel after the coil drops covers the rest;
+  without it the valve stays open until the reading passes the target and the pump pulls back.
 * **The vent valve is normally open by default**: de-energised is open, so running a vacuum means
   energising the coil to close it. A crash, a brownout or a cut wire therefore vents the chamber
   whether or not the firmware noticed. `NormallyClosedValve` in `app/Build.cpp` is the alternative

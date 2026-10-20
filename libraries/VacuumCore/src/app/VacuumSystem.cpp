@@ -32,6 +32,7 @@ void VacuumSystem::rest() {
   vent_->open();  // assert the vented resting state when asked
   pidReset();
   output_ = 0.0f;
+  targetVent_ = false;
   setState(RunState::Idle);
 }
 
@@ -40,6 +41,7 @@ void VacuumSystem::release() {
   vent_->open();
   pidReset();
   output_ = 0.0f;
+  targetVent_ = false;
   ventStartMs_ = millis();
   setState(RunState::Venting);
 }
@@ -49,6 +51,7 @@ bool VacuumSystem::start() {
 
   // Close before pumping, so the pump never pulls against an open port.
   vent_->close();
+  targetVent_ = false;
   pidReset();
   output_ = 0.0f;
   lastControlMs_ = millis();
@@ -73,10 +76,35 @@ void VacuumSystem::stop() {
   release();
 }
 
-bool VacuumSystem::vented() const {
+bool VacuumSystem::released() const {
   bool settled = sensor_->present() && sensor_->readingValid() &&
                  currentKpa() <= cfg::VENT_MARGIN_KPA;
   return settled || (millis() - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
+}
+
+// Stop, then open: the pump never pulls against an open port. The state is VENT either way, and
+// targetVent_ is what tells the service loop which ending to wait for.
+void VacuumSystem::startTargetVent() {
+  pump_->stop();
+  vent_->open();
+  pidReset();
+  output_ = 0.0f;
+  targetVent_ = true;
+  ventStartMs_ = millis();
+  setState(RunState::Venting);
+}
+
+// The landing is done: seal the chamber and hand it back to the run's state machine. Resetting the
+// derivative state keeps the valve's slew out of the PID's first step.
+void VacuumSystem::endTargetVent() {
+  vent_->close();
+  targetVent_ = false;
+  pidReset();
+  output_ = 0.0f;
+  lastControlMs_ = millis();
+  lastDerivativeMs_ = lastControlMs_;
+  lastMeasured_ = currentKpa();
+  setState(RunState::Pulling);
 }
 
 void VacuumSystem::setTarget(float kpa) {
@@ -86,6 +114,18 @@ void VacuumSystem::setTarget(float kpa) {
   if (kpa < cfg::CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   pidReset();
+
+  // A target shallower than the chamber cannot be pulled to, so a run in progress uses the valve.
+  // A change inside the deadband is already at target and needs neither actuator. A vent already
+  // running follows the new target, or ends when the target moves back to where the pump works.
+  const bool shallower = currentKpa() > kpa + cfg::CONTROL_DEADBAND_KPA;
+  if (targetVent_) {
+    if (!shallower) endTargetVent();
+    return;
+  }
+  if (shallower && (state_ == RunState::Pulling || state_ == RunState::Holding)) {
+    startTargetVent();
+  }
 }
 
 void VacuumSystem::clearTarget() {
@@ -93,9 +133,10 @@ void VacuumSystem::clearTarget() {
   pidReset();
   output_ = 0.0f;
 
-  // A run without a target is not a run, so clearing one releases the chamber. An idle vacuum
-  // system is already at rest, and a fault owns the state until it is reset.
-  if (state_ == RunState::Pulling || state_ == RunState::Holding) {
+  // A run without a target is not a run, so clearing one releases the chamber. A target vent is
+  // cut into that release rather than landing on zero. An idle vacuum system is already at rest,
+  // and a fault owns the state until it is reset.
+  if (targetVent_ || state_ == RunState::Pulling || state_ == RunState::Holding) {
     release();
   } else if (state_ == RunState::Idle) {
     rest();
@@ -121,6 +162,7 @@ void VacuumSystem::fail(const char* code) {
   vent_->open();  // drive the valve open: the safe direction
   pidReset();
   output_ = 0.0f;
+  targetVent_ = false;
   faultCode_ = code ? code : "unknown";
   setState(RunState::Fault);
 }
@@ -130,24 +172,37 @@ void VacuumSystem::service(uint32_t nowMs) {
   // code is what `vacuum get` reports.
   if (faulted()) return;
 
-  const bool regulating = state_ == RunState::Pulling || state_ == RunState::Holding;
+  const bool running = state_ == RunState::Pulling || state_ == RunState::Holding;
 
-  // Regulating on a reading nobody trusts is how the loop runs away.
-  if (regulating && (!sensor_->present() || !sensor_->readingValid())) {
+  // Regulating on a reading nobody trusts is how the loop runs away. A target vent steers on the
+  // reading too; a release can finish on its timeout, so a lost sensor does not have to fault it.
+  if ((running || targetVent_) && (!sensor_->present() || !sensor_->readingValid())) {
     fail("sensor");
     return;
+  }
+
+  // VENT is one state with two endings. A target vent seals the chamber and hands it back to the
+  // run; a release waits for ambient or the timeout and goes to rest.
+  if (state_ == RunState::Venting) {
+    if (targetVent_) {
+      const float landing = cfg::CONTROL_VENT_TO_TARGET
+                                ? targetKpa_ + cfg::VENT_TARGET_LEAD_KPA
+                                : targetKpa_;
+      const bool arrived = currentKpa() <= landing;
+      const bool timedOut = (nowMs - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
+      if (!arrived && !timedOut) return;
+      endTargetVent();
+    } else {
+      if (released()) rest();
+      return;
+    }
   }
 
   // The two transitions that are facts about the chamber rather than orders: the target has
   // been reached, and the release is over. A latched fault owns the state, so neither can
   // fire while one is held.
   if (state_ == RunState::Pulling && atTarget()) setState(RunState::Holding);
-  if (state_ == RunState::Venting && vented()) {
-    rest();
-    return;
-  }
-
-  if (regulating) regulate(nowMs);
+  if (state_ == RunState::Pulling || state_ == RunState::Holding) regulate(nowMs);
 }
 
 // error is how far the chamber still is from the target, so positive means "still needs
