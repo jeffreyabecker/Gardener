@@ -221,11 +221,17 @@ class PressureDisplay : Component
 
   # A readout is two text components: the number fills the content rect, and the suffix sits in the
   # lower-right corner at the smallest face. The suffix is dropped when the box cannot fit both.
+  # A `border` draws the frame first, which is what lets a value sit in the layout without a label
+  # beside it: the box says what the number is.
   def draw(kpa)
     var u = screen.unit()
     var text = "--"
     if kpa != nil
       text = string.format("%." + str(u.decimals) + "f", kpa * u.per_kpa)
+    end
+    if self.border > 0
+      var f = self.frame()
+      screen.draw_rect(f[0], f[1], f[2], f[3])
     end
     self.number.family = self.family
     self.number.style = self.style
