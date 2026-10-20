@@ -39,7 +39,7 @@ class Browser : Page
   def rows()
     var out = []
     for name : self.names
-      out.push([nil, name])
+      out.push([routines.icon(name), name])
     end
     return out
   end

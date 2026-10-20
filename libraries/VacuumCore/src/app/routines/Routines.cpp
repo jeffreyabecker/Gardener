@@ -15,9 +15,14 @@ namespace gardener {
 namespace {
 
 // The routine object is held as a global as well as in the registry: Berry's collector only walks
-// what the VM can see, and a std::vector is not one of those.
+// what the VM can see, and a std::vector is not one of those. The icon, when there is one, is held
+// the same way under its own name.
 void globalKey(char* out, size_t size, size_t slot) {
   snprintf(out, size, "__routine%u", (unsigned int)slot);
+}
+
+void iconKey(char* out, size_t size, size_t slot) {
+  snprintf(out, size, "__routine%uicon", (unsigned int)slot);
 }
 
 // A routine has to look like one before it is kept, so a file that registers something else is
@@ -158,7 +163,8 @@ void Routines::reportError(const char* file, const char* what) {
 
 // --- the registry ----------------------------------------------------------
 
-bool Routines::registerRoutine(const char* name, const char* title, int objectIndex, bool hidden) {
+bool Routines::registerRoutine(const char* name, const char* title, int objectIndex, bool hidden,
+                               int iconIndex) {
   if (name == nullptr || title == nullptr || name[0] == '\0') return false;
 
   // The name is also the file the routine's values are kept in, so it has to be a plain word
@@ -202,11 +208,22 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
   entries_[slot].title = title;
   entries_[slot].hidden = hidden;
 
-  char key[16];
+  char key[24];
   globalKey(key, sizeof key, (size_t)slot);
   be_pushvalue(vm_, objectIndex);
   be_setglobal(vm_, key);
   be_pop(vm_, 1);  // be_setglobal leaves the value it stored on the stack
+
+  // A nil clears an icon the name had before, so a replacement file that registers none does not
+  // inherit the old one.
+  iconKey(key, sizeof key, (size_t)slot);
+  if (iconIndex > 0) {
+    be_pushvalue(vm_, iconIndex);
+  } else {
+    be_pushnil(vm_);
+  }
+  be_setglobal(vm_, key);
+  be_pop(vm_, 1);
   return true;
 }
 
@@ -282,6 +299,20 @@ bool Routines::pushObject(const char* name) const {
     const bool found = be_getglobal(vm_, key);
     // be_getglobal pushes a nil when the name is not there; callers only want a stack slot when the
     // object was found.
+    if (!found) be_pop(vm_, 1);
+    return found;
+  }
+  return false;
+}
+
+bool Routines::pushIcon(const char* name) const {
+  if (vm_ == nullptr || name == nullptr) return false;
+  for (size_t i = 0; i < entries_.size(); i++) {
+    if (entries_[i].name != name) continue;
+    char key[24];
+    iconKey(key, sizeof key, i);
+    // A routine that registered no icon has a nil here, which is exactly what its row should say.
+    const bool found = be_getglobal(vm_, key);
     if (!found) be_pop(vm_, 1);
     return found;
   }

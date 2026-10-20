@@ -410,7 +410,9 @@ The routine registered as **`default`** is the page. If no file registers one, t
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
 back — and a routine that registers without `activate()` or `poll()` is refused at load. A fourth
 argument to `routines.register` marks a routine **hidden**: it is registered and can be switched to,
-but it is left out of `routines.names()` and so is not one of the entries the browser draws.
+but it is left out of `routines.names()` and so is not one of the entries the browser draws. A fifth
+argument is the routine's icon, an `Icon` instance from `/modules/components.be` that the browser
+draws before the routine's name; a routine without one gets a text-only row.
 
 Four ship. `default` is the readout; a double Up opens `browser`, the list of routines to pick,
 which walks with Up and Down and switches with OK, and a double OK or double Down opens `system`,

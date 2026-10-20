@@ -273,13 +273,18 @@ the whole sequence malformed and `play` returns false.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, routine, hidden)` | `bool` | bind a routine to a name and a title. Called from a file's top level; `hidden` is optional and defaults to `false` |
+| `routines.register(name, title, routine, hidden, icon)` | `bool` | bind a routine to a name and a title. Called from a file's top level; `hidden` is optional and defaults to `false`, and `icon` is an optional `Icon` instance |
 | `routines.set_active(name)` | `bool` | switch pages. Called from inside a `poll` it applies when that call returns, so the VM is never re-entered |
 | `routines.names()` | list of strings | every registered name that is not hidden, in registration order |
 | `routines.get(name)` | the routine object, or `nil` | the registered instance, so a page can call a method such as `describe()` in its own frame |
+| `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon, for a list that draws one before the name |
 | `routines.has(name, method)` | `bool` | whether that routine has a function of that name |
 
-Registering the same name twice is one routine: the later file wins, and the replacement is logged.
+Registering the same name twice is one routine: the later file wins, and the replacement is logged,
+including its icon — a replacement that registers none does not keep the old one.
+
+An icon is optional: a routine without one, or one whose icon is `nil`, is a text-only row in the
+browser.
 
 There is no fixed number of routines: the registry grows as files register. What bounds it is the
 heap the files are loaded into, not a table, so a boot that runs out of memory while loading aborts

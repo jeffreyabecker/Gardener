@@ -8,13 +8,17 @@ namespace {
 
 int routinesRegister(bvm* vm) {
   const int top = be_top(vm);
-  if (top < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isinstance(vm, 3)) {
-    be_raise(vm, "type_error", "routines.register(name, title, routine, hidden)");
+  if (top < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isinstance(vm, 3) ||
+      (top >= 4 && !be_isbool(vm, 4) && !be_isnil(vm, 4)) ||
+      (top >= 5 && !be_isinstance(vm, 5) && !be_isnil(vm, 5))) {
+    be_raise(vm, "type_error", "routines.register(name, title, routine, hidden, icon)");
   }
   // The fourth argument is optional and defaults to false: a routine only leaves the browser's
-  // list when its file says so.
-  const bool hidden = top >= 4 && be_tobool(vm, 4);
-  const bool ok = gRoutines->registerRoutine(argText(vm, 1), argText(vm, 2), 3, hidden);
+  // list when its file says so. The fifth is the icon object the browser draws before the name.
+  const bool hidden = top >= 4 && be_isbool(vm, 4) && be_tobool(vm, 4);
+  const int iconIndex = top >= 5 && be_isinstance(vm, 5) ? 5 : 0;
+  const bool ok =
+      gRoutines->registerRoutine(argText(vm, 1), argText(vm, 2), 3, hidden, iconIndex);
   be_pushbool(vm, ok);
   be_return(vm);
 }
@@ -52,6 +56,15 @@ int routinesGet(bvm* vm) {
   be_return(vm);
 }
 
+// The icon the routine registered, or nil when it has none: the browser puts it before the name.
+int routinesIcon(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1) || gRoutines == nullptr ||
+      !gRoutines->pushIcon(argText(vm, 1))) {
+    be_return_nil(vm);
+  }
+  be_return(vm);
+}
+
 int routinesHas(bvm* vm) {
   if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
     be_raise(vm, "type_error", "routines.has(name, method)");
@@ -66,6 +79,7 @@ const bnfuncinfo kRoutinesLibrary[] = {
     {"set_active", routinesSetActive},
     {"names", routinesNames},
     {"get", routinesGet},
+    {"icon", routinesIcon},
     {"has", routinesHas},
     {nullptr, nullptr},
 };

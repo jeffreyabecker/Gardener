@@ -57,8 +57,10 @@ class Routines {
 
   // --- the `routines` module's surface, called from the bindings ---
   // `objectIndex` is the routine object's stack position in the calling native function; the
-  // runtime takes its own reference, so the value does not have to stay where it is.
-  bool registerRoutine(const char* name, const char* title, int objectIndex, bool hidden = false);
+  // runtime takes its own reference, so the value does not have to stay where it is. `iconIndex` is
+  // the same for an optional icon object, and 0 when the file registered none.
+  bool registerRoutine(const char* name, const char* title, int objectIndex, bool hidden = false,
+                       int iconIndex = 0);
   bool setActive(const char* name);
   size_t count() const { return entries_.size(); }
   const char* nameAt(size_t index) const;
@@ -72,6 +74,10 @@ class Routines {
   // the interpreter from a native call.
   bool pushObject(const char* name) const;
   bool hasMethod(const char* name, const char* method) const;
+
+  // The routine's icon, pushed onto the VM stack. False when the file registered none, so a list
+  // that draws icons can leave the row as text alone.
+  bool pushIcon(const char* name) const;
 
   // --- the `buttons` module's surface ---
   void pushPress(Button button, Press press);

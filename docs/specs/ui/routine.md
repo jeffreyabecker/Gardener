@@ -43,6 +43,12 @@ like any other, but it is left out of `routines.names()`, which is the list the 
 draws. The device's own pages — `default`, `browser` and `system` — register hidden: they are
 reached by gesture, not picked from the list.
 
+The fifth argument is the routine's **icon**: an instance of a class extending `Icon` from
+`/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
+The browser draws it at the left of the routine's row and shifts the name right by `icon.w + 2`. A
+routine that registers no icon, or passes `nil`, has a text-only row:
+`routines.register("mypage", "My page", MyPage(), false, MyIcon())`.
+
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark and nothing runs.
 
