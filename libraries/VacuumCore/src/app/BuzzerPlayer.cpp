@@ -84,6 +84,11 @@ bool BuzzerPlayer::play(const char* sequence, const char** badToken) {
   return true;
 }
 
+bool BuzzerPlayer::validate(const char* sequence, const char** badToken) {
+  std::vector<Note> notes;
+  return parse(sequence, notes, badToken);
+}
+
 void BuzzerPlayer::off() {
   notes_.clear();
   noteIndex_ = 0;

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/SafeReboot.h"
+#include "app/Tasks.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
 #include "app/storage/Settings.h"
@@ -215,11 +215,11 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
     return;
   }
 
-  // The reply has to leave the port before the reset takes it down. The safe path then releases the
-  // chamber before restarting, so a controller cannot skip that on its way out.
+  // The reply has to leave the port before the reset takes it down, so the restart is a queued
+  // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
-  delay(50);
-  safeReboot(app_);
+  const MachineCommand reboot{MachineCommand::Op::Reboot};
+  xQueueSend(machineCommandQueue, &reboot, 0);
 }
 
 }  // namespace

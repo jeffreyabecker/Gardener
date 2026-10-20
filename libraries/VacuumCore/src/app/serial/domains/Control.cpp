@@ -4,6 +4,7 @@
 
 #include "app/AppContext.h"
 #include "app/Ownership.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
 #include "core/Config.h"
@@ -100,10 +101,11 @@ void ControlDomain::release(Stream& io, const String& args) {
   }
 
   // Releasing control is the safe exit: the chamber goes onto the same release path as
-  // `vacuum stop`. A link that does not own the device has nothing to release, which is why this
-  // is idempotent.
+  // `vacuum stop`, which is the control task's to apply. A link that does not own the device has
+  // nothing to release, which is why this is idempotent.
   if (app_.ownership().release(Link::Serial)) {
-    app_.vacuum().stop();
+    const MachineCommand stop{MachineCommand::Op::Stop};
+    xQueueSend(machineCommandQueue, &stop, 0);
   }
   io.print("ok control=none\n");
 }

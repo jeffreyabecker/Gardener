@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "app/AppContext.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Domains.h"
@@ -139,9 +140,9 @@ void VacuumDomain::target(Stream& io, const String& args) {
     return;
   }
 
-  VacuumSystem& vacuum = app_.vacuum();
   if (token == "-") {
-    vacuum.clearTarget();
+    const MachineCommand clear{MachineCommand::Op::ClearTarget};
+    xQueueSend(machineCommandQueue, &clear, 0);
     io.print("ok target=-\n");
     return;
   }
@@ -164,9 +165,10 @@ void VacuumDomain::target(Stream& io, const String& args) {
     return;
   }
 
-  vacuum.setTarget(kpa);
+  const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
+  xQueueSend(machineCommandQueue, &set, 0);
   String reply = "ok target=";
-  reply += String(vacuum.targetKpa(), 1u);
+  reply += String(kpa, 1u);
   reply += '\n';
   io.print(reply);
 }
@@ -180,18 +182,19 @@ void VacuumDomain::start(Stream& io, const String& args) {
     return;
   }
 
-  VacuumSystem& vacuum = app_.vacuum();
-  if (!vacuum.start()) {
+  // The refusal is a pure read of the machine's target, fault and reading, so it is answered from
+  // a dirty read; a would-succeed start is queued and the reply is optimistic.
+  const char* refusal = app_.vacuum().startRefusal();
+  if (refusal != nullptr) {
     String reply = "err not_ready ";
-    reply += vacuum.startRefusal();
+    reply += refusal;
     reply += '\n';
     io.print(reply);
     return;
   }
-  String reply = "ok state=";
-  reply += runStateName(vacuum.runState());
-  reply += '\n';
-  io.print(reply);
+  const MachineCommand start{MachineCommand::Op::Start};
+  xQueueSend(machineCommandQueue, &start, 0);
+  io.print("ok state=PULL\n");
 }
 
 void VacuumDomain::stop(Stream& io, const String& args) {
@@ -203,12 +206,9 @@ void VacuumDomain::stop(Stream& io, const String& args) {
     return;
   }
 
-  VacuumSystem& vacuum = app_.vacuum();
-  vacuum.stop();
-  String reply = "ok state=";
-  reply += runStateName(vacuum.runState());
-  reply += '\n';
-  io.print(reply);
+  const MachineCommand stop{MachineCommand::Op::Stop};
+  xQueueSend(machineCommandQueue, &stop, 0);
+  io.print("ok state=VENT\n");
 }
 
 void VacuumDomain::reset(Stream& io, const String& args) {
@@ -220,12 +220,9 @@ void VacuumDomain::reset(Stream& io, const String& args) {
     return;
   }
 
-  VacuumSystem& vacuum = app_.vacuum();
-  vacuum.resetFault();
-  String reply = "ok state=";
-  reply += runStateName(vacuum.runState());
-  reply += '\n';
-  io.print(reply);
+  const MachineCommand reset{MachineCommand::Op::ResetFault};
+  xQueueSend(machineCommandQueue, &reset, 0);
+  io.print("ok state=IDLE\n");
 }
 
 }  // namespace

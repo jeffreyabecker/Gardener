@@ -117,23 +117,23 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## SER — Serial domains
 
-- [ ] SER-001 Confirm `SerialLink::poll` keeps its non-blocking `available()` loop and the
+- [x] SER-001 Confirm `SerialLink::poll` keeps its non-blocking `available()` loop and the
   `DomainList` dispatcher verbatim (no change expected).
-- [ ] SER-002 `control release`: keep `ownership.release(Serial)` direct; replace the inline
+- [x] SER-002 `control release`: keep `ownership.release(Serial)` direct; replace the inline
   `vacuum.stop()` with an enqueued `MachineCommand::Stop`.
-- [ ] SER-003 `device reboot`: write the `ok\n` reply first, then enqueue `MachineCommand::Reboot`
+- [x] SER-003 `device reboot`: write the `ok\n` reply first, then enqueue `MachineCommand::Reboot`
   instead of calling `safeReboot()` inline.
-- [ ] SER-004 `vacuum target`: enqueue `SetTarget` / `ClearTarget`; build the reply from the parsed
+- [x] SER-004 `vacuum target`: enqueue `SetTarget` / `ClearTarget`; build the reply from the parsed
   argument (refusals for range still answered from the parse, not the machine).
-- [ ] SER-005 `vacuum start`: compute the refusal from a dirty `startRefusal()` read; enqueue
+- [x] SER-005 `vacuum start`: compute the refusal from a dirty `startRefusal()` read; enqueue
   `Start` only when it would succeed; reply optimistically.
-- [ ] SER-006 `vacuum stop`: enqueue `Stop`; reply `ok state=VENT` optimistically.
-- [ ] SER-007 `vacuum reset`: enqueue `ResetFault`; reply `ok state=IDLE` optimistically.
-- [ ] SER-008 `buzzer tone`: enqueue `Tone` (range check stays in the domain).
-- [ ] SER-009 `buzzer play`: call the pure static `BuzzerPlayer::parse(text, notes, &badToken)`
+- [x] SER-006 `vacuum stop`: enqueue `Stop`; reply `ok state=VENT` optimistically.
+- [x] SER-007 `vacuum reset`: enqueue `ResetFault`; reply `ok state=IDLE` optimistically.
+- [x] SER-008 `buzzer tone`: enqueue `Tone` (range check stays in the domain).
+- [x] SER-009 `buzzer play`: call the pure static `BuzzerPlayer::parse(text, notes, &badToken)`
   for the reply; enqueue `Play` with the raw text (control re-parses inside `play()`).
-- [ ] SER-010 `buzzer off`: enqueue `Off`.
-- [ ] SER-011 Confirm `control get`, `device get`, `vacuum get`, `buzzer get` and `fs *` are
+- [x] SER-010 `buzzer off`: enqueue `Off`.
+- [x] SER-011 Confirm `control get`, `device get`, `vacuum get`, `buzzer get` and `fs *` are
   unchanged — reads are now dirty but the grammar and field order are identical.
 
 ## BLE — BLE link loop side

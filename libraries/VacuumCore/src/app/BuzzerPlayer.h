@@ -28,6 +28,11 @@ class BuzzerPlayer {
   bool play(const char* sequence, const char** badToken = nullptr);
   void off();
 
+  // True when `sequence` parses as a note list, without starting it. The wire answers a refused
+  // sequence with `badToken` at the first token that did not parse; the callers that enqueue a
+  // play use this to build that reply, then the control task parses again inside play().
+  static bool validate(const char* sequence, const char** badToken = nullptr);
+
   bool playing() const { return playing_; }
   bool sounding() const { return buzzer_.sounding(); }
   uint16_t frequencyHz() const { return buzzer_.frequencyHz(); }

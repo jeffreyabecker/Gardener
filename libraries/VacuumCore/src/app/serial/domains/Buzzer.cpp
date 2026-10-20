@@ -5,6 +5,7 @@
 
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
+#include "app/Tasks.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
 #include "core/Config.h"
@@ -150,7 +151,8 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
 
-  app_.buzzer().tone((uint16_t)hz, ms);
+  const MachineCommand tone{MachineCommand::Op::Tone, hz, ms};
+  xQueueSend(machineCommandQueue, &tone, 0);
 
   String reply = "ok tone=";
   reply += String((uint32_t)hz);
@@ -166,9 +168,10 @@ void BuzzerDomain::play(Stream& io, const String& args) {
     return;
   }
 
-  // The sequence is the rest of the line: no quotes, no escapes.
+  // The sequence is the rest of the line: no quotes, no escapes. It is checked here for the
+  // reply, then sent raw — the control task parses it again inside play().
   const char* badToken = nullptr;
-  if (!app_.buzzer().play(args.c_str(), &badToken)) {
+  if (!BuzzerPlayer::validate(args.c_str(), &badToken)) {
     String reply = "err bad_argument";
     if (badToken && *badToken) {
       reply += ' ';
@@ -179,6 +182,9 @@ void BuzzerDomain::play(Stream& io, const String& args) {
     return;
   }
 
+  MachineCommand play{MachineCommand::Op::Play};
+  play.text = args;
+  xQueueSend(machineCommandQueue, &play, 0);
   io.print("ok playing=on\n");
 }
 
@@ -191,7 +197,8 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
     return;
   }
 
-  app_.buzzer().off();
+  const MachineCommand off{MachineCommand::Op::Off};
+  xQueueSend(machineCommandQueue, &off, 0);
   io.print("ok playing=off\n");
 }
 
