@@ -100,6 +100,8 @@ interleaved output is an expected, accepted outcome — logs are not worth an IP
   the BLE loop-side change, the log flag, and LittleFS single-owner.
 - [panel-vm-task.md](panel-vm-task.md) — the panel/VM task: page selection, the display, and the
   `Routines`/`Bindings` module-by-module change.
+- [backlog.md](backlog.md) — the implementation backlog: every change above, broken into
+  individually completable tasks, in build order.
 
 ## Behaviour notes (deliberate, small divergences)
 
