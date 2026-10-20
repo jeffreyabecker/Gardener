@@ -109,7 +109,7 @@ class Ramped : Page
     self.rest = 45
     self.chrome = RampedChrome(self)
 
-    self.on("ok", "double", / -> self.open_editor(Settings("ramped")))
+    self.on("ok", "double", / -> self.edit())
     self.on("ok", nil, / -> self.ok())
     self.on("back", "short", / -> self.pause())
   end
@@ -337,19 +337,45 @@ class Ramped : Page
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
+    # The settings editor owns the panel while it is open; the ramp does not advance underneath it,
+    # and the restart on close is what puts the clock right.
+    if self.editor != nil
+      return
+    end
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
     self.advance(now)
   end
 
-  # A closed editor has re-read the settings. The targets were fixed when the run started, so a
-  # running ramp keeps them; a ready page follows the new start pressure.
+  # Settings are entered with the chamber released, like a pause: a run that was under way starts
+  # over at the first set when the editor closes, so it must not keep working at the old set
+  # underneath it. An editor that refuses to open leaves the run alone.
+  def edit()
+    if !self.open_editor(Settings("ramped"))
+      return false
+    end
+    if self.phase != "ready"
+      vacuum.stop()
+    end
+    return true
+  end
+
+  # The edit was to the file, so the file is the source again even if this activation was given a
+  # set. A run under way starts over at the first set, because the ladder is computed once from the
+  # settings a run begins with; a ready page only takes the new start pressure.
   def on_editor_closed()
     self.read_settings(nil)
     if self.phase == "ready"
       self.target = self.initial
       vacuum.target(self.initial)
+      return
+    end
+    # Settings the ladder cannot be built from stop the run rather than resume one they do not
+    # describe.
+    if !self.begin()
+      vacuum.stop()
+      self.abandon()
     end
   end
 

@@ -81,7 +81,7 @@ class Interval : Page
     self.resume = "immediately"
     self.chrome = IntervalChrome(self)
 
-    self.on("ok", "double", / -> self.open_editor(Settings("interval")))
+    self.on("ok", "double", / -> self.edit())
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
   end
 
@@ -243,20 +243,47 @@ class Interval : Page
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
+    # The settings editor owns the panel while it is open; the cycle does not advance underneath it,
+    # and the restart on close is what puts the clock right.
+    if self.editor != nil
+      return
+    end
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
     self.advance(now)
   end
 
-  # A closed editor has re-read the settings. The rest hold has its own target; only the work
-  # target follows an edit made mid-cycle. The edit was to the file, so the file is the source
-  # again even if this activation was given a set.
+  # Settings are entered with the chamber released: a run that was under way restarts at the new
+  # values when the editor closes, so it must not keep working at the old ones underneath it. An
+  # editor that refuses to open leaves the run alone.
+  def edit()
+    if !self.open_editor(Settings("interval"))
+      return false
+    end
+    if self.phase != "ready"
+      vacuum.stop()
+    end
+    return true
+  end
+
+  # The edit was to the file, so the file is the source again even if this activation was given a
+  # set. A cycle that was under way starts over at the new values; a ready page only takes the new
+  # target, because closing an editor is not a start.
   def on_editor_closed()
     self.read_settings(nil)
-    if self.phase == "ready" || self.phase == "approach" || self.phase == "work"
+    if self.phase == "ready"
       vacuum.target(self.target)
+      return
     end
+    self.restart()
+  end
+
+  # Back to the approach with the new target. The machine is pulling, holding or venting already,
+  # so the target change is the start and the chamber need not be released first.
+  def restart()
+    self.phase = "ready"
+    self.begin()
   end
 
   # --- drawing -------------------------------------------------------------
