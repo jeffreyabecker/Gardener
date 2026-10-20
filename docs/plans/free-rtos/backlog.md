@@ -259,13 +259,13 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## VER — Verification
 
-- [ ] VER-001 `python scripts/arduino.py --task build` clean at the end of every epic.
-- [ ] VER-002 Grep every `context_.<thing>().` mutation and confirm each runs on the owning task
+- [x] VER-001 `python scripts/arduino.py --task build` clean at the end of every epic.
+- [x] VER-002 Grep every `context_.<thing>().` mutation and confirm each runs on the owning task
   (no cross-task writer).
-- [ ] VER-003 Review the layer rule: no `hal/` → `app/` include introduced by the new files.
-- [ ] VER-004 Confirm LittleFS (`Storage`) and the `Wire1`/SH1106 device are reached from exactly
+- [x] VER-003 Review the layer rule: no `hal/` → `app/` include introduced by the new files.
+- [x] VER-004 Confirm LittleFS (`Storage`) and the `Wire1`/SH1106 device are reached from exactly
   one task each (interface and panel respectively).
-- [ ] VER-005 Confirm no runtime log flag remains: every consumer holds a `Logger`, and the only
+- [x] VER-005 Confirm no runtime log flag remains: every consumer holds a `Logger`, and the only
   writer of the persisted `logEnabled` setting is the interface task (via `device set log`).
 - [ ] VER-006 Flash the sketch and confirm the serial contract over USB CDC, then a BLE
   read/write, then a routine exercising `store.*` and the `vacuum.*` bindings.
