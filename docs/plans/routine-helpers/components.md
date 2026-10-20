@@ -1,8 +1,8 @@
 # Components: the drawing primitives
 
-Part of the routine-helpers plan — see [_index.md](./_index.md) for the whole effort. A routine's
-[Chrome](./chrome.md) composes these to build its readout; the components own the box math, the
-font choice and the pressure formatting.
+Part of the routine-helpers plan — see [_index.md](./_index.md) for the whole effort. A readout
+page composes these to draw its face; the components own the box math, the font choice and the
+pressure formatting.
 
 They live in `firmware/gardener/data/modules/components.be`.
 
@@ -140,10 +140,94 @@ Draws an isosceles triangle inscribed in the content rect, apex toward `directio
 opposite edge. `style` `empty` draws the outline (`screen.draw_triangle`); `filled` fills it
 (`screen.draw_filltriangle`).
 
+## `Icon` — a glyph at a point
+
+An icon is a lighter primitive than a `Component`: it has an intrinsic size and draws itself at a
+point, with no box to fit into.
+
+```berry
+class Icon
+  var w
+  var h
+
+  def init(w, h)
+    self.w = w
+    self.h = h
+  end
+
+  def draw(x, y) end    # draws within (x, y, x + w, y + h)
+end
+```
+
+Concrete icons are subclasses that implement `draw(x, y)` with the low-level `screen.draw_*`
+calls — an arrow is a filled `screen.draw_triangle`, a bullet a filled circle — so an icon is a
+named glyph the way a face is a named font. An icon draws as-is: it is not fitted, centred or
+inverted, because a glyph is the size it is.
+
+## Composing a readout
+
+A readout page holds its components as fields and feeds them state in `draw_page()` — there is no
+separate chrome object. Component fields are page fields, so where a role shares a name with a
+state field the component gets a distinct one (`target_value` below, because `target` is already
+the page's kPa target).
+
+```berry
+# in static.be
+class Static : Page
+  var header
+  var readout
+  var target_label
+  var target_value
+  var status
+  var hint
+
+  def init()
+    super(self).init()
+
+    self.header = DynamicText()
+    self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
+
+    self.readout = PressureDisplay()
+    self.readout.x = 0; self.readout.y = 12; self.readout.w = 116; self.readout.h = 24
+    self.readout.show_units = false
+
+    self.target_label = FixedText()
+    self.target_label.value = "TGT"
+    self.target_label.x = 0; self.target_label.y = 40; self.target_label.w = 40; self.target_label.h = 8
+
+    self.target_value = PressureDisplay()
+    self.target_value.x = 40; self.target_value.y = 40; self.target_value.w = 76; self.target_value.h = 8
+    self.target_value.show_units = true
+
+    self.status = DynamicText()
+    self.status.x = 0; self.status.y = 48; self.status.w = 116; self.status.h = 8
+
+    self.hint = DynamicText()
+    self.hint.x = 0; self.hint.y = 56; self.hint.w = 116; self.hint.h = 8
+  end
+
+  def draw_page()
+    var s = vacuum.state()
+    self.header.draw(self.phase_name())
+    self.readout.draw(s.sensor_ok ? s.kpa : nil)
+    self.target_label.draw()
+    self.target_value.draw(self.target)
+    self.status.draw(self.status_text())
+    self.hint.draw(self.hint_text())
+  end
+end
+```
+
+A routine that wants something else writes its own `draw_page()`; the components are the
+vocabulary, not the frame.
+
 ## Notes
 
 - No clipping: nothing on the panel clips; a component's box is a contract it keeps by measuring,
-  not by clipping. A component sized to overflow simply draws past its box, so a chrome sets boxes
+  not by clipping. A component sized to overflow simply draws past its box, so a page sets boxes
   the content will fit.
 - Components must not be constructed at a module's top level: `/modules` loads in no particular
-  order. A page constructs its chrome — and the chrome its components — in `init()`.
+  order. A page constructs its components in `init()`.
+- The overlay owns its corners: the battery icon (top right), the state icon (`x` 64–78,
+  `y` 0–14) and the connection icons (right edge from `x` 116) are drawn over every flush; a
+  page must not size a component across them.

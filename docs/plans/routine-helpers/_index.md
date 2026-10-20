@@ -1,4 +1,4 @@
-# Berry page abstractions: `Page` lifecycle + `Chrome` display (and a state-machine comparison)
+# Berry page abstractions: `Page`, `Component` and `List` (and a state-machine comparison)
 
 ## Problem
 
@@ -12,8 +12,13 @@ shared class there works.
 
 The readout pages (`default`, `static`) also redraw the same layout by hand — header line, big
 number, `TGT …` line, and (static) status/hint lines — so there is a second, higher-level
-abstraction to make: a display object that wholly owns that layout. That piece is its own
-sub-plan, [chrome.md](./chrome.md).
+abstraction to make: a display framework of drawing components a page composes. That piece is its
+own sub-plan, [components.md](./components.md).
+
+The list pages (`browser`, `system`) and the settings editor each hand-roll a menu: a selected
+index walked with Up/Down, wrapped at the ends, drawn with one highlighted row and a scroll window.
+That is three copies of the same three rules, which a stateful `List` widget makes one — its own
+sub-plan, [list.md](./list.md).
 
 Separately, `static.be`'s `advance()` is the only phase machine in the tree. The request asked
 whether a `StateMachine` helper would simplify it; per the project's "one caller means no
@@ -24,26 +29,27 @@ and compare, keeping the simpler.
 
 1. **Extract a `Page` base class** into a new module `firmware/gardener/data/modules/page.be`
    and have all four routines extend it (chosen scope: full extraction).
-2. **Extract a `Chrome` component framework** — a `Chrome` in
-   `firmware/gardener/data/modules/chrome.be` that composes drawing components (`FixedText`,
-   `DynamicText`, `PressureDisplay`, `ProgressBar`, `Scrollbar`, `Triangle` in `components.be`),
-   so `default` and `static` reduce `draw_page()` to `self.chrome.draw(vacuum.state())` (readout
-   pages only; `browser` and `system` keep their list layouts). Its own sub-plans:
-   [chrome.md](./chrome.md) and [components.md](./components.md).
-3. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
+2. **Extract a `Component` display framework** — drawing components (`FixedText`, `DynamicText`,
+   `PressureDisplay`, `ProgressBar`, `Scrollbar`, `Triangle`) plus an `Icon` base class for
+   intrinsic-size glyphs, in `firmware/gardener/data/modules/components.be`. A readout page
+   composes them as fields and feeds them state in `draw_page()`; `default` and `static` adopt it,
+   and `List` rows carry icons. Its own sub-plan: [components.md](./components.md).
+3. **Extract a stateful `List` widget** into `firmware/gardener/data/modules/list.be` — it owns a
+   selected index, the Up/Down wrap, the scroll window and the highlight, adopted by `browser`,
+   `system` and the `settings` editor. Its own sub-plan: [list.md](./list.md).
+4. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
    `advance()`, and keep whichever is genuinely simpler (expectation: the hand-rolled version
    wins; the loser is deleted, not deprecated).
 
 ## The `Page` base class (`modules/page.be`)
 
-`Page` owns the shared skeleton; pages override only what differs. Defaults keep every hook a
-no-op so a page implements only what it uses.
+`Page` owns the shared lifecycle skeleton only — the button drain, the poll cadence, the draw
+wrapper and the editor delegation. It knows nothing about units or fonts: pressure formatting
+lives in `PressureDisplay`, and the one page that still formats its own text (`system`) keeps the
+`unit`/`fmt` fields it already has.
 
-- fields: `last_draw`, `unit`, `fmt`, `editor`
+- fields: `last_draw`, `editor`
 - `init()` — zero the shared fields
-- `load_unit()` — `self.unit = screen.unit(); self.fmt = "%." + str(self.unit.decimals) + "f"`
-- `number(kpa)` — `string.format(self.fmt, kpa * self.unit.per_kpa)`
-- `value(kpa)` — `self.number(kpa) + " " + self.unit.suffix` (the labelled form for a target line)
 - `take_events()` — the drain loop, calling `self.handle(ev)`; returns whether anything acted
 - `handle(ev)` — routes to the settings editor when `self.editor != nil`, else `handle_page(ev)`;
   on editor close sets `editor = nil` and calls `on_editor_closed()`
@@ -57,31 +63,43 @@ no-op so a page implements only what it uses.
   so behaviour is identical)
 - `tick(now)` — no-op default (static overrides it for the stopped-notice + `advance()`)
 
-## The `Chrome` display class
+## The `Component` display framework
 
 The readout display is its own piece: [components.md](./components.md) specifies the drawing
 primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/`Scrollbar`/
-`Triangle`) and the font mapping; [chrome.md](./chrome.md) specifies how a routine's `Chrome`
-composes them.
+`Triangle`, and the lighter `Icon` glyph), the font mapping, and how a readout page composes them
+into its `draw_page()`.
+
+## The `List` widget
+
+The selectable menu is its own piece: [list.md](./list.md) specifies the stateful `List` —
+selection, wrap, scroll window, highlight and per-row icons — and how `browser`, `system` and
+`settings` adopt it.
 
 ## Per-page changes
 
 - **default.be** `Readout : Page` — keep `restore()`/`start()`; drop `unit`/`fmt`/`last_draw`,
-  `take_events`, `poll`, `draw`; rename `handle` → `handle_page`; drop `text(kpa)` in favour of
-  inherited `number`/`value`. Rendering moves to `ReadoutChrome` — see [chrome.md](./chrome.md).
+  `take_events`, `poll`, `draw`, `text(kpa)`; rename `handle` → `handle_page`. Rendering becomes
+  component fields fed in `draw_page()` — a `PressureDisplay` for the big number, a `FixedText` +
+  `PressureDisplay` for the target line, a `DynamicText` for the header — see
+  [components.md](./components.md).
 - **static.be** `Static : Page` — keep the cycle (`begin`/`advance`/`abandon`), settings and
   button logic; drop `unit`/`fmt`/`last_draw`/`editor`, `take_events`, `poll`, `draw`, `number`,
   `text`, `open_settings`; rename `handle` → `handle_page` (editor branch removed), override
   `tick(now)` (stopped + advance), override `on_editor_closed()` (re-read settings + retarget).
-  Rendering moves to `StaticChrome` — see [chrome.md](./chrome.md).
-- **browser.be** `Browser : Page` — keep `names`/`selected`/`rows`; drop `last_draw`/`editor`,
-  `take_events`, `poll`, `draw`, `open_settings`; rename `handle_list` → `handle_page` (editor
-  branch removed), `draw_list` → `draw_page`. No Chrome — it is a list layout.
-- **system.be** `System : Page` — keep its inline (`editing` boolean) editor and all logic; drop
-  `unit`/`fmt`/`last_draw`, `take_events`, `poll`, `draw`; rename `handle` → `handle_page`; move
-  draw body to `draw_page()`; `read()` uses `load_unit()`; replace `text(kpa)` with `number(kpa)`.
-  No Chrome — it is a list/edit layout.
-- **settings.be** — untouched: it is a widget that draws into the page's buffer, not a page.
+  Rendering becomes component fields fed in `draw_page()` — a `PressureDisplay`, a `FixedText` +
+  `PressureDisplay` target line, and `DynamicText`s for status/hint — see
+  [components.md](./components.md).
+- **browser.be** `Browser : Page` — keep `names`; drop `last_draw`/`editor`, `take_events`,
+  `poll`, `draw`, `open_settings`, `selected`/`rows`/`first`/`handle_list`/`draw_list`; rename
+  `handle` → `handle_page`. The list becomes a `List` set with `routines.names()` on activate;
+  Up/Down are `move(±1)`, OK/Back stay the page's — see [list.md](./list.md).
+- **system.be** `System : Page` — keep its inline (`editing` boolean) editor, its own `unit`/`fmt`
+  and all formatting; drop `last_draw`, `take_events`, `poll`, `draw`, the hardcoded three-row
+  wrap; rename `handle` → `handle_page`. The three rows become a `List` with `visible = 3`; the
+  edit face is unchanged — see [list.md](./list.md).
+- **settings.be** — adopt a `List` for its rows and `index`; keep `open()`/`close()`, `describe()`,
+  the store reads/writes and the two-stage edit face — see [list.md](./list.md).
 
 ## State-machine prototype (compare, then keep or discard)
 
@@ -98,12 +116,13 @@ version**; the prototype is deleted unless it is clearly simpler.
 
 ## Docs
 
-- `docs/specs/routines.md` — "Shared code in `/modules`": document `page.be`/`Page`,
-  `components.be`/`Component` and `chrome.be`/`Chrome` beside `settings.be`; a routine may extend
-  `Page` to inherit the skeleton and compose `Chrome` components to own its readout. Keep the
-  `activate()`/`poll(now)` contract unchanged (a page still satisfies it, via the base).
+- `docs/specs/ui/routine.md` — "Shared code in `/modules`": document `page.be`/`Page`,
+  `components.be`/`Component` and `list.be`/`List` beside `settings.be`; a routine may extend
+  `Page` to inherit the skeleton, compose components to own its readout, and hold a `List` for a
+  menu. Keep the `activate()`/`poll(now)` contract unchanged (a page still satisfies it, via the
+  base).
 - `README.md` — the "Shared Berry code lives in `/modules/`" paragraph: stop calling the editor
-  "the one module"; mention the page-skeleton and display modules.
+  "the one module"; mention the page-skeleton, display and list modules.
 
 ## Validation
 
@@ -115,7 +134,7 @@ version**; the prototype is deleted unless it is clearly simpler.
 
 ## Notes
 
-- Load order within `/modules/` is unspecified; `page.be`, `components.be`, `chrome.be` and
+- Load order within `/modules/` is unspecified; `page.be`, `components.be`, `list.be` and
   `statemachine.be` define classes only at top level, and `Page.open_settings()` constructs
   `Settings` at call time, so no module depends on another at load.
 - Behaviour must be identical after the refactor: the `poll` restructure preserves `static`'s
