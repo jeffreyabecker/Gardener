@@ -17,9 +17,10 @@ The parts, what they cost and where to buy them, are in
 [docs/guides/poc-parts.md](./docs/guides/poc-parts.md).
 
 The controller decides everything: the display is a readout, and the one local control is holding
-Back for 3 s, which stops and vents. What the device owns is what has to happen when nobody is
-watching — pulling to the target and venting the chamber through one path on stop, abort, link
-loss, fault, or that hold.
+Back for 3 s, which stops and vents and keeps the valve open while Back is held — an OK pressed
+during that hold gives the panel back to the readout. What the device owns is what has to happen
+when nobody is watching — pulling to the target and venting the chamber through one path on stop,
+abort, link loss, fault, or that hold.
 
 ## Units
 
@@ -251,10 +252,11 @@ which link holds control — a DE-9 face-on for serial, the Bluetooth rune for a
 state, the battery and the live connections down the right edge. The disconnected page is the boot
 screen, and boot is safe: pump off, valve open, `IDLE`.
 
-The four keys are read on change interrupts and debounced; a press is `short`, `long` or `double`,
-and holding Back for 3 s stops and vents while Back+OK for 5 s releases the chamber and restarts.
-That is the whole of the device's own key handling — the rest belongs to the page showing. See
-[docs/specs/gestures.md](./docs/specs/gestures.md).
+The four keys are read on change interrupts and debounced; a press is `short`, `long` or `double`.
+Holding Back for 3 s stops and vents, keeping the valve open while Back is held, and an OK pressed
+during that hold gives the panel back to the readout; Back+OK for 5 s releases the chamber and
+restarts. That is the whole of the device's own key handling — the rest belongs to the page showing.
+See [docs/specs/gestures.md](./docs/specs/gestures.md).
 
 ### Files on the device
 

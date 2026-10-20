@@ -55,9 +55,9 @@ itself rather than a call answering it; its fields are listed under `describe()`
 Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
 
 `vacuum.stopped()` is the one event the page cannot cause itself. Holding Back for 3 s is the
-device's own stop: it stops the pump, vents, and on the disconnected page gives the panel back to
-`default`. It is a one-shot, not a level, so a page with a phase machine resets it on the event
-rather than watching for `IDLE`:
+device's own stop: it stops the pump, vents, and keeps the valve open while Back is held. It is a
+one-shot, not a level, so a page with a phase machine resets it on the event rather than watching
+for `IDLE`:
 
 ```berry
 def poll(now)
@@ -68,11 +68,12 @@ def poll(now)
 end
 ```
 
-A page that is showing when the hold fires does not get to take it: the switch to `default` comes
-first and drops the notice, and a routine's own `activate()` is what puts its state right when it is
-returned to. The notice is what a hold fired while a controller owned the device leaves behind — the
-page it finds on the next `poll` when control comes back. The release still arrives as a `long` Back
-press afterwards.
+A page that is showing when the hold fires takes the notice and abandons its run: the hold no
+longer switches pages, so the page stays and its own `abandon()` is what puts it right. An OK
+pressed while Back is still held — short, long or double — is the way out: `default` takes the
+panel, and the switch drops any notice the page never took. The notice a hold fired while a
+controller owned the device leaves behind is what the page finds on the next `poll` when control
+comes back. The release still arrives as a `long` Back press afterwards.
 
 `vacuum.clamp(kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
@@ -229,12 +230,13 @@ def poll(now)
 end
 ```
 
-Holding **Back for 3 s** is the device's own stop and the page's way out: it stops the pump, vents,
-and hands the panel back to `default`. No routine can suppress it. Whichever routine was showing is
-no longer polled, and `default` is activated again — the same object that was registered at boot, so
-it keeps whatever state it had. Nothing is re-read from disk; a routine that was left can be brought
-back with `routines.set_active()`. The release arrives as a `long` Back on whichever page is showing
-by then.
+Holding **Back for 3 s** is the device's own stop: it stops the pump, vents, and keeps the valve
+open while Back is held. No routine can suppress it, and the page showing takes the
+`vacuum.stopped()` notice and abandons its run. An **OK pressed while Back is held** — short, long
+or double — hands the panel back to `default`. The switch activates `default` again — the same
+object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
+disk; a routine that was left can be brought back with `routines.set_active()`. The release arrives
+as a `long` Back on whichever page is showing by then.
 
 Holding **Back and OK together for 5 s** is the local reset: it releases the chamber, restarts, and
 clears an ownership record left held by a controller. It works from every page and link state, and a

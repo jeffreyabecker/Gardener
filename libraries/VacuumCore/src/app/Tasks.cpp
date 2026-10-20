@@ -19,6 +19,7 @@ QueueHandle_t machineCommandQueue = nullptr;
 QueueHandle_t storeQueue = nullptr;
 QueueHandle_t buttonEventQueue = nullptr;
 volatile uint32_t stopSeq = 0;
+volatile uint32_t goHomeSeq = 0;
 volatile bool serialConnected = false;
 volatile bool bleConnected = false;
 
@@ -106,11 +107,18 @@ void drainMachineCommands(ControlState& state) {
 }
 
 // The keys, settled and classified here: one ButtonEvent per completed press. The panel task
-// consumes the queue.
+// consumes the queue. OK while the Back hold vents is not a page action: on the disconnected page it
+// is the way home, so it is stolen here rather than queued. With a controller owning there is no
+// page to go home to, so the press stays the routine-less log line it always was.
 void buttonsTick(ControlState& state) {
+  const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
   for (Button button : PressOrder) {
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
+    if (backHeld && !state.context.ownership().held() && button == Button::Ok) {
+      goHomeSeq++;
+      continue;
+    }
     const ButtonEvent event{button, press};
     if (xQueueSend(buttonEventQueue, &event, 0) != pdTRUE) {
       state.logger->warn("buttons: queue full, dropping a press");
@@ -119,20 +127,23 @@ void buttonsTick(ControlState& state) {
 }
 
 // Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
-// and the latch keeps it to one stop per hold. Releasing it arms the next one. The stop is also a
-// stopSeq bump: that is how the panel's takeStopped() learns of it, and how the disconnected page
-// knows to give the panel back to `default`.
+// and the vent stays open as long as the key is down. The latch keeps the stopSeq bump — the
+// panel's takeStopped() notice — to one per hold, while the stop itself is re-asserted every tick so
+// a start or target command that sneaks in while Back is held is undone in the same tick. Releasing
+// the key arms the next one and leaves the chamber vented.
 void watchBackHold(ControlState& state) {
   const uint32_t held = state.context.buttons().heldMs(Button::Back);
   if (held == 0) {
     state.backStopFired = false;
     return;
   }
-  if (state.backStopFired || held < BackStopMs) return;
-  state.backStopFired = true;
-  state.logger->warn("app: back held, stopping and venting");
+  if (held < BackStopMs) return;
+  if (!state.backStopFired) {
+    state.backStopFired = true;
+    state.logger->warn("app: back held, venting");
+    stopSeq++;
+  }
   state.context.vacuum().stop();
-  stopSeq++;
 }
 
 // Both keys together are the local reset. It is what clears a record an absent controller left

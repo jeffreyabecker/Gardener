@@ -41,9 +41,13 @@ extern QueueHandle_t storeQueue;
 extern QueueHandle_t buttonEventQueue;
 
 // Shared scalars, one writer each. stopSeq is the control task's counter, incremented each time the
-// Back hold fires; the panel's takeStopped() and its stop watch compare against it, and both read it
-// dirty.
+// Back hold fires; the panel's takeStopped() compares against it, and it reads dirty.
 extern volatile uint32_t stopSeq;
+
+// goHomeSeq is the control task's counter for the OK pressed while the Back hold vents: the
+// disconnected page watches it and hands the panel back to `default` on a bump. One writer, read
+// dirty.
+extern volatile uint32_t goHomeSeq;
 
 // Connection presence, one writer (the interface owner) and read dirty by the panel's overlay.
 extern volatile bool serialConnected;

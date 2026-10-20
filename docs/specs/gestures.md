@@ -28,13 +28,15 @@ These belong to the device. A page must not give them another meaning, and canno
 
 | Gesture | What happens | Where |
 | --- | --- | --- |
-| **Hold Back for 3 s** | stop the pump and vent, and give the panel back to `default` | every page, with or without a controller; the panel goes home on the disconnected pages |
+| **Hold Back for 3 s** | stop the pump and vent, holding the valve open as long as Back is held | every page, with or without a controller |
+| **OK while Back is held** | give the panel back to `default` | the disconnected pages |
 | **Hold Back+OK for 5 s** | stop, vent up to 2 s, restart, and clear ownership | every page, every link state |
 
-The Back hold fires at the 3 s mark while the key is still down; the release that follows arrives at
-the page showing by then as a `long` Back, which a page that does not use it can ignore. On the
-disconnected page the same hold is the way out, so the page being left does not have to handle it:
-the hold stops, vents, and `default` takes the panel.
+The Back hold fires at the 3 s mark while the key is still down, and the vent it starts stays open
+for as long as the key is held. The release that follows arrives at the page showing by then as a
+`long` Back, which a page that does not use it can ignore; the page stays where it was, the chamber
+vented and the run it was on abandoned. A short, long or double OK pressed while Back is still held
+is the way out on the disconnected pages: `default` takes the panel.
 
 **Back+OK is the local reset.** It is the only way to clear an ownership record left held by a
 controller that dropped while owning, and it runs whatever a controller is doing. The Back hold may
@@ -45,16 +47,18 @@ is harmless.
 routine never has to know about the pump. It is also why `poll` must return — a poll that never
 returns blocks the loop that watches the hold.
 
-**Hold Back is the way out too.** On the disconnected page the hold leaves whatever routine is
-showing and puts `default` back on the panel, so any page is one hold away from home and no page
-needs an exit of its own. The page being left does not see that stop as `vacuum.stopped()`: the
-switch drops the notice, and its `activate()` is what puts its state right when it is returned to.
+**OK during the hold is the way out.** On the disconnected page a short, long or double OK while
+Back is held leaves whatever routine is showing and puts `default` back on the panel, so any page is
+one hold and one tap from home and no page needs an exit of its own. The page being left does not
+see that switch as `vacuum.stopped()`: the hold fired first and the page already took that notice,
+so its own `abandon()` is what put its state right.
 
 A page may still have a stop gesture of its own, and a page that runs something usually wants one:
-the hold also leaves the page, so Back is how a page stops a run without leaving it. That gesture is
-the page's to choose and it owns the **whole** stop rather than the pump alone: `vacuum.stop()` and
-whatever returns the page to rest belong in it. It adds to the hold and never replaces it — a page
-cannot suppress Back for 3 s, and the hold still stops a run the page's own gesture started.
+the hold stops the run and OK during the hold is the way out, so Back is how a page stops a run
+without leaving it. That gesture is the page's to choose and it owns the **whole** stop rather than
+the pump alone: `vacuum.stop()` and whatever returns the page to rest belong in it. It adds to the
+hold and never replaces it — a page cannot suppress Back for 3 s, and the hold still stops a run the
+page's own gesture started.
 
 ## The standard page gestures
 

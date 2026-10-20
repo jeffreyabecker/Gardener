@@ -29,7 +29,7 @@ returns to `PULL`/`HOLD`.
 | `control release` | any | the same as `vacuum stop`; ownership clears and the panel returns to the disconnected page |
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
-| Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
+| Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply; the valve stays open while Back is held |
 | Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
@@ -83,9 +83,9 @@ Faults latch: only `vacuum reset` clears one, and the device never retries on it
   so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it means
   the device's own deadband has decided the target is reached, which is the one thing you cannot
   work out for yourself, because the deadband is the device's loop.
-* **A Back hold is a local `vacuum stop`**, and **Back+OK for 5 s is the local reset.** Both run
-  whatever a controller is doing. A link that dropped while owning cannot be recovered any other
-  way.
+* **A Back hold is a local `vacuum stop`** that keeps the valve open while Back is held, and
+  **Back+OK for 5 s is the local reset.** Both run whatever a controller is doing. A link that
+  dropped while owning cannot be recovered any other way.
 * **A link that drops while owning does not stop the run.** Ownership stays held, the machine keeps
   its state and the panel keeps showing that link. The device only detects a controller that
   leaves; one that hangs with the port open holds the run open.
