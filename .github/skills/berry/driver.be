@@ -272,6 +272,52 @@ def harness_check_system_jingle()
   device.set_jingle(store.get("device", "jingle", ""))
 end
 
+# The interval now runs a set count. Use an activation map so the store the editor edits is not
+# involved, and walk one "after ok" pause and the completion of a two-set run.
+def harness_check_interval_sets()
+  var entry = harness_find("interval")
+  if entry == nil
+    harness_fail("interval: not registered")
+    return
+  end
+  harness_reset()
+  var settings = {
+    "set_count": 2,
+    "target_pressure": 5.0,
+    "work_duration": 0,
+    "rest_pressure": 5.0,
+    "rest_duration": 0,
+    "resume_behavior": "after ok"
+  }
+  if !harness_activate(entry, settings)
+    return
+  end
+  var page = entry.object
+  harness_press("ok", "single")
+  var guard = 0
+  while page.phase != "waiting" && guard < 20
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if page.phase != "waiting"
+    harness_fail("interval: did not wait between sets")
+    return
+  end
+  harness_press("ok", "single")
+  guard = 0
+  while harnessActive != nil && harnessActive.name != "default" && guard < 20
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if harnessActive == nil || harnessActive.name != "default"
+    harness_fail("interval: did not complete after its set count")
+  end
+end
+
 # The names list is the browser's, so the hidden pages stay out of it and every other
 # registration is in it.
 def harness_check_names()
@@ -296,6 +342,7 @@ def harness_check()
   harness_apply_device()
   harness_check_jingles()
   harness_check_system_jingle()
+  harness_check_interval_sets()
   harness_check_names()
 
   if harness_find("default") == nil

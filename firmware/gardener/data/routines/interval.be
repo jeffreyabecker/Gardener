@@ -1,4 +1,5 @@
-# interval.be — the interval cycle: pull to a target, hold, move to a rest pressure, rest, repeat.
+# interval.be — the interval cycle: pull to a target, hold, move to a rest pressure, rest, and repeat
+# for a set count.
 #
 # The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Moving
@@ -8,6 +9,7 @@
 class IntervalChrome
   var owner
   var header
+  var sets
   var pressure
   var target
   var status
@@ -17,14 +19,17 @@ class IntervalChrome
   def init(owner)
     self.owner = owner
 
-    # The title is a fixed word rather than the phase, kept to the 58 pixels left of the state
-    # icon; the phase reads on the status line instead.
+    # The title starts below the state icon so the top row can hold the set bubbles, as ramped's
+    # does. The phase reads on the status line instead.
     self.header = FixedText()
     self.header.value = "Interval"
-    self.header.x = 0; self.header.y = 0; self.header.w = 58; self.header.h = 12
+    self.header.x = 0; self.header.y = 15; self.header.w = 116; self.header.h = 7
+
+    self.sets = ProgressBubbles()
+    self.sets.x = 0; self.sets.y = 2; self.sets.w = 40; self.sets.h = 6
 
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
+    self.pressure.x = 0; self.pressure.y = 22; self.pressure.w = 116; self.pressure.h = 17
     self.pressure.show_units = false
 
     # The target needs no label: the border is what tells it apart from the live reading, and the
@@ -49,6 +54,20 @@ class IntervalChrome
 
   def draw(s)
     self.header.draw()
+
+    # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
+    # run still empty. The count can change under the settings editor, so the cached layout goes
+    # with it.
+    if self.sets.max_count != self.owner.count
+      self.sets.max_count = self.owner.count
+      self.sets.layout = nil
+    end
+    var filled = 0
+    if self.owner.phase != "ready"
+      filled = self.owner.set + 1
+    end
+    self.sets.draw(filled)
+
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
     self.target.draw(self.owner.active_target())
     self.status.draw(self.owner.status_text())
@@ -63,6 +82,8 @@ end
 class Interval : Page
   var phase
   var mark
+  var set
+  var count
   var target
   var work
   var rest_pressure
@@ -74,6 +95,8 @@ class Interval : Page
     super(self).init()
     self.phase = "ready"
     self.mark = 0
+    self.set = 0
+    self.count = 4
     self.target = 0.0
     self.work = 30
     self.rest_pressure = 5.0
@@ -82,12 +105,13 @@ class Interval : Page
     self.chrome = IntervalChrome(self)
 
     self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
+    self.on("ok", nil, / -> self.phase == "ready" || self.phase == "waiting" ? self.begin() : false)
   end
 
   def activate(settings)
     self.editor = nil
     self.phase = "ready"
+    self.set = 0
     self.read_settings(settings)
     # Like default's restore: the page's stored target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
@@ -99,6 +123,7 @@ class Interval : Page
 
   def describe()
     return [
+      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
       setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
       setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
       setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
@@ -111,6 +136,7 @@ class Interval : Page
   # they are ever handed to the machine, and a hand-edited duration is held to the same bounds the
   # editor uses. A switch's settings map, when there is one, is the set for this activation.
   def read_settings(settings)
+    self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
     self.target = vacuum.clamp(self.value(settings, "target_pressure", 0.0))
     self.work = self.seconds(self.value(settings, "work_duration", 30), 3600)
     self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
@@ -143,9 +169,25 @@ class Interval : Page
     return seconds
   end
 
+  def whole(value, low, high)
+    var number = int(value)
+    if number < low
+      number = low
+    end
+    if number > high
+      number = high
+    end
+    return number
+  end
+
   # --- the cycle -----------------------------------------------------------
 
   def begin()
+    if self.phase == "waiting"
+      self.set += 1
+    else
+      self.set = 0
+    end
     vacuum.target(self.target)
     # A run may already be under way (the page was re-entered mid-cycle): the target change is the
     # start then. Starting again would close the valve and abandon a vent to a shallower target.
@@ -178,7 +220,7 @@ class Interval : Page
   end
 
   def advance(now)
-    if self.phase == "ready"
+    if self.phase == "ready" || self.phase == "waiting"
       return
     end
 
@@ -198,8 +240,12 @@ class Interval : Page
 
     if self.phase == "work"
       if now - self.mark >= self.work * 1000
-        vacuum.target(self.rest_pressure)
-        self.phase = "rest_approach"
+        if self.set + 1 >= self.count
+          self.complete()
+        else
+          vacuum.target(self.rest_pressure)
+          self.phase = "rest_approach"
+        end
       end
       return
     end
@@ -215,8 +261,9 @@ class Interval : Page
     if self.phase == "rest"
       if now - self.mark >= self.rest * 1000
         if self.resume == "after ok"
-          self.finish()
+          self.wait()
         else
+          self.set += 1
           vacuum.target(self.target)
           self.phase = "approach"
         end
@@ -224,18 +271,29 @@ class Interval : Page
     end
   end
 
-  # The cycle stopped between repetitions: release the chamber and put the page's target back, so
-  # `ready` is the machine's idle state again.
-  def finish()
+  # The rest between sets ended and the file asks for an OK: release the chamber and hold the set
+  # count, so OK starts the next set rather than a new run.
+  def wait()
     vacuum.stop()
     vacuum.target(self.target)
+    self.phase = "waiting"
+  end
+
+  # The last set is done: release the chamber, clear the target so `default` cannot inherit the
+  # interval's depth, and hand the panel back. The switch is deferred by the runtime, so it is safe
+  # to ask for it from here.
+  def complete()
+    vacuum.target_off()
     self.phase = "ready"
+    vacuum.log("interval: complete")
+    routines.set_active("default")
   end
 
   # The cycle ended without this page asking: a latched fault, or a release the device's hold caused.
   # The machine is already safe, so put the page's target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
+    self.set = 0
     vacuum.target(self.target)
     vacuum.log("interval: cycle stopped")
   end
@@ -303,7 +361,7 @@ class Interval : Page
   # The page has one word per thing the chamber is doing, and the target and rest phases read as
   # the hold they are heading into: an approach is work because the cycle is under way.
   def status_text()
-    if self.phase == "ready"
+    if self.phase == "ready" || self.phase == "waiting"
       return "PRESS OK"
     end
     if self.phase == "rest_approach" || self.phase == "rest"
@@ -315,6 +373,9 @@ class Interval : Page
   def hint_text()
     if self.phase == "ready"
       return "OK=START"
+    end
+    if self.phase == "waiting"
+      return "OK=NEXT"
     end
     return "HOLD BACK=STOP"
   end

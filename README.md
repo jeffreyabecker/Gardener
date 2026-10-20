@@ -301,10 +301,10 @@ boot and registers itself, and the one registered as `default` is the page. If n
 the panel shows the device's mark.
 
 Five ship: `default` (the readout), `browser` (the routine list), `system` (unit, default target,
-radio, jingle), `interval` (pull, hold, rest, repeat) and `ramped` (a ladder of sets). A routine
-reaches `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jingles`, `routines` and `store`; the
-surface is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle in
-[docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
+radio, jingle), `interval` (pull, hold, rest, repeat for a set count) and `ramped` (a ladder of
+sets). A routine reaches `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jingles`, `routines` and
+`store`; the surface is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle
+in [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
 
 A `poll` that never returns blocks the panel loop, so returning is a convention the author keeps,
 and `print` goes nowhere: `vacuum.log(text)` reaches the serial line as a `[I]` record.
