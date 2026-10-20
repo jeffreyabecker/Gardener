@@ -8,13 +8,10 @@
 #include "app/panel/DisconnectedUI.h"
 #include "app/serial/SerialLink.h"
 
-// The application loop: boot, the service order, the run log and the screen. It knows only the
+// Boot, the two links and the screen. The machine itself is serviced by the control task in
+// app/Tasks.cpp — the sensor, the pump, the battery, the buzzer, the vacuum system and the keys —
+// so App keeps the links and the panel until those move to their own tasks. It knows only the
 // AppContext, so which parts are fitted is the build function's business.
-//
-// The device answers on two transports — the serial line and the radio — and both live at once. The
-// front panel keys are read on demand, but no key changes what the device does, so the loop services
-// the devices, the control loop and the links, in that order. App is also the only place that
-// reports anything: the context returns values, and the run and the keys are logged from here.
 
 namespace gardener {
 
@@ -29,14 +26,10 @@ class App {
 
   // The context the tasks read: spawnTasks() takes it to build the per-task state.
   AppContext& context() { return context_; }
+  // The boot-chosen logger, handed to the tasks that report.
+  Logger& logger() { return *logger_; }
 
  private:
-  void logRunChanges(uint32_t nowMs);
-  void logButtonPresses();
-  // The local stop: a Back hold stops and vents, whatever the link is doing.
-  void watchBackHold();
-  // Back+OK held together: the local reset that clears a held ownership record.
-  void watchResetHold();
   // Which screen belongs to the machine as it is now: the owner's page or the disconnected page.
   UserInterface* screenFor(bool owned);
 
@@ -54,10 +47,6 @@ class App {
   UserInterface* ui_ = nullptr;
   // Whether the screen showing is the connected one. It follows ownership, not attachment.
   bool ownedShown_ = false;
-  // One stop per Back hold: set when the hold fires, cleared when the key comes up.
-  bool backStopFired_ = false;
-  RunState lastState_ = RunState::Idle;
-  uint32_t ventStartMs_ = 0;
 };
 
 }  // namespace gardener

@@ -6,7 +6,6 @@
 #include "app/Logger.h"
 #include "app/NilLogger.h"
 #include "app/Ownership.h"
-#include "app/SafeReboot.h"
 #include "app/StreamLogger.h"
 #include "app/panel/Asset.h"
 #include "core/Config.h"
@@ -18,17 +17,6 @@ namespace {
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
 // plain UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
-
-// The keys in the order a press is reported, which is the panel's order rather than the bit order.
-constexpr Button kButtons[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
-
-// The local stop. It is a safety path rather than a preference, so it is a constant here and not a
-// setting: holding Back for this long ends the run and vents, whatever the controller is doing.
-constexpr uint32_t kBackStopMs = 3000;
-
-// The local reset. Back+OK together for this long release the chamber and restart, which is also
-// how a controller that dropped while owning is cleared.
-constexpr uint32_t kResetHoldMs = 5000;
 
 }  // namespace
 
@@ -150,7 +138,6 @@ bool App::begin() {
   ready += String((uint32_t)ESP.getFreeHeap());
   logger_->info(ready.c_str());
 
-  lastState_ = context_.vacuum().runState();
   // A fresh boot has no controller: a link that is present is only a reader until it acquires
   // control, and that is a command the link has not sent yet.
   ownedShown_ = context_.ownership().held();
@@ -159,99 +146,13 @@ bool App::begin() {
   return true;
 }
 
-// The drivers stopped narrating, so the run is reported from here: one line per state
-// change, timed when it leaves a vent, plus the fault code when one latches.
-void App::logRunChanges(uint32_t nowMs) {
-  RunState state = context_.vacuum().runState();
-  if (state == lastState_) return;
-
-  String message = runStateName(lastState_);
-  message += " -> ";
-  message += runStateName(state);
-  if (state == RunState::Fault) {
-    message += " (fault ";
-    message += context_.vacuum().faultCode();
-    message += ')';
-  }
-  if (lastState_ == RunState::Venting) {
-    uint32_t ventMs = nowMs - ventStartMs_;
-    message += " after ";
-    message += String(ventMs);
-    message += " ms";
-    if (ventMs >= cfg::VENT_TIMEOUT_MS) {
-      message += ", vent timed out";
-      logger_->warn(message.c_str());
-      lastState_ = state;
-      return;
-    }
-  }
-  if (state == RunState::Venting) ventStartMs_ = nowMs;
-  logger_->info(message.c_str());
-  lastState_ = state;
-}
-
-// The keys are a local surface with no action assigned yet, so reporting the gesture is the whole
-// of what they do. One line per completed press, from here like every other report.
-// The keys belong to whoever owns the page: an active routine takes the presses, and with none the
-// loop reports them as it always has. A press is consumed either way, so it is never delivered
-// twice.
-void App::logButtonPresses() {
-  const bool toRoutine = !context_.ownership().held() && context_.routines().active();
-  for (Button button : kButtons) {
-    const Press press = context_.buttons().consumePress(button);
-    if (press == Press::None) continue;
-    if (toRoutine) {
-      context_.routines().pushPress(button, press);
-      continue;
-    }
-    String message = "btn: ";
-    message += buttonName(button);
-    message += ' ';
-    message += pressName(press);
-    logger_->info(message.c_str());
-  }
-}
-
-// Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
-// and the latch keeps it to one stop per hold. Releasing it arms the next one.
-void App::watchBackHold() {
-  const uint32_t held = context_.buttons().heldMs(Button::Back);
-  if (held == 0) {
-    backStopFired_ = false;
-    return;
-  }
-  if (backStopFired_ || held < kBackStopMs) return;
-  backStopFired_ = true;
-  logger_->warn("app: back held, stopping and venting");
-  context_.vacuum().stop();
-  context_.routines().notifyStopped();
-}
-
-// Both keys together are the local reset. It is what clears a record an absent controller left
-// held, and it runs from every page whatever a controller is doing.
-void App::watchResetHold() {
-  if (context_.buttons().heldMs(Button::Back) < kResetHoldMs) return;
-  if (context_.buttons().heldMs(Button::Ok) < kResetHoldMs) return;
-  logger_->warn("app: back and ok held, resetting");
-  safeReboot(context_);
-}
-
 void App::update() {
-  uint32_t now = millis();
+  const uint32_t now = millis();
 
-  context_.sensor().update(now);
-  context_.pump().update(now);
-  context_.battery().update(now);
-  context_.vacuum().service(now);
-
-  // Commands first, against the machine as the last control tick left it, so a reply
-  // describes something that actually happened rather than a view built mid-command.
+  // The links, against the machine as the control task's last tick left it. The machine itself is
+  // serviced on the control task; the loop keeps the links and the panel until their epics land.
   link_->poll(now);
   ble_->poll(now);
-
-  // The buzzer's schedule advances once per pass. A command handled above starts a tone now; a
-  // routine's poll at the end of the pass starts one that is serviced on the next pass.
-  context_.buzzer().update(now);
 
   // A link that leaves while owning does not release the machine: its record stays held, the run
   // continues and the panel keeps showing that link. A reconnected controller stays a reader until
@@ -265,12 +166,6 @@ void App::update() {
     }
   }
 
-  // The keys are the device's own way out, independent of the link.
-  watchBackHold();
-  watchResetHold();
-
-  logRunChanges(now);
-  logButtonPresses();
   // The screen follows ownership, not the cable: acquiring control paints the link's page, and a
   // drop while owning leaves it where it was. A swap paints its own first frame.
   const bool attached = serialAttached();

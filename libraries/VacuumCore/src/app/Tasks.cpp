@@ -1,5 +1,9 @@
 #include "app/Tasks.h"
 
+#include "app/Logger.h"
+#include "app/SafeReboot.h"
+#include "core/Config.h"
+
 namespace gardener {
 
 QueueHandle_t machineCommandQueue = nullptr;
@@ -29,13 +33,144 @@ constexpr UBaseType_t PanelCore = 0;
 constexpr UBaseType_t MachineCommandQueueDepth = 8;
 constexpr UBaseType_t ButtonEventQueueDepth = 8;
 
+// The keys in the order a press is reported, which is the panel's order rather than the bit order.
+constexpr Button PressOrder[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
+
+// The local stop. It is a safety path rather than a preference, so it is a constant here and not a
+// setting: holding Back for this long ends the run and vents, whatever the controller is doing.
+constexpr uint32_t BackStopMs = 3000;
+
+// The local reset. Back+OK together for this long release the chamber and restart, which is also
+// how a controller that dropped while owning is cleared.
+constexpr uint32_t ResetHoldMs = 5000;
+
+// The control task's own state: the context it commands, the logger it reports through, and the
+// latch/timing fields the run log and the holds need.
+struct ControlState {
+  AppContext context;
+  Logger* logger;
+  RunState lastState = RunState::Idle;
+  uint32_t ventStartMs = 0;
+  bool backStopFired = false;
+};
+
+// Applies one queued write to the machine. The op names the verb; the fields are the op's own.
+void applyMachineCommand(ControlState& state, const MachineCommand& command) {
+  AppContext& context = state.context;
+  switch (command.op) {
+    case MachineCommand::Op::Start: context.vacuum().start(); break;
+    case MachineCommand::Op::Stop: context.vacuum().stop(); break;
+    case MachineCommand::Op::ResetFault: context.vacuum().resetFault(); break;
+    case MachineCommand::Op::SetTarget: context.vacuum().setTarget(command.value); break;
+    case MachineCommand::Op::ClearTarget: context.vacuum().clearTarget(); break;
+    case MachineCommand::Op::Reboot: safeReboot(context); break;
+    case MachineCommand::Op::Tone: context.buzzer().tone((uint16_t)command.value, command.durationMs); break;
+    case MachineCommand::Op::Play: context.buzzer().play(command.text.c_str()); break;
+    case MachineCommand::Op::Off: context.buzzer().off(); break;
+  }
+}
+
+// Every pending command, applied against the machine as the last tick left it.
+void drainMachineCommands(ControlState& state) {
+  MachineCommand command;
+  while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyMachineCommand(state, command);
+}
+
+// The keys, settled and classified here: one ButtonEvent per completed press, and the OK hold
+// published for the panel's default-hold watch. The panel task consumes the queue.
+void buttonsTick(ControlState& state) {
+  for (Button button : PressOrder) {
+    const Press press = state.context.buttons().consumePress(button);
+    if (press == Press::None) continue;
+    const ButtonEvent event{button, press};
+    if (xQueueSend(buttonEventQueue, &event, 0) != pdTRUE) {
+      state.logger->warn("buttons: queue full, dropping a press");
+    }
+  }
+  okHeldMs = state.context.buttons().heldMs(Button::Ok);
+}
+
+// Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
+// and the latch keeps it to one stop per hold. Releasing it arms the next one. The stop is also a
+// stopSeq bump, which is how the panel's takeStopped() learns of it.
+void watchBackHold(ControlState& state) {
+  const uint32_t held = state.context.buttons().heldMs(Button::Back);
+  if (held == 0) {
+    state.backStopFired = false;
+    return;
+  }
+  if (state.backStopFired || held < BackStopMs) return;
+  state.backStopFired = true;
+  state.logger->warn("app: back held, stopping and venting");
+  state.context.vacuum().stop();
+  stopSeq++;
+}
+
+// Both keys together are the local reset. It is what clears a record an absent controller left
+// held, and it runs from every page whatever a controller is doing.
+void watchResetHold(ControlState& state) {
+  if (state.context.buttons().heldMs(Button::Back) < ResetHoldMs) return;
+  if (state.context.buttons().heldMs(Button::Ok) < ResetHoldMs) return;
+  state.logger->warn("app: back and ok held, resetting");
+  safeReboot(state.context);
+}
+
+// The drivers stopped narrating, so the run is reported from here: one line per state change,
+// timed when it leaves a vent, plus the fault code when one latches.
+void logRunChanges(ControlState& state, uint32_t nowMs) {
+  const RunState current = state.context.vacuum().runState();
+  if (current == state.lastState) return;
+
+  String message = runStateName(state.lastState);
+  message += " -> ";
+  message += runStateName(current);
+  if (current == RunState::Fault) {
+    message += " (fault ";
+    message += state.context.vacuum().faultCode();
+    message += ')';
+  }
+  if (state.lastState == RunState::Venting) {
+    const uint32_t ventMs = nowMs - state.ventStartMs;
+    message += " after ";
+    message += String(ventMs);
+    message += " ms";
+    if (ventMs >= cfg::VENT_TIMEOUT_MS) {
+      message += ", vent timed out";
+      state.logger->warn(message.c_str());
+      state.lastState = current;
+      return;
+    }
+  }
+  if (current == RunState::Venting) state.ventStartMs = nowMs;
+  state.logger->info(message.c_str());
+  state.lastState = current;
+}
+
 }  // namespace
 
-// The three task bodies are stubs through the foundation epic: the queues and the pinning exist,
-// and the loop still runs the machine until the later epics move each half of App::update() in.
 void controlTask(void* arg) {
-  (void)arg;
-  for (;;) vTaskDelay(pdMS_TO_TICKS(50));
+  ControlState& state = *static_cast<ControlState*>(arg);
+  state.lastState = state.context.vacuum().runState();
+
+  TickType_t lastWake = xTaskGetTickCount();
+  for (;;) {
+    const uint32_t now = millis();
+
+    // Commands first, against the machine as the last tick left it, then the devices, the PID and
+    // the buzzer on the fixed beat, then the keys and the holds, then the run log.
+    drainMachineCommands(state);
+    state.context.sensor().update(now);
+    state.context.pump().update(now);
+    state.context.battery().update(now);
+    state.context.vacuum().service(now);
+    state.context.buzzer().update(now);
+    buttonsTick(state);
+    watchBackHold(state);
+    watchResetHold(state);
+    logRunChanges(state, now);
+
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
+  }
 }
 
 void interfaceTask(void* arg) {
@@ -48,11 +183,11 @@ void panelTask(void* arg) {
   for (;;) vTaskDelay(pdMS_TO_TICKS(10));
 }
 
-void spawnTasks(AppContext& context) {
+void spawnTasks(AppContext& context, Logger& logger) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
   buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
-  static TaskState control{context};
+  static ControlState control{context, &logger};
   static TaskState interface{context};
   static TaskState panel{context};
 

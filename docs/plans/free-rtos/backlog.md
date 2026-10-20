@@ -84,35 +84,35 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## CTRL — Control task
 
-- [ ] CTRL-001 Implement `controlTask(void*)`: the `for (;;)` body with
+- [x] CTRL-001 Implement `controlTask(void*)`: the `for (;;)` body with
   `vTaskDelayUntil` on `cfg::CONTROL_PERIOD_MS` ([tasks.md](tasks.md)).
-- [ ] CTRL-002 Move `sensor().update(now)` from `App::update()` into the control loop.
-- [ ] CTRL-003 Move `pump().update(now)` into the control loop.
-- [ ] CTRL-004 Move `battery().update(now)` into the control loop.
-- [ ] CTRL-005 Move `vacuum().service(now)` into the control loop (the PID now ticks on a fixed
+- [x] CTRL-002 Move `sensor().update(now)` from `App::update()` into the control loop.
+- [x] CTRL-003 Move `pump().update(now)` into the control loop.
+- [x] CTRL-004 Move `battery().update(now)` into the control loop.
+- [x] CTRL-005 Move `vacuum().service(now)` into the control loop (the PID now ticks on a fixed
   50 ms beat).
-- [ ] CTRL-006 Move `buzzer().update(now)` into the control loop.
-- [ ] CTRL-007 Implement `drainMachineCommands()`: pop every pending `MachineCommand` and apply it.
-- [ ] CTRL-008 Apply `MachineCommand::Start` → `vacuum.start()`.
-- [ ] CTRL-009 Apply `MachineCommand::Stop` → `vacuum.stop()`.
-- [ ] CTRL-010 Apply `MachineCommand::ResetFault` → `vacuum.resetFault()`.
-- [ ] CTRL-011 Apply `MachineCommand::SetTarget` → `vacuum.setTarget(value)`.
-- [ ] CTRL-012 Apply `MachineCommand::ClearTarget` → `vacuum.clearTarget()`.
-- [ ] CTRL-013 Apply `MachineCommand::Reboot` → `safeReboot(context_)` (the vent-wait loop runs
+- [x] CTRL-006 Move `buzzer().update(now)` into the control loop.
+- [x] CTRL-007 Implement `drainMachineCommands()`: pop every pending `MachineCommand` and apply it.
+- [x] CTRL-008 Apply `MachineCommand::Start` → `vacuum.start()`.
+- [x] CTRL-009 Apply `MachineCommand::Stop` → `vacuum.stop()`.
+- [x] CTRL-010 Apply `MachineCommand::ResetFault` → `vacuum.resetFault()`.
+- [x] CTRL-011 Apply `MachineCommand::SetTarget` → `vacuum.setTarget(value)`.
+- [x] CTRL-012 Apply `MachineCommand::ClearTarget` → `vacuum.clearTarget()`.
+- [x] CTRL-013 Apply `MachineCommand::Reboot` → `safeReboot(context_)` (the vent-wait loop runs
   here, not on the interface task).
-- [ ] CTRL-014 Apply `MachineCommand::Tone` → `buzzer.tone(hz, ms)`.
-- [ ] CTRL-015 Apply `MachineCommand::Play` → `buzzer.play(text.c_str())`.
-- [ ] CTRL-016 Apply `MachineCommand::Off` → `buzzer.off()`.
-- [ ] CTRL-017 Implement `buttonsTick(now)`: `consumePress(Button)` for all four keys, pushing a
+- [x] CTRL-014 Apply `MachineCommand::Tone` → `buzzer.tone(hz, ms)`.
+- [x] CTRL-015 Apply `MachineCommand::Play` → `buzzer.play(text.c_str())`.
+- [x] CTRL-016 Apply `MachineCommand::Off` → `buzzer.off()`.
+- [x] CTRL-017 Implement `buttonsTick(now)`: `consumePress(Button)` for all four keys, pushing a
   `ButtonEvent` per completed press (overflow logged, matching today's `pressOverflow_`).
-- [ ] CTRL-018 Implement the `okHeldMs` publish: write `heldMs(Button::Ok)` into the shared
+- [x] CTRL-018 Implement the `okHeldMs` publish: write `heldMs(Button::Ok)` into the shared
   `volatile` scalar each tick.
-- [ ] CTRL-019 Move `watchBackHold` into the control loop: Back 3 s and not yet fired →
+- [x] CTRL-019 Move `watchBackHold` into the control loop: Back 3 s and not yet fired →
   `vacuum.stop()`, then `stopSeq++` (replacing the old `routines().notifyStopped()` call).
-- [ ] CTRL-020 Keep the `backStopFired_` latch in the control task, cleared when Back comes up.
-- [ ] CTRL-021 Move `watchResetHold` into the control loop: Back+OK 5 s → `safeReboot(context_)`.
-- [ ] CTRL-022 Move `logRunChanges` into the control loop, using the control task's logger.
-- [ ] CTRL-023 Remove the `sensor/pump/battery/vacuum/buzzer`, hold-watch and run-log calls from
+- [x] CTRL-020 Keep the `backStopFired_` latch in the control task, cleared when Back comes up.
+- [x] CTRL-021 Move `watchResetHold` into the control loop: Back+OK 5 s → `safeReboot(context_)`.
+- [x] CTRL-022 Move `logRunChanges` into the control loop, using the control task's logger.
+- [x] CTRL-023 Remove the `sensor/pump/battery/vacuum/buzzer`, hold-watch and run-log calls from
   `App::update()` so they run once, on the control task.
 
 ## SER — Serial domains

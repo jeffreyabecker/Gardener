@@ -10,6 +10,8 @@
 
 namespace gardener {
 
+class Logger;
+
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; the fields are the op's own, so a field that does
 // not belong to the op is ignored.
@@ -50,7 +52,7 @@ void interfaceTask(void* arg);
 void panelTask(void* arg);
 
 // Creates the queues and spawns the three tasks, pinned to their cores. Called from setup() after
-// App::begin().
-void spawnTasks(AppContext& context);
+// App::begin(). The logger is the boot-chosen one, handed to the tasks that report.
+void spawnTasks(AppContext& context, Logger& logger);
 
 }  // namespace gardener

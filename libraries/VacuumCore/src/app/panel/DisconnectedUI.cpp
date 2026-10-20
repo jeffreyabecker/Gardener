@@ -1,6 +1,7 @@
 #include "app/panel/DisconnectedUI.h"
 
 #include "app/Logger.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Asset.h"
 #include "app/routines/Routines.h"
@@ -55,8 +56,11 @@ void DisconnectedUI::update() {
 // `default` back on the panel. The machine is released first, because the page that was commanding it
 // is about to be, and the default page should not open on a chamber still pulling. The latch keeps it
 // to one switch per hold.
+//
+// The control task owns the keys and the machine, so the hold arrives as the published scalar and
+// the stop goes out as a queued command rather than a direct call.
 void DisconnectedUI::watchDefaultHold() {
-  const uint32_t held = context_.buttons().heldMs(Button::Ok);
+  const uint32_t held = okHeldMs;
   if (held == 0) {
     defaultFired_ = false;
     return;
@@ -65,7 +69,8 @@ void DisconnectedUI::watchDefaultHold() {
   defaultFired_ = true;
 
   logger_.warn("ui: ok held, stopping and back to the default page");
-  context_.vacuum().stop();
+  const MachineCommand stop{MachineCommand::Op::Stop};
+  xQueueSend(machineCommandQueue, &stop, 0);
   context_.routines().showDefault();
 }
 
