@@ -430,9 +430,11 @@ minutes and seconds, and a pressure is stored in kPa and edited in the unit the 
 changes it. The values stay in the routine's own `/routines/<name>.ini`, read and written by
 `store`. A routine without `describe()` simply has no settings view.
 
-Shared Berry code lives in `/modules/`, which loads before `/routines/`. The settings editor is the
-one module: `browser` uses its `Settings` class, and any page can hold one to edit its own settings
-without leaving its page.
+Shared Berry code lives in `/modules/`, which loads before `/routines/`. The page framework ships
+there: `page.be` (`Page`, the lifecycle a routine's page extends), `components.be` (`Component` and
+the drawing primitives a readout composes), `list.be` (`List`, a selectable menu) and `settings.be`
+(the editor `browser` uses, and any page can hold one to edit its own settings without leaving its
+page).
 
 What a routine can reach: `vacuum` (read and command the machine), `screen` (draw and flush, the
 compiled GFX faces plus the built-in 5x7, text measurement, and the unit the panel prints), `device`

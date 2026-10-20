@@ -1,16 +1,11 @@
 # static.be — the static hold: pull to a target, hold it, vent, rest at a second pressure, repeat.
 #
-# The cycle is a phase machine advanced from poll(now). Nothing waits: a phase is left when the
-# clock or the machine says so, and `now` is the only time source.
-#
-# The machine answers for itself. HOLD is the target-reached edge, IDLE is the release-settled
-# edge, and a latched fault owns the state until it is reset. A cycle that loses one of those edges
-# goes back to `ready` rather than guessing — that is also what the device's 3 s Back hold does,
-# since it stops and vents without telling the page.
+# The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
+# a phase is left when the clock or the machine says so, and `now` is the only time source.
 
 import string
 
-class Static
+class Static : Page
   var phase
   var mark
   var target
@@ -18,12 +13,15 @@ class Static
   var rest_pressure
   var rest
   var resume
-  var unit
-  var fmt
-  var last_draw
-  var editor
+  var header
+  var readout
+  var target_label
+  var target_value
+  var status
+  var hint
 
   def init()
+    super(self).init()
     self.phase = "ready"
     self.mark = 0
     self.target = 0.0
@@ -31,35 +29,40 @@ class Static
     self.rest_pressure = 5.0
     self.rest = 1
     self.resume = "immediately"
-    self.unit = nil
-    self.fmt = "%.1f"
-    self.last_draw = 0
-    self.editor = nil
+
+    self.header = DynamicText()
+    self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
+
+    self.readout = PressureDisplay()
+    self.readout.x = 0; self.readout.y = 12; self.readout.w = 116; self.readout.h = 24
+    self.readout.show_units = false
+
+    self.target_label = FixedText()
+    self.target_label.value = "TGT"
+    self.target_label.x = 0; self.target_label.y = 40; self.target_label.w = 40; self.target_label.h = 8
+
+    self.target_value = PressureDisplay()
+    self.target_value.x = 40; self.target_value.y = 40; self.target_value.w = 76; self.target_value.h = 8
+    self.target_value.show_units = true
+
+    self.status = DynamicText()
+    self.status.x = 0; self.status.y = 48; self.status.w = 116; self.status.h = 8
+
+    self.hint = DynamicText()
+    self.hint.x = 0; self.hint.y = 56; self.hint.w = 116; self.hint.h = 8
+
+    self.on("ok", "double", / -> self.open_settings("static"))
+    self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
   end
 
   def activate()
     self.editor = nil
     self.phase = "ready"
-    self.unit = screen.unit()
-    self.fmt = "%." + str(self.unit.decimals) + "f"
     self.read_settings()
     # Like default's restore: the page's stored target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     vacuum.target(self.target)
     self.draw()
-  end
-
-  def poll(now)
-    var acted = self.take_events()
-    # The device's Back hold stops and vents without asking this page. Reset the phase machine on
-    # that notice instead of waiting for the machine's state to say IDLE.
-    if vacuum.stopped() && self.phase != "ready"
-      self.abandon()
-    end
-    self.advance(now)
-    if acted || now - self.last_draw >= 250
-      self.draw()
-    end
   end
 
   # --- settings ------------------------------------------------------------
@@ -207,81 +210,38 @@ class Static
     vacuum.log("static: cycle stopped")
   end
 
-  # --- buttons -------------------------------------------------------------
-
-  def take_events()
-    var acted = false
-    while true
-      var ev = buttons.take()
-      if ev == nil
-        break
-      end
-      if self.handle(ev)
-        acted = true
-      end
+  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
+  # without asking this page, so reset the phase machine on that notice.
+  def tick(now)
+    if vacuum.stopped() && self.phase != "ready"
+      self.abandon()
     end
-    return acted
+    self.advance(now)
   end
 
-  def handle(ev)
-    if self.editor != nil
-      var acted = self.editor.handle(ev)
-      if !self.editor.is_open()
-        self.editor = nil
-        self.read_settings()
-        # The rest hold has its own target; only the work target follows an edit made mid-cycle.
-        if self.phase == "ready" || self.phase == "pull" || self.phase == "work"
-          vacuum.target(self.target)
-        end
-      end
-      return acted
+  # A closed editor has re-read the settings. The rest hold has its own target; only the work
+  # target follows an edit made mid-cycle.
+  def on_editor_closed()
+    self.read_settings()
+    if self.phase == "ready" || self.phase == "pull" || self.phase == "work"
+      vacuum.target(self.target)
     end
-
-    if ev.btn != "ok"
-      return false
-    end
-    if ev.press == "double"
-      return self.open_settings()
-    end
-    if self.phase == "ready"
-      return self.begin()
-    end
-    return false
-  end
-
-  def open_settings()
-    var editor = Settings("static")
-    if !editor.open()
-      return false
-    end
-    self.editor = editor
-    return true
   end
 
   # --- drawing -------------------------------------------------------------
 
-  def draw()
+  def draw_page()
     var s = vacuum.state()
-    screen.draw_clear()
-    if self.editor != nil
-      self.editor.draw()
-    else
-      self.draw_page(s)
-    end
-    screen.flush()
-    self.last_draw = vacuum.now_ms()
-  end
-
-  def draw_page(s)
-    screen.draw_text(0, 0, 1, false, self.phase_name())
+    self.header.draw(self.phase_name())
     if s.sensor_ok
-      screen.draw_text(0, 12, 3, false, self.number(s.kpa))
+      self.readout.draw(s.kpa)
     else
-      screen.draw_text(0, 12, 3, false, "--")
+      self.readout.draw(nil)
     end
-    screen.draw_text(0, 40, 1, false, "TGT " + self.text(self.active_target()))
-    screen.draw_text(0, 48, 1, false, self.status_text())
-    screen.draw_text(0, 56, 1, false, self.hint_text())
+    self.target_label.draw()
+    self.target_value.draw(self.active_target())
+    self.status.draw(self.status_text())
+    self.hint.draw(self.hint_text())
   end
 
   # The pressure the machine is pulling to right now: the rest hold has its own target.
@@ -361,15 +321,6 @@ class Static
       tail = "0" + tail
     end
     return str(minutes) + ":" + tail
-  end
-
-  # The big readout is the number alone; a size-3 number with a suffix would run past the panel.
-  def number(kpa)
-    return string.format(self.fmt, kpa * self.unit.per_kpa)
-  end
-
-  def text(kpa)
-    return self.number(kpa) + " " + self.unit.suffix
   end
 end
 

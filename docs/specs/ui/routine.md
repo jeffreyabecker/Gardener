@@ -60,6 +60,12 @@ data image.
 Files within `/modules/` load in no particular order, so none may depend on another at its top
 level. Define classes and functions there; leave constructing them to the page that uses them.
 
+The page framework ships the same way. `/modules/page.be` is `Page` — the button drain, the repaint
+cadence, the editor delegation and the gesture dispatch a routine's page extends. `/modules/
+components.be` is `Component` and the drawing primitives a readout composes (`FixedText`,
+`DynamicText`, `PressureDisplay`, `ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and
+the `Icon` glyph). `/modules/list.be` is `List`, a selectable menu.
+
 The shared editor ships as `/modules/settings.be`. `Settings(name)` edits the `describe()` list of
 the routine registered under that name. **Double OK** is the standard gesture for opening it; a
 page that wants the editor holds one and delegates to it:

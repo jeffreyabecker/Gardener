@@ -1,19 +1,13 @@
 # system.be — the device's own settings: the display unit, the default target pressure and the
 # radio preference.
 #
-# This page is not a routine's values; it edits what the device keeps across a reset: the display
-# unit, which `device set unit` also carries on the wire, the target the default program restores,
-# and whether the radio may run once a transport uses it. It touches nothing of the machine, so a
-# run keeps going behind it.
-#
-# A double OK or double Down on `default` opens it. Up/Down walk the rows, OK opens the value,
-# Up/Down changes it, OK saves, and Back cancels or goes home.
+# The three rows are a List widget; the edit face is the page's own. Up/Down walk the rows, OK
+# opens the value, Up/Down changes it, OK saves, and Back cancels or goes home.
 
 import string
 
-class System
+class System : Page
   var units
-  var selected
   var editing
   var unit_index
   var target
@@ -23,11 +17,11 @@ class System
   var edit_bluetooth
   var unit
   var fmt
-  var last_draw
+  var list
 
   def init()
+    super(self).init()
     self.units = nil
-    self.selected = 0
     self.editing = false
     self.unit_index = 0
     self.target = 0.0
@@ -37,24 +31,17 @@ class System
     self.edit_bluetooth = true
     self.unit = nil
     self.fmt = "%.1f"
-    self.last_draw = 0
+    self.list = List(3)
+
+    self.on("up", nil, / -> self.step_sel(-1))
+    self.on("down", nil, / -> self.step_sel(1))
+    self.on("ok", nil, / -> self.ok_edit())
+    self.on("back", nil, / -> routines.set_active("default"))
   end
 
   def activate()
     self.read()
     self.editing = false
-    self.draw()
-  end
-
-  def poll(now)
-    if self.take_events()
-      self.draw()
-      return
-    end
-    # The overlay's battery blink needs frames to keep arriving.
-    if now - self.last_draw < 250
-      return
-    end
     self.draw()
   end
 
@@ -76,32 +63,30 @@ class System
     self.bluetooth = device.bluetooth()
   end
 
-  # --- drawing -------------------------------------------------------------
-
-  def draw()
-    screen.draw_clear()
+  def draw_page()
     if self.editing
       self.draw_edit()
-    else
-      self.draw_list()
+      return
     end
-    screen.flush()
-    self.last_draw = vacuum.now_ms()
-  end
-
-  def draw_list()
     screen.draw_text(0, 0, 1, false, "SYSTEM")
-    screen.draw_text(0, 16, 1, self.selected == 0, "UNIT=" + self.unit.suffix)
-    screen.draw_text(0, 24, 1, self.selected == 1, self.target_text())
-    screen.draw_text(0, 32, 1, self.selected == 2, self.bluetooth_text())
+    self.list.set(self.rows())
+    self.list.draw(0, 16)
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=EDIT")
   end
 
+  def rows()
+    return [
+      [nil, "UNIT=" + self.unit.suffix],
+      [nil, self.target_text()],
+      [nil, self.bluetooth_text()]
+    ]
+  end
+
   def draw_edit()
-    if self.selected == 0
+    if self.list.selected == 0
       screen.draw_text(0, 0, 1, false, "UNIT")
       screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
-    elif self.selected == 1
+    elif self.list.selected == 1
       screen.draw_text(0, 0, 1, false, "TARGET " + self.unit.suffix)
       screen.draw_text(0, 16, 3, false, self.text(self.edit_kpa))
     else
@@ -136,24 +121,14 @@ class System
 
   # --- buttons -------------------------------------------------------------
 
-  def take_events()
-    var acted = false
-    while true
-      var ev = buttons.take()
-      if ev == nil
-        break
-      end
-      if self.handle(ev)
-        acted = true
-      end
+  def handle_page(ev)
+    if self.editing
+      return self.handle_edit(ev)
     end
-    return acted
+    return super(self).handle_page(ev)
   end
 
-  def handle(ev)
-    if !self.editing
-      return self.handle_list(ev)
-    end
+  def handle_edit(ev)
     if ev.btn == "up"
       self.step(1)
       return true
@@ -173,44 +148,24 @@ class System
     return false
   end
 
-  def handle_list(ev)
-    # Three rows, walking and wrapping in both directions.
-    if ev.btn == "up"
-      if self.selected == 0
-        self.selected = 2
-      else
-        self.selected -= 1
-      end
-      return true
-    end
-    if ev.btn == "down"
-      if self.selected == 2
-        self.selected = 0
-      else
-        self.selected += 1
-      end
-      return true
-    end
-    if ev.btn == "ok"
-      self.begin_edit()
-      return true
-    end
-    if ev.btn == "back"
-      routines.set_active("default")
-      return true
-    end
-    return false
+  def step_sel(delta)
+    return self.list.move(delta)
+  end
+
+  def ok_edit()
+    self.begin_edit()
+    return true
   end
 
   # --- the editor ----------------------------------------------------------
 
   def begin_edit()
     self.editing = true
-    if self.selected == 0
+    if self.list.selected == 0
       self.edit_unit_index = self.unit_index
       return
     end
-    if self.selected == 2
+    if self.list.selected == 2
       self.edit_bluetooth = self.bluetooth
       return
     end
@@ -225,12 +180,12 @@ class System
   # One whole step in the panel's unit, converted back to the machine's kPa, exactly as `default`
   # stepped its target before the setting moved here.
   def step(direction)
-    if self.selected == 0
+    if self.list.selected == 0
       var count = self.units.size()
       self.edit_unit_index = (self.edit_unit_index + direction + count) % count
       return
     end
-    if self.selected == 2
+    if self.list.selected == 2
       self.edit_bluetooth = !self.edit_bluetooth
       return
     end
@@ -239,9 +194,9 @@ class System
 
   def commit()
     self.editing = false
-    if self.selected == 0
+    if self.list.selected == 0
       device.set_unit(self.units[self.edit_unit_index])
-    elif self.selected == 1
+    elif self.list.selected == 1
       device.set_target(self.edit_kpa)
     else
       device.set_bluetooth(self.edit_bluetooth)

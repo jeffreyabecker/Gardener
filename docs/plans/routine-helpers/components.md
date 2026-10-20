@@ -73,8 +73,9 @@ nearest face rather than refuse: `serif` → `sans`, `lcd` → `mono`, `oblique`
 `bold-oblique` → `bold`. These fallbacks are documented here and logged nowhere; compiling real
 serif, LCD and oblique faces is a firmware change this plan leaves alone.
 
-Text is centred in the content rect. With a named face `y` is the baseline (the firmware's own
-rule); with the built-in face `y` is the top. The component accounts for the difference.
+Text is placed by `align` horizontally (`left`, `center`, `right`) and `v_align` vertically (`top`,
+`center`, `bottom`), both default `center`. With a named face `y` is the baseline (the firmware's
+own rule); with the built-in face `y` is the top. The component accounts for the difference.
 
 ## Components
 
@@ -82,7 +83,7 @@ Config is a set of fields with defaults, settable at construction or after.
 
 ### `FixedText`
 
-- config: `value` (the text), `family`, `style`
+- config: `value` (the text), `family`, `style`, `align`, `v_align`
 - draw args: none
 
 Draws `value` at the largest face that fits the content rect. The fit depends only on config, so
@@ -90,7 +91,7 @@ it is resolved once and cached; every `draw()` is the same call.
 
 ### `DynamicText`
 
-- config: `value` (the default text), `family`, `style`
+- config: `value` (the default text), `family`, `style`, `align`, `v_align`
 - draw args: `value` (the text to draw)
 
 As `FixedText`, except the text arrives per draw: `draw(value)` re-fits each call (the face list
@@ -98,7 +99,7 @@ is cached; the chosen face is not). A `nil` argument falls back to the config `v
 
 ### `PressureDisplay`
 
-- config: `show_units` (bool, default true), `family`, `style`
+- config: `show_units` (bool, default true), `family`, `style`, `align`, `v_align`
 - draw args: `value` (a depth in kPa)
 
 Reads `screen.unit()` itself each `draw()` — it is a plain read-only query, and reading it fresh

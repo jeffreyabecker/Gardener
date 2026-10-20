@@ -12,10 +12,9 @@ import string
 
 class Settings
   var name
-  var rows
+  var list
   var described
   var values
-  var index
   var editing
   var edit_setting
   var edit_value
@@ -25,11 +24,9 @@ class Settings
 
   def init(name)
     self.name = name
-    # The small face is eight pixels a line. The first row starts below the header.
-    self.rows = 6
+    self.list = List(6)
     self.described = nil
     self.values = nil
-    self.index = 0
     self.editing = false
     self.edit_setting = nil
     self.edit_value = 0
@@ -88,7 +85,7 @@ class Settings
     self.fmt = "%." + str(self.unit.decimals) + "f"
     self.described = described
     self.values = values
-    self.index = 0
+    self.list.selected = 0
     self.editing = false
     self.edit_setting = nil
     self.edit_value = 0
@@ -112,13 +109,18 @@ class Settings
 
   def draw_list()
     screen.draw_text(0, 0, 1, false, "SETTINGS")
-    var first = self.first(self.index)
-    var row = 0
-    while row < self.rows && first + row < self.described.size()
-      var line = self.described[first + row].label + "=" + self.value_text(first + row)
-      screen.draw_text(0, 16 + row * 8, 1, first + row == self.index, line)
-      row += 1
+    self.list.set(self.rows())
+    self.list.draw(0, 16)
+  end
+
+  def rows()
+    var out = []
+    var i = 0
+    while i < self.described.size()
+      out.push([nil, self.described[i].label + "=" + self.value_text(i)])
+      i += 1
     end
+    return out
   end
 
   def draw_edit()
@@ -144,14 +146,6 @@ class Settings
       return "MIN UP/DOWN  OK=NEXT"
     end
     return "SEC UP/DOWN  OK=SAVE"
-  end
-
-  # The first row on the glass: a list only scrolls as far as the selection needs.
-  def first(selected)
-    if selected >= self.rows
-      return selected - self.rows + 1
-    end
-    return 0
   end
 
   def value_text(index)
@@ -224,17 +218,16 @@ class Settings
   end
 
   def handle_list(ev)
-    var count = self.described.size()
-    if count == 0
+    if self.described.size() == 0
       self.close()
       return true
     end
     if ev.btn == "up"
-      self.index = (self.index + count - 1) % count
+      self.list.move(-1)
       return true
     end
     if ev.btn == "down"
-      self.index = (self.index + 1) % count
+      self.list.move(1)
       return true
     end
     if ev.btn == "ok"
@@ -281,6 +274,7 @@ class Settings
   def close()
     self.described = nil
     self.values = nil
+    self.list.selected = 0
     self.editing = false
     self.edit_setting = nil
     self.edit_stage = nil
@@ -317,7 +311,7 @@ class Settings
   end
 
   def begin_edit()
-    var setting = self.described[self.index]
+    var setting = self.described[self.list.selected]
     var editable = setting.kind == "real" || setting.kind == "int"
     editable = editable || setting.kind == "bool" || setting.kind == "choice"
     editable = editable || setting.kind == "duration"
@@ -327,7 +321,7 @@ class Settings
       return false
     end
     self.edit_setting = setting
-    self.edit_value = self.values[self.index]
+    self.edit_value = self.values[self.list.selected]
     self.edit_stage = nil
     if setting.kind == "duration"
       self.edit_stage = "min"
@@ -438,7 +432,7 @@ class Settings
 
   def commit()
     if store.set(self.name, self.edit_setting.key, self.edit_value)
-      self.values[self.index] = self.edit_value
+      self.values[self.list.selected] = self.edit_value
     else
       vacuum.log("settings: " + self.name + " did not save " + self.edit_setting.key)
     end
