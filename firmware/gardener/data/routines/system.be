@@ -2,7 +2,8 @@
 # preference and the selected jingle.
 #
 # The four rows are a List widget; the edit face is the page's own. Up/Down walk the rows, OK
-# opens the value, Up/Down changes it, OK saves, and Back cancels or goes home.
+# opens the value, Up/Down changes it, OK saves, and Back cancels or goes home. The jingle is the
+# one value with something to hear, so its browser plays what it is showing as it opens and steps.
 
 import string
 
@@ -70,8 +71,9 @@ class System : Page
 
     self.jingle_ids = jingles.ids()
     self.jingle = device.jingle()
-    # An older settings file, a hand-edited value or a missing jingle all land on the first entry.
-    if jingles.notes(self.jingle) == nil
+    # A setting that was never written, a hand-edited value or a jingle this image does not ship
+    # all land on the first entry, which is what `jingles.current()` plays for the same reason.
+    if self.jingle == nil || jingles.notes(self.jingle) == nil
       self.jingle = jingles.default_id()
     end
   end
@@ -117,6 +119,8 @@ class System : Page
         label = jingles.label(self.jingle_ids[self.edit_jingle])
       end
       screen.draw_text(0, 20, 2, false, label)
+      screen.draw_text(0, 56, 1, false, "UP/DOWN PLAY  OK=SAVE")
+      return
     end
     screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
   end
@@ -171,6 +175,8 @@ class System : Page
       return true
     end
     if ev.btn == "back"
+      # What was auditioning is the value being refused, so it goes quiet on the way out.
+      buzzer.off()
       self.editing = false
       return true
     end
@@ -200,6 +206,7 @@ class System : Page
         return
       end
       self.edit_jingle = self.jingle_index()
+      self.play_jingle()
     else
       if self.target > 0.0
         self.edit_kpa = self.target
@@ -222,6 +229,15 @@ class System : Page
     return 0
   end
 
+  # The browser plays what it is showing, so a jingle is chosen by ear. The player is non-blocking
+  # and a new sequence replaces the one running; a sequence stops itself at its end.
+  def play_jingle()
+    var notes = jingles.notes(self.jingle_ids[self.edit_jingle])
+    if notes != nil
+      buzzer.play(notes)
+    end
+  end
+
   # One whole step in the panel's unit, converted back to the machine's kPa, exactly as `default`
   # stepped its target before the setting moved here.
   def step(direction)
@@ -238,6 +254,7 @@ class System : Page
       var jingle_count = self.jingle_ids.size()
       if jingle_count > 0
         self.edit_jingle = (self.edit_jingle + direction + jingle_count) % jingle_count
+        self.play_jingle()
       end
       return
     end

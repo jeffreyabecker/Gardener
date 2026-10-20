@@ -189,7 +189,9 @@ buzzer.
 The device also ships named jingles in `/modules/jingles.ini`. A routine plays the one selected on
 the System page with `buzzer.play(jingles.current())`, or a named one by identifier with
 `buzzer.play(jingles.notes("forelle"))`; `jingles.ids()`, `jingles.title()` and `jingles.label()`
-are how it finds them.
+are how it finds them. The System page browses the library by ear: opening the jingle row plays the
+one it is on, Up/Down plays the next one, and OK stores it. An unset setting, or one naming a jingle
+the image does not ship, shows and plays the first entry — the same fallback `jingles.current()` makes.
 
 ## Building
 
