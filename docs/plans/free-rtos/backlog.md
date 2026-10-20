@@ -138,19 +138,19 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## BLE — BLE link loop side
 
-- [ ] BLE-001 Confirm the `volatile` callback slots (`control_`, `target_`, `unit_`, `command_`,
+- [x] BLE-001 Confirm the `volatile` callback slots (`control_`, `target_`, `unit_`, `command_`,
   `linkLost_`, `subscriptions_`, `baseline_`) and `onDisconnect` are untouched.
-- [ ] BLE-002 `control_` write: keep `ownership.acquire/release(Bluetooth)` direct; a release
+- [x] BLE-002 `control_` write: keep `ownership.acquire/release(Bluetooth)` direct; a release
   enqueues `MachineCommand::Stop` instead of the inline `vacuum.stop()`.
-- [ ] BLE-003 `target_` write: enqueue `SetTarget` / `ClearTarget` (0 clears); the read-back for
+- [x] BLE-003 `target_` write: enqueue `SetTarget` / `ClearTarget` (0 clears); the read-back for
   the notify is a dirty `vacuum.targetKpa()`.
-- [ ] BLE-004 `unit_` write: keep `settings.setUnit()` direct (Settings is interface-owned).
-- [ ] BLE-005 `execute(Start)`: compute the result byte from a dirty `startRefusal()` read; enqueue
+- [x] BLE-004 `unit_` write: keep `settings.setUnit()` direct (Settings is interface-owned).
+- [x] BLE-005 `execute(Start)`: compute the result byte from a dirty `startRefusal()` read; enqueue
   `Start`; write the result byte to the Command characteristic.
-- [ ] BLE-006 `execute(Stop)`: enqueue `Stop`; write the result byte.
-- [ ] BLE-007 `execute(ResetFault)`: enqueue `ResetFault`; write the result byte.
-- [ ] BLE-008 `execute(Reboot)`: enqueue `Reboot`; no inline `safeReboot()`.
-- [ ] BLE-009 Confirm `publish` / `describe` read the live `VacuumSystem`, `Settings`, `Ownership`
+- [x] BLE-006 `execute(Stop)`: enqueue `Stop`; write the result byte.
+- [x] BLE-007 `execute(ResetFault)`: enqueue `ResetFault`; write the result byte.
+- [x] BLE-008 `execute(Reboot)`: enqueue `Reboot`; no inline `safeReboot()`.
+- [x] BLE-009 Confirm `publish` / `describe` read the live `VacuumSystem`, `Settings`, `Ownership`
   directly (they already do; now from the interface task).
 
 ## STORE — Store bus

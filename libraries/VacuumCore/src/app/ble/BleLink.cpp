@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "app/Ownership.h"
-#include "app/SafeReboot.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "core/Config.h"
 #include "core/Units.h"
@@ -157,7 +157,8 @@ void BleLink::applyPending() {
     if (control_.value != 0) {
       ownership.acquire(Link::Bluetooth);
     } else if (ownership.release(Link::Bluetooth)) {
-      app_->vacuum().stop();
+      const MachineCommand stop{MachineCommand::Op::Stop};
+      xQueueSend(machineCommandQueue, &stop, 0);
     }
     // The caller's view, so a refused acquire reads back as still not owned.
     describe(Field::Control);
@@ -170,11 +171,14 @@ void BleLink::applyPending() {
     const float kpa = target_.value;
     if (owned() && isfinite(kpa)) {
       // 0 clears the target; anything else is the vacuum system's to accept or refuse against its
-      // own floor, so the two surfaces cannot disagree about what a target is.
+      // own floor, so the two surfaces cannot disagree about what a target is. The write is queued
+      // for the control task.
       if (kpa == 0.0f) {
-        app_->vacuum().clearTarget();
+        const MachineCommand clear{MachineCommand::Op::ClearTarget};
+        xQueueSend(machineCommandQueue, &clear, 0);
       } else {
-        app_->vacuum().setTarget(kpa);
+        const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
+        xQueueSend(machineCommandQueue, &set, 0);
       }
     }
     // Read back rather than echo: a refused value leaves the target where it was, and the read is
@@ -202,35 +206,45 @@ void BleLink::applyPending() {
     const uint8_t result = execute(opcode);
     setByte(characteristic(Field::Command), result);
     notify(Field::Command);
-    // The result goes out first; the release and the restart follow.
-    if (opcode == kOpReboot && result == kResultApplied) safeReboot(*app_);
   }
 }
 
 // Runs one opcode. `start` reports the same refusals the serial link reports, from the same
 // VacuumSystem::startRefusal(), so the two surfaces cannot disagree about why a run will not start.
+// Every applied opcode is queued for the control task; only the refusal and the result byte are
+// answered here.
 uint8_t BleLink::execute(uint8_t opcode) {
   if (!owned()) return kResultNotControlling;
 
   VacuumSystem& vacuum = app_->vacuum();
   switch (opcode) {
     case kOpStart: {
-      if (vacuum.start()) return kResultApplied;
       const char* refusal = vacuum.startRefusal();
-      if (refusal == nullptr) return kResultApplied;
-      if (strcmp(refusal, "latch") == 0) return kResultFault;
-      if (strcmp(refusal, "no_target") == 0) return kResultNoTarget;
-      if (strcmp(refusal, "no_reading") == 0) return kResultNoReading;
-      return kResultUnknownOpcode;
+      if (refusal != nullptr) {
+        if (strcmp(refusal, "latch") == 0) return kResultFault;
+        if (strcmp(refusal, "no_target") == 0) return kResultNoTarget;
+        if (strcmp(refusal, "no_reading") == 0) return kResultNoReading;
+        return kResultUnknownOpcode;
+      }
+      const MachineCommand start{MachineCommand::Op::Start};
+      xQueueSend(machineCommandQueue, &start, 0);
+      return kResultApplied;
     }
-    case kOpStop:
-      vacuum.stop();
+    case kOpStop: {
+      const MachineCommand stop{MachineCommand::Op::Stop};
+      xQueueSend(machineCommandQueue, &stop, 0);
       return kResultApplied;
-    case kOpResetFault:
-      vacuum.resetFault();
+    }
+    case kOpResetFault: {
+      const MachineCommand reset{MachineCommand::Op::ResetFault};
+      xQueueSend(machineCommandQueue, &reset, 0);
       return kResultApplied;
-    case kOpReboot:
+    }
+    case kOpReboot: {
+      const MachineCommand reboot{MachineCommand::Op::Reboot};
+      xQueueSend(machineCommandQueue, &reboot, 0);
       return kResultApplied;
+    }
     default:
       return kResultUnknownOpcode;
   }
