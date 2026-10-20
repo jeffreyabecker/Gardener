@@ -48,9 +48,9 @@ panel to the disconnected page.
 
 If the port disappears while the link owns the device, the machine keeps its state and the
 ownership record stays held. A reconnected link is a read-only observer until the local reset
-(Back+OK for 5 s) clears the record (§11). The device can only notice a drop when the stream
-reports host presence, which USB CDC can and a plain UART cannot; there is no command that sets or
-reports presence.
+(Back+OK for 5 s) clears the record ([vacuum control](./vacuum-control.md)). The device can only
+notice a drop when the stream reports host presence, which USB CDC can and a plain UART cannot;
+there is no command that sets or reports presence.
 
 ## 3. Grammar
 
@@ -406,77 +406,9 @@ A command with no verb at all is `err bad_argument` with nothing to name.
 
 ## 11. State model
 
-The controller owns the target, the duration and when to start and stop once it has acquired
-control. The device owns what happens when nobody is watching, and nothing else.
-
-```
-       vacuum start                          vacuum stop / control release / fault / back hold
-IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
-  ^                                                 │                           │
-  │                                                 │                           v
-  └───────────────── vacuum reset ──────────────────┴─────────────────────── FAULT
-```
-
-`VENT` is the valve open to raise pressure. It has two endings: a release goes to `IDLE` within
-2 kPa of ambient (or on the timeout), and a vent to a shallower target seals the chamber and
-returns to `PULL`/`HOLD`.
-
-| Event | From | To |
-| --- | --- | --- |
-| `control acquire` | any | no machine change; the link becomes the one controller |
-| `control release` | any | the same as `vacuum stop`; ownership clears and the panel returns to the disconnected page |
-| `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
-| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
-| Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
-| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
-| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
-| target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
-| target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
-| vent to a shallower target | `PULL`, `HOLD` | `VENT` with `duty=0`; it returns to `PULL`/`HOLD` rather than `IDLE` |
-| sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
-| `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
-| `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
-
-What a controller has to know:
-
-* **The hold's duration is yours.** The device has no timer, no timeout and no maximum run
-  time, so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it
-  means the device's own deadband has decided the target is reached, which is the moment to start
-  timing and the one thing you cannot work out for yourself, because the deadband is the
-  device's loop. Timing it is yours: the device is not told how long a hold is, and has no
-  command that takes a duration.
-* **A Back hold is a local `vacuum stop`.** Holding the Back key for 3 s stops the pump and
-  vents, even while a controller owns the device. The state moves exactly as a `vacuum stop` moves
-  it.
-* **Back+OK for 5 s is the local reset.** It stops, vents for up to 2 s, restarts, and clears a
-  held ownership record. A link that dropped while owning cannot be recovered any other way.
-* **Faults latch.** Only `vacuum reset` clears one; the device never retries on its own.
-* Venting has two endings. A **release** finishes when the pressure is within 2 kPa of ambient,
-  or after 30 s, whichever comes first; a timeout is logged, not an error, and the state still
-  returns to `IDLE`. A **vent to a shallower target** finishes at its landing and returns to
-  `PULL`/`HOLD`, keeping the target. `VENT` is the same state either way. The build chooses the
-  landing in `core/Config.h`: with `CONTROL_VENT_TO_TARGET` the valve closes
-  `VENT_TARGET_LEAD_KPA` above the target so the travel after the coil drops covers the rest;
-  without it the valve stays open until the reading passes the target and the pump pulls back.
-* **The vent valve is normally open by default**: de-energised is open, so running a vacuum means
-  energising the coil to close it. A crash, a brownout or a cut wire therefore vents the chamber
-  whether or not the firmware noticed. `NormallyClosedValve` in `app/Build.cpp` is the alternative
-  and inverts all of that — de-energised is sealed.
-* A normally open solenoid draws current for the whole hold, which is why a long hold is the
-  dominant battery cost rather than the pump. A normally closed part draws it at rest instead,
-  holding the valve open to vent. With no timer in the device, an unattended run holds until
-  something stops it.
-* **A link that drops while owning does not stop the run.** Ownership stays held, the machine
-  keeps its state and the panel keeps showing that link until the local reset. The device only
-  detects a controller that leaves; one that hangs with the port open holds the run open.
-* Duty is capped and slew limited, and those are the pump's only protections. A target deeper
-  than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at the cap and
-  nothing stops it, so read `floor` and keep targets no deeper than it.
-* **The panel is the device's.** While a controller has control it shows that link's icon — a
-  DE-9 connector face-on for serial, the Bluetooth rune for a radio — with the run state's icon,
-  the battery and the two ways in drawn over it by the overlay. It falls back to the boot mark when
-  no link owns the device. There is no drawing command, so everything else — a vent timeout, the
-  duty, the fault code — is only on the wire. Poll `vacuum get` to see it.
+The machine's states, the transition each command causes and the protections behind them are the
+firmware's contract and live in [vacuum control](./vacuum-control.md). `vacuum start`, `vacuum stop`
+and `vacuum get` report the state; the transitions themselves are that document's.
 
 ## 12. Rates
 

@@ -5,6 +5,8 @@
 The contracts the firmware and its tools must satisfy.
 
 - [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies and errors
+- [Bluetooth](./specs/bluetooth.md) — the GATT table, ownership and the command opcodes
+- [Vacuum control](./specs/vacuum-control.md) — the machine: states, transitions and protections
 - [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the page standards
 - [Assets](./specs/assets.md) — the image file format and the tool that makes one
 - [Routines](./specs/ui/routine.md) — what a routine is: its lifecycle and embedded rules
@@ -25,5 +27,4 @@ User-facing build and parts documentation.
 
 - [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy and what it costs
 
-See the [project README](../README.md) for wiring, build and upload flow, control model and safety
-notes.
+See the [project README](../README.md) for wiring, build and upload flow, and safety notes.
