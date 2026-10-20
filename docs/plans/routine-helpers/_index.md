@@ -1,4 +1,4 @@
-# Berry page abstractions: `Page`, `Component` and `List` (and a state-machine comparison)
+# Berry page abstractions: `Page`, `Component` and `List`
 
 ## Problem
 
@@ -20,11 +20,6 @@ index walked with Up/Down, wrapped at the ends, drawn with one highlighted row a
 That is three copies of the same three rules, which a stateful `List` widget makes one — its own
 sub-plan, [list.md](./list.md).
 
-Separately, `static.be`'s `advance()` is the only phase machine in the tree. The request asked
-whether a `StateMachine` helper would simplify it; per the project's "one caller means no
-interface" / "no speculative generality" rules it likely would not — but we will prototype one
-and compare, keeping the simpler.
-
 ## Decision
 
 1. **Extract a `Page` base class** into a new module `firmware/gardener/data/modules/page.be`
@@ -37,9 +32,9 @@ and compare, keeping the simpler.
 3. **Extract a stateful `List` widget** into `firmware/gardener/data/modules/list.be` — it owns a
    selected index, the Up/Down wrap, the scroll window and the highlight, adopted by `browser`,
    `system` and the `settings` editor. Its own sub-plan: [list.md](./list.md).
-4. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
-   `advance()`, and keep whichever is genuinely simpler (expectation: the hand-rolled version
-   wins; the loser is deleted, not deprecated).
+4. **Register gestures declaratively on `Page`** — `on(btn, presses, fn)` in `init()` replaces
+   each page's `handle()` if/elif chain, and the base dispatches. Its own sub-plan:
+   [presses.md](./presses.md).
 
 ## The `Page` base class (`modules/page.be`)
 
@@ -48,12 +43,14 @@ wrapper and the editor delegation. It knows nothing about units or fonts: pressu
 lives in `PressureDisplay`, and the one page that still formats its own text (`system`) keeps the
 `unit`/`fmt` fields it already has.
 
-- fields: `last_draw`, `editor`
+- fields: `last_draw`, `editor`, `gestures`
 - `init()` — zero the shared fields
 - `take_events()` — the drain loop, calling `self.handle(ev)`; returns whether anything acted
 - `handle(ev)` — routes to the settings editor when `self.editor != nil`, else `handle_page(ev)`;
   on editor close sets `editor = nil` and calls `on_editor_closed()`
-- `handle_page(ev)` — no-op default; each page's current `handle()` body moves here
+- `on(btn, presses, fn)` — register a gesture; `presses` is one token or a list of them
+- `handle_page(ev)` — default dispatch of the registered gestures (first match that acts wins);
+  pages override it only to switch between modes
 - `open_settings(name)` — constructs `Settings(name)`, opens it, stores it in `editor`
 - `on_editor_closed()` — no-op default (static overrides it to re-read settings + retarget)
 - `draw()` — `draw_clear()` → editor or `draw_page()` → `flush()` → `last_draw = vacuum.now_ms()`
@@ -76,43 +73,39 @@ The selectable menu is its own piece: [list.md](./list.md) specifies the statefu
 selection, wrap, scroll window, highlight and per-row icons — and how `browser`, `system` and
 `settings` adopt it.
 
+## The gesture handler
+
+The button dispatch is its own piece: [presses.md](./presses.md) specifies `Page.on(btn, presses,
+fn)` — declarative gesture registration replacing each page's `handle()` if/elif chain.
+
 ## Per-page changes
 
 - **default.be** `Readout : Page` — keep `restore()`/`start()`; drop `unit`/`fmt`/`last_draw`,
-  `take_events`, `poll`, `draw`, `text(kpa)`; rename `handle` → `handle_page`. Rendering becomes
+  `take_events`, `poll`, `draw`, `text(kpa)`; replace `handle` with `on(…)` registrations.
+  Rendering becomes
   component fields fed in `draw_page()` — a `PressureDisplay` for the big number, a `FixedText` +
   `PressureDisplay` for the target line, a `DynamicText` for the header — see
   [components.md](./components.md).
 - **static.be** `Static : Page` — keep the cycle (`begin`/`advance`/`abandon`), settings and
   button logic; drop `unit`/`fmt`/`last_draw`/`editor`, `take_events`, `poll`, `draw`, `number`,
-  `text`, `open_settings`; rename `handle` → `handle_page` (editor branch removed), override
+  `text`, `open_settings`; replace `handle` with `on(…)` registrations (editor branch removed),
+  override
   `tick(now)` (stopped + advance), override `on_editor_closed()` (re-read settings + retarget).
   Rendering becomes component fields fed in `draw_page()` — a `PressureDisplay`, a `FixedText` +
   `PressureDisplay` target line, and `DynamicText`s for status/hint — see
   [components.md](./components.md).
 - **browser.be** `Browser : Page` — keep `names`; drop `last_draw`/`editor`, `take_events`,
-  `poll`, `draw`, `open_settings`, `selected`/`rows`/`first`/`handle_list`/`draw_list`; rename
-  `handle` → `handle_page`. The list becomes a `List` set with `routines.names()` on activate;
+  `poll`, `draw`, `open_settings`, `selected`/`rows`/`first`/`handle_list`/`draw_list`; replace
+  `handle` with `on(…)` registrations. The list becomes a `List` set with `routines.names()` on
+  activate;
   Up/Down are `move(±1)`, OK/Back stay the page's — see [list.md](./list.md).
 - **system.be** `System : Page` — keep its inline (`editing` boolean) editor, its own `unit`/`fmt`
   and all formatting; drop `last_draw`, `take_events`, `poll`, `draw`, the hardcoded three-row
-  wrap; rename `handle` → `handle_page`. The three rows become a `List` with `visible = 3`; the
+  wrap; replace `handle` with `on(…)` registrations. The three rows become a `List` with
+  `visible = 3`; the
   edit face is unchanged — see [list.md](./list.md).
 - **settings.be** — adopt a `List` for its rows and `index`; keep `open()`/`close()`, `describe()`,
   the store reads/writes and the two-stage edit face — see [list.md](./list.md).
-
-## State-machine prototype (compare, then keep or discard)
-
-Candidate: `modules/statemachine.be` defining `StateMachine` with `phase`, `mark`, a
-`steps` map (phase → closure), `on(name, step)`, `to(name, now)`, `waited(seconds, now)` and
-`advance(now)`. `static.be` would register one closure per phase and reduce `advance()` to
-`self.machine.advance(now)`.
-
-Compare against the current 30-line `advance()` on: total lines in `static.be`, and whether a
-reviewer can still read the cycle and its two shared edges (fault/IDLE → abandon) as directly.
-Key implementation risk to verify first: whether Berry closures reliably capture the enclosing
-`self` (fallback: pass the owner explicitly into the machine). **Expect to keep the hand-rolled
-version**; the prototype is deleted unless it is clearly simpler.
 
 ## Docs
 
@@ -134,9 +127,9 @@ version**; the prototype is deleted unless it is clearly simpler.
 
 ## Notes
 
-- Load order within `/modules/` is unspecified; `page.be`, `components.be`, `list.be` and
-  `statemachine.be` define classes only at top level, and `Page.open_settings()` constructs
-  `Settings` at call time, so no module depends on another at load.
+- Load order within `/modules/` is unspecified; `page.be`, `components.be` and `list.be` define
+  classes only at top level, and `Page.open_settings()` constructs `Settings` at call time, so no
+  module depends on another at load.
 - Behaviour must be identical after the refactor: the `poll` restructure preserves `static`'s
   `advance()`-every-beat, and the other pages' early-return is provably equivalent to the
   `acted || elapsed >= 250` gate.
