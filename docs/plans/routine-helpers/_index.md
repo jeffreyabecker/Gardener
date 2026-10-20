@@ -12,7 +12,8 @@ shared class there works.
 
 The readout pages (`default`, `static`) also redraw the same layout by hand — header line, big
 number, `TGT …` line, and (static) status/hint lines — so there is a second, higher-level
-abstraction to make: a display object that wholly owns that layout.
+abstraction to make: a display object that wholly owns that layout. That piece is its own
+sub-plan, [chrome.md](./chrome.md).
 
 Separately, `static.be`'s `advance()` is the only phase machine in the tree. The request asked
 whether a `StateMachine` helper would simplify it; per the project's "one caller means no
@@ -27,7 +28,8 @@ and compare, keeping the simpler.
    that wholly takes over the readout rendering: a base owning the fixed frame, with one hook per
    line that a routine overrides in its own chrome subclass, so `default` and `static` reduce
    `draw_page()` to `self.chrome.draw(vacuum.state())` (chosen scope: readout pages only;
-   `browser` and `system` keep their list layouts).
+   `browser` and `system` keep their list layouts). This piece is its own sub-plan:
+   [chrome.md](./chrome.md).
 3. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
    `advance()`, and keep whichever is genuinely simpler (expectation: the hand-rolled version
    wins; the loser is deleted, not deprecated).
@@ -55,102 +57,22 @@ no-op so a page implements only what it uses.
   so behaviour is identical)
 - `tick(now)` — no-op default (static overrides it for the stopped-notice + `advance()`)
 
-## The `Chrome` display class (`modules/chrome.be`)
+## The `Chrome` display class
 
-`Chrome` owns the readout layout — header, big number, target, and optional status/hint lines —
-as a **subclassable base**. A routine subclasses it and overrides one hook per line, so it has
-fine-grained control over its own chrome; the base owns the fixed geometry and the formatting
-delegation. The page's `draw_page()` collapses to a single call.
-
-```berry
-class Chrome
-  var owner
-
-  def init(owner)                 # the page; reads go through it
-    self.owner = owner
-  end
-
-  def draw(s)                     # s is vacuum.state(); the fixed readout frame
-    screen.draw_text(0, 0, 1, false, self.header(s))
-    var c = self.current(s)
-    if c == nil
-      screen.draw_text(0, 12, 3, false, "--")
-    else
-      screen.draw_text(0, 12, 3, false, self.owner.number(c))
-    end
-    var t = self.target(s)
-    if t == nil
-      screen.draw_text(0, 40, 1, false, "TGT --")
-    else
-      screen.draw_text(0, 40, 1, false, "TGT " + self.owner.value(t))
-    end
-    var st = self.status(s)
-    if st != nil
-      screen.draw_text(0, 48, 1, false, st)
-    end
-    var h = self.hint(s)
-    if h != nil
-      screen.draw_text(0, 56, 1, false, h)
-    end
-  end
-
-  # Hooks a routine overrides (nil hides a line; nil current draws "--").
-  def header(s)  return ""  end
-  def current(s) return nil end
-  def target(s)  return nil end
-  def status(s)  return nil end
-  def hint(s)    return nil end
-end
-```
-
-A routine's `.be` file defines its own chrome beside its page — `default`'s maps `s.state` to the
-header and `s.kpa`/`s.target` to the readout; `static`'s maps `phase_name()`, `status_text()` and
-`hint_text()` (each reads `self.owner`). The page constructs it with itself as owner and reduces
-`draw_page()` to `self.chrome.draw(vacuum.state())`. A routine that wants a different layout
-outright overrides `draw(s)` instead of the hooks — the whole frame is one method.
-
-```berry
-# in static.be
-class StaticChrome : Chrome
-  def header(s)  return self.owner.phase_name() end
-  def current(s) return s.sensor_ok ? s.kpa : nil end
-  def target(s)  return self.owner.target end
-  def status(s)  return self.owner.status_text() end
-  def hint(s)    return self.owner.hint_text() end
-end
-
-class Static : Page
-  var chrome
-  def init()
-    super(self).init()
-    self.chrome = StaticChrome(self)
-  end
-  def draw_page()
-    self.chrome.draw(vacuum.state())
-  end
-end
-```
-
-Two deliberate, cosmetic reconciliations the chrome imposes: `default`'s target line moves from
-y=44 to y=40 (`static` already uses 40), and an unset target reads `TGT --` without the unit
-suffix (`default` previously printed `TGT -- kPa`). Flagged here so they can be vetoed; preserving
-them exactly would push per-line positions back into the page, which is what the chrome exists to
-absorb.
+The readout display is its own piece: [chrome.md](./chrome.md) specifies the subclassable
+`Chrome` base, the per-page `ReadoutChrome`/`StaticChrome` subclasses, and the two cosmetic
+reconciliations it imposes.
 
 ## Per-page changes
 
 - **default.be** `Readout : Page` — keep `restore()`/`start()`; drop `unit`/`fmt`/`last_draw`,
-  `take_events`, `poll`, `draw`; rename `handle` → `handle_page`; define `ReadoutChrome : Chrome`
-  (header `s.state`, current `s.kpa or nil`, target `s.target > 0.0 ? s.target : nil`, no
-  status/hint) and reduce `draw_page()` to `self.chrome.draw(vacuum.state())`; drop `text(kpa)`
-  in favour of inherited `number`/`value`.
+  `take_events`, `poll`, `draw`; rename `handle` → `handle_page`; drop `text(kpa)` in favour of
+  inherited `number`/`value`. Rendering moves to `ReadoutChrome` — see [chrome.md](./chrome.md).
 - **static.be** `Static : Page` — keep the cycle (`begin`/`advance`/`abandon`), settings and
   button logic; drop `unit`/`fmt`/`last_draw`/`editor`, `take_events`, `poll`, `draw`, `number`,
   `text`, `open_settings`; rename `handle` → `handle_page` (editor branch removed), override
-  `tick(now)` (stopped + advance), override `on_editor_closed()` (re-read settings + retarget);
-  define `StaticChrome : Chrome` (header `phase_name()`, current `s.kpa or nil`, target
-  `self.target`, status `status_text()`, hint `hint_text()`) and reduce `draw_page()` to
-  `self.chrome.draw(vacuum.state())`.
+  `tick(now)` (stopped + advance), override `on_editor_closed()` (re-read settings + retarget).
+  Rendering moves to `StaticChrome` — see [chrome.md](./chrome.md).
 - **browser.be** `Browser : Page` — keep `names`/`selected`/`rows`; drop `last_draw`/`editor`,
   `take_events`, `poll`, `draw`, `open_settings`; rename `handle_list` → `handle_page` (editor
   branch removed), `draw_list` → `draw_page`. No Chrome — it is a list layout.
