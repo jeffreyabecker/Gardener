@@ -11,7 +11,7 @@
 
 namespace gardener {
 
-// The store queue depth, from docs/plans/free-rtos/queues.md. One producer (the panel task) and one
+// The store queue depth. One producer (the panel task) and one
 // consumer (the interface task), both draining every pass.
 constexpr UBaseType_t StoreQueueDepth = 4;
 

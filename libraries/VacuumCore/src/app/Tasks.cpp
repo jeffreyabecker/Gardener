@@ -25,7 +25,7 @@ volatile bool bleConnected = false;
 
 namespace {
 
-// Task configuration, from docs/plans/free-rtos/tasks.md. The control task runs above the
+// Task configuration. The control task runs above the
 // Arduino loop's default priority so the safety tick is never preempted by a link or the screen;
 // the panel task runs lowest because a routine's poll may take its time. The panel's stack is the
 // one the Berry interpreter runs inside.
@@ -39,7 +39,7 @@ constexpr UBaseType_t ControlCore = 1;
 constexpr UBaseType_t InterfaceCore = 0;
 constexpr UBaseType_t PanelCore = 0;
 
-// Queue depths, from docs/plans/free-rtos/queues.md. Overflow drops the newest item with a log
+// Queue depths. Overflow drops the newest item with a log
 // line; the consumers drain every tick, so a full queue is the exception, not the steady state.
 constexpr UBaseType_t MachineCommandQueueDepth = 8;
 constexpr UBaseType_t ButtonEventQueueDepth = 8;
