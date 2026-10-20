@@ -24,12 +24,12 @@ and compare, keeping the simpler.
 
 1. **Extract a `Page` base class** into a new module `firmware/gardener/data/modules/page.be`
    and have all four routines extend it (chosen scope: full extraction).
-2. **Extract a subclassable `Chrome` display class** into `firmware/gardener/data/modules/chrome.be`
-   that wholly takes over the readout rendering: a base owning the fixed frame, with one hook per
-   line that a routine overrides in its own chrome subclass, so `default` and `static` reduce
-   `draw_page()` to `self.chrome.draw(vacuum.state())` (chosen scope: readout pages only;
-   `browser` and `system` keep their list layouts). This piece is its own sub-plan:
-   [chrome.md](./chrome.md).
+2. **Extract a `Chrome` component framework** — a `Chrome` in
+   `firmware/gardener/data/modules/chrome.be` that composes drawing components (`FixedText`,
+   `DynamicText`, `PressureDisplay`, `ProgressBar`, `Scrollbar` in `components.be`), so `default`
+   and `static` reduce `draw_page()` to `self.chrome.draw(vacuum.state())` (readout pages only;
+   `browser` and `system` keep their list layouts). Its own sub-plans: [chrome.md](./chrome.md)
+   and [components.md](./components.md).
 3. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
    `advance()`, and keep whichever is genuinely simpler (expectation: the hand-rolled version
    wins; the loser is deleted, not deprecated).
@@ -59,9 +59,9 @@ no-op so a page implements only what it uses.
 
 ## The `Chrome` display class
 
-The readout display is its own piece: [chrome.md](./chrome.md) specifies the subclassable
-`Chrome` base, the per-page `ReadoutChrome`/`StaticChrome` subclasses, and the two cosmetic
-reconciliations it imposes.
+The readout display is its own piece: [components.md](./components.md) specifies the drawing
+primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/`Scrollbar`)
+and the font mapping; [chrome.md](./chrome.md) specifies how a routine's `Chrome` composes them.
 
 ## Per-page changes
 
@@ -97,10 +97,10 @@ version**; the prototype is deleted unless it is clearly simpler.
 
 ## Docs
 
-- `docs/specs/routines.md` — "Shared code in `/modules`": document `page.be`/`Page` and
-  `chrome.be`/`Chrome` beside `settings.be`; a routine may extend `Page` to inherit the skeleton
-  and subclass `Chrome` to own its readout. Keep the `activate()`/`poll(now)` contract unchanged
-  (a page still satisfies it, via the base).
+- `docs/specs/routines.md` — "Shared code in `/modules`": document `page.be`/`Page`,
+  `components.be`/`Component` and `chrome.be`/`Chrome` beside `settings.be`; a routine may extend
+  `Page` to inherit the skeleton and compose `Chrome` components to own its readout. Keep the
+  `activate()`/`poll(now)` contract unchanged (a page still satisfies it, via the base).
 - `README.md` — the "Shared Berry code lives in `/modules/`" paragraph: stop calling the editor
   "the one module"; mention the page-skeleton and display modules.
 
@@ -114,9 +114,9 @@ version**; the prototype is deleted unless it is clearly simpler.
 
 ## Notes
 
-- Load order within `/modules/` is unspecified; `page.be`, `chrome.be` and `statemachine.be`
-  define classes only at top level, and `Page.open_settings()` constructs `Settings` at call time,
-  so no module depends on another at load.
+- Load order within `/modules/` is unspecified; `page.be`, `components.be`, `chrome.be` and
+  `statemachine.be` define classes only at top level, and `Page.open_settings()` constructs
+  `Settings` at call time, so no module depends on another at load.
 - Behaviour must be identical after the refactor: the `poll` restructure preserves `static`'s
   `advance()`-every-beat, and the other pages' early-return is provably equivalent to the
   `acted || elapsed >= 250` gate.

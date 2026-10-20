@@ -1,0 +1,139 @@
+# Components: the drawing primitives
+
+Part of the routine-helpers plan — see [_index.md](./_index.md) for the whole effort. A routine's
+[Chrome](./chrome.md) composes these to build its readout; the components own the box math, the
+font choice and the pressure formatting.
+
+They live in `firmware/gardener/data/modules/components.be`.
+
+## The box model — `Component`
+
+Every component has the same geometry, so a routine positions any of them the same way:
+
+- `x`, `y`, `w`, `h` — the component's outer box, in panel pixels, origin top left.
+- `margin` — space reserved outside the border that the component never draws into.
+- `border` — the border's thickness, drawn on the border box when a component has one.
+- `padding` — space between the border and the content.
+
+A component draws only inside its **content rect**:
+
+```
+cx = x + margin + border + padding
+cy = y + margin + border + padding
+cw = w - 2 * (margin + border + padding)
+ch = h - 2 * (margin + border + padding)
+```
+
+The base provides `content()` for that rect and a `draw(...)` hook each component overrides with
+its own arguments. Components are stateless across draws: the same config and the same args draw
+the same thing. Where config alone determines a derived value — a face that fits a fixed string —
+the component computes it once and caches it; where an argument changes per draw, it re-derives.
+
+```berry
+class Component
+  var x, y, w, h
+  var margin, border, padding
+
+  def init()
+    self.x = 0; self.y = 0; self.w = 0; self.h = 0
+    self.margin = 0; self.border = 0; self.padding = 0
+  end
+
+  def content()
+    return [self.x + self.margin + self.border + self.padding,
+            self.y + self.margin + self.border + self.padding,
+            self.w - 2 * (self.margin + self.border + self.padding),
+            self.h - 2 * (self.margin + self.border + self.padding)]
+  end
+
+  def draw() end        # each component overrides with its own signature
+end
+```
+
+The framework does not lay components out: a routine sets each component's `x`, `y`, `w`, `h`.
+`margin` exists so a component can hold breathing room without its outer box changing, and so a
+container can place siblings from their margins when one is worth adding — not yet.
+
+## Fonts
+
+Components take a family and a style and pick the largest face whose ink box fits the content
+rect, falling back to the built-in 5x7 at sizes 3, 2, 1. `text_bounds(text, 1, face)` (and
+`text_bounds(text, size)` for the built-in) is the measure.
+
+| family | style | faces, largest first |
+| --- | --- | --- |
+| `sans` | `none` | `sans24`, `sans18`, `sans12`, `sans9`, `builtin` 3, 2, 1 |
+| `sans` | `bold` | `sansbold24`, `sansbold18`, `sansbold12`, `sansbold9`, `builtin` 3, 2, 1 |
+| `mono` | `none` | `mono24`, `mono18`, `mono12`, `mono9`, `builtin` 3, 2, 1 |
+| `mono` | `bold` | `monobold24`, `monobold18`, `monobold12`, `monobold9`, `builtin` 3, 2, 1 |
+
+The four styles are `none`, `bold`, `oblique` and `bold-oblique`; the four families are `sans`,
+`mono`, `serif` and `lcd`. The firmware compiles only the faces above, so the rest resolve to the
+nearest face rather than refuse: `serif` → `sans`, `lcd` → `mono`, `oblique` → `none`,
+`bold-oblique` → `bold`. These fallbacks are documented here and logged nowhere; compiling real
+serif, LCD and oblique faces is a firmware change this plan leaves alone.
+
+Text is centred in the content rect. With a named face `y` is the baseline (the firmware's own
+rule); with the built-in face `y` is the top. The component accounts for the difference.
+
+## Components
+
+Config is a set of fields with defaults, settable at construction or after.
+
+### `FixedText`
+
+- config: `value` (the text), `family`, `style`
+- draw args: none
+
+Draws `value` at the largest face that fits the content rect. The fit depends only on config, so
+it is resolved once and cached; every `draw()` is the same call.
+
+### `DynamicText`
+
+- config: `value` (the default text), `family`, `style`
+- draw args: `value` (the text to draw)
+
+As `FixedText`, except the text arrives per draw: `draw(value)` re-fits each call (the face list
+is cached; the chosen face is not). A `nil` argument falls back to the config `value`.
+
+### `PressureDisplay`
+
+- config: `show_units` (bool, default true), `family`, `style`
+- draw args: `value` (a depth in kPa)
+
+Reads `screen.unit()` itself each `draw()` — it is a plain read-only query, and reading it fresh
+means a unit changed by the system page or a controller is picked up on the next visit with no
+activation hook. Converts the kPa to the panel's unit (`value * per_kpa`, formatted to the unit's
+`decimals`), appends the unit `suffix` when `show_units` is set, and draws the result at the
+largest face that fits the content rect. The suffix rides the same baseline and is measured
+together with the number, so the number is only ever as large as the whole line fits. A `nil`
+value draws `--`.
+
+### `ProgressBar`
+
+- config: none (the box model is the config; `border` is the frame thickness)
+- draw args: `value` (real in 0–100, clamped)
+
+Draws the frame on the border box and a fill rectangle from the left of the content rect,
+`cw * value / 100` wide. Monochrome, so the fill is the inverted half of the frame's outline —
+no colour, no text.
+
+### `Scrollbar`
+
+- config: `invert` (bool, default false)
+- draw args: `index` (the first visible row), `count` (rows in the list), `visible` (rows the box
+  shows)
+
+Draws a vertical track the height of the content rect and a thumb showing the window's share and
+position. Thumb height is `ch * visible / count`, pinned to a one-pixel minimum; thumb top is
+`cy + (ch - thumb) * index / (count - visible)`, clamped so the thumb never leaves the track, and
+filling it when `count <= visible`. Normally the track is the content rect's outline and the thumb
+is filled; `invert` swaps the two — a solid bar with the window carved out.
+
+## Notes
+
+- No clipping: nothing on the panel clips; a component's box is a contract it keeps by measuring,
+  not by clipping. A component sized to overflow simply draws past its box, so a chrome sets boxes
+  the content will fit.
+- Components must not be constructed at a module's top level: `/modules` loads in no particular
+  order. A page constructs its chrome — and the chrome its components — in `init()`.
