@@ -118,6 +118,33 @@ Draws the frame on the border box and a fill rectangle from the left of the cont
 `cw * value / 100` wide. Monochrome, so the fill is the inverted half of the frame's outline —
 no colour, no text.
 
+### `ProgressBubbles`
+
+- config: `max_count` (int), `bubble_style` (`rect`, `roundrect`, `circle`, `tri-up`, `tri-down`,
+  `tri-left`, `tri-right`; default `circle`), `unfilled` (`outline` or `none`; default `outline`),
+  `fill_direction` (`lr-tb`, `rl-tb`, `tb-lr`, `bt-lr`; default `lr-tb`)
+- draw args: `count` (int, 0–`max_count`, clamped)
+
+Draws `max_count` bubbles, filled up to `count`, in the content rect. The component computes the
+bubble size and the horizontal/vertical spacing itself, wrapping onto further lines when one row
+does not hold `max_count` — a large count fills the box top-to-bottom in a grid rather than
+squeezing one row. `fill_direction` is the order the bubbles fill across the grid: `lr-tb` left to
+right then top to bottom, `rl-tb` the reverse, `tb-lr` top to bottom then left to right, `bt-lr`
+bottom to top. The first `count` are filled; the rest are drawn as `unfilled` says — `outline`
+draws each as a hollow shape so the full count stays visible, `none` draws nothing for them.
+`bubble_style` picks the shape, mapped to the screen primitives (`rect`/`roundrect`/`circle` to
+`draw_*rect`/`draw_*roundrect`/`draw_*circle`, the triangles to `draw_*triangle`): filled for the
+active bubbles, outline for the rest.
+
+The layout degrades rather than overflowing: the gap between bubbles shrinks first, down to zero
+(bubbles touching). If the bubbles still will not fit at a legible size, they collapse to solid
+2×2 and then 1×1 squares with no outline and no shape — only the filled count is drawn, so the
+progress reads as a dense block of solid squares.
+
+The whole layout — bubble size, spacing, grid geometry and every bubble's position — follows from
+config and the box alone, so the component computes it once and caches it; `draw(count)` then just
+repaints the cached grid with the filled/unfilled split.
+
 ### `Scrollbar`
 
 - config: `invert` (bool, default false)

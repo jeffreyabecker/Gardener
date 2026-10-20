@@ -25,10 +25,10 @@ sub-plan, [list.md](./list.md).
 1. **Extract a `Page` base class** into a new module `firmware/gardener/data/modules/page.be`
    and have all four routines extend it (chosen scope: full extraction).
 2. **Extract a `Component` display framework** — drawing components (`FixedText`, `DynamicText`,
-   `PressureDisplay`, `ProgressBar`, `Scrollbar`, `Triangle`) plus an `Icon` base class for
-   intrinsic-size glyphs, in `firmware/gardener/data/modules/components.be`. A readout page
-   composes them as fields and feeds them state in `draw_page()`; `default` and `static` adopt it,
-   and `List` rows carry icons. Its own sub-plan: [components.md](./components.md).
+   `PressureDisplay`, `ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`) plus an `Icon`
+   base class for intrinsic-size glyphs, in `firmware/gardener/data/modules/components.be`. A
+   readout page composes them as fields and feeds them state in `draw_page()`; `default` and
+   `static` adopt it, and `List` rows carry icons. Its own sub-plan: [components.md](./components.md).
 3. **Extract a stateful `List` widget** into `firmware/gardener/data/modules/list.be` — it owns a
    selected index, the Up/Down wrap, the scroll window and the highlight, adopted by `browser`,
    `system` and the `settings` editor. Its own sub-plan: [list.md](./list.md).
@@ -63,9 +63,9 @@ lives in `PressureDisplay`, and the one page that still formats its own text (`s
 ## The `Component` display framework
 
 The readout display is its own piece: [components.md](./components.md) specifies the drawing
-primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/`Scrollbar`/
-`Triangle`, and the lighter `Icon` glyph), the font mapping, and how a readout page composes them
-into its `draw_page()`.
+primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/
+`ProgressBubbles`/`Scrollbar`/`Triangle`, and the lighter `Icon` glyph), the font mapping, and how
+a readout page composes them into its `draw_page()`.
 
 ## The `List` widget
 
