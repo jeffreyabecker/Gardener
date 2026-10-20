@@ -308,6 +308,10 @@ sets). A routine reaches `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jin
 `store`; the surface is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle
 in [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
 
+Both cycles sound the jingle selected on the System page when their last set finishes, just before
+the panel goes home, and the machine plays it rather than the page, so it carries on past the
+switch. The sequence stops itself at its end.
+
 A `poll` that never returns blocks the panel loop, so returning is a convention the author keeps,
 and `print` goes nowhere: `vacuum.log(text)` reaches the serial line as a `[I]` record.
 

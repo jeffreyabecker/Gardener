@@ -338,12 +338,17 @@ class Ramped : Page
   end
 
   # The last set is done: release the chamber, clear the target so `default` cannot inherit the
-  # ramp's last depth, and hand the panel back. The switch is deferred by the runtime, so it is
-  # safe to ask for it from here.
+  # ramp's last depth, sound the device's jingle at the finish, and hand the panel back. The switch
+  # is deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it:
+  # the machine plays it, not this page.
   def finish()
     vacuum.target_off()
     self.phase = "ready"
     vacuum.log("ramped: complete")
+    var notes = jingles.current()
+    if notes != nil
+      buzzer.play(notes)
+    end
     routines.set_active("default")
   end
 
