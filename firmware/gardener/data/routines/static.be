@@ -312,5 +312,25 @@ class Static : Page
   end
 end
 
-routines.register("static", "Static hold", Static())
+# The browser's row glyph: a square wave, two pulses on a 12 by 8 field. The ink sits on the
+# rows a line of text does, from y + 1 to y + 6, so the icon and the name beside it share a band.
+class StaticIcon : Icon
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw(x, y)
+    var high = y + 1
+    var low = y + 6
+    screen.draw_line(x, low, x + 2, low)
+    screen.draw_line(x + 2, low, x + 2, high)
+    screen.draw_line(x + 2, high, x + 5, high)
+    screen.draw_line(x + 5, high, x + 5, low)
+    screen.draw_line(x + 5, low, x + 9, low)
+    screen.draw_line(x + 9, low, x + 9, high)
+    screen.draw_line(x + 9, high, x + 11, high)
+  end
+end
+
+routines.register("static", "Static hold", Static(), false, StaticIcon())
 return Static

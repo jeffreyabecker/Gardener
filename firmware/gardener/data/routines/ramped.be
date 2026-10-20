@@ -421,5 +421,18 @@ class Ramped : Page
   end
 end
 
-routines.register("ramped", "Ramped pumping", Ramped())
+# The browser's row glyph: the ramp, a rising line over its baseline, on the same 12 by 8 field
+# and the same y + 1 to y + 6 band as the square wave, so the two read as a pair in the list.
+class RampedIcon : Icon
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw(x, y)
+    screen.draw_line(x, y + 6, x + 11, y + 6)
+    screen.draw_line(x, y + 6, x + 11, y + 1)
+  end
+end
+
+routines.register("ramped", "Ramped pumping", Ramped(), false, RampedIcon())
 return Ramped
