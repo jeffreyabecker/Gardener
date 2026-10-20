@@ -8,6 +8,7 @@
 #include "app/Ownership.h"
 #include "app/StoreBus.h"
 #include "app/StreamLogger.h"
+#include "app/Tasks.h"
 #include "app/panel/Asset.h"
 #include "core/Config.h"
 #include "core/Units.h"
@@ -24,11 +25,6 @@ bool serialAttached() { return (bool)Serial; }
 App::App(AppContext context) : context_(context) {
   ble_ = new BleLink(&context_);
   connectedUi_ = new ConnectedUI(context_);
-}
-
-UserInterface* App::screenFor(bool owned) {
-  if (owned) return connectedUi_;
-  return disconnectedUi_;
 }
 
 bool App::begin() {
@@ -139,11 +135,8 @@ bool App::begin() {
   ready += String((uint32_t)ESP.getFreeHeap());
   logger_->info(ready.c_str());
 
-  // A fresh boot has no controller: a link that is present is only a reader until it acquires
-  // control, and that is a command the link has not sent yet.
-  ownedShown_ = context_.ownership().held();
-  ui_ = screenFor(ownedShown_);
-  if (ui_) ui_->begin();
+  // The panel task shows the first screen when it starts: the disconnected page, because a fresh
+  // boot has no controller.
   return true;
 }
 
@@ -170,20 +163,10 @@ void App::update() {
     }
   }
 
-  // The screen follows ownership, not the cable: acquiring control paints the link's page, and a
-  // drop while owning leaves it where it was. A swap paints its own first frame.
-  const bool attached = serialAttached();
-  const bool owned = context_.ownership().held();
-  if (owned != ownedShown_) {
-    ownedShown_ = owned;
-    ui_ = screenFor(owned);
-    if (ui_) ui_->begin();
-  }
-  // The overlay reports the ways in, and the loop is the only thing that can see either link.
-  context_.overlay().setConnections(attached, ble_->connected());
-  // Last, because a frame is a whole buffer over I2C: the commands and the run log come first, and
-  // the screen is never allowed to hold up the loop in front of them.
-  if (ui_) ui_->update();
+  // Connection presence, published for the panel's overlay. The interface task takes over writing
+  // these when it lands.
+  serialConnected = serialAttached();
+  bleConnected = ble_->connected();
 }
 
 }  // namespace gardener

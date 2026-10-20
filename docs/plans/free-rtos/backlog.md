@@ -177,19 +177,19 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## PANEL — Panel / VM task
 
-- [ ] PANEL-001 Implement `panelTask(void*)`: the `for (;;)` body with a 10 ms `vTaskDelay`
+- [x] PANEL-001 Implement `panelTask(void*)`: the `for (;;)` body with a 10 ms `vTaskDelay`
   ([tasks.md](tasks.md)).
-- [ ] PANEL-002 Implement `drainButtonEvents()`: route each press to the VM (`pushPress`) when a
+- [x] PANEL-002 Implement `drainButtonEvents()`: route each press to the VM (`pushPress`) when a
   routine is active, else log it, matching today's `logButtonPresses()`.
-- [ ] PANEL-003 Move the page selection (`screenFor(owned)`) into the panel task, reading
+- [x] PANEL-003 Move the page selection (`screenFor(owned)`) into the panel task, reading
   `ownership.held()` dirty.
-- [ ] PANEL-004 Move `ConnectedUI`/`DisconnectedUI` update into the panel task, redrawing the
+- [x] PANEL-004 Move `ConnectedUI`/`DisconnectedUI` update into the panel task, redrawing the
   static page at `cfg::UI_REFRESH_MS`.
-- [ ] PANEL-005 Move `watchDefaultHold` into the panel task: read the `okHeldMs` scalar (not
+- [x] PANEL-005 Move `watchDefaultHold` into the panel task: read the `okHeldMs` scalar (not
   `heldMs` on the shared `Buttons`); on fire enqueue `MachineCommand::Stop` and call `showDefault()`.
-- [ ] PANEL-006 Confirm `Overlay` is unchanged except that it runs here and reads `battery`/
+- [x] PANEL-006 Confirm `Overlay` is unchanged except that it runs here and reads `battery`/
   `vacuum` dirty; the display is private to this task.
-- [ ] PANEL-007 Remove the `ownedShown_`/`ui_` swap and the `setConnections` call from
+- [x] PANEL-007 Remove the `ownedShown_`/`ui_` swap and the `setConnections` call from
   `App::update()` (now the panel's business).
 
 ## ROUT — Routines

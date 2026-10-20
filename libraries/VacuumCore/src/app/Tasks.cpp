@@ -1,7 +1,12 @@
 #include "app/Tasks.h"
 
+#include "app/AppContext.h"
 #include "app/Logger.h"
 #include "app/SafeReboot.h"
+#include "app/VacuumSystem.h"
+#include "app/panel/ConnectedUI.h"
+#include "app/panel/DisconnectedUI.h"
+#include "app/panel/UI.h"
 #include "core/Config.h"
 
 namespace gardener {
@@ -11,6 +16,8 @@ QueueHandle_t storeQueue = nullptr;
 QueueHandle_t buttonEventQueue = nullptr;
 volatile uint32_t okHeldMs = 0;
 volatile uint32_t stopSeq = 0;
+volatile bool serialConnected = false;
+volatile bool bleConnected = false;
 
 namespace {
 
@@ -52,6 +59,16 @@ struct ControlState {
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
   bool backStopFired = false;
+};
+
+// The panel task's own state: the two screens it owns, the one showing, and which page it is.
+struct PanelState {
+  AppContext context;
+  Logger* logger;
+  ConnectedUI* connected;
+  DisconnectedUI* disconnected;
+  UserInterface* ui = nullptr;
+  bool ownedShown = false;
 };
 
 // Applies one queued write to the machine. The op names the verb; the fields are the op's own.
@@ -146,6 +163,24 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
   state.lastState = current;
 }
 
+// The keys belong to whoever owns the page: an active routine takes the presses, and with none the
+// panel logs them as it always has. A press is consumed either way, so it is never delivered twice.
+void drainButtonEvents(PanelState& state) {
+  const bool toRoutine = !state.context.ownership().held() && state.context.routines().active();
+  ButtonEvent event;
+  while (xQueueReceive(buttonEventQueue, &event, 0) == pdTRUE) {
+    if (toRoutine) {
+      state.context.routines().pushPress(event.button, event.press);
+      continue;
+    }
+    String message = "btn: ";
+    message += buttonName(event.button);
+    message += ' ';
+    message += pressName(event.press);
+    state.logger->info(message.c_str());
+  }
+}
+
 }  // namespace
 
 void controlTask(void* arg) {
@@ -179,17 +214,45 @@ void interfaceTask(void* arg) {
 }
 
 void panelTask(void* arg) {
-  (void)arg;
-  for (;;) vTaskDelay(pdMS_TO_TICKS(10));
+  PanelState& state = *static_cast<PanelState*>(arg);
+
+  // A fresh boot has no controller: a link that is present is only a reader until it acquires
+  // control, so the disconnected page shows first.
+  state.ownedShown = state.context.ownership().held();
+  state.ui = state.ownedShown ? static_cast<UserInterface*>(state.connected)
+                              : static_cast<UserInterface*>(state.disconnected);
+  if (state.ui) state.ui->begin();
+
+  for (;;) {
+    drainButtonEvents(state);
+
+    // The screen follows ownership, not the cable: acquiring control paints the link's page, and a
+    // drop while owning leaves it where it was. A swap paints its own first frame.
+    const bool owned = state.context.ownership().held();
+    if (owned != state.ownedShown) {
+      state.ownedShown = owned;
+      state.ui = owned ? static_cast<UserInterface*>(state.connected)
+                       : static_cast<UserInterface*>(state.disconnected);
+      if (state.ui) state.ui->begin();
+    }
+
+    // The overlay reports the ways in; the interface owner publishes the two booleans, and the
+    // pages redraw themselves on the refresh cadence.
+    state.context.overlay().setConnections(serialConnected, bleConnected);
+    if (state.ui) state.ui->update();
+
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
 
-void spawnTasks(AppContext& context, Logger& logger) {
+void spawnTasks(AppContext& context, Logger& logger, ConnectedUI* connected,
+                DisconnectedUI* disconnected) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
   buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
   static ControlState control{context, &logger};
   static TaskState interface{context};
-  static TaskState panel{context};
+  static PanelState panel{context, &logger, connected, disconnected};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

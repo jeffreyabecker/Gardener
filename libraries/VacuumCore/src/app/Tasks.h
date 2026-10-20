@@ -11,6 +11,8 @@
 namespace gardener {
 
 class Logger;
+class ConnectedUI;
+class DisconnectedUI;
 
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; the fields are the op's own, so a field that does
@@ -47,12 +49,17 @@ extern QueueHandle_t buttonEventQueue;
 extern volatile uint32_t okHeldMs;
 extern volatile uint32_t stopSeq;
 
+// Connection presence, one writer (the interface owner) and read dirty by the panel's overlay.
+extern volatile bool serialConnected;
+extern volatile bool bleConnected;
+
 void controlTask(void* arg);
 void interfaceTask(void* arg);
 void panelTask(void* arg);
 
 // Creates the queues and spawns the three tasks, pinned to their cores. Called from setup() after
-// App::begin(). The logger is the boot-chosen one, handed to the tasks that report.
-void spawnTasks(AppContext& context, Logger& logger);
+// App::begin(). The logger is the boot-chosen one, and the two screens are the panel's to own.
+void spawnTasks(AppContext& context, Logger& logger, ConnectedUI* connected,
+                DisconnectedUI* disconnected);
 
 }  // namespace gardener

@@ -10,7 +10,7 @@ gardener::App app(gardener::buildAppContext());
 
 void setup() {
   app.begin();
-  gardener::spawnTasks(app.context(), app.logger());
+  gardener::spawnTasks(app.context(), app.logger(), app.connectedUi(), app.disconnectedUi());
 }
 
 void loop() { app.update(); }
