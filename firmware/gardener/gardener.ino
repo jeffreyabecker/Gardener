@@ -8,9 +8,6 @@
 
 gardener::App app(gardener::buildAppContext());
 
-void setup() {
-  app.begin();
-  gardener::spawnTasks(app.context(), app.logger(), app.connectedUi(), app.disconnectedUi());
-}
+void setup() { app.begin(); }
 
-void loop() { app.update(); }
+void loop() { vTaskDelete(NULL); }

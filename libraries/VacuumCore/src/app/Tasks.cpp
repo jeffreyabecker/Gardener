@@ -2,11 +2,15 @@
 
 #include "app/AppContext.h"
 #include "app/Logger.h"
+#include "app/Ownership.h"
 #include "app/SafeReboot.h"
+#include "app/StoreBus.h"
 #include "app/VacuumSystem.h"
+#include "app/ble/BleLink.h"
 #include "app/panel/ConnectedUI.h"
 #include "app/panel/DisconnectedUI.h"
 #include "app/panel/UI.h"
+#include "app/serial/SerialLink.h"
 #include "core/Config.h"
 
 namespace gardener {
@@ -69,6 +73,15 @@ struct PanelState {
   DisconnectedUI* disconnected;
   UserInterface* ui = nullptr;
   bool ownedShown = false;
+};
+
+// The interface task's own state: the wire and the flash, and the logger for the link's reports.
+struct InterfaceState {
+  AppContext context;
+  Logger* logger;
+  SerialLink* link;
+  BleLink* ble;
+  StoreServer* storeServer;
 };
 
 // Applies one queued write to the machine. The op names the verb; the fields are the op's own.
@@ -209,8 +222,34 @@ void controlTask(void* arg) {
 }
 
 void interfaceTask(void* arg) {
-  (void)arg;
-  for (;;) vTaskDelay(pdMS_TO_TICKS(5));
+  InterfaceState& state = *static_cast<InterfaceState*>(arg);
+
+  for (;;) {
+    const uint32_t now = millis();
+
+    // The store server applies the VM's flash and settings writes; the links answer the wire.
+    state.storeServer->drain();
+    state.link->poll(now);
+    state.ble->poll(now);
+
+    // A link that leaves while owning does not release the machine: its record stays held, the run
+    // continues and the panel keeps showing that link. A reconnected controller stays a reader
+    // until the local reset clears it.
+    if (state.link->consumeLinkLost()) {
+      if (state.context.ownership().ownedBy(Link::Serial)) {
+        state.context.ownership().drop(Link::Serial);
+        state.logger->warn("app: controller left, ownership held");
+      } else {
+        state.logger->info("app: controller left");
+      }
+    }
+
+    // Connection presence, published for the panel's overlay.
+    serialConnected = state.link->controllerAttached();
+    bleConnected = state.ble->connected();
+
+    vTaskDelay(pdMS_TO_TICKS(5));
+  }
 }
 
 void panelTask(void* arg) {
@@ -245,13 +284,13 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnTasks(AppContext& context, Logger& logger, ConnectedUI* connected,
-                DisconnectedUI* disconnected) {
+void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
+                StoreServer* storeServer, ConnectedUI* connected, DisconnectedUI* disconnected) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
   buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
   static ControlState control{context, &logger};
-  static TaskState interface{context};
+  static InterfaceState interface{context, &logger, link, ble, storeServer};
   static PanelState panel{context, &logger, connected, disconnected};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,

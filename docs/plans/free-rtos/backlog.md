@@ -38,7 +38,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 - [x] FND-011 Add a per-task state struct (e.g. `TaskState` in `app/Tasks.h`) holding the pointers
   each task owns — the context, the link/UI/logger objects and the store bus ends — so the three
   bodies receive what they own without sharing what they must not.
-- [~] FND-012 Move the `SerialLink`, `BleLink`, `StreamLogger`, `ConnectedUI` and
+- [x] FND-012 Move the `SerialLink`, `BleLink`, `StreamLogger`, `ConnectedUI` and
   `DisconnectedUI` construction out of the `App` constructor into the task spawner (or
   `buildAppContext()`), so `App::begin()` and the task bodies reach the same objects.
 - [x] FND-013 Implement `spawnTasks(AppContext&)` to create the three tasks with
@@ -47,7 +47,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
   panel: core 0 / prio 0 / 8192).
 - [x] FND-014 Call `spawnTasks(...)` from `setup()` in `firmware/gardener/gardener.ino` after
   `app.begin()`.
-- [~] FND-015 Make `loop()` in `gardener.ino` `vTaskDelete(NULL)` (free the Arduino loop task).
+- [x] FND-015 Make `loop()` in `gardener.ino` `vTaskDelete(NULL)` (free the Arduino loop task).
 - [x] FND-016 Keep the old `App::update()` in place through this epic so the build stays green
   while the foundation lands; delete it only in WIRE.
 - [x] FND-017 Verify: `python scripts/arduino.py --task build` still compiles with the
@@ -75,7 +75,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 - [x] LOG-009 Wire: `device get` reports `log=` from `settings.logEnabled()`; `device set log`
   calls `settings.setLogEnabled(...)` and replies `ok log=<on|off>`; a change takes effect on the
   next reboot (no live toggle).
-- [~] LOG-010 Give the control and panel tasks a `Logger&` to the same boot-chosen instance for
+- [x] LOG-010 Give the control and panel tasks a `Logger&` to the same boot-chosen instance for
   run-transition, hold and VM logging.
 - [x] LOG-011 Update [docs/specs/serial-protocol.md](../specs/serial-protocol.md): `log` is a
   persisted boot preference, and `set log` applies at the next reset.
@@ -235,14 +235,14 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## WIRE — Wire-up and delete the old loop
 
-- [ ] WIRE-001 Delete `App::update()`.
-- [ ] WIRE-002 Shrink `App` to `begin()` plus the task-spawning glue; remove the fields the tasks
+- [x] WIRE-001 Delete `App::update()`.
+- [x] WIRE-002 Shrink `App` to `begin()` plus the task-spawning glue; remove the fields the tasks
   now own (`link_`, `ble_`, `logger_`, `connectedUi_`, `disconnectedUi_`, `ui_`, `ownedShown_`,
   `backStopFired_`, `lastState_`, `ventStartMs_`).
-- [ ] WIRE-003 Update `App::begin()` to use the shared link/UI/logger objects from FND-012 and the
+- [x] WIRE-003 Update `App::begin()` to use the shared link/UI/logger objects from FND-012 and the
   boot-chosen logger from LOG-008, with the boot order unchanged.
-- [ ] WIRE-004 Confirm `gardener.ino` spawns the tasks after `app.begin()` and `loop()` is empty.
-- [ ] WIRE-005 Verify the three task bodies are the only places that call the devices, the links,
+- [x] WIRE-004 Confirm `gardener.ino` spawns the tasks after `app.begin()` and `loop()` is empty.
+- [x] WIRE-005 Verify the three task bodies are the only places that call the devices, the links,
   the store bus and the UI after this epic.
 
 ## DOCS — Documentation

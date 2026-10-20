@@ -13,6 +13,9 @@ namespace gardener {
 class Logger;
 class ConnectedUI;
 class DisconnectedUI;
+class SerialLink;
+class BleLink;
+class StoreServer;
 
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; the fields are the op's own, so a field that does
@@ -31,14 +34,8 @@ struct ButtonEvent {
   Press press;
 };
 
-// What one task is handed at spawn: the context it reads and, as the later epics land, the
-// objects it owns. One per task, so a task's private state never sits in another task's arg.
-struct TaskState {
-  AppContext context;
-};
-
 // The three queues. Handles are written once at boot and read by the task bodies after; the
-// store queue is created when the store bus lands (STORE), so its handle stays null until then.
+// store queue is created by the store bus in buildAppContext().
 extern QueueHandle_t machineCommandQueue;
 extern QueueHandle_t storeQueue;
 extern QueueHandle_t buttonEventQueue;
@@ -57,9 +54,10 @@ void controlTask(void* arg);
 void interfaceTask(void* arg);
 void panelTask(void* arg);
 
-// Creates the queues and spawns the three tasks, pinned to their cores. Called from setup() after
-// App::begin(). The logger is the boot-chosen one, and the two screens are the panel's to own.
-void spawnTasks(AppContext& context, Logger& logger, ConnectedUI* connected,
-                DisconnectedUI* disconnected);
+// Creates the queues and spawns the three tasks, pinned to their cores. Called from App::begin()
+// once boot is done, with the objects each task owns: the interface task takes the links and the
+// store server, the panel task takes the two screens.
+void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
+                StoreServer* storeServer, ConnectedUI* connected, DisconnectedUI* disconnected);
 
 }  // namespace gardener
