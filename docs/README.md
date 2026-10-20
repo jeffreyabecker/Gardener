@@ -5,7 +5,7 @@
 The contracts the firmware and its tools must satisfy.
 
 - [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies and errors
-- [Gestures](./specs/gestures.md) — the key contract and the press matrix
+- [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the page standards
 - [Assets](./specs/assets.md) — the image file format and the tool that makes one
 - [Routines](./specs/routines.md) — the Berry routine API and its embedded rules
 

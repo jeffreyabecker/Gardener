@@ -340,7 +340,7 @@ home.
 The Back hold tells the active routine what it did: `vacuum.stopped()` is true once after the hold,
 so a page with a phase machine resets it on the event rather than watching for `IDLE`.
 
-The matrix of every press, the reserved holds and the timing that classifies them is in
+The presses, the reserved holds and the timing that classifies them are in
 [docs/specs/gestures.md](./docs/specs/gestures.md).
 
 ### Files on the device

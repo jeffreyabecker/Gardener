@@ -3,6 +3,11 @@
 The disconnected page is a Berry program. This is the reference for what a routine can call, when
 the firmware calls it, and the handful of rules that follow from how the interpreter is embedded.
 
+This file is the contract for **any** routine, not a description of the ones that ship. A page's
+phases and its settings keys belong in that page's own `.be` file, its gestures in
+[gestures.md](./gestures.md), and `firmware/gardener/data/routines/` holds the pages this build
+ships when you want to read one. Nothing here should need to change when one of them changes.
+
 ## Where a routine lives and what it must look like
 
 Every file under `/routines/` ending in `.be` is loaded at boot. A file's top level runs once; it
@@ -11,7 +16,7 @@ registers an object and is done:
 ```berry
 import string
 
-class Readout
+class MyPage
   def activate()
     # the page became visible; draw the first frame and re-read anything cached
   end
@@ -21,8 +26,8 @@ class Readout
   end
 end
 
-routines.register("default", "Pressure readout", Readout())
-return Readout
+routines.register("mypage", "My page", MyPage())
+return MyPage
 ```
 
 The object must be an **instance** with both `activate()` and `poll(now)`. A file that registers
@@ -53,9 +58,9 @@ data image.
 Files within `/modules/` load in no particular order, so none may depend on another at its top
 level. Define classes and functions there; leave constructing them to the page that uses them.
 
-`/modules/settings.be` is the one shipped. `Settings(name)` edits the `describe()` list of the
-routine registered under that name. **Double OK** is the standard gesture for opening it; a page
-that wants the editor holds one and delegates to it:
+The shared editor ships as `/modules/settings.be`. `Settings(name)` edits the `describe()` list of
+the routine registered under that name. **Double OK** is the standard gesture for opening it; a
+page that wants the editor holds one and delegates to it:
 
 ```berry
 def activate()
@@ -310,9 +315,9 @@ the glass.
 | `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; the radio reads it when it starts, so the next boot honours it |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
-only to cycle it. `device.target()` is the stored setting, not the machine's live target: the
-`default` page hands it to the machine when it becomes visible. The `/routines/system.be` page is
-the worked example: it edits all three values in place and touches nothing of the machine.
+only to cycle it. `device.target()` is the stored setting, not the machine's live target: a page
+hands it to the machine when it becomes visible. A page that edits these values writes them through
+`device` rather than through its own `store`.
 
 ```berry
 var kpa = device.target()
@@ -361,8 +366,7 @@ clears an ownership record left held by a controller. It works from every page a
 routine cannot suppress it.
 
 The standard gestures a page should follow — double OK for its settings, OK for its primary action,
-Back to leave a view, and the three holds above — are in [gestures.md](./gestures.md), with the
-matrix of what every press does on the shipped pages.
+Back to leave a view, and the three holds above — are in [gestures.md](./gestures.md).
 
 ## `buzzer` — the piezo
 
@@ -459,7 +463,7 @@ ignored: the machine's `min` … `floor` is the range.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
 return a list. A routine without `describe()`, or one whose method raises, leaves the settings view
-closed — on the browser, the routine list stays as it was — and writes one `vacuum.log` line.
+closed and writes one `vacuum.log` line.
 
 ## `store` — the routine's own values
 
@@ -472,7 +476,7 @@ closed — on the browser, the routine list stays as it was — and writes one `
 
 A routine's values live in `/routines/<name>.ini`, named after the routine, and a data-image upload
 can ship initial ones beside its `.be`. A routine writes its own; the named forms in the table let
-a page such as `browser` edit them.
+a page edit another routine's.
 
 The **fallback sets the type** the stored text is read back as:
 
@@ -502,36 +506,5 @@ frame.
 
 The one- and two-argument forms belong to the routine that is **active**. Use them from `activate()`
 or `poll()`; a file's top level runs before any routine is active, when there is no file to address.
-The named forms are how a page such as `browser` reaches another routine's values. They cannot walk
-outside `/routines/`: a name that is not registered is refused.
-
-## A complete example
-
-Four routines ship. `/routines/default.be` shows the whole surface in use: the readout, OK to
-start, Back to vent, and the target restored from `device.target()` every time the page becomes
-visible. A **double Up** on that page opens the second one, and a **double OK** or **double Down**
-opens `/routines/system.be`, the device's own settings.
-
-`/routines/browser.be` is the list of registered routines: Up and Down walk it and wrap, a six-row
-window follows the selection, OK switches to the highlighted page and Back goes home. A **double OK**
-opens the highlighted routine's settings when it has `describe()`: Up and Down walk the settings, OK
-opens one, Up/Down changes it, OK saves and Back moves up a level. The editor itself is
-`/modules/settings.be`; the browser hands it the panel and the keys while it is open. The browser
-reads `routines.names()`, so a routine that is added to the data image appears in it with no change
-to either file. It touches nothing of the machine — a run keeps going behind it — and it writes only
-through `store.set` when a setting is saved.
-
-`/routines/system.be` edits the two settings that are the device's rather than a routine's: the
-display unit and the default target, through the `device` module above. Up and Down walk the rows,
-OK opens a value, Up/Down cycles the unit or steps the target in whole display units, OK saves, and
-Back cancels or goes home. Like the browser it touches nothing of the machine and has no `store`
-file.
-
-`/routines/static.be` is the cycle: OK starts a pull to `target_pressure`, `HOLD` starts the work
-timer, `vacuum.stop()` vents, `IDLE` starts the rest timer, and `resume_behavior` decides whether
-the next cycle starts by itself or on OK. It is also the worked example of a page whose state is a
-phase machine: `poll` advances a phase and never waits, and a release it did not ask for (the Back
-hold) arrives as `vacuum.stopped()` and sends it back to `ready`.
-
-Between them the four pages cover what a page can do; look at them rather than at a second
-description here.
+The named forms are how a page reaches another routine's values. They cannot walk outside
+`/routines/`: a name that is not registered is refused.
