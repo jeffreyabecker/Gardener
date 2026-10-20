@@ -133,3 +133,7 @@ fn)` — declarative gesture registration replacing each page's `handle()` if/el
 - Behaviour must be identical after the refactor: the `poll` restructure preserves `static`'s
   `advance()`-every-beat, and the other pages' early-return is provably equivalent to the
   `acted || elapsed >= 250` gate.
+
+## Backlog
+
+The work, as an ordered task list: [backlog.md](./backlog.md).
