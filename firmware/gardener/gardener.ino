@@ -8,6 +8,9 @@
 
 gardener::App app(gardener::buildAppContext());
 
-void setup() { app.begin(); }
+void setup() {
+  app.begin();
+  gardener::spawnTasks(app.context());
+}
 
 void loop() { app.update(); }

@@ -4,4 +4,5 @@
 
 #include "app/App.h"
 #include "app/Build.h"
+#include "app/Tasks.h"
 #include "core/Config.h"

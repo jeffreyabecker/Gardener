@@ -15,42 +15,42 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## FND — Foundation
 
-- [ ] FND-001 Create `app/Tasks.h`: declare the `MachineCommand` and `ButtonEvent` structs, the
+- [x] FND-001 Create `app/Tasks.h`: declare the `MachineCommand` and `ButtonEvent` structs, the
   three queue handles, the shared scalars `okHeldMs` and `stopSeq`, the three task entry points,
   and the `spawnTasks(AppContext&)` declaration.
-- [ ] FND-002 Create `app/Tasks.cpp`: define the three queue handles and the two shared
+- [x] FND-002 Create `app/Tasks.cpp`: define the three queue handles and the two shared
   `volatile` scalars as globals.
-- [ ] FND-003 Define `MachineCommand` with the `Op` enum `{Start, Stop, ResetFault, SetTarget,
+- [x] FND-003 Define `MachineCommand` with the `Op` enum `{Start, Stop, ResetFault, SetTarget,
   ClearTarget, Reboot, Tone, Play, Off}` and the payload fields `value`, `durationMs`, `text`
   ([queues.md](queues.md)).
-- [ ] FND-004 Define `ButtonEvent` with the `Button` and `Press` fields.
-- [ ] FND-005 Declare the shared `volatile uint32_t okHeldMs` (control writes, panel reads).
-- [ ] FND-006 Declare the shared `volatile uint32_t stopSeq` (control increments on Back hold,
+- [x] FND-004 Define `ButtonEvent` with the `Button` and `Press` fields.
+- [x] FND-005 Declare the shared `volatile uint32_t okHeldMs` (control writes, panel reads).
+- [x] FND-006 Declare the shared `volatile uint32_t stopSeq` (control increments on Back hold,
   panel's `takeStopped()` compares).
-- [ ] FND-007 Add the three task entry-point declarations: `controlTask`, `interfaceTask`,
+- [x] FND-007 Add the three task entry-point declarations: `controlTask`, `interfaceTask`,
   `panelTask` (all `void(void*)`).
-- [ ] FND-008 Create the machine-command queue with `xQueueCreate`, depth 8, item size
+- [x] FND-008 Create the machine-command queue with `xQueueCreate`, depth 8, item size
   `sizeof(MachineCommand)`.
-- [ ] FND-009 Create the store queue with `xQueueCreate`, depth 4, item size `sizeof(StoreRequest)`
+- [x] FND-009 Create the store queue with `xQueueCreate`, depth 4, item size `sizeof(StoreRequest)`
   (created alongside the store bus in STORE, not here — this item is the handle + size).
-- [ ] FND-010 Create the button-event queue with `xQueueCreate`, depth 8, item size
+- [x] FND-010 Create the button-event queue with `xQueueCreate`, depth 8, item size
   `sizeof(ButtonEvent)`.
-- [ ] FND-011 Add a per-task state struct (e.g. `TaskState` in `app/Tasks.h`) holding the pointers
+- [x] FND-011 Add a per-task state struct (e.g. `TaskState` in `app/Tasks.h`) holding the pointers
   each task owns — the context, the link/UI/logger objects and the store bus ends — so the three
   bodies receive what they own without sharing what they must not.
-- [ ] FND-012 Move the `SerialLink`, `BleLink`, `StreamLogger`, `ConnectedUI` and
+- [~] FND-012 Move the `SerialLink`, `BleLink`, `StreamLogger`, `ConnectedUI` and
   `DisconnectedUI` construction out of the `App` constructor into the task spawner (or
   `buildAppContext()`), so `App::begin()` and the task bodies reach the same objects.
-- [ ] FND-013 Implement `spawnTasks(AppContext&)` to create the three tasks with
+- [x] FND-013 Implement `spawnTasks(AppContext&)` to create the three tasks with
   `xTaskCreatePinnedToCore` using the cores, priorities and stack sizes from
   [tasks.md](tasks.md) (control: core 1 / prio 2 / 4096; interface: core 0 / prio 1 / 4096;
   panel: core 0 / prio 0 / 8192).
-- [ ] FND-014 Call `spawnTasks(...)` from `setup()` in `firmware/gardener/gardener.ino` after
+- [x] FND-014 Call `spawnTasks(...)` from `setup()` in `firmware/gardener/gardener.ino` after
   `app.begin()`.
-- [ ] FND-015 Make `loop()` in `gardener.ino` `vTaskDelete(NULL)` (free the Arduino loop task).
-- [ ] FND-016 Keep the old `App::update()` in place through this epic so the build stays green
+- [~] FND-015 Make `loop()` in `gardener.ino` `vTaskDelete(NULL)` (free the Arduino loop task).
+- [x] FND-016 Keep the old `App::update()` in place through this epic so the build stays green
   while the foundation lands; delete it only in WIRE.
-- [ ] FND-017 Verify: `powershell -File scripts/arduino.ps1 -Task build` still compiles with the
+- [x] FND-017 Verify: `python scripts/arduino.py --task build` still compiles with the
   old loop and the new scaffolding coexisting.
 
 ## LOG — Shared log flag
@@ -67,6 +67,15 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
   default-hold warning.
 - [ ] LOG-006 Confirm `StreamLogger` itself is unchanged (still takes `const bool&`); it only
   stops being handed `AppContext`'s per-copy flag.
+- [ ] LOG-007 Add `app/Logger.h` declaring the `Logger` interface — pure-virtual `info`,
+  `warn` and `error`, plus a virtual destructor — and make `StreamLogger` derive from it and
+  override the three methods. The `Stream&` / `const bool&` constructor stays as it is.
+- [ ] LOG-008 Pass only `Logger` through the app: `App::logger_` becomes `Logger*`,
+  `Routines::begin` and `berry::install` take `Logger&`, `DisconnectedUI` takes and holds
+  `Logger&`, and those headers forward declare `Logger`. `App.cpp` keeps the one
+  `new StreamLogger(...)` and the only include of `app/StreamLogger.h`.
+- [ ] LOG-009 Verify: the `build` task (`python scripts/arduino.py --task build`) still
+  compiles, and no signature or member outside `app/StreamLogger.h` names the implementation.
 
 ## CTRL — Control task
 
@@ -245,7 +254,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## VER — Verification
 
-- [ ] VER-001 `powershell -File scripts/arduino.ps1 -Task build` clean at the end of every epic.
+- [ ] VER-001 `python scripts/arduino.py --task build` clean at the end of every epic.
 - [ ] VER-002 Grep every `context_.<thing>().` mutation and confirm each runs on the owning task
   (no cross-task writer).
 - [ ] VER-003 Review the layer rule: no `hal/` → `app/` include introduced by the new files.

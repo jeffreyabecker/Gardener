@@ -26,6 +26,9 @@ class App {
   bool begin();
   void update();
 
+  // The context the tasks read: spawnTasks() takes it to build the per-task state.
+  AppContext& context() { return context_; }
+
  private:
   void logRunChanges(uint32_t nowMs);
   void logButtonPresses();
