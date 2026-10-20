@@ -130,6 +130,16 @@ position. Thumb height is `ch * visible / count`, pinned to a one-pixel minimum;
 filling it when `count <= visible`. Normally the track is the content rect's outline and the thumb
 is filled; `invert` swaps the two — a solid bar with the window carved out.
 
+### `Triangle`
+
+- config: `direction` (`up`, `down`, `left`, `right`; default `up`), `style` (`empty` or `filled`;
+  default `filled`)
+- draw args: none
+
+Draws an isosceles triangle inscribed in the content rect, apex toward `direction`, base on the
+opposite edge. `style` `empty` draws the outline (`screen.draw_triangle`); `filled` fills it
+(`screen.draw_filltriangle`).
+
 ## Notes
 
 - No clipping: nothing on the panel clips; a component's box is a contract it keeps by measuring,

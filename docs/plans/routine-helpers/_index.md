@@ -26,10 +26,10 @@ and compare, keeping the simpler.
    and have all four routines extend it (chosen scope: full extraction).
 2. **Extract a `Chrome` component framework** — a `Chrome` in
    `firmware/gardener/data/modules/chrome.be` that composes drawing components (`FixedText`,
-   `DynamicText`, `PressureDisplay`, `ProgressBar`, `Scrollbar` in `components.be`), so `default`
-   and `static` reduce `draw_page()` to `self.chrome.draw(vacuum.state())` (readout pages only;
-   `browser` and `system` keep their list layouts). Its own sub-plans: [chrome.md](./chrome.md)
-   and [components.md](./components.md).
+   `DynamicText`, `PressureDisplay`, `ProgressBar`, `Scrollbar`, `Triangle` in `components.be`),
+   so `default` and `static` reduce `draw_page()` to `self.chrome.draw(vacuum.state())` (readout
+   pages only; `browser` and `system` keep their list layouts). Its own sub-plans:
+   [chrome.md](./chrome.md) and [components.md](./components.md).
 3. **Prototype a `StateMachine`** for `static.be`, compare it against the hand-rolled
    `advance()`, and keep whichever is genuinely simpler (expectation: the hand-rolled version
    wins; the loser is deleted, not deprecated).
@@ -60,8 +60,9 @@ no-op so a page implements only what it uses.
 ## The `Chrome` display class
 
 The readout display is its own piece: [components.md](./components.md) specifies the drawing
-primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/`Scrollbar`)
-and the font mapping; [chrome.md](./chrome.md) specifies how a routine's `Chrome` composes them.
+primitives (`Component` + `FixedText`/`DynamicText`/`PressureDisplay`/`ProgressBar`/`Scrollbar`/
+`Triangle`) and the font mapping; [chrome.md](./chrome.md) specifies how a routine's `Chrome`
+composes them.
 
 ## Per-page changes
 
