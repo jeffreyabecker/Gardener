@@ -16,7 +16,7 @@ namespace gardener {
 
 class AppContext;
 class Storage;
-class StreamLogger;
+class Logger;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
 // that is active.
@@ -37,7 +37,7 @@ class Routines {
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
   // False only when the interpreter cannot be allocated at all.
-  bool begin(AppContext& context, Storage& storage, StreamLogger& logger);
+  bool begin(AppContext& context, Storage& storage, Logger& logger);
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.
@@ -115,7 +115,7 @@ class Routines {
 
   bvm* vm_ = nullptr;
   Storage* storage_ = nullptr;
-  StreamLogger* logger_ = nullptr;
+  Logger* logger_ = nullptr;
   // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
   // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
   // the device is up.

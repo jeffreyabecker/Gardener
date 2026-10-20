@@ -55,31 +55,31 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## LOG — Logger abstraction
 
-- [ ] LOG-001 Add `app/Logger.h`: the `Logger` interface — pure-virtual `info`, `warn` and
+- [x] LOG-001 Add `app/Logger.h`: the `Logger` interface — pure-virtual `info`, `warn` and
   `error` over `const char*`, plus a virtual destructor.
-- [ ] LOG-002 Add `app/NilLogger.h`: a `Logger` whose three methods do nothing.
-- [ ] LOG-003 Make `StreamLogger` derive from `Logger`; change its constructor to
+- [x] LOG-002 Add `app/NilLogger.h`: a `Logger` whose three methods do nothing.
+- [x] LOG-003 Make `StreamLogger` derive from `Logger`; change its constructor to
   `StreamLogger(Stream&)` and delete the `enabled_` flag and the gate in `write()`.
-- [ ] LOG-004 Replace `StreamLogger` with `Logger` across the app: `App::logger_` becomes
+- [x] LOG-004 Replace `StreamLogger` with `Logger` across the app: `App::logger_` becomes
   `Logger*`, `Routines::begin`/`reportError` and `berry::install`/`gLogger` take
   `Logger&`/`Logger*`, and `DisconnectedUI` takes and holds `Logger&`. Headers forward-declare
   `Logger`; only the construction site includes the concrete headers.
-- [ ] LOG-005 Replace `SerialLink::diag`'s inline `[I]`/`[W]` writes with a `Logger&` handed to
+- [x] LOG-005 Replace `SerialLink::diag`'s inline `[I]`/`[W]` writes with a `Logger&` handed to
   the link; delete the `context_.logEnabled()` check.
-- [ ] LOG-006 Remove `logEnabled_` and `logEnabled()` from `AppContext`.
-- [ ] LOG-007 Add `logEnabled()` / `setLogEnabled()` to `Settings`, persisted under `[device]`
+- [x] LOG-006 Remove `logEnabled_` and `logEnabled()` from `AppContext`.
+- [x] LOG-007 Add `logEnabled()` / `setLogEnabled()` to `Settings`, persisted under `[device]`
   in `/settings.ini`, default on — the same pattern as `bluetooth`.
-- [ ] LOG-008 Choose the logger once at boot, in `App::begin()` after `settings.begin()`:
+- [x] LOG-008 Choose the logger once at boot, in `App::begin()` after `settings.begin()`:
   `settings.logEnabled() ? (Logger*)new StreamLogger(Serial) : (Logger*)new NilLogger()`, and
   hand that one instance to the link, the UI and the routines.
-- [ ] LOG-009 Wire: `device get` reports `log=` from `settings.logEnabled()`; `device set log`
+- [x] LOG-009 Wire: `device get` reports `log=` from `settings.logEnabled()`; `device set log`
   calls `settings.setLogEnabled(...)` and replies `ok log=<on|off>`; a change takes effect on the
   next reboot (no live toggle).
-- [ ] LOG-010 Give the control and panel tasks a `Logger&` to the same boot-chosen instance for
+- [~] LOG-010 Give the control and panel tasks a `Logger&` to the same boot-chosen instance for
   run-transition, hold and VM logging.
-- [ ] LOG-011 Update [docs/specs/serial-protocol.md](../specs/serial-protocol.md): `log` is a
+- [x] LOG-011 Update [docs/specs/serial-protocol.md](../specs/serial-protocol.md): `log` is a
   persisted boot preference, and `set log` applies at the next reset.
-- [ ] LOG-012 Verify: `python scripts/arduino.py --task build` compiles, and no signature or
+- [x] LOG-012 Verify: `python scripts/arduino.py --task build` compiles, and no signature or
   member outside the construction site names `StreamLogger` / `NilLogger`.
 
 ## CTRL — Control task

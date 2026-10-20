@@ -3,22 +3,23 @@
 #include <Arduino.h>
 #include <string.h>
 
+#include "app/Logger.h"
+
 namespace gardener {
 
 // The diagnostic sink for App's reports: three levels, framed as [I], [W] and [E] records on a
-// stream. Neither the stream nor the on/off switch is its own — App hands it the same Serial the
-// link writes replies to, and the one `device set log` flag that silences every diagnostic.
-class StreamLogger {
+// stream. The stream is not its own — App hands it the same Serial the link writes replies to.
+class StreamLogger : public Logger {
  public:
-  StreamLogger(Stream& stream, const bool& enabled) : stream_(stream), enabled_(enabled) {}
+  explicit StreamLogger(Stream& stream) : stream_(stream) {}
 
-  void info(const char* text) { write('I', text); }
-  void warn(const char* text) { write('W', text); }
-  void error(const char* text) { write('E', text); }
+  void info(const char* text) override { write('I', text); }
+  void warn(const char* text) override { write('W', text); }
+  void error(const char* text) override { write('E', text); }
 
  private:
   void write(char level, const char* text) {
-    if (!enabled_ || !text) return;
+    if (!text) return;
     stream_.write((uint8_t)'[');
     stream_.write((uint8_t)level);
     stream_.write((uint8_t)']');
@@ -28,7 +29,6 @@ class StreamLogger {
   }
 
   Stream& stream_;
-  const bool& enabled_;
 };
 
 }  // namespace gardener

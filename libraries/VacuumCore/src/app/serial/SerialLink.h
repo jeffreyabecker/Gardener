@@ -7,6 +7,7 @@
 namespace gardener {
 
 class AppContext;
+class Logger;
 
 // The serial interface to the controller. It reads the first token of each command, finds that
 // domain and hands it the stream at that point; everything after the domain token, including any
@@ -18,7 +19,7 @@ class SerialLink {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(AppContext* context, Stream& stream, PresenceFn present);
+  SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger);
 
   void begin();
   void poll(uint32_t nowMs);
@@ -32,13 +33,13 @@ class SerialLink {
   // Hands the stream to the domain named by `token`. False when there is no such domain, in which
   // case the caller discards the rest of the line.
   bool dispatchDomain(const String& token);
-  void diag(const char* prefix, const char* text);
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.
   void linkError(const char* code, const String& detail);
 
   Stream& stream_;
   PresenceFn present_;
   AppContext& context_;
+  Logger& logger_;
   DomainList domains_;
   // The domain token being assembled. It never holds a command or a body.
   String buffer_;

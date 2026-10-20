@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/StreamLogger.h"
 #include "app/ble/BleLink.h"
 #include "app/panel/ConnectedUI.h"
 #include "app/panel/DisconnectedUI.h"
@@ -18,6 +17,8 @@
 // reports anything: the context returns values, and the run and the keys are logged from here.
 
 namespace gardener {
+
+class Logger;
 
 class App {
  public:
@@ -39,13 +40,13 @@ class App {
   // Which screen belongs to the machine as it is now: the owner's page or the disconnected page.
   UserInterface* screenFor(bool owned);
 
-  // The context owns the diagnostic switch (`device set log`), and both the link and the logger
-  // honour it. The link and the logger are new'd over the same Serial stream.
+  // The logger is chosen once at boot from the persisted `log` preference, and the link and the
+  // logger are new'd over the same Serial stream.
   AppContext context_;
   SerialLink* link_ = nullptr;
   // The radio is its own contract, not a second encoding of the serial one, so it is its own link.
   BleLink* ble_ = nullptr;
-  StreamLogger* logger_ = nullptr;
+  Logger* logger_ = nullptr;
   // The panel is the device's own, so the loop paints it. Two screens, one showing: the controlling
   // link's icon while a link owns the machine, and the disconnected page while none does.
   ConnectedUI* connectedUi_ = nullptr;

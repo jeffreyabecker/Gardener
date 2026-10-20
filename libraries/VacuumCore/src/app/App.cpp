@@ -3,8 +3,11 @@
 #include <Wire.h>
 #include <stdlib.h>
 
+#include "app/Logger.h"
+#include "app/NilLogger.h"
 #include "app/Ownership.h"
 #include "app/SafeReboot.h"
+#include "app/StreamLogger.h"
 #include "app/panel/Asset.h"
 #include "core/Config.h"
 #include "core/Units.h"
@@ -30,11 +33,8 @@ constexpr uint32_t kResetHoldMs = 5000;
 }  // namespace
 
 App::App(AppContext context) : context_(context) {
-  logger_ = new StreamLogger(Serial, context_.logEnabled());
-  link_ = new SerialLink(&context_, Serial, serialAttached);
   ble_ = new BleLink(&context_);
   connectedUi_ = new ConnectedUI(context_);
-  disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 }
 
 UserInterface* App::screenFor(bool owned) {
@@ -45,6 +45,16 @@ UserInterface* App::screenFor(bool owned) {
 bool App::begin() {
   Serial.begin(cfg::SERIAL_BAUD);
   delay(200);
+
+  // The device's files are mounted once, before anything that reads a preference — including the
+  // logger, which the persisted `log` switch picks. A partition with no filesystem is formatted,
+  // which is reported rather than assumed: whatever was there is gone.
+  Storage::Mount mount = context_.storage().begin();
+  context_.settings().begin();
+  logger_ = context_.settings().logEnabled() ? static_cast<Logger*>(new StreamLogger(Serial))
+                                             : static_cast<Logger*>(new NilLogger());
+  link_ = new SerialLink(&context_, Serial, serialAttached, *logger_);
+  disconnectedUi_ = new DisconnectedUI(context_, *logger_);
 
   String boot = "gardener ";
   boot += cfg::FIRMWARE_VERSION;
@@ -71,11 +81,6 @@ bool App::begin() {
   bool batteryOk = context_.battery().begin();
   bool buzzerOk = context_.buzzer().begin();
   context_.vacuum().begin();
-
-  // The device's files are mounted once, before anything that reads a preference. A partition with
-  // no filesystem is formatted, which is reported rather than assumed: whatever was there is gone.
-  Storage::Mount mount = context_.storage().begin();
-  context_.settings().begin();
 
   // The mark is an image on the device rather than an array in a header. Every page draws it from
   // there when it needs it, so a data image without it is worth one line and nothing else — the pages

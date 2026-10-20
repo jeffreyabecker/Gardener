@@ -111,7 +111,7 @@ void DeviceDomain::get(Stream& io) {
   }
 
   reply += " log=";
-  reply += app_.logEnabled() ? "on" : "off";
+  reply += app_.settings().logEnabled() ? "on" : "off";
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   reply += " unit=";
   reply += displayUnitInfo(app_.settings().unit()).name;
@@ -166,7 +166,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print(reply);
       return;
     }
-    app_.logEnabled() = enabled;
+    app_.settings().setLogEnabled(enabled);
 
     String reply = "ok log=";
     reply += enabled ? "on" : "off";

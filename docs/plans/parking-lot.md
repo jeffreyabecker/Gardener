@@ -36,3 +36,11 @@ stop, open the valve, then close and restart as the reading crosses the new targ
 from existing verbs by a routine or host, which is why it is deferred rather than designed. The open
 question is the landing: the valve is bang-bang and the chamber is small, so overshoot toward
 ambient is likely and the pump has to recover it.
+
+## Stop building serial replies as String
+
+The serial domains assemble each reply with `String` concatenation (`ok proto=1 fw=...`) and print
+it. Writing fields straight to the stream would skip the per-reply allocation; it is deferred
+because the firmware convention says `String` is good enough for replies and no reply has been
+measured as worth the churn.
+

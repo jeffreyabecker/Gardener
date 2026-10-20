@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "app/AppContext.h"
-#include "app/StreamLogger.h"
+#include "app/Logger.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Fonts.h"
 #include "app/routines/Routines.h"
@@ -17,7 +17,7 @@ namespace {
 
 AppContext* gContext = nullptr;
 Routines* gRoutines = nullptr;
-StreamLogger* gLogger = nullptr;
+Logger* gLogger = nullptr;
 
 // --- building a module -----------------------------------------------------
 
@@ -672,7 +672,7 @@ const bnfuncinfo kStoreLibrary[] = {
 
 }  // namespace
 
-void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& logger) {
+void install(bvm* vm, AppContext& context, Routines& routines, Logger& logger) {
   gContext = &context;
   gRoutines = &routines;
   gLogger = &logger;

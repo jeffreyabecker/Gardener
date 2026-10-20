@@ -6,7 +6,7 @@ namespace gardener {
 
 class AppContext;
 class Routines;
-class StreamLogger;
+class Logger;
 
 namespace berry {
 
@@ -35,7 +35,7 @@ namespace berry {
 //
 // One VM and one app, so the native callbacks -- plain C functions with no user data -- reach their
 // owners through the pointers given here.
-void install(bvm* vm, AppContext& context, Routines& routines, StreamLogger& logger);
+void install(bvm* vm, AppContext& context, Routines& routines, Logger& logger);
 
 }  // namespace berry
 }  // namespace gardener

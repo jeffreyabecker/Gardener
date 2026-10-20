@@ -10,6 +10,7 @@ constexpr const char* kSection = "device";
 constexpr const char* kUnitKey = "unit";
 constexpr const char* kTargetKey = "target";
 constexpr const char* kBluetoothKey = "bluetooth";
+constexpr const char* kLogKey = "log";
 
 }  // namespace
 
@@ -34,6 +35,10 @@ void Settings::begin() {
   bool bluetooth = true;
   stored = ini_.get(kSection, kBluetoothKey, "on");
   if (parseFlag(stored.c_str(), bluetooth)) bluetooth_ = bluetooth;
+
+  bool log = true;
+  stored = ini_.get(kSection, kLogKey, "on");
+  if (parseFlag(stored.c_str(), log)) log_ = log;
 }
 
 DisplayUnit Settings::unit() const { return unit_; }
@@ -65,6 +70,15 @@ void Settings::setBluetooth(bool enabled) {
   if (enabled == bluetooth_) return;
   bluetooth_ = enabled;
   ini_.set(kSection, kBluetoothKey, enabled ? "on" : "off");
+  storage_.write(kPath, ini_.text());
+}
+
+bool Settings::logEnabled() const { return log_; }
+
+void Settings::setLogEnabled(bool enabled) {
+  if (enabled == log_) return;
+  log_ = enabled;
+  ini_.set(kSection, kLogKey, enabled ? "on" : "off");
   storage_.write(kPath, ini_.text());
 }
 

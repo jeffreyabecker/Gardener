@@ -58,9 +58,6 @@ class AppContext {
   Ownership& ownership() { return *ownership_; }
   uint32_t uptimeMs() const { return millis(); }
 
-  // Diagnostics on the serial stream: `device get` reports it and `device set log` toggles it.
-  bool& logEnabled() { return logEnabled_; }
-
  private:
   PressureSensor* sensor_;
   Pump* pump_;
@@ -74,7 +71,6 @@ class AppContext {
   Settings* settings_;
   Routines* routines_;
   Ownership* ownership_;
-  bool logEnabled_ = true;
 };
 
 }  // namespace gardener

@@ -6,7 +6,7 @@
 
 namespace gardener {
 
-class StreamLogger;
+class Logger;
 
 // The screen when no link owns the machine: the device's own mark and nothing else. It is what a
 // keyboard-less device shows when nobody is driving it, and a placeholder until that state has
@@ -17,7 +17,7 @@ class StreamLogger;
 // is showing" is which object the loop is driving rather than a flag to test.
 class DisconnectedUI : public UserInterface {
  public:
-  DisconnectedUI(AppContext context, StreamLogger& logger);
+  DisconnectedUI(AppContext context, Logger& logger);
 
   bool begin() override;
   void update() override;
@@ -26,7 +26,7 @@ class DisconnectedUI : public UserInterface {
   void drawFrame();
   void watchDefaultHold();
 
-  StreamLogger& logger_;
+  Logger& logger_;
   uint32_t lastFrameMs_ = 0;
   // One switch back per OK hold: set when the hold fires, cleared when the key comes up.
   bool defaultFired_ = false;

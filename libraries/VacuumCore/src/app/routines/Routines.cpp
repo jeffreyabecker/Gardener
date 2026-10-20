@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "app/AppContext.h"
-#include "app/StreamLogger.h"
+#include "app/Logger.h"
 #include "app/routines/Bindings.h"
 #include "app/storage/Ini.h"
 #include "app/storage/Storage.h"
@@ -30,7 +30,7 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(AppContext& context, Storage& storage, StreamLogger& logger) {
+bool Routines::begin(AppContext& context, Storage& storage, Logger& logger) {
   logger_ = &logger;
   storage_ = &storage;
 

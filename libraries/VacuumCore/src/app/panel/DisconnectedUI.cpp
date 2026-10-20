@@ -1,6 +1,6 @@
 #include "app/panel/DisconnectedUI.h"
 
-#include "app/StreamLogger.h"
+#include "app/Logger.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Asset.h"
 #include "app/routines/Routines.h"
@@ -15,7 +15,7 @@ constexpr uint32_t kDefaultHoldMs = 3000;
 
 }  // namespace
 
-DisconnectedUI::DisconnectedUI(AppContext context, StreamLogger& logger)
+DisconnectedUI::DisconnectedUI(AppContext context, Logger& logger)
     : UserInterface(context), logger_(logger) {}
 
 // A routine draws its own first frame, so the mark is only drawn when no routine is active. The

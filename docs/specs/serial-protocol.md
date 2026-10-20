@@ -105,8 +105,8 @@ detail = token / items
   body without a count: its rows follow `ok` and a blank line ends them.
 * Values never contain a space, so a reply line splits on spaces. The one free-form command
   argument, `buzzer play`'s sequence, is never echoed back.
-* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; `device set log off` silences
-  them. Replies are never silenced.
+* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the persisted `log`
+  preference turns them off, and it applies at the next reset. Replies are never silenced.
 
 ## 5. `control` — who may command
 
@@ -161,14 +161,14 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 | `heap` | bytes | free heap |
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
-| `log` | `on` / `off` | diagnostics on this stream |
+| `log` | `on` / `off` | the diagnostics preference; a change applies at the next reset |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.ini` and restored at boot |
 | `display-size` | `widthxheight` | panel geometry in pixels |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
-| `set log <on\|off>` | `ok log=<on\|off>` | diagnostics on this stream; requires control |
+| `set log <on\|off>` | `ok log=<on\|off>` | the diagnostics preference, stored across reset; requires control |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
 
@@ -188,11 +188,12 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 
-`device set unit` is the one wire write that survives a reset: the value is written to the `[device]`
+`device set unit` and `device set log` survive a reset: the value is written to the `[device]`
 section of `/settings.ini` and read back at boot. A filesystem that will not take the write still
-answers with the unit in force for this session, and the boot log reports the failed mount. The
+answers with the value in force for this session, and the boot log reports the failed mount. The
 machine and this wire stay in kPa either way — a display unit is a preference about the glass, not
-a second way to state a pressure.
+a second way to state a pressure. `log` differs from `unit`: it chooses the logger at boot, so a
+change does not silence an already-running diagnostics stream until the next reset.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
 fields. A pack that is not fitted reads `-` for both.

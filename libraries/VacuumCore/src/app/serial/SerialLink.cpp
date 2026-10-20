@@ -1,13 +1,14 @@
 #include "app/serial/SerialLink.h"
 
 #include "app/AppContext.h"
+#include "app/Logger.h"
 #include "app/serial/Domains.h"
 #include "core/Config.h"
 
 namespace gardener {
 
-SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present)
-    : stream_(stream), present_(present), context_(*context) {
+SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger)
+    : stream_(stream), present_(present), context_(*context), logger_(logger) {
   domains_.add(createControlDomain(context_));
   domains_.add(createDeviceDomain(context_));
   domains_.add(createVacuumDomain(context_));
@@ -19,7 +20,7 @@ void SerialLink::begin() {
   attached_ = controllerAttached();
   buffer_ = "";
   swallowing_ = false;
-  diag("[I] ", "serial: interface ready");
+  logger_.info("serial: interface ready");
 }
 
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
@@ -42,13 +43,6 @@ void SerialLink::linkError(const char* code, const String& detail) {
     line += detail;
   }
   stream_.print(line);
-  stream_.write('\n');
-}
-
-void SerialLink::diag(const char* prefix, const char* text) {
-  if (!context_.logEnabled()) return;
-  stream_.print(prefix);
-  if (text && *text) stream_.print(text);
   stream_.write('\n');
 }
 
@@ -117,7 +111,7 @@ void SerialLink::poll(uint32_t nowMs) {
     linkLost_ = true;
     buffer_ = "";
     swallowing_ = false;
-    diag("[W] ", "serial: controller detached");
+    logger_.warn("serial: controller detached");
   }
   attached_ = attached;
 }

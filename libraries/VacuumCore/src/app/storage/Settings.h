@@ -7,9 +7,10 @@
 namespace gardener {
 
 // The settings the device keeps across a reset: the one unit the panel prints pressure in, the
-// target the default program pulls to, and whether the radio may run, all in the `[device]` section
-// of /settings.ini. Keys this revision does not know are carried through a write; a missing file, or
-// a value that will not parse, leaves the default in place rather than refusing to boot.
+// target the default program pulls to, whether the radio may run, and whether the diagnostics
+// stream runs, all in the `[device]` section of /settings.ini. Keys this revision does not know are
+// carried through a write; a missing file, or a value that will not parse, leaves the default in
+// place rather than refusing to boot.
 //
 // It is a class rather than a constant so the wire, the context and the UI read through the place a
 // preference lives, and the storage is behind it rather than in every reader.
@@ -27,6 +28,10 @@ class Settings {
   // a change takes effect on the next reset.
   bool bluetoothEnabled() const;
   void setBluetooth(bool enabled);
+  // Whether the diagnostics stream runs. The boot reads it to pick the logger (StreamLogger or
+  // NilLogger), so a change takes effect on the next reset.
+  bool logEnabled() const;
+  void setLogEnabled(bool enabled);
 
  private:
   Storage& storage_;
@@ -34,6 +39,7 @@ class Settings {
   DisplayUnit unit_ = DisplayUnit::Kpa;
   float targetKpa_ = 0.0f;
   bool bluetooth_ = true;
+  bool log_ = true;
 };
 
 }  // namespace gardener
