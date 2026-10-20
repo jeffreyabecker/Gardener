@@ -247,11 +247,11 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## DOCS — Documentation
 
-- [ ] DOCS-001 Update [docs/specs/routines.md](../specs/routines.md): supersede the "nothing is
+- [x] DOCS-001 Update [docs/specs/routines.md](../specs/routines.md): supersede the "nothing is
   suspended and there is no second core, which is why there are no locks and no callbacks"
   rationale — the VM now runs on the second core, writes the machine only through the command
   queue, and reads dirty; `poll` blocks the panel loop, not the control loop.
-- [ ] DOCS-002 Update [README.md](../../README.md) where it claims "lives in the main loop, so
+- [x] DOCS-002 Update [README.md](../../README.md) where it claims "lives in the main loop, so
   nothing blocks" and any control-model prose that names the single loop, to describe the three
   tasks.
 - [ ] DOCS-003 Delete this plan set (`docs/plans/free-rtos/`) once the conversion is in — the

@@ -102,7 +102,7 @@ which remains the one description of what is editable.
 | --- | --- |
 | boot, after the files load | nothing — the page's `activate()` follows |
 | the page becomes visible | `activate()` |
-| every loop pass while the page is shown | `poll(now)` |
+| every panel-task beat while the page is shown | `poll(now)` |
 | a controller acquires control | nothing; the page stops being polled |
 | the controller releases control, or the device resets | `activate()` — the page is visible again |
 
@@ -112,15 +112,16 @@ page was not shown, and a routine should not trust what it cached.
 ## One entry per beat
 
 The runtime is the only thing that enters the interpreter, and it does so from its own frame — one
-`be_pcall` per `poll`, never from inside a Berry call. Nothing is suspended and there is no second
-core, which is why there are no locks and no callbacks.
+`be_pcall` per `poll`, never from inside a Berry call. It runs on the panel task, and the one-writer
+rule is what keeps it lock-free: the machine is written only through the command queue, and read
+dirty by any task. Nothing is suspended, and there are no locks and no callbacks.
 
 What that costs, stated plainly:
 
-- **A `poll` that never returns blocks the loop.** There is no instruction budget in this build, so
+- **A `poll` that never returns blocks the panel loop.** The control loop and the wire run on their
+  own tasks, so a slow routine cannot starve them. There is no instruction budget in this build, so
   returning is a convention the author keeps. Keep `poll` short and let it return.
-- **`print` writes nowhere.** Use `vacuum.log(text)`; it reaches the serial line as a `[I]` record
-  and honours `device set log off`.
+- **`print` writes nowhere.** Use `vacuum.log(text)`; it reaches the serial line as a `[I]` record.
 - A routine that raises is **dropped**: one `[E]` line names the routine, the method and the
   message, and the page falls back to the mark until the next boot.
 

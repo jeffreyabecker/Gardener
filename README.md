@@ -30,7 +30,7 @@ suction below ambient, so kPa keeps the numbers short and the resolution meaning
 | --- | --- |
 | `1 kPa` | 10 hPa = 10 mbar = 0.145 PSI = 7.5 mmHg |
 | `kpa` | vacuum depth in kPa below ambient: 0 at rest, rising as the chamber is pumped down |
-| `target` | depth below the same reference the loop pulls to, so a target and a reading are on one ruler |
+| `target` | depth below the same reference the control loop pulls to, so a target and a reading are on one ruler |
 | `floor` | deepest target the pump can reach, `PUMP_MAX_SUCTION_KPA` below ambient |
 
 The ambient reference belongs to the sensor: the part is a gauge sensor with an analog output, and
@@ -94,7 +94,7 @@ Three rules make that hold:
 of it: a part reports what it is doing as values, and nothing in `hal/` knows that a serial line or
 a control loop exists. The vacuum system is the other side of that line —
 [app/VacuumSystem.h](./libraries/VacuumCore/src/app/VacuumSystem.h) is handed the sensor, the pump
-and the valve and holds the loop that commands them, so the control law reads in one place and the
+and the valve and holds the control law that commands them, so the control law reads in one place and the
 pins and the buses are named in another. Each of those is an interface, and the part that satisfies it
 is in `hal/impl/`. A vendor header appears only where a part is named — `<Adafruit_SH110X.h>` in
 [app/Build.cpp](./libraries/VacuumCore/src/app/Build.cpp), which picks the panel driver and hands it
@@ -248,7 +248,7 @@ ESP32 GPIO12 ── 100R ── piezo ── GND
 The firmware offers 100 Hz–10 kHz. The wire uses `buzzer tone 2000 500` and
 `buzzer play a4:1000 c6:500`; a routine uses `buzzer.tone(2000, 500)` and
 `buzzer.play("a4:1000 c6:500")`. A tone with a 0 ms duration runs until it is stopped. The timer
-lives in the main loop, so nothing blocks.
+lives on the control task, so nothing blocks.
 
 GPIO12 is the 5-way button module's fifth key on the POC rig. The firmware reads only four keys,
 so that pin is free for the piezo; a board that wants the fifth key back has to move the buzzer.
@@ -321,12 +321,12 @@ of a double. There is no separate event for a longer hold — a page that wants 
 `heldMs()` while the key is down and picks its own mark. A key held at boot is not a press.
 
 While no controller owns the device the presses go to the active routine (`buttons.take()`); with
-none, the loop logs the gesture (`btn: ok short`). Three holds belong to the device and no routine
-can suppress them: **Back for 3 s** stops the pump and vents, **OK for 3 s** does the same and hands
-the panel back to the `default` routine, and **Back+OK for 5 s** releases the chamber, restarts and
-clears a held ownership record. The first and third are hard-coded in `App` because they apply on
-every page and in every link state; the second belongs to the disconnected page, because it exists
-to leave that page.
+none, the panel task logs the gesture (`btn: ok short`). Three holds belong to the device and no
+routine can suppress them: **Back for 3 s** stops the pump and vents, **OK for 3 s** does the same
+and hands the panel back to the `default` routine, and **Back+OK for 5 s** releases the chamber,
+restarts and clears a held ownership record. The first and third are hard-coded in the control task
+because they apply on every page and in every link state; the second belongs to the disconnected
+page, because it exists to leave that page.
 
 The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
 for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
@@ -448,10 +448,10 @@ exception: Back is the device's stop and fires whatever the routine registered, 
 out — it stops, vents and switches the panel back to `default`, so a routine that took it over is
 one hold away — and Back+OK resets the device and clears ownership from any page.
 
-Two things worth knowing before writing one. A `poll` that never returns blocks the loop — the
-interpreter has no instruction budget, so returning is a convention the author keeps. And `print`
-goes nowhere: a routine that wants to say something calls `vacuum.log(text)`, which reaches the
-serial line as a `[I]` record.
+Two things worth knowing before writing one. A `poll` that never returns blocks the panel loop —
+the interpreter has no instruction budget, so returning is a convention the author keeps. And
+`print` goes nowhere: a routine that wants to say something calls `vacuum.log(text)`, which reaches
+the serial line as a `[I]` record.
 
 ### Over the serial line
 
@@ -537,9 +537,9 @@ same state.
 on top of it: the target, the PID on the vacuum depth the sensor reports (all terms in kPa,
 and the same frame a target is set in), the valve, the pump, the run state in the diagram below
 and the fault latch. It is handed the three devices it commands — the sensor, the pump and the
-valve — so the loop is policy and the pins stay in `hal/`. The pump is the only actuator, so the
-loop can pull down but never vent — the vent valve is the only way back up. When the measurement
-undershoots the target the output drops to zero and the chamber bleeds back up.
+valve — so the control law is policy and the pins stay in `hal/`. The pump is the only actuator, so
+the control loop can pull down but never vent — the vent valve is the only way back up. When the
+measurement undershoots the target the output drops to zero and the chamber bleeds back up.
 
 It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
 the duty, the state. Both of the transitions it makes for itself are facts about the chamber
