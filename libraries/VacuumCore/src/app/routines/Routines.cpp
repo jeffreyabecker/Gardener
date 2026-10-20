@@ -378,8 +378,9 @@ bool Routines::takePress(Button& button, Press& press) {
 }
 
 // The Back hold belongs to the device, not to the page, so the page is told after the fact. The
-// control task bumps stopSeq when the hold fires; one bump is one true here, and the page that was
-// showing is the one that hears about it when it resumes.
+// control task bumps stopSeq when it fires; one bump is one true here. The page that is showing
+// when the hold fires never asks: the panel switches to `default` and the switch drops the notice.
+// It is the page left behind by a hold under a controller that hears it, on its next poll.
 bool Routines::takeStopped() {
   if (lastStopSeq_ == stopSeq) return false;
   lastStopSeq_ = stopSeq;

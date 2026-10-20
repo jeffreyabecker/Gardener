@@ -40,10 +40,9 @@ extern QueueHandle_t machineCommandQueue;
 extern QueueHandle_t storeQueue;
 extern QueueHandle_t buttonEventQueue;
 
-// Shared scalars, one writer each. okHeldMs is the control task's publish of heldMs(Button::Ok)
-// for the panel's default-hold watch; stopSeq is the control task's counter, incremented each
-// time the Back hold fires, which the panel's takeStopped() compares against. Both are read dirty.
-extern volatile uint32_t okHeldMs;
+// Shared scalars, one writer each. stopSeq is the control task's counter, incremented each time the
+// Back hold fires; the panel's takeStopped() and its stop watch compare against it, and both read it
+// dirty.
 extern volatile uint32_t stopSeq;
 
 // Connection presence, one writer (the interface owner) and read dirty by the panel's overlay.

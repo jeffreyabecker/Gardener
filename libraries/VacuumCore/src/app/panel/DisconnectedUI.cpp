@@ -1,29 +1,20 @@
 #include "app/panel/DisconnectedUI.h"
 
-#include "app/Logger.h"
 #include "app/Tasks.h"
-#include "app/VacuumSystem.h"
 #include "app/panel/Asset.h"
 #include "app/routines/Routines.h"
 #include "core/Config.h"
 
 namespace gardener {
-namespace {
 
-// How long OK has to be held before the page goes back to default. The same mark as the Back hold:
-// long enough that a press cannot do it by accident.
-constexpr uint32_t kDefaultHoldMs = 3000;
-
-}  // namespace
-
-DisconnectedUI::DisconnectedUI(AppContext context, Logger& logger)
-    : UserInterface(context), logger_(logger) {}
+DisconnectedUI::DisconnectedUI(AppContext context) : UserInterface(context) {}
 
 // A routine draws its own first frame, so the mark is only drawn when no routine is active. The
 // page becoming visible is also when the routine re-reads what it knew — the unit may have changed
-// while a controller owned the device.
+// while a controller owned the device — and when a stop that fired on the other page is forgotten.
 bool DisconnectedUI::begin() {
   lastFrameMs_ = millis();
+  lastStopSeq_ = stopSeq;
   if (context_.routines().active()) {
     context_.routines().enterPage();
     return true;
@@ -39,7 +30,14 @@ bool DisconnectedUI::begin() {
 // With a routine active the page is the routine's: one entry into the VM per pass, and no frame of
 // the mark behind it.
 void DisconnectedUI::update() {
-  watchDefaultHold();
+  // The device's Back hold stops and vents from the control task; on this page it is also the way
+  // out, so the panel goes back to `default`. The page being left does not get its stopped() notice:
+  // the switch is the whole response.
+  if (stopSeq != lastStopSeq_) {
+    lastStopSeq_ = stopSeq;
+    context_.routines().showDefault();
+    return;
+  }
 
   if (context_.routines().active()) {
     context_.routines().poll(millis());
@@ -50,28 +48,6 @@ void DisconnectedUI::update() {
   if (now - lastFrameMs_ < cfg::UI_REFRESH_MS) return;
   lastFrameMs_ = now;
   drawFrame();
-}
-
-// The page's own way out: holding OK past the mark leaves whatever routine is showing and puts
-// `default` back on the panel. The machine is released first, because the page that was commanding it
-// is about to be, and the default page should not open on a chamber still pulling. The latch keeps it
-// to one switch per hold.
-//
-// The control task owns the keys and the machine, so the hold arrives as the published scalar and
-// the stop goes out as a queued command rather than a direct call.
-void DisconnectedUI::watchDefaultHold() {
-  const uint32_t held = okHeldMs;
-  if (held == 0) {
-    defaultFired_ = false;
-    return;
-  }
-  if (defaultFired_ || held < kDefaultHoldMs) return;
-  defaultFired_ = true;
-
-  logger_.warn("ui: ok held, stopping and back to the default page");
-  const MachineCommand stop{MachineCommand::Op::Stop};
-  xQueueSend(machineCommandQueue, &stop, 0);
-  context_.routines().showDefault();
 }
 
 void DisconnectedUI::drawFrame() {

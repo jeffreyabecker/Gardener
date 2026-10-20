@@ -18,7 +18,6 @@ namespace gardener {
 QueueHandle_t machineCommandQueue = nullptr;
 QueueHandle_t storeQueue = nullptr;
 QueueHandle_t buttonEventQueue = nullptr;
-volatile uint32_t okHeldMs = 0;
 volatile uint32_t stopSeq = 0;
 volatile bool serialConnected = false;
 volatile bool bleConnected = false;
@@ -106,8 +105,8 @@ void drainMachineCommands(ControlState& state) {
   while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyMachineCommand(state, command);
 }
 
-// The keys, settled and classified here: one ButtonEvent per completed press, and the OK hold
-// published for the panel's default-hold watch. The panel task consumes the queue.
+// The keys, settled and classified here: one ButtonEvent per completed press. The panel task
+// consumes the queue.
 void buttonsTick(ControlState& state) {
   for (Button button : PressOrder) {
     const Press press = state.context.buttons().consumePress(button);
@@ -117,12 +116,12 @@ void buttonsTick(ControlState& state) {
       state.logger->warn("buttons: queue full, dropping a press");
     }
   }
-  okHeldMs = state.context.buttons().heldMs(Button::Ok);
 }
 
 // Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
 // and the latch keeps it to one stop per hold. Releasing it arms the next one. The stop is also a
-// stopSeq bump, which is how the panel's takeStopped() learns of it.
+// stopSeq bump: that is how the panel's takeStopped() learns of it, and how the disconnected page
+// knows to give the panel back to `default`.
 void watchBackHold(ControlState& state) {
   const uint32_t held = state.context.buttons().heldMs(Button::Back);
   if (held == 0) {

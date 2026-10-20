@@ -321,12 +321,12 @@ of a double. There is no separate event for a longer hold — a page that wants 
 `heldMs()` while the key is down and picks its own mark. A key held at boot is not a press.
 
 While no controller owns the device the presses go to the active routine (`buttons.take()`); with
-none, the panel task logs the gesture (`btn: ok short`). Three holds belong to the device and no
-routine can suppress them: **Back for 3 s** stops the pump and vents, **OK for 3 s** does the same
-and hands the panel back to the `default` routine, and **Back+OK for 5 s** releases the chamber,
-restarts and clears a held ownership record. The first and third are hard-coded in the control task
-because they apply on every page and in every link state; the second belongs to the disconnected
-page, because it exists to leave that page.
+none, the panel task logs the gesture (`btn: ok short`). Two holds belong to the device and no
+routine can suppress them: **Back for 3 s** stops the pump, vents, and — on the disconnected page —
+hands the panel back to the `default` routine, and **Back+OK for 5 s** releases the chamber,
+restarts and clears a held ownership record. Both are hard-coded in the control task because they
+apply on every page and in every link state; handing the panel to `default` is the panel's own half
+of the Back hold, since the page switch is the panel task's to make.
 
 The rest of the keys belong to whichever page is showing. The standard across pages is **double OK
 for that page's settings** when it describes any; **Back** leaves a view; **OK** is the page's
@@ -337,8 +337,9 @@ page's settings, and Back goes back to `default`. On `system`, Up and Down walk 
 rows, OK opens the selected value, Up/Down changes it, and OK saves; Back cancels an edit or goes
 home.
 
-The Back hold tells the active routine what it did: `vacuum.stopped()` is true once after the hold,
-so a page with a phase machine resets it on the event rather than watching for `IDLE`.
+A hold that fires while a controller owns the device leaves the active routine a `vacuum.stopped()`
+notice, true once on its next poll, so a page with a phase machine resets it on the event rather
+than watching for `IDLE`.
 
 The presses, the reserved holds and the timing that classifies them are in
 [docs/specs/gestures.md](./docs/specs/gestures.md).

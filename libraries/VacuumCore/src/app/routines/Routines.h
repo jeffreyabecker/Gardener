@@ -75,8 +75,10 @@ class Routines {
 
   // The device's Back hold stops and vents without asking the page. The control task bumps stopSeq
   // when it fires; `takeStopped()` answers true once per bump, so a page that has a phase machine
-  // resets it on the event instead of inferring the stop from the machine's state. Switching pages
-  // drops a notice the old page did not take.
+  // resets it on the event instead of inferring the stop from the machine's state. A page that is
+  // showing when the hold fires does not take it: the panel switches to `default` first, and the
+  // switch drops the notice. What hears it is the routine a hold leaves behind — one fired while a
+  // controller owned the device, read by the page it finds when control comes back.
   bool takeStopped();
 
   // --- the `store` module's surface ---

@@ -42,7 +42,7 @@ bool App::begin() {
   SerialLink* link = new SerialLink(&context_, Serial, serialAttached, *logger);
   BleLink* ble = new BleLink(&context_);
   ConnectedUI* connected = new ConnectedUI(context_);
-  DisconnectedUI* disconnected = new DisconnectedUI(context_, *logger);
+  DisconnectedUI* disconnected = new DisconnectedUI(context_);
 
   String boot = "gardener ";
   boot += cfg::FIRMWARE_VERSION;
