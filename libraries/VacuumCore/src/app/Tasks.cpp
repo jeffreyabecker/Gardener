@@ -63,6 +63,10 @@ struct ControlState {
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
   bool backStopFired = false;
+  // The Up+Down chord: both keys were down at once, and the chord event has gone out. The pair's
+  // own releases are not page presses while either flag is set.
+  bool upDownChord = false;
+  bool upDownChordFired = false;
 };
 
 // The panel task's own state: the two screens it owns, the one showing, and which page it is.
@@ -110,9 +114,23 @@ void drainMachineCommands(ControlState& state) {
 // consumes the queue. OK while the Back hold vents is not a page action: on the disconnected page it
 // is the way home, so it is stolen here rather than queued. With a controller owning there is no
 // page to go home to, so the press stays the routine-less log line it always was.
+//
+// Up and Down together are one chord, not two presses: the pair is swallowed and a single chord
+// event is queued on the up key when the first of the two is released.
 void buttonsTick(ControlState& state) {
+  const bool upDown = state.context.buttons().pressed(Button::Up);
+  const bool downDown = state.context.buttons().pressed(Button::Down);
+  const bool bothDown = upDown && downDown;
+
   const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
   for (Button button : PressOrder) {
+    // The chord's keys are one gesture, so their presses are dropped while the pair is held or has
+    // just fired. The drop reaches into the double window too, so the releases never arrive late.
+    if ((state.upDownChord || state.upDownChordFired) &&
+        (button == Button::Up || button == Button::Down)) {
+      state.context.buttons().dropPress(button);
+      continue;
+    }
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
     if (backHeld && !state.context.ownership().held() && button == Button::Ok) {
@@ -123,6 +141,21 @@ void buttonsTick(ControlState& state) {
     if (xQueueSend(buttonEventQueue, &event, 0) != pdTRUE) {
       state.logger->warn("buttons: queue full, dropping a press");
     }
+  }
+
+  // Advance the chord: both down arms it, the first release fires it, and both up clears it.
+  if (bothDown && !state.upDownChordFired) {
+    state.upDownChord = true;
+  } else if (state.upDownChord && !state.upDownChordFired && !bothDown) {
+    state.upDownChordFired = true;
+    const ButtonEvent chordEvent{Button::Up, Press::Chord};
+    if (xQueueSend(buttonEventQueue, &chordEvent, 0) != pdTRUE) {
+      state.logger->warn("buttons: queue full, dropping a press");
+    }
+  }
+  if (!upDown && !downDown) {
+    state.upDownChord = false;
+    state.upDownChordFired = false;
   }
 }
 

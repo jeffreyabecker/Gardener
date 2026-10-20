@@ -179,6 +179,12 @@ def harness_run_page(entry)
     end
   end
 
+  # The Up+Down chord is the settings gesture, reported as an up press with press "chord".
+  harness_press("up", "chord")
+  if !harness_beats(4)
+    return
+  end
+
   # A re-entry after a control handover arrives as activate(nil) with the machine
   # wherever it was left, and a switch may carry the routine's values as a map.
   if harnessActive != nil

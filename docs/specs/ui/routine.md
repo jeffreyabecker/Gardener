@@ -89,7 +89,7 @@ components.be` is `Component` and the drawing primitives a readout composes (`Fi
 the `Icon` glyph). `/modules/list.be` is `List`, a selectable menu.
 
 The shared editor ships as `/modules/settings.be`. `Settings(name)` edits the `describe()` list of
-the routine registered under that name. **Double OK** is the standard gesture for opening it; a
+the routine registered under that name. **Up+Down** is the standard gesture for opening it; a
 page that wants the editor makes one and hands it to `Page.open_editor()`, which holds it while it
 is open and delegates the keys to it:
 
@@ -116,7 +116,7 @@ def handle(ev)
     end
     return true
   end
-  if ev.btn == "ok" && ev.press == "double"
+  if ev.btn == "up" && ev.press == "chord"
     return self.open_editor(Settings("mypage"))
   end
   return false

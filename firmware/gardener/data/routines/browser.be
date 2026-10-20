@@ -21,7 +21,7 @@ class Browser : Page
 
     self.on("up", nil, / -> self.step(-1))
     self.on("down", nil, / -> self.step(1))
-    self.on("ok", "double", / -> self.open_selected())
+    self.on("up", "chord", / -> self.open_selected())
     self.on("ok", nil, / -> self.choose())
     self.on("back", nil, / -> routines.set_active("default"))
   end

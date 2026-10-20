@@ -110,6 +110,16 @@ Press Buttons::consumePress(Button button) {
   return press;
 }
 
+// The chord's keys are one gesture, so their presses are dropped rather than delivered: the
+// classified press and the double window it may still be waiting in.
+void Buttons::dropPress(Button button) {
+  const uint8_t index = (uint8_t)button;
+  const uint32_t bit = bitOf(button);
+  pendingPress_[index] = Press::None;
+  awaitingSecond_ &= ~bit;
+  second_ &= ~bit;
+}
+
 uint32_t Buttons::heldMs(Button button) {
   settle();
   if (!(tracked_ & bitOf(button))) return 0;

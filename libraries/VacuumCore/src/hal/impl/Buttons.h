@@ -22,6 +22,7 @@ class Buttons : public ButtonPanel {
 
   bool pressed(Button button) override;
   Press consumePress(Button button) override;
+  void dropPress(Button button) override;
   uint32_t heldMs(Button button) override;
 
  private:

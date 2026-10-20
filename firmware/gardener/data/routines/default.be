@@ -44,7 +44,7 @@ class Readout : Page
     super(self).init()
     self.chrome = ReadoutChrome()
 
-    self.on("ok", "double", / -> routines.set_active("system"))
+    self.on("up", "chord", / -> routines.set_active("system"))
     self.on("ok", "short",  / -> self.start())
     self.on("back", ["short", "double"], / -> self.back())
     self.on("up", "double", / -> routines.set_active("browser"))

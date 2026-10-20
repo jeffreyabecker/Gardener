@@ -110,8 +110,8 @@ For every registered routine, hidden pages included:
 2. One OK, then 400 s of virtual time at 250 ms a beat, so a cycle's work and rest phases and the
    repeat are reached.
 3. The device's Back hold: `vacuum.stopped()` turns true once, and the page must abandon.
-4. Every button with every press — `up`, `down`, `ok`, `back` × `single`, `double`, `long` — a
-   few beats apart, which walks the gesture table and the browser's page switch.
+4. Every button with every press — `up`, `down`, `ok`, `back` × `single`, `double`, `long` — and
+   the Up+Down chord, a few beats apart, which walks the gesture table and the browser's page switch.
 5. `activate(nil)` again, then `activate(settings)` with a map built from `describe()` and the
    stored values, which is the switch path.
 6. For a routine with `describe()`: open `Settings`, edit every setting (OK, Up, OK, with the

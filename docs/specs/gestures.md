@@ -16,6 +16,7 @@ is the UX rule above them.
 | `short` | released before 600 ms |
 | `long` | held 600 ms or more, reported on release |
 | `double` | two short presses with the second starting within 350 ms of the first release; one event, on the second release |
+| `chord` | Up and Down pressed together; one event on the first release, reported on the up key |
 | hold | a key watched while it is down; the firmware acts at its own mark |
 
 A single short is reported only after the 350 ms window closes, so a tap is a little late rather
@@ -64,13 +65,13 @@ page's own gesture started.
 
 | Gesture | Meaning |
 | --- | --- |
-| **Double OK** | the page's edit or settings. A page with `describe()` opens the shared settings view. |
+| **Up+Down** | the page's edit or settings. A page with `describe()` opens the shared settings view. |
 | **OK** | the page's primary action. In the settings list it opens the value; in a value editor it saves. |
 | **Back** | leave the current view without writing, or stop what the page is running. The settings list closes; a value editor cancels. |
 | **Up / Down** | move the selection, or change the value being edited. |
 
-A page that describes settings takes double OK for the settings view even if it also has an inline
-editor: one gesture, one meaning. A page without settings may use double OK for whatever editing it
+A page that describes settings takes up+down for the settings view even if it also has an inline
+editor: one gesture, one meaning. A page without settings may use up+down for whatever editing it
 does have.
 
 The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
@@ -89,7 +90,7 @@ acquired control leaves the disconnected page — and its routine — in place.
 ## Rules for a page
 
 1. Leave the reserved holds alone; they are the device's.
-2. Double OK is the page's edit gesture. With `describe()`, it opens `Settings`.
+2. Up+Down is the page's edit gesture. With `describe()`, it opens `Settings`.
 3. Back leaves without writing, or stops what the page is running. A stop of the page's own is the
    whole stop — the pump and the page's state — and it adds to the Back hold, which stops every
    page whether or not the page has a gesture of its own.

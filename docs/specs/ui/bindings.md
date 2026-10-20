@@ -211,7 +211,8 @@ end
 | `buttons.take()` | an `event` record, or `nil` when the queue is empty |
 
 `ev.btn` is `up`, `down`, `ok` or `back`. `ev.press` is `short`, `long` or `double` — the device's
-press classifier, so a double tap is one event and never two shorts.
+press classifier, so a double tap is one event and never two shorts — or `chord` for Up and Down
+pressed together, reported on the `up` key.
 
 A press is queued only while this page is showing. The queue holds eight; the oldest is dropped if a
 routine falls behind, and that is logged once.
@@ -242,7 +243,7 @@ Holding **Back and OK together for 5 s** is the local reset: it releases the cha
 clears an ownership record left held by a controller. It works from every page and link state, and a
 routine cannot suppress it.
 
-The standard gestures a page should follow — double OK for its settings, OK for its primary action,
+The standard gestures a page should follow — up+down for its settings, OK for its primary action,
 Back to leave a view, and the three holds above — are in [gestures.md](../gestures.md).
 
 ## `buzzer` — the piezo
