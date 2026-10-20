@@ -40,8 +40,7 @@ the store queue, and writes the link replies to `Serial`. Log lines are written
 straight to `Serial` by whichever task produces them — logging has no IPC of its own.
 
 Owns: `Ownership`, `Settings`, `Storage` (LittleFS — not re-entrant, so one owner), `SerialLink`,
-`BleLink` loop-side, and the `device set log` flag — written here, read dirty by every task's own
-`StreamLogger`.
+`BleLink` loop-side. The `log` preference lives in `Settings` and chooses the logger at boot.
 
 ### Task 3 — Panel / VM (core 0, priority 0, ~10 ms beat)
 
@@ -97,7 +96,7 @@ interleaved output is an expected, accepted outcome — logs are not worth an IP
 - [control-task.md](control-task.md) — the control task: the tick, applying machine commands, the
   button ownership, and the safety holds.
 - [interface-task.md](interface-task.md) — the interface task: the domain-by-domain serial change,
-  the BLE loop-side change, the log flag, and LittleFS single-owner.
+  the BLE loop-side change, the boot-chosen logger, and LittleFS single-owner.
 - [panel-vm-task.md](panel-vm-task.md) — the panel/VM task: page selection, the display, and the
   `Routines`/`Bindings` module-by-module change.
 - [backlog.md](backlog.md) — the implementation backlog: every change above, broken into

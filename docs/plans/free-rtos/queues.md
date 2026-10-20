@@ -22,7 +22,7 @@ Every object has one writing task. Everything else reads the live object directl
 | `Storage` (LittleFS) | Interface | nobody else | LittleFS is not re-entrant, so even **reads** stay on the interface task. |
 | `Display` / `Overlay` | Panel | nobody else | Private. |
 | `Routines` (the VM) | Panel | nobody else | Private. |
-| `logEnabled` | Interface | every task's own `StreamLogger` | One shared `volatile bool`, read dirty. |
+| `logEnabled` (in `Settings`) | Interface | `device get log` (via Settings) | Persisted; read at boot to choose the `Logger`; a `set` applies on the next reset. |
 | `Serial` stream | everyone who logs | — | Replies from Interface; log lines from any task; interleaving accepted. |
 
 Two control-owned scalars cross to the panel task and are worth spelling out:
@@ -154,14 +154,14 @@ wait.
 ```cpp
 class StoreServer {
  public:
-  StoreServer(QueueHandle_t queue, Settings& settings, Storage& storage, StreamLogger& logger);
+  StoreServer(QueueHandle_t queue, Settings& settings, Storage& storage, Logger& logger);
   void drain();  // called each interface-loop pass
  private:
   void handle(const StoreRequest& request);
   QueueHandle_t queue_;
   Settings& settings_;
   Storage& storage_;
-  StreamLogger& logger_;
+  Logger& logger_;
 };
 
 void StoreServer::drain() {

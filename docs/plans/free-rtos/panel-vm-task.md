@@ -34,7 +34,7 @@ publishes instead of calling `heldMs(Button::Ok)` on the shared `Buttons`; on fi
   round-trip uses the client's result slot.
 - `takeStopped()` is reimplemented over the control-owned `stopSeq` counter: answer true once per
   increment, comparing against the panel's own last-seen value. The `bool stopped_` field goes away.
-- The `StreamLogger&` stays (the panel's own logger, writing `Serial` directly).
+- The `Logger&` stays (the boot-chosen instance, writing `Serial` directly).
 
 ## Bindings — module by module
 

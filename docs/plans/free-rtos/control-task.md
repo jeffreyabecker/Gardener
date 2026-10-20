@@ -25,7 +25,7 @@ The body is in [tasks.md](tasks.md). Each piece:
 - `watchResetHold` — `heldMs(Back) >= 5000 && heldMs(Ok) >= 5000`: `safeReboot(context_)`, exactly
   as today. `safeReboot` owns the sensor and the vacuum system it drives during the vent wait, so it
   stays here and nowhere else.
-- `logRunChanges` — moved verbatim; the task holds its own `StreamLogger` over `Serial`, so run
+- `logRunChanges` — moved verbatim; the task holds a `Logger&` to the boot-chosen instance, so run
   transitions write directly (interleaving accepted).
 
 ## Applying machine commands

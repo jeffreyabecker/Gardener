@@ -1,15 +1,16 @@
 # Interface task
 
 Paths are relative to the repo root. The interface task owns the wire and the flash: `SerialLink`,
-`BleLink` (loop side), `Ownership`, `Settings`, `Storage`, and the one shared `logEnabled` flag. It is
-pinned to core 0 with the NimBLE host. Its loop is in [tasks.md](tasks.md).
+`BleLink` (loop side), `Ownership`, `Settings`, `Storage`, and a `Logger&` (the boot-chosen
+instance) for link and store diagnostics. It is pinned to core 0 with the NimBLE host. Its loop is
+in [tasks.md](tasks.md).
 
-## The log flag
+## The logger
 
-`AppContext::logEnabled_` stops being a per-copy `bool&` inside the copied `AppContext` and becomes
-one shared `volatile bool` (a `SharedLog` struct created in `buildAppContext()`), written only by
-`device set log` here and read dirty by every task's own `StreamLogger`. `StreamLogger` itself is
-unchanged; it keeps taking `const bool&`.
+The interface task holds a `Logger&` — the one instance chosen at boot in `App::begin()`.
+`SerialLink` and the `StoreServer` take it for their diagnostics. Which implementation it is
+(`StreamLogger` or `NilLogger`) is decided by `settings.logEnabled()`, read after the settings load;
+there is no runtime flag anywhere else.
 
 ## Serial — the domain by domain change
 
@@ -22,7 +23,7 @@ verbatim. The domains change only in *what they touch*:
 | `control acquire` | `ownership.acquire(Serial)` | unchanged — `Ownership` is interface-owned |
 | `control release` | `ownership.release(Serial)` then `vacuum.stop()` | release direct; `vacuum.stop()` → enqueue `MachineCommand::Stop` |
 | `device get` | reads battery, settings, display, log | unchanged reads — battery is a dirty read, settings/log are direct, `display().width()/height()` are constants |
-| `device set log` | writes the flag | unchanged — writes the shared `volatile bool` |
+| `device set log` | writes the flag | `settings.setLogEnabled(...)`; persists, applies at the next reset |
 | `device set unit` | `settings.setUnit()` | unchanged — `Settings` is interface-owned |
 | `device reboot` | `safeReboot()` inline | reply `ok\n` first, then enqueue `MachineCommand::Reboot` |
 | `vacuum get` | reads `VacuumSystem` | unchanged reads, now dirty |
