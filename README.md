@@ -45,8 +45,8 @@ boots.
 | [firmware/gardener/](./firmware/gardener) | The Arduino sketch (four lines) |
 | [libraries/VacuumCore/](./libraries/VacuumCore) | The firmware, built as a local library |
 | [libraries/RLEBitmap/](./libraries/RLEBitmap) | The run-length bitmap decoder the panel's images use (vendored) |
-| [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
-| [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
+| [scripts/arduino.py](./scripts/arduino.py) | Build, upload, data upload, monitor and library install wrapper |
+| [scripts/asset.py](./scripts/asset.py) | Converts a BMP into an RLE image for the panel |
 | [docs/specs/](./docs/specs) | The contracts: serial protocol, gestures, assets and routines |
 | [docs/guides/](./docs/guides) | The parts list and build guide |
 
@@ -255,15 +255,15 @@ so that pin is free for the piezo; a board that wants the fifth key back has to 
 
 ## Building
 
-Requires `arduino-cli` (or the Arduino IDE 2 with the ESP32 core installed) and a one time
-library install:
+Requires `arduino-cli` (or the Arduino IDE 2 with the ESP32 core installed), Python 3 for the
+wrapper scripts, and a one time library install:
 
 ```powershell
 arduino-cli core install esp32:esp32
-powershell -File scripts/arduino.ps1 -Task libs
-powershell -File scripts/arduino.ps1 -Task build
-powershell -File scripts/arduino.ps1 -Task upload -Port COM5
-powershell -File scripts/arduino.ps1 -Task monitor -Port COM5
+python scripts/arduino.py --task libs
+python scripts/arduino.py --task build
+python scripts/arduino.py --task upload --port COM5
+python scripts/arduino.py --task monitor --port COM5
 ```
 
 The build uses `--libraries libraries`, so the project local `libraries/VacuumCore` is used
@@ -275,13 +275,13 @@ instead of the global sketchbook copy. In VS Code the same commands are tasks (`
 what maps `Serial` to the chip's native USB CDC and fixes the partition table the data upload
 writes. Build without `CDCOnBoot` and the whole interface goes to UART0 on GPIO43/44 instead, so a
 USB cable sees nothing at all. It is pinned in `firmware/gardener/sketch.yaml`,
-`scripts/arduino.ps1` and `.vscode/arduino.json`.
+`scripts/arduino.py` and `.vscode/arduino.json`.
 
 The board's wiring and the machine's policy tunables both live in
 [core/Config.h](./libraries/VacuumCore/src/core/Config.h); a part's own numbers live with its
 driver in `hal/impl/`.
 
-The radio is NimBLE-Arduino 2.5.1, which `-Task libs` pins. `scripts/arduino.ps1` also passes the
+The radio is NimBLE-Arduino 2.5.1, which `--task libs` pins. `scripts/arduino.py` also passes the
 compile options that cut the stack to what the contract uses — peripheral only, no central, no
 scanning, one connection — because those have to reach the library's own sources, not just the
 sketch. With the radio in, the build is 863 kB of flash and 30.5 kB of static RAM, against 638 kB
@@ -351,7 +351,7 @@ filesystem yet. Everything under `firmware/gardener/data/` is packed into an ima
 that partition over the same USB cable:
 
 ```powershell
-powershell -File scripts/arduino.ps1 -Task data -Port COM5
+python scripts/arduino.py --task data --port COM5
 ```
 
 The task creates the folder if it is missing, builds the image with the core's `mklittlefs`, writes
@@ -383,7 +383,7 @@ it can edit them. `default` keeps nothing of its own: its target is a device set
 
 Images are files too: the mark both pages open with is `/assets/eggplant.rle`, a run-length encoded
 1-bit bitmap of 327 bytes rather than the 1024-byte array it used to be compiled in. Art lives in
-`firmware/gardener/assets/` as a BMP and is converted with `scripts/asset.ps1`; the file
+`firmware/gardener/assets/` as a BMP and is converted with `scripts/asset.py`; the file
 format and the tool are in [docs/specs/assets.md](./docs/specs/assets.md).
 
 ### Routines

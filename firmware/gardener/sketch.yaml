@@ -8,8 +8,8 @@
 # USB-C socket.
 #
 # FlashSize and PartitionScheme are pinned as well: the LittleFS partition the firmware mounts
-# is the one `scripts/arduino.ps1 -Task data` writes, and its offset comes from this table.
+# is the one `scripts/arduino.py --task data` writes, and its offset comes from this table.
 #
-# Library versions are pinned by `scripts/arduino.ps1 -Task libs`, which installs NimBLE-Arduino
+# Library versions are pinned by `scripts/arduino.py --task libs`, which installs NimBLE-Arduino
 # 2.5.1 for the Bluetooth transport; the sketch build itself takes the project local libraries.
 default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default

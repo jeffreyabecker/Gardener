@@ -13,12 +13,12 @@ Add a second pump, pressure sensor and vent solenoid so the device can run two c
 
 ## Firmware size
 
-Measured on 2026-10-19 with `-Task build`: 566,997 bytes, 43% of the 1,310,720-byte app slot. An
+Measured on 2026-10-19 with `--task build`: 566,997 bytes, 43% of the 1,310,720-byte app slot. An
 empty sketch with the same FQBN is 298,069 bytes (22%). Two levers were identified and not taken.
 
 ### Revisit the partition scheme
 
-Pin `huge_app` instead of `default` in [scripts/arduino.ps1](../../scripts/arduino.ps1): one 3 MB
+Pin `huge_app` instead of `default` in [scripts/arduino.py](../../scripts/arduino.py): one 3 MB
 app slot and 896 KB of LittleFS reports ~18% instead of 43%. The OTA slot it drops is unused, and
 the data image has to be uploaded again because the offset moves.
 

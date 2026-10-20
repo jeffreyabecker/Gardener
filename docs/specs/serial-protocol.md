@@ -32,7 +32,7 @@ There is no command that changes the terminator, and no `link` domain. The line 
 maps `Serial` to the chip's native USB CDC. Building without it (`esp32:esp32:esp32s3`
 alone) sends the whole interface to UART0 on GPIO43/44, which is not the USB socket, and the
 device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.yaml`,
-`scripts/arduino.ps1` and `.vscode/arduino.json` for exactly that reason.
+`scripts/arduino.py` and `.vscode/arduino.json` for exactly that reason.
 
 ## 2. Connecting
 

@@ -1,7 +1,7 @@
 # Assets
 
 The pictures the panel draws are files on the device, not arrays in a header: one image is a file
-under `/assets/`, written by [scripts/asset.ps1](../../scripts/asset.ps1), and read when it is drawn.
+under `/assets/`, written by [scripts/asset.py](../../scripts/asset.py), and read when it is drawn.
 
 Run-length encoding is what makes this cheap. A one-bit drawing is long runs of the same pixel, so
 the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array took. The decoder is
@@ -12,31 +12,30 @@ the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array too
 Save the drawing as an **uncompressed BMP** — 1, 4, 8, 24 or 32 bits per pixel — and convert it:
 
 ```powershell
-powershell -File scripts/asset.ps1 -Source firmware/gardener/assets/eggplant.bmp `
-                                      -Out firmware/gardener/data/assets/eggplant.rle
+python scripts/asset.py --source firmware/gardener/assets/eggplant.bmp --out firmware/gardener/data/assets/eggplant.rle
 ```
 
 Whatever the source depth, the output is one bit: a pixel becomes ink when its luminance falls below
-`-Threshold`, and everything else is paper, which is not drawn at all — whatever the page already put
+`--threshold`, and everything else is paper, which is not drawn at all — whatever the page already put
 there shows through.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `-Threshold` | `128` | the luminance (0–255) a pixel has to fall below to be ink |
-| `-Invert` | off | the drawing is the *light* part, for art made light on dark |
-| `-Dither` | off | spread the error of that cut over the neighbouring pixels |
+| `--threshold` | `128` | the luminance (0–255) a pixel has to fall below to be ink |
+| `--invert` | off | the drawing is the *light* part, for art made light on dark |
+| `--dither` | off | spread the error of that cut over the neighbouring pixels |
 
-Line art wants the defaults; `-Dither` is for a photograph or a gradient, where a hard cut loses
+Line art wants the defaults; `--dither` is for a photograph or a gradient, where a hard cut loses
 everything between black and white. Dithering a two-colour drawing only adds noise.
 
-The shipped mark is made with `-Threshold 224`. Its illustration is shaded, so the default cut leaves
+The shipped mark is made with `--threshold 224`. Its illustration is shaded, so the default cut leaves
 the lighter half of the body and the tip of the stem as paper; at 224 everything that is not the
 white background is ink, which is the whole eggplant at 1337 pixels and 327 bytes.
 
 A 16-bit BMP and a compressed one are refused with a message rather than guessed at. A 32-bit pixel
 is read as BGR with its alpha byte ignored.
 
-Then upload the data image (`-Task data`), which is how every file on the device gets there.
+Then upload the data image (`--task data`), which is how every file on the device gets there.
 
 ## The file
 

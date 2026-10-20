@@ -20,7 +20,7 @@ constexpr const char* kMarkAsset = "/assets/eggplant.rle";
 // this avoids.
 //
 // The format is the RLEBitmap renderer's own three pieces behind a ten-byte header: docs/specs/assets.md
-// describes it and scripts/asset.ps1 writes it from a BMP. A file that is not there, or is not one of
+// describes it and scripts/asset.py writes it from a BMP. A file that is not there, or is not one of
 // these, draws nothing.
 void drawAsset(Display& display, Storage& storage, const char* path, int16_t x, int16_t y);
 

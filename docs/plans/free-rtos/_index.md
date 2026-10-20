@@ -122,7 +122,7 @@ interleaved output is an expected, accepted outcome — logs are not worth an IP
 3. Interface task, serial then BLE ([interface-task.md](interface-task.md)).
 4. Panel/VM task ([panel-vm-task.md](panel-vm-task.md)).
 5. Delete `App::update()`, wire `gardener.ino` to the tasks.
-6. Verify: `powershell -File scripts/arduino.ps1 -Task build`; review for the `hal/`→`app/` layer
+6. Verify: `python scripts/arduino.py --task build`; review for the `hal/`→`app/` layer
    rule and for any cross-task write (grep every `context_.<thing>().` mutation and confirm it runs
    on the owner task).
 

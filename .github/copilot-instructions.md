@@ -2,7 +2,7 @@
 
 ## Build
 
-`powershell -File scripts/arduino.ps1 -Task build` — compiles the sketch with the project
+`python scripts/arduino.py --task build` — compiles the sketch with the project
 local library. There is no host test suite, and nothing checks the layer rule, so a stray
 `hal/` → `app/` include is a review catch rather than a build failure.
 

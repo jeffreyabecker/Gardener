@@ -5,7 +5,7 @@ upstream 1.2.0, MIT — see [LICENSE](./LICENSE). The two files in `src/` are up
 
 Only `src/` is here. Upstream also ships weather and moon image sets, the `bmper` encoder and example
 sketches; none of them are part of this build. This firmware's images live on the device rather than
-in headers, so they are built with [scripts/asset.ps1](../../scripts/asset.ps1) and stored under
+in headers, so they are built with [scripts/asset.py](../../scripts/asset.py) and stored under
 `firmware/gardener/data/assets/` — the format and the tool are described in
 [docs/specs/assets.md](../../docs/specs/assets.md).
 

@@ -38,7 +38,7 @@ A routine's name is also the name of the file its values are kept in (see `store
 to be a plain word: a name containing `/` or `\` is refused at load.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
-`powershell -File scripts/arduino.ps1 -Task data`. See the README for that flow.
+`python scripts/arduino.py --task data`. See the README for that flow.
 
 ## Shared code in `/modules`
 
