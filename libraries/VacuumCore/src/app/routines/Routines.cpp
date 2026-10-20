@@ -41,7 +41,7 @@ bool Routines::begin(AppContext& context, Storage& storage, Logger& logger, Stor
     logger.error("vm: no memory, routines off");
     return false;
   }
-  berry::install(vm_, context, *this, logger);
+  berry::install(vm_, context, *this, logger, *store_);
 
   // Modules first: a page may construct a class one of them defines, so those files have to have
   // run before the pages do.

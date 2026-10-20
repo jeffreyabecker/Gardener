@@ -211,27 +211,27 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## BIND — Berry bindings
 
-- [ ] BIND-001 `vacuum.target` / `target_off`: enqueue `SetTarget` / `ClearTarget` instead of
+- [x] BIND-001 `vacuum.target` / `target_off`: enqueue `SetTarget` / `ClearTarget` instead of
   `setTarget` / `clearTarget`.
-- [ ] BIND-002 `vacuum.start` / `stop` / `reset`: enqueue `Start` / `Stop` / `ResetFault`.
-- [ ] BIND-003 `vacuum.state()`: unchanged — dirty read of `VacuumSystem` and `Battery`.
-- [ ] BIND-004 `vacuum.clamp` / `now_ms`: unchanged (pure / `millis()`).
-- [ ] BIND-005 `vacuum.log(text)`: unchanged — the panel's logger, written directly.
-- [ ] BIND-006 `vacuum.stopped()`: `takeStopped()` over `stopSeq` (ROUT-005).
-- [ ] BIND-007 `device.unit` / `target` / `bluetooth`: unchanged — dirty read of `Settings`.
-- [ ] BIND-008 `device.set_unit` / `set_target` / `set_ble`: `StoreClient::setUnit` /
+- [x] BIND-002 `vacuum.start` / `stop` / `reset`: enqueue `Start` / `Stop` / `ResetFault`.
+- [x] BIND-003 `vacuum.state()`: unchanged — dirty read of `VacuumSystem` and `Battery`.
+- [x] BIND-004 `vacuum.clamp` / `now_ms`: unchanged (pure / `millis()`).
+- [x] BIND-005 `vacuum.log(text)`: unchanged — the panel's logger, written directly.
+- [x] BIND-006 `vacuum.stopped()`: `takeStopped()` over `stopSeq` (ROUT-005).
+- [x] BIND-007 `device.unit` / `target` / `bluetooth`: unchanged — dirty read of `Settings`.
+- [x] BIND-008 `device.set_unit` / `set_target` / `set_ble`: `StoreClient::setUnit` /
   `setTarget` / `setBluetooth` (one-way).
-- [ ] BIND-009 `device.units`: unchanged (constant).
-- [ ] BIND-010 `store.get`: `StoreClient::get` round-trip (blocks).
-- [ ] BIND-011 `store.set`: `StoreClient::set` round-trip (blocks); the file's bool is the answer.
-- [ ] BIND-012 `screen.*` draw verbs: unchanged — the display is panel-owned.
-- [ ] BIND-013 `screen.unit()`: unchanged — dirty read of `Settings`.
-- [ ] BIND-014 `buttons.take()`: unchanged — the ring, now filled from the button-event queue.
-- [ ] BIND-015 `buzzer.tone` / `off`: enqueue `Tone` / `Off`.
-- [ ] BIND-016 `buzzer.play`: enqueue `Play`; the bool return comes from the pure
+- [x] BIND-009 `device.units`: unchanged (constant).
+- [x] BIND-010 `store.get`: `StoreClient::get` round-trip (blocks).
+- [x] BIND-011 `store.set`: `StoreClient::set` round-trip (blocks); the file's bool is the answer.
+- [x] BIND-012 `screen.*` draw verbs: unchanged — the display is panel-owned.
+- [x] BIND-013 `screen.unit()`: unchanged — dirty read of `Settings`.
+- [x] BIND-014 `buttons.take()`: unchanged — the ring, now filled from the button-event queue.
+- [x] BIND-015 `buzzer.tone` / `off`: enqueue `Tone` / `Off`.
+- [x] BIND-016 `buzzer.play`: enqueue `Play`; the bool return comes from the pure
   `BuzzerPlayer::parse` here.
-- [ ] BIND-017 `routines.*`: unchanged — panel-local registry methods.
-- [ ] BIND-018 Add the `StoreClient` (as a new `gStore` global) to `berry::install`'s parameters.
+- [x] BIND-017 `routines.*`: unchanged — panel-local registry methods.
+- [x] BIND-018 Add the `StoreClient` (as a new `gStore` global) to `berry::install`'s parameters.
 
 ## WIRE — Wire-up and delete the old loop
 

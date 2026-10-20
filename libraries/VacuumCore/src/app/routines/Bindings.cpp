@@ -4,7 +4,10 @@
 #include <stdio.h>
 
 #include "app/AppContext.h"
+#include "app/BuzzerPlayer.h"
 #include "app/Logger.h"
+#include "app/StoreBus.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Fonts.h"
 #include "app/routines/Routines.h"
@@ -18,6 +21,7 @@ namespace {
 AppContext* gContext = nullptr;
 Routines* gRoutines = nullptr;
 Logger* gLogger = nullptr;
+StoreClient* gStore = nullptr;
 
 // --- building a module -----------------------------------------------------
 
@@ -141,12 +145,14 @@ const GFXfont* argFont(bvm* vm, int index, const char* function) {
 // --- vacuum ----------------------------------------------------------------
 
 int vacuumTarget(bvm* vm) {
-  gContext->vacuum().setTarget((float)argReal(vm, 1));
+  const MachineCommand set{MachineCommand::Op::SetTarget, (float)argReal(vm, 1)};
+  xQueueSend(machineCommandQueue, &set, 0);
   be_return_nil(vm);
 }
 
 int vacuumTargetOff(bvm* vm) {
-  gContext->vacuum().clearTarget();
+  const MachineCommand clear{MachineCommand::Op::ClearTarget};
+  xQueueSend(machineCommandQueue, &clear, 0);
   be_return_nil(vm);
 }
 
@@ -166,17 +172,25 @@ int vacuumClamp(bvm* vm) {
 }
 
 int vacuumStart(bvm* vm) {
-  be_pushbool(vm, gContext->vacuum().start());
+  if (gContext->vacuum().startRefusal() != nullptr) {
+    be_pushbool(vm, false);
+    be_return(vm);
+  }
+  const MachineCommand start{MachineCommand::Op::Start};
+  xQueueSend(machineCommandQueue, &start, 0);
+  be_pushbool(vm, true);
   be_return(vm);
 }
 
 int vacuumStop(bvm* vm) {
-  gContext->vacuum().stop();
+  const MachineCommand stop{MachineCommand::Op::Stop};
+  xQueueSend(machineCommandQueue, &stop, 0);
   be_return_nil(vm);
 }
 
 int vacuumReset(bvm* vm) {
-  gContext->vacuum().resetFault();
+  const MachineCommand reset{MachineCommand::Op::ResetFault};
+  xQueueSend(machineCommandQueue, &reset, 0);
   be_return_nil(vm);
 }
 
@@ -426,7 +440,7 @@ int deviceSetUnit(bvm* vm) {
   DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
       be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
-  if (accepted) gContext->settings().setUnit(unit);
+  if (accepted && gStore != nullptr) gStore->setUnit(unit);
   be_pushbool(vm, accepted);
   be_return(vm);
 }
@@ -439,7 +453,7 @@ int deviceTarget(bvm* vm) {
 }
 
 int deviceSetTarget(bvm* vm) {
-  gContext->settings().setTarget((float)argReal(vm, 1));
+  if (gStore != nullptr) gStore->setTarget((float)argReal(vm, 1));
   be_return_nil(vm);
 }
 
@@ -451,7 +465,7 @@ int deviceBluetooth(bvm* vm) {
 }
 
 int deviceSetBluetooth(bvm* vm) {
-  if (be_isbool(vm, 1)) gContext->settings().setBluetooth(be_tobool(vm, 1));
+  if (be_isbool(vm, 1) && gStore != nullptr) gStore->setBluetooth(be_tobool(vm, 1));
   be_return_nil(vm);
 }
 
@@ -495,17 +509,18 @@ int buzzerTone(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "buzzer.tone(hz, duration_ms)");
   }
-  if (gContext == nullptr) be_return_nil(vm);
 
   float hz = (float)argReal(vm, 1);
   const bint duration = argInt(vm, 2);
   if (hz <= 0.0f || duration < 0) {
-    gContext->buzzer().off();
+    const MachineCommand off{MachineCommand::Op::Off};
+    xQueueSend(machineCommandQueue, &off, 0);
     be_return_nil(vm);
   }
   if (hz < cfg::BUZZER_MIN_HZ) hz = cfg::BUZZER_MIN_HZ;
   if (hz > cfg::BUZZER_MAX_HZ) hz = cfg::BUZZER_MAX_HZ;
-  gContext->buzzer().tone((uint16_t)hz, (uint32_t)duration);
+  const MachineCommand tone{MachineCommand::Op::Tone, hz, (uint32_t)duration};
+  xQueueSend(machineCommandQueue, &tone, 0);
   be_return_nil(vm);
 }
 
@@ -513,13 +528,20 @@ int buzzerPlay(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "buzzer.play(sequence)");
   }
-  const bool ok = gContext != nullptr && gContext->buzzer().play(argText(vm, 1));
+  const char* sequence = argText(vm, 1);
+  const bool ok = BuzzerPlayer::validate(sequence);
+  if (ok) {
+    MachineCommand play{MachineCommand::Op::Play};
+    play.text = sequence;
+    xQueueSend(machineCommandQueue, &play, 0);
+  }
   be_pushbool(vm, ok);
   be_return(vm);
 }
 
 int buzzerOff(bvm* vm) {
-  if (gContext != nullptr) gContext->buzzer().off();
+  const MachineCommand off{MachineCommand::Op::Off};
+  xQueueSend(machineCommandQueue, &off, 0);
   be_return_nil(vm);
 }
 
@@ -672,10 +694,11 @@ const bnfuncinfo kStoreLibrary[] = {
 
 }  // namespace
 
-void install(bvm* vm, AppContext& context, Routines& routines, Logger& logger) {
+void install(bvm* vm, AppContext& context, Routines& routines, Logger& logger, StoreClient& store) {
   gContext = &context;
   gRoutines = &routines;
   gLogger = &logger;
+  gStore = &store;
 
   installModule(vm, "vacuum", kVacuumLibrary);
   installModule(vm, "screen", kScreenLibrary);
