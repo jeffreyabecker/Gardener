@@ -37,7 +37,7 @@ anything else is refused at load with the missing method named; the other files 
 `activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
 none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
 anywhere. A routine that wants values across a re-entry reads them through `store`; a routine that
-accepts a map decides what a missing key means (the shipped `static` uses its fallback, not the
+accepts a map decides what a missing key means (the shipped `interval` uses its fallback, not the
 file's value).
 
 An optional `describe()` gives the settings editor a list of values to edit (see below). A routine

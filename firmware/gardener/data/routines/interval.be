@@ -1,57 +1,66 @@
-# static.be — the static hold: pull to a target, hold it, move to a rest pressure, rest, repeat.
+# interval.be — the interval cycle: pull to a target, hold, move to a rest pressure, rest, repeat.
 #
 # The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Moving
 # between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
 # is the edge that says the new one has arrived.
 
-import string
-
-class StaticChrome
+class IntervalChrome
   var owner
   var header
   var pressure
-  var target_label
-  var target_value
+  var target
   var status
+  var bar
   var hint
 
   def init(owner)
     self.owner = owner
 
-    self.header = DynamicText()
-    self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
+    # The title is a fixed word rather than the phase, kept to the 58 pixels left of the state
+    # icon; the phase reads on the status line instead.
+    self.header = FixedText()
+    self.header.value = "Interval"
+    self.header.x = 0; self.header.y = 0; self.header.w = 58; self.header.h = 12
 
     self.pressure = PressureDisplay()
     self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
     self.pressure.show_units = false
 
-    self.target_label = FixedText()
-    self.target_label.value = "TGT"
-    self.target_label.x = 0; self.target_label.y = 40; self.target_label.w = 40; self.target_label.h = 8
+    # The target needs no label: the border is what tells it apart from the live reading, and the
+    # suffix the unit it prints in.
+    self.target = PressureDisplay()
+    self.target.x = 0; self.target.y = 40; self.target.w = 116; self.target.h = 10
+    self.target.border = 1
 
-    self.target_value = PressureDisplay()
-    self.target_value.x = 40; self.target_value.y = 40; self.target_value.w = 76; self.target_value.h = 8
-    self.target_value.show_units = true
-
+    # The status and the hold's remaining time share a line: the words on the left, the bar draining
+    # to the right. The longest status is "PRESS OK", 48 pixels of built-in face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 48; self.status.w = 116; self.status.h = 8
+    self.status.x = 0; self.status.y = 50; self.status.w = 62; self.status.h = 7
+    self.status.align = "left"
+
+    self.bar = ProgressBar()
+    self.bar.x = 66; self.bar.y = 50; self.bar.w = 50; self.bar.h = 7
+    self.bar.border = 1
 
     self.hint = DynamicText()
-    self.hint.x = 0; self.hint.y = 56; self.hint.w = 116; self.hint.h = 8
+    self.hint.x = 0; self.hint.y = 57; self.hint.w = 116; self.hint.h = 7
   end
 
   def draw(s)
-    self.header.draw(self.owner.phase_name())
+    self.header.draw()
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
-    self.target_label.draw()
-    self.target_value.draw(self.owner.active_target())
+    self.target.draw(self.owner.active_target())
     self.status.draw(self.owner.status_text())
+    var left = self.owner.hold_left()
+    if left != nil
+      self.bar.draw(left)
+    end
     self.hint.draw(self.owner.hint_text())
   end
 end
 
-class Static : Page
+class Interval : Page
   var phase
   var mark
   var target
@@ -70,9 +79,9 @@ class Static : Page
     self.rest_pressure = 5.0
     self.rest = 1
     self.resume = "immediately"
-    self.chrome = StaticChrome(self)
+    self.chrome = IntervalChrome(self)
 
-    self.on("ok", "double", / -> self.open_settings("static"))
+    self.on("ok", "double", / -> self.open_settings("interval"))
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
   end
 
@@ -98,9 +107,9 @@ class Static : Page
     ]
   end
 
-  # The starting values match the shipped `static.ini`. The pressures go through clamp() before they
-  # are ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
-  # uses. A switch's settings map, when there is one, is the set for this activation.
+  # The starting values match the shipped `interval.ini`. The pressures go through clamp() before
+  # they are ever handed to the machine, and a hand-edited duration is held to the same bounds the
+  # editor uses. A switch's settings map, when there is one, is the set for this activation.
   def read_settings(settings)
     self.target = vacuum.clamp(self.value(settings, "target_pressure", 0.0))
     self.work = self.seconds(self.value(settings, "work_duration", 30), 3600)
@@ -147,7 +156,7 @@ class Static : Page
       return true
     end
     if !vacuum.start()
-      vacuum.log("static: start refused")
+      vacuum.log("interval: start refused")
       self.phase = "ready"
       return false
     end
@@ -228,7 +237,7 @@ class Static : Page
   def abandon()
     self.phase = "ready"
     vacuum.target(self.target)
-    vacuum.log("static: cycle stopped")
+    vacuum.log("interval: cycle stopped")
   end
 
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
@@ -264,33 +273,16 @@ class Static : Page
     return self.target
   end
 
-  def phase_name()
-    if self.phase == "approach"
-      return "TARGET"
-    end
-    if self.phase == "work"
-      return "WORK"
+  # The page has one word per thing the chamber is doing, and the target and rest phases read as
+  # the hold they are heading into: an approach is work because the cycle is under way.
+  def status_text()
+    if self.phase == "ready"
+      return "PRESS OK"
     end
     if self.phase == "rest_approach" || self.phase == "rest"
       return "REST"
     end
-    return "STATIC"
-  end
-
-  def status_text()
-    if self.phase == "approach"
-      return "TO TARGET"
-    end
-    if self.phase == "work"
-      return "WORK " + self.clock(self.remaining(self.work))
-    end
-    if self.phase == "rest_approach"
-      return "TO REST"
-    end
-    if self.phase == "rest"
-      return "REST " + self.clock(self.remaining(self.rest))
-    end
-    return "PRESS OK"
+    return "WORK"
   end
 
   def hint_text()
@@ -300,30 +292,27 @@ class Static : Page
     return "HOLD BACK=STOP"
   end
 
-  def remaining(seconds)
-    var left = seconds * 1000 - (vacuum.now_ms() - self.mark)
+  # The share of the current hold still to run: full when the hold starts and draining as its clock
+  # does. Nil outside the two holds, so the bar is only there when there is hold-time to show.
+  def hold_left()
+    if self.phase != "work" && self.phase != "rest"
+      return nil
+    end
+    var length = self.phase == "work" ? self.work : self.rest
+    if length <= 0
+      return 0.0
+    end
+    var left = length * 1000 - (vacuum.now_ms() - self.mark)
     if left < 0
       left = 0
     end
-    return left / 1000
-  end
-
-  # Minutes and seconds, so a one-hour work hold still fits the line: `59:59`.
-  def clock(seconds)
-    var whole = int(seconds)
-    var minutes = whole / 60
-    var rest = whole % 60
-    var tail = str(rest)
-    if rest < 10
-      tail = "0" + tail
-    end
-    return str(minutes) + ":" + tail
+    return left * 100.0 / (length * 1000)
   end
 end
 
 # The browser's row glyph: a square wave, two pulses on a 12 by 8 field. The ink sits on the
 # rows a line of text does, from y + 1 to y + 6, so the icon and the name beside it share a band.
-class StaticIcon : Icon
+class IntervalIcon : Icon
   def init()
     super(self).init(12, 8)
   end
@@ -341,5 +330,5 @@ class StaticIcon : Icon
   end
 end
 
-routines.register("static", "Static hold", Static(), false, StaticIcon())
-return Static
+routines.register("interval", "Interval", Interval(), false, IntervalIcon())
+return Interval

@@ -293,7 +293,7 @@ boot and registers itself, and the one registered as `default` is the page. If n
 the panel shows the device's mark.
 
 Five ship: `default` (the readout), `browser` (the routine list), `system` (unit, default target,
-radio), `static` (pull, hold, rest, repeat) and `ramped` (a ladder of sets). A routine reaches
+radio), `interval` (pull, hold, rest, repeat) and `ramped` (a ladder of sets). A routine reaches
 `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `routines` and `store`; the surface is in
 [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle in
 [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).

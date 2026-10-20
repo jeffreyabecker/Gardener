@@ -325,10 +325,10 @@ body before replying.
 -> fs list /routines
 <- ok
 <- file default.be
-<- file static.be
-<- file static.ini
+<- file interval.be
+<- file interval.ini
 <- (blank line)
--> fs read /routines/static.ini
+-> fs read /routines/interval.ini
 <- ok bytes=12
 <- [12 raw bytes]
 -> control acquire
