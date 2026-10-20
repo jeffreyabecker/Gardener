@@ -414,6 +414,12 @@ but it is left out of `routines.names()` and so is not one of the entries the br
 argument is the routine's icon, an `Icon` instance from `/modules/components.be` that the browser
 draws before the routine's name; a routine without one gets a text-only row.
 
+A switch can carry a **settings map**: `routines.set_active("static", {"target_pressure": 6.0})`.
+The map is handed to the page's `activate(settings)` for that activation and then forgotten; a later
+activation without one passes `nil`, and the page reads its file through `store`. The runtime never
+writes the map anywhere, so a set passed this way does not change `/routines/static.ini`. `static`
+takes the values it is given and uses its usual fallbacks for keys the set does not hold.
+
 Four ship. `default` is the readout; a double Up opens `browser`, the list of routines to pick,
 which walks with Up and Down and switches with OK, and a double OK or double Down opens `system`,
 the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest at a second

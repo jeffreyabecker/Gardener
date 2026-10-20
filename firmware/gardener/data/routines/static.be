@@ -55,10 +55,10 @@ class Static : Page
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
   end
 
-  def activate()
+  def activate(settings)
     self.editor = nil
     self.phase = "ready"
-    self.read_settings()
+    self.read_settings(settings)
     # Like default's restore: the page's stored target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     vacuum.target(self.target)
@@ -79,17 +79,27 @@ class Static : Page
 
   # The starting values match the shipped `static.ini`. The pressures go through clamp() before they
   # are ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
-  # uses.
-  def read_settings()
-    self.target = vacuum.clamp(store.get("target_pressure", 0.0))
-    self.work = self.seconds(store.get("work_duration", 30), 3600)
-    self.rest_pressure = vacuum.clamp(store.get("rest_pressure", 5.0))
-    self.rest = self.seconds(store.get("rest_duration", 1), 1200)
-    var resume = store.get("resume_behavior", "immediately")
+  # uses. A switch's settings map, when there is one, is the set for this activation.
+  def read_settings(settings)
+    self.target = vacuum.clamp(self.value(settings, "target_pressure", 0.0))
+    self.work = self.seconds(self.value(settings, "work_duration", 30), 3600)
+    self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
+    self.rest = self.seconds(self.value(settings, "rest_duration", 1), 1200)
+    var resume = self.value(settings, "resume_behavior", "immediately")
     if resume != "after ok"
       resume = "immediately"
     end
     self.resume = resume
+  end
+
+  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
+  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
+  # values.
+  def value(settings, key, fallback)
+    if settings != nil
+      return settings.find(key, fallback)
+    end
+    return store.get(key, fallback)
   end
 
   def seconds(value, high)
@@ -220,9 +230,10 @@ class Static : Page
   end
 
   # A closed editor has re-read the settings. The rest hold has its own target; only the work
-  # target follows an edit made mid-cycle.
+  # target follows an edit made mid-cycle. The edit was to the file, so the file is the source
+  # again even if this activation was given a set.
   def on_editor_closed()
-    self.read_settings()
+    self.read_settings(nil)
     if self.phase == "ready" || self.phase == "pull" || self.phase == "work"
       vacuum.target(self.target)
     end

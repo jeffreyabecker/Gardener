@@ -24,7 +24,15 @@ int routinesRegister(bvm* vm) {
 }
 
 int routinesSetActive(bvm* vm) {
-  const bool ok = be_isstring(vm, 1) && gRoutines->setActive(argText(vm, 1));
+  const int top = be_top(vm);
+  if (top < 1 || !be_isstring(vm, 1) ||
+      (top >= 2 && !be_ismap(vm, 2) && !be_isnil(vm, 2))) {
+    be_raise(vm, "type_error", "routines.set_active(name, settings)");
+  }
+  // A nil means the same as leaving the argument out: the activation carries no settings, and the
+  // routine reads its file through store.
+  const int settingsIndex = top >= 2 && be_ismap(vm, 2) ? 2 : 0;
+  const bool ok = gRoutines->setActive(argText(vm, 1), settingsIndex);
   be_pushbool(vm, ok);
   be_return(vm);
 }

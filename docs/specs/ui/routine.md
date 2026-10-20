@@ -34,6 +34,12 @@ return MyPage
 The object must be an **instance** with both `activate()` and `poll(now)`. A file that registers
 anything else is refused at load with the missing method named; the other files still load.
 
+`activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
+none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
+anywhere. A routine that wants values across a re-entry reads them through `store`; a routine that
+accepts a map decides what a missing key means (the shipped `static` uses its fallback, not the
+file's value).
+
 An optional `describe()` gives the settings editor a list of values to edit (see below). A routine
 without one simply has no settings.
 
@@ -126,13 +132,14 @@ which remains the one description of what is editable.
 | Moment | Call |
 | --- | --- |
 | boot, after the files load | nothing — the page's `activate()` follows |
-| the page becomes visible | `activate()` |
+| the page becomes visible | `activate(settings)` — `nil` unless the switch carried a map |
 | every panel-task beat while the page is shown | `poll(now)` |
 | a controller acquires control | nothing; the page stops being polled |
-| the controller releases control, or the device resets | `activate()` — the page is visible again |
+| the controller releases control, or the device resets | `activate(nil)` — a new activation, so the file is the source |
 
 `activate()` runs again on every page entry on purpose: the display unit may have changed while the
-page was not shown, and a routine should not trust what it cached.
+page was not shown, and a routine should not trust what it cached. The settings map is not carried
+across that entry; it was the previous activation's, and a re-entry without one reads the file.
 
 ## One entry per beat
 

@@ -25,6 +25,11 @@ void iconKey(char* out, size_t size, size_t slot) {
   snprintf(out, size, "__routine%uicon", (unsigned int)slot);
 }
 
+// A switch asked for from inside a poll cannot be applied until that call returns, and by then the
+// caller's frame — and the settings map in it — is gone. The map waits here for that one case, and
+// is cleared as soon as the switch is applied. Nothing else about an activation is retained.
+constexpr const char* kPendingSettingsKey = "__routinePendingSettings";
+
 // A routine has to look like one before it is kept, so a file that registers something else is
 // refused at load rather than discovered on the first poll.
 bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
@@ -87,6 +92,7 @@ bool Routines::showDefault() {
   pressOverflow_ = false;
   hasPending_ = false;
   pendingActive_ = "";
+  holdPendingSettings(0);
 
   active_ = -1;
   if (!choose("default")) {
@@ -249,22 +255,35 @@ void Routines::selectDefault() {
   logger_->warn("vm: no default routine, showing the mark");
 }
 
-bool Routines::setActive(const char* name) {
+bool Routines::setActive(const char* name, int settingsIndex) {
   if (name == nullptr) return false;
   if (insideCall_) {
     pendingActive_ = name;
     hasPending_ = true;
+    holdPendingSettings(settingsIndex);
     return true;
   }
   if (!choose(name)) return false;
-  return startActive();
+  return startActive(settingsIndex);
+}
+
+// Holds the map a deferred switch will activate with; 0 stores a nil.
+void Routines::holdPendingSettings(int index) {
+  if (vm_ == nullptr) return;
+  if (index > 0) {
+    be_pushvalue(vm_, index);
+  } else {
+    be_pushnil(vm_);
+  }
+  be_setglobal(vm_, kPendingSettingsKey);
+  be_pop(vm_, 1);  // be_setglobal leaves the value it stored on the stack
 }
 
 // Runs the chosen routine's activate(), which is both what makes it the visible page and what lets it
 // draw its first frame. A routine that raises here is dropped, exactly as one that raises in poll().
-bool Routines::startActive() {
+bool Routines::startActive(int settingsIndex) {
   if (active_ < 0) return false;
-  if (invoke((size_t)active_, "activate", false, 0)) return true;
+  if (invoke((size_t)active_, "activate", false, 0, settingsIndex)) return true;
   active_ = -1;
   return false;
 }
@@ -274,12 +293,23 @@ void Routines::applyPending() {
   hasPending_ = false;
   String name = pendingActive_;
   pendingActive_ = "";
-  if (setActive(name.c_str())) return;
+  if (!choose(name.c_str())) {
+    // A name that is not registered changes nothing: the routine that was running keeps running,
+    // and the map was for a switch that cannot happen.
+    holdPendingSettings(0);
+    String message = "vm: no routine named ";
+    message += name;
+    logger_->warn(message.c_str());
+    return;
+  }
 
-  // A name that is not registered changes nothing: the routine that was running keeps running.
-  String message = "vm: no routine named ";
-  message += name;
-  logger_->warn(message.c_str());
+  // The map comes off the stack it waited on and goes straight into the activation. Clearing the
+  // held copy first keeps an activate() that queues another switch from losing its map.
+  be_getglobal(vm_, kPendingSettingsKey);
+  const int settings = be_absindex(vm_, -1);
+  holdPendingSettings(0);
+  startActive(settings);
+  be_pop(vm_, 1);
 }
 
 const char* Routines::nameAt(size_t index) const {
@@ -332,7 +362,8 @@ bool Routines::hasMethod(const char* name, const char* method) const {
 
 // --- one entry per beat ----------------------------------------------------
 
-bool Routines::invoke(size_t index, const char* method, bool withNow, uint32_t nowMs) {
+bool Routines::invoke(size_t index, const char* method, bool withNow, uint32_t nowMs,
+                      int settingsIndex) {
   if (vm_ == nullptr || index >= entries_.size()) return false;
 
   const int base = be_top(vm_);
@@ -353,6 +384,15 @@ bool Routines::invoke(size_t index, const char* method, bool withNow, uint32_t n
     int argc = 1;
     if (withNow) {
       be_pushint(vm_, (bint)nowMs);
+      argc++;
+    } else {
+      // activate() always takes one argument: the switch's settings map, or nil when it carried
+      // none and the routine reads its file through store.
+      if (settingsIndex > 0) {
+        be_pushvalue(vm_, settingsIndex);
+      } else {
+        be_pushnil(vm_);
+      }
       argc++;
     }
     insideCall_ = true;

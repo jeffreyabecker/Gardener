@@ -61,7 +61,10 @@ class Routines {
   // the same for an optional icon object, and 0 when the file registered none.
   bool registerRoutine(const char* name, const char* title, int objectIndex, bool hidden = false,
                        int iconIndex = 0);
-  bool setActive(const char* name);
+  // `settingsIndex` is the stack position of an optional settings map in the calling native
+  // function, and 0 when the switch carries none. The map belongs to this activation only: it is
+  // handed to activate() and then forgotten, never written anywhere.
+  bool setActive(const char* name, int settingsIndex = 0);
   size_t count() const { return entries_.size(); }
   const char* nameAt(size_t index) const;
 
@@ -118,9 +121,11 @@ class Routines {
 
   size_t loadAll(Storage& storage, const char* dir, size_t& found);
   bool loadFile(Storage& storage, const String& path);
-  bool startActive();
+  bool startActive(int settingsIndex = 0);
   void reportError(const char* file, const char* what);
-  bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs);
+  bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs,
+              int settingsIndex = 0);
+  void holdPendingSettings(int index);
   bool choose(const char* name);
   void selectDefault();
   void applyPending();
