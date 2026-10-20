@@ -412,8 +412,8 @@ back — and a routine that registers without `activate()` or `poll()` is refuse
 Four ship. `default` is the readout; a double Up opens `browser`, the list of everything
 registered, which walks with Up and Down and switches with OK, and a double OK or double Down opens
 `system`, the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest,
-and repeat. A hold can pulse in a band around the target. There is no fixed number of routines: the
-registry grows as files register, and the browser lists whatever boot found.
+and repeat. There is no fixed number of routines: the registry grows as files register, and the
+browser lists whatever boot found.
 
 `system` edits the three settings the device keeps as itself rather than as a routine's values: the
 unit the glass prints (the one write the serial link also carries), the target `default` pulls to,

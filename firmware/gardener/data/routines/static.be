@@ -17,8 +17,6 @@ class Static
   var work
   var rest
   var resume
-  var pulse
-  var pulse_phase
   var unit
   var fmt
   var last_draw
@@ -31,8 +29,6 @@ class Static
     self.work = 30
     self.rest = 1
     self.resume = "immediately"
-    self.pulse = "off"
-    self.pulse_phase = "vent"
     self.unit = nil
     self.fmt = "%.1f"
     self.last_draw = 0
@@ -42,7 +38,6 @@ class Static
   def activate()
     self.editor = nil
     self.phase = "ready"
-    self.pulse_phase = "vent"
     self.unit = screen.unit()
     self.fmt = "%." + str(self.unit.decimals) + "f"
     self.read_settings()
@@ -72,8 +67,7 @@ class Static
       setting("target_pressure", "Target", "pressure", 1, nil, nil, nil),
       setting("work_duration", "Work", "duration", 30, 0, 3600, nil),
       setting("rest_duration", "Rest", "duration", 1, 0, 1200, nil),
-      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"]),
-      setting("pulse", "Pulse/Milk", "choice", nil, nil, nil, ["off", "low", "med", "high"])
+      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"])
     ]
   end
 
@@ -89,11 +83,6 @@ class Static
       resume = "immediately"
     end
     self.resume = resume
-    var pulse = store.get("pulse", "off")
-    if pulse != "low" && pulse != "med" && pulse != "high"
-      pulse = "off"
-    end
-    self.pulse = pulse
   end
 
   def seconds(value, high)
@@ -110,7 +99,6 @@ class Static
   # --- the cycle -----------------------------------------------------------
 
   def begin()
-    self.pulse_phase = "vent"
     vacuum.target(self.target)
     if !vacuum.start()
       vacuum.log("static: start refused")
@@ -129,10 +117,6 @@ class Static
       elif s.state == "HOLD"
         self.phase = "work"
         self.mark = now
-        self.pulse_phase = "vent"
-        if self.pulse != "off"
-          vacuum.stop()
-        end
       end
       return
     end
@@ -145,8 +129,6 @@ class Static
         vacuum.target(self.target)
         vacuum.stop()
         self.phase = "vent"
-      elif self.pulse != "off"
-        self.pulse_step(s)
       end
       return
     end
@@ -177,46 +159,8 @@ class Static
   # The machine is already safe, so put the page's target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
-    self.pulse_phase = "vent"
-    # A pulse leaves the machine on the upper target; put the page's own target back.
     vacuum.target(self.target)
     vacuum.log("static: cycle stopped")
-  end
-
-  # A pulse is a square wave inside the work hold: vent to the lower bound, pull back to the upper
-  # one. The machine's HOLD edge is the upper bound, so the control deadband does not leave the loop
-  # waiting for a reading it will never see.
-  def pulse_step(s)
-    var amplitude = self.pulse_amplitude()
-    if self.pulse_phase == "vent"
-      if s.kpa <= self.target - amplitude
-        vacuum.target(vacuum.clamp(self.target + amplitude))
-        if !vacuum.start()
-          self.abandon()
-          return
-        end
-        self.pulse_phase = "pull"
-      end
-      return
-    end
-    if s.state == "HOLD"
-      vacuum.stop()
-      self.pulse_phase = "vent"
-    end
-  end
-
-  # The band is a fraction of the target, so a deep hold pulses by more kPa than a shallow one.
-  def pulse_amplitude()
-    if self.pulse == "low"
-      return self.target * 0.005
-    end
-    if self.pulse == "med"
-      return self.target * 0.01
-    end
-    if self.pulse == "high"
-      return self.target * 0.025
-    end
-    return 0.0
   end
 
   # --- buttons -------------------------------------------------------------
