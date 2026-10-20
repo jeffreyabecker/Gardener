@@ -1,7 +1,8 @@
 # Gardener proof-of-concept parts
 
 Everything the rig is built from, in one list. One 5 V rail with a 3.3 V load rail off it, one
-switch module, one tube size. Bench use, dry air, attended.
+switch module, one tube size. Bench use, dry air, attended. A 12 V variant with a bigger pump is at
+the end.
 
 **Total to buy: ≈ $143.** The sensor is the one price that is an estimate; the rest are listed.
 
@@ -115,3 +116,126 @@ Bench-only, to fix once the loop works.
 
 Which of these parts move onto the alpha carrier board, and which stay modules, is a planned
 board decision and not part of this build.
+
+## Upgrading to 12 V and a bigger pump
+
+The base build is a 5 V rig: a 3.7 V pump on a 3.3 V load rail, powered from the PC's USB port.
+That is enough to prove the loop, and 60 kPa is the pump's measured reach. A 12 V pump buys depth
+and flow, but it moves the pump off the DRV8833 and off the USB supply. This is a bench variant,
+not a second rig: the MCU, sensor, panel, buttons, valve and firmware interface stay, and the pump,
+its drive, the supply and the two bucks change.
+
+The firmware does not care what the pump's rail is. `PwmPump` owns one LEDC channel at 20 kHz and
+the low-side switch does the rest, so GPIO6 and the duty mean the same thing on either rail. What
+changes is the numbers around it.
+
+### Parts
+
+| Part | Target | Job |
+| --- | --- | --- |
+| 12 V pump | Brushed diaphragm, 12 V, 1–2 A, ultimate vacuum at least -80 kPa, 4 mm barb, continuous duty | The point of the upgrade: more depth and flow than the JQB2438's ~60 kPa |
+| 12 V supply | 12 V 5 A (60 W), 5.5 × 2.1 mm centre positive | Covers a 2 A pump's inrush; 3 A only if the pump runs under 1 A |
+| 12 V → 5 V buck | 5 V 2 A, fixed or set and verified before connection | The MCU alone; its own 3V3 LDO still feeds sensor, panel and buttons |
+| 12 V → 3.3 V buck | 3.3 V 1 A, fixed or set and verified | The valve load rail through the DRV8833; replaces the base 5 V → 3.3 V buck |
+| Low-side switch | Logic-level N-channel MOSFET, IRLZ44N or IRLB8721, TO-220 | The S3 drives 3.3 V on the gate |
+| Flyback diode | 1N5822 (3 A, 40 V Schottky) | The pump winding's current when the FET turns off |
+| Gate parts | 100 Ω series, 10 k to ground | A defined edge, and off at reset |
+| Fuse | 3 A slow-blow and an inline holder | Protects the 12 V wiring, not just the adapter |
+| DC jack | 5.5 × 2.1 mm screw terminal | The supply's barrel plug to the rig |
+
+Add about **$60–75** on top of the base build. The base pump and the 5 V → 3.3 V buck are left
+over; the base 1000 µF moves to the 12 V rail, where the surge now is. The 3.3 V valve rail needs
+no bulk of its own: it carries 0.18 A of DC, and the DRV8833 module has its own capacitors.
+
+A 6 mm barb needs a short length of 4 mm ID tube and a 4 mm-to-2.4 mm reducer: the base 2.5 mm ID
+tube will not stretch to 6 mm, and the tee is 3/32".
+
+### Wiring
+
+```
+12 V PSU ── 3 A fuse ──┬── PUMP (+) ─────────── DRAIN
+                       │                          │
+                       │                      [ MOSFET ] ── SOURCE ── GND
+                       │                          │
+                       │        GPIO6 ── 100R ── GATE
+                       │                  10k ── GND
+                       │
+                       ├── 1000 µF ── GND      at the pump
+                       ├── 1N5822              across PUMP (+) and DRAIN,
+                       │                       cathode to +12 V
+                       │
+                       ├── 12 V → 3.3 V buck ── DRV8833 VM ── valve (channel B)
+                       │
+                       └── 12 V → 5 V buck ── MCU "5V" pin
+
+   one star ground: PSU -, both bucks' -, MOSFET source, DRV8833 GND, MCU GND
+```
+
+The pin map is unchanged: GPIO6 is the pump PWM and GPIO5 is the valve. The DRV8833 now drives
+only the valve — `BIN1` from GPIO5, `BIN2` and both `AIN` inputs to GND — with its `VM` on the
+3.3 V rail, so the coil sees the same voltage as the base build and its body diodes are still the
+coil's flyback path. The pump's diode and capacitor are at the pump, not at the FET: the capacitor
+is the surge reservoir and the diode is the winding's path when the FET turns off.
+
+Two bucks, because the two loads no longer share a rail: 5 V for the MCU and 3.3 V for the valve.
+Deriving the valve rail from 12 V rather than from the 5 V node is what keeps the fail-safe: when
+the 12 V supply goes away, the valve rail goes with it and the normally-open valve vents the
+chamber, whether or not USB is plugged in. Feed the 3.3 V buck from the 5 V node instead, and a USB
+cable can hold the valve closed after the 12 V dies.
+
+The 12 V pump current does not belong on a breadboard. Put the fuse, pump, diode, capacitor and
+MOSFET on a screw-terminal barrier or soldered joints, and keep the breadboard for the logic side;
+a breadboard contact is not a 2 A connector. The MOSFET's tab is at drain potential, so keep it
+clear.
+
+The supply's negative is the star ground. Join the two bucks' returns, the MOSFET source, the
+DRV8833 ground and the MCU ground there, and keep the sensor's return off the pump's path. The
+sensor stays on the MCU's `3V3` net, as in the base build, because its output is ratiometric.
+
+### Firmware and tuning
+
+[core/Config.h](../../libraries/VacuumCore/src/core/Config.h) is written for the base pump, so the
+upgrade is also a constants change:
+
+* `PUMP_MAX_SUCTION_KPA` is the fitted pump's measured reach, 60 kPa for the JQB2438. Measure the
+  new pump and set it: it is the `floor` in `vacuum get` and the deepest target the loop will
+  offer. Left at 60, the bigger pump looks like the old one.
+* `PUMP_DUTY_MAX_PERCENT` is 90 %, which is 10.8 V on this rail. A 12 V pump is rated for 12 V, so
+  the cap is a choice rather than a limit of the part. It is the pump's only software protection;
+  keep it unless the datasheet allows continuous 12 V and the extra flow is needed.
+* The PID gains and `CONTROL_DEADBAND_KPA` were tuned for the old pump and chamber. More flow
+  reaches the target faster and overshoots the vent more easily, so retune them against the new
+  rig. `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a step.
+* Use a brushed pump. A BLDC pump with its own controller wants a steady rail, and this firmware
+  PWMs the supply; low-side PWM into a BLDC controller is not a speed control.
+* The sensor's range is -100 kPa, so a pump that pulls deeper saturates the reading. Check the
+  pump's ultimate vacuum on its datasheet rather than the "beefier" claim; a single-stage
+  diaphragm pump lands inside the sensor, a two-stage one may not.
+
+### What the bigger pump breaks
+
+* **The valve may not seal.** A deeper chamber puts more differential across the seat, and the
+  mini 3–5 V normally-open valve is rated for some maximum. If the chamber leaks down faster than
+  before, suspect the valve before the plumbing; a deeper-rated valve is the fix.
+* **The tube is not a chamber at this depth.** 2.5 mm ID silicone collapses under a harder vacuum.
+  Use a small rigid chamber — a jar with a bulkhead, or a short rigid tube — and keep flexible tube
+  for the runs to the pump, sensor and valve. The base build used the tube's volume because the
+  pump was small.
+* **The tube-to-port stretch remains.** The base pump's 4 mm port already stretches 2.5 mm ID tube
+  1.6x; a new pump with the same barb is no worse, and a 6 mm barb needs the reducer above.
+* **The 5 V USB rail is gone.** The MCU runs from the 5 V buck. Check the Super Mini for a Schottky
+  between USB VBUS and the 5V pin; if it has none, use a cable with VBUS cut or unplug USB while
+  the 12 V is on. Two 5 V sources on one pin is not a fault the board protects you from.
+* **The ground currents are larger.** A 2 A pump return through a shared ground moves the sensor's
+  reading. The star ground and the separate sensor return in the base list matter more here, not
+  less.
+* **Startup surge.** A diaphragm pump's inrush is several times its running current, which is why
+  the supply is 5 A for a 2 A pump. The 1000 µF covers the first few milliseconds; the adapter's
+  current limit protects the adapter, not the rig.
+
+It retires two of the base build's accepted compromises: the USB rail, with its 500 mA USB 2.0
+ceiling and 1.2 A surge, and the single shared motor supply that forced the pump and the valve onto
+the same 3.3 V rail. It leaves the valve, the sensor, the panel and the firmware interface alone.
+The valve is still the hardware guarantee: on this build its rail comes from the 12 V supply, so
+losing the supply vents the chamber. A bigger pump pulls a small chamber down faster, so use a
+rated chamber, a catch pot and a filter, and keep the rig attended.

@@ -155,23 +155,23 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## STORE — Store bus
 
-- [ ] STORE-001 Create `app/StoreBus.h`: `StoreResult`, `StoreRequest` (ops `Get`, `Set`,
+- [x] STORE-001 Create `app/StoreBus.h`: `StoreResult`, `StoreRequest` (ops `Get`, `Set`,
   `SetUnit`, `SetTarget`, `SetBluetooth`), `StoreClient`, `StoreServer`
   ([queues.md](queues.md)).
-- [ ] STORE-002 Implement `StoreClient::get`: fill a `StoreRequest`, post it, block on
+- [x] STORE-002 Implement `StoreClient::get`: fill a `StoreRequest`, post it, block on
   `xTaskNotifyWait`, return `result.ok` and copy `result.value` into the out param.
-- [ ] STORE-003 Implement `StoreClient::set`: same shape as `get` with `Op::Set`, returning
+- [x] STORE-003 Implement `StoreClient::set`: same shape as `get` with `Op::Set`, returning
   `result.ok`.
-- [ ] STORE-004 Implement the one-way `StoreClient::setUnit` / `setTarget` / `setBluetooth` (null
+- [x] STORE-004 Implement the one-way `StoreClient::setUnit` / `setTarget` / `setBluetooth` (null
   result and waiter, post without waiting).
-- [ ] STORE-005 Implement `StoreServer::drain()`: `xQueueReceive` in a loop, `handle` each item.
-- [ ] STORE-006 Implement `handle(Get)`: build `/routines/<name>.ini`, read, parse `Ini`, fill the
+- [x] STORE-005 Implement `StoreServer::drain()`: `xQueueReceive` in a loop, `handle` each item.
+- [x] STORE-006 Implement `handle(Get)`: build `/routines/<name>.ini`, read, parse `Ini`, fill the
   result, `xTaskNotifyGive(waiter)`.
-- [ ] STORE-007 Implement `handle(Set)`: read/parse, skip the repeat-value write, write, fill the
+- [x] STORE-007 Implement `handle(Set)`: read/parse, skip the repeat-value write, write, fill the
   result, notify.
-- [ ] STORE-008 Implement `handle(SetUnit/SetTarget/SetBluetooth)`: call the matching
+- [x] STORE-008 Implement `handle(SetUnit/SetTarget/SetBluetooth)`: call the matching
   `settings_.setX(...)` and return without answering.
-- [ ] STORE-009 Construct the store queue and the `StoreClient`/`StoreServer` pair in
+- [x] STORE-009 Construct the store queue and the `StoreClient`/`StoreServer` pair in
   `buildAppContext()` (or the task spawner), handing the server to the interface task and the
   client to the panel task.
 

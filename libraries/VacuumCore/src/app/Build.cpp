@@ -6,6 +6,8 @@
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
 #include "app/Ownership.h"
+#include "app/StoreBus.h"
+#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Overlay.h"
 #include "app/routines/Routines.h"
@@ -63,8 +65,13 @@ AppContext buildAppContext() {
   auto* settings = new Settings(*storage);
   auto* routines = new Routines();
   auto* ownership = new Ownership();
+  // The store bus: the panel's client and the interface's server share one queue. The queue is the
+  // one handle named in app/Tasks.h; the other two are created when the tasks spawn.
+  storeQueue = xQueueCreate(StoreQueueDepth, sizeof(StoreRequest));
+  auto* storeClient = new StoreClient(storeQueue);
+  auto* storeServer = new StoreServer(storeQueue, *settings, *storage);
   return AppContext(sensor, pump, vent, battery, buttons, buzzer, overlay, system, storage,
-                    settings, routines, ownership);
+                    settings, routines, ownership, storeClient, storeServer);
 }
 
 }  // namespace gardener

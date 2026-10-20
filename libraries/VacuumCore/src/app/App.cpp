@@ -6,6 +6,7 @@
 #include "app/Logger.h"
 #include "app/NilLogger.h"
 #include "app/Ownership.h"
+#include "app/StoreBus.h"
 #include "app/StreamLogger.h"
 #include "app/panel/Asset.h"
 #include "core/Config.h"
@@ -149,8 +150,11 @@ bool App::begin() {
 void App::update() {
   const uint32_t now = millis();
 
-  // The links, against the machine as the control task's last tick left it. The machine itself is
-  // serviced on the control task; the loop keeps the links and the panel until their epics land.
+  // The store server applies the VM's flash and settings writes; it moves to the interface task
+  // when that lands. The machine itself is serviced on the control task.
+  context_.storeServer().drain();
+
+  // The links, against the machine as the control task's last tick left it.
   link_->poll(now);
   ble_->poll(now);
 

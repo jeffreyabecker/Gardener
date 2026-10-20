@@ -19,13 +19,17 @@
 
 namespace gardener {
 
+class StoreClient;
+class StoreServer;
+
 // The hardware graph as interfaces: what App commands and the serial layer reads, with no fitted
 // part named. Build.cpp owns the implementations and builds this.
 class AppContext {
  public:
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
              ButtonPanel* buttons, BuzzerPlayer* buzzer, Overlay* overlay, VacuumSystem* vacuum,
-             Storage* storage, Settings* settings, Routines* routines, Ownership* ownership)
+             Storage* storage, Settings* settings, Routines* routines, Ownership* ownership,
+             StoreClient* storeClient, StoreServer* storeServer)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -37,7 +41,9 @@ class AppContext {
         storage_(storage),
         settings_(settings),
         routines_(routines),
-        ownership_(ownership) {}
+        ownership_(ownership),
+        storeClient_(storeClient),
+        storeServer_(storeServer) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -56,6 +62,10 @@ class AppContext {
   // Who may command the machine. One record, shared by every link, so a second transport cannot
   // have a second idea of who is in control.
   Ownership& ownership() { return *ownership_; }
+  // The store bus, one end per task: the panel's client for the VM's flash and settings writes,
+  // and the interface's server that applies them.
+  StoreClient& storeClient() { return *storeClient_; }
+  StoreServer& storeServer() { return *storeServer_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -71,6 +81,8 @@ class AppContext {
   Settings* settings_;
   Routines* routines_;
   Ownership* ownership_;
+  StoreClient* storeClient_;
+  StoreServer* storeServer_;
 };
 
 }  // namespace gardener
