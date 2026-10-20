@@ -422,8 +422,8 @@ takes the values it is given and uses its usual fallbacks for keys the set does 
 
 Four ship. `default` is the readout; a double Up opens `browser`, the list of routines to pick,
 which walks with Up and Down and switches with OK, and a double OK or double Down opens `system`,
-the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest at a second
-pressure, and repeat. The device's own pages register hidden, so only `static` is in the list. There
+the device's own settings. `static` is the cycle: pull to a target, hold it, move to a rest
+pressure, rest, and repeat. The device's own pages register hidden, so only `static` is in the list. There
 is no fixed number of routines: the registry grows as files register, and the browser lists every
 routine boot found that did not mark itself hidden.
 
@@ -555,7 +555,8 @@ and the fault latch. It is handed the three devices it commands — the sensor, 
 valve — so the control law is policy and the pins stay in `hal/`. The pump is the only actuator, so
 the control loop can pull down but never vent — the vent valve is the only way back up. A target
 set shallower than the chamber while a run is active uses that valve: the pump stops, the valve
-opens, and `VENT` holds until the reading reaches the new target, then the run resumes.
+opens, and `VENT` holds until the reading reaches the new target, then the run resumes. A deeper
+target re-enters `PULL` and the pump works to it; `HOLD` follows when it arrives.
 
 It is told what to do — regulate, start, stop, rest — and it reports what is true: the pressure,
 the duty, the state. The transitions it makes for itself are facts about the chamber rather than

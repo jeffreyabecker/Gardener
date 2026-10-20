@@ -1,7 +1,9 @@
-# static.be — the static hold: pull to a target, hold it, vent, rest at a second pressure, repeat.
+# static.be — the static hold: pull to a target, hold it, move to a rest pressure, rest, repeat.
 #
 # The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
-# a phase is left when the clock or the machine says so, and `now` is the only time source.
+# a phase is left when the clock or the machine says so, and `now` is the only time source. Moving
+# between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
+# is the edge that says the new one has arrived.
 
 import string
 
@@ -117,21 +119,49 @@ class Static : Page
 
   def begin()
     vacuum.target(self.target)
+    # A run may already be under way (the page was re-entered mid-cycle): the target change is the
+    # start then. Starting again would close the valve and abandon a vent to a shallower target.
+    var s = vacuum.state()
+    if s.state == "PULL" || s.state == "HOLD"
+      self.mark = vacuum.now_ms()
+      self.phase = "approach"
+      return true
+    end
     if !vacuum.start()
       vacuum.log("static: start refused")
       self.phase = "ready"
       return false
     end
-    self.phase = "pull"
+    # The start is queued, so the first approach may still see IDLE. This is when that stops being
+    # a reason to give up.
+    self.mark = vacuum.now_ms()
+    self.phase = "approach"
     return true
   end
 
+  # A run that ended under the cycle: a latched fault, or a machine left IDLE after a queued start
+  # has had its moment. A target change keeps the machine in PULL/HOLD/VENT, so the phases that
+  # follow one can treat IDLE as a stop at once.
+  def lost(s, now)
+    if s.fault != ""
+      return true
+    end
+    return s.state == "IDLE" && (self.phase != "approach" || now - self.mark >= 1000)
+  end
+
   def advance(now)
-    if self.phase == "pull"
-      var s = vacuum.state()
-      if s.fault != "" || s.state == "IDLE"
-        self.abandon()
-      elif s.state == "HOLD"
+    if self.phase == "ready"
+      return
+    end
+
+    var s = vacuum.state()
+    if self.lost(s, now)
+      self.abandon()
+      return
+    end
+
+    if self.phase == "approach"
+      if s.state == "HOLD" && s.target == self.target
         self.phase = "work"
         self.mark = now
       end
@@ -139,36 +169,15 @@ class Static : Page
     end
 
     if self.phase == "work"
-      var s = vacuum.state()
-      if s.fault != "" || s.state == "IDLE"
-        self.abandon()
-      elif now - self.mark >= self.work * 1000
-        vacuum.target(self.target)
-        vacuum.stop()
-        self.phase = "vent"
-      end
-      return
-    end
-
-    if self.phase == "vent"
-      var s = vacuum.state()
-      if s.fault != ""
-        self.abandon()
-      elif s.state == "IDLE"
-        self.phase = "rest_pull"
+      if now - self.mark >= self.work * 1000
         vacuum.target(self.rest_pressure)
-        if !vacuum.start()
-          self.abandon()
-        end
+        self.phase = "rest_approach"
       end
       return
     end
 
-    if self.phase == "rest_pull"
-      var s = vacuum.state()
-      if s.fault != "" || s.state == "IDLE"
-        self.abandon()
-      elif s.state == "HOLD"
+    if self.phase == "rest_approach"
+      if s.state == "HOLD" && s.target == self.rest_pressure
         self.phase = "rest"
         self.mark = now
       end
@@ -176,30 +185,13 @@ class Static : Page
     end
 
     if self.phase == "rest"
-      var s = vacuum.state()
-      if s.fault != "" || s.state == "IDLE"
-        self.abandon()
-      elif now - self.mark >= self.rest * 1000
+      if now - self.mark >= self.rest * 1000
         if self.resume == "after ok"
           self.finish()
-        elif self.rest_pressure > self.target
-          # The pump can only pull deeper. A rest pressure deeper than the work target has to be
-          # released before the next pull, or the next cycle would wait for the chamber to leak.
-          vacuum.stop()
-          self.phase = "release"
         else
-          self.begin()
+          vacuum.target(self.target)
+          self.phase = "approach"
         end
-      end
-      return
-    end
-
-    if self.phase == "release"
-      var s = vacuum.state()
-      if s.fault != ""
-        self.abandon()
-      elif s.state == "IDLE"
-        self.begin()
       end
     end
   end
@@ -234,7 +226,7 @@ class Static : Page
   # again even if this activation was given a set.
   def on_editor_closed()
     self.read_settings(nil)
-    if self.phase == "ready" || self.phase == "pull" || self.phase == "work"
+    if self.phase == "ready" || self.phase == "approach" || self.phase == "work"
       vacuum.target(self.target)
     end
   end
@@ -255,54 +247,39 @@ class Static : Page
     self.hint.draw(self.hint_text())
   end
 
-  # The pressure the machine is pulling to right now: the rest hold has its own target.
+  # The pressure the machine is working to right now: the rest hold has its own target.
   def active_target()
-    if self.phase == "rest_pull" || self.phase == "rest"
+    if self.phase == "rest_approach" || self.phase == "rest"
       return self.rest_pressure
     end
     return self.target
   end
 
   def phase_name()
-    if self.phase == "pull"
-      return "PULL"
+    if self.phase == "approach"
+      return "TARGET"
     end
     if self.phase == "work"
       return "WORK"
     end
-    if self.phase == "vent"
-      return "VENT"
-    end
-    if self.phase == "rest_pull"
+    if self.phase == "rest_approach" || self.phase == "rest"
       return "REST"
-    end
-    if self.phase == "rest"
-      return "REST"
-    end
-    if self.phase == "release"
-      return "VENT"
     end
     return "STATIC"
   end
 
   def status_text()
-    if self.phase == "pull"
+    if self.phase == "approach"
       return "TO TARGET"
     end
     if self.phase == "work"
       return "WORK " + self.clock(self.remaining(self.work))
     end
-    if self.phase == "vent"
-      return "VENTING"
-    end
-    if self.phase == "rest_pull"
+    if self.phase == "rest_approach"
       return "TO REST"
     end
     if self.phase == "rest"
       return "REST " + self.clock(self.remaining(self.rest))
-    end
-    if self.phase == "release"
-      return "VENTING"
     end
     return "PRESS OK"
   end

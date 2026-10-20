@@ -118,13 +118,20 @@ void VacuumSystem::setTarget(float kpa) {
   // A target shallower than the chamber cannot be pulled to, so a run in progress uses the valve.
   // A change inside the deadband is already at target and needs neither actuator. A vent already
   // running follows the new target, or ends when the target moves back to where the pump works.
-  const bool shallower = currentKpa() > kpa + cfg::CONTROL_DEADBAND_KPA;
+  const float measured = currentKpa();
+  const bool active = state_ == RunState::Pulling || state_ == RunState::Holding;
+  const bool shallower = measured > kpa + cfg::CONTROL_DEADBAND_KPA;
   if (targetVent_) {
     if (!shallower) endTargetVent();
     return;
   }
-  if (shallower && (state_ == RunState::Pulling || state_ == RunState::Holding)) {
+  if (!active) return;
+  if (shallower) {
     startTargetVent();
+  } else if (kpa > measured + cfg::CONTROL_DEADBAND_KPA) {
+    // A deeper target is a pull from here. HOLD is the target-reached edge, so keeping it while
+    // the machine works to a new depth would hide the edge the controller times from.
+    setState(RunState::Pulling);
   }
 }
 

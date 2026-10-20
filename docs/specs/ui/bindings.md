@@ -27,7 +27,7 @@ itself rather than a call answering it; its fields are listed under `describe()`
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `vacuum.target(kpa)` | — | sets the depth to pull to, in kPa below ambient. A value below `min` is ignored by the machine. A target shallower than the reading while pulling or holding stops the pump, vents to it and returns to the run |
+| `vacuum.target(kpa)` | — | sets the depth to pull to, in kPa below ambient. A value below `min` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
 | `vacuum.target_off()` | — | clears the target; releases the chamber if it was pulling or holding |
 | `vacuum.clamp(kpa)` | `real` | the same number held to the machine's bounds, `min` … `floor`. See below |
 | `vacuum.start()` | `bool` | false when the machine refuses: no target, no valid reading, or a latched fault |

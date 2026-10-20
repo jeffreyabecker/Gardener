@@ -219,7 +219,7 @@ does not draw on the panel.
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the vacuum readout; takes no argument |
-| `target <kPa\|->` | `ok target=<kPa>` / `ok target=-` | `vacuum target 40` pulls to 40 kPa below ambient. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached; `-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target value=… min=5.0`; deeper than `floor` is accepted, and only pins the duty at the cap |
+| `target <kPa\|->` | `ok target=<kPa>` / `ok target=-` | `vacuum target 40` pulls to 40 kPa below ambient. A target deeper than the reading keeps pulling; a shallower one while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached. `-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target value=… min=5.0`; deeper than `floor` is accepted, and only pins the duty at the cap |
 | `start` | `ok state=PULL` / `err not_ready <reason>` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` |
 | `stop` | `ok state=<state>` | pump off, then vent. The normal way a run ends |
 | `reset` | `ok state=<state>` | clears the latched fault, then vents |
@@ -429,8 +429,9 @@ returns to `PULL`/`HOLD`.
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
 | Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply |
 | Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
-| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; `-` while pulling or holding releases the chamber |
+| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
+| target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
 | vent to a shallower target | `PULL`, `HOLD` | `VENT` with `duty=0`; it returns to `PULL`/`HOLD` rather than `IDLE` |
 | sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
