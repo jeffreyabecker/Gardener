@@ -134,25 +134,47 @@ class Ramped : Page
       setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
       setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
       setting("final_pressure", "Final", "pressure", 1, nil, nil, nil, false),
-      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil, false),
+      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil, true),
+      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, true),
       setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
       setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false)
     ]
   end
 
   # The starting values match the shipped `ramped.ini`. The pressures go through clamp() before they
   # are ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
-  # uses. A switch's settings map, when there is one, is the set for this activation.
+  # uses. A switch's settings map, when there is one, is the set for this activation. A nullable
+  # step is an even ladder from the start to the final pressure; a nullable rest vents all the way.
   def read_settings(settings)
     self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
     self.initial = vacuum.clamp(self.value(settings, "initial_pressure", 5.0))
     self.final = vacuum.clamp(self.value(settings, "final_pressure", 20.0))
-    var step = self.value(settings, "step_pressure", 5.0)
-    self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
+
+    if self.unset(settings, "step_pressure")
+      var rise = self.final - self.initial
+      self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
+    else
+      var step = self.value(settings, "step_pressure", 5.0)
+      self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
+    end
+
+    if self.unset(settings, "rest_pressure")
+      self.rest_pressure = vacuum.clamp(0.0)
+    else
+      self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
+    end
+
     self.work = self.whole(self.value(settings, "work_duration", 300), 0, 3600)
-    self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
     self.rest = self.whole(self.value(settings, "rest_duration", 45), 0, 1200)
+  end
+
+  # Whether a key is nothing: missing from the file (or holding an empty value), or missing from a
+  # switch's map (or nil there). A nullable setting means its own thing on this answer.
+  def unset(settings, key)
+    if settings != nil
+      return settings.find(key, nil) == nil
+    end
+    return store.get(key, "") == ""
   end
 
   # A value from the activation's set when it has one, from the routine's file otherwise. A key the
