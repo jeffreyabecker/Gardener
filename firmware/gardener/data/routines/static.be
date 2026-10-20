@@ -1,4 +1,4 @@
-# static.be — the static hold: pull to a target, hold it, vent, rest, repeat.
+# static.be — the static hold: pull to a target, hold it, vent, rest at a second pressure, repeat.
 #
 # The cycle is a phase machine advanced from poll(now). Nothing waits: a phase is left when the
 # clock or the machine says so, and `now` is the only time source.
@@ -15,6 +15,7 @@ class Static
   var mark
   var target
   var work
+  var rest_pressure
   var rest
   var resume
   var unit
@@ -27,6 +28,7 @@ class Static
     self.mark = 0
     self.target = 0.0
     self.work = 30
+    self.rest_pressure = 5.0
     self.rest = 1
     self.resume = "immediately"
     self.unit = nil
@@ -66,17 +68,19 @@ class Static
     return [
       setting("target_pressure", "Target", "pressure", 1, nil, nil, nil),
       setting("work_duration", "Work", "duration", 30, 0, 3600, nil),
-      setting("rest_duration", "Rest", "duration", 1, 0, 1200, nil),
+      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil),
+      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil),
       setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"])
     ]
   end
 
-  # The starting values match the shipped `static.ini`. The pressure goes through clamp() before it
-  # is ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
+  # The starting values match the shipped `static.ini`. The pressures go through clamp() before they
+  # are ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
   # uses.
   def read_settings()
     self.target = vacuum.clamp(store.get("target_pressure", 0.0))
     self.work = self.seconds(store.get("work_duration", 30), 3600)
+    self.rest_pressure = vacuum.clamp(store.get("rest_pressure", 5.0))
     self.rest = self.seconds(store.get("rest_duration", 1), 1200)
     var resume = store.get("resume_behavior", "immediately")
     if resume != "after ok"
@@ -138,6 +142,20 @@ class Static
       if s.fault != ""
         self.abandon()
       elif s.state == "IDLE"
+        self.phase = "rest_pull"
+        vacuum.target(self.rest_pressure)
+        if !vacuum.start()
+          self.abandon()
+        end
+      end
+      return
+    end
+
+    if self.phase == "rest_pull"
+      var s = vacuum.state()
+      if s.fault != "" || s.state == "IDLE"
+        self.abandon()
+      elif s.state == "HOLD"
         self.phase = "rest"
         self.mark = now
       end
@@ -145,14 +163,40 @@ class Static
     end
 
     if self.phase == "rest"
-      if now - self.mark >= self.rest * 1000
+      var s = vacuum.state()
+      if s.fault != "" || s.state == "IDLE"
+        self.abandon()
+      elif now - self.mark >= self.rest * 1000
         if self.resume == "after ok"
-          self.phase = "ready"
+          self.finish()
+        elif self.rest_pressure > self.target
+          # The pump can only pull deeper. A rest pressure deeper than the work target has to be
+          # released before the next pull, or the next cycle would wait for the chamber to leak.
+          vacuum.stop()
+          self.phase = "release"
         else
           self.begin()
         end
       end
+      return
     end
+
+    if self.phase == "release"
+      var s = vacuum.state()
+      if s.fault != ""
+        self.abandon()
+      elif s.state == "IDLE"
+        self.begin()
+      end
+    end
+  end
+
+  # The cycle stopped between repetitions: release the chamber and put the page's target back, so
+  # `ready` is the machine's idle state again.
+  def finish()
+    vacuum.stop()
+    vacuum.target(self.target)
+    self.phase = "ready"
   end
 
   # The cycle ended without this page asking: a latched fault, or a release the device's hold caused.
@@ -185,7 +229,10 @@ class Static
       if !self.editor.is_open()
         self.editor = nil
         self.read_settings()
-        vacuum.target(self.target)
+        # The rest hold has its own target; only the work target follows an edit made mid-cycle.
+        if self.phase == "ready" || self.phase == "pull" || self.phase == "work"
+          vacuum.target(self.target)
+        end
       end
       return acted
     end
@@ -232,9 +279,17 @@ class Static
     else
       screen.draw_text(0, 12, 3, false, "--")
     end
-    screen.draw_text(0, 40, 1, false, "TGT " + self.text(self.target))
+    screen.draw_text(0, 40, 1, false, "TGT " + self.text(self.active_target()))
     screen.draw_text(0, 48, 1, false, self.status_text())
     screen.draw_text(0, 56, 1, false, self.hint_text())
+  end
+
+  # The pressure the machine is pulling to right now: the rest hold has its own target.
+  def active_target()
+    if self.phase == "rest_pull" || self.phase == "rest"
+      return self.rest_pressure
+    end
+    return self.target
   end
 
   def phase_name()
@@ -247,8 +302,14 @@ class Static
     if self.phase == "vent"
       return "VENT"
     end
+    if self.phase == "rest_pull"
+      return "REST"
+    end
     if self.phase == "rest"
       return "REST"
+    end
+    if self.phase == "release"
+      return "VENT"
     end
     return "STATIC"
   end
@@ -263,8 +324,14 @@ class Static
     if self.phase == "vent"
       return "VENTING"
     end
+    if self.phase == "rest_pull"
+      return "TO REST"
+    end
     if self.phase == "rest"
       return "REST " + self.clock(self.remaining(self.rest))
+    end
+    if self.phase == "release"
+      return "VENTING"
     end
     return "PRESS OK"
   end
