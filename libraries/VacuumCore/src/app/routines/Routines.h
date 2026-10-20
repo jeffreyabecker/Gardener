@@ -17,6 +17,7 @@ namespace gardener {
 class AppContext;
 class Storage;
 class Logger;
+class StoreClient;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
 // that is active.
@@ -36,8 +37,9 @@ class Routines {
 
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
-  // False only when the interpreter cannot be allocated at all.
-  bool begin(AppContext& context, Storage& storage, Logger& logger);
+  // False only when the interpreter cannot be allocated at all. `store` is the client the runtime
+  // uses for the VM's flash and settings writes.
+  bool begin(AppContext& context, Storage& storage, Logger& logger, StoreClient& store);
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.
@@ -71,25 +73,23 @@ class Routines {
   void pushPress(Button button, Press press);
   bool takePress(Button& button, Press& press);
 
-  // The device's Back hold stops and vents without asking the page. The notice is a one-shot:
-  // `takeStopped()` answers true once after the hold and then false again, so a page that has a
-  // phase machine resets it on the event instead of inferring the stop from the machine's state.
-  // Switching pages drops a notice the old page did not take.
-  void notifyStopped();
+  // The device's Back hold stops and vents without asking the page. The control task bumps stopSeq
+  // when it fires; `takeStopped()` answers true once per bump, so a page that has a phase machine
+  // resets it on the event instead of inferring the stop from the machine's state. Switching pages
+  // drops a notice the old page did not take.
   bool takeStopped();
 
   // --- the `store` module's surface ---
-  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. Read
-  // through the file each time rather than cached: the file is the state, so there is no second
-  // copy to keep in step.
+  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. Reads and
+  // writes round-trip through the store client, because LittleFS has one owner and the VM does not.
   //
   // `storeGet` is false when there is no active routine or nothing is stored under the key;
   // `storeSet` is false when there is no active routine or the file would not take the write. The
   // named forms address a registered routine, which is what lets the browser edit the values of a
   // routine that is not the one showing.
-  bool storeGet(const char* key, String& out) const;
+  bool storeGet(const char* key, String& out);
   bool storeSet(const char* key, const String& value);
-  bool storeGet(const char* routine, const char* key, String& out) const;
+  bool storeGet(const char* routine, const char* key, String& out);
   bool storeSet(const char* routine, const char* key, const String& value);
 
  private:
@@ -111,11 +111,11 @@ class Routines {
   bool choose(const char* name);
   void selectDefault();
   void applyPending();
-  bool storePath(const char* routine, String& out) const;
+  bool isRegistered(const char* routine) const;
 
   bvm* vm_ = nullptr;
-  Storage* storage_ = nullptr;
   Logger* logger_ = nullptr;
+  StoreClient* store_ = nullptr;
   // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
   // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
   // the device is up.
@@ -132,8 +132,8 @@ class Routines {
   uint8_t pressHead_ = 0;
   uint8_t pressCount_ = 0;
   bool pressOverflow_ = false;
-  // One device stop per hold, consumed by the page's next poll.
-  bool stopped_ = false;
+  // The stopSeq the last takeStopped() answered, so one bump is one true.
+  uint32_t lastStopSeq_ = 0;
 };
 
 }  // namespace gardener

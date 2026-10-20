@@ -76,7 +76,8 @@ bool App::begin() {
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.
-  bool vmOk = context_.routines().begin(context_, context_.storage(), *logger_);
+  bool vmOk = context_.routines().begin(context_, context_.storage(), *logger_,
+                                        context_.storeClient());
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.

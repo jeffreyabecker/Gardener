@@ -5,6 +5,8 @@
 
 #include "app/AppContext.h"
 #include "app/Logger.h"
+#include "app/StoreBus.h"
+#include "app/Tasks.h"
 #include "app/routines/Bindings.h"
 #include "app/storage/Ini.h"
 #include "app/storage/Storage.h"
@@ -30,9 +32,9 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(AppContext& context, Storage& storage, Logger& logger) {
+bool Routines::begin(AppContext& context, Storage& storage, Logger& logger, StoreClient& store) {
   logger_ = &logger;
-  storage_ = &storage;
+  store_ = &store;
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
@@ -214,7 +216,7 @@ bool Routines::choose(const char* name) {
     active_ = (int)i;
     // A stop notice belongs to the page that was showing when the hold fired; a switch drops one
     // that page never took rather than handing it to the next one.
-    stopped_ = false;
+    lastStopSeq_ = stopSeq;
     return true;
   }
   return false;
@@ -376,14 +378,12 @@ bool Routines::takePress(Button& button, Press& press) {
 }
 
 // The Back hold belongs to the device, not to the page, so the page is told after the fact. The
-// notice waits for the page's poll: the loop may fire the hold while a controller owns the device,
-// and the page that was showing is the one that has to hear about it when it resumes.
-void Routines::notifyStopped() { stopped_ = true; }
-
+// control task bumps stopSeq when the hold fires; one bump is one true here, and the page that was
+// showing is the one that hears about it when it resumes.
 bool Routines::takeStopped() {
-  const bool stopped = stopped_;
-  stopped_ = false;
-  return stopped;
+  if (lastStopSeq_ == stopSeq) return false;
+  lastStopSeq_ = stopSeq;
+  return true;
 }
 
 // --- the active routine's values -------------------------------------------
@@ -391,27 +391,15 @@ bool Routines::takeStopped() {
 // Beside the routine rather than in a shared file: a routine's values are its own, a data-folder
 // upload can ship initial ones as `/routines/<name>.ini`, and nothing has to be namespaced inside
 // the document.
-bool Routines::storePath(const char* routine, String& out) const {
+bool Routines::isRegistered(const char* routine) const {
   if (routine == nullptr) return false;
-
-  // Only a registered name is a path: a caller that names another routine cannot address a file
-  // that is not one of the pages the device loaded.
-  bool registered = false;
   for (const Entry& entry : entries_) {
-    if (entry.name == routine) {
-      registered = true;
-      break;
-    }
+    if (entry.name == routine) return true;
   }
-  if (!registered) return false;
-
-  out = "/routines/";
-  out += routine;
-  out += ".ini";
-  return true;
+  return false;
 }
 
-bool Routines::storeGet(const char* key, String& out) const {
+bool Routines::storeGet(const char* key, String& out) {
   if (active_ < 0) return false;
   return storeGet(entries_[active_].name.c_str(), key, out);
 }
@@ -421,34 +409,16 @@ bool Routines::storeSet(const char* key, const String& value) {
   return storeSet(entries_[active_].name.c_str(), key, value);
 }
 
-bool Routines::storeGet(const char* routine, const char* key, String& out) const {
-  String path;
-  if (storage_ == nullptr || key == nullptr || !storePath(routine, path)) return false;
-
-  String text;
-  if (!storage_->read(path.c_str(), text)) return false;
-
-  // The file has no sections, so every key is a global one.
-  Ini values;
-  values.parse(text);
-  if (!values.has("", key)) return false;
-  out = values.get("", key, "");
-  return true;
+bool Routines::storeGet(const char* routine, const char* key, String& out) {
+  // Only a registered name is an address: a caller that names another routine cannot reach a file
+  // that is not one of the pages the device loaded. The read itself is the store client's.
+  if (store_ == nullptr || key == nullptr || !isRegistered(routine)) return false;
+  return store_->get(routine, key, out);
 }
 
 bool Routines::storeSet(const char* routine, const char* key, const String& value) {
-  String path;
-  if (storage_ == nullptr || key == nullptr || !storePath(routine, path)) return false;
-
-  String text;
-  Ini values;
-  if (storage_->read(path.c_str(), text)) values.parse(text);
-
-  // A set that repeats what is already there is not worth a flash write, which is what lets a
-  // routine set the same value on every pass without wearing the partition.
-  if (values.has("", key) && values.get("", key, "") == value) return true;
-  if (!values.set("", key, value)) return false;
-  return storage_->write(path.c_str(), values.text());
+  if (store_ == nullptr || key == nullptr || !isRegistered(routine)) return false;
+  return store_->set(routine, key, value);
 }
 
 }  // namespace gardener

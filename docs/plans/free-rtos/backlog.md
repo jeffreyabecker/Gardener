@@ -194,19 +194,19 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 
 ## ROUT — Routines
 
-- [ ] ROUT-001 Keep `Routines::begin()` taking `Storage&` — it still runs in `setup()` before the
+- [x] ROUT-001 Keep `Routines::begin()` taking `Storage&` — it still runs in `setup()` before the
   tasks exist, so the module/routine load stays single-threaded.
-- [ ] ROUT-002 Change `Routines::storeGet(key, out)` to resolve the active routine from the
+- [x] ROUT-002 Change `Routines::storeGet(key, out)` to resolve the active routine from the
   registry and delegate to `StoreClient::get` (drops `const`; `active_ < 0` still returns false
   without touching the bus).
-- [ ] ROUT-003 Change `Routines::storeGet(routine, key, out)` to delegate to `StoreClient::get`
+- [x] ROUT-003 Change `Routines::storeGet(routine, key, out)` to delegate to `StoreClient::get`
   with the named routine (the `registered` check stays here).
-- [ ] ROUT-004 Change `Routines::storeSet` (both forms) to delegate to `StoreClient::set`.
-- [ ] ROUT-005 Reimplement `Routines::takeStopped()` over the `stopSeq` counter: true once per
+- [x] ROUT-004 Change `Routines::storeSet` (both forms) to delegate to `StoreClient::set`.
+- [x] ROUT-005 Reimplement `Routines::takeStopped()` over the `stopSeq` counter: true once per
   increment; delete the `bool stopped_` field.
-- [ ] ROUT-006 Keep the press ring (`presses_`, `takePress`, `pushPress`) but fill it from the
+- [x] ROUT-006 Keep the press ring (`presses_`, `takePress`, `pushPress`) but fill it from the
   `ButtonEvent` queue instead of the panel reading `Buttons` directly.
-- [ ] ROUT-007 Give `Routines` a `StoreClient&` (constructed in STORE-009); remove its direct
+- [x] ROUT-007 Give `Routines` a `StoreClient&` (constructed in STORE-009); remove its direct
   `Storage` dependence for runtime `store.*`.
 
 ## BIND — Berry bindings
