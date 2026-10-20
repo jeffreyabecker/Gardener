@@ -43,11 +43,12 @@ constexpr const char* kRecords =
     "  var btn, press\n"
     "end\n"
     // What a routine's describe() says the browser may edit. `values` is the cycle order for a
-    // `choice`; the other kinds pass nil. The class is constructed by the routine, so its fields
-    // stay plain data.
+    // `choice`; the other kinds pass nil. `nullable` lets the value be nothing: the editor shows
+    // `--` for it and steps to it below the kind's lowest value. The class is constructed by the
+    // routine, so its fields stay plain data.
     "class setting\n"
-    "  var key, label, kind, step, min, max, values\n"
-    "  def init(key, label, kind, step, min, max, values)\n"
+    "  var key, label, kind, step, min, max, values, nullable\n"
+    "  def init(key, label, kind, step, min, max, values, nullable)\n"
     "    self.key = key\n"
     "    self.label = label\n"
     "    self.kind = kind\n"
@@ -55,6 +56,7 @@ constexpr const char* kRecords =
     "    self.min = min\n"
     "    self.max = max\n"
     "    self.values = values\n"
+    "    self.nullable = nullable\n"
     "  end\n"
     "end\n";
 

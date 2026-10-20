@@ -328,7 +328,8 @@ var label  = store.get("label", "")      # anything else: the text as written
 
 `store.set` writes a string as it stands, and a number or a bool in the interpreter's own text form.
 A key that was never set returns the fallback rather than `nil`, so a first boot needs no special
-case.
+case. A key that holds an empty value reads back as `""` — the way the settings editor keeps a
+cleared nullable setting, and the sentinel it tests to tell "nothing" from a real value.
 
 The file is an INI document with no sections, which is what makes it readable off the device and
 editable in the data image:

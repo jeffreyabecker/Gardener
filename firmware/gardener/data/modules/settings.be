@@ -150,6 +150,9 @@ class Settings
 
   def value_text(index)
     var value = self.values[index]
+    if value == nil
+      return "--"
+    end
     if self.described[index].kind == "bool"
       if value
         return "ON"
@@ -166,6 +169,9 @@ class Settings
   end
 
   def edit_text()
+    if self.edit_value == nil
+      return "--"
+    end
     if self.edit_setting.kind == "pressure"
       return self.number(self.edit_value)
     end
@@ -282,8 +288,12 @@ class Settings
 
   # The type of the fallback is the type the stored text comes back as, so each kind reads its own.
   # A choice's first value is its type as well as where an unset setting starts. A duration is whole
-  # seconds, and is held to its bounds before it is shown.
+  # seconds, and is held to its bounds before it is shown. A nullable setting that is not in the
+  # file — or that holds an empty value — reads as nil rather than its fallback.
   def read_value(setting)
+    if setting.nullable && store.get(self.name, setting.key, "") == ""
+      return nil
+    end
     if setting.kind == "int"
       return store.get(self.name, setting.key, 0)
     end
@@ -322,6 +332,9 @@ class Settings
     end
     self.edit_setting = setting
     self.edit_value = self.values[self.list.selected]
+    if self.edit_value == nil
+      self.edit_value = self.lowest_value(setting)
+    end
     self.edit_stage = nil
     if setting.kind == "duration"
       self.edit_stage = "min"
@@ -330,7 +343,51 @@ class Settings
     return true
   end
 
+  # The kind's lowest real value, the place a null value opens and the position null sits below:
+  # one Down at this value clears, one Up from nil reaches it. For pressure it is the shallowest
+  # legal target, so a null value opens where an unset pressure clamps to today.
+  def lowest_value(setting)
+    if setting.kind == "bool"
+      return false
+    end
+    if setting.kind == "choice"
+      return setting.values[0]
+    end
+    if setting.kind == "pressure"
+      return vacuum.clamp(0.0)
+    end
+    if setting.kind == "duration"
+      return self.clamp_duration(setting, 0)
+    end
+    if setting.kind == "int"
+      if setting.min != nil
+        return int(setting.min)
+      end
+      return 0
+    end
+    if setting.min != nil
+      return setting.min
+    end
+    return 0.0
+  end
+
   def nudge(direction)
+    # A nullable value has null one step below its lowest value: Down at the bottom clears, Up from
+    # null enters the bottom, and Down at null stays null.
+    if self.edit_setting.nullable
+      var low = self.lowest_value(self.edit_setting)
+      if self.edit_value == nil
+        if direction < 0
+          return
+        end
+        self.edit_value = low
+        return
+      end
+      if direction < 0 && self.edit_value == low
+        self.edit_value = nil
+        return
+      end
+    end
     if self.edit_setting.kind == "bool"
       self.edit_value = !self.edit_value
       return
@@ -431,7 +488,13 @@ class Settings
   end
 
   def commit()
-    if store.set(self.name, self.edit_setting.key, self.edit_value)
+    var value = self.edit_value
+    if value == nil
+      # A null writes an empty value, the marker read_value treats as nil; `str(nil)` is the text
+      # "nil", which would read back as a real string.
+      value = ""
+    end
+    if store.set(self.name, self.edit_setting.key, value)
       self.values[self.list.selected] = self.edit_value
     else
       vacuum.log("settings: " + self.name + " did not save " + self.edit_setting.key)

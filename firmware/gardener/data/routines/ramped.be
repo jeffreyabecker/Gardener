@@ -131,13 +131,13 @@ class Ramped : Page
 
   def describe()
     return [
-      setting("set_count", "Sets", "int", 1, 1, 20, nil),
-      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil),
-      setting("final_pressure", "Final", "pressure", 1, nil, nil, nil),
-      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil)
+      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
+      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
+      setting("final_pressure", "Final", "pressure", 1, nil, nil, nil, false),
+      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil, false),
+      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
+      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
+      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false)
     ]
   end
 

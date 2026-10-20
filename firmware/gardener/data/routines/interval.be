@@ -99,11 +99,11 @@ class Interval : Page
 
   def describe()
     return [
-      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil),
-      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"])
+      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
+      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
+      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
+      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false),
+      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"], false)
     ]
   end
 

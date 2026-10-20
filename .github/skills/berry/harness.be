@@ -85,8 +85,8 @@ class event
 end
 
 class setting
-  var key, label, kind, step, min, max, values
-  def init(key, label, kind, step, min, max, values)
+  var key, label, kind, step, min, max, values, nullable
+  def init(key, label, kind, step, min, max, values, nullable)
     self.key = key
     self.label = label
     self.kind = kind
@@ -94,6 +94,7 @@ class setting
     self.min = min
     self.max = max
     self.values = values
+    self.nullable = nullable
   end
 end
 

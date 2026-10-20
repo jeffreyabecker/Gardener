@@ -63,7 +63,7 @@ report a page that works on the device as `undeclared`.
 | `unit` | `name, suffix, per_kpa, whole_step, decimals` | `screen.unit()` |
 | `bounds` | `w, h` | `screen.text_bounds()` |
 | `event` | `btn, press` | `buttons.take()` |
-| `setting` | `key, label, kind, step, min, max, values` | the routine's `describe()` |
+| `setting` | `key, label, kind, step, min, max, values, nullable` | the routine's `describe()` |
 
 A field the class does not declare raises `attribute_error` when read, which is why the harness
 copies the field lists from `kRecords` rather than inventing an empty class.

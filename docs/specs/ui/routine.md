@@ -166,16 +166,16 @@ the editor calls it when the settings view opens, so the list can reflect the ma
 ```berry
 def describe()
   return [
-    setting("target", "Target", "pressure", 1, nil, nil, nil),
-    setting("hold", "Hold", "duration", 1, 0, 7200, nil),
-    setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"]),
-    setting("enabled", "Enabled", "bool", 0, nil, nil, nil),
-    setting("label", "Label", "text", 0, nil, nil, nil)
+    setting("target", "Target", "pressure", 1, nil, nil, nil, false),
+    setting("hold", "Hold", "duration", 1, 0, 7200, nil, false),
+    setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"], false),
+    setting("enabled", "Enabled", "bool", 0, nil, nil, nil, true),
+    setting("label", "Label", "text", 0, nil, nil, nil, false)
   ]
 end
 ```
 
-`setting(key, label, kind, step, min, max, values)` builds one record:
+`setting(key, label, kind, step, min, max, values, nullable)` builds one record:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -185,6 +185,7 @@ end
 | `step` | real | how far Up/Down moves a numeric value; for `duration`, the seconds increment in the seconds stage; for `pressure`, whole steps in the panel's unit; ignored by `bool` and `choice` |
 | `min` / `max` | real or nil | optional bounds for a numeric value; for `duration` both are total seconds and the value never goes below 0; ignored by `pressure`, whose bounds are the machine's |
 | `values` | list or nil | the allowed values for `choice`, in cycle order |
+| `nullable` | bool | whether the value may be nothing; see below |
 
 The editor reads the current value through `store`, with a fallback whose type matches the kind:
 `0` for `int` and `duration`, `0.0` for `real` and `pressure`, `false` for `bool`, and `values[0]`
@@ -192,17 +193,26 @@ for `choice`. A `choice` needs at least one value. Up/Down steps `real`, `int` a
 toggles `bool`, and cycles `choice`; OK writes the value back with `store.set` and Back leaves
 without writing.
 
+A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` and shows `--`
+in the list and the editor. It opens at the kind's lowest real value (the value a non-nullable
+setting starts from), and `nil` sits one step below that: Down at the lowest value clears back to
+`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` writes an empty
+value, which reads as `nil` again.
+
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
 whole minute. OK opens it in the **minutes** stage, Up/Down moves that by a minute, OK moves on to
 the **seconds** stage, and Up/Down moves that by `step` seconds (default 1); OK then writes. Back
-cancels from either stage. The value is held between `min` and `max`, and never below zero.
+cancels from either stage. The value is held between `min` and `max`, and never below zero. A
+nullable duration cleared from the minutes stage advances to the seconds stage still `nil`, and the
+second OK writes the clear.
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
 `12.5 psi`, `0.12 inHg` or `40 mmHg`, suffix included. Up/Down moves it by `step` whole display
 steps — one psi, one inHg, ten mmHg — and every value goes through `vacuum.clamp()`, whether it was
 read, stepped or restored, so the editor cannot produce a target the machine refuses. An unset
-pressure reads as `0.0` and therefore clamps to the shallowest legal target. `min` and `max` are
-ignored: the machine's `min` … `floor` is the range.
+pressure reads as `0.0` and therefore clamps to the shallowest legal target; a nullable one reads as
+`nil`, and its lowest value is that same shallowest target. `min` and `max` are ignored: the
+machine's `min` … `floor` is the range.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
 return a list. A routine without `describe()`, or one whose method raises, leaves the settings view
