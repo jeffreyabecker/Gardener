@@ -2,64 +2,36 @@
 #
 # The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Each set
-# works at its own target and rests at the rest pressure; once a set's target is at or above the
-# safety cutoff the work is broken up by explicit vents whose cadence tightens as the ramp deepens.
+# works at its own target and rests at the rest pressure.
 
 import string
 
-class Ramped : Page
-  var phase
-  var mark
-  var set
-  var target
-  var targets
-  var worked
-  var done
-  var gap
-  var count
-  var initial
-  var final
-  var step
-  var work
-  var rest_pressure
-  var rest
-  var cutoff
-  var break_len
-  var break_every
+class RampedChrome
+  var owner
   var header
-  var readout
+  var sets
+  var pressure
   var target_label
   var target_value
   var status
+  var bar
   var hint
 
-  def init()
-    super(self).init()
-    self.phase = "ready"
-    self.mark = 0
-    self.set = 0
-    self.target = 0.0
-    self.targets = []
-    self.worked = 0
-    self.done = 0
-    self.gap = 0
-    self.count = 4
-    self.initial = 5.0
-    self.final = 20.0
-    self.step = 5.0
-    self.work = 300
-    self.rest_pressure = 5.0
-    self.rest = 45
-    self.cutoff = 15.0
-    self.break_len = 10
-    self.break_every = 120
+  def init(owner)
+    self.owner = owner
 
+    # The header shares its line with the set bubbles: the state icon owns x 64-78, so the text
+    # stops before it and the bubbles start after it.
     self.header = DynamicText()
-    self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
+    self.header.x = 0; self.header.y = 0; self.header.w = 58; self.header.h = 12
+    self.header.align = "left"
 
-    self.readout = PressureDisplay()
-    self.readout.x = 0; self.readout.y = 12; self.readout.w = 116; self.readout.h = 24
-    self.readout.show_units = false
+    self.sets = ProgressBubbles()
+    self.sets.x = 82; self.sets.y = 2; self.sets.w = 28; self.sets.h = 6
+
+    self.pressure = PressureDisplay()
+    self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
+    self.pressure.show_units = false
 
     self.target_label = FixedText()
     self.target_label.value = "TGT"
@@ -69,11 +41,78 @@ class Ramped : Page
     self.target_value.x = 40; self.target_value.y = 40; self.target_value.w = 76; self.target_value.h = 8
     self.target_value.show_units = true
 
+    # The status and the set's remaining time share a line: the words on the left, the bar draining
+    # to the right. The longest status is "WORK 59:59", 59 pixels of built-in face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 48; self.status.w = 116; self.status.h = 8
+    self.status.x = 0; self.status.y = 48; self.status.w = 62; self.status.h = 8
+    self.status.align = "left"
+
+    self.bar = ProgressBar()
+    self.bar.x = 66; self.bar.y = 48; self.bar.w = 50; self.bar.h = 8
+    self.bar.border = 1
 
     self.hint = DynamicText()
     self.hint.x = 0; self.hint.y = 56; self.hint.w = 116; self.hint.h = 8
+  end
+
+  def draw(s)
+    self.header.draw(self.owner.header_text())
+
+    # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
+    # ramp still empty. The count can change under the settings editor, so the cached layout goes
+    # with it.
+    if self.sets.max_count != self.owner.count
+      self.sets.max_count = self.owner.count
+      self.sets.layout = nil
+    end
+    var filled = 0
+    if self.owner.phase != "ready"
+      filled = self.owner.set + 1
+    end
+    self.sets.draw(filled)
+
+    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.target_label.draw()
+    self.target_value.draw(self.owner.active_target())
+    self.status.draw(self.owner.status_text())
+    var left = self.owner.work_left()
+    if left != nil
+      self.bar.draw(left)
+    end
+    self.hint.draw(self.owner.hint_text())
+  end
+end
+
+class Ramped : Page
+  var phase
+  var mark
+  var set
+  var target
+  var targets
+  var count
+  var initial
+  var final
+  var step
+  var work
+  var rest_pressure
+  var rest
+  var chrome
+
+  def init()
+    super(self).init()
+    self.phase = "ready"
+    self.mark = 0
+    self.set = 0
+    self.target = 0.0
+    self.targets = []
+    self.count = 4
+    self.initial = 5.0
+    self.final = 20.0
+    self.step = 5.0
+    self.work = 300
+    self.rest_pressure = 5.0
+    self.rest = 45
+    self.chrome = RampedChrome(self)
 
     self.on("ok", "double", / -> self.open_settings("ramped"))
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
@@ -84,9 +123,6 @@ class Ramped : Page
     self.phase = "ready"
     self.set = 0
     self.targets = []
-    self.worked = 0
-    self.done = 0
-    self.gap = 0
     self.read_settings(settings)
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
@@ -105,10 +141,7 @@ class Ramped : Page
       setting("step_pressure", "Step", "pressure", 1, nil, nil, nil),
       setting("work_duration", "Work", "duration", 30, 0, 3600, nil),
       setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil),
-      setting("safety_cutoff_pressure", "Cutoff", "pressure", 1, nil, nil, nil),
-      setting("break_duration", "Break", "duration", 1, 0, 1200, nil),
-      setting("break_every", "Break every", "duration", 10, 0, 3600, nil)
+      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil)
     ]
   end
 
@@ -124,9 +157,6 @@ class Ramped : Page
     self.work = self.whole(self.value(settings, "work_duration", 300), 0, 3600)
     self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
     self.rest = self.whole(self.value(settings, "rest_duration", 45), 0, 1200)
-    self.cutoff = vacuum.clamp(self.value(settings, "safety_cutoff_pressure", 15.0))
-    self.break_len = self.whole(self.value(settings, "break_duration", 10), 0, 1200)
-    self.break_every = self.whole(self.value(settings, "break_every", 120), 0, 3600)
   end
 
   # A value from the activation's set when it has one, from the routine's file otherwise. A key the
@@ -189,9 +219,6 @@ class Ramped : Page
 
   def start_set()
     self.target = self.targets[self.set]
-    self.worked = 0
-    self.done = 0
-    self.gap = self.break_gap()
     vacuum.target(self.target)
     # A run may already be under way: the target change is the start then. Starting again would
     # close the valve and abandon a vent to a shallower target.
@@ -211,30 +238,11 @@ class Ramped : Page
     return true
   end
 
-  # Work milliseconds between in-set breaks, or 0 for a set that needs none. The gap tightens with
-  # the target's distance above the cutoff, in steps: one step above is twice the breaks, two steps
-  # three times, and the final pressure does not enter it. A one-second floor keeps a very short gap
-  # from leaving no work between breaks.
-  def break_gap()
-    if self.break_every <= 0 || self.step <= 0.0 || self.target < self.cutoff
-      return 0
-    end
-    var factor = 1.0 + (self.target - self.cutoff) / self.step
-    var gap = int(self.break_every * 1000 / factor)
-    if gap < 1000
-      gap = 1000
-    end
-    return gap
-  end
-
   # A run that ended under the cycle: a latched fault, or a machine left IDLE after a queued start
-  # has had its moment. A break's own release is expected to be IDLE, so it is not a stop.
+  # has had its moment.
   def lost(s, now)
     if s.fault != ""
       return true
-    end
-    if self.phase == "break"
-      return false
     end
     return s.state == "IDLE" && (self.phase != "approach" || now - self.mark >= 1000)
   end
@@ -259,31 +267,12 @@ class Ramped : Page
     end
 
     if self.phase == "work"
-      var worked = self.worked + (now - self.mark)
-      if worked >= self.work * 1000
+      if now - self.mark >= self.work * 1000
         if self.set + 1 >= self.targets.size()
           self.finish()
         else
           vacuum.target(self.rest_pressure)
           self.phase = "rest_approach"
-        end
-        return
-      end
-      if self.gap > 0 && worked >= self.gap * (self.done + 1)
-        self.worked = worked
-        self.done += 1
-        vacuum.stop()
-        self.mark = now
-        self.phase = "break"
-      end
-      return
-    end
-
-    if self.phase == "break"
-      if now - self.mark >= self.break_len * 1000
-        if vacuum.start()
-          self.mark = now
-          self.phase = "approach"
         end
       end
       return
@@ -346,17 +335,7 @@ class Ramped : Page
   # --- drawing -------------------------------------------------------------
 
   def draw_page()
-    var s = vacuum.state()
-    self.header.draw(self.header_text())
-    if s.sensor_ok
-      self.readout.draw(s.kpa)
-    else
-      self.readout.draw(nil)
-    end
-    self.target_label.draw()
-    self.target_value.draw(self.active_target())
-    self.status.draw(self.status_text())
-    self.hint.draw(self.hint_text())
+    self.chrome.draw(vacuum.state())
   end
 
   def header_text()
@@ -379,10 +358,7 @@ class Ramped : Page
       return "TO TARGET"
     end
     if self.phase == "work"
-      return "WORK " + self.remaining(self.work * 1000 - self.worked - (vacuum.now_ms() - self.mark))
-    end
-    if self.phase == "break"
-      return "BREAK " + self.remaining(self.break_len * 1000 - (vacuum.now_ms() - self.mark))
+      return "WORK " + self.remaining(self.work * 1000 - (vacuum.now_ms() - self.mark))
     end
     if self.phase == "rest_approach"
       return "TO REST"
@@ -391,6 +367,23 @@ class Ramped : Page
       return "REST " + self.remaining(self.rest * 1000 - (vacuum.now_ms() - self.mark))
     end
     return "PRESS OK"
+  end
+
+  # The share of the set's work still to run: full when the set starts and draining as the work
+  # clock runs. Nil outside the work phase, so the bar is only there when there is set-time to
+  # show.
+  def work_left()
+    if self.phase != "work"
+      return nil
+    end
+    if self.work <= 0
+      return 0.0
+    end
+    var left = self.work * 1000 - (vacuum.now_ms() - self.mark)
+    if left < 0
+      left = 0
+    end
+    return left * 100.0 / (self.work * 1000)
   end
 
   def hint_text()

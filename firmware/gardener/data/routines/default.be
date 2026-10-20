@@ -1,26 +1,20 @@
 # default.be — the disconnected page: the chamber's depth and the target.
 #
-# The readout is composed from components (a PressureDisplay for the big number, a FixedText +
-# PressureDisplay for the target line, a DynamicText for the header), and the gestures are
-# registered declaratively on Page.
+# The readout face is ReadoutChrome, and the gestures are registered declaratively on Page.
 
-import string
-
-class Readout : Page
+class ReadoutChrome
   var header
-  var readout
+  var pressure
   var target_label
   var target_value
 
   def init()
-    super(self).init()
-
     self.header = DynamicText()
     self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
 
-    self.readout = PressureDisplay()
-    self.readout.x = 0; self.readout.y = 12; self.readout.w = 116; self.readout.h = 24
-    self.readout.show_units = false
+    self.pressure = PressureDisplay()
+    self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
+    self.pressure.show_units = false
 
     self.target_label = FixedText()
     self.target_label.value = "TGT"
@@ -29,6 +23,26 @@ class Readout : Page
     self.target_value = PressureDisplay()
     self.target_value.x = 40; self.target_value.y = 44; self.target_value.w = 76; self.target_value.h = 8
     self.target_value.show_units = true
+  end
+
+  def draw(s)
+    self.header.draw(s.state)
+    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.target_label.draw()
+    if s.target > 0.0
+      self.target_value.draw(s.target)
+    else
+      self.target_value.draw(nil)
+    end
+  end
+end
+
+class Readout : Page
+  var chrome
+
+  def init()
+    super(self).init()
+    self.chrome = ReadoutChrome()
 
     self.on("ok", "double", / -> routines.set_active("system"))
     self.on("ok", "short",  / -> self.start())
@@ -43,19 +57,7 @@ class Readout : Page
   end
 
   def draw_page()
-    var s = vacuum.state()
-    self.header.draw(s.state)
-    if s.sensor_ok
-      self.readout.draw(s.kpa)
-    else
-      self.readout.draw(nil)
-    end
-    self.target_label.draw()
-    if s.target > 0.0
-      self.target_value.draw(s.target)
-    else
-      self.target_value.draw(nil)
-    end
+    self.chrome.draw(vacuum.state())
   end
 
   # Back is the page's one command: release the chamber. A fast double tap is classified as a

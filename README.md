@@ -424,10 +424,9 @@ Five ship. `default` is the readout; a double Up opens `browser`, the list of ro
 which walks with Up and Down and switches with OK, and a double OK or double Down opens `system`,
 the device's own settings. `static` is the cycle: pull to a target, hold it, move to a rest
 pressure, rest, and repeat. `ramped` is the ladder: a fixed number of sets rising from a start
-pressure to a final one, a rest between them, and explicit vent breaks inside a set once its target
-passes the safety cutoff. The device's own pages register hidden, so `static` and `ramped` are in
-the list. There is no fixed number of routines: the registry grows as files register, and the
-browser lists every routine boot found that did not mark itself hidden.
+pressure to a final one, with a rest between them. The device's own pages register hidden, so
+`static` and `ramped` are in the list. There is no fixed number of routines: the registry grows as
+files register, and the browser lists every routine boot found that did not mark itself hidden.
 
 `system` edits the three settings the device keeps as itself rather than as a routine's values: the
 unit the glass prints (the one write the serial link also carries), the target `default` pulls to,

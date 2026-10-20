@@ -7,37 +7,24 @@
 
 import string
 
-class Static : Page
-  var phase
-  var mark
-  var target
-  var work
-  var rest_pressure
-  var rest
-  var resume
+class StaticChrome
+  var owner
   var header
-  var readout
+  var pressure
   var target_label
   var target_value
   var status
   var hint
 
-  def init()
-    super(self).init()
-    self.phase = "ready"
-    self.mark = 0
-    self.target = 0.0
-    self.work = 30
-    self.rest_pressure = 5.0
-    self.rest = 1
-    self.resume = "immediately"
+  def init(owner)
+    self.owner = owner
 
     self.header = DynamicText()
     self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
 
-    self.readout = PressureDisplay()
-    self.readout.x = 0; self.readout.y = 12; self.readout.w = 116; self.readout.h = 24
-    self.readout.show_units = false
+    self.pressure = PressureDisplay()
+    self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
+    self.pressure.show_units = false
 
     self.target_label = FixedText()
     self.target_label.value = "TGT"
@@ -52,6 +39,38 @@ class Static : Page
 
     self.hint = DynamicText()
     self.hint.x = 0; self.hint.y = 56; self.hint.w = 116; self.hint.h = 8
+  end
+
+  def draw(s)
+    self.header.draw(self.owner.phase_name())
+    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.target_label.draw()
+    self.target_value.draw(self.owner.active_target())
+    self.status.draw(self.owner.status_text())
+    self.hint.draw(self.owner.hint_text())
+  end
+end
+
+class Static : Page
+  var phase
+  var mark
+  var target
+  var work
+  var rest_pressure
+  var rest
+  var resume
+  var chrome
+
+  def init()
+    super(self).init()
+    self.phase = "ready"
+    self.mark = 0
+    self.target = 0.0
+    self.work = 30
+    self.rest_pressure = 5.0
+    self.rest = 1
+    self.resume = "immediately"
+    self.chrome = StaticChrome(self)
 
     self.on("ok", "double", / -> self.open_settings("static"))
     self.on("ok", nil, / -> self.phase == "ready" ? self.begin() : false)
@@ -234,17 +253,7 @@ class Static : Page
   # --- drawing -------------------------------------------------------------
 
   def draw_page()
-    var s = vacuum.state()
-    self.header.draw(self.phase_name())
-    if s.sensor_ok
-      self.readout.draw(s.kpa)
-    else
-      self.readout.draw(nil)
-    end
-    self.target_label.draw()
-    self.target_value.draw(self.active_target())
-    self.status.draw(self.status_text())
-    self.hint.draw(self.hint_text())
+    self.chrome.draw(vacuum.state())
   end
 
   # The pressure the machine is working to right now: the rest hold has its own target.
