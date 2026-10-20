@@ -53,29 +53,34 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 - [x] FND-017 Verify: `python scripts/arduino.py --task build` still compiles with the
   old loop and the new scaffolding coexisting.
 
-## LOG — Shared log flag
+## LOG — Logger abstraction
 
-- [ ] LOG-001 Replace `AppContext::logEnabled_` (a per-copy `bool`) with one shared
-  `volatile bool` owned by the interface task — a small `SharedLog` struct created in
-  `buildAppContext()` and handed to the three tasks' loggers.
-- [ ] LOG-002 Update `AppContext::logEnabled()` to return the shared flag; drop the per-copy
-  reference in `StreamLogger` construction.
-- [ ] LOG-003 Update the `device set log` domain to write the shared flag (no other writer).
-- [ ] LOG-004 Give the control task its own `StreamLogger` over `Serial` for run-transition and
-  hold warnings.
-- [ ] LOG-005 Give the panel task its own `StreamLogger` over `Serial` for the VM and the
-  default-hold warning.
-- [ ] LOG-006 Confirm `StreamLogger` itself is unchanged (still takes `const bool&`); it only
-  stops being handed `AppContext`'s per-copy flag.
-- [ ] LOG-007 Add `app/Logger.h` declaring the `Logger` interface — pure-virtual `info`,
-  `warn` and `error`, plus a virtual destructor — and make `StreamLogger` derive from it and
-  override the three methods. The `Stream&` / `const bool&` constructor stays as it is.
-- [ ] LOG-008 Pass only `Logger` through the app: `App::logger_` becomes `Logger*`,
-  `Routines::begin` and `berry::install` take `Logger&`, `DisconnectedUI` takes and holds
-  `Logger&`, and those headers forward declare `Logger`. `App.cpp` keeps the one
-  `new StreamLogger(...)` and the only include of `app/StreamLogger.h`.
-- [ ] LOG-009 Verify: the `build` task (`python scripts/arduino.py --task build`) still
-  compiles, and no signature or member outside `app/StreamLogger.h` names the implementation.
+- [ ] LOG-001 Add `app/Logger.h`: the `Logger` interface — pure-virtual `info`, `warn` and
+  `error` over `const char*`, plus a virtual destructor.
+- [ ] LOG-002 Add `app/NilLogger.h`: a `Logger` whose three methods do nothing.
+- [ ] LOG-003 Make `StreamLogger` derive from `Logger`; change its constructor to
+  `StreamLogger(Stream&)` and delete the `enabled_` flag and the gate in `write()`.
+- [ ] LOG-004 Replace `StreamLogger` with `Logger` across the app: `App::logger_` becomes
+  `Logger*`, `Routines::begin`/`reportError` and `berry::install`/`gLogger` take
+  `Logger&`/`Logger*`, and `DisconnectedUI` takes and holds `Logger&`. Headers forward-declare
+  `Logger`; only the construction site includes the concrete headers.
+- [ ] LOG-005 Replace `SerialLink::diag`'s inline `[I]`/`[W]` writes with a `Logger&` handed to
+  the link; delete the `context_.logEnabled()` check.
+- [ ] LOG-006 Remove `logEnabled_` and `logEnabled()` from `AppContext`.
+- [ ] LOG-007 Add `logEnabled()` / `setLogEnabled()` to `Settings`, persisted under `[device]`
+  in `/settings.ini`, default on — the same pattern as `bluetooth`.
+- [ ] LOG-008 Choose the logger once at boot, in `App::begin()` after `settings.begin()`:
+  `settings.logEnabled() ? (Logger*)new StreamLogger(Serial) : (Logger*)new NilLogger()`, and
+  hand that one instance to the link, the UI and the routines.
+- [ ] LOG-009 Wire: `device get` reports `log=` from `settings.logEnabled()`; `device set log`
+  calls `settings.setLogEnabled(...)` and replies `ok log=<on|off>`; a change takes effect on the
+  next reboot (no live toggle).
+- [ ] LOG-010 Give the control and panel tasks a `Logger&` to the same boot-chosen instance for
+  run-transition, hold and VM logging.
+- [ ] LOG-011 Update [docs/specs/serial-protocol.md](../specs/serial-protocol.md): `log` is a
+  persisted boot preference, and `set log` applies at the next reset.
+- [ ] LOG-012 Verify: `python scripts/arduino.py --task build` compiles, and no signature or
+  member outside the construction site names `StreamLogger` / `NilLogger`.
 
 ## CTRL — Control task
 
@@ -235,7 +240,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
   now own (`link_`, `ble_`, `logger_`, `connectedUi_`, `disconnectedUi_`, `ui_`, `ownedShown_`,
   `backStopFired_`, `lastState_`, `ventStartMs_`).
 - [ ] WIRE-003 Update `App::begin()` to use the shared link/UI/logger objects from FND-012 and the
-  shared log flag from LOG-001, with the boot order unchanged.
+  boot-chosen logger from LOG-008, with the boot order unchanged.
 - [ ] WIRE-004 Confirm `gardener.ino` spawns the tasks after `app.begin()` and `loop()` is empty.
 - [ ] WIRE-005 Verify the three task bodies are the only places that call the devices, the links,
   the store bus and the UI after this epic.
@@ -260,7 +265,7 @@ Legend: `[ ]` not started · `[x]` done · `[~]` in progress. Items are not time
 - [ ] VER-003 Review the layer rule: no `hal/` → `app/` include introduced by the new files.
 - [ ] VER-004 Confirm LittleFS (`Storage`) and the `Wire1`/SH1106 device are reached from exactly
   one task each (interface and panel respectively).
-- [ ] VER-005 Confirm `logEnabled` has exactly one writer (interface) and that every task's logger
-  reads it dirty.
+- [ ] VER-005 Confirm no runtime log flag remains: every consumer holds a `Logger`, and the only
+  writer of the persisted `logEnabled` setting is the interface task (via `device set log`).
 - [ ] VER-006 Flash the sketch and confirm the serial contract over USB CDC, then a BLE
   read/write, then a routine exercising `store.*` and the `vacuum.*` bindings.
