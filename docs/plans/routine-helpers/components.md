@@ -102,13 +102,13 @@ is cached; the chosen face is not). A `nil` argument falls back to the config `v
 - config: `show_units` (bool, default true), `family`, `style`, `align`, `v_align`
 - draw args: `value` (a depth in kPa)
 
-Reads `screen.unit()` itself each `draw()` — it is a plain read-only query, and reading it fresh
-means a unit changed by the system page or a controller is picked up on the next visit with no
-activation hook. Converts the kPa to the panel's unit (`value * per_kpa`, formatted to the unit's
-`decimals`), appends the unit `suffix` when `show_units` is set, and draws the result at the
-largest face that fits the content rect. The suffix rides the same baseline and is measured
-together with the number, so the number is only ever as large as the whole line fits. A `nil`
-value draws `--`.
+A readout is composed of two text components: a number and a suffix. Reads `screen.unit()` itself
+each `draw()` — it is a plain read-only query, and reading it fresh means a unit changed by the
+system page or a controller is picked up on the next visit with no activation hook. Converts the
+kPa to the panel's unit (`value * per_kpa`, formatted to the unit's `decimals`) and draws the
+number at the largest face that fits the content rect. When `show_units` is set, the suffix is
+drawn at the smallest face in the content rect's lower-right corner and the number's box gives up
+that corner's width; the suffix is dropped when the box cannot fit both. A `nil` value draws `--`.
 
 ### `ProgressBar`
 

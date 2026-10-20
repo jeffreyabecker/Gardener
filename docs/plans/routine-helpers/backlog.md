@@ -22,7 +22,7 @@ unit. Work in this order: `Page` → components → `List` → page refactors �
 - [ ] Font resolution — family/style → ordered face list, and the largest-face-that-fits helper over `text_bounds`.
 - [ ] `FixedText` — config `value`/`family`/`style`; fit once, cache, `draw()`.
 - [ ] `DynamicText` — config `value`/`family`/`style`; `draw(value)` re-fits; `nil` → config `value`.
-- [ ] `PressureDisplay` — config `show_units`/`family`/`style`; `draw(kpa)` reads `screen.unit()` itself, converts, fits; `nil` → `--`.
+- [ ] `PressureDisplay` — config `show_units`/`family`/`style`/`align`/`v_align`; `draw(kpa)` reads `screen.unit()` itself, converts; a number text plus a lower-right suffix text, the suffix dropped when the box cannot fit both; `nil` → `--`.
 - [ ] `ProgressBar` — `draw(value)` over 0–100: frame on the border box, fill across the content rect.
 - [ ] `ProgressBubbles` — config `max_count`/`bubble_style`/`unfilled`/`fill_direction`; `draw(count)`: filled bubbles, rest outline or none; multi-line, gap to 0 then 2×2/1×1 solid squares; cache the computed layout.
 - [ ] `Scrollbar` — config `invert`; `draw(index, count, visible)`.
