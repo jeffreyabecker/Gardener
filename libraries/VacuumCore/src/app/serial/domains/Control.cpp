@@ -50,10 +50,9 @@ void ControlDomain::execute(Stream& io) {
     io.print("err bad_argument\n");
   } else if (verb == "get") {
     if (!args.isEmpty()) {
-      String reply = "err bad_argument ";
-      reply += firstToken(args);
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(firstToken(args));
+      io.print('\n');
       return;
     }
     ownedReply(io);
@@ -62,10 +61,9 @@ void ControlDomain::execute(Stream& io) {
   } else if (verb == "release") {
     release(io, args);
   } else {
-    String reply = "err unknown_verb ";
-    reply += verb;
-    reply += '\n';
-    io.print(reply);
+    io.print("err unknown_verb ");
+    io.print(verb);
+    io.print('\n');
   }
 }
 
@@ -77,10 +75,9 @@ void ControlDomain::ownedReply(Stream& io) const {
 
 void ControlDomain::acquire(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 
@@ -93,10 +90,9 @@ void ControlDomain::acquire(Stream& io, const String& args) {
 
 void ControlDomain::release(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 

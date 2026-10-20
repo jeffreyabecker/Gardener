@@ -55,10 +55,9 @@ void VacuumDomain::execute(Stream& io) {
   }
   if (verb == "get") {
     if (!args.isEmpty()) {
-      String reply = "err bad_argument ";
-      reply += firstToken(args);
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(firstToken(args));
+      io.print('\n');
       return;
     }
     get(io);
@@ -85,41 +84,39 @@ void VacuumDomain::execute(Stream& io) {
     return;
   }
 
-  String reply = "err unknown_verb ";
-  reply += verb;
-  reply += '\n';
-  io.print(reply);
+  io.print("err unknown_verb ");
+  io.print(verb);
+  io.print('\n');
 }
 
 void VacuumDomain::get(Stream& io) {
   VacuumSystem& vacuum = app_.vacuum();
-  String reply = "ok kpa=";
-  reply += String(vacuum.currentKpa(), 2u);
+  io.print("ok kpa=");
+  io.print(vacuum.currentKpa(), 2u);
 
   // A cleared target reads as unset rather than as 0.0, which is a real depth.
-  reply += " target=";
+  io.print(" target=");
   const float target = vacuum.targetKpa();
   if (target <= 0.0f) {
-    reply += '-';
+    io.print('-');
   } else {
-    reply += String(target, 1u);
+    io.print(target, 1u);
   }
 
-  reply += " floor=";
-  reply += String(cfg::CONTROL_FLOOR_KPA, 1u);
-  reply += " duty=";
-  reply += String(vacuum.pump().dutyPercent(), 1u);
-  reply += " state=";
-  reply += runStateName(vacuum.runState());
-  reply += " sensor=";
-  reply += vacuum.sensor().present() ? "1" : "0";
-  reply += " fault=";
+  io.print(" floor=");
+  io.print(cfg::CONTROL_FLOOR_KPA, 1u);
+  io.print(" duty=");
+  io.print(vacuum.pump().dutyPercent(), 1u);
+  io.print(" state=");
+  io.print(runStateName(vacuum.runState()));
+  io.print(" sensor=");
+  io.print(vacuum.sensor().present() ? "1" : "0");
+  io.print(" fault=");
   const char* fault = vacuum.faultCode();
-  reply += fault[0] ? fault : "none";
-  reply += " up=";
-  reply += String(app_.uptimeMs());
-  reply += '\n';
-  io.print(reply);
+  io.print(fault[0] ? fault : "none");
+  io.print(" up=");
+  io.print(app_.uptimeMs());
+  io.print('\n');
 }
 
 void VacuumDomain::target(Stream& io, const String& args) {
@@ -133,10 +130,9 @@ void VacuumDomain::target(Stream& io, const String& args) {
   String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
   extra.trim();
   if (!extra.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(extra);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(extra));
+    io.print('\n');
     return;
   }
 
@@ -149,36 +145,32 @@ void VacuumDomain::target(Stream& io, const String& args) {
 
   float kpa = 0.0f;
   if (!parseFloat(token.c_str(), kpa)) {
-    String reply = "err bad_argument ";
-    reply += token;
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(token);
+    io.print('\n');
     return;
   }
   if (kpa < cfg::CONTROL_MIN_TARGET_KPA) {
-    String reply = "err out_of_range field=target value=";
-    reply += token;
-    reply += " min=";
-    reply += String(cfg::CONTROL_MIN_TARGET_KPA, 1u);
-    reply += '\n';
-    io.print(reply);
+    io.print("err out_of_range field=target value=");
+    io.print(token);
+    io.print(" min=");
+    io.print(cfg::CONTROL_MIN_TARGET_KPA, 1u);
+    io.print('\n');
     return;
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
   xQueueSend(machineCommandQueue, &set, 0);
-  String reply = "ok target=";
-  reply += String(kpa, 1u);
-  reply += '\n';
-  io.print(reply);
+  io.print("ok target=");
+  io.print(kpa, 1u);
+  io.print('\n');
 }
 
 void VacuumDomain::start(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 
@@ -186,10 +178,9 @@ void VacuumDomain::start(Stream& io, const String& args) {
   // a dirty read; a would-succeed start is queued and the reply is optimistic.
   const char* refusal = app_.vacuum().startRefusal();
   if (refusal != nullptr) {
-    String reply = "err not_ready ";
-    reply += refusal;
-    reply += '\n';
-    io.print(reply);
+    io.print("err not_ready ");
+    io.print(refusal);
+    io.print('\n');
     return;
   }
   const MachineCommand start{MachineCommand::Op::Start};
@@ -199,10 +190,9 @@ void VacuumDomain::start(Stream& io, const String& args) {
 
 void VacuumDomain::stop(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 
@@ -213,10 +203,9 @@ void VacuumDomain::stop(Stream& io, const String& args) {
 
 void VacuumDomain::reset(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 

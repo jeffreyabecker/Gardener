@@ -36,14 +36,13 @@ bool SerialLink::consumeLinkLost() {
 // stream it is handed.
 
 void SerialLink::linkError(const char* code, const String& detail) {
-  String line = "err ";
-  line += code;
+  stream_.print("err ");
+  stream_.print(code);
   if (!detail.isEmpty()) {
-    line += ' ';
-    line += detail;
+    stream_.print(' ');
+    stream_.print(detail);
   }
-  stream_.print(line);
-  stream_.write('\n');
+  stream_.print('\n');
 }
 
 // --- bytes -----------------------------------------------------------------

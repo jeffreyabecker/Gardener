@@ -60,34 +60,30 @@ String parentOf(const String& path) {
 }
 
 void replyBadArgument(Stream& io, const String& token) {
-  String reply = "err bad_argument";
+  io.print("err bad_argument");
   if (!token.isEmpty()) {
-    reply += ' ';
-    reply += token;
+    io.print(' ');
+    io.print(token);
   }
-  reply += '\n';
-  io.print(reply);
+  io.print('\n');
 }
 
 void replyNotReady(Stream& io, const char* reason) {
-  String reply = "err not_ready ";
-  reply += reason;
-  reply += '\n';
-  io.print(reply);
+  io.print("err not_ready ");
+  io.print(reason);
+  io.print('\n');
 }
 
 void replyNotFound(Stream& io, const String& path) {
-  String reply = "err not_found ";
-  reply += path;
-  reply += '\n';
-  io.print(reply);
+  io.print("err not_found ");
+  io.print(path);
+  io.print('\n');
 }
 
 void replyUnsupported(Stream& io, const String& path) {
-  String reply = "err unsupported path=";
-  reply += path;
-  reply += " reason=reserved\n";
-  io.print(reply);
+  io.print("err unsupported path=");
+  io.print(path);
+  io.print(" reason=reserved\n");
 }
 
 // Exactly one argument, or the first one at fault is left in `bad`.
@@ -152,10 +148,9 @@ void FsDomain::execute(Stream& io) {
   } else if (verb == "delete") {
     if (requireControl(app_, io)) remove(io, rest);
   } else {
-    String reply = "err unknown_verb ";
-    reply += verb;
-    reply += '\n';
-    io.print(reply);
+    io.print("err unknown_verb ");
+    io.print(verb);
+    io.print('\n');
   }
 }
 
@@ -228,10 +223,9 @@ void FsDomain::read(Stream& io, const String& args) {
     return;
   }
 
-  String header = "ok bytes=";
-  header += String((uint32_t)bytes);
-  header += '\n';
-  io.print(header);
+  io.print("ok bytes=");
+  io.print((uint32_t)bytes);
+  io.print('\n');
 
   uint8_t buffer[kCopyChunk];
   while (true) {
@@ -268,12 +262,11 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
   if (bytes > cfg::FS_WRITE_MAX_BYTES) {
-    String reply = "err out_of_range field=bytes value=";
-    reply += bytesText;
-    reply += " max=";
-    reply += String((uint32_t)cfg::FS_WRITE_MAX_BYTES);
-    reply += '\n';
-    io.print(reply);
+    io.print("err out_of_range field=bytes value=");
+    io.print(bytesText);
+    io.print(" max=");
+    io.print((uint32_t)cfg::FS_WRITE_MAX_BYTES);
+    io.print('\n');
     return;
   }
 

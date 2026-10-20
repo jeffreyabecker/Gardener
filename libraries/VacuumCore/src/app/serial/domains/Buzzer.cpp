@@ -60,36 +60,33 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "stop") {
     if (requireControl(app_, io)) stop(io, args);
   } else {
-    String reply = "err unknown_verb ";
-    reply += verb;
-    reply += '\n';
-    io.print(reply);
+    io.print("err unknown_verb ");
+    io.print(verb);
+    io.print('\n');
   }
 }
 
 void BuzzerDomain::get(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 
   BuzzerPlayer& buzzer = app_.buzzer();
-  String reply = "ok tone=";
+  io.print("ok tone=");
   if (!buzzer.sounding()) {
-    reply += '-';
+    io.print('-');
   } else {
     // The same compact `hz,ms` a tone reply has always used: the frequency now and what is left.
-    reply += String((uint32_t)buzzer.frequencyHz());
-    reply += ',';
-    reply += String(buzzer.remainingMs(millis()));
+    io.print(buzzer.frequencyHz());
+    io.print(',');
+    io.print(buzzer.remainingMs(millis()));
   }
-  reply += " playing=";
-  reply += buzzer.playing() ? "on" : "off";
-  reply += '\n';
-  io.print(reply);
+  io.print(" playing=");
+  io.print(buzzer.playing() ? "on" : "off");
+  io.print('\n');
 }
 
 void BuzzerDomain::tone(Stream& io, const String& args) {
@@ -111,10 +108,9 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     extra.trim();
   }
   if (!extra.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(extra);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(extra));
+    io.print('\n');
     return;
   }
 
@@ -125,41 +121,37 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
   if (!parseFloat(hzText.c_str(), hz)) {
-    String reply = "err bad_argument ";
-    reply += hzText;
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(hzText);
+    io.print('\n');
     return;
   }
   if (!parseU32(msText.c_str(), ms)) {
-    String reply = "err bad_argument ";
-    reply += msText;
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(msText);
+    io.print('\n');
     return;
   }
 
   if (hz < cfg::BUZZER_MIN_HZ || hz > cfg::BUZZER_MAX_HZ) {
-    String reply = "err out_of_range field=tone value=";
-    reply += hzText;
-    reply += " min=";
-    reply += String(cfg::BUZZER_MIN_HZ, 1u);
-    reply += " max=";
-    reply += String(cfg::BUZZER_MAX_HZ, 1u);
-    reply += '\n';
-    io.print(reply);
+    io.print("err out_of_range field=tone value=");
+    io.print(hzText);
+    io.print(" min=");
+    io.print(cfg::BUZZER_MIN_HZ, 1u);
+    io.print(" max=");
+    io.print(cfg::BUZZER_MAX_HZ, 1u);
+    io.print('\n');
     return;
   }
 
   const MachineCommand tone{MachineCommand::Op::Tone, hz, ms};
   xQueueSend(machineCommandQueue, &tone, 0);
 
-  String reply = "ok tone=";
-  reply += String((uint32_t)hz);
-  reply += ',';
-  reply += String(ms);
-  reply += '\n';
-  io.print(reply);
+  io.print("ok tone=");
+  io.print((uint32_t)hz);
+  io.print(',');
+  io.print(ms);
+  io.print('\n');
 }
 
 void BuzzerDomain::play(Stream& io, const String& args) {
@@ -172,13 +164,12 @@ void BuzzerDomain::play(Stream& io, const String& args) {
   // reply, then sent raw — the control task parses it again inside play().
   const char* badToken = nullptr;
   if (!BuzzerPlayer::validate(args.c_str(), &badToken)) {
-    String reply = "err bad_argument";
+    io.print("err bad_argument");
     if (badToken && *badToken) {
-      reply += ' ';
-      reply += badToken;
+      io.print(' ');
+      io.print(badToken);
     }
-    reply += '\n';
-    io.print(reply);
+    io.print('\n');
     return;
   }
 
@@ -190,10 +181,9 @@ void BuzzerDomain::play(Stream& io, const String& args) {
 
 void BuzzerDomain::stop(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 

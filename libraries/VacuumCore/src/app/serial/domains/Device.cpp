@@ -60,10 +60,9 @@ void DeviceDomain::execute(Stream& io) {
   }
   if (verb.equalsIgnoreCase("get")) {
     if (!args.isEmpty()) {
-      String reply = "err bad_argument ";
-      reply += firstToken(args);
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(firstToken(args));
+      io.print('\n');
       return;
     }
     get(io);
@@ -80,48 +79,46 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
 
-  String reply = "err unknown_verb ";
-  reply += verb;
-  reply += '\n';
-  io.print(reply);
+  io.print("err unknown_verb ");
+  io.print(verb);
+  io.print('\n');
 }
 
 void DeviceDomain::get(Stream& io) {
-  String reply = "ok proto=";
-  reply += String(cfg::PROTOCOL_VERSION);
-  reply += " fw=";
-  reply += cfg::FIRMWARE_VERSION;
-  reply += " chip=";
-  reply += ESP.getChipModel();
-  reply += " heap=";
-  reply += String((uint32_t)ESP.getFreeHeap());
+  io.print("ok proto=");
+  io.print(cfg::PROTOCOL_VERSION);
+  io.print(" fw=");
+  io.print(cfg::FIRMWARE_VERSION);
+  io.print(" chip=");
+  io.print(ESP.getChipModel());
+  io.print(" heap=");
+  io.print((uint32_t)ESP.getFreeHeap());
 
   // Both battery fields report `-` together, and only the gauge knows whether there is one.
-  reply += " batt_v=";
+  io.print(" batt_v=");
   if (app_.battery().present()) {
-    reply += String(app_.battery().volts(), 2u);
+    io.print(app_.battery().volts(), 2u);
   } else {
-    reply += '-';
+    io.print('-');
   }
-  reply += " batt_pct=";
+  io.print(" batt_pct=");
   if (app_.battery().present()) {
-    reply += String(app_.battery().percent());
+    io.print(app_.battery().percent());
   } else {
-    reply += '-';
+    io.print('-');
   }
 
-  reply += " log=";
-  reply += app_.settings().logEnabled() ? "on" : "off";
+  io.print(" log=");
+  io.print(app_.settings().logEnabled() ? "on" : "off");
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
-  reply += " unit=";
-  reply += displayUnitInfo(app_.settings().unit()).name;
+  io.print(" unit=");
+  io.print(displayUnitInfo(app_.settings().unit()).name);
   // `widthxheight` in pixels, one field because it is one fact about the panel.
-  reply += " display-size=";
-  reply += String(app_.display().width());
-  reply += 'x';
-  reply += String(app_.display().height());
-  reply += '\n';
-  io.print(reply);
+  io.print(" display-size=");
+  io.print(app_.display().width());
+  io.print('x');
+  io.print(app_.display().height());
+  io.print('\n');
 }
 
 void DeviceDomain::set(Stream& io, const String& args) {
@@ -152,66 +149,58 @@ void DeviceDomain::set(Stream& io, const String& args) {
   if (field.equalsIgnoreCase("log")) {
     bool enabled = false;
     if (!parseFlag(value.c_str(), enabled)) {
-      String reply = "err bad_argument ";
-      reply += value;
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
       return;
     }
     // Refused before it is applied: a command is all or nothing.
     if (!extra.isEmpty()) {
-      String reply = "err bad_argument ";
-      reply += firstToken(extra);
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
       return;
     }
     app_.settings().setLogEnabled(enabled);
 
-    String reply = "ok log=";
-    reply += enabled ? "on" : "off";
-    reply += '\n';
-    io.print(reply);
+    io.print("ok log=");
+    io.print(enabled ? "on" : "off");
+    io.print('\n');
     return;
   }
 
   if (field.equalsIgnoreCase("unit")) {
     DisplayUnit unit = DisplayUnit::Kpa;
     if (!parseDisplayUnit(value.c_str(), unit)) {
-      String reply = "err bad_argument ";
-      reply += value;
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
       return;
     }
     if (!extra.isEmpty()) {
-      String reply = "err bad_argument ";
-      reply += firstToken(extra);
-      reply += '\n';
-      io.print(reply);
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
       return;
     }
     app_.settings().setUnit(unit);
 
-    String reply = "ok unit=";
-    reply += displayUnitInfo(unit).name;
-    reply += '\n';
-    io.print(reply);
+    io.print("ok unit=");
+    io.print(displayUnitInfo(unit).name);
+    io.print('\n');
     return;
   }
 
-  String reply = "err bad_argument ";
-  reply += field;
-  reply += '\n';
-  io.print(reply);
+  io.print("err bad_argument ");
+  io.print(field);
+  io.print('\n');
 }
 
 void DeviceDomain::reboot(Stream& io, const String& args) {
   if (!args.isEmpty()) {
-    String reply = "err bad_argument ";
-    reply += firstToken(args);
-    reply += '\n';
-    io.print(reply);
+    io.print("err bad_argument ");
+    io.print(firstToken(args));
+    io.print('\n');
     return;
   }
 
