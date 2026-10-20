@@ -6,7 +6,8 @@ follows on top of them.
 
 This file is the contract for **any** page. What a particular page does with a press — its own
 shortcuts, what OK starts on it, which presses it ignores — belongs in that page's own `.be` file.
-The routine API is in [routines.md](./routines.md); this file is the UX rule above it.
+The routine API is in [routine.md](./ui/routine.md) and [bindings.md](./ui/bindings.md); this file
+is the UX rule above them.
 
 ## How a press is recognised
 

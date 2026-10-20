@@ -442,7 +442,8 @@ since the last call, as a pull queue), `buzzer` (a timed tone, a note sequence, 
 across a power cycle, or another registered routine's by name).
 
 The full surface — every call, what it returns, the fields of each record, and what the overlay
-draws over a page — is in [docs/specs/routines.md](./docs/specs/routines.md).
+draws over a page — is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md); the routine
+lifecycle and rules in [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
 
 Presses go to the active routine and are not logged while it runs. The reserved holds are the
 exception: Back is the device's stop and fires whatever the routine registered, OK is the page's way
