@@ -28,7 +28,8 @@ class Browser : Page
 
   def activate()
     # Read again every time the page appears: the registry is fixed after boot, but a page that
-    # draws a list should not trust the list it drew last time either.
+    # draws a list should not trust the list it drew last time either. Hidden routines are already
+    # left out, so what lands here is the routines a person can pick.
     self.names = routines.names()
     self.list.set(self.rows())
     self.editor = nil
@@ -72,5 +73,5 @@ class Browser : Page
   end
 end
 
-routines.register("browser", "Routines", Browser())
+routines.register("browser", "Routines", Browser(), true)
 return Browser

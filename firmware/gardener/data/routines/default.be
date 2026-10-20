@@ -89,5 +89,5 @@ class Readout : Page
   end
 end
 
-routines.register("default", "Pressure readout", Readout())
+routines.register("default", "Pressure readout", Readout(), true)
 return Readout

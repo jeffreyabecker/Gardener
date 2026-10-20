@@ -408,13 +408,16 @@ return Readout
 
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark instead. A routine that raises is dropped — the error is logged and the mark comes
-back — and a routine that registers without `activate()` or `poll()` is refused at load.
+back — and a routine that registers without `activate()` or `poll()` is refused at load. A fourth
+argument to `routines.register` marks a routine **hidden**: it is registered and can be switched to,
+but it is left out of `routines.names()` and so is not one of the entries the browser draws.
 
-Four ship. `default` is the readout; a double Up opens `browser`, the list of everything
-registered, which walks with Up and Down and switches with OK, and a double OK or double Down opens
-`system`, the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest at
-a second pressure, and repeat. There is no fixed number of routines: the registry grows as files
-register, and the browser lists whatever boot found.
+Four ship. `default` is the readout; a double Up opens `browser`, the list of routines to pick,
+which walks with Up and Down and switches with OK, and a double OK or double Down opens `system`,
+the device's own settings. `static` is the cycle: pull to a target, hold it, vent, rest at a second
+pressure, and repeat. The device's own pages register hidden, so only `static` is in the list. There
+is no fixed number of routines: the registry grows as files register, and the browser lists every
+routine boot found that did not mark itself hidden.
 
 `system` edits the three settings the device keeps as itself rather than as a routine's values: the
 unit the glass prints (the one write the serial link also carries), the target `default` pulls to,

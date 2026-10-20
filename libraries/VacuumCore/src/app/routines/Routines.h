@@ -58,10 +58,14 @@ class Routines {
   // --- the `routines` module's surface, called from the bindings ---
   // `objectIndex` is the routine object's stack position in the calling native function; the
   // runtime takes its own reference, so the value does not have to stay where it is.
-  bool registerRoutine(const char* name, const char* title, int objectIndex);
+  bool registerRoutine(const char* name, const char* title, int objectIndex, bool hidden = false);
   bool setActive(const char* name);
   size_t count() const { return entries_.size(); }
   const char* nameAt(size_t index) const;
+
+  // A hidden routine is registered and can be switched to, but is left out of the list a browser
+  // draws: the device's own pages are reached by gesture rather than picked from that list.
+  bool hiddenAt(size_t index) const;
 
   // The registered object, pushed onto the VM stack, and whether it has a method of that name. A
   // page that calls the object itself stays in its own Berry frame; the runtime does not re-enter
@@ -98,6 +102,7 @@ class Routines {
   struct Entry {
     String name;
     String title;
+    bool hidden = false;
   };
 
   struct PressEvent {

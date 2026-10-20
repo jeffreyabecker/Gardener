@@ -158,7 +158,7 @@ void Routines::reportError(const char* file, const char* what) {
 
 // --- the registry ----------------------------------------------------------
 
-bool Routines::registerRoutine(const char* name, const char* title, int objectIndex) {
+bool Routines::registerRoutine(const char* name, const char* title, int objectIndex, bool hidden) {
   if (name == nullptr || title == nullptr || name[0] == '\0') return false;
 
   // The name is also the file the routine's values are kept in, so it has to be a plain word
@@ -200,6 +200,7 @@ bool Routines::registerRoutine(const char* name, const char* title, int objectIn
 
   entries_[slot].name = name;
   entries_[slot].title = title;
+  entries_[slot].hidden = hidden;
 
   char key[16];
   globalKey(key, sizeof key, (size_t)slot);
@@ -266,6 +267,10 @@ void Routines::applyPending() {
 
 const char* Routines::nameAt(size_t index) const {
   return index < entries_.size() ? entries_[index].name.c_str() : "";
+}
+
+bool Routines::hiddenAt(size_t index) const {
+  return index < entries_.size() && entries_[index].hidden;
 }
 
 bool Routines::pushObject(const char* name) const {

@@ -7,10 +7,14 @@ namespace berry {
 namespace {
 
 int routinesRegister(bvm* vm) {
-  if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isinstance(vm, 3)) {
-    be_raise(vm, "type_error", "routines.register(name, title, routine)");
+  const int top = be_top(vm);
+  if (top < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isinstance(vm, 3)) {
+    be_raise(vm, "type_error", "routines.register(name, title, routine, hidden)");
   }
-  const bool ok = gRoutines->registerRoutine(argText(vm, 1), argText(vm, 2), 3);
+  // The fourth argument is optional and defaults to false: a routine only leaves the browser's
+  // list when its file says so.
+  const bool hidden = top >= 4 && be_tobool(vm, 4);
+  const bool ok = gRoutines->registerRoutine(argText(vm, 1), argText(vm, 2), 3, hidden);
   be_pushbool(vm, ok);
   be_return(vm);
 }
@@ -24,9 +28,11 @@ int routinesSetActive(bvm* vm) {
 int routinesNames(bvm* vm) {
   // A list a routine can ask the size of and index, which means an instance of the `list` class: the
   // entries go into the class's own backing list and that is dropped, exactly as for a record.
+  // Hidden routines are left out: this is the browser's list.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
   for (size_t i = 0; i < gRoutines->count(); i++) {
+    if (gRoutines->hiddenAt(i)) continue;
     be_pushstring(vm, gRoutines->nameAt(i));
     be_data_push(vm, list);
     be_pop(vm, 1);

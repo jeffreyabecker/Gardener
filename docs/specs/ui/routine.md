@@ -37,6 +37,12 @@ anything else is refused at load with the missing method named; the other files 
 An optional `describe()` gives the settings editor a list of values to edit (see below). A routine
 without one simply has no settings.
 
+A routine can register itself **hidden** with the fourth argument, for example
+`routines.register("mypage", "My page", MyPage(), true)`. It is registered and can be switched to
+like any other, but it is left out of `routines.names()`, which is the list the routine browser
+draws. The device's own pages — `default`, `browser` and `system` — register hidden: they are
+reached by gesture, not picked from the list.
+
 The routine registered as **`default`** is the page. If no file registers one, the panel shows the
 device's mark and nothing runs.
 

@@ -273,9 +273,9 @@ the whole sequence malformed and `play` returns false.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, routine)` | `bool` | bind a routine to a name and a title. Called from a file's top level |
+| `routines.register(name, title, routine, hidden)` | `bool` | bind a routine to a name and a title. Called from a file's top level; `hidden` is optional and defaults to `false` |
 | `routines.set_active(name)` | `bool` | switch pages. Called from inside a `poll` it applies when that call returns, so the VM is never re-entered |
-| `routines.names()` | list of strings | every registered name, in registration order |
+| `routines.names()` | list of strings | every registered name that is not hidden, in registration order |
 | `routines.get(name)` | the routine object, or `nil` | the registered instance, so a page can call a method such as `describe()` in its own frame |
 | `routines.has(name, method)` | `bool` | whether that routine has a function of that name |
 
@@ -283,8 +283,9 @@ Registering the same name twice is one routine: the later file wins, and the rep
 
 There is no fixed number of routines: the registry grows as files register. What bounds it is the
 heap the files are loaded into, not a table, so a boot that runs out of memory while loading aborts
-and says so rather than dropping the file quietly. A name keeps the position it registered in, which
-is what `routines.names()` reports and what a page can use as an index.
+and says so rather than dropping the file quietly. A name keeps the position it registered in; the
+routine browser draws `routines.names()`, so a hidden routine is still registered and can still be
+switched to, but is not one of the names that list reports.
 
 `routines.get()` and `routines.has()` look through the same registry. The shared settings editor
 uses them to call another page's `describe()` without the firmware re-entering the interpreter from

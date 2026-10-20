@@ -205,5 +205,5 @@ class System : Page
   end
 end
 
-routines.register("system", "System settings", System())
+routines.register("system", "System settings", System(), true)
 return System
