@@ -5,7 +5,7 @@ for a timer, then vents it — driven over a serial line or Bluetooth by a contr
 end.
 
 * **MCU**: ESP32-S3 (developed against an ESP32-S3 Super Mini)
-* **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md)), and a Bluetooth LE GATT table ([docs/plans/ble-control.md](./docs/plans/ble-control.md))
+* **Interface**: USB CDC, one line oriented protocol ([docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md)), and a Bluetooth LE GATT table
 * **Pressure sensor**: CFSensor XGZP6847A100KPGN33 (-100–0 kPa gauge, 0.2–2.7 V analog)
 * **Pump**: JQB2438 DC vacuum pump through a low side MOSFET, ~60 kPa of suction
 * **Vent valve**: solenoid on a low side MOSFET — normally open by default, normally closed supported
@@ -48,7 +48,6 @@ boots.
 | [scripts/arduino.ps1](./scripts/arduino.ps1) | Build, upload, data upload, monitor and library install wrapper |
 | [scripts/asset.ps1](./scripts/asset.ps1) | Converts a BMP into an RLE image for the panel |
 | [docs/specs/](./docs/specs) | The contracts: serial protocol, gestures, assets and routines |
-| [docs/plans/](./docs/plans) | Proposals and design records; they leave when implemented or dropped |
 | [docs/guides/](./docs/guides) | The parts list and build guide |
 
 ### Architecture
@@ -59,8 +58,10 @@ core/   shared foundations: the constants the firmware owns — the board's pin 
 hal/    what the instrument needs from its hardware: an abstract class per part — Display,
         PressureSensor, Pump, VentValve, Battery, ButtonPanel, Buzzer. The parts themselves are in
         hal/impl/, which is the only place a vendor library is included
-app/    the instrument: the vacuum system that commands them, the build function that owns the
-        parts, the application loop, the display overlay, the serial interface and the radio
+app/    the instrument: the application loop, the vacuum system that commands them, the build
+        function that owns the parts, and the ownership record. The folders beside them are the
+        things that hang off it: panel/, what it draws on the glass; storage/, what it remembers;
+        routines/, the Berry runtime behind the idle page; serial/ and ble/, the two transports
 ```
 
 Dependencies only ever point downwards. Nothing checks it — keep it that way by reading:
@@ -371,8 +372,7 @@ bluetooth=on
 
 So `device set unit mmhg` survives `device reboot` and a power cycle. `target` is the depth in kPa
 the `default` page hands the machine when it becomes visible; the `system` page writes it.
-`bluetooth` is the stored preference for the BLE transport in
-[docs/plans/ble-control.md](./docs/plans/ble-control.md): `off` leaves the radio silent. It is read
+`bluetooth` is the stored preference for the BLE transport: `off` leaves the radio silent. It is read
 once at boot, so a change takes effect on the next `device reboot`. Keys the firmware does not know
 are carried through a write rather than dropped; comments and spacing are not kept.
 
@@ -526,7 +526,7 @@ kPa: `unit` says what the panel prints, not what the numbers mean.
 The writable characteristics require an encrypted link, and the device pairs Just Works and keeps
 the bond in NVS. Reads stay open, so a scanner can watch without pairing but nothing can command
 the machine until it does. `kpa` and `duty` are notified at 5 Hz; `batt` every 10 s; the rest on
-change. The whole contract is [docs/plans/ble-control.md](./docs/plans/ble-control.md).
+change.
 
 ## Vacuum control model
 
@@ -610,9 +610,8 @@ the vacuum. Do not expect the fail-safe to survive that swap.
   while the interface is in churn — it is in git at commit `85f3cbb` if it is wanted back.
 * The line grammar is the whole serial interface, so anything that can carry newline terminated
   text — another microcontroller, a bridge, a terminal — can drive the device as it stands. The
-  Bluetooth surface in [docs/plans/ble-control.md](./docs/plans/ble-control.md) is the second one,
-  deliberately different: GATT characteristics rather than lines, because a BLE client is not a
-  terminal.
+  Bluetooth surface is the second one, deliberately different: GATT characteristics rather than
+  lines, because a BLE client is not a terminal.
 
 ## Status
 

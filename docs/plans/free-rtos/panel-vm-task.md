@@ -6,7 +6,7 @@ to core 0 at the lowest priority, so a slow routine can stall the panel but neve
 wire. The display is private to this task — nothing else draws.
 
 This is the file with the most rework, because the VM currently mutates `VacuumSystem` and `Settings`
-directly ([Bindings.cpp](libraries/VacuumCore/src/app/disconnected-ui/Bindings.cpp)). Those calls
+directly ([Bindings.cpp](libraries/VacuumCore/src/app/routines/Bindings.cpp)). Those calls
 become queue sends; reads stay dirty; drawing stays put.
 
 ## Page selection and drawing

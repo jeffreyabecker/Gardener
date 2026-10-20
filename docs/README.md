@@ -17,7 +17,6 @@ to stand on its own, and plans may reference specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [BLE control](./plans/ble-control.md) — the implemented BLE GATT contract: characteristics, rates, safety, concurrency, and the bench checklist still to run
-- [Source layout](./plans/source-layout.md) — the proposed folders under `app/`, and the rule for where the next file goes
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Guides

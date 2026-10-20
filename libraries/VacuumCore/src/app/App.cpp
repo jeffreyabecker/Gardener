@@ -3,9 +3,9 @@
 #include <Wire.h>
 #include <stdlib.h>
 
-#include "app/Asset.h"
 #include "app/Ownership.h"
 #include "app/SafeReboot.h"
+#include "app/panel/Asset.h"
 #include "core/Config.h"
 #include "core/Units.h"
 

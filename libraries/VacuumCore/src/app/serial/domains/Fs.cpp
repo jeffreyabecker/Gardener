@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 #include "app/AppContext.h"
-#include "app/Storage.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
+#include "app/storage/Storage.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 

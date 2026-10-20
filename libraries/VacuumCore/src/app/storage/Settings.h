@@ -1,7 +1,7 @@
 #pragma once
 
-#include "app/Ini.h"
-#include "app/Storage.h"
+#include "app/storage/Ini.h"
+#include "app/storage/Storage.h"
 #include "core/Units.h"
 
 namespace gardener {

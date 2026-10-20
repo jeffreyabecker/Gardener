@@ -3,10 +3,10 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
-#include "app/ConnectedUI.h"
-#include "app/DisconnectedUI.h"
 #include "app/StreamLogger.h"
 #include "app/ble/BleLink.h"
+#include "app/panel/ConnectedUI.h"
+#include "app/panel/DisconnectedUI.h"
 #include "app/serial/SerialLink.h"
 
 // The application loop: boot, the service order, the run log and the screen. It knows only the

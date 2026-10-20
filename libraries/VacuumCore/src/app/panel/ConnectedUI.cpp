@@ -1,4 +1,4 @@
-#include "app/ConnectedUI.h"
+#include "app/panel/ConnectedUI.h"
 
 #include "app/Ownership.h"
 #include "core/Config.h"

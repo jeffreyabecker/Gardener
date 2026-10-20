@@ -4,9 +4,9 @@
 
 #include "app/AppContext.h"
 #include "app/SafeReboot.h"
-#include "app/Settings.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
+#include "app/storage/Settings.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 #include "core/Units.h"

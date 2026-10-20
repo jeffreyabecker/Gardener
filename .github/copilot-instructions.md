@@ -117,8 +117,8 @@ implemented or dropped, and a contract that depends on one rots with it. Write t
 the spec or guide itself.
 
 A plan may reference a spec, because a proposal depends on the contract it changes. The reverse is
-never right. [docs/README.md](../docs/README.md) is the one index of plans, and the project README
-may point at a proposal from its roadmap; a spec or guide should not.
+never right. [docs/README.md](../docs/README.md) is the one index of plans; specs, guides and the
+project README do not link to one.
 
 ## Where to look
 

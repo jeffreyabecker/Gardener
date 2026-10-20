@@ -1,13 +1,13 @@
-#include "app/disconnected-ui/Bindings.h"
+#include "app/routines/Bindings.h"
 
 #include <berry.h>
 #include <stdio.h>
 
 #include "app/AppContext.h"
-#include "app/Fonts.h"
 #include "app/StreamLogger.h"
 #include "app/VacuumSystem.h"
-#include "app/disconnected-ui/Routines.h"
+#include "app/panel/Fonts.h"
+#include "app/routines/Routines.h"
 #include "core/Config.h"
 #include "core/Units.h"
 

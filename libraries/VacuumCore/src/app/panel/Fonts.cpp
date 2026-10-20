@@ -1,4 +1,4 @@
-#include "app/Fonts.h"
+#include "app/panel/Fonts.h"
 
 #include <Fonts/FreeMono12pt7b.h>
 #include <Fonts/FreeMono18pt7b.h>

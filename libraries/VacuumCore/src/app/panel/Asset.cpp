@@ -1,9 +1,9 @@
-#include "app/Asset.h"
+#include "app/panel/Asset.h"
 
 #include <RLEBitmap.h>
 #include <string.h>
 
-#include "app/Storage.h"
+#include "app/storage/Storage.h"
 #include "hal/Display.h"
 
 namespace gardener {

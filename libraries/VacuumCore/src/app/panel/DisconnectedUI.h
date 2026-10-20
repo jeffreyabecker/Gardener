@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "app/UI.h"
+#include "app/panel/UI.h"
 
 namespace gardener {
 

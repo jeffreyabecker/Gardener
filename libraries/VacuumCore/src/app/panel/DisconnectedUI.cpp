@@ -1,9 +1,9 @@
-#include "app/DisconnectedUI.h"
+#include "app/panel/DisconnectedUI.h"
 
-#include "app/Asset.h"
 #include "app/StreamLogger.h"
 #include "app/VacuumSystem.h"
-#include "app/disconnected-ui/Routines.h"
+#include "app/panel/Asset.h"
+#include "app/routines/Routines.h"
 #include "core/Config.h"
 
 namespace gardener {

@@ -1,13 +1,13 @@
-#include "app/disconnected-ui/Routines.h"
+#include "app/routines/Routines.h"
 
 #include <berry.h>
 #include <stdio.h>
 
 #include "app/AppContext.h"
-#include "app/Ini.h"
-#include "app/Storage.h"
 #include "app/StreamLogger.h"
-#include "app/disconnected-ui/Bindings.h"
+#include "app/routines/Bindings.h"
+#include "app/storage/Ini.h"
+#include "app/storage/Storage.h"
 
 namespace gardener {
 namespace {
