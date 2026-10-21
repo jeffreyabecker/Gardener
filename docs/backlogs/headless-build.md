@@ -65,7 +65,7 @@ links serve it.
   present.
 - [x] 2.5 Record the changed `device` surface in [serial-protocol.md](../specs/serial-protocol.md).
 - [x] 2.6 Record the `caps` characteristic in [bluetooth.md](../specs/bluetooth.md).
-- [ ] 2.7 Verify `device get` and the BLE `caps` characteristic report the same value.
+- [x] 2.7 Verify `device get` and the BLE `caps` characteristic report the same value.
 
 ## Epic 3 — The machine's seams
 
