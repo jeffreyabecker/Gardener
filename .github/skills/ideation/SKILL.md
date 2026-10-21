@@ -1,6 +1,6 @@
 ---
 name: ideation
-description: 'Ideation documents in docs/ideas/: open exploration of a possibility before it has earned a requirement — the options, the trade-offs, and the constraint that set each aside. An idea document is not a plan, and it is deleted once a plan or a spec carries what it established. Use when brainstorming a direction, writing up or reviewing an idea, or deciding whether what you have is an idea, a plan or a parking-lot line.'
+description: 'Ideation documents in docs/ideas/: open exploration of a possibility before it has earned a requirement — the options, the trade-offs, and the constraint that set each aside. An idea document is not a plan, and it is deleted once a plan or a spec carries what it established. Use when brainstorming a direction, writing up or reviewing an idea, or deciding whether what you have is an idea, a plan, a backlog or a parking-lot line.'
 ---
 
 # Ideation
@@ -9,7 +9,7 @@ description: 'Ideation documents in docs/ideas/: open exploration of a possibili
 
 - A direction needs weighing before anyone commits to it
 - Writing, extending or deleting a document in `docs/ideas/`
-- Deciding whether what you have is an idea, a plan or a parking-lot line
+- Deciding whether what you have is an idea, a plan, a backlog or a parking-lot line
 - Reviewing an idea document
 
 ## What an ideation document is
@@ -25,15 +25,20 @@ has usually turned into a plan without being called one.
 
 ## What it is not
 
-| | An ideation document | A plan | A parking-lot line |
+| | An ideation document | A plan | A backlog |
 | --- | --- | --- | --- |
-| Holds | options and trade-offs | a requirement: what has to be true | a sentence naming a deferred idea |
-| Commits to | nothing | the change it proposes | nothing |
+| Holds | options and trade-offs | a requirement: what has to be true | an ordered tasklist for decided work |
+| Commits to | nothing | the change it proposes | the steps it lists |
 | Leaves by | deletion | deletion | deletion |
 
 **A plan is a requirement, not a design.** Once the question is settled, write the requirement into
 a plan — or straight into a spec if it is small enough. An idea document that starts collecting
 acceptance criteria, steps or a file list has become a plan; stop and write the plan.
+
+**A backlog is a tasklist, not a decision.** It breaks decided work into ordered steps, so an idea
+does not turn into one directly: the requirement lands in a plan or a spec first, and the backlog
+breaks that down. An idea document that starts listing tasks has skipped the step where the work was
+decided.
 
 **A parking-lot entry is a note, not a plan.** An idea small enough to state in a sentence does not
 earn a document: put that sentence and what is blocking it in `docs/plans/parking-lot.md` and stop
@@ -66,13 +71,13 @@ the work.
 ## Nothing references an idea document
 
 An idea document disappears the moment a plan or spec carries it, so a link, a filename or a
-section number in a spec, a guide, a code comment, a script header or the project README becomes a
-dangling pointer. Specs and guides stand alone, and code comments say what is true rather than what
-was once considered — a plan written from an idea states its own requirement and does not cite the
-idea.
+section number in a spec, a guide, a backlog, a code comment, a script header or the project README
+becomes a dangling pointer. Specs and guides stand alone, and code comments say what is true rather
+than what was once considered — a plan written from an idea states its own requirement and does not
+cite the idea.
 
 An idea may reference a spec or a guide, because those outlive it. The reverse never happens.
 
-The one place an idea is named is `docs/README.md`, which indexes ideas beside specs, plans and
-guides while they exist. Add the entry when the document is created, and remove it when the
-document is deleted.
+The one place an idea is named is `docs/README.md`, which indexes ideas beside specs, plans,
+backlogs and guides while they exist. Add the entry when the document is created, and remove it when
+the document is deleted.

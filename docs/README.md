@@ -14,9 +14,10 @@ The contracts the firmware and its tools must satisfy.
 
 ## Plans
 
-Proposals, design records and deferred work. A plan is not a commitment: it leaves when it is
-implemented or dropped. Specs, guides and the project README never link to a plan — a contract has
-to stand on its own, and plans may reference specs.
+Proposals: what has to be true when the work is done. A plan is not a commitment — it leaves when it
+is implemented or dropped, and its requirement is carried into a spec. Specs, guides, backlogs and
+the project README never link to a plan; a contract has to stand on its own, and plans may reference
+specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
@@ -26,7 +27,13 @@ to stand on its own, and plans may reference specs.
 A direction being weighed before it has earned a requirement: the options, what each would cost and
 the constraint that set each aside. An idea document commits to nothing, may end in "no", and is
 deleted once a plan or a spec carries what it established. Its only entry point is this index —
-specs, guides, code and the project README never link to one.
+specs, guides, backlogs, code and the project README never link to one.
+
+## Backlogs
+
+A fine-grained tasklist for work that has been decided: ordered, checkable items that each leave the
+tree working. A backlog breaks work down rather than choosing or designing it, and it is deleted when
+its last item lands.
 
 ## Guides
 

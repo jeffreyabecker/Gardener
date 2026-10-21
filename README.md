@@ -31,7 +31,7 @@ than a sketchbook copy.
 
 ## Documentation
 
-- [docs/README.md](./docs/README.md) — the index: specs, guides, plans and ideas
+- [docs/README.md](./docs/README.md) — the index: specs, guides, plans, ideas and backlogs
 - [docs/guides/poc-parts.md](./docs/guides/poc-parts.md) — the parts, the wiring and a build
 - [docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md) — the line the device serves
 - [docs/specs/vacuum-control.md](./docs/specs/vacuum-control.md) — the machine and its protections
