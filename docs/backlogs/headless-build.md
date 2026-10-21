@@ -1,12 +1,12 @@
 # Backlog — the machine without the panel
 
 The machine and the panel split into two libraries with a one-way dependency: `VacuumCore` keeps the
-vacuum system and its parts, the ownership record, the loggers, the command queue, the control and
-interface tasks, and the two links; a new `GardenerPanel` keeps the display, the keys, the buzzer,
-the interpreter, the storage and settings, and the panel task. The panel reads and commands the
-machine only through the surface a controller uses. Storage, settings and the buzzer are panel; the
-machine's knobs — radio, diagnostics, battery gauge — are configuration the composition root hands
-it.
+vacuum system and its parts, the ownership stack, the loggers, the command queue, the control and
+interface tasks, and the serial and Bluetooth links; a new `GardenerPanel` keeps the display, the
+keys, the buzzer, the battery, the interpreter, the storage and settings, and the panel task. The
+panel is itself a link: it reads and commands the machine only through the surface a controller
+uses. Storage, settings, the buzzer and the battery are panel; the machine's knobs — radio,
+diagnostics — are configuration the composition root hands it.
 
 Both links become pluggable. The serial link already speaks through domains; the BLE link gains the
 same idea, so each link's surface is whatever the build registers. The machine registers its own
@@ -15,9 +15,11 @@ its own — `fs`, `buzzer`, the BLE `unit` field, and the `device` `unit`/`log` 
 record, composed at build time and served identically by both links, tells a host which assemblies
 are fitted and how the device stops itself.
 
-The settled safety rule: a machine with no panel may hold pressure only while a controller owns it,
-and losing the owner releases the chamber and returns the device to unowned. The full device keeps
-its Back hold and its present semantics.
+The settled safety rule is ownership, everywhere: the machine holds pressure only while the link on
+top has it running, and any change of the top — a claim, a release or a drop — vents the chamber. A
+panel-less build's stack is `None` alone, so an unowned machine is always vented; the full device
+pushes the panel above `None`, so the panel is the default controller and the device's own stop is
+the panel releasing.
 
 The epics are worked in order, and every task leaves the tree building. Check a task off as it
 lands; the unticked tasks are what remains.
@@ -92,7 +94,33 @@ behaves identically after the epic.
   provides.
 - [x] 3.11 Verify the full device boots and behaves identically after the seams land.
 
-## Epic 4 — The library split
+## Epic 4 — The control stack
+
+The one-owner record with its stale flag becomes a stack of links. `None` sits at the bottom and
+vents; a panel build pushes the panel above it at boot, so the panel is the default controller;
+serial and Bluetooth push themselves when they claim and are removed when they release or drop.
+Whoever is on top drives, and any change of the top — a claim, a release or a drop — vents the
+chamber. The buttons leave the control task for the panel: the two holds become panel gestures —
+Back releases control, Back+OK is the reboot the wire already serves.
+
+- [ ] 4.1 Add `Panel` to the `Link` enum, beside `None`, `Serial` and `Bluetooth`.
+- [ ] 4.2 Replace `Ownership`'s single owner and stale flag with a stack: `None` at the bottom,
+  `acquire` pushes and always succeeds, `release` and `drop` remove, and the top is the owner. The
+  `busy` reply and the stale flag go with it.
+- [ ] 4.3 Vent the chamber whenever the top changes — a claim, a release or a drop — so a new
+  controller always starts from an open chamber.
+- [ ] 4.4 Push the panel at boot in a panel build, so it is the default controller beneath every
+  external link.
+- [ ] 4.5 Report the top as the owner: `control get` and the BLE `control` characteristic answer
+  serial, bluetooth, panel or none.
+- [ ] 4.6 Move the press classifier from the control beat to the panel beat, so the control task
+  reads no keys.
+- [ ] 4.7 Make the two holds panel gestures — Back releases control, Back+OK issues `device reboot` —
+  and remove the installable stop slot and the safety reader.
+- [ ] 4.8 Verify the full device holds and releases through the stack, and that a vanished serial or
+  BLE owner vents the chamber.
+
+## Epic 5 — The library split
 
 The one `AppContext` graph becomes two: a machine context and a panel context. The split has to
 come first — arduino-cli compiles each library against only its own `src/`, so the panel files
@@ -103,107 +131,101 @@ which depends on `VacuumCore`.
 
 ### Phase A — split the context
 
-- [x] 4.1 Create the empty `GardenerPanel` shell — `library.properties` with `depends=VacuumCore` —
+- [x] 5.1 Create the empty `GardenerPanel` shell — `library.properties` with `depends=VacuumCore` —
   so the destination exists before anything moves.
-- [ ] 4.2 Split `AppContext` into a machine context (sensor, pump, vent, battery, vacuum,
-  ownership, capabilities, config) and a panel context (buttons, display, buzzer, overlay,
-  routines, storage, settings, store bus ends).
-- [ ] 4.3 Re-route the machine's code onto the machine context — `App`, `Tasks`, `SerialLink` and
+- [ ] 5.2 Split `AppContext` into a machine context (sensor, pump, vent, vacuum, ownership,
+  capabilities, config) and a panel context (buttons, display, buzzer, battery, overlay, routines,
+  storage, settings, store bus ends).
+- [ ] 5.3 Re-route the machine's code onto the machine context — `App`, `Tasks`, `SerialLink` and
   its machine domains, `MachineBleDomain`, the control and interface task bodies — so nothing in
   the machine names a panel part.
-- [ ] 4.4 Re-route the panel's code onto the panel context plus the machine context it reads —
-  `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, the panel task, the
-  safety reader and the buzzer tick.
-- [ ] 4.5 Move the store server drain onto an installable interface-beat service, the way the stop
-  source and the buzzer tick are installed, so the interface task names no store part.
-- [ ] 4.6 Put the press classifier and the two holds into one panel-side button reader the panel
-  composition owns — still running on the control beat, because the button driver is
-  single-consumer.
-- [ ] 4.7 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`batt`/`caps`,
+- [ ] 5.4 Re-route the panel's code onto the panel context plus the machine context it reads —
+  `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, the panel task and the
+  buzzer tick.
+- [ ] 5.5 Move the store server drain onto an installable interface-beat service, the way the
+  buzzer tick is installed, so the interface task names no store part.
+- [ ] 5.6 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`batt`/`caps`,
   and the panel registers the `unit`/`log` fields.
-- [ ] 4.8 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
+- [ ] 5.7 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
   machine's.
-- [ ] 4.9 Register the BLE `unit` domain from the panel composition instead of the machine's.
-- [ ] 4.10 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
+- [ ] 5.8 Register the BLE `unit` domain from the panel composition instead of the machine's.
+- [ ] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
   settings, the VM, the panel and its registrations; the full build's composition calls both in
   order.
-- [ ] 4.11 Make the machine's task spawn start only the control and interface tasks; the panel
+- [ ] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
   starts the panel task from its own boot.
-- [ ] 4.12 Remove `Tone`, `Play` and `Off` from the machine command queue and route the VM's
+- [ ] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue and route the VM's
   `buzzer` and `jingles` bindings to the panel's buzzer.
-- [ ] 4.13 Verify the full device boots and behaves identically after the split, with the panel
+- [ ] 5.12 Verify the full device boots and behaves identically after the split, with the panel
   code still in `VacuumCore`.
 
 ### Phase B — move the panel into `GardenerPanel`
 
-- [ ] 4.14 Move the panel's HAL parts and their impls — buttons, display, buzzer.
-- [ ] 4.15 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI`.
-- [ ] 4.16 Move `Fonts` and `Asset`.
-- [ ] 4.17 Move `Routines` and the eight bindings.
-- [ ] 4.18 Move the jingles and `BuzzerPlayer`.
-- [ ] 4.19 Move `Ini`, `Settings` and `Storage`.
-- [ ] 4.20 Move the store bus.
-- [ ] 4.21 Move the panel task, the press queue, the button reader and the panel composition root.
-- [ ] 4.22 Move the panel's serial domains (`fs`, `buzzer`) and the BLE `unit` domain.
-- [ ] 4.23 Write the panel's composition root and boot in `GardenerPanel`: build the machine root,
-  compose the panel onto it, register its domains, and install the stop source and the buzzer tick.
-- [ ] 4.24 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
+- [ ] 5.13 Move the panel's HAL parts and their impls — buttons, display, buzzer.
+- [ ] 5.14 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI`.
+- [ ] 5.15 Move `Fonts` and `Asset`.
+- [ ] 5.16 Move `Routines` and the eight bindings.
+- [ ] 5.17 Move the jingles and `BuzzerPlayer`.
+- [ ] 5.18 Move `Ini`, `Settings` and `Storage`.
+- [ ] 5.19 Move the store bus.
+- [ ] 5.20 Move the panel task, the press queue, the button reader and the panel composition root.
+- [ ] 5.21 Move the panel's serial domains (`fs`, `buzzer`) and the BLE `unit` domain.
+- [ ] 5.22 Write the panel's composition root and boot in `GardenerPanel`: build the machine root,
+  compose the panel onto it, register its domains, and install the buzzer tick.
+- [ ] 5.23 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
   and NimBLE.
 
-## Epic 5 — The headless build
+## Epic 6 — The headless build
 
-The machine-alone sketch ships the machine with no panel, and its safety is ownership: it cannot
-pressurize while unowned, and it releases when its owner leaves.
+The machine-alone sketch ships the machine with no panel. Its stack is `None` alone, so the safety
+Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents. What remains
+is the second build itself.
 
-- [ ] 5.1 Add the machine-alone sketch with a composition root for the parts, the ownership record,
-  the two links and the capability — no panel.
-- [ ] 5.2 Let the machine-alone composition leave the battery gauge out for a wired-only unit.
-- [ ] 5.3 Compose the machine-alone capability: no panel, battery by build, ownership-stop posture.
-- [ ] 5.4 Register only the machine's domains in the machine-alone link composition — no `fs`, no
+- [ ] 6.1 Add the machine-alone sketch with a composition root for the pressure loop, the ownership
+  stack, the serial and Bluetooth links and the capability — no panel, so nothing pushes itself
+  above `None`.
+- [ ] 6.2 Compose the machine-alone capability: no panel, no battery, ownership stop.
+- [ ] 6.3 Register only the machine's domains in the machine-alone link composition — no `fs`, no
   `buzzer`, no `unit`.
-- [ ] 5.5 Gate pressurization on ownership in the headless build: refuse to raise or hold pressure
-  while no live controller owns the device.
-- [ ] 5.6 Release the chamber and clear the record when the owning link drops, returning the device
-  to unowned and acquirable.
-- [ ] 5.7 Ship no data image for the machine-alone build.
-- [ ] 5.8 Teach [arduino.py](../../scripts/arduino.py) to build, upload and monitor the second sketch
+- [ ] 6.4 Ship no data image for the machine-alone build.
+- [ ] 6.5 Teach [arduino.py](../../scripts/arduino.py) to build, upload and monitor the second sketch
   and skip its data task.
-- [ ] 5.9 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
+- [ ] 6.6 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
   Adafruit drivers.
 
-## Epic 6 — The contract
+## Epic 7 — The contract
 
-The specs record what the firmware now does: the composed wire surface, the capability, and the
-headless safety rule.
+The specs record what the firmware now does: the stack, the composed wire surface, and the safety
+rule every build shares.
 
-- [ ] 6.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
-  domains and the `unit`/`log` fields exist only where the panel does.
-- [ ] 6.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v`/`batt_pct` are
-  answered by the battery capability.
-- [ ] 6.3 Record in [serial-protocol.md](../specs/serial-protocol.md) that a panel-less device
-  requires ownership to pressurize.
-- [ ] 6.4 Record in [bluetooth.md](../specs/bluetooth.md) that the `unit` field exists only where
-  the panel does and `batt` follows the battery capability.
-- [ ] 6.5 Record in [bluetooth.md](../specs/bluetooth.md) that a panel-less device refuses to
-  pressurize while unowned.
-- [ ] 6.6 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
-  holds pressure only while owned and releases the chamber when its owner leaves.
-- [ ] 6.7 Record in [gestures.md](../specs/gestures.md) that a build without keys has no device
-  gestures, and its stop is ownership.
-- [ ] 6.8 Record in [README.md](../../README.md) that the device ships in two builds and what each
+- [ ] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
+  serial, bluetooth, panel or none — the top of the stack — and that `acquire` always succeeds, with
+  no `busy` reply.
+- [ ] 7.2 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
+  serial, bluetooth, panel or none, and that the `unit` and `batt` fields exist only where the panel
+  does.
+- [ ] 7.3 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
+  domains and the `unit`/`log` fields exist only where the panel does, and that `batt_v`/`batt_pct`
+  are answered by the panel's battery.
+- [ ] 7.4 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
+  the top of the stack changes — a claim, a release or a drop — and that a machine without a panel
+  holds pressure only while owned.
+- [ ] 7.5 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is the
+  reboot, and that a build without keys has no gestures, its stop being ownership.
+- [ ] 7.6 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
 
-## Epic 7 — Verification
+## Epic 8 — Verification
 
-- [ ] 7.1 Build and flash the full device; verify its serial and BLE surfaces are unchanged.
-- [ ] 7.2 Verify the full device's settings editor, routines and jingles still work after the
-  library move.
-- [ ] 7.3 Build the machine-alone device; verify `device get` reports `caps` and no `display-size`,
-  `fs`, `buzzer` or `unit`, and the BLE `caps` characteristic agrees.
-- [ ] 7.4 Verify a machine-alone device refuses to pressurize while unowned.
-- [ ] 7.5 Verify a machine-alone device releases the chamber when the owning link drops mid-run.
-- [ ] 7.6 Verify a wired-only unit reports no battery and omits `batt_v`/`batt_pct` and the BLE
-  `batt`.
-- [ ] 7.7 Verify `VacuumCore` builds and links without `GardenerPanel`.
-- [ ] 7.8 Measure the machine-alone image size and record it in the parking lot's firmware-size
+- [ ] 8.1 Build and flash the full device; verify the serial and BLE surfaces match the contract,
+  including the ownership report naming the owner.
+- [ ] 8.2 Verify the full device's settings editor, routines and jingles still work, and that the
+  panel is the default controller with Back releasing and Back+OK rebooting.
+- [ ] 8.3 Verify the chamber vents on claim, release and drop on the full device.
+- [ ] 8.4 Build the machine-alone device; verify `device get` reports `caps` and no `display-size`,
+  `fs`, `buzzer`, `unit` or `batt`, and the BLE `caps` characteristic agrees.
+- [ ] 8.5 Verify a machine-alone device refuses to pressurize while unowned and vents when the
+  owning link drops mid-run.
+- [ ] 8.6 Verify `VacuumCore` builds and links without `GardenerPanel`.
+- [ ] 8.7 Measure the machine-alone image size and record it in the parking lot's firmware-size
   section ([parking-lot.md](../plans/parking-lot.md)).
