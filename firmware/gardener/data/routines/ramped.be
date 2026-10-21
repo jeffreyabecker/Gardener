@@ -463,16 +463,22 @@ class Ramped : Page
   end
 end
 
-# The browser's row glyph: the ramp, a rising line over its baseline, on the same 12 by 8 field
-# and the same y + 1 to y + 6 band as the square wave, so the two read as a pair in the list.
+# The browser's row glyph: the stairs, three treads climbing by two risers, on the same 12 by 8
+# field and the same y + 1 to y + 6 band as the square wave, so the two read as a pair in the list.
 class RampedIcon : Icon
   def init()
     super(self).init(12, 8)
   end
 
   def draw(x, y)
-    screen.draw_line(x, y + 6, x + 11, y + 6)
-    screen.draw_line(x, y + 6, x + 11, y + 1)
+    var low = y + 6
+    var mid = y + 4
+    var high = y + 1
+    screen.draw_line(x, low, x + 4, low)
+    screen.draw_line(x + 4, low, x + 4, mid)
+    screen.draw_line(x + 4, mid, x + 8, mid)
+    screen.draw_line(x + 8, mid, x + 8, high)
+    screen.draw_line(x + 8, high, x + 11, high)
   end
 end
 
