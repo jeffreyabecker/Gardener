@@ -70,13 +70,17 @@ MachineBoot machineBoot(MachineContext& context, Logger& logger) {
       break;
   }
 
+  // The machine owns everything from here: the control task drives the
+  // pressure loop, the interface task answers the links.
+  spawnMachineTasks(context, logger, link, ble);
   return {link, ble};
 }
 
 // The panel's side of bring-up. It registers the panel's domains on the machine's links, brings the
-// panel up — the display first, which is fatal when it does not answer — and starts the interpreter.
-PanelBoot panelBoot(PanelContext& context, Logger& logger, const MachineBoot& machine,
-                    Storage::Mount mount) {
+// panel up — the display first, which is fatal when it does not answer — and starts the
+// interpreter, then the panel task.
+void panelBoot(PanelContext& context, Logger& logger, const MachineBoot& machine,
+               Storage::Mount mount) {
   // The panel's own surface on the machine's links: the panel half of `device`, the files and the
   // buzzer on serial, the battery and unit fields on BLE.
   machine.serial->registerDomain(createDeviceDomain(context));
@@ -148,7 +152,8 @@ PanelBoot panelBoot(PanelContext& context, Logger& logger, const MachineBoot& ma
   vm += String((uint32_t)ESP.getFreeHeap());
   logger.info(vm.c_str());
 
-  return {connected, disconnected};
+  // The panel and the VM run on the panel task from here.
+  spawnPanelTask(context, logger, connected, disconnected);
 }
 
 bool App::begin() {
@@ -169,15 +174,11 @@ bool App::begin() {
   // The machine first, then the panel — the panel's boot registers on the links the machine's boot
   // built. App is the full build, so the panel always follows.
   MachineBoot machine = machineBoot(context_.machine(), *logger);
-  PanelBoot panel = panelBoot(context_.panel(), *logger, machine, mount);
+  panelBoot(context_.panel(), *logger, machine, mount);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
   logger->info(ready.c_str());
-
-  // The tasks own everything from here: the machine on the control task, the wire on the
-  // interface task, the panel and the VM on the panel task.
-  spawnTasks(context_, *logger, machine.serial, machine.ble, panel.connected, panel.disconnected);
   return true;
 }
 

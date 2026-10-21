@@ -155,7 +155,7 @@ which depends on `VacuumCore`.
 - [x] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
   settings, the VM, the panel and its registrations; the full build's composition calls both in
   order.
-- [ ] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
+- [x] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
   starts the panel task from its own boot.
 - [x] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue, and route the `buzzer`
   serial domain and the VM's `buzzer` and `jingles` bindings to the panel's buzzer directly.

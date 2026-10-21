@@ -5,12 +5,13 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
-#include "app/AppContext.h"
 #include "hal/Button.h"
 
 namespace gardener {
 
 class Logger;
+class MachineContext;
+class PanelContext;
 class ConnectedUI;
 class DisconnectedUI;
 class SerialLink;
@@ -48,10 +49,12 @@ void controlTask(void* arg);
 void interfaceTask(void* arg);
 void panelTask(void* arg);
 
-// Creates the queues and spawns the three tasks, pinned to their cores. Called from App::begin()
-// once boot is done, with the objects each task owns: the interface task takes the links, the
-// panel task takes the two screens.
-void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
-                ConnectedUI* connected, DisconnectedUI* disconnected);
+// The machine's boot spawns the control and interface tasks, pinned to their cores; the command
+// queue is created here, before either task reads it.
+void spawnMachineTasks(MachineContext& context, Logger& logger, SerialLink* link, BleLink* ble);
+
+// The panel's boot spawns the panel task, with the two screens it owns.
+void spawnPanelTask(PanelContext& context, Logger& logger, ConnectedUI* connected,
+                    DisconnectedUI* disconnected);
 
 }  // namespace gardener

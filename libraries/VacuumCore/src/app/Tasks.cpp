@@ -1,6 +1,5 @@
 #include "app/Tasks.h"
 
-#include "app/AppContext.h"
 #include "app/Logger.h"
 #include "app/MachineContext.h"
 #include "app/Ownership.h"
@@ -318,18 +317,22 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
-                ConnectedUI* connected, DisconnectedUI* disconnected) {
+void spawnMachineTasks(MachineContext& context, Logger& logger, SerialLink* link, BleLink* ble) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
-  static ControlState control{context.machine(), &logger};
-  static InterfaceState interface{context.machine(), &logger, link, ble};
-  static PanelState panel{context.panel(), &logger, connected, disconnected};
+  static ControlState control{context, &logger};
+  static InterfaceState interface{context, &logger, link, ble};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);
   xTaskCreatePinnedToCore(interfaceTask, "interface", InterfaceStackWords, &interface,
                           InterfacePriority, nullptr, InterfaceCore);
+}
+
+void spawnPanelTask(PanelContext& context, Logger& logger, ConnectedUI* connected,
+                    DisconnectedUI* disconnected) {
+  static PanelState panel{context, &logger, connected, disconnected};
+
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,
                           PanelCore);
 }
