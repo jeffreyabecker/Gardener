@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/panel/Fonts.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"

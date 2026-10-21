@@ -1,6 +1,6 @@
 ---
 name: plans
-description: 'Plans in docs/plans/: a proposal that states a requirement — what has to be true — rather than a design, and is deleted once implemented or dropped so nothing may reference it. Also covers the parking lot in docs/plans/parking-lot.md. Use when writing, reviewing or retiring a plan, adding a parking-lot entry, or naming a plan anywhere.'
+description: 'Plans in docs/plans/: a proposal that states a requirement — what has to be true — rather than a design, and is deleted once implemented or dropped, together with any backlog that breaks it down. Also covers the parking lot in docs/plans/parking-lot.md. Use when writing, reviewing or retiring a plan, adding a parking-lot entry, or naming a plan anywhere.'
 ---
 
 # Plans
@@ -23,18 +23,25 @@ A plan that dictates a task, a lock, a queue or a watchdog has answered a questi
 the code. A plan that lists the steps has become a backlog. State the requirement and let the design
 happen where the code is.
 
+A backlog may break the plan into tasks and name it. That is the only document a plan is referenced
+from, because the two leave together.
+
 ## Leaving
 
 A plan leaves when it is implemented or dropped: delete it, and carry what it established into the
 spec. Do not check it off, do not mark it done, and do not keep it as a record — git has it, and a
 plan that stays after its work lands is a second, staler copy of the requirement.
 
-## Nothing references a plan
+A plan that a backlog breaks down is not done until that backlog is. When the backlog's last item
+lands both are deleted, and deleting the plan at any point deletes any backlog that breaks it down.
+
+## Only a backlog references a plan
 
 A plan is deleted the moment it is implemented or dropped, so any reference to one — a link, a
 section number, a filename in prose — becomes a dangling pointer as soon as the plan's work lands.
 That holds everywhere, not just in `docs/specs/` and `docs/guides/`: the project README, a code
-comment, a script header, a test fixture.
+comment, a script header, a test fixture. The one exception is the backlog that breaks the plan
+down, because the two are deleted together.
 
 Cite the plan when you are writing or arguing for it. Once the decision is real, write the
 requirement where it will live and let the plan go.

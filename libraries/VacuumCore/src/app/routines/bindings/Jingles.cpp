@@ -2,10 +2,9 @@
 
 #include <vector>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/BuzzerPlayer.h"
 #include "app/Logger.h"
-#include "app/Tasks.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"
 #include "app/storage/Storage.h"
@@ -178,17 +177,15 @@ int jinglesCurrent(bvm* vm) {
   be_return(vm);
 }
 
-// The finish jingle a routine sounds: the selected one, queued for the control task the way
-// buzzer.play() queues it. False when the library is empty, so the sequence did not start.
+// The finish jingle a routine sounds: the selected one, played directly on the panel's buzzer.
+// False when the library is empty, so the sequence did not start.
 int jinglesPlayCurrent(bvm* vm) {
   const Jingle* jingle = currentJingle();
   if (jingle == nullptr) {
     be_pushbool(vm, false);
     be_return(vm);
   }
-  MachineCommand play{MachineCommand::Op::Play};
-  play.text = jingle->notes;
-  xQueueSend(machineCommandQueue, &play, 0);
+  gContext->buzzer().play(jingle->notes.c_str());
   be_pushbool(vm, true);
   be_return(vm);
 }

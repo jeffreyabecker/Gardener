@@ -13,7 +13,7 @@ constexpr int16_t kIconCentreY = 35;
 
 }  // namespace
 
-ConnectedUI::ConnectedUI(AppContext context) : UserInterface(context) {}
+ConnectedUI::ConnectedUI(PanelContext context) : UserInterface(context) {}
 
 // Taking control shows the icon straight away: the page is the statement that someone is driving,
 // and it should not arrive behind a splash.
@@ -38,7 +38,7 @@ void ConnectedUI::update() {
 void ConnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  switch (context_.ownership().owner()) {
+  switch (context_.machine().ownership().owner()) {
     case Link::Serial:
       serialIcon();
       break;

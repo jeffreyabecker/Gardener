@@ -2,13 +2,14 @@
 
 namespace gardener {
 
-class AppContext;
+class MachineContext;
+class PanelContext;
 class Domain;
 
-Domain* createControlDomain(AppContext& app);
-Domain* createDeviceDomain(AppContext& app);
-Domain* createVacuumDomain(AppContext& app);
-Domain* createBuzzerDomain(AppContext& app);
-Domain* createFsDomain(AppContext& app);
+Domain* createControlDomain(MachineContext& app);
+Domain* createDeviceDomain(PanelContext& app);
+Domain* createVacuumDomain(MachineContext& app);
+Domain* createBuzzerDomain(PanelContext& app);
+Domain* createFsDomain(PanelContext& app);
 
 }  // namespace gardener

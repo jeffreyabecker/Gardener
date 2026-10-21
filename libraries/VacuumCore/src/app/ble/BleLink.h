@@ -2,7 +2,7 @@
 
 #include <NimBLEDevice.h>
 
-#include "app/AppContext.h"
+#include "app/MachineContext.h"
 #include "app/ble/BleDomain.h"
 
 namespace gardener {
@@ -29,7 +29,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   // device with the preference off stays silent.
   enum class Start : uint8_t { Disabled, Advertising, Failed };
 
-  explicit BleLink(AppContext* context) : app_(context) {}
+  explicit BleLink(MachineContext* context) : app_(context) {}
 
   // The surface is whatever the build registers: the machine brings its
   // fields, and a panel build brings its own.
@@ -66,7 +66,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   // The global index of a characteristic, or -1 when it is not ours.
   int find(const NimBLECharacteristic* characteristic) const;
 
-  AppContext* app_;
+  MachineContext* app_;
   NimBLEServer* server_ = nullptr;
   BleDomain* domains_[kMaxDomains] = {};
   uint8_t domainCount_ = 0;

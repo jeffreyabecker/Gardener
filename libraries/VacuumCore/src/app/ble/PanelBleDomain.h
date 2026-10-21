@@ -4,13 +4,13 @@
 
 namespace gardener {
 
-class AppContext;
+class PanelContext;
 
-// The panel's slice of the GATT table: the `unit` characteristic, which says
-// what the panel prints and has no meaning on a device without one.
+// The panel's slice of the GATT table: `unit` — what the panel prints — and `batt` — the gauge.
+// Both have no meaning on a device without a panel.
 class PanelBleDomain : public BleDomain {
  public:
-  explicit PanelBleDomain(AppContext* app);
+  explicit PanelBleDomain(PanelContext* app);
 
   uint8_t specCount() const override;
   Spec specAt(uint8_t index) const override;
@@ -20,13 +20,18 @@ class PanelBleDomain : public BleDomain {
   void poll(uint32_t nowMs, BleLink& link, bool baseline) override;
 
  private:
-  AppContext* app_;
-  NimBLECharacteristic* unit_ = nullptr;
+  enum : uint8_t { Unit, Batt, Count };
+
+  static const Spec kSpecs[Count];
+
+  PanelContext* app_;
+  NimBLECharacteristic* characteristics_[Count] = {};
   struct PendingByte {
     volatile bool has = false;
     volatile uint8_t value = 0;
   };
   PendingByte unitWrite_;
+  uint32_t lastBattMs_ = 0;
 };
 
 }  // namespace gardener

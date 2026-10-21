@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "app/AppContext.h"
+#include "app/MachineContext.h"
 #include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
@@ -20,7 +20,7 @@ String firstToken(const String& args) {
 
 class VacuumDomain : public Domain {
  public:
-  explicit VacuumDomain(AppContext& app) : app_(app) {}
+  explicit VacuumDomain(MachineContext& app) : app_(app) {}
 
   const char* name() const override { return "vacuum"; }
   void execute(Stream& io) override;
@@ -32,7 +32,7 @@ class VacuumDomain : public Domain {
   void stop(Stream& io, const String& args);
   void reset(Stream& io, const String& args);
 
-  AppContext& app_;
+  MachineContext& app_;
 };
 
 void VacuumDomain::execute(Stream& io) {
@@ -216,6 +216,6 @@ void VacuumDomain::reset(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createVacuumDomain(AppContext& app) { return new VacuumDomain(app); }
+Domain* createVacuumDomain(MachineContext& app) { return new VacuumDomain(app); }
 
 }  // namespace gardener

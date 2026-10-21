@@ -4,7 +4,7 @@
 
 namespace gardener {
 
-class AppContext;
+class PanelContext;
 class Routines;
 class Logger;
 class StoreClient;
@@ -13,7 +13,7 @@ namespace berry {
 
 // One VM and one app, so the native callbacks -- plain C functions with no user data -- reach their
 // owners through these. install() is the only writer.
-extern AppContext* gContext;
+extern PanelContext* gContext;
 extern Routines* gRoutines;
 extern Logger* gLogger;
 extern StoreClient* gStore;

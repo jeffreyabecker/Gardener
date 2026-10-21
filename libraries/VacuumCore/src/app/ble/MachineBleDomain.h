@@ -4,15 +4,15 @@
 
 namespace gardener {
 
-class AppContext;
+class MachineContext;
 
 // The machine's slice of the GATT table: state, kpa, target, duty, fault,
-// batt, command, fw, ble_proto, control, sensor and floor. Everything a
-// controller commands and reads about the machine itself, before the panel
-// adds anything of its own.
+// command, fw, ble_proto, control, sensor and floor. Everything a controller
+// commands and reads about the machine itself, before the panel adds anything
+// of its own.
 class MachineBleDomain : public BleDomain {
  public:
-  explicit MachineBleDomain(AppContext* app);
+  explicit MachineBleDomain(MachineContext* app);
 
   uint8_t specCount() const override;
   Spec specAt(uint8_t index) const override;
@@ -28,7 +28,6 @@ class MachineBleDomain : public BleDomain {
     Target,
     Duty,
     Fault,
-    Batt,
     Command,
     Firmware,
     Protocol,
@@ -48,7 +47,7 @@ class MachineBleDomain : public BleDomain {
   void publishOnChange(uint8_t index, uint8_t value, uint8_t& last, bool force, BleLink& link);
   void publishOnChange(uint8_t index, float value, float& last, bool force, BleLink& link);
 
-  AppContext* app_;
+  MachineContext* app_;
   NimBLECharacteristic* characteristics_[Count] = {};
 
   // The write slots, one per writable characteristic. Written on core 0, read
@@ -74,7 +73,6 @@ class MachineBleDomain : public BleDomain {
   float lastFloor_ = 0.0f;
   uint8_t lastControl_ = 0;
   uint32_t lastFastMs_ = 0;
-  uint32_t lastBattMs_ = 0;
 };
 
 }  // namespace gardener

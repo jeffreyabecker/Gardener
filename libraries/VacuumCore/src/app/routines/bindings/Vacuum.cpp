@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/Logger.h"
 #include "app/Tasks.h"
 #include "app/VacuumSystem.h"
@@ -41,7 +41,7 @@ int vacuumClamp(bvm* vm) {
 }
 
 int vacuumStart(bvm* vm) {
-  if (gContext->vacuum().startRefusal() != nullptr) {
+  if (gContext->machine().vacuum().startRefusal() != nullptr) {
     be_pushbool(vm, false);
     be_return(vm);
   }
@@ -64,7 +64,7 @@ int vacuumReset(bvm* vm) {
 }
 
 int vacuumState(bvm* vm) {
-  VacuumSystem& system = gContext->vacuum();
+  VacuumSystem& system = gContext->machine().vacuum();
   const Battery& battery = gContext->battery();
   const int record = beginRecord(vm, "reading");
   if (record < 0) be_return_nil(vm);

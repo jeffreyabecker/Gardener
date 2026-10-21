@@ -2,13 +2,13 @@
 
 #include <Arduino.h>
 
-#include "app/AppContext.h"
+#include "app/MachineContext.h"
 #include "app/VacuumSystem.h"
 #include "core/Config.h"
 
 namespace gardener {
 
-void safeReboot(AppContext& context) {
+void safeReboot(MachineContext& context) {
   VacuumSystem& vacuum = context.vacuum();
   vacuum.stop();
 

@@ -1,5 +1,5 @@
 #include "app/BuzzerPlayer.h"
-#include "app/Tasks.h"
+#include "app/PanelContext.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"
 #include "core/Config.h"
@@ -18,14 +18,12 @@ int buzzerTone(bvm* vm) {
   float hz = (float)argReal(vm, 1);
   const bint duration = argInt(vm, 2);
   if (hz <= 0.0f || duration < 0) {
-    const MachineCommand off{MachineCommand::Op::Off};
-    xQueueSend(machineCommandQueue, &off, 0);
+    gContext->buzzer().off();
     be_return_nil(vm);
   }
   if (hz < cfg::BUZZER_MIN_HZ) hz = cfg::BUZZER_MIN_HZ;
   if (hz > cfg::BUZZER_MAX_HZ) hz = cfg::BUZZER_MAX_HZ;
-  const MachineCommand tone{MachineCommand::Op::Tone, hz, (uint32_t)duration};
-  xQueueSend(machineCommandQueue, &tone, 0);
+  gContext->buzzer().tone((uint16_t)hz, (uint32_t)duration);
   be_return_nil(vm);
 }
 
@@ -36,17 +34,14 @@ int buzzerPlay(bvm* vm) {
   const char* sequence = argText(vm, 1);
   const bool ok = BuzzerPlayer::validate(sequence);
   if (ok) {
-    MachineCommand play{MachineCommand::Op::Play};
-    play.text = sequence;
-    xQueueSend(machineCommandQueue, &play, 0);
+    gContext->buzzer().play(sequence);
   }
   be_pushbool(vm, ok);
   be_return(vm);
 }
 
 int buzzerOff(bvm* vm) {
-  const MachineCommand off{MachineCommand::Op::Off};
-  xQueueSend(machineCommandQueue, &off, 0);
+  gContext->buzzer().off();
   be_return_nil(vm);
 }
 

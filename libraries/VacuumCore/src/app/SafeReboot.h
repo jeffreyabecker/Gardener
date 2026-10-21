@@ -2,11 +2,11 @@
 
 namespace gardener {
 
-class AppContext;
+class MachineContext;
 
 // The one release-then-restart path: stop the pump, open the valve, give the VENT this long to
 // finish, then restart. `device reboot` and the local Back+OK hold both run it, so neither can skip
 // the release on the way down.
-void safeReboot(AppContext& context);
+void safeReboot(MachineContext& context);
 
 }  // namespace gardener

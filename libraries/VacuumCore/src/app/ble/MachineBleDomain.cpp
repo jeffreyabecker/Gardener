@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "app/AppContext.h"
+#include "app/MachineContext.h"
 #include "app/Ownership.h"
 #include "app/Tasks.h"
 #include "app/VacuumSystem.h"
@@ -18,7 +18,6 @@ constexpr uint8_t kBleProtocolVersion = 1;
 // The two rates; everything else is sent on change. 5 Hz is about as fast as
 // a phone screen needs.
 constexpr uint32_t kFastRateMs = 200;
-constexpr uint32_t kBattRateMs = 10000;
 
 // The opcodes a controller writes to `command`, and the results it is
 // notified.
@@ -53,7 +52,6 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // target
     {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // duty
     {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                               // fault
-    {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // batt
     {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                           // command
     {0x0008, NIMBLE_PROPERTY::READ, 16},                                                         // fw
     {0x0009, NIMBLE_PROPERTY::READ, 1},                                                          // ble_proto
@@ -63,7 +61,7 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
 };
 
-MachineBleDomain::MachineBleDomain(AppContext* app) : app_(app) {}
+MachineBleDomain::MachineBleDomain(MachineContext* app) : app_(app) {}
 
 uint8_t MachineBleDomain::specCount() const { return Count; }
 
@@ -93,9 +91,6 @@ void MachineBleDomain::describe(uint8_t index) {
       break;
     case Fault:
       chr->setValue(vacuum.faultCode());
-      break;
-    case Batt:
-      setByte(chr, app_->battery().present() ? app_->battery().percent() : 0xFF);
       break;
     case Command:
       break;  // the last result, written when an opcode is applied
@@ -269,12 +264,6 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
     link.notify(characteristics_[Kpa]);
     describe(Duty);
     link.notify(characteristics_[Duty]);
-  }
-
-  if (nowMs - lastBattMs_ >= kBattRateMs) {
-    lastBattMs_ = nowMs;
-    describe(Batt);
-    link.notify(characteristics_[Batt]);
   }
 }
 

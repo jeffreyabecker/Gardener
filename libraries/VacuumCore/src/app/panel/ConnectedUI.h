@@ -13,7 +13,7 @@ namespace gardener {
 // whatever page is drawn.
 class ConnectedUI : public UserInterface {
  public:
-  explicit ConnectedUI(AppContext context);
+  explicit ConnectedUI(PanelContext context);
 
   bool begin() override;
   void update() override;

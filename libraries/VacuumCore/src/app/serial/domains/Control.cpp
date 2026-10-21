@@ -2,8 +2,7 @@
 
 #include <Arduino.h>
 
-#include "app/AppContext.h"
-#include "app/Ownership.h"
+#include "app/MachineContext.h"
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
 #include "core/Config.h"
@@ -18,7 +17,7 @@ String firstToken(const String& args) {
 
 class ControlDomain : public Domain {
  public:
-  explicit ControlDomain(AppContext& app) : app_(app) {}
+  explicit ControlDomain(MachineContext& app) : app_(app) {}
 
   const char* name() const override { return "control"; }
   void execute(Stream& io) override;
@@ -28,7 +27,7 @@ class ControlDomain : public Domain {
   void acquire(Stream& io, const String& args);
   void release(Stream& io, const String& args);
 
-  AppContext& app_;
+  MachineContext& app_;
 };
 
 void ControlDomain::execute(Stream& io) {
@@ -103,6 +102,6 @@ void ControlDomain::release(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createControlDomain(AppContext& app) { return new ControlDomain(app); }
+Domain* createControlDomain(MachineContext& app) { return new ControlDomain(app); }
 
 }  // namespace gardener

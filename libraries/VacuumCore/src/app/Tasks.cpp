@@ -2,10 +2,11 @@
 
 #include "app/AppContext.h"
 #include "app/Logger.h"
+#include "app/MachineContext.h"
 #include "app/Ownership.h"
+#include "app/PanelContext.h"
 #include "app/SafeReboot.h"
 #include "app/StoreBus.h"
-#include "app/TickService.h"
 #include "app/VacuumSystem.h"
 #include "app/ble/BleLink.h"
 #include "app/panel/ConnectedUI.h"
@@ -51,12 +52,11 @@ constexpr Button PressOrder[] = {Button::Up, Button::Down, Button::Ok, Button::B
 constexpr uint32_t BackStopMs = 3000;
 constexpr uint32_t ResetHoldMs = 5000;
 
-// The control task's own state: the context it commands, the logger it reports through, and the
+// The control task's own state: the machine it commands, the logger it reports through, and the
 // latch/timing fields the run log and the top-change vent need.
 struct ControlState {
-  AppContext context;
+  MachineContext& context;
   Logger* logger;
-  TickService* tickService = nullptr;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
   Link lastOwner = Link::None;
@@ -65,7 +65,7 @@ struct ControlState {
 // The panel task's own state: the two screens it owns, the one showing, which page it is, and the
 // chord and hold latches the keys need.
 struct PanelState {
-  AppContext context;
+  PanelContext& context;
   Logger* logger;
   ConnectedUI* connected;
   DisconnectedUI* disconnected;
@@ -79,18 +79,17 @@ struct PanelState {
   bool backStopFired = false;
 };
 
-// The interface task's own state: the wire and the flash, and the logger for the link's reports.
+// The interface task's own state: the machine it reports through, the links, and the logger.
 struct InterfaceState {
-  AppContext context;
+  MachineContext& context;
   Logger* logger;
   SerialLink* link;
   BleLink* ble;
-  StoreServer* storeServer;
 };
 
 // Applies one queued write to the machine. The op names the verb; the fields are the op's own.
 void applyMachineCommand(ControlState& state, const MachineCommand& command) {
-  AppContext& context = state.context;
+  MachineContext& context = state.context;
   switch (command.op) {
     case MachineCommand::Op::Start: context.vacuum().start(); break;
     case MachineCommand::Op::Stop: context.vacuum().stop(); break;
@@ -98,9 +97,6 @@ void applyMachineCommand(ControlState& state, const MachineCommand& command) {
     case MachineCommand::Op::SetTarget: context.vacuum().setTarget(command.value); break;
     case MachineCommand::Op::ClearTarget: context.vacuum().clearTarget(); break;
     case MachineCommand::Op::Reboot: safeReboot(context); break;
-    case MachineCommand::Op::Tone: context.buzzer().tone((uint16_t)command.value, command.durationMs); break;
-    case MachineCommand::Op::Play: context.buzzer().play(command.text.c_str()); break;
-    case MachineCommand::Op::Off: context.buzzer().off(); break;
   }
 }
 
@@ -132,11 +128,11 @@ void buttonsTick(PanelState& state) {
   if (state.context.buttons().heldMs(Button::Back) >= ResetHoldMs &&
       state.context.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
     state.logger->warn("panel: reset held, rebooting");
-    safeReboot(state.context);
+    safeReboot(state.context.machine());
     return;
   }
   const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
-  if (backHeld && state.context.ownership().ownedBy(Link::Panel)) {
+  if (backHeld && state.context.machine().ownership().ownedBy(Link::Panel)) {
     // One bump per hold, and the stop re-asserted each beat the hold lasts, so a start that sneaks
     // in is undone in the same beat.
     if (!state.backStopFired) {
@@ -159,7 +155,7 @@ void buttonsTick(PanelState& state) {
     }
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
-    if (backHeld && !state.context.ownership().external() && button == Button::Ok) {
+    if (backHeld && !state.context.machine().ownership().external() && button == Button::Ok) {
       goHomeSeq++;
       continue;
     }
@@ -180,7 +176,7 @@ void buttonsTick(PanelState& state) {
 }
 
 void deliverPress(PanelState& state, Button button, Press press) {
-  if (!state.context.ownership().external() && state.context.routines().active()) {
+  if (!state.context.machine().ownership().external() && state.context.routines().active()) {
     state.context.routines().pushPress(button, press);
     return;
   }
@@ -190,18 +186,6 @@ void deliverPress(PanelState& state, Button button, Press press) {
   message += pressName(press);
   state.logger->info(message.c_str());
 }
-
-// The buzzer's beat, installed on the control tick so its note sequences keep
-// time. It names the buzzer; the machine's beat names only the tick service.
-class BuzzerTick : public TickService {
- public:
-  explicit BuzzerTick(AppContext& context) : context_(context) {}
-
-  void tick(uint32_t nowMs) override { context_.buzzer().update(nowMs); }
-
- private:
-  AppContext& context_;
-};
 
 // The drivers stopped narrating, so the run is reported from here: one line per state change,
 // timed when it leaves a vent, plus the fault code when one latches.
@@ -259,12 +243,10 @@ void controlTask(void* arg) {
       state.logger->info(changed.c_str());
     }
 
-    // The devices, the PID and the buzzer on the fixed beat, then the run log.
+    // The devices and the PID on the fixed beat, then the run log.
     state.context.sensor().update(now);
     state.context.pump().update(now);
-    state.context.battery().update(now);
     state.context.vacuum().service(now);
-    if (state.tickService) state.tickService->tick(now);
     logRunChanges(state, now);
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
@@ -277,8 +259,7 @@ void interfaceTask(void* arg) {
   for (;;) {
     const uint32_t now = millis();
 
-    // The store server applies the VM's flash and settings writes; the links answer the wire.
-    state.storeServer->drain();
+    // The links answer the wire.
     state.link->poll(now);
     state.ble->poll(now);
 
@@ -302,7 +283,7 @@ void panelTask(void* arg) {
 
   // A fresh boot starts with the panel on top: an external link that is present is only a reader
   // until it claims, so the panel's own page shows first.
-  state.ownedShown = state.context.ownership().external();
+  state.ownedShown = state.context.machine().ownership().external();
   state.ui = state.ownedShown ? static_cast<UserInterface*>(state.connected)
                               : static_cast<UserInterface*>(state.disconnected);
   if (state.ui) state.ui->begin();
@@ -313,7 +294,7 @@ void panelTask(void* arg) {
     // The screen follows ownership, not the cable: an external claim paints the link's page, and a
     // release hands the panel back. The hand-off vents the run, so the page that returns sees the
     // stop on its first poll.
-    const bool external = state.context.ownership().external();
+    const bool external = state.context.machine().ownership().external();
     if (external != state.ownedShown) {
       state.ownedShown = external;
       stopSeq++;
@@ -321,6 +302,12 @@ void panelTask(void* arg) {
                           : static_cast<UserInterface*>(state.disconnected);
       if (state.ui) state.ui->begin();
     }
+
+    // The panel's own beat: the gauge, the buzzer and the store drain, then the glass.
+    const uint32_t now = millis();
+    state.context.battery().update(now);
+    state.context.buzzer().update(now);
+    state.context.storeServer().drain();
 
     // The overlay reports the ways in; the interface owner publishes the two booleans, and the
     // pages redraw themselves on the refresh cadence.
@@ -332,12 +319,12 @@ void panelTask(void* arg) {
 }
 
 void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
-                StoreServer* storeServer, ConnectedUI* connected, DisconnectedUI* disconnected) {
+                ConnectedUI* connected, DisconnectedUI* disconnected) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
-  static ControlState control{context, &logger, new BuzzerTick(context)};
-  static InterfaceState interface{context, &logger, link, ble, storeServer};
-  static PanelState panel{context, &logger, connected, disconnected};
+  static ControlState control{context.machine(), &logger};
+  static InterfaceState interface{context.machine(), &logger, link, ble};
+  static PanelState panel{context.panel(), &logger, connected, disconnected};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

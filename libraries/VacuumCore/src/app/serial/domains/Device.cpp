@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/Tasks.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
@@ -23,7 +23,7 @@ String firstToken(const String& args) {
 
 class DeviceDomain : public Domain {
  public:
-  explicit DeviceDomain(AppContext& app) : app_(app) {}
+  explicit DeviceDomain(PanelContext& app) : app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -33,7 +33,7 @@ class DeviceDomain : public Domain {
   void set(Stream& io, const String& args);
   void reboot(Stream& io, const String& args);
 
-  AppContext& app_;
+  PanelContext& app_;
 };
 
 void DeviceDomain::execute(Stream& io) {
@@ -69,12 +69,12 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_.machine(), io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_.machine(), io)) return;
     reboot(io, args);
     return;
   }
@@ -115,7 +115,7 @@ void DeviceDomain::get(Stream& io) {
   io.print(displayUnitInfo(app_.settings().unit()).name);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
-  io.print(app_.capabilities().mask());
+  io.print(app_.machine().capabilities().mask());
   io.print('\n');
 }
 
@@ -211,6 +211,6 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createDeviceDomain(AppContext& app) { return new DeviceDomain(app); }
+Domain* createDeviceDomain(PanelContext& app) { return new DeviceDomain(app); }
 
 }  // namespace gardener

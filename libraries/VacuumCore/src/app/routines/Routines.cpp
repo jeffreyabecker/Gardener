@@ -3,7 +3,7 @@
 #include <berry.h>
 #include <stdio.h>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/Logger.h"
 #include "app/StoreBus.h"
 #include "app/Tasks.h"
@@ -42,7 +42,7 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(AppContext& context, Storage& storage, Logger& logger, StoreClient& store) {
+bool Routines::begin(PanelContext& context, Storage& storage, Logger& logger, StoreClient& store) {
   logger_ = &logger;
   store_ = &store;
 

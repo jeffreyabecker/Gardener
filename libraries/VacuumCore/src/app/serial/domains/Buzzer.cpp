@@ -3,9 +3,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/BuzzerPlayer.h"
-#include "app/Tasks.h"
 #include "app/serial/Domain.h"
 #include "app/serial/Gate.h"
 #include "core/Config.h"
@@ -21,7 +20,7 @@ String firstToken(const String& args) {
 
 class BuzzerDomain : public Domain {
  public:
-  explicit BuzzerDomain(AppContext& app) : app_(app) {}
+  explicit BuzzerDomain(PanelContext& app) : app_(app) {}
 
   const char* name() const override { return "buzzer"; }
   void execute(Stream& io) override;
@@ -32,7 +31,7 @@ class BuzzerDomain : public Domain {
   void play(Stream& io, const String& args);
   void stop(Stream& io, const String& args);
 
-  AppContext& app_;
+  PanelContext& app_;
 };
 
 void BuzzerDomain::execute(Stream& io) {
@@ -54,11 +53,11 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "get") {
     get(io, args);
   } else if (verb == "tone") {
-    if (requireControl(app_, io)) tone(io, args);
+    if (requireControl(app_.machine(), io)) tone(io, args);
   } else if (verb == "play") {
-    if (requireControl(app_, io)) play(io, args);
+    if (requireControl(app_.machine(), io)) play(io, args);
   } else if (verb == "stop") {
-    if (requireControl(app_, io)) stop(io, args);
+    if (requireControl(app_.machine(), io)) stop(io, args);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);
@@ -144,8 +143,7 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
 
-  const MachineCommand tone{MachineCommand::Op::Tone, hz, ms};
-  xQueueSend(machineCommandQueue, &tone, 0);
+  app_.buzzer().tone((uint16_t)hz, ms);
 
   io.print("ok tone=");
   io.print((uint32_t)hz);
@@ -173,9 +171,7 @@ void BuzzerDomain::play(Stream& io, const String& args) {
     return;
   }
 
-  MachineCommand play{MachineCommand::Op::Play};
-  play.text = args;
-  xQueueSend(machineCommandQueue, &play, 0);
+  app_.buzzer().play(args.c_str());
   io.print("ok playing=on\n");
 }
 
@@ -187,13 +183,12 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
     return;
   }
 
-  const MachineCommand off{MachineCommand::Op::Off};
-  xQueueSend(machineCommandQueue, &off, 0);
+  app_.buzzer().off();
   io.print("ok playing=off\n");
 }
 
 }  // namespace
 
-Domain* createBuzzerDomain(AppContext& app) { return new BuzzerDomain(app); }
+Domain* createBuzzerDomain(PanelContext& app) { return new BuzzerDomain(app); }
 
 }  // namespace gardener

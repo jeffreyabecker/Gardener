@@ -1,4 +1,4 @@
-#include "app/AppContext.h"
+#include "app/PanelContext.h"
 #include "app/StoreBus.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"

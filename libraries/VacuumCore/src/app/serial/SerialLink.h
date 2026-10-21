@@ -6,7 +6,6 @@
 
 namespace gardener {
 
-class AppContext;
 class Logger;
 
 // The serial interface to the controller. It reads the first token of each command, finds that
@@ -19,7 +18,7 @@ class SerialLink {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger);
+  SerialLink(Stream& stream, PresenceFn present, Logger& logger);
 
   // The surface is whatever the build registers: the machine adds its domains, and a panel build
   // adds its own, so the link itself names none of them.
@@ -42,7 +41,6 @@ class SerialLink {
 
   Stream& stream_;
   PresenceFn present_;
-  AppContext& context_;
   Logger& logger_;
   DomainList domains_;
   // The domain token being assembled. It never holds a command or a body.

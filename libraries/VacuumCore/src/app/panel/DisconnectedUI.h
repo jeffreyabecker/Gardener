@@ -16,7 +16,7 @@ namespace gardener {
 // to test.
 class DisconnectedUI : public UserInterface {
  public:
-  DisconnectedUI(AppContext context);
+  DisconnectedUI(PanelContext context);
 
   bool begin() override;
   void update() override;

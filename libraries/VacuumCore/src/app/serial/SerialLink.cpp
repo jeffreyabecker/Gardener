@@ -1,13 +1,12 @@
 #include "app/serial/SerialLink.h"
 
-#include "app/AppContext.h"
 #include "app/Logger.h"
 #include "core/Config.h"
 
 namespace gardener {
 
-SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger)
-    : stream_(stream), present_(present), context_(*context), logger_(logger) {}
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger)
+    : stream_(stream), present_(present), logger_(logger) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();

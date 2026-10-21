@@ -14,7 +14,7 @@ struct bvm;
 
 namespace gardener {
 
-class AppContext;
+class PanelContext;
 class Storage;
 class Logger;
 class StoreClient;
@@ -39,7 +39,7 @@ class Routines {
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
   // False only when the interpreter cannot be allocated at all. `store` is the client the runtime
   // uses for the VM's flash and settings writes.
-  bool begin(AppContext& context, Storage& storage, Logger& logger, StoreClient& store);
+  bool begin(PanelContext& context, Storage& storage, Logger& logger, StoreClient& store);
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.

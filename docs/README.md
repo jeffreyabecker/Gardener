@@ -15,8 +15,9 @@ The contracts the firmware and its tools must satisfy.
 ## Plans
 
 Proposals: what has to be true when the work is done. A plan is not a commitment — it leaves when it
-is implemented or dropped, and its requirement is carried into a spec. Specs, guides, backlogs and
-the project README never link to a plan; a contract has to stand on its own, and plans may reference
+is implemented or dropped, and its requirement is carried into a spec. Specs, guides and the project
+README never link to a plan; the only document that names one is the backlog that breaks it down,
+since the two are deleted together. A contract has to stand on its own, and plans may reference
 specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
@@ -37,9 +38,10 @@ specs, guides, backlogs, code and the project README never link to one.
 
 ## Backlogs
 
-A fine-grained tasklist for work that has been decided: ordered, checkable items that each leave the
-tree working. A backlog breaks work down rather than choosing or designing it, and it is deleted when
-its last item lands.
+The detailed breakdown of the plan it implements: ordered, checkable items that each leave the tree
+working. A backlog breaks work down rather than choosing or designing it, and it may name its plan.
+The work is done one item at a time, with a summary written under `docs/backlogs/completed/` after
+each epic; when the last item lands the backlog and its plan are deleted together.
 
 - [The machine without the panel](./backlogs/headless-build.md) — split the machine from the panel
   into two libraries, make both links pluggable, and ship a panel-less build with a capability

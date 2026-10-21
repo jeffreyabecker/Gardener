@@ -133,23 +133,23 @@ which depends on `VacuumCore`.
 
 - [x] 5.1 Create the empty `GardenerPanel` shell — `library.properties` with `depends=VacuumCore` —
   so the destination exists before anything moves.
-- [ ] 5.2 Split `AppContext` into a machine context (sensor, pump, vent, vacuum, ownership,
+- [x] 5.2 Split `AppContext` into a machine context (sensor, pump, vent, vacuum, ownership,
   capabilities, config) and a panel context (buttons, display, buzzer, battery, overlay, routines,
   storage, settings, store bus ends).
-- [ ] 5.3 Re-route the machine's code onto the machine context — `App`, `Tasks`, `SerialLink` and
+- [x] 5.3 Re-route the machine's code onto the machine context — `App`, `Tasks`, `SerialLink` and
   its machine domains, `MachineBleDomain`, the control and interface task bodies — so nothing in
   the machine names a panel part.
-- [ ] 5.4 Re-route the panel's code onto the panel context plus the machine context it reads —
+- [x] 5.4 Re-route the panel's code onto the panel context plus the machine context it reads —
   `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, and the panel task — and
   move the battery update and the buzzer tick from the control beat to the panel beat, removing the
   `TickService` seam.
-- [ ] 5.5 Move the store server drain from the interface beat to the panel beat — the panel task
+- [x] 5.5 Move the store server drain from the interface beat to the panel beat — the panel task
   drains the store queue after the VM poll — so the interface task names no store part.
-- [ ] 5.6 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`caps`, and the
+- [x] 5.6 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`caps`, and the
   panel registers the `batt`/`unit`/`log` fields.
-- [ ] 5.7 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
+- [x] 5.7 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
   machine's.
-- [ ] 5.8 Move the BLE `batt` characteristic from the machine domain to the panel domain, and
+- [x] 5.8 Move the BLE `batt` characteristic from the machine domain to the panel domain, and
   register the panel's BLE fields — `unit` and `batt` — from the panel composition instead of the
   machine's.
 - [ ] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
@@ -157,7 +157,7 @@ which depends on `VacuumCore`.
   order.
 - [ ] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
   starts the panel task from its own boot.
-- [ ] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue, and route the `buzzer`
+- [x] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue, and route the `buzzer`
   serial domain and the VM's `buzzer` and `jingles` bindings to the panel's buzzer directly.
 - [ ] 5.12 Verify the full device boots and behaves identically after the split, with the panel
   code still in `VacuumCore`.

@@ -29,7 +29,7 @@ is.
 | Spec | `docs/specs/` | what the firmware and its tools do now | being rewritten, or dropped with the behaviour |
 | Plan | `docs/plans/` | a proposal: what has to be true | deletion, its requirement carried into a spec |
 | Idea | `docs/ideas/` | options being weighed before anything is required | deletion, carried by a plan or a spec |
-| Backlog | `docs/backlogs/` | a fine-grained tasklist for decided work | deletion, when the last item lands |
+| Backlog | `docs/backlogs/` | the tasklist breakdown of a plan, in order | deletion, with its plan, when the last item lands |
 
 A parking-lot line in `docs/plans/parking-lot.md` is the fifth thing and the smallest: a sentence
 naming a deferred idea and what is blocking it, for work too small to earn any of the four.
@@ -38,5 +38,6 @@ The skill for each has the detail: `.github/skills/specs/`, `.github/skills/plan
 `.github/skills/ideation/`, `.github/skills/backlog/`.
 
 `docs/README.md` is the one index of all of them. Everything else — specs, guides, code comments,
-script headers, the project README — stands alone and links to a spec or a guide, never to a plan, an
-idea or a backlog, because those disappear.
+script headers, the project README — stands alone and links to a spec or a guide. Plans, idea
+documents and backlogs disappear when their work lands, so nothing cites them; the one exception is
+a backlog naming the plan it breaks down, since the two are deleted together.

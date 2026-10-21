@@ -1,98 +1,22 @@
 #pragma once
 
-#include <Arduino.h>
-#include <stdint.h>
-
-#include "app/BuzzerPlayer.h"
-#include "app/Capabilities.h"
-#include "app/MachineConfig.h"
-#include "app/Ownership.h"
-#include "app/VacuumSystem.h"
-#include "app/panel/Overlay.h"
-#include "app/routines/Routines.h"
-#include "app/storage/Settings.h"
-#include "app/storage/Storage.h"
-#include "hal/Battery.h"
-#include "hal/ButtonPanel.h"
-#include "hal/Display.h"
-#include "hal/PressureSensor.h"
-#include "hal/Pump.h"
-#include "hal/VentValve.h"
+#include "app/MachineContext.h"
+#include "app/PanelContext.h"
 
 namespace gardener {
 
-class StoreClient;
-class StoreServer;
-
-// The hardware graph as interfaces: what App commands and the serial layer reads, with no fitted
-// part named. Build.cpp owns the implementations and builds this.
+// The two graphs the boot hands out, by reference. The machine's code reads the machine context,
+// and the panel's code reads the panel context, which reaches the machine through machine().
 class AppContext {
  public:
-  AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
-             ButtonPanel* buttons, BuzzerPlayer* buzzer, Overlay* overlay, VacuumSystem* vacuum,
-             Storage* storage, Settings* settings, Routines* routines, Ownership* ownership,
-             StoreClient* storeClient, StoreServer* storeServer, Capabilities* capabilities)
-      : sensor_(sensor),
-        pump_(pump),
-        vent_(vent),
-        battery_(battery),
-        buttons_(buttons),
-        buzzer_(buzzer),
-        overlay_(overlay),
-        vacuum_(vacuum),
-        storage_(storage),
-        settings_(settings),
-        routines_(routines),
-        ownership_(ownership),
-        storeClient_(storeClient),
-        storeServer_(storeServer),
-        capabilities_(capabilities) {}
+  AppContext(MachineContext& machine, PanelContext& panel) : machine_(machine), panel_(panel) {}
 
-  PressureSensor& sensor() { return *sensor_; }
-  Pump& pump() { return *pump_; }
-  VentValve& vent() { return *vent_; }
-  Battery& battery() { return *battery_; }
-  ButtonPanel& buttons() { return *buttons_; }
-  BuzzerPlayer& buzzer() { return *buzzer_; }
-  // The overlay is the display — every drawing verb goes through it — so both views are the same
-  // object. The concrete one is here because the links are the loop's to report.
-  Display& display() { return *overlay_; }
-  Overlay& overlay() { return *overlay_; }
-  VacuumSystem& vacuum() { return *vacuum_; }
-  Storage& storage() { return *storage_; }
-  Settings& settings() { return *settings_; }
-  Routines& routines() { return *routines_; }
-  // Who may command the machine. One record, shared by every link, so a second transport cannot
-  // have a second idea of who is in control.
-  Ownership& ownership() { return *ownership_; }
-  // The store bus, one end per task: the panel's client for the VM's flash and settings writes,
-  // and the interface's server that applies them.
-  StoreClient& storeClient() { return *storeClient_; }
-  StoreServer& storeServer() { return *storeServer_; }
-  // What the composition root built: which assemblies are fitted and how the
-  // device stops itself, read by both links.
-  Capabilities& capabilities() { return *capabilities_; }
-  // The machine's knobs, handed to it by the composition root.
-  MachineConfig& config() { return config_; }
-  uint32_t uptimeMs() const { return millis(); }
+  MachineContext& machine() { return machine_; }
+  PanelContext& panel() { return panel_; }
 
  private:
-  PressureSensor* sensor_;
-  Pump* pump_;
-  VentValve* vent_;
-  Battery* battery_;
-  ButtonPanel* buttons_;
-  BuzzerPlayer* buzzer_;
-  Overlay* overlay_;
-  VacuumSystem* vacuum_;
-  Storage* storage_;
-  Settings* settings_;
-  Routines* routines_;
-  Ownership* ownership_;
-  StoreClient* storeClient_;
-  StoreServer* storeServer_;
-  Capabilities* capabilities_;
-  MachineConfig config_;
+  MachineContext& machine_;
+  PanelContext& panel_;
 };
 
 }  // namespace gardener
