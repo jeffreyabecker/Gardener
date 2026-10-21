@@ -11,9 +11,9 @@ diagnostics — are configuration the composition root hands it.
 Both links become pluggable. The serial link already speaks through domains; the BLE link gains the
 same idea, so each link's surface is whatever the build registers. The machine registers its own
 domains — `control`, `vacuum`, `device`, and the core BLE characteristics — and the panel registers
-its own — `fs`, `buzzer`, the BLE `unit` field, and the `device` `unit`/`log` fields. One capability
-record, composed at build time and served identically by both links, tells a host which assemblies
-are fitted and how the device stops itself.
+its own — `fs`, `buzzer`, the BLE `unit`/`batt` fields, and the `device` `batt`/`unit`/`log`
+fields. One capability record, composed at build time and served identically by both links, tells a
+host which assemblies are fitted and how the device stops itself.
 
 The settled safety rule is ownership, everywhere: the machine holds pressure only while the link on
 top has it running, and any change of the top — a claim, a release or a drop — vents the chamber. A
@@ -140,22 +140,25 @@ which depends on `VacuumCore`.
   its machine domains, `MachineBleDomain`, the control and interface task bodies — so nothing in
   the machine names a panel part.
 - [ ] 5.4 Re-route the panel's code onto the panel context plus the machine context it reads —
-  `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, the panel task and the
-  buzzer tick.
-- [ ] 5.5 Move the store server drain onto an installable interface-beat service, the way the
-  buzzer tick is installed, so the interface task names no store part.
-- [ ] 5.6 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`batt`/`caps`,
-  and the panel registers the `unit`/`log` fields.
+  `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, and the panel task — and
+  move the battery update and the buzzer tick from the control beat to the panel beat, removing the
+  `TickService` seam.
+- [ ] 5.5 Move the store server drain from the interface beat to the panel beat — the panel task
+  drains the store queue after the VM poll — so the interface task names no store part.
+- [ ] 5.6 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`caps`, and the
+  panel registers the `batt`/`unit`/`log` fields.
 - [ ] 5.7 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
   machine's.
-- [ ] 5.8 Register the BLE `unit` domain from the panel composition instead of the machine's.
+- [ ] 5.8 Move the BLE `batt` characteristic from the machine domain to the panel domain, and
+  register the panel's BLE fields — `unit` and `batt` — from the panel composition instead of the
+  machine's.
 - [ ] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
   settings, the VM, the panel and its registrations; the full build's composition calls both in
   order.
 - [ ] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
   starts the panel task from its own boot.
-- [ ] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue and route the VM's
-  `buzzer` and `jingles` bindings to the panel's buzzer.
+- [ ] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue, and route the `buzzer`
+  serial domain and the VM's `buzzer` and `jingles` bindings to the panel's buzzer directly.
 - [ ] 5.12 Verify the full device boots and behaves identically after the split, with the panel
   code still in `VacuumCore`.
 
@@ -168,10 +171,11 @@ which depends on `VacuumCore`.
 - [ ] 5.17 Move the jingles and `BuzzerPlayer`.
 - [ ] 5.18 Move `Ini`, `Settings` and `Storage`.
 - [ ] 5.19 Move the store bus.
-- [ ] 5.20 Move the panel task, the press queue, the button reader and the panel composition root.
-- [ ] 5.21 Move the panel's serial domains (`fs`, `buzzer`) and the BLE `unit` domain.
+- [ ] 5.20 Move the panel task, the button reader and the panel composition root.
+- [ ] 5.21 Move the panel's serial domains (`fs`, `buzzer`) and the panel's BLE domain (`unit`,
+  `batt`).
 - [ ] 5.22 Write the panel's composition root and boot in `GardenerPanel`: build the machine root,
-  compose the panel onto it, register its domains, and install the buzzer tick.
+  compose the panel onto it, and register its domains.
 - [ ] 5.23 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
   and NimBLE.
 
@@ -186,7 +190,7 @@ is the second build itself.
   above `None`.
 - [ ] 6.2 Compose the machine-alone capability: no panel, no battery, ownership stop.
 - [ ] 6.3 Register only the machine's domains in the machine-alone link composition — no `fs`, no
-  `buzzer`, no `unit`.
+  `buzzer`, no `unit`, no `batt`.
 - [ ] 6.4 Ship no data image for the machine-alone build.
 - [ ] 6.5 Teach [arduino.py](../../scripts/arduino.py) to build, upload and monitor the second sketch
   and skip its data task.
