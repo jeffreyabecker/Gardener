@@ -2,12 +2,10 @@
 
 #include <Adafruit_SH110X.h>
 #include <Wire.h>
-#include <stdlib.h>
 
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
 #include "app/Capabilities.h"
-#include "app/Logger.h"
 #include "app/MachineContext.h"
 #include "app/Ownership.h"
 #include "app/PanelContext.h"
@@ -88,23 +86,6 @@ AppContext buildAppContext() {
   auto* panel = new PanelContext(buttons, buzzer, battery, overlay, storage, settings, routines,
                                  storeClient, storeServer, *machine);
   return AppContext(*machine, *panel);
-}
-
-// The panel is the one part with no fallback: nothing on the device can draw
-// without it, so a panel that does not answer is fatal rather than a degraded
-// mode. The panel build calls this from its boot; a machine-alone build never
-// does and comes up with no display.
-bool panelBoot(PanelContext& context, Logger& logger) {
-  Wire1.begin(cfg::PANEL_I2C_SDA, cfg::PANEL_I2C_SCL, cfg::PANEL_I2C_FREQ_HZ);
-  const bool displayOk = context.display().begin();
-  logger.info(displayOk ? "oled: online" : "oled: not found, aborting");
-  if (!displayOk) {
-    // abort() panics and the ESP32 resets on a panic, so the device keeps
-    // trying rather than coming up blind and silent.
-    delay(50);
-    abort();
-  }
-  return true;
 }
 
 }  // namespace gardener

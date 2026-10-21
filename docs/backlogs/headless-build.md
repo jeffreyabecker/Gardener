@@ -152,7 +152,7 @@ which depends on `VacuumCore`.
 - [x] 5.8 Move the BLE `batt` characteristic from the machine domain to the panel domain, and
   register the panel's BLE fields — `unit` and `batt` — from the panel composition instead of the
   machine's.
-- [ ] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
+- [x] 5.9 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
   settings, the VM, the panel and its registrations; the full build's composition calls both in
   order.
 - [ ] 5.10 Make the machine's task spawn start only the control and interface tasks; the panel
