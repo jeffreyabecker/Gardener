@@ -178,7 +178,7 @@ path.
   machine root and composes the panel onto it.
 - [x] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
   panel can call it.
-- [ ] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
+- [x] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
 - [ ] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
   and the full device still boots.
 - [ ] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
