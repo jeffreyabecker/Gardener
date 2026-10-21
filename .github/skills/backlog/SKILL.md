@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, checkable items that each leave the tree working, worked one task at a time with a summary written after each epic. Use when breaking decided work into steps, working through a tasklist, or deciding whether something is a task, a plan or a parking-lot line.'
+description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, checkable items that each leave the tree working, with a branch per backlog, epic and task, a commit per item, and a summary written after each epic. Use when breaking decided work into steps, working through a tasklist, or deciding whether something is a task, a plan or a parking-lot line.'
 ---
 
 # Backlog
@@ -36,22 +36,41 @@ that has not been written yet.
 - Checked off with `- [x]` as it lands. Unticked items are what is left, so the list is the status.
 - No estimates, no owners, no priorities. One file, one effort, one order.
 
+## Branches
+
+Each level of the backlog gets its own branch, so the history says which task, epic and effort a
+commit belongs to and any piece can be set aside or dropped on its own:
+
+- `backlog/<topic>` — one per backlog, cut from the branch the effort targets (`main` unless the
+  backlog belongs to a larger effort).
+- `backlog/<topic>/epic-<n>` — one per epic, cut from the backlog branch, worked in the backlog's
+  order.
+- `backlog/<topic>/epic-<n>/task-<m>` — one per item, cut from the epic branch.
+
+Work on the task branch, commit the item, and merge it back into the epic branch once it is ticked
+off, then delete it. Merge the epic branch into the backlog branch once its summary is committed,
+and the backlog branch into its target once the backlog and its plan are deleted. Merge with
+`--no-ff` so every task and epic keeps its own point in the history.
+
 ## Working a backlog
 
-Work one item at a time: do the item, verify it, tick it off, commit it, then start the next. One
-commit per item, so a step that turns out wrong can be walked back without unpicking the ones around
-it. Do not implement a whole epic in a single go — working ahead of the list hides which step broke
-the tree and turns a review into one large diff.
+Work one item at a time: cut the task branch, do the item, verify it, tick it off, commit it, merge
+it back, then start the next. One commit per item, so a step that turns out wrong can be walked back
+without unpicking the ones around it. Do not implement a whole epic in a single go — working ahead
+of the list hides which step broke the tree and turns a review into one large diff.
 
 After the last item of an epic lands, write a summary at
 `docs/backlogs/completed/<topic>/epic-<n>-<title>.md`: what changed and what was verified, task by
-task. Commit it on its own, and leave it in place — the summaries stay after the backlog is deleted.
+task. Commit it on its own, merge the epic branch, and leave the summary in place — the summaries
+stay after the backlog is deleted.
 
 ## Leaving
 
 When the last item lands, write the final epic's summary, then delete the backlog and the plan it
-breaks down. The checked list is not the record — git is, and the commit message says what the items
-did; the epic summaries are the per-epic account.
+breaks down. Commit the deletion on the backlog branch and merge it into the target; the branches
+have done their job once they are merged, so delete them rather than leaving them behind. The
+checked list is not the record — git is, and the commit messages say what the items did; the epic
+summaries are the per-epic account.
 
 Deleting a plan deletes any backlog that breaks it down: a dropped plan does not leave its tasklist
 behind. If an effort is dropped part-way, the unticked items go with the file unless an item is
