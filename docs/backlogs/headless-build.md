@@ -176,7 +176,7 @@ path.
 - [x] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
 - [x] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
   machine root and composes the panel onto it.
-- [ ] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
+- [x] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
   panel can call it.
 - [ ] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
 - [ ] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
