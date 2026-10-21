@@ -40,6 +40,10 @@ bool App::begin() {
   // which is reported rather than assumed: whatever was there is gone.
   Storage::Mount mount = context_.storage().begin();
   context_.settings().begin();
+  // The full device's composition reads the persisted preferences into the
+  // machine's config; a machine-alone build hands constants instead.
+  context_.config().bluetooth = context_.settings().bluetoothEnabled();
+  context_.config().diagnostics = context_.settings().logEnabled();
   Logger* logger = context_.config().diagnostics
                        ? static_cast<Logger*>(new StreamLogger(Serial))
                        : static_cast<Logger*>(new NilLogger());

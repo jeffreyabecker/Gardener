@@ -77,7 +77,7 @@ behaves identically after the epic.
   composition root.
 - [x] 3.2 Read the radio knob in `BleLink::begin()` from that configuration.
 - [x] 3.3 Read the diagnostics knob from configuration when the boot picks the logger.
-- [ ] 3.4 Have the full build's root read `settings.ini` and pass the values, so the full device's
+- [x] 3.4 Have the full build's root read `settings.ini` and pass the values, so the full device's
   behavior is unchanged.
 - [ ] 3.5 Give the control beat one installable local-stop slot — a verdict, stop or reset, applied
   on the same beat.
