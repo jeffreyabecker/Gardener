@@ -31,7 +31,7 @@ comes first.
 
 - [x] 1.1 Move the serial domain population out of `SerialLink`'s constructor, so the link starts
   empty and exposes registration.
-- [ ] 1.2 Register the five serial domains from `buildAppContext()`, so the full device's serial
+- [x] 1.2 Register the five serial domains from `buildAppContext()`, so the full device's serial
   surface is unchanged.
 - [ ] 1.3 Give the BLE link a domain concept mirroring the serial `Domain`: a registered piece that
   declares its characteristics — UUID suffix and properties — answers reads, applies writes, and

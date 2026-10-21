@@ -2,7 +2,6 @@
 
 #include "app/AppContext.h"
 #include "app/Logger.h"
-#include "app/serial/Domains.h"
 #include "core/Config.h"
 
 namespace gardener {

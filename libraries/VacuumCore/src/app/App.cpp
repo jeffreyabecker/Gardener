@@ -14,6 +14,7 @@
 #include "app/panel/ConnectedUI.h"
 #include "app/panel/DisconnectedUI.h"
 #include "app/serial/SerialLink.h"
+#include "app/serial/Domains.h"
 #include "core/Config.h"
 #include "core/Units.h"
 
@@ -40,6 +41,13 @@ bool App::begin() {
   Logger* logger = context_.settings().logEnabled() ? static_cast<Logger*>(new StreamLogger(Serial))
                                                     : static_cast<Logger*>(new NilLogger());
   SerialLink* link = new SerialLink(&context_, Serial, serialAttached, *logger);
+  // The wire surface is the build's to register: the machine's five domains here, and a panel
+  // build's own domains beside them.
+  link->registerDomain(createControlDomain(context_));
+  link->registerDomain(createDeviceDomain(context_));
+  link->registerDomain(createVacuumDomain(context_));
+  link->registerDomain(createBuzzerDomain(context_));
+  link->registerDomain(createFsDomain(context_));
   BleLink* ble = new BleLink(&context_);
   ConnectedUI* connected = new ConnectedUI(context_);
   DisconnectedUI* disconnected = new DisconnectedUI(context_);
