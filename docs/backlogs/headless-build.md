@@ -88,7 +88,7 @@ behaves identically after the epic.
 - [x] 3.8 Move the panel's I²C bring-up and the `display.begin()` abort out of the machine's boot
   into the composition that fits a panel.
 - [x] 3.9 Make the machine's boot succeed with no display fitted.
-- [ ] 3.10 Move the buzzer tick out of the control beat to an installable tick the composition
+- [x] 3.10 Move the buzzer tick out of the control beat to an installable tick the composition
   provides.
 - [ ] 3.11 Verify the full device boots and behaves identically after the seams land.
 

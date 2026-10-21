@@ -6,6 +6,7 @@
 #include "app/SafeReboot.h"
 #include "app/StopSource.h"
 #include "app/StoreBus.h"
+#include "app/TickService.h"
 #include "app/VacuumSystem.h"
 #include "app/ble/BleLink.h"
 #include "app/panel/ConnectedUI.h"
@@ -62,6 +63,7 @@ struct ControlState {
   AppContext context;
   Logger* logger;
   StopSource* stopSource = nullptr;
+  TickService* tickService = nullptr;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
   bool backStopFired = false;
@@ -210,6 +212,18 @@ void applyVerdict(ControlState& state, StopSource::Verdict verdict) {
   state.backStopFired = false;
 }
 
+// The buzzer's beat, installed on the control tick so its note sequences keep
+// time. It names the buzzer; the machine's beat names only the tick service.
+class BuzzerTick : public TickService {
+ public:
+  explicit BuzzerTick(AppContext& context) : context_(context) {}
+
+  void tick(uint32_t nowMs) override { context_.buzzer().update(nowMs); }
+
+ private:
+  AppContext& context_;
+};
+
 // The drivers stopped narrating, so the run is reported from here: one line per state change,
 // timed when it leaves a vent, plus the fault code when one latches.
 void logRunChanges(ControlState& state, uint32_t nowMs) {
@@ -276,7 +290,7 @@ void controlTask(void* arg) {
     state.context.pump().update(now);
     state.context.battery().update(now);
     state.context.vacuum().service(now);
-    state.context.buzzer().update(now);
+    if (state.tickService) state.tickService->tick(now);
     buttonsTick(state);
     applyVerdict(state,
                  state.stopSource ? state.stopSource->tick() : StopSource::Verdict::None);
@@ -354,7 +368,7 @@ void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* 
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
   buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
-  static ControlState control{context, &logger, new ButtonStopSource(context)};
+  static ControlState control{context, &logger, new ButtonStopSource(context), new BuzzerTick(context)};
   static InterfaceState interface{context, &logger, link, ble, storeServer};
   static PanelState panel{context, &logger, connected, disconnected};
 
