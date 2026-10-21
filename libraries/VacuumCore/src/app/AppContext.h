@@ -5,6 +5,7 @@
 
 #include "app/BuzzerPlayer.h"
 #include "app/Capabilities.h"
+#include "app/MachineConfig.h"
 #include "app/Ownership.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Overlay.h"
@@ -71,6 +72,8 @@ class AppContext {
   // What the composition root built: which assemblies are fitted and how the
   // device stops itself, read by both links.
   Capabilities& capabilities() { return *capabilities_; }
+  // The machine's knobs, handed to it by the composition root.
+  MachineConfig& config() { return config_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -89,6 +92,7 @@ class AppContext {
   StoreClient* storeClient_;
   StoreServer* storeServer_;
   Capabilities* capabilities_;
+  MachineConfig config_;
 };
 
 }  // namespace gardener

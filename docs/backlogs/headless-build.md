@@ -73,7 +73,7 @@ The machine stops reading settings, keys and the buzzer directly, and its boot s
 panel's bring-up. Each seam lands while everything still lives in one library, so the full device
 behaves identically after the epic.
 
-- [ ] 3.1 Hand the machine its knobs — radio, diagnostics, battery gauge — as configuration from the
+- [x] 3.1 Hand the machine its knobs — radio, diagnostics, battery gauge — as configuration from the
   composition root.
 - [ ] 3.2 Read the radio knob in `BleLink::begin()` from that configuration.
 - [ ] 3.3 Read the diagnostics knob from configuration when the boot picks the logger.
