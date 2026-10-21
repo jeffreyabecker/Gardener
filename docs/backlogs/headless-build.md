@@ -57,7 +57,7 @@ comes first.
 One machine-side value says which assemblies are fitted and how the device stops itself, and both
 links serve it.
 
-- [ ] 2.1 Add one machine-side capability value — panel, battery, safety posture — set by the
+- [x] 2.1 Add one machine-side capability value — panel, battery, safety posture — set by the
   composition root and read by both links.
 - [ ] 2.2 Add a read-only `caps` characteristic to the machine's BLE domain.
 - [ ] 2.3 Print `caps` from `device get` and drop `display-size` from the reply.

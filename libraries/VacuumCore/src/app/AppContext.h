@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "app/BuzzerPlayer.h"
+#include "app/Capabilities.h"
 #include "app/Ownership.h"
 #include "app/VacuumSystem.h"
 #include "app/panel/Overlay.h"
@@ -29,7 +30,7 @@ class AppContext {
   AppContext(PressureSensor* sensor, Pump* pump, VentValve* vent, Battery* battery,
              ButtonPanel* buttons, BuzzerPlayer* buzzer, Overlay* overlay, VacuumSystem* vacuum,
              Storage* storage, Settings* settings, Routines* routines, Ownership* ownership,
-             StoreClient* storeClient, StoreServer* storeServer)
+             StoreClient* storeClient, StoreServer* storeServer, Capabilities* capabilities)
       : sensor_(sensor),
         pump_(pump),
         vent_(vent),
@@ -43,7 +44,8 @@ class AppContext {
         routines_(routines),
         ownership_(ownership),
         storeClient_(storeClient),
-        storeServer_(storeServer) {}
+        storeServer_(storeServer),
+        capabilities_(capabilities) {}
 
   PressureSensor& sensor() { return *sensor_; }
   Pump& pump() { return *pump_; }
@@ -66,6 +68,9 @@ class AppContext {
   // and the interface's server that applies them.
   StoreClient& storeClient() { return *storeClient_; }
   StoreServer& storeServer() { return *storeServer_; }
+  // What the composition root built: which assemblies are fitted and how the
+  // device stops itself, read by both links.
+  Capabilities& capabilities() { return *capabilities_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
@@ -83,6 +88,7 @@ class AppContext {
   Ownership* ownership_;
   StoreClient* storeClient_;
   StoreServer* storeServer_;
+  Capabilities* capabilities_;
 };
 
 }  // namespace gardener
