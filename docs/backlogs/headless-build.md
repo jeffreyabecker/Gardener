@@ -215,7 +215,7 @@ path.
 - [x] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
   `GardenerPanel`.
 - [x] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
-- [ ] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
+- [x] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
 
 ## Epic 6 — The headless build
 
