@@ -26,3 +26,10 @@ the data image has to be uploaded again because the offset moves.
 
 The image carries 36 KB of exception metadata, about 17 KB of it in objects this build compiles.
 Nothing throws today, but any vendored C++ added later would have to make the same choice.
+
+## One file to flash
+
+A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/data) into the build's
+`gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
+`--task upload` and then `--task data`. What holds it back is that the image would ship whatever
+`settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.
