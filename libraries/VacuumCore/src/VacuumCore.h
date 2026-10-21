@@ -1,8 +1,9 @@
 #pragma once
 
-// Umbrella header for the Gardener firmware core. The sketch only needs this.
+// Umbrella header for the Gardener firmware core. A machine-alone build only needs this; a panel
+// build also includes GardenerPanel.h.
 
-#include "app/App.h"
 #include "app/Build.h"
+#include "app/MachineBoot.h"
 #include "app/Tasks.h"
 #include "core/Config.h"
