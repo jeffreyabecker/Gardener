@@ -92,33 +92,62 @@ behaves identically after the epic.
   provides.
 - [x] 3.11 Verify the full device boots and behaves identically after the seams land.
 
-## Epic 4 — The panel library
+## Epic 4 — The library split
 
-The panel code moves into `GardenerPanel`, which depends on the machine library and nothing the
-other way. The panel's domains, safety reader and buzzer tick are registered from its own
-composition root.
+The one `AppContext` graph becomes two: a machine context and a panel context. The split has to
+come first — arduino-cli compiles each library against only its own `src/`, so the panel files
+cannot move into `GardenerPanel` while the machine still includes them. Phase A splits the context
+and re-routes the boot, the tasks and the wire surface, all inside `VacuumCore`; the build keeps
+working because nothing has moved yet. Phase B then moves the panel files into `GardenerPanel`,
+which depends on `VacuumCore`.
 
-- [x] 4.1 Create `GardenerPanel` beside `VacuumCore`.
-- [ ] 4.2 Move the panel's HAL parts and their impls — buttons, display, buzzer — into it.
-- [ ] 4.3 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI` into it.
-- [ ] 4.4 Move `Fonts` and `Asset` into it.
-- [ ] 4.5 Move `Routines` and the eight bindings into it.
-- [ ] 4.6 Move the jingles and `BuzzerPlayer` into it.
-- [ ] 4.7 Move `Ini`, `Settings` and `Storage` into it.
-- [ ] 4.8 Move the store bus — client and server — into it, so the panel owns the route from the VM
-  to flash.
-- [ ] 4.9 Move the panel task, the press queue, the press classifier and the two holds into it.
-- [ ] 4.10 Move the panel's serial domains — `fs`, `buzzer` — and the `device` `unit`/`log` fields
-  into it, registered from the panel's composition.
-- [ ] 4.11 Move the panel's BLE `unit` domain into it, registered from the panel's composition.
-- [ ] 4.12 Write the panel's composition root and boot: build the machine root, compose the panel
-  onto it, register its domains, and install the safety reader and the buzzer tick.
-- [ ] 4.13 Make the machine's task spawn start only the control and interface tasks; the panel
+### Phase A — split the context
+
+- [x] 4.1 Create the empty `GardenerPanel` shell — `library.properties` with `depends=VacuumCore` —
+  so the destination exists before anything moves.
+- [ ] 4.2 Split `AppContext` into a machine context (sensor, pump, vent, battery, vacuum,
+  ownership, capabilities, config) and a panel context (buttons, display, buzzer, overlay,
+  routines, storage, settings, store bus ends).
+- [ ] 4.3 Re-route the machine's code onto the machine context — `App`, `Tasks`, `SerialLink` and
+  its machine domains, `MachineBleDomain`, the control and interface task bodies — so nothing in
+  the machine names a panel part.
+- [ ] 4.4 Re-route the panel's code onto the panel context plus the machine context it reads —
+  `ConnectedUI`, `DisconnectedUI`, `Overlay`, `Routines` and its bindings, the panel task, the
+  safety reader and the buzzer tick.
+- [ ] 4.5 Move the store server drain onto an installable interface-beat service, the way the stop
+  source and the buzzer tick are installed, so the interface task names no store part.
+- [ ] 4.6 Put the press classifier and the two holds into one panel-side button reader the panel
+  composition owns — still running on the control beat, because the button driver is
+  single-consumer.
+- [ ] 4.7 Split the `device` domain: the machine reports `proto`/`fw`/`chip`/`heap`/`batt`/`caps`,
+  and the panel registers the `unit`/`log` fields.
+- [ ] 4.8 Register the `fs` and `buzzer` serial domains from the panel composition instead of the
+  machine's.
+- [ ] 4.9 Register the BLE `unit` domain from the panel composition instead of the machine's.
+- [ ] 4.10 Split the boot: the machine boots its parts, links and tasks; the panel boots storage,
+  settings, the VM, the panel and its registrations; the full build's composition calls both in
+  order.
+- [ ] 4.11 Make the machine's task spawn start only the control and interface tasks; the panel
   starts the panel task from its own boot.
-- [ ] 4.14 Remove `Tone`, `Play` and `Off` from the machine command queue, leaving `Start`, `Stop`,
-  `ResetFault`, `SetTarget`, `ClearTarget` and `Reboot`.
-- [ ] 4.15 Route the VM's `buzzer` and `jingles` bindings to the panel's buzzer.
-- [ ] 4.16 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
+- [ ] 4.12 Remove `Tone`, `Play` and `Off` from the machine command queue and route the VM's
+  `buzzer` and `jingles` bindings to the panel's buzzer.
+- [ ] 4.13 Verify the full device boots and behaves identically after the split, with the panel
+  code still in `VacuumCore`.
+
+### Phase B — move the panel into `GardenerPanel`
+
+- [ ] 4.14 Move the panel's HAL parts and their impls — buttons, display, buzzer.
+- [ ] 4.15 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI`.
+- [ ] 4.16 Move `Fonts` and `Asset`.
+- [ ] 4.17 Move `Routines` and the eight bindings.
+- [ ] 4.18 Move the jingles and `BuzzerPlayer`.
+- [ ] 4.19 Move `Ini`, `Settings` and `Storage`.
+- [ ] 4.20 Move the store bus.
+- [ ] 4.21 Move the panel task, the press queue, the button reader and the panel composition root.
+- [ ] 4.22 Move the panel's serial domains (`fs`, `buzzer`) and the BLE `unit` domain.
+- [ ] 4.23 Write the panel's composition root and boot in `GardenerPanel`: build the machine root,
+  compose the panel onto it, register its domains, and install the stop source and the buzzer tick.
+- [ ] 4.24 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
   and NimBLE.
 
 ## Epic 5 — The headless build
