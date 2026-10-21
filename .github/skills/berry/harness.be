@@ -566,40 +566,28 @@ class JinglesStub
     return nil
   end
 
-  def fields(id)
+  def title(id)
     var entry = self.find(id)
     if entry == nil
       return nil
     end
-    var parts = string.split(entry[1], "|")
-    if parts.size() < 3
-      return nil
-    end
-    return parts
-  end
-
-  def title(id)
-    var parts = self.fields(id)
-    if parts == nil
-      return nil
-    end
-    return parts[0]
+    return entry[1]
   end
 
   def label(id)
-    var parts = self.fields(id)
-    if parts == nil
+    var entry = self.find(id)
+    if entry == nil
       return nil
     end
-    return parts[1]
+    return entry[2]
   end
 
   def notes(id)
-    var parts = self.fields(id)
-    if parts == nil
+    var entry = self.find(id)
+    if entry == nil
       return nil
     end
-    return parts[2]
+    return entry[3]
   end
 
   def default_id()
@@ -835,8 +823,30 @@ def harness_guarded(label, action)
   end
 end
 
+# The jingle library is a flat text file: one `id|Title|Label|notes` record per line, a line
+# starting with `#` a comment and a blank line skipped. Records keep file order, which is the order
+# the firmware loads, so JinglesStub answers with what the image really ships.
+def harness_seed_jingles(text)
+  var order = []
+  for line : string.split(text, "\n")
+    var clean = string.replace(line, "\r", "")
+    if clean == "" || string.startswith(clean, "#")
+      continue
+    end
+    var parts = string.split(clean, "|")
+    if parts.size() >= 4
+      order.push([parts[0], parts[1], parts[2], parts[3]])
+    end
+  end
+  harnessStoreOrder["jinglelibrary"] = order
+end
+
 # The values a routine's file holds, read from the .ini the data image ships.
 def harness_seed(name, text)
+  if name == "jinglelibrary"
+    harness_seed_jingles(text)
+    return
+  end
   var file = {}
   var order = []
   var lines = string.split(text, "\n")

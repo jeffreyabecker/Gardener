@@ -93,7 +93,7 @@ Values that must match the firmware:
 - `screen.unit()` and `device.set_unit()` share the four tokens `kpa`, `psi`, `inhg`, `mmhg`.
 - `store.get(key, fallback)` addresses the active routine; `store.get(name, key, fallback)` names
   one. The fallback's type is the type the text comes back as.
-- `jingles.ids()` is the identifiers from `/modules/jingles.ini`, in file order; the first is the
+- `jingles.ids()` is the identifiers from `/modules/jingles.txt`, in file order; the first is the
   fallback for `jingles.current()`.
 
 ### The editor, the store and the files
@@ -102,7 +102,7 @@ Values that must match the firmware:
   `Component` and the rest are the code under review.
 - Every `data/routines/*.ini` seeds the store under its own name, and `data/settings.ini` seeds
   `device`, so a routine reads the values its image ships with.
-- `data/modules/jingles.ini` is seeded as `jinglelibrary`, so the `JinglesStub` checks the real
+- `data/modules/jingles.txt` is seeded as `jinglelibrary`, so the `JinglesStub` checks the real
   identifiers, titles, labels and note strings the image ships.
 - `page.be`, `settings.be` and the components are exercised through the same calls the device
   makes, including the settings editor's whole key sequence.

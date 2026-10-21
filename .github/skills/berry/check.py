@@ -65,7 +65,7 @@ def files(data):
 
 
 def inis(data):
-    found = [("device", data / "settings.ini"), ("jinglelibrary", data / "modules" / "jingles.ini")]
+    found = [("device", data / "settings.ini"), ("jinglelibrary", data / "modules" / "jingles.txt")]
     for path in sorted((data / "routines").glob("*.ini")):
         found.append((path.stem, path))
     return [(name, path) for name, path in found if path.exists()]

@@ -29,13 +29,6 @@ class Ini {
   // The document as text, ready to write.
   String text() const;
 
-  // Read-only iteration, in the order the file was read. The key forms address one entry by its
-  // position, which is what a caller that lists a file rather than looking one key up needs.
-  uint8_t size() const { return count_; }
-  const String& sectionAt(uint8_t index) const { return entries_[index].section; }
-  const String& keyAt(uint8_t index) const { return entries_[index].key; }
-  const String& valueAt(uint8_t index) const { return entries_[index].value; }
-
  private:
   struct Entry {
     String section;
@@ -44,8 +37,7 @@ class Ini {
   };
 
   // A settings file is a handful of keys. The limit is what makes this a plain array instead of a
-  // container, and a file with more keys than this is not a settings file. The jingle library is
-  // the largest one this build reads and needs room to grow.
+  // container, and a file with more keys than this is not a settings file.
   static constexpr uint8_t kMaxEntries = 32;
 
   Entry* find(const char* section, const char* key);

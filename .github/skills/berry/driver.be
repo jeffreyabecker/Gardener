@@ -198,7 +198,7 @@ def harness_run_page(entry)
   end
 end
 
-# The jingle library is data in /modules/jingles.ini. Every identifier must resolve to a title,
+# The jingle library is data in /modules/jingles.txt. Every identifier must resolve to a title,
 # a short label and a non-empty note string; current() follows the device setting and falls back.
 def harness_check_jingles()
   var ids = jingles.ids()

@@ -276,18 +276,23 @@ the whole sequence malformed and `play` returns false.
 
 ## `jingles` — the note library
 
-The device ships named note sequences in `/modules/jingles.ini`. The file is read once at boot,
-like the `.be` modules, so a change takes effect at the next reset. It is an INI file with one
-entry per jingle under `[jingles]`:
+The device ships named note sequences in `/modules/jingles.txt`. The file is read once at boot,
+like the `.be` modules, so a change takes effect at the next reset. It is a flat text file with one
+jingle per line and four `|`-separated fields:
 
-```ini
-[jingles]
-poacher=Lincolnshire Poacher|Poacher|E5:200 G5:200 E6:200 ...
+```
+poacher|Lincolnshire Poacher|Poacher|E5:200 G5:200 E6:200 ...
 ```
 
-The key is the jingle's **identifier**: lowercase, stable, and the value the global setting stores.
-The value is the display name, the short panel label and the note string separated by `|`. The
-note string is in `buzzer.play()` notation.
+The first field is the jingle's **identifier**: lowercase, stable, and the value the global setting
+stores. Then the display name, the short panel label and the note string, which is in
+`buzzer.play()` notation.
+
+A line beginning with `#` is a comment and a blank line is skipped; anywhere else `#` is a note, so
+a sharp like `F#5` needs no escaping. The file is not a settings document and is not read by `Ini`,
+so there is no section header, no key/value form and no key limit. A line without three separators,
+one with an empty field, or one whose sequence `buzzer.play()` would refuse is reported on the
+diagnostics stream at boot and left out of the library.
 
 | Call | Returns | Notes |
 | --- | --- | --- |

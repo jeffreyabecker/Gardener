@@ -3,19 +3,19 @@
 #include <vector>
 
 #include "app/AppContext.h"
+#include "app/BuzzerPlayer.h"
 #include "app/Logger.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"
-#include "app/storage/Ini.h"
 #include "app/storage/Storage.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* kJinglePath = "/modules/jingles.ini";
-constexpr const char* kJingleSection = "jingles";
+constexpr const char* kJinglePath = "/modules/jingles.txt";
 constexpr char kFieldSeparator = '|';
+constexpr char kCommentStart = '#';
 
 struct Jingle {
   String id;
@@ -45,9 +45,12 @@ void report(const char* what, const String& id) {
   gLogger->error(message.c_str());
 }
 
-// `/modules/jingles.ini` is data, not a `.be` module: the resolver reads it once when the module is
+// `/modules/jingles.txt` is data, not a `.be` module: the resolver reads it once when the module is
 // installed, the same way the runtime reads the module files, so a change takes effect at the next
-// reset. An entry is `<id>=<title>|<label>|<notes>`.
+// reset. A line is `<id>|<title>|<label>|<notes>`, the file is not a settings document, and a `#`
+// only starts a comment at the start of a line so a sharp stays a note. The sequence is handed to
+// the player's own parser here, so a jingle that could not be played is reported at boot rather
+// than when a routine asks for it.
 void loadJingles() {
   jingles.clear();
   if (gContext == nullptr) return;
@@ -58,31 +61,41 @@ void loadJingles() {
     return;
   }
 
-  Ini ini;
-  ini.parse(text);
-  for (uint8_t i = 0; i < ini.size(); i++) {
-    if (ini.sectionAt(i) != kJingleSection) continue;
+  int start = 0;
+  while (start <= (int)text.length()) {
+    int end = text.indexOf('\n', (unsigned int)start);
+    if (end < 0) end = (int)text.length();
+    String line = text.substring((unsigned int)start, (unsigned int)end);
+    start = end + 1;
+    line.trim();
+    if (line.length() == 0 || line[0] == kCommentStart) continue;
 
-    const String& value = ini.valueAt(i);
-    const int titleEnd = value.indexOf(kFieldSeparator);
-    const int labelEnd = titleEnd < 0 ? -1 : value.indexOf(kFieldSeparator, titleEnd + 1);
-    if (titleEnd < 0 || labelEnd < 0) {
-      report("malformed entry", ini.keyAt(i));
+    const int idEnd = line.indexOf(kFieldSeparator);
+    const int titleEnd = idEnd < 0 ? -1 : line.indexOf(kFieldSeparator, (unsigned int)idEnd + 1);
+    const int labelEnd =
+        titleEnd < 0 ? -1 : line.indexOf(kFieldSeparator, (unsigned int)titleEnd + 1);
+    if (labelEnd < 0) {
+      report("malformed entry", idEnd < 0 ? line : line.substring(0, (unsigned int)idEnd));
       continue;
     }
 
     Jingle jingle;
-    jingle.id = ini.keyAt(i);
-    jingle.title = value.substring(0, titleEnd);
-    jingle.label = value.substring(titleEnd + 1, labelEnd);
-    jingle.notes = value.substring(labelEnd + 1);
+    jingle.id = line.substring(0, (unsigned int)idEnd);
+    jingle.title = line.substring((unsigned int)idEnd + 1, (unsigned int)titleEnd);
+    jingle.label = line.substring((unsigned int)titleEnd + 1, (unsigned int)labelEnd);
+    jingle.notes = line.substring((unsigned int)labelEnd + 1);
+    jingle.id.trim();
     jingle.title.trim();
     jingle.label.trim();
     jingle.notes.trim();
 
     if (jingle.id.isEmpty() || jingle.title.isEmpty() || jingle.label.isEmpty() ||
         jingle.notes.isEmpty()) {
-      report("empty field", ini.keyAt(i));
+      report("empty field", jingle.id);
+      continue;
+    }
+    if (!BuzzerPlayer::validate(jingle.notes.c_str())) {
+      report("bad notes", jingle.id);
       continue;
     }
     jingles.push_back(jingle);

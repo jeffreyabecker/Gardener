@@ -75,7 +75,7 @@ modules such as `string` — its classes are simply globals by the time the page
 Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
 data image.
 
-`/modules/jingles.ini` is data rather than a module. It is not compiled or loaded as a `.be` file;
+`/modules/jingles.txt` is data rather than a module. It is not compiled or loaded as a `.be` file;
 the native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
 `jingles.title()`, `jingles.label()`, `jingles.notes()` and `jingles.current()`. Its format and the
 call list are in [bindings.md](./bindings.md#jingles--the-note-library).
