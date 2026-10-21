@@ -75,7 +75,7 @@ behaves identically after the epic.
 
 - [x] 3.1 Hand the machine its knobs — radio, diagnostics, battery gauge — as configuration from the
   composition root.
-- [ ] 3.2 Read the radio knob in `BleLink::begin()` from that configuration.
+- [x] 3.2 Read the radio knob in `BleLink::begin()` from that configuration.
 - [ ] 3.3 Read the diagnostics knob from configuration when the boot picks the logger.
 - [ ] 3.4 Have the full build's root read `settings.ini` and pass the values, so the full device's
   behavior is unchanged.
