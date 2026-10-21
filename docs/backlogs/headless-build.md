@@ -49,8 +49,8 @@ comes first.
 - [x] 1.9 Keep the `command` opcode executor with the machine domain, preserving its result bytes.
 - [x] 1.10 Register the machine's BLE domain in `buildAppContext()`.
 - [x] 1.11 Register the panel's BLE domain (`unit`) in `buildAppContext()`.
-- [ ] 1.12 Build and flash the full device; verify its serial surface is unchanged.
-- [ ] 1.13 Verify the BLE table, UUIDs, rates and opcode results are unchanged.
+- [x] 1.12 Build and flash the full device; verify its serial surface is unchanged.
+- [x] 1.13 Verify the BLE table, UUIDs, rates and opcode results are unchanged.
 
 ## Epic 2 — The capability record
 
