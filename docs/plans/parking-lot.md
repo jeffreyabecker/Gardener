@@ -45,4 +45,4 @@ so a nudge has no press to take that does not first take a meaning away from one
 ## Gesture Classifier
 
 gestures become either an enum or a string with a predictable format state machine functions become a
-lot less nested
+lot less nested. maybe expose this at the c++ level.
