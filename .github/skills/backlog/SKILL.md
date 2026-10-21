@@ -77,8 +77,9 @@ commit belongs to and any piece can be set aside or dropped on its own:
   the backlog belongs to a larger effort). The `main` leaf keeps the branch from colliding with
   its epic and task branches, which git rejects because refs are stored as files and a branch
   cannot also be a directory.
-- `backlog/<topic>/epic-<n>` — one per epic, cut from the backlog branch, worked in the backlog's
-  order.
+- `backlog/<topic>/epic-<n>/main` — one per epic, cut from the backlog branch, worked in the
+  backlog's order. Like the backlog branch, the `main` leaf keeps the epic from colliding with
+  its task branches.
 - `backlog/<topic>/epic-<n>/task-<m>` — one per item, cut from the epic branch.
 
 Work on the task branch, commit the item, and merge it back into the epic branch once it is ticked
