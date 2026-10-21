@@ -42,6 +42,20 @@ primary action, Up+Down is the settings view of any page with `describe()`, and 
 so a nudge has no press to take that does not first take a meaning away from one of those.
 
 
+## Berry pages as a stack of components
+
+A page can hold exactly one editor (`Page.editor`), so the routine settings module in
+[modules/settings.be](../../firmware/gardener/data/modules/settings.be) carries the list, the edit
+stage and the commit for a routine's `describe()` list, and the device's own settings screen in
+[routines/system.be](../../firmware/gardener/data/routines/system.be) hand-rolls a second one for
+unit, target, Bluetooth and jingle. The idea is a stack instead of one field: a value editor is
+pushed with a current value, its kind and bounds, takes the keys and the screen while it is on top,
+and pops with the value it settled on, so routine settings becomes a composition of several of them
+and the app's own settings screen can invoke the same ones. What holds it back is the page lifecycle
+and the gesture meanings: Back is pinned to the level — it closes the editor, cancels an edit, or
+stops the run — and `draw()` chooses between the one editor and `draw_page()`, so a stack has to
+settle who draws underneath the top and what a pop hands back.
+
 ## Gesture Classifier
 
 gestures become either an enum or a string with a predictable format state machine functions become a
