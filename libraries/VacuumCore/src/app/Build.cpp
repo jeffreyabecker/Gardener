@@ -67,6 +67,11 @@ AppContext buildAppContext() {
   auto* routines = new Routines();
   auto* ownership = new Ownership();
   auto* capabilities = new Capabilities();
+  // The full device has the panel and the gauge, and its stop is the local
+  // Back hold, not an ownership rule — the headless build composes a different
+  // record.
+  capabilities->setPanel(true);
+  capabilities->setBattery(true);
   // The store bus: the panel's client and the interface's server share one queue. The queue is the
   // one handle named in app/Tasks.h; the other two are created when the tasks spawn.
   storeQueue = xQueueCreate(StoreQueueDepth, sizeof(StoreRequest));
