@@ -40,8 +40,9 @@ bool App::begin() {
   // which is reported rather than assumed: whatever was there is gone.
   Storage::Mount mount = context_.storage().begin();
   context_.settings().begin();
-  Logger* logger = context_.settings().logEnabled() ? static_cast<Logger*>(new StreamLogger(Serial))
-                                                    : static_cast<Logger*>(new NilLogger());
+  Logger* logger = context_.config().diagnostics
+                       ? static_cast<Logger*>(new StreamLogger(Serial))
+                       : static_cast<Logger*>(new NilLogger());
   SerialLink* link = new SerialLink(&context_, Serial, serialAttached, *logger);
   // The wire surface is the build's to register: the machine's five domains here, and a panel
   // build's own domains beside them.
