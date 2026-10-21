@@ -1,11 +1,11 @@
-# ramped.be — a ladder of holds: a fixed number of sets, each one deeper than the last.
+# ramped_interval.be — a ladder of holds: a fixed number of sets, each one deeper than the last.
 #
 # The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Each set
 # works at its own target and rests at the rest pressure. Back pauses the run and vents the chamber;
 # OK then starts the set it stopped on again, with its work clock back at full.
 
-class RampedChrome
+class RampedIntervalChrome
   var owner
   var header
   var sets
@@ -78,7 +78,7 @@ class RampedChrome
   end
 end
 
-class Ramped : Page
+class RampedInterval : Page
   var phase
   var mark
   var set
@@ -107,7 +107,7 @@ class Ramped : Page
     self.work = 300
     self.rest_pressure = 5.0
     self.rest = 45
-    self.chrome = RampedChrome(self)
+    self.chrome = RampedIntervalChrome(self)
 
     self.on("up", "chord", / -> self.edit())
     self.on("ok", nil, / -> self.ok())
@@ -141,10 +141,11 @@ class Ramped : Page
     ]
   end
 
-  # The starting values match the shipped `ramped.ini`. The pressures go through clamp() before they
-  # are ever handed to the machine, and a hand-edited duration is held to the same bounds the editor
-  # uses. A switch's settings map, when there is one, is the set for this activation. A nullable
-  # step is an even ladder from the start to the final pressure; a nullable rest vents all the way.
+  # The starting values match the shipped `ramped_interval.ini`. The pressures go through clamp()
+  # before they are ever handed to the machine, and a hand-edited duration is held to the same
+  # bounds the editor uses. A switch's settings map, when there is one, is the set for this
+  # activation. A nullable step is an even ladder from the start to the final pressure; a nullable
+  # rest vents all the way.
   def read_settings(settings)
     self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
     self.initial = vacuum.clamp(self.value(settings, "initial_pressure", 5.0))
@@ -231,7 +232,7 @@ class Ramped : Page
     end
     vacuum.stop()
     self.phase = "paused"
-    vacuum.log("ramped: paused")
+    vacuum.log("ramped_interval: paused")
     return true
   end
 
@@ -239,11 +240,11 @@ class Ramped : Page
   # is pinned to the final pressure, so the ramp always ends where it was asked to.
   def target_list()
     if self.count > 1 && self.step <= 0.0
-      vacuum.log("ramped: no step")
+      vacuum.log("ramped_interval: no step")
       return nil
     end
     if self.count > 1 && self.final < self.initial
-      vacuum.log("ramped: final below start")
+      vacuum.log("ramped_interval: final below start")
       return nil
     end
     var out = []
@@ -272,7 +273,7 @@ class Ramped : Page
       return true
     end
     if !vacuum.start()
-      vacuum.log("ramped: start refused")
+      vacuum.log("ramped_interval: start refused")
       self.phase = "ready"
       return false
     end
@@ -344,7 +345,7 @@ class Ramped : Page
   def finish()
     vacuum.target_off()
     self.phase = "ready"
-    vacuum.log("ramped: complete")
+    vacuum.log("ramped_interval: complete")
     var notes = jingles.current()
     if notes != nil
       buzzer.play(notes)
@@ -358,7 +359,7 @@ class Ramped : Page
     self.phase = "ready"
     self.target = self.initial
     vacuum.target(self.initial)
-    vacuum.log("ramped: cycle stopped")
+    vacuum.log("ramped_interval: cycle stopped")
   end
 
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
@@ -379,7 +380,7 @@ class Ramped : Page
   # over at the first set when the editor closes, so it must not keep working at the old set
   # underneath it. An editor that refuses to open leaves the run alone.
   def edit()
-    if !self.open_editor(Settings("ramped"))
+    if !self.open_editor(Settings("ramped_interval"))
       return false
     end
     if self.phase != "ready"
@@ -465,7 +466,7 @@ end
 
 # The browser's row glyph: the stairs, three treads climbing by two risers, on the same 12 by 8
 # field and the same y + 1 to y + 6 band as the square wave, so the two read as a pair in the list.
-class RampedIcon : Icon
+class RampedIntervalIcon : Icon
   def init()
     super(self).init(12, 8)
   end
@@ -482,5 +483,5 @@ class RampedIcon : Icon
   end
 end
 
-routines.register("ramped", "Ramped Interval", Ramped(), false, RampedIcon())
-return Ramped
+routines.register("ramped_interval", "Ramped Interval", RampedInterval(), false, RampedIntervalIcon())
+return RampedInterval

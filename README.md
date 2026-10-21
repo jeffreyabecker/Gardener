@@ -302,14 +302,16 @@ While no controller owns the device, the panel runs a Berry routine: every `/rou
 boot and registers itself, and the one registered as `default` is the page. If none registers one,
 the panel shows the device's mark.
 
-Five ship: `default` (the readout), `browser` (the routine list), `system` (unit, default target,
-radio, jingle), `interval` (pull, hold, rest, repeat for a set count) and `ramped` (a ladder of
-sets). A routine reaches `vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jingles`, `routines` and
-`store`; the surface is in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle
-in [docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
+Six ship: `default` (the readout), `browser` (the routine list), `system` (unit, default target,
+radio, jingle), `interval` (pull, hold, rest, repeat for a set count), `ramped_interval` (a ladder
+of sets) and `ramped_static` (one timed profile: hold, ramp to a target, hold it, and stop). A
+routine reaches
+`vacuum`, `screen`, `device`, `buttons`, `buzzer`, `jingles`, `routines` and `store`; the surface is
+in [docs/specs/ui/bindings.md](./docs/specs/ui/bindings.md) and the lifecycle in
+[docs/specs/ui/routine.md](./docs/specs/ui/routine.md).
 
-Both cycles sound the jingle selected on the System page when their last set finishes, just before
-the panel goes home, and the machine plays it rather than the page, so it carries on past the
+The three running pages sound the jingle selected on the System page when their run finishes, just
+before the panel goes home, and the machine plays it rather than the page, so it carries on past the
 switch. The sequence stops itself at its end.
 
 A `poll` that never returns blocks the panel loop, so returning is a convention the author keeps,

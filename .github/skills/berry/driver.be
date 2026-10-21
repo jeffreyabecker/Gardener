@@ -318,6 +318,123 @@ def harness_check_interval_sets()
   end
 end
 
+# The static ramp is one timed profile, with its stage read off the clock rather than stored. A
+# short map crosses all three stages inside a drive and goes home at the end; a long one is paused
+# with Back and picked up with OK. The generic walk presses the device's Back hold instead, so
+# neither path is covered by it.
+def harness_check_ramped_static()
+  var entry = harness_find("ramped_static")
+  if entry == nil
+    harness_fail("ramped_static: not registered")
+    return
+  end
+  var page = entry.object
+
+  harness_reset()
+  if !harness_activate(entry, {
+      "initial_pressure": 5.0,
+      "target_pressure": 10.0,
+      "initial_duration": 2,
+      "target_duration": 2,
+      "total_duration": 6
+    })
+    return
+  end
+  if page.status_text() != "PRESS OK"
+    harness_fail("ramped_static: a ready page shows " + page.status_text())
+    return
+  end
+  harness_press("ok", "single")
+  var saw_start = false
+  var guard = 0
+  while page.status_text() != "RAMP" && guard < 20
+    if !harness_beats(1)
+      return
+    end
+    saw_start = saw_start || (page.status_text() == "START")
+    guard += 1
+  end
+  if !saw_start
+    harness_fail("ramped_static: the stage never showed START")
+    return
+  end
+  if page.status_text() != "RAMP"
+    harness_fail("ramped_static: the stage did not reach RAMP")
+    return
+  end
+  guard = 0
+  while page.status_text() != "TARGET" && guard < 40
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if page.status_text() != "TARGET"
+    harness_fail("ramped_static: the stage did not reach TARGET")
+    return
+  end
+  guard = 0
+  while harnessActive != nil && harnessActive.name == "ramped_static" && guard < 40
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if harnessActive == nil || harnessActive.name != "default"
+    harness_fail("ramped_static: did not go home at the end of the profile")
+    return
+  end
+
+  harness_reset()
+  if !harness_activate(entry, {
+      "initial_pressure": 5.0,
+      "target_pressure": 20.0,
+      "initial_duration": 30,
+      "target_duration": 30,
+      "total_duration": 120
+    })
+    return
+  end
+  harness_press("ok", "single")
+  guard = 0
+  while page.phase != "run" && guard < 20
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if page.phase != "run"
+    harness_fail("ramped_static: OK did not reach the run")
+    return
+  end
+  harness_press("back", "short")
+  if !harness_beats(1)
+    return
+  end
+  if page.phase != "paused"
+    harness_fail("ramped_static: Back did not pause the run")
+    return
+  end
+  harness_press("ok", "single")
+  if !harness_beats(1)
+    return
+  end
+  if page.phase != "approach"
+    harness_fail("ramped_static: OK did not resume the run")
+    return
+  end
+  guard = 0
+  while page.phase != "run" && guard < 20
+    if !harness_beats(1)
+      return
+    end
+    guard += 1
+  end
+  if page.phase != "run"
+    harness_fail("ramped_static: the resumed run did not come back to the clock")
+  end
+end
+
 # The names list is the browser's, so the hidden pages stay out of it and every other
 # registration is in it.
 def harness_check_names()
@@ -343,6 +460,7 @@ def harness_check()
   harness_check_jingles()
   harness_check_system_jingle()
   harness_check_interval_sets()
+  harness_check_ramped_static()
   harness_check_names()
 
   if harness_find("default") == nil

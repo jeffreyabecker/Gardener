@@ -19,8 +19,8 @@ class IntervalChrome
   def init(owner)
     self.owner = owner
 
-    # The title starts below the state icon so the top row can hold the set bubbles, as ramped's
-    # does. The phase reads on the status line instead.
+    # The title starts below the state icon so the top row can hold the set bubbles, as Ramped
+    # Interval's does. The phase reads on the status line instead.
     self.header = FixedText()
     self.header.value = "Interval"
     self.header.x = 0; self.header.y = 15; self.header.w = 116; self.header.h = 7
