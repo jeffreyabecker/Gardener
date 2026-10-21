@@ -3,28 +3,18 @@
 #include <Arduino.h>
 
 #include "app/AppContext.h"
+#include "app/MachineBoot.h"
 #include "app/storage/Storage.h"
 
 namespace gardener {
 
-class BleLink;
 class Logger;
-class MachineContext;
 class PanelContext;
-class SerialLink;
 
-// What the machine's boot hands back: the two links it built and started, on which the panel's
-// boot registers its own domains beside the machine's.
-struct MachineBoot {
-  SerialLink* serial;
-  BleLink* ble;
-};
-
-// Boot. The machine's boot brings up its parts, its links and its tasks; the panel's boot brings
-// up the panel, the VM, its registrations and its task. The full build's App::begin composes the
-// two in order, mounting the panel's storage and settings itself first because the persisted
-// knobs — the radio and the diagnostics — gate the machine's boot.
-MachineBoot machineBoot(MachineContext& context, Logger& logger);
+// Boot. The panel's boot brings up the panel, the VM, its registrations and its task, on the links
+// the machine's boot built. The full build's App::begin composes the two in order, mounting the
+// panel's storage and settings itself first because the persisted knobs — the radio and the
+// diagnostics — gate the machine's boot.
 void panelBoot(PanelContext& context, Logger& logger, const MachineBoot& machine,
                Storage::Mount mount);
 
