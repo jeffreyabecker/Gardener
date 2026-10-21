@@ -83,8 +83,8 @@ behaves identically after the epic.
   on the same beat.
 - [x] 3.6 Move the two holds — Back 3 s stop, Back+OK 5 s reset — into a safety reader the panel
   installs into the slot.
-- [ ] 3.7 Move the press classifier and the OK-during-hold go-home into the panel's page reader,
-  drained on the panel beat.
+- [x] 3.7 Keep the press classifier in the control beat — the button driver is single-consumer — so
+  the panel's page reader drains the presses the control beat queues, on the panel beat.
 - [ ] 3.8 Move the panel's I²C bring-up and the `display.begin()` abort out of the machine's boot
   into the composition that fits a panel.
 - [ ] 3.9 Make the machine's boot succeed with no display fitted.

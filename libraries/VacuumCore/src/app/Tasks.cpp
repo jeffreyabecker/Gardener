@@ -117,6 +117,11 @@ void drainMachineCommands(ControlState& state) {
 // is the way home, so it is stolen here rather than queued. With a controller owning there is no
 // page to go home to, so the press stays the routine-less log line it always was.
 //
+// The classifier stays on the control beat, not the panel beat: the button driver is
+// single-consumer (its settle() mutates one state machine), so the safety reader and the page
+// reader cannot both reach into the keys. The page's half — draining the queue — is the panel
+// task's, here only the press is classified.
+//
 // Up and Down together are one chord, not two presses: the pair is swallowed and a single chord
 // event is queued on the up key when the first of the two is released.
 void buttonsTick(ControlState& state) {
