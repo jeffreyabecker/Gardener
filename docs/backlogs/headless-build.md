@@ -181,40 +181,40 @@ path.
 - [x] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
 - [x] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
   and the full device still boots.
-- [ ] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
+- [x] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
   remove them from `Tasks.h` with the button include.
-- [ ] 5.21 Move `PanelContext` into `GardenerPanel`, once no machine file names it.
-- [ ] 5.22 Move the button interface and driver — `hal/Button.h`, `hal/ButtonPanel.h`,
+- [x] 5.21 Move `PanelContext` into `GardenerPanel`, once no machine file names it.
+- [x] 5.22 Move the button interface and driver — `hal/Button.h`, `hal/ButtonPanel.h`,
   `hal/impl/Buttons.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.23 Move the display interface and its Adafruit impl — `hal/Display.h`,
+- [x] 5.23 Move the display interface and its Adafruit impl — `hal/Display.h`,
   `hal/impl/AdafruitDisplay.h` — into `GardenerPanel`.
-- [ ] 5.24 Move the buzzer interface and its PWM impl — `hal/Buzzer.h`, `hal/impl/PwmBuzzer.{h,cpp}`
+- [x] 5.24 Move the buzzer interface and its PWM impl — `hal/Buzzer.h`, `hal/impl/PwmBuzzer.{h,cpp}`
   — into `GardenerPanel`.
-- [ ] 5.25 Move the battery interface and its ADC impl — `hal/Battery.h`,
+- [x] 5.25 Move the battery interface and its ADC impl — `hal/Battery.h`,
   `hal/impl/AdcBattery.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.26 Move `Overlay` into `GardenerPanel`.
-- [ ] 5.27 Move the panel pages — `UI.h`, `ConnectedUI` and `DisconnectedUI` — into `GardenerPanel`.
-- [ ] 5.28 Move `Fonts` into `GardenerPanel`.
-- [ ] 5.29 Move `Asset` into `GardenerPanel`.
-- [ ] 5.30 Move `Routines` into `GardenerPanel`.
-- [ ] 5.31 Move the panel's counters — `stopSeq` and `goHomeSeq` — out of `Tasks.h` into the
+- [x] 5.26 Move `Overlay` into `GardenerPanel`.
+- [x] 5.27 Move the panel pages — `UI.h`, `ConnectedUI` and `DisconnectedUI` — into `GardenerPanel`.
+- [x] 5.28 Move `Fonts` into `GardenerPanel`.
+- [x] 5.29 Move `Asset` into `GardenerPanel`.
+- [x] 5.30 Move `Routines` into `GardenerPanel`.
+- [x] 5.31 Move the panel's counters — `stopSeq` and `goHomeSeq` — out of `Tasks.h` into the
   panel's own header.
-- [ ] 5.32 Move the binding surface — `bindings/Module.h`, `bindings/Modules.h`,
+- [x] 5.32 Move the binding surface — `bindings/Module.h`, `bindings/Modules.h`,
   `bindings/Registry.cpp` and `Bindings.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.33 Move the `vacuum`, `screen` and `device` bindings into `GardenerPanel`.
-- [ ] 5.34 Move the `buttons`, `buzzer` and `jingles` bindings into `GardenerPanel`.
-- [ ] 5.35 Move the `store` binding into `GardenerPanel`.
-- [ ] 5.36 Move `BuzzerPlayer` into `GardenerPanel`.
-- [ ] 5.37 Move `Storage` into `GardenerPanel`.
-- [ ] 5.38 Move `Ini` into `GardenerPanel`.
-- [ ] 5.39 Move `Settings` into `GardenerPanel`.
-- [ ] 5.40 Move the store bus and its queue handle into `GardenerPanel`, removing the handle from
+- [x] 5.33 Move the `vacuum`, `screen` and `device` bindings into `GardenerPanel`.
+- [x] 5.34 Move the `buttons`, `buzzer` and `jingles` bindings into `GardenerPanel`.
+- [x] 5.35 Move the `store` binding into `GardenerPanel`.
+- [x] 5.36 Move `BuzzerPlayer` into `GardenerPanel`.
+- [x] 5.37 Move `Storage` into `GardenerPanel`.
+- [x] 5.38 Move `Ini` into `GardenerPanel`.
+- [x] 5.39 Move `Settings` into `GardenerPanel`.
+- [x] 5.40 Move the store bus and its queue handle into `GardenerPanel`, removing the handle from
   `Tasks.h`.
-- [ ] 5.41 Move the panel's serial domains — `fs` and `buzzer`, with their factory declarations —
+- [x] 5.41 Move the panel's serial domains — `fs` and `buzzer`, with their factory declarations —
   into `GardenerPanel`, leaving `Domains.h` naming only the machine's.
-- [ ] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
+- [x] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
   `GardenerPanel`.
-- [ ] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
+- [x] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
 - [ ] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
 
 ## Epic 6 — The headless build
