@@ -29,6 +29,9 @@ the constraint that set each aside. An idea document commits to nothing, may end
 deleted once a plan or a spec carries what it established. Its only entry point is this index —
 specs, guides, backlogs, code and the project README never link to one.
 
+- [Page machine](./ideas/page-machine.md) — whether a page should own a machine whose states hold
+  `event => (callback, next phase)` records as closures, with the page firing the events
+
 ## Backlogs
 
 A fine-grained tasklist for work that has been decided: ordered, checkable items that each leave the
