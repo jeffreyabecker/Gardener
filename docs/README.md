@@ -31,6 +31,8 @@ specs, guides, backlogs, code and the project README never link to one.
 
 - [Page machine](./ideas/page-machine.md) — whether a page should own a machine whose states hold
   `event => (callback, next phase)` records as closures, with the page firing the events
+- [Headless build](./ideas/headless-build.md) — whether the screen, keys, buzzer and disconnected
+  pages should be a build variant, and what a device does while nobody owns it
 
 ## Backlogs
 

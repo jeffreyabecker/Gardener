@@ -33,3 +33,10 @@ A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/d
 `gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
 `--task upload` and then `--task data`. What holds it back is that the image would ship whatever
 `settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.
+
+## Nudges inside a routine
+
+A gesture that adjusts the run while it is going instead of ending or restarting it: deeper by a step,
+one more set, or straight to rest and done. What holds it back is the gesture map — OK is the page's
+primary action, Up+Down is the settings view of any page with `describe()`, and Back is the whole stop —
+so a nudge has no press to take that does not first take a meaning away from one of those.
