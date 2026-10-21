@@ -21,6 +21,13 @@ to stand on its own, and plans may reference specs.
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
+## Ideas
+
+A direction being weighed before it has earned a requirement: the options, what each would cost and
+the constraint that set each aside. An idea document commits to nothing, may end in "no", and is
+deleted once a plan or a spec carries what it established. Its only entry point is this index —
+specs, guides, code and the project README never link to one.
+
 ## Guides
 
 User-facing build and parts documentation.
