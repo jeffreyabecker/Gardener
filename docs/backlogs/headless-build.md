@@ -98,7 +98,7 @@ The panel code moves into `GardenerPanel`, which depends on the machine library 
 other way. The panel's domains, safety reader and buzzer tick are registered from its own
 composition root.
 
-- [ ] 4.1 Create `GardenerPanel` beside `VacuumCore`.
+- [x] 4.1 Create `GardenerPanel` beside `VacuumCore`.
 - [ ] 4.2 Move the panel's HAL parts and their impls — buttons, display, buzzer — into it.
 - [ ] 4.3 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI` into it.
 - [ ] 4.4 Move `Fonts` and `Asset` into it.
