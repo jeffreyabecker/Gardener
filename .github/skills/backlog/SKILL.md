@@ -41,8 +41,10 @@ that has not been written yet.
 Each level of the backlog gets its own branch, so the history says which task, epic and effort a
 commit belongs to and any piece can be set aside or dropped on its own:
 
-- `backlog/<topic>` — one per backlog, cut from the branch the effort targets (`main` unless the
-  backlog belongs to a larger effort).
+- `backlog/<topic>/main` — one per backlog, cut from the branch the effort targets (`main` unless
+  the backlog belongs to a larger effort). The `main` leaf keeps the branch from colliding with
+  its epic and task branches, which git rejects because refs are stored as files and a branch
+  cannot also be a directory.
 - `backlog/<topic>/epic-<n>` — one per epic, cut from the backlog branch, worked in the backlog's
   order.
 - `backlog/<topic>/epic-<n>/task-<m>` — one per item, cut from the epic branch.
