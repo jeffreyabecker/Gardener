@@ -85,9 +85,9 @@ behaves identically after the epic.
   installs into the slot.
 - [x] 3.7 Keep the press classifier in the control beat — the button driver is single-consumer — so
   the panel's page reader drains the presses the control beat queues, on the panel beat.
-- [ ] 3.8 Move the panel's I²C bring-up and the `display.begin()` abort out of the machine's boot
+- [x] 3.8 Move the panel's I²C bring-up and the `display.begin()` abort out of the machine's boot
   into the composition that fits a panel.
-- [ ] 3.9 Make the machine's boot succeed with no display fitted.
+- [x] 3.9 Make the machine's boot succeed with no display fitted.
 - [ ] 3.10 Move the buzzer tick out of the control beat to an installable tick the composition
   provides.
 - [ ] 3.11 Verify the full device boots and behaves identically after the seams land.

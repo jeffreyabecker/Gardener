@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <stdlib.h>
 
+#include "app/Build.h"
 #include "app/Logger.h"
 #include "app/NilLogger.h"
 #include "app/Ownership.h"
@@ -66,18 +67,11 @@ bool App::begin() {
   boot += " booting";
   logger->info(boot.c_str());
 
-  // The panel is the one part with no fallback: nothing on the device can draw without it, so a
-  // panel that does not answer is fatal rather than a degraded mode. Its bus is the app's to bring
-  // up, because the driver takes a TwoWire it does not own. The sensor is an ADC pin, not a bus,
-  // so it has nothing to bring up here.
-  Wire1.begin(cfg::PANEL_I2C_SDA, cfg::PANEL_I2C_SCL, cfg::PANEL_I2C_FREQ_HZ);
-  bool displayOk = context_.display().begin();
-  logger->info(displayOk ? "oled: online" : "oled: not found, aborting");
-  if (!displayOk) {
-    // abort() panics and the ESP32 resets on a panic, so the device keeps trying rather than
-    // coming up blind and silent.
-    delay(50);
-    abort();
+  // The panel, when one is fitted, is the full build's to bring up — the
+  // machine's boot names no panel part. A machine-alone build reports no panel
+  // in its capability and skips this, coming up with no display.
+  if (context_.capabilities().panel()) {
+    panelBoot(context_, *logger);
   }
 
   bool sensorOk = context_.sensor().begin();
