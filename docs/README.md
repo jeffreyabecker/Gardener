@@ -39,9 +39,10 @@ specs, guides, backlogs, code and the project README never link to one.
 ## Backlogs
 
 The detailed breakdown of the plan it implements: ordered, checkable items that each leave the tree
-working. A backlog breaks work down rather than choosing or designing it, and it may name its plan.
-The work is done one item at a time, with a summary written under `docs/backlogs/completed/` after
-each epic; when the last item lands the backlog and its plan are deleted together.
+working, independent enough to be moved, reordered or dropped on their own. A backlog breaks work
+down rather than choosing or designing it, and it may name its plan. The work is done one item at a
+time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
+lands the backlog and its plan are deleted together.
 
 - [The machine without the panel](./backlogs/headless-build.md) — split the machine from the panel
   into two libraries, make both links pluggable, and ship a panel-less build with a capability

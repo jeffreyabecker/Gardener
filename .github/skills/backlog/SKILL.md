@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, checkable items that each leave the tree working, with a branch per backlog, epic and task, a commit per item, and a summary written after each epic. Use when breaking decided work into steps, working through a tasklist, or deciding whether something is a task, a plan or a parking-lot line.'
+description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, INVEST-sized items that each leave the tree working, with a branch per backlog, epic and task, a commit per item, and a summary written after each epic. Use when breaking decided work into steps, working through a tasklist, or deciding whether something is a task, a plan or a parking-lot line.'
 ---
 
 # Backlog
@@ -25,16 +25,48 @@ that has not been made, that decision belongs in a plan — or in an idea docume
 being weighed — and the item states the outcome. A backlog full of "decide how to…" lines is a plan
 that has not been written yet.
 
-## Items
+## An item is the unit of work
+
+An epic is a heading, a branch and a summary. The item is the branch, the commit and the diff. Work
+is never done at epic size, however the effort is organised.
 
 - One imperative per line: what changes, and what is true when it is done. "Split the gesture
   classifier out of `Panel.cpp`" or "Reject a pressure target above ambient with `err: range`".
-- Fine enough to finish and check without waiting on another item. If two items always move
-  together, they are one item; if one item spans several unrelated files, it is several.
+- Checked off with `- [x]` as it lands. Unticked items are what is left, so the list is the status.
 - Ordered so that every item leaves the tree working — it builds, and what the previous item
   verified still holds.
-- Checked off with `- [x]` as it lands. Unticked items are what is left, so the list is the status.
 - No estimates, no owners, no priorities. One file, one effort, one order.
+
+A line written at epic size — "add the headless build", "move the panel into `GardenerPanel`" — is
+a heading that has not been split. The tells are that it names several files or several unrelated
+behaviours, that it cannot be ticked off in one sitting, or that its commit message needs "and" to
+describe it. Split it until each line is a step rather than a phase.
+
+## Items are INVEST
+
+Every item has to be independent, negotiable, valuable, estimable, small and testable. The letters
+are a checklist for a line that feels too big, not a form to fill in — but a line that fails one of
+them is not an item yet.
+
+- **Independent** — nothing else has to be in flight for it to land, and it carries no later item's
+  work with it. Order is not dependence: the list is ordered to keep the tree working, but any item
+  can be moved, set aside or dropped without unpicking the rest. If two items only ever move
+  together, they are one item.
+- **Negotiable** — the item states the outcome; which file, class or function gets there is the
+  implementer's call when they pick it up. An item that fixes the mechanism has moved a design
+  decision out of the plan and into the list.
+- **Valuable** — something is better when it lands, and nothing later is needed for it to count: it
+  builds, what the previous item verified still holds, and a reply, a behaviour, a spec line or a
+  measurement has changed. "Prepare for…" is half an item; the work it enables is the item.
+- **Estimable** — small enough that whoever picks it up can say what it costs and be roughly right.
+  A line nobody can size is not understood yet: it is an epic to split, or a decision the plan has
+  not made. Nothing is estimated in the file; being estimable is the requirement.
+- **Small** — one sitting, one commit, one diff a reviewer reads in a pass. Size shows in the
+  branch: a task branch touching unrelated files is the split asking to happen.
+- **Testable** — the item says what is true when it is done, and that can be checked: the build
+  passes, a command answers, a spec line exists, a size is measured. A check that needs the whole
+  epic in place is a closing item for the epic; everything else is checked by the item that makes
+  it true.
 
 ## Branches
 
@@ -59,7 +91,8 @@ and the backlog branch into its target once the backlog and its plan are deleted
 Work one item at a time: cut the task branch, do the item, verify it, tick it off, commit it, merge
 it back, then start the next. One commit per item, so a step that turns out wrong can be walked back
 without unpicking the ones around it. Do not implement a whole epic in a single go — working ahead
-of the list hides which step broke the tree and turns a review into one large diff.
+of the list hides which step broke the tree and turns a review into one large diff. If an item turns
+out to be epic-sized once you are in it, stop and split it before the commit, not after.
 
 After the last item of an epic lands, write a summary at
 `docs/backlogs/completed/<topic>/epic-<n>-<title>.md`: what changed and what was verified, task by

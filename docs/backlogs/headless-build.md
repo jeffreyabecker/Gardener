@@ -159,25 +159,63 @@ which depends on `VacuumCore`.
   starts the panel task from its own boot.
 - [x] 5.11 Remove `Tone`, `Play` and `Off` from the machine command queue, and route the `buzzer`
   serial domain and the VM's `buzzer` and `jingles` bindings to the panel's buzzer directly.
-- [ ] 5.12 Verify the full device boots and behaves identically after the split, with the panel
-  code still in `VacuumCore`.
+- [ ] 5.12 Verify the full device boots after the split, with the panel code still in `VacuumCore`.
+- [ ] 5.13 Verify both wire surfaces are unchanged after the split: serial's `device`, `fs` and
+  `buzzer` answers, and Bluetooth's `batt` and `unit`.
+- [ ] 5.14 Verify the panel still drives by default after the split: Back releases, Back+OK reboots,
+  and settings, routines and jingles work.
 
 ### Phase B — move the panel into `GardenerPanel`
 
-- [ ] 5.13 Move the panel's HAL parts and their impls — buttons, display, buzzer.
-- [ ] 5.14 Move `Overlay`, `UI`, `ConnectedUI` and `DisconnectedUI`.
-- [ ] 5.15 Move `Fonts` and `Asset`.
-- [ ] 5.16 Move `Routines` and the eight bindings.
-- [ ] 5.17 Move the jingles and `BuzzerPlayer`.
-- [ ] 5.18 Move `Ini`, `Settings` and `Storage`.
-- [ ] 5.19 Move the store bus.
-- [ ] 5.20 Move the panel task, the button reader and the panel composition root.
-- [ ] 5.21 Move the panel's serial domains (`fs`, `buzzer`) and the panel's BLE domain (`unit`,
-  `batt`).
-- [ ] 5.22 Write the panel's composition root and boot in `GardenerPanel`: build the machine root,
-  compose the panel onto it, and register its domains.
-- [ ] 5.23 Verify the machine library includes nothing panel-shaped and links only the ESP32 core
-  and NimBLE.
+The composition splits before any file moves. `arduino-cli` puts a local library on the include path
+only when the sketch reaches it, and `VacuumCore` cannot include `GardenerPanel`, so the full build
+moves panel-side and the sketch includes `GardenerPanel.h` first. After that each item moves one set
+of files that nothing left in `VacuumCore` names, so only one copy of each header is ever on the
+path.
+
+- [ ] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
+- [ ] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
+  machine root and composes the panel onto it.
+- [ ] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
+  panel can call it.
+- [ ] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
+- [ ] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
+  and the full device still boots.
+- [ ] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
+  remove them from `Tasks.h` with the button include.
+- [ ] 5.21 Move `PanelContext` into `GardenerPanel`, once no machine file names it.
+- [ ] 5.22 Move the button interface and driver — `hal/Button.h`, `hal/ButtonPanel.h`,
+  `hal/impl/Buttons.{h,cpp}` — into `GardenerPanel`.
+- [ ] 5.23 Move the display interface and its Adafruit impl — `hal/Display.h`,
+  `hal/impl/AdafruitDisplay.h` — into `GardenerPanel`.
+- [ ] 5.24 Move the buzzer interface and its PWM impl — `hal/Buzzer.h`, `hal/impl/PwmBuzzer.{h,cpp}`
+  — into `GardenerPanel`.
+- [ ] 5.25 Move the battery interface and its ADC impl — `hal/Battery.h`,
+  `hal/impl/AdcBattery.{h,cpp}` — into `GardenerPanel`.
+- [ ] 5.26 Move `Overlay` into `GardenerPanel`.
+- [ ] 5.27 Move the panel pages — `UI.h`, `ConnectedUI` and `DisconnectedUI` — into `GardenerPanel`.
+- [ ] 5.28 Move `Fonts` into `GardenerPanel`.
+- [ ] 5.29 Move `Asset` into `GardenerPanel`.
+- [ ] 5.30 Move `Routines` into `GardenerPanel`.
+- [ ] 5.31 Move the panel's counters — `stopSeq` and `goHomeSeq` — out of `Tasks.h` into the
+  panel's own header.
+- [ ] 5.32 Move the binding surface — `bindings/Module.h`, `bindings/Modules.h`,
+  `bindings/Registry.cpp` and `Bindings.{h,cpp}` — into `GardenerPanel`.
+- [ ] 5.33 Move the `vacuum`, `screen` and `device` bindings into `GardenerPanel`.
+- [ ] 5.34 Move the `buttons`, `buzzer` and `jingles` bindings into `GardenerPanel`.
+- [ ] 5.35 Move the `store` binding into `GardenerPanel`.
+- [ ] 5.36 Move `BuzzerPlayer` into `GardenerPanel`.
+- [ ] 5.37 Move `Storage` into `GardenerPanel`.
+- [ ] 5.38 Move `Ini` into `GardenerPanel`.
+- [ ] 5.39 Move `Settings` into `GardenerPanel`.
+- [ ] 5.40 Move the store bus and its queue handle into `GardenerPanel`, removing the handle from
+  `Tasks.h`.
+- [ ] 5.41 Move the panel's serial domains — `fs` and `buzzer`, with their factory declarations —
+  into `GardenerPanel`, leaving `Domains.h` naming only the machine's.
+- [ ] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
+  `GardenerPanel`.
+- [ ] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
+- [ ] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
 
 ## Epic 6 — The headless build
 
@@ -185,51 +223,69 @@ The machine-alone sketch ships the machine with no panel. Its stack is `None` al
 Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents. What remains
 is the second build itself.
 
-- [ ] 6.1 Add the machine-alone sketch with a composition root for the pressure loop, the ownership
-  stack, the serial and Bluetooth links and the capability — no panel, so nothing pushes itself
-  above `None`.
-- [ ] 6.2 Compose the machine-alone capability: no panel, no battery, ownership stop.
-- [ ] 6.3 Register only the machine's domains in the machine-alone link composition — no `fs`, no
-  `buzzer`, no `unit`, no `batt`.
-- [ ] 6.4 Ship no data image for the machine-alone build.
-- [ ] 6.5 Teach [arduino.py](../../scripts/arduino.py) to build, upload and monitor the second sketch
-  and skip its data task.
-- [ ] 6.6 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
+- [ ] 6.1 Add a machine-alone sketch that includes only `VacuumCore`.
+- [ ] 6.2 Add the machine-alone composition root: pump, sensor, vent valve, vacuum system,
+  ownership stack and capability, with no panel part.
+- [ ] 6.3 Compose the machine-alone capability: no panel, no battery, ownership stop.
+- [ ] 6.4 Add a machine-side `device` domain answering `proto`, `fw`, `chip`, `heap` and `caps`,
+  with no battery, log or unit field, and register it in the machine-alone build.
+- [ ] 6.5 Boot the machine-alone build through `machineBoot`, with the radio and diagnostics fixed
+  by the build rather than read from settings.
+- [ ] 6.6 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
+- [ ] 6.7 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
+  sketch.
+- [ ] 6.8 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
+  sketch, which ships no data image.
+- [ ] 6.9 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
   Adafruit drivers.
 
 ## Epic 7 — The contract
 
 The specs record what the firmware now does: the stack, the composed wire surface, and the safety
-rule every build shares.
+rule every build shares. One fact per item, so each line can be checked against the code alone.
 
 - [ ] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
-  serial, bluetooth, panel or none — the top of the stack — and that `acquire` always succeeds, with
-  no `busy` reply.
-- [ ] 7.2 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
-  serial, bluetooth, panel or none, and that the `unit` and `batt` fields exist only where the panel
-  does.
-- [ ] 7.3 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
-  domains and the `unit`/`log` fields exist only where the panel does, and that `batt_v`/`batt_pct`
+  serial, bluetooth, panel or none — the top of the stack.
+- [ ] 7.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control acquire` always
+  succeeds, and that the `busy` reply is gone.
+- [ ] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
+  serial, bluetooth, panel or none.
+- [ ] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
+  the panel does.
+- [ ] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
+  domains exist only where the panel does.
+- [ ] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
+  fields exist only where the panel does.
+- [ ] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
   are answered by the panel's battery.
-- [ ] 7.4 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
-  the top of the stack changes — a claim, a release or a drop — and that a machine without a panel
+- [ ] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
+  the top of the stack changes — a claim, a release or a drop.
+- [ ] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
   holds pressure only while owned.
-- [ ] 7.5 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is the
-  reboot, and that a build without keys has no gestures, its stop being ownership.
-- [ ] 7.6 Record in [README.md](../../README.md) that the device ships in two builds and what each
+- [ ] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
+  the reboot.
+- [ ] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
+  its stop being ownership.
+- [ ] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
 
 ## Epic 8 — Verification
 
-- [ ] 8.1 Build and flash the full device; verify the serial and BLE surfaces match the contract,
-  including the ownership report naming the owner.
-- [ ] 8.2 Verify the full device's settings editor, routines and jingles still work, and that the
-  panel is the default controller with Back releasing and Back+OK rebooting.
-- [ ] 8.3 Verify the chamber vents on claim, release and drop on the full device.
-- [ ] 8.4 Build the machine-alone device; verify `device get` reports `caps` and no `display-size`,
-  `fs`, `buzzer`, `unit` or `batt`, and the BLE `caps` characteristic agrees.
-- [ ] 8.5 Verify a machine-alone device refuses to pressurize while unowned and vents when the
-  owning link drops mid-run.
-- [ ] 8.6 Verify `VacuumCore` builds and links without `GardenerPanel`.
-- [ ] 8.7 Measure the machine-alone image size and record it in the parking lot's firmware-size
+- [ ] 8.1 Build and flash the full device.
+- [ ] 8.2 Verify the full device's serial surface matches the contract, including `control get`
+  naming the owner and an `acquire` that never answers `busy`.
+- [ ] 8.3 Verify the full device's BLE surface matches the contract, including the `control` and
+  `caps` characteristics.
+- [ ] 8.4 Verify the full device's settings editor still edits and persists.
+- [ ] 8.5 Verify the full device's routines and jingles still run.
+- [ ] 8.6 Verify the panel is the default controller: Back releases and Back+OK reboots.
+- [ ] 8.7 Verify the chamber vents on a claim, on a release and on a drop on the full device.
+- [ ] 8.8 Build and flash the machine-alone device.
+- [ ] 8.9 Verify the machine-alone `device get` reports `caps` and no `display-size`, `fs`,
+  `buzzer`, `unit` or `batt`.
+- [ ] 8.10 Verify the machine-alone `caps` characteristic agrees with the serial report, and that
+  `unit` and `batt` are absent.
+- [ ] 8.11 Verify the machine-alone device refuses to pressurize while unowned.
+- [ ] 8.12 Verify the machine-alone device vents when the owning link drops mid-run.
+- [ ] 8.13 Measure the machine-alone image size and record it in the parking lot's firmware-size
   section ([parking-lot.md](../plans/parking-lot.md)).
