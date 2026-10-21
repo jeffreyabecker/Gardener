@@ -113,11 +113,9 @@ void DeviceDomain::get(Stream& io) {
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
-  // `widthxheight` in pixels, one field because it is one fact about the panel.
-  io.print(" display-size=");
-  io.print(app_.display().width());
-  io.print('x');
-  io.print(app_.display().height());
+  // One byte, the same mask the BLE `caps` characteristic reports.
+  io.print(" caps=");
+  io.print(app_.capabilities().mask());
   io.print('\n');
 }
 
