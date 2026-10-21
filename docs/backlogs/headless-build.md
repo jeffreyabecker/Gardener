@@ -29,7 +29,7 @@ hard-wiring them; BLE gains the same abstraction and is split into a machine dom
 domain. This is the foundation: the capability record and the library split both build on it, so it
 comes first.
 
-- [ ] 1.1 Move the serial domain population out of `SerialLink`'s constructor, so the link starts
+- [x] 1.1 Move the serial domain population out of `SerialLink`'s constructor, so the link starts
   empty and exposes registration.
 - [ ] 1.2 Register the five serial domains from `buildAppContext()`, so the full device's serial
   surface is unchanged.

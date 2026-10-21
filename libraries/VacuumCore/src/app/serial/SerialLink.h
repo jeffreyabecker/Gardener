@@ -21,6 +21,10 @@ class SerialLink {
 
   SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger);
 
+  // The surface is whatever the build registers: the machine adds its domains, and a panel build
+  // adds its own, so the link itself names none of them.
+  void registerDomain(Domain* domain) { domains_.add(domain); }
+
   void begin();
   void poll(uint32_t nowMs);
 

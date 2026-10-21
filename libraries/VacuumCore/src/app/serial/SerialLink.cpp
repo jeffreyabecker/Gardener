@@ -8,13 +8,7 @@
 namespace gardener {
 
 SerialLink::SerialLink(AppContext* context, Stream& stream, PresenceFn present, Logger& logger)
-    : stream_(stream), present_(present), context_(*context), logger_(logger) {
-  domains_.add(createControlDomain(context_));
-  domains_.add(createDeviceDomain(context_));
-  domains_.add(createVacuumDomain(context_));
-  domains_.add(createBuzzerDomain(context_));
-  domains_.add(createFsDomain(context_));
-}
+    : stream_(stream), present_(present), context_(*context), logger_(logger) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
