@@ -1,4 +1,4 @@
-#include "app/serial/Domains.h"
+#include "app/serial/PanelDomains.h"
 
 #include <Arduino.h>
 

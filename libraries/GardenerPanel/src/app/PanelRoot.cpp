@@ -9,7 +9,6 @@
 #include "app/Ownership.h"
 #include "app/PanelContext.h"
 #include "app/StoreBus.h"
-#include "app/Tasks.h"
 #include "app/panel/Overlay.h"
 #include "app/routines/Routines.h"
 #include "app/storage/Settings.h"
@@ -21,6 +20,10 @@
 #include "hal/impl/PwmBuzzer.h"
 
 namespace gardener {
+
+// The store bus's queue: the panel's client and server share it, so it belongs to the panel.
+QueueHandle_t storeQueue = nullptr;
+
 namespace {
 
 // The fitted panel: an Adafruit 1.3" 128x64 monochrome SH1106 on the STEMMA QT bus. Its geometry
