@@ -63,7 +63,7 @@ A routine's name is also the name of the file its values are kept in (see `store
 refused at load.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
-`python scripts/arduino.py --task data`. See the README for that flow.
+`python scripts/arduino.py --task data`.
 
 ## Shared code in `/modules`
 

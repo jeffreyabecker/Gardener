@@ -88,7 +88,7 @@ second case arrives.
 
 **Delete, don't deprecate.** Unused code goes to git — not behind `#if 0`, not in a `legacy/`
 folder, not behind a flag defaulted off. The Berry runtime and the host client were both deleted
-outright and left to the history (`README.md`, Roadmap); do the same.
+outright and left to the history; do the same.
 
 **Answer a plan with the smallest mechanism.** Read `docs/plans/` for what has to be true, then
 answer it with the smallest mechanism the current single loop allows. Reaching for a task, a lock,

@@ -25,6 +25,7 @@ to stand on its own, and plans may reference specs.
 
 User-facing build and parts documentation.
 
-- [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy and what it costs
+- [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy, what it costs and
+  how it is wired
 
-See the [project README](../README.md) for wiring, build and upload flow, and safety notes.
+See the [project README](../README.md) for the build and upload flow and the safety notes.
