@@ -38,13 +38,14 @@ that has not been written yet.
 
 ## Working a backlog
 
-Work one item at a time: do the item, verify it, tick it off, then start the next. Do not implement
-a whole epic in a single go — working ahead of the list hides which step broke the tree and turns a
-review into one large diff.
+Work one item at a time: do the item, verify it, tick it off, commit it, then start the next. One
+commit per item, so a step that turns out wrong can be walked back without unpicking the ones around
+it. Do not implement a whole epic in a single go — working ahead of the list hides which step broke
+the tree and turns a review into one large diff.
 
 After the last item of an epic lands, write a summary at
 `docs/backlogs/completed/<topic>/epic-<n>-<title>.md`: what changed and what was verified, task by
-task. Those summaries stay after the backlog is deleted.
+task. Commit it on its own, and leave it in place — the summaries stay after the backlog is deleted.
 
 ## Leaving
 
