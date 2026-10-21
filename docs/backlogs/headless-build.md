@@ -173,7 +173,7 @@ moves panel-side and the sketch includes `GardenerPanel.h` first. After that eac
 of files that nothing left in `VacuumCore` names, so only one copy of each header is ever on the
 path.
 
-- [ ] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
+- [x] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
 - [ ] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
   machine root and composes the panel onto it.
 - [ ] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
