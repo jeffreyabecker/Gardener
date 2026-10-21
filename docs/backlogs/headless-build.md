@@ -79,9 +79,9 @@ behaves identically after the epic.
 - [x] 3.3 Read the diagnostics knob from configuration when the boot picks the logger.
 - [x] 3.4 Have the full build's root read `settings.ini` and pass the values, so the full device's
   behavior is unchanged.
-- [ ] 3.5 Give the control beat one installable local-stop slot — a verdict, stop or reset, applied
+- [x] 3.5 Give the control beat one installable local-stop slot — a verdict, stop or reset, applied
   on the same beat.
-- [ ] 3.6 Move the two holds — Back 3 s stop, Back+OK 5 s reset — into a safety reader the panel
+- [x] 3.6 Move the two holds — Back 3 s stop, Back+OK 5 s reset — into a safety reader the panel
   installs into the slot.
 - [ ] 3.7 Move the press classifier and the OK-during-hold go-home into the panel's page reader,
   drained on the panel beat.

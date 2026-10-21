@@ -4,6 +4,7 @@
 #include "app/Logger.h"
 #include "app/Ownership.h"
 #include "app/SafeReboot.h"
+#include "app/StopSource.h"
 #include "app/StoreBus.h"
 #include "app/VacuumSystem.h"
 #include "app/ble/BleLink.h"
@@ -60,6 +61,7 @@ constexpr uint32_t ResetHoldMs = 5000;
 struct ControlState {
   AppContext context;
   Logger* logger;
+  StopSource* stopSource = nullptr;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
   bool backStopFired = false;
@@ -159,33 +161,48 @@ void buttonsTick(ControlState& state) {
   }
 }
 
-// Back is a local stop, not a press with an action: held past the mark it stops the pump and vents,
-// and the vent stays open as long as the key is down. The latch keeps the stopSeq bump — the
-// panel's takeStopped() notice — to one per hold, while the stop itself is re-asserted every tick so
-// a start or target command that sneaks in while Back is held is undone in the same tick. Releasing
-// the key arms the next one and leaves the chamber vented.
-void watchBackHold(ControlState& state) {
-  const uint32_t held = state.context.buttons().heldMs(Button::Back);
-  if (held == 0) {
-    state.backStopFired = false;
+// The keys behind the machine's safety slot: Back held past the mark is a
+// stop, and Back+OK held past the mark is the reset. This names the keys; the
+// machine applies the verdict without naming one.
+class ButtonStopSource : public StopSource {
+ public:
+  explicit ButtonStopSource(AppContext& context) : context_(context) {}
+
+  Verdict tick() override {
+    if (context_.buttons().heldMs(Button::Back) >= ResetHoldMs &&
+        context_.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
+      return Verdict::Reset;
+    }
+    if (context_.buttons().heldMs(Button::Back) >= BackStopMs) {
+      return Verdict::Stop;
+    }
+    return Verdict::None;
+  }
+
+ private:
+  AppContext& context_;
+};
+
+// The machine applies the verdict on the control beat, so the stop is never
+// delayed by a page. A stop is re-asserted every tick while the source says
+// so — a start or target that sneaks in is undone in the same tick — and the
+// stopSeq bump is latched to one per hold. Releasing arms the next one.
+void applyVerdict(ControlState& state, StopSource::Verdict verdict) {
+  if (verdict == StopSource::Verdict::Stop) {
+    if (!state.backStopFired) {
+      state.backStopFired = true;
+      state.logger->warn("app: stop source held, venting");
+      stopSeq++;
+    }
+    state.context.vacuum().stop();
     return;
   }
-  if (held < BackStopMs) return;
-  if (!state.backStopFired) {
-    state.backStopFired = true;
-    state.logger->warn("app: back held, venting");
-    stopSeq++;
+  if (verdict == StopSource::Verdict::Reset) {
+    state.logger->warn("app: stop source held, resetting");
+    safeReboot(state.context);
+    return;
   }
-  state.context.vacuum().stop();
-}
-
-// Both keys together are the local reset. It is what clears a record an absent controller left
-// held, and it runs from every page whatever a controller is doing.
-void watchResetHold(ControlState& state) {
-  if (state.context.buttons().heldMs(Button::Back) < ResetHoldMs) return;
-  if (state.context.buttons().heldMs(Button::Ok) < ResetHoldMs) return;
-  state.logger->warn("app: back and ok held, resetting");
-  safeReboot(state.context);
+  state.backStopFired = false;
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state change,
@@ -256,8 +273,8 @@ void controlTask(void* arg) {
     state.context.vacuum().service(now);
     state.context.buzzer().update(now);
     buttonsTick(state);
-    watchBackHold(state);
-    watchResetHold(state);
+    applyVerdict(state,
+                 state.stopSource ? state.stopSource->tick() : StopSource::Verdict::None);
     logRunChanges(state, now);
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
@@ -332,7 +349,7 @@ void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* 
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
   buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
-  static ControlState control{context, &logger};
+  static ControlState control{context, &logger, new ButtonStopSource(context)};
   static InterfaceState interface{context, &logger, link, ble, storeServer};
   static PanelState panel{context, &logger, connected, disconnected};
 
