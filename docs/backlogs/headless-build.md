@@ -90,7 +90,7 @@ behaves identically after the epic.
 - [x] 3.9 Make the machine's boot succeed with no display fitted.
 - [x] 3.10 Move the buzzer tick out of the control beat to an installable tick the composition
   provides.
-- [ ] 3.11 Verify the full device boots and behaves identically after the seams land.
+- [x] 3.11 Verify the full device boots and behaves identically after the seams land.
 
 ## Epic 4 — The panel library
 
