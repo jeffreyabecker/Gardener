@@ -163,7 +163,7 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | `on` / `off` | the diagnostics preference; a change applies at the next reset |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.ini` and restored at boot |
-| `display-size` | `widthxheight` | panel geometry in pixels |
+| `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery, `4` ownership stop |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 -> control acquire
 <- ok control=owned
 -> device get
-<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa display-size=128x64
+<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa caps=3
 -> device set log off
 <- ok log=off
 -> device set unit mmhg
@@ -198,8 +198,8 @@ change does not silence an already-running diagnostics stream until the next res
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
 fields. A pack that is not fitted reads `-` for both.
 
-`panel` is gone as a domain. Its one wire fact is `display-size` in `device get`. The wire still
-does not draw on the panel.
+`panel` is gone as a domain, and so is `display-size`: whether a panel is fitted is the `caps`
+panel bit, one record served by both links. The wire still does not draw on the panel.
 
 ## 7. `vacuum` — the machine that holds pressure
 
