@@ -11,6 +11,7 @@
 #include "app/Tasks.h"
 #include "app/ble/BleLink.h"
 #include "app/ble/MachineBleDomain.h"
+#include "app/ble/PanelBleDomain.h"
 #include "app/panel/Asset.h"
 #include "app/panel/ConnectedUI.h"
 #include "app/panel/DisconnectedUI.h"
@@ -51,6 +52,7 @@ bool App::begin() {
   link->registerDomain(createFsDomain(context_));
   BleLink* ble = new BleLink(&context_);
   ble->registerDomain(new MachineBleDomain(&context_));
+  ble->registerDomain(new PanelBleDomain(&context_));
   ConnectedUI* connected = new ConnectedUI(context_);
   DisconnectedUI* disconnected = new DisconnectedUI(context_);
 
