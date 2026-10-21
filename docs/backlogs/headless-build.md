@@ -103,19 +103,19 @@ Whoever is on top drives, and any change of the top — a claim, a release or a 
 chamber. The buttons leave the control task for the panel: the two holds become panel gestures —
 Back releases control, Back+OK is the reboot the wire already serves.
 
-- [ ] 4.1 Add `Panel` to the `Link` enum, beside `None`, `Serial` and `Bluetooth`.
-- [ ] 4.2 Replace `Ownership`'s single owner and stale flag with a stack: `None` at the bottom,
+- [x] 4.1 Add `Panel` to the `Link` enum, beside `None`, `Serial` and `Bluetooth`.
+- [x] 4.2 Replace `Ownership`'s single owner and stale flag with a stack: `None` at the bottom,
   `acquire` pushes and always succeeds, `release` and `drop` remove, and the top is the owner. The
   `busy` reply and the stale flag go with it.
-- [ ] 4.3 Vent the chamber whenever the top changes — a claim, a release or a drop — so a new
+- [x] 4.3 Vent the chamber whenever the top changes — a claim, a release or a drop — so a new
   controller always starts from an open chamber.
-- [ ] 4.4 Push the panel at boot in a panel build, so it is the default controller beneath every
+- [x] 4.4 Push the panel at boot in a panel build, so it is the default controller beneath every
   external link.
-- [ ] 4.5 Report the top as the owner: `control get` and the BLE `control` characteristic answer
+- [x] 4.5 Report the top as the owner: `control get` and the BLE `control` characteristic answer
   serial, bluetooth, panel or none.
-- [ ] 4.6 Move the press classifier from the control beat to the panel beat, so the control task
+- [x] 4.6 Move the press classifier from the control beat to the panel beat, so the control task
   reads no keys.
-- [ ] 4.7 Make the two holds panel gestures — Back releases control, Back+OK issues `device reboot` —
+- [x] 4.7 Make the two holds panel gestures — Back releases control, Back+OK issues `device reboot` —
   and remove the installable stop slot and the safety reader.
 - [ ] 4.8 Verify the full device holds and releases through the stack, and that a vanished serial or
   BLE owner vents the chamber.

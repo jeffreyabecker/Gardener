@@ -45,6 +45,9 @@ void ConnectedUI::drawFrame() {
     case Link::Bluetooth:
       bluetoothIcon();
       break;
+    // The page is shown only while an external link drives, so these never draw: the panel's own
+    // pages are the mark and the routines.
+    case Link::Panel:
     case Link::None:
       break;
   }

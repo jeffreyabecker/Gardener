@@ -15,8 +15,8 @@ namespace gardener {
 // build does not.
 //
 // Connecting is read-only. Ownership is the explicit write to `control`, and
-// leaving while owning changes nothing: the record stays held (and stale)
-// until the local reset gesture clears it.
+// leaving while owning removes the link from the stack, which vents the
+// machine on the next control beat.
 //
 // NimBLE runs its host on core 0 and the loop on core 1. A status read answers
 // from the machine as it is, and a write only lands in a slot here. poll()

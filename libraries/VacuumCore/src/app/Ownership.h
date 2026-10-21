@@ -4,60 +4,84 @@
 
 namespace gardener {
 
-// The transports that can ask to drive the machine. `None` is the record's empty state, not a link.
-enum class Link : uint8_t { None, Serial, Bluetooth };
+// The links that can drive the machine, newest claim on top. `None` is the floor — it sits at the
+// bottom and vents — and a panel build pushes `Panel` above it at boot, so the panel is the
+// default controller beneath every external link.
+enum class Link : uint8_t { None, Serial, Bluetooth, Panel };
 
-// Who may change the machine. Connecting is not controlling: a link that only connects can read,
-// and the panel and the machine belong to whoever holds this record.
+// The machine's controller, read as a stack: whoever is on top drives, and a claim, a release or a
+// drop changes the top, which vents the chamber. `None` is always the floor — an empty stack is
+// the idle owner, and its only effect is to vent.
 //
-// One controller at a time. A link that drops while owning leaves the record held but stale: the
-// machine keeps running and the panel keeps showing that link, while a reconnected link can only
-// read until the local reset clears the record.
+// Serial and Bluetooth push themselves when they claim and are removed when they release or drop;
+// a panel build pushes the panel at boot. There is no busy and no stale record: a claim always
+// succeeds, and a vanished link is simply gone.
 class Ownership {
  public:
-  // True only for the live owner. A stale record answers false for the link that left it, which
-  // is what makes a reconnected link a read-only observer.
-  bool ownedBy(Link link) const { return owner_ == link && !stale_; }
+  static constexpr uint8_t MaxLinks = 3;  // serial, bluetooth, panel; None is the implicit floor
 
-  // True while any link owns the machine, including one that has dropped and left it stale. The
-  // panel uses this, because the machine is still that link's responsibility until the reset.
-  bool held() const { return owner_ != Link::None; }
+  // True when `link` is on top: the only link that commands the machine.
+  bool ownedBy(Link link) const { return top() == link; }
 
-  Link owner() const { return owner_; }
+  // True while an external link is on top: the panel is not driving. The panel's pages and the
+  // screen follow this rather than the cable.
+  bool external() const { return top() == Link::Serial || top() == Link::Bluetooth; }
 
-  // True when `link` owns the device after the call. Acquiring again as the owner is idempotent;
-  // any other link — or a stale record — is refused as busy.
+  // The top of the stack: who drives the machine. None when nobody does.
+  Link owner() const { return top(); }
+
+  // A claim always succeeds: the link goes on top unless it is already there. The floor cannot be
+  // claimed.
   bool acquire(Link link) {
     if (link == Link::None) return false;
-    if (ownedBy(link)) return true;
-    if (held()) return false;
-    owner_ = link;
+    if (indexOf(link) >= 0) return true;
+    if (count_ >= MaxLinks) return false;
+    links_[count_++] = link;
     return true;
   }
 
-  // True when `link` owned it and the caller must now release the chamber. A release from anyone
-  // else, including after a drop, is a no-op: only reset() clears a held record.
+  // A release removes the link wherever it sits; the one beneath is the controller again.
   bool release(Link link) {
-    if (!ownedBy(link)) return false;
-    owner_ = Link::None;
-    return true;
+    if (link == Link::None) return false;
+    return remove(link);
   }
 
-  // The transport went away. Ownership is not released; the record stays held and cannot be
-  // acquired again until reset().
-  void drop(Link link) {
-    if (owner_ == link) stale_ = true;
-  }
-
-  // The local reset is the only thing that clears a held record. A fresh boot starts empty.
-  void reset() {
-    owner_ = Link::None;
-    stale_ = false;
-  }
+  // The transport went away. The link is removed, so it cannot leave the machine held.
+  void drop(Link link) { remove(link); }
 
  private:
-  Link owner_ = Link::None;
-  bool stale_ = false;
+  Link top() const { return count_ == 0 ? Link::None : links_[count_ - 1]; }
+
+  int8_t indexOf(Link link) const {
+    for (uint8_t i = 0; i < count_; ++i) {
+      if (links_[i] == link) return static_cast<int8_t>(i);
+    }
+    return -1;
+  }
+
+  bool remove(Link link) {
+    const int8_t index = indexOf(link);
+    if (index < 0) return false;
+    for (uint8_t i = static_cast<uint8_t>(index); i + 1 < count_; ++i) {
+      links_[i] = links_[i + 1];
+    }
+    --count_;
+    return true;
+  }
+
+  // The stack above the floor, bottom first. Written on the link tasks and read on the control and
+  // panel beats; a stale top reads as a spurious vent, which is safe, so no lock is worth it.
+  Link links_[MaxLinks] = {};
+  uint8_t count_ = 0;
 };
+
+inline const char* linkName(Link link) {
+  switch (link) {
+    case Link::Serial: return "serial";
+    case Link::Bluetooth: return "bluetooth";
+    case Link::Panel: return "panel";
+    default: return "none";
+  }
+}
 
 }  // namespace gardener

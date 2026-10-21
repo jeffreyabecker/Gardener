@@ -4,7 +4,6 @@
 #include "app/Logger.h"
 #include "app/Ownership.h"
 #include "app/SafeReboot.h"
-#include "app/StopSource.h"
 #include "app/StoreBus.h"
 #include "app/TickService.h"
 #include "app/VacuumSystem.h"
@@ -19,7 +18,6 @@ namespace gardener {
 
 QueueHandle_t machineCommandQueue = nullptr;
 QueueHandle_t storeQueue = nullptr;
-QueueHandle_t buttonEventQueue = nullptr;
 volatile uint32_t stopSeq = 0;
 volatile uint32_t goHomeSeq = 0;
 volatile bool serialConnected = false;
@@ -28,9 +26,9 @@ volatile bool bleConnected = false;
 namespace {
 
 // Task configuration. The control task runs above the
-// Arduino loop's default priority so the safety tick is never preempted by a link or the screen;
-// the panel task runs lowest because a routine's poll may take its time. The panel's stack is the
-// one the Berry interpreter runs inside.
+// Arduino loop's default priority so the top-change vent and the PID are never preempted by a link
+// or the screen; the panel task runs lowest because a routine's poll may take its time. The panel's
+// stack is the one the Berry interpreter runs inside.
 constexpr UBaseType_t ControlPriority = 2;
 constexpr UBaseType_t InterfacePriority = 1;
 constexpr UBaseType_t PanelPriority = 0;
@@ -44,36 +42,28 @@ constexpr UBaseType_t PanelCore = 0;
 // Queue depths. Overflow drops the newest item with a log
 // line; the consumers drain every tick, so a full queue is the exception, not the steady state.
 constexpr UBaseType_t MachineCommandQueueDepth = 8;
-constexpr UBaseType_t ButtonEventQueueDepth = 8;
 
 // The keys in the order a press is reported, which is the panel's order rather than the bit order.
 constexpr Button PressOrder[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
 
-// The local stop. It is a safety path rather than a preference, so it is a constant here and not a
-// setting: holding Back for this long ends the run and vents, whatever the controller is doing.
+// The panel's holds. Holding Back for this long stops the run and vents; Back+OK together for the
+// longer mark is the reboot.
 constexpr uint32_t BackStopMs = 3000;
-
-// The local reset. Back+OK together for this long release the chamber and restart, which is also
-// how a controller that dropped while owning is cleared.
 constexpr uint32_t ResetHoldMs = 5000;
 
 // The control task's own state: the context it commands, the logger it reports through, and the
-// latch/timing fields the run log and the holds need.
+// latch/timing fields the run log and the top-change vent need.
 struct ControlState {
   AppContext context;
   Logger* logger;
-  StopSource* stopSource = nullptr;
   TickService* tickService = nullptr;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
-  bool backStopFired = false;
-  // The Up+Down chord: both keys were down at once, and the chord event has gone out. The pair's
-  // own releases are not page presses while either flag is set.
-  bool upDownChord = false;
-  bool upDownChordFired = false;
+  Link lastOwner = Link::None;
 };
 
-// The panel task's own state: the two screens it owns, the one showing, and which page it is.
+// The panel task's own state: the two screens it owns, the one showing, which page it is, and the
+// chord and hold latches the keys need.
 struct PanelState {
   AppContext context;
   Logger* logger;
@@ -81,6 +71,12 @@ struct PanelState {
   DisconnectedUI* disconnected;
   UserInterface* ui = nullptr;
   bool ownedShown = false;
+  // The Up+Down chord: both keys were down at once, and the chord event has gone out. The pair's
+  // own releases are not page presses while either flag is set.
+  bool upDownChord = false;
+  bool upDownChordFired = false;
+  // One stopSeq bump per Back hold, so a page sees the stop once rather than every beat.
+  bool backStopFired = false;
 };
 
 // The interface task's own state: the wire and the flash, and the logger for the link's reports.
@@ -114,24 +110,45 @@ void drainMachineCommands(ControlState& state) {
   while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyMachineCommand(state, command);
 }
 
-// The keys, settled and classified here: one ButtonEvent per completed press. The panel task
-// consumes the queue. OK while the Back hold vents is not a page action: on the disconnected page it
-// is the way home, so it is stolen here rather than queued. With a controller owning there is no
-// page to go home to, so the press stays the routine-less log line it always was.
-//
-// The classifier stays on the control beat, not the panel beat: the button driver is
-// single-consumer (its settle() mutates one state machine), so the safety reader and the page
-// reader cannot both reach into the keys. The page's half — draining the queue — is the panel
-// task's, here only the press is classified.
+// A classified press goes to the active routine on the panel's own pages, or to the press log. A
+// press is consumed either way, so it is never delivered twice.
+void deliverPress(PanelState& state, Button button, Press press);
+
+// The keys, settled and classified on the panel beat: the button driver is single-consumer (its
+// settle() mutates one state machine), and the panel is its one consumer now that the control task
+// reads no keys. One beat classifies the presses, watches the two holds, and feeds whichever page
+// owns them. OK while the Back hold vents is not a page action: on the panel's own pages it is the
+// way home, so it is stolen rather than delivered.
 //
 // Up and Down together are one chord, not two presses: the pair is swallowed and a single chord
-// event is queued on the up key when the first of the two is released.
-void buttonsTick(ControlState& state) {
+// event is delivered on the up key when the first of the two is released.
+void buttonsTick(PanelState& state) {
   const bool upDown = state.context.buttons().pressed(Button::Up);
   const bool downDown = state.context.buttons().pressed(Button::Down);
   const bool bothDown = upDown && downDown;
 
+  // The two holds are the panel's gestures. Back+OK is the reboot, whatever owns the machine; Back
+  // is the stop, so it fires only while the panel drives.
+  if (state.context.buttons().heldMs(Button::Back) >= ResetHoldMs &&
+      state.context.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
+    state.logger->warn("panel: reset held, rebooting");
+    safeReboot(state.context);
+    return;
+  }
   const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
+  if (backHeld && state.context.ownership().ownedBy(Link::Panel)) {
+    // One bump per hold, and the stop re-asserted each beat the hold lasts, so a start that sneaks
+    // in is undone in the same beat.
+    if (!state.backStopFired) {
+      state.backStopFired = true;
+      state.logger->warn("panel: back held, stopping");
+      stopSeq++;
+    }
+    const MachineCommand stop{MachineCommand::Op::Stop};
+    xQueueSend(machineCommandQueue, &stop, 0);
+  }
+  if (!backHeld) state.backStopFired = false;
+
   for (Button button : PressOrder) {
     // The chord's keys are one gesture, so their presses are dropped while the pair is held or has
     // just fired. The drop reaches into the double window too, so the releases never arrive late.
@@ -142,14 +159,11 @@ void buttonsTick(ControlState& state) {
     }
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
-    if (backHeld && !state.context.ownership().held() && button == Button::Ok) {
+    if (backHeld && !state.context.ownership().external() && button == Button::Ok) {
       goHomeSeq++;
       continue;
     }
-    const ButtonEvent event{button, press};
-    if (xQueueSend(buttonEventQueue, &event, 0) != pdTRUE) {
-      state.logger->warn("buttons: queue full, dropping a press");
-    }
+    deliverPress(state, button, press);
   }
 
   // Advance the chord: both down arms it, the first release fires it, and both up clears it.
@@ -157,10 +171,7 @@ void buttonsTick(ControlState& state) {
     state.upDownChord = true;
   } else if (state.upDownChord && !state.upDownChordFired && !bothDown) {
     state.upDownChordFired = true;
-    const ButtonEvent chordEvent{Button::Up, Press::Chord};
-    if (xQueueSend(buttonEventQueue, &chordEvent, 0) != pdTRUE) {
-      state.logger->warn("buttons: queue full, dropping a press");
-    }
+    deliverPress(state, Button::Up, Press::Chord);
   }
   if (!upDown && !downDown) {
     state.upDownChord = false;
@@ -168,48 +179,16 @@ void buttonsTick(ControlState& state) {
   }
 }
 
-// The keys behind the machine's safety slot: Back held past the mark is a
-// stop, and Back+OK held past the mark is the reset. This names the keys; the
-// machine applies the verdict without naming one.
-class ButtonStopSource : public StopSource {
- public:
-  explicit ButtonStopSource(AppContext& context) : context_(context) {}
-
-  Verdict tick() override {
-    if (context_.buttons().heldMs(Button::Back) >= ResetHoldMs &&
-        context_.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
-      return Verdict::Reset;
-    }
-    if (context_.buttons().heldMs(Button::Back) >= BackStopMs) {
-      return Verdict::Stop;
-    }
-    return Verdict::None;
-  }
-
- private:
-  AppContext& context_;
-};
-
-// The machine applies the verdict on the control beat, so the stop is never
-// delayed by a page. A stop is re-asserted every tick while the source says
-// so — a start or target that sneaks in is undone in the same tick — and the
-// stopSeq bump is latched to one per hold. Releasing arms the next one.
-void applyVerdict(ControlState& state, StopSource::Verdict verdict) {
-  if (verdict == StopSource::Verdict::Stop) {
-    if (!state.backStopFired) {
-      state.backStopFired = true;
-      state.logger->warn("app: stop source held, venting");
-      stopSeq++;
-    }
-    state.context.vacuum().stop();
+void deliverPress(PanelState& state, Button button, Press press) {
+  if (!state.context.ownership().external() && state.context.routines().active()) {
+    state.context.routines().pushPress(button, press);
     return;
   }
-  if (verdict == StopSource::Verdict::Reset) {
-    state.logger->warn("app: stop source held, resetting");
-    safeReboot(state.context);
-    return;
-  }
-  state.backStopFired = false;
+  String message = "btn: ";
+  message += buttonName(button);
+  message += ' ';
+  message += pressName(press);
+  state.logger->info(message.c_str());
 }
 
 // The buzzer's beat, installed on the control tick so its note sequences keep
@@ -255,45 +234,37 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
   state.lastState = current;
 }
 
-// The keys belong to whoever owns the page: an active routine takes the presses, and with none the
-// panel logs them as it always has. A press is consumed either way, so it is never delivered twice.
-void drainButtonEvents(PanelState& state) {
-  const bool toRoutine = !state.context.ownership().held() && state.context.routines().active();
-  ButtonEvent event;
-  while (xQueueReceive(buttonEventQueue, &event, 0) == pdTRUE) {
-    if (toRoutine) {
-      state.context.routines().pushPress(event.button, event.press);
-      continue;
-    }
-    String message = "btn: ";
-    message += buttonName(event.button);
-    message += ' ';
-    message += pressName(event.press);
-    state.logger->info(message.c_str());
-  }
-}
-
 }  // namespace
 
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
   state.lastState = state.context.vacuum().runState();
+  state.lastOwner = state.context.ownership().owner();
 
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     const uint32_t now = millis();
 
-    // Commands first, against the machine as the last tick left it, then the devices, the PID and
-    // the buzzer on the fixed beat, then the keys and the holds, then the run log.
+    // Commands first, against the machine as the last tick left it.
     drainMachineCommands(state);
+
+    // The top of the stack changed — a claim, a release or a drop all vent — so a new controller
+    // starts from an open chamber.
+    const Link top = state.context.ownership().owner();
+    if (top != state.lastOwner) {
+      state.lastOwner = top;
+      state.context.vacuum().stop();
+      String changed = "app: control to ";
+      changed += linkName(top);
+      state.logger->info(changed.c_str());
+    }
+
+    // The devices, the PID and the buzzer on the fixed beat, then the run log.
     state.context.sensor().update(now);
     state.context.pump().update(now);
     state.context.battery().update(now);
     state.context.vacuum().service(now);
     if (state.tickService) state.tickService->tick(now);
-    buttonsTick(state);
-    applyVerdict(state,
-                 state.stopSource ? state.stopSource->tick() : StopSource::Verdict::None);
     logRunChanges(state, now);
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
@@ -311,16 +282,11 @@ void interfaceTask(void* arg) {
     state.link->poll(now);
     state.ble->poll(now);
 
-    // A link that leaves while owning does not release the machine: its record stays held, the run
-    // continues and the panel keeps showing that link. A reconnected controller stays a reader
-    // until the local reset clears it.
+    // A link that leaves is removed from the stack, and the control beat vents when the top
+    // changes; the run does not outlive its owner.
     if (state.link->consumeLinkLost()) {
-      if (state.context.ownership().ownedBy(Link::Serial)) {
-        state.context.ownership().drop(Link::Serial);
-        state.logger->warn("app: controller left, ownership held");
-      } else {
-        state.logger->info("app: controller left");
-      }
+      state.context.ownership().drop(Link::Serial);
+      state.logger->info("app: controller left");
     }
 
     // Connection presence, published for the panel's overlay.
@@ -334,23 +300,25 @@ void interfaceTask(void* arg) {
 void panelTask(void* arg) {
   PanelState& state = *static_cast<PanelState*>(arg);
 
-  // A fresh boot has no controller: a link that is present is only a reader until it acquires
-  // control, so the disconnected page shows first.
-  state.ownedShown = state.context.ownership().held();
+  // A fresh boot starts with the panel on top: an external link that is present is only a reader
+  // until it claims, so the panel's own page shows first.
+  state.ownedShown = state.context.ownership().external();
   state.ui = state.ownedShown ? static_cast<UserInterface*>(state.connected)
                               : static_cast<UserInterface*>(state.disconnected);
   if (state.ui) state.ui->begin();
 
   for (;;) {
-    drainButtonEvents(state);
+    buttonsTick(state);
 
-    // The screen follows ownership, not the cable: acquiring control paints the link's page, and a
-    // drop while owning leaves it where it was. A swap paints its own first frame.
-    const bool owned = state.context.ownership().held();
-    if (owned != state.ownedShown) {
-      state.ownedShown = owned;
-      state.ui = owned ? static_cast<UserInterface*>(state.connected)
-                       : static_cast<UserInterface*>(state.disconnected);
+    // The screen follows ownership, not the cable: an external claim paints the link's page, and a
+    // release hands the panel back. The hand-off vents the run, so the page that returns sees the
+    // stop on its first poll.
+    const bool external = state.context.ownership().external();
+    if (external != state.ownedShown) {
+      state.ownedShown = external;
+      stopSeq++;
+      state.ui = external ? static_cast<UserInterface*>(state.connected)
+                          : static_cast<UserInterface*>(state.disconnected);
       if (state.ui) state.ui->begin();
     }
 
@@ -366,9 +334,8 @@ void panelTask(void* arg) {
 void spawnTasks(AppContext& context, Logger& logger, SerialLink* link, BleLink* ble,
                 StoreServer* storeServer, ConnectedUI* connected, DisconnectedUI* disconnected) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
-  buttonEventQueue = xQueueCreate(ButtonEventQueueDepth, sizeof(ButtonEvent));
 
-  static ControlState control{context, &logger, new ButtonStopSource(context), new BuzzerTick(context)};
+  static ControlState control{context, &logger, new BuzzerTick(context)};
   static InterfaceState interface{context, &logger, link, ble, storeServer};
   static PanelState panel{context, &logger, connected, disconnected};
 

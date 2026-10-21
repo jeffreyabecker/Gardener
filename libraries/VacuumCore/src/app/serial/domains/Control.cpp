@@ -4,7 +4,6 @@
 
 #include "app/AppContext.h"
 #include "app/Ownership.h"
-#include "app/Tasks.h"
 #include "app/VacuumSystem.h"
 #include "app/serial/Domain.h"
 #include "core/Config.h"
@@ -67,10 +66,11 @@ void ControlDomain::execute(Stream& io) {
   }
 }
 
-// The caller's view: a stale record reads as none even though the machine is still held for the link
-// that left it.
+// The caller's view of the stack: who is on top, named rather than "owned by me or not".
 void ControlDomain::ownedReply(Stream& io) const {
-  io.print(app_.ownership().ownedBy(Link::Serial) ? "ok control=owned\n" : "ok control=none\n");
+  io.print("ok control=");
+  io.print(linkName(app_.ownership().owner()));
+  io.print('\n');
 }
 
 void ControlDomain::acquire(Stream& io, const String& args) {
@@ -81,10 +81,8 @@ void ControlDomain::acquire(Stream& io, const String& args) {
     return;
   }
 
-  if (!app_.ownership().acquire(Link::Serial)) {
-    io.print("err busy\n");
-    return;
-  }
+  // A claim always succeeds and takes the top; the control beat vents the hand-over.
+  app_.ownership().acquire(Link::Serial);
   ownedReply(io);
 }
 
@@ -97,13 +95,10 @@ void ControlDomain::release(Stream& io, const String& args) {
   }
 
   // Releasing control is the safe exit: the chamber goes onto the same release path as
-  // `vacuum stop`, which is the control task's to apply. A link that does not own the device has
-  // nothing to release, which is why this is idempotent.
-  if (app_.ownership().release(Link::Serial)) {
-    const MachineCommand stop{MachineCommand::Op::Stop};
-    xQueueSend(machineCommandQueue, &stop, 0);
-  }
-  io.print("ok control=none\n");
+  // `vacuum stop`, which the control beat applies when the top changes. Releasing without owning
+  // is a no-op.
+  app_.ownership().release(Link::Serial);
+  ownedReply(io);
 }
 
 }  // namespace

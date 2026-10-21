@@ -106,7 +106,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, kBleProtocolVersion);
       break;
     case Control:
-      setByte(chr, owned() ? 1 : 0);
+      setByte(chr, static_cast<uint8_t>(app_->ownership().owner()));
       break;
     case Sensor:
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
@@ -158,16 +158,16 @@ void MachineBleDomain::applyPending(BleLink& link) {
   // safe exit.
   if (control_.has) {
     control_.has = false;
+    // A claim takes the top, a release leaves it; either way the control beat vents the hand-over.
     if (control_.value != 0) {
       ownership.acquire(Link::Bluetooth);
-    } else if (ownership.release(Link::Bluetooth)) {
-      const MachineCommand stop{MachineCommand::Op::Stop};
-      xQueueSend(machineCommandQueue, &stop, 0);
+    } else {
+      ownership.release(Link::Bluetooth);
     }
-    // The caller's view, so a refused acquire reads back as still not owned.
+    // The caller's view: who is on top, after the write.
     describe(Control);
     link.notify(characteristics_[Control]);
-    lastControl_ = owned() ? 1 : 0;
+    lastControl_ = static_cast<uint8_t>(ownership.owner());
   }
 
   if (target_.has) {
@@ -251,7 +251,8 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   VacuumSystem& vacuum = app_->vacuum();
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
-  publishOnChange(Control, owned() ? 1 : 0, lastControl_, baseline, link);
+  publishOnChange(Control, static_cast<uint8_t>(app_->ownership().owner()), lastControl_, baseline,
+                  link);
   publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
   publishOnChange(Floor, cfg::CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
 

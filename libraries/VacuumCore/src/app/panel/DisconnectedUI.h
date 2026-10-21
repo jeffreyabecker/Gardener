@@ -10,7 +10,7 @@ namespace gardener {
 // keyboard-less device shows when nobody is driving it, and a placeholder until that state has
 // something worth saying.
 //
-// It also owns the page half of the device's Back hold: the control task stops and vents, and the
+// It also owns the page half of the device's Back hold: the panel task stops and vents, and the
 // OK pressed while Back is held gives the panel back to `default`. The connected page has no such
 // half, so "only while this page is showing" is which object the loop is driving rather than a flag
 // to test.

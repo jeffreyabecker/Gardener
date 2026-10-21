@@ -90,9 +90,8 @@ void BleLink::poll(uint32_t nowMs) {
   if (!linkLost_) return;
   linkLost_ = false;
   subscriptions_ = 0;
-  // A controller that leaves while owning keeps the machine: the record stays
-  // held and stale, so a reconnected central is a reader until the local reset
-  // gesture clears it.
+  // A central that leaves is removed from the stack; the control beat vents if
+  // it was on top, and a reconnected central simply claims again.
   app_->ownership().drop(Link::Bluetooth);
 }
 
