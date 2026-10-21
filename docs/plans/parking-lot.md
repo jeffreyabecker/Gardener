@@ -56,6 +56,16 @@ and the gesture meanings: Back is pinned to the level — it closes the editor, 
 stops the run — and `draw()` chooses between the one editor and `draw_page()`, so a stack has to
 settle who draws underneath the top and what a pop hands back.
 
+## Delete the store bus
+
+[StoreBus.h](../../libraries/GardenerPanel/src/app/StoreBus.h) is a queue between the VM and the
+interface task, and both ends are now the panel task — the VM polls and the server drains on the same
+beat — so it is the panel queueing to itself. The idea is to delete `StoreClient`, `StoreServer` and
+the queue handle, and let the `store` binding and `Routines` reach `Storage` and `Settings` directly,
+which also drops the result slot and the notify. What holds it back is the `fs` serial domain, which
+still touches `Storage` from the interface task, so the queue is not yet the only thing keeping two
+tasks out of LittleFS.
+
 ## Gesture Classifier
 
 gestures become either an enum or a string with a predictable format state machine functions become a
