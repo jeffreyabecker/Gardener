@@ -20,6 +20,9 @@ the project README never link to a plan; a contract has to stand on its own, and
 specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
+- [Panel ownership](./plans/panel-ownership.md) — the machine keeps only the pump and the sensor,
+  and the panel — buttons, display, buzzer and settings — is its default controller, beneath
+  whichever external link claims it
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Ideas
@@ -31,8 +34,6 @@ specs, guides, backlogs, code and the project README never link to one.
 
 - [Page machine](./ideas/page-machine.md) — whether a page should own a machine whose states hold
   `event => (callback, next phase)` records as closures, with the page firing the events
-- [Headless build](./ideas/headless-build.md) — whether the screen, keys, buzzer and disconnected
-  pages should be a build variant, and what a device does while nobody owns it
 
 ## Backlogs
 
