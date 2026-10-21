@@ -35,6 +35,7 @@ class MachineBleDomain : public BleDomain {
     Control,
     Sensor,
     Floor,
+    Caps,
     Count,
   };
 

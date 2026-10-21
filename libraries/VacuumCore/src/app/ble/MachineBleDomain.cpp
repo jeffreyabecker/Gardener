@@ -60,6 +60,7 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},   // control
     {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // sensor
     {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // floor
+    {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
 };
 
 MachineBleDomain::MachineBleDomain(AppContext* app) : app_(app) {}
@@ -112,6 +113,9 @@ void MachineBleDomain::describe(uint8_t index) {
       break;
     case Floor:
       setFloat(chr, cfg::CONTROL_FLOOR_KPA);
+      break;
+    case Caps:
+      setByte(chr, app_->capabilities().mask());
       break;
     case Count:
       break;
