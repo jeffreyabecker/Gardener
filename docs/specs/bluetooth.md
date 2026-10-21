@@ -26,6 +26,7 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 | `control` | read, write, notify | uint8: 1 owned by this link, 0 not |
 | `sensor` | read, notify | uint8: 1 when a reading can be trusted |
 | `floor` | read, notify | float32 LE, deepest target worth offering |
+| `caps` | read | uint8 bitmask: 1 panel, 2 battery, 4 ownership stop |
 
 ## Reading, writing and owning
 

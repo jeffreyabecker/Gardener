@@ -64,7 +64,7 @@ links serve it.
 - [x] 2.4 Compose the capability in the full build's root: panel fitted, battery fitted, local stop
   present.
 - [x] 2.5 Record the changed `device` surface in [serial-protocol.md](../specs/serial-protocol.md).
-- [ ] 2.6 Record the `caps` characteristic in [bluetooth.md](../specs/bluetooth.md).
+- [x] 2.6 Record the `caps` characteristic in [bluetooth.md](../specs/bluetooth.md).
 - [ ] 2.7 Verify `device get` and the BLE `caps` characteristic report the same value.
 
 ## Epic 3 — The machine's seams
