@@ -117,7 +117,7 @@ Back releases control, Back+OK is the reboot the wire already serves.
   reads no keys.
 - [x] 4.7 Make the two holds panel gestures — Back releases control, Back+OK issues `device reboot` —
   and remove the installable stop slot and the safety reader.
-- [ ] 4.8 Verify the full device holds and releases through the stack, and that a vanished serial or
+- [x] 4.8 Verify the full device holds and releases through the stack, and that a vanished serial or
   BLE owner vents the chamber.
 
 ## Epic 5 — The library split
