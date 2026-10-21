@@ -49,9 +49,10 @@ harnessPending = nil
 harnessPendingSettings = nil
 harnessWrites = []
 
-# Declared before the stub classes so JinglesStub.current() can name it; assigned with the other
-# modules below.
+# Declared before the stub classes so JinglesStub.current() and JinglesStub.play_current() can name
+# them; assigned with the other modules below.
 device = nil
+buzzer = nil
 
 def harness_fail(text)
   harnessErrors += 1
@@ -607,6 +608,15 @@ class JinglesStub
       end
     end
     return notes
+  end
+
+  def play_current()
+    var notes = self.current()
+    if notes == nil
+      return false
+    end
+    buzzer.play(notes)
+    return true
   end
 end
 

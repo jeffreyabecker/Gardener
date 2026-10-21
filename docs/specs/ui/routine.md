@@ -77,7 +77,8 @@ data image.
 
 `/modules/jingles.txt` is data rather than a module. It is not compiled or loaded as a `.be` file;
 the native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
-`jingles.title()`, `jingles.label()`, `jingles.notes()` and `jingles.current()`. Its format and the
+`jingles.title()`, `jingles.label()`, `jingles.notes()`, `jingles.current()` and
+`jingles.play_current()`. Its format and the
 call list are in [bindings.md](./bindings.md#jingles--the-note-library).
 
 Files within `/modules/` load in directory order, which is the alphabetical order the image is

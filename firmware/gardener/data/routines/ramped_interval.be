@@ -346,10 +346,7 @@ class RampedInterval : Page
     vacuum.target_off()
     self.phase = "ready"
     vacuum.log("ramped_interval: complete")
-    var notes = jingles.current()
-    if notes != nil
-      buzzer.play(notes)
-    end
+    jingles.play_current()
     routines.set_active("default")
   end
 

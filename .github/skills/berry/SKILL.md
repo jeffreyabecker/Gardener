@@ -77,7 +77,7 @@ copies the field lists from `kRecords` rather than inventing an empty class.
 | `device` | `units, set_unit, target, set_target, bluetooth, set_bluetooth, jingle, set_jingle` |
 | `buttons` | `take` |
 | `buzzer` | `tone, play, off` |
-| `jingles` | `ids, title, label, notes, current, default_id` |
+| `jingles` | `ids, title, label, notes, current, play_current, default_id` |
 | `routines` | `register, set_active, names, get, icon, has` |
 | `store` | `get, set` (both the two- and the three-argument forms) |
 
@@ -95,6 +95,8 @@ Values that must match the firmware:
   one. The fallback's type is the type the text comes back as.
 - `jingles.ids()` is the identifiers from `/modules/jingles.txt`, in file order; the first is the
   fallback for `jingles.current()`.
+- `jingles.play_current()` starts the current jingle the same way `buzzer.play()` starts a sequence,
+  and answers `false` when the library is empty.
 
 ### The editor, the store and the files
 

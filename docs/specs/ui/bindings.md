@@ -301,10 +301,11 @@ diagnostics stream at boot and left out of the library.
 | `jingles.label(id)` | string or `nil` | the short label the System page draws |
 | `jingles.notes(id)` | string or `nil` | the note sequence, ready for `buzzer.play()` |
 | `jingles.current()` | string or `nil` | the notes for `device.jingle()`, or the first jingle when that identifier is empty or unknown |
+| `jingles.play_current()` | `bool` | play the current jingle, as `buzzer.play(jingles.current())` would; false when the library is empty |
 | `jingles.default_id()` | string or `nil` | the first identifier |
 
 ```berry
-buzzer.play(jingles.current())          # the jingle chosen on the System page
+jingles.play_current()                  # the jingle chosen on the System page, the finish sound
 buzzer.play(jingles.notes("forelle"))   # a named jingle
 ```
 

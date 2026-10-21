@@ -5,6 +5,7 @@
 #include "app/AppContext.h"
 #include "app/BuzzerPlayer.h"
 #include "app/Logger.h"
+#include "app/Tasks.h"
 #include "app/routines/bindings/Module.h"
 #include "app/routines/bindings/Modules.h"
 #include "app/storage/Storage.h"
@@ -159,16 +160,36 @@ int jinglesNotes(bvm* vm) {
 
 // The selected jingle, or the first one when nothing valid has been chosen yet. The settings read
 // is a direct one, like device.target(): the identifier is a small preferences field, not a file.
-int jinglesCurrent(bvm* vm) {
+const Jingle* currentJingle() {
   String selected;
   if (gContext != nullptr) selected = gContext->settings().jingle();
   const Jingle* jingle = findJingle(selected.c_str());
   if (jingle == nullptr && !jingles.empty()) jingle = &jingles.front();
+  return jingle;
+}
+
+int jinglesCurrent(bvm* vm) {
+  const Jingle* jingle = currentJingle();
   if (jingle == nullptr) {
     be_pushnil(vm);
   } else {
     be_pushstring(vm, jingle->notes.c_str());
   }
+  be_return(vm);
+}
+
+// The finish jingle a routine sounds: the selected one, queued for the control task the way
+// buzzer.play() queues it. False when the library is empty, so the sequence did not start.
+int jinglesPlayCurrent(bvm* vm) {
+  const Jingle* jingle = currentJingle();
+  if (jingle == nullptr) {
+    be_pushbool(vm, false);
+    be_return(vm);
+  }
+  MachineCommand play{MachineCommand::Op::Play};
+  play.text = jingle->notes;
+  xQueueSend(machineCommandQueue, &play, 0);
+  be_pushbool(vm, true);
   be_return(vm);
 }
 
@@ -187,6 +208,7 @@ const bnfuncinfo kJinglesLibrary[] = {
     {"label", jinglesLabel},
     {"notes", jinglesNotes},
     {"current", jinglesCurrent},
+    {"play_current", jinglesPlayCurrent},
     {"default_id", jinglesDefaultId},
     {nullptr, nullptr},
 };

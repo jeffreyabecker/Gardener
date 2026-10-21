@@ -287,10 +287,7 @@ class Interval : Page
     vacuum.target_off()
     self.phase = "ready"
     vacuum.log("interval: complete")
-    var notes = jingles.current()
-    if notes != nil
-      buzzer.play(notes)
-    end
+    jingles.play_current()
     routines.set_active("default")
   end
 

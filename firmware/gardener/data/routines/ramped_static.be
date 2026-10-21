@@ -304,10 +304,7 @@ class RampedStatic : Page
     self.phase = "ready"
     self.held = 0
     vacuum.log("ramped_static: complete")
-    var notes = jingles.current()
-    if notes != nil
-      buzzer.play(notes)
-    end
+    jingles.play_current()
     routines.set_active("default")
   end
 

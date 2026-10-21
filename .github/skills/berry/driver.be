@@ -229,6 +229,10 @@ def harness_check_jingles()
   if jingles.current() != jingles.notes(ids[0])
     harness_fail("jingles: current() ignored the device setting")
   end
+  var sounds = buzzer.sounds
+  if jingles.play_current() != true || buzzer.sounds != sounds + 1
+    harness_fail("jingles: play_current() did not play the current jingle")
+  end
   device.set_jingle("no_such_jingle")
   if jingles.current() != jingles.notes(ids[0])
     harness_fail("jingles: current() did not fall back")
