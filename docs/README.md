@@ -20,8 +20,6 @@ the project README never link to a plan; a contract has to stand on its own, and
 specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [Headless build](./plans/headless-build.md) — the machine compiles and runs without the panel, and
-  the panel becomes a client of it
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Ideas
@@ -39,6 +37,10 @@ specs, guides, backlogs, code and the project README never link to one.
 A fine-grained tasklist for work that has been decided: ordered, checkable items that each leave the
 tree working. A backlog breaks work down rather than choosing or designing it, and it is deleted when
 its last item lands.
+
+- [The machine without the panel](./backlogs/headless-build.md) — split the machine from the panel
+  into two libraries, make both links pluggable, and ship a panel-less build with a capability
+  surface
 
 ## Guides
 
