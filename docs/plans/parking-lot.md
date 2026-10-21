@@ -46,3 +46,7 @@ so a nudge has no press to take that does not first take a meaning away from one
 
 gestures become either an enum or a string with a predictable format state machine functions become a
 lot less nested. maybe expose this at the c++ level.
+
+# Battery Optional
+
+We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
