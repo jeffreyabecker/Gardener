@@ -174,7 +174,7 @@ of files that nothing left in `VacuumCore` names, so only one copy of each heade
 path.
 
 - [x] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
-- [ ] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
+- [x] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
   machine root and composes the panel onto it.
 - [ ] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
   panel can call it.
