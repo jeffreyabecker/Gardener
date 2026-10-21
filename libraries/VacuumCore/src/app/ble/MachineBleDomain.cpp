@@ -1,0 +1,297 @@
+#include "app/ble/MachineBleDomain.h"
+
+#include <math.h>
+#include <string.h>
+
+#include "app/AppContext.h"
+#include "app/Ownership.h"
+#include "app/Tasks.h"
+#include "app/VacuumSystem.h"
+#include "app/ble/BleLink.h"
+#include "core/Config.h"
+
+namespace gardener {
+namespace {
+
+constexpr uint8_t kBleProtocolVersion = 1;
+
+// The two rates; everything else is sent on change. 5 Hz is about as fast as
+// a phone screen needs.
+constexpr uint32_t kFastRateMs = 200;
+constexpr uint32_t kBattRateMs = 10000;
+
+// The opcodes a controller writes to `command`, and the results it is
+// notified.
+enum : uint8_t { kOpStart = 0x01, kOpStop = 0x02, kOpResetFault = 0x03, kOpReboot = 0x04 };
+enum : uint8_t {
+  kResultApplied = 0x00,
+  kResultNoTarget = 0x01,
+  kResultNoReading = 0x02,
+  kResultFault = 0x03,
+  kResultUnknownOpcode = 0x04,
+  kResultNotControlling = 0x05,
+};
+
+// Whether a reading can be trusted, which is what `sensor` reports and what a
+// run needs.
+bool plausibleReading(VacuumSystem& vacuum) {
+  return vacuum.sensor().present() && vacuum.sensor().readingValid();
+}
+
+static_assert(static_cast<uint8_t>(RunState::Idle) == 0 &&
+                  static_cast<uint8_t>(RunState::Pulling) == 1 &&
+                  static_cast<uint8_t>(RunState::Holding) == 2 &&
+                  static_cast<uint8_t>(RunState::Venting) == 3 &&
+                  static_cast<uint8_t>(RunState::Fault) == 4,
+              "RunState is the `state` characteristic's encoding");
+
+}  // namespace
+
+const BleDomain::Spec MachineBleDomain::kSpecs[] = {
+    {0x0001, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // state
+    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // kpa
+    {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // target
+    {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // duty
+    {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                               // fault
+    {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // batt
+    {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                           // command
+    {0x0008, NIMBLE_PROPERTY::READ, 16},                                                         // fw
+    {0x0009, NIMBLE_PROPERTY::READ, 1},                                                          // ble_proto
+    {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},   // control
+    {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // sensor
+    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // floor
+};
+
+MachineBleDomain::MachineBleDomain(AppContext* app) : app_(app) {}
+
+uint8_t MachineBleDomain::specCount() const { return Count; }
+
+BleDomain::Spec MachineBleDomain::specAt(uint8_t index) const { return kSpecs[index]; }
+
+void MachineBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
+  characteristics_[index] = characteristic;
+}
+
+bool MachineBleDomain::owned() const { return app_->ownership().ownedBy(Link::Bluetooth); }
+
+void MachineBleDomain::describe(uint8_t index) {
+  VacuumSystem& vacuum = app_->vacuum();
+  NimBLECharacteristic* chr = characteristics_[index];
+  switch (index) {
+    case State:
+      setByte(chr, static_cast<uint8_t>(vacuum.runState()));
+      break;
+    case Kpa:
+      setFloat(chr, vacuum.currentKpa());
+      break;
+    case Target:
+      setFloat(chr, vacuum.targetKpa());
+      break;
+    case Duty:
+      setFloat(chr, vacuum.pump().dutyPercent());
+      break;
+    case Fault:
+      chr->setValue(vacuum.faultCode());
+      break;
+    case Batt:
+      setByte(chr, app_->battery().present() ? app_->battery().percent() : 0xFF);
+      break;
+    case Command:
+      break;  // the last result, written when an opcode is applied
+    case Firmware:
+      chr->setValue(cfg::FIRMWARE_VERSION);
+      break;
+    case Protocol:
+      setByte(chr, kBleProtocolVersion);
+      break;
+    case Control:
+      setByte(chr, owned() ? 1 : 0);
+      break;
+    case Sensor:
+      setByte(chr, plausibleReading(vacuum) ? 1 : 0);
+      break;
+    case Floor:
+      setFloat(chr, cfg::CONTROL_FLOOR_KPA);
+      break;
+    case Count:
+      break;
+  }
+}
+
+void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
+  switch (index) {
+    case Target:
+      if (value.size() != sizeof(float)) return;
+      {
+        float kpa = 0.0f;
+        memcpy(&kpa, value.data(), sizeof(kpa));
+        target_.value = kpa;
+        target_.has = true;
+      }
+      break;
+    case Command:
+      if (value.size() != 1) return;
+      command_.value = value.data()[0];
+      command_.has = true;
+      break;
+    case Control:
+      if (value.size() != 1) return;
+      control_.value = value.data()[0];
+      control_.has = true;
+      break;
+    default:
+      break;  // the stack refuses a write to anything else before it gets here
+  }
+}
+
+// The loop's half of a write: ownership, the target and an opcode are applied
+// here rather than in the callback, so nothing from the radio task touches the
+// machine.
+void MachineBleDomain::applyPending(BleLink& link) {
+  Ownership& ownership = app_->ownership();
+
+  // Ownership first: every other write is gated on it, and a release is the
+  // safe exit.
+  if (control_.has) {
+    control_.has = false;
+    if (control_.value != 0) {
+      ownership.acquire(Link::Bluetooth);
+    } else if (ownership.release(Link::Bluetooth)) {
+      const MachineCommand stop{MachineCommand::Op::Stop};
+      xQueueSend(machineCommandQueue, &stop, 0);
+    }
+    // The caller's view, so a refused acquire reads back as still not owned.
+    describe(Control);
+    link.notify(characteristics_[Control]);
+    lastControl_ = owned() ? 1 : 0;
+  }
+
+  if (target_.has) {
+    target_.has = false;
+    const float kpa = target_.value;
+    if (owned() && isfinite(kpa)) {
+      // 0 clears the target; anything else is the vacuum system's to accept or
+      // refuse against its own floor, so the two surfaces cannot disagree.
+      if (kpa == 0.0f) {
+        const MachineCommand clear{MachineCommand::Op::ClearTarget};
+        xQueueSend(machineCommandQueue, &clear, 0);
+      } else {
+        const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
+        xQueueSend(machineCommandQueue, &set, 0);
+      }
+    }
+    // Read back rather than echo: a refused value leaves the target where it
+    // was, and the read is the answer.
+    describe(Target);
+    const float applied = app_->vacuum().targetKpa();
+    if (applied != lastTarget_) {
+      lastTarget_ = applied;
+      link.notify(characteristics_[Target]);
+    }
+  }
+
+  if (command_.has) {
+    command_.has = false;
+    const uint8_t result = execute(command_.value);
+    setByte(characteristics_[Command], result);
+    link.notify(characteristics_[Command]);
+  }
+}
+
+// Runs one opcode. `start` reports the same refusals the serial link reports,
+// from the same VacuumSystem::startRefusal(), so the two surfaces cannot
+// disagree about why a run will not start. Every applied opcode is queued for
+// the control task; only the refusal and the result byte are answered here.
+uint8_t MachineBleDomain::execute(uint8_t opcode) {
+  if (!owned()) return kResultNotControlling;
+
+  VacuumSystem& vacuum = app_->vacuum();
+  switch (opcode) {
+    case kOpStart: {
+      const char* refusal = vacuum.startRefusal();
+      if (refusal != nullptr) {
+        if (strcmp(refusal, "latch") == 0) return kResultFault;
+        if (strcmp(refusal, "no_target") == 0) return kResultNoTarget;
+        if (strcmp(refusal, "no_reading") == 0) return kResultNoReading;
+        return kResultUnknownOpcode;
+      }
+      const MachineCommand start{MachineCommand::Op::Start};
+      xQueueSend(machineCommandQueue, &start, 0);
+      return kResultApplied;
+    }
+    case kOpStop: {
+      const MachineCommand stop{MachineCommand::Op::Stop};
+      xQueueSend(machineCommandQueue, &stop, 0);
+      return kResultApplied;
+    }
+    case kOpResetFault: {
+      const MachineCommand reset{MachineCommand::Op::ResetFault};
+      xQueueSend(machineCommandQueue, &reset, 0);
+      return kResultApplied;
+    }
+    case kOpReboot: {
+      const MachineCommand reboot{MachineCommand::Op::Reboot};
+      xQueueSend(machineCommandQueue, &reboot, 0);
+      return kResultApplied;
+    }
+    default:
+      return kResultUnknownOpcode;
+  }
+}
+
+// Sends whatever is due. A value only moves when the machine moves it, so the
+// read and the notification are one description of the same field.
+void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
+  if (!link.connected()) return;
+
+  VacuumSystem& vacuum = app_->vacuum();
+  publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
+  publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
+  publishOnChange(Control, owned() ? 1 : 0, lastControl_, baseline, link);
+  publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
+  publishOnChange(Floor, cfg::CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
+
+  const char* fault = vacuum.faultCode();
+  if (baseline || lastFault_ != fault) {
+    lastFault_ = fault;
+    describe(Fault);
+    link.notify(characteristics_[Fault]);
+  }
+
+  if (nowMs - lastFastMs_ >= kFastRateMs) {
+    lastFastMs_ = nowMs;
+    describe(Kpa);
+    link.notify(characteristics_[Kpa]);
+    describe(Duty);
+    link.notify(characteristics_[Duty]);
+  }
+
+  if (nowMs - lastBattMs_ >= kBattRateMs) {
+    lastBattMs_ = nowMs;
+    describe(Batt);
+    link.notify(characteristics_[Batt]);
+  }
+}
+
+void MachineBleDomain::publishOnChange(uint8_t index, uint8_t value, uint8_t& last, bool force,
+                                       BleLink& link) {
+  if (!force && value == last) return;
+  last = value;
+  describe(index);
+  link.notify(characteristics_[index]);
+}
+
+void MachineBleDomain::publishOnChange(uint8_t index, float value, float& last, bool force,
+                                       BleLink& link) {
+  if (!force && value == last) return;
+  last = value;
+  describe(index);
+  link.notify(characteristics_[index]);
+}
+
+void MachineBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
+  applyPending(link);
+  publish(nowMs, link, baseline);
+}
+
+}  // namespace gardener

@@ -36,17 +36,17 @@ comes first.
 - [x] 1.3 Give the BLE link a domain concept mirroring the serial `Domain`: a registered piece that
   declares its characteristics — UUID suffix and properties — answers reads, applies writes, and
   publishes on its cadence.
-- [ ] 1.4 Split the fixed BLE field table into two domains: the machine domain (`state`, `kpa`,
+- [x] 1.4 Split the fixed BLE field table into two domains: the machine domain (`state`, `kpa`,
   `target`, `duty`, `fault`, `command`, `fw`, `ble_proto`, `control`, `sensor`, `floor`, `batt`)
   and the panel domain (`unit`).
-- [ ] 1.5 Build the GATT service and its characteristics from the registered domains, keeping every
+- [x] 1.5 Build the GATT service and its characteristics from the registered domains, keeping every
   UUID suffix and property unchanged.
-- [ ] 1.6 Route reads through the owning domain's answer.
-- [ ] 1.7 Route writes through the owning domain's apply, keeping the pending-slot and
+- [x] 1.6 Route reads through the owning domain's answer.
+- [x] 1.7 Route writes through the owning domain's apply, keeping the pending-slot and
   last-write-wins behavior.
-- [ ] 1.8 Route publish and its cadence through the owning domain, keeping 5 Hz `kpa`/`duty`, 10 s
+- [x] 1.8 Route publish and its cadence through the owning domain, keeping 5 Hz `kpa`/`duty`, 10 s
   `batt`, and on-change for the rest.
-- [ ] 1.9 Keep the `command` opcode executor with the machine domain, preserving its result bytes.
+- [x] 1.9 Keep the `command` opcode executor with the machine domain, preserving its result bytes.
 - [ ] 1.10 Register the machine's BLE domain in `buildAppContext()`.
 - [ ] 1.11 Register the panel's BLE domain (`unit`) in `buildAppContext()`.
 - [ ] 1.12 Build and flash the full device; verify its serial surface is unchanged.
