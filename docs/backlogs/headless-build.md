@@ -33,7 +33,7 @@ comes first.
   empty and exposes registration.
 - [x] 1.2 Register the five serial domains from `buildAppContext()`, so the full device's serial
   surface is unchanged.
-- [ ] 1.3 Give the BLE link a domain concept mirroring the serial `Domain`: a registered piece that
+- [x] 1.3 Give the BLE link a domain concept mirroring the serial `Domain`: a registered piece that
   declares its characteristics — UUID suffix and properties — answers reads, applies writes, and
   publishes on its cadence.
 - [ ] 1.4 Split the fixed BLE field table into two domains: the machine domain (`state`, `kpa`,
