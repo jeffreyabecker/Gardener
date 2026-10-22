@@ -69,31 +69,31 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 3 — The six-key map
 
-- [ ] **1. The readout takes the map.** Bind `ok:single` to start or resume, `cancel:single` to stop
+- [ ] **1. Give the readout its gestures.** Bind `ok:single` to start or resume, `cancel:single` to stop
   and vent, `up:double` to open the browser, and `down:double` to open the system settings, and drop
   the old Back stop and the chord. Done when the smoke walk still starts and stops a run, and on the
   rig `up:double` opens the browser while `down:double` opens the system settings.
 
-- [ ] **2. The browser takes the map.** Bind `up:single` and `down:single` to move the selection,
+- [ ] **2. Give the browser its gestures.** Bind `up:single` and `down:single` to move the selection,
   `ok:single` to open the selected routine, `forward:single` to open the selected routine's
   settings, and `back:single` to leave. Done when the browser suite still lists every routine and
   the check passes.
 
-- [ ] **3. The system scene takes the map.** Bind `up:single` and `down:single` to move rows,
+- [ ] **3. Give the system scene its gestures.** Bind `up:single` and `down:single` to move rows,
   `ok:single` to open a row, and `back:single` to leave. Done when the system suite walks the jingle
   row on these and passes.
 
-- [ ] **4. The settings list takes the map.** Bind `up:single` and `down:single` to move rows,
+- [ ] **4. Give the settings list its gestures.** Bind `up:single` and `down:single` to move rows,
   `ok:single` to open a row, and `back:single` to close the list. Done when the shared settings walk
   opens and edits a row, and the check passes.
 
-- [ ] **5. A value scene takes the map.** Bind `up:single` and `down:single` to change the value,
+- [ ] **5. Give a value scene its gestures.** Bind `up:single` and `down:single` to change the value,
   `ok:single` to keep it, and `cancel:single` to discard it; a `duration` adds `forward:single` to
   advance the stage and `back:single` to step back. Update each scene's hint line to name the keys
   that act. Done when the shared settings walk edits a `duration` on `forward:single` and saves on
   `ok:single`, and passes.
 
-- [ ] **6. The routine pages take the map.** Bind `ok:single` to begin or resume, `cancel:single` to
+- [ ] **6. Give the routine pages their gestures.** Bind `ok:single` to begin or resume, `cancel:single` to
   stop, vent and pause, `cancel:double` to stop, vent and leave the stack, and `up:double` to open
   the settings, on all three routines. Done when the two pause/resume suites press `cancel:single`
   and a `cancel:double` leaves the run, the check passes, and on the rig each of the six keys does
