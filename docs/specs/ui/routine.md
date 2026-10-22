@@ -33,19 +33,22 @@ class MyPage : Page
   end
 end
 
-routines.register("mypage", MyIcon(), MyPage, MySettings)
+routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 return MyPage
 ```
 
 `Page` (`/modules/settings_page.be`) is `Scene` plus the routine's own name: it is what the store
 file is called, and it is the class that opens the settings list, so a page writes the name once.
 
-The second argument is the routine's **icon**: an instance of a class extending `Icon` from
+The second argument is the routine's **title**: the label the browser draws for its row. It is not
+the identity — the name still is — so it may contain spaces and capital letters.
+
+The third argument is the routine's **icon**: an instance of a class extending `Icon` from
 `/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
-The browser draws it at the left of the routine's row and shifts the name right by `icon.w + 2`. A
+The browser draws it at the left of the routine's row and shifts the title right by `icon.w + 2`. A
 routine that passes `nil` has a text-only row.
 
-The third argument is the routine's **class**, not an instance: the registry builds a scene from it
+The fourth argument is the routine's **class**, not an instance: the registry builds a scene from it
 every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/modules/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
@@ -53,7 +56,7 @@ dispatch, and `Page` adds the routine's name and its settings view; a routine ex
 defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
 a scene that lacks either `activate()` or `poll`.
 
-The fourth argument is the routine's **settings scene** — the class that edits its values, or `nil`
+The fifth argument is the routine's **settings scene** — the class that edits its values, or `nil`
 when it has none. It is a `SettingsScene` subclass, and it is where the list and any rule that binds
 one setting to another live, so the page never names the keys itself (see below).
 
@@ -222,7 +225,7 @@ class MySettings : SettingsScene
   end
 end
 
-routines.register("mypage", MyIcon(), MyPage, MySettings)
+routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 ```
 
 A routine with nothing to edit registers `nil`. A subclass that defines only `settings()` inherits

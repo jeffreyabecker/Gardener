@@ -6,23 +6,23 @@
 # between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
 # is the edge that says the new one has arrived.
 
-# The page's glyph, and the browser's row glyph: a square wave, one pulse on a 12 by 8 field, laid
-# down as filled rectangles so the stroke is two pixels thick. The ink sits on the rows a line of
-# text does, from y + 1 to y + 6. It is defined before the chrome that draws it, because a class has
-# to be a global by the time the file names it.
+# The page's glyph, and the browser's row glyph: a square wave, two highs and two lows on a 12 by 8
+# field, drawn with one-pixel lines. The ink sits on the rows a line of text does, from y + 1 to
+# y + 6. It is defined before the chrome that draws it, because a class has to be a global by the
+# time the file names it.
 class IntervalIcon : Icon
   def init()
     super(self).init(12, 8)
   end
 
   def draw(x, y)
-    var high = y + 1
-    var wide = 3
-    screen.draw_fillrect(x, y + 5, wide, 2)
-    screen.draw_fillrect(x + 3, high, 2, 6)
-    screen.draw_fillrect(x + 3, high, 7, 2)
-    screen.draw_fillrect(x + 8, high, 2, 6)
-    screen.draw_fillrect(x + 8, y + 5, 4, 2)
+    screen.draw_hline(x, y + 1, 3)
+    screen.draw_vline(x + 3, y + 1, 6)
+    screen.draw_hline(x + 3, y + 6, 3)
+    screen.draw_vline(x + 6, y + 1, 6)
+    screen.draw_hline(x + 6, y + 1, 3)
+    screen.draw_vline(x + 9, y + 1, 6)
+    screen.draw_hline(x + 9, y + 6, 3)
   end
 end
 
@@ -376,5 +376,5 @@ class IntervalSettings : SettingsScene
   end
 end
 
-routines.register("interval", IntervalIcon(), Interval, IntervalSettings)
+routines.register("interval", "Interval", IntervalIcon(), Interval, IntervalSettings)
 return Interval

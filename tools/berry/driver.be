@@ -220,8 +220,14 @@ def harness_art_scene(name, path)
       harness_fail("art: " + name + " would not push")
       return false
     end
+    harness.beat(1)
+  else
+    # The readout is the root. Give it a run to show: pull toward a target above the current
+    # pressure, and save the frame mid-pull.
+    vacuum.target(20.0)
+    vacuum.start()
+    harness.beat(12)
   end
-  harness.beat(1)
   if !harness.save(path)
     harness_fail("art: cannot write " + path)
     return false

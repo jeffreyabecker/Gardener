@@ -15,9 +15,10 @@ class RampedIntervalIcon : Icon
   end
 
   def draw(x, y)
-    screen.draw_fillrect(x, y + 5, 4, 2)
-    screen.draw_fillrect(x + 4, y + 3, 4, 4)
-    screen.draw_fillrect(x + 8, y + 1, 4, 6)
+    #x,y, w,h
+    screen.draw_fillrect(x, y + 5, 3, 2)
+    screen.draw_fillrect(x + 4, y + 3, 3, 4)
+    screen.draw_fillrect(x + 8, y + 1, 3, 6)
   end
 end
 
@@ -427,5 +428,5 @@ class RampedIntervalSettings : SettingsScene
   end
 end
 
-routines.register("ramped_interval", RampedIntervalIcon(), RampedInterval, RampedIntervalSettings)
+routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(), RampedInterval, RampedIntervalSettings)
 return RampedInterval

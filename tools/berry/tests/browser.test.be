@@ -9,7 +9,7 @@ def every_registration_is_listed()
   assert_eq(rows.size(), names.size(), "the browser has a row for every routine")
   var i = 0
   while i < names.size()
-    assert_eq(rows[i][1], names[i], "the browser's row " + str(i) + " is out of step")
+    assert_eq(rows[i][1], routines.title(names[i]), "the browser's row " + str(i) + " does not carry the routine's title")
     if routines.icon(names[i]) != nil
       assert_eq(rows[i][0], routines.icon(names[i]), "the row does not carry the routine's icon")
     end

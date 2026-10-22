@@ -407,5 +407,5 @@ class RampedStaticSettings : SettingsScene
   end
 end
 
-routines.register("ramped_static", RampedStaticIcon(), RampedStatic, RampedStaticSettings)
+routines.register("ramped_static", "Ramped Static", RampedStaticIcon(), RampedStatic, RampedStaticSettings)
 return RampedStatic

@@ -347,19 +347,21 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, icon, factory, settings)` | `bool` | bind a name to the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
+| `routines.register(name, title, icon, factory, settings)` | `bool` | bind a name to the label the browser draws, the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the name; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
 | `routines.names()` | list of strings | every registered name, in registration order |
+| `routines.title(name)` | string, or `nil` | the label the browser draws for the routine |
 | `routines.settings(name)` | list of `setting`s, or `nil` | what the routine's settings scene edits |
 | `routines.settings_scene(name)` | a `SettingsScene`, or `nil` | one with no writer, for asking what a routine edits |
 | `routines.push_settings(name, on_change, closed)` | `bool` | build the routine's settings scene, hand it `on_change(key, value)` for every value it settles, and run `closed` when it pops |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
 | `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
 
-Registering the same name twice is one routine: the later file wins. An icon is optional: a routine
-without one, or one whose icon is `nil`, is a text-only row in the browser. The device's own scenes
-— the readout, the system settings and the browser — are not registered at all; they are well-known
-scenes in `/modules/ui.be` the system pushes directly. There is no fixed number of routines: the
-registry is a Berry list, so it grows as files register.
+Registering the same name twice is one routine: the later file wins. The title is what the browser
+shows, and a routine without one shows its name; an icon is optional too, and a routine without one,
+or one whose icon is `nil`, is a text-only row. The device's own scenes — the readout, the system
+settings and the browser — are not registered at all; they are well-known scenes in `/modules/ui.be`
+the system pushes directly. There is no fixed number of routines: the registry is a Berry list, so
+it grows as files register.
 
 ## `store` — the routine's own values
 

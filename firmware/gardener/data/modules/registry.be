@@ -1,7 +1,7 @@
 # registry.be — the registry of user routines: the list the browser draws, each routine's factory
 # and the scene that edits its settings, and the way into each routine's scene.
 #
-# A routine file's top level calls routines.register(name, icon, factory, settings) and the entry
+# A routine file's top level calls routines.register(name, title, icon, factory, settings) and the entry
 # joins this Berry list; nothing native holds it. The factory is the routine's scene class, and the
 # registry builds the scene when the routine is pushed, so a page starts from its own activate()
 # every time and nothing a previous visit left behind survives; the scene that is showing is
@@ -21,11 +21,15 @@ class RoutineRegistry
     self.entries = []
   end
 
-  def register(name, icon, factory, settings)
-    # The name is also the file store reads and writes, so it has to be a plain word.
+  def register(name, title, icon, factory, settings)
+    # The name is also the file store reads and writes, so it has to be a plain word. The title is
+    # the label the browser draws; a missing one falls back to the name.
     if name == nil || string.find(name, "/") >= 0 || string.find(name, "\\") >= 0
       vacuum.log("registry: routine name must be a plain word")
       return false
+    end
+    if title == nil
+      title = name
     end
     if factory == nil
       vacuum.log("registry: routine must name its scene class")
@@ -35,7 +39,7 @@ class RoutineRegistry
       vacuum.log("registry: " + name + " settings must be a scene class")
       return false
     end
-    self.entries.push([name, icon, factory, settings])
+    self.entries.push([name, title, icon, factory, settings])
     return true
   end
 
@@ -60,10 +64,10 @@ class RoutineRegistry
   # A settings scene for the routine, with no writer: enough to ask what it edits.
   def settings_scene(name)
     var e = self.entry(name)
-    if e == nil || e[3] == nil
+    if e == nil || e[4] == nil
       return nil
     end
-    var factory = e[3]
+    var factory = e[4]
     return factory(name, nil)
   end
 
@@ -71,10 +75,10 @@ class RoutineRegistry
   # stack runs when it closes. False when the routine registered no settings.
   def push_settings(name, on_change, closed)
     var e = self.entry(name)
-    if e == nil || e[3] == nil
+    if e == nil || e[4] == nil
       return false
     end
-    var factory = e[3]
+    var factory = e[4]
     return ux.push(factory(name, on_change), nil, closed)
   end
 
@@ -83,14 +87,23 @@ class RoutineRegistry
     if e == nil
       return nil
     end
+    return e[2]
+  end
+
+  # The label the browser draws for a routine; the name is the identity.
+  def title(name)
+    var e = self.entry(name)
+    if e == nil
+      return nil
+    end
     return e[1]
   end
 
-  # The browser's rows: [icon, name] per routine, ready for a List.
+  # The browser's rows: [icon, title] per routine, ready for a List.
   def rows()
     var out = []
     for e : self.entries
-      out.push([e[1], e[0]])
+      out.push([e[2], e[1]])
     end
     return out
   end
@@ -103,7 +116,7 @@ class RoutineRegistry
     if e == nil
       return false
     end
-    var factory = e[2]
+    var factory = e[3]
     return ux.push(factory(), settings, callback)
   end
 

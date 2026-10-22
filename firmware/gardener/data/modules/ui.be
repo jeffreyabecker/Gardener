@@ -402,11 +402,7 @@ class BrowserScene : Scene
   end
 
   def rows()
-    var out = []
-    for name : self.names
-      out.push([routines.icon(name), name])
-    end
-    return out
+    return routines.rows()
   end
 
   def step(delta)
