@@ -37,6 +37,10 @@ SKETCHES = {
 }
 SKETCH = SKETCHES["gardener"]
 
+# The builds that ship a data image. The machine-alone build mounts no storage and has no panel, so
+# there is nothing to write to a LittleFS partition.
+SKETCHES_WITH_DATA = {"gardener"}
+
 DATA_DIR = SKETCH / "data"
 BUILD_DIR = SKETCH / "build"
 
@@ -169,6 +173,9 @@ def upload():
 
 
 def upload_data():
+    if SKETCH.name not in SKETCHES_WITH_DATA:
+        sys.exit(f"{SKETCH.name} ships no data image; there is nothing to write")
+
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")

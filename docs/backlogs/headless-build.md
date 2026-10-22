@@ -255,7 +255,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
 - [x] 6.10 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
 - [x] 6.11 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
   sketch.
-- [ ] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
+- [x] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
   sketch, which ships no data image.
 - [ ] 6.13 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and
   the Adafruit drivers.
