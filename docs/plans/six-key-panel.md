@@ -4,7 +4,7 @@ Extend the panel from the four keys the 5-way switch exposes — up, down, ok, b
 labelled keys: **up, down, forward, back, okay, cancel**. The two new keys do for free what the
 current map works around: `back` today is both "leave the current view" and "stop the run", `ok`
 today is both "advance a duration stage" and "save", and the page's settings view has to hide
-behind the Up+Down chord because no single key can carry it.
+behind a double tap because no single key can carry it.
 
 This plan has three parts, all of which land together:
 
@@ -28,10 +28,10 @@ firmware reads them. The rest of that plan is unaffected.
 | --- | --- | --- |
 | Up | `up` | move the selection up, or raise the value being edited |
 | Down | `down` | move the selection down, or lower the value being edited |
-| Forward | `forward` | enter: open the selection, advance a stage, next item |
-| Back | `back` | leave one level up; the page's own whole stop of a run |
+| Forward | `forward` | enter: open the selection, advance a stage |
+| Back | `back` | leave one level up |
 | Okay | `ok` | confirm: the primary action — start, save, select |
-| Cancel | `cancel` | escape: leave without writing, abort an edit |
+| Cancel | `cancel` | escape: stop the run, discard an edit, leave the routine |
 
 The tokens are the values `buttonName()` answers and the values a page compares in Berry. They are
 also the words in the press log (`btn: forward:single`), so one vocabulary serves the wire log, the
@@ -109,113 +109,94 @@ reserved; what changes is the split of the two jobs that one key used to do.
 | Gesture | Meaning |
 | --- | --- |
 | **Up / Down** | move the selection, or change the value being edited |
-| **Forward** | enter: open the selection, advance a duration stage, next item |
-| **Back** | leave one level up; the page's own whole stop of a run |
+| **Forward** | enter: open the selection, advance a duration stage |
+| **Back** | leave one level up |
 | **Okay** | confirm: start, save, select |
-| **Cancel** | escape: leave without writing, abort an edit |
-| **Up+Down** | the page's edit/settings view |
+| **Cancel** | escape: stop the run, discard an edit, leave the routine |
+
+The standard is the singles. A double is a page's own shortcut and no page is required to take
+one: the shipped pages use `up:double` for the edit/settings view, `down:double` for the system
+settings on the readout, and `cancel:double` to leave a routine.
 
 The one genuinely new rule is the **Back/Cancel split**, which is the point of the sixth key.
 Today [the gesture contract](../specs/gestures.md) has Back do both "leave the current view without
 writing" and "stop what the page is running". Split them:
 
-- **Back** is *structural*: it answers "where am I". From a value editor it returns to the list,
-  from a sub-view it returns to the parent, from a top-level page it stops the run. It is the
-  navigation key and the stop key it always was.
+- **Back** is *structural*: it answers "where am I". From a value editor it steps back a stage, from
+  a sub-view it returns to the parent, from a list it returns to the readout.
 - **Cancel** is *transactional*: it answers "do I keep this". It abandons an edit without writing,
-  aborts a pending action, and returns a run to rest without leaving the page.
+  stops the run and vents, and on a routine page a single pauses while a double leaves the stack.
 
-On a view with no parent the two coincide, exactly as a single key did before — a page that is not
-editing and is not running may take Cancel as nothing or as home. On a view with a parent they
-differ, and that difference is what the key buys.
+The stop leaves Back and lands on Cancel, so Back is navigation alone and Cancel is the one key
+that stops what is running.
 
 **Forward is the enter key, and Okay stops being two things.** Today Okay opens a value in the
 settings list *and* saves it in the editor, and in a `duration` it advances minutes→seconds *and*
 then saves. With Forward, the navigation half moves off Okay:
 
-- In a list, **Forward opens the selection** (today Okay does this).
+- In a list, **Forward opens the selection** (today Okay does this) — the browser opens the selected
+  routine's settings on Forward.
 - In an editor, **Okay saves** and **Forward advances the stage** — a `duration` moves from minutes
   to seconds on Forward and writes on Okay, so the `if kind == "duration"` special case in the
   editor goes away.
-- On a run page, **Okay stays start/resume**, and **Forward is the page's own "next"** if the page
-  has a next — the nudge the parking lot noted had no key. A page without a next simply does not
-  take Forward.
 
-Where enter and confirm are the same action — choosing a routine, opening a value — a page may take
-either key for it; the standard only requires that Okay always means confirm and Forward always
-means advance.
+Where enter and confirm are the same action — opening a value — a page may take either key for it;
+the standard only requires that Okay always means confirm and Forward always means advance.
 
-**Up+Down stays the settings gesture** — that is where the page's edit view lives, and it needs no
-new key. The classifier emits it as the sum `up:single+down:single` rather than a `chord` token
-reported on the up key, and the event goes out when the **last** of the two comes up, so each part
-is named from a press that has finished. It does not move to Forward, because Forward already
-means "enter" and giving it a second meaning is exactly the overloading this plan is removing.
-No other *page* chord is added: Forward+Back and the rest wait for a page that needs one. The sum
-is not a list of chords, though — any keys down together are one event, as
-[the two-key rule](#the-two-key-rule) says.
+**The settings view is Up double.** The edit view no longer hides behind a chord: a routine page
+opens its settings on `up:double`, and the readout opens the browser on the same gesture. The chord
+itself goes — no page binds a two-key sum, and the `chord` token the panel task used to report it
+leaves the vocabulary. Forward keeps its one meaning rather than doubling as the settings key.
 
-### The reserved holds
+### The reserved gesture
 
-These belong to the device and no page may suppress them. What changes:
+One gesture belongs to the device and no page may suppress it: **Back and Okay held together for
+5 s** is the safe reset — stop, vent and restart — whatever is showing and whatever link owns the
+machine. The panel task takes it from the gesture string before any page sees it.
 
-| Gesture | Disposition | Reason |
-| --- | --- | --- |
-| **Hold Back 3 s** — stop and vent | **keeps** | Back is still Back; the release gesture is unchanged |
-| **Back+Okay 5 s** — safe reset | **keeps**, `ok` → `okay` in name only | the one gesture that must work in every link state; it is not the place to experiment |
-| **Okay while Back is held** — go home | **moves to Cancel** | Okay is confirm; with a Cancel key, "get me out" is Cancel's job, and Okay is no longer stolen during a hold |
-
-The go-home move is the second real change. Today the panel task steals an Okay *press* while Back
-is held, and a press is classified on release, so it can only act then. Cancel is taken from the
-**debounced level** instead: while Back is held, Cancel going down is reported once as the beat's
-go-home, and the press that follows is not delivered. The level is the only thing that works once a
-pair is one event — a Cancel tapped during Back's hold is part of `back:3+cancel:single`, and waiting
-for that string would hold the way out until Back came up. The gesture stays device-owned — detected
-in the panel's beat before any page sees it — so a misbehaving page still cannot suppress the way
-out.
+Everything else that used to be device-owned is a page gesture now. The Back hold that stopped and
+vented is `cancel:single` on the pages that run something, and the way home is `cancel:double` on a
+routine page; a page owns the whole stop, so no hold is stolen at the panel level.
 
 ### The two-key rule
 
 Two or more keys whose debounced intervals overlap are **one event**, the sum of their parts in
 panel order, emitted when the last of them comes up. `back:3+ok:2` is a real event, not just a
-vocabulary example, and the settings chord is the same mechanism rather than a special case in the
-classifier. A key in such a group is not also half of a double: the double window belongs to a key
-pressed on its own.
+vocabulary example. A key in such a group is not also half of a double: the double window belongs
+to a key pressed on its own.
 
 The event goes out on the last release rather than the first. A part is named by how far it got —
-`single`, `double`, or its whole seconds — and only a released key has finished a press;
-composing
-at the first release would have to guess the still-held partner's part. For the settings chord the
-difference is invisible, except that the view opens when the second key comes up rather than the
-first.
+`single`, `double`, or its whole seconds — and only a released key has finished a press; composing
+at the first release would have to guess the still-held partner's part.
+
+No page binds a two-key sum today. The mechanism is there because a held pair has to answer as one
+event rather than two; the standard map uses singles and doubles, so the sum waits for a page that
+needs one.
 
 ### The press log
 
 While an external link drives there is no page, so presses are logged as the classifier's string
-with a `btn: ` prefix: `btn: ok:single`, `btn: back:3`, `btn:
-up:single+down:single`. The log and the event are the same string; the vocabulary simply grows
-`forward` and `cancel`, and a hold that goes on past the extended mark becomes its seconds.
+with a `btn: ` prefix: `btn: ok:single`, `btn: back:3`, `btn: up:double`. The log and the event are
+the same string; the vocabulary simply grows `forward` and `cancel`, and a hold that goes on past
+the extended mark becomes its seconds.
 
 ### The shipped pages
 
 These bindings are the pages' own to write, but the standard above settles them in advance:
 
-- **`default`** — Okay single starts, Back stops and vents. The double-tap shortcuts (Up double →
-  browser, Down double → system) can go: **Forward opens the browser** and **Up+Down opens the
-  system settings** as it does today.
-- **`browser`** — Up/Down move, Forward (or Okay) opens the selected routine, Back returns to
-  `default`, Up+Down opens the selected routine's settings.
-- **`system`** — Up/Down move rows, Forward (or Okay) opens the row, Okay saves in an editor, Back
-  returns to `default` or back out of the editor, Cancel discards the edit.
-- **the settings editor** — Up/Down change the value, Forward opens/advances, Okay saves, Back and
-  Cancel both leave; Cancel discards and Back keeps "back out one level" so a `duration` can step
-  minutes→seconds with Forward and back with Back.
-- **a routine page** — Okay starts or resumes, and Cancel returns the run to rest and leaves the
-  page showing: the two ramped pages already do this on Back, and `interval` gains it, so the key
-  means the same thing on all three. **Back is a double tap**: one Back does nothing on a running
-  routine page, Back double stops the run and leaves for the browser. A single tap is too cheap for
-  the one action that takes a run away, and while a run is going the page is where the user is
-  looking. Forward is the page's own "next" and a page without one does not take it; Up+Down is
-  its settings.
+- **the readout** — `ok:single` starts or resumes, `cancel:single` stops and vents, `up:double`
+  opens the browser, `down:double` opens the system settings.
+- **the browser** — `up:single`/`down:single` move, `ok:single` opens the selected routine,
+  `forward:single` opens the selected routine's settings, `back:single` leaves.
+- **the system settings** — `up:single`/`down:single` move rows, `ok:single` opens a row,
+  `back:single` leaves.
+- **the settings list** — `up:single`/`down:single` move rows, `ok:single` opens a row,
+  `back:single` closes the list.
+- **a value scene** — `up:single`/`down:single` change the value, `ok:single` keeps it,
+  `cancel:single` discards it. A `duration` adds `forward:single` to advance minutes→seconds and
+  `back:single` to step back.
+- **a routine page** — `ok:single` begins or resumes, `cancel:single` stops and vents and leaves the
+  page paused, `cancel:double` stops and vents and leaves the stack, `up:double` opens its settings.
 
 ## Part 3 — the classifier emits gesture strings
 
@@ -256,16 +237,14 @@ is to hand the queued string to `take()`.
 
 ### One class answers the beat
 
-The drain, the sum, the reserved holds and the go-home are one piece of state, so they are one
-class rather than a loop in the panel task. `GestureClassifier` owns the reader, settles it on each
-beat and answers one value: the gesture that completed, and the three device gestures it detects
-from a level rather than a release — the reset hold, the Back stop and the Cancel-while-Back
-go-home. A second gesture completed in the same beat waits for the next, so one beat is one
-delivery.
+The drain and the sum are one piece of state, so they are one class rather than a loop in the panel
+task. `GestureClassifier` owns the reader, settles it on each beat and answers the gesture that
+completed, composed into one string. A second gesture completed in the same beat waits for the
+next, so one beat is one delivery.
 
-`buttonsTick` becomes that call plus the policy only the panel task can apply: reboot on the reset,
-latch and post the stop, bump the go-home counter, or hand the gesture to the page. Nothing left in
-it re-derives a threshold, scans the keys or composes a string.
+`buttonsTick` becomes that call plus the one policy the panel keeps: reboot when the string reads
+`back:5+ok:5`, and hand anything else to the page. Nothing left in it re-derives a threshold, scans
+the keys or composes a string.
 
 The scene framework hands the string through unchanged; a page matches it whole or splits it when
 it wants the parts:
@@ -288,14 +267,14 @@ def take_events()
 end
 ```
 
-`handle(ev)` receives the whole string — `"ok:single"`, `"back:3"`, `"up:single+down:single"` — and
+`handle(ev)` receives the whole string — `"ok:single"`, `"back:3"`, `"up:double"` — and
 the direction for the Berry side is to **compare the whole string wherever a page can**. The
 shipped pages' nested `if ev.btn == "up"` ladders are each one string compared, and they become
 one test:
 
 ```berry
-if ev == "ok:single"              # not ev.btn == "ok" && ev.press == "single"
-if ev == "up:single+down:single"   # the settings chord, matched whole
+if ev == "ok:single"    # not ev.btn == "ok" && ev.press == "single"
+if ev == "up:double"    # the settings gesture, matched whole
 ```
 
 A page splits on `+` and `:` only when it matches one dimension regardless of the other — an
@@ -332,26 +311,25 @@ the drafts that had seconds replacing `long`, and then `long` surviving at all.
 1. **The token is `ok`, not `okay`.** It is the name the press log, `Button::Ok`, `buttonName()` and
    every routine already use. The key is called "okay" and the glass may spell it either way; the
    token does not move.
-2. **Go-home is Cancel while Back is held**, taken from the debounced level in the beat's gesture
-   detection as described above. A plain Hold Cancel was the alternative; it reserves a hold on the
-   key a page most wants for its own cancel, so it is not taken.
+2. **The way home is Cancel double.** A routine page stops and vents on `cancel:single` and leaves
+   the stack on `cancel:double`, so no hold is stolen at the panel level and Okay is never taken
+   from a page during a hold.
 3. **The reset stays Back+Okay for 5 s.** Nothing about the new keys makes a better reset, and it
    is the one gesture that must work in every link state.
-4. **The sum is general.** Any keys down together are one event, in panel order, on the last
-   release. Up+Down is the only *page* chord; that is a statement about the standard, not a
-   special case in the classifier.
-5. **A registration is a whole gesture string.** `on("ok:single", fn)`, `on("up:single+down:single",
-   fn)`, and `*` in the press slot for any press on that key. A bare key name is not a gesture, and
-   a list of press names is several registrations with a hole where the hold would go.
+4. **The sum is general, and no page binds one.** Any keys down together are one event, in panel
+   order, on the last release. The settings view is a double, not a chord, so the sum waits for a
+   page that needs one.
+5. **A registration is a whole gesture string.** `on("ok:single", fn)`, `on("up:double", fn)`, and
+   `*` in the press slot for any press on that key. A bare key name is not a gesture, and a list of
+   press names is several registrations with a hole where the hold would go.
 6. **The harness presses a whole gesture.** `harness.press("ok:single")` is exactly what the device
    produces, so the host has no button or press table to drift from the classifier.
 7. **`single`, `double` and seconds are the forms.** `short` is renamed `single`, and `long` is
    gone: a release is a single or a double, and a hold that reaches the 2 s mark reports whole
    seconds instead. The 600 ms mark between a tap and a hold goes with it.
-8. **Gesture detection is one class; the panel task keeps the policy.** `GestureClassifier` answers
-   the beat with the completed gesture and the device gestures it detected from the levels.
-   `buttonsTick` decides what each one means — reboot, stop, go home, deliver — and owns nothing
-   else.
+8. **Gesture detection is one class; the panel task keeps the reset.** `GestureClassifier` answers
+   the beat with the completed gesture. `buttonsTick` reboots on the reset string and hands
+   everything else to the page.
 
 ## What moves together when it lands
 
@@ -359,10 +337,9 @@ The work is one change, and its parts share the vocabulary, so no part can stand
 
 - `hal/Button.h` (enum and `buttonName`; the `Press` enum and `pressName()` go, replaced by the
   classifier's string output), `hal/impl/Buttons.h`/`.cpp` as the shift-register reader,
-  `panel/GestureClassifier.h`/`.cpp` (the beat's gesture and the device gestures it detects),
-  `Panel.h`'s pin
-  block and `gestures()` accessor, the sketch's `Board` block, and `PanelTasks.cpp` reduced to
-  policy.
+  `panel/GestureClassifier.h`/`.cpp` (the beat's gesture), `Panel.h`'s pin
+  block and `gestures()` accessor, the sketch's `Board` block, and `PanelTasks.cpp` reduced to the
+  reset.
 - `routines/bindings/Buttons.cpp` (hands through the classifier string), `routines/Bindings.cpp`
   (`kRecords` without `event`), `modules/scene.be`, `modules/ui.be`, the settings scenes and the
   three files under `routines/` (`handle(ev)` takes the string and compares it whole, splitting on
@@ -371,6 +348,6 @@ The work is one change, and its parts share the vocabulary, so no part can stand
   (`harness.press` takes the gesture), `harness.be` (the event record goes), `driver.be` and the
   test files that press keys.
 - The specs when the work is done: [gestures.md](../specs/gestures.md) (six keys, the Back/Cancel
-  split, the moved go-home, the sum chord and the extended-hold seconds),
+  split, the way home, the two-key rule and the extended-hold seconds),
   [bindings.md](../specs/ui/bindings.md) (`buttons.take()` answers the classifier's string) and
   [routine.md](../specs/ui/routine.md) (`handle(ev)` takes the string).
