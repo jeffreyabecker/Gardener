@@ -34,7 +34,9 @@ compiled, every registration looked like a routine, and every page ran.
 
 `--art NAME` draws instead of driving: it runs that routine and saves the frame it left as a one-bit
 BMP, `build/<name>.bmp` unless `--out` says otherwise. `--seconds N` presses OK first and runs N
-seconds of virtual time, so a cycle can be caught mid-phase. See [Draw a page](#draw-a-page).
+seconds of virtual time, so a cycle can be caught mid-phase. `--sets N` activates the routine with N
+sets before that, 12 unless told otherwise, and 0 keeps the routine's own count: four sets is the
+shipped default and too few to judge a bubble row by. See [Draw a page](#draw-a-page).
 
 ## The load order, and why it matters
 
@@ -132,14 +134,20 @@ python .github/skills/berry/check.py --art default
 python .github/skills/berry/check.py --art ramped_static --seconds 30 --out C:\tmp\ramp.bmp
 ```
 
+Look at the file. A preview is a picture: the frame is a BMP because that is what
+`scripts/asset.py` converts, so it is converted to a PNG first and the page is read off that, not
+written out as text. The face the text takes, the wrapping, and what the frame's edge clips live
+only in the pixels.
+
 The font data is the installed Adafruit GFX library's, the same headers the device build compiles:
 `glcdfont.c` and `Fonts/*.h`. `check.py` finds the library through `--gfx`, then `ADAFRUIT_GFX`,
 then `arduino-cli config get directories.user`, then the usual sketchbook paths, and stops with the
 `arduino-cli lib install "Adafruit GFX Library"` hint when it cannot. `gfx/Adafruit_GFX.h` is a
 shim that lets those headers compile without `Arduino.h`.
 
-What the frame does not have: the overlay's 12 px band (it is C in `Overlay.cpp`, and the frame only
-holds what a page drew), inversion, and any depth beyond one bit. A BMP opens anywhere and
+The overlay's 12 px band is C in `Overlay.cpp` and paints over the page; the frame does the same to
+the rows it covers, 52 to 63, on the way out, filling them with a one-pixel checker that reads as
+grey. What the frame does not have: inversion, and any depth beyond one bit. A BMP opens anywhere and
 `scripts/asset.py` reads the same 1-bit format.
 
 ## What the drive does

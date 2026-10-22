@@ -128,6 +128,12 @@ parser.add_argument(
     help="with --art, press OK and run this much virtual time before saving",
 )
 parser.add_argument("--out", help="with --art, where the BMP goes (default: build/<name>.bmp)")
+parser.add_argument(
+    "--sets",
+    type=int,
+    default=12,
+    help="with --art, the set count to activate with, so the bubbles fill (default 12; 0 keeps the file's)",
+)
 args = parser.parse_args()
 
 cc = compiler()
@@ -139,7 +145,18 @@ if args.compile:
     command.append("--compile-only")
 if args.art:
     out = Path(args.out) if args.out else BUILD / f"{args.art}.bmp"
-    command.extend(["--art", args.art, "--seconds", str(args.seconds), "--out", str(out.resolve())])
+    command.extend(
+        [
+            "--art",
+            args.art,
+            "--seconds",
+            str(args.seconds),
+            "--sets",
+            str(args.sets),
+            "--out",
+            str(out.resolve()),
+        ]
+    )
 for name, path in seeds(data):
     command.extend(["--values", f"{name}={path}"])
 command.extend(str(path) for path in files(data))

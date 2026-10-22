@@ -64,7 +64,7 @@ static int callWithText(bvm* vm, const char* function, const char* name, const c
 
 // --art draws instead of checking: the page runs and harness_art saves the frame it left. The call
 // leaves its arguments above the result, so the answer is argc + 1 places down.
-static int callArt(bvm* vm, const char* name, int seconds, const char* path) {
+static int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) {
   be_pop(vm, be_top(vm));  // the seeded values leave their call's arguments behind
   if (!be_getglobal(vm, "harness_art")) {
     be_pop(vm, 1);
@@ -74,13 +74,14 @@ static int callArt(bvm* vm, const char* name, int seconds, const char* path) {
   be_pushstring(vm, name);
   be_pushint(vm, seconds);
   be_pushstring(vm, path);
-  if (be_pcall(vm, 3) != BE_OK) {
+  be_pushint(vm, sets);
+  if (be_pcall(vm, 4) != BE_OK) {
     report(vm, "harness_art", name);
     return 0;
   }
-  const int result = be_absindex(vm, -(3 + 1));
+  const int result = be_absindex(vm, -(4 + 1));
   const int ok = be_isbool(vm, result) && be_tobool(vm, result);
-  be_pop(vm, 4);
+  be_pop(vm, 5);
   return ok;
 }
 
@@ -104,6 +105,7 @@ int main(int argc, char** argv) {
   const char* artName = NULL;
   const char* artPath = NULL;
   int artSeconds = 0;
+  int artSets = 0;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--compile-only") == 0) {
@@ -114,6 +116,8 @@ int main(int argc, char** argv) {
       artPath = argv[++i];
     } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
       artSeconds = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--sets") == 0 && i + 1 < argc) {
+      artSets = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--values") == 0 && i + 1 < argc) {
       const char* value = argv[++i];
       const char* split = strchr(value, '=');
@@ -187,7 +191,7 @@ int main(int argc, char** argv) {
 
   int passed = 1;
   if (artName != NULL) {
-    passed = callArt(vm, artName, artSeconds, artPath != NULL ? artPath : "frame.bmp");
+    passed = callArt(vm, artName, artSeconds, artPath != NULL ? artPath : "frame.bmp", artSets);
   } else if (!compileOnly) {
     if (!be_getglobal(vm, "harness_check")) {
       be_pop(vm, 1);

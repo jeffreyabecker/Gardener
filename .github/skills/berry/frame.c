@@ -9,7 +9,9 @@
 // The font data is the installed library's, not a copy: check.py puts the Adafruit GFX library on
 // the include path, and gfx/Adafruit_GFX.h supplies the structs its font headers expect.
 //
-// save() writes a 1-bit BMP: the format every viewer opens and scripts/asset.py reads.
+// save() writes a 1-bit BMP: the format every viewer opens and scripts/asset.py reads. The overlay's
+// twelve-row band is marked on the way out with a one-pixel checker, so a preview shows where it
+// covers the page.
 
 #include <math.h>
 #include <stdint.h>
@@ -43,6 +45,7 @@
 enum {
   FrameWidth = 128,
   FrameHeight = 64,
+  BandY = 52,  // the overlay's top row: its band covers the twelve rows below this
   Ink = 1,
   Paper = 0,
 };
@@ -751,6 +754,17 @@ static void put32(FILE* file, uint32_t value) {
   fputc((value >> 24) & 0xFF, file);
 }
 
+// The overlay is a 12 px opaque band across the bottom, drawn in Overlay.cpp over whatever a page
+// put there. The frame paints the same rows the same way, with a one-pixel checker: opaque, like
+// the band, and a grey that reads as covered rather than as a page's own ink.
+static void drawBand(void) {
+  for (int16_t y = BandY; y < FrameHeight; y++) {
+    for (int16_t x = 0; x < FrameWidth; x++) {
+      sFrame[y][x] = ((x + y) % 2 == 0) ? Ink : Paper;
+    }
+  }
+}
+
 // A one-bit BMP, rows bottom up: the panel's own depth, and the format scripts/asset.py reads.
 static int saveBmp(const char* path) {
   const int rowBytes = FrameWidth / 8;
@@ -975,6 +989,7 @@ static int frameSave(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "frame.save(path)");
   }
+  drawBand();
   if (!saveBmp(be_tostring(vm, 1))) be_raise(vm, "io_error", "frame.save: cannot write the file");
   be_return_nil(vm);
 }

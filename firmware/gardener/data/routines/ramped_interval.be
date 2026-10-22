@@ -5,23 +5,19 @@
 # works at its own target and rests at the rest pressure. Back pauses the run and vents the chamber;
 # OK then starts the set it stopped on again, with its work clock back at full.
 
-# The page's glyph, and the browser's row glyph: the stairs, three treads climbing by two risers, on
-# a 12 by 8 field. It is defined before the chrome that draws it, because a class has to be a global
-# by the time the file names it.
+# The page's glyph, and the browser's row glyph: the stairs, three solid steps four pixels wide,
+# each column standing from the baseline two rows higher than the one before, so no gap falls between
+# them, on a 12 by 8 field. It is defined before the chrome that draws it, because a class has to be
+# a global by the time the file names it.
 class RampedIntervalIcon : Icon
   def init()
     super(self).init(12, 8)
   end
 
   def draw(x, y)
-    var low = y + 6
-    var mid = y + 4
-    var high = y + 1
-    screen.draw_line(x, low, x + 4, low)
-    screen.draw_line(x + 4, low, x + 4, mid)
-    screen.draw_line(x + 4, mid, x + 8, mid)
-    screen.draw_line(x + 8, mid, x + 8, high)
-    screen.draw_line(x + 8, high, x + 11, high)
+    screen.draw_fillrect(x, y + 5, 4, 2)
+    screen.draw_fillrect(x + 4, y + 3, 4, 4)
+    screen.draw_fillrect(x + 8, y + 1, 4, 6)
   end
 end
 
@@ -30,37 +26,32 @@ class RampedIntervalChrome
   var icon
   var sets
   var pressure
-  var target
   var status
   var bar
 
   def init(owner)
     self.owner = owner
 
-    # The icon and the set bubbles share the top row; the readout, the target and the status fill
-    # the rest of the 52 rows above the overlay's band.
+    # The left half is the glyph on the page's first row and the readout under it; the right half is
+    # the set bubbles. The status and the set's remaining time take the last row above the
+    # overlay's band.
     self.icon = RampedIntervalIcon()
 
-    self.sets = ProgressBubbles()
-    self.sets.x = 92; self.sets.y = 0; self.sets.w = 36; self.sets.h = 6
-
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 10; self.pressure.w = 116; self.pressure.h = 23
+    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 64; self.pressure.h = 32
 
-    # The target needs no label: the border is what tells it apart from the live reading.
-    self.target = PressureDisplay()
-    self.target.x = 0; self.target.y = 34; self.target.w = 116; self.target.h = 10
-    self.target.border = 1
+    self.sets = ProgressBubbles()
+    self.sets.x = 64; self.sets.y = 0; self.sets.w = 64; self.sets.h = 38
 
-    # The status and the set's remaining time share the last line above the band: the words on the
-    # left, the bar draining to the right. The longest status is "PRESS OK", 48 pixels of built-in
-    # face.
+    # The status and the set's remaining time share the last row above the band: thirty pixels of
+    # words on the left, the bar taking the rest of the width. "READY" is the longest status, 29
+    # pixels of built-in face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 45; self.status.w = 62; self.status.h = 7
+    self.status.x = 0; self.status.y = 44; self.status.w = 30; self.status.h = 8
     self.status.align = "left"
 
     self.bar = ProgressBar()
-    self.bar.x = 66; self.bar.y = 45; self.bar.w = 50; self.bar.h = 7
+    self.bar.x = 32; self.bar.y = 44; self.bar.w = 96; self.bar.h = 8
     self.bar.border = 1
   end
 
@@ -81,7 +72,6 @@ class RampedIntervalChrome
     self.sets.draw(filled)
 
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
-    self.target.draw(self.owner.active_target())
     self.status.draw(self.owner.status_text())
     var left = self.owner.work_left()
     if left != nil
@@ -422,22 +412,14 @@ class RampedInterval : Page
     self.chrome.draw(vacuum.state())
   end
 
-  # The pressure the machine is working to right now: the rest hold has its own target.
-  def active_target()
-    if self.phase == "rest_approach" || self.phase == "rest"
-      return self.rest_pressure
-    end
-    return self.target
-  end
-
   # The page has one word per thing the chamber is doing, and the target and rest phases read as
   # the hold they are heading into: an approach is work because the set is under way.
   def status_text()
     if self.phase == "ready"
-      return "PRESS OK"
+      return "READY"
     end
     if self.phase == "paused"
-      return "PAUSED"
+      return "PAUSE"
     end
     if self.phase == "rest_approach" || self.phase == "rest"
       return "REST"

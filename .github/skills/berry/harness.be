@@ -289,12 +289,14 @@ class VacuumStub
     harness_note(text)
   end
 
-  # Host only: what the driver uses to model the pump and the vent.
+  # Host only: what the driver uses to model the pump and the vent. The pull is a few kPa a
+  # second, the rate a small diaphragm pump on a chamber this size reaches, so a frame taken
+  # during a pull shows the reading behind its target rather than already on it.
   def advance(dt)
     self.clock += dt
     if self.run_state == "PULL"
       self.duty = 100.0
-      self.kpa = self.kpa + 30.0 * dt / 1000.0
+      self.kpa = self.kpa + 3.0 * dt / 1000.0
       if self.kpa >= self.target_kpa - 0.2
         self.kpa = self.target_kpa
         self.run_state = "HOLD"

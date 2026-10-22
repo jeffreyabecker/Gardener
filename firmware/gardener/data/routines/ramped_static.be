@@ -7,18 +7,16 @@
 # business and a pull that ate into the start hold would move the ramp's start — the two things the
 # profile is asked to guarantee.
 
-# The page's glyph, and the browser's row glyph: the profile itself, a baseline with a rising line
-# that turns flat, on a 12 by 8 field. It is defined before the chrome that draws it, because a
-# class has to be a global by the time the file names it.
+# The page's glyph, and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
+# run rising from the first row to the last, on a 12 by 8 field. It is defined before the chrome
+# that draws it, because a class has to be a global by the time the file names it.
 class RampedStaticIcon : Icon
   def init()
     super(self).init(12, 8)
   end
 
   def draw(x, y)
-    screen.draw_line(x, y + 6, x + 11, y + 6)
-    screen.draw_line(x, y + 6, x + 7, y + 1)
-    screen.draw_line(x + 7, y + 1, x + 11, y + 1)
+    screen.draw_filltriangle(x, y + 6, x + 11, y + 1, x + 11, y + 6)
   end
 end
 
@@ -26,41 +24,35 @@ class RampedStaticChrome
   var owner
   var icon
   var pressure
-  var target
   var status
   var bar
 
   def init(owner)
     self.owner = owner
 
-    # There are no sets, so the top row is the glyph's alone; below it the readout, the target and
-    # the status fill the rest of the 52 rows above the overlay's band.
+    # There are no sets, so the right half is empty; the readout sits where it does on the cycle
+    # pages, under the glyph in the left half, and the stage and the remaining time take the last
+    # row above the overlay's band.
     self.icon = RampedStaticIcon()
 
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 10; self.pressure.w = 116; self.pressure.h = 23
+    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 64; self.pressure.h = 32
 
-    # The target needs no label: the border is what tells it apart from the live reading.
-    self.target = PressureDisplay()
-    self.target.x = 0; self.target.y = 34; self.target.w = 116; self.target.h = 10
-    self.target.border = 1
-
-    # The stage and the run's remaining time share the last line above the band: the words on the
-    # left, the bar draining to the right. The longest stage is "PRESS OK", 48 pixels of built-in
-    # face.
+    # The stage and the run's remaining time share the last row above the band: thirty pixels of
+    # words on the left, the bar taking the rest of the width. "READY" is the longest stage, 29
+    # pixels of built-in face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 45; self.status.w = 62; self.status.h = 7
+    self.status.x = 0; self.status.y = 44; self.status.w = 30; self.status.h = 8
     self.status.align = "left"
 
     self.bar = ProgressBar()
-    self.bar.x = 66; self.bar.y = 45; self.bar.w = 50; self.bar.h = 7
+    self.bar.x = 32; self.bar.y = 44; self.bar.w = 96; self.bar.h = 8
     self.bar.border = 1
   end
 
   def draw(s)
     self.icon.draw(0, 0)
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
-    self.target.draw(self.owner.target)
     self.status.draw(self.owner.status_text())
     var left = self.owner.run_left()
     if left != nil
@@ -404,10 +396,10 @@ class RampedStatic : Page
   # The approach and the start hold are both "on the way to the start", which is the same word.
   def status_text()
     if self.phase == "ready"
-      return "PRESS OK"
+      return "READY"
     end
     if self.phase == "paused"
-      return "PAUSED"
+      return "PAUSE"
     end
     if self.phase == "approach"
       return "START"
@@ -417,7 +409,7 @@ class RampedStatic : Page
       return "START"
     end
     if elapsed >= self.initial_ms + self.ramp_ms
-      return "TARGET"
+      return "HOLD"
     end
     return "RAMP"
   end

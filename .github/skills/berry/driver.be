@@ -199,14 +199,20 @@ def harness_run_page(entry)
 end
 
 # Draw one page and save the frame as a BMP. No seconds is the page as it appears; seconds presses OK
-# and runs that much virtual time first, so a cycle can be caught mid-phase.
-def harness_art(name, seconds, path)
+# and runs that much virtual time first, so a cycle can be caught mid-phase. A set count overrides
+# the routine's own before it is activated, which is how a preview shows a run long enough to fill
+# the bubbles; zero leaves the file's value alone.
+def harness_art(name, seconds, path, sets)
   var entry = harness_find(name)
   if entry == nil
     harness_fail("art: no routine named " + name)
     return false
   end
   harness_reset()
+  var file = harnessStore.find(name, nil)
+  if sets > 0 && file != nil && file.find("set_count", nil) != nil
+    file["set_count"] = str(sets)
+  end
   if !harness_activate(entry, nil)
     return false
   end
@@ -369,7 +375,7 @@ def harness_check_ramped_static()
     })
     return
   end
-  if page.status_text() != "PRESS OK"
+  if page.status_text() != "READY"
     harness_fail("ramped_static: a ready page shows " + page.status_text())
     return
   end
@@ -392,14 +398,14 @@ def harness_check_ramped_static()
     return
   end
   guard = 0
-  while page.status_text() != "TARGET" && guard < 40
+  while page.status_text() != "HOLD" && guard < 40
     if !harness_beats(1)
       return
     end
     guard += 1
   end
-  if page.status_text() != "TARGET"
-    harness_fail("ramped_static: the stage did not reach TARGET")
+  if page.status_text() != "HOLD"
+    harness_fail("ramped_static: the stage did not reach HOLD")
     return
   end
   guard = 0
@@ -512,3 +518,4 @@ def harness_check()
                str(harnessStore.size()) + " store files")
   return harnessErrors == 0
 end
+
