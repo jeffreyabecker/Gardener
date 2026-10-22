@@ -9,9 +9,10 @@ keys and therefore no gestures**: its stop is ownership alone — the chamber ve
 controller leaves the stack, and an unowned machine is always vented. Nothing below applies to it.
 
 This file is the contract for **any** page. What a particular page does with a press — its own
-shortcuts, what OK starts on it, which presses it ignores — belongs in that page's own `.be` file.
-The routine API is in [routine.md](./ui/routine.md) and [bindings.md](./ui/bindings.md); this file
-is the UX rule above them.
+shortcuts, what OK starts on it, which presses it ignores — belongs in that page's own `.be` file,
+and the shipped bindings are listed in [scenes.md](./ui/scenes.md). The routine API is in
+[routine.md](./ui/routine.md) and [bindings.md](./ui/bindings.md); this file is the UX rule above
+them.
 
 ## How a press is recognised
 

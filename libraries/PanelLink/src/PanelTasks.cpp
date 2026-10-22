@@ -25,13 +25,11 @@ constexpr UBaseType_t PanelPriority = 0;
 constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 
-// The panel's holds, which are the marks the gesture carries in whole seconds. A Back held past
-// the stop mark releases the chamber; Back and Okay together past the reset mark restart the device.
-constexpr uint32_t BackStopSeconds = 3;
+// The one hold the panel task acts on, as the marks the gesture carries in whole seconds: Back and
+// Okay together past it restart the device.
 constexpr uint32_t ResetHoldSeconds = 5;
 
-// The panel task's own state: the two screens it owns, the one showing, and the one latch the Back
-// hold needs.
+// The panel task's own state: the two screens it owns and the one showing.
 struct PanelState {
   Panel& context;
   Logger* logger;
@@ -39,26 +37,14 @@ struct PanelState {
   DisconnectedUI* disconnected;
   UserInterface* ui = nullptr;
   bool ownedShown = false;
-  // One stopSeq bump per Back hold, so a page sees the stop once rather than every beat.
-  bool backStopFired = false;
 };
-
-// The whole seconds a gesture's Back part carries, or 0 when it has none. Back is first in panel
-// order, so its part is the gesture's first.
-uint32_t backSeconds(const String& gesture) {
-  if (!gesture.startsWith("back:")) return 0;
-  int end = gesture.indexOf('+');
-  if (end < 0) end = gesture.length();
-  return (uint32_t)gesture.substring(5, end).toInt();
-}
 
 // The gesture goes to the active routine on the panel's own pages, or to the press log. The
 // classifier is its one consumer, so it is never delivered twice.
 void deliverGesture(PanelState& state, const String& gesture);
 
-// One call to the classifier, and the policy for what it answers. The device's own gestures come
-// first and are never delivered: the reset reboots, the Back hold stops and vents, and Cancel
-// during that hold is the way home.
+// One call to the classifier, and the policy for what it answers. The reset is the one gesture the
+// panel task takes for itself; everything else is a page's.
 void buttonsTick(PanelState& state) {
   const String gesture = state.context.gestures().update();
 
@@ -67,28 +53,6 @@ void buttonsTick(PanelState& state) {
   if (gesture == ResetGesture) {
     state.logger->warn("panel: reset held, rebooting");
     safeReboot(state.context);
-    return;
-  }
-
-  const uint32_t back = backSeconds(gesture);
-  if (back < BackStopSeconds) state.backStopFired = false;
-  if (back >= BackStopSeconds) {
-    // The stop is re-asserted each beat the hold lasts, so a start that sneaks in is undone in the
-    // same beat, and only while the panel drives.
-    const bool owned = state.context.ownership().ownedBy(state.context);
-    if (!state.backStopFired) {
-      state.backStopFired = true;
-      state.logger->warn("panel: back held, stopping");
-      stopSeq++;
-    }
-    if (owned) {
-      const MachineCommand stop{MachineCommand::Op::Stop};
-      postMachineCommand(stop);
-    }
-    // Cancel beside the hold is the way home, and it is the panel's gesture rather than a page's.
-    if (gesture.endsWith("+cancel:short")) {
-      if (owned) goHomeSeq++;
-    }
     return;
   }
 
