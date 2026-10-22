@@ -257,7 +257,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
   sketch.
 - [x] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
   sketch, which ships no data image.
-- [ ] 6.13 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and
+- [x] 6.13 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and
   the Adafruit drivers.
 
 ## Epic 7 — The contract
