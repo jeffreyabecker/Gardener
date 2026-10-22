@@ -35,7 +35,7 @@ The build passes throughout. The stack's push, release and drop semantics —
 including releasing a link from beneath the top, a vanished owner falling
 back to the panel, and an absent release being a no-op — are exercised by a
 throwaway host test against `Ownership.h`, which passes. The on-hardware pass
-is Epic 8.
+is the parking lot's verification entry.
 
 ## What the headless build will do with it
 

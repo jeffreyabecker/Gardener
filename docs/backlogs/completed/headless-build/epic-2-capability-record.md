@@ -21,7 +21,8 @@ fitted and how the device stops itself, and both links serve it.
 
 `Device.cpp` and `MachineBleDomain` both read `Capabilities::mask()`, so the
 serial field and the BLE characteristic are the same value by construction.
-The build passes throughout; the on-hardware read of both surfaces is Epic 7.
+The build passes throughout; the on-hardware read of both surfaces is the
+parking lot's verification entry.
 
 ## What the headless build will do with it
 

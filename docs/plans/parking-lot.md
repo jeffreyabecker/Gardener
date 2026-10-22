@@ -42,6 +42,16 @@ primary action, Up+Down is the settings view of any page with `describe()`, and 
 so a nudge has no press to take that does not first take a meaning away from one of those.
 
 
+## Verify the two builds on hardware
+
+The machine/panel split, the ownership stack and the two builds have only ever been
+compiled. Everything the specs now promise still needs a device: the full device's serial
+and Bluetooth surfaces with `control get` naming the owner, the panel driving by default
+with Back releasing and Back+OK rebooting, and the chamber venting on a claim, a release
+and a drop. The machine-alone build needs the same: `device get` reporting `caps` and no
+battery, log or unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that
+cannot start unowned or survive its owner leaving.
+
 ## Berry pages as a stack of components
 
 A page can hold exactly one editor (`Page.editor`), so the routine settings module in

@@ -50,4 +50,5 @@ Both sketches build after every item. A clean build of the machine-alone sketch
 compiles and links at 568897 bytes (43%) with no reference to `GardenerPanel`,
 `berry`, the Adafruit drivers, `RLEBitmap` or `LittleFS`; the full device is
 873089 bytes (66%) with 30612 bytes of static RAM. `--task data --sketch
-headless` exits with the refusal. The on-hardware pass is Epic 8.
+`headless` exits with the refusal. The on-hardware pass is the parking lot's
+verification entry.

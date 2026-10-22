@@ -38,4 +38,4 @@ it cannot race the stop.
 Build passes throughout. Behavior is preserved by construction — the config
 is filled from `settings.ini`, the hold semantics keep the same latch and
 re-assert, and the buzzer stays on the control beat. The on-hardware pass is
-Epic 7.
+the parking lot's verification entry.

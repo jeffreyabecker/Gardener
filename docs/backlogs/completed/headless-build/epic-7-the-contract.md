@@ -34,13 +34,6 @@ describing the one-owner record Epic 4 deleted.
 - **The README names both builds.** What the full device and the headless build
   are for, and `--sketch` in the build section.
 
-## Where the summary sits
-
-Epics 1–4 keep their summaries beside the backlog at
-`docs/backlogs/headless-build/`, so this one does too. The backlog skill names
-`docs/backlogs/completed/<topic>/`; that directory does not exist and moving one
-file alone would be worse than either convention.
-
 ## Verification
 
 Documentation only, so the check is against the code rather than a build: the
@@ -48,4 +41,4 @@ reply grammar matches `ControlDomain`, the characteristic values match the
 `Link` enum, the field lists match `MachineDeviceDomain` and the panel's
 `DeviceDomain`, the gate is `ownedBy(Link::Panel)` in the panel's button beat,
 and Back+OK reaches `safeReboot` without consulting ownership. The behavioural
-pass is Epic 8.
+pass over both builds is the parking lot's verification entry.
