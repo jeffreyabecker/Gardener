@@ -27,7 +27,8 @@ constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 
 // The keys in the order a press is reported, which is the panel's order rather than the bit order.
-constexpr Button PressOrder[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
+constexpr Button PressOrder[] = {Button::Up,  Button::Down, Button::Forward,
+                                Button::Back, Button::Ok,   Button::Cancel};
 
 // The panel's holds. Holding Back for this long stops the run and vents; Back+OK together for the
 // longer mark is the reboot.

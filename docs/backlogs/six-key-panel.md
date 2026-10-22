@@ -25,13 +25,13 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 1 — The shift-register reader
 
-- [ ] **1. Name the six keys.** `Button` gains `Forward` and `Cancel`, declared in the order the keys
+- [x] **1. Name the six keys.** `Button` gains `Forward` and `Cancel`, declared in the order the keys
   sit on the panel, and a count replaces the `4` the classifier spells in its arrays, masks and
   loops. `buttonName()` answers all six, and the panel task's press order lists all six so a press
   is still reported in panel order. The two new keys simply never produce a press yet. Done when the
   build and the check both pass unchanged.
 
-- [ ] **2. Read the keys through the 74HC165.** The `hal/impl` reader is one shift register on latch,
+- [x] **2. Read the keys through the 74HC165.** The `hal/impl` reader is one shift register on latch,
   clock and data: it latches and shifts eight inputs in on each settle instead of reading four pins,
   and the interrupt capture goes with the pins it needed. Six of the inputs are the keys in panel
   order, the two spares are tied high, and the input-to-key mapping is named once. `PanelPins` and

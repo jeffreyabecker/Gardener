@@ -17,7 +17,8 @@
 namespace gardener {
 
 // The panel's half of the rig. The machine's three pins come first, then the display bus, the
-// piezo, the gauge and the four keys. The sketch names them, so this library carries no board.
+// piezo, the gauge, and the three lines the key register needs. The sketch names them, so this
+// library carries no board.
 struct PanelPins {
   MachinePins machine;
   uint8_t i2cSda;
@@ -26,10 +27,9 @@ struct PanelPins {
   uint8_t buzzerPwm;
   uint8_t batteryAdc;
   float batteryDivider;
-  uint8_t up;
-  uint8_t down;
-  uint8_t ok;
-  uint8_t back;
+  uint8_t keyLatch;
+  uint8_t keyClock;
+  uint8_t keyData;
 };
 
 // The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
