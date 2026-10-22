@@ -252,7 +252,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
   the panel's in the machine-alone sketch.
 - [x] 6.9 Fix the machine-alone radio and diagnostics knobs in the sketch rather than read them from
   settings, which that build does not mount.
-- [ ] 6.10 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
+- [x] 6.10 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
 - [ ] 6.11 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
   sketch.
 - [ ] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone

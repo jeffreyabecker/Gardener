@@ -3,12 +3,16 @@
 
 --task build    compile the sketch (uses the project local libraries folder)
 --task upload   compile and upload, auto-detecting the serial port
---task data     pack firmware/gardener/data and write it to the LittleFS partition
+--task data     pack the sketch's data folder and write it to the LittleFS partition
 --task monitor  open the serial monitor at 115200 baud
 --task libs     install the third party libraries the firmware needs
 --task clean    remove the build output
 
+--sketch picks the build: `gardener` is the full device and the default, `headless` is the machine
+with no panel. Each sketch is its own composition root, so this only says which one to build.
+
     python scripts/arduino.py --task upload --port COM5
+    python scripts/arduino.py --task build --sketch headless
     python scripts/arduino.py --task data --port COM5
 """
 
@@ -22,8 +26,17 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKETCH = ROOT / "firmware" / "gardener"
 PROJECT_LIBS = ROOT / "libraries"
+
+# The two builds. `gardener` is the full device; `headless` is the machine with no panel, which
+# ships no data image. Each sketch is its own composition root, so the script only picks which one
+# to build.
+SKETCHES = {
+    "gardener": ROOT / "firmware" / "gardener",
+    "headless": ROOT / "firmware" / "headless",
+}
+SKETCH = SKETCHES["gardener"]
+
 DATA_DIR = SKETCH / "data"
 BUILD_DIR = SKETCH / "build"
 
@@ -205,11 +218,13 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE
+    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
                         default="build", help="what to do (default: build)")
+    parser.add_argument("--sketch", choices=sorted(SKETCHES), default="gardener",
+                        help="which build to act on (default: gardener, the full device)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
@@ -218,6 +233,9 @@ def main():
     FQBN = args.fqbn
     PORT = args.port
     VERBOSE = args.verbose
+    SKETCH = SKETCHES[args.sketch]
+    DATA_DIR = SKETCH / "data"
+    BUILD_DIR = SKETCH / "build"
 
     if args.task == "libs":
         install_libs()
