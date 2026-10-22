@@ -133,8 +133,8 @@ from an open chamber and reads `vacuum get` before commanding it.
 
 Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
 start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
-`fs mkdir` and `fs delete` answer `err not_controlling` until the caller owns the device. The read
-verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
+`fs mkdir` and `fs delete` answer `err not_controlling` until the caller is on top of the stack. The
+read verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
 available to a connected observer. `fs write` still consumes a declared body before its refusal, so
 the next command starts on a boundary.
 
@@ -336,8 +336,8 @@ fs` and mounts no filesystem at all.
 All arguments are positional and unquoted. A path is one token and contains no spaces.
 
 `list` and `read` are available to a connected observer; `write`, `mkdir` and `delete` answer
-`err not_controlling` until the link owns the device. A gated `write` still consumes the declared
-body before replying.
+`err not_controlling` until the link is on top of the stack. A gated `write` still consumes the
+declared body before replying.
 
 ```
 -> fs list /routines
