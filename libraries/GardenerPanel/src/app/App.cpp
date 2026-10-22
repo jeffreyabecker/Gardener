@@ -12,12 +12,20 @@
 #include "app/panel/Asset.h"
 #include "app/panel/ConnectedUI.h"
 #include "app/panel/DisconnectedUI.h"
+#include "app/serial/Domains.h"
 #include "app/serial/PanelDomains.h"
 #include "app/serial/SerialLink.h"
 #include "core/Config.h"
 #include "core/Units.h"
 
 namespace gardener {
+namespace {
+
+// True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
+// plain UART it is always true, so a lost link is never reported.
+bool serialAttached() { return (bool)Serial; }
+
+}  // namespace
 
 App::App(AppContext context) : context_(context) {}
 
@@ -118,7 +126,11 @@ bool App::begin() {
 
   // The machine first, then the panel — the panel's boot registers on the links the machine's boot
   // built. App is the full build, so the panel always follows.
-  MachineBoot machine = machineBoot(context_.machine(), *logger);
+  SerialLink* serial = new SerialLink(Serial, serialAttached, *logger);
+  serial->registerDomain(createControlDomain(context_.machine()));
+  serial->registerDomain(createVacuumDomain(context_.machine()));
+
+  MachineBoot machine = machineBoot(context_.machine(), *logger, serial);
   panelBoot(context_.panel(), *logger, machine, mount);
 
   String ready = "app: ready, heap ";

@@ -4,26 +4,15 @@
 #include "app/Tasks.h"
 #include "app/ble/BleLink.h"
 #include "app/ble/MachineBleDomain.h"
-#include "app/serial/Domains.h"
 #include "app/serial/SerialLink.h"
 #include "core/Config.h"
 
 namespace gardener {
-namespace {
 
-// True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a
-// plain UART it is always true, so a lost link is never reported.
-bool serialAttached() { return (bool)Serial; }
-
-}  // namespace
-
-// The machine's side of bring-up. It builds and starts the two links — registering the machine's
-// own domains on them — and brings the machine's parts up. The links are handed back so the panel's
-// boot can register its domains beside the machine's.
-MachineBoot machineBoot(MachineContext& context, Logger& logger) {
-  SerialLink* link = new SerialLink(Serial, serialAttached, logger);
-  link->registerDomain(createControlDomain(context));
-  link->registerDomain(createVacuumDomain(context));
+// The machine's side of bring-up. It brings the machine's parts up, builds and starts the BLE link
+// with the machine's own domain on it, and hands the link back so the panel's boot can register its
+// domains beside the machine's. The serial link arrives built and populated by the caller.
+MachineBoot machineBoot(MachineContext& context, Logger& logger, SerialLink* link) {
   BleLink* ble = new BleLink(&context);
   ble->registerDomain(new MachineBleDomain(&context));
 
