@@ -141,19 +141,19 @@ class SettingsScene : Scene
   end
 
   def handle_page(ev)
-    if ev.btn == "up"
+    if string.startswith(ev, "up:")
       self.list.move(-1)
       return true
     end
-    if ev.btn == "down"
+    if string.startswith(ev, "down:")
       self.list.move(1)
       return true
     end
-    if ev.btn == "ok"
+    if string.startswith(ev, "ok:")
       self.open_row()
       return true
     end
-    if ev.btn == "back"
+    if string.startswith(ev, "back:")
       ux.pop(nil)
       return true
     end

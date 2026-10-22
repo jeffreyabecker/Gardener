@@ -5,32 +5,15 @@
 #include <cstring>
 #include <string>
 
-#include "hal/Button.h"
 #include "routines/bindings/Module.h"
 
 namespace {
 
 // One VM and one app, like the firmware's bindings: the native callbacks are plain functions with
 // no user data, so they reach the session through this.
-using gardener::Button;
 using gardener::HarnessSession;
-using gardener::Press;
 
 HarnessSession* gSession = nullptr;
-
-Button asButton(const char* name) {
-  if (name != nullptr && strcmp(name, "down") == 0) return Button::Down;
-  if (name != nullptr && strcmp(name, "ok") == 0) return Button::Ok;
-  if (name != nullptr && strcmp(name, "back") == 0) return Button::Back;
-  return Button::Up;
-}
-
-Press asPress(const char* name) {
-  if (name != nullptr && strcmp(name, "long") == 0) return Press::Long;
-  if (name != nullptr && strcmp(name, "double") == 0) return Press::Double;
-  if (name != nullptr && strcmp(name, "chord") == 0) return Press::Chord;
-  return Press::Short;
-}
 
 // --- the drive -------------------------------------------------------------
 
@@ -41,10 +24,10 @@ int harnessBeat(bvm* vm) {
 }
 
 int harnessPress(bvm* vm) {
-  if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
-    be_raise(vm, "type_error", "harness.press(btn, press)");
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "harness.press(gesture)");
   }
-  gSession->routines().pushPress(asButton(be_tostring(vm, 1)), asPress(be_tostring(vm, 2)));
+  gSession->routines().pushPress(be_tostring(vm, 1));
   be_return_nil(vm);
 }
 

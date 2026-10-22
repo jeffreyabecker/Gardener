@@ -7,8 +7,7 @@
 # Berry.
 #
 # What is left is what a driver needs and the firmware has no use for: the log it builds, the count
-# of what went wrong, a guard around a call it does not trust to return, and the event record it
-# hands a page it is walking by hand.
+# of what went wrong, and a guard around a call it does not trust to return.
 
 harnessLog = ""
 harnessErrors = 0
@@ -36,11 +35,4 @@ def harness_guarded(label, action)
     return false
   end
   return true
-end
-
-def harness_event(btn, press)
-  var ev = event()
-  ev.btn = btn
-  ev.press = press
-  return ev
 end

@@ -1,5 +1,7 @@
-# scene.be — the lifecycle a scene shares: the button drain, the repaint cadence and the
+# scene.be — the lifecycle a scene shares: the gesture drain, the repaint cadence and the
 # declarative gesture dispatch.
+
+import string
 #
 # A scene extends Scene and overrides only what differs: activate() for when it becomes the top
 # scene, draw_page() for its content, and tick(now) for per-beat work. Gestures are registered with
@@ -42,9 +44,12 @@ class Scene
     self.gestures.push([btn, presses, fn])
   end
 
+  # The gesture is a string — `ok:short`, `back:long`, `up:short+down:short` — and a registration
+  # names one key and one press token, or nil for any press on that key. The first part is the one
+  # a registration is matched against.
   def handle_page(ev)
     for g : self.gestures
-      if ev.btn == g[0] && self.press_matches(ev.press, g[1])
+      if self.press_matches(ev, g[0], g[1])
         if g[2]()
           return true
         end
@@ -53,10 +58,16 @@ class Scene
     return false
   end
 
-  def press_matches(press, wanted)
+  def press_matches(ev, btn, wanted)
+    var first = string.split(ev, "+")[0]
+    var parts = string.split(first, ":")
+    if parts.size() != 2 || parts[0] != btn
+      return false
+    end
     if wanted == nil
       return true
     end
+    var press = parts[1]
     if type(wanted) == "list"
       for p : wanted
         if p == press

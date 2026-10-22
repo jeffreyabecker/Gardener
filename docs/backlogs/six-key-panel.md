@@ -52,7 +52,7 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   what a caller does with a gesture. Done when it builds, the panel owns one, and the check still
   walks every page.
 
-- [ ] **2. Make the panel task consume the classifier.** Replace the key scan, the chord and the
+- [x] **2. Make the panel task consume the classifier.** Replace the key scan, the chord and the
   threshold checks with the gesture the classifier answers, and keep only what to do with it —
   reboot, latch and post the stop, bump the way home, or hand the gesture to the page. Handing it on
   replaces the press pair with the string on the way to the page, so the queue behind `buttons.take()`,

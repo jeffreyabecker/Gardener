@@ -1,11 +1,10 @@
 #pragma once
 
+#include <Arduino.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <vector>
-
-#include "hal/Button.h"
 
 struct bvm;
 
@@ -53,20 +52,15 @@ class UxStack {
   // the device's go-home gesture and a controller hand-off both use.
   void showDefault();
 
-  // --- the press queue and the stop notice ---
-  void pushPress(Button button, Press press);
-  bool takePress(Button& button, Press& press);
+  // --- the gesture queue and the stop notice ---
+  void pushPress(const String& gesture);
+  bool takePress(String& gesture);
   bool takeStopped();
 
  private:
   struct Frame {
     size_t slot;
     bool hasCallback;
-  };
-
-  struct PressEvent {
-    Button button;
-    Press press;
   };
 
   bool invokeTop(const char* method, bool withNow, uint32_t nowMs, int argsIndex);
@@ -94,7 +88,7 @@ class UxStack {
   bool insideCall_ = false;
   Pending pending_ = Pending::None;
 
-  PressEvent presses_[kMaxPresses];
+  String presses_[kMaxPresses];
   uint8_t pressHead_ = 0;
   uint8_t pressCount_ = 0;
   bool pressOverflow_ = false;
