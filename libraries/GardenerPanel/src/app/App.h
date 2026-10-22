@@ -8,14 +8,16 @@
 
 namespace gardener {
 
+class BleLink;
 class Logger;
 class PanelContext;
+class SerialLink;
 
 // Boot. The panel's boot brings up the panel, the VM, its registrations and its task, on the links
-// the machine's boot built. The full build's App::begin composes the two in order, mounting the
+// the composition built. The full build's App::begin composes the two in order, mounting the
 // panel's storage and settings itself first because the persisted knobs — the radio and the
 // diagnostics — gate the machine's boot.
-void panelBoot(PanelContext& context, Logger& logger, const MachineBoot& machine,
+void panelBoot(PanelContext& context, Logger& logger, SerialLink* serial, BleLink* ble,
                Storage::Mount mount);
 
 class App {
