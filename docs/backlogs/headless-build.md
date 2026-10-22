@@ -287,7 +287,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   the reboot.
 - [x] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
   its stop being ownership.
-- [ ] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
+- [x] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
 
 ## Epic 8 — Verification

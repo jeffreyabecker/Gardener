@@ -8,6 +8,12 @@ The controller decides everything. What the device owns is what has to happen wh
 watching: pulling to the target, and venting the chamber through one path on stop, abort, link
 loss, fault or the panel's reserved key hold. Pressures are kPa, on the wire and in the firmware.
 
+The firmware ships as two builds from one tree. The **full device** is the machine, the OLED panel,
+the keys, the buzzer and the battery gauge: the panel is itself a link, so the device drives itself
+when nothing else does. The **headless** build is the machine alone — pump, sensor and vent valve
+with the serial and Bluetooth links — for a chamber with no panel on it. Each is a sketch that
+composes the libraries for its own build, so what a build has is what its sketch names.
+
 ## Build
 
 Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
@@ -20,14 +26,21 @@ python scripts/arduino.py --task upload --port COM5
 python scripts/arduino.py --task monitor --port COM5
 ```
 
-`--task data` writes [firmware/gardener/data/](./firmware/gardener/data) to the device's
-filesystem. VS Code has the same commands as tasks.
+`--sketch` picks the build: `gardener` is the full device and the default, `headless` is the machine
+alone. `--task data` writes [firmware/gardener/data/](./firmware/gardener/data) to the device's
+filesystem, and the headless build has none to write. VS Code has the same commands as tasks.
+
+```powershell
+python scripts/arduino.py --task build --sketch headless
+python scripts/arduino.py --task upload --sketch headless --port COM5
+```
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses
-`--libraries libraries`, so [libraries/VacuumCore](./libraries/VacuumCore) is the firmware rather
-than a sketchbook copy.
+`--libraries libraries`, so [libraries/VacuumCore](./libraries/VacuumCore) (the machine) and
+[libraries/GardenerPanel](./libraries/GardenerPanel) (the panel, which depends on it) are the
+firmware rather than sketchbook copies.
 
 ## Documentation
 
