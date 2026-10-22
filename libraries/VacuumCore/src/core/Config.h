@@ -58,9 +58,9 @@ constexpr int BATTERY_ADC = 4;
 // BATTERY_CALIBRATION trims the pair against a meter.
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;
 
-// Four button UI, active low to GND with pull ups on the module. hal/impl/Buttons.h arms them on
-// change interrupts and settles the debounce on each read; Back held for 3 s is the one key with an
-// action, and App owns that rule.
+// Four button UI, active low to GND with pull ups on the module. The panel's button driver arms
+// them on change interrupts and settles the debounce on each read; the panel owns the keys and
+// their gestures.
 // They sit away from the S3 strapping pins (0, 3, 45, 46) and from the USB pins (19/20). GPIO10/11
 // are the variant's default SS/MOSI, which costs nothing here: this firmware never starts SPI.
 constexpr int BTN_UP = 1;

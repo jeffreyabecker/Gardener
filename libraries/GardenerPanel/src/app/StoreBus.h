@@ -20,6 +20,8 @@ struct StoreResult {
   String value;
 };
 
+extern QueueHandle_t storeQueue;
+
 // The one request the VM task sends the interface task for flash-backed reads and writes. Get and
 // Set carry the routine's registered name, already resolved by the caller.
 struct StoreRequest {

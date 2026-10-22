@@ -3,12 +3,16 @@
 
 --task build    compile the sketch (uses the project local libraries folder)
 --task upload   compile and upload, auto-detecting the serial port
---task data     pack firmware/gardener/data and write it to the LittleFS partition
+--task data     pack the sketch's data folder and write it to the LittleFS partition
 --task monitor  open the serial monitor at 115200 baud
 --task libs     install the third party libraries the firmware needs
 --task clean    remove the build output
 
+--sketch picks the build: `gardener` is the full device and the default, `headless` is the machine
+with no panel. Each sketch is its own composition root, so this only says which one to build.
+
     python scripts/arduino.py --task upload --port COM5
+    python scripts/arduino.py --task build --sketch headless
     python scripts/arduino.py --task data --port COM5
 """
 
@@ -22,8 +26,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKETCH = ROOT / "firmware" / "gardener"
 PROJECT_LIBS = ROOT / "libraries"
+
+# The two builds. `gardener` is the full device; `headless` is the machine with no panel, which
+# ships no data image. Each sketch is its own composition root, so the script only picks which one
+# to build.
+SKETCHES = {
+    "gardener": ROOT / "firmware" / "gardener",
+    "headless": ROOT / "firmware" / "headless",
+}
+SKETCH = SKETCHES["gardener"]
+
+# The builds that ship a data image. The machine-alone build mounts no storage and has no panel, so
+# there is nothing to write to a LittleFS partition.
+SKETCHES_WITH_DATA = {"gardener"}
+
 DATA_DIR = SKETCH / "data"
 BUILD_DIR = SKETCH / "build"
 
@@ -140,7 +157,7 @@ def install_libs():
 
 def clean():
     shutil.rmtree(BUILD_DIR, ignore_errors=True)
-    print("build output removed")
+    print(f"{SKETCH.name} build output removed")
 
 
 def build():
@@ -151,11 +168,14 @@ def upload():
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")
-    print(f"uploading to {device}")
+    print(f"uploading {SKETCH.name} to {device}")
     compile_sketch("--upload", "-p", device)
 
 
 def upload_data():
+    if SKETCH.name not in SKETCHES_WITH_DATA:
+        sys.exit(f"{SKETCH.name} ships no data image; there is nothing to write")
+
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")
@@ -197,7 +217,7 @@ def monitor():
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")
-    print(f"monitoring {device} at 115200 baud, Ctrl+C to stop")
+    print(f"monitoring {SKETCH.name} on {device} at 115200 baud, Ctrl+C to stop")
     try:
         arduino_cli("monitor", "-p", device, "--config", "baudrate=115200")
     except KeyboardInterrupt:
@@ -205,11 +225,13 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE
+    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
                         default="build", help="what to do (default: build)")
+    parser.add_argument("--sketch", choices=sorted(SKETCHES), default="gardener",
+                        help="which build to act on (default: gardener, the full device)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
@@ -218,6 +240,9 @@ def main():
     FQBN = args.fqbn
     PORT = args.port
     VERBOSE = args.verbose
+    SKETCH = SKETCHES[args.sketch]
+    DATA_DIR = SKETCH / "data"
+    BUILD_DIR = SKETCH / "build"
 
     if args.task == "libs":
         install_libs()

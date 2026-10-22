@@ -173,71 +173,92 @@ moves panel-side and the sketch includes `GardenerPanel.h` first. After that eac
 of files that nothing left in `VacuumCore` names, so only one copy of each header is ever on the
 path.
 
-- [ ] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
-- [ ] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
+- [x] 5.15 Extract the machine half of `buildAppContext()` into a machine root in `VacuumCore`.
+- [x] 5.16 Move the panel half of the composition into `GardenerPanel`'s root, which builds the
   machine root and composes the panel onto it.
-- [ ] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
+- [x] 5.17 Leave `machineBoot` in `VacuumCore` behind a machine-only header, so a build without a
   panel can call it.
-- [ ] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
-- [ ] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
+- [x] 5.18 Move `panelBoot`, `App` and `AppContext` into `GardenerPanel`.
+- [x] 5.19 Include `GardenerPanel.h` from the sketch, so the panel library is on the include path
   and the full device still boots.
-- [ ] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
+- [x] 5.20 Move the panel task, its press reader and `spawnPanelTask` into `GardenerPanel`, and
   remove them from `Tasks.h` with the button include.
-- [ ] 5.21 Move `PanelContext` into `GardenerPanel`, once no machine file names it.
-- [ ] 5.22 Move the button interface and driver — `hal/Button.h`, `hal/ButtonPanel.h`,
+- [x] 5.21 Move `PanelContext` into `GardenerPanel`, once no machine file names it.
+- [x] 5.22 Move the button interface and driver — `hal/Button.h`, `hal/ButtonPanel.h`,
   `hal/impl/Buttons.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.23 Move the display interface and its Adafruit impl — `hal/Display.h`,
+- [x] 5.23 Move the display interface and its Adafruit impl — `hal/Display.h`,
   `hal/impl/AdafruitDisplay.h` — into `GardenerPanel`.
-- [ ] 5.24 Move the buzzer interface and its PWM impl — `hal/Buzzer.h`, `hal/impl/PwmBuzzer.{h,cpp}`
+- [x] 5.24 Move the buzzer interface and its PWM impl — `hal/Buzzer.h`, `hal/impl/PwmBuzzer.{h,cpp}`
   — into `GardenerPanel`.
-- [ ] 5.25 Move the battery interface and its ADC impl — `hal/Battery.h`,
+- [x] 5.25 Move the battery interface and its ADC impl — `hal/Battery.h`,
   `hal/impl/AdcBattery.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.26 Move `Overlay` into `GardenerPanel`.
-- [ ] 5.27 Move the panel pages — `UI.h`, `ConnectedUI` and `DisconnectedUI` — into `GardenerPanel`.
-- [ ] 5.28 Move `Fonts` into `GardenerPanel`.
-- [ ] 5.29 Move `Asset` into `GardenerPanel`.
-- [ ] 5.30 Move `Routines` into `GardenerPanel`.
-- [ ] 5.31 Move the panel's counters — `stopSeq` and `goHomeSeq` — out of `Tasks.h` into the
+- [x] 5.26 Move `Overlay` into `GardenerPanel`.
+- [x] 5.27 Move the panel pages — `UI.h`, `ConnectedUI` and `DisconnectedUI` — into `GardenerPanel`.
+- [x] 5.28 Move `Fonts` into `GardenerPanel`.
+- [x] 5.29 Move `Asset` into `GardenerPanel`.
+- [x] 5.30 Move `Routines` into `GardenerPanel`.
+- [x] 5.31 Move the panel's counters — `stopSeq` and `goHomeSeq` — out of `Tasks.h` into the
   panel's own header.
-- [ ] 5.32 Move the binding surface — `bindings/Module.h`, `bindings/Modules.h`,
+- [x] 5.32 Move the binding surface — `bindings/Module.h`, `bindings/Modules.h`,
   `bindings/Registry.cpp` and `Bindings.{h,cpp}` — into `GardenerPanel`.
-- [ ] 5.33 Move the `vacuum`, `screen` and `device` bindings into `GardenerPanel`.
-- [ ] 5.34 Move the `buttons`, `buzzer` and `jingles` bindings into `GardenerPanel`.
-- [ ] 5.35 Move the `store` binding into `GardenerPanel`.
-- [ ] 5.36 Move `BuzzerPlayer` into `GardenerPanel`.
-- [ ] 5.37 Move `Storage` into `GardenerPanel`.
-- [ ] 5.38 Move `Ini` into `GardenerPanel`.
-- [ ] 5.39 Move `Settings` into `GardenerPanel`.
-- [ ] 5.40 Move the store bus and its queue handle into `GardenerPanel`, removing the handle from
+- [x] 5.33 Move the `vacuum`, `screen` and `device` bindings into `GardenerPanel`.
+- [x] 5.34 Move the `buttons`, `buzzer` and `jingles` bindings into `GardenerPanel`.
+- [x] 5.35 Move the `store` binding into `GardenerPanel`.
+- [x] 5.36 Move `BuzzerPlayer` into `GardenerPanel`.
+- [x] 5.37 Move `Storage` into `GardenerPanel`.
+- [x] 5.38 Move `Ini` into `GardenerPanel`.
+- [x] 5.39 Move `Settings` into `GardenerPanel`.
+- [x] 5.40 Move the store bus and its queue handle into `GardenerPanel`, removing the handle from
   `Tasks.h`.
-- [ ] 5.41 Move the panel's serial domains — `fs` and `buzzer`, with their factory declarations —
+- [x] 5.41 Move the panel's serial domains — `fs` and `buzzer`, with their factory declarations —
   into `GardenerPanel`, leaving `Domains.h` naming only the machine's.
-- [ ] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
+- [x] 5.42 Move the panel's BLE domain — `PanelBleDomain`, with `unit` and `batt` — into
   `GardenerPanel`.
-- [ ] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
-- [ ] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
+- [x] 5.43 Verify `VacuumCore` includes nothing panel-shaped.
+- [x] 5.44 Verify `VacuumCore` links only the ESP32 core and NimBLE.
 
 ## Epic 6 — The headless build
 
-The machine-alone sketch ships the machine with no panel. Its stack is `None` alone, so the safety
-Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents. What remains
-is the second build itself.
+Each sketch is its own composition root. The links a build serves, the domains it registers and the
+tasks it starts are named in the sketch, so the two builds differ where a reader can see them rather
+than behind a library flag: the full device composes the panel onto the machine and starts three
+tasks, and the machine-alone build starts two and registers no panel domain. The libraries keep the
+parts, the domains and the task bodies; the sketch says which of them this build has.
 
-- [ ] 6.1 Add a machine-alone sketch that includes only `VacuumCore`.
-- [ ] 6.2 Add the machine-alone composition root: pump, sensor, vent valve, vacuum system,
-  ownership stack and capability, with no panel part.
-- [ ] 6.3 Compose the machine-alone capability: no panel, no battery, ownership stop.
-- [ ] 6.4 Add a machine-side `device` domain answering `proto`, `fw`, `chip`, `heap` and `caps`,
-  with no battery, log or unit field, and register it in the machine-alone build.
-- [ ] 6.5 Boot the machine-alone build through `machineBoot`, with the radio and diagnostics fixed
-  by the build rather than read from settings.
-- [ ] 6.6 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
-- [ ] 6.7 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
+The machine-alone sketch ships the machine with no panel. Its stack is `None` alone, so the safety
+Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents.
+
+### Phase A — the full device's sketch takes over its setup
+
+- [x] 6.1 Move the serial link out of `machineBoot`: `App::begin` builds the `SerialLink` and
+  registers the machine's `control` and `vacuum` domains on it, and `machineBoot` brings the
+  machine's parts up and reports them.
+- [x] 6.2 Move the BLE link out of `machineBoot` the same way, and delete the `MachineBoot` struct
+  now that no link is handed back.
+- [x] 6.3 Move the panel's domain registrations out of `panelBoot` and into `App::begin`, so
+  `panelBoot` only brings the panel up and reports what came up.
+- [x] 6.4 Move the three task starts out of the boots and into `App::begin`, so the boots bring
+  parts up and nothing more.
+- [x] 6.5 Move `App::begin`'s body into `gardener.ino` and delete `App`, leaving the sketch as the
+  full device's composition root.
+
+### Phase B — the machine-alone sketch
+
+- [x] 6.6 Add a machine-alone sketch that includes only `VacuumCore.h` and builds its own
+  `MachineContext` from `buildMachineRoot()`.
+- [x] 6.7 Compose the machine-alone capability: no panel, no battery, ownership stop.
+- [x] 6.8 Add a machine-side `device` domain in `VacuumCore` answering `proto`, `fw`, `chip`, `heap`
+  and `caps` and serving `reboot`, with no battery, log or unit field, and register it in place of
+  the panel's in the machine-alone sketch.
+- [x] 6.9 Fix the machine-alone radio and diagnostics knobs in the sketch rather than read them from
+  settings, which that build does not mount.
+- [x] 6.10 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
+- [x] 6.11 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
   sketch.
-- [ ] 6.8 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
+- [x] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
   sketch, which ships no data image.
-- [ ] 6.9 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
-  Adafruit drivers.
+- [x] 6.13 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and
+  the Adafruit drivers.
 
 ## Epic 7 — The contract
 
