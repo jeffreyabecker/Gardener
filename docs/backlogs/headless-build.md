@@ -235,7 +235,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
   machine's parts up and reports them.
 - [x] 6.2 Move the BLE link out of `machineBoot` the same way, and delete the `MachineBoot` struct
   now that no link is handed back.
-- [ ] 6.3 Move the panel's domain registrations out of `panelBoot` and into `App::begin`, so
+- [x] 6.3 Move the panel's domain registrations out of `panelBoot` and into `App::begin`, so
   `panelBoot` only brings the panel up and reports what came up.
 - [ ] 6.4 Move the three task starts out of the boots and into `App::begin`, so the boots bring
   parts up and nothing more.
