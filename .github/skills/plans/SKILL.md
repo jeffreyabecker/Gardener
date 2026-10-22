@@ -55,8 +55,3 @@ detail the idea has not earned.
 
 An entry leaves when it is done and the result is in the tree, or when it is dropped and the reason
 is in git.
-
-## Index
-
-`docs/README.md` is the one index of plans. Add the entry when the document is created, with a
-one-line summary of what the plan proposes, and remove it when the plan is deleted.

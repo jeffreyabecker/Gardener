@@ -77,7 +77,3 @@ than what was once considered — a plan written from an idea states its own req
 cite the idea.
 
 An idea may reference a spec or a guide, because those outlive it. The reverse never happens.
-
-The one place an idea is named is `docs/README.md`, which indexes ideas beside specs, plans,
-backlogs and guides while they exist. Add the entry when the document is created, and remove it when
-the document is deleted.

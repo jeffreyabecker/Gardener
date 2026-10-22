@@ -11,7 +11,8 @@ This plan has three parts, all of which land together:
 1. **A shift-register reader.** The six keys are read through a 74HC165, not through six GPIOs.
 2. **A gesture map for six keys.** Which presses stay, which change, and what the two new keys
    mean. This picks up the [Gesture Classifier](./parking-lot.md) parking-lot note.
-3. **The event as a string.** `buttons.take()` answers one string instead of an `event` record.
+3. **The classifier emits gesture strings.** `buttons.take()` answers a string the C++ classifier
+   wrote itself, instead of an `event` record a binding assembles.
 
 What has to be true when it is done is stated here. The design decisions already made — the part,
 the six names, the string — are stated as requirements; the places where a choice is genuinely
@@ -33,7 +34,7 @@ firmware reads them. The rest of that plan is unaffected.
 | Cancel | `cancel` | escape: leave without writing, abort an edit |
 
 The tokens are the values `buttonName()` answers and the values a page compares in Berry. They are
-also the words in the press log (`btn: forward short`), so one vocabulary serves the wire log, the
+also the words in the press log (`btn: forward:short`), so one vocabulary serves the wire log, the
 Berry event and the C++ enum.
 
 **`ok`, not `okay`.** The key's human name is "okay" and the glass may say whatever it likes, but
@@ -53,16 +54,19 @@ does not change.
 
 - The reader satisfies `ButtonPanel` exactly as the GPIO reader does: `pressed(Button)`,
   `consumePress(Button)`, `dropPress(Button)` and `heldMs(Button)` keep their meanings, and the
-  press classifier's thresholds are **unchanged** — 20 ms debounce, 600 ms long press, 350 ms
-  double window. The two new keys are ordinary keys: they debounce, classify and double exactly
-  like the four existing ones.
+  press classifier's thresholds are **unchanged** — 20 ms debounce, the 600 ms mark between a tap
+  and a reported hold, 350 ms double window. The two new keys are ordinary keys: they debounce,
+  classify and double exactly like the four existing ones. What the classifier *reports* changes
+  with part 3 — it emits a gesture string directly, and a hold is its seconds rather than `long` —
+  but the mechanics behind it are the same ones the GPIO reader used.
 - The `Button` enum gains two members and a count that stops being written as `4` in five places
   in `hal/impl/Buttons.cpp`. `enum class Button : uint8_t { Up, Down, Forward, Back, Ok, Cancel }`
   and a `kButtonCount = 6` are the shape; the `pressStartMs_`, `pendingPress_` and
   `firstReleaseMs_` arrays and the 32-bit masks all follow the count. Six bits of a 32-bit mask is
   not a change of mechanism, only of bound.
-- `PanelTasks`'s `PressOrder` gains the two keys, because a press is reported in panel order and a
-  chord key and a steal target are both found by scanning it.
+- `PanelTasks`'s `PressOrder` gains the two keys, because a press is reported in panel order and
+  the go-home steal target is found by scanning it. The two-keys-together recognition the panel
+  task used for the chord moves into the classifier, which is the thing that emits the event.
 
 ### The part
 
@@ -106,7 +110,7 @@ reserved; what changes is the split of the two jobs that one key used to do.
 | **Back** | leave one level up; the page's own whole stop of a run |
 | **Okay** | confirm: start, save, select |
 | **Cancel** | escape: leave without writing, abort an edit |
-| **Up+Down** | the page's edit/settings view, unchanged |
+| **Up+Down** | the page's edit/settings view |
 
 The one genuinely new rule is the **Back/Cancel split**, which is the point of the sixth key.
 Today [the gesture contract](../specs/gestures.md) has Back do both "leave the current view without
@@ -138,10 +142,12 @@ Where enter and confirm are the same action — choosing a routine, opening a va
 either key for it; the standard only requires that Okay always means confirm and Forward always
 means advance.
 
-**Up+Down stays the settings gesture.** It is the one chord, one event on the first release,
-reported on the up key, made by the panel task — unchanged. It does not move to Forward, because
-Forward already means "enter" and giving it a second meaning is exactly the overloading this plan
-is removing. No new chord is added: Forward+Back and the rest wait for a page that needs one.
+**Up+Down stays the settings gesture** — that is the recommendation for where the page's edit view
+lives, and it needs no new key. It is still the one chord, one event on the first release, but the
+classifier now emits it as the sum `up:short+down:short` rather than a `chord` token reported on
+the up key. It does not move to Forward, because Forward already means "enter" and giving it a
+second meaning is exactly the overloading this plan is removing. No other chord is added:
+Forward+Back and the rest wait for a page that needs one.
 
 ### The reserved holds
 
@@ -161,9 +167,10 @@ the open decision below; either way it stops being Okay.)
 
 ### The press log
 
-While an external link drives there is no page, so presses are logged: `btn: ok short`. The format
-is unchanged; the vocabulary grows `forward` and `cancel`. With part 3, the log token and the event
-token are the same string with and without the `btn: ` prefix.
+While an external link drives there is no page, so presses are logged as the classifier's string
+with a `btn: ` prefix: `btn: ok:short`, `btn: back:3`, `btn: up:short+down:short`. The log and the
+event are the same string; the vocabulary simply grows `forward` and `cancel`, and a hold becomes
+its seconds.
 
 ### The shipped pages
 
@@ -180,28 +187,46 @@ These bindings are the pages' own to write, but the standard above settles them 
   Cancel both leave; Cancel discards and Back keeps "back out one level" so a `duration` can step
   minutes→seconds with Forward and back with Back.
 
-## Part 3 — the press event as a string
+## Part 3 — the classifier emits gesture strings
 
-`buttons.take()` today answers an `event` record — a Berry class with `btn` and `press` fields —
-because a routine reads a record with a dot and only the parser can declare an instance variable.
-That buys a class, a compile-at-boot string in `kRecords`, and `beginRecord`/`setText` plumbing
-for what is two short strings every consumer immediately compares to string literals anyway.
+The press classifier in C++ stops handing the rest of the firmware a `Press` enum that a binding
+later names, and instead **emits the gesture string itself**. `buttons.take()` answers that string,
+or `nil` when the queue is empty. The Berry binding no longer builds a record or maps an enum to a
+name; it hands through what the classifier produced, and the `event` record class leaves
+`kRecords` — `reading`, `unit` and `bounds` stay, because those are genuinely multi-field values a
+routine reads by name.
 
-**`buttons.take()` answers one string, `"btn:press"`, or `nil` when the queue is empty:**
+The string is one event with one part per key:
 
-```berry
-var ev = buttons.take()   # "ok:short", "up:chord", "back:long", or nil
+```
+part  := button ':' press
+event := part ( '+' part )*
 ```
 
-- The two tokens are the same ones today: `up`, `down`, `forward`, `back`, `ok`, `cancel` and
-  `short`, `long`, `double`, `chord`. Neither contains `:`, so `:` is a safe separator.
-- The `event` class leaves `kRecords`; `reading`, `unit` and `bounds` stay, because those are
-  genuinely multi-field values a routine reads by name.
-- The native binding stops building a record and builds the string from `buttonName()` and
-  `pressName()` with a `:` between. The queue it drains is unchanged — it still holds `Button` and
-  `Press` — only the answer changes.
-- The scene framework splits the token once and hands the page two strings, so the page's
-  comparison stays as readable as it is now:
+- A **tap** is `short`; a **double tap** is `double` — the two a page has always compared.
+- A **hold** reports the **whole seconds the key was held** instead of `long`: the held
+  milliseconds divided by 1000, so `back:3` is Back held three and a bit seconds and `up:0` is a
+  hold just past the tap mark. The classifier already measures the hold; it now reports it.
+- **Two keys together are one event, the sum of their parts.** The `chord` token is gone, and Up
+  and Down pressed together is `up:short+down:short`; a held pair reports each part's seconds,
+  `back:3+ok:2`.
+
+So the full vocabulary is `up`, `down`, `forward`, `back`, `ok`, `cancel` before the colon, and
+`short`, `double` or a whole number of seconds after it, joined with `+` when the gesture is more
+than one key. No button or press name contains `:` or `+`, so both are safe separators.
+
+The classifier's mechanics do not change with the vocabulary — 20 ms debounce, the 600 ms mark
+between `short` and a reported duration, the 350 ms double window, and the two-keys-together
+recognition that today lives in the panel task. What changes is the output: the named `long` and
+`chord` leave, and the classifier strings the gesture itself. The `Button` enum and `buttonName()`
+stay; the `Press` enum and `pressName()` go, and the two-keys-together recognition moves from the
+panel task into the classifier.
+
+A press is queued only while the page is showing, the queue holds eight, and the binding's only job
+is to hand the queued string to `take()`.
+
+The scene framework hands the string through unchanged; a page matches it whole or splits it when
+it wants the parts:
 
 ```berry
 import string
@@ -213,8 +238,7 @@ def take_events()
     if ev == nil
       break
     end
-    var parts = string.split(ev, ':')
-    if self.handle(parts[0], parts[1])
+    if self.handle(ev)
       acted = true
     end
   end
@@ -222,25 +246,35 @@ def take_events()
 end
 ```
 
-`handle(btn, press)` becomes a two-argument method throughout — the scene base, the page
-overrides, and the settings editor — and `ev.btn`/`ev.press` become the two arguments. The
-declarative `on(btn, presses, fn)` registration and its `press_matches` logic are unchanged; only
-the plumbing between `take()` and `handle` moves, and `scene.be` gains the `import string` the
-split needs.
+`handle(ev)` receives the whole string — `"ok:short"`, `"back:3"`, `"up:short+down:short"` — and
+the direction for the Berry side is to **compare the whole string wherever a page can**. The
+shipped pages' nested `if ev.btn == "up"` ladders are each one string compared, and they become
+one test:
 
-Why a string and not the record, stated plainly:
+```berry
+if ev == "ok:short"              # not ev.btn == "ok" && ev.press == "short"
+if ev == "up:short+down:short"   # the settings chord, matched whole
+```
 
-- **The record's only job is to carry two tokens.** A string is the same data with none of the
-  class-declaration machinery, and a string is what the event log already prints with a colon
-  where the space is.
-- **No record class means one fewer entry in `kRecords`** and the whole `event` fill path in the
-  binding goes away.
-- **A record allocates an instance per press; a string interns the two tokens the interpreter
-  already has.** The change is small either way, but it is in the direction of less surface.
+A page splits on `+` and `:` only when it matches one dimension regardless of the other — an
+editor that takes Up and Down at any press, say — and even then it looks at the whole string
+first. The declarative `on(btn, presses, fn)` registration stays for the cases that genuinely key
+on a button and a press separately; a hand-rolled `handle` compares the string.
+
+Why the classifier emits strings, stated plainly:
+
+- The `event` record existed because a routine reads a record with a dot, but its two fields were
+  the key and a press name. The key is already a string, and the press name is exactly what the
+  classifier decides — so the classifier writing the string is the shortest path from a key to a
+  page.
+- A hold's seconds is data the classifier has and a page wants; `long` threw it away and made the
+  page re-derive "long enough" from a threshold it could not see.
+- The `+` sum is what `chord` was pretending not to be: two keys, each with its own press. The sum
+  says it outright and drops the special token.
 
 The alternative — keep the record — is the no-op option, and it is only worth taking if a press
-ever needs a third field. Nothing in sight needs one; a press is a key and a gesture, and the two
-tokens are the whole of it.
+ever needs a third field. Nothing in sight needs one; a gesture is one or more keys and how each
+was pressed, and the string above is the whole of it.
 
 ## Open decisions
 
@@ -253,21 +287,24 @@ string, the steal target and the token names all appear in the gesture map above
 2. **Where go-home lands.** Recommended: **Cancel while Back is held**, stolen in the panel task,
    exactly as Okay-while-Back is today. The alternative is a plain Hold Cancel, which is simpler to
    describe but reserves a hold on a key a page may want for its own cancel-and-hold.
-3. **The reset chord.** Recommended: keep **Back+Okay 5 s**. Nothing about the new keys makes a
+3. **The reset hold.** Recommended: keep **Back+Okay 5 s**. Nothing about the new keys makes a
    better reset; it only has to not move.
 
 ## What moves together when it lands
 
 The work is one change and lands as one, because the token names appear in all of these at once:
 
-- `hal/Button.h` (enum, `buttonName`), `hal/impl/Buttons.h`/`.cpp` replaced by the shift-register
-  reader, `Panel.h` pin block, the sketch's `PanelPins`, `PanelTasks.cpp` (order, chord, holds,
-  steal).
-- `routines/bindings/Buttons.cpp` (string answer), `routines/Bindings.cpp` (`kRecords` without
-  `event`), `modules/scene.be` (split and two-argument `handle`), the five routine `.be` files and
-  `modules/settings.be`.
+- `hal/Button.h` (enum, `buttonName`; the `Press` enum and `pressName()` go, replaced by the
+  classifier's string output), `hal/impl/Buttons.h`/`.cpp` replaced by the shift-register reader,
+  `Panel.h` pin block, the sketch's `PanelPins`, `PanelTasks.cpp` (order, holds, steal — the chord
+  recognition moves into the classifier).
+- `routines/bindings/Buttons.cpp` (hands through the classifier string), `routines/Bindings.cpp`
+  (`kRecords` without `event`), `modules/scene.be` and the five routine `.be` files and
+  `modules/settings.be` (`handle(ev)` takes the string and compares it whole, splitting on `+` and
+  `:` only for a dimension match).
 - The specs when the work is done: [gestures.md](../specs/gestures.md) (six keys, the Back/Cancel
-  split, the moved go-home), [bindings.md](../specs/ui/bindings.md) (`buttons.take()` answers a
-  string) and [routine.md](../specs/ui/routine.md) (`handle(btn, press)`). The specs still describe
+  split, the moved go-home, the sum chord and the seconds vocabulary),
+  [bindings.md](../specs/ui/bindings.md) (`buttons.take()` answers the classifier's string) and
+  [routine.md](../specs/ui/routine.md) (`handle(ev)` takes the string). The specs still describe
   the `Page`/`page.be` framework names that an in-flight rename has already moved to
   `Scene`/`scene.be`; that reconciliation happens with the same pass.

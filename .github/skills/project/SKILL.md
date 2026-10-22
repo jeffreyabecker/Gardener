@@ -59,7 +59,8 @@ naming a deferred idea and what is blocking it, for work too small to earn any o
 The skill for each has the detail: `.github/skills/specs/`, `.github/skills/plans/`,
 `.github/skills/ideation/`, `.github/skills/backlog/`.
 
-`docs/README.md` is the one index of all of them. Everything else — specs, guides, code comments,
+`docs/README.md` indexes specs, guides and backlogs; plans and ideas have no entry, so they are
+found by name in their folder. Everything else — specs, guides, code comments,
 script headers, the project README — stands alone and links to a spec or a guide. Plans, idea
 documents and backlogs disappear when their work lands, so nothing cites them; the one exception is
 a backlog naming the plan it breaks down, since the two are deleted together.
