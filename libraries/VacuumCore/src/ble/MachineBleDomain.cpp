@@ -8,8 +8,7 @@
 #include "Tasks.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
-#include "core/Control.h"
-#include "core/Version.h"
+#include "firmwareversion.h"
 
 namespace gardener {
 namespace {
@@ -98,7 +97,7 @@ void MachineBleDomain::describe(uint8_t index) {
     case Command:
       break;  // the last result, written when an opcode is applied
     case Firmware:
-      chr->setValue(cfg::FIRMWARE_VERSION);
+      chr->setValue(FirmwareVersion);
       break;
     case Protocol:
       setByte(chr, kBleProtocolVersion);
@@ -110,7 +109,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
       break;
     case Floor:
-      setFloat(chr, cfg::CONTROL_FLOOR_KPA);
+      setFloat(chr, CONTROL_FLOOR_KPA);
       break;
     case Caps:
       setByte(chr, app_->capabilities());
@@ -251,7 +250,7 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
   publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
   publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
-  publishOnChange(Floor, cfg::CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
+  publishOnChange(Floor, CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
 
   const char* fault = vacuum.faultCode();
   if (baseline || lastFault_ != fault) {

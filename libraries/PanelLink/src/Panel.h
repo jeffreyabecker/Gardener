@@ -14,6 +14,22 @@
 
 namespace gardener {
 
+// The panel's half of the rig. The machine's three pins come first, then the display bus, the
+// piezo, the gauge and the four keys. The sketch names them, so this library carries no board.
+struct PanelPins {
+  MachinePins machine;
+  uint8_t i2cSda;
+  uint8_t i2cScl;
+  uint32_t i2cHz;
+  uint8_t buzzerPwm;
+  uint8_t batteryAdc;
+  float batteryDivider;
+  uint8_t up;
+  uint8_t down;
+  uint8_t ok;
+  uint8_t back;
+};
+
 // The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
 // machine it reads and commands. It *is* a Machine, so the panel's code reaches the machine by the
 // same surface a controller uses and there is no second name for it.
@@ -25,9 +41,10 @@ class Panel : public Machine, public Link {
  public:
   static constexpr uint8_t Code = 3;
 
-  Panel(Logger& logger, ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
-        Display* display, PanelSettings* settings, Routines* routines)
-      : Machine(logger, *settings),
+  Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
+        Battery* battery, Display* display, PanelSettings* settings, Routines* routines)
+      : Machine(logger, *settings, pins.machine),
+        pins_(pins),
         buttons_(buttons),
         buzzer_(buzzer),
         battery_(battery),
@@ -57,6 +74,8 @@ class Panel : public Machine, public Link {
   Routines& routines() { return *routines_; }
 
  private:
+  // Kept for boot(), which brings the display bus up on the two pins it names.
+  const PanelPins pins_;
   ButtonPanel* buttons_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;

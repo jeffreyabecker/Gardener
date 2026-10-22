@@ -263,7 +263,7 @@ temporary build. That trade was made deliberately, so nobody should go looking f
 command that is not there.
 
 Vent margin and timeout, the PID gains, the deadband, the duty cap and the slew limit are in
-`core/Control.h`; the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. They are not
+`Machine.h`; the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. They are not
 commands, so the command surface stays this table. The deadband matters to a controller: it is what
 decides that the target has been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the
 other one worth knowing: it is the shallowest target the loop will accept, and it is reported as

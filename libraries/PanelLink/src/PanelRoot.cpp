@@ -8,7 +8,6 @@
 #include "Panel.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
-#include "core/Board.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
@@ -31,11 +30,11 @@ constexpr int16_t kPanelNoResetLine = -1;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-Panel& buildPanelRoot(Logger& logger, PanelSettings& settings) {
-  auto* battery = new AdcBattery(cfg::BATTERY_ADC);
-  auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
+Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, const PanelPins& pins) {
+  auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
+  auto* buttons = new Buttons(pins.up, pins.down, pins.ok, pins.back);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
-  auto* buzzerPart = new PwmBuzzer(cfg::BUZZER_PWM);
+  auto* buzzerPart = new PwmBuzzer(pins.buzzerPwm);
   auto* buzzer = new BuzzerPlayer(*buzzerPart);
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction; the callback is where it comes up, once App has the bus running.
@@ -43,7 +42,7 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings) {
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* routines = new Routines();
-  auto* panel = new Panel(logger, buttons, buzzer, battery, display, &settings, routines);
+  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, &settings, routines);
 
   // The full device has the panel and the gauge, so it is the one build with bits set. The panel
   // pushes itself above the floor so it is the default controller.

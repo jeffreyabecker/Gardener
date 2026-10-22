@@ -6,7 +6,6 @@
 #include "SafeReboot.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
-#include "core/Control.h"
 #include "serial/SerialLink.h"
 
 namespace gardener {
@@ -87,7 +86,7 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
     message += " after ";
     message += String(ventMs);
     message += " ms";
-    if (ventMs >= cfg::VENT_TIMEOUT_MS) {
+    if (ventMs >= VENT_TIMEOUT_MS) {
       message += ", vent timed out";
       state.logger->warn(message.c_str());
       state.lastState = current;
@@ -132,7 +131,7 @@ void controlTask(void* arg) {
     state.machine.vacuum().service(now);
     logRunChanges(state, now);
 
-    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(CONTROL_PERIOD_MS));
   }
 }
 

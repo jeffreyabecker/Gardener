@@ -4,9 +4,10 @@
 
 #include "Machine.h"
 #include "Tasks.h"
-#include "core/Version.h"
+#include "firmwareversion.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
+#include "serial/SerialLink.h"
 
 namespace gardener {
 namespace {
@@ -79,9 +80,9 @@ void MachineDeviceDomain::execute(Stream& io) {
 // persist and no unit to print.
 void MachineDeviceDomain::get(Stream& io) {
   io.print("ok proto=");
-  io.print(cfg::PROTOCOL_VERSION);
+  io.print(PROTOCOL_VERSION);
   io.print(" fw=");
-  io.print(cfg::FIRMWARE_VERSION);
+  io.print(FirmwareVersion);
   io.print(" chip=");
   io.print(ESP.getChipModel());
   io.print(" heap=");

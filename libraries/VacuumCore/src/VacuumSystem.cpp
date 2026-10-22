@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <math.h>
 
+#include "Machine.h"
 #include "core/Math.h"
 
 namespace gardener {
@@ -78,8 +79,8 @@ void VacuumSystem::stop() {
 
 bool VacuumSystem::released() const {
   bool settled = sensor_->present() && sensor_->readingValid() &&
-                 currentKpa() <= cfg::VENT_MARGIN_KPA;
-  return settled || (millis() - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
+                 currentKpa() <= VENT_MARGIN_KPA;
+  return settled || (millis() - ventStartMs_) >= VENT_TIMEOUT_MS;
 }
 
 // Stop, then open: the pump never pulls against an open port. The state is VENT either way, and
@@ -111,7 +112,7 @@ void VacuumSystem::setTarget(float kpa) {
   // Shallower than the loop's floor is not a target, and the floor itself is one: the bound the
   // wire publishes is this constant, so a target of exactly it has to be taken. Deeper than the
   // pump can reach still is a target: the duty pins at the cap and the run simply never gets there.
-  if (kpa < cfg::CONTROL_MIN_TARGET_KPA) return;
+  if (kpa < CONTROL_MIN_TARGET_KPA) return;
   targetKpa_ = kpa;
   pidReset();
 
@@ -120,7 +121,7 @@ void VacuumSystem::setTarget(float kpa) {
   // running follows the new target, or ends when the target moves back to where the pump works.
   const float measured = currentKpa();
   const bool active = state_ == RunState::Pulling || state_ == RunState::Holding;
-  const bool shallower = measured > kpa + cfg::CONTROL_DEADBAND_KPA;
+  const bool shallower = measured > kpa + CONTROL_DEADBAND_KPA;
   if (targetVent_) {
     if (!shallower) endTargetVent();
     return;
@@ -128,7 +129,7 @@ void VacuumSystem::setTarget(float kpa) {
   if (!active) return;
   if (shallower) {
     startTargetVent();
-  } else if (kpa > measured + cfg::CONTROL_DEADBAND_KPA) {
+  } else if (kpa > measured + CONTROL_DEADBAND_KPA) {
     // A deeper target is a pull from here. HOLD is the target-reached edge, so keeping it while
     // the machine works to a new depth would hide the edge the controller times from.
     setState(RunState::Pulling);
@@ -151,7 +152,7 @@ void VacuumSystem::clearTarget() {
 }
 
 bool VacuumSystem::atTarget() const {
-  return currentKpa() >= targetKpa_ - cfg::CONTROL_DEADBAND_KPA;
+  return currentKpa() >= targetKpa_ - CONTROL_DEADBAND_KPA;
 }
 
 void VacuumSystem::resetFault() {
@@ -192,11 +193,11 @@ void VacuumSystem::service(uint32_t nowMs) {
   // run; a release waits for ambient or the timeout and goes to rest.
   if (state_ == RunState::Venting) {
     if (targetVent_) {
-      const float landing = cfg::CONTROL_VENT_TO_TARGET
-                                ? targetKpa_ + cfg::VENT_TARGET_LEAD_KPA
+      const float landing = CONTROL_VENT_TO_TARGET
+                                ? targetKpa_ + VENT_TARGET_LEAD_KPA
                                 : targetKpa_;
       const bool arrived = currentKpa() <= landing;
-      const bool timedOut = (nowMs - ventStartMs_) >= cfg::VENT_TIMEOUT_MS;
+      const bool timedOut = (nowMs - ventStartMs_) >= VENT_TIMEOUT_MS;
       if (!arrived && !timedOut) return;
       endTargetVent();
     } else {
@@ -216,14 +217,14 @@ void VacuumSystem::service(uint32_t nowMs) {
 // vacuum"; the derivative term uses the measurement slew rather than the error slope, which
 // keeps a setpoint change from kicking the output.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
-  if (dt <= 0.0f) return cfg::PID_KP * error + pidIntegral_;
-  pidIntegral_ = clampf(pidIntegral_ + cfg::PID_KI * error * dt, -cfg::PID_INTEGRAL_LIMIT,
-                        cfg::PID_INTEGRAL_LIMIT);
-  return cfg::PID_KP * error + pidIntegral_ - cfg::PID_KD * measurementSlew;
+  if (dt <= 0.0f) return PID_KP * error + pidIntegral_;
+  pidIntegral_ = clampf(pidIntegral_ + PID_KI * error * dt, -PID_INTEGRAL_LIMIT,
+                        PID_INTEGRAL_LIMIT);
+  return PID_KP * error + pidIntegral_ - PID_KD * measurementSlew;
 }
 
 void VacuumSystem::regulate(uint32_t nowMs) {
-  if (nowMs - lastControlMs_ < cfg::CONTROL_PERIOD_MS) return;
+  if (nowMs - lastControlMs_ < CONTROL_PERIOD_MS) return;
 
   float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
   lastControlMs_ = nowMs;
@@ -233,7 +234,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   float measured = currentKpa();
   float error = targetKpa_ - measured;  // positive means "still needs vacuum"
 
-  if (error < -cfg::CONTROL_DEADBAND_KPA) {
+  if (error < -CONTROL_DEADBAND_KPA) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
     pidReset();
     output_ = 0.0f;
@@ -243,7 +244,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
     return;
   }
 
-  float controlError = fabsf(error) <= cfg::CONTROL_DEADBAND_KPA ? 0.0f : error;
+  float controlError = fabsf(error) <= CONTROL_DEADBAND_KPA ? 0.0f : error;
 
   float slew = 0.0f;
   uint32_t windowMs = nowMs - lastDerivativeMs_;
@@ -251,7 +252,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
     slew = (measured - lastMeasured_) / ((float)windowMs / 1000.0f);
   }
 
-  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, cfg::PUMP_DUTY_MAX_PERCENT);
+  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, PUMP_DUTY_MAX_PERCENT);
   pump_->setDuty(output_);
 
   lastMeasured_ = measured;

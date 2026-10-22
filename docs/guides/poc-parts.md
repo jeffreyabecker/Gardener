@@ -198,7 +198,8 @@ A 6 mm barb needs a short length of 4 mm ID tube and a 4 mm-to-2.4 mm reducer: t
 ```
 
 The pin map is the 5 V build's: GPIO6 is the pump PWM, GPIO5 is the valve, and the sensor, panel,
-buttons and buzzer do not move. The DRV8833 drives only the valve — `BIN1` from GPIO5, `BIN2` and
+buttons and buzzer do not move. It is the sketch's `Board` block, so a variant of the rig is that
+block and nothing in the libraries. The DRV8833 drives only the valve — `BIN1` from GPIO5, `BIN2` and
 both `AIN` inputs to GND — with its `VM` on the 3.3 V rail, so the coil sees the same voltage as
 the 5 V build and its body diodes are the coil's flyback path. The pump's diode and capacitor are
 at the pump, not at the FET: the capacitor is the surge reservoir and the diode is the winding's
@@ -238,7 +239,7 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
   pump's ultimate vacuum on its datasheet; a single-stage diaphragm pump lands inside the sensor,
   a two-stage one may not.
 * The pump's measured reach is the `floor`, so set `CONTROL_FLOOR_KPA` in
-  [core/Control.h](../../libraries/VacuumCore/src/core/Control.h) after measuring it. The PID gains
+  [Machine.h](../../libraries/VacuumCore/src/Machine.h) after measuring it. The PID gains
   and `CONTROL_DEADBAND_KPA` are tuned for the 5 V pump and chamber; retune them for the new flow.
   `PUMP_DUTY_MAX_PERCENT` is 90 %, which is 10.8 V here; keep it unless the pump's datasheet
   allows continuous 12 V. `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a

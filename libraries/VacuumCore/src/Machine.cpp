@@ -1,8 +1,7 @@
 #include "Machine.h"
 
 #include "Logger.h"
-#include "core/Board.h"
-#include "core/Version.h"
+#include "firmwareversion.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
 #include "hal/impl/XgzpSensor.h"
@@ -10,17 +9,17 @@
 namespace gardener {
 
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
-// so nothing owns them. The sensor, pump and vent are named here with their pins, so a board variant
-// edits this file and core/Board.h and nothing under hal/impl/.
-Machine::Machine(Logger& logger, Settings& settings)
+// so nothing owns them. The pins come from the sketch, so a board variant edits its sketch and
+// nothing under hal/impl/.
+Machine::Machine(Logger& logger, Settings& settings, const MachinePins& pins)
     : logger_(logger),
       settings_(settings),
-      vacuum_(new PwmPump(cfg::PUMP_PWM), new XgzpSensor(cfg::SENSOR_ADC),
-              new NormallyOpenValve(cfg::VENT_VALVE)) {}
+      vacuum_(new PwmPump(pins.pumpPwm), new XgzpSensor(pins.sensorAdc),
+              new NormallyOpenValve(pins.ventValve)) {}
 
 void Machine::boot() {
   String boot = "gardener ";
-  boot += cfg::FIRMWARE_VERSION;
+  boot += FirmwareVersion;
   boot += " booting";
   logger_.info(boot.c_str());
 

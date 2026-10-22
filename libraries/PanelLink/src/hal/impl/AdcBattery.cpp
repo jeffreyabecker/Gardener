@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-#include "core/Board.h"
 
 namespace gardener {
 namespace {
@@ -45,7 +44,7 @@ void AdcBattery::update(uint32_t nowMs) {
   for (uint8_t i = 0; i < SamplesPerRead; i++) totalMilliVolts += analogReadMilliVolts(pin_);
 
   float pinVolts = (float)totalMilliVolts / (float)SamplesPerRead / 1000.0f;
-  volts_ = pinVolts * cfg::BATTERY_DIVIDER_RATIO * Calibration;
+  volts_ = pinVolts * divider_ * Calibration;
   present_ = volts_ >= PresentMinVolts;
   if (!present_) {
     percent_ = 0;

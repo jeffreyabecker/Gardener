@@ -4,7 +4,6 @@
 
 #include "Machine.h"
 #include "VacuumSystem.h"
-#include "core/Control.h"
 
 namespace gardener {
 
@@ -16,7 +15,7 @@ void safeReboot(Machine& context) {
   // coming up to ambient when the device restarts is already on the safe path.
   const uint32_t startedMs = millis();
   while (vacuum.runState() == RunState::Venting &&
-         (uint32_t)(millis() - startedMs) < cfg::REBOOT_VENT_WAIT_MS) {
+         (uint32_t)(millis() - startedMs) < REBOOT_VENT_WAIT_MS) {
     // The sensor has to keep sampling for the release to see that it has finished; the rest of the
     // loop is stopped while the restart is pending.
     const uint32_t now = millis();

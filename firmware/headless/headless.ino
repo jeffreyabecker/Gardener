@@ -10,6 +10,9 @@
 
 namespace {
 
+// The rig this build is wired to: the machine's three parts, and nothing else.
+constexpr gardener::MachinePins Board{.sensorAdc = 7, .pumpPwm = 6, .ventValve = 5};
+
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
 // UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
@@ -17,14 +20,14 @@ bool serialAttached() { return (bool)Serial; }
 }  // namespace
 
 void setup() {
-  Serial.begin(gardener::cfg::SERIAL_BAUD);
+  Serial.begin(115200);
   delay(200);
 
   // No settings file is mounted, so every preference is its default and the diagnostics stream is
   // the build's — the only way to see what the device is doing.
   gardener::Logger* logger = new gardener::StreamLogger(Serial);
   gardener::Settings& settings = *new gardener::Settings(nullptr);
-  gardener::Machine& machine = *new gardener::Machine(*logger, settings);
+  gardener::Machine& machine = *new gardener::Machine(*logger, settings, Board);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
   // Nothing pushes itself above `None`, so `None` is the only controller until a link claims.

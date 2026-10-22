@@ -4,7 +4,6 @@
 #include "Machine.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
-#include "core/Control.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
 #include "serial/Gate.h"
@@ -103,7 +102,7 @@ void VacuumDomain::get(Stream& io) {
   }
 
   io.print(" floor=");
-  io.print(cfg::CONTROL_FLOOR_KPA, 1u);
+  io.print(CONTROL_FLOOR_KPA, 1u);
   io.print(" duty=");
   io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");
@@ -144,11 +143,11 @@ void VacuumDomain::target(Stream& io, const String& args) {
 
   // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
   const float kpa = token.toFloat();
-  if (!(kpa >= cfg::CONTROL_MIN_TARGET_KPA)) {
+  if (!(kpa >= CONTROL_MIN_TARGET_KPA)) {
     io.print("err out_of_range field=target value=");
     io.print(token);
     io.print(" min=");
-    io.print(cfg::CONTROL_MIN_TARGET_KPA, 1u);
+    io.print(CONTROL_MIN_TARGET_KPA, 1u);
     io.print('\n');
     return;
   }

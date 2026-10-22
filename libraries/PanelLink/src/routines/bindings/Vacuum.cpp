@@ -4,7 +4,6 @@
 #include "Logger.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
-#include "core/Control.h"
 #include "routines/Routines.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
@@ -31,10 +30,10 @@ int vacuumTargetOff(bvm* vm) {
 // stored value and anything else that asks.
 int vacuumClamp(bvm* vm) {
   float kpa = (float)argReal(vm, 1);
-  if (kpa < cfg::CONTROL_MIN_TARGET_KPA) {
-    kpa = cfg::CONTROL_MIN_TARGET_KPA;
-  } else if (kpa > cfg::CONTROL_FLOOR_KPA) {
-    kpa = cfg::CONTROL_FLOOR_KPA;
+  if (kpa < CONTROL_MIN_TARGET_KPA) {
+    kpa = CONTROL_MIN_TARGET_KPA;
+  } else if (kpa > CONTROL_FLOOR_KPA) {
+    kpa = CONTROL_FLOOR_KPA;
   }
   be_pushreal(vm, kpa);
   be_return(vm);
@@ -71,8 +70,8 @@ int vacuumState(bvm* vm) {
   setReal(vm, record, "kpa", system.currentKpa());
   setReal(vm, record, "target", system.targetKpa());
   setReal(vm, record, "duty", system.pump().dutyPercent());
-  setReal(vm, record, "floor", cfg::CONTROL_FLOOR_KPA);
-  setReal(vm, record, "min", cfg::CONTROL_MIN_TARGET_KPA);
+  setReal(vm, record, "floor", CONTROL_FLOOR_KPA);
+  setReal(vm, record, "min", CONTROL_MIN_TARGET_KPA);
   setText(vm, record, "state", runStateName(system.runState()));
   setText(vm, record, "fault", system.faultCode());
   // -1 rather than 0 when no gauge is fitted, so "no battery" is not "flat battery".

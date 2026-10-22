@@ -6,6 +6,13 @@
 local libraries. There is no host test suite, and nothing checks the layer rule, so a stray
 `hal/` include that reaches upward is a review catch rather than a build failure.
 
+**Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
+`firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under
+`assets/`, or a file in `firmware/gardener/data/` — a `.be` routine, a page, a `.ini` — cannot change
+what the build says, so editing one is not a reason to run it. The data image is checked on the host
+instead: `python .github/skills/berry/check.py` compiles and drives every `.be` file, which is the
+success a routine edit has to prove.
+
 A commit runs nothing: when told to commit, stage the tree and write the message, and don't build,
 test or review the diff on the way.
 

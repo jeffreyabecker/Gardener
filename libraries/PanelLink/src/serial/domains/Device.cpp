@@ -4,7 +4,8 @@
 
 #include "Panel.h"
 #include "Tasks.h"
-#include "core/Version.h"
+#include "firmwareversion.h"
+#include "serial/SerialLink.h"
 #include "hal/Battery.h"
 #include "hal/Display.h"
 #include "panel/Units.h"
@@ -84,9 +85,9 @@ void DeviceDomain::execute(Stream& io) {
 
 void DeviceDomain::get(Stream& io) {
   io.print("ok proto=");
-  io.print(cfg::PROTOCOL_VERSION);
+  io.print(PROTOCOL_VERSION);
   io.print(" fw=");
-  io.print(cfg::FIRMWARE_VERSION);
+  io.print(FirmwareVersion);
   io.print(" chip=");
   io.print(ESP.getChipModel());
   io.print(" heap=");

@@ -7,6 +7,11 @@
 
 namespace gardener {
 
+// The wire revision this link serves, reported as `proto` by `device get`. The wire is still
+// unsettled, so the number stays 1 and does not move per revision; a controller must not treat it
+// as a compatibility guarantee.
+constexpr uint32_t PROTOCOL_VERSION = 1;
+
 class Logger;
 class Machine;
 

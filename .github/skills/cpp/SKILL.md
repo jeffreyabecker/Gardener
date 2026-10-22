@@ -26,7 +26,7 @@ project's own code.
 | Globals | camelCase | `machineCommandQueue`, `serialConnected` |
 | Enum values | PascalCase | `Button::Back`, `RunState::Pulling` |
 | Files | PascalCase, one type or one topic per file | `VacuumSystem.h`, `PanelSettings.cpp` |
-| Namespaces | lowercase | `gardener`, `cfg`, `fonts` |
+| Namespaces | lowercase | `gardener`, `fonts` |
 
 **Constants are PascalCase, and never carry a `k` prefix.** `PanelWidth`, `DefaultHoldMs`,
 `MarkAsset` — the prefix belongs to a convention from somewhere else, and it is not this
@@ -39,9 +39,9 @@ name that needs a letter in front of it to be understood is working against the 
 
 Existing prefixed names are not a rewrite-on-sight target. `gContext`, `gRoutines` and `gLogger` in
 `libraries/PanelLink/src/routines/bindings/`, and the `SCREAMING_SNAKE_CASE` constants in
-`libraries/VacuumCore/src/core/Board.h` and `core/Control.h`, are earlier decisions. Rename them
-where you are already changing those lines for another reason; a sweep of the codebase for its own
-sake is its own decision with its own measurement.
+`libraries/VacuumCore/src/Machine.h`, are earlier decisions. Rename them where you are already
+changing those lines for another reason; a sweep of the codebase for its own sake is its own
+decision with its own measurement.
 
 ## Formatting
 

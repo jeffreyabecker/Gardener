@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#include "core/Control.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
@@ -49,7 +48,7 @@ inline const char* runStateName(RunState state) {
 // can pull down but never vent; the valve is the only way back up, which is why every release
 // path here stops the pump before it opens the valve. A target set shallower than the chamber
 // while a run is active uses the same actuator: the valve opens until the new target is reached,
-// then the run carries on. Gains live in core/Control.h.
+// then the run carries on. Gains live in Machine.h.
 class VacuumSystem {
  public:
   VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent)

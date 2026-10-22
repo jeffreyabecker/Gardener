@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include "Logger.h"
-#include "core/Board.h"
 #include "panel/Asset.h"
 #include "panel/Units.h"
 
@@ -22,7 +21,7 @@ void Panel::boot() {
   // The panel is the one part with no fallback: nothing on the device can draw
   // without it, so a panel that does not answer is fatal rather than a degraded
   // mode.
-  Wire1.begin(cfg::PANEL_I2C_SDA, cfg::PANEL_I2C_SCL, cfg::PANEL_I2C_FREQ_HZ);
+  Wire1.begin(pins_.i2cSda, pins_.i2cScl, pins_.i2cHz);
   const bool displayOk = display().begin();
   log.info(displayOk ? "oled: online" : "oled: not found, aborting");
   if (!displayOk) {

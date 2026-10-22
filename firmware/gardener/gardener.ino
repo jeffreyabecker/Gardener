@@ -11,6 +11,22 @@
 
 namespace {
 
+// The rig this build is wired to. The libraries take the pins, so a board variant is this block and
+// nothing else.
+constexpr gardener::PanelPins Board{
+    .machine = {.sensorAdc = 7, .pumpPwm = 6, .ventValve = 5},
+    .i2cSda = 17,
+    .i2cScl = 18,
+    .i2cHz = 400000,
+    .buzzerPwm = 12,
+    .batteryAdc = 4,
+    .batteryDivider = 2.0f,
+    .up = 1,
+    .down = 2,
+    .ok = 10,
+    .back = 11,
+};
+
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
 // UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
@@ -18,7 +34,7 @@ bool serialAttached() { return (bool)Serial; }
 }  // namespace
 
 void setup() {
-  Serial.begin(gardener::cfg::SERIAL_BAUD);
+  Serial.begin(115200);
   delay(200);
 
   // The device's files are on the LittleFS partition the build reserves. It is mounted once here,
@@ -55,7 +71,7 @@ void setup() {
   }
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, Board);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both
