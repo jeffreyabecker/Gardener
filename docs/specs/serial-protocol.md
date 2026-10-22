@@ -170,7 +170,7 @@ the reply names whoever is still driving.
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | `on` / `off` | the diagnostics preference; a change applies at the next reset |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.ini` and restored at boot |
-| `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery, `4` ownership stop |
+| `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ the reply names whoever is still driving.
 `log` and `unit` are the panel's: they are preferences it persists in `/settings.ini` and shows on
 its glass, so a build without a panel neither reports them in `device get` nor accepts `device set
 log` or `device set unit`. That build's `device get` reads `ok proto=1 fw=... chip=... heap=...
-caps=4`.
+caps=0`.
 
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.

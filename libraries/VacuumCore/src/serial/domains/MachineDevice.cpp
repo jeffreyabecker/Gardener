@@ -88,7 +88,7 @@ void MachineDeviceDomain::get(Stream& io) {
   io.print((uint32_t)ESP.getFreeHeap());
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
-  io.print(app_.capabilities().mask());
+  io.print(app_.capabilities());
   io.print('\n');
 }
 

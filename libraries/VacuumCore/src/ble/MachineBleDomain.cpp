@@ -112,7 +112,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setFloat(chr, cfg::CONTROL_FLOOR_KPA);
       break;
     case Caps:
-      setByte(chr, app_->capabilities().mask());
+      setByte(chr, app_->capabilities());
       break;
     case Count:
       break;

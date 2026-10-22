@@ -26,11 +26,8 @@ void setup() {
   gardener::Settings& settings = *new gardener::Settings(nullptr);
   gardener::Machine& machine = *new gardener::Machine(*logger, settings);
 
-  // What this build has: no panel, no gauge, and the ownership stop that makes an unowned machine
-  // vent. Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
-  machine.capabilities().setPanel(false);
-  machine.capabilities().setBattery(false);
-  machine.capabilities().setOwnershipStop(true);
+  // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
+  // Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
 
   // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial = new gardener::SerialLink(machine, Serial, serialAttached, *logger);

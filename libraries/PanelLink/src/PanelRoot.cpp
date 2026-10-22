@@ -45,11 +45,9 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings) {
   auto* routines = new Routines();
   auto* panel = new Panel(logger, buttons, buzzer, battery, display, &settings, routines);
 
-  // The full device has the panel and the gauge, and — like every build — it vents when its owner
-  // leaves. The panel pushes itself above the floor so it is the default controller.
-  panel->capabilities().setPanel(true);
-  panel->capabilities().setBattery(true);
-  panel->capabilities().setOwnershipStop(true);
+  // The full device has the panel and the gauge, so it is the one build with bits set. The panel
+  // pushes itself above the floor so it is the default controller.
+  panel->setCapabilities(PanelFitted | BatteryFitted);
   panel->ownership().acquire(*panel);
   return *panel;
 }

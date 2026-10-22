@@ -26,7 +26,7 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 | `control` | read, write, notify | uint8: 0 none, 1 serial, 2 bluetooth, 3 panel — who is on top of the stack |
 | `sensor` | read, notify | uint8: 1 when a reading can be trusted |
 | `floor` | read, notify | float32 LE, deepest target worth offering |
-| `caps` | read | uint8 bitmask: 1 panel, 2 battery, 4 ownership stop |
+| `caps` | read | uint8 bitmask: 1 panel, 2 battery |
 
 `batt` and `unit` are the panel's: `batt` is the gauge the panel carries and `unit` is the
 preference its pages print in. A build without a panel has neither characteristic, so a client

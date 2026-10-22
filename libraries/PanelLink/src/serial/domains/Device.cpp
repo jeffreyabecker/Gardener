@@ -114,7 +114,7 @@ void DeviceDomain::get(Stream& io) {
   io.print(displayUnitInfo(app_.settings().unit()).name);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
-  io.print(app_.capabilities().mask());
+  io.print(app_.capabilities());
   io.print('\n');
 }
 
