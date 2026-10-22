@@ -4,6 +4,10 @@ Four keys, no labels on the glass, and one hand. This covers three things: the p
 classifier can produce, the gestures the firmware reserves for itself, and the standards every page
 follows on top of them.
 
+The keys are the panel's, so everything here is a panel contract. **A build without a panel has no
+keys and therefore no gestures**: its stop is ownership alone — the chamber vents when the
+controller leaves the stack, and an unowned machine is always vented. Nothing below applies to it.
+
 This file is the contract for **any** page. What a particular page does with a press — its own
 shortcuts, what OK starts on it, which presses it ignores — belongs in that page's own `.be` file.
 The routine API is in [routine.md](./ui/routine.md) and [bindings.md](./ui/bindings.md); this file

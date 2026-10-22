@@ -285,7 +285,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   holds pressure only while owned.
 - [x] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
   the reboot.
-- [ ] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
+- [x] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
   its stop being ownership.
 - [ ] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
