@@ -44,8 +44,10 @@ What each one answers:
 
 | Scene | Gesture | What it does |
 | --- | --- | --- |
-| `ReadoutScene` | `ok:single` | start or resume the run |
-| `ReadoutScene` | `cancel:single` | stop and vent |
+| `ReadoutScene` | `ok:single` | start or resume the run, or commit the target being edited |
+| `ReadoutScene` | `ok:double` | make the target pressure editable |
+| `ReadoutScene` | `up:single`, `down:single` | step the target while it is being edited |
+| `ReadoutScene` | `cancel:single` | discard an edit, or stop and vent |
 | `ReadoutScene` | `forward:double` | push the routine browser |
 | `ReadoutScene` | `up:double` | push the system settings |
 

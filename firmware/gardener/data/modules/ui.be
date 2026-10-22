@@ -12,29 +12,38 @@ import string
 # --- the readout -----------------------------------------------------------
 
 class ReadoutChrome
-
+  var owner
   var pressure
   var target_value
 
-  def init()
-    
+  def init(owner)
+    self.owner = owner
+
     self.pressure = PressureDisplay()
     self.pressure.x = 0; self.pressure.y = 0; self.pressure.w = 64; self.pressure.h = 52
-
+    self.pressure.margin = 1
 
     self.target_value = PressureDisplay()
     self.target_value.x = 64; self.target_value.y = 0; self.target_value.w = 64; self.target_value.h = 52
     self.target_value.inverted = true
+    self.target_value.margin = 1
   end
 
   def draw(s)
-
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
 
-    if s.target > 0.0
-      self.target_value.draw(s.target)
+    if self.owner.editing
+      self.target_value.draw(self.owner.edit_target)
+      if self.owner.border_on()
+        var f = self.target_value.frame()
+        screen.draw_rect(f[0], f[1], f[2], f[3])
+      end
     else
-      self.target_value.draw(nil)
+      if s.target > 0.0
+        self.target_value.draw(s.target)
+      else
+        self.target_value.draw(nil)
+      end
     end
   end
 end
@@ -46,18 +55,26 @@ browserScene = nil
 
 class ReadoutScene : Scene
   var chrome
+  var editing
+  var edit_target
 
   def init()
     super(self).init()
-    self.chrome = ReadoutChrome()
+    self.chrome = ReadoutChrome(self)
+    self.editing = false
+    self.edit_target = 0.0
 
-    self.on("ok:single", / -> self.start())
+    self.on("ok:single", / -> self.ok())
+    self.on("ok:double", / -> self.edit())
+    self.on("up:single", / -> self.step_target(1))
+    self.on("down:single", / -> self.step_target(-1))
     self.on("cancel:single", / -> self.cancel())
     self.on("forward:double", / -> ux.push(browserScene))
     self.on("up:double", / -> ux.push(systemScene))
   end
 
   def activate()
+    self.editing = false
     self.restore()
     self.draw()
   end
@@ -66,15 +83,74 @@ class ReadoutScene : Scene
     self.chrome.draw(vacuum.state())
   end
 
-  # Cancel is the page's stop: release the chamber.
+  # OK starts the run, or commits the target being edited.
+  def ok()
+    if self.editing
+      return self.commit_target()
+    end
+    return self.start()
+  end
+
+  # A double OK makes the target editable, starting from the machine's current target.
+  def edit()
+    if self.editing
+      return false
+    end
+    self.editing = true
+    self.edit_target = self.edit_start()
+    self.draw()
+    return true
+  end
+
+  # Up and Down move the target one whole display step while it is being edited.
+  def step_target(dir)
+    if !self.editing
+      return false
+    end
+    var unit = screen.unit()
+    self.edit_target = vacuum.clamp(self.edit_target + dir * unit.whole_step / unit.per_kpa)
+    self.draw()
+    return true
+  end
+
+  # OK while editing: write the target to the device setting and place it on the machine.
+  def commit_target()
+    var kpa = vacuum.clamp(self.edit_target)
+    device.set_target(kpa)
+    vacuum.target(kpa)
+    self.editing = false
+    self.draw()
+    return true
+  end
+
+  # The border blinks while the target is editable, half a second on and half off.
+  def border_on()
+    return (vacuum.now_ms() / 500) % 2 == 0
+  end
+
+  # Where an edit starts: the machine's target, or the shallowest legal depth when none is set.
+  def edit_start()
+    var target = vacuum.state().target
+    if target <= 0.0
+      target = vacuum.clamp(vacuum.state().kpa)
+    end
+    return target
+  end
+
+  # Cancel discards an edit, or stops and vents the run.
   def cancel()
+    if self.editing
+      self.editing = false
+      self.draw()
+      return true
+    end
     vacuum.stop()
     vacuum.log("default: venting")
     return true
   end
 
-  # The target outlives a boot as a device setting: the system settings scene owns it, and this
-  # scene hands it to the machine whenever it becomes visible.
+  # The target outlives a boot as a device setting; this scene hands it to the machine whenever it
+  # becomes visible, and ok:double edits it.
   def restore()
     var kpa = device.target()
     if kpa > 0.0
@@ -147,7 +223,7 @@ class JingleScene : ChoiceScene
   end
 end
 
-# The system scene's drawing: the four-row menu list. The rows come from the scene, which owns the
+# The system scene's drawing: the three-row menu list. The rows come from the scene, which owns the
 # values and formats them; the chrome owns the list and draws it.
 class SystemChrome
   var owner
@@ -155,7 +231,7 @@ class SystemChrome
 
   def init(owner)
     self.owner = owner
-    self.list = List(4)
+    self.list = List(3)
   end
 
   def draw()
@@ -164,17 +240,15 @@ class SystemChrome
   end
 end
 
-# The device's own settings as a menu: four rows walked with Up/Down, each opening the value scene
+# The device's own settings as a menu: three rows walked with Up/Down, each opening the value scene
 # it edits. The caller writes what a scene returns through `device`.
 class SystemScene : Scene
   var units
   var unit
   var unit_index
-  var target
   var bluetooth
   var jingle
   var jingle_ids
-  var fmt
   var chrome
 
   def init()
@@ -182,11 +256,9 @@ class SystemScene : Scene
     self.units = []
     self.unit = nil
     self.unit_index = 0
-    self.target = 0.0
     self.bluetooth = true
     self.jingle = nil
     self.jingle_ids = []
-    self.fmt = "%.1f"
     self.chrome = SystemChrome(self)
   end
 
@@ -196,12 +268,11 @@ class SystemScene : Scene
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
-  # device, the target is what the readout will place on the machine, the radio row reports what
-  # this build was compiled with, and the jingle is the identifier `jingles` resolves.
+  # device, the radio row reports what this build was compiled with, and the jingle is the
+  # identifier `jingles` resolves.
   def read()
     self.units = device.units()
     self.unit = screen.unit()
-    self.fmt = "%." + str(self.unit.decimals) + "f"
     var i = 0
     while i < self.units.size()
       if self.units[i] == self.unit.name
@@ -209,7 +280,6 @@ class SystemScene : Scene
       end
       i += 1
     end
-    self.target = device.target()
     self.bluetooth = device.bluetooth()
 
     self.jingle_ids = jingles.ids()
@@ -228,17 +298,9 @@ class SystemScene : Scene
   def rows()
     return [
       [nil, "UNIT=" + self.unit.suffix],
-      [nil, self.target_text()],
       [nil, self.bluetooth_text()],
       [nil, self.jingle_text()]
     ]
-  end
-
-  def target_text()
-    if self.target > 0.0
-      return "TGT=" + self.text(self.target)
-    end
-    return "TGT=--"
   end
 
   def bluetooth_text()
@@ -254,11 +316,6 @@ class SystemScene : Scene
       return "JINGLE=--"
     end
     return "JINGLE=" + jingles.label(self.jingle)
-  end
-
-  # A depth in kPa as the panel's unit, at the precision that unit steps in.
-  def text(kpa)
-    return string.format(self.fmt, kpa * self.unit.per_kpa)
   end
 
   def handle_page(ev)
@@ -284,14 +341,7 @@ class SystemScene : Scene
   def open_row()
     if self.chrome.list.selected == 0
       ux.push(UnitScene(self.unit_index, self.units), nil, / v -> self.set_unit(v))
-    elif self.chrome.list.selected == 1
-      # No target yet: start from where the chamber is, which is what a first edit means.
-      var kpa = self.target
-      if kpa <= 0.0
-        kpa = vacuum.clamp(vacuum.state().kpa)
-      end
-      ux.push(PressureScene("TARGET", kpa, 1, false), nil, / v -> self.set_target(v))
-    elif self.chrome.list.selected == 3
+    elif self.chrome.list.selected == 2
       # No library is a fault the boot already reported; OK does nothing rather than opening an
       # editor with nothing to cycle.
       if self.jingle_ids.size() == 0
@@ -304,14 +354,6 @@ class SystemScene : Scene
 
   def set_unit(value)
     if value != cancelled && device.set_unit(value)
-      self.read()
-    end
-    self.draw()
-  end
-
-  def set_target(value)
-    if value != cancelled
-      device.set_target(vacuum.clamp(value))
       self.read()
     end
     self.draw()

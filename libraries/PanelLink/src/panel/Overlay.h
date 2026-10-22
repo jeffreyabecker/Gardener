@@ -111,6 +111,8 @@ class Overlay : public Display {
   }
 
  private:
+  // The band's icons, named by their emoji: Idle 🟢, Pulling ⬇️, Holding 🔒, Venting ⬆️,
+  // Fault ❌, plug 🔌, serial 🖥️.
   void drawStateIcon();
   void chevrons(int16_t x, int16_t y, bool down);
   void drawConnections();

@@ -7,9 +7,9 @@ suite = "system"
 def jingle_editor_walks()
   assert_not_nil(systemScene, "system: not built")
   ux.push(systemScene)
-  # Rows: UNIT, TGT, BT, JINGLE. Three Downs select the last.
+  # Rows: UNIT, BT, JINGLE. Two Downs select the last.
   var row = 0
-  while row < 3
+  while row < 2
     harness.press("down:single")
     harness.beat(1)
     row += 1
