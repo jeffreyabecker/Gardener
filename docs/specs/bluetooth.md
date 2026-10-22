@@ -23,7 +23,7 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 | `fw` | read | UTF-8 version |
 | `ble_proto` | read | uint8, this contract's revision |
 | `unit` | read, write | uint8, 0 kPa, 1 psi, 2 inHg, 3 mmHg |
-| `control` | read, write, notify | uint8: 1 owned by this link, 0 not |
+| `control` | read, write, notify | uint8: 0 none, 1 serial, 2 bluetooth, 3 panel — who is on top of the stack |
 | `sensor` | read, notify | uint8: 1 when a reading can be trusted |
 | `floor` | read, notify | float32 LE, deepest target worth offering |
 | `caps` | read | uint8 bitmask: 1 panel, 2 battery, 4 ownership stop |
@@ -31,12 +31,14 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 ## Reading, writing and owning
 
 Connecting is read-only: every value can be read without pairing, and the page does not change.
-Writing `1` to `control` acquires the machine — the point where commands are accepted and the
-panel switches to the Bluetooth rune — and writing `0` is the graceful exit, which stops, vents and
-gives the page back.
+Writing anything other than `0` to `control` acquires the machine — the point where commands are
+accepted and the panel switches to the Bluetooth rune — and writing `0` is the graceful exit, which
+stops and vents and gives the page back. A claim always succeeds, and it vents: the claimant takes
+the top of the stack and the link beneath is set aside.
 
-Disconnecting while owning changes nothing: the run continues and the ownership record stays held,
-so a reconnected phone is a reader until Back+OK for 5 s clears the record.
+Disconnecting removes the link from the stack, so a run does not outlive its owner: the chamber
+vents and control falls to the link beneath — the panel, which resumes or idles, or `none`, which
+vents. A reconnected phone is a reader until it claims again.
 
 The writable characteristics require an encrypted link. The device pairs Just Works and keeps the
 bond in NVS, so reads stay open to a scanner while nothing can command the machine until it pairs.

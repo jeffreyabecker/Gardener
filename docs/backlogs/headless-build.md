@@ -269,7 +269,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   serial, bluetooth, panel or none — the top of the stack.
 - [x] 7.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control acquire` always
   succeeds, and that the `busy` reply is gone.
-- [ ] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
+- [x] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
   serial, bluetooth, panel or none.
 - [ ] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
   the panel does.
