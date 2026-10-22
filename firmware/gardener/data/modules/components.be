@@ -2,6 +2,9 @@
 # (x, y, w, h plus margin, border, padding), fits its content into the content rect, and draws
 # itself with draw(...). Components are stateless: the same config and args draw the same thing,
 # and where config alone fixes a derived value it is computed once and cached.
+#
+# An inverted component flips its own box as the last thing its draw does, so whatever it drew
+# reads as paper on ink: that is a highlighted row, a cursor or a focused readout.
 
 import string
 import math
@@ -9,6 +12,7 @@ import math
 class Component
   var x, y, w, h
   var margin, border, padding
+  var inverted
 
   def init()
     self.x = 0
@@ -18,6 +22,7 @@ class Component
     self.margin = 0
     self.border = 0
     self.padding = 0
+    self.inverted = false
   end
 
   # The rectangle a component draws into, inset by margin + border + padding.
@@ -30,6 +35,15 @@ class Component
   def frame()
     return [self.x + self.margin, self.y + self.margin,
             self.w - 2 * self.margin, self.h - 2 * self.margin]
+  end
+
+  # The last thing a draw does. An inverted component flips its own box, so everything it drew in
+  # there reads as paper on ink; a component that returns before drawing anything leaves its box
+  # alone, because there is nothing to highlight.
+  def flip()
+    if self.inverted
+      screen.draw_invert(self.x, self.y, self.w, self.h)
+    end
   end
 
   def draw()
@@ -178,6 +192,7 @@ class FixedText : Text
       self.candidate = self.fit(self.value)
     end
     self.draw_fitted(self.value, self.candidate)
+    self.flip()
   end
 end
 
@@ -194,6 +209,7 @@ class DynamicText : Text
       value = self.value
     end
     self.draw_fitted(value, self.fit(value))
+    self.flip()
   end
 end
 
@@ -237,6 +253,7 @@ class PressureDisplay : Component
     self.number.w = c[2]
     self.number.h = c[3]
     self.number.draw(text)
+    self.flip()
   end
 end
 
@@ -255,6 +272,7 @@ class ProgressBar : Component
     if fill_w > 0
       screen.draw_fillrect(c[0], c[1], fill_w, c[3])
     end
+    self.flip()
   end
 end
 
@@ -289,6 +307,7 @@ class ProgressBubbles : Component
       self.bubble(self.layout[i], i < count)
       i += 1
     end
+    self.flip()
   end
 
   def compute()
@@ -404,11 +423,11 @@ class ProgressBubbles : Component
 end
 
 class Scrollbar : Component
-  var invert
+  var hollow
 
   def init()
     super(self).init()
-    self.invert = false
+    self.hollow = false
   end
 
   def draw(index, count, visible)
@@ -438,7 +457,7 @@ class Scrollbar : Component
     if top + thumb > cy + ch
       top = cy + ch - thumb
     end
-    if self.invert
+    if self.hollow
       screen.draw_invert(cx, cy, cw, top - cy)
       screen.draw_invert(cx, top + thumb, cw, (cy + ch) - (top + thumb))
     else
@@ -446,6 +465,7 @@ class Scrollbar : Component
       screen.draw_rect(f[0], f[1], f[2], f[3])
       screen.draw_fillrect(cx, top, cw, thumb)
     end
+    self.flip()
   end
 end
 
@@ -475,6 +495,7 @@ class Triangle : Component
     else
       self.tri(filled, cx + cw - 1, cy + ch / 2, cx, cy, cx, cy + ch - 1)
     end
+    self.flip()
   end
 
   def tri(filled, x0, y0, x1, y1, x2, y2)

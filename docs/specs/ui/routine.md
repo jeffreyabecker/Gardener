@@ -101,7 +101,9 @@ repaint cadence and the gesture dispatch a routine's scene extends. `/modules/re
 registry: `class RoutineRegistry` and the global `routines` instance — the list the browser draws,
 and the `push(name, callback)` that opens a routine. `/modules/components.be` is `Component` and the
 drawing primitives a readout composes (`FixedText`, `DynamicText`, `PressureDisplay`,
-`ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and the `Icon` glyph).
+`ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and the `Icon` glyph). Every one of them
+has a box, and setting `inverted` on it flips that box as the last thing its draw does — paper
+where its ink was — which is what a selected row, a cursor or a focused readout looks like.
 `/modules/list.be` is `List`, a selectable menu. `/modules/ui.be` is the device's own scenes — the
 readout, the system settings and the browser — none of them registered.
 
