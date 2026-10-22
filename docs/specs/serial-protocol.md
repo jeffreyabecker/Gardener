@@ -205,7 +205,9 @@ a second way to state a pressure. `log` differs from `unit`: it chooses the logg
 change does not silence an already-running diagnostics stream until the next reset.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
-fields. A pack that is not fitted reads `-` for both.
+fields. They are answered by the panel's gauge, so a build without a panel reports neither — it has
+no sense pin and no battery bit in `caps`. A panel build whose pack is not fitted reads `-` for
+both.
 
 `panel` is gone as a domain, and so is `display-size`: whether a panel is fitted is the `caps`
 panel bit, one record served by both links. The wire still does not draw on the panel.

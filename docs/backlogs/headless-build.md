@@ -277,7 +277,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   domains exist only where the panel does.
 - [x] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
   fields exist only where the panel does.
-- [ ] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
+- [x] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
   are answered by the panel's battery.
 - [ ] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
   the top of the stack changes — a claim, a release or a drop.
