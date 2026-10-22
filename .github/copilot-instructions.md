@@ -13,6 +13,12 @@ what the build says, so editing one is not a reason to run it. The data image is
 instead: `python .github/skills/berry/check.py` compiles and drives every `.be` file, which is the
 success a routine edit has to prove.
 
+**Consider the build before running it.** Ask what this run would catch that the last one did not: what
+changed in the tree since then, and whether that change can reach the compiler. When the answer is
+nothing — the same tree, a tree changed only in prose or data, a build before a commit after a build
+that already passed — don't run it. One build after a change that can break the compile is the
+verification; a second one is only waiting for the answer it already gave.
+
 A commit runs nothing: when told to commit, stage the tree and write the message, and don't build,
 test or review the diff on the way.
 
