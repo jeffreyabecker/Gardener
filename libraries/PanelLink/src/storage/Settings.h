@@ -1,7 +1,6 @@
 #pragma once
 
 #include "storage/Ini.h"
-#include "storage/Storage.h"
 #include "core/Units.h"
 
 namespace gardener {
@@ -13,10 +12,10 @@ namespace gardener {
 // parse, leaves the default in place rather than refusing to boot.
 //
 // It is a class rather than a constant so the wire, the context and the UI read through the place a
-// preference lives, and the storage is behind it rather than in every reader.
+// preference lives, and the file is read and written here rather than in every reader.
 class Settings {
  public:
-  explicit Settings(Storage& storage);
+  Settings() = default;
 
   void begin();
   DisplayUnit unit() const;
@@ -42,7 +41,8 @@ class Settings {
   // the String reallocation the interface task would otherwise race it with.
   static constexpr size_t kJingleIdLength = 32;
 
-  Storage& storage_;
+  void save() const;
+
   Ini ini_;
   DisplayUnit unit_ = DisplayUnit::Kpa;
   float targetKpa_ = 0.0f;

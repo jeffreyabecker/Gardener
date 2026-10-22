@@ -8,11 +8,9 @@
 #include "MachineContext.h"
 #include "Ownership.h"
 #include "PanelContext.h"
-#include "StoreBus.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Settings.h"
-#include "storage/Storage.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
@@ -20,10 +18,6 @@
 #include "hal/impl/PwmBuzzer.h"
 
 namespace gardener {
-
-// The store bus's queue: the panel's client and server share it, so it belongs to the panel.
-QueueHandle_t storeQueue = nullptr;
-
 namespace {
 
 // The fitted panel: an Adafruit 1.3" 128x64 monochrome SH1106 on the STEMMA QT bus. Its geometry
@@ -60,16 +54,9 @@ PanelContext& buildPanelRoot() {
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* overlay = new Overlay(display, battery, &machine.vacuum());
-  auto* storage = new Storage();
-  auto* settings = new Settings(*storage);
+  auto* settings = new Settings();
   auto* routines = new Routines();
-  // The store bus: the panel's client and the interface's server share one queue. The queue is the
-  // one handle named in Tasks.h; the other two are created when the tasks spawn.
-  storeQueue = xQueueCreate(StoreQueueDepth, sizeof(StoreRequest));
-  auto* storeClient = new StoreClient(storeQueue);
-  auto* storeServer = new StoreServer(storeQueue, *settings, *storage);
-  auto* panel = new PanelContext(buttons, buzzer, battery, overlay, storage, settings, routines,
-                                 storeClient, storeServer, machine);
+  auto* panel = new PanelContext(buttons, buzzer, battery, overlay, settings, routines, machine);
   return *panel;
 }
 

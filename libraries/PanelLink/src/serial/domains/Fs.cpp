@@ -1,12 +1,14 @@
 #include "serial/PanelDomains.h"
 
 #include <Arduino.h>
+#include <LittleFS.h>
 #include <stdint.h>
+
+#include <vector>
 
 #include "PanelContext.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
-#include "storage/Storage.h"
 #include "core/Config.h"
 #include "core/Parse.h"
 
@@ -57,6 +59,43 @@ bool validPath(const String& path, bool allowRoot) {
 String parentOf(const String& path) {
   const int slash = path.lastIndexOf('/');
   return slash <= 0 ? String("/") : path.substring(0, slash);
+}
+
+bool isDirectory(const char* path) {
+  File file = LittleFS.open(path);
+  if (!file) return false;
+  const bool directory = file.isDirectory();
+  file.close();
+  return directory;
+}
+
+// Removes a file, or a directory with everything under it. Deleting under an open cursor
+// invalidates it, so a directory's children are collected before any of them is removed.
+bool removePath(const char* path) {
+  const String target = path;
+  File file = LittleFS.open(target);
+  if (!file) return false;
+
+  if (!file.isDirectory()) {
+    file.close();
+    return LittleFS.remove(target);
+  }
+
+  std::vector<String> children;
+  while (true) {
+    File child = file.openNextFile();
+    if (!child) break;
+    String childPath = target;
+    if (!childPath.endsWith("/")) childPath += '/';
+    childPath += child.name();
+    children.push_back(childPath);
+    child.close();
+  }
+  file.close();
+  for (const String& childPath : children) {
+    if (!removePath(childPath.c_str())) return false;
+  }
+  return LittleFS.rmdir(target);
 }
 
 void replyBadArgument(Stream& io, const String& token) {
@@ -112,9 +151,9 @@ class FsDomain : public Domain {
   void makeDirectory(Stream& io, const String& args);
   void remove(Stream& io, const String& args);
 
-  // Reads exactly `bytes` from the stream, writing to `handle` when it is not null. The optional
+  // Reads exactly `bytes` from the stream, writing to `file` when it is not null. The optional
   // newline after the body is consumed either way, so the next command starts on a boundary.
-  Payload readPayload(Stream& io, uint32_t bytes, Storage::WriteHandle* handle);
+  Payload readPayload(Stream& io, uint32_t bytes, File* file);
   // Consumes a body a refused header still declared. False means the reply has already been sent.
   bool discardPayload(Stream& io, uint32_t bytes);
 
@@ -166,31 +205,33 @@ void FsDomain::list(Stream& io, const String& args) {
     return;
   }
 
-  Storage& storage = app_.storage();
-  if (!storage.exists(path.c_str())) {
+  if (!LittleFS.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
-  if (!storage.isDirectory(path.c_str())) {
-    replyNotReady(io, "not_dir");
+
+  File directory = LittleFS.open(path.c_str());
+  if (!directory) {
+    replyNotReady(io, "io");
     return;
   }
-
-  Storage::Directory* directory = storage.openDirectory(path.c_str());
-  if (directory == nullptr) {
-    replyNotReady(io, "io");
+  if (!directory.isDirectory()) {
+    directory.close();
+    replyNotReady(io, "not_dir");
     return;
   }
 
   // Rows go out as the cursor yields them; the blank line is the only terminator.
   io.print("ok\n");
-  Storage::Entry entry;
-  while (storage.nextEntry(directory, entry)) {
-    io.print(entry.directory ? "dir " : "file ");
-    io.print(entry.name);
+  while (true) {
+    File entry = directory.openNextFile();
+    if (!entry) break;
+    io.print(entry.isDirectory() ? "dir " : "file ");
+    io.print(entry.name());
     io.print('\n');
+    entry.close();
   }
-  storage.closeDirectory(directory);
+  directory.close();
   io.print('\n');
 }
 
@@ -206,34 +247,33 @@ void FsDomain::read(Stream& io, const String& args) {
     return;
   }
 
-  Storage& storage = app_.storage();
-  if (!storage.exists(path.c_str())) {
+  if (!LittleFS.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
-  if (storage.isDirectory(path.c_str())) {
+
+  File file = LittleFS.open(path.c_str(), "r");
+  if (!file) {
+    replyNotReady(io, "io");
+    return;
+  }
+  if (file.isDirectory()) {
+    file.close();
     replyNotReady(io, "is_dir");
     return;
   }
 
-  const size_t bytes = storage.size(path.c_str());
-  Storage::ReadHandle* handle = storage.openRead(path.c_str());
-  if (handle == nullptr) {
-    replyNotReady(io, "io");
-    return;
-  }
-
   io.print("ok bytes=");
-  io.print((uint32_t)bytes);
+  io.print((uint32_t)file.size());
   io.print('\n');
 
   uint8_t buffer[kCopyChunk];
   while (true) {
-    const size_t got = storage.readChunk(handle, buffer, sizeof(buffer));
+    const size_t got = file.read(buffer, sizeof(buffer));
     if (got == 0) break;
     io.write(buffer, got);
   }
-  storage.closeRead(handle);
+  file.close();
 }
 
 void FsDomain::write(Stream& io, const String& args) {
@@ -284,44 +324,51 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  Storage& storage = app_.storage();
-  if (storage.isDirectory(path.c_str())) {
+  if (isDirectory(path.c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "is_dir");
     return;
   }
-  if (!storage.isDirectory(parentOf(path).c_str())) {
+  if (!isDirectory(parentOf(path).c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "no_parent");
     return;
   }
-  size_t capacity = storage.freeBytes();
-  if (storage.exists(path.c_str())) capacity += storage.size(path.c_str());
+  // Overwriting may reuse the room the old file holds, so its size counts as free.
+  const size_t total = LittleFS.totalBytes();
+  const size_t used = LittleFS.usedBytes();
+  size_t capacity = used < total ? total - used : 0;
+  File existing = LittleFS.open(path.c_str());
+  if (existing) {
+    capacity += (size_t)existing.size();
+    existing.close();
+  }
   if (bytes > capacity) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "no_space");
     return;
   }
 
-  Storage::WriteHandle* handle = storage.openWrite(path.c_str());
-  if (handle == nullptr) {
+  File file = LittleFS.open(path.c_str(), "w");
+  if (!file) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "io");
     return;
   }
 
-  const Payload result = readPayload(io, bytes, handle);
-  if (result == Payload::Idle) {
-    storage.abortWrite(handle);
-    replyBadArgument(io, "");
+  const Payload result = readPayload(io, bytes, &file);
+  if (result != Payload::Complete) {
+    // A short or abandoned body leaves nothing behind: the partial file is removed.
+    file.close();
+    LittleFS.remove(path.c_str());
+    if (result == Payload::Idle) {
+      replyBadArgument(io, "");
+    } else {
+      replyNotReady(io, "io");
+    }
     return;
   }
-  if (result == Payload::WriteFailed) {
-    storage.abortWrite(handle);
-    replyNotReady(io, "io");
-    return;
-  }
-  storage.closeWrite(handle);
+  file.close();
   io.print("ok\n");
 }
 
@@ -337,16 +384,15 @@ void FsDomain::makeDirectory(Stream& io, const String& args) {
     return;
   }
 
-  Storage& storage = app_.storage();
-  if (storage.exists(path.c_str())) {
+  if (LittleFS.exists(path.c_str())) {
     replyNotReady(io, "exists");
     return;
   }
-  if (!storage.isDirectory(parentOf(path).c_str())) {
+  if (!isDirectory(parentOf(path).c_str())) {
     replyNotReady(io, "no_parent");
     return;
   }
-  if (!storage.makeDirectory(path.c_str())) {
+  if (!LittleFS.mkdir(path.c_str())) {
     replyNotReady(io, "io");
     return;
   }
@@ -369,21 +415,18 @@ void FsDomain::remove(Stream& io, const String& args) {
     return;
   }
 
-  Storage& storage = app_.storage();
-  if (!storage.exists(path.c_str())) {
+  if (!LittleFS.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
-
-  size_t removed = 0;
-  if (!storage.remove(path.c_str(), removed)) {
+  if (!removePath(path.c_str())) {
     replyNotReady(io, "io");
     return;
   }
   io.print("ok\n");
 }
 
-FsDomain::Payload FsDomain::readPayload(Stream& io, uint32_t bytes, Storage::WriteHandle* handle) {
+FsDomain::Payload FsDomain::readPayload(Stream& io, uint32_t bytes, File* file) {
   uint8_t buffer[kCopyChunk];
   size_t filled = 0;
   uint32_t received = 0;
@@ -401,16 +444,16 @@ FsDomain::Payload FsDomain::readPayload(Stream& io, uint32_t bytes, Storage::Wri
     last = millis();
     received++;
 
-    if (handle == nullptr) continue;
+    if (file == nullptr) continue;
     buffer[filled++] = (uint8_t)value;
     if (filled == sizeof(buffer)) {
-      if (!app_.storage().writeChunk(handle, buffer, filled)) return Payload::WriteFailed;
+      if (file->write(buffer, filled) != filled) return Payload::WriteFailed;
       filled = 0;
     }
   }
 
-  if (handle != nullptr && filled > 0) {
-    if (!app_.storage().writeChunk(handle, buffer, filled)) return Payload::WriteFailed;
+  if (file != nullptr && filled > 0) {
+    if (file->write(buffer, filled) != filled) return Payload::WriteFailed;
   }
 
   // The newline is optional and may still be in flight; if it arrives later, the link ignores the

@@ -7,7 +7,6 @@
 #include "Ownership.h"
 #include "PanelContext.h"
 #include "SafeReboot.h"
-#include "StoreBus.h"
 #include "Tasks.h"
 #include "panel/ConnectedUI.h"
 #include "panel/DisconnectedUI.h"
@@ -160,11 +159,10 @@ void panelTask(void* arg) {
       if (state.ui) state.ui->begin();
     }
 
-    // The panel's own beat: the gauge, the buzzer and the store drain, then the glass.
+    // The panel's own beat: the gauge and the buzzer, then the glass.
     const uint32_t now = millis();
     state.context.battery().update(now);
     state.context.buzzer().update(now);
-    state.context.storeServer().drain();
 
     // The overlay reports the ways in; the interface owner publishes the two booleans, and the
     // pages redraw themselves on the refresh cadence.

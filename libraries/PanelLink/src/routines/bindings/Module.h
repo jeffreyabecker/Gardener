@@ -7,7 +7,6 @@ namespace gardener {
 class PanelContext;
 class Routines;
 class Logger;
-class StoreClient;
 
 namespace berry {
 
@@ -16,7 +15,6 @@ namespace berry {
 extern PanelContext* gContext;
 extern Routines* gRoutines;
 extern Logger* gLogger;
-extern StoreClient* gStore;
 
 // --- building a module -----------------------------------------------------
 

@@ -1,5 +1,4 @@
 #include "PanelContext.h"
-#include "StoreBus.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 #include "core/Units.h"
@@ -27,7 +26,7 @@ int deviceSetUnit(bvm* vm) {
   DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
       be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
-  if (accepted && gStore != nullptr) gStore->setUnit(unit);
+  if (accepted) gContext->settings().setUnit(unit);
   be_pushbool(vm, accepted);
   be_return(vm);
 }
@@ -40,7 +39,7 @@ int deviceTarget(bvm* vm) {
 }
 
 int deviceSetTarget(bvm* vm) {
-  if (gStore != nullptr) gStore->setTarget((float)argReal(vm, 1));
+  gContext->settings().setTarget((float)argReal(vm, 1));
   be_return_nil(vm);
 }
 
@@ -52,7 +51,7 @@ int deviceBluetooth(bvm* vm) {
 }
 
 int deviceSetBluetooth(bvm* vm) {
-  if (be_isbool(vm, 1) && gStore != nullptr) gStore->setBluetooth(be_tobool(vm, 1));
+  if (be_isbool(vm, 1)) gContext->settings().setBluetooth(be_tobool(vm, 1));
   be_return_nil(vm);
 }
 
@@ -69,7 +68,7 @@ int deviceSetJingle(bvm* vm) {
   if (!be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "device.set_jingle(id)");
   }
-  if (gStore != nullptr) gStore->setJingle(String(argText(vm, 1)));
+  gContext->settings().setJingle(String(argText(vm, 1)));
   be_return_nil(vm);
 }
 

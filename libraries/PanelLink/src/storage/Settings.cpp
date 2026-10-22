@@ -1,5 +1,6 @@
 #include "storage/Settings.h"
 
+#include <LittleFS.h>
 #include <string.h>
 
 #include "core/Parse.h"
@@ -17,14 +18,21 @@ constexpr const char* kJingleKey = "jingle";
 
 }  // namespace
 
-Settings::Settings(Storage& storage) : storage_(storage) {}
+void Settings::save() const {
+  File file = LittleFS.open(kPath, "w");
+  if (!file) return;
+  file.print(ini_.text());
+  file.close();
+}
 
 // Reading is best effort: a file that is not there, does not parse, or names a unit or target this
 // revision does not understand leaves the defaults in place. Nothing about a boot depends on the
 // answer.
 void Settings::begin() {
-  String text;
-  if (!storage_.read(kPath, text)) return;
+  File file = LittleFS.open(kPath, "r");
+  if (!file) return;
+  String text = file.readString();
+  file.close();
 
   ini_.parse(text);
   String token = ini_.get(kSection, kUnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
@@ -56,7 +64,7 @@ void Settings::setUnit(DisplayUnit unit) {
   if (unit == unit_) return;
   unit_ = unit;
   ini_.set(kSection, kUnitKey, displayUnitInfo(unit).name);
-  storage_.write(kPath, ini_.text());
+  save();
 }
 
 float Settings::targetKpa() const { return targetKpa_; }
@@ -67,7 +75,7 @@ void Settings::setTarget(float kpa) {
   if (kpa == targetKpa_) return;
   targetKpa_ = kpa;
   ini_.set(kSection, kTargetKey, String(kpa, 2u));
-  storage_.write(kPath, ini_.text());
+  save();
 }
 
 bool Settings::bluetoothEnabled() const { return bluetooth_; }
@@ -76,7 +84,7 @@ void Settings::setBluetooth(bool enabled) {
   if (enabled == bluetooth_) return;
   bluetooth_ = enabled;
   ini_.set(kSection, kBluetoothKey, enabled ? "on" : "off");
-  storage_.write(kPath, ini_.text());
+  save();
 }
 
 bool Settings::logEnabled() const { return log_; }
@@ -85,7 +93,7 @@ void Settings::setLogEnabled(bool enabled) {
   if (enabled == log_) return;
   log_ = enabled;
   ini_.set(kSection, kLogKey, enabled ? "on" : "off");
-  storage_.write(kPath, ini_.text());
+  save();
 }
 
 String Settings::jingle() const { return String(jingle_); }
@@ -97,7 +105,7 @@ void Settings::setJingle(const String& id) {
   memset(jingle_, 0, sizeof jingle_);
   id.toCharArray(jingle_, sizeof jingle_);
   ini_.set(kSection, kJingleKey, id);
-  storage_.write(kPath, ini_.text());
+  save();
 }
 
 }  // namespace gardener

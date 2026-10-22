@@ -13,7 +13,6 @@ namespace berry {
 PanelContext* gContext = nullptr;
 Routines* gRoutines = nullptr;
 Logger* gLogger = nullptr;
-StoreClient* gStore = nullptr;
 
 namespace {
 
@@ -62,11 +61,10 @@ constexpr const char* kRecords =
 
 }  // namespace
 
-void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger, StoreClient& store) {
+void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger) {
   gContext = &context;
   gRoutines = &routines;
   gLogger = &logger;
-  gStore = &store;
 
   installVacuumModule(vm);
   installScreenModule(vm);

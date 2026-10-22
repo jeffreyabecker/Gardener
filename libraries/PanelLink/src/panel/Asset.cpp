@@ -1,9 +1,9 @@
 #include "panel/Asset.h"
 
+#include <LittleFS.h>
 #include <RLEBitmap.h>
 #include <string.h>
 
-#include "storage/Storage.h"
 #include "hal/Display.h"
 
 namespace gardener {
@@ -55,16 +55,25 @@ bool readInfo(const uint8_t* bytes, size_t length, RLEBitmapInfo& info) {
 
 }  // namespace
 
-void drawAsset(Display& display, Storage& storage, const char* path, int16_t x, int16_t y) {
-  const size_t size = storage.size(path);
-  if (size <= kHeaderBytes) return;
+void drawAsset(Display& display, const char* path, int16_t x, int16_t y) {
+  File file = LittleFS.open(path, "r");
+  if (!file) return;
+  const size_t size = (size_t)file.size();
+  if (size <= kHeaderBytes) {
+    file.close();
+    return;
+  }
 
   uint8_t* bytes = new uint8_t[size];
-  if (bytes == nullptr) return;
+  if (bytes == nullptr) {
+    file.close();
+    return;
+  }
+  const size_t got = file.read(bytes, size);
+  file.close();
 
-  size_t got = 0;
   RLEBitmapInfo info{};
-  if (storage.read(path, bytes, size, got) && readInfo(bytes, got, info)) {
+  if (got > kHeaderBytes && readInfo(bytes, got, info)) {
     InkContext context(display);
     renderRLEBitmap(info, x, y, &context, true);
   }

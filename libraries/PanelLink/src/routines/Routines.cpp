@@ -1,15 +1,14 @@
 #include "routines/Routines.h"
 
+#include <LittleFS.h>
 #include <berry.h>
 #include <stdio.h>
 
 #include "PanelContext.h"
 #include "Logger.h"
-#include "StoreBus.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
 #include "storage/Ini.h"
-#include "storage/Storage.h"
 
 namespace gardener {
 namespace {
@@ -30,6 +29,14 @@ void iconKey(char* out, size_t size, size_t slot) {
 // is cleared as soon as the switch is applied. Nothing else about an activation is retained.
 constexpr const char* kPendingSettingsKey = "__routinePendingSettings";
 
+// A routine's values live beside its source, named after it.
+String routineValuesPath(const char* routine) {
+  String path = "/routines/";
+  path += routine;
+  path += ".ini";
+  return path;
+}
+
 // A routine has to look like one before it is kept, so a file that registers something else is
 // refused at load rather than discovered on the first poll.
 bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
@@ -42,23 +49,22 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(PanelContext& context, Storage& storage, Logger& logger, StoreClient& store) {
+bool Routines::begin(PanelContext& context, Logger& logger) {
   logger_ = &logger;
-  store_ = &store;
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
     logger.error("vm: no memory, routines off");
     return false;
   }
-  berry::install(vm_, context, *this, logger, *store_);
+  berry::install(vm_, context, *this, logger);
 
   // Modules first: a page may construct a class one of them defines, so those files have to have
   // run before the pages do.
   size_t moduleFiles = 0;
-  const size_t modules = loadAll(storage, "/modules", moduleFiles);
+  const size_t modules = loadAll("/modules", moduleFiles);
   size_t routineFiles = 0;
-  const size_t pages = loadAll(storage, "/routines", routineFiles);
+  const size_t pages = loadAll("/routines", routineFiles);
 
   const size_t files = moduleFiles + routineFiles;
   String summary = "vm: ";
@@ -104,9 +110,21 @@ bool Routines::showDefault() {
 
 // --- loading ---------------------------------------------------------------
 
-size_t Routines::loadAll(Storage& storage, const char* dir, size_t& found) {
+size_t Routines::loadAll(const char* dir, size_t& found) {
   std::vector<String> files;
-  storage.list(dir, ".be", files);
+  File folder = LittleFS.open(dir);
+  if (folder.isDirectory()) {
+    while (true) {
+      File file = folder.openNextFile();
+      if (!file) break;
+      if (!file.isDirectory()) {
+        String name = file.name();
+        if (name.endsWith(".be")) files.push_back(name);
+      }
+      file.close();
+    }
+  }
+  folder.close();
   found = files.size();
 
   size_t loaded = 0;
@@ -114,20 +132,22 @@ size_t Routines::loadAll(Storage& storage, const char* dir, size_t& found) {
     String path = dir;
     path += '/';
     path += file;
-    if (loadFile(storage, path)) loaded++;
+    if (loadFile(path)) loaded++;
   }
   return loaded;
 }
 
-bool Routines::loadFile(Storage& storage, const String& path) {
-  String source;
-  if (!storage.read(path.c_str(), source)) {
+bool Routines::loadFile(const String& path) {
+  File file = LittleFS.open(path.c_str(), "r");
+  if (!file) {
     String message = "vm: ";
     message += path;
     message += " unreadable";
     logger_->error(message.c_str());
     return false;
   }
+  String source = file.readString();
+  file.close();
 
   // Every entry records the stack depth it started at: a failure leaves whatever the interpreter
   // put there, and the VM is restored rather than trusted to be balanced.
@@ -489,14 +509,41 @@ bool Routines::storeSet(const char* key, const String& value) {
 
 bool Routines::storeGet(const char* routine, const char* key, String& out) {
   // Only a registered name is an address: a caller that names another routine cannot reach a file
-  // that is not one of the pages the device loaded. The read itself is the store client's.
-  if (store_ == nullptr || key == nullptr || !isRegistered(routine)) return false;
-  return store_->get(routine, key, out);
+  // that is not one of the pages the device loaded.
+  if (key == nullptr || !isRegistered(routine)) return false;
+
+  File file = LittleFS.open(routineValuesPath(routine).c_str(), "r");
+  if (!file) return false;
+  Ini values;
+  values.parse(file.readString());
+  file.close();
+
+  if (!values.has("", key)) return false;
+  out = values.get("", key, "");
+  return true;
 }
 
 bool Routines::storeSet(const char* routine, const char* key, const String& value) {
-  if (store_ == nullptr || key == nullptr || !isRegistered(routine)) return false;
-  return store_->set(routine, key, value);
+  if (key == nullptr || !isRegistered(routine)) return false;
+
+  const String path = routineValuesPath(routine);
+  Ini values;
+  File file = LittleFS.open(path.c_str(), "r");
+  if (file) {
+    values.parse(file.readString());
+    file.close();
+  }
+
+  // A repeat value is not worth a flash write.
+  if (values.has("", key) && values.get("", key, "") == value) return true;
+  if (!values.set("", key, value)) return false;
+
+  File out = LittleFS.open(path.c_str(), "w");
+  if (!out) return false;
+  const String text = values.text();
+  const bool written = out.print(text) == text.length();
+  out.close();
+  return written;
 }
 
 }  // namespace gardener

@@ -6,6 +6,7 @@
 // machine's and the panel's domains on them, brings the machine and the panel up, and starts the
 // three tasks. A build with no panel does the same with two tasks and no panel domain.
 
+#include <LittleFS.h>
 #include <PanelLink.h>
 
 namespace {
@@ -22,10 +23,18 @@ void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
   delay(200);
 
-  // The files and the persisted knobs come up first. Storage and settings are the panel's, but the
-  // knobs they persist — the radio and the diagnostics — are the machine's, so they are read into
-  // the machine's config and the logger is picked before either boot.
-  gardener::Storage::Mount mount = context.storage().begin();
+  // The device's files are on the LittleFS partition the build reserves. It is mounted once here,
+  // before anything reads one; a partition that will not mount is formatted once, because a fresh
+  // partition is not a fault.
+  bool mounted = LittleFS.begin(false);
+  bool formatted = false;
+  if (!mounted) {
+    formatted = LittleFS.format() && LittleFS.begin(false);
+    mounted = formatted;
+  }
+
+  // The persisted knobs are the machine's, so they are read into its config and the logger is
+  // picked before either boot.
   context.settings().begin();
   context.config().bluetooth = context.settings().bluetoothEnabled();
   context.config().diagnostics = context.settings().logEnabled();
@@ -33,6 +42,19 @@ void setup() {
       context.config().diagnostics
           ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
           : static_cast<gardener::Logger*>(new gardener::NilLogger());
+
+  if (mounted) {
+    logger->info(formatted ? "fs: littlefs formatted, no filesystem found"
+                           : "fs: littlefs mounted");
+    String usage = "fs: ";
+    usage += String((uint32_t)LittleFS.usedBytes());
+    usage += " of ";
+    usage += String((uint32_t)LittleFS.totalBytes());
+    usage += " bytes used";
+    logger->info(usage.c_str());
+  } else {
+    logger->warn("fs: littlefs mount failed, settings will not persist");
+  }
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel context is a machine context, so the same object
@@ -65,7 +87,7 @@ void setup() {
 
   // The parts, then the tasks that drive them.
   gardener::machineBoot(context, *logger);
-  gardener::panelBoot(context, *logger, mount);
+  gardener::panelBoot(context, *logger);
 
   auto* connected = new gardener::ConnectedUI(context);
   auto* disconnected = new gardener::DisconnectedUI(context);

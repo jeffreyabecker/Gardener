@@ -8,16 +8,13 @@
 
 #include "hal/Button.h"
 
-// The vendored interpreter's VM type, forward declared so its header stops here the way LittleFS.h
-// stops at Storage.cpp.
+// The vendored interpreter's VM type, forward declared so its header stops here.
 struct bvm;
 
 namespace gardener {
 
 class PanelContext;
-class Storage;
 class Logger;
-class StoreClient;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
 // that is active.
@@ -37,9 +34,8 @@ class Routines {
 
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
-  // False only when the interpreter cannot be allocated at all. `store` is the client the runtime
-  // uses for the VM's flash and settings writes.
-  bool begin(PanelContext& context, Storage& storage, Logger& logger, StoreClient& store);
+  // False only when the interpreter cannot be allocated at all.
+  bool begin(PanelContext& context, Logger& logger);
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.
@@ -95,8 +91,8 @@ class Routines {
   bool takeStopped();
 
   // --- the `store` module's surface ---
-  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. Reads and
-  // writes round-trip through the store client, because LittleFS has one owner and the VM does not.
+  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. The file is
+  // read and written here, on the panel task the VM already runs on.
   //
   // `storeGet` is false when there is no active routine or nothing is stored under the key;
   // `storeSet` is false when there is no active routine or the file would not take the write. The
@@ -119,8 +115,8 @@ class Routines {
     Press press;
   };
 
-  size_t loadAll(Storage& storage, const char* dir, size_t& found);
-  bool loadFile(Storage& storage, const String& path);
+  size_t loadAll(const char* dir, size_t& found);
+  bool loadFile(const String& path);
   bool startActive(int settingsIndex = 0);
   void reportError(const char* file, const char* what);
   bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs,
@@ -133,7 +129,6 @@ class Routines {
 
   bvm* vm_ = nullptr;
   Logger* logger_ = nullptr;
-  StoreClient* store_ = nullptr;
   // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
   // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
   // the device is up.

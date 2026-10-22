@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <LittleFS.h>
 
 #include <vector>
 
@@ -7,7 +8,6 @@
 #include "Logger.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "storage/Storage.h"
 
 namespace gardener {
 namespace berry {
@@ -53,13 +53,14 @@ void report(const char* what, const String& id) {
 // than when a routine asks for it.
 void loadJingles() {
   jingles.clear();
-  if (gContext == nullptr) return;
 
-  String text;
-  if (!gContext->storage().read(kJinglePath, text)) {
+  File file = LittleFS.open(kJinglePath, "r");
+  if (!file) {
     report("missing", "");
     return;
   }
+  String text = file.readString();
+  file.close();
 
   int start = 0;
   while (start <= (int)text.length()) {
