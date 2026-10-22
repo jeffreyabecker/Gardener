@@ -42,15 +42,14 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
 
 **Connecting is not controlling.** A link that has only connected can read; every writing verb is
-refused with `err not_controlling` until the link sends `control acquire` (§5). One link owns the
-device at a time, and `control release` is the graceful exit: it stops and vents, then returns the
-panel to the disconnected page.
+refused with `err not_controlling` until the link sends `control acquire` (§5). One link drives at a
+time, and `control release` is the graceful exit: the link leaves the stack, which vents, and the
+panel returns to its own page.
 
-If the port disappears while the link owns the device, the machine keeps its state and the
-ownership record stays held. A reconnected link is a read-only observer until the local reset
-(Back+OK for 5 s) clears the record ([vacuum control](./vacuum-control.md)). The device can only
-notice a drop when the stream reports host presence, which USB CDC can and a plain UART cannot;
-there is no command that sets or reports presence.
+If the port disappears while the link drives, the link is removed from the stack: the chamber vents
+and control falls to the link beneath, so a reconnected link is a reader until it claims again. The
+device can only notice a drop when the stream reports host presence, which USB CDC can and a plain
+UART cannot; there is no command that sets or reports presence.
 
 ## 3. Grammar
 
@@ -120,7 +119,8 @@ the machine at once. Whoever is on top drives; a link that is not on top is a re
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
-| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there || `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
+| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there |
+| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
 
 The reply names the top rather than answering "owned by you or not", so a controller can tell
 whether the machine is being driven by the panel or by another link. `none` is the floor: no link
@@ -178,7 +178,7 @@ not touch the machine.
 
 ```
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> device get
 <- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa caps=3
 -> device set log off
@@ -243,7 +243,7 @@ device to stop and vent (§5).
 -> vacuum get
 <- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> vacuum target 40
 <- ok target=40.0
 -> vacuum start
@@ -292,7 +292,7 @@ connected observer.
 -> buzzer get
 <- ok tone=- playing=off
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> buzzer tone 2000 500
 <- ok tone=2000,500
 -> buzzer get
@@ -350,7 +350,7 @@ body before replying.
 <- ok bytes=12
 <- [12 raw bytes]
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> fs write /routines/new.ini 5
 <- ok
 -> fs mkdir /assets/icons
@@ -406,7 +406,7 @@ prose. The detail is a bare token when the code names one thing, and items when 
 -> vacuum start
 <- err not_controlling
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> vacuum start
 <- err not_ready no_target
 -> vacuum target 1
