@@ -289,7 +289,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   its stop being ownership.
 - [x] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
-- [ ] 7.13 Bring the rest of [serial-protocol.md](../specs/serial-protocol.md) onto the stack: the
+- [x] 7.13 Bring the rest of [serial-protocol.md](../specs/serial-protocol.md) onto the stack: the
   connecting rules and the worked examples that still answer `ok control=owned`.
 - [ ] 7.14 Bring the remaining specs onto the stack: the Back+OK lines in
   [vacuum-control.md](../specs/vacuum-control.md) and [bindings.md](../specs/ui/bindings.md) that say
