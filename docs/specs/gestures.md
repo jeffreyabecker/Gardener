@@ -92,9 +92,10 @@ Up and Down are the page's own. A double on either is one event and moves once, 
 not distinguish it simply treats it as that key; a page may give the double a meaning of its own,
 and no other page is required to take it.
 
-While a controller owns the device there is no routine page: presses are logged (`btn: ok short`)
-and only the Back hold and the Back+OK reset still act. A link that is connected but has not
-acquired control leaves the disconnected page — and its routine — in place.
+While an external link drives the machine there is no routine page: presses are logged (`btn: ok
+short`) and only Back+OK still acts, since Back is the panel's own release and the panel is not
+driving. A link that is connected but has not claimed anything leaves the disconnected page — and
+its routine — in place.
 
 ## Rules for a page
 
