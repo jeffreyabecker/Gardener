@@ -43,13 +43,11 @@ void setup() {
   serial->registerDomain(gardener::createControlDomain(machine, *serial));
   serial->registerDomain(gardener::createVacuumDomain(machine, *serial));
   serial->registerDomain(gardener::createMachineDeviceDomain(machine, *serial));
-#if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink(&machine);
   ble->registerDomain(new gardener::MachineBleDomain(&machine));
-#endif
+
 
   serial->begin();
-#if GARDENER_BLUETOOTH
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
   // up. It comes up before the ready line so that line reports the heap the firmware runs with.
   switch (ble->begin()) {
@@ -60,15 +58,10 @@ void setup() {
       logger->warn("ble: start failed, serial only");
       break;
   }
-#endif
 
   // The parts, then the two tasks that drive them.
   machine.boot();
-#if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(machine, serial, ble);
-#else
-  gardener::spawnMachineTasks(machine, serial);
-#endif
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
