@@ -25,7 +25,7 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 1 — The shift-register reader
 
-- [ ] **1. Name the six keys.** `Button` gains `Forward` and `Cancel`, declared in the order the keys
+- [x] **1. Name the six keys.** `Button` gains `Forward` and `Cancel`, declared in the order the keys
   sit on the panel, and a count replaces the `4` the classifier spells in its arrays, masks and
   loops. `buttonName()` answers all six, and the panel task's press order lists all six so a press
   is still reported in panel order. The two new keys simply never produce a press yet. Done when the

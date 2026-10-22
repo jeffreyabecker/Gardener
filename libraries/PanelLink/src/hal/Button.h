@@ -4,15 +4,20 @@
 
 namespace gardener {
 
-// The keys the front panel's 5-way switch exposes to this rig.
-enum class Button : uint8_t { Up, Down, Ok, Back };
+// The keys on the front panel, declared in the order they sit on it. A gesture's parts are reported
+// in panel order, so the declaration is the order.
+enum class Button : uint8_t { Up, Down, Forward, Back, Ok, Cancel };
+
+inline constexpr uint8_t ButtonCount = 6;
 
 inline const char* buttonName(Button button) {
   switch (button) {
     case Button::Up: return "up";
     case Button::Down: return "down";
-    case Button::Ok: return "ok";
+    case Button::Forward: return "forward";
     case Button::Back: return "back";
+    case Button::Ok: return "ok";
+    case Button::Cancel: return "cancel";
     default: return "?";
   }
 }
