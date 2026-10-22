@@ -41,7 +41,7 @@ well inside one channel.
 | ESP32-S3 Super Mini | Retained by request. Two female headers; USB-C at the board edge. |
 | 3.3 V buck | Retained by request. Header pins mate with a 0.1" female header; check pitch and pin order. Its output is the load rail. |
 | OLED | Panel part; a 4-pin header is the right amount of integration. |
-| Button module | Mechanical; a header carrying 3.3 V, GND and five keys keeps it panel-mountable. The firmware reads four keys today; GPIO12, the fifth key's pin on the POC rig, drives the piezo instead. |
+| Six keys + 74HC165 | [The six-key panel plan](./six-key-panel.md) supersedes the bought module: the board carries six switches and one shift register, so the panel needs three signal pins and a supply pair instead of six GPIOs. |
 | Pump, valve, tube, tee | Off-board by nature. |
 
 The breadboard and jumpers are gone; the board is what replaces them.

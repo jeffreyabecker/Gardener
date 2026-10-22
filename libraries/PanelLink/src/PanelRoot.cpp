@@ -33,7 +33,7 @@ constexpr int16_t kPanelNoResetLine = -1;
 Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, Library& library,
                       const PanelPins& pins) {
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
-  auto* buttons = new Buttons(pins.up, pins.down, pins.ok, pins.back);
+  auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
   auto* buzzerPart = new PwmBuzzer(pins.buzzerPwm);
   auto* buzzer = new BuzzerPlayer(*buzzerPart);

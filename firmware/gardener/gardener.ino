@@ -21,10 +21,9 @@ constexpr gardener::PanelPins Board{
     .buzzerPwm = 12,
     .batteryAdc = 4,
     .batteryDivider = 2.0f,
-    .up = 1,
-    .down = 2,
-    .ok = 10,
-    .back = 11,
+    .keyLatch = 10,
+    .keyClock = 11,
+    .keyData = 1,
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
