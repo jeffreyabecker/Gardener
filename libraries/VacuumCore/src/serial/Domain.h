@@ -6,6 +6,10 @@
 
 namespace gardener {
 
+// The longest command line a domain serves: the link refuses a longer one, and so does each domain
+// handed one. A command body, when a domain defines one, is not bounded here.
+constexpr uint16_t COMMAND_LINE_MAX = 128;
+
 class Link;
 
 // One domain of the serial surface. The dispatcher reads only the domain token, then hands it the

@@ -76,7 +76,7 @@ keep in step. The panel is a machine with its parts arranged around it, so it ne
 for the machine.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
-no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the
+no compile-time flag, no `mode` field for a behaviour nothing uses. Add the second case when the
 second case arrives.
 
 **Delete, don't deprecate.** Unused code goes to git — not behind `#if 0`, not in a `legacy/`

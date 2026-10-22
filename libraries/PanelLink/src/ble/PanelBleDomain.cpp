@@ -2,7 +2,7 @@
 
 #include "Panel.h"
 #include "ble/BleLink.h"
-#include "core/Units.h"
+#include "panel/Units.h"
 
 namespace gardener {
 namespace {

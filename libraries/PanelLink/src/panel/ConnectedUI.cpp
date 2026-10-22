@@ -2,7 +2,7 @@
 
 #include "Ownership.h"
 #include "ble/BleLink.h"
-#include "core/Config.h"
+#include "panel/UI.h"
 #include "serial/SerialLink.h"
 
 namespace gardener {
@@ -30,7 +30,7 @@ bool ConnectedUI::begin() {
 // while frames keep arriving.
 void ConnectedUI::update() {
   uint32_t now = millis();
-  if (now - lastFrameMs_ < cfg::UI_REFRESH_MS) return;
+  if (now - lastFrameMs_ < RefreshMs) return;
   lastFrameMs_ = now;
   drawFrame();
 }

@@ -2,9 +2,9 @@
 
 #include "Panel.h"
 #include "panel/Fonts.h"
+#include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "core/Units.h"
 
 namespace gardener {
 namespace berry {
@@ -166,7 +166,7 @@ int screenBounds(bvm* vm) {
   be_return(vm);
 }
 
-// The unit the panel prints, as the same fields core/Units.h holds: a page formats and steps a
+// The unit the panel prints, as the same fields panel/Units.h holds: a page formats and steps a
 // target in the unit on the glass without carrying a table of its own.
 int screenUnit(bvm* vm) {
   const DisplayUnit unit = gContext->settings().unit();

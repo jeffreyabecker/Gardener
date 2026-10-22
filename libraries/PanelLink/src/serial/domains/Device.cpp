@@ -4,13 +4,12 @@
 
 #include "Panel.h"
 #include "Tasks.h"
-#include "serial/Domain.h"
-#include "serial/Gate.h"
-#include "core/Config.h"
-#include "core/Parse.h"
-#include "core/Units.h"
+#include "core/Version.h"
 #include "hal/Battery.h"
 #include "hal/Display.h"
+#include "panel/Units.h"
+#include "serial/Domain.h"
+#include "serial/Gate.h"
 
 namespace gardener {
 namespace {
@@ -38,7 +37,7 @@ class DeviceDomain : public Domain {
 void DeviceDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     io.print("err bad_argument\n");
     return;
   }
@@ -144,8 +143,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
   }
 
   if (field.equalsIgnoreCase("log")) {
-    bool enabled = false;
-    if (!parseFlag(value.c_str(), enabled)) {
+    const bool enabled = value.equalsIgnoreCase("on");
+    if (!enabled && !value.equalsIgnoreCase("off")) {
       io.print("err bad_argument ");
       io.print(value);
       io.print('\n');

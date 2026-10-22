@@ -6,8 +6,8 @@
 #include "SafeReboot.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
+#include "core/Control.h"
 #include "serial/SerialLink.h"
-#include "core/Config.h"
 
 namespace gardener {
 

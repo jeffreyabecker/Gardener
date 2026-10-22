@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <type_traits>
 
-#include "core/Config.h"
+#include "hal/Buzzer.h"
 
 namespace gardener {
 namespace {
@@ -28,7 +28,7 @@ bool PwmBuzzer::begin() {
 }
 
 void PwmBuzzer::tone(uint16_t hz) {
-  if (hz == 0 || hz < cfg::BUZZER_MIN_HZ || hz > cfg::BUZZER_MAX_HZ) {
+  if (hz == 0 || hz < BuzzerMinHz || hz > BuzzerMaxHz) {
     off();
     return;
   }

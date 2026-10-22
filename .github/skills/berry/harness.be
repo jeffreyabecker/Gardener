@@ -12,7 +12,7 @@
 
 import string
 
-# --- the unit table, from core/Units.h -------------------------------------
+# --- the unit table, from panel/Units.h ------------------------------------
 
 harnessUnits = [
   {"name": "kpa", "suffix": "kPa", "per_kpa": 1.0, "whole_step": 1.0, "decimals": 1},

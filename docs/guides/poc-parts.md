@@ -237,8 +237,8 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
 * The sensor's range is -100 kPa, so a pump that pulls deeper saturates the reading. Check the
   pump's ultimate vacuum on its datasheet; a single-stage diaphragm pump lands inside the sensor,
   a two-stage one may not.
-* The pump's measured reach is the `floor`, so set `PUMP_MAX_SUCTION_KPA` in
-  [core/Config.h](../../libraries/VacuumCore/src/core/Config.h) after measuring it. The PID gains
+* The pump's measured reach is the `floor`, so set `CONTROL_FLOOR_KPA` in
+  [core/Control.h](../../libraries/VacuumCore/src/core/Control.h) after measuring it. The PID gains
   and `CONTROL_DEADBAND_KPA` are tuned for the 5 V pump and chamber; retune them for the new flow.
   `PUMP_DUTY_MAX_PERCENT` is 90 %, which is 10.8 V here; keep it unless the pump's datasheet
   allows continuous 12 V. `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a

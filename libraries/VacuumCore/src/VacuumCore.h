@@ -12,5 +12,7 @@
 #include "ble/MachineBleDomain.h"
 #include "serial/Domains.h"
 #include "serial/SerialLink.h"
-#include "core/Config.h"
+#include "core/Board.h"
+#include "core/Control.h"
+#include "core/Version.h"
 #include "storage/Settings.h"

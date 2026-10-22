@@ -5,7 +5,6 @@
 #include "Machine.h"
 #include "VacuumSystem.h"
 #include "serial/Domain.h"
-#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -33,7 +32,7 @@ class ControlDomain : public Domain {
 void ControlDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     io.print("err bad_argument\n");
     return;
   }

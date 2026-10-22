@@ -9,14 +9,17 @@
 #include "Panel.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
-#include "core/Config.h"
-#include "core/Parse.h"
 #include "storage/Settings.h"
 
 namespace gardener {
 namespace {
 
 constexpr size_t kCopyChunk = 512;
+
+// The serial `fs` domain's write body. The declared byte count is authoritative and is capped here;
+// a body that stops arriving for this long is abandoned and its partial file removed.
+constexpr uint32_t WriteMaxBytes = 1024 * 1024;
+constexpr uint32_t WriteIdleMs = 2000;
 
 // The next bare token, and whether there was one. Paths are one token, so nothing here takes the
 // rest of the line.
@@ -164,7 +167,7 @@ class FsDomain : public Domain {
 void FsDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     replyBadArgument(io, "");
     return;
   }
@@ -297,16 +300,17 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  uint32_t bytes = 0;
-  if (!parseU32(bytesText.c_str(), bytes)) {
+  const long declared = bytesText.toInt();
+  if (declared < 0) {
     replyBadArgument(io, bytesText);
     return;
   }
-  if (bytes > cfg::FS_WRITE_MAX_BYTES) {
+  const uint32_t bytes = (uint32_t)declared;
+  if (bytes > WriteMaxBytes) {
     io.print("err out_of_range field=bytes value=");
     io.print(bytesText);
     io.print(" max=");
-    io.print((uint32_t)cfg::FS_WRITE_MAX_BYTES);
+    io.print((uint32_t)WriteMaxBytes);
     io.print('\n');
     return;
   }
@@ -435,7 +439,7 @@ FsDomain::Payload FsDomain::readPayload(Stream& io, uint32_t bytes, File* file) 
 
   while (received < bytes) {
     if (io.available() <= 0) {
-      if ((uint32_t)(millis() - last) >= cfg::FS_WRITE_IDLE_MS) return Payload::Idle;
+      if ((uint32_t)(millis() - last) >= WriteIdleMs) return Payload::Idle;
       delay(1);
       continue;
     }

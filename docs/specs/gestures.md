@@ -25,7 +25,7 @@ is the UX rule above them.
 
 A single short is reported only after the 350 ms window closes, so a tap is a little late rather
 than acted on twice. A long second press is a `long`, never half a double. A key held at boot is not
-a press. The numbers are `BUTTON_LONG_MS` and `BUTTON_DOUBLE_MS` in `core/Config.h`.
+a press. The numbers are `LongPressMs` and `DoublePressMs` in `hal/impl/Buttons.cpp`.
 
 ## Reserved gestures
 

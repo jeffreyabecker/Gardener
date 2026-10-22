@@ -2,8 +2,6 @@
 
 #include <math.h>
 
-#include "core/Config.h"
-
 namespace gardener {
 namespace {
 
@@ -149,7 +147,7 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, const char*
       const int midi = (octave + 1) * 12 + semitone;
       if (midi < 0 || midi > 127) return fail(badToken, noteStart);
       const float frequency = 440.0f * powf(2.0f, (float)(midi - 69) / 12.0f);
-      if (frequency < cfg::BUZZER_MIN_HZ || frequency > cfg::BUZZER_MAX_HZ) {
+      if (frequency < BuzzerMinHz || frequency > BuzzerMaxHz) {
         return fail(badToken, noteStart);
       }
       hz = (uint16_t)(frequency + 0.5f);

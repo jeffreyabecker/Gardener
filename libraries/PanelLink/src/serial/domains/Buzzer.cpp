@@ -7,8 +7,6 @@
 #include "BuzzerPlayer.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
-#include "core/Config.h"
-#include "core/Parse.h"
 
 namespace gardener {
 namespace {
@@ -37,7 +35,7 @@ class BuzzerDomain : public Domain {
 void BuzzerDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     io.print("err bad_argument\n");
     return;
   }
@@ -113,32 +111,26 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
 
-  float hz = 0.0f;
-  uint32_t ms = 0;
   if (hzText.isEmpty() || msText.isEmpty()) {
     io.print("err bad_argument\n");
     return;
   }
-  if (!parseFloat(hzText.c_str(), hz)) {
-    io.print("err bad_argument ");
-    io.print(hzText);
-    io.print('\n');
-    return;
-  }
-  if (!parseU32(msText.c_str(), ms)) {
+  const float hz = hzText.toFloat();
+  const int32_t ms = msText.toInt();
+  if (ms < 0) {
     io.print("err bad_argument ");
     io.print(msText);
     io.print('\n');
     return;
   }
 
-  if (hz < cfg::BUZZER_MIN_HZ || hz > cfg::BUZZER_MAX_HZ) {
+  if (hz < BuzzerMinHz || hz > BuzzerMaxHz) {
     io.print("err out_of_range field=tone value=");
     io.print(hzText);
     io.print(" min=");
-    io.print(cfg::BUZZER_MIN_HZ, 1u);
+    io.print(BuzzerMinHz, 1u);
     io.print(" max=");
-    io.print(cfg::BUZZER_MAX_HZ, 1u);
+    io.print(BuzzerMaxHz, 1u);
     io.print('\n');
     return;
   }

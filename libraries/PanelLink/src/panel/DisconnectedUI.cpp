@@ -2,8 +2,8 @@
 
 #include "PanelTasks.h"
 #include "panel/Asset.h"
+#include "panel/UI.h"
 #include "routines/Routines.h"
-#include "core/Config.h"
 
 namespace gardener {
 
@@ -45,7 +45,7 @@ void DisconnectedUI::update() {
   }
 
   uint32_t now = millis();
-  if (now - lastFrameMs_ < cfg::UI_REFRESH_MS) return;
+  if (now - lastFrameMs_ < RefreshMs) return;
   lastFrameMs_ = now;
   drawFrame();
 }

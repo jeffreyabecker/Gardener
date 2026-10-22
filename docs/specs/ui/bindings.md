@@ -163,7 +163,7 @@ screen.draw_text(box.w + 4, 41, 1, false, suffix, "sansbold9")
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |
 | `decimals` | int | digits the unit's fine step can express |
 
-The same numbers live in `core/Units.h`, so a routine and the panel's own formatting cannot
+The same numbers live in `panel/Units.h`, so a routine and the panel's own formatting cannot
 disagree about what a psi is.
 
 ### The overlay owns its corners
@@ -185,7 +185,7 @@ rather than to the glass.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `device.units()` | list of strings | every token `device set unit` accepts, in `core/Units.h` order |
+| `device.units()` | list of strings | every token `device set unit` accepts, in `panel/Units.h` order |
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
@@ -252,7 +252,7 @@ Back to leave a view, and the three holds above — are in [gestures.md](../gest
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `buzzer.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `buzzer.off()`; `hz` is clamped to `BUZZER_MIN_HZ` … `BUZZER_MAX_HZ` |
+| `buzzer.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `buzzer.off()`; `hz` is clamped to `BuzzerMinHz` … `BuzzerMaxHz` |
 | `buzzer.play(sequence)` | `bool` | a sequence of note/duration pairs; false when malformed |
 | `buzzer.off()` | — | silence and stop any sequence |
 

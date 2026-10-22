@@ -8,6 +8,10 @@
 
 namespace gardener {
 
+// The panel is repainted on a fixed cadence: often enough that the battery blink is visible, slow
+// enough that a whole frame's I2C write does not crowd the control loop.
+constexpr uint32_t RefreshMs = 250;
+
 class UserInterface {
  public:
   explicit UserInterface(Panel& context) : context_(context) {}

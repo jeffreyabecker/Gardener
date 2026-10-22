@@ -4,6 +4,11 @@
 
 namespace gardener {
 
+// The range the fitted piezo reproduces. The note parser rejects a frequency outside it, and the
+// wire publishes it as the `tone` bounds, so it belongs to the part family rather than to a driver.
+constexpr float BuzzerMinHz = 100.0f;
+constexpr float BuzzerMaxHz = 10000.0f;
+
 // The piezo: one square wave output. The part knows frequency and silence, not durations or note
 // names — `BuzzerPlayer` owns what to play and for how long.
 //

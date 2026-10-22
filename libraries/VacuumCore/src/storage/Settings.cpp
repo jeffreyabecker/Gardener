@@ -1,7 +1,5 @@
 #include "storage/Settings.h"
 
-#include "core/Parse.h"
-
 namespace gardener {
 namespace {
 
@@ -48,15 +46,15 @@ String Settings::get(const char* section, const char* key, const char* fallback)
 }
 
 bool Settings::getBool(const char* section, const char* key, bool fallback) const {
-  bool value = false;
   const String stored = ini_.get(section, key, "");
-  return parseFlag(stored.c_str(), value) ? value : fallback;
+  if (stored.equalsIgnoreCase("on")) return true;
+  if (stored.equalsIgnoreCase("off")) return false;
+  return fallback;
 }
 
 float Settings::getFloat(const char* section, const char* key, float fallback) const {
-  float value = 0.0f;
   const String stored = ini_.get(section, key, "");
-  return parseFloat(stored.c_str(), value) ? value : fallback;
+  return stored.isEmpty() ? fallback : stored.toFloat();
 }
 
 bool Settings::set(const char* section, const char* key, const String& value) {

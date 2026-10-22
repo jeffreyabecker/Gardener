@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#include "core/Config.h"
 #include "hal/Battery.h"
 
 namespace gardener {
@@ -17,7 +16,7 @@ class AdcBattery : public Battery {
   void update(uint32_t nowMs) override;
 
   bool present() const override { return present_; }
-  bool low() const override { return present_ && percent_ < cfg::BATTERY_LOW_PERCENT; }
+  bool low() const override;
   float volts() const override { return volts_; }
   uint8_t percent() const override { return percent_; }
 

@@ -4,7 +4,7 @@
 
 #include "Machine.h"
 #include "VacuumSystem.h"
-#include "core/Config.h"
+#include "core/Control.h"
 
 namespace gardener {
 

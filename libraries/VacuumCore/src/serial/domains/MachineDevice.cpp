@@ -4,9 +4,9 @@
 
 #include "Machine.h"
 #include "Tasks.h"
+#include "core/Version.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
-#include "core/Config.h"
 
 namespace gardener {
 namespace {
@@ -37,7 +37,7 @@ class MachineDeviceDomain : public Domain {
 void MachineDeviceDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     io.print("err bad_argument\n");
     return;
   }

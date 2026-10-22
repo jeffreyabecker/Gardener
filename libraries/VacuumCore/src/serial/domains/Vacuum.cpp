@@ -4,11 +4,10 @@
 #include "Machine.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
+#include "core/Control.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
 #include "serial/Gate.h"
-#include "core/Config.h"
-#include "core/Parse.h"
 
 namespace gardener {
 namespace {
@@ -38,7 +37,7 @@ class VacuumDomain : public Domain {
 void VacuumDomain::execute(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > cfg::COMMAND_LINE_MAX) {
+  if (line.length() > COMMAND_LINE_MAX) {
     io.print("err bad_argument\n");
     return;
   }
@@ -143,14 +142,9 @@ void VacuumDomain::target(Stream& io, const String& args) {
     return;
   }
 
-  float kpa = 0.0f;
-  if (!parseFloat(token.c_str(), kpa)) {
-    io.print("err bad_argument ");
-    io.print(token);
-    io.print('\n');
-    return;
-  }
-  if (kpa < cfg::CONTROL_MIN_TARGET_KPA) {
+  // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
+  const float kpa = token.toFloat();
+  if (!(kpa >= cfg::CONTROL_MIN_TARGET_KPA)) {
     io.print("err out_of_range field=target value=");
     io.print(token);
     io.print(" min=");

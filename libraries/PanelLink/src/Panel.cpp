@@ -5,9 +5,9 @@
 #include <stdlib.h>
 
 #include "Logger.h"
+#include "core/Board.h"
 #include "panel/Asset.h"
-#include "core/Config.h"
-#include "core/Units.h"
+#include "panel/Units.h"
 
 namespace gardener {
 

@@ -8,7 +8,7 @@
 #include "Panel.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
-#include "core/Config.h"
+#include "core/Board.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"

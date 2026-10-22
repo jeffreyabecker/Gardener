@@ -1,7 +1,5 @@
 #include "hal/impl/Buttons.h"
 
-#include "core/Config.h"
-
 namespace gardener {
 namespace {
 
@@ -9,6 +7,15 @@ namespace {
 // believes it. Short enough that a press still feels immediate, long enough to swallow the edges
 // one press produces.
 constexpr uint32_t kDebounceMs = 20;
+
+// A key released before this is a short press; at or after it, a long press. Both are reported when
+// the key comes up. A consumer that wants a longer hold watches heldMs() and picks its own mark, so
+// there is no third threshold here.
+constexpr uint32_t LongPressMs = 600;
+// Two short presses with the second starting within this of the first release are one double
+// press. The first is held back for the window so it cannot also act as a single; a long press is
+// never part of a double.
+constexpr uint32_t DoublePressMs = 350;
 
 }  // namespace
 
@@ -64,7 +71,7 @@ uint32_t Buttons::settle() {
       if ((up & bit) && (tracked_ & bit)) {
         // Both ends are the raw edges, so the debounce does not shorten or lengthen the hold.
         const uint32_t held = pendingSinceMs_ - pressStartMs_[i];
-        const bool shortPress = held < cfg::BUTTON_LONG_MS;
+        const bool shortPress = held < LongPressMs;
         if (second_ & bit) {
           pendingPress_[i] = shortPress ? Press::Double : Press::Long;
           second_ &= ~bit;
@@ -84,12 +91,12 @@ uint32_t Buttons::settle() {
   for (uint8_t i = 0; i < 4; i++) {
     const uint32_t bit = 1u << i;
     // A single short press is ready once the double window closes without a second press.
-    if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= cfg::BUTTON_DOUBLE_MS) {
+    if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= DoublePressMs) {
       awaitingSecond_ &= ~bit;
     }
     // A second press that becomes long is a long press, not half a double: release the first short
     // now rather than waiting for the second to come up.
-    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= cfg::BUTTON_LONG_MS) {
+    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= LongPressMs) {
       second_ &= ~bit;
     }
   }

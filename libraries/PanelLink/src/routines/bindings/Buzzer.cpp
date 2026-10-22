@@ -2,7 +2,6 @@
 #include "Panel.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "core/Config.h"
 
 namespace gardener {
 namespace berry {
@@ -21,8 +20,8 @@ int buzzerTone(bvm* vm) {
     gContext->buzzer().off();
     be_return_nil(vm);
   }
-  if (hz < cfg::BUZZER_MIN_HZ) hz = cfg::BUZZER_MIN_HZ;
-  if (hz > cfg::BUZZER_MAX_HZ) hz = cfg::BUZZER_MAX_HZ;
+  if (hz < BuzzerMinHz) hz = BuzzerMinHz;
+  if (hz > BuzzerMaxHz) hz = BuzzerMaxHz;
   gContext->buzzer().tone((uint16_t)hz, (uint32_t)duration);
   be_return_nil(vm);
 }

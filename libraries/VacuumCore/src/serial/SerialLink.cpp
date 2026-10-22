@@ -2,7 +2,6 @@
 
 #include "Logger.h"
 #include "Machine.h"
-#include "core/Config.h"
 
 namespace gardener {
 
@@ -55,7 +54,7 @@ void SerialLink::poll(uint32_t nowMs) {
       String token = buffer_;
       buffer_ = "";
       if (token.isEmpty() || token.charAt(0) == '#') continue;
-      if (token.length() > cfg::COMMAND_LINE_MAX) {
+      if (token.length() > COMMAND_LINE_MAX) {
         linkError("bad_argument", "");
         continue;
       }
@@ -83,7 +82,7 @@ void SerialLink::poll(uint32_t nowMs) {
       continue;
     }
 
-    if (buffer_.length() > cfg::COMMAND_LINE_MAX) {
+    if (buffer_.length() > COMMAND_LINE_MAX) {
       linkError("bad_argument", "");
       buffer_ = "";
       swallowing_ = true;

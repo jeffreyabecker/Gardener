@@ -223,7 +223,7 @@ panel bit, one record served by both links. The wire still does not draw on the 
 | --- | --- | --- |
 | `kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest, rising as the chamber is pumped down |
 | `target` | kPa below ambient, or `-` | the current target; `-` when none is set |
-| `floor` | kPa, 1 dp | deepest reachable target, `PUMP_MAX_SUCTION_KPA` below the reference |
+| `floor` | kPa, 1 dp | deepest reachable target, `CONTROL_FLOOR_KPA` below the reference |
 | `duty` | %, 1 dp | pump duty |
 | `state` | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
 | `sensor` | `1` / `0` | `1` when the sensor is producing a plausible reading |
@@ -262,12 +262,12 @@ would mean a second control path to reason about. Characterizing the pump theref
 temporary build. That trade was made deliberately, so nobody should go looking for a raw duty
 command that is not there.
 
-Vent margin and timeout, the PID gains, the deadband, the duty cap, the slew limit and the
-battery thresholds are all in `core/Config.h`. They are not commands, so the command surface
-stays this table. The deadband matters to a controller: it is what decides that the target has
-been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the other one worth
-knowing: it is the shallowest target the loop will accept, and it is reported as `min=` on the
-`out_of_range` reply.
+Vent margin and timeout, the PID gains, the deadband, the duty cap and the slew limit are in
+`core/Control.h`; the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. They are not
+commands, so the command surface stays this table. The deadband matters to a controller: it is what
+decides that the target has been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the
+other one worth knowing: it is the shallowest target the loop will accept, and it is reported as
+`min=` on the `out_of_range` reply.
 
 ## 8. `buzzer` — the piezo
 
@@ -371,13 +371,13 @@ come in the filesystem's order and are not sorted.
 content is never scanned for a terminator. `fs write` is length-delimited in the same way: the
 header's `<bytes>` is authoritative, the payload may contain any byte including `LF` and NUL, and
 the device never searches it for an end. One optional `LF` or `CRLF` after the payload is consumed.
-A write that declares more than `FS_WRITE_MAX_BYTES` (1 MiB) is
+A write that declares more than 1 MiB is
 `err out_of_range field=bytes value=… max=1048576`.
 
 A write header that is syntactically valid but cannot be honoured still consumes the declared
 payload before replying, so the next command starts on a boundary. A header refused on syntax — a
 malformed `<bytes>`, an oversized count, or a malformed path — replies immediately and expects no
-payload. A payload that stops arriving for `FS_WRITE_IDLE_MS` (2 s) is abandoned, the partial file
+payload. A payload that stops arriving for 2 s is abandoned, the partial file
 is removed, and the reply is `err bad_argument`.
 
 Paths are absolute, `/`-separated and case-sensitive. `.`, `..`, empty segments and trailing
@@ -423,6 +423,11 @@ prose. The detail is a bare token when the code names one thing, and items when 
 ```
 
 A command with no verb at all is `err bad_argument` with nothing to name.
+
+Numbers are read with the Arduino `String` parsers, which take the leading number and ignore what
+follows: `12abc` is 12, and a token with no digits at all is 0. The range check then decides, so a
+malformed number arrives as `out_of_range` — or, for `fs write`, as that many declared bytes —
+rather than as `bad_argument`. A missing or leftover argument is still `bad_argument`.
 
 ## 11. State model
 

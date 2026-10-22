@@ -1,7 +1,8 @@
 #include "Machine.h"
 
 #include "Logger.h"
-#include "core/Config.h"
+#include "core/Board.h"
+#include "core/Version.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
 #include "hal/impl/XgzpSensor.h"
@@ -10,7 +11,7 @@ namespace gardener {
 
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
 // so nothing owns them. The sensor, pump and vent are named here with their pins, so a board variant
-// edits this file and core/Config.h and nothing under hal/impl/.
+// edits this file and core/Board.h and nothing under hal/impl/.
 Machine::Machine(Logger& logger, Settings& settings)
     : logger_(logger),
       settings_(settings),

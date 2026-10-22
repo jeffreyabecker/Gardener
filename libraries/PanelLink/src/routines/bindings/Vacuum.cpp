@@ -4,10 +4,10 @@
 #include "Logger.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
+#include "core/Control.h"
 #include "routines/Routines.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "core/Config.h"
 
 namespace gardener {
 namespace berry {

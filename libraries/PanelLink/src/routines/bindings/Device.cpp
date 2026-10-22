@@ -1,14 +1,14 @@
 #include "Panel.h"
+#include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "core/Units.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
 // The settings the device keeps as itself rather than as a routine's own values. `units()` is the
-// token table `core/Units.h` holds, so a page cycles exactly what `device set unit` accepts and
+// token table `panel/Units.h` holds, so a page cycles exactly what `device set unit` accepts and
 // carries no second list.
 int deviceUnits(bvm* vm) {
   be_newobject(vm, "list");

@@ -4,7 +4,7 @@
 #include <math.h>
 #include <type_traits>
 
-#include "core/Config.h"
+#include "core/Control.h"
 #include "core/Math.h"
 
 namespace gardener {

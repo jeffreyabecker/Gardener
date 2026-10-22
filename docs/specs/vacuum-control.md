@@ -66,12 +66,12 @@ means. The valve is closed through `PULL` and `HOLD` and open in `IDLE` and `VEN
 A release finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
 first — a leaky rig takes longer, and that is logged rather than treated as an error. A vent to a
 shallower target finishes at its landing and returns to `PULL`/`HOLD`, keeping the target.
-`CONTROL_VENT_TO_TARGET` in `core/Config.h` chooses the landing: with it, the valve closes
+`CONTROL_VENT_TO_TARGET` in `core/Control.h` chooses the landing: with it, the valve closes
 `VENT_TARGET_LEAD_KPA` above the target so the travel after the coil drops covers the rest; without
 it, the valve stays open until the reading passes the target and the pump pulls back.
 
 Gains and the deadband are `PID_KP`, `PID_KI`, `PID_KD` and `CONTROL_DEADBAND_KPA` in
-`core/Config.h`. They are starting points, not tuned values — tune them for your chamber volume and
+`core/Control.h`. They are starting points, not tuned values — tune them for your chamber volume and
 pump.
 
 ## Protections

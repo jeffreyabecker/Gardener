@@ -8,7 +8,8 @@
 #include "Tasks.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
-#include "core/Config.h"
+#include "core/Control.h"
+#include "core/Version.h"
 
 namespace gardener {
 namespace {
