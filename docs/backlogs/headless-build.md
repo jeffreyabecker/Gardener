@@ -244,7 +244,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
 
 ### Phase B — the machine-alone sketch
 
-- [ ] 6.6 Add a machine-alone sketch that includes only `VacuumCore.h` and builds its own
+- [x] 6.6 Add a machine-alone sketch that includes only `VacuumCore.h` and builds its own
   `MachineContext` from `buildMachineRoot()`.
 - [ ] 6.7 Compose the machine-alone capability: no panel, no battery, ownership stop.
 - [ ] 6.8 Add a machine-side `device` domain in `VacuumCore` answering `proto`, `fw`, `chip`, `heap`
