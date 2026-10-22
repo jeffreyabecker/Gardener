@@ -40,6 +40,11 @@ int screenClear(bvm* vm) {
   be_return_nil(vm);
 }
 
+int screenInvert(bvm* vm) {
+  panel().invert(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  be_return_nil(vm);
+}
+
 int screenFlush(bvm* vm) {
   panel().display();
   be_return_nil(vm);
@@ -192,6 +197,7 @@ const bnfuncinfo kScreenLibrary[] = {
     {"draw_vline", screenVLine},
     {"draw_rect", screenRect},
     {"draw_fillrect", screenFillRect},
+    {"draw_invert", screenInvert},
     {"draw_roundrect", screenRoundRect},
     {"draw_fillroundrect", screenFillRoundRect},
     {"draw_circle", screenCircle},

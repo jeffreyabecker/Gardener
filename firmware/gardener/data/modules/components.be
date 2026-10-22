@@ -439,8 +439,8 @@ class Scrollbar : Component
       top = cy + ch - thumb
     end
     if self.invert
-      screen.draw_fillrect(cx, cy, cw, top - cy)
-      screen.draw_fillrect(cx, top + thumb, cw, (cy + ch) - (top + thumb))
+      screen.draw_invert(cx, cy, cw, top - cy)
+      screen.draw_invert(cx, top + thumb, cw, (cy + ch) - (top + thumb))
     else
       var f = self.frame()
       screen.draw_rect(f[0], f[1], f[2], f[3])

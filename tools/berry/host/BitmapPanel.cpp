@@ -55,7 +55,8 @@ void BitmapPanel::drawPixel(int16_t x, int16_t y, uint16_t color) {
 
 void BitmapPanel::writePixel(int16_t x, int16_t y, uint16_t color) {
   if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
-  frame_[y][x] = (uint8_t)(color & 1);
+  // 2 is the monochrome drivers' "toggle this pixel", which is what a region invert draws with.
+  frame_[y][x] = color == 2 ? (uint8_t)!frame_[y][x] : (uint8_t)(color & 1);
 }
 
 void BitmapPanel::writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {

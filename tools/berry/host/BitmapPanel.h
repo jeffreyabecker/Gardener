@@ -10,6 +10,7 @@
 //
 // The primitives and the text path are the port frame.c held: they follow the installed Adafruit
 // GFX closely enough that a page's face choice, its measured box and its pixels are the panel's.
+// Colours are the drivers': 0 is paper, 1 is ink, and 2 flips whatever the pixel already is.
 //
 // save() writes a one-bit BMP, which is how --art shows a page.
 

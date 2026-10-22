@@ -46,16 +46,21 @@ class Display {
   virtual void setRotation(uint8_t rotation) = 0;
 
   // --- the screen ----------------------------------------------------------
-  virtual void clear() = 0;          // paper everywhere
-  virtual void invert(bool on) = 0;  // the whole panel, not the next thing drawn
-  // What invert() was last given. The wire reports it — `panel get` has to answer with the state
-  // the panel is in, and a host that attaches mid-session has no other way to learn it.
+  virtual void clear() = 0;               // paper everywhere
+  virtual void setInverted(bool on) = 0;  // the whole panel, not the next thing drawn
+  // What setInverted() was last given. The wire reports it — `panel get` has to answer with the
+  // state the panel is in, and a host that attaches mid-session has no other way to learn it.
   virtual bool inverted() const = 0;
 
   // --- pixels, lines and shapes --------------------------------------------
   // Panel pixels, origin top left. Ink unless the name says otherwise.
   virtual void pixel(int16_t x, int16_t y) = 0;
   virtual void clearRect(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
+  // Flips what is already there — every pixel in the rectangle goes from ink to paper or paper to
+  // ink — which is how a line drawn in a proportional face gets a paper-on-ink highlight, and how
+  // a track laid over a border keeps the border visible. It draws, so it lands in the frame buffer
+  // with the rest and waits for display(); setInverted() is the panel's own command and does not.
+  virtual void invert(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
   virtual void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) = 0;
   virtual void hLine(int16_t x, int16_t y, int16_t w) = 0;
   virtual void vLine(int16_t x, int16_t y, int16_t h) = 0;

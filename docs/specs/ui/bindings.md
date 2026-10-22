@@ -103,6 +103,7 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_vline(x, y, h)` |
 | `screen.draw_rect(x, y, w, h)` |
 | `screen.draw_fillrect(x, y, w, h)` |
+| `screen.draw_invert(x, y, w, h)` |
 | `screen.draw_roundrect(x, y, w, h, r)` |
 | `screen.draw_fillroundrect(x, y, w, h, r)` |
 | `screen.draw_circle(x, y, r)` |
@@ -116,6 +117,11 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_text(x, y, size, inverted, text [, font])` |
 | `screen.text_bounds(text, size [, font])` |
 | `screen.flush()` |
+
+`draw_invert` is the one call that does not put ink or paper down: it flips what is already inside
+the rectangle, ink to paper and paper to ink, so it has to come after the pixels it is meant to
+flip. That is also the only way to highlight a line drawn in a proportional face, which `draw_text`'s
+`inverted` cannot do — see Faces below.
 
 ### Faces
 
@@ -137,7 +143,8 @@ mistake.
 With a custom face, `y` is the **baseline** of the line rather than the top of the glyph box — the
 font format's own rule. With the built-in face, `y` is the top. `size` scales whichever face is set:
 `1` is the face as designed, `3` is three times as tall. A custom face has no background, so
-`inverted` has no effect on it; fill a rectangle first when a line needs a highlight.
+`inverted` has no effect on it; when a line needs a highlight, draw it and then `draw_invert` the
+box `text_bounds` answered, which turns that rectangle's paper to ink and its ink to paper.
 
 The face belongs to the call. The firmware restores the built-in face after drawing or measuring,
 so handing the panel to the shared settings editor does not hand it a face as well.

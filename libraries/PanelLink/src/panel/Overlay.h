@@ -40,13 +40,16 @@ class Overlay : public Display {
 
   // --- the screen ----------------------------------------------------------
   void clear() override { inner_->clear(); }
-  void invert(bool on) override { inner_->invert(on); }
+  void setInverted(bool on) override { inner_->setInverted(on); }
   bool inverted() const override { return inner_->inverted(); }
 
   // --- pixels, lines and shapes --------------------------------------------
   void pixel(int16_t x, int16_t y) override { inner_->pixel(x, y); }
   void clearRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
     inner_->clearRect(x, y, w, h);
+  }
+  void invert(int16_t x, int16_t y, int16_t w, int16_t h) override {
+    inner_->invert(x, y, w, h);
   }
   void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) override {
     inner_->line(x0, y0, x1, y1);
