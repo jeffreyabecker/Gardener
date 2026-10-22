@@ -281,7 +281,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   are answered by the panel's battery.
 - [x] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
   the top of the stack changes — a claim, a release or a drop.
-- [ ] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
+- [x] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
   holds pressure only while owned.
 - [ ] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
   the reboot.

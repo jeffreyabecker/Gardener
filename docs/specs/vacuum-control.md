@@ -44,6 +44,12 @@ chamber** — a claim, a release, or a link that drops. A new controller therefo
 an open chamber, and a link that vanishes cannot leave the machine held: it is no longer on the
 stack, so the link beneath it takes over from a vented chamber.
 
+A build with no panel has nothing beneath an external link: its stack is `none` alone until
+something claims, so **it holds pressure only while a link owns it**. An unowned machine is vented,
+and `vacuum start` from a link that is not on top is refused. A panel build differs in one respect
+only — the panel is a controller of its own, pushed at boot, so the device can hold pressure with no
+external link attached.
+
 ## The control law
 
 The pump is the only actuator, so the loop can pull down but never vent — the vent valve is the
