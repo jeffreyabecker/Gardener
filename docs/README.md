@@ -9,6 +9,8 @@ The contracts the firmware and its tools must satisfy.
 - [Vacuum control](./specs/vacuum-control.md) — the machine: states, transitions and protections
 - [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the page standards
 - [Assets](./specs/assets.md) — the image file format and the tool that makes one
+- [Berry harness](./specs/berry-harness.md) — the host build that compiles, drives and draws the
+  data image without a device
 - [Routines](./specs/ui/routine.md) — what a routine is: its lifecycle and embedded rules
 - [Bindings](./specs/ui/bindings.md) — what a routine can call: the native modules and records
 

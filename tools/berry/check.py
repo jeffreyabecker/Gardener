@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Compile and run the Berry data image on the host.
 
-    python .github/skills/berry/check.py              # compile, load and drive
-    python .github/skills/berry/check.py --compile    # compile only
-    python .github/skills/berry/check.py --no-cache   # rebuild the VM objects
-    python .github/skills/berry/check.py --art default
-    python .github/skills/berry/check.py --art interval --seconds 30
+    python tools/berry/check.py              # compile, load and drive
+    python tools/berry/check.py --compile    # compile only
+    python tools/berry/check.py --no-cache   # rebuild the VM objects
+    python tools/berry/check.py --art default
+    python tools/berry/check.py --art interval --seconds 30
 
 The VM is the vendored one from libraries/berry, built with the same berry_conf.h
 the firmware uses, so 32-bit ints, single-precision reals and the 2000-slot stack
@@ -23,11 +23,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-SKILL = Path(__file__).resolve().parent
-ROOT = SKILL.parents[2]
+TOOL = Path(__file__).resolve().parent
+ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
 DATA = ROOT / "firmware" / "gardener" / "data"
-BUILD = SKILL / "build"
+BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 
 
@@ -82,7 +82,7 @@ def build(cc, gfx):
     include = [
         "-I", str(BERRY / "src"),
         "-I", str(BERRY / "generate"),
-        "-I", str(SKILL / "gfx"),
+        "-I", str(TOOL / "gfx"),
         "-I", str(gfx),
     ]
     libraries = []
@@ -93,7 +93,7 @@ def build(cc, gfx):
         libraries.append(obj)
 
     # main.c and frame.c: the host entry point, and the panel the harness draws on.
-    for source in (SKILL / "main.c", SKILL / "frame.c"):
+    for source in (TOOL / "main.c", TOOL / "frame.c"):
         obj = objects / ("berrycheck_" + source.stem + ".o")
         if args.no_cache or not obj.exists() or obj.stat().st_mtime < source.stat().st_mtime:
             run([cc, "-std=gnu11", "-O0", *include, "-c", str(source), "-o", str(obj)])
@@ -104,7 +104,7 @@ def build(cc, gfx):
 def files(data):
     modules = sorted((data / "modules").glob("*.be"))
     routines = sorted((data / "routines").glob("*.be"))
-    return [SKILL / "harness.be", *modules, SKILL / "driver.be", *routines]
+    return [TOOL / "harness.be", *modules, TOOL / "driver.be", *routines]
 
 
 def seeds(data):
