@@ -22,52 +22,77 @@ The stack drains the gesture queue once per beat and hands the top scene one ges
 
 ## The map
 
-| Scene | Defined in | Dispatch | Gesture | What it does |
-| --- | --- | --- | --- | --- |
-| `ReadoutScene` — the root | `modules/ui.be` | `on` | `up:chord` | push the system settings |
-| | | | `ok:short` | start or resume the run |
-| | | | `back:short`, `back:double` | stop and vent |
-| | | | `up:double` | push the routine browser |
-| | | | `down:double` | push the system settings |
-| `BrowserScene` | `modules/ui.be` | `on` | `up:*`, `down:*` | move the selection |
-| | | | `up:chord` | open the selected routine's settings |
-| | | | `ok:*` | push the selected routine |
-| | | | `back:*` | leave |
-| `SystemScene` | `modules/ui.be` | `handle_page` | `up:*`, `down:*` | move the row |
-| | | | `ok:*` | open the row |
-| | | | `back:*` | leave |
-| `SettingsScene` | `modules/settings_page.be` | `handle_page` | `up:*`, `down:*` | move the row |
-| | | | `ok:*` | open the row |
-| | | | `back:*` | close the list |
-| `ValueScene` | `modules/settings_edit.be` | `handle_page` | `up:*`, `down:*` | raise or lower the value |
-| | | | `ok:*` | close, keeping the value |
-| | | | `back:*` | close, discarding it |
-| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `modules/settings_edit.be` | inherited | the four `ValueScene` gestures | as `ValueScene` |
-| `DurationScene` | `modules/settings_edit.be` | `handle_page` | `ok:*` | advance minutes→seconds, then close keeping the value |
-| | | inherited | the other three `ValueScene` gestures | as `ValueScene` |
-| `UnitScene`, `JingleScene` | `modules/ui.be` | inherited | the four `ValueScene` gestures | as `ValueScene` |
-| `Interval` | `routines/interval.be` | `on` | `up:chord` | open its settings |
-| | | | `ok:*` | begin, while the run is ready or waiting |
-| `RampedInterval` | `routines/ramped_interval.be` | `on` | `up:chord` | open its settings |
-| | | | `ok:*` | start or resume the run |
-| | | | `back:short` | pause the run |
-| `RampedStatic` | `routines/ramped_static.be` | `on` | `up:chord` | open its settings |
-| | | | `ok:*` | start or resume the run |
-| | | | `back:short` | pause the run |
-| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the three routine files | inherited | the four `SettingsScene` gestures | as `SettingsScene` |
-| `Page` — the routine base | `modules/settings_page.be` | — | none | owns the settings view, not a gesture |
-| `Scene` — the base | `modules/scene.be` | — | none | drains the queue and dispatches |
+Every scene, and where it lives:
 
-`key:*` is any press on that key. `chord` is the settings gesture, Up and Down pressed together, and
-a scene registers it on the up key.
+| Scene | Defined in | Dispatch |
+| --- | --- | --- |
+| `ReadoutScene` — the root | `modules/ui.be` | `on` |
+| `BrowserScene` | `modules/ui.be` | `on` |
+| `SystemScene` | `modules/ui.be` | `handle_page` |
+| `SettingsScene` | `modules/settings_page.be` | `handle_page` |
+| `ValueScene` — the value base | `modules/settings_edit.be` | `handle_page` |
+| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `modules/settings_edit.be` | inherited |
+| `DurationScene` | `modules/settings_edit.be` | `handle_page` |
+| `UnitScene`, `JingleScene` | `modules/ui.be` | inherited |
+| `Interval` | `routines/interval.be` | `on` |
+| `RampedInterval` | `routines/ramped_interval.be` | `on` |
+| `RampedStatic` | `routines/ramped_static.be` | `on` |
+| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the three routine files | inherited |
+| `Page` — the routine base | `modules/settings_page.be` | — |
+| `Scene` — the base | `modules/scene.be` | — |
+
+What each one answers:
+
+| Scene | Gesture | What it does |
+| --- | --- | --- |
+| `ReadoutScene` | `ok:short` | start or resume the run |
+| `ReadoutScene` | `cancel:short` | stop and vent |
+| `ReadoutScene` | `up:double` | push the routine browser |
+| `ReadoutScene` | `down:double` | push the system settings |
+| `BrowserScene` | `up:short`, `down:short` | move the selection |
+| `BrowserScene` | `ok:double` | open the selected routine's settings & push the selected scene with those settings on return |
+| `BrowserScene` | `ok:short` | push the selected routine |
+| `BrowserScene` | `back:short` | leave |
+| `SystemScene` | `up:short`, `down:short` | move the row |
+| `SystemScene` | `ok:short` | open the row |
+| `SystemScene` | `back:short` | leave |
+| `SettingsScene` | `up:short`, `down:short` | move the row |
+| `SettingsScene` | `ok:short` | open the row |
+| `SettingsScene` | `back:short` | close the list |
+| `ValueScene` | `up:short`, `down:short` | raise or lower the value |
+| `ValueScene` | `ok:short` | close, keeping the value |
+| `ValueScene` | `cancel:short` | close, discarding it |
+| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | the four `ValueScene` gestures | as `ValueScene` |
+| `DurationScene` | `forward:short` | advance minutes→seconds|
+| `DurationScene` | `back:short` | go back seconds→minutes|
+| `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
+| `UnitScene`, `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
+| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the four `SettingsScene` gestures | as `SettingsScene` |
+
+| `Interval` | `up:double` | stop and vent, reset the run, open its settings |
+| `Interval` | `ok:short` | begin, while the run is ready, paused or waiting |
+| `Interval` | `cancel:short` | stop and vent, pause the run |
+| `Interval` | `cancel:double` | stop and vent, pop off the stack |
+| `RampedInterval` | `up:double` | stop and vent, reset the run, open its settings |
+| `RampedInterval` | `ok:short` | begin, while the run is ready, paused or waiting |
+| `RampedInterval` | `cancel:short` | stop and vent, pause the run |
+| `RampedInterval` | `cancel:double` | stop and vent, pop off the stack |
+| `RampedStatic` | `up:double` | stop and vent, reset the run, open its settings |
+| `RampedStatic` | `ok:short` | begin, while the run is ready, paused or waiting |
+| `RampedStatic` | `cancel:short` | stop and vent, pause the run |
+| `RampedStatic` | `cancel:double` | stop and vent, pop off the stack |
+| `Page`, `Scene` | none | the bases answer nothing |
+
+`key:*` and `*:chord` are not a valid gesture identifiers. 
 
 ## Rules
 
 1. A scene answers only what the table gives it; everything else is dropped.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
-3. `SettingsScene` and `SystemScene` answer the same four gestures; a row and a setting are opened
-   and left the same way in both.
-4. `ValueScene` and everything built on it answer the same four; only `DurationScene` adds a stage.
+3. `SettingsScene` and `SystemScene` answer the same gestures; a row and a setting are opened and
+   left the same way in both.
+4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
+   stage.
 5. A routine page's `ok` is its primary action, and its `back` is its own — the two ramped routines
    pause on it, `Interval` has none.
