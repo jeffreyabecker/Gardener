@@ -42,6 +42,16 @@ primary action, Up+Down is the settings view of any page with `describe()`, and 
 so a nudge has no press to take that does not first take a meaning away from one of those.
 
 
+## Verify the two builds on hardware
+
+The machine/panel split, the ownership stack and the two builds have only ever been
+compiled. Everything the specs now promise still needs a device: the full device's serial
+and Bluetooth surfaces with `control get` naming the owner, the panel driving by default
+with Back releasing and Back+OK rebooting, and the chamber venting on a claim, a release
+and a drop. The machine-alone build needs the same: `device get` reporting `caps` and no
+battery, log or unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that
+cannot start unowned or survive its owner leaving.
+
 ## Berry pages as a stack of components
 
 A page can hold exactly one editor (`Page.editor`), so the routine settings module in
@@ -55,6 +65,16 @@ and the app's own settings screen can invoke the same ones. What holds it back i
 and the gesture meanings: Back is pinned to the level — it closes the editor, cancels an edit, or
 stops the run — and `draw()` chooses between the one editor and `draw_page()`, so a stack has to
 settle who draws underneath the top and what a pop hands back.
+
+## Delete the store bus
+
+[StoreBus.h](../../libraries/GardenerPanel/src/app/StoreBus.h) is a queue between the VM and the
+interface task, and both ends are now the panel task — the VM polls and the server drains on the same
+beat — so it is the panel queueing to itself. The idea is to delete `StoreClient`, `StoreServer` and
+the queue handle, and let the `store` binding and `Routines` reach `Storage` and `Settings` directly,
+which also drops the result slot and the notify. What holds it back is the `fs` serial domain, which
+still touches `Storage` from the interface task, so the queue is not yet the only thing keeping two
+tasks out of LittleFS.
 
 ## Gesture Classifier
 

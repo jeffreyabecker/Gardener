@@ -6,7 +6,7 @@
 #include "app/PanelContext.h"
 #include "app/Logger.h"
 #include "app/StoreBus.h"
-#include "app/Tasks.h"
+#include "app/PanelTasks.h"
 #include "app/routines/Bindings.h"
 #include "app/storage/Ini.h"
 #include "app/storage/Storage.h"

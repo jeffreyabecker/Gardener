@@ -21,9 +21,6 @@ since the two are deleted together. A contract has to stand on its own, and plan
 specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [Panel ownership](./plans/panel-ownership.md) — the machine keeps only the pump and the sensor,
-  and the panel — buttons, display, buzzer and settings — is its default controller, beneath
-  whichever external link claims it
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Ideas
@@ -44,9 +41,11 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
-- [The machine without the panel](./backlogs/headless-build.md) — split the machine from the panel
-  into two libraries, make both links pluggable, and ship a panel-less build with a capability
-  surface
+None is open. The summaries of the finished ones are in
+[docs/backlogs/completed/](./backlogs/completed/) — currently
+[the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
+from the panel into two libraries, made both links pluggable, and shipped a panel-less build with a
+capability surface.
 
 ## Guides
 

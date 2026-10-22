@@ -42,4 +42,4 @@ panel's off.
 - Build passes at each step, and the full sketch's size returns to the baseline
   (within a few hundred bytes) once both domains are registered.
 - The wire surfaces are byte-for-byte the same by construction; the on-hardware
-  pass is Epic 7.
+  pass is the parking lot's verification entry.

@@ -42,15 +42,14 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
 
 **Connecting is not controlling.** A link that has only connected can read; every writing verb is
-refused with `err not_controlling` until the link sends `control acquire` (§5). One link owns the
-device at a time, and `control release` is the graceful exit: it stops and vents, then returns the
-panel to the disconnected page.
+refused with `err not_controlling` until the link sends `control acquire` (§5). One link drives at a
+time, and `control release` is the graceful exit: the link leaves the stack, which vents, and the
+panel returns to its own page.
 
-If the port disappears while the link owns the device, the machine keeps its state and the
-ownership record stays held. A reconnected link is a read-only observer until the local reset
-(Back+OK for 5 s) clears the record ([vacuum control](./vacuum-control.md)). The device can only
-notice a drop when the stream reports host presence, which USB CDC can and a plain UART cannot;
-there is no command that sets or reports presence.
+If the port disappears while the link drives, the link is removed from the stack: the chamber vents
+and control falls to the link beneath, so a reconnected link is a reader until it claims again. The
+device can only notice a drop when the stream reports host presence, which USB CDC can and a plain
+UART cannot; there is no command that sets or reports presence.
 
 ## 3. Grammar
 
@@ -113,41 +112,46 @@ detail = token / items
 The ownership record. A link may read at any time; this domain is how it becomes the one controller,
 and how it gives the machine back.
 
-The record is not the serial link's: the Bluetooth transport acquires the same one, so a cable and
-a phone cannot both drive the machine. Whichever transport arrives, a link that has not acquired is
-a reader.
+The record is a stack of links and is not the serial link's: the Bluetooth transport claims the
+same one, and a panel build sits on it from boot, so a cable, a phone and the panel cannot all drive
+the machine at once. Whoever is on top drives; a link that is not on top is a reader.
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
-| `get` | `ok control=owned` / `ok control=none` | the caller's view. A record left behind by a dropped link reads `none`, even though the machine is still held for that link |
-| `acquire` | `ok control=owned` / `err busy` | idempotent for the current owner. A second link, or a stale record, is `busy` |
-| `release` | `ok control=none` | idempotent; stops and vents when this link owns the device |
+| `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
+| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there |
+| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
 
-A link acquires once and keeps control until it releases or the device is reset. Acquiring does not
-change the machine: a controller that takes over a running chamber reads `vacuum get` before
-commanding it.
+The reply names the top rather than answering "owned by you or not", so a controller can tell
+whether the machine is being driven by the panel or by another link. `none` is the floor: no link
+holds the machine and the chamber is vented.
+
+A link acquires once and keeps the top until it releases or drops. There is no `busy`: a claim is
+never refused, because the claimant takes the top and the link beneath is set aside rather than
+rejected. Acquiring a running chamber takes the top and vents it, so a new controller always starts
+from an open chamber and reads `vacuum get` before commanding it.
 
 Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
 start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
-`fs mkdir` and `fs delete` answer `err not_controlling` until the caller owns the device. The read
-verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
+`fs mkdir` and `fs delete` answer `err not_controlling` until the caller is on top of the stack. The
+read verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
 available to a connected observer. `fs write` still consumes a declared body before its refusal, so
 the next command starts on a boundary.
 
 ```
 -> control get
-<- ok control=none
+<- ok control=panel
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> control release
-<- ok control=none
+<- ok control=panel
 ```
 
-After a link drops while owning, `control get` reads `none` but `control acquire` answers `err busy`
-until the local reset clears the held record. `release` while another link owns the device — or
-after a drop — is the idempotent `ok control=none` and does not touch the machine.
+A build with no panel has `none` at the floor, so its `get` before a claim reads `ok control=none`
+and its `release` returns there. Releasing a link that is not on the stack is idempotent and does
+not touch the machine.
 
 ## 6. `device` — the machine and this stream
 
@@ -174,7 +178,7 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 
 ```
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> device get
 <- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa caps=3
 -> device set log off
@@ -184,6 +188,11 @@ after a drop — is the idempotent `ok control=none` and does not touch the mach
 -> device reboot
 <- ok
 ```
+
+`log` and `unit` are the panel's: they are preferences it persists in `/settings.ini` and shows on
+its glass, so a build without a panel neither reports them in `device get` nor accepts `device set
+log` or `device set unit`. That build's `device get` reads `ok proto=1 fw=... chip=... heap=...
+caps=4`.
 
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
@@ -196,7 +205,9 @@ a second way to state a pressure. `log` differs from `unit`: it chooses the logg
 change does not silence an already-running diagnostics stream until the next reset.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
-fields. A pack that is not fitted reads `-` for both.
+fields. They are answered by the panel's gauge, so a build without a panel reports neither — it has
+no sense pin and no battery bit in `caps`. A panel build whose pack is not fitted reads `-` for
+both.
 
 `panel` is gone as a domain, and so is `display-size`: whether a panel is fitted is the `caps`
 panel bit, one record served by both links. The wire still does not draw on the panel.
@@ -232,7 +243,7 @@ device to stop and vent (§5).
 -> vacuum get
 <- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> vacuum target 40
 <- ok target=40.0
 -> vacuum start
@@ -257,6 +268,9 @@ knowing: it is the shallowest target the loop will accept, and it is reported as
 
 ## 8. `buzzer` — the piezo
 
+The piezo is the panel's part, so this domain is served only by a build with a panel. A build
+without one answers `err unknown_domain buzzer`, the same as any token it does not serve.
+
 `buzzer get` reports `tone` then `playing`:
 
 | Field | Values | Notes |
@@ -278,7 +292,7 @@ connected observer.
 -> buzzer get
 <- ok tone=- playing=off
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> buzzer tone 2000 500
 <- ok tone=2000,500
 -> buzzer get
@@ -307,6 +321,10 @@ The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.in
 interface for changing what is on the device without reflashing its data image. Writing under
 `/routines` or `/modules` does not reload anything; the change takes effect at the next boot.
 
+The files are the panel's — it is the panel that mounts the partition and runs the routines — so
+this domain is served only by a build with a panel. A build without one answers `err unknown_domain
+fs` and mounts no filesystem at all.
+
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `list <path>` | `ok`, then entries, then a blank line | one `file <name>` or `dir <name>` per entry |
@@ -318,8 +336,8 @@ interface for changing what is on the device without reflashing its data image. 
 All arguments are positional and unquoted. A path is one token and contains no spaces.
 
 `list` and `read` are available to a connected observer; `write`, `mkdir` and `delete` answer
-`err not_controlling` until the link owns the device. A gated `write` still consumes the declared
-body before replying.
+`err not_controlling` until the link is on top of the stack. A gated `write` still consumes the
+declared body before replying.
 
 ```
 -> fs list /routines
@@ -332,7 +350,7 @@ body before replying.
 <- ok bytes=12
 <- [12 raw bytes]
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> fs write /routines/new.ini 5
 <- ok
 -> fs mkdir /assets/icons
@@ -382,14 +400,13 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `no_space`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
-| `busy` | nothing | another link owns the device, or a held record has not been cleared by the local reset |
-| `not_controlling` | nothing | a state-changing verb from a link that does not own the device |
+| `not_controlling` | nothing | a state-changing verb from a link that is not on top of the stack |
 
 ```
 -> vacuum start
 <- err not_controlling
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> vacuum start
 <- err not_ready no_target
 -> vacuum target 1

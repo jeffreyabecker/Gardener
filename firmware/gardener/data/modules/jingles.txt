@@ -34,3 +34,5 @@ found_secret|Found Secret|Secret|G5:120 F#5:120 D#5:120 A4:120 G#4:120 E5:120 G#
 healing_machine|Healing Machine|Healing|F6:180 F5:180 Bb5:180 Eb6:180 r:60 G6:180 Bb6:360
 # Pac-Man - Opening Theme
 pacman|Opening Theme|Pac-Man|B5:100 B6:100 F#6:100 D#6:100 B6:50 F#6:100 D#6:150 C6:100 C7:100 G6:100 E6:100 C7:50 G6:100 E6:150 B5:100 B6:100 F#6:100 D#6:100 B6:50 F#6:100 D#6:150 D#6:50 E6:50 F6:50 F#6:50 G6:50 G#6:50 A6:100 B6:200
+# Nokia - the Nokia tune, from Tarrega's Gran Vals
+nokia|Nokia Tune|Nokia|E6:160 D6:160 F#5:160 G#5:160 C#6:160 B5:160 D5:160 E5:160 B5:160 A5:160 C#5:160 E5:160 A5:400
