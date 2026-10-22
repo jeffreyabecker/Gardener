@@ -246,8 +246,7 @@ next, so one beat is one delivery.
 `back:5+ok:5`, and hand anything else to the page. Nothing left in it re-derives a threshold, scans
 the keys or composes a string.
 
-The scene framework hands the string through unchanged; a page matches it whole or splits it when
-it wants the parts:
+The scene framework hands the string through unchanged; a page matches it whole or not at all:
 
 ```berry
 import string
@@ -268,22 +267,20 @@ end
 ```
 
 `handle(ev)` receives the whole string — `"ok:single"`, `"back:3"`, `"up:double"` — and
-the direction for the Berry side is to **compare the whole string wherever a page can**. The
-shipped pages' nested `if ev.btn == "up"` ladders are each one string compared, and they become
-one test:
+the direction for the Berry side is to **compare the whole string, always**. The shipped pages'
+nested `if ev.btn == "up"` ladders are each one string compared, and they become one test:
 
 ```berry
 if ev == "ok:single"    # not ev.btn == "ok" && ev.press == "single"
 if ev == "up:double"    # the settings gesture, matched whole
 ```
 
-A page splits on `+` and `:` only when it matches one dimension regardless of the other — an
-editor that takes Up and Down at any press, say — and even then it looks at the whole string
-first. The declarative registration takes the same shape: `on(gesture, fn)` is given the whole
-event string, and `*` in the press slot when the press does not matter (`on("ok:*", fn)`). There
-is no registration that names a bare key: "any press" is `ok:*`, which says so. There is no list
-of press names either — `on("back", ["single", "double"], fn)` was two registrations written as
-one, and it cannot express a hold at all.
+No page matches one part of a gesture without the other. Splitting a gesture on `+` or `:` to
+match a key regardless of press — or the reverse — is a bug, not an option, so no page does it and
+the framework does not offer it. A registration is the same shape: `on(gesture, fn)` takes one
+whole gesture string and matches it exactly. There is no `*`, no bare key and no list of press
+names — `on("back", ["single", "double"], fn)` was two registrations written as one, and each of
+those forms is a way to match a part without the whole.
 
 Why the classifier emits strings, stated plainly:
 
@@ -319,9 +316,9 @@ the drafts that had seconds replacing `long`, and then `long` surviving at all.
 4. **The sum is general, and no page binds one.** Any keys down together are one event, in panel
    order, on the last release. The settings view is a double, not a chord, so the sum waits for a
    page that needs one.
-5. **A registration is a whole gesture string.** `on("ok:single", fn)`, `on("up:double", fn)`, and
-   `*` in the press slot for any press on that key. A bare key name is not a gesture, and a list of
-   press names is several registrations with a hole where the hold would go.
+5. **A registration is a whole gesture string.** `on("ok:single", fn)`, `on("up:double", fn)`.
+   A page matches a gesture whole or not at all: no `*`, no bare key, no list of press names, and
+   no splitting on `:` or `+` anywhere in the framework.
 6. **The harness presses a whole gesture.** `harness.press("ok:single")` is exactly what the device
    produces, so the host has no button or press table to drift from the classifier.
 7. **`single`, `double` and seconds are the forms.** `short` is renamed `single`, and `long` is
@@ -342,8 +339,8 @@ The work is one change, and its parts share the vocabulary, so no part can stand
   reset.
 - `routines/bindings/Buttons.cpp` (hands through the classifier string), `routines/Bindings.cpp`
   (`kRecords` without `event`), `modules/scene.be`, `modules/ui.be`, the settings scenes and the
-  three files under `routines/` (`handle(ev)` takes the string and compares it whole, splitting on
-  `+` and `:` only for a dimension match).
+  three files under `routines/` (`handle(ev)` takes the string and compares it whole, never
+  matching one part without the other).
 - The host harness, which is the other caller of the same seam: `tools/berry/host/HarnessModule.cpp`
   (`harness.press` takes the gesture), `harness.be` (the event record goes), `driver.be` and the
   test files that press keys.

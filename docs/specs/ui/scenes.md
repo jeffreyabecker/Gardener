@@ -9,14 +9,13 @@ what it does.
 ## How a gesture reaches a scene
 
 The stack drains the gesture queue once per beat and hands the top scene one gesture string —
-`ok:single`, `back:3`, `up:single+down:single` — which is `ev` in `handle(ev)` and `handle_page(ev)`.
+`ok:single`, `back:3`, `up:double` — which is `ev` in `handle(ev)` and `handle_page(ev)`.
 
-- **Declarative.** `on(key, presses, fn)` matches the gesture's **first part** only: the part before
-  a `+` if there is one. `key` is the button token; `presses` is one press token, a list of them, or
-  `nil` for any press on that key. The first registration whose action returns true wins.
-- **Hand-rolled.** A scene that defines `handle_page(ev)` compares the string itself. In the shipped
-  scenes it does so by key — `string.startswith(ev, "up:")` — which is the same match as `on(key,
-  nil, fn)`.
+- A scene matches a gesture **whole or not at all**. It compares the string it is given with the
+  gestures it knows, and the first match whose action returns true wins.
+- The declarative form is `on(gesture, fn)`: one whole gesture string per registration. There is no
+  `*`, no bare key and no list of presses — each of those matches one part of a gesture without the
+  other, which no scene may do.
 - A gesture no binding matches is dropped. A scene never sees the device's reserved gestures, which
   are taken before the queue.
 
@@ -82,8 +81,6 @@ What each one answers:
 | `RampedStatic` | `cancel:single` | stop and vent, pause the run |
 | `RampedStatic` | `cancel:double` | stop and vent, pop off the stack |
 | `Page`, `Scene` | none | the bases answer nothing |
-
-`key:*` and `*:chord` are not a valid gesture identifiers. 
 
 ## Rules
 
