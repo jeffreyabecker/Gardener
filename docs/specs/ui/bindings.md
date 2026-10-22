@@ -241,9 +241,9 @@ object that was registered at boot, so it keeps whatever state it had. Nothing i
 disk; a routine that was left can be brought back with `routines.set_active()`. The release arrives
 as a `long` Back on whichever page is showing by then.
 
-Holding **Back and OK together for 5 s** is the local reset: it releases the chamber, restarts, and
-clears an ownership record left held by a controller. It works from every page and link state, and a
-routine cannot suppress it.
+Holding **Back and OK together for 5 s** is the reboot: the same safe reset the wire serves as
+`device reboot`, which stops, vents up to 2 s and restarts. It works from every page and link state,
+and a routine cannot suppress it.
 
 The standard gestures a page should follow — up+down for its settings, OK for its primary action,
 Back to leave a view, and the three holds above — are in [gestures.md](../gestures.md).

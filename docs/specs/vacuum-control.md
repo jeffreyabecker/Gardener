@@ -30,7 +30,7 @@ returns to `PULL`/`HOLD`.
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
 | Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply; the valve stays open while Back is held |
-| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
+| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
@@ -84,7 +84,7 @@ All of these act without consulting the controller:
 * a target deeper than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at
   the cap, and nothing stops it
 * holding Back for 3 s stops the pump and vents
-* holding Back and OK for 5 s releases the chamber, restarts, and clears a held ownership record
+* holding Back and OK for 5 s reboots the device: stop, vent up to 2 s, restart
 
 Faults latch: only `vacuum reset` clears one, and the device never retries on its own.
 
