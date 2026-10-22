@@ -68,8 +68,8 @@ class Logger;
 // parts, the ownership stack and the capability byte, and it reports through the logger it was
 // built with. boot() brings the parts up; the links and the tasks stay the composition's.
 //
-// The settings it was built with are the ones a link or the boot reads — the radio preference and
-// the diagnostics one. A build with a panel hands it the panel's subclass.
+// The settings it was built with are the ones a link or the boot reads — the radio preference. A
+// build with a panel hands it the panel's subclass.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {

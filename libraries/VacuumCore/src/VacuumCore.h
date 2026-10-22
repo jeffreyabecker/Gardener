@@ -5,8 +5,7 @@
 
 #include "Logger.h"
 #include "Machine.h"
-#include "NilLogger.h"
-#include "StreamLogger.h"
+#include "SerialLogger.h"
 #include "Tasks.h"
 #include "ble/BleLink.h"
 #include "ble/MachineBleDomain.h"

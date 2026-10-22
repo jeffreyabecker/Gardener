@@ -106,8 +106,9 @@ detail = token / items
   body without a count: its rows follow `ok` and a blank line ends them.
 * Values never contain a space, so a reply line splits on spaces. The one free-form command
   argument, `buzzer play`'s sequence, is never echoed back.
-* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the persisted `log`
-  preference turns them off, and it applies at the next reset. Replies are never silenced.
+* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the `log` switch turns them
+  off and on while the device runs, and a change applies to the next record. Replies are never
+  silenced.
 
 ## 5. `control` — who may command
 
@@ -168,14 +169,14 @@ the reply names whoever is still driving.
 | `heap` | bytes | free heap |
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
-| `log` | `on` / `off` | the diagnostics preference; a change applies at the next reset |
+| `log` | `on` / `off` | the diagnostics switch for this session: on at boot, not stored |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
 | `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
-| `set log <on\|off>` | `ok log=<on\|off>` | the diagnostics preference, stored across reset; requires control |
+| `set log <on\|off>` | `ok log=<on\|off>` | turns the diagnostics records on or off at once; requires control |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
 
@@ -192,20 +193,20 @@ the reply names whoever is still driving.
 <- ok
 ```
 
-`log` and `unit` are the panel's: they are preferences it persists in `/settings.cfg` and shows on
-its glass, so a build without a panel neither reports them in `device get` nor accepts `device set
-log` or `device set unit`. That build's `device get` reads `ok proto=1 fw=... chip=... heap=...
-caps=0`.
+`unit` is the panel's: it is a preference the panel persists in `/settings.cfg` and shows on its
+glass, so a build without a panel neither reports it in `device get` nor accepts `device set unit`.
+`log` is not a preference — every build owns a logger — so both builds report it and accept `device
+set log`. The machine-alone build reads `ok proto=1 fw=... chip=... heap=... log=on caps=0`.
 
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 
-`device set unit` and `device set log` survive a reset: the value is written to `/settings.cfg` as
-a `key=value` line and read back at boot. A filesystem that will not take the write still
-answers with the value in force for this session, and the boot log reports the failed mount. The
-machine and this wire stay in kPa either way — a display unit is a preference about the glass, not
-a second way to state a pressure. `log` differs from `unit`: it chooses the logger at boot, so a
-change does not silence an already-running diagnostics stream until the next reset.
+`device set unit` survives a reset: the value is written to `/settings.cfg` as a `key=value` line
+and read back at boot. A filesystem that will not take the write still answers with the value in
+force for this session, and the boot log reports the failed mount. The machine and this wire stay in
+kPa either way — a display unit is a preference about the glass, not a second way to state a
+pressure. `log` is not stored at all: it is the switch for the running device, on at boot, and
+`device set log off` silences the records from the next one until `device set log on` or a reset.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
 fields. They are answered by the panel's gauge, so a build without a panel reports neither — it has

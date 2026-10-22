@@ -47,15 +47,12 @@ void setup() {
     mounted = formatted;
   }
 
-  // The settings pick the logger, and the machine is built with the logger, so the preferences are
-  // read before the panel is.
+  // The settings are read before the panel is built; the diagnostics stream is not one of them. It
+  // is on from boot, a link switches it with `device set log`, and a reset returns it to on.
   auto* settings = new gardener::PanelSettings(&LittleFS);
   settings->begin();
 
-  gardener::Logger* logger =
-      settings->logEnabled()
-          ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
-          : static_cast<gardener::Logger*>(new gardener::NilLogger());
+  auto* logger = new gardener::SerialLogger(Serial);
 
   if (mounted) {
     logger->info(formatted ? "fs: littlefs formatted, no filesystem found"

@@ -4,7 +4,6 @@ namespace gardener {
 namespace {
 
 constexpr const char* kBluetoothKey = "bluetooth";
-constexpr const char* kLogKey = "log";
 
 }  // namespace
 
@@ -34,7 +33,6 @@ bool Settings::begin() {
   }
 
   bluetooth_ = getBool(kBluetoothKey, true);
-  log_ = getBool(kLogKey, true);
   load();
   return read;
 }
@@ -76,14 +74,6 @@ void Settings::setBluetooth(bool enabled) {
   if (enabled == bluetooth_) return;
   bluetooth_ = enabled;
   setBool(kBluetoothKey, enabled);
-}
-
-bool Settings::logEnabled() const { return log_; }
-
-void Settings::setLogEnabled(bool enabled) {
-  if (enabled == log_) return;
-  log_ = enabled;
-  setBool(kLogKey, enabled);
 }
 
 }  // namespace gardener

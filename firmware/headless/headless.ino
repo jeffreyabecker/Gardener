@@ -23,9 +23,9 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // No settings file is mounted, so every preference is its default and the diagnostics stream is
-  // the build's — the only way to see what the device is doing.
-  gardener::Logger* logger = new gardener::StreamLogger(Serial);
+  // No settings file is mounted, so every preference is its default. The diagnostics stream is on
+  // from boot and a link switches it, the same as the full device's.
+  gardener::Logger* logger = new gardener::SerialLogger(Serial);
   gardener::Settings& settings = *new gardener::Settings(nullptr);
   gardener::Machine& machine = *new gardener::Machine(*logger, settings, Board);
 

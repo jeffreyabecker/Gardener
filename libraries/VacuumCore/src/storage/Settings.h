@@ -47,10 +47,6 @@ class Settings {
   // a change takes effect on the next reset.
   bool bluetoothEnabled() const;
   void setBluetooth(bool enabled);
-  // Whether the diagnostics stream runs. The boot reads it to pick the logger (StreamLogger or
-  // NilLogger), so a change takes effect on the next reset.
-  bool logEnabled() const;
-  void setLogEnabled(bool enabled);
 
  protected:
   // Restores the values a subclass names; begin() calls it once the file has been read.
@@ -62,7 +58,6 @@ class Settings {
   FS* fs_;
   Values values_;
   bool bluetooth_ = true;
-  bool log_ = true;
 };
 
 }  // namespace gardener

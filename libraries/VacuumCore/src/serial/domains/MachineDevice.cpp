@@ -5,6 +5,7 @@
 #include "Machine.h"
 #include "Tasks.h"
 #include "firmwareversion.h"
+#include "Logger.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
 #include "serial/SerialLink.h"
@@ -19,7 +20,7 @@ String firstToken(const String& args) {
 
 // The machine's half of `device`: what the firmware is and which assemblies are fitted. It answers
 // the fields a build without a panel still has — the panel's own domain answers these and the
-// battery, log and unit fields beside them. The two are never registered on the same link, because
+// battery and unit fields beside them. The two are never registered on the same link, because
 // a link holds one domain per name.
 class MachineDeviceDomain : public Domain {
  public:
@@ -30,6 +31,7 @@ class MachineDeviceDomain : public Domain {
 
  private:
   void get(Stream& io);
+  void set(Stream& io, const String& args);
   void reboot(Stream& io, const String& args);
 
   Machine& app_;
@@ -65,6 +67,11 @@ void MachineDeviceDomain::execute(Stream& io) {
     get(io);
     return;
   }
+  if (verb.equalsIgnoreCase("set")) {
+    if (!requireControl(app_, link_, io)) return;
+    set(io, args);
+    return;
+  }
   if (verb.equalsIgnoreCase("reboot")) {
     if (!requireControl(app_, link_, io)) return;
     reboot(io, args);
@@ -76,8 +83,8 @@ void MachineDeviceDomain::execute(Stream& io) {
   io.print('\n');
 }
 
-// Every field is the machine's own: a build with no panel has no gauge to read, no log switch to
-// persist and no unit to print.
+// Every field is the machine's own: a build with no panel has no gauge to read and no unit to
+// print. The diagnostics switch is the logger's, not a preference, so this build serves it too.
 void MachineDeviceDomain::get(Stream& io) {
   io.print("ok proto=");
   io.print(PROTOCOL_VERSION);
@@ -87,9 +94,64 @@ void MachineDeviceDomain::get(Stream& io) {
   io.print(ESP.getChipModel());
   io.print(" heap=");
   io.print((uint32_t)ESP.getFreeHeap());
+  io.print(" log=");
+  io.print(app_.logger().enabled() ? "on" : "off");
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
+  io.print('\n');
+}
+
+void MachineDeviceDomain::set(Stream& io, const String& args) {
+  // `set` is `<field> <value>`, and `log` is the only field this build has.
+  const int split = args.indexOf(' ');
+  if (split < 0) {
+    io.print("err bad_argument\n");
+    return;
+  }
+
+  const String field = args.substring(0, split);
+  String rest = args.substring(split + 1);
+  rest.trim();
+
+  const int valueEnd = rest.indexOf(' ');
+  const String value = valueEnd < 0 ? rest : rest.substring(0, valueEnd);
+  String extra;
+  if (valueEnd >= 0) {
+    extra = rest.substring(valueEnd + 1);
+    extra.trim();
+  }
+
+  if (value.isEmpty()) {
+    io.print("err bad_argument\n");
+    return;
+  }
+
+  if (field.equalsIgnoreCase("log")) {
+    const bool enabled = value.equalsIgnoreCase("on");
+    if (!enabled && !value.equalsIgnoreCase("off")) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    // Refused before it is applied: a command is all or nothing.
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.logger().setEnabled(enabled);
+
+    io.print("ok log=");
+    io.print(enabled ? "on" : "off");
+    io.print('\n');
+    return;
+  }
+
+  io.print("err bad_argument ");
+  io.print(field);
   io.print('\n');
 }
 

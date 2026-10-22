@@ -5,6 +5,7 @@
 #include "Panel.h"
 #include "Tasks.h"
 #include "firmwareversion.h"
+#include "Logger.h"
 #include "serial/SerialLink.h"
 #include "hal/Battery.h"
 #include "hal/Display.h"
@@ -108,7 +109,7 @@ void DeviceDomain::get(Stream& io) {
   }
 
   io.print(" log=");
-  io.print(app_.settings().logEnabled() ? "on" : "off");
+  io.print(app_.logger().enabled() ? "on" : "off");
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
@@ -158,7 +159,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.settings().setLogEnabled(enabled);
+    app_.logger().setEnabled(enabled);
 
     io.print("ok log=");
     io.print(enabled ? "on" : "off");
