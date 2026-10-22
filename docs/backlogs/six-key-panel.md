@@ -74,10 +74,10 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 4 — The contract
 
-- [ ] **1. `gestures.md` describes six keys.** The keys and their tokens, the Back/Cancel split, the
-  moved go-home, the two-key rule, `single`/`double` with the extended-hold seconds, and the
-  press-log line are the contract the pages are written against. Done when the spec names no
-  four-key map, no `chord` token and no Okay-while-Back steal, and agrees with the firmware.
+- [x] **1. `gestures.md` describes six keys.** The keys and their tokens, the Back/Cancel split, the
+  two-key rule, `single`/`double` with the extended-hold seconds, and the press-log line are the
+  contract the pages are written against. Done when the spec names no four-key map, no `chord`
+  token and no Okay-while-Back steal, and agrees with the firmware.
 
 - [ ] **2. `bindings.md` describes the string.** `buttons.take()` answers the classifier's gesture or
   `nil`, the vocabulary is the six keys and `single`/`double`/seconds, the queue holds eight,
