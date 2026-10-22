@@ -74,7 +74,7 @@ copies the field lists from `kRecords` rather than inventing an empty class.
 | --- | --- |
 | `vacuum` | `target, target_off, clamp, start, stop, reset, state, now_ms, log, stopped` |
 | `screen` | `draw_clear`, `draw_pixel`, `draw_line`, `draw_hline`, `draw_vline`, `draw_rect`, `draw_fillrect`, `draw_roundrect`, `draw_fillroundrect`, `draw_circle`, `draw_fillcircle`, `draw_ellipse`, `draw_fillellipse`, `draw_triangle`, `draw_filltriangle`, `draw_rotatedrect`, `draw_fillrotatedrect`, `draw_text`, `text_bounds`, `flush`, `unit` |
-| `device` | `units, set_unit, target, set_target, bluetooth, set_bluetooth, jingle, set_jingle` |
+| `device` | `units, set_unit, target, set_target, bluetooth, jingle, set_jingle` |
 | `buttons` | `take` |
 | `buzzer` | `tone, play, off` |
 | `jingles` | `ids, title, label, notes, current, play_current, default_id` |

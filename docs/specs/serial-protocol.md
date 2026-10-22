@@ -116,7 +116,8 @@ and how it gives the machine back.
 
 The record is a stack of links and is not the serial link's: the Bluetooth transport claims the
 same one, and a panel build sits on it from boot, so a cable, a phone and the panel cannot all drive
-the machine at once. Whoever is on top drives; a link that is not on top is a reader.
+the machine at once. Whoever is on top drives; a link that is not on top is a reader. A build
+compiled without the radio has no `bluetooth` link, so the value never appears in these answers.
 
 | Verb | Reply | Notes |
 | --- | --- | --- |

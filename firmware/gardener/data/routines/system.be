@@ -1,9 +1,10 @@
-# system.be — the device's own settings: the display unit, the default target pressure, the radio
-# preference and the selected jingle.
+# system.be — the device's own settings: the display unit, the default target pressure, whether this
+# build has a radio, and the selected jingle.
 #
 # The four rows are a List widget; the edit face is the page's own. Up/Down walk the rows, OK
-# opens the value, Up/Down changes it, OK saves, and Back cancels or goes home. The jingle is the
-# one value with something to hear, so its browser plays what it is showing as it opens and steps.
+# opens the value, Up/Down changes it, OK saves, and Back cancels or goes home. The radio row is a
+# build fact rather than a preference, so it has nothing to edit. The jingle is the one value with
+# something to hear, so its browser plays what it is showing as it opens and steps.
 
 import string
 
@@ -15,7 +16,6 @@ class System : Page
   var edit_unit_index
   var edit_kpa
   var bluetooth
-  var edit_bluetooth
   var jingle
   var jingle_ids
   var edit_jingle
@@ -32,7 +32,6 @@ class System : Page
     self.edit_unit_index = 0
     self.edit_kpa = 0.0
     self.bluetooth = true
-    self.edit_bluetooth = true
     self.jingle = nil
     self.jingle_ids = []
     self.edit_jingle = 0
@@ -53,8 +52,8 @@ class System : Page
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
-  # device, the target is what `default` will place on the machine when it comes back, the radio
-  # preference is what a transport will honour, and the jingle is the identifier `jingles` resolves.
+  # device, the target is what `default` will place on the machine when it comes back, the radio row
+  # reports what this build was compiled with, and the jingle is the identifier `jingles` resolves.
   def read()
     self.units = device.units()
     self.unit = screen.unit()
@@ -105,13 +104,6 @@ class System : Page
     elif self.list.selected == 1
       screen.draw_text(0, 0, 1, false, "TARGET " + self.unit.suffix)
       screen.draw_text(0, 16, 3, false, self.text(self.edit_kpa))
-    elif self.list.selected == 2
-      screen.draw_text(0, 0, 1, false, "BLUETOOTH")
-      var state = "OFF"
-      if self.edit_bluetooth
-        state = "ON"
-      end
-      screen.draw_text(0, 20, 2, false, state)
     else
       screen.draw_text(0, 0, 1, false, "JINGLE")
       var label = "--"
@@ -198,7 +190,8 @@ class System : Page
     if self.list.selected == 0
       self.edit_unit_index = self.unit_index
     elif self.list.selected == 2
-      self.edit_bluetooth = self.bluetooth
+      # The radio is a build fact: the row reports it and OK has nothing to open.
+      return
     elif self.list.selected == 3
       # No library is a fault the boot already reported; OK does nothing rather than opening an
       # editor with nothing to cycle.
@@ -246,10 +239,6 @@ class System : Page
       self.edit_unit_index = (self.edit_unit_index + direction + unit_count) % unit_count
       return
     end
-    if self.list.selected == 2
-      self.edit_bluetooth = !self.edit_bluetooth
-      return
-    end
     if self.list.selected == 3
       var jingle_count = self.jingle_ids.size()
       if jingle_count > 0
@@ -270,11 +259,6 @@ class System : Page
     end
     if self.list.selected == 1
       device.set_target(self.edit_kpa)
-      self.read()
-      return
-    end
-    if self.list.selected == 2
-      device.set_bluetooth(self.edit_bluetooth)
       self.read()
       return
     end

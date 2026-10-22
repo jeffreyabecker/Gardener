@@ -485,11 +485,10 @@ def harness_switch(name, settings)
 end
 
 class DeviceStub
-  var target_kpa, bluetooth_enabled, jingle_id
+  var target_kpa, jingle_id
 
   def init()
     self.target_kpa = 0.0
-    self.bluetooth_enabled = true
     self.jingle_id = ""
   end
 
@@ -521,14 +520,9 @@ class DeviceStub
     self.target_kpa = kpa
   end
 
+  # The radio is a build fact in the firmware, not a setting; the harness is a build with it.
   def bluetooth()
-    return self.bluetooth_enabled
-  end
-
-  def set_bluetooth(on)
-    if type(on) == "bool"
-      self.bluetooth_enabled = on
-    end
+    return true
   end
 
   def jingle()

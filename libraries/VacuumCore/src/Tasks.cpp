@@ -5,7 +5,9 @@
 #include "Ownership.h"
 #include "SafeReboot.h"
 #include "VacuumSystem.h"
+#if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
+#endif
 #include "serial/SerialLink.h"
 
 namespace gardener {
@@ -45,7 +47,9 @@ struct ControlState {
 struct InterfaceState {
   Machine& machine;
   SerialLink* link;
+#if GARDENER_BLUETOOTH
   BleLink* ble;
+#endif
 };
 
 // Applies one queued write to the machine. The op names the verb; the fields are the op's own.
@@ -143,17 +147,25 @@ void interfaceTask(void* arg) {
 
     // The links answer the wire.
     state.link->poll(now);
+#if GARDENER_BLUETOOTH
     state.ble->poll(now);
+#endif
 
     // Connection presence, published for the panel's overlay.
     serialConnected = state.link->controllerAttached();
+#if GARDENER_BLUETOOTH
     bleConnected = state.ble->connected();
+#endif
 
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
+#if GARDENER_BLUETOOTH
 void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble) {
+#else
+void spawnMachineTasks(Machine& machine, SerialLink* link) {
+#endif
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
   static ControlState control{machine, &machine.logger()};
@@ -161,7 +173,11 @@ void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble) {
   // panel in a panel build, `None` alone otherwise. No wire claim is applied before the interface
   // task runs, so nothing can change in between.
   control.lastOwner = &machine.ownership().owner();
+#if GARDENER_BLUETOOTH
   static InterfaceState interface{machine, link, ble};
+#else
+  static InterfaceState interface{machine, link};
+#endif
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

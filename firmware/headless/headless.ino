@@ -8,6 +8,13 @@
 
 #include <VacuumCore.h>
 
+// The machine-alone build has no panel, so the radio is one of its two ways in and is not optional.
+// `scripts/arduino.py` always enables it for this sketch; a build that tries to remove it stops
+// here rather than linking half a composition.
+#if !GARDENER_BLUETOOTH
+#error "the headless build always includes the Bluetooth transport"
+#endif
+
 namespace {
 
 // The rig this build is wired to: the machine's three parts, and nothing else.
@@ -23,11 +30,10 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // No settings file is mounted, so every preference is its default. The diagnostics stream is on
-  // from boot and a link switches it, the same as the full device's.
+  // No settings file is mounted: this build has no storage and no preferences. The diagnostics
+  // stream is on from boot and a link switches it, the same as the full device's.
   gardener::Logger* logger = new gardener::SerialLogger(Serial);
-  gardener::Settings& settings = *new gardener::Settings(nullptr);
-  gardener::Machine& machine = *new gardener::Machine(*logger, settings, Board);
+  gardener::Machine& machine = *new gardener::Machine(*logger, Board);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
   // Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
@@ -37,27 +43,32 @@ void setup() {
   serial->registerDomain(gardener::createControlDomain(machine, *serial));
   serial->registerDomain(gardener::createVacuumDomain(machine, *serial));
   serial->registerDomain(gardener::createMachineDeviceDomain(machine, *serial));
+#if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink(&machine);
   ble->registerDomain(new gardener::MachineBleDomain(&machine));
+#endif
 
   serial->begin();
+#if GARDENER_BLUETOOTH
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
   // up. It comes up before the ready line so that line reports the heap the firmware runs with.
   switch (ble->begin()) {
     case gardener::BleLink::Start::Advertising:
       logger->info("ble: advertising as gardener");
       break;
-    case gardener::BleLink::Start::Disabled:
-      logger->info("ble: off");
-      break;
     case gardener::BleLink::Start::Failed:
       logger->warn("ble: start failed, serial only");
       break;
   }
+#endif
 
   // The parts, then the two tasks that drive them.
   machine.boot();
+#if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(machine, serial, ble);
+#else
+  gardener::spawnMachineTasks(machine, serial);
+#endif
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

@@ -35,6 +35,15 @@ python scripts/arduino.py --task build --sketch headless
 python scripts/arduino.py --task upload --sketch headless --port COM5
 ```
 
+Bluetooth is a build option rather than a setting. The full device compiles the radio in by default;
+`--no-enable-bluetooth` leaves the NimBLE stack, the GATT table and the `bluetooth` ownership link
+out of that image. The headless build always keeps the radio, because a machine with no panel has
+only the two links to drive it.
+
+```powershell
+python scripts/arduino.py --task build --no-enable-bluetooth
+```
+
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses

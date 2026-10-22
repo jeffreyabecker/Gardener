@@ -58,7 +58,7 @@ A page can hold exactly one editor (`Page.editor`), so the routine settings modu
 [modules/settings.be](../../firmware/gardener/data/modules/settings.be) carries the list, the edit
 stage and the commit for a routine's `describe()` list, and the device's own settings screen in
 [routines/system.be](../../firmware/gardener/data/routines/system.be) hand-rolls a second one for
-unit, target, Bluetooth and jingle. The idea is a stack instead of one field: a value editor is
+unit, target and jingle. The idea is a stack instead of one field: a value editor is
 pushed with a current value, its kind and bounds, takes the keys and the screen while it is on top,
 and pops with the value it settled on, so routine settings becomes a composition of several of them
 and the app's own settings screen can invoke the same ones. What holds it back is the page lifecycle

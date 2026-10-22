@@ -1,5 +1,7 @@
 #include "ble/BleLink.h"
 
+#if GARDENER_BLUETOOTH
+
 #include <stdio.h>
 
 #include "Ownership.h"
@@ -27,7 +29,6 @@ void BleLink::registerDomain(BleDomain* domain) {
 }
 
 BleLink::Start BleLink::begin() {
-  if (!app_->settings().bluetoothEnabled()) return Start::Disabled;
   if (!NimBLEDevice::init(kDeviceName)) return Start::Failed;
 
   // Just Works, bonded: the device pairs without a passkey and keeps the bond
@@ -160,3 +161,5 @@ void BleLink::onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& 
 }
 
 }  // namespace gardener
+
+#endif  // GARDENER_BLUETOOTH

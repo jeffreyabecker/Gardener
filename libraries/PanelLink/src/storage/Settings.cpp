@@ -1,11 +1,6 @@
 #include "storage/Settings.h"
 
 namespace gardener {
-namespace {
-
-constexpr const char* kBluetoothKey = "bluetooth";
-
-}  // namespace
 
 Settings::Settings(FS* fs) : fs_(fs) {}
 
@@ -32,7 +27,6 @@ bool Settings::begin() {
     }
   }
 
-  bluetooth_ = getBool(kBluetoothKey, true);
   load();
   return read;
 }
@@ -66,14 +60,6 @@ bool Settings::setBool(const char* key, bool value) {
 
 bool Settings::setFloat(const char* key, float value, uint8_t decimals) {
   return set(key, String(value, static_cast<unsigned int>(decimals)));
-}
-
-bool Settings::bluetoothEnabled() const { return bluetooth_; }
-
-void Settings::setBluetooth(bool enabled) {
-  if (enabled == bluetooth_) return;
-  bluetooth_ = enabled;
-  setBool(kBluetoothKey, enabled);
 }
 
 }  // namespace gardener

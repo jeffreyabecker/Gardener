@@ -79,32 +79,37 @@ void setup() {
   serial->registerDomain(gardener::createDeviceDomain(context, *serial));
   serial->registerDomain(gardener::createBuzzerDomain(context, *serial));
   serial->registerDomain(gardener::createFsDomain(context, *serial));
+#if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink(&context);
   ble->registerDomain(new gardener::MachineBleDomain(&context));
   ble->registerDomain(new gardener::PanelBleDomain(&context));
+#endif
 
   serial->begin();
-  // The radio is a bonus transport: a device with the preference off stays silent, and a failure is
-  // a line here rather than a boot that does not come up. It comes up before the ready line so that
-  // line reports the heap the firmware actually runs with.
+#if GARDENER_BLUETOOTH
+  // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
+  // up. It comes up before the ready line so that line reports the heap the firmware actually runs
+  // with.
   switch (ble->begin()) {
     case gardener::BleLink::Start::Advertising:
       logger->info("ble: advertising as gardener");
-      break;
-    case gardener::BleLink::Start::Disabled:
-      logger->info("ble: off");
       break;
     case gardener::BleLink::Start::Failed:
       logger->warn("ble: start failed, serial only");
       break;
   }
+#endif
 
   // The parts, then the tasks that drive them.
   context.boot();
 
   auto* connected = new gardener::ConnectedUI(context);
   auto* disconnected = new gardener::DisconnectedUI(context);
+#if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(context, serial, ble);
+#else
+  gardener::spawnMachineTasks(context, serial);
+#endif
   gardener::spawnPanelTask(context, connected, disconnected);
 
   String ready = "app: ready, heap ";

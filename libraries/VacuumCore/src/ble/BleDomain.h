@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Build.h"
+
+#if GARDENER_BLUETOOTH
+
 #include <NimBLEDevice.h>
 
 namespace gardener {
@@ -61,3 +65,5 @@ inline void setFloat(NimBLECharacteristic* characteristic, float value) {
 }
 
 }  // namespace gardener
+
+#endif  // GARDENER_BLUETOOTH

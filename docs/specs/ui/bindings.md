@@ -181,7 +181,8 @@ Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear
 The unit the panel prints, the target the default program restores and the selected jingle. All
 belong to the device rather than to a routine's `store` file. The unit is the same switch the serial
 `device` domain carries; the diagnostics switch is not here, because it belongs to the serial link
-rather than to the glass.
+rather than to the glass. The radio is not a setting: `device.bluetooth()` reports whether the
+image was built with it.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -189,8 +190,7 @@ rather than to the glass.
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.cfg`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(kpa)` | — | stores a new target in `/settings.cfg`; clamp it with `vacuum.clamp()` first |
-| `device.bluetooth()` | `bool` | the stored radio preference; `true` when unset |
-| `device.set_bluetooth(enabled)` | — | stores it in `/settings.cfg`; the radio reads it when it starts, so the next boot honours it |
+| `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
 | `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.cfg` |
 

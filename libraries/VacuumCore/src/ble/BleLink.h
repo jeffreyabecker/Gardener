@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Build.h"
+
+#if GARDENER_BLUETOOTH
+
 #include <NimBLEDevice.h>
 #include <vector>
 
@@ -31,9 +35,8 @@ class BleLink : public Link,
   static constexpr uint8_t Code = 2;
 
   // What begin() found. The radio is a bonus transport, so a link that does
-  // not come up is a line in the boot log rather than a boot failure, and a
-  // device with the preference off stays silent.
-  enum class Start : uint8_t { Disabled, Advertising, Failed };
+  // not come up is a line in the boot log rather than a boot failure.
+  enum class Start : uint8_t { Advertising, Failed };
 
   explicit BleLink(Machine* context) : app_(context) {
     domains_.reserve(MaxDomains);
@@ -103,3 +106,5 @@ class BleLink : public Link,
 };
 
 }  // namespace gardener
+
+#endif  // GARDENER_BLUETOOTH

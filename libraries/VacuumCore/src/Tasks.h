@@ -5,11 +5,15 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
+#include "Build.h"
+
 namespace gardener {
 
 class Machine;
 class SerialLink;
+#if GARDENER_BLUETOOTH
 class BleLink;
+#endif
 
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; the fields are the op's own, so a field that does
@@ -24,7 +28,8 @@ struct MachineCommand {
 // after.
 extern QueueHandle_t machineCommandQueue;
 
-// Connection presence, one writer (the interface owner) and read dirty by the panel's overlay.
+// Connection presence, one writer (the interface owner) and read dirty by the panel's overlay. A
+// build without the radio never sets the Bluetooth one, so the panel draws no rune.
 extern volatile bool serialConnected;
 extern volatile bool bleConnected;
 
@@ -33,5 +38,9 @@ void interfaceTask(void* arg);
 
 // The composition spawns the control and interface tasks, pinned to their cores; the command queue
 // is created here, before either task reads it.
+#if GARDENER_BLUETOOTH
 void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble);
+#else
+void spawnMachineTasks(Machine& machine, SerialLink* link);
+#endif
 }  // namespace gardener

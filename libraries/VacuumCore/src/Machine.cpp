@@ -11,9 +11,8 @@ namespace gardener {
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
 // so nothing owns them. The pins come from the sketch, so a board variant edits its sketch and
 // nothing under hal/impl/.
-Machine::Machine(Logger& logger, Settings& settings, const MachinePins& pins)
+Machine::Machine(Logger& logger, const MachinePins& pins)
     : logger_(logger),
-      settings_(settings),
       vacuum_(new PwmPump(pins.pumpPwm), new XgzpSensor(pins.sensorAdc),
               new NormallyOpenValve(pins.ventValve)) {}
 

@@ -62,5 +62,8 @@ mean.
 
 `kpa` and `duty` are notified at 5 Hz, `batt` every 10 s, and the rest on change.
 
-The stored preference in `/settings.cfg` (`bluetooth=off`) leaves the radio silent. It is read once
-at boot, so a change takes effect on the next `device reboot`.
+The radio is a build fact, not a preference. A full-device image may be compiled with
+`GARDENER_BLUETOOTH=0` (`python scripts/arduino.py --task build --no-enable-bluetooth`), which
+leaves this GATT table, the NimBLE stack and the `bluetooth` link out of the image entirely: such a
+build has one transport, and `control` never reports `bluetooth`. The machine-alone build always
+keeps the radio.

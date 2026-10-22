@@ -1,5 +1,7 @@
 #include "ble/MachineBleDomain.h"
 
+#if GARDENER_BLUETOOTH
+
 #include <math.h>
 #include <string.h>
 
@@ -290,3 +292,5 @@ void MachineBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
 }
 
 }  // namespace gardener
+
+#endif  // GARDENER_BLUETOOTH

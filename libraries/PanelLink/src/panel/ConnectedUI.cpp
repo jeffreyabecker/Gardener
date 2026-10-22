@@ -1,7 +1,10 @@
 #include "panel/ConnectedUI.h"
 
+#include "Build.h"
 #include "Ownership.h"
+#if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
+#endif
 #include "panel/UI.h"
 #include "serial/SerialLink.h"
 
@@ -45,9 +48,11 @@ void ConnectedUI::drawFrame() {
     case SerialLink::Code:
       serialIcon();
       break;
+#if GARDENER_BLUETOOTH
     case BleLink::Code:
       bluetoothIcon();
       break;
+#endif
     default:
       break;
   }

@@ -1,5 +1,7 @@
 #include "ble/PanelBleDomain.h"
 
+#if GARDENER_BLUETOOTH
+
 #include "Panel.h"
 #include "ble/BleLink.h"
 #include "panel/Units.h"
@@ -67,3 +69,5 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
 }
 
 }  // namespace gardener
+
+#endif  // GARDENER_BLUETOOTH

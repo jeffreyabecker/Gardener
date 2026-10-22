@@ -42,7 +42,7 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, const PanelPins& 
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* routines = new Routines();
-  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, &settings, routines);
+  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, routines);
 
   // The full device has the panel and the gauge, so it is the one build with bits set. The panel
   // pushes itself above the floor so it is the default controller.

@@ -1,4 +1,6 @@
 #include "Panel.h"
+
+#include "Build.h"
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
@@ -43,16 +45,11 @@ int deviceSetTarget(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The radio preference the system page edits. BleLink reads it when it starts, so the switch decides
-// whether the next boot advertises.
+// The radio is a build fact, not a preference: the row reports whether this image has one, and
+// nothing a page can call changes that.
 int deviceBluetooth(bvm* vm) {
-  be_pushbool(vm, gContext->settings().bluetoothEnabled());
+  be_pushbool(vm, GARDENER_BLUETOOTH != 0);
   be_return(vm);
-}
-
-int deviceSetBluetooth(bvm* vm) {
-  if (be_isbool(vm, 1)) gContext->settings().setBluetooth(be_tobool(vm, 1));
-  be_return_nil(vm);
 }
 
 // The selected jingle's identifier, or "" when none has been chosen. The jingles module resolves an
@@ -78,7 +75,6 @@ const bnfuncinfo kDeviceLibrary[] = {
     {"target", deviceTarget},
     {"set_target", deviceSetTarget},
     {"bluetooth", deviceBluetooth},
-    {"set_bluetooth", deviceSetBluetooth},
     {"jingle", deviceJingle},
     {"set_jingle", deviceSetJingle},
     {nullptr, nullptr},

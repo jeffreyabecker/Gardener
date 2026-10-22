@@ -11,8 +11,13 @@
 --sketch picks the build: `gardener` is the full device and the default, `headless` is the machine
 with no panel. Each sketch is its own composition root, so this only says which one to build.
 
+`--no-enable-bluetooth` compiles the full device without the radio: the GATT link, its domains and
+all of NimBLE are left out of the image. The headless build always keeps the radio, because a
+machine with no panel has only the two links to drive it, so the switch is ignored there.
+
     python scripts/arduino.py --task upload --port COM5
     python scripts/arduino.py --task build --sketch headless
+    python scripts/arduino.py --task build --no-enable-bluetooth
     python scripts/arduino.py --task data --port COM5
 """
 
@@ -63,7 +68,8 @@ THIRD_PARTY_LIBS = [
 
 # NimBLE builds only what the contract can use: a peripheral with one connection, no scanning and no
 # client role. These reach every compiled file, including the library's own sources, which is where
-# nimconfig.h would read them if the library name were the variable.
+# nimconfig.h would read them if the library name were the variable. A build without the radio does
+# not pass them at all, since the stack they configure is not compiled.
 BLE_DEFINES = " ".join([
     "-DCONFIG_BT_NIMBLE_ROLE_CENTRAL=0",
     "-DCONFIG_BT_NIMBLE_ROLE_OBSERVER=0",
@@ -75,6 +81,9 @@ BLE_DEFINES = " ".join([
 FQBN = DEFAULT_FQBN
 PORT = ""
 VERBOSE = False
+# Whether the build compiles the radio in. It has to reach every translation unit, so it travels as
+# the `GARDENER_BLUETOOTH` build define rather than as anything in a sketch.
+BLUETOOTH = True
 
 
 def run(command):
@@ -144,8 +153,15 @@ def spiffs_partition(table):
     sys.exit(f"no spiffs partition in {table}")
 
 
+def build_defines():
+    defines = [f"-DGARDENER_BLUETOOTH={1 if BLUETOOTH else 0}"]
+    if BLUETOOTH:
+        defines.append(BLE_DEFINES)
+    return " ".join(defines)
+
+
 def compile_sketch(*extra):
-    arduino_cli("compile", "--fqbn", FQBN, "--build-property", f"build.defines={BLE_DEFINES}",
+    arduino_cli("compile", "--fqbn", FQBN, "--build-property", f"build.defines={build_defines()}",
                 "--libraries", str(PROJECT_LIBS), *extra, str(SKETCH))
 
 
@@ -225,7 +241,7 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR
+    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
@@ -234,6 +250,9 @@ def main():
                         help="which build to act on (default: gardener, the full device)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
+    parser.add_argument("--enable-bluetooth", action=argparse.BooleanOptionalAction, default=True,
+                        help="compile the radio in (default: on; --no-enable-bluetooth leaves it "
+                             "out of the full device; the headless build always keeps it)")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
     args = parser.parse_args()
 
@@ -243,6 +262,10 @@ def main():
     SKETCH = SKETCHES[args.sketch]
     DATA_DIR = SKETCH / "data"
     BUILD_DIR = SKETCH / "build"
+    # The machine-alone build has no panel, so its radio is not optional.
+    if SKETCH.name == "headless" and not args.enable_bluetooth:
+        print("headless always compiles the radio in; --no-enable-bluetooth ignored")
+    BLUETOOTH = args.enable_bluetooth or SKETCH.name == "headless"
 
     if args.task == "libs":
         install_libs()

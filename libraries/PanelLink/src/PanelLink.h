@@ -9,7 +9,9 @@
 #include "Panel.h"
 #include "PanelRoot.h"
 #include "PanelTasks.h"
+#if GARDENER_BLUETOOTH
 #include "ble/PanelBleDomain.h"
+#endif
 #include "panel/ConnectedUI.h"
 #include "panel/DisconnectedUI.h"
 #include "serial/PanelDomains.h"

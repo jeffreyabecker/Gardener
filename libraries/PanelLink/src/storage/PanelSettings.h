@@ -5,10 +5,10 @@
 
 namespace gardener {
 
-// The preferences the panel adds to the device's: the one unit the panel prints pressure in, the
-// target the default program pulls to, and which jingle is selected. They are the panel's because
-// only a build with a panel prints a unit, pulls a target or sounds a jingle; everything a link or
-// the boot reads stays on the core's Settings.
+// The preferences the panel adds to the device's settings: the one unit the panel prints pressure
+// in, the target the default program pulls to, and which jingle is selected. They are the panel's
+// because only a build with a panel prints a unit, pulls a target or sounds a jingle; the file, its
+// key=value document and the unknown-key carry-through stay on Settings.
 class PanelSettings : public Settings {
  public:
   explicit PanelSettings(FS* fs) : Settings(fs) {}

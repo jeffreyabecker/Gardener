@@ -42,14 +42,15 @@ class Panel : public Machine, public Link {
   static constexpr uint8_t Code = 3;
 
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, Display* display, PanelSettings* settings, Routines* routines)
-      : Machine(logger, *settings, pins.machine),
+        Battery* battery, Display* display, PanelSettings& settings, Routines* routines)
+      : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
         buzzer_(buzzer),
         battery_(battery),
         overlay_(new Overlay(display, battery, &vacuum())),
-        routines_(routines) {}
+        routines_(routines),
+        settings_(settings) {}
 
   const char* name() const override { return "panel"; }
   uint8_t code() const override { return Code; }
@@ -69,8 +70,7 @@ class Panel : public Machine, public Link {
   // The display is the overlay — every drawing verb goes through it — so both are the same object.
   Display& display() { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
-  // The machine holds the settings, and the panel is built with the panel's subclass of them.
-  PanelSettings& settings() { return static_cast<PanelSettings&>(Machine::settings()); }
+  PanelSettings& settings() { return settings_; }
   Routines& routines() { return *routines_; }
 
  private:
@@ -81,6 +81,7 @@ class Panel : public Machine, public Link {
   Battery* battery_;
   Overlay* overlay_;
   Routines* routines_;
+  PanelSettings& settings_;
   // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
   // connection flags make.
   volatile bool external_ = false;

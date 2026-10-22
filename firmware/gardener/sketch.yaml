@@ -11,5 +11,6 @@
 # is the one `scripts/arduino.py --task data` writes, and its offset comes from this table.
 #
 # Library versions are pinned by `scripts/arduino.py --task libs`, which installs NimBLE-Arduino
-# 2.5.1 for the Bluetooth transport; the sketch build itself takes the project local libraries.
+# 2.5.1 for the Bluetooth transport; the sketch build itself takes the project local libraries. A
+# build made with `--no-enable-bluetooth` leaves that stack out of the image.
 default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
