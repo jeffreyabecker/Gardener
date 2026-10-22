@@ -23,16 +23,12 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
-Open:
-
-- [Six-key panel](./backlogs/six-key-panel.md) — the 74HC165 reader, the six-key gesture map and the
-  classifier's gesture string, breaking down [the six-key panel plan](./plans/six-key-panel.md).
-
 The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) — currently
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
 from the panel into two libraries, made both links pluggable, and shipped a panel-less build with a
-capability surface.
+capability surface, and [the six-key panel](./backlogs/completed/six-key-panel/), whose epics read
+six keys through a shift register, added the gesture classifier and bound the six-key map.
 
 ## Guides
 

@@ -41,7 +41,7 @@ well inside one channel.
 | ESP32-S3 Super Mini | Retained by request. Two female headers; USB-C at the board edge. |
 | 3.3 V buck | Retained by request. Header pins mate with a 0.1" female header; check pitch and pin order. Its output is the load rail. |
 | OLED | Panel part; a 4-pin header is the right amount of integration. |
-| Six keys + 74HC165 | [The six-key panel plan](./six-key-panel.md) supersedes the bought module: the board carries six switches and one shift register, so the panel needs three signal pins and a supply pair instead of six GPIOs. |
+| Six keys + 74HC165 | The board carries six switches and one shift register, so the panel needs three signal pins and a supply pair instead of six GPIOs. |
 | Pump, valve, tube, tee | Off-board by nature. |
 
 The breadboard and jumpers are gone; the board is what replaces them.

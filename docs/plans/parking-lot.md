@@ -37,10 +37,8 @@ A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/d
 ## Nudges inside a routine
 
 A gesture that adjusts the run while it is going instead of ending or restarting it: deeper by a step,
-one more set, or straight to rest and done. What holds it back is the gesture map — OK is the page's
-primary action, Up+Down is the settings view of a routine page, and Back is the whole stop — so a
-nudge has no press to take that does not first take a meaning away from one of those.
-
+one more set, or straight to rest and done. A routine page's free keys — Forward and Down — could
+carry one, but no run has a mid-run adjustment in its phase machine yet.
 
 ## Verify the two builds on hardware
 
@@ -51,11 +49,6 @@ with Back releasing and Back+OK rebooting, and the chamber venting on a claim, a
 and a drop. The machine-alone build needs the same: `device get` reporting `caps` and `log` with no
 battery or unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that
 cannot start unowned or survive its owner leaving.
-
-## Gesture Classifier
-
-gestures become either an enum or a string with a predictable format state machine functions become a
-lot less nested. maybe expose this at the c++ level.
 
 # Battery Optional
 

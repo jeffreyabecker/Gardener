@@ -1,8 +1,7 @@
 # Epic 1 — The shift-register reader
 
-The panel's six keys are named and read through one 74HC165. This is part 1 of
-[the six-key panel plan](../../../plans/six-key-panel.md); the gesture map and the gesture string
-follow in epics 2 and 3.
+The panel's six keys are named and read through one 74HC165. The gesture map and the gesture
+string follow in epics 2 and 3.
 
 ## Task 1 — Name the six keys
 
