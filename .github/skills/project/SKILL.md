@@ -13,11 +13,21 @@ description: 'Gardener Git and documentation practice: how to commit (one commit
 
 ## Committing
 
-**Committing means commit.** When you are told to commit, stage what is in the tree and write the
-message: one commit, the change as it stands, in the style the history already uses. Don't re-run
-what was verified when the change was made, don't split one request into a tidier series of commits,
-and never revert files to rebuild an intermediate state so that a commit looks smaller. Verification
-belongs to the change, not to the commit.
+**Committing means commit.** When you are told to commit, it is `git add -A` and one `git commit`:
+the whole tree as it stands, in the style the history already uses. That is the task, and it should
+take the time two commands take.
+
+**A commit runs nothing.** No build, no test, no lint, no file-by-file read of the diff to satisfy
+yourself the tree is good, and no check of whether someone else's unstaged work compiles. Whatever is
+in the tree was verified when it was made; verifying it again belongs to the change, not to the
+commit. If the tree holds work you did not write, that is still the tree — stage it and describe it
+in the message.
+
+Don't split one request into a tidier series of commits, and never revert files to rebuild an
+intermediate state so that a commit looks smaller. Don't amend a commit that already landed.
+
+The message is a subject in the imperative — as long as it needs to be and no longer — then the body
+saying what changed and why. Read `git log` for the voice, not for a template.
 
 ## Where work goes
 

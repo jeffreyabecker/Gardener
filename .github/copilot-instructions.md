@@ -6,6 +6,9 @@
 local libraries. There is no host test suite, and nothing checks the layer rule, so a stray
 `hal/` include that reaches upward is a review catch rather than a build failure.
 
+A commit runs nothing: when told to commit, stage the tree and write the message, and don't build,
+test or review the diff on the way.
+
 ## Skills
 
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
