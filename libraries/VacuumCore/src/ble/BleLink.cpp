@@ -22,8 +22,8 @@ String characteristicUuid(uint16_t suffix) {
 }  // namespace
 
 void BleLink::registerDomain(BleDomain* domain) {
-  if (domain == nullptr || domainCount_ >= kMaxDomains) return;
-  domains_[domainCount_++] = domain;
+  if (domain == nullptr) return;
+  domains_.push_back(domain);
 }
 
 BleLink::Start BleLink::begin() {
@@ -49,9 +49,8 @@ BleLink::Start BleLink::begin() {
 
   // Each registered domain contributes its characteristics in registration
   // order, and the link hands each one back so the domain can answer it.
-  fieldCount_ = 0;
-  for (uint8_t d = 0; d < domainCount_; ++d) {
-    BleDomain* domain = domains_[d];
+  fields_.clear();
+  for (BleDomain* domain : domains_) {
     for (uint8_t i = 0; i < domain->specCount(); ++i) {
       const BleDomain::Spec& spec = domain->specAt(i);
       NimBLECharacteristic* characteristic = service->createCharacteristic(
@@ -59,9 +58,7 @@ BleLink::Start BleLink::begin() {
       if (characteristic == nullptr) return Start::Failed;
       characteristic->setCallbacks(this);
       domain->bind(i, characteristic);
-      entries_[fieldCount_] = {domain, i};
-      fields_[fieldCount_] = characteristic;
-      ++fieldCount_;
+      fields_.push_back({domain, i, characteristic});
     }
   }
 
@@ -83,8 +80,8 @@ void BleLink::poll(uint32_t nowMs) {
   // pass after it.
   const bool baseline = baseline_;
   baseline_ = false;
-  for (uint8_t d = 0; d < domainCount_; ++d) {
-    domains_[d]->poll(nowMs, *this, baseline);
+  for (BleDomain* domain : domains_) {
+    domain->poll(nowMs, *this, baseline);
   }
 
   if (!linkLost_) return;
@@ -109,8 +106,8 @@ bool BleLink::subscribed(const NimBLECharacteristic* characteristic) const {
 }
 
 int BleLink::find(const NimBLECharacteristic* characteristic) const {
-  for (uint8_t i = 0; i < fieldCount_; ++i) {
-    if (fields_[i] == characteristic) return static_cast<int>(i);
+  for (size_t i = 0; i < fields_.size(); ++i) {
+    if (fields_[i].characteristic == characteristic) return static_cast<int>(i);
   }
   return -1;
 }
@@ -131,8 +128,8 @@ void BleLink::onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo& info)
   (void)info;
   const int index = find(characteristic);
   if (index < 0) return;
-  const Entry& entry = entries_[index];
-  entry.domain->describe(entry.index);
+  const Field& field = fields_[index];
+  field.domain->describe(field.index);
 }
 
 // A write only lands in its slot. Lengths are checked by the owning domain,
@@ -141,8 +138,8 @@ void BleLink::onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo& info
   (void)info;
   const int index = find(characteristic);
   if (index < 0) return;
-  const Entry& entry = entries_[index];
-  entry.domain->write(entry.index, characteristic->getValue());
+  const Field& field = fields_[index];
+  field.domain->write(field.index, characteristic->getValue());
 }
 
 void BleLink::onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& info,

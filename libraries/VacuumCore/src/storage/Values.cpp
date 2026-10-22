@@ -3,7 +3,7 @@
 namespace gardener {
 
 void Values::parse(const String& text) {
-  count_ = 0;
+  entries_.clear();
   int start = 0;
   while (start <= (int)text.length()) {
     int end = text.indexOf('\n', (unsigned int)start);
@@ -29,10 +29,9 @@ void Values::parse(const String& text) {
       entry->value = value;
       continue;
     }
-    if (count_ == kMaxEntries) continue;
-    entries_[count_].key = key;
-    entries_[count_].value = value;
-    count_++;
+    // A file with more keys than the document holds keeps the keys it read first.
+    if (entries_.size() >= MaxEntries) continue;
+    entries_.push_back({key, value});
   }
 }
 
@@ -46,35 +45,33 @@ bool Values::set(const char* key, const String& value) {
     entry->value = value;
     return true;
   }
-  if (count_ == kMaxEntries) return false;
-  entries_[count_].key = key;
-  entries_[count_].value = value;
-  count_++;
+  if (entries_.size() >= MaxEntries) return false;
+  entries_.push_back({key, value});
   return true;
 }
 
 // Entries keep the order they were read in, so an unknown key keeps its place rather than moving.
 String Values::text() const {
   String out;
-  for (uint8_t i = 0; i < count_; i++) {
-    out += entries_[i].key;
+  for (const Entry& entry : entries_) {
+    out += entry.key;
     out += '=';
-    out += entries_[i].value;
+    out += entry.value;
     out += '\n';
   }
   return out;
 }
 
 Values::Entry* Values::find(const char* key) {
-  for (uint8_t i = 0; i < count_; i++) {
-    if (entries_[i].key == key) return &entries_[i];
+  for (Entry& entry : entries_) {
+    if (entry.key == key) return &entry;
   }
   return nullptr;
 }
 
 const Values::Entry* Values::find(const char* key) const {
-  for (uint8_t i = 0; i < count_; i++) {
-    if (entries_[i].key == key) return &entries_[i];
+  for (const Entry& entry : entries_) {
+    if (entry.key == key) return &entry;
   }
   return nullptr;
 }

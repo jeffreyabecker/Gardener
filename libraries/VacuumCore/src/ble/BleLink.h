@@ -1,6 +1,7 @@
 #pragma once
 
 #include <NimBLEDevice.h>
+#include <vector>
 
 #include "Machine.h"
 #include "Ownership.h"
@@ -34,7 +35,10 @@ class BleLink : public Link,
   // device with the preference off stays silent.
   enum class Start : uint8_t { Disabled, Advertising, Failed };
 
-  explicit BleLink(Machine* context) : app_(context) {}
+  explicit BleLink(Machine* context) : app_(context) {
+    domains_.reserve(MaxDomains);
+    fields_.reserve(MaxFields);
+  }
 
   const char* name() const override { return "bluetooth"; }
   uint8_t code() const override { return Code; }
@@ -59,12 +63,18 @@ class BleLink : public Link,
   bool subscribed(const NimBLECharacteristic* characteristic) const;
 
  private:
-  static constexpr uint8_t kMaxDomains = 4;
-  static constexpr uint8_t kMaxFields = 16;
+  // The machine's domains and a panel's, and the characteristics they declare. Both are a build
+  // fact, so the tables are reserved once and do not grow while the device runs.
+  static constexpr uint8_t MaxDomains = 4;
+  static constexpr uint8_t MaxFields = 16;
 
-  struct Entry {
+  // One registered characteristic: the domain that declares it, its index in that domain's specs,
+  // and the characteristic the link created for it. One list of three, because a read or a write
+  // routes on all three and two parallel arrays are two things to keep in step.
+  struct Field {
     BleDomain* domain;
     uint8_t index;  // this domain's spec index
+    NimBLECharacteristic* characteristic;
   };
 
   // --- NimBLE's callbacks, on the host task ---------------------------------
@@ -79,11 +89,8 @@ class BleLink : public Link,
 
   Machine* app_;
   NimBLEServer* server_ = nullptr;
-  BleDomain* domains_[kMaxDomains] = {};
-  uint8_t domainCount_ = 0;
-  Entry entries_[kMaxFields] = {};
-  NimBLECharacteristic* fields_[kMaxFields] = {};
-  uint8_t fieldCount_ = 0;
+  std::vector<BleDomain*> domains_;
+  std::vector<Field> fields_;
 
   // Written on core 0, read on core 1. Each is one aligned value, which is
   // all this model needs.

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <stdint.h>
+#include <vector>
 
 namespace gardener {
 
@@ -47,19 +49,24 @@ class Ownership {
  public:
   static constexpr uint8_t MaxLinks = 4;  // the floor, serial, bluetooth and the panel
 
+  // The floor goes on first and never comes off, so `owner()` always has an answer.
+  Ownership() {
+    links_.reserve(MaxLinks);
+    links_.push_back(&none_);
+  }
+
   // The top of the stack: who drives the machine.
-  Link& owner() const { return *links_[count_ - 1]; }
+  Link& owner() const { return *links_.back(); }
 
   // True when `link` is on top: the only link that commands the machine.
-  bool ownedBy(const Link& link) const { return &link == links_[count_ - 1]; }
+  bool ownedBy(const Link& link) const { return &link == links_.back(); }
 
   // A claim moves the link to the top, wherever it sat. The floor cannot be claimed, and there is
   // always a slot for a link the build has, so a claim from anything else succeeds.
   bool acquire(Link& link) {
     if (&link == &none_) return false;
     remove(link);
-    if (count_ >= MaxLinks) return false;
-    links_[count_++] = &link;
+    links_.push_back(&link);
     link.claimed();
     return true;
   }
@@ -68,26 +75,21 @@ class Ownership {
   // on top, so a transport that has gone keeps asking until it gets there.
   bool release(Link& link) {
     if (&link == &none_ || !ownedBy(link)) return false;
-    --count_;
+    links_.pop_back();
     return true;
   }
 
  private:
-  bool remove(Link& link) {
-    for (uint8_t i = 0; i < count_; ++i) {
-      if (links_[i] != &link) continue;
-      for (uint8_t j = i; j + 1 < count_; ++j) links_[j] = links_[j + 1];
-      --count_;
-      return true;
-    }
-    return false;
+  // Drops the link if it is on the stack, keeping the order of the ones above it.
+  void remove(Link& link) {
+    auto found = std::find(links_.begin(), links_.end(), &link);
+    if (found != links_.end()) links_.erase(found);
   }
 
   // The stack, bottom first. Written on the link tasks and read on the control and panel beats; a
   // stale top reads as a spurious vent, which is safe, so no lock is worth it.
   NoneLink none_;
-  Link* links_[MaxLinks] = {&none_};
-  uint8_t count_ = 1;
+  std::vector<Link*> links_;
 };
 
 }  // namespace gardener

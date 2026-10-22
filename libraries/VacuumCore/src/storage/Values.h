@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <vector>
+
 namespace gardener {
 
 // A flat `key=value` document: one setting per line, blank lines and `#`/`;` comments skipped.
@@ -11,6 +13,10 @@ namespace gardener {
 // back is the same keys in the same order, formatted plainly.
 class Values {
  public:
+  // The table is resized once, to the document's limit, so a parse and the sets that follow it do
+  // not allocate again.
+  Values() { entries_.reserve(MaxEntries); }
+
   // Replaces whatever was held before. Malformed lines are ignored: a settings file is not worth
   // refusing to boot over.
   void parse(const String& text);
@@ -34,15 +40,14 @@ class Values {
     String value;
   };
 
-  // A values file is a handful of keys. The limit is what makes this a plain array instead of a
-  // container, and a file with more keys than this is not a values file.
-  static constexpr uint8_t kMaxEntries = 32;
+  // A values file is a handful of keys. The limit is the document's contract, not the storage's:
+  // `set` refuses a new key past it, and a parse keeps the keys it read first.
+  static constexpr uint8_t MaxEntries = 32;
 
   Entry* find(const char* key);
   const Entry* find(const char* key) const;
 
-  Entry entries_[kMaxEntries];
-  uint8_t count_ = 0;
+  std::vector<Entry> entries_;
 };
 
 }  // namespace gardener

@@ -1,12 +1,16 @@
 #include "serial/SerialLink.h"
 
+#include <string.h>
+
 #include "Logger.h"
 #include "Machine.h"
 
 namespace gardener {
 
 SerialLink::SerialLink(Machine& machine, Stream& stream, PresenceFn present, Logger& logger)
-    : machine_(machine), stream_(stream), present_(present), logger_(logger) {}
+    : machine_(machine), stream_(stream), present_(present), logger_(logger) {
+  domains_.reserve(MaxDomains);
+}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
@@ -60,7 +64,7 @@ void SerialLink::poll(uint32_t nowMs) {
       }
 
       token.toLowerCase();
-      if (domains_.find(token.c_str())) {
+      if (findDomain(token.c_str())) {
         // A domain with no command.
         linkError("bad_argument", "");
       } else {
@@ -113,7 +117,7 @@ bool SerialLink::dispatchDomain(const String& token) {
   String name = token;
   name.toLowerCase();
 
-  Domain* domain = domains_.find(name.c_str());
+  Domain* domain = findDomain(name.c_str());
   if (!domain) {
     linkError("unknown_domain", name);
     return false;
@@ -121,6 +125,14 @@ bool SerialLink::dispatchDomain(const String& token) {
 
   domain->execute(stream_);
   return true;
+}
+
+Domain* SerialLink::findDomain(const char* name) const {
+  if (!name) return nullptr;
+  for (Domain* domain : domains_) {
+    if (strcmp(domain->name(), name) == 0) return domain;
+  }
+  return nullptr;
 }
 
 }  // namespace gardener

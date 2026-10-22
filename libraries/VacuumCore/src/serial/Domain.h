@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-#include <string.h>
 
 namespace gardener {
 
@@ -25,28 +24,6 @@ class Domain {
 
  protected:
   Link& link_;
-};
-
-// The domains in dispatch order. SerialLink owns it.
-class DomainList {
- public:
-  static constexpr uint8_t kMax = 8;
-
-  void add(Domain* domain) {
-    if (count_ < kMax) items_[count_++] = domain;
-  }
-
-  Domain* find(const char* name) const {
-    if (!name) return nullptr;
-    for (uint8_t i = 0; i < count_; i++) {
-      if (strcmp(items_[i]->name(), name) == 0) return items_[i];
-    }
-    return nullptr;
-  }
-
- private:
-  Domain* items_[kMax] = {};
-  uint8_t count_ = 0;
 };
 
 }  // namespace gardener

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 
 #include "Ownership.h"
 #include "serial/Domain.h"
@@ -38,7 +39,7 @@ class SerialLink : public Link {
 
   // The surface is whatever the build registers: the machine adds its domains, and a panel build
   // adds its own, so the link itself names none of them.
-  void registerDomain(Domain* domain) { domains_.add(domain); }
+  void registerDomain(Domain* domain) { domains_.push_back(domain); }
 
   void begin();
   void poll(uint32_t nowMs);
@@ -46,9 +47,14 @@ class SerialLink : public Link {
   bool controllerAttached() const;
 
  private:
+  // What a build registers: the machine's domains and a panel's, with room to spare.
+  static constexpr uint8_t MaxDomains = 8;
+
   // Hands the stream to the domain named by `token`. False when there is no such domain, in which
   // case the caller discards the rest of the line.
   bool dispatchDomain(const String& token);
+  // The domain registered under `name`, in registration order.
+  Domain* findDomain(const char* name) const;
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.
   void linkError(const char* code, const String& detail);
 
@@ -56,7 +62,7 @@ class SerialLink : public Link {
   Stream& stream_;
   PresenceFn present_;
   Logger& logger_;
-  DomainList domains_;
+  std::vector<Domain*> domains_;
   // The domain token being assembled. It never holds a command or a body.
   String buffer_;
   // The rest of a line that was already answered, or a comment, is being thrown away.

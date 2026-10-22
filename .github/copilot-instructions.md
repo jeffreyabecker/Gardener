@@ -19,6 +19,12 @@ nothing — the same tree, a tree changed only in prose or data, a build before 
 that already passed — don't run it. One build after a change that can break the compile is the
 verification; a second one is only waiting for the answer it already gave.
 
+**The build's answer is whether it compiles.** `arduino-cli` ends every run with the program-storage
+and global-variables figures, and they move a little with every edit; that is a number to keep out of
+the report unless someone asks how much room the firmware has. Don't build a baseline to compare
+against, and don't build twice to show a delta. A size comparison nobody requested costs two slow
+runs and changes no decision, so report pass or fail and leave the figures out.
+
 A commit runs nothing: when told to commit, read `git status --short`, stage the tree and write the
 message, and don't build, test or review the diff on the way.
 
