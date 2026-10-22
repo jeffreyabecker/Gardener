@@ -219,25 +219,46 @@ path.
 
 ## Epic 6 — The headless build
 
-The machine-alone sketch ships the machine with no panel. Its stack is `None` alone, so the safety
-Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents. What remains
-is the second build itself.
+Each sketch is its own composition root. The links a build serves, the domains it registers and the
+tasks it starts are named in the sketch, so the two builds differ where a reader can see them rather
+than behind a library flag: the full device composes the panel onto the machine and starts three
+tasks, and the machine-alone build starts two and registers no panel domain. The libraries keep the
+parts, the domains and the task bodies; the sketch says which of them this build has.
 
-- [ ] 6.1 Add a machine-alone sketch that includes only `VacuumCore`.
-- [ ] 6.2 Add the machine-alone composition root: pump, sensor, vent valve, vacuum system,
-  ownership stack and capability, with no panel part.
-- [ ] 6.3 Compose the machine-alone capability: no panel, no battery, ownership stop.
-- [ ] 6.4 Add a machine-side `device` domain answering `proto`, `fw`, `chip`, `heap` and `caps`,
-  with no battery, log or unit field, and register it in the machine-alone build.
-- [ ] 6.5 Boot the machine-alone build through `machineBoot`, with the radio and diagnostics fixed
-  by the build rather than read from settings.
-- [ ] 6.6 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
-- [ ] 6.7 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
+The machine-alone sketch ships the machine with no panel. Its stack is `None` alone, so the safety
+Epic 4 built is its whole story: an unowned machine vents, and a dropped owner vents.
+
+### Phase A — the full device's sketch takes over its setup
+
+- [ ] 6.1 Move the serial link out of `machineBoot`: `App::begin` builds the `SerialLink` and
+  registers the machine's `control` and `vacuum` domains on it, and `machineBoot` brings the
+  machine's parts up and reports them.
+- [ ] 6.2 Move the BLE link out of `machineBoot` the same way, and delete the `MachineBoot` struct
+  now that no link is handed back.
+- [ ] 6.3 Move the panel's domain registrations out of `panelBoot` and into `App::begin`, so
+  `panelBoot` only brings the panel up and reports what came up.
+- [ ] 6.4 Move the three task starts out of the boots and into `App::begin`, so the boots bring
+  parts up and nothing more.
+- [ ] 6.5 Move `App::begin`'s body into `gardener.ino` and delete `App`, leaving the sketch as the
+  full device's composition root.
+
+### Phase B — the machine-alone sketch
+
+- [ ] 6.6 Add a machine-alone sketch that includes only `VacuumCore.h` and builds its own
+  `MachineContext` from `buildMachineRoot()`.
+- [ ] 6.7 Compose the machine-alone capability: no panel, no battery, ownership stop.
+- [ ] 6.8 Add a machine-side `device` domain in `VacuumCore` answering `proto`, `fw`, `chip`, `heap`
+  and `caps` and serving `reboot`, with no battery, log or unit field, and register it in place of
+  the panel's in the machine-alone sketch.
+- [ ] 6.9 Fix the machine-alone radio and diagnostics knobs in the sketch rather than read them from
+  settings, which that build does not mount.
+- [ ] 6.10 Teach [arduino.py](../../scripts/arduino.py) to compile the machine-alone sketch.
+- [ ] 6.11 Teach [arduino.py](../../scripts/arduino.py) to upload and monitor the machine-alone
   sketch.
-- [ ] 6.8 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
+- [ ] 6.12 Have [arduino.py](../../scripts/arduino.py) refuse the data task for the machine-alone
   sketch, which ships no data image.
-- [ ] 6.9 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and the
-  Adafruit drivers.
+- [ ] 6.13 Verify the machine-alone build compiles and links without `GardenerPanel`, `berry` and
+  the Adafruit drivers.
 
 ## Epic 7 — The contract
 
