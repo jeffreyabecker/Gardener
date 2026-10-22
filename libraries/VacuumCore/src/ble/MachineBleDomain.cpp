@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "Machine.h"
+#include "MachineCommand.h"
 #include "Ownership.h"
-#include "Tasks.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
 #include "firmwareversion.h"
@@ -177,10 +177,10 @@ void MachineBleDomain::applyPending(BleLink& link) {
       // refuse against its own floor, so the two surfaces cannot disagree.
       if (kpa == 0.0f) {
         const MachineCommand clear{MachineCommand::Op::ClearTarget};
-        xQueueSend(machineCommandQueue, &clear, 0);
+        postMachineCommand(clear);
       } else {
         const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
-        xQueueSend(machineCommandQueue, &set, 0);
+        postMachineCommand(set);
       }
     }
     // Read back rather than echo: a refused value leaves the target where it
@@ -219,22 +219,22 @@ uint8_t MachineBleDomain::execute(const Link& link, uint8_t opcode) {
         return kResultUnknownOpcode;
       }
       const MachineCommand start{MachineCommand::Op::Start};
-      xQueueSend(machineCommandQueue, &start, 0);
+      postMachineCommand(start);
       return kResultApplied;
     }
     case kOpStop: {
       const MachineCommand stop{MachineCommand::Op::Stop};
-      xQueueSend(machineCommandQueue, &stop, 0);
+      postMachineCommand(stop);
       return kResultApplied;
     }
     case kOpResetFault: {
       const MachineCommand reset{MachineCommand::Op::ResetFault};
-      xQueueSend(machineCommandQueue, &reset, 0);
+      postMachineCommand(reset);
       return kResultApplied;
     }
     case kOpReboot: {
       const MachineCommand reboot{MachineCommand::Op::Reboot};
-      xQueueSend(machineCommandQueue, &reboot, 0);
+      postMachineCommand(reboot);
       return kResultApplied;
     }
     default:

@@ -86,7 +86,7 @@ void buttonsTick(PanelState& state) {
       stopSeq++;
     }
     const MachineCommand stop{MachineCommand::Op::Stop};
-    xQueueSend(machineCommandQueue, &stop, 0);
+    postMachineCommand(stop);
   }
   if (!backHeld) state.backStopFired = false;
 

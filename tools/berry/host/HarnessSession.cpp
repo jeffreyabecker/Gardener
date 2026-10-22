@@ -1,19 +1,29 @@
 #include "HarnessSession.h"
 
-#include <freertos/queue.h>
+#include <deque>
 
 #include "Machine.h"
 #include "MachineCommand.h"
-#include "Tasks.h"
+#include "PanelTasks.h"
 #include "routines/Bindings.h"
 
 namespace gardener {
 
-// The panel task's two counters, and the command queue the native modules post to. Only the stop
-// notice is fired here; the go-home sequence belongs to the keys the drive presses itself.
+// The panel task's two counters, defined here because the panel task is not. Only the stop notice
+// is fired here; the go-home sequence belongs to the keys the drive presses itself.
 volatile uint32_t stopSeq = 0;
 volatile uint32_t goHomeSeq = 0;
-QueueHandle_t machineCommandQueue = nullptr;
+
+namespace {
+
+// The control task's queue, as a list. Everything that writes the machine posts here and the beat
+// drains it before its own tick, so a write is seen on the next beat as it is on the device rather
+// than the instant it is made.
+std::deque<MachineCommand> pendingCommands;
+
+}  // namespace
+
+void postMachineCommand(const MachineCommand& command) { pendingCommands.push_back(command); }
 
 }  // namespace gardener
 
@@ -27,9 +37,6 @@ constexpr float kLeakKpaPerSecond = 0.2f;
 constexpr float kChamberCeilingKpa = 70.0f;
 constexpr uint32_t kBeatMs = 250;
 constexpr uint32_t kTickMs = 50;
-
-// The command queue's depth, as Tasks.cpp gives it.
-constexpr UBaseType_t kCommandDepth = 8;
 
 }  // namespace
 
@@ -80,9 +87,7 @@ HarnessSession::HarnessSession(std::string dataDir)
           BitmapPanel::kWidth, BitmapPanel::kHeight),
       buzzer_(buzzerPart_),
       overlay_(&display_, &battery_, &vacuum_, &settings_),
-      context_(overlay_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {
-  machineCommandQueue = xQueueCreate(kCommandDepth, sizeof(MachineCommand));
-}
+      context_(overlay_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -117,8 +122,9 @@ void HarnessSession::beat(int count) {
       chamber_.advance(kTickMs);
 
       // controlTask's three calls, in its order, with its commands drained first.
-      MachineCommand command;
-      while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) {
+      while (!pendingCommands.empty()) {
+        const MachineCommand command = pendingCommands.front();
+        pendingCommands.pop_front();
         applyMachineCommand(vacuum_, command);
       }
       sensor_.update(now);
@@ -135,16 +141,14 @@ void HarnessSession::beat(int count) {
 
 void HarnessSession::backHold() {
   stopSeq++;
-  const MachineCommand stop{MachineCommand::Op::Stop};
-  xQueueSend(machineCommandQueue, &stop, 0);
+  postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
 }
 
 void HarnessSession::reset() {
   // Leaving the page under test runs default's activate(), which is where the device would be.
   routines_.showDefault();
 
-  const MachineCommand stop{MachineCommand::Op::Stop};
-  xQueueSend(machineCommandQueue, &stop, 0);
+  postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();
   vacuum_.service(millis());
 }

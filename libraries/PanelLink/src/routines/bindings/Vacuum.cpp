@@ -3,7 +3,7 @@
 #include "PanelContext.h"
 #include "Logger.h"
 #include "Machine.h"
-#include "Tasks.h"
+#include "MachineCommand.h"
 #include "VacuumSystem.h"
 #include "hal/Battery.h"
 #include "routines/Routines.h"
@@ -16,13 +16,13 @@ namespace {
 
 int vacuumTarget(bvm* vm) {
   const MachineCommand set{MachineCommand::Op::SetTarget, (float)argReal(vm, 1)};
-  xQueueSend(machineCommandQueue, &set, 0);
+  postMachineCommand(set);
   be_return_nil(vm);
 }
 
 int vacuumTargetOff(bvm* vm) {
   const MachineCommand clear{MachineCommand::Op::ClearTarget};
-  xQueueSend(machineCommandQueue, &clear, 0);
+  postMachineCommand(clear);
   be_return_nil(vm);
 }
 
@@ -47,20 +47,20 @@ int vacuumStart(bvm* vm) {
     be_return(vm);
   }
   const MachineCommand start{MachineCommand::Op::Start};
-  xQueueSend(machineCommandQueue, &start, 0);
+  postMachineCommand(start);
   be_pushbool(vm, true);
   be_return(vm);
 }
 
 int vacuumStop(bvm* vm) {
   const MachineCommand stop{MachineCommand::Op::Stop};
-  xQueueSend(machineCommandQueue, &stop, 0);
+  postMachineCommand(stop);
   be_return_nil(vm);
 }
 
 int vacuumReset(bvm* vm) {
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  xQueueSend(machineCommandQueue, &reset, 0);
+  postMachineCommand(reset);
   be_return_nil(vm);
 }
 

@@ -1,5 +1,9 @@
 #include "Tasks.h"
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+
 #include "Logger.h"
 #include "Machine.h"
 #include "Ownership.h"
@@ -12,7 +16,6 @@
 
 namespace gardener {
 
-QueueHandle_t machineCommandQueue = nullptr;
 volatile bool serialConnected = false;
 volatile bool bleConnected = false;
 
@@ -30,6 +33,11 @@ constexpr UBaseType_t InterfaceCore = 0;
 // Queue depths. Overflow drops the newest item with a log
 // line; the consumers drain every tick, so a full queue is the exception, not the steady state.
 constexpr UBaseType_t MachineCommandQueueDepth = 8;
+
+// The control task's queue, created before either task starts. It is written through
+// postMachineCommand and drained at the top of every control tick; no header names the handle, so
+// nothing above this file can post past that call.
+QueueHandle_t machineCommandQueue = nullptr;
 
 // The control task's own state: the machine it commands, the logger it reports through, and the
 // latch/timing fields the run log and the top-change vent need.
@@ -96,6 +104,10 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
 }
 
 }  // namespace
+
+void postMachineCommand(const MachineCommand& command) {
+  xQueueSend(machineCommandQueue, &command, 0);
+}
 
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);

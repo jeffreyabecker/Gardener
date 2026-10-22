@@ -19,4 +19,9 @@ struct MachineCommand {
 // system cannot answer — Reboot, which belongs to the composition — so its caller handles that one.
 bool applyMachineCommand(VacuumSystem& vacuum, const MachineCommand& command);
 
+// The one way to ask the machine for something: the command joins the control task's queue and is
+// applied on its next beat, so a writer never touches the vacuum system from its own thread. The
+// queue handle and the task it feeds stay behind this call.
+void postMachineCommand(const MachineCommand& command);
+
 }  // namespace gardener

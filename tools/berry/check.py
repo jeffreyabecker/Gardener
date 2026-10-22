@@ -63,7 +63,6 @@ HOST_SOURCES = [
     HOST / "Clock.cpp",
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
-    HOST / "HostQueue.cpp",
     HOST / "MemoryFiles.cpp",
 ]
 
