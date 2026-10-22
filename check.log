@@ -1,5 +1,0 @@
-Exception ignored on threading shutdown:
-Traceback (most recent call last):
-  File "C:\Users\jeffr\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1524, in _shutdown
-    if _main_thread._handle.is_done() and _is_main_interpreter():
-SystemError: <method 'is_done' of '_thread._ThreadHandle' objects> returned a result with an exception set
