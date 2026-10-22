@@ -69,34 +69,35 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 3 — The six-key map
 
-- [ ] **1. The readout takes the map.** Forward opens the browser, Up+Down opens the system settings,
-  Okay starts or resumes, Back stops and vents, and Cancel does nothing. The two double-tap
-  shortcuts are gone with the keys that no longer need them. Done when the driven readout reaches
-  the browser on Forward and the check passes.
+- [ ] **1. The readout takes the map.** Bind `ok:single` to start or resume, `cancel:single` to stop
+  and vent, `up:double` to open the browser, and `down:double` to open the system settings, and drop
+  the old Back stop and the chord. Done when the smoke walk still starts and stops a run, and on the
+  rig `up:double` opens the browser while `down:double` opens the system settings.
 
-- [ ] **2. The browser takes the map.** Forward opens the selected routine as Okay does, Up+Down opens
-  the selected routine's settings, Up/Down move, and Back returns to the readout. Done when the
-  browser suite still lists every routine and the check passes.
+- [ ] **2. The browser takes the map.** Bind `up:single` and `down:single` to move the selection,
+  `ok:single` to open the selected routine, `forward:single` to open the selected routine's
+  settings, and `back:single` to leave. Done when the browser suite still lists every routine and
+  the check passes.
 
-- [ ] **3. The system scene takes the map.** Forward opens the row Okay would, Okay saves in the value
-  scene, Cancel discards the edit, and Back leaves the value scene and then the system scene. Done
-  when the system suite walks the jingle row with Forward to open and Okay to save, and passes.
+- [ ] **3. The system scene takes the map.** Bind `up:single` and `down:single` to move rows,
+  `ok:single` to open a row, and `back:single` to leave. Done when the system suite walks the jingle
+  row on these and passes.
 
-- [ ] **4. The settings list takes the map.** Forward opens the row and Okay still does, and Back and
-  Cancel both close the list. Done when the shared settings walk opens a row on Forward and the
-  check passes.
+- [ ] **4. The settings list takes the map.** Bind `up:single` and `down:single` to move rows,
+  `ok:single` to open a row, and `back:single` to close the list. Done when the shared settings walk
+  opens and edits a row, and the check passes.
 
-- [ ] **5. A value scene takes the map.** Okay saves, Forward moves a `duration` from minutes to
-  seconds, Back steps back a stage and then leaves, Cancel discards the value and leaves, and each
-  scene's hint names the keys that act. Done when the shared settings walk edits a `duration` with
-  Forward and Okay, and passes.
+- [ ] **5. A value scene takes the map.** Bind `up:single` and `down:single` to change the value,
+  `ok:single` to keep it, and `cancel:single` to discard it; a `duration` adds `forward:single` to
+  advance the stage and `back:single` to step back. Update each scene's hint line to name the keys
+  that act. Done when the shared settings walk edits a `duration` on `forward:single` and saves on
+  `ok:single`, and passes.
 
-- [ ] **6. The routine pages take the map.** Cancel returns the run to rest and leaves the page
-  showing on all three — the two ramped pages move their pause there, and `interval` gains it — Back
-  double stops the run and pops to the browser, one Back does nothing to a running page, Okay starts
-  or resumes, and Up+Down opens the settings. Forward is not taken. Done when the two pause/resume
-  suites press Cancel, a run is left by a Back double, the check passes, and on the rig each of the
-  six keys does its own thing — which is the first point every key is bound.
+- [ ] **6. The routine pages take the map.** Bind `ok:single` to begin or resume, `cancel:single` to
+  stop, vent and pause, `cancel:double` to stop, vent and leave the stack, and `up:double` to open
+  the settings, on all three routines. Done when the two pause/resume suites press `cancel:single`
+  and a `cancel:double` leaves the run, the check passes, and on the rig each of the six keys does
+  its own thing — the first point every key is bound.
 
 ## Epic 4 — The contract
 
