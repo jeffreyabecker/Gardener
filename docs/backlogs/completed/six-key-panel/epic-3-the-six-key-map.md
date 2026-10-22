@@ -1,8 +1,7 @@
 # Epic 3 — The six-key map
 
-The scene framework matches whole gesture strings and the six scenes bind the map the plan settles.
-This is part 3 of [the six-key panel plan](../../../plans/six-key-panel.md); the contract updates
-in epic 4 follow.
+The scene framework matches whole gesture strings and the six scenes bind the six-key map. The
+contract updates in epic 4 follow.
 
 ## Task 1 — Rewrite the dispatch to whole gestures
 

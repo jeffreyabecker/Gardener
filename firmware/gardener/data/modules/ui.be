@@ -58,8 +58,8 @@ class ReadoutScene : Scene
 
     self.on("ok:single", / -> self.start())
     self.on("cancel:single", / -> self.cancel())
-    self.on("up:double", / -> ux.push(browserScene))
-    self.on("down:double", / -> ux.push(systemScene))
+    self.on("forward:double", / -> ux.push(browserScene))
+    self.on("up:double", / -> ux.push(systemScene))
   end
 
   def activate()

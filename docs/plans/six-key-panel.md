@@ -115,8 +115,9 @@ reserved; what changes is the split of the two jobs that one key used to do.
 | **Cancel** | escape: stop the run, discard an edit, leave the routine |
 
 The standard is the singles. A double is a page's own shortcut and no page is required to take
-one: the shipped pages use `up:double` for the edit/settings view, `down:double` for the system
-settings on the readout, and `cancel:double` to leave a routine.
+one: the shipped pages use `up:double` for the edit/settings view and for the system settings on
+the readout, `forward:double` for the browser on the readout, and `cancel:double` to leave a
+routine.
 
 The one genuinely new rule is the **Back/Cancel split**, which is the point of the sixth key.
 Today [the gesture contract](../specs/gestures.md) has Back do both "leave the current view without
@@ -144,9 +145,10 @@ Where enter and confirm are the same action — opening a value — a page may t
 the standard only requires that Okay always means confirm and Forward always means advance.
 
 **The settings view is Up double.** The edit view no longer hides behind a chord: a routine page
-opens its settings on `up:double`, and the readout opens the browser on the same gesture. The chord
-itself goes — no page binds a two-key sum, and the `chord` token the panel task used to report it
-leaves the vocabulary. Forward keeps its one meaning rather than doubling as the settings key.
+opens its settings on `up:double`, and the readout opens the system settings on the same gesture and
+the browser on `forward:double`. The chord itself goes — no page binds a two-key sum, and the
+`chord` token the panel task used to report it leaves the vocabulary. Forward keeps its one meaning
+rather than doubling as the settings key.
 
 ### The reserved gesture
 
@@ -184,8 +186,8 @@ the extended mark becomes its seconds.
 
 These bindings are the pages' own to write, but the standard above settles them in advance:
 
-- **the readout** — `ok:single` starts or resumes, `cancel:single` stops and vents, `up:double`
-  opens the browser, `down:double` opens the system settings.
+- **the readout** — `ok:single` starts or resumes, `cancel:single` stops and vents, `forward:double`
+  opens the browser, `up:double` opens the system settings.
 - **the browser** — `up:single`/`down:single` move, `ok:single` opens the selected routine,
   `forward:single` opens the selected routine's settings, `back:single` leaves.
 - **the system settings** — `up:single`/`down:single` move rows, `ok:single` opens a row,

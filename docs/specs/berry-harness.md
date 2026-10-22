@@ -41,7 +41,7 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--no-cache` | off | rebuild the vendored VM objects |
 | `--gfx DIR` | the installed library | the Adafruit GFX library the fonts come from |
 | `--art NAME` | — | draw that routine and save its frame instead of driving |
-| `--seconds N` | `0` | with `--art`, press OK and run N seconds of virtual time first |
+| `--seconds N` | `0` | with `--art`, press `ok:single` and run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
 | `--out PATH` | `build/<name>.bmp` | where the frame goes |
 | `--tests` | off | run the test suites instead of the smoke walk |
@@ -69,14 +69,14 @@ image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `bounds`, `event` and `setting`, and the seven native modules a
-routine calls:
+The records `reading`, `unit`, `bounds` and `setting`, and the seven native modules a routine
+calls:
 
 | Module | On the host |
 | --- | --- |
 | `vacuum` | a machine model: `state()`, `target()`, `start()`, `stop()`, `log()` |
 | `screen` | every drawing verb forwarded to `frame`, real `text_bounds`, ink and unit |
-| `buttons` | a queue: presses are pushed and delivered one beat at a time |
+| `buttons` | a queue: `harness.press("ok:single")` pushes one whole gesture string, delivered one beat at a time |
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |
 | `jingles` | the library read from `/modules/jingles.txt` |
@@ -112,9 +112,10 @@ panel's finished face.
 For every registered routine:
 
 1. push with no settings map, then eight beats
-2. one OK, then 400 s of virtual time, so a cycle's phases and its repeat are reached
-3. a long Back with the machine reporting a stop, then every button and press pair, then the Up+Down
-   chord — the routine has to hand the panel back and survive all of it
+2. one `ok:single`, then 400 s of virtual time, so a cycle's phases and its repeat are reached
+3. an external stop notice, then every key's `single`, `up:double` with `back:single` to close the
+   settings list it opened, and `cancel:double` — the routine has to survive all of it and hand the
+   panel back
 
 The settings view is walked first, through its whole key sequence.
 
