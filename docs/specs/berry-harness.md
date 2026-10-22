@@ -15,7 +15,9 @@ registration does not look like a routine, or a page does not survive being driv
 | `frame.c` | the panel: a 128 x 64 one-bit frame, the Adafruit GFX drawing verbs and the BMP writer |
 | `frame.h` | the one function `main.c` calls to install the frame as a module |
 | `harness.be` | the records and the eight native modules a routine compiles against |
-| `driver.be` | the checks themselves: the drive, the editor, and the phases worth walking |
+| `driver.be` | the smoke walk: the drive, the settings editor, and the page re-entry |
+| `tests/suite.be` | the suite framework: `test()`, the assertions, `wait_until`, the runner |
+| `tests/*.test.be` | the suites, one file per concern, each registering named cases |
 
 `check.py` builds `libraries/berry` with the firmware's own `berry_conf.h`, so the host VM has the
 device's 32-bit ints, single-precision reals and `BE_STACK_TOTAL_MAX` slot limit. Objects and the
@@ -28,6 +30,8 @@ compiles and loads.
 python tools/berry/check.py                              # compile, load and drive the image
 python tools/berry/check.py --compile                    # compile and load only
 python tools/berry/check.py --art interval --seconds 60  # draw a page instead of driving it
+python tools/berry/check.py --tests                      # run the test suites
+python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
 
 | Flag | Default | Meaning |
@@ -40,10 +44,13 @@ python tools/berry/check.py --art interval --seconds 60  # draw a page instead o
 | `--seconds N` | `0` | with `--art`, press OK and run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
 | `--out PATH` | `build/<name>.bmp` | where the frame goes |
+| `--tests` | off | run the test suites instead of the smoke walk |
+| `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
 | `--verbose` | off | print each compiler command |
 
 The last line says how much loaded — `12 of 12 files loaded, check passed` — and the exit code is 0
-only when every file compiled, every registration looked like a routine, and every page ran.
+only when every file compiled, every registration looked like a routine, and every page ran. In
+`--tests` mode the same contract holds for the suites: `13 passed, 0 failed`, with `suites passed`.
 
 ## The load order
 
@@ -56,6 +63,10 @@ The order is not a preference. Berry resolves a global name when it **compiles**
 may name only what an earlier file defined, and that reaches inside method bodies. A class a later
 file needs has to be a global by the time the earlier file is compiled: `FixedText` in
 `/modules/components.be` is used by the pages, so it is defined in a module, not in a page.
+
+In `--tests` mode two more load after those four: `tests/suite.be`, then `tests/*.test.be` in
+alphabetical order. A suite can name every routine, module and `harness` drive because the whole
+image is already compiled by then.
 
 ## What the harness provides
 
@@ -104,9 +115,28 @@ For every registered routine, hidden pages included:
 
 The settings editor is walked first, through its whole key sequence.
 
-Four checks are not a walk and are named for it: the jingle library, the System page's jingle editor,
-the interval's set count and its "after ok" pause, and the ramp's three stages, its pause and its
-resume.
+## The test suites
+
+The named checks live in `tests/*.test.be`, outside the data image so `arduino.py --task data`
+never packs them. Each file sets `suite` to its own name, registers cases with `test(name, fn)` and
+uses the helpers from `tests/suite.be`:
+
+| Helper | What it is |
+| --- | --- |
+| `test(name, fn)` | register a case; `fn` is a function taking no arguments |
+| `assert_true(cond, msg)` | raise when `cond` is false |
+| `assert_eq(actual, expected, msg)` | raise when the values differ, with both in the message |
+| `assert_nil(x, msg)`, `assert_not_nil(x, msg)` | raise on the wrong nil-ness |
+| `wait_until(label, beats, pred)` | beat the harness until `pred()` is true, or raise naming `label` |
+
+The runner executes every registered case (or those whose full `suite.case` name contains the
+`--test` filter), each from a reset page, and reports one line per case: `[PASS] suite.case` or
+`[FAIL] suite.case: assert: ...`, then `N passed, M failed`. A case that raises does not stop the
+rest, and the run ends `suites passed` only when nothing failed.
+
+The suites cover what a walk cannot name: the jingle library, the System page's jingle editor, the
+interval's set count and its "after ok" pause, the ramp's three stages and its pause and resume, and
+the registry's hidden-page rule.
 
 ## Failing
 
@@ -118,5 +148,6 @@ load:
 ```
 
 A check that fails says what it expected, prefixed with the page it was driving, and the run ends
-with `check failed`. The VM's own failures — a missing routine, an unregistered name — are errors of
-the image, not of the harness.
+with `check failed`. A failing suite case is a `[FAIL]` line carrying the assertion, and the run
+ends `suites failed`. The VM's own failures — a missing routine, an unregistered name — are errors
+of the image, not of the harness.

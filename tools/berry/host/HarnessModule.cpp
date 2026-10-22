@@ -52,7 +52,7 @@ int harnessActivate(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "harness.activate(name, settings)");
   }
-  const int settings = be_top(vm) >= 2 && be_ismap(vm, 2) ? 2 : 0;
+  const int settings = be_top(vm) >= 2 && be_ismapinstance(vm, 2) ? 2 : 0;
   be_pushbool(vm, gSession->routines().setActive(be_tostring(vm, 1), settings));
   be_return(vm);
 }

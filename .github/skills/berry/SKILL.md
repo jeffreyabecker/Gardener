@@ -21,6 +21,8 @@ on the host instead.
 python tools/berry/check.py                              # compile, load and drive the image
 python tools/berry/check.py --compile                    # compile and load only
 python tools/berry/check.py --art interval --seconds 60  # draw a page instead of driving
+python tools/berry/check.py --tests                      # run the test suites
+python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
 
 The last line says how much loaded — `12 of 12 files loaded, check passed` — and the exit code is 0
@@ -29,7 +31,8 @@ build lands in `tools/berry/build/`, which is ignored, so a `.be` edit only reco
 
 The flags, the load order, the eight modules and records a routine compiles against, the frame and
 what the drive does are the contract: [Berry harness](../../../docs/specs/berry-harness.md). Its
-sources are in `tools/berry/` — `harness.be` for the stubs, `driver.be` for the checks.
+sources are in `tools/berry/` — `harness.be` for the driver's bookkeeping, `driver.be` for the smoke
+walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick.
 Convert the BMP to a PNG when the viewer will not open one and read the page off that; writing a

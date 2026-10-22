@@ -6,6 +6,8 @@
     python tools/berry/check.py --no-cache   # rebuild everything
     python tools/berry/check.py --art default
     python tools/berry/check.py --art interval --seconds 30
+    python tools/berry/check.py --tests      # run the test suites
+    python tools/berry/check.py --test interval
 
 The check is the firmware, not a model of it: the panel's own bindings, registry, overlay, settings
 and control law are compiled here against the vendored VM, with a bitmap for a glass, a chamber for
@@ -167,6 +169,12 @@ parser.add_argument(
     default=12,
     help="with --art, the set count to activate with (default 12; 0 keeps the file's)",
 )
+parser.add_argument("--tests", action="store_true", help="run the test suites in tools/berry/tests")
+parser.add_argument(
+    "--test",
+    metavar="NAME",
+    help="run only the tests whose full name contains NAME (implies --tests)",
+)
 args = parser.parse_args()
 
 build(compiler("c"), compiler("c++"), gfx_library())
@@ -198,6 +206,13 @@ if args.art:
             str(out.resolve()),
         ]
     )
+if args.tests or args.test:
+    tests_dir = TOOL / "tests"
+    command.extend(["--suite", str(tests_dir / "suite.be")])
+    for file in sorted(tests_dir.glob("*.test.be")):
+        command.extend(["--test-file", str(file)])
+    if args.test:
+        command.extend(["--test", args.test])
 if args.verbose:
     print(" ".join(command), flush=True)
 sys.exit(subprocess.run(command).returncode)

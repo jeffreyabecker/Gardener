@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <string>
+#include <vector>
 
 #include "HarnessSession.h"
 #include "berry.h"
@@ -102,6 +103,27 @@ int callCheck(bvm* vm) {
   return passed ? 1 : 0;
 }
 
+// The suite runner, registered by suite.be: runs every test, or those whose full name contains
+// the filter, and answers whether any failed.
+int callSuites(bvm* vm, const char* filter) {
+  if (!be_getglobal(vm, "suite_run")) {
+    be_pop(vm, 1);
+    printf("[E] vm: suite_run is missing\n");
+    return 0;
+  }
+  be_pushstring(vm, filter != nullptr ? filter : "");
+  const int rc = be_pcall(vm, 1);
+  if (rc != BE_OK) {
+    report(vm, "suite_run", "harness");
+    return 0;
+  }
+  // be_pcall leaves the argument on the stack under the result, as callArt does below.
+  const int result = be_absindex(vm, -(1 + 1));
+  const bool passed = be_isbool(vm, result) && be_tobool(vm, result);
+  be_pop(vm, 2);
+  return passed ? 1 : 0;
+}
+
 int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) {
   if (!be_getglobal(vm, "harness_art")) {
     be_pop(vm, 1);
@@ -131,10 +153,13 @@ int main(int argc, char** argv) {
   const char* driverPath = "driver.be";
   const char* artName = nullptr;
   const char* artPath = nullptr;
+  const char* testFilter = nullptr;
   int artSeconds = 0;
   int artSets = 0;
   bool compileOnly = false;
   bool verbose = false;
+  bool suites = false;
+  std::vector<std::string> suiteFiles;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--data") == 0 && i + 1 < argc) {
@@ -143,6 +168,15 @@ int main(int argc, char** argv) {
       harnessPath = argv[++i];
     } else if (strcmp(argv[i], "--driver") == 0 && i + 1 < argc) {
       driverPath = argv[++i];
+    } else if (strcmp(argv[i], "--suite") == 0 && i + 1 < argc) {
+      suiteFiles.emplace_back(argv[++i]);
+      suites = true;
+    } else if (strcmp(argv[i], "--test-file") == 0 && i + 1 < argc) {
+      suiteFiles.emplace_back(argv[++i]);
+      suites = true;
+    } else if (strcmp(argv[i], "--test") == 0 && i + 1 < argc) {
+      testFilter = argv[++i];
+      suites = true;
     } else if (strcmp(argv[i], "--compile-only") == 0) {
       compileOnly = true;
     } else if (strcmp(argv[i], "--verbose") == 0) {
@@ -173,11 +207,16 @@ int main(int argc, char** argv) {
   int failed = 0;
   if (!loadFile(vm, harnessPath)) failed++;
   if (!loadFile(vm, driverPath)) failed++;
+  for (const std::string& file : suiteFiles) {
+    if (!loadFile(vm, file.c_str())) failed++;
+  }
 
   const size_t routines = session.routines().count();
   int passed = 0;
   if (artName != nullptr) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
+  } else if (suites) {
+    passed = callSuites(vm, testFilter);
   } else if (!compileOnly) {
     passed = callCheck(vm);
   } else {
@@ -190,6 +229,8 @@ int main(int argc, char** argv) {
   printf("%u routine%s", (unsigned)routines, routines == 1 ? "" : "s");
   if (artName != nullptr) {
     printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
+  } else if (suites) {
+    printf(", suites %s", passed && failed == 0 ? "passed" : "failed");
   } else if (!compileOnly) {
     printf(", check %s", passed && failed == 0 ? "passed" : "failed");
   }
