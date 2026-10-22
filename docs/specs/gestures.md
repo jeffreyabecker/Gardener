@@ -1,8 +1,8 @@
 # Gestures
 
-Four keys, no labels on the glass, and one hand. This covers three things: the presses the
-classifier can produce, the gestures the firmware reserves for itself, and the standards every page
-follows on top of them.
+Six keys, no labels on the glass, and one hand. This covers three things: the gestures the
+classifier can produce, the one gesture the firmware reserves for itself, and the standards every
+page follows on top of them.
 
 The keys are the panel's, so everything here is a panel contract. **A build without a panel has no
 keys and therefore no gestures**: its stop is ownership alone — the chamber vents when the
@@ -14,17 +14,42 @@ and the shipped bindings are listed in [scenes.md](./ui/scenes.md). The routine 
 [routine.md](./ui/routine.md) and [bindings.md](./ui/bindings.md); this file is the UX rule above
 them.
 
-## How a press is recognised
+## The keys
+
+| Key | Token | Role at the page level |
+| --- | --- | --- |
+| Up | `up` | move the selection up, or raise the value being edited |
+| Down | `down` | move the selection down, or lower the value being edited |
+| Forward | `forward` | enter: open the selection, advance a stage |
+| Back | `back` | leave one level up |
+| Okay | `ok` | confirm: the primary action — start, save, select |
+| Cancel | `cancel` | escape: stop the run, discard an edit, leave the routine |
+
+The tokens are the words `buttonName()` answers, the words a page compares in Berry, and the words
+in the press log (`btn: forward:single`), so one vocabulary serves the wire log, the Berry gesture
+and the C++ enum.
+
+## How a gesture is recognised
+
+The classifier answers each beat with one whole gesture string, or the empty string. A gesture is
+one or more keys, each with the form of its press, joined by `+` in panel order — up, down,
+forward, back, okay, cancel. `ok:single`, `cancel:double` and `back:5+ok:5` are all gestures.
 
 | Term | Meaning |
 | --- | --- |
 | `single` | one press, reported on release, after the 350 ms double window closes |
 | `double` | two singles with the second starting within 350 ms of the first release; one event, on the second release |
-| hold | a key held to `ExtendedHoldMs` (2 s) or more, reported as whole seconds while it is still down |
+| `key:2`, `key:3`, … | a key held to `ExtendedHoldMs` (2 s) or more, reported as whole seconds while it is still down |
 
 A single is reported only after the double window closes, so a tap is a little late rather than
-acted on twice. A key held at boot is not a press. The numbers are `DoublePressMs` in
-`hal/impl/Buttons.cpp` and `ExtendedHoldMs` in `hal/Button.h`.
+acted on twice. A hold's seconds are reported once per second while the key is down; the release
+after a mark is the mark's end, not a press of its own. A key held at boot is not a press. The
+numbers are `DebounceMs` (20 ms) and `DoublePressMs` (350 ms) in `hal/impl/Buttons.cpp`, and
+`ExtendedHoldMs` (2 s) in `hal/Button.h`.
+
+Keys down together are one gesture, not two: each says its own part and the sum is reported on the
+last release, in panel order. No shipped page binds a sum; the classifier reports it because the
+parts are one event, and a page that needs two keys at once names the whole sum.
 
 ## Reserved gestures
 
@@ -41,43 +66,46 @@ doing. It is the only gesture the device keeps for itself; every other press is 
 
 A page that runs something usually wants a stop gesture of its own, and that gesture owns the
 **whole** stop rather than the pump alone: `vacuum.stop()` and whatever returns the page to rest
-belong in it. Nothing else is reserved — Back is the scene's to name, and a scene that can run must
-stop itself.
+belong in it. Nothing else is reserved — a scene that runs must stop itself on Cancel; no device
+hold will do it.
 
 ## The standard page gestures
 
 | Gesture | Meaning |
 | --- | --- |
-| **Up+Down** | the scene's edit or settings. A routine page opens the shared settings view. |
-| **OK** | the scene's primary action. In the settings list it opens the value; in a value scene it saves. |
-| **Back** | the scene's own: usually leave the current view without writing, or stop what it is running. The stack sets no global rule — a scene that needs another meaning names its own Back. |
-| **Up / Down** | move the selection, or change the value being edited. |
+| **OK** | the scene's primary action: start or resume the run, open a row or a routine, keep the value |
+| **Cancel** | the scene's stop: stop and vent a run, or leave a view without keeping what it showed |
+| **Back** | leave the current view without writing, or step back a stage |
+| **Up / Down** | move the selection, or change the value being edited |
+| **Forward** | open the settings, or advance a stage |
 
-A routine page takes up+down for the settings view even if it also has an inline editor: one
-gesture, one meaning. The device's own scenes have no settings list and use up+down for the editing
-they do have.
+A scene binds the singles that mean something to it and drops the rest. `OK` and `Cancel` are the
+scene's two exits — OK keeps, Cancel discards — and on a scene that runs something Cancel is the stop
+that vents. `Back` is navigation alone: it leaves a view without writing, so a scene that runs
+something never stops on Back.
 
-The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
-it, OK saves, Back closes the list or cancels the value scene. A `duration` adds a stage — OK moves
-from minutes to seconds before it saves. A `pressure` edits in the unit on the glass and stores kPa,
-so changing the display unit never rewrites a value.
+Up and Down are the page's own: single moves or changes, double is a jump of its own. `up:double`
+from the readout opens the routine browser and `down:double` opens the system settings; on a routine
+page `up:double` stops and vents, resets the run and opens its settings, and `cancel:double` stops
+and vents and pops the page. A double a scene does not bind is dropped.
 
-Up and Down are the page's own. A double on either is one event and moves once, so a page that does
-not distinguish it simply treats it as that key; a page may give the double a meaning of its own,
-and no other page is required to take it.
+The settings view follows the same rules wherever it is hosted: OK opens a row or a value, Up/Down
+moves or changes it, OK keeps, Cancel discards, Back closes the list or leaves. A `duration` adds a
+stage — Forward moves from minutes to seconds and Back moves back — before OK saves.
 
-While an external link drives the machine there is no routine page: presses are logged (`btn: ok
-short`) and only Back+OK still acts, because it is the reboot and works whatever a controller is
-doing. A link that is connected but has not claimed anything leaves the disconnected page — and
-its routine — in place.
+While an external link drives the machine there is no routine page: presses are logged
+(`btn: <gesture>`, for example `btn: ok:single`) and only Back+OK still acts, because it is the
+reboot and works whatever a controller is doing. A link that is connected but has not claimed
+anything leaves the disconnected page — and its routine — in place.
 
 ## Rules for a scene
 
 1. Leave the reserved gesture alone; it is the device's.
-2. Up+Down is the scene's edit gesture. A routine page opens the shared settings view.
-3. Back is the scene's to name: usually it leaves without writing, or stops what the scene is
-   running. A stop of the scene's own is the whole stop — the pump and the scene's state — and no
-   device hold does it for a scene that lacks one.
+2. `up:double` opens a routine page's settings; `forward:single` opens a routine's settings from
+   the browser.
+3. Back leaves the current view without writing; Cancel is the scene's stop. A stop of the scene's
+   own is the whole stop — the pump and the scene's state — and no device hold does it for a scene
+   that lacks one.
 4. OK is the primary action; Up and Down move or change.
 5. A view that needs one draws its hint on the panel's last line — the value scenes do. There is no
    permanent legend on the glass.
