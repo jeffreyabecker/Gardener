@@ -153,7 +153,7 @@ def install_libs():
 
 def clean():
     shutil.rmtree(BUILD_DIR, ignore_errors=True)
-    print("build output removed")
+    print(f"{SKETCH.name} build output removed")
 
 
 def build():
@@ -164,7 +164,7 @@ def upload():
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")
-    print(f"uploading to {device}")
+    print(f"uploading {SKETCH.name} to {device}")
     compile_sketch("--upload", "-p", device)
 
 
@@ -210,7 +210,7 @@ def monitor():
     device = device_port()
     if not device:
         sys.exit("no serial port found, pass --port COMx")
-    print(f"monitoring {device} at 115200 baud, Ctrl+C to stop")
+    print(f"monitoring {SKETCH.name} on {device} at 115200 baud, Ctrl+C to stop")
     try:
         arduino_cli("monitor", "-p", device, "--config", "baudrate=115200")
     except KeyboardInterrupt:
