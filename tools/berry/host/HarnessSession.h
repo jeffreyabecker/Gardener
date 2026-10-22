@@ -210,7 +210,7 @@ class HarnessSession {
 
   bvm* vm() const { return vm_; }
   Routines& routines() { return routines_; }
-  BitmapPanel& panel() { return panel_; }
+  BitmapPanel& panel() { return display_.driver(); }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -234,7 +234,6 @@ class HarnessSession {
   ModelSensor sensor_;
   ModelValve valve_;
   VacuumSystem vacuum_;
-  BitmapPanel panel_;
   AdafruitDisplay<BitmapPanel> display_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;

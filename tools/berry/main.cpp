@@ -124,6 +124,27 @@ int callSuites(bvm* vm, const char* filter) {
   return passed ? 1 : 0;
 }
 
+// Draw one of the device's own scenes — readout, browser or system — and save the frame. The
+// driver reaches them by their globals, because the well-known scenes are not registry entries.
+int callArtScene(bvm* vm, const char* name, const char* path) {
+  if (!be_getglobal(vm, "harness_art_scene")) {
+    be_pop(vm, 1);
+    printf("[E] vm: harness_art_scene is missing\n");
+    return 0;
+  }
+  be_pushstring(vm, name);
+  be_pushstring(vm, path);
+  const int rc = be_pcall(vm, 2);
+  if (rc != BE_OK) {
+    report(vm, "harness_art_scene", name);
+    return 0;
+  }
+  const int result = be_absindex(vm, -(2 + 1));
+  const bool ok = be_isbool(vm, result) && be_tobool(vm, result);
+  be_pop(vm, 3);
+  return ok ? 1 : 0;
+}
+
 int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) {
   if (!be_getglobal(vm, "harness_art")) {
     be_pop(vm, 1);
@@ -153,6 +174,7 @@ int main(int argc, char** argv) {
   const char* driverPath = "driver.be";
   const char* artName = nullptr;
   const char* artPath = nullptr;
+  const char* sceneName = nullptr;
   const char* testFilter = nullptr;
   int artSeconds = 0;
   int artSets = 0;
@@ -183,6 +205,8 @@ int main(int argc, char** argv) {
       verbose = true;
     } else if (strcmp(argv[i], "--art") == 0 && i + 1 < argc) {
       artName = argv[++i];
+    } else if (strcmp(argv[i], "--scene") == 0 && i + 1 < argc) {
+      sceneName = argv[++i];
     } else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
       artPath = argv[++i];
     } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
@@ -221,6 +245,8 @@ int main(int argc, char** argv) {
   int passed = 0;
   if (artName != nullptr) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
+  } else if (sceneName != nullptr) {
+    passed = callArtScene(vm, sceneName, artPath != nullptr ? artPath : "frame.bmp");
   } else if (suites) {
     passed = callSuites(vm, testFilter);
   } else if (!compileOnly) {
@@ -235,6 +261,8 @@ int main(int argc, char** argv) {
   printf("%lld routine%s", (long long)routineCount, routineCount == 1 ? "" : "s");
   if (artName != nullptr) {
     printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
+  } else if (sceneName != nullptr) {
+    printf(", scene %s %s", sceneName, passed && failed == 0 ? "saved" : "failed");
   } else if (suites) {
     printf(", suites %s", passed && failed == 0 ? "passed" : "failed");
   } else if (!compileOnly) {

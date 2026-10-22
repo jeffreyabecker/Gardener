@@ -31,6 +31,10 @@ class AdafruitDisplay : public Display {
   bool begin() override { return onBegin_(panel_); }
   void display() override { panel_.display(); }
 
+  // The driver behind the verbs, for a caller that has to reach it directly — the host harness
+  // saves the frame this panel drew.
+  Driver& driver() { return panel_; }
+
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return panel_.width(); }
   int16_t height() const override { return panel_.height(); }

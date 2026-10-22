@@ -30,6 +30,7 @@ compiles and loads.
 python tools/berry/check.py                              # compile, load and drive the image
 python tools/berry/check.py --compile                    # compile and load only
 python tools/berry/check.py --art interval --seconds 60  # draw a page instead of driving it
+python tools/berry/check.py --scene browser              # draw one of the device's own scenes
 python tools/berry/check.py --tests                      # run the test suites
 python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
@@ -41,9 +42,10 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--no-cache` | off | rebuild the vendored VM objects |
 | `--gfx DIR` | the installed library | the Adafruit GFX library the fonts come from |
 | `--art NAME` | — | draw that routine and save its frame instead of driving |
+| `--scene NAME` | — | draw that device scene — `readout`, `browser` or `system` — and save its frame |
 | `--seconds N` | `0` | with `--art`, press `ok:single` and run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
-| `--out PATH` | `build/<name>.bmp` | where the frame goes |
+| `--out PATH` | `build/<name>.bmp` | with `--art` or `--scene`, where the frame goes |
 | `--tests` | off | run the test suites instead of the smoke walk |
 | `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
 | `--verbose` | off | print each compiler command |

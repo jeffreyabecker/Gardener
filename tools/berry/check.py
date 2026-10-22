@@ -6,6 +6,7 @@
     python tools/berry/check.py --no-cache   # rebuild everything
     python tools/berry/check.py --art default
     python tools/berry/check.py --art interval --seconds 30
+    python tools/berry/check.py --scene browser
     python tools/berry/check.py --tests      # run the test suites
     python tools/berry/check.py --test interval
 
@@ -15,7 +16,8 @@ a rig and an in-memory data image. A page therefore runs on the code the device 
 driver walks the image's own routines.
 
 --art runs one routine and saves the frame it drew as a one-bit BMP, using the Adafruit GFX
-library the device compiles for the fonts.
+library the device compiles for the fonts. --scene does the same for one of the device's own
+scenes: readout, browser or system.
 """
 
 import argparse
@@ -158,6 +160,11 @@ parser.add_argument("--data", default=str(DATA), help="the data image to check")
 parser.add_argument("--gfx", help="the Adafruit GFX library folder; default is the installed one")
 parser.add_argument("--art", metavar="NAME", help="draw that routine and save the frame as a BMP")
 parser.add_argument(
+    "--scene",
+    metavar="NAME",
+    help="draw that device scene — readout, browser or system — and save the frame as a BMP",
+)
+parser.add_argument(
     "--seconds",
     type=int,
     default=0,
@@ -207,6 +214,9 @@ if args.art:
             str(out.resolve()),
         ]
     )
+if args.scene:
+    out = Path(args.out) if args.out else BUILD / f"{args.scene}.bmp"
+    command.extend(["--scene", args.scene, "--out", str(out.resolve())])
 if args.tests or args.test:
     tests_dir = TOOL / "tests"
     command.extend(["--suite", str(tests_dir / "suite.be")])

@@ -200,6 +200,36 @@ def harness_art(name, seconds, path, sets)
   return harnessErrors == 0
 end
 
+# Draw one of the device's own scenes and save the frame as a BMP. The well-known scenes are not
+# registry entries — the readout is the root, and the browser and system scenes are the globals
+# ui.be sets — so they are reached by name here rather than through routines.push.
+def harness_art_scene(name, path)
+  harness.reset()
+  if name != "readout"
+    var scene = nil
+    if name == "browser"
+      scene = browserScene
+    elif name == "system"
+      scene = systemScene
+    end
+    if scene == nil
+      harness_fail("art: no scene named " + name)
+      return false
+    end
+    if !ux.push(scene)
+      harness_fail("art: " + name + " would not push")
+      return false
+    end
+  end
+  harness.beat(1)
+  if !harness.save(path)
+    harness_fail("art: cannot write " + path)
+    return false
+  end
+  harness_note("art: " + name + " saved to " + path)
+  return harnessErrors == 0
+end
+
 def harness_check()
   if ux.depth() == 0
     harness_fail("vm: no root scene showing")

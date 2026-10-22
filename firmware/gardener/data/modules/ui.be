@@ -12,30 +12,25 @@ import string
 # --- the readout -----------------------------------------------------------
 
 class ReadoutChrome
-  var header
+
   var pressure
-  var target_label
   var target_value
 
   def init()
-    self.header = DynamicText()
-    self.header.x = 0; self.header.y = 0; self.header.w = 116; self.header.h = 12
-
+    
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
+    self.pressure.x = 0; self.pressure.y = 0; self.pressure.w = 64; self.pressure.h = 52
 
-    self.target_label = FixedText()
-    self.target_label.value = "TGT"
-    self.target_label.x = 0; self.target_label.y = 44; self.target_label.w = 40; self.target_label.h = 8
 
     self.target_value = PressureDisplay()
-    self.target_value.x = 40; self.target_value.y = 44; self.target_value.w = 76; self.target_value.h = 8
+    self.target_value.x = 64; self.target_value.y = 0; self.target_value.w = 64; self.target_value.h = 52
+    self.target_value.inverted = true
   end
 
   def draw(s)
-    self.header.draw(s.state)
+
     self.pressure.draw(s.sensor_ok ? s.kpa : nil)
-    self.target_label.draw()
+
     if s.target > 0.0
       self.target_value.draw(s.target)
     else
@@ -152,6 +147,23 @@ class JingleScene : ChoiceScene
   end
 end
 
+# The system scene's drawing: the four-row menu list. The rows come from the scene, which owns the
+# values and formats them; the chrome owns the list and draws it.
+class SystemChrome
+  var owner
+  var list
+
+  def init(owner)
+    self.owner = owner
+    self.list = List(4)
+  end
+
+  def draw()
+    self.list.set(self.owner.rows())
+    self.list.draw(0, 10)
+  end
+end
+
 # The device's own settings as a menu: four rows walked with Up/Down, each opening the value scene
 # it edits. The caller writes what a scene returns through `device`.
 class SystemScene : Scene
@@ -163,7 +175,7 @@ class SystemScene : Scene
   var jingle
   var jingle_ids
   var fmt
-  var list
+  var chrome
 
   def init()
     super(self).init()
@@ -175,7 +187,7 @@ class SystemScene : Scene
     self.jingle = nil
     self.jingle_ids = []
     self.fmt = "%.1f"
-    self.list = List(4)
+    self.chrome = SystemChrome(self)
   end
 
   def activate()
@@ -210,10 +222,7 @@ class SystemScene : Scene
   end
 
   def draw_page()
-    screen.draw_text(0, 0, 1, false, "SYSTEM")
-    self.list.set(self.rows())
-    self.list.draw(0, 10)
-    screen.draw_text(0, 44, 1, false, "UP/DOWN  OK=EDIT")
+    self.chrome.draw()
   end
 
   def rows()
@@ -254,11 +263,11 @@ class SystemScene : Scene
 
   def handle_page(ev)
     if ev == "up:single"
-      self.list.move(-1)
+      self.chrome.list.move(-1)
       return true
     end
     if ev == "down:single"
-      self.list.move(1)
+      self.chrome.list.move(1)
       return true
     end
     if ev == "ok:single"
@@ -273,16 +282,16 @@ class SystemScene : Scene
   end
 
   def open_row()
-    if self.list.selected == 0
+    if self.chrome.list.selected == 0
       ux.push(UnitScene(self.unit_index, self.units), nil, / v -> self.set_unit(v))
-    elif self.list.selected == 1
+    elif self.chrome.list.selected == 1
       # No target yet: start from where the chamber is, which is what a first edit means.
       var kpa = self.target
       if kpa <= 0.0
         kpa = vacuum.clamp(vacuum.state().kpa)
       end
       ux.push(PressureScene("TARGET", kpa, 1, false), nil, / v -> self.set_target(v))
-    elif self.list.selected == 3
+    elif self.chrome.list.selected == 3
       # No library is a fault the boot already reported; OK does nothing rather than opening an
       # editor with nothing to cycle.
       if self.jingle_ids.size() == 0
