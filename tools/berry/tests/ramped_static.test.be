@@ -45,7 +45,7 @@ def crosses_stages_and_goes_home()
   wait_until("ramped_static: the stage did not reach HOLD", 200,
              / -> page.status_text() == "HOLD")
   wait_until("ramped_static: did not go home at the end of the profile", 200,
-             / -> harness.active() == "default")
+             / -> ux.depth() == 1)
 end
 
 test("crosses START, RAMP and HOLD and goes home", crosses_stages_and_goes_home)

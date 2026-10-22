@@ -8,36 +8,28 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The active routine's own values. The fallback is both the answer for a key nothing has written
-// and the type the text is read back as, so a routine reads a number as a number and a missing key
-// is not an error it has to test for.
+// A routine's own values, addressed by the routine's name. The fallback is both the answer for a
+// key nothing has written and the type the text is read back as, so a routine reads a number as a
+// number and a missing key is not an error it has to test for.
 
 int storeGet(bvm* vm) {
-  const int top = be_top(vm);
-  const bool named = top >= 3;
-  const int keyIndex = named ? 2 : 1;
-  const int fallbackIndex = named ? 3 : 2;
-
-  if (top < 1 || !be_isstring(vm, 1) || !be_isstring(vm, keyIndex)) {
-    be_raise(vm, "type_error", "store.get(key, fallback) or store.get(name, key, fallback)");
+  if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
+    be_raise(vm, "type_error", "store.get(name, key, fallback)");
   }
+  const bool hasFallback = be_top(vm) >= 3;
+  const bool fallbackInt = hasFallback && be_isint(vm, 3);
+  const bool fallbackReal = hasFallback && be_isreal(vm, 3);
+  const bool fallbackBool = hasFallback && be_isbool(vm, 3);
 
-  const bool hasFallback = top >= fallbackIndex;
-  const bool fallbackInt = hasFallback && be_isint(vm, fallbackIndex);
-  const bool fallbackReal = hasFallback && be_isreal(vm, fallbackIndex);
-  const bool fallbackBool = hasFallback && be_isbool(vm, fallbackIndex);
-
-  const char* routine = named ? argText(vm, 1) : nullptr;
-  const char* key = argText(vm, keyIndex);
+  const char* routine = argText(vm, 1);
+  const char* key = argText(vm, 2);
   String text;
-  const bool stored =
-      gRoutines != nullptr &&
-      (named ? gRoutines->storeGet(routine, key, text) : gRoutines->storeGet(key, text));
+  const bool stored = gRoutines != nullptr && gRoutines->storeGet(routine, key, text);
 
   if (!stored) {
     // Nothing under the key: the fallback the caller passed is the answer, as it stands.
     if (hasFallback) {
-      be_pushvalue(vm, fallbackIndex);
+      be_pushvalue(vm, 3);
     } else {
       be_pushnil(vm);
     }
@@ -57,25 +49,19 @@ int storeGet(bvm* vm) {
 }
 
 int storeSet(bvm* vm) {
-  const int top = be_top(vm);
-  const bool named = top >= 3;
-  const int keyIndex = named ? 2 : 1;
-  const int valueIndex = named ? 3 : 2;
-
-  if (top < 2 || !be_isstring(vm, 1) || !be_isstring(vm, keyIndex)) {
-    be_raise(vm, "type_error", "store.set(key, value) or store.set(name, key, value)");
+  if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
+    be_raise(vm, "type_error", "store.set(name, key, value)");
   }
 
-  const char* routine = named ? argText(vm, 1) : nullptr;
-  const char* key = argText(vm, keyIndex);
+  const char* routine = argText(vm, 1);
+  const char* key = argText(vm, 2);
   // be_tostring converts a number or a bool in place, so every scalar has the text form the file
   // holds. The pointer is into the VM's string table, which is why it is used before anything else
   // is pushed.
-  const char* value = be_tostring(vm, valueIndex);
+  const char* value = be_tostring(vm, 3);
   const bool written =
       value != nullptr && gRoutines != nullptr &&
-      (named ? gRoutines->storeSet(routine, key, String(value))
-             : gRoutines->storeSet(key, String(value)));
+      gRoutines->storeSet(routine, key, String(value));
   be_pushbool(vm, written);
   be_return(vm);
 }

@@ -1,9 +1,9 @@
 # driver.be — what the check does after every file has loaded.
 #
-# It names Settings and store, so it loads after /modules and /routines: a Berry file cannot compile
-# a name that is not declared yet. Everything it calls is the firmware's own: the drive is the
-# `harness` module, the pages are looked up and switched through `routines`, and a value is read or
-# written through `store`, which is the path a page uses itself.
+# It names the scenes and store, so it loads after /modules and /routines: a Berry file cannot
+# compile a name that is not declared yet. Everything it calls is the firmware's own: the drive is
+# the `harness` module, the routines are reached through the Berry `routines` registry and pushed
+# through `ux`, and a value is read or written through `store`.
 
 def harness_kind_known(kind)
   for name : ["real", "int", "bool", "choice", "duration", "pressure"]
@@ -14,12 +14,14 @@ def harness_kind_known(kind)
   return false
 end
 
-# A switch, with or without the map that carries a routine's values.
+# A switch onto a routine: home, then push the routine's scene. The settings map, when there is
+# one, is that activation's own values.
 def harness_activate(name, settings)
+  ux.pop_to_root()
   if settings == nil
-    return harness.activate(name)
+    return ux.push(routines.get(name))
   end
-  return harness.activate(name, settings)
+  return ux.push(routines.get(name), settings)
 end
 
 # The map a switch carries is the routine's own settings, typed as the editor reads them, so
@@ -57,12 +59,13 @@ def harness_setting_value(name, item)
 end
 
 def harness_settings_map(name)
-  if !routines.has(name, "describe")
+  var routine = routines.get(name)
+  if routine == nil
     return nil
   end
   var described = nil
   try
-    described = routines.get(name).describe()
+    described = routine.describe()
   except .. as e, m
     harness_fail("settings: " + name + " describe: " + e + ": " + m)
     return nil
@@ -78,41 +81,37 @@ def harness_settings_map(name)
   return settings
 end
 
-# The settings editor is the one path every routine with a describe() shares, and the one that
-# writes through store. Walk it: open, edit every value, close.
+# A committed value the driver writes, exactly as the routine that owns the settings would.
+def harness_editor_wrote(name, key, value)
+  store.set(name, key, value == nil ? "" : value)
+end
+
+# The settings view is the one path every routine with a describe() shares: push it, edit every
+# value, and make sure each commit reaches the file through the caller.
 def harness_editor(name)
-  if !routines.has(name, "describe")
+  var routine = routines.get(name)
+  if routine == nil
     return
   end
 
   var label = "settings: " + name
+  var described = nil
   try
-    routines.get(name).describe()
+    described = routine.describe()
   except .. as e, m
     harness_fail(label + " describe: " + e + ": " + m)
     return
   end
-
-  var editor = Settings(name)
-  var opened = false
-  try
-    opened = editor.open()
-  except .. as e, m
-    harness_fail(label + " open: " + e + ": " + m)
-    return
-  end
-  if !opened
-    harness_fail(label + " open() refused")
+  if described == nil || described.size() == 0
     return
   end
 
-  harness_guarded(label, / -> editor.draw())
+  harness_activate(name, nil)
+  ux.push(SettingsScene(name, / key, value -> harness_editor_wrote(name, key, value)))
 
-  var count = editor.described.size()
   var i = 0
-  var guard = 0
-  while i < count
-    var item = editor.described[i]
+  while i < described.size()
+    var item = described[i]
     if type(item) != "instance"
       harness_fail(label + " describe() returned a non-setting")
       return
@@ -124,40 +123,38 @@ def harness_editor(name)
       harness_fail(label + " choice " + str(item.key) + " has no values")
     end
 
-    editor.list.selected = i
-    harness_guarded(label, / -> editor.draw())
-    harness_guarded(label, / -> editor.handle(harness_event("ok", "short")))
+    # OK opens the value scene for the row the list has selected. A duration opens in the minutes
+    # stage, so a second OK advances to the seconds before the commit.
+    harness.press("ok", "short")
+    harness.beat(1)
+    if item.kind == "duration"
+      harness.press("ok", "short")
+      harness.beat(1)
+    end
+    harness.press("up", "short")
+    harness.beat(1)
+    harness.press("ok", "short")
+    harness.beat(1)
 
-    # OK opens the value. A duration opens twice: minutes first, then seconds.
-    guard = 0
-    while editor.editing && guard < 6
-      harness_guarded(label, / -> editor.handle(harness_event("up", "short")))
-      harness_guarded(label, / -> editor.draw())
-      harness_guarded(label, / -> editor.handle(harness_event("ok", "short")))
-      guard += 1
-    end
-    if editor.editing
-      harness_guarded(label, / -> editor.handle(harness_event("back", "short")))
-    end
     if harness_kind_known(item.kind) && !harness.wrote(name, item.key)
       harness_fail(label + " did not write " + str(item.key))
+    end
+
+    if i + 1 < described.size()
+      harness.press("down", "short")
+      harness.beat(1)
     end
     i += 1
   end
 
-  guard = 0
-  while editor.is_open() && guard < 4
-    harness_guarded(label, / -> editor.handle(harness_event("back", "short")))
-    guard += 1
-  end
-  if editor.is_open()
-    harness_fail(label + " did not close on Back")
-  end
+  # Back closes the settings list and pops it, which hands the panel back to the routine.
+  harness.press("back", "short")
+  harness.beat(1)
 end
 
-# One page's life: activate, a run started by a person, 400 s of virtual time, the device's own
-# stop, every gesture, and a re-entry. The active page may change under it when a page switches
-# (the browser does), which is the point.
+# One routine's life: activate, a run started by a person, 400 s of virtual time, the device's own
+# stop, every gesture, and a re-entry. The active scene may change under it when a scene pushes
+# another (the browser does), which is the point.
 def harness_run_page(name)
   harness.reset()
   if !harness_activate(name, nil)
@@ -172,11 +169,11 @@ def harness_run_page(name)
     return
   end
 
-  # The device's own Back hold, which the panel task fires without asking the page.
+  # The device's own Back hold, which the panel task fires without asking the scene.
   harness.press("back", "long")
   harness.back_hold()
   harness.beat(8)
-  if harness.active() == nil
+  if ux.depth() == 0
     return
   end
 
@@ -197,22 +194,19 @@ def harness_run_page(name)
 
   # A re-entry after a control handover arrives as activate(nil) with the machine wherever it was
   # left, and a switch may carry the routine's values as a map.
-  var active = harness.active()
-  if active != nil
-    harness_activate(active, nil)
-    harness.beat(4)
-    var settings = harness_settings_map(active)
-    if settings != nil
-      harness_activate(active, settings)
-      harness.beat(8)
-    end
+  harness_activate(name, nil)
+  harness.beat(4)
+  var settings = harness_settings_map(name)
+  if settings != nil
+    harness_activate(name, settings)
+    harness.beat(8)
   end
 end
 
-# Draw one page and save the frame as a BMP. No seconds is the page as it appears; seconds presses OK
-# and runs that much virtual time first, so a cycle can be caught mid-phase. A set count overrides
-# the routine's own before it is activated, which is how a preview shows a run long enough to fill
-# the bubbles; zero leaves the file's value alone.
+# Draw one routine and save the frame as a BMP. No seconds is the page as it appears; seconds
+# presses OK and runs that much virtual time first, so a cycle can be caught mid-phase. A set count
+# overrides the routine's own before it is activated, which is how a preview shows a run long
+# enough to fill the bubbles; zero leaves the file's value alone.
 def harness_art(name, seconds, path, sets)
   if routines.get(name) == nil
     harness_fail("art: no routine named " + name)
@@ -242,11 +236,11 @@ def harness_art(name, seconds, path, sets)
 end
 
 def harness_check()
-  if routines.get("default") == nil
-    harness_fail("vm: no default routine registered")
+  if ux.depth() == 0
+    harness_fail("vm: no root scene showing")
   end
 
-  for name : harness.entries()
+  for name : routines.all()
     try
       harness_editor(name)
       harness_run_page(name)
@@ -254,6 +248,6 @@ def harness_check()
       harness_fail("vm: " + name + " check: " + e + ": " + m)
     end
   end
-  harness_note("checked " + str(harness.entries().size()) + " routines")
+  harness_note("checked " + str(routines.all().size()) + " routines")
   return harnessErrors == 0
 end

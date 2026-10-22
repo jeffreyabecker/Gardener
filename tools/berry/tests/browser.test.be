@@ -5,14 +5,14 @@ suite = "browser"
 
 def registrations_listed()
   var names = routines.names()
-  for name : harness.entries()
+  for name : routines.all()
     var found = false
     for listed : names
       if listed == name
         found = true
       end
     end
-    if harness.hidden(name)
+    if routines.hidden(name)
       assert_true(!found, "routines.names() lists hidden " + name)
     else
       assert_true(found, "routines.names() is missing " + name)

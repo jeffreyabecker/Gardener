@@ -9,6 +9,12 @@ phases and its settings keys belong in that page's own `.be` file, its gestures 
 [gestures.md](../gestures.md), and `firmware/gardener/data/routines/` holds the pages this build
 ships when you want to read one. Nothing here should need to change when one of them changes.
 
+The panel UI is a stack of **scenes**. A routine file registers a scene instance; the firmware polls
+the top scene and only the top scene, and a scene pushes or pops scenes with the `ux` module. The
+registry the routine browser draws is a Berry class — the global `routines` instance in
+`/modules/registry.be` — and the only native additions over the older page model are `ux.*` (the
+stack) and the now name-only `store.*` forms.
+
 ## Where a routine lives and what it must look like
 
 Every file under `/routines/` ending in `.be` is loaded at boot. A file's top level runs once; it
@@ -17,13 +23,13 @@ registers an object and is done:
 ```berry
 import string
 
-class MyPage
+class MyPage : Scene
   def activate()
-    # the page became visible; draw the first frame and re-read anything cached
+    # the scene became the top scene; draw the first frame and re-read anything cached
   end
 
   def poll(now)
-    # called once per loop pass while this page is showing; `now` is millis()
+    # called once per loop pass while this scene is showing; `now` is millis()
   end
 end
 
@@ -31,8 +37,10 @@ routines.register("mypage", "My page", MyPage())
 return MyPage
 ```
 
-The object must be an **instance** with both `activate()` and `poll(now)`. A file that registers
-anything else is refused at load with the missing method named; the other files still load.
+The object must be an **instance** with both `activate()` and `poll(now)`. `Scene`
+(`/modules/scene.be`) provides `poll`, a press drain, the repaint cadence and the gesture
+dispatch; a routine extends it and defines `activate()` plus whatever `draw_page()` and `tick(now)`
+it needs. The stack refuses to push a scene that lacks either method.
 
 `activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
 none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
@@ -44,10 +52,10 @@ An optional `describe()` gives the settings editor a list of values to edit (see
 without one simply has no settings.
 
 A routine can register itself **hidden** with the fourth argument, for example
-`routines.register("mypage", "My page", MyPage(), true)`. It is registered and can be switched to
-like any other, but it is left out of `routines.names()`, which is the list the routine browser
-draws. The device's own pages — `default`, `browser` and `system` — register hidden: they are
-reached by gesture, not picked from the list.
+`routines.register("mypage", "My page", MyPage(), true)`. It is registered and can be pushed like
+any other, but it is left out of `routines.names()`, which is the list the routine browser draws.
+The device's own scenes — the readout, the system settings and the browser — are not registered at
+all: they are well-known scenes in `/modules/ui.be` the system pushes directly.
 
 The fifth argument is the routine's **icon**: an instance of a class extending `Icon` from
 `/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
@@ -55,8 +63,8 @@ The browser draws it at the left of the routine's row and shifts the name right 
 routine that registers no icon, or passes `nil`, has a text-only row:
 `routines.register("mypage", "My page", MyPage(), false, MyIcon())`.
 
-The routine registered as **`default`** is the page. If no file registers one, the panel shows the
-device's mark and nothing runs.
+The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
+one, the panel shows the device's mark and nothing runs.
 
 A routine's name is also the name of the file its values are kept in (see `store` in
 [bindings.md](./bindings.md)), so it has to be a plain word: a name containing `/` or `\` is
@@ -88,65 +96,62 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The page framework ships the same way. `/modules/page.be` is `Page` — the button drain, the repaint
-cadence, the editor delegation and the gesture dispatch a routine's page extends. `/modules/
-components.be` is `Component` and the drawing primitives a readout composes (`FixedText`,
-`DynamicText`, `PressureDisplay`, `ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and
-the `Icon` glyph). `/modules/list.be` is `List`, a selectable menu.
+The page framework ships the same way. `/modules/scene.be` is `Scene` — the button drain, the
+repaint cadence and the gesture dispatch a routine's scene extends. `/modules/registry.be` is the
+registry: `class RoutineRegistry` and the global `routines` instance — the list the browser draws,
+and the `push(name, callback)` that opens a routine. `/modules/components.be` is `Component` and the
+drawing primitives a readout composes (`FixedText`, `DynamicText`, `PressureDisplay`,
+`ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and the `Icon` glyph).
+`/modules/list.be` is `List`, a selectable menu. `/modules/ui.be` is the device's own scenes — the
+readout, the system settings and the browser — none of them registered.
 
-The shared editor ships as `/modules/settings.be`. `Settings(name)` edits the `describe()` list of
-the routine registered under that name. **Up+Down** is the standard gesture for opening it; a
-page that wants the editor makes one and hands it to `Page.open_editor()`, which holds it while it
-is open and delegates the keys to it:
+The settings view ships as `/modules/settings.be`: `SettingsScene` (the list) and one value scene
+per kind (`BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene`, `DurationScene`).
+**Up+Down** is the standard gesture for opening it. A routine pushes `SettingsScene` with a
+callback that writes the committed values; the value scenes pop with the value they settled on:
 
 ```berry
-def activate()
-  self.editor = nil
+def edit()
+  ux.push(SettingsScene("mypage", / key, value -> self.on_setting(key, value)), nil, / v -> self.draw())
 end
 
-def draw()
-  screen.draw_clear()
-  if self.editor != nil
-    self.editor.draw()
-  else
-    # the page's own content
-  end
-  screen.flush()
-end
-
-def handle(ev)
-  if self.editor != nil
-    self.editor.handle(ev)
-    if !self.editor.is_open()
-      self.editor = nil
-    end
-    return true
-  end
-  if ev.btn == "up" && ev.press == "chord"
-    return self.open_editor(Settings("mypage"))
-  end
-  return false
+def on_setting(key, value)
+  store.set("mypage", key, value == nil ? "" : value)
 end
 ```
 
-`open()` calls the routine's `describe()` and reads each value from its store file. `draw()` paints
-the list or the edit screen without clearing or flushing, so the page still owns the panel. Back at
-the top closes the editor and `is_open()` turns false. The routine still implements `describe()`,
-which remains the one description of what is editable.
+`SettingsScene` reads the routine's `describe()` and each value from its store file; nothing in
+`settings.be` writes. A committed value is handed to the caller's callback, which writes where
+appropriate. Back at the top of the list pops the settings scene with nil. The routine still
+implements `describe()`, which remains the one description of what is editable.
 
-## When the firmware calls into a routine
+## When the firmware calls into a scene
 
 | Moment | Call |
 | --- | --- |
-| boot, after the files load | nothing — the page's `activate()` follows |
-| the page becomes visible | `activate(settings)` — `nil` unless the switch carried a map |
-| every panel-task beat while the page is shown | `poll(now)` |
-| a controller acquires control | nothing; the page stops being polled |
-| the controller releases control, or the device resets | `activate(nil)` — a new activation, so the file is the source |
+| boot, after the files load | the firmware pushes the root scene (`__rootScene`) |
+| a scene becomes the top of the stack | `activate(args)` — the push's args, or `nil` |
+| every panel-task beat while the scene is on top | `poll(now)` |
+| a scene is popped off the top | the pusher's callback runs with the returned value, or the scene below re-activates |
+| a controller acquires control | nothing; the top scene stops being polled |
+| the controller releases control, or the device resets | `activate(nil)` on the top scene |
 
-`activate()` runs again on every page entry on purpose: the display unit may have changed while the
-page was not shown, and a routine should not trust what it cached. The settings map is not carried
-across that entry; it was the previous activation's, and a re-entry without one reads the file.
+`activate()` runs again on every push and on every return to a scene that was pushed without a
+callback: the display unit may have changed while the scene was not showing, and a scene should not
+trust what it cached. A push's args are not carried across a re-entry; a re-entry without them reads
+the file.
+
+## The stack
+
+`ux.push(scene [, args [, callback]])` puts a scene on top and makes it the one that is polled.
+`ux.pop([value])` leaves it and hands `value` to the pusher's callback, or re-activates the scene
+below when it was pushed without one. `ux.pop_to_root([value])` pops every scene above the root in
+one move — a finished run's way home. The root is the `__rootScene` global `/modules/ui.be` sets;
+if nothing sets it, the panel shows the device's mark.
+
+Only the top scene polls and draws, so a scene below the top is suspended — it keeps its state and
+resumes through its callback when the scene above pops. A pop asked for from inside a scene's own
+`poll` is deferred until that call returns, so a scene may pop itself.
 
 ## One entry per beat
 

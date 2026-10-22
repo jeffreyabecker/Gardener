@@ -1,22 +1,22 @@
-# page.be — the lifecycle a routine's page shares: the button drain, the repaint cadence, the
-# settings-editor delegation, and declarative gesture dispatch.
+# scene.be — the lifecycle a scene shares: the button drain, the repaint cadence and the
+# declarative gesture dispatch.
 #
-# A routine's page extends Page and overrides only what differs: draw_page() for its content,
-# tick(now) for per-beat work, and on_editor_closed() for what a closed editor leaves behind.
-# Gestures are registered with on(btn, presses, fn) in init(), and handle_page() dispatches them.
+# A scene extends Scene and overrides only what differs: activate() for when it becomes the top
+# scene, draw_page() for its content, and tick(now) for per-beat work. Gestures are registered with
+# on(btn, presses, fn) in init(), and handle_page() dispatches them. A scene pushes a sub-scene
+# with ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
+# callback runs when the sub-scene pops, and the scene below keeps its state.
 
-class Page
+class Scene
   var last_draw
-  var editor
   var gestures
 
   def init()
     self.last_draw = 0
-    self.editor = nil
     self.gestures = []
   end
 
-  # The queue is a pull: drain it every poll so a press is never left waiting for the next page.
+  # The queue is a pull: drain it every poll so a press is never left waiting for the next scene.
   def take_events()
     var acted = false
     while true
@@ -31,16 +31,7 @@ class Page
     return acted
   end
 
-  # The settings editor owns the keys until Back closes it; the page gets them back after that.
   def handle(ev)
-    if self.editor != nil
-      var acted = self.editor.handle(ev)
-      if !self.editor.is_open()
-        self.editor = nil
-        self.on_editor_closed()
-      end
-      return acted
-    end
     return self.handle_page(ev)
   end
 
@@ -77,27 +68,9 @@ class Page
     return wanted == press
   end
 
-  # Up+Down opens the settings; Back at the top closes them. The editor is the
-  # routine's to make: /modules loads in directory order, so a page may not name a
-  # class from a file that loads after it.
-  def open_editor(editor)
-    if !editor.open()
-      return false
-    end
-    self.editor = editor
-    return true
-  end
-
-  def on_editor_closed()
-  end
-
   def draw()
     screen.draw_clear()
-    if self.editor != nil
-      self.editor.draw()
-    else
-      self.draw_page()
-    end
+    self.draw_page()
     screen.flush()
     self.last_draw = vacuum.now_ms()
   end

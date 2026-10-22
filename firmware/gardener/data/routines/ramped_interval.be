@@ -80,7 +80,7 @@ class RampedIntervalChrome
   end
 end
 
-class RampedInterval : Page
+class RampedInterval : Scene
   var phase
   var mark
   var set
@@ -117,7 +117,6 @@ class RampedInterval : Page
   end
 
   def activate(settings)
-    self.editor = nil
     self.phase = "ready"
     self.set = 0
     self.targets = []
@@ -177,7 +176,7 @@ class RampedInterval : Page
     if settings != nil
       return settings.find(key, nil) == nil
     end
-    return store.get(key, "") == ""
+    return store.get("ramped_interval", key, "") == ""
   end
 
   # A value from the activation's set when it has one, from the routine's file otherwise. A key the
@@ -187,7 +186,7 @@ class RampedInterval : Page
     if settings != nil
       return settings.find(key, fallback)
     end
-    return store.get(key, fallback)
+    return store.get("ramped_interval", key, fallback)
   end
 
   def whole(value, low, high)
@@ -349,7 +348,7 @@ class RampedInterval : Page
     self.phase = "ready"
     vacuum.log("ramped_interval: complete")
     jingles.play_current()
-    routines.set_active("default")
+    ux.pop_to_root()
   end
 
   # The run ended without this page asking: a latched fault, or a release the device's hold caused.
@@ -364,11 +363,8 @@ class RampedInterval : Page
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
-    # The settings editor owns the panel while it is open; the ramp does not advance underneath it,
-    # and the restart on close is what puts the clock right.
-    if self.editor != nil
-      return
-    end
+    # While the settings scene is on top this scene is not polled, so the ramp does not advance
+    # underneath it; the restart on close is what puts the clock right.
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
@@ -376,16 +372,19 @@ class RampedInterval : Page
   end
 
   # Settings are entered with the chamber released, like a pause: a run that was under way starts
-  # over at the first set when the editor closes, so it must not keep working at the old set
-  # underneath it. An editor that refuses to open leaves the run alone.
+  # over at the first set when the settings scene closes, so it must not keep working at the old
+  # set underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    if !self.open_editor(Settings("ramped_interval"))
-      return false
-    end
+    ux.push(SettingsScene("ramped_interval", / key, value -> self.on_setting(key, value)), nil, / v -> self.on_editor_closed())
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
+  end
+
+  # A committed value is the routine's to write: the settings scene only returns it.
+  def on_setting(key, value)
+    store.set("ramped_interval", key, value == nil ? "" : value)
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a

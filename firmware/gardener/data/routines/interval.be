@@ -85,7 +85,7 @@ class IntervalChrome
   end
 end
 
-class Interval : Page
+class Interval : Scene
   var phase
   var mark
   var set
@@ -115,7 +115,6 @@ class Interval : Page
   end
 
   def activate(settings)
-    self.editor = nil
     self.phase = "ready"
     self.set = 0
     self.read_settings(settings)
@@ -161,7 +160,7 @@ class Interval : Page
     if settings != nil
       return settings.find(key, fallback)
     end
-    return store.get(key, fallback)
+    return store.get("interval", key, fallback)
   end
 
   def seconds(value, high)
@@ -294,7 +293,7 @@ class Interval : Page
     self.phase = "ready"
     vacuum.log("interval: complete")
     jingles.play_current()
-    routines.set_active("default")
+    ux.pop_to_root()
   end
 
   # The cycle ended without this page asking: a latched fault, or a release the device's hold caused.
@@ -309,11 +308,8 @@ class Interval : Page
   # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
-    # The settings editor owns the panel while it is open; the cycle does not advance underneath it,
-    # and the restart on close is what puts the clock right.
-    if self.editor != nil
-      return
-    end
+    # While the settings scene is on top this scene is not polled, so the cycle does not advance
+    # underneath it; the restart on close is what puts the clock right.
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
@@ -321,16 +317,19 @@ class Interval : Page
   end
 
   # Settings are entered with the chamber released: a run that was under way restarts at the new
-  # values when the editor closes, so it must not keep working at the old ones underneath it. An
-  # editor that refuses to open leaves the run alone.
+  # values when the settings scene closes, so it must not keep working at the old ones underneath
+  # it. The scene below is not polled while the settings are showing.
   def edit()
-    if !self.open_editor(Settings("interval"))
-      return false
-    end
+    ux.push(SettingsScene("interval", / key, value -> self.on_setting(key, value)), nil, / v -> self.on_editor_closed())
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
+  end
+
+  # A committed value is the routine's to write: the settings scene only returns it.
+  def on_setting(key, value)
+    store.set("interval", key, value == nil ? "" : value)
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a

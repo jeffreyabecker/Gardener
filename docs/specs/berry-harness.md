@@ -14,8 +14,8 @@ registration does not look like a routine, or a page does not survive being driv
 | `main.c` | loads the files in the device's order and calls the checks |
 | `frame.c` | the panel: a 128 x 64 one-bit frame, the Adafruit GFX drawing verbs and the BMP writer |
 | `frame.h` | the one function `main.c` calls to install the frame as a module |
-| `harness.be` | the records and the eight native modules a routine compiles against |
-| `driver.be` | the smoke walk: the drive, the settings editor, and the page re-entry |
+| `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
+| `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
 | `tests/suite.be` | the suite framework: `test()`, the assertions, `wait_until`, the runner |
 | `tests/*.test.be` | the suites, one file per concern, each registering named cases |
 
@@ -54,23 +54,23 @@ only when every file compiled, every registration looked like a routine, and eve
 
 ## The load order
 
-1. `harness.be`
-2. `/modules/*.be`, alphabetical
+1. the image: `/modules/*.be`, alphabetical, then `/routines/*.be`, alphabetical
+2. `harness.be`
 3. `driver.be`
-4. `/routines/*.be`, alphabetical
 
 The order is not a preference. Berry resolves a global name when it **compiles** a file, so a file
 may name only what an earlier file defined, and that reaches inside method bodies. A class a later
 file needs has to be a global by the time the earlier file is compiled: `FixedText` in
-`/modules/components.be` is used by the pages, so it is defined in a module, not in a page.
+`/modules/components.be` is used by the scenes, so it is defined in a module, not in a routine.
 
-In `--tests` mode two more load after those four: `tests/suite.be`, then `tests/*.test.be` in
+In `--tests` mode two more load after those three: `tests/suite.be`, then `tests/*.test.be` in
 alphabetical order. A suite can name every routine, module and `harness` drive because the whole
 image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `bounds`, `event` and `setting`, and the eight modules a routine calls:
+The records `reading`, `unit`, `bounds`, `event` and `setting`, and the seven native modules a
+routine calls:
 
 | Module | On the host |
 | --- | --- |
@@ -80,8 +80,11 @@ The records `reading`, `unit`, `bounds`, `event` and `setting`, and the eight mo
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |
 | `jingles` | the library read from `/modules/jingles.txt` |
-| `store` | `/settings.cfg` and every `/routines/*.cfg`, as text, with the type taken from the default asked for |
-| `routines` | the registry: `register()`, `names()`, `set_active()` and the switch a page asks for |
+| `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for |
+| `ux` | the scene stack: `push()`, `pop()`, `pop_to_root()`, `top()` and `depth()` |
+
+The registry the browser draws is not native: `/modules/registry.be` defines the global `routines`
+instance, which the driver and the suites reach the same way a scene does.
 
 The machine model is what a preview moves against. It starts at 0 kPa, pulls at 3 kPa/s, settles a
 target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target below 5 kPa and caps at
@@ -106,14 +109,14 @@ panel's finished face.
 
 ## What the drive does
 
-For every registered routine, hidden pages included:
+For every registered routine, hidden routines included:
 
-1. activate with no settings map, then eight beats
+1. push with no settings map, then eight beats
 2. one OK, then 400 s of virtual time, so a cycle's phases and its repeat are reached
 3. a long Back with the machine reporting a stop, then every button and press pair, then the Up+Down
-   chord — the page has to hand the panel back and survive all of it
+   chord — the routine has to hand the panel back and survive all of it
 
-The settings editor is walked first, through its whole key sequence.
+The settings view is walked first, through its whole key sequence.
 
 ## The test suites
 
@@ -134,9 +137,9 @@ The runner executes every registered case (or those whose full `suite.case` name
 `[FAIL] suite.case: assert: ...`, then `N passed, M failed`. A case that raises does not stop the
 rest, and the run ends `suites passed` only when nothing failed.
 
-The suites cover what a walk cannot name: the jingle library, the System page's jingle editor, the
+The suites cover what a walk cannot name: the jingle library, the System scene's jingle editor, the
 interval's set count and its "after ok" pause, the ramp's three stages and its pause and resume, and
-the registry's hidden-page rule.
+the registry's hidden-routine rule.
 
 ## Failing
 

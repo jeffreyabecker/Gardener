@@ -33,7 +33,7 @@ def completes_and_goes_home()
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   harness.press("ok", "short")
-  wait_until("ramped_interval: did not complete", 200, / -> harness.active() == "default")
+  wait_until("ramped_interval: did not complete", 200, / -> ux.depth() == 1)
 end
 
 test("a run completes and goes home", completes_and_goes_home)

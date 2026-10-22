@@ -10,7 +10,7 @@ class Logger;
 
 namespace berry {
 
-// The eight native modules a routine sees, installed into a fresh VM:
+// The seven native modules a scene sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
@@ -18,15 +18,16 @@ namespace berry {
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
 //   jingles.*  the named note sequences in /modules/jingles.txt
-//   routines.* the registry, so a file can register itself
-//   store.*    the routine's own values, kept across a power cycle
+//   ux.*       the scene stack: push, pop and pop_to_root
+//   store.*    a routine's own values, kept across a power cycle
 //
-// Four of those calls answer a *record* rather than a plain value: `vacuum.state()` a `reading`,
-// `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`, `buttons.take()` an `event`. A record
-// is a class instance whose fields a
-// routine reads with a dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and
-// compiled at boot, because only the parser can declare an instance variable on a class. The
-// `setting` class in the same block is the shape a routine's describe() builds for the browser.
+// The registry the browser draws is a Berry class (/modules/registry.be); there is no native
+// registry module. Four of these calls answer a *record* rather than a plain value:
+// `vacuum.state()` a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`,
+// `buttons.take()` an `event`. A record is a class instance whose fields a routine reads with a
+// dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and compiled at boot, because
+// only the parser can declare an instance variable on a class. The `setting` class in the same
+// block is the shape a routine's describe() builds for the settings view.
 //
 // The reference a routine author reads is docs/specs/ui/bindings.md (what a routine can call) and
 // docs/specs/ui/routine.md (what a routine must be). The tables in `bindings/` are the same

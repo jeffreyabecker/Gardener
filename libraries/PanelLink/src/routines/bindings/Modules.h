@@ -17,7 +17,7 @@ void installButtonsModule(bvm* vm);
 void installBuzzerModule(bvm* vm);
 // The jingle library is read once, when the module is installed, from the interpreter's library.
 void installJinglesModule(bvm* vm, Library& library);
-void installRoutinesModule(bvm* vm);
+void installUxModule(bvm* vm);
 void installStoreModule(bvm* vm);
 
 }  // namespace berry

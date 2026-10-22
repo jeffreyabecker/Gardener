@@ -211,7 +211,13 @@ int main(int argc, char** argv) {
     if (!loadFile(vm, file.c_str())) failed++;
   }
 
-  const size_t routines = session.routines().count();
+  // The registry is Berry, so the count of registered routines is read back from a global the
+  // driver sets after the image has loaded.
+  bint routineCount = 0;
+  if (be_getglobal(vm, "harnessRoutineCount")) {
+    routineCount = be_toint(vm, -1);
+    be_pop(vm, 1);
+  }
   int passed = 0;
   if (artName != nullptr) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
@@ -226,7 +232,7 @@ int main(int argc, char** argv) {
   printDriverLog(vm);
   if (verbose) fputs(session.logger().text().c_str(), stdout);
 
-  printf("%u routine%s", (unsigned)routines, routines == 1 ? "" : "s");
+  printf("%lld routine%s", (long long)routineCount, routineCount == 1 ? "" : "s");
   if (artName != nullptr) {
     printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
   } else if (suites) {

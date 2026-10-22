@@ -38,7 +38,7 @@ def waits_between_sets()
   wait_until("interval: did not wait between sets", 200, / -> page.phase == "waiting")
   harness.press("ok", "short")
   wait_until("interval: did not complete after its set count", 200,
-             / -> harness.active() == "default")
+             / -> ux.depth() == 1)
 end
 
 test("waits between sets and completes after the set count", waits_between_sets)

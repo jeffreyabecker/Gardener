@@ -75,7 +75,7 @@ void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger)
   installButtonsModule(vm);
   installBuzzerModule(vm);
   installJinglesModule(vm, context.library());
-  installRoutinesModule(vm);
+  installUxModule(vm);
   installStoreModule(vm);
 
   // The records are classes, not native functions, so they are compiled rather than installed from

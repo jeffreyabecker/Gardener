@@ -48,16 +48,7 @@ int harnessPress(bvm* vm) {
   be_return_nil(vm);
 }
 
-int harnessActivate(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "harness.activate(name, settings)");
-  }
-  const int settings = be_top(vm) >= 2 && be_ismapinstance(vm, 2) ? 2 : 0;
-  be_pushbool(vm, gSession->routines().setActive(be_tostring(vm, 1), settings));
-  be_return(vm);
-}
-
-// The device's Back hold: the notice a page reads through vacuum.stopped() and the stop command,
+// The device's Back hold: the notice a scene reads through vacuum.stopped() and the stop command,
 // which are what panelTask fires together.
 int harnessBackHold(bvm* vm) {
   gSession->backHold();
@@ -70,29 +61,6 @@ int harnessReset(bvm* vm) {
 }
 
 // --- what the driver asks about -------------------------------------------
-
-int harnessEntries(bvm* vm) {
-  be_newobject(vm, "list");
-  const int list = be_absindex(vm, -1);
-  gardener::Routines& routines = gSession->routines();
-  for (size_t i = 0; i < routines.count(); i++) {
-    be_pushstring(vm, routines.nameAt(i));
-    be_data_push(vm, list);
-    be_pop(vm, 1);
-  }
-  be_pop(vm, 1);
-  be_return(vm);
-}
-
-int harnessActive(bvm* vm) {
-  const char* name = gSession->routines().activeName();
-  if (name == nullptr || name[0] == '\0') {
-    be_pushnil(vm);
-  } else {
-    be_pushstring(vm, name);
-  }
-  be_return(vm);
-}
 
 int harnessSave(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
@@ -116,33 +84,15 @@ int harnessWrote(bvm* vm) {
   be_return(vm);
 }
 
-// Whether a registered routine stays out of the browser's list. registration is what the device
-// knows; a name that is not registered at all answers false and the names check reports it.
-int harnessHidden(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "harness.hidden(name)");
-  }
-  const char* name = be_tostring(vm, 1);
-  gardener::Routines& routines = gSession->routines();
-  for (size_t i = 0; i < routines.count(); i++) {
-    if (strcmp(routines.nameAt(i), name) != 0) continue;
-    be_pushbool(vm, routines.hiddenAt(i));
-    be_return(vm);
-  }
-  be_pushbool(vm, false);
-  be_return(vm);
-}
-
 int harnessBuzzerSounds(bvm* vm) {
   be_pushint(vm, gSession->buzzerPart().sounds());
   be_return(vm);
 }
 
 const bnfuncinfo kHarnessLibrary[] = {
-    {"beat", harnessBeat},          {"press", harnessPress},       {"activate", harnessActivate},
-    {"back_hold", harnessBackHold}, {"reset", harnessReset},       {"entries", harnessEntries},
-    {"hidden", harnessHidden},      {"active", harnessActive},     {"save", harnessSave},
-    {"log", harnessLog},            {"wrote", harnessWrote},       {"buzzer_sounds", harnessBuzzerSounds},
+    {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
+    {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
+    {"wrote", harnessWrote},    {"buzzer_sounds", harnessBuzzerSounds},
     {nullptr, nullptr},
 };
 

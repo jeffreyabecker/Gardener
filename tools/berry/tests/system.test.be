@@ -1,12 +1,12 @@
-# system.test.be — the System page is the only editor of the global jingle, and it has no
-# describe() for the shared editor walk to cover. Walk its jingle row with the real key path and
+# system.test.be — the System scene is the only editor of the global jingle, and it has no
+# describe() for the shared settings walk to cover. Walk its jingle row with the real key path and
 # make sure the identifier moves.
 
 suite = "system"
 
 def jingle_editor_walks()
-  assert_not_nil(routines.get("system"), "system: not registered")
-  harness_activate("system", nil)
+  assert_not_nil(systemScene, "system: not built")
+  ux.push(systemScene)
   # Rows: UNIT, TGT, BT, JINGLE. Three Downs select the last.
   var row = 0
   while row < 3
@@ -16,8 +16,8 @@ def jingle_editor_walks()
   end
   harness.press("ok", "short")
   harness.beat(1)
-  var page = routines.get("system")
-  assert_true(page.editing, "system: OK did not open the jingle editor")
+  # The jingle scene is on top now, auditioning the value it opens on.
+  assert_eq(ux.depth(), 3, "system: OK did not open the jingle editor")
   var before = device.jingle()
   harness.press("up", "short")
   harness.beat(1)
