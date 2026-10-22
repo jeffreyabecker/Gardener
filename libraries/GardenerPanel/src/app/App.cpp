@@ -8,6 +8,7 @@
 #include "app/PanelTasks.h"
 #include "app/StreamLogger.h"
 #include "app/ble/BleLink.h"
+#include "app/ble/MachineBleDomain.h"
 #include "app/ble/PanelBleDomain.h"
 #include "app/panel/Asset.h"
 #include "app/panel/ConnectedUI.h"
@@ -29,17 +30,17 @@ bool serialAttached() { return (bool)Serial; }
 
 App::App(AppContext context) : context_(context) {}
 
-// The panel's side of bring-up. It registers the panel's domains on the machine's links, brings the
-// panel up — the display first, which is fatal when it does not answer — and starts the
-// interpreter, then the panel task.
-void panelBoot(PanelContext& context, Logger& logger, const MachineBoot& machine,
+// The panel's side of bring-up. It registers the panel's domains on the links, brings the panel up
+// — the display first, which is fatal when it does not answer — and starts the interpreter, then
+// the panel task.
+void panelBoot(PanelContext& context, Logger& logger, SerialLink* serial, BleLink* ble,
                Storage::Mount mount) {
-  // The panel's own surface on the machine's links: the panel half of `device`, the files and the
-  // buzzer on serial, the battery and unit fields on BLE.
-  machine.serial->registerDomain(createDeviceDomain(context));
-  machine.serial->registerDomain(createBuzzerDomain(context));
-  machine.serial->registerDomain(createFsDomain(context));
-  machine.ble->registerDomain(new PanelBleDomain(&context));
+  // The panel's own surface on the links: the panel half of `device`, the files and the buzzer on
+  // serial, the battery and unit fields on BLE.
+  serial->registerDomain(createDeviceDomain(context));
+  serial->registerDomain(createBuzzerDomain(context));
+  serial->registerDomain(createFsDomain(context));
+  ble->registerDomain(new PanelBleDomain(&context));
 
   ConnectedUI* connected = new ConnectedUI(context);
   DisconnectedUI* disconnected = new DisconnectedUI(context);
@@ -124,14 +125,33 @@ bool App::begin() {
                        ? static_cast<Logger*>(new StreamLogger(Serial))
                        : static_cast<Logger*>(new NilLogger());
 
-  // The machine first, then the panel — the panel's boot registers on the links the machine's boot
-  // built. App is the full build, so the panel always follows.
+  // The machine first, then the panel — the composition builds and starts the links, the machine's
+  // boot brings its parts up, and the panel registers on those same links. App is the full build, so
+  // the panel always follows.
   SerialLink* serial = new SerialLink(Serial, serialAttached, *logger);
   serial->registerDomain(createControlDomain(context_.machine()));
   serial->registerDomain(createVacuumDomain(context_.machine()));
+  BleLink* ble = new BleLink(&context_.machine());
+  ble->registerDomain(new MachineBleDomain(&context_.machine()));
 
-  MachineBoot machine = machineBoot(context_.machine(), *logger, serial);
-  panelBoot(context_.panel(), *logger, machine, mount);
+  serial->begin();
+  // The radio is a bonus transport: a device with the preference off stays silent, and a failure is
+  // a line here rather than a boot that does not come up. It comes up before the ready line so that
+  // line reports the heap the firmware actually runs with.
+  switch (ble->begin()) {
+    case BleLink::Start::Advertising:
+      logger->info("ble: advertising as gardener");
+      break;
+    case BleLink::Start::Disabled:
+      logger->info("ble: off");
+      break;
+    case BleLink::Start::Failed:
+      logger->warn("ble: start failed, serial only");
+      break;
+  }
+
+  machineBoot(context_.machine(), *logger, serial, ble);
+  panelBoot(context_.panel(), *logger, serial, ble, mount);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
