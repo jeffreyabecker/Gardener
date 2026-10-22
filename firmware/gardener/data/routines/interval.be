@@ -1,7 +1,7 @@
 # interval.be — the interval cycle: pull to a target, hold, move to a rest pressure, rest, and repeat
 # for a set count.
 #
-# The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
+# The cycle is a phase machine advanced from tick(now), which every poll calls. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Moving
 # between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
 # is the edge that says the new one has arrived.
@@ -85,7 +85,7 @@ class IntervalChrome
   end
 end
 
-class Interval : Scene
+class Interval : Page
   var phase
   var mark
   var set
@@ -98,7 +98,7 @@ class Interval : Scene
   var chrome
 
   def init()
-    super(self).init()
+    super(self).init("interval")
     self.phase = "ready"
     self.mark = 0
     self.set = 0
@@ -126,52 +126,20 @@ class Interval : Scene
 
   # --- settings ------------------------------------------------------------
 
-  # The starting values match the shipped `interval.cfg`. The pressures go through clamp() before
-  # they are ever handed to the machine, and a hand-edited duration is held to the same bounds the
-  # editor uses. A switch's settings map, when there is one, is the set for this activation.
+  # The starting values match the shipped `interval.cfg`. A switch's settings map, when there is
+  # one, is the set for this activation; otherwise the file is.
   def read_settings(settings)
-    self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
-    self.target = vacuum.clamp(self.value(settings, "target_pressure", 0.0))
-    self.work = self.seconds(self.value(settings, "work_duration", 30), 3600)
-    self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
-    self.rest = self.seconds(self.value(settings, "rest_duration", 1), 1200)
-    var resume = self.value(settings, "resume_behavior", "immediately")
+    var s = self.activation(settings)
+    self.count = s.whole("set_count", 4, 1, 20)
+    self.target = s.pressure("target_pressure", 0.0)
+    self.work = s.seconds("work_duration", 30, 3600)
+    self.rest_pressure = s.pressure("rest_pressure", 5.0)
+    self.rest = s.seconds("rest_duration", 1, 1200)
+    var resume = s.find("resume_behavior", "immediately")
     if resume != "after ok"
       resume = "immediately"
     end
     self.resume = resume
-  end
-
-  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
-  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
-  # values.
-  def value(settings, key, fallback)
-    if settings != nil
-      return settings.find(key, fallback)
-    end
-    return store.get("interval", key, fallback)
-  end
-
-  def seconds(value, high)
-    var seconds = int(value)
-    if seconds < 0
-      seconds = 0
-    end
-    if seconds > high
-      seconds = high
-    end
-    return seconds
-  end
-
-  def whole(value, low, high)
-    var number = int(value)
-    if number < low
-      number = low
-    end
-    if number > high
-      number = high
-    end
-    return number
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -294,7 +262,7 @@ class Interval : Scene
     vacuum.log("interval: cycle stopped")
   end
 
-  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
+  # poll calls tick(now) every beat, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the cycle does not advance
@@ -309,16 +277,11 @@ class Interval : Scene
   # values when the settings scene closes, so it must not keep working at the old ones underneath
   # it. The scene below is not polled while the settings are showing.
   def edit()
-    ux.push(SettingsScene("interval", / key, value -> self.on_setting(key, value)), nil, / v -> self.on_editor_closed())
+    self.open_settings()
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
-  end
-
-  # A committed value is the routine's to write: the settings scene only returns it.
-  def on_setting(key, value)
-    store.set("interval", key, value == nil ? "" : value)
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a

@@ -1,6 +1,6 @@
 # ramped_interval.be — a ladder of holds: a fixed number of sets, each one deeper than the last.
 #
-# The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
+# The cycle is a phase machine advanced from tick(now), which every poll calls. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Each set
 # works at its own target and rests at the rest pressure. Back pauses the run and vents the chamber;
 # OK then starts the set it stopped on again, with its work clock back at full.
@@ -80,7 +80,7 @@ class RampedIntervalChrome
   end
 end
 
-class RampedInterval : Scene
+class RampedInterval : Page
   var phase
   var mark
   var set
@@ -96,7 +96,7 @@ class RampedInterval : Scene
   var chrome
 
   def init()
-    super(self).init()
+    super(self).init("ramped_interval")
     self.phase = "ready"
     self.mark = 0
     self.set = 0
@@ -130,62 +130,31 @@ class RampedInterval : Scene
 
   # --- settings ------------------------------------------------------------
 
-  # The starting values match the shipped `ramped_interval.cfg`. The pressures go through clamp()
-  # before they are ever handed to the machine, and a hand-edited duration is held to the same
-  # bounds the editor uses. A switch's settings map, when there is one, is the set for this
-  # activation. A nullable step is an even ladder from the start to the final pressure; a nullable
-  # rest vents all the way.
+  # The starting values match the shipped `ramped_interval.cfg`. A switch's settings map, when there
+  # is one, is the set for this activation; otherwise the file is. A nullable step is an even ladder
+  # from the start to the final pressure; a nullable rest vents all the way.
   def read_settings(settings)
-    self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
-    self.initial = vacuum.clamp(self.value(settings, "initial_pressure", 5.0))
-    self.final = vacuum.clamp(self.value(settings, "final_pressure", 20.0))
+    var s = self.activation(settings)
+    self.count = s.whole("set_count", 4, 1, 20)
+    self.initial = s.pressure("initial_pressure", 5.0)
+    self.final = s.pressure("final_pressure", 20.0)
 
-    if self.unset(settings, "step_pressure")
+    if s.unset("step_pressure")
       var rise = self.final - self.initial
       self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
     else
-      var step = self.value(settings, "step_pressure", 5.0)
+      var step = s.find("step_pressure", 5.0)
       self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
     end
 
-    if self.unset(settings, "rest_pressure")
+    if s.unset("rest_pressure")
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
+      self.rest_pressure = s.pressure("rest_pressure", 5.0)
     end
 
-    self.work = self.whole(self.value(settings, "work_duration", 300), 0, 3600)
-    self.rest = self.whole(self.value(settings, "rest_duration", 45), 0, 1200)
-  end
-
-  # Whether a key is nothing: missing from the file (or holding an empty value), or missing from a
-  # switch's map (or nil there). A nullable setting means its own thing on this answer.
-  def unset(settings, key)
-    if settings != nil
-      return settings.find(key, nil) == nil
-    end
-    return store.get("ramped_interval", key, "") == ""
-  end
-
-  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
-  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
-  # values.
-  def value(settings, key, fallback)
-    if settings != nil
-      return settings.find(key, fallback)
-    end
-    return store.get("ramped_interval", key, fallback)
-  end
-
-  def whole(value, low, high)
-    var number = int(value)
-    if number < low
-      number = low
-    end
-    if number > high
-      number = high
-    end
-    return number
+    self.work = s.seconds("work_duration", 300, 3600)
+    self.rest = s.seconds("rest_duration", 45, 1200)
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -348,7 +317,7 @@ class RampedInterval : Scene
     vacuum.log("ramped_interval: cycle stopped")
   end
 
-  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
+  # poll calls tick(now) every beat, after the press drain. The device's Back hold stops and vents
   # without asking this page, so reset the phase machine on that notice.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the ramp does not advance
@@ -363,16 +332,11 @@ class RampedInterval : Scene
   # over at the first set when the settings scene closes, so it must not keep working at the old
   # set underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    ux.push(SettingsScene("ramped_interval", / key, value -> self.on_setting(key, value)), nil, / v -> self.on_editor_closed())
+    self.open_settings()
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
-  end
-
-  # A committed value is the routine's to write: the settings scene only returns it.
-  def on_setting(key, value)
-    store.set("ramped_interval", key, value == nil ? "" : value)
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a

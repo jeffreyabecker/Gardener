@@ -23,13 +23,13 @@ registers an object and is done:
 ```berry
 import string
 
-class MyPage : Scene
-  def activate()
-    # the scene became the top scene; draw the first frame and re-read anything cached
+class MyPage : Page
+  def init()
+    super(self).init("mypage")
   end
 
-  def poll(now)
-    # called once per loop pass while this scene is showing; `now` is millis()
+  def activate()
+    # the scene became the top scene; draw the first frame and re-read anything cached
   end
 end
 
@@ -40,6 +40,9 @@ routines.register("mypage", MyIcon(), MyPage, [
 return MyPage
 ```
 
+`Page` (`/modules/settings_page.be`) is `Scene` plus the routine's own name: it is what the store
+file is called, and it is the class that opens the settings list, so a page writes the name once.
+
 The second argument is the routine's **icon**: an instance of a class extending `Icon` from
 `/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
 The browser draws it at the left of the routine's row and shifts the name right by `icon.w + 2`. A
@@ -49,8 +52,9 @@ The third argument is the routine's **class**, not an instance: the registry bui
 every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/modules/scene.be`) provides `poll`, a press drain, the repaint cadence and the gesture
-dispatch, and a routine extends it and defines `activate()` plus whatever `draw_page()` and
-`tick(now)` it needs. The stack refuses to push a scene that lacks either `activate()` or `poll`.
+dispatch, and `Page` adds the routine's name and its settings view; a routine extends `Page` and
+defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
+a scene that lacks either `activate()` or `poll`.
 
 The fourth argument is the list of **settings** the routine offers the editor, and an empty list
 when it has none. The list is data — built from `setting` records and walked by the settings view
@@ -110,25 +114,26 @@ where its ink was — which is what a selected row, a cursor or a focused readou
 `/modules/list.be` is `List`, a selectable menu. `/modules/ui.be` is the device's own scenes — the
 readout, the system settings and the browser — none of them registered.
 
-The settings view ships as `/modules/settings.be`: `SettingsScene` (the list) and one value scene
-per kind (`BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene`, `DurationScene`).
-**Up+Down** is the standard gesture for opening it. A routine pushes `SettingsScene` with a
-callback that writes the committed values; the value scenes pop with the value they settled on:
+The settings view ships in four files under `/modules/`. `settings.be` is the pair of duration
+helpers. `settings_edit.be` is the editing screens: one value scene per kind (`BoolScene`,
+`ChoiceScene`, `RealScene`, `IntScene`, `PressureScene`, `DurationScene`) over a shared
+`ValueScene`. `settings_editors.be` is the editor each kind's setting carries. `settings_page.be`
+is `SettingsScene` (the list), `Activation` (one activation's values) and `Page` (the scene a
+routine extends). **Up+Down** is the standard gesture for opening the list; the page's own gesture
+calls `open_settings()`, which pushes the list under the page's name and writes each committed value
+to the page's file:
 
 ```berry
 def edit()
-  ux.push(SettingsScene("mypage", / key, value -> self.on_setting(key, value)), nil, / v -> self.draw())
-end
-
-def on_setting(key, value)
-  store.set("mypage", key, value == nil ? "" : value)
+  self.open_settings()
+  return true
 end
 ```
 
 `SettingsScene` reads the list the routine registered and each value from its store file through the
-setting's editor; nothing in `settings.be` writes. A committed value is handed to the caller's
-callback, which writes where appropriate. Back at the top of the list pops the settings scene with
-nil.
+setting's editor; nothing in the four settings modules writes. A committed value is handed to the
+caller's callback, which writes where appropriate. Back at the top of the list pops the settings
+scene with nil.
 
 ## When the firmware calls into a scene
 
@@ -200,8 +205,8 @@ routines.register("mypage", MyIcon(), MyPage, [
 
 ### Editors
 
-The editor is the whole of what a value is. There is one class per kind, and each keeps the rules
-its kind needs:
+The editor is the whole of what a value is. There is one class per kind in
+`/modules/settings_editors.be`, and each keeps the rules its kind needs:
 
 | Editor | `kind()` | Arguments |
 | --- | --- | --- |
@@ -247,3 +252,20 @@ machine's own `min` … `floor` is the range, so a pressure editor takes no `min
 
 A list the editor cannot read — a choice with no values, or a record that is not a `setting` —
 leaves the settings view closed and writes one `vacuum.log` line.
+
+### Reading them
+
+A page reads its values through `self.activation(settings)`, which takes the map a switch carried
+or `nil` for the routine's own file and is the one place that decides which of the two a key comes
+from. It answers `find(key, fallback)` for a plain value, `unset(key)` for whether a nullable one
+holds nothing, `whole(key, fallback, low, high)` and `seconds(key, fallback, high)` for a number
+held to its bounds, and `pressure(key, fallback)` for a depth that goes through `vacuum.clamp()`:
+
+```berry
+def read_settings(settings)
+  var s = self.activation(settings)
+  self.count = s.whole("set_count", 4, 1, 20)
+  self.target = s.pressure("target_pressure", 0.0)
+  self.rest = s.seconds("rest_duration", 1, 1200)
+end
+```
