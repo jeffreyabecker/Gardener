@@ -124,8 +124,8 @@ void controlTask(void* arg) {
     }
 
     // The devices and the PID on the fixed beat, then the run log.
-    state.context.sensor().update(now);
-    state.context.pump().update(now);
+    state.context.vacuum().sensor().update(now);
+    state.context.vacuum().pump().update(now);
     state.context.vacuum().service(now);
     logRunChanges(state, now);
 

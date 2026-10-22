@@ -13,15 +13,15 @@ void machineBoot(MachineContext& context, Logger& logger) {
   boot += " booting";
   logger.info(boot.c_str());
 
-  const bool sensorOk = context.sensor().begin();
-  const bool pumpOk = context.pump().begin();
-  context.vent().begin();
+  const bool sensorOk = context.vacuum().sensor().begin();
+  const bool pumpOk = context.vacuum().pump().begin();
+  context.vacuum().vent().begin();
   context.vacuum().begin();
 
   logger.info(sensorOk ? "sensor: online" : "sensor: not found");
   logger.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
-  logger.info(context.vent().energiseWhenOpen() ? "vent: normally closed"
-                                                : "vent: normally open");
+  logger.info(context.vacuum().vent().energiseWhenOpen() ? "vent: normally closed"
+                                                         : "vent: normally open");
 }
 
 }  // namespace gardener

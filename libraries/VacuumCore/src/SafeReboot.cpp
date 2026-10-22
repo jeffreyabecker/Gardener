@@ -20,7 +20,7 @@ void safeReboot(MachineContext& context) {
     // The sensor has to keep sampling for the release to see that it has finished; the rest of the
     // loop is stopped while the restart is pending.
     const uint32_t now = millis();
-    context.sensor().update(now);
+    context.vacuum().sensor().update(now);
     vacuum.service(now);
     delay(5);
   }

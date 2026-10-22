@@ -22,7 +22,7 @@ MachineContext& buildMachineRoot() {
   auto* system = new VacuumSystem(pump, sensor, vent);
   auto* ownership = new Ownership();
   auto* capabilities = new Capabilities();
-  return *new MachineContext(sensor, pump, vent, system, ownership, capabilities);
+  return *new MachineContext(system, ownership, capabilities);
 }
 
 }  // namespace gardener
