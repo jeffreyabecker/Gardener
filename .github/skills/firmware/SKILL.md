@@ -1,6 +1,6 @@
 ---
 name: firmware
-description: 'C++ and design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, PascalCase constants with no k prefix, the hal/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating.'
+description: 'Design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, the hal/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating. Naming and formatting are in the cpp skill.'
 ---
 
 # Firmware
@@ -34,18 +34,10 @@ the only way text is formatted in this firmware.
 
 ## C++ style
 
-**Constants are PascalCase, and never carry a `k` prefix.** `PanelWidth`, `DefaultHoldMs`,
-`MarkAsset` — the prefix belongs to a convention from somewhere else, and it is not this
-codebase's. A type is PascalCase too, so a constant and a type can look alike; the declaration
-already says which one it is, and nobody has to decode a letter to read the line.
-
-The rest of the naming is what the code already does: types PascalCase, functions and variables
-camelCase, members with a trailing underscore (`count_`, `context_`). Enum values are
-PascalCase as well (`Button::Back`), so a constant needs no prefix to tell it apart.
-
-Existing `k` names are not a rewrite-on-sight target either. Rename them where you are already
-changing those lines for another reason; a sweep of the codebase for its own sake is its own
-decision with its own measurement.
+Naming, formatting and the type rules are in `.github/skills/cpp/`. The two that surprise a reader
+coming from another codebase: constants are PascalCase with no `k` prefix, and globals are camelCase
+with no `g` prefix. Types PascalCase, functions and variables camelCase, members with a trailing
+underscore (`count_`, `context_`), enum values PascalCase.
 
 ## Keep it simple
 

@@ -11,8 +11,9 @@ namespace gardener {
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
 // so nothing owns them. The sensor, pump and vent are named here with their pins, so a board variant
 // edits this file and core/Config.h and nothing under hal/impl/.
-Machine::Machine(Logger& logger)
+Machine::Machine(Logger& logger, Settings& settings)
     : logger_(logger),
+      settings_(settings),
       vacuum_(new PwmPump(cfg::PUMP_PWM), new XgzpSensor(cfg::SENSOR_ADC),
               new NormallyOpenValve(cfg::VENT_VALVE)) {}
 

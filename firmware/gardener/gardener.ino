@@ -33,7 +33,7 @@ void setup() {
 
   // The settings pick the logger, and the machine is built with the logger, so the preferences are
   // read before the panel is.
-  auto* settings = new gardener::Settings();
+  auto* settings = new gardener::PanelSettings(&LittleFS);
   settings->begin();
 
   gardener::Logger* logger =
@@ -56,8 +56,6 @@ void setup() {
 
   // The full device's graph: the machine, with the panel arranged around it.
   gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings);
-  context.config().bluetooth = settings->bluetoothEnabled();
-  context.config().diagnostics = settings->logEnabled();
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both

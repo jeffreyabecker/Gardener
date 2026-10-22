@@ -7,7 +7,7 @@
 #include "Ownership.h"
 #include "Panel.h"
 #include "routines/Routines.h"
-#include "storage/Settings.h"
+#include "storage/PanelSettings.h"
 #include "core/Config.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
@@ -31,7 +31,7 @@ constexpr int16_t kPanelNoResetLine = -1;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-Panel& buildPanelRoot(Logger& logger, Settings& settings) {
+Panel& buildPanelRoot(Logger& logger, PanelSettings& settings) {
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.

@@ -27,7 +27,7 @@ void BleLink::registerDomain(BleDomain* domain) {
 }
 
 BleLink::Start BleLink::begin() {
-  if (!app_->config().bluetooth) return Start::Disabled;
+  if (!app_->settings().bluetoothEnabled()) return Start::Disabled;
   if (!NimBLEDevice::init(kDeviceName)) return Start::Failed;
 
   // Just Works, bonded: the device pairs without a passkey and keeps the bond

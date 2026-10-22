@@ -11,6 +11,7 @@
 #include "serial/Gate.h"
 #include "core/Config.h"
 #include "core/Parse.h"
+#include "storage/Settings.h"
 
 namespace gardener {
 namespace {
@@ -318,7 +319,7 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (path == "/settings.ini") {
+  if (path == Settings::kPath) {
     if (!discardPayload(io, bytes)) return;
     replyUnsupported(io, path);
     return;
@@ -410,7 +411,7 @@ void FsDomain::remove(Stream& io, const String& args) {
     replyBadArgument(io, path);
     return;
   }
-  if (path == "/settings.ini") {
+  if (path == Settings::kPath) {
     replyUnsupported(io, path);
     return;
   }

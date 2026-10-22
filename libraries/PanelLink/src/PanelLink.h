@@ -13,3 +13,4 @@
 #include "panel/ConnectedUI.h"
 #include "panel/DisconnectedUI.h"
 #include "serial/PanelDomains.h"
+#include "storage/PanelSettings.h"

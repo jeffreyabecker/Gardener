@@ -7,7 +7,7 @@
 #include "Machine.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
-#include "storage/Settings.h"
+#include "storage/PanelSettings.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
 #include "hal/Display.h"
@@ -26,13 +26,12 @@ class Panel : public Machine, public Link {
   static constexpr uint8_t Code = 3;
 
   Panel(Logger& logger, ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
-        Display* display, Settings* settings, Routines* routines)
-      : Machine(logger),
+        Display* display, PanelSettings* settings, Routines* routines)
+      : Machine(logger, *settings),
         buttons_(buttons),
         buzzer_(buzzer),
         battery_(battery),
         overlay_(new Overlay(display, battery, &vacuum())),
-        settings_(settings),
         routines_(routines) {}
 
   const char* name() const override { return "panel"; }
@@ -53,7 +52,8 @@ class Panel : public Machine, public Link {
   // The display is the overlay — every drawing verb goes through it — so both are the same object.
   Display& display() { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
-  Settings& settings() { return *settings_; }
+  // The machine holds the settings, and the panel is built with the panel's subclass of them.
+  PanelSettings& settings() { return static_cast<PanelSettings&>(Machine::settings()); }
   Routines& routines() { return *routines_; }
 
  private:
@@ -61,7 +61,6 @@ class Panel : public Machine, public Link {
   BuzzerPlayer* buzzer_;
   Battery* battery_;
   Overlay* overlay_;
-  Settings* settings_;
   Routines* routines_;
   // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
   // connection flags make.

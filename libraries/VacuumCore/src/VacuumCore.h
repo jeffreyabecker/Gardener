@@ -13,3 +13,4 @@
 #include "serial/Domains.h"
 #include "serial/SerialLink.h"
 #include "core/Config.h"
+#include "storage/Settings.h"

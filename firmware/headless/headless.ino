@@ -20,21 +20,17 @@ void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
   delay(200);
 
-  // No settings file is mounted, so the diagnostics stream is the build's and is the only way to
-  // see what the device is doing.
+  // No settings file is mounted, so every preference is its default and the diagnostics stream is
+  // the build's — the only way to see what the device is doing.
   gardener::Logger* logger = new gardener::StreamLogger(Serial);
-  gardener::Machine& machine = *new gardener::Machine(*logger);
+  gardener::Settings& settings = *new gardener::Settings(nullptr);
+  gardener::Machine& machine = *new gardener::Machine(*logger, settings);
 
   // What this build has: no panel, no gauge, and the ownership stop that makes an unowned machine
   // vent. Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
   machine.capabilities().setPanel(false);
   machine.capabilities().setBattery(false);
   machine.capabilities().setOwnershipStop(true);
-
-  // No settings file is mounted, so the machine's two knobs are the build's: the radio may
-  // advertise, and diagnostics always run.
-  machine.config().bluetooth = true;
-  machine.config().diagnostics = true;
 
   // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial = new gardener::SerialLink(machine, Serial, serialAttached, *logger);
