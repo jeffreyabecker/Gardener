@@ -43,40 +43,38 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   work — Okay starts, Back stops and vents, Up+Down opens the settings — with no key reading
   another's bit.
 
-## Epic 2 — The gesture is a string
+## Epic 2 — The gesture classifier
 
-- [ ] **1. The panel task stops detecting gestures.** One class owns the keys, the Up+Down chord and
-  the device's marks, and answers each beat with the press that completed, whether the reset mark
-  has passed, whether the stop mark has passed, and whether the way home was asked for. The panel
-  task decides what to do with each answer — reboot, latch and post the stop, bump the way home, or
-  hand the press on — and never scans a key or compares a threshold. The way home moves from an
-  Okay press during a Back hold to Cancel, taken from the level, so it fires as Cancel goes down
-  rather than when it comes up. This is one item because the class and its one caller move
-  together: a class nothing calls is not a tree that works. Done when the panel task is one call
-  and four decisions, and on the rig a Cancel during a Back hold goes home while Back+Okay still
-  reboots.
+- [ ] **1. Write the gesture classifier.** Move the key scan, the Up+Down chord and the device's
+  marks out of the panel task into one class that answers each beat with what completed and which
+  marks have passed. Leave the panel task deciding what to do with each answer. Done when the panel
+  task is one call and four decisions, and the check still walks every page.
 
-- [ ] **2. A gesture reaches the page as one string.** The classifier's answer, the press it is
-  given, the queue behind `buttons.take()`, the binding and the harness are the same string —
-  `ok:short`, `up:chord` — and a page registers and compares that whole string, `*` standing for
-  any press. The press enum, the record a page reads with a dot, and the harness's button/press
-  table go with them. This is one item rather than several because a string at the reader and a
-  record at the page is not a tree that works: the seam cannot be handed over one end at a time.
-  Done when the check drives every page, the press log prints `btn: ok:short`, and no `.be` file
-  reads `ev.btn`, `ev.press`, or registers a bare key or a list of presses.
+- [ ] **2. Take the way home from Cancel while Back is held.** Stop stealing an Okay press during the
+  hold and watch Cancel going down instead, so the way home fires on the press rather than the
+  release and Okay keeps its own meaning. Done when, on the rig, a Cancel during a Back hold goes
+  home while an Okay during the same hold reaches the page.
 
-- [ ] **3. An extended hold reports its seconds.** `short`, `long` and `double` stay as they are; a
-  hold past two seconds reports the whole seconds instead, so a page sees `back:3` for a hold that
-  has gone on and `back:long` for one that has not. Done when the build passes and, with a link
-  driving, the press log shows `btn: back:long` for a one-second press and `btn: back:3` for a
-  three-second one.
+- [ ] **3. Make the press a gesture string all the way to the page.** Change what the classifier
+  answers from the press enum to the gesture string, and carry it through the queue, the binding and
+  the harness in place of the record a page reads with a dot. Update the pages to read the string,
+  splitting it where a handler matches one dimension. Done when the check drives every page, the
+  press log prints `btn: ok:short`, and no `.be` file reads an event's fields.
 
-- [ ] **4. Two keys together are one event.** The classifier composes keys held together into one
-  string in panel order and answers it when the last comes up, so its Up+Down special case becomes
-  the general rule rather than one case in a list. The settings gesture reads
-  `up:short+down:short`, and every registration that named the chord names that string. Done when
-  the check still walks every page, and on the rig Up+Down opens the settings while two keys with
-  no binding pass through as one event.
+- [ ] **4. Replace the key-and-press registration with the gesture string.** Change the registration
+  to take the whole gesture, with `*` for any press, and rewrite every registration — a list of
+  presses becomes one registration per string. Drop the framework's key-and-press matcher. Done when
+  no `.be` file passes a bare key or a list to `on`, and the check still walks every page.
+
+- [ ] **5. Report a hold past two seconds as its seconds.** Add the two-second mark beside the long
+  and double marks and report a hold that passes it as its whole seconds, leaving a shorter hold as
+  `long`. Done when the build passes and, with a link driving, the press log shows `btn: back:long`
+  for a one-second press and `btn: back:3` for a three-second one.
+
+- [ ] **6. Emit keys held together as one string.** Replace the Up+Down special case with the general
+  rule: keys down together are one string in panel order, answered when the last comes up. Change the
+  settings registrations to `up:short+down:short`. Done when the check still walks every page, and on
+  the rig Up+Down opens the settings while two keys with no binding pass through as one event.
 
 ## Epic 3 — The six-key map
 
