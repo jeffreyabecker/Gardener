@@ -16,11 +16,14 @@ bool serialAttached() { return (bool)Serial; }
 
 }  // namespace
 
-gardener::MachineContext& machine = gardener::buildMachineRoot();
-
 void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
   delay(200);
+
+  // No settings file is mounted, so the diagnostics stream is the build's and is the only way to
+  // see what the device is doing.
+  gardener::Logger* logger = new gardener::StreamLogger(Serial);
+  gardener::Machine& machine = *new gardener::Machine(*logger);
 
   // What this build has: no panel, no gauge, and the ownership stop that makes an unowned machine
   // vent. Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
@@ -29,12 +32,9 @@ void setup() {
   machine.capabilities().setOwnershipStop(true);
 
   // No settings file is mounted, so the machine's two knobs are the build's: the radio may
-  // advertise, and the diagnostics stream is the only way to see what the device is doing.
+  // advertise, and diagnostics always run.
   machine.config().bluetooth = true;
   machine.config().diagnostics = true;
-  gardener::Logger* logger = machine.config().diagnostics
-                                 ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
-                                 : static_cast<gardener::Logger*>(new gardener::NilLogger());
 
   // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
@@ -60,8 +60,8 @@ void setup() {
   }
 
   // The parts, then the two tasks that drive them.
-  gardener::machineBoot(machine, *logger);
-  gardener::spawnMachineTasks(machine, *logger, serial, ble);
+  machine.boot();
+  gardener::spawnMachineTasks(machine, serial, ble);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

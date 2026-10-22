@@ -3,12 +3,9 @@
 #include <Adafruit_SH110X.h>
 #include <Wire.h>
 
-#include "Build.h"
 #include "BuzzerPlayer.h"
-#include "MachineContext.h"
 #include "Ownership.h"
 #include "PanelContext.h"
-#include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Settings.h"
 #include "core/Config.h"
@@ -31,18 +28,10 @@ constexpr int16_t kPanelNoResetLine = -1;
 
 }  // namespace
 
-// The full device's composition: the machine root, then the panel parts on top. The panel's bus is
-// the composition's to bring up: the driver takes a TwoWire it does not own, so it is up before
-// begin() is called.
-PanelContext& buildPanelRoot() {
-  MachineContext& machine = buildMachineRoot();
-  // The full device has the panel and the gauge, and — like every build — it vents when its owner
-  // leaves. The panel pushes itself above the floor so it is the default controller.
-  machine.capabilities().setPanel(true);
-  machine.capabilities().setBattery(true);
-  machine.capabilities().setOwnershipStop(true);
-  machine.ownership().acquire(Link::Panel);
-
+// The full device's composition: the panel parts on top of the machine. The panel's bus is the
+// composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
+// is called.
+PanelContext& buildPanelRoot(Logger& logger, Settings& settings) {
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -53,10 +42,15 @@ PanelContext& buildPanelRoot() {
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
-  auto* overlay = new Overlay(display, battery, &machine.vacuum());
-  auto* settings = new Settings();
   auto* routines = new Routines();
-  auto* panel = new PanelContext(buttons, buzzer, battery, overlay, settings, routines, machine);
+  auto* panel = new PanelContext(logger, buttons, buzzer, battery, display, &settings, routines);
+
+  // The full device has the panel and the gauge, and — like every build — it vents when its owner
+  // leaves. The panel pushes itself above the floor so it is the default controller.
+  panel->capabilities().setPanel(true);
+  panel->capabilities().setBattery(true);
+  panel->capabilities().setOwnershipStop(true);
+  panel->ownership().acquire(Link::Panel);
   return *panel;
 }
 

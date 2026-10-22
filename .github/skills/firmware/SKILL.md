@@ -78,10 +78,10 @@ sensor or nothing at all. An interface with one implementation earns its place e
 foreign boundary like that; anywhere else it is a second implementation that does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
-accessor; `buildMachineRoot()` and `buildPanelRoot()` build and own the parts and hand out the
-contexts, and the serial domains read them when they format a reply, so there is no snapshot or
-second copy to keep in step. The panel context is a machine context with the panel arranged around
-it, so it needs no second name for the machine.
+accessor; `Machine` and `buildPanelRoot()` build and own the parts and hand out the contexts, and
+the serial domains read them when they format a reply, so there is no snapshot or second copy to
+keep in step. The panel context is a machine with the panel arranged around it, so it needs no
+second name for the machine.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the

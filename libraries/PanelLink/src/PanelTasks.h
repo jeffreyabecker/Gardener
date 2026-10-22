@@ -4,7 +4,6 @@
 
 namespace gardener {
 
-class Logger;
 class PanelContext;
 class ConnectedUI;
 class DisconnectedUI;
@@ -22,7 +21,7 @@ extern volatile uint32_t goHomeSeq;
 void panelTask(void* arg);
 
 // The panel's boot spawns the panel task, with the two screens it owns.
-void spawnPanelTask(PanelContext& context, Logger& logger, ConnectedUI* connected,
+void spawnPanelTask(PanelContext& context, ConnectedUI* connected,
                     DisconnectedUI* disconnected);
 
 }  // namespace gardener

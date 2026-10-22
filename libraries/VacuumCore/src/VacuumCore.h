@@ -3,9 +3,8 @@
 // Umbrella header for the Gardener firmware core. A machine-alone build includes this and nothing
 // else: it names the machine's parts, the two links and the tasks that drive them.
 
-#include "Build.h"
 #include "Logger.h"
-#include "MachineBoot.h"
+#include "Machine.h"
 #include "NilLogger.h"
 #include "StreamLogger.h"
 #include "Tasks.h"

@@ -14,7 +14,9 @@ namespace gardener {
 // The panel's side of bring-up: the panel comes up — the display first, which is fatal when it
 // does not answer — the gauge and buzzer follow, and the interpreter starts. The panel's wire
 // domains, its screens and its task belong to the composition that calls this.
-void panelBoot(PanelContext& context, Logger& logger) {
+void panelBoot(PanelContext& context) {
+  Logger& logger = context.logger();
+
   // The panel is the one part with no fallback: nothing on the device can draw
   // without it, so a panel that does not answer is fatal rather than a degraded
   // mode.
@@ -43,7 +45,7 @@ void panelBoot(PanelContext& context, Logger& logger) {
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.
-  const bool vmOk = context.routines().begin(context, logger);
+  const bool vmOk = context.routines().begin(context);
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.

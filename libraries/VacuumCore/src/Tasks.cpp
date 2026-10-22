@@ -1,7 +1,7 @@
 #include "Tasks.h"
 
 #include "Logger.h"
-#include "MachineContext.h"
+#include "Machine.h"
 #include "Ownership.h"
 #include "SafeReboot.h"
 #include "VacuumSystem.h"
@@ -33,7 +33,7 @@ constexpr UBaseType_t MachineCommandQueueDepth = 8;
 // The control task's own state: the machine it commands, the logger it reports through, and the
 // latch/timing fields the run log and the top-change vent need.
 struct ControlState {
-  MachineContext& context;
+  Machine& machine;
   Logger* logger;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
@@ -42,7 +42,7 @@ struct ControlState {
 
 // The interface task's own state: the machine it reports through, the links, and the logger.
 struct InterfaceState {
-  MachineContext& context;
+  Machine& machine;
   Logger* logger;
   SerialLink* link;
   BleLink* ble;
@@ -50,14 +50,14 @@ struct InterfaceState {
 
 // Applies one queued write to the machine. The op names the verb; the fields are the op's own.
 void applyMachineCommand(ControlState& state, const MachineCommand& command) {
-  MachineContext& context = state.context;
+  Machine& machine = state.machine;
   switch (command.op) {
-    case MachineCommand::Op::Start: context.vacuum().start(); break;
-    case MachineCommand::Op::Stop: context.vacuum().stop(); break;
-    case MachineCommand::Op::ResetFault: context.vacuum().resetFault(); break;
-    case MachineCommand::Op::SetTarget: context.vacuum().setTarget(command.value); break;
-    case MachineCommand::Op::ClearTarget: context.vacuum().clearTarget(); break;
-    case MachineCommand::Op::Reboot: safeReboot(context); break;
+    case MachineCommand::Op::Start: machine.vacuum().start(); break;
+    case MachineCommand::Op::Stop: machine.vacuum().stop(); break;
+    case MachineCommand::Op::ResetFault: machine.vacuum().resetFault(); break;
+    case MachineCommand::Op::SetTarget: machine.vacuum().setTarget(command.value); break;
+    case MachineCommand::Op::ClearTarget: machine.vacuum().clearTarget(); break;
+    case MachineCommand::Op::Reboot: safeReboot(machine); break;
   }
 }
 
@@ -70,7 +70,7 @@ void drainMachineCommands(ControlState& state) {
 // The drivers stopped narrating, so the run is reported from here: one line per state change,
 // timed when it leaves a vent, plus the fault code when one latches.
 void logRunChanges(ControlState& state, uint32_t nowMs) {
-  const RunState current = state.context.vacuum().runState();
+  const RunState current = state.machine.vacuum().runState();
   if (current == state.lastState) return;
 
   String message = runStateName(state.lastState);
@@ -78,7 +78,7 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
   message += runStateName(current);
   if (current == RunState::Fault) {
     message += " (fault ";
-    message += state.context.vacuum().faultCode();
+    message += state.machine.vacuum().faultCode();
     message += ')';
   }
   if (state.lastState == RunState::Venting) {
@@ -102,8 +102,8 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
 
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
-  state.lastState = state.context.vacuum().runState();
-  state.lastOwner = state.context.ownership().owner();
+  state.lastState = state.machine.vacuum().runState();
+  state.lastOwner = state.machine.ownership().owner();
 
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
@@ -114,19 +114,19 @@ void controlTask(void* arg) {
 
     // The top of the stack changed — a claim, a release or a drop all vent — so a new controller
     // starts from an open chamber.
-    const Link top = state.context.ownership().owner();
+    const Link top = state.machine.ownership().owner();
     if (top != state.lastOwner) {
       state.lastOwner = top;
-      state.context.vacuum().stop();
+      state.machine.vacuum().stop();
       String changed = "app: control to ";
       changed += linkName(top);
       state.logger->info(changed.c_str());
     }
 
     // The devices and the PID on the fixed beat, then the run log.
-    state.context.vacuum().sensor().update(now);
-    state.context.vacuum().pump().update(now);
-    state.context.vacuum().service(now);
+    state.machine.vacuum().sensor().update(now);
+    state.machine.vacuum().pump().update(now);
+    state.machine.vacuum().service(now);
     logRunChanges(state, now);
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(cfg::CONTROL_PERIOD_MS));
@@ -146,7 +146,7 @@ void interfaceTask(void* arg) {
     // A link that leaves is removed from the stack, and the control beat vents when the top
     // changes; the run does not outlive its owner.
     if (state.link->consumeLinkLost()) {
-      state.context.ownership().drop(Link::Serial);
+      state.machine.ownership().drop(Link::Serial);
       state.logger->info("app: controller left");
     }
 
@@ -158,11 +158,11 @@ void interfaceTask(void* arg) {
   }
 }
 
-void spawnMachineTasks(MachineContext& context, Logger& logger, SerialLink* link, BleLink* ble) {
+void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
-  static ControlState control{context, &logger};
-  static InterfaceState interface{context, &logger, link, ble};
+  static ControlState control{machine, &machine.logger()};
+  static InterfaceState interface{machine, &machine.logger(), link, ble};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

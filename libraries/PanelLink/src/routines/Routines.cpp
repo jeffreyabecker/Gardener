@@ -49,15 +49,15 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(PanelContext& context, Logger& logger) {
-  logger_ = &logger;
+bool Routines::begin(PanelContext& context) {
+  logger_ = &context.logger();
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
-    logger.error("vm: no memory, routines off");
+    logger_->error("vm: no memory, routines off");
     return false;
   }
-  berry::install(vm_, context, *this, logger);
+  berry::install(vm_, context, *this, context.logger());
 
   // Modules first: a page may construct a class one of them defines, so those files have to have
   // run before the pages do.
@@ -83,7 +83,7 @@ bool Routines::begin(PanelContext& context, Logger& logger) {
   summary += String((uint32_t)files);
   summary += " file";
   if (files != 1) summary += 's';
-  logger.info(summary.c_str());
+  logger_->info(summary.c_str());
 
   selectDefault();
   return true;

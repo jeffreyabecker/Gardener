@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "MachineContext.h"
+#include "Machine.h"
 #include "Tasks.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
@@ -22,7 +22,7 @@ String firstToken(const String& args) {
 // a link holds one domain per name.
 class MachineDeviceDomain : public Domain {
  public:
-  explicit MachineDeviceDomain(MachineContext& app) : app_(app) {}
+  explicit MachineDeviceDomain(Machine& app) : app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -31,7 +31,7 @@ class MachineDeviceDomain : public Domain {
   void get(Stream& io);
   void reboot(Stream& io, const String& args);
 
-  MachineContext& app_;
+  Machine& app_;
 };
 
 void MachineDeviceDomain::execute(Stream& io) {
@@ -109,6 +109,6 @@ void MachineDeviceDomain::reboot(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createMachineDeviceDomain(MachineContext& app) { return new MachineDeviceDomain(app); }
+Domain* createMachineDeviceDomain(Machine& app) { return new MachineDeviceDomain(app); }
 
 }  // namespace gardener

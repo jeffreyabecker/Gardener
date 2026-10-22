@@ -7,7 +7,7 @@
 
 namespace gardener {
 
-DisconnectedUI::DisconnectedUI(PanelContext context) : UserInterface(context) {}
+DisconnectedUI::DisconnectedUI(PanelContext& context) : UserInterface(context) {}
 
 // A routine draws its own first frame, so the mark is only drawn when no routine is active. The
 // page becoming visible is also when the routine re-reads what it knew — the unit may have changed

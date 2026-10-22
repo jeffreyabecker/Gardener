@@ -173,9 +173,9 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(PanelContext& context, Logger& logger, ConnectedUI* connected,
+void spawnPanelTask(PanelContext& context, ConnectedUI* connected,
                     DisconnectedUI* disconnected) {
-  static PanelState panel{context, &logger, connected, disconnected};
+  static PanelState panel{context, &context.logger(), connected, disconnected};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,
                           PanelCore);

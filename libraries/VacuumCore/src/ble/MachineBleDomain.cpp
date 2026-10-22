@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "MachineContext.h"
+#include "Machine.h"
 #include "Ownership.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
@@ -61,7 +61,7 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
 };
 
-MachineBleDomain::MachineBleDomain(MachineContext* app) : app_(app) {}
+MachineBleDomain::MachineBleDomain(Machine* app) : app_(app) {}
 
 uint8_t MachineBleDomain::specCount() const { return Count; }
 

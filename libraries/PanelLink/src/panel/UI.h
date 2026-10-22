@@ -10,14 +10,14 @@ namespace gardener {
 
 class UserInterface {
  public:
-  explicit UserInterface(PanelContext context) : context_(context) {}
+  explicit UserInterface(PanelContext& context) : context_(context) {}
   virtual ~UserInterface() = default;
 
   virtual bool begin() = 0;
   virtual void update() = 0;
 
  protected:
-  PanelContext context_;
+  PanelContext& context_;
 };
 
 }  // namespace gardener

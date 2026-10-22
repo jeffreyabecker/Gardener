@@ -17,8 +17,6 @@ bool serialAttached() { return (bool)Serial; }
 
 }  // namespace
 
-gardener::PanelContext& context = gardener::buildPanelRoot();
-
 void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
   delay(200);
@@ -33,13 +31,13 @@ void setup() {
     mounted = formatted;
   }
 
-  // The persisted knobs are the machine's, so they are read into its config and the logger is
-  // picked before either boot.
-  context.settings().begin();
-  context.config().bluetooth = context.settings().bluetoothEnabled();
-  context.config().diagnostics = context.settings().logEnabled();
+  // The settings pick the logger, and the machine is built with the logger, so the preferences are
+  // read before the panel is.
+  auto* settings = new gardener::Settings();
+  settings->begin();
+
   gardener::Logger* logger =
-      context.config().diagnostics
+      settings->logEnabled()
           ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
           : static_cast<gardener::Logger*>(new gardener::NilLogger());
 
@@ -56,9 +54,14 @@ void setup() {
     logger->warn("fs: littlefs mount failed, settings will not persist");
   }
 
+  // The full device's graph: the machine, with the panel arranged around it.
+  gardener::PanelContext& context = gardener::buildPanelRoot(*logger, *settings);
+  context.config().bluetooth = settings->bluetoothEnabled();
+  context.config().diagnostics = settings->logEnabled();
+
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
-  // one serial link and the one BLE link. The panel context is a machine context, so the same object
-  // serves both halves.
+  // one serial link and the one BLE link. The panel context is a machine, so the same object serves
+  // both halves.
   gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
   serial->registerDomain(gardener::createControlDomain(context));
   serial->registerDomain(gardener::createVacuumDomain(context));
@@ -86,13 +89,13 @@ void setup() {
   }
 
   // The parts, then the tasks that drive them.
-  gardener::machineBoot(context, *logger);
-  gardener::panelBoot(context, *logger);
+  context.boot();
+  gardener::panelBoot(context);
 
   auto* connected = new gardener::ConnectedUI(context);
   auto* disconnected = new gardener::DisconnectedUI(context);
-  gardener::spawnMachineTasks(context, *logger, serial, ble);
-  gardener::spawnPanelTask(context, *logger, connected, disconnected);
+  gardener::spawnMachineTasks(context, serial, ble);
+  gardener::spawnPanelTask(context, connected, disconnected);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

@@ -13,7 +13,7 @@ constexpr int16_t kIconCentreY = 35;
 
 }  // namespace
 
-ConnectedUI::ConnectedUI(PanelContext context) : UserInterface(context) {}
+ConnectedUI::ConnectedUI(PanelContext& context) : UserInterface(context) {}
 
 // Taking control shows the icon straight away: the page is the statement that someone is driving,
 // and it should not arrive behind a splash.

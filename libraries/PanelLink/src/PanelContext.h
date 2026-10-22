@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "BuzzerPlayer.h"
-#include "MachineContext.h"
+#include "Machine.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Settings.h"
@@ -15,17 +15,17 @@
 namespace gardener {
 
 // The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
-// machine it reads and commands. It *is* a MachineContext, so the panel's code reaches the machine by
-// the same surface a controller uses and there is no second name for it.
-class PanelContext : public MachineContext {
+// machine it reads and commands. It *is* a Machine, so the panel's code reaches the machine by the
+// same surface a controller uses and there is no second name for it.
+class PanelContext : public Machine {
  public:
-  PanelContext(ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery, Overlay* overlay,
-               Settings* settings, Routines* routines, MachineContext& machine)
-      : MachineContext(&machine.vacuum(), &machine.ownership(), &machine.capabilities()),
+  PanelContext(Logger& logger, ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
+               Display* display, Settings* settings, Routines* routines)
+      : Machine(logger),
         buttons_(buttons),
         buzzer_(buzzer),
         battery_(battery),
-        overlay_(overlay),
+        overlay_(new Overlay(display, battery, &vacuum())),
         settings_(settings),
         routines_(routines) {}
 

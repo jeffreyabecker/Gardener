@@ -7,8 +7,7 @@
 
 namespace gardener {
 
-class Logger;
-class MachineContext;
+class Machine;
 class SerialLink;
 class BleLink;
 
@@ -34,5 +33,5 @@ void interfaceTask(void* arg);
 
 // The composition spawns the control and interface tasks, pinned to their cores; the command queue
 // is created here, before either task reads it.
-void spawnMachineTasks(MachineContext& context, Logger& logger, SerialLink* link, BleLink* ble);
+void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble);
 }  // namespace gardener
