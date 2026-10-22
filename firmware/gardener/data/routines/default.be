@@ -14,7 +14,6 @@ class ReadoutChrome
 
     self.pressure = PressureDisplay()
     self.pressure.x = 0; self.pressure.y = 12; self.pressure.w = 116; self.pressure.h = 24
-    self.pressure.show_units = false
 
     self.target_label = FixedText()
     self.target_label.value = "TGT"
@@ -22,7 +21,6 @@ class ReadoutChrome
 
     self.target_value = PressureDisplay()
     self.target_value.x = 40; self.target_value.y = 44; self.target_value.w = 76; self.target_value.h = 8
-    self.target_value.show_units = true
   end
 
   def draw(s)

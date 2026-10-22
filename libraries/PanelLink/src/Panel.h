@@ -48,7 +48,7 @@ class Panel : public Machine, public Link {
         buttons_(buttons),
         buzzer_(buzzer),
         battery_(battery),
-        overlay_(new Overlay(display, battery, &vacuum())),
+        overlay_(new Overlay(display, battery, &vacuum(), &settings)),
         routines_(routines),
         settings_(settings) {}
 

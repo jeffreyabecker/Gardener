@@ -214,12 +214,13 @@ nullable duration cleared from the minutes stage advances to the seconds stage s
 second OK writes the clear.
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
-`12.5 psi`, `0.12 inHg` or `40 mmHg`, suffix included. Up/Down moves it by `step` whole display
-steps — one psi, one inHg, ten mmHg — and every value goes through `vacuum.clamp()`, whether it was
-read, stepped or restored, so the editor cannot produce a target the machine refuses. An unset
-pressure reads as `0.0` and therefore clamps to the shallowest legal target; a nullable one reads as
-`nil`, and its lowest value is that same shallowest target. `min` and `max` are ignored: the
-machine's `min` … `floor` is the range.
+`12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the overlay's, printed in the
+top row rather than beside any number, so a page or the editor draws the value alone. Up/Down moves
+it by `step` whole display steps — one psi, one inHg, ten mmHg — and every value goes through
+`vacuum.clamp()`, whether it was read, stepped or restored, so the editor cannot produce a target
+the machine refuses. An unset pressure reads as `0.0` and therefore clamps to the shallowest legal
+target; a nullable one reads as `nil`, and its lowest value is that same shallowest target. `min`
+and `max` are ignored: the machine's `min` … `floor` is the range.
 
 `describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
 return a list. A routine without `describe()`, or one whose method raises, leaves the settings view

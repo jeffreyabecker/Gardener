@@ -8,17 +8,20 @@
 
 namespace gardener {
 
+class PanelSettings;
+
 // The display the app draws through: it wraps any Display, and puts the device's own status on top
 // of whatever was drawn there just before the frame goes to the glass.
 //
 // Everything else is passed straight through, so a page cannot tell the difference — which is
-// the point. The battery, the run state's icon and the two ways a controller can reach the device
-// have to be on the panel whatever page is showing, and nothing that draws a page should have to
-// remember them.
+// the point. The battery, the run state's icon, the unit the glass prints in and the two ways a
+// controller can reach the device have to be on the panel whatever page is showing, and nothing
+// that draws a page should have to remember them.
 class Overlay : public Display {
  public:
-  Overlay(Display* inner, const Battery* battery, const VacuumSystem* vacuum)
-      : inner_(inner), battery_(battery), vacuum_(vacuum) {}
+  Overlay(Display* inner, const Battery* battery, const VacuumSystem* vacuum,
+          const PanelSettings* settings)
+      : inner_(inner), battery_(battery), vacuum_(vacuum), settings_(settings) {}
   ~Overlay() override = default;
 
   // --- the panel -----------------------------------------------------------
@@ -112,10 +115,12 @@ class Overlay : public Display {
   void bluetoothIcon(int16_t x, int16_t y);
   void drawBattery();
   void batteryIcon(int16_t x, int16_t y, uint8_t percent);
+  void drawUnit();
 
   Display* inner_;
   const Battery* battery_;
   const VacuumSystem* vacuum_;
+  const PanelSettings* settings_;
   bool serial_ = false;
   bool bluetooth_ = false;
 };

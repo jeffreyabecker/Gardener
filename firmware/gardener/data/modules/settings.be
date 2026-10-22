@@ -125,17 +125,9 @@ class Settings
 
   def draw_edit()
     screen.draw_text(0, 0, 1, false, "EDIT")
-    screen.draw_text(0, 16, 1, false, self.edit_label())
+    screen.draw_text(0, 16, 1, false, self.edit_setting.label)
     screen.draw_text(0, 24, 3, false, self.edit_text())
     screen.draw_text(0, 56, 1, false, self.edit_hint())
-  end
-
-  # The suffix belongs on the label line: a size-3 value with a unit would run past the panel.
-  def edit_label()
-    if self.edit_setting.kind == "pressure"
-      return self.edit_setting.label + " " + self.unit.suffix
-    end
-    return self.edit_setting.label
   end
 
   def edit_hint()
@@ -160,7 +152,7 @@ class Settings
       return "OFF"
     end
     if self.described[index].kind == "pressure"
-      return self.pressure_text(value)
+      return self.number(value)
     end
     if self.described[index].kind == "duration"
       return self.duration_text(value)
@@ -187,12 +179,8 @@ class Settings
     return str(self.edit_value)
   end
 
-  # A pressure is kPa in the store and the unit on the glass in the editor, suffix included so the
-  # number cannot be read as the wrong scale.
-  def pressure_text(kpa)
-    return self.number(kpa) + " " + self.unit.suffix
-  end
-
+  # A pressure is kPa in the store and the unit on the glass in the editor; the suffix is the
+  # overlay's, so a value carries its number alone.
   def number(kpa)
     return string.format(self.fmt, kpa * self.unit.per_kpa)
   end

@@ -202,9 +202,7 @@ class PressureDisplay : Component
   var style
   var align
   var v_align
-  var show_units
   var number
-  var units
 
   def init()
     super(self).init()
@@ -212,17 +210,12 @@ class PressureDisplay : Component
     self.style = "none"
     self.align = "center"
     self.v_align = "center"
-    self.show_units = true
     self.number = DynamicText()
-    self.units = FixedText()
-    self.units.align = "right"
-    self.units.v_align = "bottom"
   end
 
-  # A readout is two text components: the number fills the content rect, and the suffix sits in the
-  # lower-right corner at the smallest face. The suffix is dropped when the box cannot fit both.
-  # A `border` draws the frame first, which is what lets a value sit in the layout without a label
-  # beside it: the box says what the number is.
+  # The number fills the content rect. A `border` draws the frame first, which is what lets a value
+  # sit in the layout without a label beside it: the box says what the number is. The unit is the
+  # overlay's, on the top row with the state icon, so a readout carries no suffix of its own.
   def draw(kpa)
     var u = screen.unit()
     var text = "--"
@@ -239,34 +232,10 @@ class PressureDisplay : Component
     self.number.v_align = self.v_align
 
     var c = self.content()
-    var cx = c[0]
-    var cy = c[1]
-    var cw = c[2]
-    var ch = c[3]
-
-    if self.show_units
-      var ub = self.units.bounds(u.suffix, [nil, 1])
-      var uw = ub[0]
-      var uh = ub[1]
-      if uw < cw && uh <= ch
-        self.number.x = cx
-        self.number.y = cy
-        self.number.w = cw - uw
-        self.number.h = ch
-        self.number.draw(text)
-        self.units.value = u.suffix
-        self.units.x = cx + cw - uw
-        self.units.y = cy + ch - uh
-        self.units.w = uw
-        self.units.h = uh
-        self.units.draw_fitted(u.suffix, [nil, 1])
-        return
-      end
-    end
-    self.number.x = cx
-    self.number.y = cy
-    self.number.w = cw
-    self.number.h = ch
+    self.number.x = c[0]
+    self.number.y = c[1]
+    self.number.w = c[2]
+    self.number.h = c[3]
     self.number.draw(text)
   end
 end

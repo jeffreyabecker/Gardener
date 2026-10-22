@@ -143,7 +143,7 @@ so handing the panel to the shared settings editor does not hand it a face as we
 ```berry
 screen.draw_text(0, 41, 1, false, value, "sansbold18")
 var box = screen.text_bounds(value, 1, "sansbold18")
-screen.draw_text(box.w + 4, 41, 1, false, suffix, "sansbold9")
+screen.draw_text(box.w + 4, 41, 1, false, "TGT", "sansbold9")
 ```
 
 `text_bounds` answers a `bounds` record, read with a dot:
@@ -158,23 +158,29 @@ screen.draw_text(box.w + 4, 41, 1, false, suffix, "sansbold9")
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
-| `suffix` | string | what the glass prints after the number |
+| `suffix` | string | what the overlay prints as the glass's unit, beside the state icon |
 | `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |
 | `decimals` | int | digits the unit's fine step can express |
 
 The same numbers live in `panel/Units.h`, so a routine and the panel's own formatting cannot
-disagree about what a psi is.
+disagree about what a psi is. `suffix` is read to name a unit being chosen, not to append to a
+reading: the overlay prints the glass's unit itself.
 
-### The overlay owns its corners
+### The overlay owns the top row and the right edge
 
-The firmware draws three things on top of every `flush()`, so a routine does not have to:
+The firmware draws four things on top of every `flush()`, so a routine does not have to:
 
-- the battery icon at the top right;
 - the run state's icon at `x` 64–78, `y` 0–14;
+- the unit the glass prints in, in the top row right after that icon, at `x` 80–104, `y` 3–10;
+- the battery icon at the top right;
 - the connection icons down the right edge from `x` 116.
 
-Keep a page's own text and shapes to the left of `x` 110 above `y` 30, and clear of the state icon.
+The unit is one for the whole glass, so a page draws the number and never the suffix after it: a
+readout that says `12.5` is a depth in the unit the top row names.
+
+Keep a page's own text and shapes out of that top band — to the left of `x` 64 above `y` 14 — and
+to the left of `x` 110 above `y` 30.
 
 ## `device` — the device's own settings
 

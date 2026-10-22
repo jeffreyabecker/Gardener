@@ -102,7 +102,7 @@ class System : Page
       screen.draw_text(0, 0, 1, false, "UNIT")
       screen.draw_text(0, 20, 2, false, string.toupper(self.units[self.edit_unit_index]))
     elif self.list.selected == 1
-      screen.draw_text(0, 0, 1, false, "TARGET " + self.unit.suffix)
+      screen.draw_text(0, 0, 1, false, "TARGET")
       screen.draw_text(0, 16, 3, false, self.text(self.edit_kpa))
     else
       screen.draw_text(0, 0, 1, false, "JINGLE")

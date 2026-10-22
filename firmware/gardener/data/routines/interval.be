@@ -30,10 +30,8 @@ class IntervalChrome
 
     self.pressure = PressureDisplay()
     self.pressure.x = 0; self.pressure.y = 22; self.pressure.w = 116; self.pressure.h = 17
-    self.pressure.show_units = false
 
-    # The target needs no label: the border is what tells it apart from the live reading, and the
-    # suffix the unit it prints in.
+    # The target needs no label: the border is what tells it apart from the live reading.
     self.target = PressureDisplay()
     self.target.x = 0; self.target.y = 40; self.target.w = 116; self.target.h = 10
     self.target.border = 1

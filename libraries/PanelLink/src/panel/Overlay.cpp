@@ -2,6 +2,9 @@
 
 #include <type_traits>
 
+#include "panel/Units.h"
+#include "storage/PanelSettings.h"
+
 namespace gardener {
 namespace {
 
@@ -13,6 +16,15 @@ constexpr int16_t kBatteryIconY = 1;
 // The state icon sits on the line a page puts its state name on, clear of the longest one.
 constexpr int16_t kStateIconX = 64;
 constexpr int16_t kStateIconY = 0;
+constexpr int16_t kStateIconSize = 14;
+
+// The unit reads as part of the state icon: the same top row, right after it and on its centre
+// line. The slot is the widest suffix ("mmHg", four built-in glyphs), so a shorter one leaves no
+// pixel of the last behind.
+constexpr int16_t kUnitX = kStateIconX + kStateIconSize + 2;
+constexpr int16_t kUnitY = 3;
+constexpr int16_t kUnitSlotWidth = 24;
+constexpr int16_t kUnitSlotHeight = 8;
 
 // The status column down the right edge: the battery at the top, then the two ways in.
 constexpr int16_t kConnectionIconX = 116;
@@ -38,6 +50,7 @@ void Overlay::display() {
   drawStateIcon();
   drawConnections();
   drawBattery();
+  drawUnit();
   inner_->display();
 }
 
@@ -135,6 +148,14 @@ void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
   if (fill < 1) fill = 1;  // any charge at all shows something
   if (fill > interior) fill = interior;
   inner_->fillRect(x + 2, y + 2, fill, kBatteryBodyHeight - 4);
+}
+
+// The glass prints one unit, so the overlay says which rather than every page writing the suffix
+// after its number. It reads the setting on each frame, so a unit set from the wire or the system
+// page is on the glass with the next one.
+void Overlay::drawUnit() {
+  inner_->clearRect(kUnitX, kUnitY, kUnitSlotWidth, kUnitSlotHeight);
+  inner_->text(kUnitX, kUnitY, displayUnitInfo(settings_->unit()).suffix, 1, false);
 }
 
 }  // namespace gardener
