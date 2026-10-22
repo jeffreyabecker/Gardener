@@ -296,14 +296,14 @@ class SystemScene : Scene
   end
 
   def set_unit(value)
-    if value != nil && device.set_unit(value)
+    if value != cancelled && device.set_unit(value)
       self.read()
     end
     self.draw()
   end
 
   def set_target(value)
-    if value != nil
+    if value != cancelled
       device.set_target(vacuum.clamp(value))
       self.read()
     end
@@ -311,7 +311,7 @@ class SystemScene : Scene
   end
 
   def set_jingle(value)
-    if value != nil
+    if value != cancelled
       self.jingle = value
       device.set_jingle(value)
     end

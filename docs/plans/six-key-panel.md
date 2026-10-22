@@ -56,8 +56,8 @@ does not change.
   press classifier's thresholds are **unchanged** — 20 ms debounce, the 600 ms mark between a tap
   and a reported hold, 350 ms double window. The two new keys are ordinary keys: they debounce,
   classify and double exactly like the four existing ones. What the classifier *reports* changes
-  with part 3 — it emits a gesture string directly, and a hold is its seconds rather than `long` —
-  but the mechanics behind it are the same ones the GPIO reader used.
+  with part 3 — it emits a gesture string directly, and a hold past the extended mark says its
+  seconds rather than `long` — but the mechanics behind it are the same ones the GPIO reader used.
 - The `Button` enum gains two members and a count that stops being written as `4` in five places
   in `hal/impl/Buttons.cpp`. `enum class Button : uint8_t { Up, Down, Forward, Back, Ok, Cancel }`
   and a `kButtonCount = 6` are the shape; the `pressStartMs_`, `pendingPress_` and
@@ -181,7 +181,8 @@ classifier. A key in such a group is not also half of a double: the double windo
 pressed on its own.
 
 The event goes out on the last release rather than the first. A part is named by how far it got —
-`short`, `double`, or its whole seconds — and only a released key has finished a press; composing
+`short`, `long`, `double`, or its whole seconds — and only a released key has finished a press;
+composing
 at the first release would have to guess the still-held partner's part. For the settings chord the
 difference is invisible, except that the view opens when the second key comes up rather than the
 first.
@@ -189,9 +190,9 @@ first.
 ### The press log
 
 While an external link drives there is no page, so presses are logged as the classifier's string
-with a `btn: ` prefix: `btn: ok:short`, `btn: back:3`, `btn: up:short+down:short`. The log and the
-event are the same string; the vocabulary simply grows `forward` and `cancel`, and a hold becomes
-its seconds.
+with a `btn: ` prefix: `btn: ok:short`, `btn: back:long`, `btn: back:3`, `btn:
+up:short+down:short`. The log and the event are the same string; the vocabulary simply grows
+`forward` and `cancel`, and a hold that goes on past the extended mark becomes its seconds.
 
 ### The shipped pages
 
@@ -231,21 +232,25 @@ part  := button ':' press
 event := part ( '+' part )*
 ```
 
-- A **tap** is `short`; a **double tap** is `double` — the two a page has always compared.
-- A **hold** reports the **whole seconds the key was held** instead of `long`: the held
-  milliseconds divided by 1000, so `back:3` is Back held three and a bit seconds and `up:0` is a
-  hold just past the tap mark. The classifier already measures the hold; it now reports it.
+- A **tap** is `short`; a **double tap** is `double`; an ordinary **hold** is `long` — the three a
+  page compares today, and they stay.
+- A **significantly extended hold** reports the **whole seconds the key was held** instead of
+  `long`: from 2 s on, the held milliseconds divided by 1000, so `back:3` is Back held three and a
+  bit seconds and `back:2` is a hold just past the mark. Below 2 s it stays `back:long`. The
+  classifier already measures the hold; it now says how long once the hold has gone on long enough
+  for the number to mean something.
 - **Two keys together are one event, the sum of their parts.** The `chord` token is gone, and Up
-  and Down pressed together is `up:short+down:short`; a held pair reports each part's seconds,
-  `back:3+ok:2`.
+  and Down pressed together is `up:short+down:short`; a held pair reports each part in its own
+  form, `back:3+ok:long`.
 
 So the full vocabulary is `up`, `down`, `forward`, `back`, `ok`, `cancel` before the colon, and
-`short`, `double` or a whole number of seconds after it, joined with `+` when the gesture is more
-than one key. No button or press name contains `:` or `+`, so both are safe separators.
+`short`, `long`, `double` or a whole number of seconds after it, joined with `+` when the gesture
+is more than one key. No button or press name contains `:` or `+`, so both are safe separators.
 
 The classifier's mechanics do not change with the vocabulary — 20 ms debounce, the 600 ms mark
-between `short` and a reported duration, and the 350 ms double window all stay. What changes is the
-output: the named `long` and `chord` leave, and the classifier strings the gesture itself. The
+between `short` and `long`, and the 350 ms double window all stay, and a new 2 s mark separates an
+ordinary hold from an extended one. What changes is the output: `chord` leaves, `long` stays, an
+extended hold says its seconds, and the classifier strings the gesture itself. The
 `Button` enum and `buttonName()` stay; the `Press` enum and `pressName()` go; the
 two-keys-together recognition moves out of the panel task and into the classifier, which is the
 thing that emits the event.
@@ -298,8 +303,9 @@ Why the classifier emits strings, stated plainly:
   the key and a press name. The key is already a string, and the press name is exactly what the
   classifier decides — so the classifier writing the string is the shortest path from a key to a
   page.
-- A hold's seconds is data the classifier has and a page wants; `long` threw it away and made the
-  page re-derive "long enough" from a threshold it could not see.
+- A hold's seconds is data the classifier has and a page wants; `long` alone made a page re-derive
+  "long enough" from a threshold it could not see. An extended hold now says how long it was; an
+  ordinary one is still `long`, which is all it has to say.
 - The `+` sum is what `chord` was pretending not to be: two keys, each with its own press. The sum
   says it outright and drops the special token.
 
@@ -311,7 +317,8 @@ was pressed, and the string above is the whole of it.
 
 These were the open questions, settled before the backlog exists because the string, the steal
 target and the token names all appear in the gesture map above. The first three were open in the
-first draft; the rest came out of reading the code against the map.
+first draft, the next three came out of reading the code against the map, and the last corrects a
+first draft that had seconds replacing `long` outright.
 
 1. **The token is `ok`, not `okay`.** It is the name the press log, `Button::Ok`, `buttonName()` and
    every routine already use. The key is called "okay" and the glass may spell it either way; the
@@ -329,6 +336,10 @@ first draft; the rest came out of reading the code against the map.
    a list of press names is several registrations with a hole where the hold would go.
 6. **The harness presses a whole gesture.** `harness.press("ok:short")` is exactly what the device
    produces, so the host has no button or press table to drift from the classifier.
+7. **`long` stays, and seconds begin at 2 s.** `short`, `long` and `double` are the three
+   classifications a page compares day to day, and the press log keeps saying `long`. A hold that
+   goes on past the 2 s mark reports whole seconds instead, which is what makes the device's own
+   3 s and 5 s marks readable; below the mark it is `long`, which is all a page needs to know.
 
 ## What moves together when it lands
 
@@ -346,6 +357,6 @@ The work is one change, and its parts share the vocabulary, so no part can stand
   (`harness.press` takes the gesture), `harness.be` (the event record goes), `driver.be` and the
   test files that press keys.
 - The specs when the work is done: [gestures.md](../specs/gestures.md) (six keys, the Back/Cancel
-  split, the moved go-home, the sum chord and the seconds vocabulary),
+  split, the moved go-home, the sum chord and the extended-hold seconds),
   [bindings.md](../specs/ui/bindings.md) (`buttons.take()` answers the classifier's string) and
   [routine.md](../specs/ui/routine.md) (`handle(ev)` takes the string).

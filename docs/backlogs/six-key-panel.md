@@ -1,9 +1,9 @@
 # Six-key panel
 
 The tasklist for [the six-key panel plan](../plans/six-key-panel.md). The plan is the requirement
-and holds every decision — the six tokens, the Back/Cancel split, the two-key rule, the
-whole-string registration — so an item here states the outcome and points at the plan rather than
-restating it. The plan and this file are deleted together when the last item lands, and each epic's
+and holds every decision — the six tokens, the Back/Cancel split, the two-key rule, the whole-string
+registration, and the three press classes with an extended hold in seconds — so an item here states
+the outcome and points at the plan rather than restating it. The plan and this file are deleted together when the last item lands, and each epic's
 summary goes to `docs/backlogs/completed/six-key-panel/`.
 
 This backlog targets `feature/berry-test-harness`, not `main`: `main` still has `page.be` and the
@@ -65,11 +65,13 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   drift from the classifier. `harness_event` goes with the record, and the drive and the suites that
   press keys press strings. Done when the check's drive and suites press only strings and pass.
 
-- [ ] **A hold is its seconds.** The classifier reports how far a key got rather than a `long`
-  token: the held milliseconds divided by 1000, so `back:1` replaces `long` everywhere. No page,
-  harness, drive or test names `long`, and the drive's sweep presses a short, a double and a hold on
-  each key. Done when the check passes and `long` is gone from `firmware/` and `tools/berry/`; the
-  spec that describes the vocabulary follows in epic 4.
+- [ ] **An extended hold reports its seconds.** `short`, `long` and `double` stay exactly as they
+  are; a hold at or past the **2 s** mark reports the whole seconds instead, so `back:long` is an
+  ordinary hold and `back:3` one that has gone on. `ExtendedHoldMs` sits beside `LongPressMs` and
+  `DoublePressMs`, and the drive's sweep presses a short, a double and a hold on each key so the
+  `long` form still has a caller. Done when the build passes and, with a link driving, the
+  press log shows `btn: back:long` for a one-second press and `btn: back:3` for a three-second one;
+  the spec that describes the vocabulary follows in epic 4.
 
 - [ ] **Two keys together are one event.** The classifier composes keys that are down together into
   one string in panel order and emits it when the last comes up, so the panel answers one whole
@@ -114,14 +116,14 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 ## Epic 4 — The contract
 
 - [ ] **`gestures.md` describes six keys.** The keys and their tokens, the Back/Cancel split, the
-  moved go-home, the two-key rule, the seconds vocabulary and the press-log line are the contract
-  the pages are written against. Done when the spec names no four-key map, no `chord` token and no
-  Okay-while-Back steal, and agrees with the firmware.
+  moved go-home, the two-key rule, `short`/`long`/`double` with the extended-hold seconds, and the
+  press-log line are the contract the pages are written against. Done when the spec names no
+  four-key map, no `chord` token and no Okay-while-Back steal, and agrees with the firmware.
 
 - [ ] **`bindings.md` describes the string.** `buttons.take()` answers the classifier's gesture or
-  `nil`, the vocabulary is the six keys and `short`/`double`/seconds, the queue holds eight, and the
-  `event` record is gone from the record list. Done when the `buttons` section and the record list
-  agree with the binding.
+  `nil`, the vocabulary is the six keys and `short`/`long`/`double`/seconds, the queue holds eight,
+  and the `event` record is gone from the record list. Done when the `buttons` section and the
+  record list agree with the binding.
 
 - [ ] **`routine.md` describes the scene's gestures.** `handle(ev)` receives the whole gesture
   string, `on(gesture, fn)` is the declarative form, and the standard page gestures are the six-key

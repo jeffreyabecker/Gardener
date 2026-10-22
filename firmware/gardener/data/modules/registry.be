@@ -1,12 +1,12 @@
 # registry.be — the registry of user routines: the list the browser draws, each routine's factory
-# and the settings it offers, and the way into each routine's scene.
+# and the scene that edits its settings, and the way into each routine's scene.
 #
-# A routine file's top level calls routines.register(name, icon, factory, settings) and the
-# entry joins this Berry list; nothing native holds it. The factory is the routine's scene class,
-# and the registry builds the scene when the routine is pushed, so a page starts from its own
-# activate() every time and nothing a previous visit left behind survives; the scene that is
-# showing is ux.top(). The settings are the list of setting records the settings editor walks, so
-# the scene below no longer answers for them.
+# A routine file's top level calls routines.register(name, icon, factory, settings) and the entry
+# joins this Berry list; nothing native holds it. The factory is the routine's scene class, and the
+# registry builds the scene when the routine is pushed, so a page starts from its own activate()
+# every time and nothing a previous visit left behind survives; the scene that is showing is
+# ux.top(). The settings are the class of the scene that edits them, so the rules that bind two
+# settings together live with the values rather than in the page.
 #
 # The browser reads names()/rows() and pushes a routine with push(name, callback[, settings]), which
 # builds its scene and hands it to ux.push. The device's own scenes — the readout, system and
@@ -31,6 +31,10 @@ class RoutineRegistry
       vacuum.log("registry: routine must name its scene class")
       return false
     end
+    if settings != nil && type(settings) != "class"
+      vacuum.log("registry: " + name + " settings must be a scene class")
+      return false
+    end
     self.entries.push([name, icon, factory, settings])
     return true
   end
@@ -44,13 +48,34 @@ class RoutineRegistry
     return out
   end
 
-  # The settings a routine offers, as the list it registered; nil when the name is not registered.
+  # The settings a routine edits, as the class it registered describes them; nil when it has none.
   def settings(name)
-    var e = self.entry(name)
-    if e == nil
+    var scene = self.settings_scene(name)
+    if scene == nil
       return nil
     end
-    return e[3]
+    return scene.settings()
+  end
+
+  # A settings scene for the routine, with no writer: enough to ask what it edits.
+  def settings_scene(name)
+    var e = self.entry(name)
+    if e == nil || e[3] == nil
+      return nil
+    end
+    var factory = e[3]
+    return factory(name, nil)
+  end
+
+  # Push a routine's settings scene, with the callback that writes a settled value and the one the
+  # stack runs when it closes. False when the routine registered no settings.
+  def push_settings(name, on_change, closed)
+    var e = self.entry(name)
+    if e == nil || e[3] == nil
+      return false
+    end
+    var factory = e[3]
+    return ux.push(factory(name, on_change), nil, closed)
   end
 
   def icon(name)

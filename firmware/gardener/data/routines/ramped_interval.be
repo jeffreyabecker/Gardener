@@ -132,29 +132,30 @@ class RampedInterval : Page
 
   # The starting values match the shipped `ramped_interval.cfg`. A switch's settings map, when there
   # is one, is the set for this activation; otherwise the file is. A nullable step is an even ladder
-  # from the start to the final pressure; a nullable rest vents all the way.
+  # from the start to the final pressure; a nullable rest vents all the way. The step's zero is a
+  # rule of the page's own - no editor would produce it - so it is read raw.
   def read_settings(settings)
     var s = self.activation(settings)
-    self.count = s.whole("set_count", 4, 1, 20)
-    self.initial = s.pressure("initial_pressure", 5.0)
-    self.final = s.pressure("final_pressure", 20.0)
+    self.count = s.value("set_count")
+    self.initial = s.value("initial_pressure")
+    self.final = s.value("final_pressure")
 
     if s.unset("step_pressure")
       var rise = self.final - self.initial
       self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
     else
-      var step = s.find("step_pressure", 5.0)
+      var step = s.raw("step_pressure")
       self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
     end
 
     if s.unset("rest_pressure")
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = s.pressure("rest_pressure", 5.0)
+      self.rest_pressure = s.value("rest_pressure")
     end
 
-    self.work = s.seconds("work_duration", 300, 3600)
-    self.rest = s.seconds("rest_duration", 45, 1200)
+    self.work = s.value("work_duration")
+    self.rest = s.value("rest_duration")
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -396,13 +397,28 @@ class RampedInterval : Page
   end
 end
 
-routines.register("ramped_interval", RampedIntervalIcon(), RampedInterval, [
-  setting("set_count", "Sets", IntEditor(1, 1, 20, false)),
-  setting("initial_pressure", "Start", PressureEditor(1, false)),
-  setting("final_pressure", "Final", PressureEditor(1, false)),
-  setting("step_pressure", "Step", PressureEditor(1, true)),
-  setting("rest_pressure", "Rest", PressureEditor(1, true)),
-  setting("work_duration", "Work", DurationEditor(30, 0, 3600, false)),
-  setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false))
-])
+# The values this page edits, in the order the settings list shows them, and the one rule that binds
+# two of them: a ladder has to climb, so the final pressure is at least where it starts.
+class RampedIntervalSettings : SettingsScene
+  def settings()
+    return [
+      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
+      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
+      setting("final_pressure", "Final", PressureEditor(1, false), 20.0),
+      setting("step_pressure", "Step", PressureEditor(1, true), nil),
+      setting("rest_pressure", "Rest", PressureEditor(1, true), nil),
+      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 300),
+      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 45)
+    ]
+  end
+
+  def problem(values)
+    if values["final_pressure"] < values["initial_pressure"]
+      return "FINAL < START"
+    end
+    return nil
+  end
+end
+
+routines.register("ramped_interval", RampedIntervalIcon(), RampedInterval, RampedIntervalSettings)
 return RampedInterval

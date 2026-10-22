@@ -22,8 +22,8 @@ A record is the machine as it stood when the call returned, not a live view: wri
 have raises `attribute_error`, and the fields are the ones listed under each call.
 
 The `setting` record a routine registers is the same kind of object, but a routine builds it itself
-rather than a call answering it; its fields, and the editor each one carries, are listed under the
-settings a routine registers in [routine.md](./routine.md).
+rather than a call answering it; its fields, the editor each one carries and the default it holds,
+are listed under the settings a routine registers in [routine.md](./routine.md).
 
 ## `vacuum` — the machine
 
@@ -358,9 +358,11 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, icon, factory, settings)` | `bool` | bind a name to the scene class that draws it and the list of settings it offers. The scene is built from `factory` on every push; `icon` is an `Icon` instance or `nil`; `settings` is a list of `setting` records, or an empty list |
+| `routines.register(name, icon, factory, settings)` | `bool` | bind a name to the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
 | `routines.names()` | list of strings | every registered name, in registration order |
-| `routines.settings(name)` | list of `setting`s, or `nil` | what the routine registered |
+| `routines.settings(name)` | list of `setting`s, or `nil` | what the routine's settings scene edits |
+| `routines.settings_scene(name)` | a `SettingsScene`, or `nil` | one with no writer, for asking what a routine edits |
+| `routines.push_settings(name, on_change, closed)` | `bool` | build the routine's settings scene, hand it `on_change(key, value)` for every value it settles, and run `closed` when it pops |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
 | `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
 

@@ -44,7 +44,7 @@ def harness_settings_map(name)
   end
   var settings = {}
   for item : described
-    settings[item.key] = item.editor.read(name, item.key)
+    settings[item.key] = item.editor.read(name, item.key, item.default)
   end
   return settings
 end
@@ -64,7 +64,7 @@ def harness_editor(name)
   end
 
   harness_activate(name, nil)
-  ux.push(SettingsScene(name, / key, value -> harness_editor_wrote(name, key, value)))
+  routines.push_settings(name, / key, value -> harness_editor_wrote(name, key, value), nil)
 
   var i = 0
   while i < described.size()

@@ -46,15 +46,16 @@ constexpr const char* kRecords =
     "end\n"
     // What a routine registers as one of its editable values. The class is constructed by the
     // routine, so its fields stay plain data; `editor` is the kind's editor object, which owns how
-    // the value is read, printed and edited, and `icon` is what the settings list draws at the left
-    // of the row, or nil for a text-only row.
+    // the value is read, printed and edited; `default` is what it holds when nothing has been
+    // stored, and `icon` is what the settings list draws at the left of the row, or nil.
     "class setting\n"
-    "  var key, label, icon, editor\n"
-    "  def init(key, label, editor, icon)\n"
+    "  var key, label, icon, editor, default\n"
+    "  def init(key, label, editor, default, icon)\n"
     "    self.key = key\n"
     "    self.label = label\n"
     "    self.icon = icon\n"
     "    self.editor = editor\n"
+    "    self.default = default\n"
     "  end\n"
     "end\n";
 

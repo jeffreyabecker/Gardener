@@ -127,19 +127,16 @@ class Interval : Page
   # --- settings ------------------------------------------------------------
 
   # The starting values match the shipped `interval.cfg`. A switch's settings map, when there is
-  # one, is the set for this activation; otherwise the file is.
+  # one, is the set for this activation; otherwise the file is. Each value comes back held to its
+  # kind - a hand-edited file cannot put the page somewhere the editor could not.
   def read_settings(settings)
     var s = self.activation(settings)
-    self.count = s.whole("set_count", 4, 1, 20)
-    self.target = s.pressure("target_pressure", 0.0)
-    self.work = s.seconds("work_duration", 30, 3600)
-    self.rest_pressure = s.pressure("rest_pressure", 5.0)
-    self.rest = s.seconds("rest_duration", 1, 1200)
-    var resume = s.find("resume_behavior", "immediately")
-    if resume != "after ok"
-      resume = "immediately"
-    end
-    self.resume = resume
+    self.count = s.value("set_count")
+    self.target = s.value("target_pressure")
+    self.work = s.value("work_duration")
+    self.rest_pressure = s.value("rest_pressure")
+    self.rest = s.value("rest_duration")
+    self.resume = s.value("resume_behavior")
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -339,12 +336,21 @@ class Interval : Page
   end
 end
 
-routines.register("interval", IntervalIcon(), Interval, [
-  setting("set_count", "Sets", IntEditor(1, 1, 20, false)),
-  setting("target_pressure", "Target", PressureEditor(1, false)),
-  setting("work_duration", "Work", DurationEditor(30, 0, 3600, false)),
-  setting("rest_pressure", "Rest", PressureEditor(1, false)),
-  setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false)),
-  setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false))
-])
+# The values this page edits, in the order the settings list shows them. Nothing binds one setting
+# to another here, so this scene has no rule of its own.
+class IntervalSettings : SettingsScene
+  def settings()
+    return [
+      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
+      setting("target_pressure", "Target", PressureEditor(1, false), 0.0),
+      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 30),
+      setting("rest_pressure", "Rest", PressureEditor(1, false), 5.0),
+      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 1),
+      setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false),
+              "immediately")
+    ]
+  end
+end
+
+routines.register("interval", IntervalIcon(), Interval, IntervalSettings)
 return Interval

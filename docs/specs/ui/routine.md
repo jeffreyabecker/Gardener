@@ -33,10 +33,7 @@ class MyPage : Page
   end
 end
 
-routines.register("mypage", MyIcon(), MyPage, [
-  setting("target", "Target", PressureEditor(1, false)),
-  setting("hold", "Hold", DurationEditor(1, 0, 7200, false))
-])
+routines.register("mypage", MyIcon(), MyPage, MySettings)
 return MyPage
 ```
 
@@ -56,9 +53,9 @@ dispatch, and `Page` adds the routine's name and its settings view; a routine ex
 defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
 a scene that lacks either `activate()` or `poll`.
 
-The fourth argument is the list of **settings** the routine offers the editor, and an empty list
-when it has none. The list is data — built from `setting` records and walked by the settings view
-(see below) — and the scene does not answer for it.
+The fourth argument is the routine's **settings scene** — the class that edits its values, or `nil`
+when it has none. It is a `SettingsScene` subclass, and it is where the list and any rule that binds
+one setting to another live, so the page never names the keys itself (see below).
 
 `activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
 none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
@@ -182,26 +179,47 @@ What that costs, stated plainly:
 
 ## The settings a routine registers
 
-The fourth argument to `routines.register()` is the list of values the editor may change, in the
-order the settings view shows them. Each is a `setting`, built by the routine:
+A routine's settings are a scene of their own: a class extending `SettingsScene` from
+`/modules/settings_page.be`, registered as the fourth argument. It answers `settings()` with the
+values it edits, in the order the list shows them, and — when its values constrain one another —
+`problem()` with the rule that has to hold:
 
 ```berry
-routines.register("mypage", MyIcon(), MyPage, [
-  setting("target", "Target", PressureEditor(1, false)),
-  setting("hold", "Hold", DurationEditor(1, 0, 7200, false)),
-  setting("mode", "Mode", ChoiceEditor(["hold", "cycle"], false)),
-  setting("enabled", "Enabled", BoolEditor(true))
-])
+class MySettings : SettingsScene
+  def settings()
+    return [
+      setting("target", "Target", PressureEditor(1, false), 10.0),
+      setting("hold", "Hold", DurationEditor(1, 0, 7200, false), 30),
+      setting("mode", "Mode", ChoiceEditor(["hold", "cycle"], false), "hold"),
+      setting("enabled", "Enabled", BoolEditor(true), true)
+    ]
+  end
+
+  def problem(values)
+    if values["hold"] > 3600
+      return "HOLD > 1H"
+    end
+    return nil
+  end
+end
+
+routines.register("mypage", MyIcon(), MyPage, MySettings)
 ```
 
-`setting(key, label, editor[, icon])` builds one record:
+A routine with nothing to edit registers `nil`. A subclass that defines only `settings()` inherits
+the rows, the value scenes, the writes and the repair.
+
+### A setting
+
+`setting(key, label, editor, default[, icon])` builds one record:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
 | `label` | string | the line the editor draws beside the value |
-| `icon` | an `Icon`, or `nil` | drawn at the left of the row; `nil`, or an argument left off, is a text-only row |
-| `editor` | an editor | what the value is, and how it is read, shown and edited |
+| `editor` | an editor | what the value is, and how it is read, printed and edited |
+| `default` | the kind's type, or `nil` | what the setting is when nothing has been stored; `nil` for a nullable one |
+| `icon` | an `Icon`, or `nil` | drawn at the left of the row; an argument left off is a text-only row |
 
 ### Editors
 
@@ -217,22 +235,25 @@ The editor is the whole of what a value is. There is one class per kind in
 | `PressureEditor` | `pressure` | `step`, `nullable` |
 | `DurationEditor` | `duration` | `step`, `min`, `max`, `nullable` |
 
-An editor answers four questions: `read(name, key)` gives the stored value in the kind's own type,
-`text(value)` prints it as the list shows it, `lowest()` is the value a null setting opens at, and
-`scene(label, value)` builds the value scene that edits it. `kind()` names the kind for whatever has
-to know, which today is only the host harness.
+An editor answers four questions: `read(name, key, default)` gives the stored value in the kind's
+own type, or the default when nothing is stored; `value(raw, default)` holds a value that came from
+a switch's map to the same rules; `text(value)` prints it as the list shows it; `lowest()` is the
+value a null setting opens at; and `scene(label, value)` builds the value scene that edits it.
+`kind()` names the kind for whatever has to know, which today is only the host harness.
 
-The value is read through `store` with a fallback whose type matches the kind: `0` for `int` and
-`duration`, `0.0` for `real` and `pressure`, `false` for `bool`, and `values[0]` for `choice` — which
-needs at least one value, and leaves the settings view closed when it has none. Up/Down steps
-`real`, `int` and `pressure`, toggles `bool`, and cycles `choice`; OK writes the value back with
-`store.set` and Back leaves without writing.
+A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
+clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
+`vacuum.clamp()`, and a choice that is not one of its values reads as the default. A kind that
+cannot work at all — a choice with no values, bounds the wrong way round — says so where it is
+built, logs one line, and leaves its row out of the list. Up/Down steps `real`, `int` and
+`pressure`, toggles `bool`, and cycles `choice`; OK writes the value back with `store.set` and Back
+leaves without writing.
 
-A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` and shows `--`
-in the list and the editor. It opens at the kind's lowest real value (the value a non-nullable
-setting starts from), and `nil` sits one step below that: Down at the lowest value clears back to
-`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` writes an empty
-value, which reads as `nil` again.
+A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
+default says, and shows `--` in the list and the editor. It opens at the kind's lowest real value
+(the value a non-nullable setting starts from), and `nil` sits one step below that: Down at the
+lowest value clears back to `--`, Up from `--` enters the lowest value, and Down at `--` stays. OK
+on `--` writes an empty value, which reads as `nil` again.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
 whole minute. OK opens it in the **minutes** stage, Up/Down moves that by a minute, OK moves on to
@@ -250,22 +271,30 @@ the machine refuses. An unset pressure reads as `0.0` and therefore clamps to th
 target; a nullable one reads as `nil`, and its lowest value is that same shallowest target. The
 machine's own `min` … `floor` is the range, so a pressure editor takes no `min` or `max`.
 
-A list the editor cannot read — a choice with no values, or a record that is not a `setting` —
-leaves the settings view closed and writes one `vacuum.log` line.
+### A rule across settings
+
+`problem(values)` is asked with every value by key whenever the list opens and after every commit.
+The scene never hands out a set the rule refuses: while it fails, the settings that differ from
+their default are put back to them — the one just changed first, then the rest in the order the
+list shows them — and each repair is written through the page's callback. The rule that was applied
+is drawn in place of the list's title until the next press. So a file edited by hand is mended the
+moment its settings are opened, and an edit that would break a rule lands on the default instead.
+
+A page starting a run from a file nobody has opened settings on still refuses: `begin()` asks the
+same rule of the values it read.
 
 ### Reading them
 
-A page reads its values through `self.activation(settings)`, which takes the map a switch carried
-or `nil` for the routine's own file and is the one place that decides which of the two a key comes
-from. It answers `find(key, fallback)` for a plain value, `unset(key)` for whether a nullable one
-holds nothing, `whole(key, fallback, low, high)` and `seconds(key, fallback, high)` for a number
-held to its bounds, and `pressure(key, fallback)` for a depth that goes through `vacuum.clamp()`:
+A page reads its values through `self.activation(settings)`: `value(key)` for a setting held to its
+kind — from the switch's map when one was carried, from the routine's own file otherwise —
+`raw(key)` for a rule the kind does not own, and `unset(key)` for a nullable setting that holds
+nothing.
 
 ```berry
 def read_settings(settings)
   var s = self.activation(settings)
-  self.count = s.whole("set_count", 4, 1, 20)
-  self.target = s.pressure("target_pressure", 0.0)
-  self.rest = s.seconds("rest_duration", 1, 1200)
+  self.count = s.value("set_count")
+  self.target = s.value("target_pressure")
+  self.rest = s.value("rest_duration")
 end
 ```

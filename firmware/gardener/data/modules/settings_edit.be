@@ -1,10 +1,17 @@
 # settings_edit.be — the scenes a setting is edited in: ValueScene, the modal editor that owns the
 # keys while it is on top, and one subclass per kind.
 #
-# A scene holds the half-made value and pops with it when OK is pressed, or with nil on Back. The
-# editor that carries the kind (settings_editors.be) builds the scene and names it; the list that
-# pushed it (settings_page.be) writes whatever comes back. The device's own settings screen pushes
-# these scenes directly too.
+# A scene holds the half-made value and pops with it when OK is pressed. Back pops `cancelled`
+# rather than nil, because nil is a value a nullable setting can commit; the settings list compares
+# against it. The editor that carries the kind (settings_editors.be) builds the scene and names it;
+# the list that pushed it (settings_page.be) writes whatever comes back.
+
+# What a value scene pops when Back was pressed. A setting whose kind allows nothing cannot use nil
+# to mean both "cleared" and "cancelled", so a cancel needs a value of its own.
+class Cancelled
+end
+
+cancelled = Cancelled()
 
 class ValueScene : Scene
   var label
@@ -46,7 +53,7 @@ class ValueScene : Scene
   end
 
   def cancel()
-    ux.pop(nil)
+    ux.pop(cancelled)
   end
 
   def draw_page()

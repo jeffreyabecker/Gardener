@@ -111,14 +111,16 @@ class RampedStatic : Page
   # --- settings ------------------------------------------------------------
 
   # The starting values match the shipped `ramped_static.cfg`. A switch's settings map, when there
-  # is one, is the set for this activation; otherwise the file is.
+  # is one, is the set for this activation; otherwise the file is. The profile is built once from
+  # the settings a run begins with, so a hand-edited file that cannot make one is refused at the
+  # start rather than here.
   def read_settings(settings)
     var s = self.activation(settings)
-    self.start_pressure = s.pressure("initial_pressure", 5.0)
-    self.target_pressure = s.pressure("target_pressure", 20.0)
-    self.initial_ms = s.seconds("initial_duration", 60, 7200) * 1000
-    self.target_ms = s.seconds("target_duration", 60, 7200) * 1000
-    self.total_ms = s.whole("total_duration", 300, 1, 7200) * 1000
+    self.start_pressure = s.value("initial_pressure")
+    self.target_pressure = s.value("target_pressure")
+    self.initial_ms = s.value("initial_duration") * 1000
+    self.target_ms = s.value("target_duration") * 1000
+    self.total_ms = s.value("total_duration") * 1000
   end
 
   # --- the run -------------------------------------------------------------
@@ -377,11 +379,26 @@ class RampedStatic : Page
   end
 end
 
-routines.register("ramped_static", RampedStaticIcon(), RampedStatic, [
-  setting("initial_pressure", "Start", PressureEditor(1, false)),
-  setting("target_pressure", "Target", PressureEditor(1, false)),
-  setting("initial_duration", "Start time", DurationEditor(1, 0, 7200, false)),
-  setting("target_duration", "Target time", DurationEditor(1, 0, 7200, false)),
-  setting("total_duration", "Total time", DurationEditor(1, 1, 7200, false))
-])
+# The values this page edits, in the order the settings list shows them, and the one rule that binds
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds.
+class RampedStaticSettings : SettingsScene
+  def settings()
+    return [
+      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
+      setting("target_pressure", "Target", PressureEditor(1, false), 20.0),
+      setting("initial_duration", "Start time", DurationEditor(1, 0, 7200, false), 60),
+      setting("target_duration", "Target time", DurationEditor(1, 0, 7200, false), 60),
+      setting("total_duration", "Total time", DurationEditor(1, 1, 7200, false), 300)
+    ]
+  end
+
+  def problem(values)
+    if values["total_duration"] < values["initial_duration"] + values["target_duration"]
+      return "TOTAL < HOLDS"
+    end
+    return nil
+  end
+end
+
+routines.register("ramped_static", RampedStaticIcon(), RampedStatic, RampedStaticSettings)
 return RampedStatic
