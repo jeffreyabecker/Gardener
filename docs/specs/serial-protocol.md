@@ -189,6 +189,11 @@ not touch the machine.
 <- ok
 ```
 
+`log` and `unit` are the panel's: they are preferences it persists in `/settings.ini` and shows on
+its glass, so a build without a panel neither reports them in `device get` nor accepts `device set
+log` or `device set unit`. That build's `device get` reads `ok proto=1 fw=... chip=... heap=...
+caps=4`.
+
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 

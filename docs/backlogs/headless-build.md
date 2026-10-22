@@ -275,7 +275,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   the panel does.
 - [x] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
   domains exist only where the panel does.
-- [ ] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
+- [x] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
   fields exist only where the panel does.
 - [ ] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
   are answered by the panel's battery.
