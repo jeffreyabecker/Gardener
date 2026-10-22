@@ -37,25 +37,12 @@ These belong to the device. A page must not give them another meaning, and canno
 
 **Back+OK is the reboot.** It is the same safe reset the wire serves — `device reboot` on serial and
 `command 0x04` on Bluetooth — issued from the panel's side, so it works whatever a controller is
-doing. The Back hold may fire first on the way to the 5 s mark; the machine is already on the
-release path by then, so that is harmless.
+doing. It is the only gesture the device keeps for itself; every other press is a page's to answer.
 
-**Hold Back is the panel's release.** It is the device's, it acts on every page while the panel
-drives, and it is why a routine never has to know about the pump. It is also why `poll` must
-return — a poll that never returns blocks the loop that watches the hold.
-
-**OK during the hold is the way out.** On the disconnected page a short, long or double OK while
-Back is held leaves whatever routine is showing and puts the readout back on the panel, so any
-scene is one hold and one tap from home and no scene needs an exit of its own. The scene being left
-does not see that switch as `vacuum.stopped()`: the hold fired first and the scene already took
-that notice, so its own `abandon()` is what put its state right.
-
-A page may still have a stop gesture of its own, and a page that runs something usually wants one:
-the hold stops the run and OK during the hold is the way out, so Back is how a page stops a run
-without leaving it. That gesture is the page's to choose and it owns the **whole** stop rather than
-the pump alone: `vacuum.stop()` and whatever returns the page to rest belong in it. It adds to the
-hold and never replaces it — a page cannot suppress Back for 3 s, and the hold still stops a run the
-page's own gesture started.
+A page that runs something usually wants a stop gesture of its own, and that gesture owns the
+**whole** stop rather than the pump alone: `vacuum.stop()` and whatever returns the page to rest
+belong in it. Nothing else is reserved — Back is the scene's to name, and a scene that can run must
+stop itself.
 
 ## The standard page gestures
 
@@ -80,17 +67,17 @@ not distinguish it simply treats it as that key; a page may give the double a me
 and no other page is required to take it.
 
 While an external link drives the machine there is no routine page: presses are logged (`btn: ok
-short`) and only Back+OK still acts, since Back is the panel's own release and the panel is not
-driving. A link that is connected but has not claimed anything leaves the disconnected page — and
+short`) and only Back+OK still acts, because it is the reboot and works whatever a controller is
+doing. A link that is connected but has not claimed anything leaves the disconnected page — and
 its routine — in place.
 
 ## Rules for a scene
 
-1. Leave the reserved holds alone; they are the device's.
+1. Leave the reserved gesture alone; it is the device's.
 2. Up+Down is the scene's edit gesture. A routine page opens the shared settings view.
 3. Back is the scene's to name: usually it leaves without writing, or stops what the scene is
-   running. A stop of the scene's own is the whole stop — the pump and the scene's state — and it
-   adds to the Back hold, which stops every scene whether or not the scene has a gesture of its own.
+   running. A stop of the scene's own is the whole stop — the pump and the scene's state — and no
+   device hold does it for a scene that lacks one.
 4. OK is the primary action; Up and Down move or change.
 5. A view that needs one draws its hint on the panel's last line — the value scenes do. There is no
    permanent legend on the glass.
