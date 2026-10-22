@@ -16,7 +16,7 @@ namespace gardener {
 // to test.
 class DisconnectedUI : public UserInterface {
  public:
-  explicit DisconnectedUI(PanelContext& context);
+  explicit DisconnectedUI(Panel& context);
 
   bool begin() override;
   void update() override;

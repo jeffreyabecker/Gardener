@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "Tasks.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
@@ -23,7 +23,7 @@ String firstToken(const String& args) {
 
 class DeviceDomain : public Domain {
  public:
-  explicit DeviceDomain(PanelContext& app) : app_(app) {}
+  DeviceDomain(Panel& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -33,7 +33,7 @@ class DeviceDomain : public Domain {
   void set(Stream& io, const String& args);
   void reboot(Stream& io, const String& args);
 
-  PanelContext& app_;
+  Panel& app_;
 };
 
 void DeviceDomain::execute(Stream& io) {
@@ -69,12 +69,12 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     reboot(io, args);
     return;
   }
@@ -211,6 +211,6 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createDeviceDomain(PanelContext& app) { return new DeviceDomain(app); }
+Domain* createDeviceDomain(Panel& app, Link& link) { return new DeviceDomain(app, link); }
 
 }  // namespace gardener

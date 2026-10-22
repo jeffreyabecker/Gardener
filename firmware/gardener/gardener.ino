@@ -55,19 +55,19 @@ void setup() {
   }
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::PanelContext& context = gardener::buildPanelRoot(*logger, *settings);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings);
   context.config().bluetooth = settings->bluetoothEnabled();
   context.config().diagnostics = settings->logEnabled();
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
-  // one serial link and the one BLE link. The panel context is a machine, so the same object serves
-  // both halves.
-  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
-  serial->registerDomain(gardener::createControlDomain(context));
-  serial->registerDomain(gardener::createVacuumDomain(context));
-  serial->registerDomain(gardener::createDeviceDomain(context));
-  serial->registerDomain(gardener::createBuzzerDomain(context));
-  serial->registerDomain(gardener::createFsDomain(context));
+  // one serial link and the one BLE link. The panel is a machine, so the same object serves both
+  // halves.
+  gardener::SerialLink* serial = new gardener::SerialLink(context, Serial, serialAttached, *logger);
+  serial->registerDomain(gardener::createControlDomain(context, *serial));
+  serial->registerDomain(gardener::createVacuumDomain(context, *serial));
+  serial->registerDomain(gardener::createDeviceDomain(context, *serial));
+  serial->registerDomain(gardener::createBuzzerDomain(context, *serial));
+  serial->registerDomain(gardener::createFsDomain(context, *serial));
   gardener::BleLink* ble = new gardener::BleLink(&context);
   ble->registerDomain(new gardener::MachineBleDomain(&context));
   ble->registerDomain(new gardener::PanelBleDomain(&context));
@@ -90,7 +90,6 @@ void setup() {
 
   // The parts, then the tasks that drive them.
   context.boot();
-  gardener::panelBoot(context);
 
   auto* connected = new gardener::ConnectedUI(context);
   auto* disconnected = new gardener::DisconnectedUI(context);

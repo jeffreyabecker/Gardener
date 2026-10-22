@@ -6,8 +6,7 @@
 
 #include "VacuumCore.h"
 
-#include "PanelBoot.h"
-#include "PanelContext.h"
+#include "Panel.h"
 #include "PanelRoot.h"
 #include "PanelTasks.h"
 #include "ble/PanelBleDomain.h"

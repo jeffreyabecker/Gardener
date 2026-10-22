@@ -1,6 +1,6 @@
 #include "ble/PanelBleDomain.h"
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "ble/BleLink.h"
 #include "core/Units.h"
 
@@ -16,7 +16,7 @@ const BleDomain::Spec PanelBleDomain::kSpecs[] = {
     {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},    // batt
 };
 
-PanelBleDomain::PanelBleDomain(PanelContext* app) : app_(app) {}
+PanelBleDomain::PanelBleDomain(Panel* app) : app_(app) {}
 
 uint8_t PanelBleDomain::specCount() const { return Count; }
 
@@ -53,8 +53,7 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     unitWrite_.has = false;
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
-    if (app_->ownership().ownedBy(Link::Bluetooth) &&
-        unitWrite_.value < kDisplayUnitCount) {
+    if (app_->ownership().ownedBy(link) && unitWrite_.value < kDisplayUnitCount) {
       app_->settings().setUnit(static_cast<DisplayUnit>(unitWrite_.value));
     }
     describe(Unit);

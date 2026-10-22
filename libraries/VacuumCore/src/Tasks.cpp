@@ -37,13 +37,14 @@ struct ControlState {
   Logger* logger;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
-  Link lastOwner = Link::None;
+  // The link that drove on the last beat: the stack's top is compared against it, and the two are
+  // told when it changes.
+  Link* lastOwner = nullptr;
 };
 
-// The interface task's own state: the machine it reports through, the links, and the logger.
+// The interface task's own state: the machine it reports through and the links it polls.
 struct InterfaceState {
   Machine& machine;
-  Logger* logger;
   SerialLink* link;
   BleLink* ble;
 };
@@ -103,7 +104,6 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
   state.lastState = state.machine.vacuum().runState();
-  state.lastOwner = state.machine.ownership().owner();
 
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
@@ -112,14 +112,17 @@ void controlTask(void* arg) {
     // Commands first, against the machine as the last tick left it.
     drainMachineCommands(state);
 
-    // The top of the stack changed — a claim, a release or a drop all vent — so a new controller
-    // starts from an open chamber.
-    const Link top = state.machine.ownership().owner();
+    // The top of the stack changed — a claim, a release or a link that has gone — so the links are
+    // told and the chamber vents: a new controller starts from an open chamber. The stop is here
+    // rather than in the callbacks because this is the one task that writes the vacuum system.
+    Link* top = &state.machine.ownership().owner();
     if (top != state.lastOwner) {
+      if (state.lastOwner != nullptr) state.lastOwner->lostControl();
+      top->gainedControl();
       state.lastOwner = top;
       state.machine.vacuum().stop();
       String changed = "app: control to ";
-      changed += linkName(top);
+      changed += top->name();
       state.logger->info(changed.c_str());
     }
 
@@ -143,13 +146,6 @@ void interfaceTask(void* arg) {
     state.link->poll(now);
     state.ble->poll(now);
 
-    // A link that leaves is removed from the stack, and the control beat vents when the top
-    // changes; the run does not outlive its owner.
-    if (state.link->consumeLinkLost()) {
-      state.machine.ownership().drop(Link::Serial);
-      state.logger->info("app: controller left");
-    }
-
     // Connection presence, published for the panel's overlay.
     serialConnected = state.link->controllerAttached();
     bleConnected = state.ble->connected();
@@ -162,7 +158,11 @@ void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
   static ControlState control{machine, &machine.logger()};
-  static InterfaceState interface{machine, &machine.logger(), link, ble};
+  // The stack's top when the tasks start is the controller the first beat compares against: the
+  // panel in a panel build, `None` alone otherwise. No wire claim is applied before the interface
+  // task runs, so nothing can change in between.
+  control.lastOwner = &machine.ownership().owner();
+  static InterfaceState interface{machine, link, ble};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

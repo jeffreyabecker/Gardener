@@ -5,7 +5,7 @@
 
 #include "BuzzerPlayer.h"
 #include "Ownership.h"
-#include "PanelContext.h"
+#include "Panel.h"
 #include "routines/Routines.h"
 #include "storage/Settings.h"
 #include "core/Config.h"
@@ -31,7 +31,7 @@ constexpr int16_t kPanelNoResetLine = -1;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-PanelContext& buildPanelRoot(Logger& logger, Settings& settings) {
+Panel& buildPanelRoot(Logger& logger, Settings& settings) {
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);
   auto* buttons = new Buttons(cfg::BTN_UP, cfg::BTN_DOWN, cfg::BTN_OK, cfg::BTN_BACK);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -43,14 +43,14 @@ PanelContext& buildPanelRoot(Logger& logger, Settings& settings) {
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* routines = new Routines();
-  auto* panel = new PanelContext(logger, buttons, buzzer, battery, display, &settings, routines);
+  auto* panel = new Panel(logger, buttons, buzzer, battery, display, &settings, routines);
 
   // The full device has the panel and the gauge, and — like every build — it vents when its owner
   // leaves. The panel pushes itself above the floor so it is the default controller.
   panel->capabilities().setPanel(true);
   panel->capabilities().setBattery(true);
   panel->capabilities().setOwnershipStop(true);
-  panel->ownership().acquire(Link::Panel);
+  panel->ownership().acquire(*panel);
   return *panel;
 }
 

@@ -4,7 +4,7 @@
 #include <berry.h>
 #include <stdio.h>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "Logger.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
@@ -49,7 +49,7 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(PanelContext& context) {
+bool Routines::begin(Panel& context) {
   logger_ = &context.logger();
 
   vm_ = be_vm_new();

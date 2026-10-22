@@ -37,10 +37,10 @@ void setup() {
   machine.config().diagnostics = true;
 
   // The wire surface is this build's: the machine's domains and nothing else.
-  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
-  serial->registerDomain(gardener::createControlDomain(machine));
-  serial->registerDomain(gardener::createVacuumDomain(machine));
-  serial->registerDomain(gardener::createMachineDeviceDomain(machine));
+  gardener::SerialLink* serial = new gardener::SerialLink(machine, Serial, serialAttached, *logger);
+  serial->registerDomain(gardener::createControlDomain(machine, *serial));
+  serial->registerDomain(gardener::createVacuumDomain(machine, *serial));
+  serial->registerDomain(gardener::createMachineDeviceDomain(machine, *serial));
   gardener::BleLink* ble = new gardener::BleLink(&machine);
   ble->registerDomain(new gardener::MachineBleDomain(&machine));
 

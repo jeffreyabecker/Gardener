@@ -88,11 +88,12 @@ void BleLink::poll(uint32_t nowMs) {
   }
 
   if (!linkLost_) return;
+  // A central that leaves is a link that has left: it pops itself once it is on
+  // top. While it sits beneath another link, this pass finds nothing to do and
+  // the next one asks again, so a departed central cannot linger as an owner.
+  if (!app_->ownership().release(*this)) return;
   linkLost_ = false;
   subscriptions_ = 0;
-  // A central that leaves is removed from the stack; the control beat vents if
-  // it was on top, and a reconnected central simply claims again.
-  app_->ownership().drop(Link::Bluetooth);
 }
 
 void BleLink::notify(NimBLECharacteristic* characteristic) {

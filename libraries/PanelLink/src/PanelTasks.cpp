@@ -5,7 +5,7 @@
 
 #include "Logger.h"
 #include "Ownership.h"
-#include "PanelContext.h"
+#include "Panel.h"
 #include "SafeReboot.h"
 #include "Tasks.h"
 #include "panel/ConnectedUI.h"
@@ -37,7 +37,7 @@ constexpr uint32_t ResetHoldMs = 5000;
 // The panel task's own state: the two screens it owns, the one showing, which page it is, and the
 // chord and hold latches the keys need.
 struct PanelState {
-  PanelContext& context;
+  Panel& context;
   Logger* logger;
   ConnectedUI* connected;
   DisconnectedUI* disconnected;
@@ -77,7 +77,7 @@ void buttonsTick(PanelState& state) {
     return;
   }
   const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
-  if (backHeld && state.context.ownership().ownedBy(Link::Panel)) {
+  if (backHeld && state.context.ownership().ownedBy(state.context)) {
     // One bump per hold, and the stop re-asserted each beat the hold lasts, so a start that sneaks
     // in is undone in the same beat.
     if (!state.backStopFired) {
@@ -100,7 +100,7 @@ void buttonsTick(PanelState& state) {
     }
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
-    if (backHeld && !state.context.ownership().external() && button == Button::Ok) {
+    if (backHeld && state.context.ownership().ownedBy(state.context) && button == Button::Ok) {
       goHomeSeq++;
       continue;
     }
@@ -121,7 +121,7 @@ void buttonsTick(PanelState& state) {
 }
 
 void deliverPress(PanelState& state, Button button, Press press) {
-  if (!state.context.ownership().external() && state.context.routines().active()) {
+  if (state.context.ownership().ownedBy(state.context) && state.context.routines().active()) {
     state.context.routines().pushPress(button, press);
     return;
   }
@@ -139,7 +139,7 @@ void panelTask(void* arg) {
 
   // A fresh boot starts with the panel on top: an external link that is present is only a reader
   // until it claims, so the panel's own page shows first.
-  state.ownedShown = state.context.ownership().external();
+  state.ownedShown = state.context.externalPage();
   state.ui = state.ownedShown ? static_cast<UserInterface*>(state.connected)
                               : static_cast<UserInterface*>(state.disconnected);
   if (state.ui) state.ui->begin();
@@ -147,10 +147,10 @@ void panelTask(void* arg) {
   for (;;) {
     buttonsTick(state);
 
-    // The screen follows ownership, not the cable: an external claim paints the link's page, and a
+    // The screen follows control, not the cable: an external claim paints the link's page, and a
     // release hands the panel back. The hand-off vents the run, so the page that returns sees the
     // stop on its first poll.
-    const bool external = state.context.ownership().external();
+    const bool external = state.context.externalPage();
     if (external != state.ownedShown) {
       state.ownedShown = external;
       stopSeq++;
@@ -173,7 +173,7 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(PanelContext& context, ConnectedUI* connected,
+void spawnPanelTask(Panel& context, ConnectedUI* connected,
                     DisconnectedUI* disconnected) {
   static PanelState panel{context, &context.logger(), connected, disconnected};
 

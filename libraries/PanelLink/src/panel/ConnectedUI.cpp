@@ -1,7 +1,9 @@
 #include "panel/ConnectedUI.h"
 
 #include "Ownership.h"
+#include "ble/BleLink.h"
 #include "core/Config.h"
+#include "serial/SerialLink.h"
 
 namespace gardener {
 namespace {
@@ -13,7 +15,7 @@ constexpr int16_t kIconCentreY = 35;
 
 }  // namespace
 
-ConnectedUI::ConnectedUI(PanelContext& context) : UserInterface(context) {}
+ConnectedUI::ConnectedUI(Panel& context) : UserInterface(context) {}
 
 // Taking control shows the icon straight away: the page is the statement that someone is driving,
 // and it should not arrive behind a splash.
@@ -38,17 +40,15 @@ void ConnectedUI::update() {
 void ConnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  switch (context_.ownership().owner()) {
-    case Link::Serial:
+  // The page is shown only while an external link drives, and the icon names which one arrived.
+  switch (context_.ownership().owner().code()) {
+    case SerialLink::Code:
       serialIcon();
       break;
-    case Link::Bluetooth:
+    case BleLink::Code:
       bluetoothIcon();
       break;
-    // The page is shown only while an external link drives, so these never draw: the panel's own
-    // pages are the mark and the routines.
-    case Link::Panel:
-    case Link::None:
+    default:
       break;
   }
   panel.display();

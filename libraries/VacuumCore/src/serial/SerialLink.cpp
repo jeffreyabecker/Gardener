@@ -1,12 +1,13 @@
 #include "serial/SerialLink.h"
 
 #include "Logger.h"
+#include "Machine.h"
 #include "core/Config.h"
 
 namespace gardener {
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger)
-    : stream_(stream), present_(present), logger_(logger) {}
+SerialLink::SerialLink(Machine& machine, Stream& stream, PresenceFn present, Logger& logger)
+    : machine_(machine), stream_(stream), present_(present), logger_(logger) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
@@ -16,12 +17,6 @@ void SerialLink::begin() {
 }
 
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
-
-bool SerialLink::consumeLinkLost() {
-  bool lost = linkLost_;
-  linkLost_ = false;
-  return lost;
-}
 
 // --- replies ---------------------------------------------------------------
 // The link writes only its own errors and diagnostics. A domain formats its reply through the
@@ -105,6 +100,14 @@ void SerialLink::poll(uint32_t nowMs) {
     logger_.warn("serial: controller detached");
   }
   attached_ = attached;
+
+  // A port that has gone is a link that has left: it pops itself once it is on top. While it sits
+  // beneath another link, this pass finds nothing to do and the next one asks again; a claim
+  // cancels the departure, so a link that comes back and claims again keeps its place.
+  if (linkLost_ && machine_.ownership().release(*this)) {
+    linkLost_ = false;
+    logger_.info("app: controller left");
+  }
 }
 
 bool SerialLink::dispatchDomain(const String& token) {

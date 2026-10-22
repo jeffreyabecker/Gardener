@@ -80,8 +80,8 @@ foreign boundary like that; anywhere else it is a second implementation that doe
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; `Machine` and `buildPanelRoot()` build and own the parts and hand out the contexts, and
 the serial domains read them when they format a reply, so there is no snapshot or second copy to
-keep in step. The panel context is a machine with the panel arranged around it, so it needs no
-second name for the machine.
+keep in step. The panel is a machine with its parts arranged around it, so it needs no second name
+for the machine.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no `Config.h` flag, no `mode` field for a behaviour nothing uses. Add the second case when the

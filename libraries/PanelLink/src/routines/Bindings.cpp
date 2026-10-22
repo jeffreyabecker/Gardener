@@ -10,7 +10,7 @@ namespace gardener {
 namespace berry {
 
 // The pointers `bindings/Module.h` declares. install() is the one assignment.
-PanelContext* gContext = nullptr;
+Panel* gContext = nullptr;
 Routines* gRoutines = nullptr;
 Logger* gLogger = nullptr;
 
@@ -61,7 +61,7 @@ constexpr const char* kRecords =
 
 }  // namespace
 
-void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger) {
+void install(bvm* vm, Panel& context, Routines& routines, Logger& logger) {
   gContext = &context;
   gRoutines = &routines;
   gLogger = &logger;

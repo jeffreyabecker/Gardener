@@ -13,7 +13,7 @@ struct bvm;
 
 namespace gardener {
 
-class PanelContext;
+class Panel;
 class Logger;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
@@ -35,7 +35,7 @@ class Routines {
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
   // False only when the interpreter cannot be allocated at all.
-  bool begin(PanelContext& context);
+  bool begin(Panel& context);
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.

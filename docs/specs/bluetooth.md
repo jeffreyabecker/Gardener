@@ -43,7 +43,8 @@ the top of the stack and the link beneath is set aside.
 
 Disconnecting removes the link from the stack, so a run does not outlive its owner: the chamber
 vents and control falls to the link beneath — the panel, which resumes or idles, or `none`, which
-vents. A reconnected phone is a reader until it claims again.
+vents. A phone that disconnects while another link drives leaves the stack when it reaches the top.
+A reconnected phone is a reader until it claims again.
 
 The writable characteristics require an encrypted link. The device pairs Just Works and keeps the
 bond in NVS, so reads stay open to a scanner while nothing can command the machine until it pairs.

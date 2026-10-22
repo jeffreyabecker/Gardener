@@ -6,14 +6,21 @@
 
 namespace gardener {
 
+class Link;
+
 // One domain of the serial surface. The dispatcher reads only the domain token, then hands it the
 // stream at that point. `io` is the port: the domain reads the rest of its command from it and
-// writes its reply back to it.
+// writes its reply back to it. `link_` is the link that serves the domain: a state-changing verb is
+// refused unless that link is on top of the ownership stack.
 class Domain {
  public:
+  explicit Domain(Link& link) : link_(link) {}
   virtual ~Domain() {}
   virtual const char* name() const = 0;
   virtual void execute(Stream& io) = 0;
+
+ protected:
+  Link& link_;
 };
 
 // The domains in dispatch order. SerialLink owns it.

@@ -17,7 +17,7 @@ String firstToken(const String& args) {
 
 class ControlDomain : public Domain {
  public:
-  explicit ControlDomain(Machine& app) : app_(app) {}
+  ControlDomain(Machine& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "control"; }
   void execute(Stream& io) override;
@@ -68,7 +68,7 @@ void ControlDomain::execute(Stream& io) {
 // The caller's view of the stack: who is on top, named rather than "owned by me or not".
 void ControlDomain::ownedReply(Stream& io) const {
   io.print("ok control=");
-  io.print(linkName(app_.ownership().owner()));
+  io.print(app_.ownership().owner().name());
   io.print('\n');
 }
 
@@ -81,7 +81,7 @@ void ControlDomain::acquire(Stream& io, const String& args) {
   }
 
   // A claim always succeeds and takes the top; the control beat vents the hand-over.
-  app_.ownership().acquire(Link::Serial);
+  app_.ownership().acquire(link_);
   ownedReply(io);
 }
 
@@ -94,14 +94,14 @@ void ControlDomain::release(Stream& io, const String& args) {
   }
 
   // Releasing control is the safe exit: the chamber goes onto the same release path as
-  // `vacuum stop`, which the control beat applies when the top changes. Releasing without owning
-  // is a no-op.
-  app_.ownership().release(Link::Serial);
+  // `vacuum stop`, which the control beat applies when the top changes. Only the link on top can
+  // release itself, so a link beneath another is a no-op.
+  app_.ownership().release(link_);
   ownedReply(io);
 }
 
 }  // namespace
 
-Domain* createControlDomain(Machine& app) { return new ControlDomain(app); }
+Domain* createControlDomain(Machine& app, Link& link) { return new ControlDomain(app, link); }
 
 }  // namespace gardener

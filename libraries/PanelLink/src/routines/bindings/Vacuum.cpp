@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "Logger.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"

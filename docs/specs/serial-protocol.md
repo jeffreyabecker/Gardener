@@ -47,9 +47,11 @@ time, and `control release` is the graceful exit: the link leaves the stack, whi
 panel returns to its own page.
 
 If the port disappears while the link drives, the link is removed from the stack: the chamber vents
-and control falls to the link beneath, so a reconnected link is a reader until it claims again. The
-device can only notice a drop when the stream reports host presence, which USB CDC can and a plain
-UART cannot; there is no command that sets or reports presence.
+and control falls to the link beneath, so a reconnected link is a reader until it claims again. A
+port that disappears while another link drives leaves the stack when it reaches the top, so it
+cannot be left behind as an owner. The device can only notice a drop when the stream reports host
+presence, which USB CDC can and a plain UART cannot; there is no command that sets or reports
+presence.
 
 ## 3. Grammar
 
@@ -119,8 +121,8 @@ the machine at once. Whoever is on top drives; a link that is not on top is a re
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
-| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there |
-| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
+| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top, moving there if it was beneath another link. Always succeeds, and a claim from the top leaves the stack as it was |
+| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | the link on top leaves the stack; a link that is not on top is a no-op. Idempotent |
 
 The reply names the top rather than answering "owned by you or not", so a controller can tell
 whether the machine is being driven by the panel or by another link. `none` is the floor: no link
@@ -150,8 +152,9 @@ the next command starts on a boundary.
 ```
 
 A build with no panel has `none` at the floor, so its `get` before a claim reads `ok control=none`
-and its `release` returns there. Releasing a link that is not on the stack is idempotent and does
-not touch the machine.
+and its `release` returns there. Only the link on top can give control back: a release from beneath
+another link, or from a link that never claimed, is idempotent and does not touch the machine, and
+the reply names whoever is still driving.
 
 ## 6. `device` — the machine and this stream
 

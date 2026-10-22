@@ -20,7 +20,7 @@ String firstToken(const String& args) {
 
 class VacuumDomain : public Domain {
  public:
-  explicit VacuumDomain(Machine& app) : app_(app) {}
+  VacuumDomain(Machine& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "vacuum"; }
   void execute(Stream& io) override;
@@ -64,22 +64,22 @@ void VacuumDomain::execute(Stream& io) {
     return;
   }
   if (verb == "target") {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     target(io, args);
     return;
   }
   if (verb == "start") {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     start(io, args);
     return;
   }
   if (verb == "stop") {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     stop(io, args);
     return;
   }
   if (verb == "reset") {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     reset(io, args);
     return;
   }
@@ -216,6 +216,6 @@ void VacuumDomain::reset(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createVacuumDomain(Machine& app) { return new VacuumDomain(app); }
+Domain* createVacuumDomain(Machine& app, Link& link) { return new VacuumDomain(app, link); }
 
 }  // namespace gardener

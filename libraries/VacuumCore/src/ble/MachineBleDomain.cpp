@@ -71,7 +71,9 @@ void MachineBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic)
   characteristics_[index] = characteristic;
 }
 
-bool MachineBleDomain::owned() const { return app_->ownership().ownedBy(Link::Bluetooth); }
+bool MachineBleDomain::owned(const Link& link) const {
+  return app_->ownership().ownedBy(link);
+}
 
 void MachineBleDomain::describe(uint8_t index) {
   VacuumSystem& vacuum = app_->vacuum();
@@ -101,7 +103,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, kBleProtocolVersion);
       break;
     case Control:
-      setByte(chr, static_cast<uint8_t>(app_->ownership().owner()));
+      setByte(chr, app_->ownership().owner().code());
       break;
     case Sensor:
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
@@ -155,20 +157,20 @@ void MachineBleDomain::applyPending(BleLink& link) {
     control_.has = false;
     // A claim takes the top, a release leaves it; either way the control beat vents the hand-over.
     if (control_.value != 0) {
-      ownership.acquire(Link::Bluetooth);
+      ownership.acquire(link);
     } else {
-      ownership.release(Link::Bluetooth);
+      ownership.release(link);
     }
     // The caller's view: who is on top, after the write.
     describe(Control);
     link.notify(characteristics_[Control]);
-    lastControl_ = static_cast<uint8_t>(ownership.owner());
+    lastControl_ = ownership.owner().code();
   }
 
   if (target_.has) {
     target_.has = false;
     const float kpa = target_.value;
-    if (owned() && isfinite(kpa)) {
+    if (owned(link) && isfinite(kpa)) {
       // 0 clears the target; anything else is the vacuum system's to accept or
       // refuse against its own floor, so the two surfaces cannot disagree.
       if (kpa == 0.0f) {
@@ -191,7 +193,7 @@ void MachineBleDomain::applyPending(BleLink& link) {
 
   if (command_.has) {
     command_.has = false;
-    const uint8_t result = execute(command_.value);
+    const uint8_t result = execute(link, command_.value);
     setByte(characteristics_[Command], result);
     link.notify(characteristics_[Command]);
   }
@@ -201,8 +203,8 @@ void MachineBleDomain::applyPending(BleLink& link) {
 // from the same VacuumSystem::startRefusal(), so the two surfaces cannot
 // disagree about why a run will not start. Every applied opcode is queued for
 // the control task; only the refusal and the result byte are answered here.
-uint8_t MachineBleDomain::execute(uint8_t opcode) {
-  if (!owned()) return kResultNotControlling;
+uint8_t MachineBleDomain::execute(const Link& link, uint8_t opcode) {
+  if (!owned(link)) return kResultNotControlling;
 
   VacuumSystem& vacuum = app_->vacuum();
   switch (opcode) {
@@ -246,8 +248,7 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   VacuumSystem& vacuum = app_->vacuum();
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
-  publishOnChange(Control, static_cast<uint8_t>(app_->ownership().owner()), lastControl_, baseline,
-                  link);
+  publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
   publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
   publishOnChange(Floor, cfg::CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
 

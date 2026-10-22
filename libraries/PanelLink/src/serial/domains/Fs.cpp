@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
 #include "core/Config.h"
@@ -137,7 +137,7 @@ bool oneArg(const String& args, String& token, String& bad) {
 
 class FsDomain : public Domain {
  public:
-  explicit FsDomain(PanelContext& app) : app_(app) {}
+  FsDomain(Panel& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "fs"; }
   void execute(Stream& io) override;
@@ -157,7 +157,7 @@ class FsDomain : public Domain {
   // Consumes a body a refused header still declared. False means the reply has already been sent.
   bool discardPayload(Stream& io, uint32_t bytes);
 
-  PanelContext& app_;
+  Panel& app_;
 };
 
 void FsDomain::execute(Stream& io) {
@@ -183,9 +183,9 @@ void FsDomain::execute(Stream& io) {
   } else if (verb == "write") {
     write(io, rest);
   } else if (verb == "mkdir") {
-    if (requireControl(app_, io)) makeDirectory(io, rest);
+    if (requireControl(app_, link_, io)) makeDirectory(io, rest);
   } else if (verb == "delete") {
-    if (requireControl(app_, io)) remove(io, rest);
+    if (requireControl(app_, link_, io)) remove(io, rest);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);
@@ -310,7 +310,7 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (!hasControl(app_)) {
+  if (!hasControl(app_, link_)) {
     // The header is valid, so its declared body still has to be consumed before the refusal: the
     // next command has to start on a boundary even when this one is not allowed to run.
     if (!discardPayload(io, bytes)) return;
@@ -479,6 +479,6 @@ bool FsDomain::discardPayload(Stream& io, uint32_t bytes) {
 
 }  // namespace
 
-Domain* createFsDomain(PanelContext& app) { return new FsDomain(app); }
+Domain* createFsDomain(Panel& app, Link& link) { return new FsDomain(app, link); }
 
 }  // namespace gardener

@@ -5,6 +5,7 @@
 namespace gardener {
 
 class Machine;
+class Link;
 
 // The machine's slice of the GATT table: state, kpa, target, duty, fault,
 // command, fw, ble_proto, control, sensor and floor. Everything a controller
@@ -40,8 +41,8 @@ class MachineBleDomain : public BleDomain {
 
   static const Spec kSpecs[Count];
 
-  bool owned() const;
-  uint8_t execute(uint8_t opcode);
+  bool owned(const Link& link) const;
+  uint8_t execute(const Link& link, uint8_t opcode);
   void applyPending(BleLink& link);
   void publish(uint32_t nowMs, BleLink& link, bool baseline);
   void publishOnChange(uint8_t index, uint8_t value, uint8_t& last, bool force, BleLink& link);

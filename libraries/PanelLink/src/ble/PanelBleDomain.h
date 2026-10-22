@@ -4,13 +4,13 @@
 
 namespace gardener {
 
-class PanelContext;
+class Panel;
 
 // The panel's slice of the GATT table: `unit` — what the panel prints — and `batt` — the gauge.
 // Both have no meaning on a device without a panel.
 class PanelBleDomain : public BleDomain {
  public:
-  explicit PanelBleDomain(PanelContext* app);
+  explicit PanelBleDomain(Panel* app);
 
   uint8_t specCount() const override;
   Spec specAt(uint8_t index) const override;
@@ -24,7 +24,7 @@ class PanelBleDomain : public BleDomain {
 
   static const Spec kSpecs[Count];
 
-  PanelContext* app_;
+  Panel* app_;
   NimBLECharacteristic* characteristics_[Count] = {};
   struct PendingByte {
     volatile bool has = false;

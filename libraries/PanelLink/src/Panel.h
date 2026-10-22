@@ -17,10 +17,16 @@ namespace gardener {
 // The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
 // machine it reads and commands. It *is* a Machine, so the panel's code reaches the machine by the
 // same surface a controller uses and there is no second name for it.
-class PanelContext : public Machine {
+//
+// It is also one of the links on the ownership stack: the composition pushes it at boot, so it is
+// the default controller. The two control notifications are what its pages follow — the panel's own
+// pages while it drives, the connected page while an external link does.
+class Panel : public Machine, public Link {
  public:
-  PanelContext(Logger& logger, ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
-               Display* display, Settings* settings, Routines* routines)
+  static constexpr uint8_t Code = 3;
+
+  Panel(Logger& logger, ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
+        Display* display, Settings* settings, Routines* routines)
       : Machine(logger),
         buttons_(buttons),
         buzzer_(buzzer),
@@ -28,6 +34,18 @@ class PanelContext : public Machine {
         overlay_(new Overlay(display, battery, &vacuum())),
         settings_(settings),
         routines_(routines) {}
+
+  const char* name() const override { return "panel"; }
+  uint8_t code() const override { return Code; }
+
+  void gainedControl() override { external_ = false; }
+  void lostControl() override { external_ = true; }
+  // True while an external link drives: the panel shows that link's page rather than its own.
+  bool externalPage() const { return external_; }
+
+  // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
+  // interpreter.
+  void boot();
 
   ButtonPanel& buttons() { return *buttons_; }
   BuzzerPlayer& buzzer() { return *buzzer_; }
@@ -45,6 +63,9 @@ class PanelContext : public Machine {
   Overlay* overlay_;
   Settings* settings_;
   Routines* routines_;
+  // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
+  // connection flags make.
+  volatile bool external_ = false;
 };
 
 }  // namespace gardener

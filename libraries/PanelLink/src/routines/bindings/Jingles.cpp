@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "BuzzerPlayer.h"
 #include "Logger.h"
 #include "routines/bindings/Module.h"

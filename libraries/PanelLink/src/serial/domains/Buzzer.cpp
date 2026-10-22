@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "PanelContext.h"
+#include "Panel.h"
 #include "BuzzerPlayer.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
@@ -20,7 +20,7 @@ String firstToken(const String& args) {
 
 class BuzzerDomain : public Domain {
  public:
-  explicit BuzzerDomain(PanelContext& app) : app_(app) {}
+  BuzzerDomain(Panel& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "buzzer"; }
   void execute(Stream& io) override;
@@ -31,7 +31,7 @@ class BuzzerDomain : public Domain {
   void play(Stream& io, const String& args);
   void stop(Stream& io, const String& args);
 
-  PanelContext& app_;
+  Panel& app_;
 };
 
 void BuzzerDomain::execute(Stream& io) {
@@ -53,11 +53,11 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "get") {
     get(io, args);
   } else if (verb == "tone") {
-    if (requireControl(app_, io)) tone(io, args);
+    if (requireControl(app_, link_, io)) tone(io, args);
   } else if (verb == "play") {
-    if (requireControl(app_, io)) play(io, args);
+    if (requireControl(app_, link_, io)) play(io, args);
   } else if (verb == "stop") {
-    if (requireControl(app_, io)) stop(io, args);
+    if (requireControl(app_, link_, io)) stop(io, args);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);
@@ -189,6 +189,6 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createBuzzerDomain(PanelContext& app) { return new BuzzerDomain(app); }
+Domain* createBuzzerDomain(Panel& app, Link& link) { return new BuzzerDomain(app, link); }
 
 }  // namespace gardener

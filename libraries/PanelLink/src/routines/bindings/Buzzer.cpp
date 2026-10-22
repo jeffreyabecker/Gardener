@@ -1,5 +1,5 @@
 #include "BuzzerPlayer.h"
-#include "PanelContext.h"
+#include "Panel.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 #include "core/Config.h"

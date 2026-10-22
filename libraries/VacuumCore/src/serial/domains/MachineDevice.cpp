@@ -22,7 +22,7 @@ String firstToken(const String& args) {
 // a link holds one domain per name.
 class MachineDeviceDomain : public Domain {
  public:
-  explicit MachineDeviceDomain(Machine& app) : app_(app) {}
+  MachineDeviceDomain(Machine& app, Link& link) : Domain(link), app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -65,7 +65,7 @@ void MachineDeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_, io)) return;
+    if (!requireControl(app_, link_, io)) return;
     reboot(io, args);
     return;
   }
@@ -109,6 +109,8 @@ void MachineDeviceDomain::reboot(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createMachineDeviceDomain(Machine& app) { return new MachineDeviceDomain(app); }
+Domain* createMachineDeviceDomain(Machine& app, Link& link) {
+  return new MachineDeviceDomain(app, link);
+}
 
 }  // namespace gardener

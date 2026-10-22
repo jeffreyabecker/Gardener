@@ -41,8 +41,9 @@ returns to `PULL`/`HOLD`.
 
 The controller is whoever is on top of the ownership stack, and **any change of the top vents the
 chamber** — a claim, a release, or a link that drops. A new controller therefore always starts from
-an open chamber, and a link that vanishes cannot leave the machine held: it is no longer on the
-stack, so the link beneath it takes over from a vented chamber.
+an open chamber. Only the link on top can leave the stack, so a link that loses its transport
+beneath another one stays there and leaves when it reaches the top, venting then exactly as if it
+had dropped while driving: a vanished link can never leave the machine held.
 
 A build with no panel has nothing beneath an external link: its stack is `none` alone until
 something claims, so **it holds pressure only while a link owns it**. An unowned machine is vented,
