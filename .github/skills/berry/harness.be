@@ -5,8 +5,9 @@
 # machine and the store. It is loaded before /modules and /routines, because a Berry
 # file cannot compile a name that is not declared yet.
 #
-# It is not the firmware. The machine is a model, the panel counts calls instead of
-# drawing, and the store is memory rather than LittleFS. What it checks is the
+# It is not the firmware. The machine is a model, the store is memory rather than
+# LittleFS, and the panel is a real 128x64 frame owned by frame.c -- every drawing verb
+# below forwards to it, so the check can save what a page drew. What it checks is the
 # contract: the files compile, every registered object looks like a routine, and
 # activate() and poll() run without raising.
 
@@ -22,16 +23,6 @@ harnessUnits = [
 ]
 
 harnessUnitIndex = 0
-
-# --- the faces screen.draw_text accepts, from app/panel/Fonts.cpp ----------
-
-harnessFaces = [
-  "sans9", "sans12", "sans18", "sans24",
-  "sansbold9", "sansbold12", "sansbold18", "sansbold24",
-  "mono9", "mono12", "mono18", "mono24",
-  "monobold9", "monobold12", "monobold18", "monobold24",
-  "tomthumb", "picopixel"
-]
 
 # --- what the run found ----------------------------------------------------
 
@@ -61,15 +52,6 @@ end
 
 def harness_note(text)
   harnessLog = harnessLog + "[I] " + text + "\n"
-end
-
-def harness_face_known(name)
-  for face : harnessFaces
-    if face == name
-      return true
-    end
-  end
-  return false
 end
 
 # --- the records, exactly as Bindings.cpp declares them --------------------
@@ -342,6 +324,9 @@ class VacuumStub
 end
 
 # --- the panel -------------------------------------------------------------
+#
+# The pixels are the frame module's (frame.c): this keeps the contract around them -- the unit
+# record, the face-name errors and the call counters -- and hands each verb over.
 
 class ScreenStub
   var draws, clears, flushes
@@ -350,6 +335,7 @@ class ScreenStub
     self.draws = 0
     self.clears = 0
     self.flushes = 0
+    frame.clear()
   end
 
   def check_face(font)
@@ -359,91 +345,110 @@ class ScreenStub
     if type(font) != "string"
       raise "type_error", "screen.draw_text: font name expected"
     end
-    if !harness_face_known(font)
+    if !frame.known(font)
       raise "value_error", "screen.draw_text: unknown font " + font
     end
   end
 
   def draw_clear()
+    frame.clear()
     self.clears += 1
   end
 
   def draw_pixel(x, y)
+    frame.pixel(x, y)
     self.draws += 1
   end
 
   def draw_line(x0, y0, x1, y1)
+    frame.line(x0, y0, x1, y1)
     self.draws += 1
   end
 
   def draw_hline(x, y, w)
+    frame.hline(x, y, w)
     self.draws += 1
   end
 
   def draw_vline(x, y, h)
+    frame.vline(x, y, h)
     self.draws += 1
   end
 
   def draw_rect(x, y, w, h)
+    frame.rect(x, y, w, h)
     self.draws += 1
   end
 
   def draw_fillrect(x, y, w, h)
+    frame.fillrect(x, y, w, h)
     self.draws += 1
   end
 
   def draw_roundrect(x, y, w, h, r)
+    frame.roundrect(x, y, w, h, r)
     self.draws += 1
   end
 
   def draw_fillroundrect(x, y, w, h, r)
+    frame.fillroundrect(x, y, w, h, r)
     self.draws += 1
   end
 
   def draw_circle(x, y, r)
+    frame.circle(x, y, r)
     self.draws += 1
   end
 
   def draw_fillcircle(x, y, r)
+    frame.fillcircle(x, y, r)
     self.draws += 1
   end
 
   def draw_ellipse(x, y, rw, rh)
+    frame.ellipse(x, y, rw, rh)
     self.draws += 1
   end
 
   def draw_fillellipse(x, y, rw, rh)
+    frame.fillellipse(x, y, rw, rh)
     self.draws += 1
   end
 
   def draw_triangle(x0, y0, x1, y1, x2, y2)
+    frame.triangle(x0, y0, x1, y1, x2, y2)
     self.draws += 1
   end
 
   def draw_filltriangle(x0, y0, x1, y1, x2, y2)
+    frame.filltriangle(x0, y0, x1, y1, x2, y2)
     self.draws += 1
   end
 
   def draw_rotatedrect(cx, cy, w, h, angle)
+    frame.rotatedrect(cx, cy, w, h, angle)
     self.draws += 1
   end
 
   def draw_fillrotatedrect(cx, cy, w, h, angle)
+    frame.fillrotatedrect(cx, cy, w, h, angle)
     self.draws += 1
   end
 
   def draw_text(x, y, size, inverted, text, font)
     self.check_face(font)
+    frame.text(x, y, size, inverted, text, font)
     self.draws += 1
   end
 
-  # The firmware measures in the real face; the check only needs a box a page can
-  # lay out with, so the built-in 5x7 is scaled for every face.
+  # The panel's own ink box for the string in that face, measured by the same code the driver
+  # measures with, so Text.fit() picks the face the glass would.
   def text_bounds(text, scale, font)
     self.check_face(font)
+    var measured = frame.bounds(text, scale, font)
     var box = bounds()
-    box.w = size(str(text)) * 6 * scale
-    box.h = 8 * scale
+    box.w = measured[0]
+    box.h = measured[1]
     return box
   end
 

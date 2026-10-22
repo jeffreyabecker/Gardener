@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "berry.h"
+#include "frame.h"
 
 #define MAX_PATHS 256
 
@@ -61,6 +62,28 @@ static int callWithText(bvm* vm, const char* function, const char* name, const c
   return 1;
 }
 
+// --art draws instead of checking: the page runs and harness_art saves the frame it left. The call
+// leaves its arguments above the result, so the answer is argc + 1 places down.
+static int callArt(bvm* vm, const char* name, int seconds, const char* path) {
+  be_pop(vm, be_top(vm));  // the seeded values leave their call's arguments behind
+  if (!be_getglobal(vm, "harness_art")) {
+    be_pop(vm, 1);
+    printf("[E] vm: harness_art is missing\n");
+    return 0;
+  }
+  be_pushstring(vm, name);
+  be_pushint(vm, seconds);
+  be_pushstring(vm, path);
+  if (be_pcall(vm, 3) != BE_OK) {
+    report(vm, "harness_art", name);
+    return 0;
+  }
+  const int result = be_absindex(vm, -(3 + 1));
+  const int ok = be_isbool(vm, result) && be_tobool(vm, result);
+  be_pop(vm, 4);
+  return ok;
+}
+
 static void printLog(bvm* vm) {
   if (!be_getglobal(vm, "harnessLog")) {
     be_pop(vm, 1);
@@ -78,10 +101,19 @@ int main(int argc, char** argv) {
   int fileCount = 0;
   int seedCount = 0;
   int compileOnly = 0;
+  const char* artName = NULL;
+  const char* artPath = NULL;
+  int artSeconds = 0;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--compile-only") == 0) {
       compileOnly = 1;
+    } else if (strcmp(argv[i], "--art") == 0 && i + 1 < argc) {
+      artName = argv[++i];
+    } else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
+      artPath = argv[++i];
+    } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
+      artSeconds = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--values") == 0 && i + 1 < argc) {
       const char* value = argv[++i];
       const char* split = strchr(value, '=');
@@ -102,6 +134,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "no memory for the VM\n");
     return 2;
   }
+  // The frame is a native module: the harness's screen stub forwards to it, so it has to be a
+  // global before any file names it.
+  frameRegister(vm);
 
   int failed = 0;
   int loaded = 0;
@@ -151,7 +186,9 @@ int main(int argc, char** argv) {
   }
 
   int passed = 1;
-  if (!compileOnly) {
+  if (artName != NULL) {
+    passed = callArt(vm, artName, artSeconds, artPath != NULL ? artPath : "frame.bmp");
+  } else if (!compileOnly) {
     if (!be_getglobal(vm, "harness_check")) {
       be_pop(vm, 1);
       printf("[E] vm: harness_check is missing\n");
@@ -172,7 +209,9 @@ int main(int argc, char** argv) {
   be_vm_delete(vm);
 
   printf("%d of %d file%s loaded", loaded, fileCount, fileCount == 1 ? "" : "s");
-  if (!compileOnly) {
+  if (artName != NULL) {
+    printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
+  } else if (!compileOnly) {
     printf(", check %s", passed && failed == 0 ? "passed" : "failed");
   }
   printf("\n");

@@ -11,7 +11,8 @@ local libraries. There is no host test suite, and nothing checks the layer rule,
 `assets/`, or a file in `firmware/gardener/data/` — a `.be` routine, a page, a `.cfg` — cannot change
 what the build says, so editing one is not a reason to run it. The data image is checked on the host
 instead: `python .github/skills/berry/check.py` compiles and drives every `.be` file, which is the
-success a routine edit has to prove.
+success a routine edit has to prove, and `--art NAME` saves the frame a page actually draws as a BMP
+when a layout is the question.
 
 **Consider the build before running it.** Ask what this run would catch that the last one did not: what
 changed in the tree since then, and whether that change can reach the compiler. When the answer is

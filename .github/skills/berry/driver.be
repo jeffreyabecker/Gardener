@@ -198,6 +198,31 @@ def harness_run_page(entry)
   end
 end
 
+# Draw one page and save the frame as a BMP. No seconds is the page as it appears; seconds presses OK
+# and runs that much virtual time first, so a cycle can be caught mid-phase.
+def harness_art(name, seconds, path)
+  var entry = harness_find(name)
+  if entry == nil
+    harness_fail("art: no routine named " + name)
+    return false
+  end
+  harness_reset()
+  if !harness_activate(entry, nil)
+    return false
+  end
+  if seconds > 0
+    harness_press("ok", "single")
+    if !harness_beats(seconds * 4)
+      return false
+    end
+  else
+    harness_beats(1)
+  end
+  frame.save(path)
+  harness_note("art: " + name + " saved to " + path)
+  return harnessErrors == 0
+end
+
 # The jingle library is data in /modules/jingles.txt. Every identifier must resolve to a title,
 # a short label and a non-empty note string; current() follows the device setting and falls back.
 def harness_check_jingles()

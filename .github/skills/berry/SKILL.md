@@ -23,13 +23,18 @@ python .github/skills/berry/check.py              # compile, load and drive the 
 python .github/skills/berry/check.py --compile    # compile and load only
 python .github/skills/berry/check.py --data DIR   # another data image, e.g. a scratch copy
 python .github/skills/berry/check.py --no-cache   # rebuild the vendored VM objects
+python .github/skills/berry/check.py --art interval --seconds 30
 ```
 
 The first run builds `libraries/berry` for the host into `.github/skills/berry/build/` and links
-[main.c](./main.c). The objects are cached; a check after a `.be` edit only loads and drives. It
-uses the firmware's own `berry_conf.h`, so 32-bit ints, single-precision reals and the
-`BE_STACK_TOTAL_MAX` slot limit are the ones the device has. Exit code 0 means every file compiled,
-every registration looked like a routine, and every page ran.
+[main.c](./main.c) and [frame.c](./frame.c). The objects are cached; a check after a `.be` edit only
+loads and drives. It uses the firmware's own `berry_conf.h`, so 32-bit ints, single-precision reals
+and the `BE_STACK_TOTAL_MAX` slot limit are the ones the device has. Exit code 0 means every file
+compiled, every registration looked like a routine, and every page ran.
+
+`--art NAME` draws instead of driving: it runs that routine and saves the frame it left as a one-bit
+BMP, `build/<name>.bmp` unless `--out` says otherwise. `--seconds N` presses OK first and runs N
+seconds of virtual time, so a cycle can be caught mid-phase. See [Draw a page](#draw-a-page).
 
 ## The load order, and why it matters
 
@@ -41,6 +46,9 @@ loads it:
 2. `data/modules/*.be` — in packed order, which is alphabetical
 3. [driver.be](./driver.be) — it names `Settings`, so it loads after `/modules`
 4. `data/routines/*.be` — in packed order
+
+[main.c](./main.c) registers one more global before any of them: `frame`, the panel the check draws
+on. It is a native module from [frame.c](./frame.c), not a Berry stub.
 
 A module may name a class only from a file that loads **before** it, and that rule reaches inside
 method bodies. `page.be` used to construct `Settings` from `settings.be`, which sorts after it;
@@ -109,6 +117,31 @@ Values that must match the firmware:
 - `page.be`, `settings.be` and the components are exercised through the same calls the device
   makes, including the settings editor's whole key sequence.
 
+## Draw a page
+
+`--art NAME` is how a layout is judged without a panel. `ScreenStub` forwards every drawing verb to
+the `frame` module, which holds a 128 x 64 one-bit frame and draws it with ports of the Adafruit_GFX
+the device compiles: `writeLine`, the circle and ellipse helpers, the filled triangle, the rotated
+rectangle, `drawChar` for both the classic 5x7 and the GFX faces, `write` with the same advance and
+wrap, and `getTextBounds`. So `screen.text_bounds` answers the real ink box and `Text.fit()` picks
+the face the glass would — which is why a render is worth trusting where the old `6 x scale` stub
+was not.
+
+```
+python .github/skills/berry/check.py --art default
+python .github/skills/berry/check.py --art ramped_static --seconds 30 --out C:\tmp\ramp.bmp
+```
+
+The font data is the installed Adafruit GFX library's, the same headers the device build compiles:
+`glcdfont.c` and `Fonts/*.h`. `check.py` finds the library through `--gfx`, then `ADAFRUIT_GFX`,
+then `arduino-cli config get directories.user`, then the usual sketchbook paths, and stops with the
+`arduino-cli lib install "Adafruit GFX Library"` hint when it cannot. `gfx/Adafruit_GFX.h` is a
+shim that lets those headers compile without `Arduino.h`.
+
+What the frame does not have: the overlay's 12 px band (it is C in `Overlay.cpp`, and the frame only
+holds what a page drew), inversion, and any depth beyond one bit. A BMP opens anywhere and
+`scripts/asset.py` reads the same 1-bit format.
+
 ## What the drive does
 
 For every registered routine, hidden pages included:
@@ -130,8 +163,9 @@ deferred to the next beat, as it is on the device.
 
 ## What the check cannot tell you
 
-- The pump, the sensor, the panel and BLE are models or counters. Timing, layout, legibility and
-  the actual vacuum are the device's.
+- The pump, the sensor and BLE are models or counters, and the clock is virtual: timing and the
+  actual vacuum are the device's. A frame is drawn, but only the page's half of it — the overlay's
+  band and the panel's contrast and inversion are not simulated.
 - `print` writes nowhere, here and on the device: it is the same `be_port.c`. Use `vacuum.log()`,
   which lands in the check's output as `[I]`.
 - LittleFS is a map. A write that fails on a full filesystem succeeds here.
@@ -145,6 +179,8 @@ deferred to the next beat, as it is on the device.
 | `value 'nil' does not support set super` | The base class's file failed to load; find its error first |
 | `X needs activate() and poll()` | The registered object is not a routine instance, or a method is missing or misspelt |
 | `value_error: screen.draw_text: unknown font X` | The face is not one of the compiled ones |
+| `art: no routine named X` | `--art` was given a name no file registered |
+| `io_error: frame.save: cannot write the file` | The `--out` path is not writable |
 | `attribute_error: the 'reading' object has no attribute 'X'` | The record class has no such field |
 | `settings: X open() refused` | `describe()` raised, returned nil or returned an empty list |
 | `routines.names() ...` | The hidden flag or the registration is wrong |
