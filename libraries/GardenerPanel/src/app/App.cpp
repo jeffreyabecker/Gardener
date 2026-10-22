@@ -30,18 +30,10 @@ bool serialAttached() { return (bool)Serial; }
 
 App::App(AppContext context) : context_(context) {}
 
-// The panel's side of bring-up. It registers the panel's domains on the links, brings the panel up
-// — the display first, which is fatal when it does not answer — and starts the interpreter, then
-// the panel task.
-void panelBoot(PanelContext& context, Logger& logger, SerialLink* serial, BleLink* ble,
-               Storage::Mount mount) {
-  // The panel's own surface on the links: the panel half of `device`, the files and the buzzer on
-  // serial, the battery and unit fields on BLE.
-  serial->registerDomain(createDeviceDomain(context));
-  serial->registerDomain(createBuzzerDomain(context));
-  serial->registerDomain(createFsDomain(context));
-  ble->registerDomain(new PanelBleDomain(&context));
-
+// The panel's side of bring-up: the panel comes up — the display first, which is fatal when it
+// does not answer — the gauge and buzzer follow, the interpreter starts, and the panel task takes
+// over. The panel's wire domains are the composition's to register.
+void panelBoot(PanelContext& context, Logger& logger, Storage::Mount mount) {
   ConnectedUI* connected = new ConnectedUI(context);
   DisconnectedUI* disconnected = new DisconnectedUI(context);
 
@@ -131,8 +123,12 @@ bool App::begin() {
   SerialLink* serial = new SerialLink(Serial, serialAttached, *logger);
   serial->registerDomain(createControlDomain(context_.machine()));
   serial->registerDomain(createVacuumDomain(context_.machine()));
+  serial->registerDomain(createDeviceDomain(context_.panel()));
+  serial->registerDomain(createBuzzerDomain(context_.panel()));
+  serial->registerDomain(createFsDomain(context_.panel()));
   BleLink* ble = new BleLink(&context_.machine());
   ble->registerDomain(new MachineBleDomain(&context_.machine()));
+  ble->registerDomain(new PanelBleDomain(&context_.panel()));
 
   serial->begin();
   // The radio is a bonus transport: a device with the preference off stays silent, and a failure is
@@ -151,7 +147,7 @@ bool App::begin() {
   }
 
   machineBoot(context_.machine(), *logger, serial, ble);
-  panelBoot(context_.panel(), *logger, serial, ble, mount);
+  panelBoot(context_.panel(), *logger, mount);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
