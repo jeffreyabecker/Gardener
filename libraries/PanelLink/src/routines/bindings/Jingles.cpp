@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <LittleFS.h>
+#include <FS.h>
 
 #include <vector>
 
@@ -51,10 +51,10 @@ void report(const char* what, const String& id) {
 // only starts a comment at the start of a line so a sharp stays a note. The sequence is handed to
 // the player's own parser here, so a jingle that could not be played is reported at boot rather
 // than when a routine asks for it.
-void loadJingles() {
+void loadJingles(FS& fs) {
   jingles.clear();
 
-  File file = LittleFS.open(kJinglePath, "r");
+  File file = fs.open(kJinglePath, "r");
   if (!file) {
     report("missing", "");
     return;
@@ -213,8 +213,8 @@ const bnfuncinfo kJinglesLibrary[] = {
 
 }  // namespace
 
-void installJinglesModule(bvm* vm) {
-  loadJingles();
+void installJinglesModule(bvm* vm, FS& fs) {
+  loadJingles(fs);
   installModule(vm, "jingles", kJinglesLibrary);
 }
 

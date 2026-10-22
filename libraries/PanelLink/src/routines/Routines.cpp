@@ -1,10 +1,10 @@
 #include "routines/Routines.h"
 
-#include <LittleFS.h>
+#include <FS.h>
 #include <berry.h>
 #include <stdio.h>
 
-#include "Panel.h"
+#include "PanelContext.h"
 #include "Logger.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
@@ -49,8 +49,9 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 }  // namespace
 
-bool Routines::begin(Panel& context) {
+bool Routines::begin(PanelContext& context) {
   logger_ = &context.logger();
+  fs_ = &context.fs();
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
@@ -112,7 +113,7 @@ bool Routines::showDefault() {
 
 size_t Routines::loadAll(const char* dir, size_t& found) {
   std::vector<String> files;
-  File folder = LittleFS.open(dir);
+  File folder = fs_->open(dir);
   if (folder.isDirectory()) {
     while (true) {
       File file = folder.openNextFile();
@@ -138,7 +139,7 @@ size_t Routines::loadAll(const char* dir, size_t& found) {
 }
 
 bool Routines::loadFile(const String& path) {
-  File file = LittleFS.open(path.c_str(), "r");
+  File file = fs_->open(path.c_str(), "r");
   if (!file) {
     String message = "vm: ";
     message += path;
@@ -512,7 +513,7 @@ bool Routines::storeGet(const char* routine, const char* key, String& out) {
   // that is not one of the pages the device loaded.
   if (key == nullptr || !isRegistered(routine)) return false;
 
-  File file = LittleFS.open(routineValuesPath(routine).c_str(), "r");
+  File file = fs_->open(routineValuesPath(routine).c_str(), "r");
   if (!file) return false;
   Values values;
   values.parse(file.readString());
@@ -528,7 +529,7 @@ bool Routines::storeSet(const char* routine, const char* key, const String& valu
 
   const String path = routineValuesPath(routine);
   Values values;
-  File file = LittleFS.open(path.c_str(), "r");
+  File file = fs_->open(path.c_str(), "r");
   if (file) {
     values.parse(file.readString());
     file.close();
@@ -538,7 +539,7 @@ bool Routines::storeSet(const char* routine, const char* key, const String& valu
   if (values.has(key) && values.get(key, "") == value) return true;
   if (!values.set(key, value)) return false;
 
-  File out = LittleFS.open(path.c_str(), "w");
+  File out = fs_->open(path.c_str(), "w");
   if (!out) return false;
   const String text = values.text();
   const bool written = out.print(text) == text.length();

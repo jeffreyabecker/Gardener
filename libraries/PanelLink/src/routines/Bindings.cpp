@@ -3,6 +3,7 @@
 #include <berry.h>
 
 #include "Logger.h"
+#include "PanelContext.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 
@@ -10,7 +11,7 @@ namespace gardener {
 namespace berry {
 
 // The pointers `bindings/Module.h` declares. install() is the one assignment.
-Panel* gContext = nullptr;
+PanelContext* gContext = nullptr;
 Routines* gRoutines = nullptr;
 Logger* gLogger = nullptr;
 
@@ -61,7 +62,7 @@ constexpr const char* kRecords =
 
 }  // namespace
 
-void install(bvm* vm, Panel& context, Routines& routines, Logger& logger) {
+void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger) {
   gContext = &context;
   gRoutines = &routines;
   gLogger = &logger;
@@ -71,7 +72,7 @@ void install(bvm* vm, Panel& context, Routines& routines, Logger& logger) {
   installDeviceModule(vm);
   installButtonsModule(vm);
   installBuzzerModule(vm);
-  installJinglesModule(vm);
+  installJinglesModule(vm, context.fs());
   installRoutinesModule(vm);
   installStoreModule(vm);
 

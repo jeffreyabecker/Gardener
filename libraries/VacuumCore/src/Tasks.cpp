@@ -52,23 +52,16 @@ struct InterfaceState {
 #endif
 };
 
-// Applies one queued write to the machine. The op names the verb; the fields are the op's own.
-void applyMachineCommand(ControlState& state, const MachineCommand& command) {
-  Machine& machine = state.machine;
-  switch (command.op) {
-    case MachineCommand::Op::Start: machine.vacuum().start(); break;
-    case MachineCommand::Op::Stop: machine.vacuum().stop(); break;
-    case MachineCommand::Op::ResetFault: machine.vacuum().resetFault(); break;
-    case MachineCommand::Op::SetTarget: machine.vacuum().setTarget(command.value); break;
-    case MachineCommand::Op::ClearTarget: machine.vacuum().clearTarget(); break;
-    case MachineCommand::Op::Reboot: safeReboot(machine); break;
-  }
+// Applies one queued write to the machine. The five the vacuum system answers are MachineCommand's
+// own; the reboot is the composition's, so it is the one left here.
+void applyCommand(ControlState& state, const MachineCommand& command) {
+  if (!applyMachineCommand(state.machine.vacuum(), command)) safeReboot(state.machine);
 }
 
 // Every pending command, applied against the machine as the last tick left it.
 void drainMachineCommands(ControlState& state) {
   MachineCommand command;
-  while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyMachineCommand(state, command);
+  while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyCommand(state, command);
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state change,

@@ -68,7 +68,7 @@ void setup() {
   }
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, Board);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, LittleFS, Board);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both

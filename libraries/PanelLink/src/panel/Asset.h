@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <FS.h>
 #include <stdint.h>
 
 namespace gardener {
@@ -21,6 +22,6 @@ constexpr const char* kMarkAsset = "/assets/eggplant.rle";
 // The format is the RLEBitmap renderer's own three pieces behind a ten-byte header: docs/specs/assets.md
 // describes it and scripts/asset.py writes it from a BMP. A file that is not there, or is not one of
 // these, draws nothing.
-void drawAsset(Display& display, const char* path, int16_t x, int16_t y);
+void drawAsset(Display& display, FS& fs, const char* path, int16_t x, int16_t y);
 
 }  // namespace gardener

@@ -5,6 +5,7 @@
 
 #include "BuzzerPlayer.h"
 #include "Machine.h"
+#include "PanelContext.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
@@ -37,12 +38,12 @@ struct PanelPins {
 // It is also one of the links on the ownership stack: the composition pushes it at boot, so it is
 // the default controller. The two control notifications are what its pages follow — the panel's own
 // pages while it drives, the connected page while an external link does.
-class Panel : public Machine, public Link {
+class Panel : public Machine, public Link, public PanelContext {
  public:
   static constexpr uint8_t Code = 3;
 
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, Display* display, PanelSettings& settings, Routines* routines)
+        Battery* battery, Display* display, PanelSettings& settings, FS& fs, Routines* routines)
       : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
@@ -50,7 +51,8 @@ class Panel : public Machine, public Link {
         battery_(battery),
         overlay_(new Overlay(display, battery, &vacuum(), &settings)),
         routines_(routines),
-        settings_(settings) {}
+        settings_(settings),
+        fs_(fs) {}
 
   const char* name() const override { return "panel"; }
   uint8_t code() const override { return Code; }
@@ -65,12 +67,16 @@ class Panel : public Machine, public Link {
   void boot();
 
   ButtonPanel& buttons() { return *buttons_; }
-  BuzzerPlayer& buzzer() { return *buzzer_; }
-  Battery& battery() { return *battery_; }
+  BuzzerPlayer& buzzer() override { return *buzzer_; }
+  Battery& battery() override { return *battery_; }
+  // The machine's own reads, named again so the context's virtuals resolve to one function.
+  VacuumSystem& vacuum() override { return Machine::vacuum(); }
+  Logger& logger() override { return Machine::logger(); }
   // The display is the overlay — every drawing verb goes through it — so both are the same object.
-  Display& display() { return *overlay_; }
+  Display& display() override { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
-  PanelSettings& settings() { return settings_; }
+  PanelSettings& settings() override { return settings_; }
+  FS& fs() override { return fs_; }
   Routines& routines() { return *routines_; }
 
  private:
@@ -82,6 +88,7 @@ class Panel : public Machine, public Link {
   Overlay* overlay_;
   Routines* routines_;
   PanelSettings& settings_;
+  FS& fs_;
   // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
   // connection flags make.
   volatile bool external_ = false;

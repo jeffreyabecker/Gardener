@@ -55,7 +55,7 @@ void DisconnectedUI::drawFrame() {
   panel.clear();
   // Nothing when the image is not there: the page is blank rather than wrong, and the boot log is
   // where the missing file was named.
-  drawAsset(panel, kMarkAsset, 0, 0);
+  drawAsset(panel, context_.fs(), kMarkAsset, 0, 0);
   panel.display();
 }
 

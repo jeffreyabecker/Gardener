@@ -30,7 +30,7 @@ constexpr int16_t kPanelNoResetLine = -1;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, const PanelPins& pins) {
+Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, const PanelPins& pins) {
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.up, pins.down, pins.ok, pins.back);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -42,7 +42,7 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, const PanelPins& 
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
       kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
   auto* routines = new Routines();
-  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, routines);
+  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, fs, routines);
 
   // The full device has the panel and the gauge, so it is the one build with bits set. The panel
   // pushes itself above the floor so it is the default controller.

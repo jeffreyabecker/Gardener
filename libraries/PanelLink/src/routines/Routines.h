@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <FS.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,7 +14,7 @@ struct bvm;
 
 namespace gardener {
 
-class Panel;
+class PanelContext;
 class Logger;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
@@ -35,7 +36,11 @@ class Routines {
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
   // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
   // False only when the interpreter cannot be allocated at all.
-  bool begin(Panel& context);
+  bool begin(PanelContext& context);
+
+  // The interpreter itself, for the host harness, which loads its own driver into the same VM after
+  // the image has loaded.
+  bvm* vm() const { return vm_; }
 
   // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
   // files are not re-read — every routine is still registered — so this is a switch, not a load.
@@ -50,6 +55,8 @@ class Routines {
   void enterPage();
 
   bool active() const { return active_ >= 0; }
+  // The name of the page that is showing, or "" when none is.
+  const char* activeName() const { return active_ >= 0 ? entries_[(size_t)active_].name.c_str() : ""; }
 
   // --- the `routines` module's surface, called from the bindings ---
   // `objectIndex` is the routine object's stack position in the calling native function; the
@@ -129,6 +136,9 @@ class Routines {
 
   bvm* vm_ = nullptr;
   Logger* logger_ = nullptr;
+  // The filesystem the modules, the routines and their values are on. Set at begin(), from the
+  // context, so nothing here names a particular one.
+  FS* fs_ = nullptr;
   // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
   // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
   // the device is up.
