@@ -45,15 +45,16 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 2 — The gesture is a string
 
-- [ ] **1. The beat answers with one gesture, from one place.** The keys, the Up+Down chord and the
-  three device gestures the panel owns become one class's answer for a beat: the press that
-  completed, whether the reset mark has passed, whether the stop mark has passed, and whether the
-  way home was asked for. Nothing in the panel task scans a key or compares a threshold any more;
-  it decides what each answer means — reboot, latch and post the stop, bump the way home, or hand
-  the press on. The way home moves from an Okay press during a Back hold to Cancel, which is a
-  level, so it fires as Cancel goes down rather than when it comes up. Done when the panel task is
-  one call and four decisions, and on the rig a Cancel during a Back hold goes home while Back+Okay
-  still reboots.
+- [ ] **1. The panel task stops detecting gestures.** One class owns the keys, the Up+Down chord and
+  the device's marks, and answers each beat with the press that completed, whether the reset mark
+  has passed, whether the stop mark has passed, and whether the way home was asked for. The panel
+  task decides what to do with each answer — reboot, latch and post the stop, bump the way home, or
+  hand the press on — and never scans a key or compares a threshold. The way home moves from an
+  Okay press during a Back hold to Cancel, taken from the level, so it fires as Cancel goes down
+  rather than when it comes up. This is one item because the class and its one caller move
+  together: a class nothing calls is not a tree that works. Done when the panel task is one call
+  and four decisions, and on the rig a Cancel during a Back hold goes home while Back+Okay still
+  reboots.
 
 - [ ] **2. A gesture reaches the page as one string.** The classifier's answer, the press it is
   given, the queue behind `buttons.take()`, the binding and the harness are the same string —
