@@ -1,18 +1,17 @@
 # Assets
 
-The pictures the panel draws are files on the device, not arrays in a header: one image is a file
-under `/assets/`, written by [scripts/asset.py](../../scripts/asset.py), and read when it is drawn.
+The mark the panel draws when no page is active is compiled into the firmware, not a file on the
+device: [scripts/asset.py](../../scripts/asset.py) turns the source image into a header the panel
+build includes, and the renderer draws the packed bits directly. There is no run-length encoding and
+no file under `/assets/`.
 
-Run-length encoding is what makes this cheap. A one-bit drawing is long runs of the same pixel, so
-the 128x64 mark ships in **327 bytes** rather than the 1024 the packed array took. The decoder is
-[MHotchin/RLEBitmap](../../libraries/RLEBitmap), vendored unmodified in `libraries/RLEBitmap`.
-
-## Making an asset
+## Making the mark
 
 Save the drawing as an **uncompressed BMP** — 1, 4, 8, 24 or 32 bits per pixel — and convert it:
 
 ```powershell
-python scripts/asset.py --source firmware/gardener/assets/eggplant.bmp --out firmware/gardener/data/assets/eggplant.rle
+python scripts/asset.py --source firmware/gardener/assets/eggplant.bmp \
+                        --out libraries/PanelLink/src/panel/Mark.h --threshold 224
 ```
 
 Whatever the source depth, the output is one bit: a pixel becomes ink when its luminance falls below
@@ -30,52 +29,33 @@ everything between black and white. Dithering a two-colour drawing only adds noi
 
 The shipped mark is made with `--threshold 224`. Its illustration is shaded, so the default cut leaves
 the lighter half of the body and the tip of the stem as paper; at 224 everything that is not the
-white background is ink, which is the whole eggplant at 1337 pixels and 327 bytes.
+white background is ink, which is the whole eggplant at 1337 pixels.
 
 A 16-bit BMP and a compressed one are refused with a message rather than guessed at. A 32-bit pixel
 is read as BGR with its alpha byte ignored.
 
-Then upload the data image (`--task data`), which is how every file on the device gets there.
+The header is then compiled with the panel build, which is the only place the mark needs to be.
 
-## The file
+## The header
 
-```
-offset  size  contents
-0       4     "GRL1"
-4       2     width, in pixels
-6       2     height, in pixels
-8       1     flags: bit 0 set means one-byte runs are legal (a palette of 16 or fewer)
-9       1     palette entries
-10      2*n   the palette, one RGB565 little-endian word per entry
-10+2*n  ...   the runs, to the end of the file
+The converter writes one name in the `gardener` namespace:
+
+```cpp
+constexpr uint8_t MarkBits[] = { 0x80, 0x40, ... };
 ```
 
-Everything is little endian, and the palette is always two entries: **paper** is colour `0x0000`,
-which the renderer treats as transparent, and **ink** is `0xFFFF`. That normalisation is what lets one
-renderer serve a one-bit panel: a run is either ink or nothing.
-
-A run is one byte when its length is at most 15 — high nibble the length, low nibble the palette
-index — and two bytes otherwise: the index, then the length. Two rules come from the decoder rather
-than from taste:
-
-- **A run never crosses the end of a row.** The renderer discards the overshoot and starts the next
-  row with the next run, so pixels past the row edge are simply lost.
-- **A run is at most 255 pixels**, because the length is one byte.
-
-The converter keeps both, which is why it is the tool to use rather than a hand-built stream.
+`MarkBits` carries its own size: the first byte is the width and the second the height, then the
+image packed one bit per pixel — row-major, the most-significant bit first in each byte, and each row
+padded to a whole byte, so a 128-pixel row is 16 bytes. A set bit is ink; a clear bit is paper.
 
 ## On the device
 
-`drawAsset()` is the whole of it: it reads the file named, renders it at the point asked for, and
-lets the bytes go. The disconnected page calls it on every redraw, so there is no loaded copy
-anywhere and nothing to keep in step with the file. A few hundred bytes every redraw is cheaper than
-the state an owned buffer would need.
+`Display::bitmap()` is the whole of it: it reads the width and the height from the first two bytes,
+walks the rows and draws each ink pixel, skipping the paper. The disconnected page calls it on every
+redraw from the array the header defines, so there is no file to read and no loaded copy to keep in
+step.
 
-An asset is drawn whole and at its own size: there is no scaling.
+A mark is drawn whole and at its own size: there is no scaling.
 
-A file that is not there is not fatal. `App::begin()` says `ui: /assets/eggplant.rle missing, the
-disconnected page has no mark` and the page draws nothing, because the data image is where the file
-ships from and its absence is a packaging fault rather than a mode to support.
-
-The art itself lives in [firmware/gardener/assets/](../../firmware/gardener/assets), outside `data/`,
-so a source image is never uploaded to the device.
+The art itself lives in [firmware/gardener/assets/](../../firmware/gardener/assets), outside the
+build, so the source image is not compiled — the header generated from it is.

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "Logger.h"
-#include "panel/Asset.h"
 #include "panel/Units.h"
 
 namespace gardener {
@@ -32,16 +31,6 @@ void Panel::boot() {
 
   const bool batteryOk = battery().begin();
   const bool buzzerOk = buzzer().begin();
-
-  // The mark is an image on the device rather than an array in a header. Every page draws it from
-  // there when it needs it, so a data image without it is worth one line and nothing else — the pages
-  // simply have no mark.
-  File mark = fs_.open(kMarkAsset, "r");
-  const bool hasMark = mark && mark.size() > 0;
-  mark.close();
-  if (!hasMark) {
-    log.warn("ui: /assets/eggplant.rle missing, the disconnected page has no mark");
-  }
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.

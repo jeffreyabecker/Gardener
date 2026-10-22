@@ -8,7 +8,7 @@ The contracts the firmware and its tools must satisfy.
 - [Bluetooth](./specs/bluetooth.md) — the GATT table, ownership and the command opcodes
 - [Vacuum control](./specs/vacuum-control.md) — the machine: states, transitions and protections
 - [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the scene standards
-- [Assets](./specs/assets.md) — the image file format and the tool that makes one
+- [Assets](./specs/assets.md) — the packed mark header and the tool that makes it
 - [Berry harness](./specs/berry-harness.md) — the host build that compiles, drives and draws the
   data image without a device
 - [Routines](./specs/ui/routine.md) — what a routine is: its lifecycle and embedded rules

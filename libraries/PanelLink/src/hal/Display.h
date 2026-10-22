@@ -81,6 +81,11 @@ class Display {
   virtual void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h,
                                int16_t angle) = 0;
 
+  // A packed one-bit image: bits[0] is the width, bits[1] the height, then the pixels row-major
+  // and most-significant bit first, each row padded to a whole byte. Ink bits are drawn; paper
+  // bits are left as whatever is under them.
+  virtual void bitmap(int16_t x, int16_t y, const uint8_t* bits) = 0;
+
   // --- text ----------------------------------------------------------------
   // The face is chosen once and stays chosen; setFont(nullptr) puts the built-in 5x7 back. With a
   // face set, `y` is the baseline rather than the top of the glyph box, which is the font format's

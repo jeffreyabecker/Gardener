@@ -1,7 +1,7 @@
 #include "panel/DisconnectedUI.h"
 
 #include "PanelTasks.h"
-#include "panel/Asset.h"
+#include "panel/Mark.h"
 #include "panel/UI.h"
 #include "routines/Routines.h"
 
@@ -53,9 +53,7 @@ void DisconnectedUI::update() {
 void DisconnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  // Nothing when the image is not there: the page is blank rather than wrong, and the boot log is
-  // where the missing file was named.
-  drawAsset(panel, context_.fs(), kMarkAsset, 0, 0);
+  panel.bitmap(0, 0, MarkBits);
   panel.display();
 }
 

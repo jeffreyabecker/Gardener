@@ -103,6 +103,20 @@ class AdafruitDisplay : public Display {
                        int16_t angle) override {
     panel_.fillRotatedRect(cx, cy, w, h, angle, kInk);
   }
+  void bitmap(int16_t x, int16_t y, const uint8_t* bits) override {
+    const int16_t width = bits[0];
+    const int16_t height = bits[1];
+    const int16_t stride = (width + 7) / 8;
+    const uint8_t* rows = bits + 2;
+    // The proposed hardware keeps the frame in a buffer, so one write per ink pixel is fast
+    // enough and there is nothing to gain from coalescing runs.
+    for (int16_t row = 0; row < height; row++) {
+      const uint8_t* line = rows + row * stride;
+      for (int16_t col = 0; col < width; col++) {
+        if (inkAt(line, col)) hLine(x + col, y + row, 1);
+      }
+    }
+  }
 
   // --- text ----------------------------------------------------------------
   void setFont(const GFXfont* font) override { panel_.setFont(font); }
@@ -154,6 +168,11 @@ class AdafruitDisplay : public Display {
     panel_.getTextBounds(value, 0, 0, &boxX, &boxY, &boxWidth, &boxHeight);
     outWidth = (int16_t)boxWidth;
     outHeight = (int16_t)boxHeight;
+  }
+
+  // The bit at one column of a packed row, most-significant bit first.
+  static bool inkAt(const uint8_t* line, int16_t col) {
+    return (line[col / 8] >> (7 - (col & 7))) & 1;
   }
 
   // Run at begin(), once the caller's bus is up; the driver itself is constructed with the args

@@ -91,6 +91,9 @@ class Overlay : public Display {
                        int16_t angle) override {
     inner_->fillRotatedRect(cx, cy, w, h, angle);
   }
+  void bitmap(int16_t x, int16_t y, const uint8_t* bits) override {
+    inner_->bitmap(x, y, bits);
+  }
 
   // --- text ----------------------------------------------------------------
   void setFont(const GFXfont* font) override { inner_->setFont(font); }
