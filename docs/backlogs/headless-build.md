@@ -230,7 +230,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
 
 ### Phase A — the full device's sketch takes over its setup
 
-- [ ] 6.1 Move the serial link out of `machineBoot`: `App::begin` builds the `SerialLink` and
+- [x] 6.1 Move the serial link out of `machineBoot`: `App::begin` builds the `SerialLink` and
   registers the machine's `control` and `vacuum` domains on it, and `machineBoot` brings the
   machine's parts up and reports them.
 - [ ] 6.2 Move the BLE link out of `machineBoot` the same way, and delete the `MachineBoot` struct
