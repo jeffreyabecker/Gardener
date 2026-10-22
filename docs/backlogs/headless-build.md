@@ -283,7 +283,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   the top of the stack changes — a claim, a release or a drop.
 - [x] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
   holds pressure only while owned.
-- [ ] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
+- [x] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
   the reboot.
 - [ ] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
   its stop being ownership.
