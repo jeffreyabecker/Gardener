@@ -19,35 +19,36 @@ class IntervalChrome
   def init(owner)
     self.owner = owner
 
-    # The title starts below the state icon so the top row can hold the set bubbles, as Ramped
-    # Interval's does. The phase reads on the status line instead.
+    # The title and the set bubbles share the top row: the overlay's band took the bottom of the
+    # glass, so the page owns the 52 rows above it and nothing dodges an icon any more.
     self.header = FixedText()
     self.header.value = "Interval"
-    self.header.x = 0; self.header.y = 15; self.header.w = 116; self.header.h = 7
+    self.header.x = 0; self.header.y = 0; self.header.w = 90; self.header.h = 7
+    self.header.align = "left"
 
     self.sets = ProgressBubbles()
-    self.sets.x = 0; self.sets.y = 2; self.sets.w = 40; self.sets.h = 6
+    self.sets.x = 92; self.sets.y = 0; self.sets.w = 36; self.sets.h = 6
 
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 22; self.pressure.w = 116; self.pressure.h = 17
+    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 116; self.pressure.h = 17
 
     # The target needs no label: the border is what tells it apart from the live reading.
     self.target = PressureDisplay()
-    self.target.x = 0; self.target.y = 40; self.target.w = 116; self.target.h = 10
+    self.target.x = 0; self.target.y = 26; self.target.w = 116; self.target.h = 10
     self.target.border = 1
 
     # The status and the hold's remaining time share a line: the words on the left, the bar draining
     # to the right. The longest status is "PRESS OK", 48 pixels of built-in face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 50; self.status.w = 62; self.status.h = 7
+    self.status.x = 0; self.status.y = 37; self.status.w = 62; self.status.h = 7
     self.status.align = "left"
 
     self.bar = ProgressBar()
-    self.bar.x = 66; self.bar.y = 50; self.bar.w = 50; self.bar.h = 7
+    self.bar.x = 66; self.bar.y = 37; self.bar.w = 50; self.bar.h = 7
     self.bar.border = 1
 
     self.hint = DynamicText()
-    self.hint.x = 0; self.hint.y = 57; self.hint.w = 116; self.hint.h = 7
+    self.hint.x = 0; self.hint.y = 45; self.hint.w = 116; self.hint.h = 7
   end
 
   def draw(s)

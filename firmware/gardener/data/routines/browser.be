@@ -16,7 +16,7 @@ class Browser : Page
     self.names = []
     self.list = List(6)
     self.scrollbar = Scrollbar()
-    self.scrollbar.x = 110; self.scrollbar.y = 16; self.scrollbar.w = 2; self.scrollbar.h = 48
+    self.scrollbar.x = 110; self.scrollbar.y = 2; self.scrollbar.w = 2; self.scrollbar.h = 48
     self.list.scrollbar = self.scrollbar
 
     self.on("up", nil, / -> self.step(-1))
@@ -69,7 +69,7 @@ class Browser : Page
     if self.names.size() == 0
       return
     end
-    self.list.draw(0, 16)
+    self.list.draw(0, 2)
   end
 end
 

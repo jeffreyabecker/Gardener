@@ -158,7 +158,7 @@ screen.draw_text(box.w + 4, 41, 1, false, "TGT", "sansbold9")
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
-| `suffix` | string | what the overlay prints as the glass's unit, beside the state icon |
+| `suffix` | string | what the overlay prints as the glass's unit, at the left of the bottom band |
 | `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |
 | `decimals` | int | digits the unit's fine step can express |
@@ -167,20 +167,23 @@ The same numbers live in `panel/Units.h`, so a routine and the panel's own forma
 disagree about what a psi is. `suffix` is read to name a unit being chosen, not to append to a
 reading: the overlay prints the glass's unit itself.
 
-### The overlay owns the top row and the right edge
+### The overlay owns the bottom band
 
-The firmware draws four things on top of every `flush()`, so a routine does not have to:
+The bottom 12 rows of the glass, `y` 52–63, are the overlay's. It clears them and draws them last
+on every `flush()`, so a routine never has to. Left to right:
 
-- the run state's icon at `x` 64–78, `y` 0–14;
-- the unit the glass prints in, in the top row right after that icon, at `x` 80–104, `y` 3–10;
-- the battery icon at the top right;
-- the connection icons down the right edge from `x` 116.
+| Field | `x` |
+| --- | --- |
+| the unit the glass prints in | 2–25 |
+| the serial link's icon, while it is connected | 50–61 |
+| the Bluetooth link's icon, while it is connected | 66–77 |
+| the run state's icon | 100–111 |
+| the battery, when a pack is fitted | 116–127 |
 
-The unit is one for the whole glass, so a page draws the number and never the suffix after it: a
-readout that says `12.5` is a depth in the unit the top row names.
-
-Keep a page's own text and shapes out of that top band — to the left of `x` 64 above `y` 14 — and
-to the left of `x` 110 above `y` 30.
+The band is opaque: a page's own text and shapes belong above `y` 52, and anything drawn there is
+painted over before the frame goes to the glass. The unit is one for the whole glass, so a page
+draws the number and never the suffix after it: a readout that says `12.5` is a depth in the unit
+the band names.
 
 ## `device` — the device's own settings
 

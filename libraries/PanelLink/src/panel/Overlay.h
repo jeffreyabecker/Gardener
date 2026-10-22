@@ -10,8 +10,8 @@ namespace gardener {
 
 class PanelSettings;
 
-// The display the app draws through: it wraps any Display, and puts the device's own status on top
-// of whatever was drawn there just before the frame goes to the glass.
+// The display the app draws through: it wraps any Display, and puts the device's own status in a
+// band across the bottom of whatever was drawn there just before the frame goes to the glass.
 //
 // Everything else is passed straight through, so a page cannot tell the difference — which is
 // the point. The battery, the run state's icon, the unit the glass prints in and the two ways a

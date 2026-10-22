@@ -24,7 +24,7 @@ class Settings
 
   def init(name)
     self.name = name
-    self.list = List(6)
+    self.list = List(5)
     self.described = nil
     self.values = nil
     self.editing = false
@@ -110,7 +110,7 @@ class Settings
   def draw_list()
     screen.draw_text(0, 0, 1, false, "SETTINGS")
     self.list.set(self.rows())
-    self.list.draw(0, 16)
+    self.list.draw(0, 8)
   end
 
   def rows()
@@ -125,9 +125,9 @@ class Settings
 
   def draw_edit()
     screen.draw_text(0, 0, 1, false, "EDIT")
-    screen.draw_text(0, 16, 1, false, self.edit_setting.label)
-    screen.draw_text(0, 24, 3, false, self.edit_text())
-    screen.draw_text(0, 56, 1, false, self.edit_hint())
+    screen.draw_text(0, 8, 1, false, self.edit_setting.label)
+    screen.draw_text(0, 16, 3, false, self.edit_text())
+    screen.draw_text(0, 44, 1, false, self.edit_hint())
   end
 
   def edit_hint()

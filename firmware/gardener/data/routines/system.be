@@ -84,8 +84,8 @@ class System : Page
     end
     screen.draw_text(0, 0, 1, false, "SYSTEM")
     self.list.set(self.rows())
-    self.list.draw(0, 16)
-    screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=EDIT")
+    self.list.draw(0, 10)
+    screen.draw_text(0, 44, 1, false, "UP/DOWN  OK=EDIT")
   end
 
   def rows()
@@ -111,10 +111,10 @@ class System : Page
         label = jingles.label(self.jingle_ids[self.edit_jingle])
       end
       screen.draw_text(0, 20, 2, false, label)
-      screen.draw_text(0, 56, 1, false, "UP/DOWN PLAY  OK=SAVE")
+      screen.draw_text(0, 44, 1, false, "UP/DOWN PLAY  OK=SAVE")
       return
     end
-    screen.draw_text(0, 56, 1, false, "UP/DOWN  OK=SAVE")
+    screen.draw_text(0, 44, 1, false, "UP/DOWN  OK=SAVE")
   end
 
   def target_text()

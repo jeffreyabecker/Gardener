@@ -8,29 +8,22 @@
 namespace gardener {
 namespace {
 
+// The status band: the bottom 12 rows of the glass, cleared and redrawn on the way to every frame.
+// Every field is a 12 px cell, left to right: the unit, the two ways in, the run state and the
+// gauge. A page's own content belongs above it.
+constexpr int16_t kBandHeight = 12;
+constexpr int16_t kBandY = 52;
+// A field that is shorter than the band sits on the band's centre line.
+constexpr int16_t kFieldY = kBandY + 2;
+
+constexpr int16_t kUnitX = 2;
+constexpr int16_t kSerialIconX = 50;
+constexpr int16_t kBluetoothIconX = 66;
+constexpr int16_t kStateIconX = 100;
+
 constexpr int16_t kBatteryIconWidth = 12;
 constexpr int16_t kBatteryBodyWidth = 10;
 constexpr int16_t kBatteryBodyHeight = 7;
-constexpr int16_t kBatteryIconY = 1;
-
-// The state icon sits on the line a page puts its state name on, clear of the longest one.
-constexpr int16_t kStateIconX = 64;
-constexpr int16_t kStateIconY = 0;
-constexpr int16_t kStateIconSize = 14;
-
-// The unit reads as part of the state icon: the same top row, right after it and on its centre
-// line. The slot is the widest suffix ("mmHg", four built-in glyphs), so a shorter one leaves no
-// pixel of the last behind.
-constexpr int16_t kUnitX = kStateIconX + kStateIconSize + 2;
-constexpr int16_t kUnitY = 3;
-constexpr int16_t kUnitSlotWidth = 24;
-constexpr int16_t kUnitSlotHeight = 8;
-
-// The status column down the right edge: the battery at the top, then the two ways in.
-constexpr int16_t kConnectionIconX = 116;
-constexpr int16_t kSerialIconY = 10;
-constexpr int16_t kBluetoothIconY = 24;
-constexpr int16_t kConnectionIconSize = 12;
 
 // Below the low threshold the fill blinks. With no buttons and no alarm, that blink is the
 // entire low battery notification.
@@ -47,10 +40,11 @@ static_assert(!std::is_abstract<Overlay>::value,
 // The overlay goes down last, so it lands on top of whatever the page drew and no page has to know
 // it exists.
 void Overlay::display() {
-  drawStateIcon();
-  drawConnections();
-  drawBattery();
+  inner_->clearRect(0, kBandY, inner_->width(), kBandHeight);
   drawUnit();
+  drawConnections();
+  drawStateIcon();
+  drawBattery();
   inner_->display();
 }
 
@@ -63,7 +57,7 @@ void Overlay::setConnections(bool serial, bool bluetooth) {
 // pulls, up while the valve vents, a ring at target, and a warning triangle on a fault.
 void Overlay::drawStateIcon() {
   const int16_t x = kStateIconX;
-  const int16_t y = kStateIconY;
+  const int16_t y = kBandY;
   switch (vacuum_->runState()) {
     case RunState::Pulling:
       chevrons(x, y, true);
@@ -72,40 +66,38 @@ void Overlay::drawStateIcon() {
       chevrons(x, y, false);
       break;
     case RunState::Holding:
-      inner_->circle(x + 7, y + 7, 7);
-      inner_->fillCircle(x + 7, y + 7, 2);
+      inner_->circle(x + 6, y + 6, 5);
+      inner_->fillCircle(x + 6, y + 6, 2);
       break;
     case RunState::Fault:
-      inner_->triangle(x + 7, y, x, y + 14, x + 14, y + 14);
-      inner_->vLine(x + 7, y + 5, 5);
-      inner_->pixel(x + 7, y + 12);
+      inner_->triangle(x + 6, y, x, y + 11, x + 11, y + 11);
+      inner_->vLine(x + 6, y + 4, 5);
+      inner_->pixel(x + 6, y + 10);
       break;
     case RunState::Idle:
-      inner_->circle(x + 7, y + 7, 7);
+      inner_->circle(x + 6, y + 6, 5);
       break;
   }
 }
 
 void Overlay::chevrons(int16_t x, int16_t y, bool down) {
   for (int16_t i = 0; i < 2; ++i) {
-    int16_t top = y + i * 7;
+    const int16_t top = y + i * 6;
     if (down) {
-      inner_->line(x, top, x + 7, top + 6);
-      inner_->line(x + 7, top + 6, x + 14, top);
+      inner_->line(x, top, x + 6, top + 4);
+      inner_->line(x + 6, top + 4, x + 11, top);
     } else {
-      inner_->line(x, top + 6, x + 7, top);
-      inner_->line(x + 7, top, x + 14, top + 6);
+      inner_->line(x, top + 4, x + 6, top);
+      inner_->line(x + 6, top, x + 11, top + 4);
     }
   }
 }
 
-// Both slots own their footprint and are drawn only while the connection is up, so the column says
-// what is true now rather than what was true when the page was painted.
+// Both cells say what is true now rather than what was true when the page was painted: the band is
+// cleared on the way to every frame, and an icon is drawn only while its link is up.
 void Overlay::drawConnections() {
-  inner_->clearRect(kConnectionIconX, kSerialIconY, kConnectionIconSize, kConnectionIconSize);
-  inner_->clearRect(kConnectionIconX, kBluetoothIconY, kConnectionIconSize, kConnectionIconSize);
-  if (serial_) serialIcon(kConnectionIconX, kSerialIconY);
-  if (bluetooth_) bluetoothIcon(kConnectionIconX, kBluetoothIconY);
+  if (serial_) serialIcon(kSerialIconX, kBandY);
+  if (bluetooth_) bluetoothIcon(kBluetoothIconX, kBandY);
 }
 
 // A plug: body, tongue and the cable leaving it.
@@ -125,14 +117,12 @@ void Overlay::bluetoothIcon(int16_t x, int16_t y) {
 }
 
 // The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so
-// the panel does not spend characters on it and the corner is the icon's: a page can use
-// everything to the left.
+// the panel does not spend characters on it and the cell is the icon's.
 void Overlay::drawBattery() {
-  if (!battery_->present()) return;  // nothing fitted, so leave the corner empty
+  if (!battery_->present()) return;  // nothing fitted, so leave the cell empty
 
-  bool blinkOff = battery_->low() && ((millis() / kLowBatteryBlinkMs) % 2u) == 0u;
-  int16_t iconX = inner_->width() - kBatteryIconWidth;
-  batteryIcon(iconX, kBatteryIconY, blinkOff ? 0 : battery_->percent());
+  const bool blinkOff = battery_->low() && ((millis() / kLowBatteryBlinkMs) % 2u) == 0u;
+  batteryIcon(inner_->width() - kBatteryIconWidth, kFieldY, blinkOff ? 0 : battery_->percent());
 }
 
 void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
@@ -154,8 +144,7 @@ void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
 // after its number. It reads the setting on each frame, so a unit set from the wire or the system
 // page is on the glass with the next one.
 void Overlay::drawUnit() {
-  inner_->clearRect(kUnitX, kUnitY, kUnitSlotWidth, kUnitSlotHeight);
-  inner_->text(kUnitX, kUnitY, displayUnitInfo(settings_->unit()).suffix, 1, false);
+  inner_->text(kUnitX, kFieldY, displayUnitInfo(settings_->unit()).suffix, 1, false);
 }
 
 }  // namespace gardener

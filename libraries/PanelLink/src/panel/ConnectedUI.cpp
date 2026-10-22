@@ -11,10 +11,9 @@
 namespace gardener {
 namespace {
 
-// The overlay keeps the top edge for the state icon and the right column for its status, so the
-// link's icon is centred below the one and clear of the other.
+// The overlay's band owns the bottom 12 rows, so the link's icon is centred in the page above it.
 constexpr int16_t kIconCentreX = 64;
-constexpr int16_t kIconCentreY = 35;
+constexpr int16_t kIconCentreY = 26;
 
 }  // namespace
 
