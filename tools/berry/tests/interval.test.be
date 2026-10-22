@@ -61,3 +61,25 @@ def reaches_work_hold()
 end
 
 test("a run reaches the work hold", reaches_work_hold)
+
+def cancel_pauses_and_ok_resumes()
+  var settings = {
+    "set_count": 1,
+    "target_pressure": 5.0,
+    "work_duration": 30,
+    "rest_pressure": 5.0,
+    "rest_duration": 0,
+    "resume_behavior": "immediately"
+  }
+  assert_true(harness_activate("interval", settings), "interval: activate refused")
+  var page = ux.top()
+  harness.press("ok:single")
+  wait_until("interval: did not reach the work hold", 200, / -> page.phase == "work")
+  harness.press("cancel:single")
+  harness.beat(1)
+  assert_eq(page.phase, "paused", "interval: Cancel did not pause the cycle")
+  harness.press("ok:single")
+  wait_until("interval: did not resume the work hold", 200, / -> page.phase == "work")
+end
+
+test("Cancel pauses and OK resumes the cycle", cancel_pauses_and_ok_resumes)

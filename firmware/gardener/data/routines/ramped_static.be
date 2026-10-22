@@ -92,9 +92,10 @@ class RampedStatic : Page
     self.command_target = 0.0
     self.chrome = RampedStaticChrome(self)
 
-    self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.ok())
-    self.on("back", "single", / -> self.pause())
+    self.on("up:double", / -> self.edit())
+    self.on("ok:single", / -> self.ok())
+    self.on("cancel:single", / -> self.pause())
+    self.on("cancel:double", / -> self.leave())
   end
 
   def activate(settings)
@@ -179,9 +180,8 @@ class RampedStatic : Page
     return true
   end
 
-  # Back pauses: the chamber vents and the clock stops where it was, so the pause costs the
-  # pressure and nothing else. The device's own Back hold still stops outright and leaves the page,
-  # which is the way out.
+  # Cancel pauses: the chamber vents and the clock stops where it was, so the pause costs the
+  # pressure and nothing else. Cancel, held to a double, leaves the page.
   def pause()
     if self.phase != "approach" && self.phase != "run"
       return false
@@ -190,6 +190,13 @@ class RampedStatic : Page
     vacuum.stop()
     self.phase = "paused"
     vacuum.log("ramped_static: paused")
+    return true
+  end
+
+  def leave()
+    vacuum.stop()
+    vacuum.log("ramped_static: left")
+    ux.pop(nil)
     return true
   end
 
@@ -276,7 +283,7 @@ class RampedStatic : Page
     ux.pop_to_root()
   end
 
-  # The run ended without this page asking: a latched fault, or a release the device's hold caused.
+  # The run ended without this page asking: a latched fault, or a release an external claim caused.
   # The machine is already safe, so put the page's starting target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
@@ -286,8 +293,8 @@ class RampedStatic : Page
     vacuum.log("ramped_static: run stopped")
   end
 
-  # poll calls tick(now) every beat, after the press drain. The device's Back hold stops and vents
-  # without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
+  # vents without asking this page, so reset the phase machine on that notice.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the profile does not advance
     # underneath it; the restart on close is what puts the clock right.

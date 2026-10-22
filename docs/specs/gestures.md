@@ -32,20 +32,8 @@ These belong to the device. A page must not give them another meaning, and canno
 
 | Gesture | What happens | Where |
 | --- | --- | --- |
-| **Hold Back for 3 s** | the panel releases control, which vents the chamber; the valve stays open as long as Back is held | every page, while the panel drives |
-| **OK while Back is held** | give the panel back to the readout | the disconnected scenes |
 | **Hold Back+OK for 5 s** | safe reset: stop, vent up to 2 s, restart | every page, every link state |
 
-The Back hold fires at the 3 s mark while the key is still down, and the vent it starts stays open
-for as long as the key is held. The release that follows arrives at the page showing by then as a
-`long` Back, which a page that does not use it can ignore; the page stays where it was, the chamber
-vented and the run it was on abandoned. A short, long or double OK pressed while Back is still held
-is the way out on the disconnected scenes: the readout takes the panel.
-
-**Back releases the panel's control.** It is the panel's own way out of the stack, not a separate
-stop: the machine vents because the controller left, exactly as it does when a serial or Bluetooth
-link lets go. While an external link is on top the panel is not driving, so the Back hold does
-nothing and only Back+OK acts.
 
 **Back+OK is the reboot.** It is the same safe reset the wire serves — `device reboot` on serial and
 `command 0x04` on Bluetooth — issued from the panel's side, so it works whatever a controller is

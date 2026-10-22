@@ -38,7 +38,7 @@ end
 
 test("a run completes and goes home", completes_and_goes_home)
 
-def back_pauses_and_ok_restarts()
+def cancel_pauses_and_ok_restarts()
   var settings = {
     "set_count": 2,
     "initial_pressure": 5.0,
@@ -50,11 +50,11 @@ def back_pauses_and_ok_restarts()
   var page = ux.top()
   harness.press("ok:single")
   wait_until("ramped_interval: OK did not reach the work hold", 200, / -> page.phase == "work")
-  harness.press("back:single")
+  harness.press("cancel:single")
   harness.beat(1)
-  assert_eq(page.phase, "paused", "ramped_interval: Back did not pause")
+  assert_eq(page.phase, "paused", "ramped_interval: Cancel did not pause")
   harness.press("ok:single")
   wait_until("ramped_interval: OK did not restart the set", 200, / -> page.phase == "work")
 end
 
-test("Back pauses and OK restarts the set", back_pauses_and_ok_restarts)
+test("Cancel pauses and OK restarts the set", cancel_pauses_and_ok_restarts)
