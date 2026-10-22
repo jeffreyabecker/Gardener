@@ -1,11 +1,9 @@
 #pragma once
 
 #include <Arduino.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <freertos/task.h>
 
 #include "Build.h"
+#include "MachineCommand.h"
 
 namespace gardener {
 
@@ -14,19 +12,6 @@ class SerialLink;
 #if GARDENER_BLUETOOTH
 class BleLink;
 #endif
-
-// A write to the machine that the control task applies, carried across from the link or the VM
-// that originated it. The op names the verb; the fields are the op's own, so a field that does
-// not belong to the op is ignored.
-struct MachineCommand {
-  enum class Op : uint8_t { Start, Stop, ResetFault, SetTarget, ClearTarget, Reboot };
-  Op op;
-  float value = 0.0f;  // SetTarget: kPa below ambient
-};
-
-// The machine's command queue. The handle is written once at boot and read by the control task
-// after.
-extern QueueHandle_t machineCommandQueue;
 
 // Connection presence, one writer (the interface owner) and read dirty by the panel's overlay. A
 // build without the radio never sets the Bluetooth one, so the panel draws no rune.

@@ -2,27 +2,21 @@
 
 namespace gardener {
 
-Settings::Settings(FS* fs) : fs_(fs) {}
+Settings::Settings(SettingsSource* source) : source_(source) {}
 
 bool Settings::save() const {
-  if (fs_ == nullptr) return false;
-  File file = fs_->open(kPath, "w");
-  if (!file) return false;
-  const String body = values_.text();
-  const bool written = file.print(body) == body.length();
-  file.close();
-  return written;
+  if (source_ == nullptr) return false;
+  return source_->write(kDeviceDocument, values_.text());
 }
 
-// Reading is best effort: a file that is not there or does not parse leaves the defaults in place.
-// Nothing about a boot depends on the answer.
+// Reading is best effort: a document that is not there or does not parse leaves the defaults in
+// place. Nothing about a boot depends on the answer.
 bool Settings::begin() {
   bool read = false;
-  if (fs_ != nullptr) {
-    File file = fs_->open(kPath, "r");
-    if (file) {
-      values_.parse(file.readString());
-      file.close();
+  if (source_ != nullptr) {
+    String text;
+    if (source_->read(kDeviceDocument, text)) {
+      values_.parse(text);
       read = true;
     }
   }

@@ -1,7 +1,7 @@
 # interval.be — the interval cycle: pull to a target, hold, move to a rest pressure, rest, and repeat
 # for a set count.
 #
-# The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
+# The cycle is a phase machine advanced from tick(now), which every poll calls. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Moving
 # between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
 # is the edge that says the new one has arrived.
@@ -98,7 +98,7 @@ class Interval : Page
   var chrome
 
   def init()
-    super(self).init()
+    super(self).init("interval")
     self.phase = "ready"
     self.mark = 0
     self.set = 0
@@ -110,12 +110,13 @@ class Interval : Page
     self.resume = "immediately"
     self.chrome = IntervalChrome(self)
 
-    self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.phase == "ready" || self.phase == "waiting" ? self.begin() : false)
+    self.on("up:double", / -> self.edit())
+    self.on("ok:single", / -> self.phase == "ready" || self.phase == "waiting" || self.phase == "paused" ? self.begin() : false)
+    self.on("cancel:single", / -> self.pause())
+    self.on("cancel:double", / -> self.leave())
   end
 
   def activate(settings)
-    self.editor = nil
     self.phase = "ready"
     self.set = 0
     self.read_settings(settings)
@@ -127,63 +128,17 @@ class Interval : Page
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
-      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false),
-      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"], false)
-    ]
-  end
-
-  # The starting values match the shipped `interval.cfg`. The pressures go through clamp() before
-  # they are ever handed to the machine, and a hand-edited duration is held to the same bounds the
-  # editor uses. A switch's settings map, when there is one, is the set for this activation.
+  # The starting values match the shipped `interval.cfg`. A switch's settings map, when there is
+  # one, is the set for this activation; otherwise the file is. Each value comes back held to its
+  # kind - a hand-edited file cannot put the page somewhere the editor could not.
   def read_settings(settings)
-    self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
-    self.target = vacuum.clamp(self.value(settings, "target_pressure", 0.0))
-    self.work = self.seconds(self.value(settings, "work_duration", 30), 3600)
-    self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
-    self.rest = self.seconds(self.value(settings, "rest_duration", 1), 1200)
-    var resume = self.value(settings, "resume_behavior", "immediately")
-    if resume != "after ok"
-      resume = "immediately"
-    end
-    self.resume = resume
-  end
-
-  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
-  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
-  # values.
-  def value(settings, key, fallback)
-    if settings != nil
-      return settings.find(key, fallback)
-    end
-    return store.get(key, fallback)
-  end
-
-  def seconds(value, high)
-    var seconds = int(value)
-    if seconds < 0
-      seconds = 0
-    end
-    if seconds > high
-      seconds = high
-    end
-    return seconds
-  end
-
-  def whole(value, low, high)
-    var number = int(value)
-    if number < low
-      number = low
-    end
-    if number > high
-      number = high
-    end
-    return number
+    var s = self.activation(settings)
+    self.count = s.value("set_count")
+    self.target = s.value("target_pressure")
+    self.work = s.value("work_duration")
+    self.rest_pressure = s.value("rest_pressure")
+    self.rest = s.value("rest_duration")
+    self.resume = s.value("resume_behavior")
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -191,7 +146,7 @@ class Interval : Page
   def begin()
     if self.phase == "waiting"
       self.set += 1
-    else
+    elif self.phase != "paused"
       self.set = 0
     end
     vacuum.target(self.target)
@@ -226,7 +181,7 @@ class Interval : Page
   end
 
   def advance(now)
-    if self.phase == "ready" || self.phase == "waiting"
+    if self.phase == "ready" || self.phase == "waiting" || self.phase == "paused"
       return
     end
 
@@ -285,6 +240,25 @@ class Interval : Page
     self.phase = "waiting"
   end
 
+  # Cancel pauses the cycle: the chamber vents and the clock stops where it was. OK picks the run
+  # up at the set it paused on; Cancel, held to a double, leaves the page.
+  def pause()
+    if self.phase == "ready" || self.phase == "waiting" || self.phase == "paused"
+      return false
+    end
+    vacuum.stop()
+    self.phase = "paused"
+    vacuum.log("interval: paused")
+    return true
+  end
+
+  def leave()
+    vacuum.stop()
+    vacuum.log("interval: left")
+    ux.pop(nil)
+    return true
+  end
+
   # The last set is done: release the chamber, clear the target so `default` cannot inherit the
   # interval's depth, sound the device's jingle at the finish, and hand the panel back. The switch is
   # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it: the
@@ -294,7 +268,7 @@ class Interval : Page
     self.phase = "ready"
     vacuum.log("interval: complete")
     jingles.play_current()
-    routines.set_active("default")
+    ux.pop_to_root()
   end
 
   # The cycle ended without this page asking: a latched fault, or a release the device's hold caused.
@@ -306,14 +280,11 @@ class Interval : Page
     vacuum.log("interval: cycle stopped")
   end
 
-  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
-  # without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
+  # vents without asking this page, so reset the phase machine on that notice.
   def tick(now)
-    # The settings editor owns the panel while it is open; the cycle does not advance underneath it,
-    # and the restart on close is what puts the clock right.
-    if self.editor != nil
-      return
-    end
+    # While the settings scene is on top this scene is not polled, so the cycle does not advance
+    # underneath it; the restart on close is what puts the clock right.
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
@@ -321,12 +292,10 @@ class Interval : Page
   end
 
   # Settings are entered with the chamber released: a run that was under way restarts at the new
-  # values when the editor closes, so it must not keep working at the old ones underneath it. An
-  # editor that refuses to open leaves the run alone.
+  # values when the settings scene closes, so it must not keep working at the old ones underneath
+  # it. The scene below is not polled while the settings are showing.
   def edit()
-    if !self.open_editor(Settings("interval"))
-      return false
-    end
+    self.open_settings()
     if self.phase != "ready"
       vacuum.stop()
     end
@@ -364,6 +333,9 @@ class Interval : Page
     if self.phase == "ready" || self.phase == "waiting"
       return "READY"
     end
+    if self.phase == "paused"
+      return "PAUSED"
+    end
     if self.phase == "rest_approach" || self.phase == "rest"
       return "REST"
     end
@@ -388,5 +360,21 @@ class Interval : Page
   end
 end
 
-routines.register("interval", "Interval", Interval(), false, IntervalIcon())
+# The values this page edits, in the order the settings list shows them. Nothing binds one setting
+# to another here, so this scene has no rule of its own.
+class IntervalSettings : SettingsScene
+  def settings()
+    return [
+      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
+      setting("target_pressure", "Target", PressureEditor(1, false), 0.0),
+      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 30),
+      setting("rest_pressure", "Rest", PressureEditor(1, false), 5.0),
+      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 1),
+      setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false),
+              "immediately")
+    ]
+  end
+end
+
+routines.register("interval", IntervalIcon(), Interval, IntervalSettings)
 return Interval

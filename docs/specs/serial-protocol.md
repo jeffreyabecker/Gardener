@@ -403,7 +403,7 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `unknown_verb` | bare token | the domain does not accept that verb: `err unknown_verb frobnicate` |
 | `bad_argument` | bare token, or nothing | an argument is missing, does not parse or is left over; or the header was too long. The token is the first one at fault |
 | `out_of_range` | `field=… value=… [min=…] [max=…]` | the value parses but is not acceptable: `err out_of_range field=target value=1 min=5.0` |
-| `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `no_space`, `io` |
+| `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
 | `not_controlling` | nothing | a state-changing verb from a link that is not on top of the stack |

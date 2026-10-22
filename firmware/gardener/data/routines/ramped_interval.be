@@ -1,6 +1,6 @@
 # ramped_interval.be — a ladder of holds: a fixed number of sets, each one deeper than the last.
 #
-# The cycle is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits:
+# The cycle is a phase machine advanced from tick(now), which every poll calls. Nothing waits:
 # a phase is left when the clock or the machine says so, and `now` is the only time source. Each set
 # works at its own target and rests at the rest pressure. Back pauses the run and vents the chamber;
 # OK then starts the set it stopped on again, with its work clock back at full.
@@ -96,7 +96,7 @@ class RampedInterval : Page
   var chrome
 
   def init()
-    super(self).init()
+    super(self).init("ramped_interval")
     self.phase = "ready"
     self.mark = 0
     self.set = 0
@@ -111,13 +111,13 @@ class RampedInterval : Page
     self.rest = 45
     self.chrome = RampedIntervalChrome(self)
 
-    self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.ok())
-    self.on("back", "short", / -> self.pause())
+    self.on("up:double", / -> self.edit())
+    self.on("ok:single", / -> self.ok())
+    self.on("cancel:single", / -> self.pause())
+    self.on("cancel:double", / -> self.leave())
   end
 
   def activate(settings)
-    self.editor = nil
     self.phase = "ready"
     self.set = 0
     self.targets = []
@@ -131,74 +131,32 @@ class RampedInterval : Page
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
-      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
-      setting("final_pressure", "Final", "pressure", 1, nil, nil, nil, false),
-      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil, true),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, true),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false)
-    ]
-  end
-
-  # The starting values match the shipped `ramped_interval.cfg`. The pressures go through clamp()
-  # before they are ever handed to the machine, and a hand-edited duration is held to the same
-  # bounds the editor uses. A switch's settings map, when there is one, is the set for this
-  # activation. A nullable step is an even ladder from the start to the final pressure; a nullable
-  # rest vents all the way.
+  # The starting values match the shipped `ramped_interval.cfg`. A switch's settings map, when there
+  # is one, is the set for this activation; otherwise the file is. A nullable step is an even ladder
+  # from the start to the final pressure; a nullable rest vents all the way. The step's zero is a
+  # rule of the page's own - no editor would produce it - so it is read raw.
   def read_settings(settings)
-    self.count = self.whole(self.value(settings, "set_count", 4), 1, 20)
-    self.initial = vacuum.clamp(self.value(settings, "initial_pressure", 5.0))
-    self.final = vacuum.clamp(self.value(settings, "final_pressure", 20.0))
+    var s = self.activation(settings)
+    self.count = s.value("set_count")
+    self.initial = s.value("initial_pressure")
+    self.final = s.value("final_pressure")
 
-    if self.unset(settings, "step_pressure")
+    if s.unset("step_pressure")
       var rise = self.final - self.initial
       self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
     else
-      var step = self.value(settings, "step_pressure", 5.0)
+      var step = s.raw("step_pressure")
       self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
     end
 
-    if self.unset(settings, "rest_pressure")
+    if s.unset("rest_pressure")
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = vacuum.clamp(self.value(settings, "rest_pressure", 5.0))
+      self.rest_pressure = s.value("rest_pressure")
     end
 
-    self.work = self.whole(self.value(settings, "work_duration", 300), 0, 3600)
-    self.rest = self.whole(self.value(settings, "rest_duration", 45), 0, 1200)
-  end
-
-  # Whether a key is nothing: missing from the file (or holding an empty value), or missing from a
-  # switch's map (or nil there). A nullable setting means its own thing on this answer.
-  def unset(settings, key)
-    if settings != nil
-      return settings.find(key, nil) == nil
-    end
-    return store.get(key, "") == ""
-  end
-
-  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
-  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
-  # values.
-  def value(settings, key, fallback)
-    if settings != nil
-      return settings.find(key, fallback)
-    end
-    return store.get(key, fallback)
-  end
-
-  def whole(value, low, high)
-    var number = int(value)
-    if number < low
-      number = low
-    end
-    if number > high
-      number = high
-    end
-    return number
+    self.work = s.value("work_duration")
+    self.rest = s.value("rest_duration")
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -225,9 +183,8 @@ class RampedInterval : Page
     return false
   end
 
-  # Back pauses: the chamber vents and the cycle holds the set it stopped on, so the pause costs
-  # the pressure and nothing else. The device's own Back hold still stops outright and leaves the
-  # page, which is the way out.
+  # Cancel pauses: the chamber vents and the cycle holds the set it stopped on, so the pause costs
+  # the pressure and nothing else. Cancel, held to a double, leaves the page.
   def pause()
     if self.phase == "ready" || self.phase == "paused"
       return false
@@ -235,6 +192,13 @@ class RampedInterval : Page
     vacuum.stop()
     self.phase = "paused"
     vacuum.log("ramped_interval: paused")
+    return true
+  end
+
+  def leave()
+    vacuum.stop()
+    vacuum.log("ramped_interval: left")
+    ux.pop(nil)
     return true
   end
 
@@ -349,10 +313,10 @@ class RampedInterval : Page
     self.phase = "ready"
     vacuum.log("ramped_interval: complete")
     jingles.play_current()
-    routines.set_active("default")
+    ux.pop_to_root()
   end
 
-  # The run ended without this page asking: a latched fault, or a release the device's hold caused.
+  # The run ended without this page asking: a latched fault, or a release an external claim caused.
   # The machine is already safe, so put the page's starting target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
@@ -361,14 +325,11 @@ class RampedInterval : Page
     vacuum.log("ramped_interval: cycle stopped")
   end
 
-  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
-  # without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
+  # vents without asking this page, so reset the phase machine on that notice.
   def tick(now)
-    # The settings editor owns the panel while it is open; the ramp does not advance underneath it,
-    # and the restart on close is what puts the clock right.
-    if self.editor != nil
-      return
-    end
+    # While the settings scene is on top this scene is not polled, so the ramp does not advance
+    # underneath it; the restart on close is what puts the clock right.
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
@@ -376,12 +337,10 @@ class RampedInterval : Page
   end
 
   # Settings are entered with the chamber released, like a pause: a run that was under way starts
-  # over at the first set when the editor closes, so it must not keep working at the old set
-  # underneath it. An editor that refuses to open leaves the run alone.
+  # over at the first set when the settings scene closes, so it must not keep working at the old
+  # set underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    if !self.open_editor(Settings("ramped_interval"))
-      return false
-    end
+    self.open_settings()
     if self.phase != "ready"
       vacuum.stop()
     end
@@ -445,5 +404,28 @@ class RampedInterval : Page
   end
 end
 
-routines.register("ramped_interval", "Ramped Interval", RampedInterval(), false, RampedIntervalIcon())
+# The values this page edits, in the order the settings list shows them, and the one rule that binds
+# two of them: a ladder has to climb, so the final pressure is at least where it starts.
+class RampedIntervalSettings : SettingsScene
+  def settings()
+    return [
+      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
+      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
+      setting("final_pressure", "Final", PressureEditor(1, false), 20.0),
+      setting("step_pressure", "Step", PressureEditor(1, true), nil),
+      setting("rest_pressure", "Rest", PressureEditor(1, true), nil),
+      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 300),
+      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 45)
+    ]
+  end
+
+  def problem(values)
+    if values["final_pressure"] < values["initial_pressure"]
+      return "FINAL < START"
+    end
+    return nil
+  end
+end
+
+routines.register("ramped_interval", RampedIntervalIcon(), RampedInterval, RampedIntervalSettings)
 return RampedInterval

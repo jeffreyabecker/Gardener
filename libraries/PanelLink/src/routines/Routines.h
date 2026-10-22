@@ -4,149 +4,86 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <vector>
-
-#include "hal/Button.h"
+#include "routines/UxStack.h"
 
 // The vendored interpreter's VM type, forward declared so its header stops here.
 struct bvm;
 
 namespace gardener {
 
-class Panel;
+class PanelContext;
 class Logger;
+class SettingsSource;
+class Library;
 
-// The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
-// that is active.
+// The Berry runtime behind the disconnected page: the VM, the modules and scenes it has loaded,
+// and the scene stack that is showing. The stack owns the top scene and is driven one entry per
+// beat from this class's own frame — never from inside a Berry call — so there is nothing
+// suspended, no second core and no lock.
 //
-// One entry per beat. The runtime is the only thing that enters the interpreter, and it does so
-// from its own frame — never from inside a Berry call — so there is nothing suspended, no second
-// core and no lock. `activate()` runs when a routine becomes active, and `poll(now)` once per pass
-// after that.
-//
-// A routine that raises is dropped and the page falls back to the mark: an error in a script is not
-// allowed to leave the glass blank.
+// The registry the browser drives is a Berry class (`/modules/registry.be`); this side keeps only
+// what the firmware has to: the VM, the files it loads, the scene stack it polls, the gesture queue,
+// and the `store` surface that reads and writes a routine's own document.
 class Routines {
  public:
-  // The press queue is a fixed ring, because a dropped press is worth a log line and nothing more. The
-  // registry is not bounded: how many routines the device has is however many files were put there.
-  static constexpr uint8_t kMaxPresses = 8;
-
   // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
-  // `/routines/*.be`, and picks `default`. Modules come first so a page can use what one defines.
-  // False only when the interpreter cannot be allocated at all.
-  bool begin(Panel& context);
+  // `/routines/*.be`, and pushes the root scene. Modules come first so a scene can use what one
+  // defines. False only when the interpreter cannot be allocated at all.
+  bool begin(PanelContext& context);
 
-  // The page's way out: leave whichever routine is showing and give the panel back to `default`. The
-  // files are not re-read — every routine is still registered — so this is a switch, not a load.
-  // False when nothing named `default` is registered, which leaves the mark.
+  // The interpreter itself, for the host harness, which loads its own driver into the same VM after
+  // the image has loaded.
+  bvm* vm() const { return vm_; }
+
+  // The page's way out: leave whichever scenes are showing and give the panel back to the root.
+  // False when no root scene is there, which leaves the mark.
   bool showDefault();
 
-  // One beat: the active routine's poll(now), or nothing when there is no active routine.
+  // One beat: the top scene's poll(now), or nothing when the stack is empty.
   void poll(uint32_t nowMs);
 
-  // The page became visible again: run the active routine's activate(), so a routine re-reads the
-  // unit and redraws rather than trusting what it knew before the controller took over.
+  // The page became visible again: run the top scene's activate(), so a scene re-reads the unit
+  // and redraws rather than trusting what it knew before the controller took over.
   void enterPage();
 
-  bool active() const { return active_ >= 0; }
+  bool active() const { return stack_.active(); }
 
-  // --- the `routines` module's surface, called from the bindings ---
-  // `objectIndex` is the routine object's stack position in the calling native function; the
-  // runtime takes its own reference, so the value does not have to stay where it is. `iconIndex` is
-  // the same for an optional icon object, and 0 when the file registered none.
-  bool registerRoutine(const char* name, const char* title, int objectIndex, bool hidden = false,
-                       int iconIndex = 0);
-  // `settingsIndex` is the stack position of an optional settings map in the calling native
-  // function, and 0 when the switch carries none. The map belongs to this activation only: it is
-  // handed to activate() and then forgotten, never written anywhere.
-  bool setActive(const char* name, int settingsIndex = 0);
-  size_t count() const { return entries_.size(); }
-  const char* nameAt(size_t index) const;
-
-  // A hidden routine is registered and can be switched to, but is left out of the list a browser
-  // draws: the device's own pages are reached by gesture rather than picked from that list.
-  bool hiddenAt(size_t index) const;
-
-  // The registered object, pushed onto the VM stack, and whether it has a method of that name. A
-  // page that calls the object itself stays in its own Berry frame; the runtime does not re-enter
-  // the interpreter from a native call.
-  bool pushObject(const char* name) const;
-  bool hasMethod(const char* name, const char* method) const;
-
-  // The routine's icon, pushed onto the VM stack. False when the file registered none, so a list
-  // that draws icons can leave the row as text alone.
-  bool pushIcon(const char* name) const;
+  // --- the `ux` module's surface, called from the bindings ---
+  // Positions on the VM stack in the calling native function; 0 means the argument was absent.
+  bool push(int sceneIndex, int argsIndex, int callbackIndex) {
+    return stack_.push(sceneIndex, argsIndex, callbackIndex);
+  }
+  bool pop(int valueIndex) { return stack_.pop(valueIndex); }
+  bool popToRoot(int valueIndex) { return stack_.popToRoot(valueIndex); }
+  bool top() const { return stack_.top(); }
+  int depth() const { return stack_.depth(); }
 
   // --- the `buttons` module's surface ---
-  void pushPress(Button button, Press press);
-  bool takePress(Button& button, Press& press);
+  void pushPress(const String& gesture) { stack_.pushPress(gesture); }
+  bool takePress(String& gesture) { return stack_.takePress(gesture); }
 
-  // The device's Back hold stops and vents without asking the page. The panel task bumps stopSeq
-  // when the hold fires and when control is handed to or from an external link; `takeStopped()`
-  // answers true once per bump, so a page that has a phase machine resets it on the event instead
-  // of inferring the stop from the machine's state. A page that is showing when the hold fires
-  // takes it and abandons its run: the hold no longer switches pages, so the page stays. What a
-  // hand-off leaves behind is read by the page it finds when control comes back.
-  bool takeStopped();
+  // --- the `vacuum` module's surface ---
+  bool takeStopped() { return stack_.takeStopped(); }
 
   // --- the `store` module's surface ---
-  // The active routine's own values, kept beside its source in `/routines/<name>.cfg`. The file is
-  // read and written here, on the panel task the VM already runs on.
-  //
-  // `storeGet` is false when there is no active routine or nothing is stored under the key;
-  // `storeSet` is false when there is no active routine or the file would not take the write. The
-  // named forms address a registered routine, which is what lets the browser edit the values of a
-  // routine that is not the one showing.
-  bool storeGet(const char* key, String& out);
-  bool storeSet(const char* key, const String& value);
+  // A routine's own values, kept in the routine's own document by the settings source the context
+  // gave. The name is a plain word: the document is named after it, so a path separator would
+  // address another file.
   bool storeGet(const char* routine, const char* key, String& out);
   bool storeSet(const char* routine, const char* key, const String& value);
 
  private:
-  struct Entry {
-    String name;
-    String title;
-    bool hidden = false;
-  };
-
-  struct PressEvent {
-    Button button;
-    Press press;
-  };
-
-  size_t loadAll(const char* dir, size_t& found);
+  size_t loadAll(const char* folder, size_t& found);
   bool loadFile(const String& path);
-  bool startActive(int settingsIndex = 0);
   void reportError(const char* file, const char* what);
-  bool invoke(size_t index, const char* method, bool withNow, uint32_t nowMs,
-              int settingsIndex = 0);
-  void holdPendingSettings(int index);
-  bool choose(const char* name);
-  void selectDefault();
-  void applyPending();
-  bool isRegistered(const char* routine) const;
 
   bvm* vm_ = nullptr;
   Logger* logger_ = nullptr;
-  // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
-  // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
-  // the device is up.
-  std::vector<Entry> entries_;
-  int active_ = -1;
-
-  // A routine that asks to switch routines is asking from inside its own poll; the switch is
-  // applied when that call returns rather than re-entering the VM.
-  bool insideCall_ = false;
-  bool hasPending_ = false;
-  String pendingActive_;
-
-  PressEvent presses_[kMaxPresses];
-  uint8_t pressHead_ = 0;
-  uint8_t pressCount_ = 0;
-  bool pressOverflow_ = false;
-  // The stopSeq the last takeStopped() answered, so one bump is one true.
-  uint32_t lastStopSeq_ = 0;
+  // Where a routine's own values live, and the files the interpreter loads. Both come from the
+  // context at begin(), so nothing here names a filesystem or a path.
+  SettingsSource* values_ = nullptr;
+  Library* library_ = nullptr;
+  UxStack stack_;
 };
 
 }  // namespace gardener

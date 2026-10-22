@@ -22,7 +22,7 @@ attended.
 | 3 | Solenoid valve | Mini 2-way **normally open**, 3.0–5.0 V, ~180 mA at 3.3 V. Ports 1 and 2 in use; port 3 capped | **$9.63** — [B0HDRX4C44](https://www.amazon.com/dp/B0HDRX4C44) |
 | 4 | **XGZP6847A sensor** | CFSensor XGZP6847A100KPGN33: -100–0 kPa gauge, 3.3 V, amplified analog 0.2–2.7 V out, 6-DIP, 3 mm barbless top port. Pre-calibrated, so no bridge ADC; it takes one ADC pin rather than the I2C bus | **≈ $40** — [DigiKey](https://www.digikey.com/en/products/detail/cfsensor/XGZP6847A100KPGN33/22530823) |
 | 5 | **OLED** | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. On its own bus | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
-| 6 | Button module | KOOBOOK 5-way navigation switch: up, down, left, right, centre — 5 switches, 5 GPIOs. 2.0–9.0 V | **$7.29** — [B07SC1H42W](https://www.amazon.com/dp/B07SC1H42W) |
+| 6 | **Six keys + 74HC165** | Six labelled momentary switches — up, down, forward, back, okay, cancel — into an 8-bit parallel-in/serial-out shift register. Three GPIOs instead of six; the two spare register inputs are tied high | **≈ $5** — any 74HC165 and six 6 mm tactile switches |
 | 7 | **DRV8833 module** | Dual H-bridge, 2 × 1.5 A, logic-level inputs. Drives the pump and the valve | **$6.99** — [B0G1RMXMSF](https://www.amazon.com/dp/B0G1RMXMSF) |
 | 8 | **Breadboard + jumpers** | 2 × 830-point board with a wire kit | **$9.99** — [B0H17GR4S5](https://www.amazon.com/dp/B0H17GR4S5) |
 | 9 | **Bulk capacitor** | 1000 µF 25 V electrolytic, across the 3.3 V load rail | **$6.99** — [B0F8C1VMT6](https://www.amazon.com/dp/B0F8C1VMT6) |
@@ -41,7 +41,7 @@ few cents if they are not, and neither is in the total.
 ```
 PC USB 5 V ─┬─ MCU "5V" pin ── its 3V3 pin ─┬─ XGZP6847A  VDD + GND   (OUT → GPIO7)
 (via USB-C) │                               ├─ OLED       SDA + SCL   (Wire1, 17/18)
-            │                               └─ buttons    5-way
+            │                               └─ keys       74HC165 (SH/LD, CLK, Q7)
             └─ 3.3 V buck ── DRV8833 VM ─┬─ channel A ── pump
                                          └─ channel B ── valve
 
@@ -53,10 +53,10 @@ GPIO  7               ADC     XGZP6847A OUT (ADC1 channel 6)
 GPIO 17 18            I2C     panel 0x3C (Wire1)
 GPIO  6               pump
 GPIO  5               valve
-GPIO  1  2  10 11     buttons 5-way (four keys read)
+GPIO 10 11  1         keys: 74HC165 SH/LD, CLK, Q7 (six keys)
 GPIO  4               battery sense (reserved)
 GPIO 12               buzzer (passive piezo)
-GPIO  8  9 13 14 15 16   spare
+GPIO  2  8  9 13 14 15 16   spare
 ```
 
 The sensor is a bare 6-DIP: pin 1 is N/C, pins 2 and 4 are VDD, pins 3 and 6 are GND, and pin 5
@@ -65,8 +65,9 @@ OUT to GND. The pulldown is what makes an unplugged sensor read 0 V and be refus
 read as full vacuum.
 
 A passive piezo on GPIO12 is an add-on to this list; the firmware drives it directly from one
-LEDC channel. GPIO12 is the 5-way module's fifth key in the original wiring, but the firmware reads
-only four keys, so that key is not wired on a build that fits the buzzer.
+LEDC channel. The key register's `CLK INH` is tied low, its six key inputs are active-low with
+pull-ups to 3.3 V, and its two spare inputs are tied high: an unconnected 74HC165 input floats and
+reads as noise.
 
 ```
    pump inlet ──────┐
@@ -118,8 +119,8 @@ Bench-only, to fix once the loop works.
 * The datasheet warns that light reaching the die shifts the output. Use opaque tube, and do not
   leave the sensor under a lamp with its port lit.
 * No chamber, so no realistic pump-down time and no leak measurement.
-* The 5-way module costs five GPIOs but the firmware reads four keys. GPIO12, the fifth key's pin,
-  drives the buzzer instead; the key is not wired on a build that fits the piezo.
+* The six-key panel costs one shift register and three GPIOs, so the key count is no longer what
+  limits the rig; the 74HC165 has two spare inputs before a second register is needed.
 
 Which of these parts move onto the alpha carrier board, and which stay modules, is a planned
 board decision and not part of the 5 V build.
@@ -161,7 +162,7 @@ switch does the rest, so GPIO6 and the duty mean the same thing on either rail.
 | Valve | 3–5 V normally open | the 5 V build's item 3 |
 | Sensor | XGZP6847A | the 5 V build's item 4 |
 | Panel | SH1106 OLED | the 5 V build's item 5 |
-| Buttons | 5-way module | the 5 V build's item 6 |
+| Keys | six switches + 74HC165 | the 5 V build's item 6 |
 | Bulk capacitor | 1000 µF 25 V | the 5 V build's item 9 |
 | Fuse | 3 A slow-blow and an inline holder | **≈ $6** |
 | DC jack | 5.5 × 2.1 mm screw terminal | **≈ $5** |

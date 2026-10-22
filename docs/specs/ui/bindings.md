@@ -1,8 +1,10 @@
 # Bindings
 
-The native surface a routine calls: eight modules — `vacuum`, `screen`, `device`, `buttons`,
-`buzzer`, `jingles`, `routines` and `store` — and the records those calls answer with. This is the
+The native surface a routine calls: seven modules — `vacuum`, `screen`, `device`, `buttons`,
+`buzzer`, `jingles`, `ux` and `store` — and the records those calls answer with. This is the
 reference for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
+The registry the routine browser draws is a Berry class, not a native module: it is documented
+under `routines` below but lives in `/modules/registry.be`.
 
 ## Values
 
@@ -19,9 +21,9 @@ A record is the machine as it stood when the call returned, not a live view: wri
 (`s.kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
 have raises `attribute_error`, and the fields are the ones listed under each call.
 
-The `setting` record that `describe()` returns is the same kind of object, but a routine builds it
-itself rather than a call answering it; its fields are listed under `describe()` in
-[routine.md](./routine.md).
+The `setting` record a routine registers is the same kind of object, but a routine builds it itself
+rather than a call answering it; its fields, the editor each one carries and the default it holds,
+are listed under the settings a routine registers in [routine.md](./routine.md).
 
 ## `vacuum` — the machine
 
@@ -70,7 +72,7 @@ end
 
 A page that is showing when the hold fires takes the notice and abandons its run: the hold no
 longer switches pages, so the page stays and its own `abandon()` is what puts it right. An OK
-pressed while Back is still held — short, long or double — is the way out: `default` takes the
+pressed while Back is still held — short, long or double — is the way out: the readout takes the
 panel, and the switch drops any notice the page never took. The notice a hold fired while a
 controller owned the device leaves behind is what the page finds on the next `poll` when control
 comes back. The release still arrives as a `long` Back press afterwards.
@@ -101,6 +103,7 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_vline(x, y, h)` |
 | `screen.draw_rect(x, y, w, h)` |
 | `screen.draw_fillrect(x, y, w, h)` |
+| `screen.draw_invert(x, y, w, h)` |
 | `screen.draw_roundrect(x, y, w, h, r)` |
 | `screen.draw_fillroundrect(x, y, w, h, r)` |
 | `screen.draw_circle(x, y, r)` |
@@ -114,6 +117,11 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_text(x, y, size, inverted, text [, font])` |
 | `screen.text_bounds(text, size [, font])` |
 | `screen.flush()` |
+
+`draw_invert` is the one call that does not put ink or paper down: it flips what is already inside
+the rectangle, ink to paper and paper to ink, so it has to come after the pixels it is meant to
+flip. That is also the only way to highlight a line drawn in a proportional face, which `draw_text`'s
+`inverted` cannot do — see Faces below.
 
 ### Faces
 
@@ -135,7 +143,8 @@ mistake.
 With a custom face, `y` is the **baseline** of the line rather than the top of the glyph box — the
 font format's own rule. With the built-in face, `y` is the top. `size` scales whichever face is set:
 `1` is the face as designed, `3` is three times as tall. A custom face has no background, so
-`inverted` has no effect on it; fill a rectangle first when a line needs a highlight.
+`inverted` has no effect on it; when a line needs a highlight, draw it and then `draw_invert` the
+box `text_bounds` answered, which turns that rectangle's paper to ink and its ink to paper.
 
 The face belongs to the call. The firmware restores the built-in face after drawing or measuring,
 so handing the panel to the shared settings editor does not hand it a face as well.
@@ -243,12 +252,12 @@ end
 ```
 
 Holding **Back for 3 s** is the device's own stop: it stops the pump, vents, and keeps the valve
-open while Back is held. No routine can suppress it, and the page showing takes the
+open while Back is held. No routine can suppress it, and the scene showing takes the
 `vacuum.stopped()` notice and abandons its run. An **OK pressed while Back is held** — short, long
-or double — hands the panel back to `default`. The switch activates `default` again — the same
-object that was registered at boot, so it keeps whatever state it had. Nothing is re-read from
-disk; a routine that was left can be brought back with `routines.set_active()`. The release arrives
-as a `long` Back on whichever page is showing by then.
+or double — hands the panel back to the readout. The switch returns to the root scene — the same
+object that was pushed at boot, so it keeps whatever state it had. Nothing is re-read from disk; a
+routine that was left can be brought back by pushing its scene again. The release arrives as a
+`long` Back on whichever scene is showing by then.
 
 Holding **Back and OK together for 5 s** is the reboot: the same safe reset the wire serves as
 `device reboot`, which stops, vents up to 2 s and restarts. It works from every page and link state,
@@ -322,64 +331,72 @@ An identifier that is not in the file answers `nil` from `title`, `label` and `n
 or malformed file leaves the library empty; the System page then shows `JINGLE=--` and the rest of
 the device keeps working.
 
-## `routines` — the registry
+## `ux` — the scene stack
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, routine, hidden, icon)` | `bool` | bind a routine to a name and a title. Called from a file's top level; `hidden` is optional and defaults to `false`, and `icon` is an optional `Icon` instance |
-| `routines.set_active(name, settings)` | `bool` | switch pages, optionally carrying a settings map for the activation. Called from inside a `poll` it applies when that call returns, so the VM is never re-entered |
-| `routines.names()` | list of strings | every registered name that is not hidden, in registration order |
-| `routines.get(name)` | the routine object, or `nil` | the registered instance, so a page can call a method such as `describe()` in its own frame |
-| `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon, for a list that draws one before the name |
-| `routines.has(name, method)` | `bool` | whether that routine has a function of that name |
+| `ux.push(scene [, args [, callback]])` | `bool` | put a scene on top and make it the one that is polled. `args` (a map or nil) is that activation's `activate(args)`; `callback` receives the value the scene returns when it pops |
+| `ux.pop([value])` | `bool` | leave the top scene, handing `value` to the pusher's callback, or re-activating the scene below when it was pushed without one. Refused when only the root remains |
+| `ux.pop_to_root([value])` | `bool` | pop every scene above the root; the root re-activates |
+| `ux.top()` | the top scene, or `nil` | what the stack is showing |
+| `ux.depth()` | `int` | how many scenes are on the stack |
 
-Registering the same name twice is one routine: the later file wins, and the replacement is logged,
-including its icon — a replacement that registers none does not keep the old one.
+A push or pop asked for from inside a scene's own `poll` is applied when that call returns, so the
+VM is never re-entered. Only the top scene is activated and polled; a scene below the top keeps its
+state and resumes through its callback when the scene above pops. A scene whose `activate()` or
+`poll()` raises is dropped with the whole stack: the panel shows the device's mark.
 
-An icon is optional: a routine without one, or one whose icon is `nil`, is a text-only row in the
-browser.
+The root scene is the `__rootScene` global `/modules/ui.be` sets, pushed at boot by the firmware. It
+is not registered anywhere; it is what the device's go-home gesture and a controller hand-off
+return to.
 
-A switch may carry a **settings map**: the second argument is handed to that activation's
-`activate(settings)` and then forgotten. A later activation carries no map and passes `nil`, so the
-page reads its values from its file through `store`. The runtime never writes the map anywhere:
-`store` is untouched, and persistence still only happens when a routine calls `store.set`.
+## `routines` — the registry (a Berry class)
 
-There is no fixed number of routines: the registry grows as files register. What bounds it is the
-heap the files are loaded into, not a table, so a boot that runs out of memory while loading aborts
-and says so rather than dropping the file quietly. A name keeps the position it registered in; the
-routine browser draws `routines.names()`, so a hidden routine is still registered and can still be
-switched to, but is not one of the names that list reports.
+The registry is not a native module. `/modules/registry.be` defines `class RoutineRegistry` and the
+global instance `routines`; a routine file's top level calls its methods and the routine browser
+draws its list.
 
-`routines.get()` and `routines.has()` look through the same registry. The shared settings editor
-uses them to call another page's `describe()` without the firmware re-entering the interpreter from
-a native call.
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `routines.register(name, icon, factory, settings)` | `bool` | bind a name to the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
+| `routines.names()` | list of strings | every registered name, in registration order |
+| `routines.settings(name)` | list of `setting`s, or `nil` | what the routine's settings scene edits |
+| `routines.settings_scene(name)` | a `SettingsScene`, or `nil` | one with no writer, for asking what a routine edits |
+| `routines.push_settings(name, on_change, closed)` | `bool` | build the routine's settings scene, hand it `on_change(key, value)` for every value it settles, and run `closed` when it pops |
+| `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
+| `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
+
+Registering the same name twice is one routine: the later file wins. An icon is optional: a routine
+without one, or one whose icon is `nil`, is a text-only row in the browser. The device's own scenes
+— the readout, the system settings and the browser — are not registered at all; they are well-known
+scenes in `/modules/ui.be` the system pushes directly. There is no fixed number of routines: the
+registry is a Berry list, so it grows as files register.
 
 ## `store` — the routine's own values
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `store.get(key, fallback)` | the fallback's type | the active routine's value, or `fallback` when the key was never set |
-| `store.set(key, value)` | `bool` | false when the value could not be written |
-| `store.get(name, key, fallback)` | the fallback's type | a registered routine's value |
-| `store.set(name, key, value)` | `bool` | write a registered routine's value |
+| `store.get(name, key, fallback)` | the fallback's type | a routine's value, or `fallback` when the key was never set |
+| `store.set(name, key, value)` | `bool` | write a routine's value |
 
 A routine's values live in `/routines/<name>.cfg`, named after the routine, and a data-image upload
-can ship initial ones beside its `.be`. A routine writes its own; the named forms in the table let
-a page edit another routine's.
+can ship initial ones beside its `.be`. A routine writes its own; a page that edits another
+routine's values (the browser does) uses the same named forms. The name is a plain word — a name
+with `/` or `\` is refused, because it would address another file.
 
 The **fallback sets the type** the stored text is read back as:
 
 ```berry
-var target = store.get("target", 0.0)    # real
-var count  = store.get("count", 0)       # int
-var muted  = store.get("muted", false)   # bool: "true" and "1" are true
-var label  = store.get("label", "")      # anything else: the text as written
+var target = store.get("interval", "target", 0.0)   # real
+var count  = store.get("interval", "count", 0)      # int
+var muted  = store.get("interval", "muted", false)  # bool: "true" and "1" are true
+var label  = store.get("interval", "label", "")     # anything else: the text as written
 ```
 
 `store.set` writes a string as it stands, and a number or a bool in the interpreter's own text form.
 A key that was never set returns the fallback rather than `nil`, so a first boot needs no special
-case. A key that holds an empty value reads back as `""` — the way the settings editor keeps a
-cleared nullable setting, and the sentinel it tests to tell "nothing" from a real value.
+case. A key that holds an empty value reads back as `""` — the way a cleared nullable setting is
+kept, and the sentinel the settings view tests to tell "nothing" from a real value.
 
 The file is a flat `key=value` document, which is what makes it readable off the device and
 editable in the data image:
@@ -393,8 +410,3 @@ Two limits. It holds **32 keys** — a `set` past that returns `false`. And a `s
 though only when the value actually changed: setting the same value on every pass costs nothing,
 while storing a *changing* value on every pass wears the partition. Write on the event, not on the
 frame.
-
-The one- and two-argument forms belong to the routine that is **active**. Use them from `activate()`
-or `poll()`; a file's top level runs before any routine is active, when there is no file to address.
-The named forms are how a page reaches another routine's values. They cannot walk outside
-`/routines/`: a name that is not registered is refused.

@@ -2,18 +2,20 @@
 """Compile and run the Berry data image on the host.
 
     python tools/berry/check.py              # compile, load and drive
-    python tools/berry/check.py --compile    # compile only
-    python tools/berry/check.py --no-cache   # rebuild the VM objects
+    python tools/berry/check.py --compile    # compile and load only
+    python tools/berry/check.py --no-cache   # rebuild everything
     python tools/berry/check.py --art default
     python tools/berry/check.py --art interval --seconds 30
+    python tools/berry/check.py --tests      # run the test suites
+    python tools/berry/check.py --test interval
 
-The VM is the vendored one from libraries/berry, built with the same berry_conf.h
-the firmware uses, so 32-bit ints, single-precision reals and the 2000-slot stack
-are the ones a routine will meet on the device.
+The check is the firmware, not a model of it: the panel's own bindings, registry, overlay, settings
+and control law are compiled here against the vendored VM, with a bitmap for a glass, a chamber for
+a rig and an in-memory data image. A page therefore runs on the code the device runs, and the
+driver walks the image's own routines.
 
---art runs one routine and saves the frame it drew as a one-bit BMP, using the
-Adafruit GFX library the device compiles for the fonts, so the picture is the
-panel's, not an approximation.
+--art runs one routine and saves the frame it drew as a one-bit BMP, using the Adafruit GFX
+library the device compiles for the fonts.
 """
 
 import argparse
@@ -26,16 +28,57 @@ from pathlib import Path
 TOOL = Path(__file__).resolve().parent
 ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
+PANEL = ROOT / "libraries" / "PanelLink"
+MACHINE = ROOT / "libraries" / "VacuumCore"
 DATA = ROOT / "firmware" / "gardener" / "data"
+HOST = TOOL / "host"
 BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 
+# The firmware's own sources, compiled on the host. What is not here is what needs a board: the
+# composition roots, the tasks, the links, the device drivers and the vendor display.
+PANEL_SOURCES = [
+    PANEL / "src" / "BuzzerPlayer.cpp",
+    PANEL / "src" / "panel" / "Overlay.cpp",
+    PANEL / "src" / "panel" / "Fonts.cpp",
+    PANEL / "src" / "routines" / "Bindings.cpp",
+    PANEL / "src" / "routines" / "Routines.cpp",
+    PANEL / "src" / "routines" / "UxStack.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Buttons.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Buzzer.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Device.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Jingles.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Screen.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Store.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Ux.cpp",
+    PANEL / "src" / "routines" / "bindings" / "Vacuum.cpp",
+    PANEL / "src" / "storage" / "PanelSettings.cpp",
+    PANEL / "src" / "storage" / "Settings.cpp",
+    PANEL / "src" / "storage" / "Values.cpp",
+    MACHINE / "src" / "MachineCommand.cpp",
+    MACHINE / "src" / "VacuumSystem.cpp",
+]
 
-def compiler():
-    for name in (os.environ.get("CC"), "cc", "gcc", "clang"):
+# The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
+# parts, a counted piezo, a full battery, the data image in memory and a log buffer.
+HOST_SOURCES = [
+    HOST / "BitmapPanel.cpp",
+    HOST / "Clock.cpp",
+    HOST / "HarnessModule.cpp",
+    HOST / "HarnessSession.cpp",
+    HOST / "MemoryFiles.cpp",
+]
+
+MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
+
+
+def compiler(kind):
+    preferred = os.environ.get("CXX" if kind == "c++" else "CC")
+    names = ("g++", "clang++") if kind == "c++" else ("cc", "gcc", "clang")
+    for name in (preferred, *names):
         if name and shutil.which(name):
             return name
-    sys.exit("no C compiler found; set CC")
+    sys.exit(f"no {kind} compiler found; set {'CXX' if kind == 'c++' else 'CC'}")
 
 
 def run(command):
@@ -70,54 +113,47 @@ def gfx_library():
         if (path / "Fonts" / "FreeSans18pt7b.h").exists() and (path / "glcdfont.c").exists():
             return path
     sys.exit(
-        "the frame renderer needs the Adafruit GFX library's fonts; install it with\n"
+        "the panel renderer needs the Adafruit GFX library's fonts; install it with\n"
         '  arduino-cli lib install "Adafruit GFX Library"\n'
         "or point --gfx (or ADAFRUIT_GFX) at the library folder"
     )
 
 
-def build(cc, gfx):
+def slug(path):
+    return "_".join(Path(path).resolve().parts[-4:])
+
+
+def build(cc, cxx, gfx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
-    include = [
-        "-I", str(BERRY / "src"),
-        "-I", str(BERRY / "generate"),
-        "-I", str(TOOL / "gfx"),
-        "-I", str(gfx),
-    ]
-    libraries = []
+    includes = []
+    for path in (HOST, BERRY / "src", BERRY / "generate", TOOL / "gfx", gfx, PANEL / "src",
+                 MACHINE / "src"):
+        includes.extend(["-I", str(path)])
+
+    built = []
+
+    def compile(source, std, compiler_path):
+        obj = objects / (slug(source) + ".o")
+        if (args.no_cache or not obj.exists()
+                or obj.stat().st_mtime < Path(source).stat().st_mtime):
+            run([compiler_path, std, "-O0", *includes, "-c", str(source), "-o", str(obj)])
+        built.append(obj)
+
     for source in sorted((BERRY / "src").glob("*.c")):
-        obj = objects / (source.stem + ".o")
-        if args.no_cache or not obj.exists() or obj.stat().st_mtime < source.stat().st_mtime:
-            run([cc, "-std=gnu11", "-O0", *include, "-c", str(source), "-o", str(obj)])
-        libraries.append(obj)
+        compile(source, "-std=gnu11", cc)
+    for source in (*MAIN_SOURCES, *PANEL_SOURCES):
+        compile(source, "-std=c++17", cxx)
 
-    # main.c and frame.c: the host entry point, and the panel the harness draws on.
-    for source in (TOOL / "main.c", TOOL / "frame.c"):
-        obj = objects / ("berrycheck_" + source.stem + ".o")
-        if args.no_cache or not obj.exists() or obj.stat().st_mtime < source.stat().st_mtime:
-            run([cc, "-std=gnu11", "-O0", *include, "-c", str(source), "-o", str(obj)])
-        libraries.append(obj)
-    run([cc, *(str(obj) for obj in libraries), "-o", str(EXE), "-lm"])
-
-
-def files(data):
-    modules = sorted((data / "modules").glob("*.be"))
-    routines = sorted((data / "routines").glob("*.be"))
-    return [TOOL / "harness.be", *modules, TOOL / "driver.be", *routines]
-
-
-def seeds(data):
-    found = [("device", data / "settings.cfg"), ("jinglelibrary", data / "modules" / "jingles.txt")]
-    for path in sorted((data / "routines").glob("*.cfg")):
-        found.append((path.stem, path))
-    return [(name, path) for name, path in found if path.exists()]
+    # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then
+    # refuses to start with a missing entry point rather than a diagnostic.
+    run([cxx, "-static", *(str(obj) for obj in built), "-o", str(EXE), "-lm"])
 
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--compile", action="store_true", help="stop after compiling and loading")
-parser.add_argument("--no-cache", action="store_true", help="rebuild the VM objects")
-parser.add_argument("--verbose", action="store_true", help="show the compiler commands")
+parser.add_argument("--no-cache", action="store_true", help="rebuild every object")
+parser.add_argument("--verbose", action="store_true", help="show compiler commands and device log")
 parser.add_argument("--data", default=str(DATA), help="the data image to check")
 parser.add_argument("--gfx", help="the Adafruit GFX library folder; default is the installed one")
 parser.add_argument("--art", metavar="NAME", help="draw that routine and save the frame as a BMP")
@@ -132,17 +168,31 @@ parser.add_argument(
     "--sets",
     type=int,
     default=12,
-    help="with --art, the set count to activate with, so the bubbles fill (default 12; 0 keeps the file's)",
+    help="with --art, the set count to activate with (default 12; 0 keeps the file's)",
+)
+parser.add_argument("--tests", action="store_true", help="run the test suites in tools/berry/tests")
+parser.add_argument(
+    "--test",
+    metavar="NAME",
+    help="run only the tests whose full name contains NAME (implies --tests)",
 )
 args = parser.parse_args()
 
-cc = compiler()
-build(cc, gfx_library())
+build(compiler("c"), compiler("c++"), gfx_library())
 
-data = Path(args.data).resolve()
-command = [str(EXE)]
+command = [
+    str(EXE),
+    "--data",
+    str(Path(args.data).resolve()),
+    "--harness",
+    str(TOOL / "harness.be"),
+    "--driver",
+    str(TOOL / "driver.be"),
+]
 if args.compile:
     command.append("--compile-only")
+if args.verbose:
+    command.append("--verbose")
 if args.art:
     out = Path(args.out) if args.out else BUILD / f"{args.art}.bmp"
     command.extend(
@@ -157,9 +207,13 @@ if args.art:
             str(out.resolve()),
         ]
     )
-for name, path in seeds(data):
-    command.extend(["--values", f"{name}={path}"])
-command.extend(str(path) for path in files(data))
+if args.tests or args.test:
+    tests_dir = TOOL / "tests"
+    command.extend(["--suite", str(tests_dir / "suite.be")])
+    for file in sorted(tests_dir.glob("*.test.be")):
+        command.extend(["--test-file", str(file)])
+    if args.test:
+        command.extend(["--test", args.test])
 if args.verbose:
     print(" ".join(command), flush=True)
 sys.exit(subprocess.run(command).returncode)

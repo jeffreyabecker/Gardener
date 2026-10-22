@@ -122,5 +122,3 @@ A backlog may reference the plan it breaks down and the specs it implements, sin
 as long as it does. The reference runs one way: the backlog names the plan, never the reverse, and
 the pair is deleted together. No spec or guide links to a backlog either.
 
-`docs/README.md` is the one index, and it names a backlog while the file exists. Add the entry when
-the document is created, and remove it when the document is deleted.

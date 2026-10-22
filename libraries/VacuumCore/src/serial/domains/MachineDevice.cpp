@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include "Machine.h"
-#include "Tasks.h"
+#include "MachineCommand.h"
 #include "firmwareversion.h"
 #include "Logger.h"
 #include "serial/Domain.h"
@@ -167,7 +167,7 @@ void MachineDeviceDomain::reboot(Stream& io, const String& args) {
   // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
   const MachineCommand reboot{MachineCommand::Op::Reboot};
-  xQueueSend(machineCommandQueue, &reboot, 0);
+  postMachineCommand(reboot);
 }
 
 }  // namespace

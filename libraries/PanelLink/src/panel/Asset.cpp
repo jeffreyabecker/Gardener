@@ -1,6 +1,6 @@
 #include "panel/Asset.h"
 
-#include <LittleFS.h>
+#include <FS.h>
 #include <RLEBitmap.h>
 #include <string.h>
 
@@ -55,8 +55,8 @@ bool readInfo(const uint8_t* bytes, size_t length, RLEBitmapInfo& info) {
 
 }  // namespace
 
-void drawAsset(Display& display, const char* path, int16_t x, int16_t y) {
-  File file = LittleFS.open(path, "r");
+void drawAsset(Display& display, FS& fs, const char* path, int16_t x, int16_t y) {
+  File file = fs.open(path, "r");
   if (!file) return;
   const size_t size = (size_t)file.size();
   if (size <= kHeaderBytes) {

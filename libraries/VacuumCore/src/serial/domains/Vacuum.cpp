@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #include "Machine.h"
-#include "Tasks.h"
+#include "MachineCommand.h"
 #include "VacuumSystem.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
@@ -136,7 +136,7 @@ void VacuumDomain::target(Stream& io, const String& args) {
 
   if (token == "-") {
     const MachineCommand clear{MachineCommand::Op::ClearTarget};
-    xQueueSend(machineCommandQueue, &clear, 0);
+    postMachineCommand(clear);
     io.print("ok target=-\n");
     return;
   }
@@ -153,7 +153,7 @@ void VacuumDomain::target(Stream& io, const String& args) {
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
-  xQueueSend(machineCommandQueue, &set, 0);
+  postMachineCommand(set);
   io.print("ok target=");
   io.print(kpa, 1u);
   io.print('\n');
@@ -177,7 +177,7 @@ void VacuumDomain::start(Stream& io, const String& args) {
     return;
   }
   const MachineCommand start{MachineCommand::Op::Start};
-  xQueueSend(machineCommandQueue, &start, 0);
+  postMachineCommand(start);
   io.print("ok state=PULL\n");
 }
 
@@ -190,7 +190,7 @@ void VacuumDomain::stop(Stream& io, const String& args) {
   }
 
   const MachineCommand stop{MachineCommand::Op::Stop};
-  xQueueSend(machineCommandQueue, &stop, 0);
+  postMachineCommand(stop);
   io.print("ok state=VENT\n");
 }
 
@@ -203,7 +203,7 @@ void VacuumDomain::reset(Stream& io, const String& args) {
   }
 
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  xQueueSend(machineCommandQueue, &reset, 0);
+  postMachineCommand(reset);
   io.print("ok state=IDLE\n");
 }
 

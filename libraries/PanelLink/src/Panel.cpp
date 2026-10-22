@@ -1,6 +1,5 @@
 #include "Panel.h"
 
-#include <LittleFS.h>
 #include <Wire.h>
 #include <stdlib.h>
 
@@ -37,7 +36,7 @@ void Panel::boot() {
   // The mark is an image on the device rather than an array in a header. Every page draws it from
   // there when it needs it, so a data image without it is worth one line and nothing else — the pages
   // simply have no mark.
-  File mark = LittleFS.open(kMarkAsset, "r");
+  File mark = fs_.open(kMarkAsset, "r");
   const bool hasMark = mark && mark.size() > 0;
   mark.close();
   if (!hasMark) {

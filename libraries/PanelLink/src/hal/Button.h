@@ -4,33 +4,31 @@
 
 namespace gardener {
 
-// The keys the front panel's 5-way switch exposes to this rig.
-enum class Button : uint8_t { Up, Down, Ok, Back };
+// The keys on the front panel, declared in the order they sit on it. A gesture's parts are reported
+// in panel order, so the declaration is the order.
+enum class Button : uint8_t { Up, Down, Forward, Back, Ok, Cancel };
+
+inline constexpr uint8_t ButtonCount = 6;
 
 inline const char* buttonName(Button button) {
   switch (button) {
     case Button::Up: return "up";
     case Button::Down: return "down";
-    case Button::Ok: return "ok";
+    case Button::Forward: return "forward";
     case Button::Back: return "back";
+    case Button::Ok: return "ok";
+    case Button::Cancel: return "cancel";
     default: return "?";
   }
 }
 
-// What a key did, classified when it is released. Two short presses close together are one Double.
-// There is no event for a hold that goes on: a consumer that wants one watches heldMs() and picks
-// its own mark. Chord is not a key's own press: the panel task makes it for Up and Down pressed
-// together, and it is reported on the up key.
-enum class Press : uint8_t { None, Short, Long, Double, Chord };
+// What a key did, classified when it is released. Two singles close together are one Double. A
+// hold that goes on past ExtendedHoldMs is not a press at all: the classifier reports it as whole
+// seconds while the key is still down.
+enum class Press : uint8_t { None, Single, Double };
 
-inline const char* pressName(Press press) {
-  switch (press) {
-    case Press::Short: return "short";
-    case Press::Long: return "long";
-    case Press::Double: return "double";
-    case Press::Chord: return "chord";
-    default: return "none";
-  }
-}
+// A key held at or past this mark is reported as whole seconds rather than as a press. It is the
+// one hold boundary left now that a tap and a hold are no longer told apart below it.
+inline constexpr uint32_t ExtendedHoldMs = 2000;
 
 }  // namespace gardener

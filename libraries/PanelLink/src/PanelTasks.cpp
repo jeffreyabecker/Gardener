@@ -11,7 +11,6 @@
 #include "panel/ConnectedUI.h"
 #include "panel/DisconnectedUI.h"
 #include "panel/UI.h"
-#include "hal/Button.h"
 
 namespace gardener {
 
@@ -26,16 +25,11 @@ constexpr UBaseType_t PanelPriority = 0;
 constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 
-// The keys in the order a press is reported, which is the panel's order rather than the bit order.
-constexpr Button PressOrder[] = {Button::Up, Button::Down, Button::Ok, Button::Back};
+// The one hold the panel task acts on, as the marks the gesture carries in whole seconds: Back and
+// Okay together past it restart the device.
+constexpr uint32_t ResetHoldSeconds = 5;
 
-// The panel's holds. Holding Back for this long stops the run and vents; Back+OK together for the
-// longer mark is the reboot.
-constexpr uint32_t BackStopMs = 3000;
-constexpr uint32_t ResetHoldMs = 5000;
-
-// The panel task's own state: the two screens it owns, the one showing, which page it is, and the
-// chord and hold latches the keys need.
+// The panel task's own state: the two screens it owns and the one showing.
 struct PanelState {
   Panel& context;
   Logger* logger;
@@ -43,92 +37,35 @@ struct PanelState {
   DisconnectedUI* disconnected;
   UserInterface* ui = nullptr;
   bool ownedShown = false;
-  // The Up+Down chord: both keys were down at once, and the chord event has gone out. The pair's
-  // own releases are not page presses while either flag is set.
-  bool upDownChord = false;
-  bool upDownChordFired = false;
-  // One stopSeq bump per Back hold, so a page sees the stop once rather than every beat.
-  bool backStopFired = false;
 };
 
-// A classified press goes to the active routine on the panel's own pages, or to the press log. A
-// press is consumed either way, so it is never delivered twice.
-void deliverPress(PanelState& state, Button button, Press press);
+// The gesture goes to the active routine on the panel's own pages, or to the press log. The
+// classifier is its one consumer, so it is never delivered twice.
+void deliverGesture(PanelState& state, const String& gesture);
 
-// The keys, settled and classified on the panel beat: the button driver is single-consumer (its
-// settle() mutates one state machine), and the panel is its one consumer now that the control task
-// reads no keys. One beat classifies the presses, watches the two holds, and feeds whichever page
-// owns them. OK while the Back hold vents is not a page action: on the panel's own pages it is the
-// way home, so it is stolen rather than delivered.
-//
-// Up and Down together are one chord, not two presses: the pair is swallowed and a single chord
-// event is delivered on the up key when the first of the two is released.
+// One call to the classifier, and the policy for what it answers. The reset is the one gesture the
+// panel task takes for itself; everything else is a page's.
 void buttonsTick(PanelState& state) {
-  const bool upDown = state.context.buttons().pressed(Button::Up);
-  const bool downDown = state.context.buttons().pressed(Button::Down);
-  const bool bothDown = upDown && downDown;
+  const String gesture = state.context.gestures().update();
 
-  // The two holds are the panel's gestures. Back+OK is the reboot, whatever owns the machine; Back
-  // is the stop, so it fires only while the panel drives.
-  if (state.context.buttons().heldMs(Button::Back) >= ResetHoldMs &&
-      state.context.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
+  static const String ResetGesture =
+      String("back:") + ResetHoldSeconds + "+ok:" + ResetHoldSeconds;
+  if (gesture == ResetGesture) {
     state.logger->warn("panel: reset held, rebooting");
     safeReboot(state.context);
     return;
   }
-  const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
-  if (backHeld && state.context.ownership().ownedBy(state.context)) {
-    // One bump per hold, and the stop re-asserted each beat the hold lasts, so a start that sneaks
-    // in is undone in the same beat.
-    if (!state.backStopFired) {
-      state.backStopFired = true;
-      state.logger->warn("panel: back held, stopping");
-      stopSeq++;
-    }
-    const MachineCommand stop{MachineCommand::Op::Stop};
-    xQueueSend(machineCommandQueue, &stop, 0);
-  }
-  if (!backHeld) state.backStopFired = false;
 
-  for (Button button : PressOrder) {
-    // The chord's keys are one gesture, so their presses are dropped while the pair is held or has
-    // just fired. The drop reaches into the double window too, so the releases never arrive late.
-    if ((state.upDownChord || state.upDownChordFired) &&
-        (button == Button::Up || button == Button::Down)) {
-      state.context.buttons().dropPress(button);
-      continue;
-    }
-    const Press press = state.context.buttons().consumePress(button);
-    if (press == Press::None) continue;
-    if (backHeld && state.context.ownership().ownedBy(state.context) && button == Button::Ok) {
-      goHomeSeq++;
-      continue;
-    }
-    deliverPress(state, button, press);
-  }
-
-  // Advance the chord: both down arms it, the first release fires it, and both up clears it.
-  if (bothDown && !state.upDownChordFired) {
-    state.upDownChord = true;
-  } else if (state.upDownChord && !state.upDownChordFired && !bothDown) {
-    state.upDownChordFired = true;
-    deliverPress(state, Button::Up, Press::Chord);
-  }
-  if (!upDown && !downDown) {
-    state.upDownChord = false;
-    state.upDownChordFired = false;
-  }
+  if (!gesture.isEmpty()) deliverGesture(state, gesture);
 }
 
-void deliverPress(PanelState& state, Button button, Press press) {
+void deliverGesture(PanelState& state, const String& gesture) {
   if (state.context.ownership().ownedBy(state.context) && state.context.routines().active()) {
-    state.context.routines().pushPress(button, press);
+    state.context.routines().pushPress(gesture);
     return;
   }
   String message = "btn: ";
-  message += buttonName(button);
-  message += ' ';
-  message += pressName(press);
+  message += gesture;
   state.logger->info(message.c_str());
 }
 

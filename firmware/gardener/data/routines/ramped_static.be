@@ -1,7 +1,7 @@
 # ramped_static.be — one timed profile: hold the start pressure, ramp to the target pressure, hold
 # that, and finish.
 #
-# The run is a phase machine advanced from tick(now), which Page calls every poll. Nothing waits: a
+# The run is a phase machine advanced from tick(now), which every poll calls. Nothing waits: a
 # phase is left when the clock or the machine says so, and `now` is the only time source. t = 0 is
 # the arrival at the start pressure rather than the OK press, because the approach is the machine's
 # business and a pull that ate into the start hold would move the ramp's start — the two things the
@@ -77,7 +77,7 @@ class RampedStatic : Page
   var chrome
 
   def init()
-    super(self).init()
+    super(self).init("ramped_static")
     self.phase = "ready"
     self.mark = 0
     self.held = 0
@@ -92,13 +92,13 @@ class RampedStatic : Page
     self.command_target = 0.0
     self.chrome = RampedStaticChrome(self)
 
-    self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.ok())
-    self.on("back", "short", / -> self.pause())
+    self.on("up:double", / -> self.edit())
+    self.on("ok:single", / -> self.ok())
+    self.on("cancel:single", / -> self.pause())
+    self.on("cancel:double", / -> self.leave())
   end
 
   def activate(settings)
-    self.editor = nil
     self.phase = "ready"
     self.held = 0
     self.read_settings(settings)
@@ -111,47 +111,17 @@ class RampedStatic : Page
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
-      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
-      setting("initial_duration", "Start time", "duration", 1, 0, 7200, nil, false),
-      setting("target_duration", "Target time", "duration", 1, 0, 7200, nil, false),
-      setting("total_duration", "Total time", "duration", 1, 1, 7200, nil, false)
-    ]
-  end
-
-  # The starting values match the shipped `ramped_static.cfg`. The pressures go through clamp()
-  # before they are ever handed to the machine, and a hand-edited duration is held to the same
-  # bounds the editor uses. A switch's settings map, when there is one, is the set for this
-  # activation.
+  # The starting values match the shipped `ramped_static.cfg`. A switch's settings map, when there
+  # is one, is the set for this activation; otherwise the file is. The profile is built once from
+  # the settings a run begins with, so a hand-edited file that cannot make one is refused at the
+  # start rather than here.
   def read_settings(settings)
-    self.start_pressure = vacuum.clamp(self.value(settings, "initial_pressure", 5.0))
-    self.target_pressure = vacuum.clamp(self.value(settings, "target_pressure", 20.0))
-    self.initial_ms = self.whole(self.value(settings, "initial_duration", 60), 0, 7200) * 1000
-    self.target_ms = self.whole(self.value(settings, "target_duration", 60), 0, 7200) * 1000
-    self.total_ms = self.whole(self.value(settings, "total_duration", 300), 1, 7200) * 1000
-  end
-
-  # A value from the activation's set when it has one, from the routine's file otherwise. A key the
-  # set does not hold keeps the fallback, not the file: the set is the whole of this activation's
-  # values.
-  def value(settings, key, fallback)
-    if settings != nil
-      return settings.find(key, fallback)
-    end
-    return store.get(key, fallback)
-  end
-
-  def whole(value, low, high)
-    var number = int(value)
-    if number < low
-      number = low
-    end
-    if number > high
-      number = high
-    end
-    return number
+    var s = self.activation(settings)
+    self.start_pressure = s.value("initial_pressure")
+    self.target_pressure = s.value("target_pressure")
+    self.initial_ms = s.value("initial_duration") * 1000
+    self.target_ms = s.value("target_duration") * 1000
+    self.total_ms = s.value("total_duration") * 1000
   end
 
   # --- the run -------------------------------------------------------------
@@ -210,9 +180,8 @@ class RampedStatic : Page
     return true
   end
 
-  # Back pauses: the chamber vents and the clock stops where it was, so the pause costs the
-  # pressure and nothing else. The device's own Back hold still stops outright and leaves the page,
-  # which is the way out.
+  # Cancel pauses: the chamber vents and the clock stops where it was, so the pause costs the
+  # pressure and nothing else. Cancel, held to a double, leaves the page.
   def pause()
     if self.phase != "approach" && self.phase != "run"
       return false
@@ -221,6 +190,13 @@ class RampedStatic : Page
     vacuum.stop()
     self.phase = "paused"
     vacuum.log("ramped_static: paused")
+    return true
+  end
+
+  def leave()
+    vacuum.stop()
+    vacuum.log("ramped_static: left")
+    ux.pop(nil)
     return true
   end
 
@@ -304,10 +280,10 @@ class RampedStatic : Page
     self.held = 0
     vacuum.log("ramped_static: complete")
     jingles.play_current()
-    routines.set_active("default")
+    ux.pop_to_root()
   end
 
-  # The run ended without this page asking: a latched fault, or a release the device's hold caused.
+  # The run ended without this page asking: a latched fault, or a release an external claim caused.
   # The machine is already safe, so put the page's starting target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
@@ -317,14 +293,11 @@ class RampedStatic : Page
     vacuum.log("ramped_static: run stopped")
   end
 
-  # Page calls tick(now) every poll, after the press drain. The device's Back hold stops and vents
-  # without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
+  # vents without asking this page, so reset the phase machine on that notice.
   def tick(now)
-    # The settings editor owns the panel while it is open; the profile does not advance underneath
-    # it, and the restart on close is what puts the clock right.
-    if self.editor != nil
-      return
-    end
+    # While the settings scene is on top this scene is not polled, so the profile does not advance
+    # underneath it; the restart on close is what puts the clock right.
     if vacuum.stopped() && self.phase != "ready"
       self.abandon()
     end
@@ -332,12 +305,10 @@ class RampedStatic : Page
   end
 
   # Settings are entered with the chamber released, like a pause: a run that was under way starts
-  # over from the approach when the editor closes, so it must not keep working at the old values
-  # underneath it. An editor that refuses to open leaves the run alone.
+  # over from the approach when the settings scene closes, so it must not keep working at the old
+  # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    if !self.open_editor(Settings("ramped_static"))
-      return false
-    end
+    self.open_settings()
     if self.phase != "ready"
       vacuum.stop()
     end
@@ -415,5 +386,26 @@ class RampedStatic : Page
   end
 end
 
-routines.register("ramped_static", "Ramped Static", RampedStatic(), false, RampedStaticIcon())
+# The values this page edits, in the order the settings list shows them, and the one rule that binds
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds.
+class RampedStaticSettings : SettingsScene
+  def settings()
+    return [
+      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
+      setting("target_pressure", "Target", PressureEditor(1, false), 20.0),
+      setting("initial_duration", "Start time", DurationEditor(1, 0, 7200, false), 60),
+      setting("target_duration", "Target time", DurationEditor(1, 0, 7200, false), 60),
+      setting("total_duration", "Total time", DurationEditor(1, 1, 7200, false), 300)
+    ]
+  end
+
+  def problem(values)
+    if values["total_duration"] < values["initial_duration"] + values["target_duration"]
+      return "TOTAL < HOLDS"
+    end
+    return nil
+  end
+end
+
+routines.register("ramped_static", RampedStaticIcon(), RampedStatic, RampedStaticSettings)
 return RampedStatic

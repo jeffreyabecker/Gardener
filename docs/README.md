@@ -7,33 +7,13 @@ The contracts the firmware and its tools must satisfy.
 - [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies and errors
 - [Bluetooth](./specs/bluetooth.md) — the GATT table, ownership and the command opcodes
 - [Vacuum control](./specs/vacuum-control.md) — the machine: states, transitions and protections
-- [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the page standards
+- [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the scene standards
 - [Assets](./specs/assets.md) — the image file format and the tool that makes one
 - [Berry harness](./specs/berry-harness.md) — the host build that compiles, drives and draws the
   data image without a device
 - [Routines](./specs/ui/routine.md) — what a routine is: its lifecycle and embedded rules
 - [Bindings](./specs/ui/bindings.md) — what a routine can call: the native modules and records
-
-## Plans
-
-Proposals: what has to be true when the work is done. A plan is not a commitment — it leaves when it
-is implemented or dropped, and its requirement is carried into a spec. Specs, guides and the project
-README never link to a plan; the only document that names one is the backlog that breaks it down,
-since the two are deleted together. A contract has to stand on its own, and plans may reference
-specs.
-
-- [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
-- [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
-
-## Ideas
-
-A direction being weighed before it has earned a requirement: the options, what each would cost and
-the constraint that set each aside. An idea document commits to nothing, may end in "no", and is
-deleted once a plan or a spec carries what it established. Its only entry point is this index —
-specs, guides, backlogs, code and the project README never link to one.
-
-- [Page machine](./ideas/page-machine.md) — whether a page should own a machine whose states hold
-  `event => (callback, next phase)` records as closures, with the page firing the events
+- [Scenes](./specs/ui/scenes.md) — the gestures each scene binds, and what it does with them
 
 ## Backlogs
 
@@ -43,7 +23,12 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
-None is open. The summaries of the finished ones are in
+Open:
+
+- [Six-key panel](./backlogs/six-key-panel.md) — the 74HC165 reader, the six-key gesture map and the
+  classifier's gesture string, breaking down [the six-key panel plan](./plans/six-key-panel.md).
+
+The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) — currently
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
 from the panel into two libraries, made both links pluggable, and shipped a panel-less build with a

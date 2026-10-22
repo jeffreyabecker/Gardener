@@ -21,10 +21,9 @@ constexpr gardener::PanelPins Board{
     .buzzerPwm = 12,
     .batteryAdc = 4,
     .batteryDivider = 2.0f,
-    .up = 1,
-    .down = 2,
-    .ok = 10,
-    .back = 11,
+    .keyLatch = 10,
+    .keyClock = 11,
+    .keyData = 1,
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain
@@ -48,8 +47,11 @@ void setup() {
   }
 
   // The settings are read before the panel is built; the diagnostics stream is not one of them. It
-  // is on from boot, a link switches it with `device set log`, and a reset returns it to on.
-  auto* settings = new gardener::PanelSettings(&LittleFS);
+  // is on from boot, a link switches it with `device set log`, and a reset returns it to on. The
+  // panel reads its documents and the interpreter's files through these two.
+  auto* documents = new gardener::FileSettings(LittleFS);
+  auto* library = new gardener::FileLibrary(LittleFS);
+  auto* settings = new gardener::PanelSettings(documents);
   settings->begin();
 
   auto* logger = new gardener::SerialLogger(Serial);
@@ -68,7 +70,7 @@ void setup() {
   }
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, Board);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, LittleFS, *library, Board);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both

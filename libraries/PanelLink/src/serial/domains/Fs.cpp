@@ -1,7 +1,7 @@
 #include "serial/PanelDomains.h"
 
 #include <Arduino.h>
-#include <LittleFS.h>
+#include <FS.h>
 #include <stdint.h>
 
 #include <vector>
@@ -9,6 +9,7 @@
 #include "Panel.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
+#include "storage/FileSettings.h"
 #include "storage/Settings.h"
 
 namespace gardener {
@@ -65,8 +66,8 @@ String parentOf(const String& path) {
   return slash <= 0 ? String("/") : path.substring(0, slash);
 }
 
-bool isDirectory(const char* path) {
-  File file = LittleFS.open(path);
+bool isDirectory(FS& fs, const char* path) {
+  File file = fs.open(path);
   if (!file) return false;
   const bool directory = file.isDirectory();
   file.close();
@@ -75,14 +76,14 @@ bool isDirectory(const char* path) {
 
 // Removes a file, or a directory with everything under it. Deleting under an open cursor
 // invalidates it, so a directory's children are collected before any of them is removed.
-bool removePath(const char* path) {
+bool removePath(FS& fs, const char* path) {
   const String target = path;
-  File file = LittleFS.open(target);
+  File file = fs.open(target);
   if (!file) return false;
 
   if (!file.isDirectory()) {
     file.close();
-    return LittleFS.remove(target);
+    return fs.remove(target);
   }
 
   std::vector<String> children;
@@ -97,9 +98,9 @@ bool removePath(const char* path) {
   }
   file.close();
   for (const String& childPath : children) {
-    if (!removePath(childPath.c_str())) return false;
+    if (!removePath(fs, childPath.c_str())) return false;
   }
-  return LittleFS.rmdir(target);
+  return fs.rmdir(target);
 }
 
 void replyBadArgument(Stream& io, const String& token) {
@@ -209,12 +210,12 @@ void FsDomain::list(Stream& io, const String& args) {
     return;
   }
 
-  if (!LittleFS.exists(path.c_str())) {
+  if (!app_.fs().exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
 
-  File directory = LittleFS.open(path.c_str());
+  File directory = app_.fs().open(path.c_str());
   if (!directory) {
     replyNotReady(io, "io");
     return;
@@ -251,12 +252,12 @@ void FsDomain::read(Stream& io, const String& args) {
     return;
   }
 
-  if (!LittleFS.exists(path.c_str())) {
+  if (!app_.fs().exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
 
-  File file = LittleFS.open(path.c_str(), "r");
+  File file = app_.fs().open(path.c_str(), "r");
   if (!file) {
     replyNotReady(io, "io");
     return;
@@ -323,38 +324,28 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (path == Settings::kPath) {
+  if (path == kDevicePath) {
     if (!discardPayload(io, bytes)) return;
     replyUnsupported(io, path);
     return;
   }
 
-  if (isDirectory(path.c_str())) {
+  if (isDirectory(app_.fs(), path.c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "is_dir");
     return;
   }
-  if (!isDirectory(parentOf(path).c_str())) {
+  if (!isDirectory(app_.fs(), parentOf(path).c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "no_parent");
     return;
   }
-  // Overwriting may reuse the room the old file holds, so its size counts as free.
-  const size_t total = LittleFS.totalBytes();
-  const size_t used = LittleFS.usedBytes();
-  size_t capacity = used < total ? total - used : 0;
-  File existing = LittleFS.open(path.c_str());
-  if (existing) {
-    capacity += (size_t)existing.size();
-    existing.close();
-  }
-  if (bytes > capacity) {
-    if (!discardPayload(io, bytes)) return;
-    replyNotReady(io, "no_space");
-    return;
-  }
+  // Whether the body fits is the filesystem's to say: a write that runs out of room returns short,
+  // readPayload answers WriteFailed, and the partial file is removed below. The Arduino FS
+  // interface has no capacity to ask about — only a concrete implementation knows its partition —
+  // so the size is answered by the write rather than by a pre-check here.
 
-  File file = LittleFS.open(path.c_str(), "w");
+  File file = app_.fs().open(path.c_str(), "w");
   if (!file) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "io");
@@ -365,7 +356,7 @@ void FsDomain::write(Stream& io, const String& args) {
   if (result != Payload::Complete) {
     // A short or abandoned body leaves nothing behind: the partial file is removed.
     file.close();
-    LittleFS.remove(path.c_str());
+    app_.fs().remove(path.c_str());
     if (result == Payload::Idle) {
       replyBadArgument(io, "");
     } else {
@@ -389,15 +380,15 @@ void FsDomain::makeDirectory(Stream& io, const String& args) {
     return;
   }
 
-  if (LittleFS.exists(path.c_str())) {
+  if (app_.fs().exists(path.c_str())) {
     replyNotReady(io, "exists");
     return;
   }
-  if (!isDirectory(parentOf(path).c_str())) {
+  if (!isDirectory(app_.fs(), parentOf(path).c_str())) {
     replyNotReady(io, "no_parent");
     return;
   }
-  if (!LittleFS.mkdir(path.c_str())) {
+  if (!app_.fs().mkdir(path.c_str())) {
     replyNotReady(io, "io");
     return;
   }
@@ -415,16 +406,16 @@ void FsDomain::remove(Stream& io, const String& args) {
     replyBadArgument(io, path);
     return;
   }
-  if (path == Settings::kPath) {
+  if (path == kDevicePath) {
     replyUnsupported(io, path);
     return;
   }
 
-  if (!LittleFS.exists(path.c_str())) {
+  if (!app_.fs().exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
-  if (!removePath(path.c_str())) {
+  if (!removePath(app_.fs(), path.c_str())) {
     replyNotReady(io, "io");
     return;
   }

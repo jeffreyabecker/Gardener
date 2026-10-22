@@ -1,10 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
+#include <FS.h>
 #include <stdint.h>
 
 #include "BuzzerPlayer.h"
 #include "Machine.h"
+#include "PanelContext.h"
+#include "panel/GestureClassifier.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
@@ -15,7 +18,8 @@
 namespace gardener {
 
 // The panel's half of the rig. The machine's three pins come first, then the display bus, the
-// piezo, the gauge and the four keys. The sketch names them, so this library carries no board.
+// piezo, the gauge, and the three lines the key register needs. The sketch names them, so this
+// library carries no board.
 struct PanelPins {
   MachinePins machine;
   uint8_t i2cSda;
@@ -24,10 +28,9 @@ struct PanelPins {
   uint8_t buzzerPwm;
   uint8_t batteryAdc;
   float batteryDivider;
-  uint8_t up;
-  uint8_t down;
-  uint8_t ok;
-  uint8_t back;
+  uint8_t keyLatch;
+  uint8_t keyClock;
+  uint8_t keyData;
 };
 
 // The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
@@ -37,20 +40,24 @@ struct PanelPins {
 // It is also one of the links on the ownership stack: the composition pushes it at boot, so it is
 // the default controller. The two control notifications are what its pages follow — the panel's own
 // pages while it drives, the connected page while an external link does.
-class Panel : public Machine, public Link {
+class Panel : public Machine, public Link, public PanelContext {
  public:
   static constexpr uint8_t Code = 3;
 
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, Display* display, PanelSettings& settings, Routines* routines)
+        Battery* battery, Display* display, PanelSettings& settings, FS& fs, Library& library,
+        Routines* routines)
       : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
+        gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
         overlay_(new Overlay(display, battery, &vacuum(), &settings)),
         routines_(routines),
-        settings_(settings) {}
+        settings_(settings),
+        fs_(fs),
+        library_(library) {}
 
   const char* name() const override { return "panel"; }
   uint8_t code() const override { return Code; }
@@ -65,23 +72,34 @@ class Panel : public Machine, public Link {
   void boot();
 
   ButtonPanel& buttons() { return *buttons_; }
-  BuzzerPlayer& buzzer() { return *buzzer_; }
-  Battery& battery() { return *battery_; }
+  GestureClassifier& gestures() { return gestures_; }
+  BuzzerPlayer& buzzer() override { return *buzzer_; }
+  Battery& battery() override { return *battery_; }
+  // The machine's own reads, named again so the context's virtuals resolve to one function.
+  VacuumSystem& vacuum() override { return Machine::vacuum(); }
+  Logger& logger() override { return Machine::logger(); }
   // The display is the overlay — every drawing verb goes through it — so both are the same object.
-  Display& display() { return *overlay_; }
+  Display& display() override { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
-  PanelSettings& settings() { return settings_; }
+  PanelSettings& settings() override { return settings_; }
+  Library& library() override { return library_; }
+  // The filesystem is the panel's own, for the mark it draws and the `fs` wire domain. It is not
+  // part of the context: no routine reaches a file.
+  FS& fs() { return fs_; }
   Routines& routines() { return *routines_; }
 
  private:
   // Kept for boot(), which brings the display bus up on the two pins it names.
   const PanelPins pins_;
   ButtonPanel* buttons_;
+  GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;
   Overlay* overlay_;
   Routines* routines_;
   PanelSettings& settings_;
+  FS& fs_;
+  Library& library_;
   // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
   // connection flags make.
   volatile bool external_ = false;
