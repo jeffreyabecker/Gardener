@@ -265,7 +265,7 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
 The specs record what the firmware now does: the stack, the composed wire surface, and the safety
 rule every build shares. One fact per item, so each line can be checked against the code alone.
 
-- [ ] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
+- [x] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
   serial, bluetooth, panel or none — the top of the stack.
 - [ ] 7.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control acquire` always
   succeeds, and that the `busy` reply is gone.
