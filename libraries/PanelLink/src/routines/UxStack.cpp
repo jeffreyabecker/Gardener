@@ -338,13 +338,13 @@ void UxStack::clear() {
   frames_.clear();
 }
 
-// --- the press queue -------------------------------------------------------
+// --- the gesture queue -----------------------------------------------------
 
-void UxStack::pushPress(Button button, Press press) {
-  if (press == Press::None) return;
+void UxStack::pushPress(const String& gesture) {
+  if (gesture.isEmpty()) return;
 
   if (pressCount_ == kMaxPresses) {
-    // The oldest press goes so the newest still arrives, and the log says it once rather than on
+    // The oldest gesture goes so the newest still arrives, and the log says it once rather than on
     // every drop.
     if (!pressOverflow_) {
       pressOverflow_ = true;
@@ -355,15 +355,14 @@ void UxStack::pushPress(Button button, Press press) {
   }
 
   const uint8_t tail = (uint8_t)((pressHead_ + pressCount_) % kMaxPresses);
-  presses_[tail].button = button;
-  presses_[tail].press = press;
+  presses_[tail] = gesture;
   pressCount_++;
 }
 
-bool UxStack::takePress(Button& button, Press& press) {
+bool UxStack::takePress(String& gesture) {
   if (pressCount_ == 0) return false;
-  button = presses_[pressHead_].button;
-  press = presses_[pressHead_].press;
+  gesture = presses_[pressHead_];
+  presses_[pressHead_] = "";
   pressHead_ = (uint8_t)((pressHead_ + 1) % kMaxPresses);
   pressCount_--;
   return true;

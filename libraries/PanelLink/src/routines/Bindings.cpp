@@ -41,9 +41,6 @@ constexpr const char* kRecords =
     "class bounds\n"
     "  var w, h\n"
     "end\n"
-    "class event\n"
-    "  var btn, press\n"
-    "end\n"
     // What a routine registers as one of its editable values. The class is constructed by the
     // routine, so its fields stay plain data; `editor` is the kind's editor object, which owns how
     // the value is read, printed and edited; `default` is what it holds when nothing has been

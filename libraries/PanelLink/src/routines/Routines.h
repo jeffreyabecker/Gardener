@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "hal/Button.h"
 #include "routines/UxStack.h"
 
 // The vendored interpreter's VM type, forward declared so its header stops here.
@@ -23,7 +22,7 @@ class Library;
 // suspended, no second core and no lock.
 //
 // The registry the browser drives is a Berry class (`/modules/registry.be`); this side keeps only
-// what the firmware has to: the VM, the files it loads, the scene stack it polls, the press queue,
+// what the firmware has to: the VM, the files it loads, the scene stack it polls, the gesture queue,
 // and the `store` surface that reads and writes a routine's own document.
 class Routines {
  public:
@@ -60,8 +59,8 @@ class Routines {
   int depth() const { return stack_.depth(); }
 
   // --- the `buttons` module's surface ---
-  void pushPress(Button button, Press press) { stack_.pushPress(button, press); }
-  bool takePress(Button& button, Press& press) { return stack_.takePress(button, press); }
+  void pushPress(const String& gesture) { stack_.pushPress(gesture); }
+  bool takePress(String& gesture) { return stack_.takePress(gesture); }
 
   // --- the `vacuum` module's surface ---
   bool takeStopped() { return stack_.takeStopped(); }

@@ -13,7 +13,7 @@ class DisconnectedUI;
 // takeStopped() compares against it and reads it dirty.
 extern volatile uint32_t stopSeq;
 
-// goHomeSeq is the panel task's counter for the OK pressed while the Back hold vents: the
+// goHomeSeq is the panel task's counter for Cancel pressed while the Back hold vents: the
 // disconnected page watches it and hands the panel back to `default` on a bump. One writer, read
 // dirty.
 extern volatile uint32_t goHomeSeq;

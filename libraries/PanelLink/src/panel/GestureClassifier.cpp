@@ -31,12 +31,18 @@ String GestureClassifier::update() {
     const Button button = (Button)i;
     const uint32_t heldMs = buttons_.heldMs(button);
     if (heldMs == 0) {
+      // The release of a hold that already said its seconds is the mark, not a press of its own.
+      if (markedSecond_[i] > 0) buttons_.consumePress(button);
       markedSecond_[i] = 0;
       continue;
     }
     const uint32_t seconds = heldMs / 1000;
     if (seconds * 1000 < ExtendedHoldMs || seconds <= markedSecond_[i]) continue;
     markedSecond_[i] = seconds;
+    // The mark is this key's gesture, so it stops waiting in a group with the other keys.
+    group_ &= ~bitOf(button);
+    done_[i] = false;
+    part_[i] = "";
     if (!marks.isEmpty()) marks += '+';
     marks += buttonName(button);
     marks += ':';
@@ -65,7 +71,28 @@ String GestureClassifier::update() {
     const Press press = buttons_.consumePress(button);
     if (press == Press::None) continue;
     done_[i] = true;
-    part_[i] = (press == Press::Long && markedSecond_[i] > 0) ? String() : partOf(button, press);
+    part_[i] = partOf(button, press);
+
+    // A key that is down past its mark has already said its gesture, so a press beside it joins
+    // that gesture rather than waiting for both keys to come up: `back:3+cancel:short`.
+    String joined;
+    for (uint8_t k = 0; k < ButtonCount; k++) {
+      if (markedSecond_[k] == 0) continue;
+      const uint32_t heldMs = buttons_.heldMs((Button)k);
+      if (heldMs == 0) continue;
+      if (!joined.isEmpty()) joined += '+';
+      joined += buttonName((Button)k);
+      joined += ':';
+      joined += heldMs / 1000;
+    }
+    if (!joined.isEmpty()) {
+      joined += '+';
+      joined += part_[i];
+      part_[i] = "";
+      done_[i] = false;
+      group_ &= ~bitOf(button);
+      return joined;
+    }
   }
 
   // The gesture is whole once none of its keys is down and every one has said its part.
