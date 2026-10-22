@@ -68,7 +68,7 @@ settle who draws underneath the top and what a pop hands back.
 
 ## Delete the store bus
 
-[StoreBus.h](../../libraries/GardenerPanel/src/app/StoreBus.h) is a queue between the VM and the
+[StoreBus.h](../../libraries/PanelLink/src/app/StoreBus.h) is a queue between the VM and the
 interface task, and both ends are now the panel task — the VM polls and the server drains on the same
 beat — so it is the panel queueing to itself. The idea is to delete `StoreClient`, `StoreServer` and
 the queue handle, and let the `store` binding and `Routines` reach `Storage` and `Settings` directly,

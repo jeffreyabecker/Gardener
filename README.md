@@ -39,7 +39,7 @@ The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 `--libraries libraries`, so [libraries/VacuumCore](./libraries/VacuumCore) (the machine) and
-[libraries/GardenerPanel](./libraries/GardenerPanel) (the panel, which depends on it) are the
+[libraries/PanelLink](./libraries/PanelLink) (the panel, which depends on it) are the
 firmware rather than sketchbook copies.
 
 ## Documentation

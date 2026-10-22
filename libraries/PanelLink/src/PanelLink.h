@@ -1,7 +1,8 @@
 #pragma once
 
-// Umbrella header for the Gardener panel library. The full device's sketch includes this one: it
-// pulls in VacuumCore, which the panel depends on, and the panel's own composition pieces.
+// Umbrella header for the panel link: the half of the firmware that drives the panel. The full
+// device's sketch includes this one — it pulls in VacuumCore, which the panel depends on, and the
+// panel's own composition pieces.
 
 #include "VacuumCore.h"
 

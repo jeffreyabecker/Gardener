@@ -6,7 +6,7 @@
 // machine's and the panel's domains on them, brings the machine and the panel up, and starts the
 // three tasks. A build with no panel does the same with two tasks and no panel domain.
 
-#include <GardenerPanel.h>
+#include <PanelLink.h>
 
 namespace {
 

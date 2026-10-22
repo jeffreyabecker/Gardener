@@ -30,7 +30,7 @@ panel code where it was; Phase B moved the files.
   `Tasks.h` kept only the machine's two tasks and no button header.
 - **`VacuumCore` verified clean.** It includes nothing panel-shaped and links
   only the ESP32 core and NimBLE — a sketch including only `VacuumCore.h`
-  compiles and links at 566521 bytes with no Adafruit, Berry or `GardenerPanel`
+  compiles and links at 566521 bytes with no Adafruit, Berry or `PanelLink`
   reference in the build.
 
 ## What did not land

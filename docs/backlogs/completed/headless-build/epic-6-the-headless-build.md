@@ -47,8 +47,8 @@ phases are recorded here as they landed: 6.1–6.4 moved the setup into
 ## Verification
 
 Both sketches build after every item. A clean build of the machine-alone sketch
-compiles and links at 568897 bytes (43%) with no reference to `GardenerPanel`,
+compiles and links at 568897 bytes (43%) with no reference to `PanelLink`,
 `berry`, the Adafruit drivers, `RLEBitmap` or `LittleFS`; the full device is
 873089 bytes (66%) with 30612 bytes of static RAM. `--task data --sketch
-`headless` exits with the refusal. The on-hardware pass is the parking lot's
+headless` exits with the refusal. The on-hardware pass is the parking lot's
 verification entry.
