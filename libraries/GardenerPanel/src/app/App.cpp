@@ -7,6 +7,7 @@
 #include "app/NilLogger.h"
 #include "app/PanelTasks.h"
 #include "app/StreamLogger.h"
+#include "app/Tasks.h"
 #include "app/ble/BleLink.h"
 #include "app/ble/MachineBleDomain.h"
 #include "app/ble/PanelBleDomain.h"
@@ -31,12 +32,9 @@ bool serialAttached() { return (bool)Serial; }
 App::App(AppContext context) : context_(context) {}
 
 // The panel's side of bring-up: the panel comes up — the display first, which is fatal when it
-// does not answer — the gauge and buzzer follow, the interpreter starts, and the panel task takes
-// over. The panel's wire domains are the composition's to register.
+// does not answer — the gauge and buzzer follow, and the interpreter starts. The panel's wire
+// domains and its task are the composition's.
 void panelBoot(PanelContext& context, Logger& logger, Storage::Mount mount) {
-  ConnectedUI* connected = new ConnectedUI(context);
-  DisconnectedUI* disconnected = new DisconnectedUI(context);
-
   // The panel is the one part with no fallback: nothing on the device can draw
   // without it, so a panel that does not answer is fatal rather than a degraded
   // mode.
@@ -97,9 +95,6 @@ void panelBoot(PanelContext& context, Logger& logger, Storage::Mount mount) {
   String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";
   vm += String((uint32_t)ESP.getFreeHeap());
   logger.info(vm.c_str());
-
-  // The panel and the VM run on the panel task from here.
-  spawnPanelTask(context, logger, connected, disconnected);
 }
 
 bool App::begin() {
@@ -146,8 +141,15 @@ bool App::begin() {
       break;
   }
 
-  machineBoot(context_.machine(), *logger, serial, ble);
+  machineBoot(context_.machine(), *logger);
   panelBoot(context_.panel(), *logger, mount);
+
+  // The tasks own everything from here: the machine's control beat and its wire, and the panel
+  // with the VM. The command queue exists before the panel's keys can reach it.
+  ConnectedUI* connected = new ConnectedUI(context_.panel());
+  DisconnectedUI* disconnected = new DisconnectedUI(context_.panel());
+  spawnMachineTasks(context_.machine(), *logger, serial, ble);
+  spawnPanelTask(context_.panel(), *logger, connected, disconnected);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

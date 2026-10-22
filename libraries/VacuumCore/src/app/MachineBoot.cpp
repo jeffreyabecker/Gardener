@@ -1,17 +1,13 @@
 #include "app/MachineBoot.h"
 
 #include "app/Logger.h"
-#include "app/Tasks.h"
-#include "app/ble/BleLink.h"
-#include "app/serial/SerialLink.h"
 #include "core/Config.h"
 
 namespace gardener {
 
-// The machine's side of bring-up. The links arrive built, populated and started by the caller; all
-// this does is bring the machine's parts up, report what came up, and start the tasks that drive
-// them.
-void machineBoot(MachineContext& context, Logger& logger, SerialLink* serial, BleLink* ble) {
+// The machine's side of bring-up: the parts come up and report whether they answered. The links
+// and the tasks belong to the composition that calls this.
+void machineBoot(MachineContext& context, Logger& logger) {
   String boot = "gardener ";
   boot += cfg::FIRMWARE_VERSION;
   boot += " booting";
@@ -26,10 +22,6 @@ void machineBoot(MachineContext& context, Logger& logger, SerialLink* serial, Bl
   logger.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
   logger.info(context.vent().energiseWhenOpen() ? "vent: normally closed"
                                                 : "vent: normally open");
-
-  // The machine owns everything from here: the control task drives the
-  // pressure loop, the interface task answers the links.
-  spawnMachineTasks(context, logger, serial, ble);
 }
 
 }  // namespace gardener

@@ -32,8 +32,7 @@ extern volatile bool bleConnected;
 void controlTask(void* arg);
 void interfaceTask(void* arg);
 
-// The machine's boot spawns the control and interface tasks, pinned to their cores; the command
-// queue is created here, before either task reads it.
+// The composition spawns the control and interface tasks, pinned to their cores; the command queue
+// is created here, before either task reads it.
 void spawnMachineTasks(MachineContext& context, Logger& logger, SerialLink* link, BleLink* ble);
-
 }  // namespace gardener
