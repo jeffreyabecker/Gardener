@@ -265,30 +265,35 @@ Epic 4 built is its whole story: an unowned machine vents, and a dropped owner v
 The specs record what the firmware now does: the stack, the composed wire surface, and the safety
 rule every build shares. One fact per item, so each line can be checked against the code alone.
 
-- [ ] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
+- [x] 7.1 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control get` answers
   serial, bluetooth, panel or none — the top of the stack.
-- [ ] 7.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control acquire` always
+- [x] 7.2 Record in [serial-protocol.md](../specs/serial-protocol.md) that `control acquire` always
   succeeds, and that the `busy` reply is gone.
-- [ ] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
+- [x] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
   serial, bluetooth, panel or none.
-- [ ] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
+- [x] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
   the panel does.
-- [ ] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
+- [x] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
   domains exist only where the panel does.
-- [ ] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
+- [x] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
   fields exist only where the panel does.
-- [ ] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
+- [x] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
   are answered by the panel's battery.
-- [ ] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
+- [x] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
   the top of the stack changes — a claim, a release or a drop.
-- [ ] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
+- [x] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
   holds pressure only while owned.
-- [ ] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
+- [x] 7.10 Record in [gestures.md](../specs/gestures.md) that Back releases control and Back+OK is
   the reboot.
-- [ ] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
+- [x] 7.11 Record in [gestures.md](../specs/gestures.md) that a build without keys has no gestures,
   its stop being ownership.
-- [ ] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
+- [x] 7.12 Record in [README.md](../../README.md) that the device ships in two builds and what each
   is for.
+- [x] 7.13 Bring the rest of [serial-protocol.md](../specs/serial-protocol.md) onto the stack: the
+  connecting rules and the worked examples that still answer `ok control=owned`.
+- [x] 7.14 Bring the remaining specs onto the stack: the Back+OK lines in
+  [vacuum-control.md](../specs/vacuum-control.md) and [bindings.md](../specs/ui/bindings.md) that say
+  a reset clears a held ownership record, and the Bluetooth introduction's one-link claim.
 
 ## Epic 8 — Verification
 

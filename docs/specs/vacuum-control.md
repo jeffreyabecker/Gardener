@@ -25,12 +25,12 @@ returns to `PULL`/`HOLD`.
 
 | Event | From | To |
 | --- | --- | --- |
-| `control acquire` | any | no machine change; the link becomes the one controller |
-| `control release` | any | the same as `vacuum stop`; ownership clears and the panel returns to the disconnected page |
+| `control acquire` | any | the claimant takes the top of the stack and the chamber vents; the new controller starts from an open chamber |
+| `control release` | any | this link leaves the stack and the chamber vents; the link beneath is the controller again, or `none` |
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
 | Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply; the valve stays open while Back is held |
-| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart; clears ownership |
+| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
@@ -38,6 +38,17 @@ returns to `PULL`/`HOLD`.
 | sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
 | `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
+
+The controller is whoever is on top of the ownership stack, and **any change of the top vents the
+chamber** — a claim, a release, or a link that drops. A new controller therefore always starts from
+an open chamber, and a link that vanishes cannot leave the machine held: it is no longer on the
+stack, so the link beneath it takes over from a vented chamber.
+
+A build with no panel has nothing beneath an external link: its stack is `none` alone until
+something claims, so **it holds pressure only while a link owns it**. An unowned machine is vented,
+and `vacuum start` from a link that is not on top is refused. A panel build differs in one respect
+only — the panel is a controller of its own, pushed at boot, so the device can hold pressure with no
+external link attached.
 
 ## The control law
 
@@ -73,7 +84,7 @@ All of these act without consulting the controller:
 * a target deeper than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at
   the cap, and nothing stops it
 * holding Back for 3 s stops the pump and vents
-* holding Back and OK for 5 s releases the chamber, restarts, and clears a held ownership record
+* holding Back and OK for 5 s reboots the device: stop, vent up to 2 s, restart
 
 Faults latch: only `vacuum reset` clears one, and the device never retries on its own.
 
@@ -86,9 +97,10 @@ Faults latch: only `vacuum reset` clears one, and the device never retries on it
 * **A Back hold is a local `vacuum stop`** that keeps the valve open while Back is held, and
   **Back+OK for 5 s is the local reset.** Both run whatever a controller is doing. A link that
   dropped while owning cannot be recovered any other way.
-* **A link that drops while owning does not stop the run.** Ownership stays held, the machine keeps
-  its state and the panel keeps showing that link. The device only detects a controller that
-  leaves; one that hangs with the port open holds the run open.
+* **A link that drops while owning stops the run.** It leaves the stack, so the chamber vents and
+  control passes to the link beneath — the panel or `none`. The device cannot tell a controller that
+  left from one that hung, though: a link that stops answering while its port stays open keeps the
+  top until Back+OK.
 * **With no timer in the device, an unattended run holds until something stops it.** A normally
   open solenoid draws current for the whole hold, which is why a long hold, not the pump, is the
   dominant battery cost.
