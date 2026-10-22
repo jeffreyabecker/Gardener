@@ -368,10 +368,9 @@ bool UxStack::takePress(String& gesture) {
   return true;
 }
 
-// The Back hold belongs to the device, not to the scene, so the scene is told after the fact. The
-// panel task bumps stopSeq when the Back hold fires and when control is handed to or from an
-// external link — both vent the run — and one bump is one true here. The scene that is showing
-// when it happens asks and abandons its run: the hold no longer switches scenes.
+// A stop the scene did not make itself — control handed to or from an external link — is told to
+// the scene after the fact. The panel task bumps stopSeq on the hand-off, which vents the run, and
+// one bump is one true here. The scene that is showing when it happens asks and abandons its run.
 bool UxStack::takeStopped() {
   if (lastStopSeq_ == stopSeq) return false;
   lastStopSeq_ = stopSeq;

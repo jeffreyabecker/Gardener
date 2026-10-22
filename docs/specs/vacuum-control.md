@@ -29,8 +29,8 @@ returns to `PULL`/`HOLD`.
 | `control release` | any | this link leaves the stack and the chamber vents; the link beneath is the controller again, or `none` |
 | `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
-| Back held for 3 s (local key) | any | the same as `vacuum stop`, with no command and no reply; the valve stays open while Back is held |
-| Back+OK held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
+| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout; acts only while the panel drives |
+| OK+Cancel held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
 | target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
 | target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
@@ -84,8 +84,8 @@ All of these act without consulting the controller:
   to `FAULT`
 * a target deeper than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at
   the cap, and nothing stops it
-* holding Back for 3 s stops the pump and vents
-* holding Back and OK for 5 s reboots the device: stop, vent up to 2 s, restart
+* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout
+* holding OK and Cancel for 5 s reboots the device: stop, vent up to 2 s, restart
 
 Faults latch: only `vacuum reset` clears one, and the device never retries on its own.
 
@@ -95,13 +95,13 @@ Faults latch: only `vacuum reset` clears one, and the device never retries on it
   so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it means
   the device's own deadband has decided the target is reached, which is the one thing you cannot
   work out for yourself, because the deadband is the device's loop.
-* **A Back hold is a local `vacuum stop`** that keeps the valve open while Back is held, and
-  **Back+OK for 5 s is the local reset.** Both run whatever a controller is doing. A link that
-  dropped while owning cannot be recovered any other way.
+* **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the readout, only
+  while the panel drives — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever a
+  controller is doing, so a link that dropped while owning cannot be recovered any other way.
 * **A link that drops while owning stops the run.** It leaves the stack, so the chamber vents and
   control passes to the link beneath — the panel or `none`. The device cannot tell a controller that
   left from one that hung, though: a link that stops answering while its port stays open keeps the
-  top until Back+OK.
+  top until OK+Cancel.
 * **With no timer in the device, an unattended run holds until something stops it.** A normally
   open solenoid draws current for the whole hold, which is why a long hold, not the pump, is the
   dominant battery cost.

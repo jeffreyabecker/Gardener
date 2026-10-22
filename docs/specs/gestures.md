@@ -1,7 +1,7 @@
 # Gestures
 
 Six keys, no labels on the glass, and one hand. This covers three things: the gestures the
-classifier can produce, the one gesture the firmware reserves for itself, and the standards every
+classifier can produce, the gestures the firmware reserves for itself, and the standards every
 page follows on top of them.
 
 The keys are the panel's, so everything here is a panel contract. **A build without a panel has no
@@ -33,7 +33,7 @@ and the C++ enum.
 
 The classifier answers each beat with one whole gesture string, or the empty string. A gesture is
 one or more keys, each with the form of its press, joined by `+` in panel order — up, down,
-forward, back, okay, cancel. `ok:single`, `cancel:double` and `back:5+ok:5` are all gestures.
+forward, back, okay, cancel. `ok:single`, `cancel:double` and `ok:5+cancel:5` are all gestures.
 
 | Term | Meaning |
 | --- | --- |
@@ -57,17 +57,22 @@ These belong to the device. A page must not give them another meaning, and canno
 
 | Gesture | What happens | Where |
 | --- | --- | --- |
-| **Hold Back+OK for 5 s** | safe reset: stop, vent up to 2 s, restart | every page, every link state |
+| **Hold OK+Cancel for 5 s** | safe reset: stop, vent up to 2 s, restart | every page, every link state |
+| **Hold Cancel for 5 s** | force-quit: stop and vent, leave the routine, back to the readout | the panel's pages, while a routine is showing |
 
+**OK+Cancel is the reboot.** It is the same safe reset the wire serves — `device reboot` on serial
+and `command 0x04` on Bluetooth — issued from the panel's side, so it works whatever a controller
+is doing.
 
-**Back+OK is the reboot.** It is the same safe reset the wire serves — `device reboot` on serial and
-`command 0x04` on Bluetooth — issued from the panel's side, so it works whatever a controller is
-doing. It is the only gesture the device keeps for itself; every other press is a page's to answer.
+**Cancel held 5 s is the force-quit.** It is the device's, not the page's: the panel task stops and
+vents the run and returns the panel to the readout, whatever the routine is doing. It is the way out
+when a routine's own quit (`cancel:double`) does not answer, and no page can give the hold another
+meaning.
 
 A page that runs something usually wants a stop gesture of its own, and that gesture owns the
 **whole** stop rather than the pump alone: `vacuum.stop()` and whatever returns the page to rest
-belong in it. Nothing else is reserved — a scene that runs must stop itself on Cancel; no device
-hold will do it.
+belong in it. The page's own `cancel:single` and `cancel:double` are that stop and that quit; the
+device's `cancel:5` is the fallback when the page does not answer.
 
 ## Standard routine gestures
 
@@ -81,19 +86,22 @@ gestures.
 | `up:double` | launch settings |
 | `cancel:double` | quit the routine |
 
+The device's force-quit is `cancel:5`, taken before the routine sees it; `cancel:single` and
+`cancel:double` are the routine's own stop and quit.
+
 While an external link drives the machine there is no routine page: presses are logged
-(`btn: <gesture>`, for example `btn: ok:single`) and only Back+OK still acts, because it is the
+(`btn: <gesture>`, for example `btn: ok:single`) and only OK+Cancel still acts, because it is the
 reboot and works whatever a controller is doing. A link that is connected but has not claimed
 anything leaves the disconnected page — and its routine — in place.
 
 ## Rules for a scene
 
-1. Leave the reserved gesture alone; it is the device's.
+1. Leave the reserved gestures alone; they are the device's.
 2. `up:double` opens a routine page's settings; `forward:single` opens a routine's settings from
    the browser.
-3. Back leaves the current view without writing; Cancel is the scene's stop. A stop of the scene's
-   own is the whole stop — the pump and the scene's state — and no device hold does it for a scene
-   that lacks one.
+3. Back leaves the current view without writing; Cancel is the scene's stop, and a stop of the
+   scene's own is the whole stop — the pump and the scene's state. `cancel:5` is the device's
+   force-quit, not a scene gesture.
 4. OK is the primary action; Up and Down move or change.
 5. A view that needs one draws its hint on the panel's last line — the value scenes do. There is no
    permanent legend on the glass.

@@ -230,7 +230,7 @@ end
 The string is the classifier's whole gesture: one or more keys, each with the form of its press,
 joined by `+` in panel order. A key is `up`, `down`, `forward`, `back`, `ok` or `cancel`; its form
 is `single`, `double`, or whole seconds from `2` up once the key passes `ExtendedHoldMs`.
-`ok:single`, `cancel:double` and `back:5+ok:5` are all gestures.
+`ok:single`, `cancel:double` and `ok:5+cancel:5` are all gestures.
 
 A gesture is queued only while this page is showing. The queue holds eight; the oldest is dropped
 if a routine falls behind, and that is logged once.

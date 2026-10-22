@@ -30,9 +30,9 @@ bool DisconnectedUI::begin() {
 // With a routine active the page is the routine's: one entry into the VM per pass, and no frame of
 // the mark behind it.
 void DisconnectedUI::update() {
-  // The device's Back hold stops and vents from the panel task and keeps the valve open while
-  // Back is down; an OK pressed during that hold is the page's way out, so the panel goes back to
-  // `default` then. The page being left does not get its stopped() notice: the switch drops it.
+  // The device's force-quit stops and vents from the panel task and bumps goHomeSeq; the page
+  // goes back to `default` then. The page being left does not get its stopped() notice: the switch
+  // drops it.
   if (goHomeSeq != lastGoHomeSeq_) {
     lastGoHomeSeq_ = goHomeSeq;
     context_.routines().showDefault();

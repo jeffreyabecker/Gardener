@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 
 #include "Logger.h"
+#include "MachineCommand.h"
 #include "Ownership.h"
 #include "Panel.h"
 #include "SafeReboot.h"
@@ -25,8 +26,8 @@ constexpr UBaseType_t PanelPriority = 0;
 constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 
-// The one hold the panel task acts on, as the marks the gesture carries in whole seconds: Back and
-// Okay together past it restart the device.
+// The holds the panel task acts on, as the marks the gesture carries in whole seconds: Okay and
+// Cancel together past it restart the device, and Cancel alone past it force-quits the routine.
 constexpr uint32_t ResetHoldSeconds = 5;
 
 // The panel task's own state: the two screens it owns and the one showing.
@@ -43,16 +44,27 @@ struct PanelState {
 // classifier is its one consumer, so it is never delivered twice.
 void deliverGesture(PanelState& state, const String& gesture);
 
-// One call to the classifier, and the policy for what it answers. The reset is the one gesture the
-// panel task takes for itself; everything else is a page's.
+// One call to the classifier, and the policy for what it answers. The reboot and the force-quit are
+// the gestures the panel task takes for itself; everything else is a page's.
 void buttonsTick(PanelState& state) {
   const String gesture = state.context.gestures().update();
 
   static const String ResetGesture =
-      String("back:") + ResetHoldSeconds + "+ok:" + ResetHoldSeconds;
+      String("ok:") + ResetHoldSeconds + "+cancel:" + ResetHoldSeconds;
   if (gesture == ResetGesture) {
     state.logger->warn("panel: reset held, rebooting");
     safeReboot(state.context);
+    return;
+  }
+
+  static const String QuitGesture = String("cancel:") + ResetHoldSeconds;
+  if (gesture == QuitGesture && state.context.ownership().ownedBy(state.context)) {
+    // The stop is the device's, not the routine's: the routine is being taken off the stack, so
+    // nothing of it runs to stop itself. goHomeSeq tells the disconnected page to show the root.
+    state.logger->warn("panel: cancel held, force-quitting");
+    const MachineCommand stop{MachineCommand::Op::Stop};
+    postMachineCommand(stop);
+    goHomeSeq++;
     return;
   }
 

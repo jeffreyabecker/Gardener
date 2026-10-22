@@ -96,8 +96,9 @@ int vacuumLog(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The device's Back hold, as a one-shot a poll can ask about: true once after the hold, then false
-// again. A page with a phase machine resets it here rather than comparing the machine's state.
+// A stop the scene did not make itself, as a one-shot a poll can ask about: true once after the
+// ownership hand-off vents the run, then false again. A page with a phase machine resets it here
+// rather than comparing the machine's state.
 int vacuumStopped(bvm* vm) {
   be_pushbool(vm, gRoutines != nullptr && gRoutines->takeStopped());
   be_return(vm);

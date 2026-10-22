@@ -4,7 +4,7 @@
 # A scene extends Scene and overrides only what differs: activate() for when it becomes the top
 # scene, draw_page() for its content, and tick(now) for per-beat work. Gestures are registered with
 # on(gesture, fn) in init(), and handle_page() dispatches them. A gesture is one whole string —
-# `ok:single`, `cancel:double`, `back:5+ok:5` — and a registration matches it in full; a page never
+# `ok:single`, `cancel:double`, `ok:5+cancel:5` — and a registration matches it in full; a page never
 # matches one dimension of a gesture without the other. A scene pushes a sub-scene with
 # ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
 # callback runs when the sub-scene pops, and the scene below keeps its state.
