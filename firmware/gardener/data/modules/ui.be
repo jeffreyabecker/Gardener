@@ -56,11 +56,10 @@ class ReadoutScene : Scene
     super(self).init()
     self.chrome = ReadoutChrome()
 
-    self.on("up", "chord", / -> ux.push(systemScene))
-    self.on("ok", "single", / -> self.start())
-    self.on("back", ["single", "double"], / -> self.back())
-    self.on("up", "double", / -> ux.push(browserScene))
-    self.on("down", "double", / -> ux.push(systemScene))
+    self.on("ok:single", / -> self.start())
+    self.on("cancel:single", / -> self.cancel())
+    self.on("up:double", / -> ux.push(browserScene))
+    self.on("down:double", / -> ux.push(systemScene))
   end
 
   def activate()
@@ -72,9 +71,8 @@ class ReadoutScene : Scene
     self.chrome.draw(vacuum.state())
   end
 
-  # Back is the page's one command: release the chamber. A fast double tap is classified as a
-  # double rather than a short, and it means the same thing here.
-  def back()
+  # Cancel is the page's stop: release the chamber.
+  def cancel()
     vacuum.stop()
     vacuum.log("default: venting")
     return true
@@ -255,19 +253,19 @@ class SystemScene : Scene
   end
 
   def handle_page(ev)
-    if string.startswith(ev, "up:")
+    if ev == "up:single"
       self.list.move(-1)
       return true
     end
-    if string.startswith(ev, "down:")
+    if ev == "down:single"
       self.list.move(1)
       return true
     end
-    if string.startswith(ev, "ok:")
+    if ev == "ok:single"
       self.open_row()
       return true
     end
-    if string.startswith(ev, "back:")
+    if ev == "back:single" || ev == "cancel:single"
       ux.pop(nil)
       return true
     end
@@ -336,11 +334,12 @@ class BrowserScene : Scene
     self.scrollbar.x = 110; self.scrollbar.y = 2; self.scrollbar.w = 2; self.scrollbar.h = 48
     self.list.scrollbar = self.scrollbar
 
-    self.on("up", nil, / -> self.step(-1))
-    self.on("down", nil, / -> self.step(1))
-    self.on("up", "chord", / -> self.open_selected())
-    self.on("ok", nil, / -> self.choose())
-    self.on("back", nil, / -> self.leave())
+    self.on("up:single", / -> self.step(-1))
+    self.on("down:single", / -> self.step(1))
+    self.on("ok:single", / -> self.choose())
+    self.on("forward:single", / -> self.open_selected())
+    self.on("back:single", / -> self.leave())
+    self.on("cancel:single", / -> self.leave())
   end
 
   def activate()

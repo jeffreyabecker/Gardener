@@ -52,9 +52,11 @@ What each one answers:
 | `BrowserScene` | `forward:single` | open the selected routine's settings  |
 | `BrowserScene` | `ok:single` | push the selected routine |
 | `BrowserScene` | `back:single` | leave |
+| `BrowserScene` | `cancel:single` | leave |
 | `SystemScene` | `up:single`, `down:single` | move the row |
 | `SystemScene` | `ok:single` | open the row |
 | `SystemScene` | `back:single` | leave |
+| `SystemScene` | `cancel:single` | leave |
 | `SettingsScene` | `up:single`, `down:single` | move the row |
 | `SettingsScene` | `ok:single` | open the row |
 | `SettingsScene` | `back:single` | close the list |
@@ -91,5 +93,5 @@ What each one answers:
    left the same way in both.
 4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
    stage.
-5. A routine page's `ok` is its primary action, and its `back` is its own — the two ramped routines
-   pause on it, `Interval` has none.
+5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
+   `cancel:double` leaves the page.

@@ -64,7 +64,7 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 3 — The six-key map
 
-- [ ] **1. Rewrite the dispatch to whole gestures.** `on(gesture, fn)` takes one whole gesture string
+- [x] **1. Rewrite the dispatch to whole gestures.** `on(gesture, fn)` takes one whole gesture string
   and a scene's `handle_page(ev)` compares whole strings, so nothing matches a key without its press.
   The six scenes bind the map the plan settles in the same change — the readout, the browser, the
   system scene, the settings list, the value scenes and the three routine pages — and the drive and

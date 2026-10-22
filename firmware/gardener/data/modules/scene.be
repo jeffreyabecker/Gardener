@@ -1,12 +1,12 @@
 # scene.be — the lifecycle a scene shares: the gesture drain, the repaint cadence and the
 # declarative gesture dispatch.
-
-import string
 #
 # A scene extends Scene and overrides only what differs: activate() for when it becomes the top
 # scene, draw_page() for its content, and tick(now) for per-beat work. Gestures are registered with
-# on(btn, presses, fn) in init(), and handle_page() dispatches them. A scene pushes a sub-scene
-# with ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
+# on(gesture, fn) in init(), and handle_page() dispatches them. A gesture is one whole string —
+# `ok:single`, `cancel:double`, `back:5+ok:5` — and a registration matches it in full; a page never
+# matches one dimension of a gesture without the other. A scene pushes a sub-scene with
+# ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
 # callback runs when the sub-scene pops, and the scene below keeps its state.
 
 class Scene
@@ -37,46 +37,21 @@ class Scene
     return self.handle_page(ev)
   end
 
-  # Declarative gestures: the first registered (button, press) match whose action acts wins.
-  # `presses` is one gesture token, a list of them, or nil for any press. Back must never be nil:
-  # the device's own long Back hold is reserved, so Back names its presses explicitly.
-  def on(btn, presses, fn)
-    self.gestures.push([btn, presses, fn])
+  # Declarative gestures: the first registered gesture whose action acts wins. The gesture is one
+  # whole string, compared in full — a page matches a gesture or leaves it alone.
+  def on(gesture, fn)
+    self.gestures.push([gesture, fn])
   end
 
-  # The gesture is a string — `ok:single`, `back:3`, `up:single+down:single` — and a registration
-  # names one key and one press token, or nil for any press on that key. The first part is the one
-  # a registration is matched against.
   def handle_page(ev)
     for g : self.gestures
-      if self.press_matches(ev, g[0], g[1])
-        if g[2]()
+      if ev == g[0]
+        if g[1]()
           return true
         end
       end
     end
     return false
-  end
-
-  def press_matches(ev, btn, wanted)
-    var first = string.split(ev, "+")[0]
-    var parts = string.split(first, ":")
-    if parts.size() != 2 || parts[0] != btn
-      return false
-    end
-    if wanted == nil
-      return true
-    end
-    var press = parts[1]
-    if type(wanted) == "list"
-      for p : wanted
-        if p == press
-          return true
-        end
-      end
-      return false
-    end
-    return wanted == press
   end
 
   def draw()

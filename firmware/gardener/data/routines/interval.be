@@ -110,8 +110,10 @@ class Interval : Page
     self.resume = "immediately"
     self.chrome = IntervalChrome(self)
 
-    self.on("up", "chord", / -> self.edit())
-    self.on("ok", nil, / -> self.phase == "ready" || self.phase == "waiting" ? self.begin() : false)
+    self.on("up:double", / -> self.edit())
+    self.on("ok:single", / -> self.phase == "ready" || self.phase == "waiting" || self.phase == "paused" ? self.begin() : false)
+    self.on("cancel:single", / -> self.pause())
+    self.on("cancel:double", / -> self.leave())
   end
 
   def activate(settings)
@@ -144,7 +146,7 @@ class Interval : Page
   def begin()
     if self.phase == "waiting"
       self.set += 1
-    else
+    elif self.phase != "paused"
       self.set = 0
     end
     vacuum.target(self.target)
@@ -179,7 +181,7 @@ class Interval : Page
   end
 
   def advance(now)
-    if self.phase == "ready" || self.phase == "waiting"
+    if self.phase == "ready" || self.phase == "waiting" || self.phase == "paused"
       return
     end
 
@@ -238,6 +240,25 @@ class Interval : Page
     self.phase = "waiting"
   end
 
+  # Cancel pauses the cycle: the chamber vents and the clock stops where it was. OK picks the run
+  # up at the set it paused on; Cancel, held to a double, leaves the page.
+  def pause()
+    if self.phase == "ready" || self.phase == "waiting" || self.phase == "paused"
+      return false
+    end
+    vacuum.stop()
+    self.phase = "paused"
+    vacuum.log("interval: paused")
+    return true
+  end
+
+  def leave()
+    vacuum.stop()
+    vacuum.log("interval: left")
+    ux.pop(nil)
+    return true
+  end
+
   # The last set is done: release the chamber, clear the target so `default` cannot inherit the
   # interval's depth, sound the device's jingle at the finish, and hand the panel back. The switch is
   # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it: the
@@ -259,8 +280,8 @@ class Interval : Page
     vacuum.log("interval: cycle stopped")
   end
 
-  # poll calls tick(now) every beat, after the press drain. The device's Back hold stops and vents
-  # without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
+  # vents without asking this page, so reset the phase machine on that notice.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the cycle does not advance
     # underneath it; the restart on close is what puts the clock right.
@@ -311,6 +332,9 @@ class Interval : Page
   def status_text()
     if self.phase == "ready" || self.phase == "waiting"
       return "READY"
+    end
+    if self.phase == "paused"
+      return "PAUSED"
     end
     if self.phase == "rest_approach" || self.phase == "rest"
       return "REST"

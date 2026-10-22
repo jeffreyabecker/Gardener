@@ -1,13 +1,13 @@
 # settings_edit.be — the scenes a setting is edited in: ValueScene, the modal editor that owns the
 # keys while it is on top, and one subclass per kind.
 #
-# A scene holds the half-made value and pops with it when OK is pressed. Back pops `cancelled`
+# A scene holds the half-made value and pops with it when OK is pressed. Cancel pops `cancelled`
 # rather than nil, because nil is a value a nullable setting can commit; the settings list compares
 # against it. The editor that carries the kind (settings_editors.be) builds the scene and names it;
 # the list that pushed it (settings_page.be) writes whatever comes back.
 
-# What a value scene pops when Back was pressed. A setting whose kind allows nothing cannot use nil
-# to mean both "cleared" and "cancelled", so a cancel needs a value of its own.
+# What a value scene pops when Cancel was pressed. A setting whose kind allows nothing cannot use
+# nil to mean both "cleared" and "cancelled", so a cancel needs a value of its own.
 class Cancelled
 end
 
@@ -21,7 +21,7 @@ class ValueScene : Scene
     self.label = label
   end
 
-  # The scene owns the keys while it is on top: Up/Down changes the value, OK pops with it, Back
+  # The scene owns the keys while it is on top: Up/Down changes the value, OK pops with it, Cancel
   # pops with nil. A scene that pops itself pops from inside its own poll; the runtime defers the
   # pop until the poll returns, so it is safe to ask for it here.
   def activate()
@@ -29,19 +29,19 @@ class ValueScene : Scene
   end
 
   def handle_page(ev)
-    if string.startswith(ev, "up:")
+    if ev == "up:single"
       self.nudge(1)
       return true
     end
-    if string.startswith(ev, "down:")
+    if ev == "down:single"
       self.nudge(-1)
       return true
     end
-    if string.startswith(ev, "ok:")
+    if ev == "ok:single"
       self.finish()
       return true
     end
-    if string.startswith(ev, "back:")
+    if ev == "cancel:single"
       self.cancel()
       return true
     end
@@ -409,13 +409,18 @@ class DurationScene : ValueScene
   end
 
   def handle_page(ev)
-    if string.startswith(ev, "ok:")
+    if ev == "forward:single"
       if self.stage == "min"
         self.stage = "sec"
         self.draw()
-        return true
       end
-      self.finish()
+      return true
+    end
+    if ev == "back:single"
+      if self.stage == "sec"
+        self.stage = "min"
+        self.draw()
+      end
       return true
     end
     return super(self).handle_page(ev)
@@ -423,7 +428,7 @@ class DurationScene : ValueScene
 
   def hint()
     if self.stage == "min"
-      return "MIN UP/DOWN  OK=NEXT"
+      return "MIN UP/DOWN  FWD=NEXT"
     end
     return "SEC UP/DOWN  OK=SAVE"
   end

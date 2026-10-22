@@ -49,7 +49,7 @@ end
 
 test("crosses START, RAMP and HOLD and goes home", crosses_stages_and_goes_home)
 
-def back_pauses_and_ok_resumes()
+def cancel_pauses_and_ok_resumes()
   var settings = {
     "initial_pressure": 5.0,
     "target_pressure": 20.0,
@@ -61,9 +61,9 @@ def back_pauses_and_ok_resumes()
   var page = ux.top()
   harness.press("ok:single")
   wait_until("ramped_static: OK did not reach the run", 200, / -> page.phase == "run")
-  harness.press("back:single")
+  harness.press("cancel:single")
   harness.beat(1)
-  assert_eq(page.phase, "paused", "ramped_static: Back did not pause the run")
+  assert_eq(page.phase, "paused", "ramped_static: Cancel did not pause the run")
   harness.press("ok:single")
   harness.beat(1)
   assert_eq(page.phase, "approach", "ramped_static: OK did not resume the run")
@@ -71,4 +71,21 @@ def back_pauses_and_ok_resumes()
              / -> page.phase == "run")
 end
 
-test("Back pauses and OK resumes the run", back_pauses_and_ok_resumes)
+test("Cancel pauses and OK resumes the run", cancel_pauses_and_ok_resumes)
+
+def double_cancel_leaves()
+  var settings = {
+    "initial_pressure": 5.0,
+    "target_pressure": 10.0,
+    "initial_duration": 2,
+    "target_duration": 2,
+    "total_duration": 6
+  }
+  assert_true(harness_activate("ramped_static", settings), "ramped_static: activate refused")
+  assert_eq(ux.depth(), 2, "ramped_static: activation did not push the page")
+  harness.press("cancel:double")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "ramped_static: a double Cancel did not leave the page")
+end
+
+test("a double Cancel leaves the page", double_cancel_leaves)

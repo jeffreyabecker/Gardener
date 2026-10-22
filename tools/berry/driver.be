@@ -81,11 +81,11 @@ def harness_editor(name)
     end
 
     # OK opens the value scene for the row the list has selected. A duration opens in the minutes
-    # stage, so a second OK advances to the seconds before the commit.
+    # stage, so Forward advances to the seconds before the commit.
     harness.press("ok:single")
     harness.beat(1)
     if item.editor.kind() == "duration"
-      harness.press("ok:single")
+      harness.press("forward:single")
       harness.beat(1)
     end
     harness.press("up:single")
@@ -126,25 +126,33 @@ def harness_run_page(name)
     return
   end
 
-  # The device's own Back hold, which the panel task fires without asking the scene.
-  harness.press("back:3")
+  # An external claim or release stops the run without asking the scene.
   harness.back_hold()
   harness.beat(8)
   if ux.depth() == 0
     return
   end
 
-  for btn : ["up", "down", "ok", "back"]
-    for press : ["single", "double"]
-      harness.press(btn + ":" + press)
-      if !harness.beat(4)
-        return
-      end
+  # Every key the page takes, once: OK starts or resumes, Cancel pauses, the rest do nothing to a
+  # routine page. The settings gesture opens the list and Back closes it, and a double Cancel
+  # leaves the page.
+  for press : ["up:single", "down:single", "forward:single", "back:single",
+               "ok:single", "cancel:single"]
+    harness.press(press)
+    if !harness.beat(4)
+      return
     end
   end
 
-  # The Up+Down chord is the settings gesture, reported as an up press with press "chord".
-  harness.press("up:chord")
+  harness.press("up:double")
+  if !harness.beat(4)
+    return
+  end
+  harness.press("back:single")
+  if !harness.beat(4)
+    return
+  end
+  harness.press("cancel:double")
   if !harness.beat(4)
     return
   end
