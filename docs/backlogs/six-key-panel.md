@@ -13,8 +13,10 @@ per item — `<m>` is the item's number in its epic — and merge back with `--n
 
 The plan's parts 2 and 3 are worked in the other order. The vocabulary has to be a string before
 the map can be written against it — `up:short+down:short` is not expressible while a press is an
-`event` record with a `chord` token — so the reader (part 1) comes first, then the string (part 3),
-then the map (part 2), then the contract.
+`event` record with a `chord` token — so the reader (part 1) comes first, then the class and the
+string (part 3), then the map (part 2), then the contract. The class comes before the string
+because it is the thing that composes one: its first item takes the detection out of the panel task
+against the press the panel already delivers, and the items after it change what it composes.
 
 Two checks cover the work: `python scripts/arduino.py --task build` for the firmware, and
 `python tools/berry/check.py` for the image and the host harness — no flags to compile, load and
@@ -43,29 +45,40 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 2 — The gesture is a string
 
-- [ ] **1. A registration is a whole gesture.** `on(gesture, fn)` replaces `on(btn, presses, fn)`: a
+- [ ] **1. Write the gesture classifier.** `GestureClassifier` owns the panel's reader and answers
+  one beat with the press that completed and the three device gestures it detected from a level
+  rather than a release — the Back+Okay reset, the Back stop and the Cancel-while-Back go-home. A
+  second press completed in the same beat waits for the next, so one beat is one delivery. The
+  panel task's `buttonsTick` becomes that call plus the policy only it can apply: reboot, latch and
+  post the stop, bump go-home, or hand the press to the page. `PressOrder` and the panel task's
+  chord state go, and `dropPress` goes with them, because the class drains every key each beat and
+  never has a press it did not ask for. The vocabulary is unchanged — the press is the `Button` and
+  `Press` the panel already delivers. Done when `buttonsTick` is one call and four branches, the
+  build passes, and the check still walks every page.
+
+- [ ] **2. A registration is a whole gesture.** `on(gesture, fn)` replaces `on(btn, presses, fn)`: a
   registration is the event string it matches, `*` in the press slot means any press on that key,
   and the list of press names becomes one registration per string. Every shipped registration is
   rewritten — the five settings chords become `on("up:chord", fn)` for now — and the framework
-  matches whole strings instead of one key and one press. The four hand-rolled `handle_page`
-  overrides compare the string they are given rather than reading `ev.btn` and `ev.press`. Done when
-  no `.be` file passes a bare key or a list to `on`, every page still walks, and the check passes.
+  matches whole strings instead of one key and one press, making the string from the press it is
+  given until the next item hands it one. The four hand-rolled `handle_page` overrides compare the
+  string they are given rather than reading `ev.btn` and `ev.press`. Done when no `.be` file passes
+  a bare key or a list to `on`, every page still walks, and the check passes.
 
-- [ ] **2. The classifier emits the string.** The press is named in one place: the classifier queues
-  `key:press` with the tokens it has today, `ButtonPanel` hands the panel task one string per press,
-  the scene queue holds strings, `buttons.take()` answers one, and the `event` record leaves
-  `kRecords`. The framework stops assembling the string from the record. The panel task keeps its
-  own chord, delivering `up:chord` until the two-key item takes it over, and the harness joins the
-  two names it is given so the host keeps its current call until the next item. Done when the check
-  drives every routine, the press log prints `btn: ok:short`, and `hal/Button.h` declares neither
-  `Press` nor `pressName`.
+- [ ] **3. The classifier names the gesture.** The press is named in one place: the reader answers
+  `key:press` with the tokens it has today, `GestureClassifier` composes it into the beat's gesture
+  and the panel task delivers or logs that string. The scene queue holds strings, `buttons.take()`
+  answers one, and the `event` record leaves `kRecords`. The framework stops making the string from
+  the record. The harness joins the two names it is given so the host keeps its current call until
+  the next item. Done when the check drives every routine, the press log prints `btn: ok:short`,
+  and `hal/Button.h` declares neither `Press` nor `pressName`.
 
-- [ ] **3. The harness presses a gesture.** `harness.press("ok:short")` replaces the button and press
+- [ ] **4. The harness presses a gesture.** `harness.press("ok:short")` replaces the button and press
   arguments, so the host pushes exactly what the device would and has no button or press table to
   drift from the classifier. `harness_event` goes with the record, and the drive and the suites that
   press keys press strings. Done when the check's drive and suites press only strings and pass.
 
-- [ ] **4. An extended hold reports its seconds.** `short`, `long` and `double` stay exactly as they
+- [ ] **5. An extended hold reports its seconds.** `short`, `long` and `double` stay exactly as they
   are; a hold at or past the **2 s** mark reports the whole seconds instead, so `back:long` is an
   ordinary hold and `back:3` one that has gone on. `ExtendedHoldMs` sits beside `LongPressMs` and
   `DoublePressMs`, and the drive's sweep presses a short, a double and a hold on each key so the
@@ -73,19 +86,9 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   press log shows `btn: back:long` for a one-second press and `btn: back:3` for a three-second one;
   the spec that describes the vocabulary follows in epic 4.
 
-- [ ] **5. The panel's gestures are one class.** `Gestures` owns the reader and answers a beat with
-  the gesture that completed and the three device gestures it detects from a level rather than a
-  release — the Back+Okay reset, the Back stop and the Cancel-while-Back go-home. A second gesture
-  completed in the same beat waits for the next, so one beat is one delivery. `buttonsTick` becomes
-  that call and the policy only it can apply: reboot, latch and post the stop, bump go-home, or
-  hand the gesture to the page. `PressOrder` and the panel task's chord state go; `dropPress` goes
-  with them, because the class drains every key each beat and never has a press it did not ask for.
-  Done when `buttonsTick` is one call and four branches, the check still walks every page, and on
-  the rig a Cancel during a Back hold goes home and the reset reboots.
-
-- [ ] **6. Two keys together are one event.** `Gestures` composes keys that are down together into
-  one string in panel order and emits it when the last comes up, replacing its Up+Down special case
-  rather than growing beside it. Up+Down is `up:short+down:short` and the five settings
+- [ ] **6. Two keys together are one event.** `GestureClassifier` composes keys that are down
+  together into one string in panel order and emits it when the last comes up, replacing its Up+Down
+  special case rather than growing beside it. Up+Down is `up:short+down:short` and the five settings
   registrations name that string. Done when the build passes, the check still walks every page, and
   on the rig Up+Down opens the settings while two keys with no binding pass through as one event.
 

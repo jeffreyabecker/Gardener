@@ -262,10 +262,11 @@ is to hand the queued string to `take()`.
 ### One class answers the beat
 
 The drain, the sum, the reserved holds and the go-home are one piece of state, so they are one
-class rather than a loop in the panel task. `Gestures` owns the reader, settles it on each beat and
-answers one value: the gesture that completed, and the three device gestures it detects from a
-level rather than a release — the reset hold, the Back stop and the Cancel-while-Back go-home. A
-second gesture completed in the same beat waits for the next, so one beat is one delivery.
+class rather than a loop in the panel task. `GestureClassifier` owns the reader, settles it on each
+beat and answers one value: the gesture that completed, and the three device gestures it detects
+from a level rather than a release — the reset hold, the Back stop and the Cancel-while-Back
+go-home. A second gesture completed in the same beat waits for the next, so one beat is one
+delivery.
 
 `buttonsTick` becomes that call plus the policy only the panel task can apply: reboot on the reset,
 latch and post the stop, bump the go-home counter, or hand the gesture to the page. Nothing left in
@@ -353,9 +354,10 @@ first draft that had seconds replacing `long` outright.
    classifications a page compares day to day, and the press log keeps saying `long`. A hold that
    goes on past the 2 s mark reports whole seconds instead, which is what makes the device's own
    3 s and 5 s marks readable; below the mark it is `long`, which is all a page needs to know.
-8. **Gesture detection is one class; the panel task keeps the policy.** `Gestures` answers the beat
-   with the completed gesture and the device gestures it detected from the levels. `buttonsTick`
-   decides what each one means — reboot, stop, go home, deliver — and owns nothing else.
+8. **Gesture detection is one class; the panel task keeps the policy.** `GestureClassifier` answers
+   the beat with the completed gesture and the device gestures it detected from the levels.
+   `buttonsTick` decides what each one means — reboot, stop, go home, deliver — and owns nothing
+   else.
 
 ## What moves together when it lands
 
@@ -363,7 +365,8 @@ The work is one change, and its parts share the vocabulary, so no part can stand
 
 - `hal/Button.h` (enum and `buttonName`; the `Press` enum and `pressName()` go, replaced by the
   classifier's string output), `hal/impl/Buttons.h`/`.cpp` as the shift-register reader,
-  `panel/Gestures.h`/`.cpp` (the beat's gesture and the device gestures it detects), `Panel.h`'s pin
+  `panel/GestureClassifier.h`/`.cpp` (the beat's gesture and the device gestures it detects),
+  `Panel.h`'s pin
   block and `gestures()` accessor, the sketch's `Board` block, and `PanelTasks.cpp` reduced to
   policy.
 - `routines/bindings/Buttons.cpp` (hands through the classifier string), `routines/Bindings.cpp`
