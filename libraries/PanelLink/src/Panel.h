@@ -7,6 +7,7 @@
 #include "BuzzerPlayer.h"
 #include "Machine.h"
 #include "PanelContext.h"
+#include "panel/GestureClassifier.h"
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
@@ -49,6 +50,7 @@ class Panel : public Machine, public Link, public PanelContext {
       : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
+        gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
         overlay_(new Overlay(display, battery, &vacuum(), &settings)),
@@ -70,6 +72,7 @@ class Panel : public Machine, public Link, public PanelContext {
   void boot();
 
   ButtonPanel& buttons() { return *buttons_; }
+  GestureClassifier& gestures() { return gestures_; }
   BuzzerPlayer& buzzer() override { return *buzzer_; }
   Battery& battery() override { return *battery_; }
   // The machine's own reads, named again so the context's virtuals resolve to one function.
@@ -89,6 +92,7 @@ class Panel : public Machine, public Link, public PanelContext {
   // Kept for boot(), which brings the display bus up on the two pins it names.
   const PanelPins pins_;
   ButtonPanel* buttons_;
+  GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;
   Overlay* overlay_;

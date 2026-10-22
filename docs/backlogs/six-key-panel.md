@@ -45,7 +45,7 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 
 ## Epic 2 — The gesture classifier
 
-- [ ] **1. Write the gesture classifier.** One class owns the panel's key reader and answers each beat
+- [x] **1. Write the gesture classifier.** One class owns the panel's key reader and answers each beat
   with what it detected: the press that completed, the keys still held, and the marks the plan
   reserves for the device. Keys pressed together are composed into one gesture. Nothing in it knows
   what a caller does with a gesture. Done when it builds, the panel owns one, and the check still
