@@ -103,11 +103,11 @@ is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `
 
 `gfx/Adafruit_GFX.h` is a shim that lets those font headers compile without `Arduino.h`.
 
-Saving paints rows 52 to 63 with a one-pixel checker: that is where `Overlay.cpp` draws the panel's
-band, over whatever a page put there, and a preview has to show it.
+Saving keeps the band the real `Overlay.cpp` draws: rows 52 to 63 are the device's own status row —
+the unit, the serial and Bluetooth icons, the run-state icon and the battery — over whatever the
+page put there.
 
-The frame holds one bit and no inversion, so it is the page as the display would draw it and not the
-panel's finished face.
+The frame holds one bit and no display inversion, which is the panel's own depth and face.
 
 ## What the drive does
 

@@ -120,6 +120,11 @@ class AdafruitDisplay : public Display {
                   int16_t& outHeight) override {
     measure(value, size, outWidth, outHeight);
   }
+  void glyph(int16_t x, int16_t y, uint8_t code, uint8_t size) override {
+    // drawChar is the one verb that takes a raw code: print() would read 0x0A as a newline, and
+    // the band's state icons need the glyph itself. Ink for both colours means no background.
+    panel_.drawChar(x, y, code, kInk, kInk, size);
+  }
 
  private:
   static constexpr uint16_t kInk = 1;

@@ -100,6 +100,9 @@ bool HarnessSession::begin() {
   buzzerPart_.begin();
   buzzer_.begin();
   overlay_.begin();
+  // The host models a device with both links up, so the band shows the serial and Bluetooth
+  // icons the panel task would set them for.
+  overlay_.setConnections(true, true);
   // Machine::begin's order: the parts first, then the control law over them.
   sensor_.begin();
   pump_.begin();

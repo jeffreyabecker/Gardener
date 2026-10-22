@@ -53,63 +53,43 @@ void Overlay::setConnections(bool serial, bool bluetooth) {
   bluetooth_ = bluetooth;
 }
 
-// One icon per state, so the mode reads without the word beside it: chevrons down while the pump
-// pulls, up while the valve vents, a ring at target, and a warning triangle on a fault.
+// One glyph per state, from the built-in face's symbol range, so the mode reads without the word
+// beside it: an up triangle while the pump pulls, a down triangle while the valve vents, an
+// inverse circle at target, the sun while idle, and an X on a fault.
 void Overlay::drawStateIcon() {
-  const int16_t x = kStateIconX;
-  const int16_t y = kBandY;
+  const int16_t x = kStateIconX + 3;
   switch (vacuum_->runState()) {
     case RunState::Pulling:
-      chevrons(x, y, true);
+      inner_->glyph(x, kFieldY, 0x1E, 1);
       break;
     case RunState::Venting:
-      chevrons(x, y, false);
+      inner_->glyph(x, kFieldY, 0x1F, 1);
       break;
     case RunState::Holding:
-      inner_->circle(x + 6, y + 6, 5);
-      inner_->fillCircle(x + 6, y + 6, 2);
+      inner_->glyph(x, kFieldY, 0x0A, 1);
       break;
     case RunState::Fault:
-      inner_->triangle(x + 6, y, x, y + 11, x + 11, y + 11);
-      inner_->vLine(x + 6, y + 4, 5);
-      inner_->pixel(x + 6, y + 10);
+      inner_->glyph(x, kFieldY, 'X', 1);
       break;
     case RunState::Idle:
-      inner_->circle(x + 6, y + 6, 5);
+      inner_->glyph(x, kFieldY, 0x08, 1);
       break;
-  }
-}
-
-void Overlay::chevrons(int16_t x, int16_t y, bool down) {
-  for (int16_t i = 0; i < 2; ++i) {
-    const int16_t top = y + i * 6;
-    if (down) {
-      inner_->line(x, top, x + 6, top + 4);
-      inner_->line(x + 6, top + 4, x + 11, top);
-    } else {
-      inner_->line(x, top + 4, x + 6, top);
-      inner_->line(x + 6, top, x + 11, top + 4);
-    }
   }
 }
 
 // Both cells say what is true now rather than what was true when the page was painted: the band is
-// cleared on the way to every frame, and an icon is drawn only while its link is up.
+// cleared on the way to every frame, and an icon is drawn only while its link is up. The serial
+// icon is the built-in face's section sign.
 void Overlay::drawConnections() {
-  if (serial_) serialIcon(kSerialIconX, kBandY);
+  if (serial_) inner_->glyph(kSerialIconX + 3, kFieldY, 0x15, 1);
   if (bluetooth_) bluetoothIcon(kBluetoothIconX, kBandY);
 }
 
-// A plug: body, tongue and the cable leaving it.
-void Overlay::serialIcon(int16_t x, int16_t y) {
-  inner_->rect(x + 2, y + 1, 8, 6);
-  inner_->rect(x + 4, y + 3, 4, 2);
-  inner_->vLine(x + 6, y + 7, 4);
-}
-
-// The Bluetooth rune: the stem, and the two triangles on it.
+// The Bluetooth rune: the stem, its tails and the two triangles on it.
 void Overlay::bluetoothIcon(int16_t x, int16_t y) {
   inner_->vLine(x + 3, y, 12);
+  inner_->hLine(x, y, 7);
+  inner_->hLine(x, y + 11, 7);
   inner_->line(x + 3, y, x + 10, y + 3);
   inner_->line(x + 10, y + 3, x + 3, y + 6);
   inner_->line(x + 3, y + 6, x + 10, y + 9);
@@ -119,10 +99,14 @@ void Overlay::bluetoothIcon(int16_t x, int16_t y) {
 // The icon is the whole of it. The number is on the wire (`batt`, and `batt_pct` in `device get`), so
 // the panel does not spend characters on it and the cell is the icon's.
 void Overlay::drawBattery() {
-  if (!battery_->present()) return;  // nothing fitted, so leave the cell empty
+  const int16_t x = inner_->width() - kBatteryIconWidth;
+  if (!battery_->present()) {
+    emptyBatteryIcon(x, kFieldY);
+    return;
+  }
 
   const bool blinkOff = battery_->low() && ((millis() / kLowBatteryBlinkMs) % 2u) == 0u;
-  batteryIcon(inner_->width() - kBatteryIconWidth, kFieldY, blinkOff ? 0 : battery_->percent());
+  batteryIcon(x, kFieldY, blinkOff ? 0 : battery_->percent());
 }
 
 void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
@@ -138,6 +122,15 @@ void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
   if (fill < 1) fill = 1;  // any charge at all shows something
   if (fill > interior) fill = interior;
   inner_->fillRect(x + 2, y + 2, fill, kBatteryBodyHeight - 4);
+}
+
+// No gauge fitted: the battery's outline with a slash through it, so the cell says there is no
+// battery rather than no charge.
+void Overlay::emptyBatteryIcon(int16_t x, int16_t y) {
+  inner_->clearRect(x, y, kBatteryIconWidth, kBatteryBodyHeight);
+  inner_->rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight);
+  inner_->fillRect(x + kBatteryBodyWidth, y + 2, 2, 3);  // nub
+  inner_->line(x + 1, y + 1, x + kBatteryBodyWidth - 2, y + kBatteryBodyHeight - 2);
 }
 
 // The glass prints one unit, so the overlay says which rather than every page writing the suffix

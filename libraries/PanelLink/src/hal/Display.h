@@ -102,6 +102,11 @@ class Display {
                           int16_t& outHeight) = 0;
   virtual void textBounds(const char* value, uint8_t size, int16_t& outWidth,
                           int16_t& outHeight) = 0;
+
+  // One glyph of the built-in 5x7 face, by its code rather than as text. The band's state icons
+  // live in the face's control range, and 0x0A is a newline to print(), so a raw draw is the only
+  // way to put it down.
+  virtual void glyph(int16_t x, int16_t y, uint8_t code, uint8_t size) = 0;
 };
 
 }  // namespace gardener

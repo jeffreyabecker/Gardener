@@ -70,6 +70,10 @@ class BitmapPanel {
   size_t print(const char* text);
   void getTextBounds(const char* text, int16_t x, int16_t y, int16_t* outX, int16_t* outY,
                      uint16_t* outWidth, uint16_t* outHeight);
+  // The raw glyph draw the display wrapper's glyph verb needs, for codes print() treats as
+  // control characters.
+  void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t background,
+                uint8_t size);
 
   // --- the picture ---------------------------------------------------------
   bool save(const char* path) const;
@@ -84,8 +88,6 @@ class BitmapPanel {
   void fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t corners, int16_t delta,
                         uint16_t color);
   void rotatePoint(int16_t* x, int16_t* y, int16_t angleDegrees);
-  void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t background,
-                uint8_t size);
   void writeChar(uint8_t c);
   void charBounds(unsigned char c, int16_t* x, int16_t* y, int16_t* minX, int16_t* minY,
                   int16_t* maxX, int16_t* maxY);

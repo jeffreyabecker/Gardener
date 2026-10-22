@@ -109,17 +109,19 @@ class Overlay : public Display {
                   int16_t& outHeight) override {
     inner_->textBounds(value, size, outWidth, outHeight);
   }
+  void glyph(int16_t x, int16_t y, uint8_t code, uint8_t size) override {
+    inner_->glyph(x, y, code, size);
+  }
 
  private:
-  // The band's icons, named by their emoji: Idle 🟢, Pulling ⬇️, Holding 🔒, Venting ⬆️,
-  // Fault ❌, plug 🔌, serial 🖥️.
+  // The band's icons: Idle sun 0x0F, Pulling up triangle 0x1E, Holding inverse circle 0x0A,
+  // Venting down triangle 0x1F, Fault X, the serial section sign 0x15 and the Bluetooth rune.
   void drawStateIcon();
-  void chevrons(int16_t x, int16_t y, bool down);
   void drawConnections();
-  void serialIcon(int16_t x, int16_t y);
   void bluetoothIcon(int16_t x, int16_t y);
   void drawBattery();
   void batteryIcon(int16_t x, int16_t y, uint8_t percent);
+  void emptyBatteryIcon(int16_t x, int16_t y);
   void drawUnit();
 
   Display* inner_;

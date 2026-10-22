@@ -25,7 +25,7 @@ class ReadoutChrome
 
     self.target_value = PressureDisplay()
     self.target_value.x = 64; self.target_value.y = 0; self.target_value.w = 64; self.target_value.h = 52
-    self.target_value.inverted = true
+    self.target_value.border = 1
     self.target_value.margin = 1
   end
 
