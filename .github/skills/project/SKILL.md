@@ -1,6 +1,6 @@
 ---
 name: project
-description: 'Gardener Git and documentation practice: how to commit (one commit, the whole tree, the history style), and which document a requirement, a proposal, an idea or a tasklist belongs in. Use when asked to commit, when editing the project README, or when deciding where a note about work belongs.'
+description: 'Gardener Git and documentation practice: how to commit (one commit, the whole tree, the subject-and-body message style), and which document a requirement, a proposal, an idea or a tasklist belongs in. Use when asked to commit, when editing the project README, or when deciding where a note about work belongs.'
 ---
 
 # Project
@@ -14,8 +14,8 @@ description: 'Gardener Git and documentation practice: how to commit (one commit
 ## Committing
 
 **Committing means commit.** When you are told to commit, it is `git status --short`, `git add -A`
-and one `git commit`: the whole tree as it stands, in the style the history already uses. That is the
-task, and it should take the time three commands take.
+and one `git commit`: the whole tree as it stands, in the message style below. That is the task, and
+it should take the time three commands take.
 
 **Look at the tree before you describe it.** `git status --short` comes first because it answers what
 the commit is: what is staged, what is not, and whether the work you meant to describe is still there.
@@ -34,8 +34,12 @@ in the message.
 Don't split one request into a tidier series of commits, and never revert files to rebuild an
 intermediate state so that a commit looks smaller. Don't amend a commit that already landed.
 
-The message is a subject in the imperative — as long as it needs to be and no longer — then the body
-saying what changed and why. Read `git log` for the voice, not for a template.
+**The message has a shape.** The subject is one imperative sentence, capitalised, with no scope,
+ticket or type prefix and no trailing full stop, and it stays under about 65 characters. Then a
+blank line and a body of plain paragraphs wrapped at 100 columns: what was there before, what
+replaces it and why, naming the files, types and behaviours it touches. No bullets, no headings, no
+backticks, and no summary, test-plan or checklist sections. End with the history's trailer,
+`Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
 
 ## Where work goes
 
