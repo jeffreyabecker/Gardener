@@ -28,7 +28,13 @@ void setup() {
   machine.capabilities().setBattery(false);
   machine.capabilities().setOwnershipStop(true);
 
-  gardener::Logger* logger = new gardener::StreamLogger(Serial);
+  // No settings file is mounted, so the machine's two knobs are the build's: the radio may
+  // advertise, and the diagnostics stream is the only way to see what the device is doing.
+  machine.config().bluetooth = true;
+  machine.config().diagnostics = true;
+  gardener::Logger* logger = machine.config().diagnostics
+                                 ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
+                                 : static_cast<gardener::Logger*>(new gardener::NilLogger());
 
   // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
