@@ -23,6 +23,8 @@ since the two are deleted together. A contract has to stand on its own, and plan
 specs.
 
 - [Alpha PCB scope](./plans/alpha-pcb.md) — which parts move onto the board
+- [Six-key panel](./plans/six-key-panel.md) — six keys read through a 74HC165, the gesture map they
+  need, and the press event as one string
 - [Parking lot](./plans/parking-lot.md) — deferred "what if" ideas, noted not designed
 
 ## Ideas
