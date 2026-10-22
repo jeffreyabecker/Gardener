@@ -9,7 +9,7 @@
 namespace gardener {
 
 // The keys as gestures. It owns the panel's button reader, settles it on each beat and answers the
-// gesture it detected as one string: `ok:short`, `up:short+down:short`, `back:3`. Nothing in it
+// gesture it detected as one string: `ok:single`, `up:single+down:single`, `back:3`. Nothing in it
 // knows what a caller does with a gesture.
 //
 // A press is named when the reader classifies it, and keys held together are composed into one
@@ -24,8 +24,6 @@ class GestureClassifier {
   String update();
 
  private:
-  static constexpr uint32_t ExtendedHoldMs = 2000;
-
   static constexpr uint32_t bitOf(Button button) { return 1u << (uint8_t)button; }
 
   static String partOf(Button button, Press press);

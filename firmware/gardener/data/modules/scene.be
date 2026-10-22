@@ -44,7 +44,7 @@ class Scene
     self.gestures.push([btn, presses, fn])
   end
 
-  # The gesture is a string — `ok:short`, `back:long`, `up:short+down:short` — and a registration
+  # The gesture is a string — `ok:single`, `back:3`, `up:single+down:single` — and a registration
   # names one key and one press token, or nil for any press on that key. The first part is the one
   # a registration is matched against.
   def handle_page(ev)

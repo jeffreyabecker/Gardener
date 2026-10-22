@@ -82,15 +82,15 @@ def harness_editor(name)
 
     # OK opens the value scene for the row the list has selected. A duration opens in the minutes
     # stage, so a second OK advances to the seconds before the commit.
-    harness.press("ok:short")
+    harness.press("ok:single")
     harness.beat(1)
     if item.editor.kind() == "duration"
-      harness.press("ok:short")
+      harness.press("ok:single")
       harness.beat(1)
     end
-    harness.press("up:short")
+    harness.press("up:single")
     harness.beat(1)
-    harness.press("ok:short")
+    harness.press("ok:single")
     harness.beat(1)
 
     if harness_kind_known(item.editor.kind()) && !harness.wrote(name, item.key)
@@ -98,14 +98,14 @@ def harness_editor(name)
     end
 
     if i + 1 < described.size()
-      harness.press("down:short")
+      harness.press("down:single")
       harness.beat(1)
     end
     i += 1
   end
 
   # Back closes the settings list and pops it, which hands the panel back to the routine.
-  harness.press("back:short")
+  harness.press("back:single")
   harness.beat(1)
 end
 
@@ -121,13 +121,13 @@ def harness_run_page(name)
     return
   end
 
-  harness.press("ok:short")
+  harness.press("ok:single")
   if !harness.beat(1600)
     return
   end
 
   # The device's own Back hold, which the panel task fires without asking the scene.
-  harness.press("back:long")
+  harness.press("back:3")
   harness.back_hold()
   harness.beat(8)
   if ux.depth() == 0
@@ -135,7 +135,7 @@ def harness_run_page(name)
   end
 
   for btn : ["up", "down", "ok", "back"]
-    for press : ["short", "double", "long"]
+    for press : ["single", "double"]
       harness.press(btn + ":" + press)
       if !harness.beat(4)
         return
@@ -177,7 +177,7 @@ def harness_art(name, seconds, path, sets)
     return false
   end
   if seconds > 0
-    harness.press("ok:short")
+    harness.press("ok:single")
     if !harness.beat(seconds * 4)
       return false
     end

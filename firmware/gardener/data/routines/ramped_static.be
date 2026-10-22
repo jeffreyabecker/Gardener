@@ -94,7 +94,7 @@ class RampedStatic : Page
 
     self.on("up", "chord", / -> self.edit())
     self.on("ok", nil, / -> self.ok())
-    self.on("back", "short", / -> self.pause())
+    self.on("back", "single", / -> self.pause())
   end
 
   def activate(settings)

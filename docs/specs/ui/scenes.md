@@ -9,7 +9,7 @@ what it does.
 ## How a gesture reaches a scene
 
 The stack drains the gesture queue once per beat and hands the top scene one gesture string —
-`ok:short`, `back:long`, `up:short+down:short` — which is `ev` in `handle(ev)` and `handle_page(ev)`.
+`ok:single`, `back:3`, `up:single+down:single` — which is `ev` in `handle(ev)` and `handle_page(ev)`.
 
 - **Declarative.** `on(key, presses, fn)` matches the gesture's **first part** only: the part before
   a `+` if there is one. `key` is the button token; `presses` is one press token, a list of them, or
@@ -45,41 +45,41 @@ What each one answers:
 
 | Scene | Gesture | What it does |
 | --- | --- | --- |
-| `ReadoutScene` | `ok:short` | start or resume the run |
-| `ReadoutScene` | `cancel:short` | stop and vent |
+| `ReadoutScene` | `ok:single` | start or resume the run |
+| `ReadoutScene` | `cancel:single` | stop and vent |
 | `ReadoutScene` | `up:double` | push the routine browser |
 | `ReadoutScene` | `down:double` | push the system settings |
-| `BrowserScene` | `up:short`, `down:short` | move the selection |
-| `BrowserScene` | `ok:double` | open the selected routine's settings & push the selected scene with those settings on return |
-| `BrowserScene` | `ok:short` | push the selected routine |
-| `BrowserScene` | `back:short` | leave |
-| `SystemScene` | `up:short`, `down:short` | move the row |
-| `SystemScene` | `ok:short` | open the row |
-| `SystemScene` | `back:short` | leave |
-| `SettingsScene` | `up:short`, `down:short` | move the row |
-| `SettingsScene` | `ok:short` | open the row |
-| `SettingsScene` | `back:short` | close the list |
-| `ValueScene` | `up:short`, `down:short` | raise or lower the value |
-| `ValueScene` | `ok:short` | close, keeping the value |
-| `ValueScene` | `cancel:short` | close, discarding it |
+| `BrowserScene` | `up:single`, `down:single` | move the selection |
+| `BrowserScene` | `forward:single` | open the selected routine's settings  |
+| `BrowserScene` | `ok:single` | push the selected routine |
+| `BrowserScene` | `back:single` | leave |
+| `SystemScene` | `up:single`, `down:single` | move the row |
+| `SystemScene` | `ok:single` | open the row |
+| `SystemScene` | `back:single` | leave |
+| `SettingsScene` | `up:single`, `down:single` | move the row |
+| `SettingsScene` | `ok:single` | open the row |
+| `SettingsScene` | `back:single` | close the list |
+| `ValueScene` | `up:single`, `down:single` | raise or lower the value |
+| `ValueScene` | `ok:single` | close, keeping the value |
+| `ValueScene` | `cancel:single` | close, discarding it |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | the four `ValueScene` gestures | as `ValueScene` |
-| `DurationScene` | `forward:short` | advance minutes→seconds|
-| `DurationScene` | `back:short` | go back seconds→minutes|
+| `DurationScene` | `forward:single` | advance minutes→seconds|
+| `DurationScene` | `back:single` | go back seconds→minutes|
 | `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
 | `UnitScene`, `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
 | `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the four `SettingsScene` gestures | as `SettingsScene` |
 
 | `Interval` | `up:double` | stop and vent, reset the run, open its settings |
-| `Interval` | `ok:short` | begin, while the run is ready, paused or waiting |
-| `Interval` | `cancel:short` | stop and vent, pause the run |
+| `Interval` | `ok:single` | begin, while the run is ready, paused or waiting |
+| `Interval` | `cancel:single` | stop and vent, pause the run |
 | `Interval` | `cancel:double` | stop and vent, pop off the stack |
 | `RampedInterval` | `up:double` | stop and vent, reset the run, open its settings |
-| `RampedInterval` | `ok:short` | begin, while the run is ready, paused or waiting |
-| `RampedInterval` | `cancel:short` | stop and vent, pause the run |
+| `RampedInterval` | `ok:single` | begin, while the run is ready, paused or waiting |
+| `RampedInterval` | `cancel:single` | stop and vent, pause the run |
 | `RampedInterval` | `cancel:double` | stop and vent, pop off the stack |
 | `RampedStatic` | `up:double` | stop and vent, reset the run, open its settings |
-| `RampedStatic` | `ok:short` | begin, while the run is ready, paused or waiting |
-| `RampedStatic` | `cancel:short` | stop and vent, pause the run |
+| `RampedStatic` | `ok:single` | begin, while the run is ready, paused or waiting |
+| `RampedStatic` | `cancel:single` | stop and vent, pause the run |
 | `RampedStatic` | `cancel:double` | stop and vent, pop off the stack |
 | `Page`, `Scene` | none | the bases answer nothing |
 

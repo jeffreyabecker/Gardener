@@ -8,13 +8,9 @@ namespace {
 // one press produces.
 constexpr uint32_t DebounceMs = 20;
 
-// A key released before this is a short press; at or after it, a long press. Both are reported when
-// the key comes up. A consumer that wants a longer hold watches heldMs() and picks its own mark, so
-// there is no third threshold here.
-constexpr uint32_t LongPressMs = 600;
-// Two short presses with the second starting within this of the first release are one double
-// press. The first is held back for the window so it cannot also act as a single; a long press is
-// never part of a double.
+// Two singles with the second starting within this of the first release are one double. The first
+// is held back for the window so it cannot also act as a single. A hold past ExtendedHoldMs is not
+// a press at all, so it never joins a double.
 constexpr uint32_t DoublePressMs = 350;
 
 }  // namespace
@@ -82,13 +78,13 @@ uint32_t Buttons::settle() {
       if ((up & bit) && (tracked_ & bit)) {
         // Both ends are the raw edges, so the debounce does not shorten or lengthen the hold.
         const uint32_t held = pendingSinceMs_ - pressStartMs_[i];
-        const bool shortPress = held < LongPressMs;
         if (second_ & bit) {
-          pendingPress_[i] = shortPress ? Press::Double : Press::Long;
+          pendingPress_[i] = Press::Double;
           second_ &= ~bit;
         } else {
-          pendingPress_[i] = shortPress ? Press::Short : Press::Long;
-          if (shortPress) {
+          pendingPress_[i] = Press::Single;
+          // A hold past the mark has said its seconds already, so it waits no double window.
+          if (held < ExtendedHoldMs) {
             awaitingSecond_ |= bit;
             firstReleaseMs_[i] = pendingSinceMs_;
           }
@@ -101,13 +97,13 @@ uint32_t Buttons::settle() {
 
   for (uint8_t i = 0; i < ButtonCount; i++) {
     const uint32_t bit = 1u << i;
-    // A single short press is ready once the double window closes without a second press.
+    // A single is ready once the double window closes without a second press.
     if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= DoublePressMs) {
       awaitingSecond_ &= ~bit;
     }
-    // A second press that becomes long is a long press, not half a double: release the first short
-    // now rather than waiting for the second to come up.
-    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= LongPressMs) {
+    // A second press held past the mark is a hold, not half a double: release the first single now
+    // rather than waiting for the second to come up.
+    if ((second_ & bit) && (tracked_ & bit) && now - pressStartMs_[i] >= ExtendedHoldMs) {
       second_ &= ~bit;
     }
   }
@@ -120,7 +116,7 @@ bool Buttons::pressed(Button button) {
 
 Press Buttons::consumePress(Button button) {
   settle();
-  // The first short of a possible double is not ready until the pair is ruled out.
+  // The first single of a possible double is not ready until the pair is ruled out.
   if ((awaitingSecond_ | second_) & bitOf(button)) return Press::None;
   const uint8_t index = (uint8_t)button;
   const Press press = pendingPress_[index];

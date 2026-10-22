@@ -13,11 +13,7 @@ GestureClassifier::GestureClassifier(ButtonPanel& buttons) : buttons_(buttons) {
 String GestureClassifier::partOf(Button button, Press press) {
   String part = buttonName(button);
   part += ':';
-  switch (press) {
-    case Press::Short: part += "short"; break;
-    case Press::Double: part += "double"; break;
-    default: part += "long"; break;
-  }
+  part += press == Press::Double ? "double" : "single";
   return part;
 }
 
@@ -74,7 +70,7 @@ String GestureClassifier::update() {
     part_[i] = partOf(button, press);
 
     // A key that is down past its mark has already said its gesture, so a press beside it joins
-    // that gesture rather than waiting for both keys to come up: `back:3+cancel:short`.
+    // that gesture rather than waiting for both keys to come up: `back:3+cancel:single`.
     String joined;
     for (uint8_t k = 0; k < ButtonCount; k++) {
       if (markedSecond_[k] == 0) continue;

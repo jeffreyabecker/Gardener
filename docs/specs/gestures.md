@@ -18,15 +18,13 @@ them.
 
 | Term | Meaning |
 | --- | --- |
-| `short` | released before 600 ms |
-| `long` | held 600 ms or more, reported on release |
-| `double` | two short presses with the second starting within 350 ms of the first release; one event, on the second release |
-| `chord` | Up and Down pressed together; one event on the first release, reported on the up key |
-| hold | a key watched while it is down; the firmware acts at its own mark |
+| `single` | one press, reported on release, after the 350 ms double window closes |
+| `double` | two singles with the second starting within 350 ms of the first release; one event, on the second release |
+| hold | a key held to `ExtendedHoldMs` (2 s) or more, reported as whole seconds while it is still down |
 
-A single short is reported only after the 350 ms window closes, so a tap is a little late rather
-than acted on twice. A long second press is a `long`, never half a double. A key held at boot is not
-a press. The numbers are `LongPressMs` and `DoublePressMs` in `hal/impl/Buttons.cpp`.
+A single is reported only after the double window closes, so a tap is a little late rather than
+acted on twice. A key held at boot is not a press. The numbers are `DoublePressMs` in
+`hal/impl/Buttons.cpp` and `ExtendedHoldMs` in `hal/Button.h`.
 
 ## Reserved gestures
 

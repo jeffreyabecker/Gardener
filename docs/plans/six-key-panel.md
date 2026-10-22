@@ -34,7 +34,7 @@ firmware reads them. The rest of that plan is unaffected.
 | Cancel | `cancel` | escape: leave without writing, abort an edit |
 
 The tokens are the values `buttonName()` answers and the values a page compares in Berry. They are
-also the words in the press log (`btn: forward:short`), so one vocabulary serves the wire log, the
+also the words in the press log (`btn: forward:single`), so one vocabulary serves the wire log, the
 Berry event and the C++ enum.
 
 **`ok`, not `okay`.** The key's human name is "okay" and the glass may say whatever it likes, but
@@ -53,11 +53,11 @@ does not change.
 
 - The reader satisfies `ButtonPanel` exactly as the GPIO reader does: `pressed(Button)`,
   `consumePress(Button)`, `dropPress(Button)` and `heldMs(Button)` keep their meanings, and the
-  press classifier's thresholds are **unchanged** — 20 ms debounce, the 600 ms mark between a tap
-  and a reported hold, 350 ms double window. The two new keys are ordinary keys: they debounce,
-  classify and double exactly like the four existing ones. What the classifier *reports* changes
-  with part 3 — it emits a gesture string directly, and a hold past the extended mark says its
-  seconds rather than `long` — but the mechanics behind it are the same ones the GPIO reader used.
+  press classifier's mechanics are **unchanged** — 20 ms debounce, 350 ms double window, and the
+  2 s mark between a press and a hold. The two new keys are ordinary keys: they debounce, classify
+  and double exactly like the four existing ones. What the classifier *reports* changes with part
+  3 — it emits a gesture string directly, and a hold past the 2 s mark says its seconds — but the
+  mechanics behind it are the same ones the GPIO reader used.
 - The `Button` enum gains two members and a count that stops being written as `4` in five places
   in `hal/impl/Buttons.cpp`. `enum class Button : uint8_t { Up, Down, Forward, Back, Ok, Cancel }`
   and a `kButtonCount = 6` are the shape; the `pressStartMs_`, `pendingPress_` and
@@ -146,7 +146,7 @@ either key for it; the standard only requires that Okay always means confirm and
 means advance.
 
 **Up+Down stays the settings gesture** — that is where the page's edit view lives, and it needs no
-new key. The classifier emits it as the sum `up:short+down:short` rather than a `chord` token
+new key. The classifier emits it as the sum `up:single+down:single` rather than a `chord` token
 reported on the up key, and the event goes out when the **last** of the two comes up, so each part
 is named from a press that has finished. It does not move to Forward, because Forward already
 means "enter" and giving it a second meaning is exactly the overloading this plan is removing.
@@ -168,7 +168,7 @@ The go-home move is the second real change. Today the panel task steals an Okay 
 is held, and a press is classified on release, so it can only act then. Cancel is taken from the
 **debounced level** instead: while Back is held, Cancel going down is reported once as the beat's
 go-home, and the press that follows is not delivered. The level is the only thing that works once a
-pair is one event — a Cancel tapped during Back's hold is part of `back:3+cancel:short`, and waiting
+pair is one event — a Cancel tapped during Back's hold is part of `back:3+cancel:single`, and waiting
 for that string would hold the way out until Back came up. The gesture stays device-owned — detected
 in the panel's beat before any page sees it — so a misbehaving page still cannot suppress the way
 out.
@@ -182,7 +182,7 @@ classifier. A key in such a group is not also half of a double: the double windo
 pressed on its own.
 
 The event goes out on the last release rather than the first. A part is named by how far it got —
-`short`, `long`, `double`, or its whole seconds — and only a released key has finished a press;
+`single`, `double`, or its whole seconds — and only a released key has finished a press;
 composing
 at the first release would have to guess the still-held partner's part. For the settings chord the
 difference is invisible, except that the view opens when the second key comes up rather than the
@@ -191,15 +191,15 @@ first.
 ### The press log
 
 While an external link drives there is no page, so presses are logged as the classifier's string
-with a `btn: ` prefix: `btn: ok:short`, `btn: back:long`, `btn: back:3`, `btn:
-up:short+down:short`. The log and the event are the same string; the vocabulary simply grows
+with a `btn: ` prefix: `btn: ok:single`, `btn: back:3`, `btn:
+up:single+down:single`. The log and the event are the same string; the vocabulary simply grows
 `forward` and `cancel`, and a hold that goes on past the extended mark becomes its seconds.
 
 ### The shipped pages
 
 These bindings are the pages' own to write, but the standard above settles them in advance:
 
-- **`default`** — Okay short starts, Back stops and vents. The double-tap shortcuts (Up double →
+- **`default`** — Okay single starts, Back stops and vents. The double-tap shortcuts (Up double →
   browser, Down double → system) can go: **Forward opens the browser** and **Up+Down opens the
   system settings** as it does today.
 - **`browser`** — Up/Down move, Forward (or Okay) opens the selected routine, Back returns to
@@ -233,28 +233,23 @@ part  := button ':' press
 event := part ( '+' part )*
 ```
 
-- A **tap** is `short`; a **double tap** is `double`; an ordinary **hold** is `long` — the three a
-  page compares today, and they stay.
-- A **significantly extended hold** reports the **whole seconds the key was held** instead of
-  `long`: from 2 s on, the held milliseconds divided by 1000, so `back:3` is Back held three and a
-  bit seconds and `back:2` is a hold just past the mark. Below 2 s it stays `back:long`. The
-  classifier already measures the hold; it now says how long once the hold has gone on long enough
-  for the number to mean something.
-- **Two keys together are one event, the sum of their parts.** The `chord` token is gone, and Up
-  and Down pressed together is `up:short+down:short`; a held pair reports each part in its own
-  form, `back:3+ok:long`.
+- A **tap** is `single`; a **double tap** is `double` — the two a page compares.
+- A **hold past the 2 s mark** reports the **whole seconds the key was held**: the held
+  milliseconds divided by 1000, so `back:3` is Back held three and a bit seconds and `back:2` is a
+  hold just past the mark. Below the mark a release is `single`; there is no `long` form.
+- **Two keys together are one event, the sum of their parts.** Up and Down pressed together is
+  `up:single+down:single`; a held pair reports each part in its own form, `back:3+ok:single`.
 
 So the full vocabulary is `up`, `down`, `forward`, `back`, `ok`, `cancel` before the colon, and
-`short`, `long`, `double` or a whole number of seconds after it, joined with `+` when the gesture
-is more than one key. No button or press name contains `:` or `+`, so both are safe separators.
+`single`, `double` or a whole number of seconds after it, joined with `+` when the gesture is more
+than one key. No button or press name contains `:` or `+`, so both are safe separators.
 
-The classifier's mechanics do not change with the vocabulary — 20 ms debounce, the 600 ms mark
-between `short` and `long`, and the 350 ms double window all stay, and a new 2 s mark separates an
-ordinary hold from an extended one. What changes is the output: `chord` leaves, `long` stays, an
-extended hold says its seconds, and the classifier strings the gesture itself. The
-`Button` enum and `buttonName()` stay; the `Press` enum and `pressName()` go; the
-two-keys-together recognition moves out of the panel task and into the class that detects the
-gesture, which is the thing that emits the event.
+The classifier's mechanics do not change with the vocabulary — 20 ms debounce and the 350 ms double
+window stay, and the 2 s mark separates a press from a hold reported as seconds. What changes is
+the output: `short` is renamed `single`, `long` and `chord` leave, an extended hold says its
+seconds, and the classifier strings the gesture itself. The `Button` enum and `buttonName()` stay;
+the `Press` enum and `pressName()` go; the two-keys-together recognition moves out of the panel
+task and into the class that detects the gesture, which is the thing that emits the event.
 
 A press is queued only while the page is showing, the queue holds eight, and the binding's only job
 is to hand the queued string to `take()`.
@@ -293,14 +288,14 @@ def take_events()
 end
 ```
 
-`handle(ev)` receives the whole string — `"ok:short"`, `"back:3"`, `"up:short+down:short"` — and
+`handle(ev)` receives the whole string — `"ok:single"`, `"back:3"`, `"up:single+down:single"` — and
 the direction for the Berry side is to **compare the whole string wherever a page can**. The
 shipped pages' nested `if ev.btn == "up"` ladders are each one string compared, and they become
 one test:
 
 ```berry
-if ev == "ok:short"              # not ev.btn == "ok" && ev.press == "short"
-if ev == "up:short+down:short"   # the settings chord, matched whole
+if ev == "ok:single"              # not ev.btn == "ok" && ev.press == "single"
+if ev == "up:single+down:single"   # the settings chord, matched whole
 ```
 
 A page splits on `+` and `:` only when it matches one dimension regardless of the other — an
@@ -308,7 +303,7 @@ editor that takes Up and Down at any press, say — and even then it looks at th
 first. The declarative registration takes the same shape: `on(gesture, fn)` is given the whole
 event string, and `*` in the press slot when the press does not matter (`on("ok:*", fn)`). There
 is no registration that names a bare key: "any press" is `ok:*`, which says so. There is no list
-of press names either — `on("back", ["short", "double"], fn)` was two registrations written as
+of press names either — `on("back", ["single", "double"], fn)` was two registrations written as
 one, and it cannot express a hold at all.
 
 Why the classifier emits strings, stated plainly:
@@ -317,9 +312,9 @@ Why the classifier emits strings, stated plainly:
   the key and a press name. The key is already a string, and the press name is exactly what the
   classifier decides — so the classifier writing the string is the shortest path from a key to a
   page.
-- A hold's seconds is data the classifier has and a page wants; `long` alone made a page re-derive
-  "long enough" from a threshold it could not see. An extended hold now says how long it was; an
-  ordinary one is still `long`, which is all it has to say.
+- A hold's seconds is data the classifier has and a page wants. An extended hold says how long it
+  was, and a release below the mark is a single — there is no `long` to re-derive "long enough"
+  from a threshold a page cannot see.
 - The `+` sum is what `chord` was pretending not to be: two keys, each with its own press. The sum
   says it outright and drops the special token.
 
@@ -331,8 +326,8 @@ was pressed, and the string above is the whole of it.
 
 These were the open questions, settled before the backlog exists because the string, the steal
 target and the token names all appear in the gesture map above. The first three were open in the
-first draft, the next three came out of reading the code against the map, and the last corrects a
-first draft that had seconds replacing `long` outright.
+first draft, the next three came out of reading the code against the map, and the last two correct
+the drafts that had seconds replacing `long`, and then `long` surviving at all.
 
 1. **The token is `ok`, not `okay`.** It is the name the press log, `Button::Ok`, `buttonName()` and
    every routine already use. The key is called "okay" and the glass may spell it either way; the
@@ -345,15 +340,14 @@ first draft that had seconds replacing `long` outright.
 4. **The sum is general.** Any keys down together are one event, in panel order, on the last
    release. Up+Down is the only *page* chord; that is a statement about the standard, not a
    special case in the classifier.
-5. **A registration is a whole gesture string.** `on("ok:short", fn)`, `on("up:short+down:short",
+5. **A registration is a whole gesture string.** `on("ok:single", fn)`, `on("up:single+down:single",
    fn)`, and `*` in the press slot for any press on that key. A bare key name is not a gesture, and
    a list of press names is several registrations with a hole where the hold would go.
-6. **The harness presses a whole gesture.** `harness.press("ok:short")` is exactly what the device
+6. **The harness presses a whole gesture.** `harness.press("ok:single")` is exactly what the device
    produces, so the host has no button or press table to drift from the classifier.
-7. **`long` stays, and seconds begin at 2 s.** `short`, `long` and `double` are the three
-   classifications a page compares day to day, and the press log keeps saying `long`. A hold that
-   goes on past the 2 s mark reports whole seconds instead, which is what makes the device's own
-   3 s and 5 s marks readable; below the mark it is `long`, which is all a page needs to know.
+7. **`single`, `double` and seconds are the forms.** `short` is renamed `single`, and `long` is
+   gone: a release is a single or a double, and a hold that reaches the 2 s mark reports whole
+   seconds instead. The 600 ms mark between a tap and a hold goes with it.
 8. **Gesture detection is one class; the panel task keeps the policy.** `GestureClassifier` answers
    the beat with the completed gesture and the device gestures it detected from the levels.
    `buttonsTick` decides what each one means — reboot, stop, go home, deliver — and owns nothing

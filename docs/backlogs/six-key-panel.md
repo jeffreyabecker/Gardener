@@ -12,7 +12,7 @@ branch, `backlog/six-key-panel/epic-<n>/main` per epic and `backlog/six-key-pane
 per item — `<m>` is the item's number in its epic — and merge back with `--no-ff`.
 
 The plan's parts 2 and 3 are worked in the other order. The vocabulary has to be a string before
-the map can be written against it — `up:short+down:short` is not expressible while a press is an
+the map can be written against it — `up:single+down:single` is not expressible while a press is an
 `event` record with a `chord` token — so the reader (part 1) comes first, then the class and the
 string (part 3), then the map (part 2), then the contract. The class comes before the string
 because it is the thing that composes one: the first item writes the class, the second makes the
@@ -59,7 +59,7 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   the binding and the harness carry the string, and a page reads it and splits it where a handler
   matches one dimension. The way home moves to Cancel while Back is held, so Okay is no longer stolen
   during the hold. Done when the panel task is one call and four decisions, the press log prints
-  `btn: ok:short`, the check drives every page, and on the rig a Cancel during a Back hold goes home
+  `btn: ok:single`, the check drives every page, and on the rig a Cancel during a Back hold goes home
   while an Okay during the same hold reaches the page.
 
 - [ ] **3. Replace the key-and-press registration with the gesture string.** Change the registration
@@ -101,12 +101,12 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
 ## Epic 4 — The contract
 
 - [ ] **1. `gestures.md` describes six keys.** The keys and their tokens, the Back/Cancel split, the
-  moved go-home, the two-key rule, `short`/`long`/`double` with the extended-hold seconds, and the
+  moved go-home, the two-key rule, `single`/`double` with the extended-hold seconds, and the
   press-log line are the contract the pages are written against. Done when the spec names no
   four-key map, no `chord` token and no Okay-while-Back steal, and agrees with the firmware.
 
 - [ ] **2. `bindings.md` describes the string.** `buttons.take()` answers the classifier's gesture or
-  `nil`, the vocabulary is the six keys and `short`/`long`/`double`/seconds, the queue holds eight,
+  `nil`, the vocabulary is the six keys and `single`/`double`/seconds, the queue holds eight,
   and the `event` record is gone from the record list. Done when the `buttons` section and the
   record list agree with the binding.
 

@@ -57,8 +57,8 @@ class ReadoutScene : Scene
     self.chrome = ReadoutChrome()
 
     self.on("up", "chord", / -> ux.push(systemScene))
-    self.on("ok", "short", / -> self.start())
-    self.on("back", ["short", "double"], / -> self.back())
+    self.on("ok", "single", / -> self.start())
+    self.on("back", ["single", "double"], / -> self.back())
     self.on("up", "double", / -> ux.push(browserScene))
     self.on("down", "double", / -> ux.push(systemScene))
   end

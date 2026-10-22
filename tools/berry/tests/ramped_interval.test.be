@@ -32,7 +32,7 @@ def completes_and_goes_home()
     "rest_duration": 0
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
-  harness.press("ok:short")
+  harness.press("ok:single")
   wait_until("ramped_interval: did not complete", 200, / -> ux.depth() == 1)
 end
 
@@ -48,12 +48,12 @@ def back_pauses_and_ok_restarts()
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   var page = ux.top()
-  harness.press("ok:short")
+  harness.press("ok:single")
   wait_until("ramped_interval: OK did not reach the work hold", 200, / -> page.phase == "work")
-  harness.press("back:short")
+  harness.press("back:single")
   harness.beat(1)
   assert_eq(page.phase, "paused", "ramped_interval: Back did not pause")
-  harness.press("ok:short")
+  harness.press("ok:single")
   wait_until("ramped_interval: OK did not restart the set", 200, / -> page.phase == "work")
 end
 
