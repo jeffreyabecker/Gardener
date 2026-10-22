@@ -9,7 +9,6 @@ namespace gardener {
 struct MachineConfig {
   bool bluetooth = true;    // whether the radio may advertise
   bool diagnostics = true;  // whether the diagnostics stream runs
-  bool battery = true;      // whether a battery gauge is fitted
 };
 
 }  // namespace gardener

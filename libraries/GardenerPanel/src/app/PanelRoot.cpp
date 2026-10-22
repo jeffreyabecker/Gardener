@@ -42,10 +42,11 @@ constexpr int16_t kPanelNoResetLine = -1;
 // called.
 AppContext buildAppContext() {
   MachineContext& machine = buildMachineRoot();
-  // The full device has the panel and the gauge, and the panel pushes itself above the floor so
-  // it is the default controller.
+  // The full device has the panel and the gauge, and — like every build — it vents when its owner
+  // leaves. The panel pushes itself above the floor so it is the default controller.
   machine.capabilities().setPanel(true);
   machine.capabilities().setBattery(true);
+  machine.capabilities().setOwnershipStop(true);
   machine.ownership().acquire(Link::Panel);
 
   auto* battery = new AdcBattery(cfg::BATTERY_ADC);

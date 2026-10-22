@@ -22,6 +22,12 @@ void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
   delay(200);
 
+  // What this build has: no panel, no gauge, and the ownership stop that makes an unowned machine
+  // vent. Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
+  machine.capabilities().setPanel(false);
+  machine.capabilities().setBattery(false);
+  machine.capabilities().setOwnershipStop(true);
+
   gardener::Logger* logger = new gardener::StreamLogger(Serial);
 
   // The wire surface is this build's: the machine's domains and nothing else. There is no `device`
