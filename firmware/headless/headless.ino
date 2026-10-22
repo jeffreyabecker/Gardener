@@ -30,11 +30,11 @@ void setup() {
 
   gardener::Logger* logger = new gardener::StreamLogger(Serial);
 
-  // The wire surface is this build's: the machine's domains and nothing else. There is no `device`
-  // domain yet, so nothing answers `device get`.
+  // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
   serial->registerDomain(gardener::createControlDomain(machine));
   serial->registerDomain(gardener::createVacuumDomain(machine));
+  serial->registerDomain(gardener::createMachineDeviceDomain(machine));
   gardener::BleLink* ble = new gardener::BleLink(&machine);
   ble->registerDomain(new gardener::MachineBleDomain(&machine));
 
