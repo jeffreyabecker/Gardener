@@ -47,13 +47,13 @@ class Buttons : public ButtonPanel {
   // The keys with a press in progress: set when a debounced down edge is accepted, cleared by the
   // release that classifies it. A key held at boot is never tracked, so it is not a press.
   uint32_t tracked_ = 0;
-  uint32_t pressStartMs_[4] = {};
-  Press pendingPress_[4] = {};
+  uint32_t pressStartMs_[ButtonCount] = {};
+  Press pendingPress_[ButtonCount] = {};
   // A short release waits out the double window before it is ready; a press that arrives inside
   // that window is marked as the second half and decides whether the pair is a double.
   uint32_t awaitingSecond_ = 0;
   uint32_t second_ = 0;
-  uint32_t firstReleaseMs_[4] = {};
+  uint32_t firstReleaseMs_[ButtonCount] = {};
 };
 
 }  // namespace gardener

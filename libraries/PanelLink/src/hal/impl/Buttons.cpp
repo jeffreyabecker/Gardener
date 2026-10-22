@@ -52,7 +52,7 @@ uint32_t Buttons::settle() {
     // accepted is the one press to classify; a key held at boot has no down edge and is not one.
     const uint32_t down = pending_ & ~stable_;
     const uint32_t up = stable_ & ~pending_;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < ButtonCount; i++) {
       const uint32_t bit = 1u << i;
       if (down & bit) {
         tracked_ |= bit;
@@ -88,7 +88,7 @@ uint32_t Buttons::settle() {
     stable_ = pending_;
   }
 
-  for (uint8_t i = 0; i < 4; i++) {
+  for (uint8_t i = 0; i < ButtonCount; i++) {
     const uint32_t bit = 1u << i;
     // A single short press is ready once the double window closes without a second press.
     if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= DoublePressMs) {
