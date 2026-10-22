@@ -95,7 +95,7 @@ void MachineDeviceDomain::get(Stream& io) {
   io.print(" heap=");
   io.print((uint32_t)ESP.getFreeHeap());
   io.print(" log=");
-  io.print(app_.logger().enabled() ? "on" : "off");
+  io.print(app_.logger().levels());
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -128,8 +128,8 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
   }
 
   if (field.equalsIgnoreCase("log")) {
-    const bool enabled = value.equalsIgnoreCase("on");
-    if (!enabled && !value.equalsIgnoreCase("off")) {
+    String levels;
+    if (!parseLevels(value, levels)) {
       io.print("err bad_argument ");
       io.print(value);
       io.print('\n');
@@ -142,10 +142,10 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.logger().setEnabled(enabled);
+    app_.logger().setLevels(levels);
 
     io.print("ok log=");
-    io.print(enabled ? "on" : "off");
+    io.print(levels);
     io.print('\n');
     return;
   }

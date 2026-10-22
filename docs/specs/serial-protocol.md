@@ -97,7 +97,7 @@ detail = token / items
   sends one command at a time reads one reply, and a controller that pipelines counts replies in
   the order it sent the commands.
 * `ok` means accepted. It carries the state the verb changed, using the keys `get` reports:
-  `ok state=PULL`, `ok target=40.0`, `ok tone=2000,500`, `ok playing=on`, `ok log=off`.
+  `ok state=PULL`, `ok target=40.0`, `ok tone=2000,500`, `ok playing=on`, `ok log=WE`.
 * `err` carries a code and the detail that code defines. A code naming one thing takes it bare
   (`err unknown_verb frobnicate`); a code with several values uses items
   (`err out_of_range field=target value=1 min=5.0`).
@@ -106,9 +106,8 @@ detail = token / items
   body without a count: its rows follow `ok` and a blank line ends them.
 * Values never contain a space, so a reply line splits on spaces. The one free-form command
   argument, `buzzer play`'s sequence, is never echoed back.
-* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the `log` switch turns them
-  off and on while the device runs, and a change applies to the next record. Replies are never
-  silenced.
+* Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the `log` switch chooses which
+  of the three are written, and a change applies to the next record. Replies are never silenced.
 
 ## 5. `control` — who may command
 
@@ -169,14 +168,14 @@ the reply names whoever is still driving.
 | `heap` | bytes | free heap |
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
-| `log` | `on` / `off` | the diagnostics switch for this session: on at boot, not stored |
+| `log` | set of `I`/`W`/`E`, or `-` | the diagnostics levels written, in canonical order; `IWE` at boot, not stored |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
 | `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
-| `set log <on\|off>` | `ok log=<on\|off>` | turns the diagnostics records on or off at once; requires control |
+| `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical. Requires control |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
 
@@ -184,9 +183,9 @@ the reply names whoever is still driving.
 -> control acquire
 <- ok control=serial
 -> device get
-<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=on unit=kpa caps=3
--> device set log off
-<- ok log=off
+<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE unit=kpa caps=3
+-> device set log WE
+<- ok log=WE
 -> device set unit mmhg
 <- ok unit=mmhg
 -> device reboot
@@ -196,7 +195,7 @@ the reply names whoever is still driving.
 `unit` is the panel's: it is a preference the panel persists in `/settings.cfg` and shows on its
 glass, so a build without a panel neither reports it in `device get` nor accepts `device set unit`.
 `log` is not a preference — every build owns a logger — so both builds report it and accept `device
-set log`. The machine-alone build reads `ok proto=1 fw=... chip=... heap=... log=on caps=0`.
+set log`. The machine-alone build reads `ok proto=1 fw=... chip=... heap=... log=IWE caps=0`.
 
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
@@ -205,8 +204,10 @@ Only `get` is available without control. A `set` or `reboot` from a connected ob
 and read back at boot. A filesystem that will not take the write still answers with the value in
 force for this session, and the boot log reports the failed mount. The machine and this wire stay in
 kPa either way — a display unit is a preference about the glass, not a second way to state a
-pressure. `log` is not stored at all: it is the switch for the running device, on at boot, and
-`device set log off` silences the records from the next one until `device set log on` or a reset.
+pressure. `log` is not stored at all: it is the set of levels written for the running device, `IWE`
+at boot, and `device set log -` silences all three from the next record until a link names levels
+again or the device resets. Narrowing the set keeps the levels it names: `device set log E` writes
+errors and drops the rest.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
 fields. They are answered by the panel's gauge, so a build without a panel reports neither — it has

@@ -160,7 +160,8 @@ What that costs, stated plainly:
 - **A `poll` that never returns blocks the panel loop.** The control loop and the wire run on their
   own tasks, so a slow routine cannot starve them. There is no instruction budget in this build, so
   returning is a convention the author keeps. Keep `poll` short and let it return.
-- **`print` writes nowhere.** Use `vacuum.log(text)`; it reaches the serial line as a `[I]` record.
+- **`print` writes nowhere.** Use `vacuum.log(text)`; it reaches the serial line as a `[I]` record
+  when the device's `log` set includes `I`.
 - A routine that raises is **dropped**: one `[E]` line names the routine, the method and the
   message, and the page falls back to the mark until the next boot.
 

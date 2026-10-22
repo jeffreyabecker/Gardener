@@ -8,22 +8,27 @@
 namespace gardener {
 
 // The diagnostic sink: three levels, framed as [I], [W] and [E] records on the serial line the link
-// writes its replies to. It starts enabled, and the links switch it; while it is off it writes
-// nothing and the replies are unaffected.
+// writes its replies to. It writes every level from boot, and the links narrow the set; a record for
+// a level that is not in it is not written, and the replies are unaffected either way.
 class SerialLogger : public Logger {
  public:
-  explicit SerialLogger(Stream& serial) : serial_(serial) {}
+  explicit SerialLogger(Stream& serial) : serial_(serial) { levels_.reserve(kLevelsReserve); }
 
-  void setEnabled(bool enabled) override { enabled_ = enabled; }
-  bool enabled() const override { return enabled_; }
+  String levels() const override { return levels_; }
+  void setLevels(const String& levels) override { levels_ = levels; }
 
   void info(const char* text) override { write('I', text); }
   void warn(const char* text) override { write('W', text); }
   void error(const char* text) override { write('E', text); }
 
  private:
+  // The longest set, `IWE`, and its terminator. The buffer is reserved so a change never
+  // reallocates: a reader on another task may then see a torn value for one call, which drops or
+  // repeats a single record and nothing more.
+  static constexpr unsigned int kLevelsReserve = 4;
+
   void write(char level, const char* text) {
-    if (!enabled_ || !text) return;
+    if (!text || levels_.indexOf(level) < 0) return;
     serial_.write((uint8_t)'[');
     serial_.write((uint8_t)level);
     serial_.write((uint8_t)']');
@@ -33,9 +38,9 @@ class SerialLogger : public Logger {
   }
 
   Stream& serial_;
-  // Written by a link on the interface task, read on the control and panel beats. A byte write is
-  // atomic on this part, and volatile keeps the compiler from caching the flag in a task.
-  volatile bool enabled_ = true;
+  // The levels written, every one from boot; written by a link on the interface task and read on the
+  // control and panel beats.
+  String levels_ = "IWE";
 };
 
 }  // namespace gardener

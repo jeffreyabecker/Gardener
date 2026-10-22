@@ -36,7 +36,7 @@ itself rather than a call answering it; its fields are listed under `describe()`
 | `vacuum.state()` | a `reading` record | see below |
 | `vacuum.now_ms()` | `int` | `millis()` |
 | `vacuum.stopped()` | `bool` | true once after the device's 3 s Back hold stopped and vented the machine; the next call is false |
-| `vacuum.log(text)` | — | one `[I]` diagnostic record |
+| `vacuum.log(text)` | — | one `[I]` diagnostic record, written when the device's `log` set includes `I` |
 
 `vacuum.state()` answers a `reading`, read with a dot:
 

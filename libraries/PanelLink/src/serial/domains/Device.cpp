@@ -109,7 +109,7 @@ void DeviceDomain::get(Stream& io) {
   }
 
   io.print(" log=");
-  io.print(app_.logger().enabled() ? "on" : "off");
+  io.print(app_.logger().levels());
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
@@ -145,8 +145,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
   }
 
   if (field.equalsIgnoreCase("log")) {
-    const bool enabled = value.equalsIgnoreCase("on");
-    if (!enabled && !value.equalsIgnoreCase("off")) {
+    String levels;
+    if (!parseLevels(value, levels)) {
       io.print("err bad_argument ");
       io.print(value);
       io.print('\n');
@@ -159,10 +159,10 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.logger().setEnabled(enabled);
+    app_.logger().setLevels(levels);
 
     io.print("ok log=");
-    io.print(enabled ? "on" : "off");
+    io.print(levels);
     io.print('\n');
     return;
   }
