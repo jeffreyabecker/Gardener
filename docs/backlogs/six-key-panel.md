@@ -16,8 +16,8 @@ the map can be written against it — `up:single+down:single` is not expressible
 `event` record with a `chord` token — so the reader (part 1) comes first, then the class and the
 string (part 3), then the map (part 2), then the contract. The class comes before the string
 because it is the thing that composes one: the first item writes the class, the second makes the
-panel task consume it and carry the gesture to the page, and the third changes how a page registers
-it.
+panel task consume it and carry the gesture to the page, and epic 3 rewrites how a page registers
+it and what each scene binds.
 
 Two checks cover the work: `python scripts/arduino.py --task build` for the firmware, and
 `python tools/berry/check.py` for the image and the host harness — no flags to compile, load and
@@ -62,42 +62,15 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   `btn: ok:single`, the check drives every page, and on the rig a Cancel during a Back hold goes home
   while an Okay during the same hold reaches the page.
 
-- [ ] **3. Replace the key-and-press registration with the gesture string.** Change the registration
-  to take the whole gesture, with `*` for any press, and rewrite every registration — a list of
-  presses becomes one registration per string. Drop the framework's key-and-press matcher. Done when
-  no `.be` file passes a bare key or a list to `on`, and the check still walks every page.
-
 ## Epic 3 — The six-key map
 
-- [ ] **1. Give the readout its gestures.** Bind `ok:single` to start or resume, `cancel:single` to stop
-  and vent, `up:double` to open the browser, and `down:double` to open the system settings, and drop
-  the old Back stop and the chord. Done when the smoke walk still starts and stops a run, and on the
-  rig `up:double` opens the browser while `down:double` opens the system settings.
-
-- [ ] **2. Give the browser its gestures.** Bind `up:single` and `down:single` to move the selection,
-  `ok:single` to open the selected routine, `forward:single` to open the selected routine's
-  settings, and `back:single` to leave. Done when the browser suite still lists every routine and
-  the check passes.
-
-- [ ] **3. Give the system scene its gestures.** Bind `up:single` and `down:single` to move rows,
-  `ok:single` to open a row, and `back:single` to leave. Done when the system suite walks the jingle
-  row on these and passes.
-
-- [ ] **4. Give the settings list its gestures.** Bind `up:single` and `down:single` to move rows,
-  `ok:single` to open a row, and `back:single` to close the list. Done when the shared settings walk
-  opens and edits a row, and the check passes.
-
-- [ ] **5. Give a value scene its gestures.** Bind `up:single` and `down:single` to change the value,
-  `ok:single` to keep it, and `cancel:single` to discard it; a `duration` adds `forward:single` to
-  advance the stage and `back:single` to step back. Update each scene's hint line to name the keys
-  that act. Done when the shared settings walk edits a `duration` on `forward:single` and saves on
-  `ok:single`, and passes.
-
-- [ ] **6. Give the routine pages their gestures.** Bind `ok:single` to begin or resume, `cancel:single` to
-  stop, vent and pause, `cancel:double` to stop, vent and leave the stack, and `up:double` to open
-  the settings, on all three routines. Done when the two pause/resume suites press `cancel:single`
-  and a `cancel:double` leaves the run, the check passes, and on the rig each of the six keys does
-  its own thing — the first point every key is bound.
+- [ ] **1. Rewrite the dispatch to whole gestures.** `on(gesture, fn)` takes one whole gesture string
+  and a scene's `handle_page(ev)` compares whole strings, so nothing matches a key without its press.
+  The six scenes bind the map the plan settles in the same change — the readout, the browser, the
+  system scene, the settings list, the value scenes and the three routine pages — and the drive and
+  the suites press the same gestures. Done when no `.be` file splits a gesture or registers less
+  than a whole string, the check walks every page, and on the rig each of the six keys does what the
+  map says.
 
 ## Epic 4 — The contract
 
