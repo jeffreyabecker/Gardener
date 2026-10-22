@@ -105,7 +105,7 @@ Faults latch: only `vacuum reset` clears one, and the device never retries on it
   open solenoid draws current for the whole hold, which is why a long hold, not the pump, is the
   dominant battery cost.
 * **The vent valve is normally open by default**, so de-energised is open and running a vacuum
-  means energising the coil. `NormallyClosedValve` in `app/Build.cpp` inverts that and removes the
+  means energising the coil. `NormallyClosedValve` in `Build.cpp` inverts that and removes the
   fail-safe.
 * **The panel is the device's.** It shows the controlling link's icon, the run state and the
   battery; there is no drawing command, so everything else — a vent timeout, the duty, the fault

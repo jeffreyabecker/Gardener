@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Checking the Berry data image under firmware/gardener/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under app/routines/bindings/: compile, load and drive the whole image on the host with the vendored VM, the eight native modules, the records and the settings editor. Covers the load order, the surface the test app must stub, and the failures each message means.'
+description: 'Checking the Berry data image under firmware/gardener/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: compile, load and drive the whole image on the host with the vendored VM, the eight native modules, the records and the settings editor. Covers the load order, the surface the test app must stub, and the failures each message means.'
 ---
 
 # Berry
@@ -8,8 +8,8 @@ description: 'Checking the Berry data image under firmware/gardener/data without
 ## When to use
 
 - Editing anything under `firmware/gardener/data/routines/` or `firmware/gardener/data/modules/`
-- Editing `app/routines/Bindings.cpp`, `app/routines/Routines.cpp` or a file under
-  `app/routines/bindings/`
+- Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under
+  `routines/bindings/`
 - A page misbehaves on the panel and you want the answer without a build and a flash
 
 A `.be` file is compiled by the device at boot. Nothing in the repo checks it: `arduino.py build`

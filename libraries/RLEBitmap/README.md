@@ -10,7 +10,7 @@ in headers, so they are built with [scripts/asset.py](../../scripts/asset.py) an
 [docs/specs/assets.md](../../docs/specs/assets.md).
 
 The renderer walks a `RLEBitmapInfo` and calls `writeFastHLine` on an `RLEGraphicsContext`. The
-firmware supplies its own context over the panel in `libraries/VacuumCore/src/app/panel/Asset.cpp`, so the
+firmware supplies its own context over the panel in `libraries/PanelLink/src/panel/Asset.cpp`, so the
 `_ADAFRUIT_GFX_H` and `_TFT_eSPIH_` adapters at the bottom of the header are unused here.
 
 `RLEBitmapInfo` holds 32-bit "far addresses" read with `pgm_read_byte_far`; on the ESP32 core those

@@ -40,7 +40,7 @@ constexpr int SENSOR_ADC = 7;
 constexpr int PUMP_PWM = 6;
 
 // The vent valve: a solenoid through a logic level MOSFET with a flyback diode across the coil,
-// wired like the pump. Which coil level means "open" is chosen in app/Build.cpp by the valve class it
+// wired like the pump. Which coil level means "open" is chosen in Build.cpp by the valve class it
 // constructs; normally open is the fail-safe default.
 constexpr int VENT_VALVE = 5;
 
@@ -95,7 +95,7 @@ constexpr float CONTROL_FLOOR_KPA =
 
 // --- Vent valve ------------------------------------------------------------
 // Timing only; which part is fitted, and therefore which coil level means "open", is the
-// composition root's call in app/Build.cpp — normally open is the fail-safe default.
+// composition root's call in Build.cpp — normally open is the fail-safe default.
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
 // A target set shallower than the chamber while pulling or holding is reached by opening the

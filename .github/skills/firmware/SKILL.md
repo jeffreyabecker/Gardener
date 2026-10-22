@@ -1,6 +1,6 @@
 ---
 name: firmware
-description: 'C++ and design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, PascalCase constants with no k prefix, the hal/ to app/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating.'
+description: 'C++ and design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, PascalCase constants with no k prefix, the hal/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating.'
 ---
 
 # Firmware
@@ -27,7 +27,7 @@ Prefer them to hand-rolled equivalents.
   a measured memory ceiling — and say what the reason is in a comment.
 
 This applies to new code and to code you are already changing. Existing hand-rolled code is
-not a rewrite-on-sight target: the `char`-buffer command parsing in `app/serial/SerialLink.cpp` is an
+not a rewrite-on-sight target: the `char`-buffer command parsing in `serial/SerialLink.cpp` is an
 earlier decision that this guidance supersedes for new work, not a task to schedule. The
 hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
 the only way text is formatted in this firmware.
@@ -63,7 +63,7 @@ Work out what the code has to do and write that — don't dither about the desig
 boundary described next is a decision already made, not a precedent for the next abstraction.
 
 **One class where one class works, and one file per device.**
-`libraries/VacuumCore/src/app/VacuumSystem.h` is the vacuum system *and* the machine, because the
+`libraries/VacuumCore/src/VacuumSystem.h` is the vacuum system *and* the machine, because the
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
 a part is an abstract class in `hal/` with its implementation in `hal/impl/`, and the vacuum system

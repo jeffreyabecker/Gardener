@@ -5,7 +5,7 @@
 namespace gardener {
 
 // The piezo: one square wave output. The part knows frequency and silence, not durations or note
-// names — the timed player in app/ owns what to play and for how long.
+// names — `BuzzerPlayer` owns what to play and for how long.
 //
 // `sounding()` and `frequencyHz()` report the level the part is actually driving, so a reader does
 // not keep a second copy of the current tone.
