@@ -84,10 +84,10 @@ scene's two exits — OK keeps, Cancel discards — and on a scene that runs som
 that vents. `Back` is navigation alone: it leaves a view without writing, so a scene that runs
 something never stops on Back.
 
-Up and Down are the page's own: single moves or changes, double is a jump of its own. `up:double`
-from the readout opens the routine browser and `down:double` opens the system settings; on a routine
-page `up:double` stops and vents, resets the run and opens its settings, and `cancel:double` stops
-and vents and pops the page. A double a scene does not bind is dropped.
+A double is a page's own jump: `forward:double` from the readout opens the routine browser,
+`up:double` opens the system settings, and on a routine page `up:double` stops and vents, resets
+the run and opens its settings, while `cancel:double` stops and vents and pops the page. A double
+a scene does not bind is dropped.
 
 The settings view follows the same rules wherever it is hosted: OK opens a row or a value, Up/Down
 moves or changes it, OK keeps, Cancel discards, Back closes the list or leaves. A `duration` adds a

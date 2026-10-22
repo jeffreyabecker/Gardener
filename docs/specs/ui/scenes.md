@@ -46,8 +46,8 @@ What each one answers:
 | --- | --- | --- |
 | `ReadoutScene` | `ok:single` | start or resume the run |
 | `ReadoutScene` | `cancel:single` | stop and vent |
-| `ReadoutScene` | `up:double` | push the routine browser |
-| `ReadoutScene` | `down:double` | push the system settings |
+| `ReadoutScene` | `forward:double` | push the routine browser |
+| `ReadoutScene` | `up:double` | push the system settings |
 | `BrowserScene` | `up:single`, `down:single` | move the selection |
 | `BrowserScene` | `forward:single` | open the selected routine's settings  |
 | `BrowserScene` | `ok:single` | push the selected routine |
