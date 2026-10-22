@@ -113,19 +113,23 @@ detail = token / items
 The ownership record. A link may read at any time; this domain is how it becomes the one controller,
 and how it gives the machine back.
 
-The record is not the serial link's: the Bluetooth transport acquires the same one, so a cable and
-a phone cannot both drive the machine. Whichever transport arrives, a link that has not acquired is
-a reader.
+The record is a stack of links and is not the serial link's: the Bluetooth transport claims the
+same one, and a panel build sits on it from boot, so a cable, a phone and the panel cannot all drive
+the machine at once. Whoever is on top drives; a link that is not on top is a reader.
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
-| `get` | `ok control=owned` / `ok control=none` | the caller's view. A record left behind by a dropped link reads `none`, even though the machine is still held for that link |
-| `acquire` | `ok control=owned` / `err busy` | idempotent for the current owner. A second link, or a stale record, is `busy` |
-| `release` | `ok control=none` | idempotent; stops and vents when this link owns the device |
+| `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
+| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there |
+| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
 
-A link acquires once and keeps control until it releases or the device is reset. Acquiring does not
-change the machine: a controller that takes over a running chamber reads `vacuum get` before
-commanding it.
+The reply names the top rather than answering "owned by you or not", so a controller can tell
+whether the machine is being driven by the panel or by another link. `none` is the floor: no link
+holds the machine and the chamber is vented.
+
+A link acquires once and keeps the top until it releases or drops. Acquiring a running chamber
+takes the top and vents it, so a new controller always starts from an open chamber and reads
+`vacuum get` before commanding it.
 
 Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
 start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
@@ -136,18 +140,18 @@ the next command starts on a boundary.
 
 ```
 -> control get
-<- ok control=none
+<- ok control=panel
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> control acquire
-<- ok control=owned
+<- ok control=serial
 -> control release
-<- ok control=none
+<- ok control=panel
 ```
 
-After a link drops while owning, `control get` reads `none` but `control acquire` answers `err busy`
-until the local reset clears the held record. `release` while another link owns the device — or
-after a drop — is the idempotent `ok control=none` and does not touch the machine.
+A build with no panel has `none` at the floor, so its `get` before a claim reads `ok control=none`
+and its `release` returns there. Releasing a link that is not on the stack is idempotent and does
+not touch the machine.
 
 ## 6. `device` — the machine and this stream
 
