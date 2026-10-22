@@ -38,9 +38,9 @@ constexpr int16_t kPanelNoResetLine = -1;
 }  // namespace
 
 // The full device's composition: the machine root, then the panel parts on top. The panel's bus is
-// App's to bring up: the driver takes a TwoWire it does not own, so it is up before begin() is
-// called.
-AppContext buildAppContext() {
+// the composition's to bring up: the driver takes a TwoWire it does not own, so it is up before
+// begin() is called.
+PanelContext& buildPanelRoot() {
   MachineContext& machine = buildMachineRoot();
   // The full device has the panel and the gauge, and — like every build — it vents when its owner
   // leaves. The panel pushes itself above the floor so it is the default controller.
@@ -70,7 +70,7 @@ AppContext buildAppContext() {
   auto* storeServer = new StoreServer(storeQueue, *settings, *storage);
   auto* panel = new PanelContext(buttons, buzzer, battery, overlay, storage, settings, routines,
                                  storeClient, storeServer, machine);
-  return AppContext(machine, *panel);
+  return *panel;
 }
 
 }  // namespace gardener

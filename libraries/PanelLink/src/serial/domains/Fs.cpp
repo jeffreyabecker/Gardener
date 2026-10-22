@@ -144,9 +144,9 @@ void FsDomain::execute(Stream& io) {
   } else if (verb == "write") {
     write(io, rest);
   } else if (verb == "mkdir") {
-    if (requireControl(app_.machine(), io)) makeDirectory(io, rest);
+    if (requireControl(app_, io)) makeDirectory(io, rest);
   } else if (verb == "delete") {
-    if (requireControl(app_.machine(), io)) remove(io, rest);
+    if (requireControl(app_, io)) remove(io, rest);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);
@@ -270,7 +270,7 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (!hasControl(app_.machine())) {
+  if (!hasControl(app_)) {
     // The header is valid, so its declared body still has to be consumed before the refusal: the
     // next command has to start on a boundary even when this one is not allowed to run.
     if (!discardPayload(io, bytes)) return;

@@ -16,7 +16,7 @@ bool serialAttached() { return (bool)Serial; }
 
 }  // namespace
 
-gardener::AppContext context = gardener::buildAppContext();
+gardener::PanelContext& context = gardener::buildPanelRoot();
 
 void setup() {
   Serial.begin(gardener::cfg::SERIAL_BAUD);
@@ -25,26 +25,27 @@ void setup() {
   // The files and the persisted knobs come up first. Storage and settings are the panel's, but the
   // knobs they persist — the radio and the diagnostics — are the machine's, so they are read into
   // the machine's config and the logger is picked before either boot.
-  gardener::Storage::Mount mount = context.panel().storage().begin();
-  context.panel().settings().begin();
-  context.machine().config().bluetooth = context.panel().settings().bluetoothEnabled();
-  context.machine().config().diagnostics = context.panel().settings().logEnabled();
+  gardener::Storage::Mount mount = context.storage().begin();
+  context.settings().begin();
+  context.config().bluetooth = context.settings().bluetoothEnabled();
+  context.config().diagnostics = context.settings().logEnabled();
   gardener::Logger* logger =
-      context.machine().config().diagnostics
+      context.config().diagnostics
           ? static_cast<gardener::Logger*>(new gardener::StreamLogger(Serial))
           : static_cast<gardener::Logger*>(new gardener::NilLogger());
 
-  // The wire surface is this build's to compose: the machine's domains on the machine context, the
-  // panel's on the panel context, both on the one serial link and the one BLE link.
+  // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
+  // one serial link and the one BLE link. The panel context is a machine context, so the same object
+  // serves both halves.
   gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
-  serial->registerDomain(gardener::createControlDomain(context.machine()));
-  serial->registerDomain(gardener::createVacuumDomain(context.machine()));
-  serial->registerDomain(gardener::createDeviceDomain(context.panel()));
-  serial->registerDomain(gardener::createBuzzerDomain(context.panel()));
-  serial->registerDomain(gardener::createFsDomain(context.panel()));
-  gardener::BleLink* ble = new gardener::BleLink(&context.machine());
-  ble->registerDomain(new gardener::MachineBleDomain(&context.machine()));
-  ble->registerDomain(new gardener::PanelBleDomain(&context.panel()));
+  serial->registerDomain(gardener::createControlDomain(context));
+  serial->registerDomain(gardener::createVacuumDomain(context));
+  serial->registerDomain(gardener::createDeviceDomain(context));
+  serial->registerDomain(gardener::createBuzzerDomain(context));
+  serial->registerDomain(gardener::createFsDomain(context));
+  gardener::BleLink* ble = new gardener::BleLink(&context);
+  ble->registerDomain(new gardener::MachineBleDomain(&context));
+  ble->registerDomain(new gardener::PanelBleDomain(&context));
 
   serial->begin();
   // The radio is a bonus transport: a device with the preference off stays silent, and a failure is
@@ -63,13 +64,13 @@ void setup() {
   }
 
   // The parts, then the tasks that drive them.
-  gardener::machineBoot(context.machine(), *logger);
-  gardener::panelBoot(context.panel(), *logger, mount);
+  gardener::machineBoot(context, *logger);
+  gardener::panelBoot(context, *logger, mount);
 
-  auto* connected = new gardener::ConnectedUI(context.panel());
-  auto* disconnected = new gardener::DisconnectedUI(context.panel());
-  gardener::spawnMachineTasks(context.machine(), *logger, serial, ble);
-  gardener::spawnPanelTask(context.panel(), *logger, connected, disconnected);
+  auto* connected = new gardener::ConnectedUI(context);
+  auto* disconnected = new gardener::DisconnectedUI(context);
+  gardener::spawnMachineTasks(context, *logger, serial, ble);
+  gardener::spawnPanelTask(context, *logger, connected, disconnected);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

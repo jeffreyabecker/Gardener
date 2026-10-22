@@ -41,7 +41,7 @@ int vacuumClamp(bvm* vm) {
 }
 
 int vacuumStart(bvm* vm) {
-  if (gContext->machine().vacuum().startRefusal() != nullptr) {
+  if (gContext->vacuum().startRefusal() != nullptr) {
     be_pushbool(vm, false);
     be_return(vm);
   }
@@ -64,7 +64,7 @@ int vacuumReset(bvm* vm) {
 }
 
 int vacuumState(bvm* vm) {
-  VacuumSystem& system = gContext->machine().vacuum();
+  VacuumSystem& system = gContext->vacuum();
   const Battery& battery = gContext->battery();
   const int record = beginRecord(vm, "reading");
   if (record < 0) be_return_nil(vm);

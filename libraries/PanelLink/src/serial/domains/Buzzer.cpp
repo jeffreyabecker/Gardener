@@ -53,11 +53,11 @@ void BuzzerDomain::execute(Stream& io) {
   } else if (verb == "get") {
     get(io, args);
   } else if (verb == "tone") {
-    if (requireControl(app_.machine(), io)) tone(io, args);
+    if (requireControl(app_, io)) tone(io, args);
   } else if (verb == "play") {
-    if (requireControl(app_.machine(), io)) play(io, args);
+    if (requireControl(app_, io)) play(io, args);
   } else if (verb == "stop") {
-    if (requireControl(app_.machine(), io)) stop(io, args);
+    if (requireControl(app_, io)) stop(io, args);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);

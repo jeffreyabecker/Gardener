@@ -6,7 +6,6 @@
 
 #include "VacuumCore.h"
 
-#include "AppContext.h"
 #include "PanelBoot.h"
 #include "PanelContext.h"
 #include "PanelRoot.h"

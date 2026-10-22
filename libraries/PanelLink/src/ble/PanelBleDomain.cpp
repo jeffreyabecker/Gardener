@@ -53,7 +53,7 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     unitWrite_.has = false;
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
-    if (app_->machine().ownership().ownedBy(Link::Bluetooth) &&
+    if (app_->ownership().ownedBy(Link::Bluetooth) &&
         unitWrite_.value < kDisplayUnitCount) {
       app_->settings().setUnit(static_cast<DisplayUnit>(unitWrite_.value));
     }

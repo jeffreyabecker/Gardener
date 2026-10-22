@@ -38,7 +38,7 @@ void ConnectedUI::update() {
 void ConnectedUI::drawFrame() {
   Display& panel = context_.display();
   panel.clear();
-  switch (context_.machine().ownership().owner()) {
+  switch (context_.ownership().owner()) {
     case Link::Serial:
       serialIcon();
       break;

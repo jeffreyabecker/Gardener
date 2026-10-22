@@ -74,11 +74,11 @@ void buttonsTick(PanelState& state) {
   if (state.context.buttons().heldMs(Button::Back) >= ResetHoldMs &&
       state.context.buttons().heldMs(Button::Ok) >= ResetHoldMs) {
     state.logger->warn("panel: reset held, rebooting");
-    safeReboot(state.context.machine());
+    safeReboot(state.context);
     return;
   }
   const bool backHeld = state.context.buttons().heldMs(Button::Back) >= BackStopMs;
-  if (backHeld && state.context.machine().ownership().ownedBy(Link::Panel)) {
+  if (backHeld && state.context.ownership().ownedBy(Link::Panel)) {
     // One bump per hold, and the stop re-asserted each beat the hold lasts, so a start that sneaks
     // in is undone in the same beat.
     if (!state.backStopFired) {
@@ -101,7 +101,7 @@ void buttonsTick(PanelState& state) {
     }
     const Press press = state.context.buttons().consumePress(button);
     if (press == Press::None) continue;
-    if (backHeld && !state.context.machine().ownership().external() && button == Button::Ok) {
+    if (backHeld && !state.context.ownership().external() && button == Button::Ok) {
       goHomeSeq++;
       continue;
     }
@@ -122,7 +122,7 @@ void buttonsTick(PanelState& state) {
 }
 
 void deliverPress(PanelState& state, Button button, Press press) {
-  if (!state.context.machine().ownership().external() && state.context.routines().active()) {
+  if (!state.context.ownership().external() && state.context.routines().active()) {
     state.context.routines().pushPress(button, press);
     return;
   }
@@ -140,7 +140,7 @@ void panelTask(void* arg) {
 
   // A fresh boot starts with the panel on top: an external link that is present is only a reader
   // until it claims, so the panel's own page shows first.
-  state.ownedShown = state.context.machine().ownership().external();
+  state.ownedShown = state.context.ownership().external();
   state.ui = state.ownedShown ? static_cast<UserInterface*>(state.connected)
                               : static_cast<UserInterface*>(state.disconnected);
   if (state.ui) state.ui->begin();
@@ -151,7 +151,7 @@ void panelTask(void* arg) {
     // The screen follows ownership, not the cable: an external claim paints the link's page, and a
     // release hands the panel back. The hand-off vents the run, so the page that returns sees the
     // stop on its first poll.
-    const bool external = state.context.machine().ownership().external();
+    const bool external = state.context.ownership().external();
     if (external != state.ownedShown) {
       state.ownedShown = external;
       stopSeq++;

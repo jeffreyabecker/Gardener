@@ -69,12 +69,12 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
-    if (!requireControl(app_.machine(), io)) return;
+    if (!requireControl(app_, io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_.machine(), io)) return;
+    if (!requireControl(app_, io)) return;
     reboot(io, args);
     return;
   }
@@ -115,7 +115,7 @@ void DeviceDomain::get(Stream& io) {
   io.print(displayUnitInfo(app_.settings().unit()).name);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
-  io.print(app_.machine().capabilities().mask());
+  io.print(app_.capabilities().mask());
   io.print('\n');
 }
 
