@@ -279,7 +279,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   fields exist only where the panel does.
 - [x] 7.7 Record in [serial-protocol.md](../specs/serial-protocol.md) that `batt_v` and `batt_pct`
   are answered by the panel's battery.
-- [ ] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
+- [x] 7.8 Record in [vacuum-control.md](../specs/vacuum-control.md) that the chamber vents whenever
   the top of the stack changes — a claim, a release or a drop.
 - [ ] 7.9 Record in [vacuum-control.md](../specs/vacuum-control.md) that a machine without a panel
   holds pressure only while owned.
