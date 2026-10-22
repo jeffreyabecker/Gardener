@@ -73,14 +73,21 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   press log shows `btn: back:long` for a one-second press and `btn: back:3` for a three-second one;
   the spec that describes the vocabulary follows in epic 4.
 
-- [ ] **5. Two keys together are one event.** The classifier composes keys that are down together into
-  one string in panel order and emits it when the last comes up, so the panel answers one whole
-  gesture rather than one press per key, and its chord state, `dropPress` and `PressOrder` all go.
-  Up+Down is `up:short+down:short` and the five settings registrations name that string; go-home
-  becomes the debounced Cancel level while Back is held, and the press that follows is not
-  delivered. Done when a driven Up+Down opens a routine's settings and the check passes; go-home is
-  the panel task's, which the harness does not run, so it is checked on the rig with the other
-  keys.
+- [ ] **5. The panel's gestures are one class.** `Gestures` owns the reader and answers a beat with
+  the gesture that completed and the three device gestures it detects from a level rather than a
+  release — the Back+Okay reset, the Back stop and the Cancel-while-Back go-home. A second gesture
+  completed in the same beat waits for the next, so one beat is one delivery. `buttonsTick` becomes
+  that call and the policy only it can apply: reboot, latch and post the stop, bump go-home, or
+  hand the gesture to the page. `PressOrder` and the panel task's chord state go; `dropPress` goes
+  with them, because the class drains every key each beat and never has a press it did not ask for.
+  Done when `buttonsTick` is one call and four branches, the check still walks every page, and on
+  the rig a Cancel during a Back hold goes home and the reset reboots.
+
+- [ ] **6. Two keys together are one event.** `Gestures` composes keys that are down together into
+  one string in panel order and emits it when the last comes up, replacing its Up+Down special case
+  rather than growing beside it. Up+Down is `up:short+down:short` and the five settings
+  registrations name that string. Done when the build passes, the check still walks every page, and
+  on the rig Up+Down opens the settings while two keys with no binding pass through as one event.
 
 ## Epic 3 — The six-key map
 

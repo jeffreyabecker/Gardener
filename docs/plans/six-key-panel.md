@@ -166,11 +166,12 @@ These belong to the device and no page may suppress them. What changes:
 
 The go-home move is the second real change. Today the panel task steals an Okay *press* while Back
 is held, and a press is classified on release, so it can only act then. Cancel is taken from the
-**debounced level** instead: while Back is held, Cancel going down bumps the go-home counter once,
-and the press that follows is not delivered. The level is the only thing that works once a pair is
-one event — a Cancel tapped during Back's hold is part of `back:3+cancel:short`, and waiting for
-that string would hold the way out until Back came up. The gesture stays device-owned — taken in
-the panel task before any page sees it — so a misbehaving page still cannot suppress the way out.
+**debounced level** instead: while Back is held, Cancel going down is reported once as the beat's
+go-home, and the press that follows is not delivered. The level is the only thing that works once a
+pair is one event — a Cancel tapped during Back's hold is part of `back:3+cancel:short`, and waiting
+for that string would hold the way out until Back came up. The gesture stays device-owned — detected
+in the panel's beat before any page sees it — so a misbehaving page still cannot suppress the way
+out.
 
 ### The two-key rule
 
@@ -252,11 +253,23 @@ between `short` and `long`, and the 350 ms double window all stay, and a new 2 s
 ordinary hold from an extended one. What changes is the output: `chord` leaves, `long` stays, an
 extended hold says its seconds, and the classifier strings the gesture itself. The
 `Button` enum and `buttonName()` stay; the `Press` enum and `pressName()` go; the
-two-keys-together recognition moves out of the panel task and into the classifier, which is the
-thing that emits the event.
+two-keys-together recognition moves out of the panel task and into the class that detects the
+gesture, which is the thing that emits the event.
 
 A press is queued only while the page is showing, the queue holds eight, and the binding's only job
 is to hand the queued string to `take()`.
+
+### One class answers the beat
+
+The drain, the sum, the reserved holds and the go-home are one piece of state, so they are one
+class rather than a loop in the panel task. `Gestures` owns the reader, settles it on each beat and
+answers one value: the gesture that completed, and the three device gestures it detects from a
+level rather than a release — the reset hold, the Back stop and the Cancel-while-Back go-home. A
+second gesture completed in the same beat waits for the next, so one beat is one delivery.
+
+`buttonsTick` becomes that call plus the policy only the panel task can apply: reboot on the reset,
+latch and post the stop, bump the go-home counter, or hand the gesture to the page. Nothing left in
+it re-derives a threshold, scans the keys or composes a string.
 
 The scene framework hands the string through unchanged; a page matches it whole or splits it when
 it wants the parts:
@@ -323,9 +336,9 @@ first draft that had seconds replacing `long` outright.
 1. **The token is `ok`, not `okay`.** It is the name the press log, `Button::Ok`, `buttonName()` and
    every routine already use. The key is called "okay" and the glass may spell it either way; the
    token does not move.
-2. **Go-home is Cancel while Back is held**, taken from the debounced level in the panel task as
-   described above. A plain Hold Cancel was the alternative; it reserves a hold on the key a page
-   most wants for its own cancel, so it is not taken.
+2. **Go-home is Cancel while Back is held**, taken from the debounced level in the beat's gesture
+   detection as described above. A plain Hold Cancel was the alternative; it reserves a hold on the
+   key a page most wants for its own cancel, so it is not taken.
 3. **The reset stays Back+Okay for 5 s.** Nothing about the new keys makes a better reset, and it
    is the one gesture that must work in every link state.
 4. **The sum is general.** Any keys down together are one event, in panel order, on the last
@@ -340,6 +353,9 @@ first draft that had seconds replacing `long` outright.
    classifications a page compares day to day, and the press log keeps saying `long`. A hold that
    goes on past the 2 s mark reports whole seconds instead, which is what makes the device's own
    3 s and 5 s marks readable; below the mark it is `long`, which is all a page needs to know.
+8. **Gesture detection is one class; the panel task keeps the policy.** `Gestures` answers the beat
+   with the completed gesture and the device gestures it detected from the levels. `buttonsTick`
+   decides what each one means — reboot, stop, go home, deliver — and owns nothing else.
 
 ## What moves together when it lands
 
@@ -347,8 +363,9 @@ The work is one change, and its parts share the vocabulary, so no part can stand
 
 - `hal/Button.h` (enum and `buttonName`; the `Press` enum and `pressName()` go, replaced by the
   classifier's string output), `hal/impl/Buttons.h`/`.cpp` as the shift-register reader,
-  `Panel.h`'s pin block, the sketch's `Board` block, `PanelTasks.cpp` (press order, holds and the
-  steal — the chord recognition moves into the classifier).
+  `panel/Gestures.h`/`.cpp` (the beat's gesture and the device gestures it detects), `Panel.h`'s pin
+  block and `gestures()` accessor, the sketch's `Board` block, and `PanelTasks.cpp` reduced to
+  policy.
 - `routines/bindings/Buttons.cpp` (hands through the classifier string), `routines/Bindings.cpp`
   (`kRecords` without `event`), `modules/scene.be`, `modules/ui.be`, the settings scenes and the
   three files under `routines/` (`handle(ev)` takes the string and compares it whole, splitting on
