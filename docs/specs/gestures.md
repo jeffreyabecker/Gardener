@@ -69,29 +69,17 @@ A page that runs something usually wants a stop gesture of its own, and that ges
 belong in it. Nothing else is reserved — a scene that runs must stop itself on Cancel; no device
 hold will do it.
 
-## The standard page gestures
+## Standard routine gestures
+
+A routine is a special type of page: it runs the machine, and every routine answers the same four
+gestures.
 
 | Gesture | Meaning |
 | --- | --- |
-| **OK** | the scene's primary action: start or resume the run, open a row or a routine, keep the value |
-| **Cancel** | the scene's stop: stop and vent a run, or leave a view without keeping what it showed |
-| **Back** | leave the current view without writing, or step back a stage |
-| **Up / Down** | move the selection, or change the value being edited |
-| **Forward** | open the settings, or advance a stage |
-
-A scene binds the singles that mean something to it and drops the rest. `OK` and `Cancel` are the
-scene's two exits — OK keeps, Cancel discards — and on a scene that runs something Cancel is the stop
-that vents. `Back` is navigation alone: it leaves a view without writing, so a scene that runs
-something never stops on Back.
-
-A double is a page's own jump: `forward:double` from the readout opens the routine browser,
-`up:double` opens the system settings, and on a routine page `up:double` stops and vents, resets
-the run and opens its settings, while `cancel:double` stops and vents and pops the page. A double
-a scene does not bind is dropped.
-
-The settings view follows the same rules wherever it is hosted: OK opens a row or a value, Up/Down
-moves or changes it, OK keeps, Cancel discards, Back closes the list or leaves. A `duration` adds a
-stage — Forward moves from minutes to seconds and Back moves back — before OK saves.
+| `ok:single` | the scene's primary action |
+| `cancel:single` | stop and vent, pause the run |
+| `up:double` | launch settings |
+| `cancel:double` | quit the routine |
 
 While an external link drives the machine there is no routine page: presses are logged
 (`btn: <gesture>`, for example `btn: ok:single`) and only Back+OK still acts, because it is the

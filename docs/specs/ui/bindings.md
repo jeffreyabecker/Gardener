@@ -37,7 +37,7 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 | `vacuum.reset()` | — | clears a latched fault, then vents |
 | `vacuum.state()` | a `reading` record | see below |
 | `vacuum.now_ms()` | `int` | `millis()` |
-| `vacuum.stopped()` | `bool` | true once after the device's 3 s Back hold stopped and vented the machine; the next call is false |
+| `vacuum.stopped()` | `bool` | true once after an external link claim or release stopped and vented the machine; the next call is false |
 | `vacuum.log(text)` | — | one `[I]` diagnostic record, written when the device's `log` set includes `I` |
 
 `vacuum.state()` answers a `reading`, read with a dot:
@@ -56,10 +56,9 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 
 Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
 
-`vacuum.stopped()` is the one event the page cannot cause itself. Holding Back for 3 s is the
-device's own stop: it stops the pump, vents, and keeps the valve open while Back is held. It is a
-one-shot, not a level, so a page with a phase machine resets it on the event rather than watching
-for `IDLE`:
+`vacuum.stopped()` is the one event the page cannot cause itself: an external link that claims the
+panel, or releases it back, vents the run. It is a one-shot, not a level, so a page with a phase
+machine resets it on the event rather than watching for `IDLE`:
 
 ```berry
 def poll(now)
@@ -70,12 +69,10 @@ def poll(now)
 end
 ```
 
-A page that is showing when the hold fires takes the notice and abandons its run: the hold no
-longer switches pages, so the page stays and its own `abandon()` is what puts it right. An OK
-pressed while Back is still held — short, long or double — is the way out: the readout takes the
-panel, and the switch drops any notice the page never took. The notice a hold fired while a
+A page that is showing when the hand-off happens takes the notice and abandons its run: the page
+stays, and its own `abandon()` is what puts it right. The notice a hand-off fired while a
 controller owned the device leaves behind is what the page finds on the next `poll` when control
-comes back. The release still arrives as a `long` Back press afterwards.
+comes back.
 
 `vacuum.clamp(kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
@@ -224,18 +221,19 @@ if kpa > 0.0
 end
 ```
 
-## `buttons` — the presses
+## `buttons` — the gestures
 
 | Call | Returns |
 | --- | --- |
-| `buttons.take()` | an `event` record, or `nil` when the queue is empty |
+| `buttons.take()` | a gesture string, or `nil` when the queue is empty |
 
-`ev.btn` is `up`, `down`, `ok` or `back`. `ev.press` is `short`, `long` or `double` — the device's
-press classifier, so a double tap is one event and never two shorts — or `chord` for Up and Down
-pressed together, reported on the `up` key.
+The string is the classifier's whole gesture: one or more keys, each with the form of its press,
+joined by `+` in panel order. A key is `up`, `down`, `forward`, `back`, `ok` or `cancel`; its form
+is `single`, `double`, or whole seconds from `2` up once the key passes `ExtendedHoldMs`.
+`ok:single`, `cancel:double` and `back:5+ok:5` are all gestures.
 
-A press is queued only while this page is showing. The queue holds eight; the oldest is dropped if a
-routine falls behind, and that is logged once.
+A gesture is queued only while this page is showing. The queue holds eight; the oldest is dropped
+if a routine falls behind, and that is logged once.
 
 Draining the queue is the routine's job, usually at the top of `poll`:
 
@@ -246,25 +244,16 @@ def poll(now)
     if ev == nil
       break
     end
-    # ev.btn is the key that moved, ev.press the gesture
+    # ev is one whole gesture, e.g. "ok:single"
   end
 end
 ```
 
-Holding **Back for 3 s** is the device's own stop: it stops the pump, vents, and keeps the valve
-open while Back is held. No routine can suppress it, and the scene showing takes the
-`vacuum.stopped()` notice and abandons its run. An **OK pressed while Back is held** — short, long
-or double — hands the panel back to the readout. The switch returns to the root scene — the same
-object that was pushed at boot, so it keeps whatever state it had. Nothing is re-read from disk; a
-routine that was left can be brought back by pushing its scene again. The release arrives as a
-`long` Back on whichever scene is showing by then.
-
 Holding **Back and OK together for 5 s** is the reboot: the same safe reset the wire serves as
 `device reboot`, which stops, vents up to 2 s and restarts. It works from every page and link state,
-and a routine cannot suppress it.
+and a routine cannot suppress it. The panel task acts on it before a page sees it.
 
-The standard gestures a page should follow — up+down for its settings, OK for its primary action,
-Back to leave a view, and the three holds above — are in [gestures.md](../gestures.md).
+The standard gestures a page should follow are in [gestures.md](../gestures.md).
 
 ## `buzzer` — the piezo
 

@@ -48,7 +48,7 @@ routine that passes `nil` has a text-only row.
 The third argument is the routine's **class**, not an instance: the registry builds a scene from it
 every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
-`Scene` (`/modules/scene.be`) provides `poll`, a press drain, the repaint cadence and the gesture
+`Scene` (`/modules/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
 dispatch, and `Page` adds the routine's name and its settings view; a routine extends `Page` and
 defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
 a scene that lacks either `activate()` or `poll`.
@@ -100,7 +100,7 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The page framework ships the same way. `/modules/scene.be` is `Scene` — the button drain, the
+The page framework ships the same way. `/modules/scene.be` is `Scene` — the gesture drain, the
 repaint cadence and the gesture dispatch a routine's scene extends. `/modules/registry.be` is the
 registry: `class RoutineRegistry` and the global `routines` instance — the list the browser draws,
 and the `push(name, callback)` that opens a routine. `/modules/components.be` is `Component` and the
@@ -116,9 +116,9 @@ helpers. `settings_edit.be` is the editing screens: one value scene per kind (`B
 `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene`, `DurationScene`) over a shared
 `ValueScene`. `settings_editors.be` is the editor each kind's setting carries. `settings_page.be`
 is `SettingsScene` (the list), `Activation` (one activation's values) and `Page` (the scene a
-routine extends). **Up+Down** is the standard gesture for opening the list; the page's own gesture
-calls `open_settings()`, which pushes the list under the page's name and writes each committed value
-to the page's file:
+routine extends). **`up:double`** is the standard gesture for opening the list; the page's own
+gesture calls `open_settings()`, which pushes the list under the page's name and writes each
+committed value to the page's file:
 
 ```berry
 def edit()
@@ -129,8 +129,8 @@ end
 
 `SettingsScene` reads the list the routine registered and each value from its store file through the
 setting's editor; nothing in the four settings modules writes. A committed value is handed to the
-caller's callback, which writes where appropriate. Back at the top of the list pops the settings
-scene with nil.
+caller's callback, which writes where appropriate. `back:single` at the top of the list pops the
+settings scene with nil.
 
 ## When the firmware calls into a scene
 
@@ -147,6 +147,25 @@ scene with nil.
 callback: the display unit may have changed while the scene was not showing, and a scene should not
 trust what it cached. A push's args are not carried across a re-entry; a re-entry without them reads
 the file.
+
+## Gestures
+
+The top scene sees one gesture per poll as `ev` in `handle(ev)` — a whole string such as
+`ok:single` or `cancel:double`. A scene registers its gestures declaratively in `init()`:
+
+```berry
+def init()
+  super(self).init()
+  self.on("ok:single", / -> self.start())
+  self.on("cancel:double", / -> self.leave())
+end
+```
+
+`on(gesture, fn)` appends the pair; the default `handle(ev)` compares each registered gesture whole
+and runs the first action that returns true. A scene may instead override `handle_page(ev)` and
+compare whole strings itself. Either way the match is whole or not at all: no `*`, no bare key, no
+list of presses, and no splitting on `:` or `+`. The standard gestures are in
+[gestures.md](../gestures.md); the shipped bindings are in [scenes.md](./scenes.md).
 
 ## The stack
 
@@ -246,8 +265,8 @@ clamped to the bound, a duration is held between `min` and `max`, a pressure goe
 `vacuum.clamp()`, and a choice that is not one of its values reads as the default. A kind that
 cannot work at all — a choice with no values, bounds the wrong way round — says so where it is
 built, logs one line, and leaves its row out of the list. Up/Down steps `real`, `int` and
-`pressure`, toggles `bool`, and cycles `choice`; OK writes the value back with `store.set` and Back
-leaves without writing.
+`pressure`, toggles `bool`, and cycles `choice`; `ok:single` keeps the value and `cancel:single`
+discards it.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
 default says, and shows `--` in the list and the editor. It opens at the kind's lowest real value
@@ -256,11 +275,12 @@ lowest value clears back to `--`, Up from `--` enters the lowest value, and Down
 on `--` writes an empty value, which reads as `nil` again.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
-whole minute. OK opens it in the **minutes** stage, Up/Down moves that by a minute, OK moves on to
-the **seconds** stage, and Up/Down moves that by `step` seconds (default 1); OK then writes. Back
-cancels from either stage. The value is held between `min` and `max`, and never below zero. A
-nullable duration cleared from the minutes stage advances to the seconds stage still `nil`, and the
-second OK writes the clear.
+whole minute. `ok:single` opens it in the **minutes** stage, Up/Down moves that by a minute,
+`forward:single` moves on to the **seconds** stage, and Up/Down moves that by `step` seconds
+(default 1); `ok:single` then writes, and `back:single` steps back to the minutes stage.
+`cancel:single` discards from either stage. The value is held between `min` and `max`, and never
+below zero. A nullable duration cleared from the minutes stage advances to the seconds stage still
+`nil`, and the second OK writes the clear.
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
 `12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the overlay's, printed in its

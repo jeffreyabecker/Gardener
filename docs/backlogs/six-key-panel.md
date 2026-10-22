@@ -79,17 +79,17 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   contract the pages are written against. Done when the spec names no four-key map, no `chord`
   token and no Okay-while-Back steal, and agrees with the firmware.
 
-- [ ] **2. `bindings.md` describes the string.** `buttons.take()` answers the classifier's gesture or
+- [x] **2. `bindings.md` describes the string.** `buttons.take()` answers the classifier's gesture or
   `nil`, the vocabulary is the six keys and `single`/`double`/seconds, the queue holds eight,
   and the `event` record is gone from the record list. Done when the `buttons` section and the
   record list agree with the binding.
 
-- [ ] **3. `routine.md` describes the scene's gestures.** `handle(ev)` receives the whole gesture
+- [x] **3. `routine.md` describes the scene's gestures.** `handle(ev)` receives the whole gesture
   string, `on(gesture, fn)` is the declarative form, and the standard page gestures are the six-key
   ones. Done when the framework section names no `(btn, presses, fn)` and no `handle_page` key
   comparison, and agrees with the scenes in the image.
 
-- [ ] **4. `berry-harness.md` describes the host's press.** The record list loses `event`, the harness
+- [x] **4. `berry-harness.md` describes the host's press.** The record list loses `event`, the harness
   module pushes a gesture string, and the drive's key sweep is the six-key one. Done when the spec
   agrees with `tools/berry/`.
 
