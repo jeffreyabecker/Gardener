@@ -120,16 +120,16 @@ the machine at once. Whoever is on top drives; a link that is not on top is a re
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
-| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there |
-| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
+| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top. Always succeeds, and is idempotent for a link already there || `release` | `ok control=<serial\|bluetooth\|panel\|none>` | this link is removed from the stack, wherever it sits; idempotent |
 
 The reply names the top rather than answering "owned by you or not", so a controller can tell
 whether the machine is being driven by the panel or by another link. `none` is the floor: no link
 holds the machine and the chamber is vented.
 
-A link acquires once and keeps the top until it releases or drops. Acquiring a running chamber
-takes the top and vents it, so a new controller always starts from an open chamber and reads
-`vacuum get` before commanding it.
+A link acquires once and keeps the top until it releases or drops. There is no `busy`: a claim is
+never refused, because the claimant takes the top and the link beneath is set aside rather than
+rejected. Acquiring a running chamber takes the top and vents it, so a new controller always starts
+from an open chamber and reads `vacuum get` before commanding it.
 
 Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
 start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
@@ -386,8 +386,7 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `no_space`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
-| `busy` | nothing | another link owns the device, or a held record has not been cleared by the local reset |
-| `not_controlling` | nothing | a state-changing verb from a link that does not own the device |
+| `not_controlling` | nothing | a state-changing verb from a link that is not on top of the stack |
 
 ```
 -> vacuum start
