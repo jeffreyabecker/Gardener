@@ -28,6 +28,11 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 | `floor` | read, notify | float32 LE, deepest target worth offering |
 | `caps` | read | uint8 bitmask: 1 panel, 2 battery, 4 ownership stop |
 
+`batt` and `unit` are the panel's: `batt` is the gauge the panel carries and `unit` is the
+preference its pages print in. A build without a panel has neither characteristic, so a client
+finds `caps` with the panel bit clear and no `batt` or `unit` to read. Every other characteristic is
+the machine's and is always present.
+
 ## Reading, writing and owning
 
 Connecting is read-only: every value can be read without pairing, and the page does not change.

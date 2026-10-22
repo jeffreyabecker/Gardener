@@ -271,7 +271,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   succeeds, and that the `busy` reply is gone.
 - [x] 7.3 Record in [bluetooth.md](../specs/bluetooth.md) that the `control` characteristic answers
   serial, bluetooth, panel or none.
-- [ ] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
+- [x] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
   the panel does.
 - [ ] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
   domains exist only where the panel does.
