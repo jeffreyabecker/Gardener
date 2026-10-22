@@ -261,6 +261,9 @@ knowing: it is the shallowest target the loop will accept, and it is reported as
 
 ## 8. `buzzer` — the piezo
 
+The piezo is the panel's part, so this domain is served only by a build with a panel. A build
+without one answers `err unknown_domain buzzer`, the same as any token it does not serve.
+
 `buzzer get` reports `tone` then `playing`:
 
 | Field | Values | Notes |
@@ -310,6 +313,10 @@ long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop
 The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.ini`. `fs` is a bench
 interface for changing what is on the device without reflashing its data image. Writing under
 `/routines` or `/modules` does not reload anything; the change takes effect at the next boot.
+
+The files are the panel's — it is the panel that mounts the partition and runs the routines — so
+this domain is served only by a build with a panel. A build without one answers `err unknown_domain
+fs` and mounts no filesystem at all.
 
 | Verb | Reply | Notes |
 | --- | --- | --- |

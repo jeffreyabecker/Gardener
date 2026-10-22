@@ -273,7 +273,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   serial, bluetooth, panel or none.
 - [x] 7.4 Record in [bluetooth.md](../specs/bluetooth.md) that `unit` and `batt` exist only where
   the panel does.
-- [ ] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
+- [x] 7.5 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `fs` and `buzzer`
   domains exist only where the panel does.
 - [ ] 7.6 Record in [serial-protocol.md](../specs/serial-protocol.md) that the `unit` and `log`
   fields exist only where the panel does.
