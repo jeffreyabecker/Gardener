@@ -105,5 +105,5 @@ its routine — in place.
    whole stop — the pump and the page's state — and it adds to the Back hold, which stops every
    page whether or not the page has a gesture of its own.
 4. OK is the primary action; Up and Down move or change.
-5. Draw the hint for the view that is showing — the settings editor does on its last line. There is
-   no permanent legend on the glass.
+5. A view that needs one draws its hint on the page's last line — the settings editor does. There
+   is no permanent legend on the glass.

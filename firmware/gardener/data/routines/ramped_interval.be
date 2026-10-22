@@ -5,53 +5,67 @@
 # works at its own target and rests at the rest pressure. Back pauses the run and vents the chamber;
 # OK then starts the set it stopped on again, with its work clock back at full.
 
+# The page's glyph, and the browser's row glyph: the stairs, three treads climbing by two risers, on
+# a 12 by 8 field. It is defined before the chrome that draws it, because a class has to be a global
+# by the time the file names it.
+class RampedIntervalIcon : Icon
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw(x, y)
+    var low = y + 6
+    var mid = y + 4
+    var high = y + 1
+    screen.draw_line(x, low, x + 4, low)
+    screen.draw_line(x + 4, low, x + 4, mid)
+    screen.draw_line(x + 4, mid, x + 8, mid)
+    screen.draw_line(x + 8, mid, x + 8, high)
+    screen.draw_line(x + 8, high, x + 11, high)
+  end
+end
+
 class RampedIntervalChrome
   var owner
-  var header
+  var icon
   var sets
   var pressure
   var target
   var status
   var bar
-  var hint
 
   def init(owner)
     self.owner = owner
 
-    # The title and the set bubbles share the top row: the overlay's band took the bottom of the
-    # glass, so the page owns the 52 rows above it and the title no longer needs a line of its own.
-    self.header = FixedText()
-    self.header.value = "Ramped Interval"
-    self.header.x = 0; self.header.y = 0; self.header.w = 90; self.header.h = 7
-    self.header.align = "left"
+    # The icon and the set bubbles share the top row; the readout, the target and the status fill
+    # the rest of the 52 rows above the overlay's band.
+    self.icon = RampedIntervalIcon()
 
     self.sets = ProgressBubbles()
     self.sets.x = 92; self.sets.y = 0; self.sets.w = 36; self.sets.h = 6
 
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 116; self.pressure.h = 17
+    self.pressure.x = 0; self.pressure.y = 10; self.pressure.w = 116; self.pressure.h = 23
 
     # The target needs no label: the border is what tells it apart from the live reading.
     self.target = PressureDisplay()
-    self.target.x = 0; self.target.y = 26; self.target.w = 116; self.target.h = 10
+    self.target.x = 0; self.target.y = 34; self.target.w = 116; self.target.h = 10
     self.target.border = 1
 
-    # The status and the set's remaining time share a line: the words on the left, the bar draining
-    # to the right. The longest status is "PRESS OK", 48 pixels of built-in face.
+    # The status and the set's remaining time share the last line above the band: the words on the
+    # left, the bar draining to the right. The longest status is "PRESS OK", 48 pixels of built-in
+    # face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 37; self.status.w = 62; self.status.h = 7
+    self.status.x = 0; self.status.y = 45; self.status.w = 62; self.status.h = 7
     self.status.align = "left"
 
     self.bar = ProgressBar()
-    self.bar.x = 66; self.bar.y = 37; self.bar.w = 50; self.bar.h = 7
+    self.bar.x = 66; self.bar.y = 45; self.bar.w = 50; self.bar.h = 7
     self.bar.border = 1
-
-    self.hint = DynamicText()
-    self.hint.x = 0; self.hint.y = 45; self.hint.w = 116; self.hint.h = 7
   end
 
   def draw(s)
-    self.header.draw()
+    self.icon.draw(0, 0)
 
     # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
     # ramp still empty. The count can change under the settings editor, so the cached layout goes
@@ -73,7 +87,6 @@ class RampedIntervalChrome
     if left != nil
       self.bar.draw(left)
     end
-    self.hint.draw(self.owner.hint_text())
   end
 end
 
@@ -447,35 +460,6 @@ class RampedInterval : Page
       left = 0
     end
     return left * 100.0 / (self.work * 1000)
-  end
-
-  def hint_text()
-    if self.phase == "ready"
-      return "OK=START"
-    end
-    if self.phase == "paused"
-      return "OK=RESUME"
-    end
-    return "BACK=PAUSE"
-  end
-end
-
-# The browser's row glyph: the stairs, three treads climbing by two risers, on the same 12 by 8
-# field and the same y + 1 to y + 6 band as the square wave, so the two read as a pair in the list.
-class RampedIntervalIcon : Icon
-  def init()
-    super(self).init(12, 8)
-  end
-
-  def draw(x, y)
-    var low = y + 6
-    var mid = y + 4
-    var high = y + 1
-    screen.draw_line(x, low, x + 4, low)
-    screen.draw_line(x + 4, low, x + 4, mid)
-    screen.draw_line(x + 4, mid, x + 8, mid)
-    screen.draw_line(x + 8, mid, x + 8, high)
-    screen.draw_line(x + 8, high, x + 11, high)
   end
 end
 

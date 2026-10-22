@@ -128,7 +128,7 @@ gives up the transitions, which is what the ladder is made of.
 `if self.phase == ...` block per phase, each testing its exit condition and assigning the next phase.
 The commands ask the phase again — `ok()` picks start or resume, `pause()` refuses unless the page is
 running, the editor stops a run it is about to change — and the display asks it a third time:
-`status_text()`, `hint_text()`, `hold_left()` and their counterparts in the ramped pages.
+`status_text()`, `hold_left()` and their counterparts in the ramped pages.
 
 The cost is that a phase assignment in one method is invisible to the others, so "which phases are
 running" is a list copied by hand into every method that needs it — and `tick()` already carries a

@@ -6,53 +6,68 @@
 # between the two targets is the machine's: a shallower target vents, a deeper one pulls, and HOLD
 # is the edge that says the new one has arrived.
 
+# The page's glyph, and the browser's row glyph: a square wave, two pulses on a 12 by 8 field. The
+# ink sits on the rows a line of text does, from y + 1 to y + 6. It is defined before the chrome that
+# draws it, because a class has to be a global by the time the file names it.
+class IntervalIcon : Icon
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw(x, y)
+    var high = y + 1
+    var low = y + 6
+    screen.draw_line(x, low, x + 2, low)
+    screen.draw_line(x + 2, low, x + 2, high)
+    screen.draw_line(x + 2, high, x + 5, high)
+    screen.draw_line(x + 5, high, x + 5, low)
+    screen.draw_line(x + 5, low, x + 9, low)
+    screen.draw_line(x + 9, low, x + 9, high)
+    screen.draw_line(x + 9, high, x + 11, high)
+  end
+end
+
 class IntervalChrome
   var owner
-  var header
+  var icon
   var sets
   var pressure
   var target
   var status
   var bar
-  var hint
 
   def init(owner)
     self.owner = owner
 
-    # The title and the set bubbles share the top row: the overlay's band took the bottom of the
-    # glass, so the page owns the 52 rows above it and nothing dodges an icon any more.
-    self.header = FixedText()
-    self.header.value = "Interval"
-    self.header.x = 0; self.header.y = 0; self.header.w = 90; self.header.h = 7
-    self.header.align = "left"
+    # The icon and the set bubbles share the top row; the readout, the target and the status fill
+    # the rest of the 52 rows above the overlay's band.
+    self.icon = IntervalIcon()
 
     self.sets = ProgressBubbles()
     self.sets.x = 92; self.sets.y = 0; self.sets.w = 36; self.sets.h = 6
 
     self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 116; self.pressure.h = 17
+    self.pressure.x = 0; self.pressure.y = 10; self.pressure.w = 116; self.pressure.h = 23
 
     # The target needs no label: the border is what tells it apart from the live reading.
     self.target = PressureDisplay()
-    self.target.x = 0; self.target.y = 26; self.target.w = 116; self.target.h = 10
+    self.target.x = 0; self.target.y = 34; self.target.w = 116; self.target.h = 10
     self.target.border = 1
 
-    # The status and the hold's remaining time share a line: the words on the left, the bar draining
-    # to the right. The longest status is "PRESS OK", 48 pixels of built-in face.
+    # The status and the hold's remaining time share the last line above the band: the words on the
+    # left, the bar draining to the right. The longest status is "PRESS OK", 48 pixels of built-in
+    # face.
     self.status = DynamicText()
-    self.status.x = 0; self.status.y = 37; self.status.w = 62; self.status.h = 7
+    self.status.x = 0; self.status.y = 45; self.status.w = 62; self.status.h = 7
     self.status.align = "left"
 
     self.bar = ProgressBar()
-    self.bar.x = 66; self.bar.y = 37; self.bar.w = 50; self.bar.h = 7
+    self.bar.x = 66; self.bar.y = 45; self.bar.w = 50; self.bar.h = 7
     self.bar.border = 1
-
-    self.hint = DynamicText()
-    self.hint.x = 0; self.hint.y = 45; self.hint.w = 116; self.hint.h = 7
   end
 
   def draw(s)
-    self.header.draw()
+    self.icon.draw(0, 0)
 
     # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
     # run still empty. The count can change under the settings editor, so the cached layout goes
@@ -74,7 +89,6 @@ class IntervalChrome
     if left != nil
       self.bar.draw(left)
     end
-    self.hint.draw(self.owner.hint_text())
   end
 end
 
@@ -371,16 +385,6 @@ class Interval : Page
     return "WORK"
   end
 
-  def hint_text()
-    if self.phase == "ready"
-      return "OK=START"
-    end
-    if self.phase == "waiting"
-      return "OK=NEXT"
-    end
-    return "HOLD BACK=STOP"
-  end
-
   # The share of the current hold still to run: full when the hold starts and draining as its clock
   # does. Nil outside the two holds, so the bar is only there when there is hold-time to show.
   def hold_left()
@@ -396,26 +400,6 @@ class Interval : Page
       left = 0
     end
     return left * 100.0 / (length * 1000)
-  end
-end
-
-# The browser's row glyph: a square wave, two pulses on a 12 by 8 field. The ink sits on the
-# rows a line of text does, from y + 1 to y + 6, so the icon and the name beside it share a band.
-class IntervalIcon : Icon
-  def init()
-    super(self).init(12, 8)
-  end
-
-  def draw(x, y)
-    var high = y + 1
-    var low = y + 6
-    screen.draw_line(x, low, x + 2, low)
-    screen.draw_line(x + 2, low, x + 2, high)
-    screen.draw_line(x + 2, high, x + 5, high)
-    screen.draw_line(x + 5, high, x + 5, low)
-    screen.draw_line(x + 5, low, x + 9, low)
-    screen.draw_line(x + 9, low, x + 9, high)
-    screen.draw_line(x + 9, high, x + 11, high)
   end
 end
 
