@@ -2,8 +2,8 @@
 
 The radio is a second contract rather than the line protocol over a pipe, because a phone is a GATT
 client and not a terminal: the surface is a table of characteristics rather than lines of text. It
-shares the ownership record with the serial line, so one link controls the machine at a time
-whichever transport it arrived on.
+shares the ownership stack with the serial line, so one link drives the machine at a time whichever
+transport it arrived on, with the panel beneath both when a panel is fitted.
 
 The device advertises as `gardener` with one service, `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`. The
 last 16 bits of a characteristic's UUID select the field, so `state` is

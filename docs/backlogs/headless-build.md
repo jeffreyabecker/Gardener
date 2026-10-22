@@ -291,7 +291,7 @@ rule every build shares. One fact per item, so each line can be checked against 
   is for.
 - [x] 7.13 Bring the rest of [serial-protocol.md](../specs/serial-protocol.md) onto the stack: the
   connecting rules and the worked examples that still answer `ok control=owned`.
-- [ ] 7.14 Bring the remaining specs onto the stack: the Back+OK lines in
+- [x] 7.14 Bring the remaining specs onto the stack: the Back+OK lines in
   [vacuum-control.md](../specs/vacuum-control.md) and [bindings.md](../specs/ui/bindings.md) that say
   a reset clears a held ownership record, and the Bluetooth introduction's one-link claim.
 
