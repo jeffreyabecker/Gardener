@@ -15,8 +15,9 @@ The plan's parts 2 and 3 are worked in the other order. The vocabulary has to be
 the map can be written against it — `up:short+down:short` is not expressible while a press is an
 `event` record with a `chord` token — so the reader (part 1) comes first, then the class and the
 string (part 3), then the map (part 2), then the contract. The class comes before the string
-because it is the thing that composes one: the first two items put the detection in it and make the
-panel task consume it, and the third changes what it answers.
+because it is the thing that composes one: the first item writes the class, the second makes the
+panel task consume it and carry the gesture to the page, and the third changes how a page registers
+it.
 
 Two checks cover the work: `python scripts/arduino.py --task build` for the firmware, and
 `python tools/berry/check.py` for the image and the host harness — no flags to compile, load and
@@ -52,20 +53,16 @@ checked on the bench in epic 1, and the whole map on the bench at the end of epi
   walks every page.
 
 - [ ] **2. Make the panel task consume the classifier.** Replace the key scan, the chord and the
-  threshold checks with the classifier's answer, and keep only what to do with each answer — reboot,
-  latch and post the stop, bump the way home, or hand the gesture to the page. The way home moves to
-  Cancel while Back is held, so Okay is no longer stolen during the hold. Done when the panel task is
-  one call and four decisions, the check still walks every page, and on the rig a Cancel during a
-  Back hold goes home while an Okay during the same hold reaches the page.
+  threshold checks with the gesture the classifier answers, and keep only what to do with it —
+  reboot, latch and post the stop, bump the way home, or hand the gesture to the page. Handing it on
+  replaces the press pair with the string on the way to the page, so the queue behind `buttons.take()`,
+  the binding and the harness carry the string, and a page reads it and splits it where a handler
+  matches one dimension. The way home moves to Cancel while Back is held, so Okay is no longer stolen
+  during the hold. Done when the panel task is one call and four decisions, the press log prints
+  `btn: ok:short`, the check drives every page, and on the rig a Cancel during a Back hold goes home
+  while an Okay during the same hold reaches the page.
 
-- [ ] **3. Make the gesture a string all the way to the page.** Change what the classifier answers
-  from the press enum to the gesture string the plan writes — `ok:short`, `back:long`, `back:3`,
-  `up:short+down:short` — and carry it through the queue, the binding and the harness in place of the
-  record a page reads with a dot. Update the pages to read the string, splitting it where a handler
-  matches one dimension. Done when the check drives every page, the press log prints `btn: ok:short`,
-  and no `.be` file reads an event's fields.
-
-- [ ] **4. Replace the key-and-press registration with the gesture string.** Change the registration
+- [ ] **3. Replace the key-and-press registration with the gesture string.** Change the registration
   to take the whole gesture, with `*` for any press, and rewrite every registration — a list of
   presses becomes one registration per string. Drop the framework's key-and-press matcher. Done when
   no `.be` file passes a bare key or a list to `on`, and the check still walks every page.
