@@ -13,9 +13,17 @@ description: 'Gardener Git and documentation practice: how to commit (one commit
 
 ## Committing
 
-**Committing means commit.** When you are told to commit, it is `git add -A` and one `git commit`:
-the whole tree as it stands, in the style the history already uses. That is the task, and it should
-take the time two commands take.
+**Committing means commit.** When you are told to commit, it is `git status --short`, `git add -A`
+and one `git commit`: the whole tree as it stands, in the style the history already uses. That is the
+task, and it should take the time three commands take.
+
+**Look at the tree before you describe it.** `git status --short` comes first because it answers what
+the commit is: what is staged, what is not, and whether the work you meant to describe is still there.
+The tree moves between calls — work lands from another terminal, a commit from another session — so
+the index you saw a minute ago is no evidence of the one in front of you. Open a diff only when the
+message needs it to name the change, and stop at what names it. When a diff comes back empty where you
+expected files, `status` is the question to ask; repeating the same query, quoted or narrowed, only
+says nothing twice.
 
 **A commit runs nothing.** No build, no test, no lint, no file-by-file read of the diff to satisfy
 yourself the tree is good, and no check of whether someone else's unstaged work compiles. Whatever is

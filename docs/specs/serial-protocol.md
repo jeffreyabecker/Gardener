@@ -169,7 +169,7 @@ the reply names whoever is still driving.
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | `on` / `off` | the diagnostics preference; a change applies at the next reset |
-| `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.ini` and restored at boot |
+| `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
 | `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
 
 | Verb | Reply | Notes |
@@ -192,7 +192,7 @@ the reply names whoever is still driving.
 <- ok
 ```
 
-`log` and `unit` are the panel's: they are preferences it persists in `/settings.ini` and shows on
+`log` and `unit` are the panel's: they are preferences it persists in `/settings.cfg` and shows on
 its glass, so a build without a panel neither reports them in `device get` nor accepts `device set
 log` or `device set unit`. That build's `device get` reads `ok proto=1 fw=... chip=... heap=...
 caps=0`.
@@ -200,8 +200,8 @@ caps=0`.
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 
-`device set unit` and `device set log` survive a reset: the value is written to the `[device]`
-section of `/settings.ini` and read back at boot. A filesystem that will not take the write still
+`device set unit` and `device set log` survive a reset: the value is written to `/settings.cfg` as
+a `key=value` line and read back at boot. A filesystem that will not take the write still
 answers with the value in force for this session, and the boot log reports the failed mount. The
 machine and this wire stay in kPa either way — a display unit is a preference about the glass, not
 a second way to state a pressure. `log` differs from `unit`: it chooses the logger at boot, so a
@@ -320,7 +320,7 @@ long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop
 
 ## 9. `fs` — the device's files
 
-The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.ini`. `fs` is a bench
+The device's LittleFS tree: `/routines`, `/modules`, `/assets` and `/settings.cfg`. `fs` is a bench
 interface for changing what is on the device without reflashing its data image. Writing under
 `/routines` or `/modules` does not reload anything; the change takes effect at the next boot.
 
@@ -347,14 +347,14 @@ declared body before replying.
 <- ok
 <- file default.be
 <- file interval.be
-<- file interval.ini
+<- file interval.cfg
 <- (blank line)
--> fs read /routines/interval.ini
+-> fs read /routines/interval.cfg
 <- ok bytes=12
 <- [12 raw bytes]
 -> control acquire
 <- ok control=serial
--> fs write /routines/new.ini 5
+-> fs write /routines/new.cfg 5
 <- ok
 -> fs mkdir /assets/icons
 <- ok
@@ -381,8 +381,8 @@ payload. A payload that stops arriving for 2 s is abandoned, the partial file
 is removed, and the reply is `err bad_argument`.
 
 Paths are absolute, `/`-separated and case-sensitive. `.`, `..`, empty segments and trailing
-slashes are refused. `/` is valid only for `fs list`. `/settings.ini` is reserved: `fs write` and
-`fs delete` refuse it with `err unsupported path=/settings.ini reason=reserved`; `fs read` and
+slashes are refused. `/` is valid only for `fs list`. `/settings.cfg` is reserved: `fs write` and
+`fs delete` refuse it with `err unsupported path=/settings.cfg reason=reserved`; `fs read` and
 `fs list` may see it. A malformed path is `err bad_argument <token>`; a path that parses but is
 absent is `err not_found <path>`.
 

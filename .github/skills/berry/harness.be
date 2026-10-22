@@ -777,7 +777,7 @@ def harness_reset()
   harnessInCall = false
 end
 
-# settings.ini is the device's own values, not a routine's; the unit is the one the
+# settings.cfg is the device's own values, not a routine's; the unit is the one the
 # panel prints and the editor steps in.
 def harness_apply_device()
   var token = store.get("device", "unit", "kpa")
@@ -851,7 +851,7 @@ def harness_seed_jingles(text)
   harnessStoreOrder["jinglelibrary"] = order
 end
 
-# The values a routine's file holds, read from the .ini the data image ships.
+# The values a routine's file holds, read from the .cfg the data image ships.
 def harness_seed(name, text)
   if name == "jinglelibrary"
     harness_seed_jingles(text)
@@ -862,8 +862,7 @@ def harness_seed(name, text)
   var lines = string.split(text, "\n")
   for line : lines
     var clean = string.replace(line, "\r", "")
-    if clean == "" || string.startswith(clean, "[") || string.startswith(clean, "#") ||
-       string.startswith(clean, ";")
+    if clean == "" || string.startswith(clean, "#") || string.startswith(clean, ";")
       continue
     end
     var parts = string.split(clean, "=")

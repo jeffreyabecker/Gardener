@@ -62,5 +62,5 @@ mean.
 
 `kpa` and `duty` are notified at 5 Hz, `batt` every 10 s, and the rest on change.
 
-The stored preference in `/settings.ini` (`bluetooth=off`) leaves the radio silent. It is read once
+The stored preference in `/settings.cfg` (`bluetooth=off`) leaves the radio silent. It is read once
 at boot, so a change takes effect on the next `device reboot`.

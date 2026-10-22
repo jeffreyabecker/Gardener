@@ -14,13 +14,13 @@ constexpr const char* kJingleKey = "jingle";
 // Reading is best effort: a value this revision does not understand leaves the default in place.
 void PanelSettings::load() {
   DisplayUnit unit = DisplayUnit::Kpa;
-  const String token = get(kSection, kUnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
+  const String token = get(kUnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
   if (parseDisplayUnit(token.c_str(), unit)) unit_ = unit;
 
-  const float target = getFloat(kSection, kTargetKey, 0.0f);
+  const float target = getFloat(kTargetKey, 0.0f);
   if (target > 0.0f) targetKpa_ = target;
 
-  get(kSection, kJingleKey, "").toCharArray(jingle_, sizeof jingle_);
+  get(kJingleKey, "").toCharArray(jingle_, sizeof jingle_);
 }
 
 // The wire echoes the field after a write, so the value is applied whatever the flash does: a device
@@ -29,7 +29,7 @@ void PanelSettings::load() {
 void PanelSettings::setUnit(DisplayUnit unit) {
   if (unit == unit_) return;
   unit_ = unit;
-  set(kSection, kUnitKey, displayUnitInfo(unit).name);
+  set(kUnitKey, displayUnitInfo(unit).name);
 }
 
 // The page clamps this to the machine's bounds before it gets here; setFloat() only keeps a
@@ -37,7 +37,7 @@ void PanelSettings::setUnit(DisplayUnit unit) {
 void PanelSettings::setTarget(float kpa) {
   if (kpa == targetKpa_) return;
   targetKpa_ = kpa;
-  setFloat(kSection, kTargetKey, kpa);
+  setFloat(kTargetKey, kpa);
 }
 
 String PanelSettings::jingle() const { return String(jingle_); }
@@ -48,7 +48,7 @@ void PanelSettings::setJingle(const String& id) {
   // copied; a partial value simply fails the jingles lookup and falls back to the first entry.
   memset(jingle_, 0, sizeof jingle_);
   id.toCharArray(jingle_, sizeof jingle_);
-  set(kSection, kJingleKey, id);
+  set(kJingleKey, id);
 }
 
 }  // namespace gardener

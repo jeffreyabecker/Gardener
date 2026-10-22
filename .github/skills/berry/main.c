@@ -73,25 +73,25 @@ static void printLog(bvm* vm) {
 
 int main(int argc, char** argv) {
   const char* files[MAX_PATHS];
-  const char* iniNames[MAX_PATHS];
-  const char* iniPaths[MAX_PATHS];
+  const char* seedNames[MAX_PATHS];
+  const char* seedPaths[MAX_PATHS];
   int fileCount = 0;
-  int iniCount = 0;
+  int seedCount = 0;
   int compileOnly = 0;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--compile-only") == 0) {
       compileOnly = 1;
-    } else if (strcmp(argv[i], "--ini") == 0 && i + 1 < argc) {
+    } else if (strcmp(argv[i], "--values") == 0 && i + 1 < argc) {
       const char* value = argv[++i];
       const char* split = strchr(value, '=');
-      if (split == NULL || iniCount >= MAX_PATHS) {
-        fprintf(stderr, "--ini needs name=path\n");
+      if (split == NULL || seedCount >= MAX_PATHS) {
+        fprintf(stderr, "--values needs name=path\n");
         return 2;
       }
-      iniNames[iniCount] = value;
-      iniPaths[iniCount] = split + 1;
-      iniCount++;
+      seedNames[seedCount] = value;
+      seedPaths[seedCount] = split + 1;
+      seedCount++;
     } else if (fileCount < MAX_PATHS) {
       files[fileCount++] = argv[i];
     }
@@ -131,20 +131,20 @@ int main(int argc, char** argv) {
     free(source);
   }
 
-  for (int i = 0; i < iniCount; i++) {
+  for (int i = 0; i < seedCount; i++) {
     size_t length = 0;
-    char* text = readFile(iniPaths[i], &length);
+    char* text = readFile(seedPaths[i], &length);
     if (text == NULL) {
-      printf("[E] vm: %s unreadable\n", iniPaths[i]);
+      printf("[E] vm: %s unreadable\n", seedPaths[i]);
       failed++;
       continue;
     }
     // The name is everything before the '=' check.py put there, and ends at the '='.
     char name[128];
-    const char* split = strchr(iniNames[i], '=');
-    size_t nameLength = split != NULL ? (size_t)(split - iniNames[i]) : 0;
+    const char* split = strchr(seedNames[i], '=');
+    size_t nameLength = split != NULL ? (size_t)(split - seedNames[i]) : 0;
     if (nameLength >= sizeof(name)) nameLength = sizeof(name) - 1;
-    memcpy(name, iniNames[i], nameLength);
+    memcpy(name, seedNames[i], nameLength);
     name[nameLength] = '\0';
     if (!callWithText(vm, "harness_seed", name, text)) failed++;
     free(text);

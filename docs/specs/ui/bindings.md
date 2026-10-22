@@ -186,13 +186,13 @@ rather than to the glass.
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `device.units()` | list of strings | every token `device set unit` accepts, in `panel/Units.h` order |
-| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini`; false for a token that is not one of `units()` |
+| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.cfg`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
-| `device.set_target(kpa)` | — | stores a new target in `/settings.ini`; clamp it with `vacuum.clamp()` first |
+| `device.set_target(kpa)` | — | stores a new target in `/settings.cfg`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | the stored radio preference; `true` when unset |
-| `device.set_bluetooth(enabled)` | — | stores it in `/settings.ini`; the radio reads it when it starts, so the next boot honours it |
+| `device.set_bluetooth(enabled)` | — | stores it in `/settings.cfg`; the radio reads it when it starts, so the next boot honours it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
-| `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.ini` |
+| `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.cfg` |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it. `device.target()` is the stored setting, not the machine's live target: a page
@@ -289,10 +289,10 @@ stores. Then the display name, the short panel label and the note string, which 
 `buzzer.play()` notation.
 
 A line beginning with `#` is a comment and a blank line is skipped; anywhere else `#` is a note, so
-a sharp like `F#5` needs no escaping. The file is not a settings document and is not read by `Ini`,
-so there is no section header, no key/value form and no key limit. A line without three separators,
-one with an empty field, or one whose sequence `buzzer.play()` would refuse is reported on the
-diagnostics stream at boot and left out of the library.
+a sharp like `F#5` needs no escaping. The file is not a `key=value` settings document and is not
+read by the settings parser, so there is no key/value form and no key limit. A line without three
+separators, one with an empty field, or one whose sequence `buzzer.play()` would refuse is reported
+on the diagnostics stream at boot and left out of the library.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -354,7 +354,7 @@ a native call.
 | `store.get(name, key, fallback)` | the fallback's type | a registered routine's value |
 | `store.set(name, key, value)` | `bool` | write a registered routine's value |
 
-A routine's values live in `/routines/<name>.ini`, named after the routine, and a data-image upload
+A routine's values live in `/routines/<name>.cfg`, named after the routine, and a data-image upload
 can ship initial ones beside its `.be`. A routine writes its own; the named forms in the table let
 a page edit another routine's.
 
@@ -372,7 +372,7 @@ A key that was never set returns the fallback rather than `nil`, so a first boot
 case. A key that holds an empty value reads back as `""` — the way the settings editor keeps a
 cleared nullable setting, and the sentinel it tests to tell "nothing" from a real value.
 
-The file is an INI document with no sections, which is what makes it readable off the device and
+The file is a flat `key=value` document, which is what makes it readable off the device and
 editable in the data image:
 
 ```
@@ -380,7 +380,7 @@ target=12.5
 count=3
 ```
 
-Two limits. It holds **16 keys** — a `set` past that returns `false`. And a `set` writes to flash,
+Two limits. It holds **32 keys** — a `set` past that returns `false`. And a `set` writes to flash,
 though only when the value actually changed: setting the same value on every pass costs nothing,
 while storing a *changing* value on every pass wears the partition. Write on the event, not on the
 frame.

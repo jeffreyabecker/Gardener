@@ -32,7 +32,7 @@ Nothing throws today, but any vendored C++ added later would have to make the sa
 A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/data) into the build's
 `gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
 `--task upload` and then `--task data`. What holds it back is that the image would ship whatever
-`settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.
+`settings.cfg` and routines are in the tree and clear NVS on the way, which nobody has decided on.
 
 ## Nudges inside a routine
 

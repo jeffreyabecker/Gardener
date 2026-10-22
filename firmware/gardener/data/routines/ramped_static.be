@@ -122,7 +122,7 @@ class RampedStatic : Page
     ]
   end
 
-  # The starting values match the shipped `ramped_static.ini`. The pressures go through clamp()
+  # The starting values match the shipped `ramped_static.cfg`. The pressures go through clamp()
   # before they are ever handed to the machine, and a hand-edited duration is held to the same
   # bounds the editor uses. A switch's settings map, when there is one, is the set for this
   # activation.

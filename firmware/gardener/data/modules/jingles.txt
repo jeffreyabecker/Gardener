@@ -4,7 +4,7 @@
 #
 #   <identifier>|<display name>|<short label>|<note sequence>
 #
-# The identifier is the stable key stored in settings.ini and passed to the jingles module. The
+# The identifier is the stable key stored in settings.cfg and passed to the jingles module. The
 # display name is what a routine can show; the short label is what fits on the panel. The sequence
 # is buzzer.play() notation: note:ms pairs separated by spaces, and r for a rest.
 #

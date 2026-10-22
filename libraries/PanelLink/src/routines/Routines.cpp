@@ -8,7 +8,7 @@
 #include "Logger.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
-#include "storage/Ini.h"
+#include "storage/Values.h"
 
 namespace gardener {
 namespace {
@@ -33,7 +33,7 @@ constexpr const char* kPendingSettingsKey = "__routinePendingSettings";
 String routineValuesPath(const char* routine) {
   String path = "/routines/";
   path += routine;
-  path += ".ini";
+  path += ".cfg";
   return path;
 }
 
@@ -487,7 +487,7 @@ bool Routines::takeStopped() {
 // --- the active routine's values -------------------------------------------
 
 // Beside the routine rather than in a shared file: a routine's values are its own, a data-folder
-// upload can ship initial ones as `/routines/<name>.ini`, and nothing has to be namespaced inside
+// upload can ship initial ones as `/routines/<name>.cfg`, and nothing has to be namespaced inside
 // the document.
 bool Routines::isRegistered(const char* routine) const {
   if (routine == nullptr) return false;
@@ -514,12 +514,12 @@ bool Routines::storeGet(const char* routine, const char* key, String& out) {
 
   File file = LittleFS.open(routineValuesPath(routine).c_str(), "r");
   if (!file) return false;
-  Ini values;
+  Values values;
   values.parse(file.readString());
   file.close();
 
-  if (!values.has("", key)) return false;
-  out = values.get("", key, "");
+  if (!values.has(key)) return false;
+  out = values.get(key, "");
   return true;
 }
 
@@ -527,7 +527,7 @@ bool Routines::storeSet(const char* routine, const char* key, const String& valu
   if (key == nullptr || !isRegistered(routine)) return false;
 
   const String path = routineValuesPath(routine);
-  Ini values;
+  Values values;
   File file = LittleFS.open(path.c_str(), "r");
   if (file) {
     values.parse(file.readString());
@@ -535,8 +535,8 @@ bool Routines::storeSet(const char* routine, const char* key, const String& valu
   }
 
   // A repeat value is not worth a flash write.
-  if (values.has("", key) && values.get("", key, "") == value) return true;
-  if (!values.set("", key, value)) return false;
+  if (values.has(key) && values.get(key, "") == value) return true;
+  if (!values.set(key, value)) return false;
 
   File out = LittleFS.open(path.c_str(), "w");
   if (!out) return false;

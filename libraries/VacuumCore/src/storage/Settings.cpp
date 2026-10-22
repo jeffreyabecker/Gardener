@@ -14,7 +14,7 @@ bool Settings::save() const {
   if (fs_ == nullptr) return false;
   File file = fs_->open(kPath, "w");
   if (!file) return false;
-  const String body = ini_.text();
+  const String body = values_.text();
   const bool written = file.print(body) == body.length();
   file.close();
   return written;
@@ -27,49 +27,47 @@ bool Settings::begin() {
   if (fs_ != nullptr) {
     File file = fs_->open(kPath, "r");
     if (file) {
-      ini_.parse(file.readString());
+      values_.parse(file.readString());
       file.close();
       read = true;
     }
   }
 
-  bluetooth_ = getBool(kSection, kBluetoothKey, true);
-  log_ = getBool(kSection, kLogKey, true);
+  bluetooth_ = getBool(kBluetoothKey, true);
+  log_ = getBool(kLogKey, true);
   load();
   return read;
 }
 
-bool Settings::has(const char* section, const char* key) const { return ini_.has(section, key); }
-
-String Settings::get(const char* section, const char* key, const char* fallback) const {
-  return ini_.get(section, key, fallback);
+String Settings::get(const char* key, const char* fallback) const {
+  return values_.get(key, fallback);
 }
 
-bool Settings::getBool(const char* section, const char* key, bool fallback) const {
-  const String stored = ini_.get(section, key, "");
+bool Settings::getBool(const char* key, bool fallback) const {
+  const String stored = values_.get(key, "");
   if (stored.equalsIgnoreCase("on")) return true;
   if (stored.equalsIgnoreCase("off")) return false;
   return fallback;
 }
 
-float Settings::getFloat(const char* section, const char* key, float fallback) const {
-  const String stored = ini_.get(section, key, "");
+float Settings::getFloat(const char* key, float fallback) const {
+  const String stored = values_.get(key, "");
   return stored.isEmpty() ? fallback : stored.toFloat();
 }
 
-bool Settings::set(const char* section, const char* key, const String& value) {
+bool Settings::set(const char* key, const String& value) {
   // A repeat value is not worth a flash write.
-  if (ini_.get(section, key, "") == value && ini_.has(section, key)) return true;
-  if (!ini_.set(section, key, value)) return false;
+  if (values_.get(key, "") == value && values_.has(key)) return true;
+  if (!values_.set(key, value)) return false;
   return save();
 }
 
-bool Settings::setBool(const char* section, const char* key, bool value) {
-  return set(section, key, value ? "on" : "off");
+bool Settings::setBool(const char* key, bool value) {
+  return set(key, value ? "on" : "off");
 }
 
-bool Settings::setFloat(const char* section, const char* key, float value, uint8_t decimals) {
-  return set(section, key, String(value, static_cast<unsigned int>(decimals)));
+bool Settings::setFloat(const char* key, float value, uint8_t decimals) {
+  return set(key, String(value, static_cast<unsigned int>(decimals)));
 }
 
 bool Settings::bluetoothEnabled() const { return bluetooth_; }
@@ -77,7 +75,7 @@ bool Settings::bluetoothEnabled() const { return bluetooth_; }
 void Settings::setBluetooth(bool enabled) {
   if (enabled == bluetooth_) return;
   bluetooth_ = enabled;
-  setBool(kSection, kBluetoothKey, enabled);
+  setBool(kBluetoothKey, enabled);
 }
 
 bool Settings::logEnabled() const { return log_; }
@@ -85,7 +83,7 @@ bool Settings::logEnabled() const { return log_; }
 void Settings::setLogEnabled(bool enabled) {
   if (enabled == log_) return;
   log_ = enabled;
-  setBool(kSection, kLogKey, enabled);
+  setBool(kLogKey, enabled);
 }
 
 }  // namespace gardener

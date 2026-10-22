@@ -91,7 +91,7 @@ class Routines {
   bool takeStopped();
 
   // --- the `store` module's surface ---
-  // The active routine's own values, kept beside its source in `/routines/<name>.ini`. The file is
+  // The active routine's own values, kept beside its source in `/routines/<name>.cfg`. The file is
   // read and written here, on the panel task the VM already runs on.
   //
   // `storeGet` is false when there is no active routine or nothing is stored under the key;

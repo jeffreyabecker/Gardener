@@ -102,7 +102,7 @@ Values that must match the firmware:
 
 - `data/modules/*.be` are the real shipped files, not copies. `Settings`, `Page`, `List`,
   `Component` and the rest are the code under review.
-- Every `data/routines/*.ini` seeds the store under its own name, and `data/settings.ini` seeds
+- Every `data/routines/*.cfg` seeds the store under its own name, and `data/settings.cfg` seeds
   `device`, so a routine reads the values its image ships with.
 - `data/modules/jingles.txt` is seeded as `jinglelibrary`, so the `JinglesStub` checks the real
   identifiers, titles, labels and note strings the image ships.

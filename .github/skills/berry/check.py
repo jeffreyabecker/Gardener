@@ -64,9 +64,9 @@ def files(data):
     return [SKILL / "harness.be", *modules, SKILL / "driver.be", *routines]
 
 
-def inis(data):
-    found = [("device", data / "settings.ini"), ("jinglelibrary", data / "modules" / "jingles.txt")]
-    for path in sorted((data / "routines").glob("*.ini")):
+def seeds(data):
+    found = [("device", data / "settings.cfg"), ("jinglelibrary", data / "modules" / "jingles.txt")]
+    for path in sorted((data / "routines").glob("*.cfg")):
         found.append((path.stem, path))
     return [(name, path) for name, path in found if path.exists()]
 
@@ -85,8 +85,8 @@ data = Path(args.data).resolve()
 command = [str(EXE)]
 if args.compile:
     command.append("--compile-only")
-for name, path in inis(data):
-    command.extend(["--ini", f"{name}={path}"])
+for name, path in seeds(data):
+    command.extend(["--values", f"{name}={path}"])
 command.extend(str(path) for path in files(data))
 if args.verbose:
     print(" ".join(command), flush=True)
