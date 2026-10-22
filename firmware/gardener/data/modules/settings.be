@@ -1,12 +1,12 @@
-# settings.be — the settings view, as scenes: a list of a routine's describe() rows, and one value
-# scene per kind those rows can hold.
+# settings.be — the settings view, as scenes: a list of the settings a routine registered, and one
+# value scene per kind those settings can hold, each behind an editor.
 #
-# Nothing here writes. SettingsScene pushes the value scene a row calls for; the value scene pops
-# with the value it settled on (nil on cancel), SettingsScene forwards that value to its on_change
-# callback, and the caller — the routine that opened its settings — writes where appropriate, with
-# store.set(name, ...) or device.set_*.
+# Nothing here writes. SettingsScene pushes the value scene a row's editor calls for; the value
+# scene pops with the value it settled on (nil on cancel), SettingsScene forwards that value to its
+# on_change callback, and the caller — the routine that opened its settings — writes where
+# appropriate, with store.set(name, ...) or device.set_*.
 #
-# The routine still implements describe(), which remains the one description of what is editable.
+# The settings are data: a routine hands its list to routines.register(), and this file walks it.
 # The device's own settings screen invokes the same value scenes directly, without a SettingsScene.
 
 import string
@@ -472,14 +472,223 @@ class DurationScene : ValueScene
   end
 end
 
+# --- the editors -----------------------------------------------------------
+
+# An editor is one kind of value as a setting uses it: how the store's text is read back, how the
+# list prints it, where nil opens, and which value scene edits it. A setting carries one, so
+# SettingsScene asks the editor instead of branching on a kind string.
+
+class Editor
+  var nullable
+
+  def init(nullable)
+    self.nullable = nullable
+  end
+
+  # The stored value, typed as the kind stores it, or nil when a nullable setting holds nothing.
+  def read(name, key)
+    if self.nullable && store.get(name, key, "") == ""
+      return nil
+    end
+    return self.stored(name, key)
+  end
+end
+
+class BoolEditor : Editor
+  def kind()
+    return "bool"
+  end
+
+  def stored(name, key)
+    return store.get(name, key, false)
+  end
+
+  def text(value)
+    return value ? "ON" : "OFF"
+  end
+
+  def lowest()
+    return false
+  end
+
+  def scene(label, value)
+    return BoolScene(label, value, self.nullable)
+  end
+end
+
+class ChoiceEditor : Editor
+  var values
+
+  def init(values, nullable)
+    super(self).init(nullable)
+    self.values = values
+  end
+
+  def kind()
+    return "choice"
+  end
+
+  # A choice with nothing to cycle is a mistake in the routine, and the list's read refuses it
+  # rather than showing a value nothing can produce.
+  def stored(name, key)
+    if self.values == nil || self.values.size() == 0
+      raise "value_error", "choice has no values"
+    end
+    return store.get(name, key, self.values[0])
+  end
+
+  def text(value)
+    return str(value)
+  end
+
+  def lowest()
+    return self.values[0]
+  end
+
+  def scene(label, value)
+    return ChoiceScene(label, value, self.values, self.nullable)
+  end
+end
+
+class IntEditor : Editor
+  var step, min, max
+
+  def init(step, min, max, nullable)
+    super(self).init(nullable)
+    self.step = step
+    self.min = min
+    self.max = max
+  end
+
+  def kind()
+    return "int"
+  end
+
+  def stored(name, key)
+    return store.get(name, key, 0)
+  end
+
+  def text(value)
+    return str(value)
+  end
+
+  def lowest()
+    if self.min != nil
+      return int(self.min)
+    end
+    return 0
+  end
+
+  def scene(label, value)
+    return IntScene(label, value, self.step, self.min, self.max, self.nullable)
+  end
+end
+
+class RealEditor : Editor
+  var step, min, max
+
+  def init(step, min, max, nullable)
+    super(self).init(nullable)
+    self.step = step
+    self.min = min
+    self.max = max
+  end
+
+  def kind()
+    return "real"
+  end
+
+  def stored(name, key)
+    return store.get(name, key, 0.0)
+  end
+
+  def text(value)
+    return str(value)
+  end
+
+  def lowest()
+    if self.min != nil
+      return self.min
+    end
+    return 0.0
+  end
+
+  def scene(label, value)
+    return RealScene(label, value, self.step, self.min, self.max, self.nullable)
+  end
+end
+
+# A pressure is kPa in the store and the unit on the glass here, exactly as the value scene does it.
+# The machine's own bounds are the range, so there is no min or max to give.
+class PressureEditor : Editor
+  var step
+
+  def init(step, nullable)
+    super(self).init(nullable)
+    self.step = step
+  end
+
+  def kind()
+    return "pressure"
+  end
+
+  def stored(name, key)
+    return vacuum.clamp(store.get(name, key, 0.0))
+  end
+
+  def text(value)
+    var unit = screen.unit()
+    return string.format("%." + str(unit.decimals) + "f", value * unit.per_kpa)
+  end
+
+  def lowest()
+    return vacuum.clamp(0.0)
+  end
+
+  def scene(label, value)
+    return PressureScene(label, value, self.step, self.nullable)
+  end
+end
+
+class DurationEditor : Editor
+  var step, min, max
+
+  def init(step, min, max, nullable)
+    super(self).init(nullable)
+    self.step = step
+    self.min = min
+    self.max = max
+  end
+
+  def kind()
+    return "duration"
+  end
+
+  def stored(name, key)
+    return duration_seconds(store.get(name, key, 0), self.min, self.max)
+  end
+
+  def text(value)
+    return duration_text(value)
+  end
+
+  def lowest()
+    return duration_seconds(0, self.min, self.max)
+  end
+
+  def scene(label, value)
+    return DurationScene(label, value, self.step, self.min, self.max, self.nullable)
+  end
+end
+
 # --- the settings list -----------------------------------------------------
 
-# The list of a routine's describe() rows. `on_change(key, value)` is the caller's callback: it
-# runs on every committed value, and writes where appropriate. Back pops the scene with nil.
+# The list of the settings a routine registered. `on_change(key, value)` is the caller's callback:
+# it runs on every committed value, and writes where appropriate. Back pops the scene with nil.
 class SettingsScene : Scene
   var name
   var on_change
-  var described
+  var settings
   var values
   var list
 
@@ -487,7 +696,7 @@ class SettingsScene : Scene
     super(self).init()
     self.name = name
     self.on_change = on_change
-    self.described = nil
+    self.settings = nil
     self.values = []
     self.list = List(5)
   end
@@ -500,70 +709,29 @@ class SettingsScene : Scene
     self.draw()
   end
 
-  # Reads the routine's describe() once and each value from its file. False when the routine has
-  # nothing to edit, which leaves the scene to pop itself.
+  # Reads the routine's registered settings and each value from its file. False when the routine
+  # has nothing to edit, which leaves the scene to pop itself.
   def open()
-    var routine = routines.get(self.name)
-    if routine == nil
-      vacuum.log("settings: no routine named " + self.name)
-      return false
-    end
-    var described = nil
-    try
-      described = routine.describe()
-    except .. as e, m
-      vacuum.log("settings: " + self.name + " describe failed")
-      return false
-    end
-    if described == nil || described.size() == 0
+    var settings = routines.settings(self.name)
+    if settings == nil || settings.size() == 0
       vacuum.log("settings: " + self.name + " has no settings")
       return false
     end
     var values = []
     var i = 0
     try
-      while i < described.size()
-        values.push(self.read_value(described[i]))
+      while i < settings.size()
+        values.push(settings[i].editor.read(self.name, settings[i].key))
         i += 1
       end
     except .. as e, m
-      vacuum.log("settings: " + self.name + " describe has an invalid setting")
+      vacuum.log("settings: " + self.name + " has an invalid setting")
       return false
     end
-    self.described = described
+    self.settings = settings
     self.values = values
     self.list.selected = 0
     return true
-  end
-
-  # The type of the fallback is the type the stored text comes back as, so each kind reads its own.
-  # A nullable setting that is not in the file — or holds an empty value — reads as nil.
-  def read_value(setting)
-    if setting.nullable && store.get(self.name, setting.key, "") == ""
-      return nil
-    end
-    if setting.kind == "int"
-      return store.get(self.name, setting.key, 0)
-    end
-    if setting.kind == "real"
-      return store.get(self.name, setting.key, 0.0)
-    end
-    if setting.kind == "pressure"
-      return vacuum.clamp(store.get(self.name, setting.key, 0.0))
-    end
-    if setting.kind == "bool"
-      return store.get(self.name, setting.key, false)
-    end
-    if setting.kind == "duration"
-      return duration_seconds(store.get(self.name, setting.key, 0), setting.min, setting.max)
-    end
-    if setting.kind == "choice"
-      if setting.values == nil || setting.values.size() == 0
-        raise "value_error", "choice has no values"
-      end
-      return store.get(self.name, setting.key, setting.values[0])
-    end
-    return store.get(self.name, setting.key, "")
   end
 
   def handle_page(ev)
@@ -595,8 +763,9 @@ class SettingsScene : Scene
   def rows()
     var out = []
     var i = 0
-    while i < self.described.size()
-      out.push([nil, self.described[i].label + "=" + self.value_text(i)])
+    while i < self.settings.size()
+      var item = self.settings[i]
+      out.push([item.icon, item.label + "=" + self.value_text(i)])
       i += 1
     end
     return out
@@ -607,98 +776,25 @@ class SettingsScene : Scene
     if value == nil
       return "--"
     end
-    var kind = self.described[index].kind
-    if kind == "bool"
-      return value ? "ON" : "OFF"
-    end
-    if kind == "pressure"
-      return self.number(value)
-    end
-    if kind == "duration"
-      return duration_text(value)
-    end
-    return str(value)
-  end
-
-  # A pressure is kPa in the store and the unit on the glass in the list.
-  def number(kpa)
-    var unit = screen.unit()
-    return string.format("%." + str(unit.decimals) + "f", kpa * unit.per_kpa)
+    return self.settings[index].editor.text(value)
   end
 
   def open_row()
-    var setting = self.described[self.list.selected]
+    var item = self.settings[self.list.selected]
     var value = self.values[self.list.selected]
     if value == nil
-      value = self.lowest_value(setting)
+      value = item.editor.lowest()
     end
-    var scene = self.make_scene(setting, value)
-    if scene == nil
-      vacuum.log("settings: " + setting.key + " is read-only")
-      return
-    end
-    ux.push(scene, nil, / v -> self.value_closed(setting, v))
-  end
-
-  def make_scene(setting, value)
-    if setting.kind == "bool"
-      return BoolScene(setting.label, value, setting.nullable)
-    end
-    if setting.kind == "choice"
-      if setting.values == nil || setting.values.size() == 0
-        return nil
-      end
-      return ChoiceScene(setting.label, value, setting.values, setting.nullable)
-    end
-    if setting.kind == "int"
-      return IntScene(setting.label, value, setting.step, setting.min, setting.max, setting.nullable)
-    end
-    if setting.kind == "real"
-      return RealScene(setting.label, value, setting.step, setting.min, setting.max, setting.nullable)
-    end
-    if setting.kind == "pressure"
-      return PressureScene(setting.label, value, setting.step, setting.nullable)
-    end
-    if setting.kind == "duration"
-      return DurationScene(setting.label, value, setting.step, setting.min, setting.max, setting.nullable)
-    end
-    return nil
+    ux.push(item.editor.scene(item.label, value), nil, / v -> self.value_closed(item, v))
   end
 
   # A committed value is forwarded to the caller and the row shows the new value. A cancel leaves
   # the row alone.
-  def value_closed(setting, value)
+  def value_closed(item, value)
     if value != nil
       self.values[self.list.selected] = value
-      self.on_change(setting.key, value)
+      self.on_change(item.key, value)
     end
     self.draw()
-  end
-
-  # The kind's lowest real value, the place a null value opens and the position null sits below:
-  # one Down at this value clears, one Up from nil reaches it.
-  def lowest_value(setting)
-    if setting.kind == "bool"
-      return false
-    end
-    if setting.kind == "choice"
-      return setting.values[0]
-    end
-    if setting.kind == "pressure"
-      return vacuum.clamp(0.0)
-    end
-    if setting.kind == "duration"
-      return duration_seconds(0, setting.min, setting.max)
-    end
-    if setting.kind == "int"
-      if setting.min != nil
-        return int(setting.min)
-      end
-      return 0
-    end
-    if setting.min != nil
-      return setting.min
-    end
-    return 0.0
   end
 end

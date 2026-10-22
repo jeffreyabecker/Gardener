@@ -110,16 +110,6 @@ class RampedStatic : Scene
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
-      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
-      setting("initial_duration", "Start time", "duration", 1, 0, 7200, nil, false),
-      setting("target_duration", "Target time", "duration", 1, 0, 7200, nil, false),
-      setting("total_duration", "Total time", "duration", 1, 1, 7200, nil, false)
-    ]
-  end
-
   # The starting values match the shipped `ramped_static.cfg`. The pressures go through clamp()
   # before they are ever handed to the machine, and a hand-edited duration is held to the same
   # bounds the editor uses. A switch's settings map, when there is one, is the set for this
@@ -414,5 +404,11 @@ class RampedStatic : Scene
   end
 end
 
-routines.register("ramped_static", "Ramped Static", RampedStatic(), false, RampedStaticIcon())
+routines.register("ramped_static", RampedStaticIcon(), RampedStatic, [
+  setting("initial_pressure", "Start", PressureEditor(1, false)),
+  setting("target_pressure", "Target", PressureEditor(1, false)),
+  setting("initial_duration", "Start time", DurationEditor(1, 0, 7200, false)),
+  setting("target_duration", "Target time", DurationEditor(1, 0, 7200, false)),
+  setting("total_duration", "Total time", DurationEditor(1, 1, 7200, false))
+])
 return RampedStatic

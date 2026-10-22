@@ -13,7 +13,7 @@ def schedule_follows_profile()
     "total_duration": 30
   }
   assert_true(harness_activate("ramped_static", settings), "ramped_static: activate refused")
-  var page = routines.get("ramped_static")
+  var page = ux.top()
   # begin() builds the profile once: the ramp is the total minus the two holds.
   harness.press("ok", "short")
   harness.beat(1)
@@ -26,7 +26,6 @@ end
 test("the schedule follows the profile", schedule_follows_profile)
 
 def crosses_stages_and_goes_home()
-  assert_not_nil(routines.get("ramped_static"), "ramped_static: not registered")
   var settings = {
     "initial_pressure": 5.0,
     "target_pressure": 10.0,
@@ -35,7 +34,7 @@ def crosses_stages_and_goes_home()
     "total_duration": 6
   }
   assert_true(harness_activate("ramped_static", settings), "ramped_static: activate refused")
-  var page = routines.get("ramped_static")
+  var page = ux.top()
   assert_eq(page.status_text(), "READY", "ramped_static: a ready page is not READY")
   harness.press("ok", "short")
   wait_until("ramped_static: the stage did not show START", 200,
@@ -59,7 +58,7 @@ def back_pauses_and_ok_resumes()
     "total_duration": 120
   }
   assert_true(harness_activate("ramped_static", settings), "ramped_static: activate refused")
-  var page = routines.get("ramped_static")
+  var page = ux.top()
   harness.press("ok", "short")
   wait_until("ramped_static: OK did not reach the run", 200, / -> page.phase == "run")
   harness.press("back", "short")

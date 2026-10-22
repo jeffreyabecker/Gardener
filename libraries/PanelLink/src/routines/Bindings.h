@@ -27,7 +27,8 @@ namespace berry {
 // `buttons.take()` an `event`. A record is a class instance whose fields a routine reads with a
 // dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and compiled at boot, because
 // only the parser can declare an instance variable on a class. The `setting` class in the same
-// block is the shape a routine's describe() builds for the settings view.
+// block is the record a routine builds for each of its settings: a key, a label, an icon and the
+// editor that owns the value.
 //
 // The reference a routine author reads is docs/specs/ui/bindings.md (what a routine can call) and
 // docs/specs/ui/routine.md (what a routine must be). The tables in `bindings/` are the same

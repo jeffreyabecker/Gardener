@@ -21,9 +21,9 @@ A record is the machine as it stood when the call returned, not a live view: wri
 (`s.kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
 have raises `attribute_error`, and the fields are the ones listed under each call.
 
-The `setting` record that `describe()` returns is the same kind of object, but a routine builds it
-itself rather than a call answering it; its fields are listed under `describe()` in
-[routine.md](./routine.md).
+The `setting` record a routine registers is the same kind of object, but a routine builds it itself
+rather than a call answering it; its fields, and the editor each one carries, are listed under the
+settings a routine registers in [routine.md](./routine.md).
 
 ## `vacuum` — the machine
 
@@ -358,13 +358,11 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, scene, hidden, icon)` | `bool` | bind a scene to a name and a title. `hidden` is optional and defaults to `false`; `icon` is an optional `Icon` instance |
-| `routines.names()` | list of strings | every registered name that is not hidden, in registration order |
-| `routines.all()` | list of strings | every registered name, hidden included |
-| `routines.hidden(name)` | `bool` | whether that routine is hidden |
-| `routines.get(name)` | the scene object, or `nil` | the registered instance, so a scene can call a method such as `describe()` in its own frame |
+| `routines.register(name, icon, factory, settings)` | `bool` | bind a name to the scene class that draws it and the list of settings it offers. The scene is built from `factory` on every push; `icon` is an `Icon` instance or `nil`; `settings` is a list of `setting` records, or an empty list |
+| `routines.names()` | list of strings | every registered name, in registration order |
+| `routines.settings(name)` | list of `setting`s, or `nil` | what the routine registered |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
-| `routines.push(name, callback)` | `bool` | push the routine's scene, handing the returned value to the callback |
+| `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
 
 Registering the same name twice is one routine: the later file wins. An icon is optional: a routine
 without one, or one whose icon is `nil`, is a text-only row in the browser. The device's own scenes

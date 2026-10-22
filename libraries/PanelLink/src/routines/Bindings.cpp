@@ -25,8 +25,8 @@ namespace {
 // on an instance whose class declares the field. Only the parser makes an instance variable, and
 // upstream's own class tables come from a code generator this build does not run, so the record
 // classes are declared once, here, in the language a routine is written in, and the firmware fills
-// the instances it answers with. `setting` is the same idea for a routine's own describe(): the
-// browser reads the fields the routine builds.
+// the instances it answers with. `setting` is the same idea for a routine's own settings: the
+// settings list a routine registers is built from them.
 //
 // A record is the state at the moment of the call, which is what the map it replaced was: writing
 // one of its fields changes the routine's copy and nothing else.
@@ -44,21 +44,17 @@ constexpr const char* kRecords =
     "class event\n"
     "  var btn, press\n"
     "end\n"
-    // What a routine's describe() says the browser may edit. `values` is the cycle order for a
-    // `choice`; the other kinds pass nil. `nullable` lets the value be nothing: the editor shows
-    // `--` for it and steps to it below the kind's lowest value. The class is constructed by the
-    // routine, so its fields stay plain data.
+    // What a routine registers as one of its editable values. The class is constructed by the
+    // routine, so its fields stay plain data; `editor` is the kind's editor object, which owns how
+    // the value is read, printed and edited, and `icon` is what the settings list draws at the left
+    // of the row, or nil for a text-only row.
     "class setting\n"
-    "  var key, label, kind, step, min, max, values, nullable\n"
-    "  def init(key, label, kind, step, min, max, values, nullable)\n"
+    "  var key, label, icon, editor\n"
+    "  def init(key, label, editor, icon)\n"
     "    self.key = key\n"
     "    self.label = label\n"
-    "    self.kind = kind\n"
-    "    self.step = step\n"
-    "    self.min = min\n"
-    "    self.max = max\n"
-    "    self.values = values\n"
-    "    self.nullable = nullable\n"
+    "    self.icon = icon\n"
+    "    self.editor = editor\n"
     "  end\n"
     "end\n";
 

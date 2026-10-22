@@ -1,6 +1,6 @@
-# system.test.be — the System scene is the only editor of the global jingle, and it has no
-# describe() for the shared settings walk to cover. Walk its jingle row with the real key path and
-# make sure the identifier moves.
+# system.test.be — the System scene is the only editor of the global jingle, and it is not a routine,
+# so it registers no settings and the shared settings walk does not cover it. Walk its jingle row
+# with the real key path and make sure the identifier moves.
 
 suite = "system"
 

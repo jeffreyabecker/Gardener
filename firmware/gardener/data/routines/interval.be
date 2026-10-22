@@ -126,17 +126,6 @@ class Interval : Scene
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
-      setting("target_pressure", "Target", "pressure", 1, nil, nil, nil, false),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, false),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false),
-      setting("resume_behavior", "Resume", "choice", nil, nil, nil, ["immediately", "after ok"], false)
-    ]
-  end
-
   # The starting values match the shipped `interval.cfg`. The pressures go through clamp() before
   # they are ever handed to the machine, and a hand-edited duration is held to the same bounds the
   # editor uses. A switch's settings map, when there is one, is the set for this activation.
@@ -387,5 +376,12 @@ class Interval : Scene
   end
 end
 
-routines.register("interval", "Interval", Interval(), false, IntervalIcon())
+routines.register("interval", IntervalIcon(), Interval, [
+  setting("set_count", "Sets", IntEditor(1, 1, 20, false)),
+  setting("target_pressure", "Target", PressureEditor(1, false)),
+  setting("work_duration", "Work", DurationEditor(30, 0, 3600, false)),
+  setting("rest_pressure", "Rest", PressureEditor(1, false)),
+  setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false)),
+  setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false))
+])
 return Interval

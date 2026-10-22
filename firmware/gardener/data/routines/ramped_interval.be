@@ -130,18 +130,6 @@ class RampedInterval : Scene
 
   # --- settings ------------------------------------------------------------
 
-  def describe()
-    return [
-      setting("set_count", "Sets", "int", 1, 1, 20, nil, false),
-      setting("initial_pressure", "Start", "pressure", 1, nil, nil, nil, false),
-      setting("final_pressure", "Final", "pressure", 1, nil, nil, nil, false),
-      setting("step_pressure", "Step", "pressure", 1, nil, nil, nil, true),
-      setting("rest_pressure", "Rest", "pressure", 1, nil, nil, nil, true),
-      setting("work_duration", "Work", "duration", 30, 0, 3600, nil, false),
-      setting("rest_duration", "Rest time", "duration", 1, 0, 1200, nil, false)
-    ]
-  end
-
   # The starting values match the shipped `ramped_interval.cfg`. The pressures go through clamp()
   # before they are ever handed to the machine, and a hand-edited duration is held to the same
   # bounds the editor uses. A switch's settings map, when there is one, is the set for this
@@ -444,5 +432,13 @@ class RampedInterval : Scene
   end
 end
 
-routines.register("ramped_interval", "Ramped Interval", RampedInterval(), false, RampedIntervalIcon())
+routines.register("ramped_interval", RampedIntervalIcon(), RampedInterval, [
+  setting("set_count", "Sets", IntEditor(1, 1, 20, false)),
+  setting("initial_pressure", "Start", PressureEditor(1, false)),
+  setting("final_pressure", "Final", PressureEditor(1, false)),
+  setting("step_pressure", "Step", PressureEditor(1, true)),
+  setting("rest_pressure", "Rest", PressureEditor(1, true)),
+  setting("work_duration", "Work", DurationEditor(30, 0, 3600, false)),
+  setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false))
+])
 return RampedInterval

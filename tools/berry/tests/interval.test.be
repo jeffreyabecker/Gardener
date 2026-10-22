@@ -23,7 +23,6 @@ end
 test("activating sets the target without starting the machine", activate_places_target)
 
 def waits_between_sets()
-  assert_not_nil(routines.get("interval"), "interval: not registered")
   var settings = {
     "set_count": 2,
     "target_pressure": 5.0,
@@ -33,7 +32,7 @@ def waits_between_sets()
     "resume_behavior": "after ok"
   }
   assert_true(harness_activate("interval", settings), "interval: activate refused")
-  var page = routines.get("interval")
+  var page = ux.top()
   harness.press("ok", "short")
   wait_until("interval: did not wait between sets", 200, / -> page.phase == "waiting")
   harness.press("ok", "short")
@@ -53,7 +52,7 @@ def reaches_work_hold()
     "resume_behavior": "immediately"
   }
   assert_true(harness_activate("interval", settings), "interval: activate refused")
-  var page = routines.get("interval")
+  var page = ux.top()
   assert_eq(page.phase, "ready", "interval: a fresh page is not ready")
   harness.press("ok", "short")
   wait_until("interval: did not reach the work hold", 200, / -> page.phase == "work")

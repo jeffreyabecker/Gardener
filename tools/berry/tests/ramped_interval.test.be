@@ -13,7 +13,7 @@ def builds_even_ladder()
     "rest_duration": 0
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
-  var page = routines.get("ramped_interval")
+  var page = ux.top()
   var plan = page.target_list()
   assert_eq(plan.size(), 3, "ramped_interval: the ladder is not three sets")
   assert_eq(plan[0], 5.0, "ramped_interval: the ladder does not start at the start pressure")
@@ -47,7 +47,7 @@ def back_pauses_and_ok_restarts()
     "rest_duration": 0
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
-  var page = routines.get("ramped_interval")
+  var page = ux.top()
   harness.press("ok", "short")
   wait_until("ramped_interval: OK did not reach the work hold", 200, / -> page.phase == "work")
   harness.press("back", "short")

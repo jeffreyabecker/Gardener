@@ -15,7 +15,7 @@ harnessErrors = 0
 
 # The registry is a Berry class now, so the routine count the summary prints is read here, after
 # the image has loaded.
-harnessRoutineCount = routines.all().size()
+harnessRoutineCount = routines.names().size()
 
 def harness_fail(text)
   harnessErrors += 1

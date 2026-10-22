@@ -38,8 +38,8 @@ A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/d
 
 A gesture that adjusts the run while it is going instead of ending or restarting it: deeper by a step,
 one more set, or straight to rest and done. What holds it back is the gesture map — OK is the page's
-primary action, Up+Down is the settings view of any page with `describe()`, and Back is the whole stop —
-so a nudge has no press to take that does not first take a meaning away from one of those.
+primary action, Up+Down is the settings view of a routine page, and Back is the whole stop — so a
+nudge has no press to take that does not first take a meaning away from one of those.
 
 
 ## Verify the two builds on hardware

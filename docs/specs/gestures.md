@@ -74,14 +74,14 @@ page's own gesture started.
 
 | Gesture | Meaning |
 | --- | --- |
-| **Up+Down** | the scene's edit or settings. A scene with `describe()` opens the shared settings view. |
+| **Up+Down** | the scene's edit or settings. A routine page opens the shared settings view. |
 | **OK** | the scene's primary action. In the settings list it opens the value; in a value scene it saves. |
 | **Back** | the scene's own: usually leave the current view without writing, or stop what it is running. The stack sets no global rule — a scene that needs another meaning names its own Back. |
 | **Up / Down** | move the selection, or change the value being edited. |
 
-A scene that describes settings takes up+down for the settings view even if it also has an inline
-editor: one gesture, one meaning. A scene without settings may use up+down for whatever editing it
-does have.
+A routine page takes up+down for the settings view even if it also has an inline editor: one
+gesture, one meaning. The device's own scenes have no settings list and use up+down for the editing
+they do have.
 
 The settings view follows the same rules wherever it is hosted: OK opens a value, Up/Down changes
 it, OK saves, Back closes the list or cancels the value scene. A `duration` adds a stage — OK moves
@@ -100,7 +100,7 @@ its routine — in place.
 ## Rules for a scene
 
 1. Leave the reserved holds alone; they are the device's.
-2. Up+Down is the scene's edit gesture. With `describe()`, it opens the shared settings view.
+2. Up+Down is the scene's edit gesture. A routine page opens the shared settings view.
 3. Back is the scene's to name: usually it leaves without writing, or stops what the scene is
    running. A stop of the scene's own is the whole stop — the pump and the scene's state — and it
    adds to the Back hold, which stops every scene whether or not the scene has a gesture of its own.

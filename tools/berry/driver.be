@@ -14,69 +14,37 @@ def harness_kind_known(kind)
   return false
 end
 
-# A switch onto a routine: home, then push the routine's scene. The settings map, when there is
-# one, is that activation's own values.
+# A switch onto a routine: home, then push the routine. Its scene is built from the class it
+# registered, so each switch starts a fresh page; the settings map, when there is one, is that
+# activation's own values.
 def harness_activate(name, settings)
   ux.pop_to_root()
-  if settings == nil
-    return ux.push(routines.get(name))
+  return routines.push(name, nil, settings)
+end
+
+def harness_registered(name)
+  for listed : routines.names()
+    if listed == name
+      return true
+    end
   end
-  return ux.push(routines.get(name), settings)
+  return false
 end
 
 # The map a switch carries is the routine's own settings, typed as the editor reads them, so
 # activate(settings) takes the same path as a real switch.
-def harness_setting_value(name, item)
-  if item.kind == "int"
-    return store.get(name, item.key, 0)
-  end
-  if item.kind == "real"
-    return store.get(name, item.key, 0.0)
-  end
-  if item.kind == "pressure"
-    return vacuum.clamp(store.get(name, item.key, 0.0))
-  end
-  if item.kind == "bool"
-    return store.get(name, item.key, false)
-  end
-  if item.kind == "duration"
-    var seconds = store.get(name, item.key, 0)
-    if item.min != nil && seconds < item.min
-      seconds = item.min
-    end
-    if item.max != nil && seconds > item.max
-      seconds = item.max
-    end
-    return seconds
-  end
-  if item.kind == "choice"
-    if item.values == nil || item.values.size() == 0
-      return ""
-    end
-    return store.get(name, item.key, item.values[0])
-  end
-  return store.get(name, item.key, "")
-end
-
 def harness_settings_map(name)
-  var routine = routines.get(name)
-  if routine == nil
-    return nil
-  end
-  var described = nil
-  try
-    described = routine.describe()
-  except .. as e, m
-    harness_fail("settings: " + name + " describe: " + e + ": " + m)
+  var described = routines.settings(name)
+  if described == nil
     return nil
   end
   if !isinstance(described, list)
-    harness_fail("settings: " + name + " describe() is not a list")
+    harness_fail("settings: " + name + " settings are not a list")
     return nil
   end
   var settings = {}
   for item : described
-    settings[item.key] = harness_setting_value(name, item)
+    settings[item.key] = item.editor.read(name, item.key)
   end
   return settings
 end
@@ -86,22 +54,11 @@ def harness_editor_wrote(name, key, value)
   store.set(name, key, value == nil ? "" : value)
 end
 
-# The settings view is the one path every routine with a describe() shares: push it, edit every
-# value, and make sure each commit reaches the file through the caller.
+# The settings view is the one path every routine with settings shares: push it, edit every value,
+# and make sure each commit reaches the file through the caller.
 def harness_editor(name)
-  var routine = routines.get(name)
-  if routine == nil
-    return
-  end
-
   var label = "settings: " + name
-  var described = nil
-  try
-    described = routine.describe()
-  except .. as e, m
-    harness_fail(label + " describe: " + e + ": " + m)
-    return
-  end
+  var described = routines.settings(name)
   if described == nil || described.size() == 0
     return
   end
@@ -113,13 +70,13 @@ def harness_editor(name)
   while i < described.size()
     var item = described[i]
     if type(item) != "instance"
-      harness_fail(label + " describe() returned a non-setting")
+      harness_fail(label + " settings returned a non-setting")
       return
     end
-    if !harness_kind_known(item.kind)
-      harness_fail(label + " setting " + str(item.key) + " has kind " + str(item.kind))
+    if !harness_kind_known(item.editor.kind())
+      harness_fail(label + " setting " + str(item.key) + " has kind " + str(item.editor.kind()))
     end
-    if item.kind == "choice" && (item.values == nil || item.values.size() == 0)
+    if item.editor.kind() == "choice" && (item.editor.values == nil || item.editor.values.size() == 0)
       harness_fail(label + " choice " + str(item.key) + " has no values")
     end
 
@@ -127,7 +84,7 @@ def harness_editor(name)
     # stage, so a second OK advances to the seconds before the commit.
     harness.press("ok", "short")
     harness.beat(1)
-    if item.kind == "duration"
+    if item.editor.kind() == "duration"
       harness.press("ok", "short")
       harness.beat(1)
     end
@@ -136,7 +93,7 @@ def harness_editor(name)
     harness.press("ok", "short")
     harness.beat(1)
 
-    if harness_kind_known(item.kind) && !harness.wrote(name, item.key)
+    if harness_kind_known(item.editor.kind()) && !harness.wrote(name, item.key)
       harness_fail(label + " did not write " + str(item.key))
     end
 
@@ -208,7 +165,7 @@ end
 # overrides the routine's own before it is activated, which is how a preview shows a run long
 # enough to fill the bubbles; zero leaves the file's value alone.
 def harness_art(name, seconds, path, sets)
-  if routines.get(name) == nil
+  if !harness_registered(name)
     harness_fail("art: no routine named " + name)
     return false
   end
@@ -240,7 +197,7 @@ def harness_check()
     harness_fail("vm: no root scene showing")
   end
 
-  for name : routines.all()
+  for name : routines.names()
     try
       harness_editor(name)
       harness_run_page(name)
@@ -248,6 +205,6 @@ def harness_check()
       harness_fail("vm: " + name + " check: " + e + ": " + m)
     end
   end
-  harness_note("checked " + str(routines.all().size()) + " routines")
+  harness_note("checked " + str(routines.names().size()) + " routines")
   return harnessErrors == 0
 end

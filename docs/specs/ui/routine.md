@@ -9,11 +9,11 @@ phases and its settings keys belong in that page's own `.be` file, its gestures 
 [gestures.md](../gestures.md), and `firmware/gardener/data/routines/` holds the pages this build
 ships when you want to read one. Nothing here should need to change when one of them changes.
 
-The panel UI is a stack of **scenes**. A routine file registers a scene instance; the firmware polls
-the top scene and only the top scene, and a scene pushes or pops scenes with the `ux` module. The
-registry the routine browser draws is a Berry class — the global `routines` instance in
-`/modules/registry.be` — and the only native additions over the older page model are `ux.*` (the
-stack) and the now name-only `store.*` forms.
+The panel UI is a stack of **scenes**. A routine file registers the class its scene is built from;
+the firmware polls the top scene and only the top scene, and a scene pushes or pops scenes with the
+`ux` module. The registry the routine browser draws is a Berry class — the global `routines`
+instance in `/modules/registry.be` — and the only native additions over the older page model are
+`ux.*` (the stack) and the now name-only `store.*` forms.
 
 ## Where a routine lives and what it must look like
 
@@ -33,14 +33,28 @@ class MyPage : Scene
   end
 end
 
-routines.register("mypage", "My page", MyPage())
+routines.register("mypage", MyIcon(), MyPage, [
+  setting("target", "Target", PressureEditor(1, false)),
+  setting("hold", "Hold", DurationEditor(1, 0, 7200, false))
+])
 return MyPage
 ```
 
-The object must be an **instance** with both `activate()` and `poll(now)`. `Scene`
-(`/modules/scene.be`) provides `poll`, a press drain, the repaint cadence and the gesture
-dispatch; a routine extends it and defines `activate()` plus whatever `draw_page()` and `tick(now)`
-it needs. The stack refuses to push a scene that lacks either method.
+The second argument is the routine's **icon**: an instance of a class extending `Icon` from
+`/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
+The browser draws it at the left of the routine's row and shifts the name right by `icon.w + 2`. A
+routine that passes `nil` has a text-only row.
+
+The third argument is the routine's **class**, not an instance: the registry builds a scene from it
+every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
+visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
+`Scene` (`/modules/scene.be`) provides `poll`, a press drain, the repaint cadence and the gesture
+dispatch, and a routine extends it and defines `activate()` plus whatever `draw_page()` and
+`tick(now)` it needs. The stack refuses to push a scene that lacks either `activate()` or `poll`.
+
+The fourth argument is the list of **settings** the routine offers the editor, and an empty list
+when it has none. The list is data — built from `setting` records and walked by the settings view
+(see below) — and the scene does not answer for it.
 
 `activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
 none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
@@ -48,20 +62,9 @@ anywhere. A routine that wants values across a re-entry reads them through `stor
 accepts a map decides what a missing key means (the shipped `interval` uses its fallback, not the
 file's value).
 
-An optional `describe()` gives the settings editor a list of values to edit (see below). A routine
-without one simply has no settings.
-
-A routine can register itself **hidden** with the fourth argument, for example
-`routines.register("mypage", "My page", MyPage(), true)`. It is registered and can be pushed like
-any other, but it is left out of `routines.names()`, which is the list the routine browser draws.
-The device's own scenes — the readout, the system settings and the browser — are not registered at
-all: they are well-known scenes in `/modules/ui.be` the system pushes directly.
-
-The fifth argument is the routine's **icon**: an instance of a class extending `Icon` from
-`/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
-The browser draws it at the left of the routine's row and shifts the name right by `icon.w + 2`. A
-routine that registers no icon, or passes `nil`, has a text-only row:
-`routines.register("mypage", "My page", MyPage(), false, MyIcon())`.
+Every registration is listed: there is no hidden routine. The device's own scenes — the readout, the
+system settings and the browser — are not registered at all: they are well-known scenes in
+`/modules/ui.be` the system pushes directly.
 
 The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
@@ -122,10 +125,10 @@ def on_setting(key, value)
 end
 ```
 
-`SettingsScene` reads the routine's `describe()` and each value from its store file; nothing in
-`settings.be` writes. A committed value is handed to the caller's callback, which writes where
-appropriate. Back at the top of the list pops the settings scene with nil. The routine still
-implements `describe()`, which remains the one description of what is editable.
+`SettingsScene` reads the list the routine registered and each value from its store file through the
+setting's editor; nothing in `settings.be` writes. A committed value is handed to the caller's
+callback, which writes where appropriate. Back at the top of the list pops the settings scene with
+nil.
 
 ## When the firmware calls into a scene
 
@@ -172,40 +175,53 @@ What that costs, stated plainly:
 - A routine that raises is **dropped**: one `[E]` line names the routine, the method and the
   message, and the page falls back to the mark until the next boot.
 
-## `describe()` — the settings a routine describes
+## The settings a routine registers
 
-A routine that wants editable values exposes `describe()`. It returns a list of `setting` records;
-the editor calls it when the settings view opens, so the list can reflect the machine as it is now:
+The fourth argument to `routines.register()` is the list of values the editor may change, in the
+order the settings view shows them. Each is a `setting`, built by the routine:
 
 ```berry
-def describe()
-  return [
-    setting("target", "Target", "pressure", 1, nil, nil, nil, false),
-    setting("hold", "Hold", "duration", 1, 0, 7200, nil, false),
-    setting("mode", "Mode", "choice", 0, nil, nil, ["hold", "cycle"], false),
-    setting("enabled", "Enabled", "bool", 0, nil, nil, nil, true),
-    setting("label", "Label", "text", 0, nil, nil, nil, false)
-  ]
-end
+routines.register("mypage", MyIcon(), MyPage, [
+  setting("target", "Target", PressureEditor(1, false)),
+  setting("hold", "Hold", DurationEditor(1, 0, 7200, false)),
+  setting("mode", "Mode", ChoiceEditor(["hold", "cycle"], false)),
+  setting("enabled", "Enabled", BoolEditor(true))
+])
 ```
 
-`setting(key, label, kind, step, min, max, values, nullable)` builds one record:
+`setting(key, label, editor[, icon])` builds one record:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
 | `label` | string | the line the editor draws beside the value |
-| `kind` | string | `real`, `int`, `bool`, `choice`, `duration` or `pressure`; other kinds are shown read-only |
-| `step` | real | how far Up/Down moves a numeric value; for `duration`, the seconds increment in the seconds stage; for `pressure`, whole steps in the panel's unit; ignored by `bool` and `choice` |
-| `min` / `max` | real or nil | optional bounds for a numeric value; for `duration` both are total seconds and the value never goes below 0; ignored by `pressure`, whose bounds are the machine's |
-| `values` | list or nil | the allowed values for `choice`, in cycle order |
-| `nullable` | bool | whether the value may be nothing; see below |
+| `icon` | an `Icon`, or `nil` | drawn at the left of the row; `nil`, or an argument left off, is a text-only row |
+| `editor` | an editor | what the value is, and how it is read, shown and edited |
 
-The editor reads the current value through `store`, with a fallback whose type matches the kind:
-`0` for `int` and `duration`, `0.0` for `real` and `pressure`, `false` for `bool`, and `values[0]`
-for `choice`. A `choice` needs at least one value. Up/Down steps `real`, `int` and `pressure`,
-toggles `bool`, and cycles `choice`; OK writes the value back with `store.set` and Back leaves
-without writing.
+### Editors
+
+The editor is the whole of what a value is. There is one class per kind, and each keeps the rules
+its kind needs:
+
+| Editor | `kind()` | Arguments |
+| --- | --- | --- |
+| `BoolEditor` | `bool` | `nullable` |
+| `ChoiceEditor` | `choice` | `values`, `nullable` |
+| `IntEditor` | `int` | `step`, `min`, `max`, `nullable` |
+| `RealEditor` | `real` | `step`, `min`, `max`, `nullable` |
+| `PressureEditor` | `pressure` | `step`, `nullable` |
+| `DurationEditor` | `duration` | `step`, `min`, `max`, `nullable` |
+
+An editor answers four questions: `read(name, key)` gives the stored value in the kind's own type,
+`text(value)` prints it as the list shows it, `lowest()` is the value a null setting opens at, and
+`scene(label, value)` builds the value scene that edits it. `kind()` names the kind for whatever has
+to know, which today is only the host harness.
+
+The value is read through `store` with a fallback whose type matches the kind: `0` for `int` and
+`duration`, `0.0` for `real` and `pressure`, `false` for `bool`, and `values[0]` for `choice` — which
+needs at least one value, and leaves the settings view closed when it has none. Up/Down steps
+`real`, `int` and `pressure`, toggles `bool`, and cycles `choice`; OK writes the value back with
+`store.set` and Back leaves without writing.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` and shows `--`
 in the list and the editor. It opens at the kind's lowest real value (the value a non-nullable
@@ -226,9 +242,8 @@ bottom band rather than beside any number, so a page or the editor draws the val
 moves it by `step` whole display steps — one psi, one inHg, ten mmHg — and every value goes through
 `vacuum.clamp()`, whether it was read, stepped or restored, so the editor cannot produce a target
 the machine refuses. An unset pressure reads as `0.0` and therefore clamps to the shallowest legal
-target; a nullable one reads as `nil`, and its lowest value is that same shallowest target. `min`
-and `max` are ignored: the machine's `min` … `floor` is the range.
+target; a nullable one reads as `nil`, and its lowest value is that same shallowest target. The
+machine's own `min` … `floor` is the range, so a pressure editor takes no `min` or `max`.
 
-`describe()` is an ordinary method: it can read `vacuum.state()` and the panel unit, and it must
-return a list. A routine without `describe()`, or one whose method raises, leaves the settings view
-closed and writes one `vacuum.log` line.
+A list the editor cannot read — a choice with no values, or a record that is not a `setting` —
+leaves the settings view closed and writes one `vacuum.log` line.

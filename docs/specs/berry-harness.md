@@ -109,7 +109,7 @@ panel's finished face.
 
 ## What the drive does
 
-For every registered routine, hidden routines included:
+For every registered routine:
 
 1. push with no settings map, then eight beats
 2. one OK, then 400 s of virtual time, so a cycle's phases and its repeat are reached

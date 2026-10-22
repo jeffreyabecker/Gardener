@@ -1,23 +1,34 @@
-# browser.test.be — the names list is the browser's, so hidden pages stay out of it and every
-# other registration is in it.
+# browser.test.be — the names list is the browser's, so it carries every registration, and the rows
+# carry what each registration gave: the routine's name, and its icon when it has one.
 
 suite = "browser"
 
-def registrations_listed()
+def every_registration_is_listed()
   var names = routines.names()
-  for name : routines.all()
+  var rows = routines.rows()
+  assert_eq(rows.size(), names.size(), "the browser has a row for every routine")
+  var i = 0
+  while i < names.size()
+    assert_eq(rows[i][1], names[i], "the browser's row " + str(i) + " is out of step")
+    if routines.icon(names[i]) != nil
+      assert_eq(rows[i][0], routines.icon(names[i]), "the row does not carry the routine's icon")
+    end
+    i += 1
+  end
+end
+
+test("every registration is listed with its icon", every_registration_is_listed)
+
+def shipped_routines_are_listed()
+  for name : ["interval", "ramped_interval", "ramped_static"]
     var found = false
-    for listed : names
+    for listed : routines.names()
       if listed == name
         found = true
       end
     end
-    if routines.hidden(name)
-      assert_true(!found, "routines.names() lists hidden " + name)
-    else
-      assert_true(found, "routines.names() is missing " + name)
-    end
+    assert_true(found, "routines.names() is missing " + name)
   end
 end
 
-test("every registration is listed unless hidden", registrations_listed)
+test("the shipped routines are listed", shipped_routines_are_listed)
