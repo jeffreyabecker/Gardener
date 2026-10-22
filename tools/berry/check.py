@@ -64,7 +64,7 @@ HOST_SOURCES = [
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
     HOST / "HostQueue.cpp",
-    HOST / "MemoryFS.cpp",
+    HOST / "MemoryFiles.cpp",
 ]
 
 MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
@@ -143,7 +143,9 @@ def build(cc, cxx, gfx):
     for source in (*MAIN_SOURCES, *PANEL_SOURCES):
         compile(source, "-std=c++17", cxx)
 
-    run([cxx, *(str(obj) for obj in built), "-o", str(EXE), "-lm"])
+    # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then
+    # refuses to start with a missing entry point rather than a diagnostic.
+    run([cxx, "-static", *(str(obj) for obj in built), "-o", str(EXE), "-lm"])
 
 
 parser = argparse.ArgumentParser(description=__doc__)

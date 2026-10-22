@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <FS.h>
 #include <stdint.h>
 
 #include "BuzzerPlayer.h"
@@ -43,7 +44,8 @@ class Panel : public Machine, public Link, public PanelContext {
   static constexpr uint8_t Code = 3;
 
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, Display* display, PanelSettings& settings, FS& fs, Routines* routines)
+        Battery* battery, Display* display, PanelSettings& settings, FS& fs, Library& library,
+        Routines* routines)
       : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
@@ -52,7 +54,8 @@ class Panel : public Machine, public Link, public PanelContext {
         overlay_(new Overlay(display, battery, &vacuum(), &settings)),
         routines_(routines),
         settings_(settings),
-        fs_(fs) {}
+        fs_(fs),
+        library_(library) {}
 
   const char* name() const override { return "panel"; }
   uint8_t code() const override { return Code; }
@@ -76,7 +79,10 @@ class Panel : public Machine, public Link, public PanelContext {
   Display& display() override { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
   PanelSettings& settings() override { return settings_; }
-  FS& fs() override { return fs_; }
+  Library& library() override { return library_; }
+  // The filesystem is the panel's own, for the mark it draws and the `fs` wire domain. It is not
+  // part of the context: no routine reaches a file.
+  FS& fs() { return fs_; }
   Routines& routines() { return *routines_; }
 
  private:
@@ -89,6 +95,7 @@ class Panel : public Machine, public Link, public PanelContext {
   Routines* routines_;
   PanelSettings& settings_;
   FS& fs_;
+  Library& library_;
   // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
   // connection flags make.
   volatile bool external_ = false;

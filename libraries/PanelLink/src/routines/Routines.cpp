@@ -1,13 +1,15 @@
 #include "routines/Routines.h"
 
-#include <FS.h>
 #include <berry.h>
 #include <stdio.h>
 
-#include "PanelContext.h"
 #include "Logger.h"
+#include "PanelContext.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
+#include "routines/Library.h"
+#include "storage/PanelSettings.h"
+#include "storage/SettingsSource.h"
 #include "storage/Values.h"
 
 namespace gardener {
@@ -29,14 +31,7 @@ void iconKey(char* out, size_t size, size_t slot) {
 // is cleared as soon as the switch is applied. Nothing else about an activation is retained.
 constexpr const char* kPendingSettingsKey = "__routinePendingSettings";
 
-// A routine's values live beside its source, named after it.
-String routineValuesPath(const char* routine) {
-  String path = "/routines/";
-  path += routine;
-  path += ".cfg";
-  return path;
-}
-
+// A routine's values are its own document, named after it. The source decides where that lives.
 // A routine has to look like one before it is kept, so a file that registers something else is
 // refused at load rather than discovered on the first poll.
 bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
@@ -51,7 +46,8 @@ bool objectHasMethod(bvm* vm, int objectIndex, const char* name) {
 
 bool Routines::begin(PanelContext& context) {
   logger_ = &context.logger();
-  fs_ = &context.fs();
+  values_ = context.settings().source();
+  library_ = &context.library();
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
@@ -63,9 +59,9 @@ bool Routines::begin(PanelContext& context) {
   // Modules first: a page may construct a class one of them defines, so those files have to have
   // run before the pages do.
   size_t moduleFiles = 0;
-  const size_t modules = loadAll("/modules", moduleFiles);
+  const size_t modules = loadAll("modules", moduleFiles);
   size_t routineFiles = 0;
-  const size_t pages = loadAll("/routines", routineFiles);
+  const size_t pages = loadAll("routines", routineFiles);
 
   const size_t files = moduleFiles + routineFiles;
   String summary = "vm: ";
@@ -111,26 +107,14 @@ bool Routines::showDefault() {
 
 // --- loading ---------------------------------------------------------------
 
-size_t Routines::loadAll(const char* dir, size_t& found) {
+size_t Routines::loadAll(const char* folder, size_t& found) {
   std::vector<String> files;
-  File folder = fs_->open(dir);
-  if (folder.isDirectory()) {
-    while (true) {
-      File file = folder.openNextFile();
-      if (!file) break;
-      if (!file.isDirectory()) {
-        String name = file.name();
-        if (name.endsWith(".be")) files.push_back(name);
-      }
-      file.close();
-    }
-  }
-  folder.close();
+  if (library_ != nullptr) library_->list(folder, files);
   found = files.size();
 
   size_t loaded = 0;
   for (const String& file : files) {
-    String path = dir;
+    String path = folder;
     path += '/';
     path += file;
     if (loadFile(path)) loaded++;
@@ -139,16 +123,14 @@ size_t Routines::loadAll(const char* dir, size_t& found) {
 }
 
 bool Routines::loadFile(const String& path) {
-  File file = fs_->open(path.c_str(), "r");
-  if (!file) {
+  String source;
+  if (library_ == nullptr || !library_->readFile(path, source)) {
     String message = "vm: ";
     message += path;
     message += " unreadable";
     logger_->error(message.c_str());
     return false;
   }
-  String source = file.readString();
-  file.close();
 
   // Every entry records the stack depth it started at: a failure leaves whatever the interpreter
   // put there, and the VM is restored rather than trusted to be balanced.
@@ -509,42 +491,31 @@ bool Routines::storeSet(const char* key, const String& value) {
 }
 
 bool Routines::storeGet(const char* routine, const char* key, String& out) {
-  // Only a registered name is an address: a caller that names another routine cannot reach a file
+  // Only a registered name is an address: a caller that names another routine cannot reach a value
   // that is not one of the pages the device loaded.
-  if (key == nullptr || !isRegistered(routine)) return false;
+  if (key == nullptr || values_ == nullptr || !isRegistered(routine)) return false;
 
-  File file = fs_->open(routineValuesPath(routine).c_str(), "r");
-  if (!file) return false;
+  String text;
+  if (!values_->read(routine, text)) return false;
+
   Values values;
-  values.parse(file.readString());
-  file.close();
-
+  values.parse(text);
   if (!values.has(key)) return false;
   out = values.get(key, "");
   return true;
 }
 
 bool Routines::storeSet(const char* routine, const char* key, const String& value) {
-  if (key == nullptr || !isRegistered(routine)) return false;
+  if (key == nullptr || values_ == nullptr || !isRegistered(routine)) return false;
 
-  const String path = routineValuesPath(routine);
+  String text;
   Values values;
-  File file = fs_->open(path.c_str(), "r");
-  if (file) {
-    values.parse(file.readString());
-    file.close();
-  }
+  if (values_->read(routine, text)) values.parse(text);
 
   // A repeat value is not worth a flash write.
   if (values.has(key) && values.get(key, "") == value) return true;
   if (!values.set(key, value)) return false;
-
-  File out = fs_->open(path.c_str(), "w");
-  if (!out) return false;
-  const String text = values.text();
-  const bool written = out.print(text) == text.length();
-  out.close();
-  return written;
+  return values_->write(routine, values.text());
 }
 
 }  // namespace gardener

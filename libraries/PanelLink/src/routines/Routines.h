@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <FS.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,6 +15,8 @@ namespace gardener {
 
 class PanelContext;
 class Logger;
+class SettingsSource;
+class Library;
 
 // The Berry runtime behind the disconnected page: the VM, the routines it has loaded, and the one
 // that is active.
@@ -98,8 +99,8 @@ class Routines {
   bool takeStopped();
 
   // --- the `store` module's surface ---
-  // The active routine's own values, kept beside its source in `/routines/<name>.cfg`. The file is
-  // read and written here, on the panel task the VM already runs on.
+  // The active routine's own values, kept in the routine's own document by the settings source the
+  // context gave. Reads and writes happen here, on the panel task the VM already runs on.
   //
   // `storeGet` is false when there is no active routine or nothing is stored under the key;
   // `storeSet` is false when there is no active routine or the file would not take the write. The
@@ -122,7 +123,7 @@ class Routines {
     Press press;
   };
 
-  size_t loadAll(const char* dir, size_t& found);
+  size_t loadAll(const char* folder, size_t& found);
   bool loadFile(const String& path);
   bool startActive(int settingsIndex = 0);
   void reportError(const char* file, const char* what);
@@ -136,9 +137,10 @@ class Routines {
 
   bvm* vm_ = nullptr;
   Logger* logger_ = nullptr;
-  // The filesystem the modules, the routines and their values are on. Set at begin(), from the
-  // context, so nothing here names a particular one.
-  FS* fs_ = nullptr;
+  // Where a routine's own values live, and the files the interpreter loads. Both come from the
+  // context at begin(), so nothing here names a filesystem or a path.
+  SettingsSource* values_ = nullptr;
+  Library* library_ = nullptr;
   // Registration order, and only appended to or replaced in place: a routine's object lives in the VM
   // under its index (`__routine<i>`), so an index has to keep meaning the same routine for as long as
   // the device is up.

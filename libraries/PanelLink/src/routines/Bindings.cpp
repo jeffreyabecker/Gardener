@@ -2,6 +2,8 @@
 
 #include <berry.h>
 
+#include <cstring>
+
 #include "Logger.h"
 #include "PanelContext.h"
 #include "routines/bindings/Module.h"
@@ -72,16 +74,27 @@ void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger)
   installDeviceModule(vm);
   installButtonsModule(vm);
   installBuzzerModule(vm);
-  installJinglesModule(vm, context.fs());
+  installJinglesModule(vm, context.library());
   installRoutinesModule(vm);
   installStoreModule(vm);
 
   // The records are classes, not native functions, so they are compiled rather than installed from
   // a table. Before any routine file runs, so every call that answers a record has one to answer.
   const int base = be_top(vm);
-  if (be_loadbuffer(vm, "records", kRecords, sizeof(kRecords) - 1) != BE_OK ||
-      be_pcall(vm, 0) != BE_OK) {
-    logger.error("vm: records did not compile");
+  int rc = be_loadbuffer(vm, "records", kRecords, strlen(kRecords));
+  if (rc == BE_OK) rc = be_pcall(vm, 0);
+  if (rc != BE_OK) {
+    // Without the parser's own line a failure here is unfindable: every record class is gone and the
+    // files that name one fail after it, with a message about the name rather than about this.
+    String message = "vm: records did not compile";
+    if (be_isstring(vm, -1)) {
+      message += ": ";
+      message += be_tostring(vm, -1);
+    } else if (be_isstring(vm, -2)) {
+      message += ": ";
+      message += be_tostring(vm, -2);
+    }
+    logger.error(message.c_str());
   }
   be_pop(vm, be_top(vm) - base);
 }

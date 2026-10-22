@@ -9,10 +9,11 @@
 
 namespace gardener {
 
-// The panel task's two counters. Only the stop notice is fired here; the go-home sequence belongs
-// to the keys the drive presses itself.
+// The panel task's two counters, and the command queue the native modules post to. Only the stop
+// notice is fired here; the go-home sequence belongs to the keys the drive presses itself.
 volatile uint32_t stopSeq = 0;
 volatile uint32_t goHomeSeq = 0;
+QueueHandle_t machineCommandQueue = nullptr;
 
 }  // namespace gardener
 
@@ -69,7 +70,7 @@ void ModelPump::update(uint32_t nowMs) {
 
 HarnessSession::HarnessSession(std::string dataDir)
     : dataDir_(std::move(dataDir)),
-      settings_(&fs_),
+      settings_(&files_),
       pump_(chamber_),
       sensor_(chamber_),
       valve_(chamber_),
@@ -79,14 +80,14 @@ HarnessSession::HarnessSession(std::string dataDir)
           BitmapPanel::kWidth, BitmapPanel::kHeight),
       buzzer_(buzzerPart_),
       overlay_(&display_, &battery_, &vacuum_, &settings_),
-      context_(overlay_, settings_, vacuum_, battery_, buzzer_, fs_, logger_) {
+      context_(overlay_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {
   machineCommandQueue = xQueueCreate(kCommandDepth, sizeof(MachineCommand));
 }
 
 HarnessSession::~HarnessSession() = default;
 
 bool HarnessSession::begin() {
-  if (!fs_.load(dataDir_)) return false;
+  if (!files_.load(dataDir_)) return false;
 
   // The order Panel::boot brings them up in, minus the bus and the keys.
   settings_.begin();
@@ -94,6 +95,10 @@ bool HarnessSession::begin() {
   buzzerPart_.begin();
   buzzer_.begin();
   overlay_.begin();
+  // Machine::begin's order: the parts first, then the control law over them.
+  sensor_.begin();
+  pump_.begin();
+  valve_.begin();
   vacuum_.begin();
 
   if (!routines_.begin(context_)) return false;

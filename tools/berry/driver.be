@@ -1,7 +1,9 @@
 # driver.be — what the check does after every file has loaded.
 #
-# It names Settings, so it loads after /modules: that class is one of the files there,
-# and a Berry file cannot compile a name that is not declared yet.
+# It names Settings and store, so it loads after /modules and /routines: a Berry file cannot compile
+# a name that is not declared yet. Everything it calls is the firmware's own: the drive is the
+# `harness` module, the pages are looked up and switched through `routines`, and a value is read or
+# written through `store`, which is the path a page uses itself.
 
 def harness_kind_known(kind)
   for name : ["real", "int", "bool", "choice", "duration", "pressure"]
@@ -12,8 +14,16 @@ def harness_kind_known(kind)
   return false
 end
 
-# The map a switch carries is the routine's own settings, typed as the editor reads
-# them, so activate(settings) takes the same path as a real switch.
+# A switch, with or without the map that carries a routine's values.
+def harness_activate(name, settings)
+  if settings == nil
+    return harness.activate(name)
+  end
+  return harness.activate(name, settings)
+end
+
+# The map a switch carries is the routine's own settings, typed as the editor reads them, so
+# activate(settings) takes the same path as a real switch.
 def harness_setting_value(name, item)
   if item.kind == "int"
     return store.get(name, item.key, 0)
@@ -46,44 +56,44 @@ def harness_setting_value(name, item)
   return store.get(name, item.key, "")
 end
 
-def harness_settings_map(entry)
-  if !harness_has_method(entry.object, "describe")
+def harness_settings_map(name)
+  if !routines.has(name, "describe")
     return nil
   end
   var described = nil
   try
-    described = entry.object.describe()
+    described = routines.get(name).describe()
   except .. as e, m
-    harness_fail("settings: " + entry.name + " describe: " + e + ": " + m)
+    harness_fail("settings: " + name + " describe: " + e + ": " + m)
     return nil
   end
   if !isinstance(described, list)
-    harness_fail("settings: " + entry.name + " describe() is not a list")
+    harness_fail("settings: " + name + " describe() is not a list")
     return nil
   end
   var settings = {}
   for item : described
-    settings[item.key] = harness_setting_value(entry.name, item)
+    settings[item.key] = harness_setting_value(name, item)
   end
   return settings
 end
 
-# The settings editor is the one path every routine with a describe() shares, and the
-# one that writes through store. Walk it: open, edit every value, close.
-def harness_editor(entry)
-  if !harness_has_method(entry.object, "describe")
+# The settings editor is the one path every routine with a describe() shares, and the one that
+# writes through store. Walk it: open, edit every value, close.
+def harness_editor(name)
+  if !routines.has(name, "describe")
     return
   end
 
-  var label = "settings: " + entry.name
+  var label = "settings: " + name
   try
-    entry.object.describe()
+    routines.get(name).describe()
   except .. as e, m
     harness_fail(label + " describe: " + e + ": " + m)
     return
   end
 
-  var editor = Settings(entry.name)
+  var editor = Settings(name)
   var opened = false
   try
     opened = editor.open()
@@ -98,7 +108,6 @@ def harness_editor(entry)
 
   harness_guarded(label, / -> editor.draw())
 
-  harnessWrites = []
   var count = editor.described.size()
   var i = 0
   var guard = 0
@@ -117,20 +126,20 @@ def harness_editor(entry)
 
     editor.list.selected = i
     harness_guarded(label, / -> editor.draw())
-    harness_guarded(label, / -> editor.handle(harness_event("ok", "single")))
+    harness_guarded(label, / -> editor.handle(harness_event("ok", "short")))
 
     # OK opens the value. A duration opens twice: minutes first, then seconds.
     guard = 0
     while editor.editing && guard < 6
-      harness_guarded(label, / -> editor.handle(harness_event("up", "single")))
+      harness_guarded(label, / -> editor.handle(harness_event("up", "short")))
       harness_guarded(label, / -> editor.draw())
-      harness_guarded(label, / -> editor.handle(harness_event("ok", "single")))
+      harness_guarded(label, / -> editor.handle(harness_event("ok", "short")))
       guard += 1
     end
     if editor.editing
-      harness_guarded(label, / -> editor.handle(harness_event("back", "single")))
+      harness_guarded(label, / -> editor.handle(harness_event("back", "short")))
     end
-    if harness_kind_known(item.kind) && !harness_wrote(entry.name, item.key)
+    if harness_kind_known(item.kind) && !harness.wrote(name, item.key)
       harness_fail(label + " did not write " + str(item.key))
     end
     i += 1
@@ -138,7 +147,7 @@ def harness_editor(entry)
 
   guard = 0
   while editor.is_open() && guard < 4
-    harness_guarded(label, / -> editor.handle(harness_event("back", "single")))
+    harness_guarded(label, / -> editor.handle(harness_event("back", "short")))
     guard += 1
   end
   if editor.is_open()
@@ -146,54 +155,56 @@ def harness_editor(entry)
   end
 end
 
-# One page's life: activate, a run started by a person, 400 s of virtual time, the
-# device's own stop, every gesture, and a re-entry. `harnessActive` may change under
-# it when a page switches (the browser does), which is the point.
-def harness_run_page(entry)
-  harness_reset()
-  if !harness_activate(entry, nil)
+# One page's life: activate, a run started by a person, 400 s of virtual time, the device's own
+# stop, every gesture, and a re-entry. The active page may change under it when a page switches
+# (the browser does), which is the point.
+def harness_run_page(name)
+  harness.reset()
+  if !harness_activate(name, nil)
     return
   end
-  if !harness_beats(8)
-    return
-  end
-
-  harness_press("ok", "single")
-  if !harness_beats(1600)
+  if !harness.beat(8)
     return
   end
 
-  harness_press("back", "long")
-  vacuum.notice = true
-  harness_beats(8)
-  if harnessActive == nil
+  harness.press("ok", "short")
+  if !harness.beat(1600)
+    return
+  end
+
+  # The device's own Back hold, which the panel task fires without asking the page.
+  harness.press("back", "long")
+  harness.back_hold()
+  harness.beat(8)
+  if harness.active() == nil
     return
   end
 
   for btn : ["up", "down", "ok", "back"]
-    for press : ["single", "double", "long"]
-      harness_press(btn, press)
-      if !harness_beats(4)
+    for press : ["short", "double", "long"]
+      harness.press(btn, press)
+      if !harness.beat(4)
         return
       end
     end
   end
 
   # The Up+Down chord is the settings gesture, reported as an up press with press "chord".
-  harness_press("up", "chord")
-  if !harness_beats(4)
+  harness.press("up", "chord")
+  if !harness.beat(4)
     return
   end
 
-  # A re-entry after a control handover arrives as activate(nil) with the machine
-  # wherever it was left, and a switch may carry the routine's values as a map.
-  if harnessActive != nil
-    harness_activate(harnessActive, nil)
-    harness_beats(4)
-    var settings = harness_settings_map(harnessActive)
+  # A re-entry after a control handover arrives as activate(nil) with the machine wherever it was
+  # left, and a switch may carry the routine's values as a map.
+  var active = harness.active()
+  if active != nil
+    harness_activate(active, nil)
+    harness.beat(4)
+    var settings = harness_settings_map(active)
     if settings != nil
-      harness_activate(harnessActive, settings)
-      harness_beats(8)
+      harness_activate(active, settings)
+      harness.beat(8)
     end
   end
 end
@@ -203,34 +214,35 @@ end
 # the routine's own before it is activated, which is how a preview shows a run long enough to fill
 # the bubbles; zero leaves the file's value alone.
 def harness_art(name, seconds, path, sets)
-  var entry = harness_find(name)
-  if entry == nil
+  if routines.get(name) == nil
     harness_fail("art: no routine named " + name)
     return false
   end
-  harness_reset()
-  var file = harnessStore.find(name, nil)
-  if sets > 0 && file != nil && file.find("set_count", nil) != nil
-    file["set_count"] = str(sets)
+  harness.reset()
+  if sets > 0 && store.get(name, "set_count", nil) != nil
+    store.set(name, "set_count", sets)
   end
-  if !harness_activate(entry, nil)
+  if !harness_activate(name, nil)
     return false
   end
   if seconds > 0
-    harness_press("ok", "single")
-    if !harness_beats(seconds * 4)
+    harness.press("ok", "short")
+    if !harness.beat(seconds * 4)
       return false
     end
   else
-    harness_beats(1)
+    harness.beat(1)
   end
-  frame.save(path)
+  if !harness.save(path)
+    harness_fail("art: cannot write " + path)
+    return false
+  end
   harness_note("art: " + name + " saved to " + path)
   return harnessErrors == 0
 end
 
-# The jingle library is data in /modules/jingles.txt. Every identifier must resolve to a title,
-# a short label and a non-empty note string; current() follows the device setting and falls back.
+# The jingle library is data in /modules/jingles.txt. Every identifier must resolve to a title, a
+# short label and a non-empty note string; current() follows the device setting and falls back.
 def harness_check_jingles()
   var ids = jingles.ids()
   if ids.size() == 0
@@ -256,66 +268,65 @@ def harness_check_jingles()
   if jingles.notes("no_such_jingle") != nil
     harness_fail("jingles: an unknown identifier answered notes")
   end
+  var before = device.jingle()
   device.set_jingle(ids[0])
   if jingles.current() != jingles.notes(ids[0])
     harness_fail("jingles: current() ignored the device setting")
   end
-  var sounds = buzzer.sounds
-  if jingles.play_current() != true || buzzer.sounds != sounds + 1
+  var sounds = harness.buzzer_sounds()
+  if jingles.play_current() != true || harness.buzzer_sounds() != sounds + 1
     harness_fail("jingles: play_current() did not play the current jingle")
   end
   device.set_jingle("no_such_jingle")
   if jingles.current() != jingles.notes(ids[0])
     harness_fail("jingles: current() did not fall back")
   end
-  device.set_jingle(store.get("device", "jingle", ""))
+  device.set_jingle(before)
 end
 
 # The System page is the only editor of the global jingle, and it has no describe() for the shared
 # editor check to walk. Walk its fourth row with the real key path and make sure the identifier moves.
 def harness_check_system_jingle()
-  var entry = harness_find("system")
-  if entry == nil
+  if routines.get("system") == nil
     harness_fail("system: not registered")
     return
   end
-  harness_activate(entry, nil)
+  harness_activate("system", nil)
   # Rows: UNIT, TGT, BT, JINGLE. Three Downs select the last.
   var row = 0
   while row < 3
-    harness_press("down", "single")
-    if !harness_beats(1)
+    harness.press("down", "short")
+    if !harness.beat(1)
       return
     end
     row += 1
   end
-  harness_press("ok", "single")
-  harness_beats(1)
-  var page = entry.object
+  harness.press("ok", "short")
+  harness.beat(1)
+  var page = routines.get("system")
   if !page.editing
     harness_fail("system: OK did not open the jingle editor")
     return
   end
   var before = device.jingle()
-  harness_press("up", "single")
-  harness_beats(1)
-  harness_press("ok", "single")
-  harness_beats(1)
+  harness.press("up", "short")
+  harness.beat(1)
+  harness.press("ok", "short")
+  harness.beat(1)
   if device.jingle() == before
     harness_fail("system: the jingle did not change")
   end
-  device.set_jingle(store.get("device", "jingle", ""))
+  device.set_jingle(before)
 end
 
 # The interval now runs a set count. Use an activation map so the store the editor edits is not
 # involved, and walk one "after ok" pause and the completion of a two-set run.
 def harness_check_interval_sets()
-  var entry = harness_find("interval")
-  if entry == nil
+  if routines.get("interval") == nil
     harness_fail("interval: not registered")
     return
   end
-  harness_reset()
+  harness.reset()
   var settings = {
     "set_count": 2,
     "target_pressure": 5.0,
@@ -324,14 +335,14 @@ def harness_check_interval_sets()
     "rest_duration": 0,
     "resume_behavior": "after ok"
   }
-  if !harness_activate(entry, settings)
+  if !harness_activate("interval", settings)
     return
   end
-  var page = entry.object
-  harness_press("ok", "single")
+  var page = routines.get("interval")
+  harness.press("ok", "short")
   var guard = 0
   while page.phase != "waiting" && guard < 20
-    if !harness_beats(1)
+    if !harness.beat(1)
       return
     end
     guard += 1
@@ -340,15 +351,15 @@ def harness_check_interval_sets()
     harness_fail("interval: did not wait between sets")
     return
   end
-  harness_press("ok", "single")
+  harness.press("ok", "short")
   guard = 0
-  while harnessActive != nil && harnessActive.name != "default" && guard < 20
-    if !harness_beats(1)
+  while harness.active() != nil && harness.active() != "default" && guard < 20
+    if !harness.beat(1)
       return
     end
     guard += 1
   end
-  if harnessActive == nil || harnessActive.name != "default"
+  if harness.active() != "default"
     harness_fail("interval: did not complete after its set count")
   end
 end
@@ -358,15 +369,14 @@ end
 # with Back and picked up with OK. The generic walk presses the device's Back hold instead, so
 # neither path is covered by it.
 def harness_check_ramped_static()
-  var entry = harness_find("ramped_static")
-  if entry == nil
+  if routines.get("ramped_static") == nil
     harness_fail("ramped_static: not registered")
     return
   end
-  var page = entry.object
+  var page = routines.get("ramped_static")
 
-  harness_reset()
-  if !harness_activate(entry, {
+  harness.reset()
+  if !harness_activate("ramped_static", {
       "initial_pressure": 5.0,
       "target_pressure": 10.0,
       "initial_duration": 2,
@@ -379,11 +389,11 @@ def harness_check_ramped_static()
     harness_fail("ramped_static: a ready page shows " + page.status_text())
     return
   end
-  harness_press("ok", "single")
+  harness.press("ok", "short")
   var saw_start = false
   var guard = 0
   while page.status_text() != "RAMP" && guard < 20
-    if !harness_beats(1)
+    if !harness.beat(1)
       return
     end
     saw_start = saw_start || (page.status_text() == "START")
@@ -399,7 +409,7 @@ def harness_check_ramped_static()
   end
   guard = 0
   while page.status_text() != "HOLD" && guard < 40
-    if !harness_beats(1)
+    if !harness.beat(1)
       return
     end
     guard += 1
@@ -409,19 +419,19 @@ def harness_check_ramped_static()
     return
   end
   guard = 0
-  while harnessActive != nil && harnessActive.name == "ramped_static" && guard < 40
-    if !harness_beats(1)
+  while harness.active() == "ramped_static" && guard < 40
+    if !harness.beat(1)
       return
     end
     guard += 1
   end
-  if harnessActive == nil || harnessActive.name != "default"
+  if harness.active() != "default"
     harness_fail("ramped_static: did not go home at the end of the profile")
     return
   end
 
-  harness_reset()
-  if !harness_activate(entry, {
+  harness.reset()
+  if !harness_activate("ramped_static", {
       "initial_pressure": 5.0,
       "target_pressure": 20.0,
       "initial_duration": 30,
@@ -430,10 +440,10 @@ def harness_check_ramped_static()
     })
     return
   end
-  harness_press("ok", "single")
+  harness.press("ok", "short")
   guard = 0
   while page.phase != "run" && guard < 20
-    if !harness_beats(1)
+    if !harness.beat(1)
       return
     end
     guard += 1
@@ -442,16 +452,16 @@ def harness_check_ramped_static()
     harness_fail("ramped_static: OK did not reach the run")
     return
   end
-  harness_press("back", "short")
-  if !harness_beats(1)
+  harness.press("back", "short")
+  if !harness.beat(1)
     return
   end
   if page.phase != "paused"
     harness_fail("ramped_static: Back did not pause the run")
     return
   end
-  harness_press("ok", "single")
-  if !harness_beats(1)
+  harness.press("ok", "short")
+  if !harness.beat(1)
     return
   end
   if page.phase != "approach"
@@ -460,7 +470,7 @@ def harness_check_ramped_static()
   end
   guard = 0
   while page.phase != "run" && guard < 20
-    if !harness_beats(1)
+    if !harness.beat(1)
       return
     end
     guard += 1
@@ -470,52 +480,46 @@ def harness_check_ramped_static()
   end
 end
 
-# The names list is the browser's, so the hidden pages stay out of it and every other
-# registration is in it.
+# The names list is the browser's, so the hidden pages stay out of it and every other registration
+# is in it.
 def harness_check_names()
   var names = routines.names()
-  for entry : harnessEntries
+  for name : harness.entries()
     var found = false
-    for name : names
-      if name == entry.name
+    for listed : names
+      if listed == name
         found = true
       end
     end
-    if entry.hidden && found
-      harness_fail("routines.names() lists hidden " + entry.name)
+    var hidden = harness.hidden(name)
+    if hidden && found
+      harness_fail("routines.names() lists hidden " + name)
     end
-    if !entry.hidden && !found
-      harness_fail("routines.names() is missing " + entry.name)
+    if !hidden && !found
+      harness_fail("routines.names() is missing " + name)
     end
   end
 end
 
 def harness_check()
-  harness_apply_device()
   harness_check_jingles()
   harness_check_system_jingle()
   harness_check_interval_sets()
   harness_check_ramped_static()
   harness_check_names()
 
-  if harness_find("default") == nil
+  if routines.get("default") == nil
     harness_fail("vm: no default routine registered")
   end
 
-  var i = 0
-  while i < harnessEntries.size()
-    var entry = harnessEntries[i]
+  for name : harness.entries()
     try
-      harness_editor(entry)
-      harness_run_page(entry)
+      harness_editor(name)
+      harness_run_page(name)
     except .. as e, m
-      harness_fail("vm: " + entry.name + " check: " + e + ": " + m)
-      harnessActive = nil
+      harness_fail("vm: " + name + " check: " + e + ": " + m)
     end
-    i += 1
   end
-  harness_note("checked " + str(harnessEntries.size()) + " routines, " +
-               str(harnessStore.size()) + " store files")
+  harness_note("checked " + str(harness.entries().size()) + " routines")
   return harnessErrors == 0
 end
-

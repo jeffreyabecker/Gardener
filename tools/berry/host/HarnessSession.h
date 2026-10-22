@@ -1,14 +1,12 @@
 #pragma once
 
-#include <FS.h>
-
 #include <memory>
 #include <string>
 
 #include "BitmapPanel.h"
 #include "BuzzerPlayer.h"
 #include "Logger.h"
-#include "MemoryFS.h"
+#include "MemoryFiles.h"
 #include "PanelContext.h"
 #include "VacuumSystem.h"
 #include "hal/Battery.h"
@@ -169,13 +167,13 @@ class BufferLogger : public Logger {
 class HarnessPanel : public PanelContext {
  public:
   HarnessPanel(Display& display, PanelSettings& settings, VacuumSystem& vacuum, Battery& battery,
-                BuzzerPlayer& buzzer, FS& fs, Logger& logger)
+                BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
         settings_(settings),
         vacuum_(vacuum),
         battery_(battery),
         buzzer_(buzzer),
-        fs_(fs),
+        library_(library),
         logger_(logger) {}
 
   Display& display() override { return display_; }
@@ -183,7 +181,7 @@ class HarnessPanel : public PanelContext {
   VacuumSystem& vacuum() override { return vacuum_; }
   Battery& battery() override { return battery_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
-  FS& fs() override { return fs_; }
+  Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
 
  private:
@@ -192,7 +190,7 @@ class HarnessPanel : public PanelContext {
   VacuumSystem& vacuum_;
   Battery& battery_;
   BuzzerPlayer& buzzer_;
-  FS& fs_;
+  Library& library_;
   Logger& logger_;
 };
 
@@ -213,7 +211,7 @@ class HarnessSession {
   bvm* vm() const { return vm_; }
   Routines& routines() { return routines_; }
   BitmapPanel& panel() { return panel_; }
-  MemoryFS& fs() { return fs_; }
+  MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
 
@@ -228,7 +226,7 @@ class HarnessSession {
  private:
   std::string dataDir_;
 
-  MemoryFS fs_;
+  MemoryFiles files_;
   BufferLogger logger_;
   PanelSettings settings_;
   Chamber chamber_;

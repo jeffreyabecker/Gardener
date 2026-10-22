@@ -1,9 +1,11 @@
 #pragma once
 
 struct bvm;
-class FS;
 
 namespace gardener {
+
+class Library;
+
 namespace berry {
 
 // Each native module a routine sees, installed from its own file in this folder: the module's
@@ -13,9 +15,8 @@ void installScreenModule(bvm* vm);
 void installDeviceModule(bvm* vm);
 void installButtonsModule(bvm* vm);
 void installBuzzerModule(bvm* vm);
-// The jingle library is read once, when the module is installed, from the filesystem the panel was
-// given.
-void installJinglesModule(bvm* vm, FS& fs);
+// The jingle library is read once, when the module is installed, from the interpreter's library.
+void installJinglesModule(bvm* vm, Library& library);
 void installRoutinesModule(bvm* vm);
 void installStoreModule(bvm* vm);
 

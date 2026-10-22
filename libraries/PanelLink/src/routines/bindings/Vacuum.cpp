@@ -1,9 +1,11 @@
 #include <Arduino.h>
 
-#include "Panel.h"
+#include "PanelContext.h"
 #include "Logger.h"
+#include "Machine.h"
 #include "Tasks.h"
 #include "VacuumSystem.h"
+#include "hal/Battery.h"
 #include "routines/Routines.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"

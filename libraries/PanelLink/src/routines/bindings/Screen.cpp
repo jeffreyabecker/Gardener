@@ -1,10 +1,12 @@
 #include <stdio.h>
 
-#include "Panel.h"
+#include "PanelContext.h"
+#include "hal/Display.h"
 #include "panel/Fonts.h"
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/PanelSettings.h"
 
 namespace gardener {
 namespace berry {

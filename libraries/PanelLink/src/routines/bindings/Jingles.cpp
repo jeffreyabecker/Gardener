@@ -1,19 +1,20 @@
 #include <Arduino.h>
-#include <FS.h>
 
 #include <vector>
 
-#include "Panel.h"
+#include "PanelContext.h"
 #include "BuzzerPlayer.h"
 #include "Logger.h"
+#include "routines/Library.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/PanelSettings.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* kJinglePath = "/modules/jingles.txt";
+constexpr const char* kJinglePath = "modules/jingles.txt";
 constexpr char kFieldSeparator = '|';
 constexpr char kCommentStart = '#';
 
@@ -51,16 +52,14 @@ void report(const char* what, const String& id) {
 // only starts a comment at the start of a line so a sharp stays a note. The sequence is handed to
 // the player's own parser here, so a jingle that could not be played is reported at boot rather
 // than when a routine asks for it.
-void loadJingles(FS& fs) {
+void loadJingles(Library& library) {
   jingles.clear();
 
-  File file = fs.open(kJinglePath, "r");
-  if (!file) {
+  String text;
+  if (!library.readFile(kJinglePath, text)) {
     report("missing", "");
     return;
   }
-  String text = file.readString();
-  file.close();
 
   int start = 0;
   while (start <= (int)text.length()) {
@@ -213,8 +212,8 @@ const bnfuncinfo kJinglesLibrary[] = {
 
 }  // namespace
 
-void installJinglesModule(bvm* vm, FS& fs) {
-  loadJingles(fs);
+void installJinglesModule(bvm* vm, Library& library) {
+  loadJingles(library);
   installModule(vm, "jingles", kJinglesLibrary);
 }
 

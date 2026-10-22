@@ -112,7 +112,24 @@ int harnessWrote(bvm* vm) {
     be_raise(vm, "type_error", "harness.wrote(routine, key)");
   }
   const std::string path = std::string("/routines/") + be_tostring(vm, 1) + ".cfg";
-  be_pushbool(vm, gSession->fs().wrote(path, be_tostring(vm, 2)));
+  be_pushbool(vm, gSession->files().wrote(path, be_tostring(vm, 2)));
+  be_return(vm);
+}
+
+// Whether a registered routine stays out of the browser's list. registration is what the device
+// knows; a name that is not registered at all answers false and the names check reports it.
+int harnessHidden(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "harness.hidden(name)");
+  }
+  const char* name = be_tostring(vm, 1);
+  gardener::Routines& routines = gSession->routines();
+  for (size_t i = 0; i < routines.count(); i++) {
+    if (strcmp(routines.nameAt(i), name) != 0) continue;
+    be_pushbool(vm, routines.hiddenAt(i));
+    be_return(vm);
+  }
+  be_pushbool(vm, false);
   be_return(vm);
 }
 
@@ -122,10 +139,10 @@ int harnessBuzzerSounds(bvm* vm) {
 }
 
 const bnfuncinfo kHarnessLibrary[] = {
-    {"beat", harnessBeat},         {"press", harnessPress},       {"activate", harnessActivate},
-    {"back_hold", harnessBackHold}, {"reset", harnessReset},      {"entries", harnessEntries},
-    {"active", harnessActive},     {"save", harnessSave},         {"log", harnessLog},
-    {"wrote", harnessWrote},       {"buzzer_sounds", harnessBuzzerSounds},
+    {"beat", harnessBeat},          {"press", harnessPress},       {"activate", harnessActivate},
+    {"back_hold", harnessBackHold}, {"reset", harnessReset},       {"entries", harnessEntries},
+    {"hidden", harnessHidden},      {"active", harnessActive},     {"save", harnessSave},
+    {"log", harnessLog},            {"wrote", harnessWrote},       {"buzzer_sounds", harnessBuzzerSounds},
     {nullptr, nullptr},
 };
 

@@ -1,12 +1,11 @@
 #pragma once
 
-#include <FS.h>
-
 namespace gardener {
 
 class Battery;
 class BuzzerPlayer;
 class Display;
+class Library;
 class Logger;
 class PanelSettings;
 class VacuumSystem;
@@ -23,9 +22,8 @@ class PanelContext {
   virtual VacuumSystem& vacuum() = 0;
   virtual Battery& battery() = 0;
   virtual BuzzerPlayer& buzzer() = 0;
-  // The filesystem the panel's files live on: the interpreter's modules and routines, each
-  // routine's values, the jingle library and the mark.
-  virtual FS& fs() = 0;
+  // The interpreter's own files: the modules and routines it compiles, and the data it reads.
+  virtual Library& library() = 0;
   virtual Logger& logger() = 0;
 };
 

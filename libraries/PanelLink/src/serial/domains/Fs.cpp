@@ -9,6 +9,7 @@
 #include "Panel.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
+#include "storage/FileSettings.h"
 #include "storage/Settings.h"
 
 namespace gardener {
@@ -323,7 +324,7 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (path == Settings::kPath) {
+  if (path == kDevicePath) {
     if (!discardPayload(io, bytes)) return;
     replyUnsupported(io, path);
     return;
@@ -405,7 +406,7 @@ void FsDomain::remove(Stream& io, const String& args) {
     replyBadArgument(io, path);
     return;
   }
-  if (path == Settings::kPath) {
+  if (path == kDevicePath) {
     replyUnsupported(io, path);
     return;
   }
