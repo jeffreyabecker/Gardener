@@ -12,9 +12,9 @@ class Machine;
 class Link;
 
 // The machine's slice of the GATT table: state, kpa, target, duty, fault,
-// command, fw, ble_proto, control, sensor, floor, flow, volume and caps.
-// Everything a controller commands and reads about the machine itself, before
-// the panel adds anything of its own.
+// command, fw, ble_proto, control, sensor, floor, flow, volume, valve,
+// pump_max, deadband and caps. Everything a controller commands and reads
+// about the machine itself, before the panel adds anything of its own.
 class MachineBleDomain : public BleDomain {
  public:
   explicit MachineBleDomain(Machine* app);
@@ -42,6 +42,9 @@ class MachineBleDomain : public BleDomain {
     Caps,
     Flow,
     Volume,
+    Valve,
+    PumpMax,
+    Deadband,
     Count,
   };
 
@@ -72,6 +75,10 @@ class MachineBleDomain : public BleDomain {
   PendingByte control_;
   PendingFloat flow_;
   PendingFloat volume_;
+  PendingFloat floor_;
+  PendingByte valve_;
+  PendingFloat pumpMax_;
+  PendingFloat deadband_;
 
   // The last value sent for each on-change field, so a pass only notifies a
   // real change.
@@ -83,6 +90,8 @@ class MachineBleDomain : public BleDomain {
   uint8_t lastControl_ = 0;
   float lastFlow_ = 0.0f;
   float lastVolume_ = 0.0f;
+  float lastPumpMax_ = 0.0f;
+  float lastDeadband_ = 0.0f;
   uint32_t lastFastMs_ = 0;
 };
 

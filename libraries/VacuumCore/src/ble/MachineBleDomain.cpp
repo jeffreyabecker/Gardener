@@ -60,10 +60,13 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x0009, NIMBLE_PROPERTY::READ, 1},                                                          // ble_proto
     {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},   // control
     {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // sensor
-    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // floor
+    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // floor
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
     {0x000F, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // flow
     {0x0010, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // volume
+    {0x0011, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},                             // valve
+    {0x0012, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // pump_max
+    {0x0013, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // deadband
 };
 
 MachineBleDomain::MachineBleDomain(Machine* app) : app_(app) {}
@@ -114,7 +117,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
       break;
     case Floor:
-      setFloat(chr, CONTROL_FLOOR_KPA);
+      setFloat(chr, app_->settings().floorKpa());
       break;
     case Caps:
       setByte(chr, app_->capabilities());
@@ -124,6 +127,16 @@ void MachineBleDomain::describe(uint8_t index) {
       break;
     case Volume:
       setFloat(chr, app_->settings().chamberVolumeL());
+      break;
+    case Valve:
+      // The fitted direction, not the stored key: a pending change applies on the next boot.
+      setByte(chr, app_->vacuum().vent().energiseWhenOpen() ? 1 : 0);
+      break;
+    case PumpMax:
+      setFloat(chr, app_->settings().pumpMaxPercent());
+      break;
+    case Deadband:
+      setFloat(chr, app_->settings().deadbandKpa());
       break;
     case Count:
       break;
@@ -167,6 +180,38 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
         memcpy(&litres, value.data(), sizeof(litres));
         volume_.value = litres;
         volume_.has = true;
+      }
+      break;
+    case Floor:
+      if (value.size() != sizeof(float)) return;
+      {
+        float kpa = 0.0f;
+        memcpy(&kpa, value.data(), sizeof(kpa));
+        floor_.value = kpa;
+        floor_.has = true;
+      }
+      break;
+    case Valve:
+      if (value.size() != 1) return;
+      valve_.value = value.data()[0];
+      valve_.has = true;
+      break;
+    case PumpMax:
+      if (value.size() != sizeof(float)) return;
+      {
+        float percent = 0.0f;
+        memcpy(&percent, value.data(), sizeof(percent));
+        pumpMax_.value = percent;
+        pumpMax_.has = true;
+      }
+      break;
+    case Deadband:
+      if (value.size() != sizeof(float)) return;
+      {
+        float kpa = 0.0f;
+        memcpy(&kpa, value.data(), sizeof(kpa));
+        deadband_.value = kpa;
+        deadband_.has = true;
       }
       break;
     default:
@@ -250,6 +295,59 @@ void MachineBleDomain::applyPending(BleLink& link) {
     }
   }
 
+  if (floor_.has) {
+    floor_.has = false;
+    const float kpa = floor_.value;
+    if (owned(link) && isfinite(kpa) && kpa >= CONTROL_MIN_TARGET_KPA) {
+      app_->settings().setFloorKpa(kpa);
+    }
+    describe(Floor);
+    const float applied = app_->settings().floorKpa();
+    if (applied != lastFloor_) {
+      lastFloor_ = applied;
+      link.notify(characteristics_[Floor]);
+    }
+  }
+
+  if (valve_.has) {
+    valve_.has = false;
+    if (owned(link)) {
+      // 0 is normally open, 1 is normally closed. The fitted part is chosen on
+      // the next boot, so the characteristic keeps reading what is fitted now.
+      app_->settings().setValveNormallyOpen(valve_.value == 0);
+    }
+    describe(Valve);
+  }
+
+  if (pumpMax_.has) {
+    pumpMax_.has = false;
+    const float percent = pumpMax_.value;
+    if (owned(link) && isfinite(percent) && percent > 0.0f &&
+        percent <= PUMP_DUTY_MAX_PERCENT) {
+      app_->settings().setPumpMaxPercent(percent);
+    }
+    describe(PumpMax);
+    const float applied = app_->settings().pumpMaxPercent();
+    if (applied != lastPumpMax_) {
+      lastPumpMax_ = applied;
+      link.notify(characteristics_[PumpMax]);
+    }
+  }
+
+  if (deadband_.has) {
+    deadband_.has = false;
+    const float kpa = deadband_.value;
+    if (owned(link) && isfinite(kpa) && kpa > 0.0f) {
+      app_->settings().setDeadbandKpa(kpa);
+    }
+    describe(Deadband);
+    const float applied = app_->settings().deadbandKpa();
+    if (applied != lastDeadband_) {
+      lastDeadband_ = applied;
+      link.notify(characteristics_[Deadband]);
+    }
+  }
+
   if (command_.has) {
     command_.has = false;
     const uint8_t result = execute(link, command_.value);
@@ -309,9 +407,11 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
   publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
   publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
-  publishOnChange(Floor, CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
+  publishOnChange(Floor, app_->settings().floorKpa(), lastFloor_, baseline, link);
   publishOnChange(Flow, app_->settings().pumpFlowLpm(), lastFlow_, baseline, link);
   publishOnChange(Volume, app_->settings().chamberVolumeL(), lastVolume_, baseline, link);
+  publishOnChange(PumpMax, app_->settings().pumpMaxPercent(), lastPumpMax_, baseline, link);
+  publishOnChange(Deadband, app_->settings().deadbandKpa(), lastDeadband_, baseline, link);
 
   const char* fault = vacuum.faultCode();
   if (baseline || lastFault_ != fault) {

@@ -8,6 +8,17 @@
 #include "storage/MachineSettings.h"
 
 namespace gardener {
+namespace {
+
+// The fitted valve is one of two parts, chosen from the setting once at boot: normally open keeps
+// the fail-safe (de-energised vents), normally closed inverts it. The pin is the board's, the
+// direction is the setting's.
+VentValve* makeValve(uint8_t pin, bool normallyOpen) {
+  if (normallyOpen) return new NormallyOpenValve(pin);
+  return new NormallyClosedValve(pin);
+}
+
+}  // namespace
 
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
 // so nothing owns them. The pins come from the sketch, so a board variant edits its sketch and
@@ -16,7 +27,7 @@ Machine::Machine(Logger& logger, const MachinePins& pins, MachineSettings& setti
     : logger_(logger),
       settings_(settings),
       vacuum_(new PwmPump(pins.pumpPwm), new XgzpSensor(pins.sensorAdc),
-              new NormallyOpenValve(pins.ventValve), settings) {}
+              makeValve(pins.ventValve, settings.valveNormallyOpen()), settings) {}
 
 void Machine::boot() {
   String boot = "gardener ";

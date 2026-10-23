@@ -102,7 +102,7 @@ void VacuumDomain::get(Stream& io) {
   }
 
   io.print(" floor=");
-  io.print(CONTROL_FLOOR_KPA, 1u);
+  io.print(app_.settings().floorKpa(), 1u);
   io.print(" duty=");
   io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");

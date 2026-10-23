@@ -120,9 +120,10 @@ void VacuumSystem::setTarget(float kpa) {
   // A target shallower than the chamber cannot be pulled to, so a run in progress uses the valve.
   // A change inside the deadband is already at target and needs neither actuator. A vent already
   // running follows the new target, or ends when the target moves back to where the pump works.
+  const float deadband = settings_.deadbandKpa();
   const float measured = currentKpa();
   const bool active = state_ == RunState::Pulling || state_ == RunState::Holding;
-  const bool shallower = measured > kpa + CONTROL_DEADBAND_KPA;
+  const bool shallower = measured > kpa + deadband;
   if (targetVent_) {
     if (!shallower) endTargetVent();
     return;
@@ -130,7 +131,7 @@ void VacuumSystem::setTarget(float kpa) {
   if (!active) return;
   if (shallower) {
     startTargetVent();
-  } else if (kpa > measured + CONTROL_DEADBAND_KPA) {
+  } else if (kpa > measured + deadband) {
     // A deeper target is a pull from here. HOLD is the target-reached edge, so keeping it while
     // the machine works to a new depth would hide the edge the controller times from.
     setState(RunState::Pulling);
@@ -153,7 +154,7 @@ void VacuumSystem::clearTarget() {
 }
 
 bool VacuumSystem::atTarget() const {
-  return currentKpa() >= targetKpa_ - CONTROL_DEADBAND_KPA;
+  return currentKpa() >= targetKpa_ - settings_.deadbandKpa();
 }
 
 void VacuumSystem::resetFault() {
@@ -229,8 +230,8 @@ float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
 void VacuumSystem::regulate(uint32_t nowMs) {
   if (nowMs - lastControlMs_ < CONTROL_PERIOD_MS) return;
 
-  // A retune — the pump's flow or the chamber's volume changed — starts the integral over, as a
-  // target change already does: the accumulated error is in the old gains' units.
+  // A retune — a loop input the settings hold changed — starts the integral over, as a target
+  // change already does: the accumulated error is in the old gains' units.
   if (settings_.revision() != lastGainsRevision_) {
     pidReset();
     lastGainsRevision_ = settings_.revision();
@@ -240,12 +241,15 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
+  const float deadband = settings_.deadbandKpa();
+  const float maxDuty = settings_.pumpMaxPercent();
+
   // The slew comes off the same reading the error is built from, so the derivative gain is
   // signed against it.
   float measured = currentKpa();
   float error = targetKpa_ - measured;  // positive means "still needs vacuum"
 
-  if (error < -CONTROL_DEADBAND_KPA) {
+  if (error < -deadband) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
     pidReset();
     output_ = 0.0f;
@@ -255,7 +259,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
     return;
   }
 
-  float controlError = fabsf(error) <= CONTROL_DEADBAND_KPA ? 0.0f : error;
+  float controlError = fabsf(error) <= deadband ? 0.0f : error;
 
   float slew = 0.0f;
   uint32_t windowMs = nowMs - lastDerivativeMs_;
@@ -263,7 +267,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
     slew = (measured - lastMeasured_) / ((float)windowMs / 1000.0f);
   }
 
-  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, PUMP_DUTY_MAX_PERCENT);
+  output_ = clampf(pidUpdate(dt, controlError, slew), 0.0f, maxDuty);
   pump_->setDuty(output_);
 
   lastMeasured_ = measured;

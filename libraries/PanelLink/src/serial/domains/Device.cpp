@@ -114,6 +114,15 @@ void DeviceDomain::get(Stream& io) {
   io.print(app_.settings().pumpFlowLpm(), 2u);
   io.print(" volume=");
   io.print(app_.settings().chamberVolumeL(), 3u);
+  io.print(" floor=");
+  io.print(app_.settings().floorKpa(), 1u);
+  io.print(" pump_max=");
+  io.print(app_.settings().pumpMaxPercent(), 1u);
+  io.print(" deadband=");
+  io.print(app_.settings().deadbandKpa(), 2u);
+  // The fitted direction, not the stored key: a pending change takes effect on the next boot.
+  io.print(" valve=");
+  io.print(app_.vacuum().vent().energiseWhenOpen() ? "closed" : "open");
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
@@ -211,6 +220,101 @@ void DeviceDomain::set(Stream& io, const String& args) {
 
     io.print("ok volume=");
     io.print(app_.settings().chamberVolumeL(), 3u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("floor")) {
+    const float kpa = value.toFloat();
+    if (!(kpa >= CONTROL_MIN_TARGET_KPA)) {
+      io.print("err out_of_range field=floor value=");
+      io.print(value);
+      io.print(" min=");
+      io.print(CONTROL_MIN_TARGET_KPA, 1u);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setFloorKpa(kpa);
+
+    io.print("ok floor=");
+    io.print(app_.settings().floorKpa(), 1u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("pump_max")) {
+    const float percent = value.toFloat();
+    if (!(percent > 0.0f && percent <= PUMP_DUTY_MAX_PERCENT)) {
+      io.print("err out_of_range field=pump_max value=");
+      io.print(value);
+      io.print(" max=");
+      io.print(PUMP_DUTY_MAX_PERCENT, 1u);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setPumpMaxPercent(percent);
+
+    io.print("ok pump_max=");
+    io.print(app_.settings().pumpMaxPercent(), 1u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("deadband")) {
+    const float kpa = value.toFloat();
+    if (!(kpa > 0.0f)) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setDeadbandKpa(kpa);
+
+    io.print("ok deadband=");
+    io.print(app_.settings().deadbandKpa(), 2u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("valve")) {
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    if (value.equalsIgnoreCase("open")) {
+      app_.settings().setValveNormallyOpen(true);
+    } else if (value.equalsIgnoreCase("closed")) {
+      app_.settings().setValveNormallyOpen(false);
+    } else {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    // Echo the stored direction: a change applies on the next boot, so the read-out and the
+    // pending setting can differ until then.
+    io.print("ok valve=");
+    io.print(app_.settings().valveNormallyOpen() ? "open" : "closed");
     io.print('\n');
     return;
   }
