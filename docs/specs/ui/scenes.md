@@ -57,11 +57,11 @@ What each one answers:
 | `BrowserScene` | `back:single` | leave |
 | `BrowserScene` | `cancel:single` | leave |
 | `SystemScene` | `up:single`, `down:single` | move the row |
-| `SystemScene` | `ok:single` | open the row |
+| `SystemScene` | `forward:single` | open the row |
 | `SystemScene` | `back:single` | leave |
 | `SystemScene` | `cancel:single` | leave |
 | `SettingsScene` | `up:single`, `down:single` | move the row |
-| `SettingsScene` | `ok:single` | open the row |
+| `SettingsScene` | `forward:single` | open the row |
 | `SettingsScene` | `back:single` | close the list |
 | `ValueScene` | `up:single`, `down:single` | raise or lower the value |
 | `ValueScene` | `ok:single` | close, keeping the value |

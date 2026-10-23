@@ -149,7 +149,7 @@ class SettingsScene : Scene
       self.list.move(1)
       return true
     end
-    if ev == "ok:single"
+    if ev == "forward:single"
       self.open_row()
       return true
     end

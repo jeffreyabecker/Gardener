@@ -14,10 +14,10 @@ def jingle_editor_walks()
     harness.beat(1)
     row += 1
   end
-  harness.press("ok:single")
+  harness.press("forward:single")
   harness.beat(1)
   # The jingle scene is on top now, auditioning the value it opens on.
-  assert_eq(ux.depth(), 3, "system: OK did not open the jingle editor")
+  assert_eq(ux.depth(), 3, "system: Forward did not open the jingle editor")
   var before = device.jingle()
   harness.press("up:single")
   harness.beat(1)

@@ -327,7 +327,7 @@ class SystemScene : Scene
       self.chrome.list.move(1)
       return true
     end
-    if ev == "ok:single"
+    if ev == "forward:single"
       self.open_row()
       return true
     end
@@ -342,14 +342,14 @@ class SystemScene : Scene
     if self.chrome.list.selected == 0
       ux.push(UnitScene(self.unit_index, self.units), nil, / v -> self.set_unit(v))
     elif self.chrome.list.selected == 2
-      # No library is a fault the boot already reported; OK does nothing rather than opening an
-      # editor with nothing to cycle.
+      # No library is a fault the boot already reported; Forward does nothing rather than opening
+      # an editor with nothing to cycle.
       if self.jingle_ids.size() == 0
         return
       end
       ux.push(JingleScene(self.jingle, self.jingle_ids), nil, / v -> self.set_jingle(v))
     end
-    # The radio row is a build fact: the row reports it and OK has nothing to open.
+    # The radio row is a build fact: the row reports it and Forward has nothing to open.
   end
 
   def set_unit(value)

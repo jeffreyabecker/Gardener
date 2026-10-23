@@ -34,9 +34,11 @@ def waits_between_sets()
   assert_true(harness_activate("interval", settings), "interval: activate refused")
   var page = ux.top()
   harness.press("ok:single")
-  wait_until("interval: did not wait between sets", 200, / -> page.phase == "waiting")
+  # A beat is 250 ms, so the 600 s work hold and the 60 s rest are 2640 beats before the pause, and
+  # the second set is another 2400.
+  wait_until("interval: did not wait between sets", 3000, / -> page.phase == "waiting")
   harness.press("ok:single")
-  wait_until("interval: did not complete after its set count", 200,
+  wait_until("interval: did not complete after its set count", 3000,
              / -> ux.depth() == 1)
 end
 

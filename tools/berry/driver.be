@@ -83,9 +83,9 @@ def harness_editor(name)
       harness_fail(label + " choice " + str(item.key) + " has no values")
     end
 
-    # OK opens the value scene for the row the list has selected. A duration opens in the minutes
-    # stage, so Forward advances to the seconds before the commit.
-    harness.press("ok:single")
+    # Forward opens the value scene for the row the list has selected. A duration opens in the
+    # minutes stage, so Forward advances to the seconds before the commit.
+    harness.press("forward:single")
     harness.beat(1)
     if item.editor.kind() == "duration"
       harness.press("forward:single")
