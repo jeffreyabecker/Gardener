@@ -34,8 +34,9 @@ was queued before the stop can run after it.
 
 - Accept `stop` from any link on either transport, before the ownership gate, and answer it exactly
   as an owner's stop is answered today.
-- Give stop a path that does not depend on room in the queue, and make it take precedence over every
-  command queued before it — whatever it discards is logged.
+- Keep the queue as the only way into the machine, and make a command the queue cannot take be
+  requeued by its link on the next poll rather than dropped; a stop takes precedence over every
+  command queued before it, and whatever it discards is logged.
 - Make stop idempotent: stopping a machine that is already venting does not restart its vent timer.
 - Stop and vent from the panel's Cancel hold whatever link drives, without the panel having to own
   the machine. OK+Cancel stays the harder reset.

@@ -23,15 +23,21 @@ place the contract is written.
   reads the opcode. Handle `kOpStop` before the ownership check. Check: a connected but non-owning
   client writes `0x02` and is notified `0x00`.
 
-- [ ] 1.3 Make a stop survive a full command queue. Today `postMachineCommand` in `Tasks.cpp` calls
-  `xQueueSend` with a zero timeout and ignores the result, so a stop behind a full queue of eight is
-  silently dropped. Give the stop a path that does not depend on queue room. Check: the stop is
-  delivered even when the queue is full, and any command dropped to make room is logged.
+- [ ] 1.3 Make a failed queue post retry instead of dropping. Today `postMachineCommand` in
+  `Tasks.cpp` calls `xQueueSend` with a zero timeout and discards the result, so a command posted
+  while the queue is full is lost. Keep the queue as the only way into the machine — it is the one
+  path that reaches the one task writing the vacuum system — and return the send result; each link
+  holds a failed command and requeues it on its next poll. Check: a command posted while the queue
+  is full is queued again on the next poll and applied — delayed, never lost.
 
-- [ ] 1.4 Make a stop take precedence over the queue. Today `drainMachineCommands` in `Tasks.cpp`
-  applies queued commands in order, so a start queued before a stop runs after it. When a stop is
-  pending, discard the commands queued before it and log each at warn. Check: queue start, then
-  setTarget, then stop in one beat — the start and target never run, and the log names both.
+- [ ] 1.4 Collapse the queued commands before applying them. Today `drainMachineCommands` in
+  `Tasks.cpp` applies every queued command in order, so a burst of target changes each opens and
+  closes the valve in turn and a stop can be preceded by a start that runs after it. When the queue
+  is drained, collapse it: a stop discards every command queued before it, and several
+  pressure-setting commands collapse to the last one so intermediate targets are never applied; log
+  what was collapsed. Check: queue start, target 40, target 20, then stop in one beat — the start
+  and both targets never run and the log names all three; queue start then target 40 then target 20
+  without a stop — only target 20 is applied and the log names target 40.
 
 - [ ] 1.5 Make a stop idempotent while releasing. Today `VacuumSystem::stop` in `VacuumSystem.cpp`
   calls `release` again when already venting, which resets `ventStartMs_` and restarts the vent
