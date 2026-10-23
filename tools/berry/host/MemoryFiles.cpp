@@ -107,13 +107,6 @@ void MemoryFiles::list(const String& folder, std::vector<String>& names) {
   for (const std::string& name : found) names.push_back(name.c_str());
 }
 
-bool MemoryFiles::readFile(const String& name, String& out) {
-  std::string text;
-  if (!textAt("/" + std::string(name.c_str()), text)) return false;
-  out = text.c_str();
-  return true;
-}
-
 bool MemoryFiles::wrote(const std::string& path, const std::string& key) const {
   const std::string entry = path + "|" + key;
   return std::find(written_.begin(), written_.end(), entry) != written_.end();

@@ -41,8 +41,8 @@ void setup() {
     mounted = formatted;
   }
 
-  auto* documents = new gardener::FileSettings(LittleFS);
-  auto* settings = new gardener::MachineSettings(documents);
+  auto* files = new gardener::FileLibrary(LittleFS);
+  auto* settings = new gardener::MachineSettings(files);
   settings->begin();
 
   // The diagnostics stream is on from boot and a link switches it, the same as the full device's.

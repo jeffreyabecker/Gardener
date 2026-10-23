@@ -48,10 +48,9 @@ void setup() {
 
   // The settings are read before the panel is built; the diagnostics stream is not one of them. It
   // is on from boot, a link switches it with `device set log`, and a reset returns it to on. The
-  // panel reads its documents and the interpreter's files through these two.
-  auto* documents = new gardener::FileSettings(LittleFS);
-  auto* library = new gardener::FileLibrary(LittleFS);
-  auto* settings = new gardener::PanelSettings(documents);
+  // panel reads its documents and the interpreter's files through the one store.
+  auto* files = new gardener::FileLibrary(LittleFS);
+  auto* settings = new gardener::PanelSettings(files);
   settings->begin();
 
   auto* logger = new gardener::SerialLogger(Serial);
@@ -70,7 +69,7 @@ void setup() {
   }
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, LittleFS, *library, Board);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *settings, LittleFS, *files, Board);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both

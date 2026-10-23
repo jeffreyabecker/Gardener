@@ -9,7 +9,7 @@ namespace gardener {
 // like `unit`. The panel layers its own preferences on top in PanelSettings.
 class MachineSettings : public Settings {
  public:
-  explicit MachineSettings(SettingsSource* source) : Settings(source) {}
+  explicit MachineSettings(Library* store) : Settings(store) {}
 
   float pumpFlowLpm() const { return pumpFlowLpm_; }
   void setPumpFlowLpm(float lpm);

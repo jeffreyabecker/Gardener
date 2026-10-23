@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "routines/Library.h"
-#include "storage/SettingsSource.h"
+#include "storage/Library.h"
 
 namespace gardener {
 
@@ -15,19 +14,15 @@ namespace gardener {
 // modules, the routines and the jingle library are the ones the image ships; every write afterwards
 // lands here, so a run can never touch the repository. It is also the write log the driver asks
 // when it checks that the settings editor persisted a value.
-class MemoryFiles : public SettingsSource, public Library {
+class MemoryFiles : public Library {
  public:
   // Copies a directory tree into the image, as the paths the firmware would see:
   // `<root>/modules/x.be` becomes `/modules/x.be`. False when the directory is not there.
   bool load(const std::string& root);
 
-  // --- SettingsSource ------------------------------------------------------
+  void list(const String& folder, std::vector<String>& names) override;
   bool read(const String& path, String& out) override;
   bool write(const String& path, const String& text) override;
-
-  // --- Library -------------------------------------------------------------
-  void list(const String& folder, std::vector<String>& names) override;
-  bool readFile(const String& name, String& out) override;
 
   // Whether a `key=value` line for `key` changed in `path` since the run began.
   bool wrote(const std::string& path, const std::string& key) const;

@@ -2,20 +2,20 @@
 
 namespace gardener {
 
-Settings::Settings(SettingsSource* source) : source_(source) {}
+Settings::Settings(Library* store) : store_(store) {}
 
 bool Settings::save() const {
-  if (source_ == nullptr) return false;
-  return source_->write(kDevicePath, values_.text());
+  if (store_ == nullptr) return false;
+  return store_->write(kDevicePath, values_.text());
 }
 
 // Reading is best effort: a document that is not there or does not parse leaves the defaults in
 // place. Nothing about a boot depends on the answer.
 bool Settings::begin() {
   bool read = false;
-  if (source_ != nullptr) {
+  if (store_ != nullptr) {
     String text;
-    if (source_->read(kDevicePath, text)) {
+    if (store_->read(kDevicePath, text)) {
       values_.parse(text);
       read = true;
     }

@@ -1,4 +1,4 @@
-#include "routines/FileLibrary.h"
+#include "storage/FileLibrary.h"
 
 #include <algorithm>
 #include <string.h>
@@ -30,14 +30,20 @@ void FileLibrary::list(const String& folder, std::vector<String>& names) {
             });
 }
 
-bool FileLibrary::readFile(const String& name, String& out) {
-  String path = "/";
-  path += name;
+bool FileLibrary::read(const String& path, String& out) {
   File file = fs_.open(path.c_str(), "r");
   if (!file) return false;
   out = file.readString();
   file.close();
   return true;
+}
+
+bool FileLibrary::write(const String& path, const String& text) {
+  File file = fs_.open(path.c_str(), "w");
+  if (!file) return false;
+  const bool written = file.print(text) == text.length();
+  file.close();
+  return written;
 }
 
 }  // namespace gardener

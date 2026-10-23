@@ -5,16 +5,16 @@
 #include "PanelContext.h"
 #include "BuzzerPlayer.h"
 #include "Logger.h"
-#include "routines/Library.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/Library.h"
 #include "storage/PanelSettings.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* kJinglePath = "modules/jingles.txt";
+constexpr const char* kJinglePath = "/modules/jingles.txt";
 constexpr char kFieldSeparator = '|';
 constexpr char kCommentStart = '#';
 
@@ -56,7 +56,7 @@ void loadJingles(Library& library) {
   jingles.clear();
 
   String text;
-  if (!library.readFile(kJinglePath, text)) {
+  if (!library.read(kJinglePath, text)) {
     report("missing", "");
     return;
   }

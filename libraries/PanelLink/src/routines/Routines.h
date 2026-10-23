@@ -13,7 +13,6 @@ namespace gardener {
 
 class PanelContext;
 class Logger;
-class SettingsSource;
 class Library;
 
 // The Berry runtime behind the disconnected page: the VM, the modules and scenes it has loaded,
@@ -79,9 +78,8 @@ class Routines {
 
   bvm* vm_ = nullptr;
   Logger* logger_ = nullptr;
-  // Where a routine's own values live, and the files the interpreter loads. Both come from the
-  // context at begin(), so nothing here names a filesystem or a path.
-  SettingsSource* values_ = nullptr;
+  // The files the interpreter loads and the routine documents it reads and writes, from the context
+  // at begin(), so nothing here names a filesystem or a path.
   Library* library_ = nullptr;
   UxStack stack_;
 };

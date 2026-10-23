@@ -9,7 +9,6 @@
 #include "Panel.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
-#include "storage/FileSettings.h"
 #include "storage/Settings.h"
 
 namespace gardener {

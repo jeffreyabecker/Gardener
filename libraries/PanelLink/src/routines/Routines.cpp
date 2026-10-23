@@ -7,9 +7,8 @@
 #include "Logger.h"
 #include "PanelContext.h"
 #include "routines/Bindings.h"
-#include "routines/Library.h"
+#include "storage/Library.h"
 #include "storage/PanelSettings.h"
-#include "storage/SettingsSource.h"
 #include "storage/Values.h"
 
 namespace gardener {
@@ -37,7 +36,6 @@ String routinePath(const char* name) {
 
 bool Routines::begin(PanelContext& context) {
   logger_ = &context.logger();
-  values_ = context.settings().source();
   library_ = &context.library();
 
   vm_ = be_vm_new();
@@ -92,7 +90,8 @@ size_t Routines::loadAll(const char* folder, size_t& found) {
 
   size_t loaded = 0;
   for (const String& file : files) {
-    String path = folder;
+    String path = "/";
+    path += folder;
     path += '/';
     path += file;
     if (loadFile(path)) loaded++;
@@ -102,7 +101,7 @@ size_t Routines::loadAll(const char* folder, size_t& found) {
 
 bool Routines::loadFile(const String& path) {
   String source;
-  if (library_ == nullptr || !library_->readFile(path, source)) {
+  if (library_ == nullptr || !library_->read(path, source)) {
     String message = "vm: ";
     message += path;
     message += " unreadable";
@@ -151,10 +150,10 @@ void Routines::reportError(const char* file, const char* what) {
 // --- the routine's own values ----------------------------------------------
 
 bool Routines::storeGet(const char* routine, const char* key, String& out) {
-  if (!plainWord(routine) || key == nullptr || values_ == nullptr) return false;
+  if (!plainWord(routine) || key == nullptr || library_ == nullptr) return false;
 
   String text;
-  if (!values_->read(routinePath(routine), text)) return false;
+  if (!library_->read(routinePath(routine), text)) return false;
 
   Values values;
   values.parse(text);
@@ -164,16 +163,16 @@ bool Routines::storeGet(const char* routine, const char* key, String& out) {
 }
 
 bool Routines::storeSet(const char* routine, const char* key, const String& value) {
-  if (!plainWord(routine) || key == nullptr || values_ == nullptr) return false;
+  if (!plainWord(routine) || key == nullptr || library_ == nullptr) return false;
 
   String text;
   Values values;
-  if (values_->read(routinePath(routine), text)) values.parse(text);
+  if (library_->read(routinePath(routine), text)) values.parse(text);
 
   // A repeat value is not worth a flash write.
   if (values.has(key) && values.get(key, "") == value) return true;
   if (!values.set(key, value)) return false;
-  return values_->write(routinePath(routine), values.text());
+  return library_->write(routinePath(routine), values.text());
 }
 
 }  // namespace gardener

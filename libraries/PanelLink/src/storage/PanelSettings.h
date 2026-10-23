@@ -12,7 +12,7 @@ namespace gardener {
 // preferences stay on MachineSettings.
 class PanelSettings : public MachineSettings {
  public:
-  explicit PanelSettings(SettingsSource* source) : MachineSettings(source) {}
+  explicit PanelSettings(Library* store) : MachineSettings(store) {}
 
   DisplayUnit unit() const { return unit_; }
   void setUnit(DisplayUnit unit);
