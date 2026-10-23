@@ -95,10 +95,11 @@ target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target belo
 ## The frame and its pictures
 
 `--art` and `--scene` run the real page and save what it drew. The default is an animated GIF, one
-frame per beat at the panel's 128 x 64, paper and ink, replaying at virtual speed; a `.bmp` `--out`
-saves a single still instead, as before. The GIF is enlarged 2 x to 256 x 128 by `kRenderScale` in
-the GIF writer — nearest neighbour, because the picture is one bit — while the `.bmp` stays at the
-panel's native size. The drawing is not an approximation of the driver's — the primitives,
+frame per beat at the panel's 128 x 64, paper and ink, each held for a second so the run reads
+slowly; a `.bmp` `--out` saves a single still instead, as before. The GIF is enlarged 2 x to
+256 x 128 by `kRenderScale` in the GIF writer — nearest neighbour, because the picture is one bit —
+while the `.bmp` stays at the panel's native size. The frame delay is `kGifDelayCs`, one line to
+change to slow the whole animation down or speed it up. The drawing is not an approximation of the driver's — the primitives,
 `drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and the font data
 is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `ADAFRUIT_GFX`, then
 `arduino-cli`, then the usual sketchbook paths. A missing library stops the run with the

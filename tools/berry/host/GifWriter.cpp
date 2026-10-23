@@ -97,7 +97,7 @@ std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
 }  // namespace
 
 bool writeGif(const char* path, int16_t width, int16_t height,
-              const std::vector<std::vector<uint8_t>>& frames, uint16_t delayCs) {
+              const std::vector<std::vector<uint8_t>>& frames) {
   if (frames.empty()) return false;
 
   const int16_t outWidth = width * kRenderScale;
@@ -133,7 +133,7 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put8(file, 0xF9);
     put8(file, 0x04);
     put8(file, 0x00);
-    put16(file, delayCs);
+    put16(file, kGifDelayCs);
     put8(file, 0x00);
     put8(file, 0x00);
 

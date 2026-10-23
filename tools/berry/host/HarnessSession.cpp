@@ -188,8 +188,7 @@ bool HarnessSession::endCapture() {
     return true;
   }
   BitmapPanel& panel = display_.driver();
-  const bool ok = writeGif(capturePath_.c_str(), panel.width(), panel.height(), captureFrames_,
-                           kBeatMs / 10);
+  const bool ok = writeGif(capturePath_.c_str(), panel.width(), panel.height(), captureFrames_);
   captureFrames_.clear();
   capturePath_.clear();
   return ok;
