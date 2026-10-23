@@ -31,13 +31,13 @@ class Chamber {
  public:
   void advance(uint32_t ms);
   void reset();
-  float kpa() const { return kpa_; }
+  float pressureKpa() const { return pressureKpa_; }
   void setDuty(float percent) { duty_ = percent; }
   void setVenting(bool venting) { venting_ = venting; }
   bool venting() const { return venting_; }
 
  private:
-  float kpa_ = 0.0f;
+  float pressureKpa_ = 0.0f;
   float duty_ = 0.0f;
   bool venting_ = true;
 };
@@ -75,7 +75,7 @@ class ModelSensor : public PressureSensor {
   void update(uint32_t) override {}
   bool present() const override { return present_; }
   bool readingValid() const override { return present_; }
-  float kpa() const override { return chamber_.kpa(); }
+  float pressureKpa() const override { return chamber_.pressureKpa(); }
 
  private:
   Chamber& chamber_;

@@ -37,7 +37,7 @@ int deviceSetUnit(bvm* vm) {
 // The target the default program pulls to; 0 when none has been set. The page clamps a new value to
 // the machine's bounds before it writes it, and the default page clamps again when it restores one.
 int deviceTarget(bvm* vm) {
-  be_pushreal(vm, gContext->settings().targetKpa());
+  be_pushreal(vm, gContext->settings().targetPressureKpa());
   be_return(vm);
 }
 

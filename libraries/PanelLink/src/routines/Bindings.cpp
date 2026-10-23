@@ -21,7 +21,7 @@ namespace {
 
 // --- the records -----------------------------------------------------------
 //
-// A routine reads a record with dots -- `s.kpa`, `ev.btn` -- and in this interpreter that works only
+// A routine reads a record with dots -- `s.pressure_kpa`, `ev.btn` -- and in this interpreter that works only
 // on an instance whose class declares the field. Only the parser makes an instance variable, and
 // upstream's own class tables come from a code generator this build does not run, so the record
 // classes are declared once, here, in the language a routine is written in, and the firmware fills
@@ -33,7 +33,7 @@ namespace {
 
 constexpr const char* kRecords =
     "class reading\n"
-    "  var kpa, target, duty, floor, min, state, fault, batt, sensor_ok\n"
+    "  var pressure_kpa, target, duty, floor, min, state, fault, batt, sensor_ok\n"
     "end\n"
     "class unit\n"
     "  var name, suffix, per_kpa, whole_step, decimals\n"

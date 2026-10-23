@@ -53,7 +53,7 @@ static_assert(static_cast<uint8_t>(RunState::Idle) == 0 &&
 
 const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x0001, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // state
-    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // kpa
+    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // pressure_kpa
     {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // target
     {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // duty
     {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                               // fault
@@ -92,11 +92,11 @@ void MachineBleDomain::describe(uint8_t index) {
     case State:
       setByte(chr, static_cast<uint8_t>(vacuum.runState()));
       break;
-    case Kpa:
-      setFloat(chr, vacuum.currentKpa());
+    case PressureKpa:
+      setFloat(chr, vacuum.currentPressureKpa());
       break;
     case Target:
-      setFloat(chr, vacuum.targetKpa());
+      setFloat(chr, vacuum.targetPressureKpa());
       break;
     case Duty:
       setFloat(chr, vacuum.pump().dutyPercent());
@@ -119,7 +119,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
       break;
     case Floor:
-      setFloat(chr, app_->settings().floorKpa());
+      setFloat(chr, app_->settings().floorPressureKpa());
       break;
     case Caps:
       setByte(chr, app_->capabilities());
@@ -138,7 +138,7 @@ void MachineBleDomain::describe(uint8_t index) {
       setFloat(chr, app_->settings().pumpMaxPercent());
       break;
     case Deadband:
-      setFloat(chr, app_->settings().deadbandKpa());
+      setFloat(chr, app_->settings().deadbandPressureKpa());
       break;
     case Count:
       break;
@@ -150,9 +150,9 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
     case Target:
       if (value.size() != sizeof(float)) return;
       {
-        float kpa = 0.0f;
-        memcpy(&kpa, value.data(), sizeof(kpa));
-        target_.value = kpa;
+        float pressureKpa = 0.0f;
+        memcpy(&pressureKpa, value.data(), sizeof(pressureKpa));
+        target_.value = pressureKpa;
         target_.has = true;
       }
       break;
@@ -187,9 +187,9 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
     case Floor:
       if (value.size() != sizeof(float)) return;
       {
-        float kpa = 0.0f;
-        memcpy(&kpa, value.data(), sizeof(kpa));
-        floor_.value = kpa;
+        float pressureKpa = 0.0f;
+        memcpy(&pressureKpa, value.data(), sizeof(pressureKpa));
+        floor_.value = pressureKpa;
         floor_.has = true;
       }
       break;
@@ -210,9 +210,9 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
     case Deadband:
       if (value.size() != sizeof(float)) return;
       {
-        float kpa = 0.0f;
-        memcpy(&kpa, value.data(), sizeof(kpa));
-        deadband_.value = kpa;
+        float pressureKpa = 0.0f;
+        memcpy(&pressureKpa, value.data(), sizeof(pressureKpa));
+        deadband_.value = pressureKpa;
         deadband_.has = true;
       }
       break;
@@ -245,22 +245,22 @@ void MachineBleDomain::applyPending(BleLink& link) {
 
   if (target_.has) {
     target_.has = false;
-    const float kpa = target_.value;
-    if (owned(link) && isfinite(kpa)) {
+    const float pressureKpa = target_.value;
+    if (owned(link) && isfinite(pressureKpa)) {
       // 0 clears the target; anything else is the vacuum system's to accept or
       // refuse against its own floor, so the two surfaces cannot disagree.
-      if (kpa == 0.0f) {
+      if (pressureKpa == 0.0f) {
         const MachineCommand clear{MachineCommand::Op::ClearTarget};
         postMachineCommand(clear);
       } else {
-        const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
+        const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
         postMachineCommand(set);
       }
     }
     // Read back rather than echo: a refused value leaves the target where it
     // was, and the read is the answer.
     describe(Target);
-    const float applied = app_->vacuum().targetKpa();
+    const float applied = app_->vacuum().targetPressureKpa();
     if (applied != lastTarget_) {
       lastTarget_ = applied;
       link.notify(characteristics_[Target]);
@@ -299,12 +299,12 @@ void MachineBleDomain::applyPending(BleLink& link) {
 
   if (floor_.has) {
     floor_.has = false;
-    const float kpa = floor_.value;
-    if (owned(link) && isfinite(kpa) && kpa >= CONTROL_MIN_TARGET_KPA) {
-      app_->settings().setFloorKpa(kpa);
+    const float pressureKpa = floor_.value;
+    if (owned(link) && isfinite(pressureKpa) && pressureKpa >= CONTROL_MIN_TARGET_KPA) {
+      app_->settings().setFloorPressureKpa(pressureKpa);
     }
     describe(Floor);
-    const float applied = app_->settings().floorKpa();
+    const float applied = app_->settings().floorPressureKpa();
     if (applied != lastFloor_) {
       lastFloor_ = applied;
       link.notify(characteristics_[Floor]);
@@ -338,12 +338,12 @@ void MachineBleDomain::applyPending(BleLink& link) {
 
   if (deadband_.has) {
     deadband_.has = false;
-    const float kpa = deadband_.value;
-    if (owned(link) && isfinite(kpa) && kpa > 0.0f) {
-      app_->settings().setDeadbandKpa(kpa);
+    const float pressureKpa = deadband_.value;
+    if (owned(link) && isfinite(pressureKpa) && pressureKpa > 0.0f) {
+      app_->settings().setDeadbandPressureKpa(pressureKpa);
     }
     describe(Deadband);
-    const float applied = app_->settings().deadbandKpa();
+    const float applied = app_->settings().deadbandPressureKpa();
     if (applied != lastDeadband_) {
       lastDeadband_ = applied;
       link.notify(characteristics_[Deadband]);
@@ -408,12 +408,12 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
   publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
-  publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
-  publishOnChange(Floor, app_->settings().floorKpa(), lastFloor_, baseline, link);
+  publishOnChange(Target, vacuum.targetPressureKpa(), lastTarget_, baseline, link);
+  publishOnChange(Floor, app_->settings().floorPressureKpa(), lastFloor_, baseline, link);
   publishOnChange(Flow, app_->settings().pumpFlowLpm(), lastFlow_, baseline, link);
   publishOnChange(Volume, app_->settings().chamberVolumeL(), lastVolume_, baseline, link);
   publishOnChange(PumpMax, app_->settings().pumpMaxPercent(), lastPumpMax_, baseline, link);
-  publishOnChange(Deadband, app_->settings().deadbandKpa(), lastDeadband_, baseline, link);
+  publishOnChange(Deadband, app_->settings().deadbandPressureKpa(), lastDeadband_, baseline, link);
 
   const char* fault = vacuum.faultCode();
   if (baseline || lastFault_ != fault) {
@@ -424,8 +424,8 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
 
   if (nowMs - lastFastMs_ >= kFastRateMs) {
     lastFastMs_ = nowMs;
-    describe(Kpa);
-    link.notify(characteristics_[Kpa]);
+    describe(PressureKpa);
+    link.notify(characteristics_[PressureKpa]);
     describe(Duty);
     link.notify(characteristics_[Duty]);
   }

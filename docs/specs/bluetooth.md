@@ -15,7 +15,7 @@ leaves. The last 16 bits of a characteristic's UUID select the field, so `state`
 | Characteristic | Properties | Payload |
 | --- | --- | --- |
 | `state` | read, notify | uint8: 0 idle, 1 pull, 2 hold, 3 vent, 4 fault |
-| `kpa` | read, notify | float32 LE, depth below ambient |
+| `pressure_kpa` | read, notify | float32 LE, depth below ambient |
 | `target` | read, write, notify | float32 LE, depth to pull to; 0 clears; a shallower value while running vents to it |
 | `duty` | read, notify | float32 LE, pump duty in percent |
 | `fault` | read, notify | UTF-8 code, empty when none, at most 12 bytes |
@@ -39,7 +39,7 @@ preference its pages print in. A build without a panel has neither characteristi
 finds `caps` with the panel bit clear and no `batt` or `unit` to read. Every other characteristic is
 the machine's and is always present.
 
-`kpa`, `target` and `floor` are always kPa: `unit` says what the panel prints, not what the numbers
+`pressure_kpa`, `target` and `floor` are always kPa: `unit` says what the panel prints, not what the numbers
 mean.
 
 ## Reading, writing and owning
@@ -119,7 +119,7 @@ A notification goes only to a central that has subscribed to that characteristic
 subscription the link sends the current value of every on-change field once, so a client starts from
 the machine's state rather than from the first thing that moves.
 
-`kpa` and `duty` are notified at 5 Hz while a central is connected, and `batt` every 10 s. Every
+`pressure_kpa` and `duty` are notified at 5 Hz while a central is connected, and `batt` every 10 s. Every
 other notifying characteristic is sent when its value changes, with `command` sent after every
 opcode and `control` after every write to it.
 

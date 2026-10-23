@@ -23,16 +23,16 @@ void MachineSettings::load() {
   chamberVolumeL_ = getFloat(kVolumeKey, CHAMBER_VOLUME_L);
   if (!(chamberVolumeL_ > 0.0f)) chamberVolumeL_ = CHAMBER_VOLUME_L;
 
-  floorKpa_ = getFloat(kFloorKey, CONTROL_FLOOR_KPA);
-  if (!(floorKpa_ >= CONTROL_MIN_TARGET_KPA)) floorKpa_ = CONTROL_FLOOR_KPA;
+  floorPressureKpa_ = getFloat(kFloorKey, CONTROL_FLOOR_KPA);
+  if (!(floorPressureKpa_ >= CONTROL_MIN_TARGET_KPA)) floorPressureKpa_ = CONTROL_FLOOR_KPA;
 
   pumpMaxPercent_ = getFloat(kPumpMaxKey, PUMP_DUTY_MAX_PERCENT);
   if (!(pumpMaxPercent_ > 0.0f && pumpMaxPercent_ <= PUMP_DUTY_MAX_PERCENT)) {
     pumpMaxPercent_ = PUMP_DUTY_MAX_PERCENT;
   }
 
-  deadbandKpa_ = getFloat(kDeadbandKey, CONTROL_DEADBAND_KPA);
-  if (!(deadbandKpa_ > 0.0f)) deadbandKpa_ = CONTROL_DEADBAND_KPA;
+  deadbandPressureKpa_ = getFloat(kDeadbandKey, CONTROL_DEADBAND_KPA);
+  if (!(deadbandPressureKpa_ > 0.0f)) deadbandPressureKpa_ = CONTROL_DEADBAND_KPA;
 
   // "open" is the default and the fail-safe; anything that is not "closed" reads as open.
   valveNormallyOpen_ = !get(kValveKey, "open").equalsIgnoreCase("closed");
@@ -52,10 +52,10 @@ void MachineSettings::setChamberVolumeL(float litres) {
   setFloat(kVolumeKey, litres, 3);
 }
 
-void MachineSettings::setFloorKpa(float kpa) {
-  if (!(kpa >= CONTROL_MIN_TARGET_KPA) || kpa == floorKpa_) return;
-  floorKpa_ = kpa;
-  setFloat(kFloorKey, kpa, 1);
+void MachineSettings::setFloorPressureKpa(float pressureKpa) {
+  if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA) || pressureKpa == floorPressureKpa_) return;
+  floorPressureKpa_ = pressureKpa;
+  setFloat(kFloorKey, pressureKpa, 1);
 }
 
 void MachineSettings::setPumpMaxPercent(float percent) {
@@ -65,11 +65,11 @@ void MachineSettings::setPumpMaxPercent(float percent) {
   setFloat(kPumpMaxKey, percent, 1);
 }
 
-void MachineSettings::setDeadbandKpa(float kpa) {
-  if (!(kpa > 0.0f) || kpa == deadbandKpa_) return;
-  deadbandKpa_ = kpa;
+void MachineSettings::setDeadbandPressureKpa(float pressureKpa) {
+  if (!(pressureKpa > 0.0f) || pressureKpa == deadbandPressureKpa_) return;
+  deadbandPressureKpa_ = pressureKpa;
   revision_++;
-  setFloat(kDeadbandKey, kpa, 2);
+  setFloat(kDeadbandKey, pressureKpa, 2);
 }
 
 void MachineSettings::setValveNormallyOpen(bool normallyOpen) {

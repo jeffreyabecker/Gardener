@@ -59,8 +59,8 @@ inline uint8_t displayDecimals(DisplayUnit unit) {
 }
 
 // The same depth, in the unit the glass prints.
-inline float displayValue(float kpa, DisplayUnit unit) {
-  return kpa * displayUnitInfo(unit).perKpa;
+inline float displayValue(float pressureKpa, DisplayUnit unit) {
+  return pressureKpa * displayUnitInfo(unit).perKpa;
 }
 
 }  // namespace gardener

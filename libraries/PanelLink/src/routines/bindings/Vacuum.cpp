@@ -32,13 +32,13 @@ int vacuumTargetOff(bvm* vm) {
 // target without carrying its own copy of the bounds — and so one bound serves the editor, a
 // stored value and anything else that asks.
 int vacuumClamp(bvm* vm) {
-  float kpa = (float)argReal(vm, 1);
-  if (kpa < CONTROL_MIN_TARGET_KPA) {
-    kpa = CONTROL_MIN_TARGET_KPA;
-  } else if (kpa > gContext->settings().floorKpa()) {
-    kpa = gContext->settings().floorKpa();
+  float pressureKpa = (float)argReal(vm, 1);
+  if (pressureKpa < CONTROL_MIN_TARGET_KPA) {
+    pressureKpa = CONTROL_MIN_TARGET_KPA;
+  } else if (pressureKpa > gContext->settings().floorPressureKpa()) {
+    pressureKpa = gContext->settings().floorPressureKpa();
   }
-  be_pushreal(vm, kpa);
+  be_pushreal(vm, pressureKpa);
   be_return(vm);
 }
 
@@ -70,10 +70,10 @@ int vacuumState(bvm* vm) {
   const Battery& battery = gContext->battery();
   const int record = beginRecord(vm, "reading");
   if (record < 0) be_return_nil(vm);
-  setReal(vm, record, "kpa", system.currentKpa());
-  setReal(vm, record, "target", system.targetKpa());
+  setReal(vm, record, "pressure_kpa", system.currentPressureKpa());
+  setReal(vm, record, "target", system.targetPressureKpa());
   setReal(vm, record, "duty", system.pump().dutyPercent());
-  setReal(vm, record, "floor", gContext->settings().floorKpa());
+  setReal(vm, record, "floor", gContext->settings().floorPressureKpa());
   setReal(vm, record, "min", CONTROL_MIN_TARGET_KPA);
   setText(vm, record, "state", runStateName(system.runState()));
   setText(vm, record, "fault", system.faultCode());

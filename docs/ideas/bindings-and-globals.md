@@ -57,7 +57,63 @@ the thing to delete.
 
 ## The options
 
-### Capture the owners in native closures, and delete the globals
+### Split the buckets into classes of their own
+
+`UxStack` holds three kinds of state that do not change together: the scene stack, the gesture
+queue, and the stop notice. Each becomes its own class, and `Routines` becomes only the runtime —
+the VM, the loader, and the beat that drives the stack:
+
+```cpp
+class Routines {
+  // begin/vm/showDefault/poll/enterPage/active, the loader, and:
+  SceneStack stack_;
+  GestureQueue gestures_;
+  StopNotice stopped_;
+  RoutineStore store_;
+};
+```
+
+`SceneStack` is what `UxStack` already is minus the queue and the flag — the frames, the pending
+push/pop, and the activate/poll/deliver logic. `GestureQueue` is the ring buffer and its overflow.
+`StopNotice` is the one-shot `lastStopSeq` compare against the panel task's counter. `RoutineStore`
+takes the `plainWord` and `routinePath` fact and the `Library` the context handed over, so the
+`store` module reaches it directly and `Routines` no longer answers for a routine's values.
+
+This is the same reasoning the conventions already use, in the other direction: the chamber's state
+and the run's state were one state, so `VacuumSystem` is one class; the scene stack and the button
+queue are not one state, so they stop sharing a name. Each new class has one implementation and no
+interface — they are state with an owner, not a boundary.
+
+What it costs: five small classes where there were two, and a decision about who builds and holds
+them. The counterweight is the conventions' own caution against classes nobody else holds. The
+gesture queue and the stop notice are small; they earn their names only if a reader and a writer
+that are not the same thing reach them — which they do: the panel task writes the queue and the
+hand-off writes the flag, while the bindings read both, and the scene stack is written by neither.
+
+### A `BindingSurface` as the single point of entry
+
+The four split classes plus `PanelContext` are what a binding reaches, and a module reaches several
+at once. A `BindingSurface` wraps them in one aggregate — a plain struct holding `PanelContext&`
+and references to the four new classes, no interface — and the closures capture a `BindingSurface*`
+instead of two or three separate pointers:
+
+```cpp
+struct BindingSurface {
+  PanelContext& context;
+  SceneStack& stack;
+  GestureQueue& gestures;
+  StopNotice& stopped;
+  RoutineStore& store;
+};
+```
+
+`install()` takes one argument, and every callback reads the one surface and reaches the part it
+needs — `surface.context.display()`, `surface.stack.push(...)`, `surface.store.get(...)`. This is
+the answer to the question the previous shape left open — one bundled object or several pointers —
+and it is the thing that makes the split possible without making every binding take a fistful of
+arguments.
+
+### Capture the surface in native closures, and delete the globals
 
 Each module's callbacks all reach the same owners, so the module installer captures one pointer per
 module and every function in that module closes over it:
@@ -66,15 +122,15 @@ module and every function in that module closes over it:
 // today
 void installScreenModule(bvm* vm) { installModule(vm, "screen", kScreenLibrary); }
 // after
-void installScreenModule(bvm* vm, PanelContext& context) {
-  installModule(vm, "screen", kScreenLibrary, &context);
+void installScreenModule(bvm* vm, BindingSurface& surface) {
+  installModule(vm, "screen", kScreenLibrary, &surface);
 }
 ```
 
 `installModule` pushes each function as a closure with one upvalue holding the pointer, and a
 callback reads its owner back at entry instead of naming `gContext`. `gContext`, `gRoutines` and
-`gLogger` disappear; `install()` shrinks from three arguments to the owners the modules actually
-need, and the harness's `gSession` goes the same way.
+`gLogger` disappear; `install()` shrinks to the one surface, and the harness's `gSession` goes the
+same way.
 
 Cost: one unpack line at the top of each callback, hidden behind a helper. The `bnfuncinfo` table
 no longer says everything — the installer has to know it is capturing a pointer — but the table
@@ -82,7 +138,7 @@ shape itself can stay, since one captured pointer per module serves every functi
 
 What it makes harder: nothing in the code that exists. It removes the "one VM and one app" sentence
 the globals encoded, but only in the direction that helps — a second VM would capture its own
-context, which globals cannot express at all.
+surface, which globals cannot express at all.
 
 ### Keep the globals but reduce them to one
 
@@ -99,50 +155,39 @@ pollutes the namespace a routine sees, adds a fetch to every call, and makes the
 from routine code — strictly worse than the closures, which keep the pointer where a routine can
 never reach it.
 
-### Slim `Routines` once the closures are in
-
-The closures make the facade unnecessary: a binding reaches the `UxStack` and the `Library` through
-the captured pointer, so `Routines` sheds the eleven pass-throughs and keeps the runtime and the
-loader. What this leaves open is `store`. The `plainWord` and `routinePath` helpers are the
-"routine documents live at `/routines/<name>.cfg`" fact, which is `Routines`' own; but the actual
-read and write are `Library`'s, and the `store` module could capture `Library&` directly and take
-the path fact with it. Whether `store` stays on `Routines` or moves to the `store` binding is a
-second-order question this option does not settle.
-
-### Split `UxStack` into its three buckets
-
-The scene stack, the gesture queue and the stop notice could each become their own owner, reached
-directly by their own module. Against it: the gesture queue is four fields and the stop notice is
-one, and the firmware conventions argue against classes nobody else holds — "one class where one
-class works" cuts against inventing a `GestureQueue` with one caller. The buckets sit together in
-`UxStack` because one beat drives them; the real question is only whether the bindings hold them
-through `Routines` or directly.
-
 ## What each option was ruled in or out by
 
-The closures are the constraint that rules the others in. The stated dislike of the globals rules
-out "keep them, fewer"; the VM-global option is ruled out by the namespace it would hand to routine
-code and by the indirection it adds for no gain over a closure. The `UxStack` split is not ruled
-out but not earned: the three buckets have one reader apiece, and a split names parts that nothing
-else composes.
+The closures and the `BindingSurface` rule the rest in together: the closures delete the globals,
+and the surface gives them one thing to capture, which is what lets the buckets split without
+scattering pointers through every binding. The stated dislike of the globals rules out "keep them,
+fewer"; the VM-global option is ruled out by the namespace it would hand to routine code and by the
+indirection it adds for no gain over a closure.
 
-What has to be true for the preferred option: the captured pointer must point at objects that
-outlive the VM. That is the same lifetime the globals already assume — `Panel` and `Routines`
-outlive the interpreter they built — so it is a stated assumption, not a new hazard. The
-`bnfuncinfo` table and its `installModule` are the only place the installer's shape has to change,
-and the harness's `installHarnessModule` follows the same shape.
+The split is ruled in by the same test that kept `VacuumSystem` whole — is it one state or three? —
+and the three buckets answer three. It is disciplined by the conventions' caution against classes
+nobody holds: a bucket earns its class only when its reader and its writer are not the same thing,
+which is true for the queue (panel task writes, bindings read) and the stop notice (hand-off writes,
+bindings read).
 
-What is still unknown: whether to bundle the captured owners into one small context object or
-capture two pointers (`PanelContext*` and `Routines*`) per module; whether `store` keeps its path
-fact on `Routines` or moves it to the binding; and whether the harness migration rides in the same
-change or follows it.
+What has to be true for the preferred option: the surface must point at objects that outlive the
+VM — the same lifetime the globals already assume, since `Panel` and `Routines` outlive the
+interpreter they built. The `bnfuncinfo` table and its `installModule` are the only place the
+installer's shape has to change, and the harness's `installHarnessModule` follows the same shape.
+
+What is still unknown: whether the four split classes are built and owned by `Routines` or by the
+composition root that hands them to both `Routines` and the surface; whether the harness migration
+rides in the same change or follows it; and whether the panel task's `stopSeq` counter, which the
+`StopNotice` compares against, is passed in as the field it already is or folded into the class.
 
 ## Where I land
 
-Capture the owners in native closures and delete the three globals, then let `Routines` shed the
-pass-through surface that only existed to feed them. The closures are not an exotic mechanism — the
-VM's own libraries are built on them — and they turn the globals from a fact of the API into a
-choice that was never necessary. The `UxStack` split I would leave: the buckets share a beat, and
-splitting them names parts with no second owner. Held with moderate confidence: the closures and
-the `Routines` slimming I would do; the one-context-object-versus-two-pointers and the fate of
-`store` are open enough to decide when the work is picked up.
+Do the whole thing, in this order: split `UxStack` into `SceneStack`, `GestureQueue` and
+`StopNotice`, pull `store` into a `RoutineStore`, and leave `Routines` as the runtime that owns and
+drives them. Build a `BindingSurface` over `PanelContext` and the four new classes, capture it in
+native closures, and delete the three globals.
+
+The closures are not an exotic mechanism — the VM's own libraries are built on them — and they turn
+the globals from a fact of the API into a choice that was never necessary. The split is the same
+"is it one state?" test `VacuumSystem` was decided by, answered the other way. The surface is what
+makes the split liveable. Held with moderate confidence on the whole of it; the still-open parts
+are who owns the four classes and whether the harness migration rides in the same change.

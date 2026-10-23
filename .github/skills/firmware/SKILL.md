@@ -88,7 +88,7 @@ answer it with the smallest mechanism the current single loop allows. Reaching f
 a queue or a watchdog is a question to ask, not a thing to build.
 
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
-of it: one `kpa()` reading, with the ambient reference and the values derived from it left to the
+of it: one `pressureKpa()` reading, with the ambient reference and the values derived from it left to the
 driver that can actually know them.
 
 This is guidance for new code, and for code you are already changing. Existing structure is not a

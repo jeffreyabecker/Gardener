@@ -70,7 +70,7 @@ void XgzpSensor::update(uint32_t nowMs) {
   if (present_) applySample(volts);
 }
 
-float XgzpSensor::kpa() const {
+float XgzpSensor::pressureKpa() const {
   if (!valid_) return 0.0f;
   const float depth = (ambientVolts_ - filteredVolts_) / kVoltsPerKpa;
   return depth > 0.0f ? depth : 0.0f;

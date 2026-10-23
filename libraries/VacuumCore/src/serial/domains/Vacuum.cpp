@@ -90,12 +90,12 @@ void VacuumDomain::execute(Stream& io) {
 
 void VacuumDomain::get(Stream& io) {
   VacuumSystem& vacuum = app_.vacuum();
-  io.print("ok kpa=");
-  io.print(vacuum.currentKpa(), 2u);
+  io.print("ok pressure_kpa=");
+  io.print(vacuum.currentPressureKpa(), 2u);
 
   // A cleared target reads as unset rather than as 0.0, which is a real depth.
   io.print(" target=");
-  const float target = vacuum.targetKpa();
+  const float target = vacuum.targetPressureKpa();
   if (target <= 0.0f) {
     io.print('-');
   } else {
@@ -103,7 +103,7 @@ void VacuumDomain::get(Stream& io) {
   }
 
   io.print(" floor=");
-  io.print(app_.settings().floorKpa(), 1u);
+  io.print(app_.settings().floorPressureKpa(), 1u);
   io.print(" duty=");
   io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");
@@ -143,8 +143,8 @@ void VacuumDomain::target(Stream& io, const String& args) {
   }
 
   // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
-  const float kpa = token.toFloat();
-  if (!(kpa >= CONTROL_MIN_TARGET_KPA)) {
+  const float pressureKpa = token.toFloat();
+  if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA)) {
     io.print("err out_of_range field=target value=");
     io.print(token);
     io.print(" min=");
@@ -153,10 +153,10 @@ void VacuumDomain::target(Stream& io, const String& args) {
     return;
   }
 
-  const MachineCommand set{MachineCommand::Op::SetTarget, kpa};
+  const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
   postMachineCommand(set);
   io.print("ok target=");
-  io.print(kpa, 1u);
+  io.print(pressureKpa, 1u);
   io.print('\n');
 }
 

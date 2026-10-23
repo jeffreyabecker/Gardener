@@ -17,8 +17,8 @@ class PanelSettings : public MachineSettings {
   DisplayUnit unit() const { return unit_; }
   void setUnit(DisplayUnit unit);
   // The depth the default program pulls to, in kPa below ambient; 0 when none has been set.
-  float targetKpa() const { return targetKpa_; }
-  void setTarget(float kpa);
+  float targetPressureKpa() const { return targetPressureKpa_; }
+  void setTarget(float pressureKpa);
   // The selected jingle's identifier, or "" when none has been chosen. The jingles module resolves
   // an empty or unknown value to its first entry.
   String jingle() const;
@@ -33,7 +33,7 @@ class PanelSettings : public MachineSettings {
   static constexpr size_t kJingleIdLength = 32;
 
   DisplayUnit unit_ = DisplayUnit::Kpa;
-  float targetKpa_ = 0.0f;
+  float targetPressureKpa_ = 0.0f;
   char jingle_[kJingleIdLength] = "";
 };
 

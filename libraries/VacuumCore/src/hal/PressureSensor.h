@@ -10,7 +10,7 @@ namespace gardener {
 // amplified analog output is read by an ADC pin and averaged before it is filtered — is in
 // hal/impl/.
 //
-// `kpa` is the vacuum depth: zero at ambient and rising as the chamber is pulled down. The part
+// `pressureKpa` is the vacuum depth: zero at ambient and rising as the chamber is pulled down. The part
 // takes its own reference when it comes up, in begin(), so the depth is measured below whatever
 // pressure the rig was at when it booted. Which part does that, and how, stays the
 // implementation's business.
@@ -29,7 +29,7 @@ class PressureSensor {
 
   // Vacuum depth in kPa, from the reference the part took when it came up. Zero while
   // readingValid() is false.
-  virtual float kpa() const = 0;
+  virtual float pressureKpa() const = 0;
 };
 
 }  // namespace gardener

@@ -25,8 +25,8 @@ void VacuumSystem::begin() {
   lastDerivativeMs_ = lastControlMs_;
 }
 
-float VacuumSystem::currentKpa() const {
-  return sensor_->readingValid() ? sensor_->kpa() : 0.0f;
+float VacuumSystem::currentPressureKpa() const {
+  return sensor_->readingValid() ? sensor_->pressureKpa() : 0.0f;
 }
 
 void VacuumSystem::rest() {
@@ -64,7 +64,7 @@ bool VacuumSystem::start() {
 
 const char* VacuumSystem::startRefusal() const {
   if (faulted()) return "latch";
-  if (targetKpa_ <= 0.0f) return "no_target";
+  if (targetPressureKpa_ <= 0.0f) return "no_target";
   if (!sensor_->present() || !sensor_->readingValid()) return "no_reading";
   return nullptr;
 }
@@ -80,7 +80,7 @@ void VacuumSystem::stop() {
 
 bool VacuumSystem::released() const {
   bool settled = sensor_->present() && sensor_->readingValid() &&
-                 currentKpa() <= VENT_MARGIN_KPA;
+                 currentPressureKpa() <= VENT_MARGIN_KPA;
   return settled || (millis() - ventStartMs_) >= VENT_TIMEOUT_MS;
 }
 
@@ -105,25 +105,25 @@ void VacuumSystem::endTargetVent() {
   output_ = 0.0f;
   lastControlMs_ = millis();
   lastDerivativeMs_ = lastControlMs_;
-  lastMeasured_ = currentKpa();
+  lastMeasured_ = currentPressureKpa();
   setState(RunState::Pulling);
 }
 
-void VacuumSystem::setTarget(float kpa) {
+void VacuumSystem::setTarget(float pressureKpa) {
   // Shallower than the loop's floor is not a target, and the floor itself is one: the bound the
   // wire publishes is this constant, so a target of exactly it has to be taken. Deeper than the
   // pump can reach still is a target: the duty pins at the cap and the run simply never gets there.
-  if (kpa < CONTROL_MIN_TARGET_KPA) return;
-  targetKpa_ = kpa;
+  if (pressureKpa < CONTROL_MIN_TARGET_KPA) return;
+  targetPressureKpa_ = pressureKpa;
   pidReset();
 
   // A target shallower than the chamber cannot be pulled to, so a run in progress uses the valve.
   // A change inside the deadband is already at target and needs neither actuator. A vent already
   // running follows the new target, or ends when the target moves back to where the pump works.
-  const float deadband = settings_.deadbandKpa();
-  const float measured = currentKpa();
+  const float deadband = settings_.deadbandPressureKpa();
+  const float measured = currentPressureKpa();
   const bool active = state_ == RunState::Pulling || state_ == RunState::Holding;
-  const bool shallower = measured > kpa + deadband;
+  const bool shallower = measured > pressureKpa + deadband;
   if (targetVent_) {
     if (!shallower) endTargetVent();
     return;
@@ -131,7 +131,7 @@ void VacuumSystem::setTarget(float kpa) {
   if (!active) return;
   if (shallower) {
     startTargetVent();
-  } else if (kpa > measured + deadband) {
+  } else if (pressureKpa > measured + deadband) {
     // A deeper target is a pull from here. HOLD is the target-reached edge, so keeping it while
     // the machine works to a new depth would hide the edge the controller times from.
     setState(RunState::Pulling);
@@ -139,7 +139,7 @@ void VacuumSystem::setTarget(float kpa) {
 }
 
 void VacuumSystem::clearTarget() {
-  targetKpa_ = 0.0f;
+  targetPressureKpa_ = 0.0f;
   pidReset();
   output_ = 0.0f;
 
@@ -154,7 +154,7 @@ void VacuumSystem::clearTarget() {
 }
 
 bool VacuumSystem::atTarget() const {
-  return currentKpa() >= targetKpa_ - settings_.deadbandKpa();
+  return currentPressureKpa() >= targetPressureKpa_ - settings_.deadbandPressureKpa();
 }
 
 void VacuumSystem::resetFault() {
@@ -196,9 +196,9 @@ void VacuumSystem::service(uint32_t nowMs) {
   if (state_ == RunState::Venting) {
     if (targetVent_) {
       const float landing = CONTROL_VENT_TO_TARGET
-                                ? targetKpa_ + VENT_TARGET_LEAD_KPA
-                                : targetKpa_;
-      const bool arrived = currentKpa() <= landing;
+                                ? targetPressureKpa_ + VENT_TARGET_LEAD_KPA
+                                : targetPressureKpa_;
+      const bool arrived = currentPressureKpa() <= landing;
       const bool timedOut = (nowMs - ventStartMs_) >= VENT_TIMEOUT_MS;
       if (!arrived && !timedOut) return;
       endTargetVent();
@@ -241,13 +241,13 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  const float deadband = settings_.deadbandKpa();
+  const float deadband = settings_.deadbandPressureKpa();
   const float maxDuty = settings_.pumpMaxPercent();
 
   // The slew comes off the same reading the error is built from, so the derivative gain is
   // signed against it.
-  float measured = currentKpa();
-  float error = targetKpa_ - measured;  // positive means "still needs vacuum"
+  float measured = currentPressureKpa();
+  float error = targetPressureKpa_ - measured;  // positive means "still needs vacuum"
 
   if (error < -deadband) {
     // Deeper than requested; the pump cannot vent, so coast and let it bleed up.

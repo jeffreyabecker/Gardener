@@ -11,7 +11,7 @@ namespace gardener {
 class Machine;
 class Link;
 
-// The machine's slice of the GATT table: state, kpa, target, duty, fault,
+// The machine's slice of the GATT table: state, pressure_kpa, target, duty, fault,
 // command, fw, ble_proto, control, sensor, floor, flow, volume, valve,
 // pump_max, deadband and caps. Everything a controller commands and reads
 // about the machine itself, before the panel adds anything of its own.
@@ -29,7 +29,7 @@ class MachineBleDomain : public BleDomain {
  private:
   enum : uint8_t {
     State,
-    Kpa,
+    PressureKpa,
     Target,
     Duty,
     Fault,

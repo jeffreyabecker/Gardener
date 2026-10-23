@@ -20,7 +20,7 @@ void PanelSettings::load() {
   if (parseDisplayUnit(token.c_str(), unit)) unit_ = unit;
 
   const float target = getFloat(kTargetKey, 0.0f);
-  if (target > 0.0f) targetKpa_ = target;
+  if (target > 0.0f) targetPressureKpa_ = target;
 
   get(kJingleKey, "").toCharArray(jingle_, sizeof jingle_);
 }
@@ -36,10 +36,10 @@ void PanelSettings::setUnit(DisplayUnit unit) {
 
 // The page clamps this to the machine's bounds before it gets here; setFloat() only keeps a
 // repeated value from writing the flash.
-void PanelSettings::setTarget(float kpa) {
-  if (kpa == targetKpa_) return;
-  targetKpa_ = kpa;
-  setFloat(kTargetKey, kpa);
+void PanelSettings::setTarget(float pressureKpa) {
+  if (pressureKpa == targetPressureKpa_) return;
+  targetPressureKpa_ = pressureKpa;
+  setFloat(kTargetKey, pressureKpa);
 }
 
 String PanelSettings::jingle() const { return String(jingle_); }

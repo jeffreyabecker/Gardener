@@ -1,6 +1,6 @@
 # Gardener serial protocol
 
-Pressures are **kPa** everywhere. `kpa` is the vacuum depth below ambient — 0 at rest, rising as
+Pressures are **kPa** everywhere. `pressure_kpa` is the vacuum depth below ambient — 0 at rest, rising as
 the chamber is pumped down — and a **target** is a depth on the same ruler. The ambient reference
 belongs to the sensor: the gauge part's output is analog, so its driver takes one from its first
 reading when it comes up, and nothing on the wire sets or restates one.
@@ -246,7 +246,7 @@ panel bit, one record served by both links. The wire still does not draw on the 
 
 | Field | Values | Notes |
 | --- | --- | --- |
-| `kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest, rising as the chamber is pumped down |
+| `pressure_kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest, rising as the chamber is pumped down |
 | `target` | kPa below ambient, or `-` | the current target; `-` when none is set |
 | `floor` | kPa, 1 dp | deepest reachable target, the `floor` device setting below the reference |
 | `duty` | %, 1 dp | pump duty |
@@ -269,7 +269,7 @@ device to stop and vent (§5).
 
 ```
 -> vacuum get
-<- ok kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
+<- ok pressure_kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
 -> control acquire
 <- ok control=serial
 -> vacuum target 40

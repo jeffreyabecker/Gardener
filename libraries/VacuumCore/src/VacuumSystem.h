@@ -43,7 +43,7 @@ inline const char* runStateName(RunState state) {
 // stop, and nothing times a run.
 //
 // Pressures here are depths below ambient, in kPa: a target is a depth to pull to, and
-// currentKpa() is how deep the chamber is now. The reference is the sensor's own — the part takes
+// currentPressureKpa() is how deep the chamber is now. The reference is the sensor's own — the part takes
 // it when it comes up — so it cancels out of every comparison against a target.
 //
 // The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
@@ -60,7 +60,7 @@ class VacuumSystem {
   void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
 
   // --- commands -----------------------------------------------------------
-  void setTarget(float kpa);  // kPa below ambient
+  void setTarget(float pressureKpa);  // kPa below ambient
   // A run without a target is not a run, so clearing one releases the chamber.
   void clearTarget();
   bool start();                   // false: no target/reading, or faulted
@@ -72,10 +72,10 @@ class VacuumSystem {
 
   // --- the reads ----------------------------------------------------------
   // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
-  // same number `vacuum get` reports as `kpa`. Zero while a reading is invalid.
-  float currentKpa() const;
+  // same number `vacuum get` reports as `pressure_kpa`. Zero while a reading is invalid.
+  float currentPressureKpa() const;
   RunState runState() const { return state_; }
-  float targetKpa() const { return targetKpa_; }
+  float targetPressureKpa() const { return targetPressureKpa_; }
   const char* faultCode() const { return faultCode_; }
 
   // The devices, so the serial layer can read what the loop commands without a second copy.
@@ -111,7 +111,7 @@ class VacuumSystem {
   MachineSettings& settings_;
 
   RunState state_ = RunState::Idle;
-  float targetKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports
+  float targetPressureKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
   // VENT is either a release to ambient or a controlled vent to the current target; this is what

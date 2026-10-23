@@ -45,17 +45,17 @@ constexpr uint32_t kTickMs = 50;
 void Chamber::advance(uint32_t ms) {
   const float seconds = (float)ms / 1000.0f;
   if (venting_) {
-    kpa_ -= kVentKpaPerSecond * seconds;
+    pressureKpa_ -= kVentKpaPerSecond * seconds;
   } else {
-    kpa_ += (duty_ / 100.0f) * kPullKpaPerSecond * seconds;
-    kpa_ -= kLeakKpaPerSecond * seconds;
+    pressureKpa_ += (duty_ / 100.0f) * kPullKpaPerSecond * seconds;
+    pressureKpa_ -= kLeakKpaPerSecond * seconds;
   }
-  if (kpa_ < 0.0f) kpa_ = 0.0f;
-  if (kpa_ > kChamberCeilingKpa) kpa_ = kChamberCeilingKpa;
+  if (pressureKpa_ < 0.0f) pressureKpa_ = 0.0f;
+  if (pressureKpa_ > kChamberCeilingKpa) pressureKpa_ = kChamberCeilingKpa;
 }
 
 void Chamber::reset() {
-  kpa_ = 0.0f;
+  pressureKpa_ = 0.0f;
   duty_ = 0.0f;
   venting_ = true;
 }

@@ -72,7 +72,7 @@ class RampedIntervalChrome
     end
     self.sets.draw(filled)
 
-    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
     self.status.draw(self.owner.status_text())
     var left = self.owner.work_left()
     if left != nil
@@ -217,11 +217,11 @@ class RampedInterval : Page
     var out = []
     var i = 0
     while i < self.count
-      var kpa = self.initial + i * self.step
-      if kpa > self.final
-        kpa = self.final
+      var pressure_kpa = self.initial + i * self.step
+      if pressure_kpa > self.final
+        pressure_kpa = self.final
       end
-      out.push(vacuum.clamp(kpa))
+      out.push(vacuum.clamp(pressure_kpa))
       i += 1
     end
     out[out.size() - 1] = vacuum.clamp(self.final)

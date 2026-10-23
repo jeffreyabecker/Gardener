@@ -11,7 +11,7 @@ namespace gardener {
 //
 // The part's facts are here rather than in the board's pin map: at 3.3 V its nominal output is
 // 0.2 V at -100 kPa and 2.7 V at 0 kPa, or 0.025 V per kPa. begin() records the output at ambient
-// and kpa() measures below it, which cancels the part's own zero offset. Samples are averaged,
+// and pressureKpa() measures below it, which cancels the part's own zero offset. Samples are averaged,
 // then EMA filtered.
 class XgzpSensor : public PressureSensor {
  public:
@@ -23,7 +23,7 @@ class XgzpSensor : public PressureSensor {
   bool present() const override { return present_; }
   bool readingValid() const override { return valid_; }
 
-  float kpa() const override;
+  float pressureKpa() const override;
 
  private:
   bool sample(float& outVolts);

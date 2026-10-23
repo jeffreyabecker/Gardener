@@ -14,11 +14,11 @@ Four of the calls answer a **record**: a small object whose fields are read with
 
 ```berry
 var s = vacuum.state()
-var depth = s.kpa          # not s["kpa"]
+var depth = s.pressure_kpa          # not s["pressure_kpa"]
 ```
 
 A record is the machine as it stood when the call returned, not a live view: writing a field
-(`s.kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
+(`s.pressure_kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
 have raises `attribute_error`, and the fields are the ones listed under each call.
 
 The `setting` record a routine registers is the same kind of object, but a routine builds it itself
@@ -29,9 +29,9 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `vacuum.target(kpa)` | — | sets the depth to pull to, in kPa below ambient. A value below `min` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
+| `vacuum.target(pressure_kpa)` | — | sets the depth to pull to, in kPa below ambient. A value below `min` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
 | `vacuum.target_off()` | — | clears the target; releases the chamber if it was pulling or holding |
-| `vacuum.clamp(kpa)` | `real` | the same number held to the machine's bounds, `min` … `floor`. See below |
+| `vacuum.clamp(pressure_kpa)` | `real` | the same number held to the machine's bounds, `min` … `floor`. See below |
 | `vacuum.start()` | `bool` | false when the machine refuses: no target, no valid reading, or a latched fault |
 | `vacuum.stop()` | — | stops the pump and vents. The target is kept |
 | `vacuum.reset()` | — | clears a latched fault, then vents |
@@ -44,7 +44,7 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `kpa` | real | current depth below ambient |
+| `pressure_kpa` | real | current depth below ambient |
 | `target` | real | the target, **0 when none is set** |
 | `duty` | real | pump duty, percent |
 | `floor` | real | deepest target worth asking for |
@@ -74,14 +74,14 @@ stays, and its own `abandon()` is what puts it right. The notice a hand-off fire
 controller owned the device leaves behind is what the page finds on the next `poll` when control
 comes back.
 
-`vacuum.clamp(kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
+`vacuum.clamp(pressure_kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
 target is restored through it, and a page that reads a pressure to start from uses it too — so no
 routine carries its own copy of the two constants:
 
 ```berry
 var s = vacuum.state()
-var start = vacuum.clamp(s.kpa)         # a safe starting point for the editor
+var start = vacuum.clamp(s.pressure_kpa)         # a safe starting point for the editor
 vacuum.target(vacuum.clamp(stored))     # and a stored one it cannot trust yet
 ```
 
@@ -204,7 +204,7 @@ image was built with it.
 | `device.units()` | list of strings | every token `device set unit` accepts, in `panel/Units.h` order |
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.cfg`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
-| `device.set_target(kpa)` | — | stores a new target in `/settings.cfg`; clamp it with `vacuum.clamp()` first |
+| `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.cfg`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
 | `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.cfg` |
@@ -215,9 +215,9 @@ hands it to the machine when it becomes visible. A page that edits these values 
 `device` rather than through its own `store`.
 
 ```berry
-var kpa = device.target()
-if kpa > 0.0
-  vacuum.target(vacuum.clamp(kpa))
+var pressure_kpa = device.target()
+if pressure_kpa > 0.0
+  vacuum.target(vacuum.clamp(pressure_kpa))
 end
 ```
 

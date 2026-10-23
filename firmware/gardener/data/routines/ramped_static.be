@@ -52,7 +52,7 @@ class RampedStaticChrome
 
   def draw(s)
     self.icon.draw(0, 0)
-    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
     self.status.draw(self.owner.status_text())
     var left = self.owner.run_left()
     if left != nil

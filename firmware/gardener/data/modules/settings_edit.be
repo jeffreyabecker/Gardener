@@ -332,8 +332,8 @@ class PressureScene : ValueScene
         return
       end
     end
-    var kpa = self.current + dir * self.step * self.unit.whole_step / self.unit.per_kpa
-    self.current = vacuum.clamp(kpa)
+    var pressure_kpa = self.current + dir * self.step * self.unit.whole_step / self.unit.per_kpa
+    self.current = vacuum.clamp(pressure_kpa)
   end
 
   def value()

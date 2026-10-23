@@ -30,7 +30,7 @@ class ReadoutChrome
   end
 
   def draw(s)
-    self.pressure.draw(s.sensor_ok ? s.kpa : nil)
+    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
 
     if self.owner.editing
       self.target_value.draw(self.owner.edit_target)
@@ -115,9 +115,9 @@ class ReadoutScene : Scene
 
   # OK while editing: write the target to the device setting and place it on the machine.
   def commit_target()
-    var kpa = vacuum.clamp(self.edit_target)
-    device.set_target(kpa)
-    vacuum.target(kpa)
+    var pressure_kpa = vacuum.clamp(self.edit_target)
+    device.set_target(pressure_kpa)
+    vacuum.target(pressure_kpa)
     self.editing = false
     self.draw()
     return true
@@ -132,7 +132,7 @@ class ReadoutScene : Scene
   def edit_start()
     var target = vacuum.state().target
     if target <= 0.0
-      target = vacuum.clamp(vacuum.state().kpa)
+      target = vacuum.clamp(vacuum.state().pressure_kpa)
     end
     return target
   end
@@ -152,9 +152,9 @@ class ReadoutScene : Scene
   # The target outlives a boot as a device setting; this scene hands it to the machine whenever it
   # becomes visible, and ok:double edits it.
   def restore()
-    var kpa = device.target()
-    if kpa > 0.0
-      vacuum.target(vacuum.clamp(kpa))
+    var pressure_kpa = device.target()
+    if pressure_kpa > 0.0
+      vacuum.target(vacuum.clamp(pressure_kpa))
     end
   end
 

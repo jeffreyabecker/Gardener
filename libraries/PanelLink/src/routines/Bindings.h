@@ -25,7 +25,7 @@ namespace berry {
 // registry module. Four of these calls answer a *record* rather than a plain value:
 // `vacuum.state()` a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`,
 // `buttons.take()` an `event`. A record is a class instance whose fields a routine reads with a
-// dot (`s.kpa`, `ev.btn`) -- the classes are declared in `kRecords` and compiled at boot, because
+// dot (`s.pressure_kpa`, `ev.btn`) -- the classes are declared in `kRecords` and compiled at boot, because
 // only the parser can declare an instance variable on a class. The `setting` class in the same
 // block is the record a routine builds for each of its settings: a key, a label, an icon and the
 // editor that owns the value.

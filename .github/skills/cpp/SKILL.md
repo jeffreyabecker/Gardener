@@ -20,7 +20,7 @@ project's own code.
 | --- | --- | --- |
 | Types — `class`, `struct`, `enum`, alias | PascalCase | `VacuumSystem`, `RunState`, `PanelSettings` |
 | Functions and methods | camelCase | `service()`, `startRefusal()`, `buildPanelRoot()` |
-| Local variables and parameters | camelCase | `targetKpa`, `nowMs` |
+| Local variables and parameters | camelCase | `targetPressureKpa`, `nowMs` |
 | Data members | camelCase, trailing underscore | `pump_`, `logger_`, `pidIntegral_` |
 | Constants — `constexpr`, `const`, `static constexpr` | PascalCase | `PanelPriority`, `BackStopMs`, `MarkAsset` |
 | Globals | camelCase | `machineCommandQueue`, `serialConnected` |

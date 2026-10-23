@@ -232,11 +232,11 @@ class PressureDisplay : Component
   # The number fills the content rect. A `border` draws the frame first, which is what lets a value
   # sit in the layout without a label beside it: the box says what the number is. The unit is the
   # overlay's, on the top row with the state icon, so a readout carries no suffix of its own.
-  def draw(kpa)
+  def draw(pressure_kpa)
     var u = screen.unit()
     var text = "--"
-    if kpa != nil
-      text = string.format("%." + str(u.decimals) + "f", kpa * u.per_kpa)
+    if pressure_kpa != nil
+      text = string.format("%." + str(u.decimals) + "f", pressure_kpa * u.per_kpa)
     end
     if self.border > 0
       var f = self.frame()
