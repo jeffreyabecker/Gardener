@@ -9,6 +9,7 @@
 #include "routines/Routines.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/PanelSettings.h"
 
 namespace gardener {
 namespace berry {

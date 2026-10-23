@@ -72,15 +72,19 @@ it, the valve stays open until the reading passes the target and the pump pulls 
 
 The gains are derived from the pump's projected free-flow rate and the chamber volume — two device
 settings, `flow` (L/min) and `volume` (L), with compile-time defaults in `Machine.h`, restored from
-`/settings.cfg`, and overridable over the wire (`device set flow`, `device set volume`). The
-deadband is `CONTROL_DEADBAND_KPA` in `Machine.h`. A different pump or chamber is retuned by
-setting the two numbers, not by re-deriving the gains.
+`/settings.cfg`, and overridable over the wire (`device set flow`, `device set volume`). A different
+pump or chamber is retuned by setting the two numbers, not by re-deriving the gains. The loop's
+other rig numbers are settings the same way: `floor` (the pump's measured reach), `pump_max` (the
+duty cap) and `deadband` (the target-reached tolerance), each with a `Machine.h` default and a
+`device set` verb. `valve` (`open` or `closed`) names the fitted valve's direction and is read once
+at boot, so it is the one setting a change to does not take up until the next boot.
 
 ## Protections
 
 All of these act without consulting the controller:
 
-* duty is hard capped at `PUMP_DUTY_MAX_PERCENT`, and `PUMP_RAMP_PERCENT_PER_SEC` avoids step
+* duty is hard capped at the `pump_max` setting, with the pump driver's own
+  `PUMP_DUTY_MAX_PERCENT` as the part's ceiling, and `PUMP_RAMP_PERCENT_PER_SEC` avoids step
   changes into the pump
 * if the sensor stops producing a plausible reading mid-run, the pump is cut and the state latches
   to `FAULT`

@@ -25,10 +25,13 @@ last 16 bits of a characteristic's UUID select the field, so `state` is
 | `unit` | read, write | uint8, 0 kPa, 1 psi, 2 inHg, 3 mmHg |
 | `control` | read, write, notify | uint8: 0 none, 1 serial, 2 bluetooth, 3 panel — who is on top of the stack |
 | `sensor` | read, notify | uint8: 1 when a reading can be trusted |
-| `floor` | read, notify | float32 LE, deepest target worth offering |
+| `floor` | read, write, notify | float32 LE, the pump's measured reach, deepest target worth offering |
 | `caps` | read | uint8 bitmask: 1 panel, 2 battery |
 | `flow` | read, write, notify | float32 LE, the pump's projected free flow in L/min; the gains follow |
 | `volume` | read, write, notify | float32 LE, the chamber volume in litres; the gains follow |
+| `valve` | read, write | uint8: 0 normally open, 1 normally closed — the fitted part's direction; a write applies on the next boot |
+| `pump_max` | read, write, notify | float32 LE, the duty cap the loop clamps to, at most 90 |
+| `deadband` | read, write, notify | float32 LE, the target-reached tolerance |
 
 `batt` and `unit` are the panel's: `batt` is the gauge the panel carries and `unit` is the
 preference its pages print in. A build without a panel has neither characteristic, so a client

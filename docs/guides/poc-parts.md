@@ -239,13 +239,13 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
 * The sensor's range is -100 kPa, so a pump that pulls deeper saturates the reading. Check the
   pump's ultimate vacuum on its datasheet; a single-stage diaphragm pump lands inside the sensor,
   a two-stage one may not.
-* The pump's measured reach is the `floor`, so set `CONTROL_FLOOR_KPA` in
-  [Machine.h](../../libraries/VacuumCore/src/Machine.h) after measuring it. The PID gains are
-  derived from the pump's free flow and the chamber volume — `device set flow <lpm>` and
-  `device set volume <l>` — so a new pump or chamber is retuned by setting the two numbers, not by
-  re-deriving gains. `PUMP_DUTY_MAX_PERCENT` is 90 %, which is 10.8 V here; keep it unless the
-  pump's datasheet allows continuous 12 V. `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm
-  still dislikes a step.
+* The pump's measured reach is the `floor`, so set it over the wire — `device set floor <kPa>` —
+  after measuring it, and use `device set valve closed` if the fitted valve is normally closed. The
+  PID gains are derived from the pump's free flow and the chamber volume — `device set flow <lpm>`
+  and `device set volume <l>` — so a new pump or chamber is retuned by setting the two numbers, not
+  by re-deriving gains. The duty cap is `device set pump_max <%>`; the default 90 % is 10.8 V here,
+  keep it unless the pump's datasheet allows continuous 12 V. `PUMP_RAMP_PERCENT_PER_SEC` stays: a
+  larger diaphragm still dislikes a step.
 * The MCU's 5V pin is the 12 V → 5 V buck's output. Check the Super Mini for a Schottky between
   USB VBUS and that pin; if it has none, use a cable with VBUS cut or unplug USB while the 12 V is
   on. Two 5 V sources on one pin is not a fault the board protects you from.

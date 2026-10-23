@@ -7,6 +7,7 @@
 #include "serial/Domain.h"
 #include "serial/Domains.h"
 #include "serial/Gate.h"
+#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
