@@ -81,3 +81,15 @@ chosen for a window — a jumper read at power-up is the only candidate so far.
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
+
+## Rename and delete a saved routine
+
+The browser can create a saved routine but not rename or delete one; that is done over `fs` or by
+shipping a new image. Blocked by: no gesture has been chosen for either, and a delete has to decide
+what happens to a run that was started from the routine.
+
+## Preview a saved routine by name
+
+`--art` and `--scene` draw a definition by name; a saved routine is only reachable by opening the
+browser first, and no wire command opens one either. Blocked by: the harness drives definitions, and
+naming a saved routine on the command line needs a flag whose shape nobody has decided.

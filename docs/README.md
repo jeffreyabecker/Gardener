@@ -23,6 +23,9 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
+- [Named saved routines](./backlogs/named-saved-routines.md) — a routine's definition split from the
+  configs that instantiate it
+
 The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) —
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
