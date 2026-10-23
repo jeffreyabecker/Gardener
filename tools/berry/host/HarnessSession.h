@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "BitmapPanel.h"
 #include "BuzzerPlayer.h"
@@ -223,8 +224,21 @@ class HarnessSession {
   void reset();
   bool active() const { return routines_.active(); }
 
+  // --- capture -------------------------------------------------------------
+  // Arms capture: every beat from now snapshots the frame, and endCapture() writes them as a GIF.
+  void beginCapture(const char* path);
+  // Writes the captured frames to the armed path; false when there was nothing to write.
+  bool endCapture();
+  // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
+  void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
+  const std::string& captureStem() const { return captureStem_; }
+
  private:
   std::string dataDir_;
+  std::string capturePath_;
+  std::string captureStem_ = "build/runs";
+  std::vector<std::vector<uint8_t>> captureFrames_;
+  bool capturing_ = false;
 
   MemoryFiles files_;
   BufferLogger logger_;

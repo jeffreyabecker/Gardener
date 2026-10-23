@@ -15,9 +15,10 @@ and control law are compiled here against the vendored VM, with a bitmap for a g
 a rig and an in-memory data image. A page therefore runs on the code the device runs, and the
 driver walks the image's own routines.
 
---art runs one routine and saves the frame it drew as a one-bit BMP, using the Adafruit GFX
-library the device compiles for the fonts. --scene does the same for one of the device's own
-scenes: readout, browser or system.
+--art runs one routine and saves what it drew, using the Adafruit GFX library the device compiles
+for the fonts: an animated GIF of every beat by default, or a one-bit BMP when --out names a .bmp
+file. --scene does the same for one of the device's own scenes: readout, browser or system.
+--tests saves a GIF per case that ran.
 """
 
 import argparse
@@ -66,6 +67,7 @@ PANEL_SOURCES = [
 HOST_SOURCES = [
     HOST / "BitmapPanel.cpp",
     HOST / "Clock.cpp",
+    HOST / "GifWriter.cpp",
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
@@ -168,9 +170,12 @@ parser.add_argument(
     "--seconds",
     type=int,
     default=0,
-    help="with --art, press OK and run this much virtual time before saving",
+    help="with --art or --scene, run this much virtual time before saving",
 )
-parser.add_argument("--out", help="with --art, where the BMP goes (default: build/<name>.bmp)")
+parser.add_argument(
+    "--out",
+    help="where the frame or animation goes (default: build/<name>.gif)",
+)
 parser.add_argument(
     "--sets",
     type=int,
@@ -201,7 +206,7 @@ if args.compile:
 if args.verbose:
     command.append("--verbose")
 if args.art:
-    out = Path(args.out) if args.out else BUILD / f"{args.art}.bmp"
+    out = Path(args.out) if args.out else BUILD / f"{args.art}.gif"
     command.extend(
         [
             "--art",
@@ -215,8 +220,10 @@ if args.art:
         ]
     )
 if args.scene:
-    out = Path(args.out) if args.out else BUILD / f"{args.scene}.bmp"
-    command.extend(["--scene", args.scene, "--out", str(out.resolve())])
+    out = Path(args.out) if args.out else BUILD / f"{args.scene}.gif"
+    command.extend(
+        ["--scene", args.scene, "--seconds", str(args.seconds), "--out", str(out.resolve())]
+    )
 if args.tests or args.test:
     tests_dir = TOOL / "tests"
     command.extend(["--suite", str(tests_dir / "suite.be")])
@@ -224,6 +231,9 @@ if args.tests or args.test:
         command.extend(["--test-file", str(file)])
     if args.test:
         command.extend(["--test", args.test])
+    # The stem the runner names a per-case GIF from; a .bmp name is meaningless here.
+    stem = Path(args.out) if args.out else BUILD / "runs.gif"
+    command.extend(["--out", str(stem.resolve())])
 if args.verbose:
     print(" ".join(command), flush=True)
 sys.exit(subprocess.run(command).returncode)

@@ -126,22 +126,23 @@ int callSuites(bvm* vm, const char* filter) {
 
 // Draw one of the device's own scenes — readout, browser or system — and save the frame. The
 // driver reaches them by their globals, because the well-known scenes are not registry entries.
-int callArtScene(bvm* vm, const char* name, const char* path) {
+int callArtScene(bvm* vm, const char* name, int seconds, const char* path) {
   if (!be_getglobal(vm, "harness_art_scene")) {
     be_pop(vm, 1);
     printf("[E] vm: harness_art_scene is missing\n");
     return 0;
   }
   be_pushstring(vm, name);
+  be_pushint(vm, seconds);
   be_pushstring(vm, path);
-  const int rc = be_pcall(vm, 2);
+  const int rc = be_pcall(vm, 3);
   if (rc != BE_OK) {
     report(vm, "harness_art_scene", name);
     return 0;
   }
-  const int result = be_absindex(vm, -(2 + 1));
+  const int result = be_absindex(vm, -(3 + 1));
   const bool ok = be_isbool(vm, result) && be_tobool(vm, result);
-  be_pop(vm, 3);
+  be_pop(vm, 4);
   return ok ? 1 : 0;
 }
 
@@ -246,8 +247,18 @@ int main(int argc, char** argv) {
   if (artName != nullptr) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
   } else if (sceneName != nullptr) {
-    passed = callArtScene(vm, sceneName, artPath != nullptr ? artPath : "frame.bmp");
+    passed = callArtScene(vm, sceneName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
   } else if (suites) {
+    // One GIF per case, named from the stem the runner reads back through the harness. A .bmp
+    // --out is meaningless under --tests, so it falls back to the default stem.
+    std::string stem = "build/runs";
+    if (artPath != nullptr) {
+      const size_t len = strlen(artPath);
+      if (len >= 4 && strcmp(artPath + len - 4, ".gif") == 0) {
+        stem.assign(artPath, len - 4);
+      }
+    }
+    session.setCaptureStem(stem);
     passed = callSuites(vm, testFilter);
   } else if (!compileOnly) {
     passed = callCheck(vm);

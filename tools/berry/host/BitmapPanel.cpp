@@ -696,6 +696,22 @@ void put32(FILE* file, uint32_t value) {
 
 }  // namespace
 
+// The frame one bit per pixel, row-major and top-down (GIF order, unlike save()'s bottom-up BMP).
+void BitmapPanel::packFrame(uint8_t* out) const {
+  const int rowBytes = width_ / 8;
+  for (int y = 0; y < height_; y++) {
+    for (int byte = 0; byte < rowBytes; byte++) {
+      uint8_t bits = 0;
+      for (int bit = 0; bit < 8; bit++) {
+        bits = (uint8_t)(bits << 1);
+        const uint8_t pixel = (uint8_t)(frame_[y][byte * 8 + bit] & 1);
+        if ((pixel ^ (inverted_ ? 1 : 0)) != 0) bits |= 1;
+      }
+      out[y * rowBytes + byte] = bits;
+    }
+  }
+}
+
 // A one-bit BMP, rows bottom up: the panel's own depth, and the format scripts/asset.py reads.
 bool BitmapPanel::save(const char* path) const {
   const int rowBytes = width_ / 8;

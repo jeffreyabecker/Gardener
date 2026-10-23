@@ -76,6 +76,8 @@ class BitmapPanel {
                 uint8_t size);
 
   // --- the picture ---------------------------------------------------------
+  // The frame packed one bit per pixel, row-major and top-down, as the GIF writer wants it.
+  void packFrame(uint8_t* out) const;
   bool save(const char* path) const;
 
  private:

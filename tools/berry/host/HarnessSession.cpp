@@ -2,6 +2,7 @@
 
 #include <deque>
 
+#include "GifWriter.h"
 #include "Machine.h"
 #include "MachineCommand.h"
 #include "PanelTasks.h"
@@ -139,6 +140,13 @@ void HarnessSession::beat(int count) {
     battery_.update(millis());
     buzzer_.update(millis());
     routines_.poll(millis());
+
+    if (capturing_) {
+      BitmapPanel& panel = display_.driver();
+      std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
+      panel.packFrame(frame.data());
+      captureFrames_.push_back(std::move(frame));
+    }
   }
 }
 
@@ -154,6 +162,27 @@ void HarnessSession::reset() {
   postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();
   vacuum_.service(millis());
+}
+
+void HarnessSession::beginCapture(const char* path) {
+  capturePath_ = path != nullptr ? path : "";
+  captureFrames_.clear();
+  capturing_ = true;
+}
+
+bool HarnessSession::endCapture() {
+  capturing_ = false;
+  // Nothing to write is not a write failure: a case that never beats has no motion to show.
+  if (captureFrames_.empty()) {
+    capturePath_.clear();
+    return true;
+  }
+  BitmapPanel& panel = display_.driver();
+  const bool ok = writeGif(capturePath_.c_str(), panel.width(), panel.height(), captureFrames_,
+                           kBeatMs / 10);
+  captureFrames_.clear();
+  capturePath_.clear();
+  return ok;
 }
 
 }  // namespace gardener

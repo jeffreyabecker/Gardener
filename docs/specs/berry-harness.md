@@ -29,9 +29,9 @@ compiles and loads.
 ```powershell
 python tools/berry/check.py                              # compile, load and drive the image
 python tools/berry/check.py --compile                    # compile and load only
-python tools/berry/check.py --art interval --seconds 60  # draw a page instead of driving it
+python tools/berry/check.py --art interval --seconds 60  # animate a page instead of driving it
 python tools/berry/check.py --scene browser              # draw one of the device's own scenes
-python tools/berry/check.py --tests                      # run the test suites
+python tools/berry/check.py --tests                      # run the test suites, a GIF per case
 python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
 
@@ -41,11 +41,11 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--data DIR` | `firmware/gardener/data` | another data image, such as a scratch copy |
 | `--no-cache` | off | rebuild the vendored VM objects |
 | `--gfx DIR` | the installed library | the Adafruit GFX library the fonts come from |
-| `--art NAME` | — | draw that routine and save its frame instead of driving |
-| `--scene NAME` | — | draw that device scene — `readout`, `browser` or `system` — and save its frame |
-| `--seconds N` | `0` | with `--art`, press `ok:single` and run N seconds of virtual time first |
+| `--art NAME` | — | draw that routine and save an animation of it instead of driving |
+| `--scene NAME` | — | draw that device scene — `readout`, `browser` or `system` — and save an animation |
+| `--seconds N` | `0` | with `--art` or `--scene`, run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
-| `--out PATH` | `build/<name>.bmp` | with `--art` or `--scene`, where the frame goes |
+| `--out PATH` | `build/<name>.gif` | where the frame or animation goes; a `.bmp` name saves one still instead |
 | `--tests` | off | run the test suites instead of the smoke walk |
 | `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
 | `--verbose` | off | print each compiler command |
@@ -94,12 +94,14 @@ target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target belo
 
 ## The frame and its pictures
 
-`--art` runs the real page and saves what it drew as a one-bit BMP: 128 x 64, rows bottom up, a
-palette of paper and ink. The drawing is not an approximation of the driver's — the primitives,
-`drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and the font data
-is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `ADAFRUIT_GFX`, then
-`arduino-cli`, then the usual sketchbook paths. A missing library stops the run with the
-`arduino-cli lib install "Adafruit GFX Library"` hint rather than drawing in a stand-in face.
+`--art` and `--scene` run the real page and save what it drew. The default is an animated GIF, one
+frame per beat at the panel's 128 x 64, paper and ink, replaying at virtual speed; a `.bmp` `--out`
+saves a single still instead, as before. The drawing is not an approximation of the driver's — the
+primitives, `drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and
+the font data is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then
+`ADAFRUIT_GFX`, then `arduino-cli`, then the usual sketchbook paths. A missing library stops the run
+with the `arduino-cli lib install "Adafruit GFX Library"` hint rather than drawing in a stand-in
+face.
 
 `gfx/Adafruit_GFX.h` is a shim that lets those font headers compile without `Arduino.h`.
 
@@ -139,6 +141,10 @@ The runner executes every registered case (or those whose full `suite.case` name
 `--test` filter), each from a reset page, and reports one line per case: `[PASS] suite.case` or
 `[FAIL] suite.case: assert: ...`, then `N passed, M failed`. A case that raises does not stop the
 rest, and the run ends `suites passed` only when nothing failed.
+
+Every case is also captured as an animation named `<stem>.<suite>.<case>.gif` — the stem is the
+`--out` value with its `.gif` stripped, defaulting to `build/runs` — so a failing case leaves its
+motion behind. A case that never beats has nothing to animate and writes nothing.
 
 The suites cover what a walk cannot name: the jingle library, the System scene's jingle editor, the
 interval's set count and its "after ok" pause, the ramp's three stages and its pause and resume, and

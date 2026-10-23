@@ -20,9 +20,9 @@ on the host instead.
 ```powershell
 python tools/berry/check.py                              # compile, load and drive the image
 python tools/berry/check.py --compile                    # compile and load only
-python tools/berry/check.py --art interval --seconds 60  # draw a page instead of driving
+python tools/berry/check.py --art interval --seconds 60  # animate a page instead of driving it
 python tools/berry/check.py --scene browser              # draw one of the device's own scenes
-python tools/berry/check.py --tests                      # run the test suites
+python tools/berry/check.py --tests                      # run the test suites, a GIF per case
 python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
 
@@ -37,8 +37,9 @@ walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
 `--scene readout`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
-Convert the BMP to a PNG when the viewer will not open one and read the page off that; writing a
-frame out as text loses the thing the render is for.
+The output is an animated GIF by default — one frame per beat, replayed at virtual speed — and a
+`.bmp` `--out` asks for one still instead. Writing a frame out as text loses the thing the render
+is for.
 
 ## Reading the output
 
@@ -58,6 +59,7 @@ Two things bite before the messages do:
 | `art: no routine named X` | `--art` was given a name no file registered |
 | `art: no scene named X` | `--scene` was given a name that is not `readout`, `browser` or `system` |
 | `io_error: frame.save: cannot write the file` | The `--out` path is not writable |
+| `art: cannot write PATH` | A `.bmp` still or a GIF capture could not be written, or the run had no frames |
 | `attribute_error: the 'reading' object has no attribute 'X'` | The record class has no such field |
 | `settings: X has no settings` | The routine registered no settings, or the name is not registered |
 | `vm: X poll: ...` | A run-time error; the page is dropped, as it would be on the device |

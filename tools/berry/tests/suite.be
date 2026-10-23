@@ -62,6 +62,9 @@ def suite_run(filter)
     var full = t[0] + "." + t[1]
     if filter == nil || filter == "" || string.find(full, filter) >= 0
       harness.reset()
+      # One GIF per case, named from the stem the command line hands over, so a failing case still
+      # leaves its motion behind.
+      harness.capture_start(harness.capture_stem() + "." + full + ".gif")
       try
         t[2]()
         passed += 1
@@ -69,6 +72,9 @@ def suite_run(filter)
       except .. as e, m
         failed += 1
         harnessLog = harnessLog + "[FAIL] " + full + ": " + e + ": " + m + "\n"
+      end
+      if !harness.capture_finish()
+        harnessLog = harnessLog + "[E] suite: cannot write " + full + " capture\n"
       end
     end
   end

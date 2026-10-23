@@ -168,10 +168,11 @@ def harness_run_page(name)
   end
 end
 
-# Draw one routine and save the frame as a BMP. No seconds is the page as it appears; seconds
-# presses OK and runs that much virtual time first, so a cycle can be caught mid-phase. A set count
-# overrides the routine's own before it is activated, which is how a preview shows a run long
-# enough to fill the bubbles; zero leaves the file's value alone.
+# Draw one routine and save what it drew. A .gif path captures every beat as an animation; a .bmp
+# path saves the one frame it has today. No seconds is the page as it appears; seconds presses OK
+# and runs that much virtual time first, so a cycle can be caught mid-phase. A set count overrides
+# the routine's own before it is activated, which is how a preview shows a run long enough to fill
+# the bubbles; zero leaves the file's value alone.
 def harness_art(name, seconds, path, sets)
   if !harness_registered(name)
     harness_fail("art: no routine named " + name)
@@ -181,19 +182,40 @@ def harness_art(name, seconds, path, sets)
   if sets > 0 && store.get(name, "set_count", nil) != nil
     store.set(name, "set_count", sets)
   end
+
+  var gif = harness.is_gif(path)
+  if gif
+    harness.capture_start(path)
+  end
+
   if !harness_activate(name, nil)
+    if gif
+      harness.capture_finish()
+    end
     return false
   end
+
+  var ran = false
   if seconds > 0
     harness.press("ok:single")
-    if !harness.beat(seconds * 4)
+    ran = harness.beat(seconds * 4)
+  else
+    harness.beat(1)
+    ran = true
+  end
+
+  if gif
+    # Whatever beats ran are the animation; an empty capture is the only way this fails.
+    if !harness.capture_finish()
+      harness_fail("art: cannot write " + path)
+      return false
+    end
+  elif ran
+    if !harness.save(path)
+      harness_fail("art: cannot write " + path)
       return false
     end
   else
-    harness.beat(1)
-  end
-  if !harness.save(path)
-    harness_fail("art: cannot write " + path)
     return false
   end
   harness_note("art: " + name + " saved to " + path)
@@ -203,8 +225,13 @@ end
 # Draw one of the device's own scenes and save the frame as a BMP. The well-known scenes are not
 # registry entries — the readout is the root, and the browser and system scenes are the globals
 # ui.be sets — so they are reached by name here rather than through routines.push.
-def harness_art_scene(name, path)
+def harness_art_scene(name, seconds, path)
   harness.reset()
+  var gif = harness.is_gif(path)
+  if gif
+    harness.capture_start(path)
+  end
+
   if name != "readout"
     var scene = nil
     if name == "browser"
@@ -214,21 +241,42 @@ def harness_art_scene(name, path)
     end
     if scene == nil
       harness_fail("art: no scene named " + name)
+      if gif
+        harness.capture_finish()
+      end
       return false
     end
     if !ux.push(scene)
       harness_fail("art: " + name + " would not push")
+      if gif
+        harness.capture_finish()
+      end
       return false
     end
-    harness.beat(1)
+    if seconds > 0
+      harness.beat(seconds * 4)
+    else
+      harness.beat(1)
+    end
   else
     # The readout is the root. Give it a run to show: pull toward a target above the current
-    # pressure, and save the frame mid-pull.
+    # pressure, and save the frame mid-pull; with seconds, run that long instead.
     vacuum.target(20.0)
     vacuum.start()
-    harness.beat(12)
+    if seconds > 0
+      harness.beat(seconds * 4)
+    else
+      harness.beat(12)
+    end
   end
-  if !harness.save(path)
+
+  var wrote = false
+  if gif
+    wrote = harness.capture_finish()
+  else
+    wrote = harness.save(path)
+  end
+  if !wrote
     harness_fail("art: cannot write " + path)
     return false
   end
