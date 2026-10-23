@@ -104,24 +104,15 @@ class VacuumSystem {
  private:
   void setState(RunState state);
 
-  // The chamber's own answers, rather than queries for anyone outside: these are the two
-  // transitions that are facts about the chamber instead of orders, and service() is where
-  // they are asked.
-  bool atTarget() const;  // close enough to the target, deadband included
+  // The chamber's own answer rather than an order: the release is over once the depth settles at
+  // the vent floor, and service() is where that is asked.
   bool released() const;  // settled at the vent floor
   // The one decision every command ends in: open the valve, close it, or run the pump.
   void converge();
   void release();         // stop, then open: the one release path
   void rest();            // the resting state without releasing: pump off, valve open
   void closeValve();      // seal the chamber and hand it to the PID
-  void startTargetVent(); // stop, open, and land on the current target
-  void endTargetVent();   // close the valve and hand the run back to the PID
-
-  // The run's deadline, the pull's progress and the depth's overshoot, all measured against the
-  // reading on the control beat.
-  void checkRun(uint32_t nowMs);
-  void checkProgress(uint32_t nowMs, float measured, float maxDuty);
-  void checkOvershoot(float measured);
+  void beginTargetVent(); // stop, open, and land on the current target
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
@@ -143,7 +134,7 @@ class VacuumSystem {
   uint32_t ventStartMs_ = 0;
   // VENT is either a release to ambient or a controlled vent to the current target; this is what
   // tells them apart when the end is decided.
-  bool targetVent_ = false;
+  bool ventingToTarget_ = false;
 
   // The run's deadline: when it began, the hold granted to it, and whether it has expired.
   uint32_t runStartMs_ = 0;
@@ -158,7 +149,6 @@ class VacuumSystem {
   float lastMeasured_ = 0.0f;
   float output_ = 0.0f;
   uint32_t lastControlMs_ = 0;
-  uint32_t lastDerivativeMs_ = 0;
   // The settings revision the integral was last computed against; a change starts it over.
   uint8_t lastGainsRevision_ = 0;
 };

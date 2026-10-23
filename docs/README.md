@@ -23,15 +23,14 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
-- [Safety hardening](./backlogs/safety-hardening.md) — the device's safe path made independent of the
-  controller, in eleven epics
-
 The summaries of the finished ones are in
-[docs/backlogs/completed/](./backlogs/completed/) — currently
+[docs/backlogs/completed/](./backlogs/completed/) —
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
 from the panel into two libraries, made both links pluggable, and shipped a panel-less build with a
-capability surface, and [the six-key panel](./backlogs/completed/six-key-panel/), whose epics read
-six keys through a shift register, added the gesture classifier and bound the six-key map.
+capability surface; [the six-key panel](./backlogs/completed/six-key-panel/), whose epics read
+six keys through a shift register, added the gesture classifier and bound the six-key map; and
+[safety hardening](./backlogs/completed/safety-hardening/), whose epics made the device's safe path
+independent of the controller.
 
 ## Guides
 
