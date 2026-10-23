@@ -78,6 +78,9 @@ class BitmapPanel {
   // --- the picture ---------------------------------------------------------
   // The frame packed one bit per pixel, row-major and top-down, as the GIF writer wants it.
   void packFrame(uint8_t* out) const;
+  // The classic 5x7 face this panel draws with, for host-side callouts that render into a packed
+  // frame themselves.
+  static const uint8_t* classicFont();
   bool save(const char* path) const;
 
  private:

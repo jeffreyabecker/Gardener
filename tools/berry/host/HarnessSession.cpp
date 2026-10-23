@@ -2,6 +2,7 @@
 
 #include <deque>
 
+#include "GestureCallout.h"
 #include "GifWriter.h"
 #include "Machine.h"
 #include "MachineCommand.h"
@@ -145,9 +146,18 @@ void HarnessSession::beat(int count) {
       BitmapPanel& panel = display_.driver();
       std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
       panel.packFrame(frame.data());
+      if (gestureBeats_ > 0 && !gesture_.empty()) {
+        drawGestureStrip(frame.data(), panel.width(), panel.height(), gestureLabel(gesture_));
+      }
       captureFrames_.push_back(std::move(frame));
     }
+    if (gestureBeats_ > 0) gestureBeats_--;
   }
+}
+
+void HarnessSession::pressGesture(const char* gesture) {
+  gesture_ = gesture != nullptr ? gesture : "";
+  gestureBeats_ = kGestureCalloutBeats;
 }
 
 void HarnessSession::backHold() {

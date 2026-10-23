@@ -696,6 +696,8 @@ void put32(FILE* file, uint32_t value) {
 
 }  // namespace
 
+const uint8_t* BitmapPanel::classicFont() { return font; }
+
 // The frame one bit per pixel, row-major and top-down (GIF order, unlike save()'s bottom-up BMP).
 void BitmapPanel::packFrame(uint8_t* out) const {
   const int rowBytes = width_ / 8;

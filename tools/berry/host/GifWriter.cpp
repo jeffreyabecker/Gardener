@@ -14,7 +14,27 @@ void put16(FILE* file, uint16_t value) {
   fputc((value >> 8) & 0xFF, file);
 }
 
-// The packed bytes of one frame, each byte eight one-bit pixels.
+// One frame unpacked to one byte per pixel and enlarged by the scale: each source pixel becomes a
+// scale x scale block, the nearest neighbour of a one-bit picture. The LZW stage wants one pixel
+// per byte, so the packed row is spread first.
+std::vector<uint8_t> unpackScaled(const uint8_t* packed, int16_t width, int16_t height,
+                                  int scale) {
+  const int16_t rowBytes = (width + 7) / 8;
+  const int16_t outRowBytes = width * scale;
+  std::vector<uint8_t> out((size_t)outRowBytes * height * scale);
+  for (int16_t y = 0; y < height; y++) {
+    for (int16_t x = 0; x < width; x++) {
+      const uint8_t bit = (packed[y * rowBytes + x / 8] >> (7 - (x & 7))) & 1;
+      for (int16_t dy = 0; dy < scale; dy++) {
+        uint8_t* row = out.data() + (size_t)(y * scale + dy) * outRowBytes;
+        for (int16_t dx = 0; dx < scale; dx++) row[x * scale + dx] = bit;
+      }
+    }
+  }
+  return out;
+}
+
+// The one-byte-per-pixel image, compressed.
 std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
   constexpr int kMinCodeSize = 2;
   constexpr int kClearCode = 1 << kMinCodeSize;  // 4
@@ -55,8 +75,10 @@ std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
     }
     emit(current);
     if (nextCode < kMaxCode) {
-      children[key] = nextCode++;
+      // The code being assigned is what decides the size, checked before it is assigned: the
+      // decoder grows its code size the moment it receives a code that fills the table.
       if (nextCode == (1 << codeSize) && codeSize < 12) codeSize++;
+      children[key] = nextCode++;
     } else {
       // The table is full: clear it at the size in effect, then start over smaller.
       emit(kClearCode);
@@ -78,14 +100,17 @@ bool writeGif(const char* path, int16_t width, int16_t height,
               const std::vector<std::vector<uint8_t>>& frames, uint16_t delayCs) {
   if (frames.empty()) return false;
 
+  const int16_t outWidth = width * kRenderScale;
+  const int16_t outHeight = height * kRenderScale;
+
   FILE* file = fopen(path, "wb");
   if (file == nullptr) return false;
 
   fputs("GIF89a", file);
   // Logical screen descriptor: a global colour table, 8-bit colour resolution, two entries.
-  put16(file, (uint16_t)width);
-  put16(file, (uint16_t)height);
-  put8(file, 0xF1);  // GCT | colour resolution 8 | GCT size 2^1
+  put16(file, (uint16_t)outWidth);
+  put16(file, (uint16_t)outHeight);
+  put8(file, 0xF0);  // GCT | colour resolution 8 | GCT size 2^(0+1) = 2 entries
   put8(file, 0);     // background colour index
   put8(file, 0);     // pixel aspect ratio
   // Global colour table: index 0 white paper, index 1 black ink.
@@ -116,11 +141,12 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put8(file, 0x2C);
     put16(file, 0);
     put16(file, 0);
-    put16(file, (uint16_t)width);
-    put16(file, (uint16_t)height);
+    put16(file, (uint16_t)outWidth);
+    put16(file, (uint16_t)outHeight);
     put8(file, 0x00);  // no local colour table, not interlaced
 
-    const std::vector<uint8_t> compressed = lzwEncode(frame.data(), frame.size());
+    const std::vector<uint8_t> pixels = unpackScaled(frame.data(), width, height, kRenderScale);
+    const std::vector<uint8_t> compressed = lzwEncode(pixels.data(), pixels.size());
     put8(file, 2);  // min code size
     size_t at = 0;
     while (at < compressed.size()) {

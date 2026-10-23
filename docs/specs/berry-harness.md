@@ -96,12 +96,20 @@ target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target belo
 
 `--art` and `--scene` run the real page and save what it drew. The default is an animated GIF, one
 frame per beat at the panel's 128 x 64, paper and ink, replaying at virtual speed; a `.bmp` `--out`
-saves a single still instead, as before. The drawing is not an approximation of the driver's — the
-primitives, `drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and
-the font data is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then
-`ADAFRUIT_GFX`, then `arduino-cli`, then the usual sketchbook paths. A missing library stops the run
-with the `arduino-cli lib install "Adafruit GFX Library"` hint rather than drawing in a stand-in
-face.
+saves a single still instead, as before. The GIF is enlarged 2 x to 256 x 128 by `kRenderScale` in
+the GIF writer — nearest neighbour, because the picture is one bit — while the `.bmp` stays at the
+panel's native size. The drawing is not an approximation of the driver's — the primitives,
+`drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and the font data
+is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `ADAFRUIT_GFX`, then
+`arduino-cli`, then the usual sketchbook paths. A missing library stops the run with the
+`arduino-cli lib install "Adafruit GFX Library"` hint rather than drawing in a stand-in face.
+
+A captured GIF also carries the gesture that drove it: each press the driver injects is shown as a
+full-width strip across the top of the frame it lands on — the key and its form, `OK`, `OK×2`,
+`CANCEL 5s` — so a tutorial can show the button as the viewer watches the run. The strip is a
+host-only callout drawn over the captured frame; the page and the overlay never see it. It stays
+for one beat, behind `kGestureCalloutBeats` in `tools/berry/host/GestureCallout.h`, which is the
+one line to change to keep the key on screen longer.
 
 `gfx/Adafruit_GFX.h` is a shim that lets those font headers compile without `Arduino.h`.
 

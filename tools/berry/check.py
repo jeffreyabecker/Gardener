@@ -67,6 +67,7 @@ PANEL_SOURCES = [
 HOST_SOURCES = [
     HOST / "BitmapPanel.cpp",
     HOST / "Clock.cpp",
+    HOST / "GestureCallout.cpp",
     HOST / "GifWriter.cpp",
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",

@@ -27,7 +27,9 @@ int harnessPress(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "harness.press(gesture)");
   }
-  gSession->routines().pushPress(be_tostring(vm, 1));
+  const char* gesture = be_tostring(vm, 1);
+  gSession->pressGesture(gesture);
+  gSession->routines().pushPress(gesture);
   be_return_nil(vm);
 }
 

@@ -232,6 +232,8 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
+  // Records a gesture for the callout strip, shown on the next kGestureCalloutBeats captures.
+  void pressGesture(const char* gesture);
 
  private:
   std::string dataDir_;
@@ -239,6 +241,8 @@ class HarnessSession {
   std::string captureStem_ = "build/runs";
   std::vector<std::vector<uint8_t>> captureFrames_;
   bool capturing_ = false;
+  std::string gesture_;
+  int gestureBeats_ = 0;
 
   MemoryFiles files_;
   BufferLogger logger_;
