@@ -19,6 +19,9 @@ end
 # activation's own values.
 def harness_activate(name, settings)
   ux.pop_to_root()
+  # A routine is launched from the browser, and the browser vents first; a direct push models the
+  # same path, so a test never starts a routine against a chamber the readout left pressurised.
+  vacuum.stop()
   return routines.push(name, nil, settings)
 end
 

@@ -14,8 +14,10 @@ constexpr uint32_t CONTROL_PERIOD_MS = 50;
 // wire publishes it as the `min` of `vacuum target`, so a pull of exactly this much is accepted and
 // anything gentler is refused rather than regulated.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
-constexpr float PID_KP = 3.0f;    // % duty per kPa of error
-constexpr float PID_KI = 0.2f;    // % duty per kPa second
+constexpr float PID_KP = 30.0f;   // % duty per kPa of error: pins the pump at the cap for any
+                                  // pull deeper than ~3 kPa
+constexpr float PID_KI = 0.2f;    // % duty per kPa second; kept small so the saturated pull does
+                                  // not wind the integral past the duty that holds against the leak
 constexpr float PID_KD = 0.5f;    // % duty per kPa/s of pressure slew
 constexpr float PID_INTEGRAL_LIMIT = 150.0f;
 constexpr float CONTROL_DEADBAND_KPA = 0.2f;

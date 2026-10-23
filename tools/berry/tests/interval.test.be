@@ -25,10 +25,10 @@ test("activating sets the target without starting the machine", activate_places_
 def waits_between_sets()
   var settings = {
     "set_count": 2,
-    "target_pressure": 5.0,
-    "work_duration": 0,
+    "target_pressure": 25.0,
+    "work_duration": 600,
     "rest_pressure": 5.0,
-    "rest_duration": 0,
+    "rest_duration": 60,
     "resume_behavior": "after ok"
   }
   assert_true(harness_activate("interval", settings), "interval: activate refused")

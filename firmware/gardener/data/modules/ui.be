@@ -394,6 +394,9 @@ class BrowserScene : Scene
   end
 
   def activate()
+    # A routine may only start from a released chamber, so opening the browser vents whatever the
+    # readout was running: the launch it leads to is the one place a routine is allowed to begin.
+    vacuum.stop()
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.
     self.names = routines.names()

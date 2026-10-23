@@ -48,7 +48,7 @@ What each one answers:
 | `ReadoutScene` | `ok:double` | make the target pressure editable |
 | `ReadoutScene` | `up:single`, `down:single` | step the target while it is being edited |
 | `ReadoutScene` | `cancel:single` | discard an edit, or stop and vent |
-| `ReadoutScene` | `forward:double` | push the routine browser |
+| `ReadoutScene` | `forward:double` | stop and vent, then push the routine browser |
 | `ReadoutScene` | `up:double` | push the system settings |
 
 | `BrowserScene` | `up:single`, `down:single` | move the selection |
