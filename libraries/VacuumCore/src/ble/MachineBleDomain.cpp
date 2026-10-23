@@ -23,15 +23,17 @@ constexpr uint8_t kBleProtocolVersion = 1;
 constexpr uint32_t kFastRateMs = 200;
 
 // The opcodes a controller writes to `command`, and the results it is
-// notified.
+// notified. The machine's answers fill the bottom of the range and the
+// protocol's refusals sit at the top, so a client can tell which of the two
+// spoke without knowing the list.
 enum : uint8_t { kOpStart = 0x01, kOpStop = 0x02, kOpResetFault = 0x03, kOpReboot = 0x04 };
 enum : uint8_t {
   kResultApplied = 0x00,
   kResultNoTarget = 0x01,
   kResultNoReading = 0x02,
   kResultFault = 0x03,
-  kResultUnknownOpcode = 0x04,
-  kResultNotControlling = 0x05,
+  kResultNotControlling = 0xFE,
+  kResultUnknownOpcode = 0xFF,
 };
 
 // Whether a reading can be trusted, which is what `sensor` reports and what a

@@ -87,10 +87,27 @@ that is not on top of the stack is dropped, and the read-back shows the unchange
 
 ## Commands
 
-`command` takes `0x01` start, `0x02` stop and vent, `0x03` reset a latched fault, and `0x04`
-reboot, and notifies `0x00` applied, `0x01` no target, `0x02` no valid reading, `0x03` fault
-latched, `0x04` unknown opcode or `0x05` not controlling. The result is notified after every write,
-whatever it is, and is the only value `command` carries: the characteristic has no read.
+`command` carries one byte and has no read: a write is an opcode, and the notification that follows
+is the result, sent after every write whatever it is.
+
+| Opcode | Meaning |
+| --- | --- |
+| `0x01` | start: close the valve, then pull to the target |
+| `0x02` | stop and vent |
+| `0x03` | reset a latched fault |
+| `0x04` | reboot |
+
+| Result | Meaning |
+| --- | --- |
+| `0x00` | applied |
+| `0x01` | no target to pull to |
+| `0x02` | no valid reading |
+| `0x03` | fault latched |
+| `0xFE` | not controlling: the writing link is not on top of the stack |
+| `0xFF` | unknown opcode |
+
+`0x00`–`0x03` are the machine answering; `0xFE` and `0xFF` are the protocol refusing the request
+itself.
 
 `start` refuses for the same three reasons the serial line reports — no target, no valid reading
 and a latched fault — because both transports ask the same check, so the two surfaces cannot
