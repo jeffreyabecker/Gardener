@@ -38,7 +38,10 @@ requirement carries four things:
   is not a design; it is how the reader finds the behaviour to change. Name the code that is wrong,
   never the code you would write in its place.
 - **What is true instead.** The new state, transition, reply, refusal or limit in the terms a spec
-  would use: from what to what, whether the old answer survives, and what a caller sees.
+  would use: from what to what, whether the old answer survives, and what a caller sees. Say which
+  entry points it has to hold on — the wire, the panel, a routine, the loader — because a rule
+  enforced on one path is a rule the others break, and "the target is bounded" leaves the
+  implementer to guess that the panel sets one too.
 - **The number, where a threshold is involved.** Ranges, timeouts and limits with their unit and
   where the value lives. "A reasonable bound" is not a requirement; "5–100 kPa, clamped when loaded
   and refused when written" is.
