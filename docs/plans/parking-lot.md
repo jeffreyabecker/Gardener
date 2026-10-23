@@ -50,6 +50,35 @@ and a drop. The machine-alone build needs the same: `device get` reporting `caps
 battery or unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that
 cannot start unowned or survive its owner leaving.
 
+## Thermal and continuous-duty protection
+
+`pump_max` is a duty cap, not a thermal limit: a long hold at the top of the range can overheat the
+pump. A maximum continuous run, a derating curve, or a current or temperature sense would cover it.
+Blocked by: nothing on the rig senses temperature or pump current, and neither pump has a measured
+continuous-duty figure to set a body-safe default from. A single hold is now bounded at fifteen
+minutes, which is the whole of the protection there is.
+
+## Low-battery start refusal
+
+`startRefusal()` should answer `low_battery` when a gauge is fitted and the pack is below a
+threshold, so a brownout is refused rather than survived. Blocked by: no gauge on the
+machine-alone build, and no pack fitted to either build yet — the alpha PCB leaves the divider
+deferred until a Super Mini variant with one is chosen.
+
+## A local event log
+
+The last N claims, commands, stops, transitions and faults kept in NVS and readable over the serial
+line and the Bluetooth diagnostics, so an incident can be understood after the fact. Blocked by:
+nothing decided about where it lives, how it is bounded, or what reads it back.
+
+## Pairing authorization
+
+Just Works is proximity rather than authorization: anyone in radio range of an advertising machine
+can pair and command pressure. A pairing window opened by a physical gesture, Passkey Entry with the
+code on the panel, or a physical confirm would replace it. Blocked by: the machine-alone build has
+no panel to show a code, and no spare input has been chosen for a window — a jumper read at
+power-up is the only candidate so far. The bond cap and the physical stop cover the gap meanwhile.
+
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
