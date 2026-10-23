@@ -71,13 +71,13 @@ The last N claims, commands, stops, transitions and faults kept in NVS and reada
 line and the Bluetooth diagnostics, so an incident can be understood after the fact. Blocked by:
 nothing decided about where it lives, how it is bounded, or what reads it back.
 
-## Pairing authorization
+## Pairing
 
 Just Works is proximity rather than authorization: anyone in radio range of an advertising machine
-can pair and command pressure. A pairing window opened by a physical gesture, Passkey Entry with the
-code on the panel, or a physical confirm would replace it. Blocked by: the machine-alone build has
-no panel to show a code, and no spare input has been chosen for a window — a jumper read at
-power-up is the only candidate so far. The bond cap and the physical stop cover the gap meanwhile.
+can pair and command pressure, and bonds are uncapped. Until a pairing window or passkey replaces
+it, the exposure should be bounded: cap the bonds at four and add a local action that forgets every
+bond. Blocked by: the machine-alone build has no panel to show a code, and no spare input has been
+chosen for a window — a jumper read at power-up is the only candidate so far.
 
 # Battery Optional
 

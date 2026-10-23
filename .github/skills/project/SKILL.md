@@ -49,7 +49,7 @@ is.
 | Document | Location | Holds | Leaves by |
 | --- | --- | --- | --- |
 | Spec | `docs/specs/` | what the firmware and its tools do now | being rewritten, or dropped with the behaviour |
-| Plan | `docs/plans/` | a proposal: what has to be true | deletion, its requirement carried into a spec |
+| Plan | `docs/plans/` | a proposal: what is wrong, what has to be true, and how that is checked | deletion, its requirement carried into a spec |
 | Idea | `docs/ideas/` | options being weighed before anything is required | deletion, carried by a plan or a spec |
 | Backlog | `docs/backlogs/` | the tasklist breakdown of a plan, in order | deletion, with its plan, when the last item lands |
 
