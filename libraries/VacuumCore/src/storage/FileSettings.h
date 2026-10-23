@@ -6,18 +6,17 @@
 
 namespace gardener {
 
-// The device's settings documents, on the filesystem the composition root mounted: the device's
-// own in one file, a routine's in the file named after it.
+// A SettingsSource on the filesystem the composition root mounted: it opens the path it is handed
+// and carries no layout or validation of its own. The callers build the paths — Settings writes the
+// device's document at kDevicePath, Routines builds each routine's document — so safety is theirs.
 class FileSettings : public SettingsSource {
  public:
   explicit FileSettings(FS& fs) : fs_(fs) {}
 
-  bool read(const String& name, String& out) override;
-  bool write(const String& name, const String& text) override;
+  bool read(const String& path, String& out) override;
+  bool write(const String& path, const String& text) override;
 
  private:
-  bool valid(const String& name) const;
-
   FS& fs_;
 };
 

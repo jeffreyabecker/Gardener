@@ -22,8 +22,8 @@ class MemoryFiles : public SettingsSource, public Library {
   bool load(const std::string& root);
 
   // --- SettingsSource ------------------------------------------------------
-  bool read(const String& name, String& out) override;
-  bool write(const String& name, const String& text) override;
+  bool read(const String& path, String& out) override;
+  bool write(const String& path, const String& text) override;
 
   // --- Library -------------------------------------------------------------
   void list(const String& folder, std::vector<String>& names) override;

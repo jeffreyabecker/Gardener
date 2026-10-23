@@ -67,20 +67,19 @@ bool MemoryFiles::load(const std::string& root) {
   return true;
 }
 
-bool MemoryFiles::read(const String& name, String& out) {
-  const std::string path = settingsDocumentPath(name).c_str();
+bool MemoryFiles::read(const String& path, String& out) {
   std::string text;
-  if (!textAt(path, text)) return false;
+  if (!textAt(path.c_str(), text)) return false;
   out = text.c_str();
   return true;
 }
 
-bool MemoryFiles::write(const String& name, const String& text) {
-  const std::string path = settingsDocumentPath(name).c_str();
+bool MemoryFiles::write(const String& path, const String& text) {
+  const std::string filePath = path.c_str();
 
   std::string previous;
-  textAt(path, previous);
-  files_[path] = text.c_str();
+  textAt(filePath, previous);
+  files_[filePath] = text.c_str();
 
   // What changed, key by key: the driver asks whether the editor persisted this setting, and a
   // rewritten document is not by itself an answer.
@@ -88,7 +87,7 @@ bool MemoryFiles::write(const String& name, const String& text) {
   for (const auto& entry : keysOf(text.c_str())) {
     const auto old = before.find(entry.first);
     if (old != before.end() && old->second == entry.second) continue;
-    written_.push_back(path + "|" + entry.first);
+    written_.push_back(filePath + "|" + entry.first);
   }
   return true;
 }

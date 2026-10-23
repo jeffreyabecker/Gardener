@@ -15,12 +15,22 @@
 namespace gardener {
 namespace {
 
-// A routine's values are its own document, named after it. The name is a plain word: a path
-// separator would address another file, which the store refuses.
+// A routine's values are its own document at /routines/<name>.cfg. The name is a plain word: a
+// path separator would address another file, so the path is only ever built from a name that has
+// none.
 bool plainWord(const char* name) {
   if (name == nullptr || name[0] == '\0') return false;
   const String named(name);
   return named.indexOf('/') < 0 && named.indexOf('\\') < 0;
+}
+
+// The document a routine's values live in. The name has to be a plain word first, so the path
+// cannot escape /routines/.
+String routinePath(const char* name) {
+  String path = "/routines/";
+  path += name;
+  path += ".cfg";
+  return path;
 }
 
 }  // namespace
@@ -144,7 +154,7 @@ bool Routines::storeGet(const char* routine, const char* key, String& out) {
   if (!plainWord(routine) || key == nullptr || values_ == nullptr) return false;
 
   String text;
-  if (!values_->read(routine, text)) return false;
+  if (!values_->read(routinePath(routine), text)) return false;
 
   Values values;
   values.parse(text);
@@ -158,12 +168,12 @@ bool Routines::storeSet(const char* routine, const char* key, const String& valu
 
   String text;
   Values values;
-  if (values_->read(routine, text)) values.parse(text);
+  if (values_->read(routinePath(routine), text)) values.parse(text);
 
   // A repeat value is not worth a flash write.
   if (values.has(key) && values.get(key, "") == value) return true;
   if (!values.set(key, value)) return false;
-  return values_->write(routine, values.text());
+  return values_->write(routinePath(routine), values.text());
 }
 
 }  // namespace gardener
