@@ -27,25 +27,28 @@ class MachineBleDomain : public BleDomain {
   void poll(uint32_t nowMs, BleLink& link, bool baseline) override;
 
  private:
+  // The slot of each characteristic this domain declares, numbered in the
+  // order kSpecs lists them. The values are written out so a slot keeps its
+  // number when its neighbours move.
   enum : uint8_t {
-    State,
-    PressureKpa,
-    Target,
-    Duty,
-    Fault,
-    Command,
-    Firmware,
-    Protocol,
-    Control,
-    Sensor,
-    Floor,
-    Caps,
-    Flow,
-    Volume,
-    Valve,
-    PumpMax,
-    Deadband,
-    Count,
+    State = 0,
+    PressureKpa = 1,
+    Target = 2,
+    Duty = 3,
+    Fault = 4,
+    Command = 5,
+    Firmware = 6,
+    Protocol = 7,
+    Control = 8,
+    Sensor = 9,
+    Floor = 10,
+    Caps = 11,
+    Flow = 12,
+    Volume = 13,
+    Valve = 14,
+    PumpMax = 15,
+    Deadband = 16,
+    Count = 17,
   };
 
   static const Spec kSpecs[Count];

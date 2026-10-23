@@ -5,7 +5,8 @@
 The contracts the firmware and its tools must satisfy.
 
 - [Serial protocol](./specs/serial-protocol.md) — the wire, domains, replies and errors
-- [Bluetooth](./specs/bluetooth.md) — the GATT table, ownership and the command opcodes
+- [Bluetooth](./specs/bluetooth.md) — every characteristic and parameter, ownership and the command
+  opcodes
 - [Vacuum control](./specs/vacuum-control.md) — the machine: states, transitions and protections
 - [Gestures](./specs/gestures.md) — the press classifier, the reserved holds and the scene standards
 - [Assets](./specs/assets.md) — the packed mark header and the tool that makes it
