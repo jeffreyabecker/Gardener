@@ -24,11 +24,16 @@ struct bvm;
 
 namespace gardener {
 
+// The model chamber's ceiling, in kPa of depth: the deepest the modelled pump pulls it. A rig that
+// reaches deeper or shallower is this number, and `--ceiling-kpa` sets it.
+constexpr float kChamberCeilingKpa = 70.0f;
+
 // The chamber the check pulls against: depth below ambient, pulled in proportion to the duty and
 // vented while the valve is open. It is the one thing here that is a model rather than a part,
 // because a real chamber cannot be pulled four hundred times in a second.
 class Chamber {
  public:
+  explicit Chamber(float ceilingKpa) : ceilingKpa_(ceilingKpa) {}
   void advance(uint32_t ms);
   void reset();
   float pressureKpa() const { return pressureKpa_; }
@@ -37,6 +42,7 @@ class Chamber {
   bool venting() const { return venting_; }
 
  private:
+  const float ceilingKpa_;
   float pressureKpa_ = 0.0f;
   float duty_ = 0.0f;
   bool venting_ = true;
@@ -199,7 +205,7 @@ class HarnessPanel : public PanelContext {
 // panel, the chamber, the interpreter.
 class HarnessSession {
  public:
-  explicit HarnessSession(std::string dataDir);
+  explicit HarnessSession(std::string dataDir, float ceilingKpa);
   ~HarnessSession();
 
   HarnessSession(const HarnessSession&) = delete;

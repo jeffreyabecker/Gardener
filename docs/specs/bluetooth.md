@@ -60,8 +60,8 @@ and the serial line reports the same state in `state=`.
 | --- | --- | --- |
 | `0` | idle | the valve is open and the pump stopped; the chamber is released, or was never pulled |
 | `1` | pull | the valve is closed and the pump is working toward the target |
-| `2` | hold | the reading is within `deadband` of the target; the pump keeps regulating to stay there |
-| `3` | vent | the pump is stopped and the valve open, so the pressure rises: a release, or a vent to a shallower target |
+| `2` | hold | the loop has called the target reached — within `deadband` on a pull, or a vent's lead short of it — and keeps regulating to stay there |
+| `3` | vent | the pump is stopped and the valve open, so the depth falls back toward ambient: a release, or a vent to a shallower target |
 | `4` | fault | a fault is latched; the pump is cut, the valve is open, and only the `0x03` opcode clears it |
 
 ### `pressure_kpa`

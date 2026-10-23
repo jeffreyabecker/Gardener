@@ -47,10 +47,10 @@ inline const char* runStateName(RunState state) {
 // it when it comes up — so it cancels out of every comparison against a target.
 //
 // The loop is a plain PID on that relative pressure with the pump as the only actuator, so it
-// can pull down but never vent; the valve is the only way back up, which is why every release
-// path here stops the pump before it opens the valve. A target set shallower than the chamber
-// while a run is active uses the same actuator: the valve opens until the new target is reached,
-// then the run carries on. Gains live in Machine.h.
+// can pull down but never vent; the valve is the only way back toward ambient, which is why every
+// release path here stops the pump before it opens the valve. A target set shallower than the
+// chamber while a run is active uses the same actuator: the valve opens until the new target is
+// reached, then the run carries on. Gains live in Machine.h.
 class VacuumSystem {
  public:
   VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent, MachineSettings& settings)
@@ -72,7 +72,8 @@ class VacuumSystem {
 
   // --- the reads ----------------------------------------------------------
   // Depth below ambient as the sensor reports it: the frame the target is stated in, so it is the
-  // same number `vacuum get` reports as `pressure_kpa`. Zero while a reading is invalid.
+  // same number `vacuum get` reports as `pressure_kpa`. Zero while there is no reading: the part is
+  // not answering, or no sample has been filtered yet.
   float currentPressureKpa() const;
   RunState runState() const { return state_; }
   float targetPressureKpa() const { return targetPressureKpa_; }

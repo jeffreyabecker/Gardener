@@ -26,7 +26,7 @@ void VacuumSystem::begin() {
 }
 
 float VacuumSystem::currentPressureKpa() const {
-  return sensor_->readingValid() ? sensor_->pressureKpa() : 0.0f;
+  return sensor_->present() && sensor_->readingValid() ? sensor_->pressureKpa() : 0.0f;
 }
 
 void VacuumSystem::rest() {
@@ -250,7 +250,7 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   float error = targetPressureKpa_ - measured;  // positive means "still needs vacuum"
 
   if (error < -deadband) {
-    // Deeper than requested; the pump cannot vent, so coast and let it bleed up.
+    // Deeper than requested; the pump cannot vent, so coast and let it leak back toward ambient.
     pidReset();
     output_ = 0.0f;
     pump_->stop();

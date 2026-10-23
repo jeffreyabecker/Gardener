@@ -2,7 +2,8 @@
 
 namespace gardener {
 
-// The vent valve: the only way back up, since the pump can pull down and nothing else can.
+// The vent valve: the only way back toward ambient, since the pump can pull down and nothing else
+// can.
 //
 // This is the interface the vacuum system holds. The verbs are the chamber's, not the coil's: `open()`
 // vents and `close()` makes the chamber pumpable, whichever way the fitted solenoid happens to wire

@@ -246,7 +246,7 @@ panel bit, one record served by both links. The wire still does not draw on the 
 
 | Field | Values | Notes |
 | --- | --- | --- |
-| `pressure_kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest, rising as the chamber is pumped down |
+| `pressure_kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest or while no reading can be trusted, rising as the chamber is pumped down |
 | `target` | kPa below ambient, or `-` | the current target; `-` when none is set |
 | `floor` | kPa, 1 dp | deepest reachable target, the `floor` device setting below the reference |
 | `duty` | %, 1 dp | pump duty |

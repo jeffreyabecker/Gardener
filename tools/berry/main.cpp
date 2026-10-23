@@ -179,6 +179,7 @@ int main(int argc, char** argv) {
   const char* testFilter = nullptr;
   int artSeconds = 0;
   int artSets = 0;
+  float ceilingKpa = gardener::kChamberCeilingKpa;
   bool compileOnly = false;
   bool verbose = false;
   bool suites = false;
@@ -214,13 +215,15 @@ int main(int argc, char** argv) {
       artSeconds = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--sets") == 0 && i + 1 < argc) {
       artSets = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--ceiling-kpa") == 0 && i + 1 < argc) {
+      ceilingKpa = (float)atof(argv[++i]);
     } else {
       fprintf(stderr, "unknown argument %s\n", argv[i]);
       return 2;
     }
   }
 
-  gardener::HarnessSession session(data);
+  gardener::HarnessSession session(data, ceilingKpa);
   if (!session.begin()) {
     fprintf(stderr, "no data image at %s\n", data);
     return 2;

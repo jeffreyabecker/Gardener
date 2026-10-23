@@ -36,7 +36,6 @@ namespace {
 constexpr float kPullKpaPerSecond = 3.0f;   // at full duty
 constexpr float kVentKpaPerSecond = 40.0f;
 constexpr float kLeakKpaPerSecond = 0.2f;
-constexpr float kChamberCeilingKpa = 70.0f;
 constexpr uint32_t kBeatMs = 250;
 constexpr uint32_t kTickMs = 50;
 
@@ -51,7 +50,7 @@ void Chamber::advance(uint32_t ms) {
     pressureKpa_ -= kLeakKpaPerSecond * seconds;
   }
   if (pressureKpa_ < 0.0f) pressureKpa_ = 0.0f;
-  if (pressureKpa_ > kChamberCeilingKpa) pressureKpa_ = kChamberCeilingKpa;
+  if (pressureKpa_ > ceilingKpa_) pressureKpa_ = ceilingKpa_;
 }
 
 void Chamber::reset() {
@@ -77,9 +76,10 @@ void ModelPump::update(uint32_t nowMs) {
   chamber_.setDuty(duty_);
 }
 
-HarnessSession::HarnessSession(std::string dataDir)
+HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
     : dataDir_(std::move(dataDir)),
       settings_(&files_),
+      chamber_(ceilingKpa),
       pump_(chamber_),
       sensor_(chamber_),
       valve_(chamber_),

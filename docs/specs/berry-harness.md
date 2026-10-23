@@ -45,6 +45,7 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--scene NAME` | — | draw that device scene — `readout`, `browser` or `system` — and save an animation |
 | `--seconds N` | `0` | with `--art` or `--scene`, run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
+| `--ceiling-kpa KPA` | `70` | the deepest depth the model chamber reaches |
 | `--out PATH` | `build/<name>.gif` | where the frame or animation goes; a `.bmp` name saves one still instead |
 | `--tests` | off | run the test suites instead of the smoke walk |
 | `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
@@ -90,7 +91,7 @@ instance, which the driver and the suites reach the same way a scene does.
 
 The machine model is what a preview moves against. It starts at 0 kPa, pulls at 3 kPa/s, settles a
 target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target below 5 kPa and caps at
-60 kPa. One beat is 250 ms of virtual time.
+the ceiling `--ceiling-kpa` sets, 70 kPa by default. One beat is 250 ms of virtual time.
 
 ## The frame and its pictures
 

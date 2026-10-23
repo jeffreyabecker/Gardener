@@ -9,6 +9,13 @@ handed the sensor, the pump and the valve, so the control law is policy and the 
 The controller owns the target, the duration and when to start and stop once it has acquired
 control. The device owns what happens when nobody is watching, and nothing else.
 
+Every pressure the machine holds or reports — in the loop, on the serial line and over Bluetooth —
+is a depth below ambient in kPa: zero at rest, larger as the chamber is pumped down, smaller as the
+valve lets it back toward ambient. The sensor's negative gauge output becomes that depth in its
+driver under `hal/`, held at zero rather than going negative, so nothing above the part deals in a
+signed gauge pressure. A target of `0` means none rather than ambient: the loop accepts nothing
+shallower than `CONTROL_MIN_TARGET_KPA`.
+
 ## States
 
 ```
@@ -19,9 +26,9 @@ IDLE ──────────────> PULL ──(target reached)─�
   └───────────────── vacuum reset ──────────────────┴─────────────────────── FAULT
 ```
 
-`VENT` is the valve open to raise pressure. It has two endings: a release goes to `IDLE` within
-2 kPa of ambient (or on the timeout), and a vent to a shallower target seals the chamber and
-returns to `PULL`/`HOLD`.
+`VENT` is the valve open to let the chamber back toward ambient. It has two endings: a release goes
+to `IDLE` within 2 kPa of ambient (or on the timeout), and a vent to a shallower target seals the
+chamber and returns to `PULL`/`HOLD`.
 
 | Event | From | To |
 | --- | --- | --- |
@@ -54,21 +61,26 @@ external link attached.
 ## The control law
 
 The pump is the only actuator, so the loop can pull down but never vent — the vent valve is the
-only way back up. A target set shallower than the chamber while a run is active uses that valve:
-the pump stops, the valve opens, and `VENT` holds until the reading reaches the new target, then
-the run resumes. A deeper target re-enters `PULL` and the pump works to it; `HOLD` follows when it
-arrives.
+only way back toward ambient. A target set shallower than the chamber while a run is active uses
+that valve: the pump stops, the valve opens, and `VENT` holds until the reading reaches the new
+target, then the run resumes. A deeper target re-enters `PULL` and the pump works to it; `HOLD`
+follows when it arrives.
 
 `HOLD` is the device's own deadband saying that the target has been reached, and that is all it
 means. The valve is closed through `PULL` and `HOLD` and open in `IDLE` and `VENT`; whether
 "closed" means energised is the fitted part's.
 
+The deadband bounds an arrival by pulling. A vent to a shallower target is the exception: it lands
+a lead deeper than the target and the loop calls that arrived, so `HOLD` can follow a vent with the
+reading up to `VENT_TARGET_LEAD_KPA` deeper than the target rather than within `deadband`. The pump
+stays off until the leak brings it back inside the band, which is the rest of the travel.
+
 A release finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
 first — a leaky rig takes longer, and that is logged rather than treated as an error. A vent to a
 shallower target finishes at its landing and returns to `PULL`/`HOLD`, keeping the target.
 `CONTROL_VENT_TO_TARGET` in `Machine.h` chooses the landing: with it, the valve closes
-`VENT_TARGET_LEAD_KPA` above the target so the travel after the coil drops covers the rest; without
-it, the valve stays open until the reading passes the target and the pump pulls back.
+`VENT_TARGET_LEAD_KPA` deeper than the target so the travel after the coil drops covers the rest;
+without it, the valve stays open until the reading passes the target and the pump pulls back.
 
 The gains are derived from the pump's projected free-flow rate and the chamber volume — two device
 settings, `flow` (L/min) and `volume` (L), with compile-time defaults in `Machine.h`, restored from

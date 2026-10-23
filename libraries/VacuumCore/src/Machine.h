@@ -41,10 +41,10 @@ struct PidGains {
   float integralLimit;
 };
 
-// The one function of the two settings: the chamber's drop at full duty near ambient, in kPa/s,
-// is the pump's free flow times ambient pressure over the volume, which is the same slew the
-// derivative term measures. Each gain scales against it, so the loop keeps its shape whatever
-// pump and chamber are fitted.
+// The one function of the two settings: the rate the depth rises at full duty near ambient, in
+// kPa/s, is the pump's free flow times ambient pressure over the volume, which is the same slew
+// the derivative term measures. Each gain scales against it, so the loop keeps its shape
+// whatever pump and chamber are fitted.
 inline PidGains pidGainsFor(float flowLpm, float volumeL) {
   const float slewKpaPerSec = 101.325f * flowLpm / (60.0f * volumeL);
   PidGains gains;
@@ -71,11 +71,11 @@ constexpr float CONTROL_FLOOR_KPA = 60.0f;
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to ambient to be released
 constexpr uint32_t VENT_TIMEOUT_MS = 30000;  // stop waiting on a leaky rig
 // A target set shallower than the chamber while pulling or holding is reached by opening the
-// valve, not by waiting for the leak. This chooses where the valve closes. True stops it a lead
-// above the target, so the travel after the coil drops covers the rest; false leaves it open
-// until the reading passes the target and lets the pump pull back. Try both on the bench.
+// valve, not by waiting for the leak. This chooses where the valve closes. True closes it a lead
+// deeper than the target, so the travel after the coil drops covers the rest; false leaves it
+// open until the reading passes the target and lets the pump pull back. Try both on the bench.
 constexpr bool CONTROL_VENT_TO_TARGET = true;
-constexpr float VENT_TARGET_LEAD_KPA = 1.0f;  // how far above the target the valve closes
+constexpr float VENT_TARGET_LEAD_KPA = 1.0f;  // how far deeper than the target it closes
 // A reset releases the chamber first, but it does not wait out the whole vent: the restart is safe
 // once the pump is off and the valve is open, and this is the margin a near-vented chamber gets.
 constexpr uint32_t REBOOT_VENT_WAIT_MS = 2000;

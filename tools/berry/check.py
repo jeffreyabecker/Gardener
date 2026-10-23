@@ -184,6 +184,11 @@ parser.add_argument(
     default=12,
     help="with --art, the set count to activate with (default 12; 0 keeps the file's)",
 )
+parser.add_argument(
+    "--ceiling-kpa",
+    type=float,
+    help="the deepest depth the model chamber reaches, in kPa (default 70)",
+)
 parser.add_argument("--tests", action="store_true", help="run the test suites in tools/berry/tests")
 parser.add_argument(
     "--test",
@@ -207,6 +212,8 @@ if args.compile:
     command.append("--compile-only")
 if args.verbose:
     command.append("--verbose")
+if args.ceiling_kpa is not None:
+    command.extend(["--ceiling-kpa", str(args.ceiling_kpa)])
 if args.art:
     out = Path(args.out) if args.out else BUILD / f"{args.art}.gif"
     command.extend(
