@@ -25,15 +25,22 @@ constexpr uint32_t kFastRateMs = 200;
 // The opcodes a controller writes to `command`, and the results it is
 // notified. The machine's answers fill the bottom of the range and the
 // protocol's refusals sit at the top, so a client can tell which of the two
-// spoke without knowing the list.
+// spoke without knowing the list. `0x01` is retired: a start is valid at a
+// target of 0 now, so "no target" is never answered.
 enum : uint8_t { kOpStart = 0x01, kOpStop = 0x02, kOpResetFault = 0x03, kOpReboot = 0x04 };
 enum : uint8_t {
   kResultApplied = 0x00,
-  kResultNoTarget = 0x01,
   kResultNoReading = 0x02,
   kResultFault = 0x03,
   kResultNotControlling = 0xFE,
   kResultUnknownOpcode = 0xFF,
+};
+
+// Why a write was refused, in the byte `write_result` carries after the field's suffix.
+enum : uint8_t {
+  kWriteNotControlling = 0x01,
+  kWriteOutOfRange = 0x02,
+  kWriteNotANumber = 0x03,
 };
 
 // Whether a reading can be trusted, which is what `sensor` reports and what a
@@ -52,23 +59,27 @@ static_assert(static_cast<uint8_t>(RunState::Idle) == 0 &&
 }  // namespace
 
 const BleDomain::Spec MachineBleDomain::kSpecs[] = {
-    {0x0001, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // state
-    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // pressure_kpa
-    {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // target
-    {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // duty
-    {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                               // fault
-    {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                           // command
-    {0x0008, NIMBLE_PROPERTY::READ, 16},                                                         // fw
-    {0x0009, NIMBLE_PROPERTY::READ, 1},                                                          // ble_proto
-    {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},   // control
-    {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // sensor
-    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // floor
-    {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
-    {0x000F, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // flow
-    {0x0010, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // volume
-    {0x0011, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},                             // valve
-    {0x0012, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // pump_max
-    {0x0013, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // deadband
+    {0x0001, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // state
+    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pressure_kpa
+    {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4}, // target
+    {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // duty
+    {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                             // fault
+    {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                         // command
+    {0x0008, NIMBLE_PROPERTY::READ, 16},                                                       // fw
+    {0x0009, NIMBLE_PROPERTY::READ, 1},                                                        // ble_proto
+    {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1}, // control
+    {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // sensor
+    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // floor
+    {0x000E, NIMBLE_PROPERTY::READ, 1},                                                        // caps
+    {0x000F, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // flow
+    {0x0010, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // volume
+    {0x0011, NIMBLE_PROPERTY::READ, 1},                                                        // valve
+    {0x0012, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pump_max
+    {0x0013, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // deadband
+    {0x0014, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 2}, // hold_s
+    {0x0015, NIMBLE_PROPERTY::READ, 2},                                                        // max_run_s
+    {0x0016, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 3},                              // write_result
+    {0x0017, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // uptime_ms
 };
 
 MachineBleDomain::MachineBleDomain(Machine* app) : app_(app) {}
@@ -140,6 +151,18 @@ void MachineBleDomain::describe(uint8_t index) {
     case Deadband:
       setFloat(chr, app_->settings().deadbandPressureKpa());
       break;
+    case HoldS:
+      // The hold granted to the run, not the one a write asked for: 0 while nothing is running.
+      setUint16(chr, vacuum.running() ? (uint16_t)vacuum.holdSeconds() : 0);
+      break;
+    case MaxRunS:
+      setUint16(chr, (uint16_t)(CONTROL_MAX_RUN_MS / 1000));
+      break;
+    case WriteResult:
+      break;  // the last refusal, written when a write is turned away
+    case UptimeMs:
+      setUint32(chr, app_->uptimeMs());
+      break;
     case Count:
       break;
   }
@@ -166,54 +189,13 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
       control_.value = value.data()[0];
       control_.has = true;
       break;
-    case Flow:
-      if (value.size() != sizeof(float)) return;
+    case HoldS:
+      if (value.size() != sizeof(uint16_t)) return;
       {
-        float lpm = 0.0f;
-        memcpy(&lpm, value.data(), sizeof(lpm));
-        flow_.value = lpm;
-        flow_.has = true;
-      }
-      break;
-    case Volume:
-      if (value.size() != sizeof(float)) return;
-      {
-        float litres = 0.0f;
-        memcpy(&litres, value.data(), sizeof(litres));
-        volume_.value = litres;
-        volume_.has = true;
-      }
-      break;
-    case Floor:
-      if (value.size() != sizeof(float)) return;
-      {
-        float pressureKpa = 0.0f;
-        memcpy(&pressureKpa, value.data(), sizeof(pressureKpa));
-        floor_.value = pressureKpa;
-        floor_.has = true;
-      }
-      break;
-    case Valve:
-      if (value.size() != 1) return;
-      valve_.value = value.data()[0];
-      valve_.has = true;
-      break;
-    case PumpMax:
-      if (value.size() != sizeof(float)) return;
-      {
-        float percent = 0.0f;
-        memcpy(&percent, value.data(), sizeof(percent));
-        pumpMax_.value = percent;
-        pumpMax_.has = true;
-      }
-      break;
-    case Deadband:
-      if (value.size() != sizeof(float)) return;
-      {
-        float pressureKpa = 0.0f;
-        memcpy(&pressureKpa, value.data(), sizeof(pressureKpa));
-        deadband_.value = pressureKpa;
-        deadband_.has = true;
+        uint16_t seconds = 0;
+        memcpy(&seconds, value.data(), sizeof(seconds));
+        hold_.value = seconds;
+        hold_.has = true;
       }
       break;
     default:
@@ -246,16 +228,17 @@ void MachineBleDomain::applyPending(BleLink& link) {
   if (target_.has) {
     target_.has = false;
     const float pressureKpa = target_.value;
-    if (owned(link) && isfinite(pressureKpa)) {
-      // 0 clears the target; anything else is the vacuum system's to accept or
-      // refuse against its own floor, so the two surfaces cannot disagree.
-      if (pressureKpa == 0.0f) {
-        const MachineCommand clear{MachineCommand::Op::ClearTarget};
-        postMachineCommand(clear);
-      } else {
-        const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-        postMachineCommand(set);
-      }
+    if (!owned(link)) {
+      refuse(link, Target, kWriteNotControlling);
+    } else if (!isfinite(pressureKpa)) {
+      refuse(link, Target, kWriteNotANumber);
+    } else if (pressureKpa < 0.0f || pressureKpa > app_->settings().floorPressureKpa()) {
+      refuse(link, Target, kWriteOutOfRange);
+    } else {
+      // 0 is the ambient target, which releases the chamber; anything else is a setpoint the
+      // vacuum system accepts or refuses against the same floor.
+      const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
+      link.post(set);
     }
     // Read back rather than echo: a refused value leaves the target where it
     // was, and the read is the answer.
@@ -267,86 +250,24 @@ void MachineBleDomain::applyPending(BleLink& link) {
     }
   }
 
-  // The two loop settings, applied the same way `target` is: an owner's write
-  // retunes the loop, and the read-back is the answer.
-  if (flow_.has) {
-    flow_.has = false;
-    const float lpm = flow_.value;
-    if (owned(link) && isfinite(lpm) && lpm > 0.0f) {
-      app_->settings().setPumpFlowLpm(lpm);
+  if (hold_.has) {
+    hold_.has = false;
+    const uint16_t seconds = hold_.value;
+    const uint16_t maxSeconds = static_cast<uint16_t>(CONTROL_MAX_RUN_MS / 1000);
+    if (!owned(link)) {
+      refuse(link, HoldS, kWriteNotControlling);
+    } else if (seconds > maxSeconds) {
+      refuse(link, HoldS, kWriteOutOfRange);
+    } else {
+      // 0 asks for the compiled maximum, which is what a start with no hold gets.
+      requestedHoldS_ = seconds;
     }
-    describe(Flow);
-    const float applied = app_->settings().pumpFlowLpm();
-    if (applied != lastFlow_) {
-      lastFlow_ = applied;
-      link.notify(characteristics_[Flow]);
-    }
-  }
-
-  if (volume_.has) {
-    volume_.has = false;
-    const float litres = volume_.value;
-    if (owned(link) && isfinite(litres) && litres > 0.0f) {
-      app_->settings().setChamberVolumeL(litres);
-    }
-    describe(Volume);
-    const float applied = app_->settings().chamberVolumeL();
-    if (applied != lastVolume_) {
-      lastVolume_ = applied;
-      link.notify(characteristics_[Volume]);
-    }
-  }
-
-  if (floor_.has) {
-    floor_.has = false;
-    const float pressureKpa = floor_.value;
-    if (owned(link) && isfinite(pressureKpa) && pressureKpa >= CONTROL_MIN_TARGET_KPA) {
-      app_->settings().setFloorPressureKpa(pressureKpa);
-    }
-    describe(Floor);
-    const float applied = app_->settings().floorPressureKpa();
-    if (applied != lastFloor_) {
-      lastFloor_ = applied;
-      link.notify(characteristics_[Floor]);
-    }
-  }
-
-  if (valve_.has) {
-    valve_.has = false;
-    if (owned(link)) {
-      // 0 is normally open, 1 is normally closed. The fitted part is chosen on
-      // the next boot, so the characteristic keeps reading what is fitted now.
-      app_->settings().setValveNormallyOpen(valve_.value == 0);
-    }
-    describe(Valve);
-  }
-
-  if (pumpMax_.has) {
-    pumpMax_.has = false;
-    const float percent = pumpMax_.value;
-    if (owned(link) && isfinite(percent) && percent > 0.0f &&
-        percent <= PUMP_DUTY_MAX_PERCENT) {
-      app_->settings().setPumpMaxPercent(percent);
-    }
-    describe(PumpMax);
-    const float applied = app_->settings().pumpMaxPercent();
-    if (applied != lastPumpMax_) {
-      lastPumpMax_ = applied;
-      link.notify(characteristics_[PumpMax]);
-    }
-  }
-
-  if (deadband_.has) {
-    deadband_.has = false;
-    const float pressureKpa = deadband_.value;
-    if (owned(link) && isfinite(pressureKpa) && pressureKpa > 0.0f) {
-      app_->settings().setDeadbandPressureKpa(pressureKpa);
-    }
-    describe(Deadband);
-    const float applied = app_->settings().deadbandPressureKpa();
-    if (applied != lastDeadband_) {
-      lastDeadband_ = applied;
-      link.notify(characteristics_[Deadband]);
+    describe(HoldS);
+    const uint16_t applied =
+        app_->vacuum().running() ? static_cast<uint16_t>(app_->vacuum().holdSeconds()) : 0;
+    if (applied != lastHoldS_) {
+      lastHoldS_ = applied;
+      link.notify(characteristics_[HoldS]);
     }
   }
 
@@ -358,11 +279,31 @@ void MachineBleDomain::applyPending(BleLink& link) {
   }
 }
 
+// A refused write is not silence: the field's suffix and the reason are notified, while the
+// read-back stays the authority on what the machine holds.
+void MachineBleDomain::refuse(BleLink& link, uint8_t index, uint8_t reason) {
+  NimBLECharacteristic* chr = characteristics_[WriteResult];
+  if (chr == nullptr) return;
+  const uint16_t suffix = kSpecs[index].suffix;
+  const uint8_t payload[3] = {static_cast<uint8_t>(suffix & 0xFF),
+                              static_cast<uint8_t>(suffix >> 8), reason};
+  chr->setValue(payload, sizeof(payload));
+  link.notify(chr);
+}
+
 // Runs one opcode. `start` reports the same refusals the serial link reports,
 // from the same VacuumSystem::startRefusal(), so the two surfaces cannot
 // disagree about why a run will not start. Every applied opcode is queued for
 // the control task; only the refusal and the result byte are answered here.
-uint8_t MachineBleDomain::execute(const Link& link, uint8_t opcode) {
+uint8_t MachineBleDomain::execute(Link& link, uint8_t opcode) {
+  // Stop is the one opcode a bonded link may send without owning the machine: it is how a
+  // bystander makes the machine safe, so it is answered before the ownership gate.
+  if (opcode == kOpStop) {
+    const MachineCommand stop{MachineCommand::Op::Stop};
+    link.post(stop);
+    return kResultApplied;
+  }
+
   if (!owned(link)) return kResultNotControlling;
 
   VacuumSystem& vacuum = app_->vacuum();
@@ -371,27 +312,21 @@ uint8_t MachineBleDomain::execute(const Link& link, uint8_t opcode) {
       const char* refusal = vacuum.startRefusal();
       if (refusal != nullptr) {
         if (strcmp(refusal, "latch") == 0) return kResultFault;
-        if (strcmp(refusal, "no_target") == 0) return kResultNoTarget;
         if (strcmp(refusal, "no_reading") == 0) return kResultNoReading;
         return kResultUnknownOpcode;
       }
-      const MachineCommand start{MachineCommand::Op::Start};
-      postMachineCommand(start);
-      return kResultApplied;
-    }
-    case kOpStop: {
-      const MachineCommand stop{MachineCommand::Op::Stop};
-      postMachineCommand(stop);
+      const MachineCommand start{MachineCommand::Op::Start, (float)requestedHoldS_};
+      link.post(start);
       return kResultApplied;
     }
     case kOpResetFault: {
       const MachineCommand reset{MachineCommand::Op::ResetFault};
-      postMachineCommand(reset);
+      link.post(reset);
       return kResultApplied;
     }
     case kOpReboot: {
       const MachineCommand reboot{MachineCommand::Op::Reboot};
-      postMachineCommand(reboot);
+      link.post(reboot);
       return kResultApplied;
     }
     default:
@@ -415,6 +350,13 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(PumpMax, app_->settings().pumpMaxPercent(), lastPumpMax_, baseline, link);
   publishOnChange(Deadband, app_->settings().deadbandPressureKpa(), lastDeadband_, baseline, link);
 
+  const uint16_t holdS = vacuum.running() ? static_cast<uint16_t>(vacuum.holdSeconds()) : 0;
+  if (baseline || holdS != lastHoldS_) {
+    lastHoldS_ = holdS;
+    describe(HoldS);
+    link.notify(characteristics_[HoldS]);
+  }
+
   const char* fault = vacuum.faultCode();
   if (baseline || lastFault_ != fault) {
     lastFault_ = fault;
@@ -428,6 +370,8 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
     link.notify(characteristics_[PressureKpa]);
     describe(Duty);
     link.notify(characteristics_[Duty]);
+    describe(UptimeMs);
+    link.notify(characteristics_[UptimeMs]);
   }
 }
 

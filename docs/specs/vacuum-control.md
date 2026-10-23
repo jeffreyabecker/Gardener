@@ -6,15 +6,16 @@ on the depth the sensor reports, the valve, the pump, the run state and the faul
 handed the sensor, the pump and the valve, so the control law is policy and the pins stay in
 `hal/`.
 
-The controller owns the target, the duration and when to start and stop once it has acquired
-control. The device owns what happens when nobody is watching, and nothing else.
+The controller owns the target, the hold and when to start and stop once it has acquired control.
+The device owns what happens when nobody is watching — a stop from anyone, the deadline on a run,
+and every fault — and nothing else.
 
 Every pressure the machine holds or reports — in the loop, on the serial line and over Bluetooth —
 is a depth below ambient in kPa: zero at rest, larger as the chamber is pumped down, smaller as the
 valve lets it back toward ambient. The sensor's negative gauge output becomes that depth in its
 driver under `hal/`, held at zero rather than going negative, so nothing above the part deals in a
-signed gauge pressure. A target of `0` means none rather than ambient: the loop accepts nothing
-shallower than `CONTROL_MIN_TARGET_KPA`.
+signed gauge pressure. A target of `0` is the ambient target: the chamber released, which is what a
+stop asks for too. Any non-zero target is held to `floor`, the deepest depth this rig can reach.
 
 ## States
 
@@ -27,22 +28,24 @@ IDLE ──────────────> PULL ──(target reached)─�
 ```
 
 `VENT` is the valve open to let the chamber back toward ambient. It has two endings: a release goes
-to `IDLE` within 2 kPa of ambient (or on the timeout), and a vent to a shallower target seals the
-chamber and returns to `PULL`/`HOLD`.
+to `IDLE` once the depth reaches this rig's vent floor within the vent margin, and a vent to a
+shallower target seals the chamber and returns to `PULL`/`HOLD`. A release that has not reached the
+floor after 30 s latches `vent_timeout` instead of reporting `IDLE`.
 
 | Event | From | To |
 | --- | --- | --- |
 | `control acquire` | any | the claimant takes the top of the stack and the chamber vents; the new controller starts from an open chamber |
 | `control release` | any | this link leaves the stack and the chamber vents; the link beneath is the controller again, or `none` |
-| `vacuum start` | anything but `FAULT` | closes the valve, then `PULL`; `err not_ready` with `no_target`, `no_reading` or `latch`. From `VENT` it abandons the release and pulls again |
-| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move |
-| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout; acts only while the panel drives |
+| `vacuum start [<s>]` | anything but `FAULT` | closes the valve, then runs the stored target, `0` included, for the hold or the maximum; `err not_ready` with `no_reading` or `latch`. From `VENT` it abandons the release. A start while running is a no-op |
+| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move. The target is kept. Accepted from any link, controlling or not |
+| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout; whatever link drives |
 | OK+Cancel held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
-| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. A target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached; `-` while pulling or holding releases the chamber |
-| target reached | `PULL` | `HOLD`, and the controller's countdown should start here |
+| `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. `0` (or `-`) is the ambient target and releases the chamber; a target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached. Deeper than `floor` is refused and changes nothing |
+| target reached | `PULL` | `HOLD`, and the run's hold is timed from here by the controller |
 | target set deeper | `PULL`, `HOLD` | `PULL`; the pump works to the new depth and `HOLD` follows |
 | vent to a shallower target | `PULL`, `HOLD` | `VENT` with `duty=0`; it returns to `PULL`/`HOLD` rather than `IDLE` |
-| sensor loss, pump latch | any | `VENT`, then `IDLE` or `FAULT` |
+| the run's hold expires | `PULL`, `HOLD` | `VENT` then `IDLE`: the chamber is released and the log names the deadline |
+| sensor loss | any state but `IDLE` | `FAULT` with `sensor`, the pump cut and the valve open |
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
 | `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
 
@@ -75,12 +78,19 @@ a lead deeper than the target and the loop calls that arrived, so `HOLD` can fol
 reading up to `VENT_TARGET_LEAD_KPA` deeper than the target rather than within `deadband`. The pump
 stays off until the leak brings it back inside the band, which is the rest of the travel.
 
-A release finishes when the pressure is within 2 kPa of ambient, or after 30 s, whichever comes
-first — a leaky rig takes longer, and that is logged rather than treated as an error. A vent to a
-shallower target finishes at its landing and returns to `PULL`/`HOLD`, keeping the target.
+A release finishes when the depth reaches this rig's vent floor within 2 kPa — `VENT_FLOOR_KPA`,
+measured on the bench — or latches `vent_timeout` after 30 s without getting there. The floor rather
+than ambient is the criterion because a chamber with the valve open does not settle at 0: the tube,
+the orifice and the sensor's offset leave it a little above. A vent to a shallower target finishes at
+its landing and returns to `PULL`/`HOLD`, keeping the target.
 `CONTROL_VENT_TO_TARGET` in `Machine.h` chooses the landing: with it, the valve closes
 `VENT_TARGET_LEAD_KPA` deeper than the target so the travel after the coil drops covers the rest;
 without it, the valve stays open until the reading passes the target and the pump pulls back.
+
+A run has a deadline. `vacuum start` may carry a hold in whole seconds, and a start without one gets
+`CONTROL_MAX_RUN_MS` (fifteen minutes); the hold is published as `hold` and the maximum as
+`max_run`. When it expires the machine releases the chamber and the run log names it. That is a
+release, not a fault: the machine did what it was told for as long as it was allowed to.
 
 The gains are derived from the pump's projected free-flow rate and the chamber volume — two device
 settings, `flow` (L/min) and `volume` (L), with compile-time defaults in `Machine.h`, restored from
@@ -98,31 +108,39 @@ All of these act without consulting the controller:
 * duty is hard capped at the `pump_max` setting, with the pump driver's own
   `PUMP_DUTY_MAX_PERCENT` as the part's ceiling, and `PUMP_RAMP_PERCENT_PER_SEC` avoids step
   changes into the pump
-* if the sensor stops producing a plausible reading mid-run, the pump is cut and the state latches
-  to `FAULT`
-* a target deeper than `floor` — the pump's own reach, reported in `vacuum get` — pins the duty at
-  the cap, and nothing stops it
-* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout
+* a target deeper than `floor` is refused on every path that sets one — the serial line, Bluetooth
+  and a routine alike — and the refusal names the bound
+* if the sensor stops producing a plausible reading while the machine is not idle, the pump is cut
+  and the state latches `sensor` — a pull, a hold, a target vent and a release all steer on it
+* a release that has not reached the vent floor after 30 s latches `vent_timeout`
+* a pull driven at or above half the duty cap for ten seconds without a kilopascal of headway
+  latches `no_progress`
+* a depth more than 5 kPa past the target on five consecutive readings latches `overshoot`
+* a run ends as a release at its hold, fifteen minutes at most
+* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout, whichever link
+  drives
 * holding OK and Cancel for 5 s reboots the device: stop, vent up to 2 s, restart
 
-Faults latch: only `vacuum reset` clears one, and the device never retries on its own.
+A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cleared. Only
+`vacuum reset` clears one, and the device never retries on its own.
 
 ## What a controller has to know
 
-* **The hold's duration is yours.** The device has no timer, no timeout and no maximum run time,
-  so a run continues until you send `vacuum stop`. `HOLD` is the cue, not a countdown: it means
+* **The hold's duration is yours, within a bound.** `HOLD` is the cue, not a countdown: it means
   the device's own deadband has decided the target is reached, which is the one thing you cannot
-  work out for yourself, because the deadband is the device's loop.
-* **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the readout, only
-  while the panel drives — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever a
+  work out for yourself, because the deadband is the device's loop. A start may carry a shorter
+  hold, and the run releases itself at the maximum whatever you do — the device will not hold the
+  pump for a controller that has stopped talking.
+* **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the readout,
+  whichever link drives — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever a
   controller is doing, so a link that dropped while owning cannot be recovered any other way.
 * **A link that drops while owning stops the run.** It leaves the stack, so the chamber vents and
-  control passes to the link beneath — the panel or `none`. The device cannot tell a controller that
-  left from one that hung, though: a link that stops answering while its port stays open keeps the
-  top until OK+Cancel.
-* **With no timer in the device, an unattended run holds until something stops it.** A normally
-  open solenoid draws current for the whole hold, which is why a long hold, not the pump, is the
-  dominant battery cost.
+  control passes to the link beneath — the panel or `none`. A link that stops answering while its
+  port stays open keeps the top until its hold expires or OK+Cancel.
+* **A stop is always available.** Any link may send it without owning the machine, so a bystander on
+  the same wire or radio can vent the chamber.
+* **A long hold is the dominant battery cost.** A normally open solenoid draws current for the whole
+  hold, which is why the run's deadline matters as much as the pump's.
 * **The vent valve is normally open by default**, so de-energised is open and running a vacuum
   means energising the coil. `NormallyClosedValve` in `Build.cpp` inverts that and removes the
   fail-safe.

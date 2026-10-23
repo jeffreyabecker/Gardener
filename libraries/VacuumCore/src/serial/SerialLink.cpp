@@ -40,6 +40,10 @@ void SerialLink::linkError(const char* code, const String& detail) {
 void SerialLink::poll(uint32_t nowMs) {
   (void)nowMs;
 
+  // A command the control task's queue could not take on an earlier pass is retried first, so a
+  // momentarily full queue costs this link a beat rather than the command.
+  flushCommands();
+
   // The link reads the domain token and nothing else. Once the token is followed by a space or a
   // tab, the stream belongs to the domain, which parses the rest of the line (and any body).
   while (stream_.available() > 0) {

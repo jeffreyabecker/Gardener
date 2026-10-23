@@ -30,8 +30,8 @@ constexpr uint32_t InterfaceStackWords = 4096;
 constexpr UBaseType_t ControlCore = 1;
 constexpr UBaseType_t InterfaceCore = 0;
 
-// Queue depths. Overflow drops the newest item with a log
-// line; the consumers drain every tick, so a full queue is the exception, not the steady state.
+// Queue depth. A command the queue cannot take is held by the link that posted it and retried on
+// its next poll, so a full queue is a beat of delay rather than a lost stop.
 constexpr UBaseType_t MachineCommandQueueDepth = 8;
 
 // The control task's queue, created before either task starts. It is written through
@@ -60,21 +60,78 @@ struct InterfaceState {
 #endif
 };
 
-// Applies one queued write to the machine. The five the vacuum system answers are MachineCommand's
+// Applies one queued write to the machine. The settings and the vacuum system are the machine's
 // own; the reboot is the composition's, so it is the one left here.
 void applyCommand(ControlState& state, const MachineCommand& command) {
   if (!applyMachineCommand(state.machine.vacuum(), command)) safeReboot(state.machine);
 }
 
-// Every pending command, applied against the machine as the last tick left it.
+// A queued command the machine never had to apply, named with why, so a burst that collapses
+// leaves the same evidence as one that ran.
+void logCollapsed(ControlState& state, const MachineCommand& command, const char* reason) {
+  String message = "queue: dropped ";
+  message += machineCommandName(command.op);
+  if (command.op == MachineCommand::Op::SetTarget) {
+    message += ' ';
+    message += String(command.value, 1u);
+  }
+  message += ' ';
+  message += reason;
+  state.logger->warn(message.c_str());
+}
+
+// Every pending command, collapsed to what the machine should do rather than replayed step by
+// step: a stop discards everything queued before it, and repeated target writes reduce to the last
+// one. A burst therefore cannot walk the valve back and forth, and a start queued before a stop
+// never runs after it.
 void drainMachineCommands(ControlState& state) {
-  MachineCommand command;
-  while (xQueueReceive(machineCommandQueue, &command, 0) == pdTRUE) applyCommand(state, command);
+  MachineCommand batch[MachineCommandQueueDepth];
+  UBaseType_t count = 0;
+  while (count < MachineCommandQueueDepth &&
+         xQueueReceive(machineCommandQueue, &batch[count], 0) == pdTRUE) {
+    count++;
+  }
+  if (count == 0) return;
+
+  // The last stop owns everything before it.
+  UBaseType_t first = 0;
+  for (UBaseType_t i = count; i > 0; i--) {
+    if (batch[i - 1].op == MachineCommand::Op::Stop) {
+      first = i - 1;
+      break;
+    }
+  }
+  for (UBaseType_t i = 0; i < first; i++) logCollapsed(state, batch[i], "before a stop");
+
+  // Of what is left, only the last target is worth applying: the depths before it are setpoints
+  // the machine never has to stand still at.
+  UBaseType_t lastTarget = count;
+  for (UBaseType_t i = count; i > first; i--) {
+    if (batch[i - 1].op == MachineCommand::Op::SetTarget) {
+      lastTarget = i - 1;
+      break;
+    }
+  }
+  for (UBaseType_t i = first; i < count; i++) {
+    if (i != lastTarget && batch[i].op == MachineCommand::Op::SetTarget) {
+      logCollapsed(state, batch[i], "for a later target");
+      continue;
+    }
+    applyCommand(state, batch[i]);
+  }
 }
 
 // The drivers stopped narrating, so the run is reported from here: one line per state change,
-// timed when it leaves a vent, plus the fault code when one latches.
+// timed when it leaves a vent, plus the fault code when one latches and the deadline when one
+// ends the run.
 void logRunChanges(ControlState& state, uint32_t nowMs) {
+  if (state.machine.vacuum().takeDeadlineExpired()) {
+    String deadline = "run: hold deadline reached after ";
+    deadline += String(state.machine.vacuum().holdSeconds());
+    deadline += " s";
+    state.logger->warn(deadline.c_str());
+  }
+
   const RunState current = state.machine.vacuum().runState();
   if (current == state.lastState) return;
 
@@ -87,16 +144,9 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
     message += ')';
   }
   if (state.lastState == RunState::Venting) {
-    const uint32_t ventMs = nowMs - state.ventStartMs;
     message += " after ";
-    message += String(ventMs);
+    message += String(nowMs - state.ventStartMs);
     message += " ms";
-    if (ventMs >= VENT_TIMEOUT_MS) {
-      message += ", vent timed out";
-      state.logger->warn(message.c_str());
-      state.lastState = current;
-      return;
-    }
   }
   if (current == RunState::Venting) state.ventStartMs = nowMs;
   state.logger->info(message.c_str());
@@ -105,8 +155,9 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
 
 }  // namespace
 
-void postMachineCommand(const MachineCommand& command) {
-  xQueueSend(machineCommandQueue, &command, 0);
+bool postMachineCommand(const MachineCommand& command) {
+  if (machineCommandQueue == nullptr) return false;
+  return xQueueSend(machineCommandQueue, &command, 0) == pdTRUE;
 }
 
 void controlTask(void* arg) {

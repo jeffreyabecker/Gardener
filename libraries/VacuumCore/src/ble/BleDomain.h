@@ -64,6 +64,17 @@ inline void setFloat(NimBLECharacteristic* characteristic, float value) {
   characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
+// The same trade for the integer fields: the ESP32 and the contract are both little-endian.
+inline void setUint16(NimBLECharacteristic* characteristic, uint16_t value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+}
+
+inline void setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+}
+
 }  // namespace gardener
 
 #endif  // GARDENER_BLUETOOTH

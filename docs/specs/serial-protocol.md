@@ -10,8 +10,9 @@ must not treat it as a compatibility guarantee. `fw` is the build.
 
 The device is a serial peripheral in the strict sense: it never initiates, keeps no session,
 and every state it has is either a command it was given or something it had to do for
-safety. All control comes from the controller at the other end of the line, including how long
-a run lasts.
+safety. Control comes from the controller at the other end of the line, with two exceptions it
+owns itself: a stop is accepted from any link, and a run ends as a release at its deadline whether
+or not the controller is still talking.
 
 The first token is a **domain**. `control`, `device`, `vacuum`, `buzzer` and `fs` are the domains.
 There is no `help` domain: this document is the interface.
@@ -42,9 +43,9 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
 
 **Connecting is not controlling.** A link that has only connected can read; every writing verb is
-refused with `err not_controlling` until the link sends `control acquire` (§5). One link drives at a
-time, and `control release` is the graceful exit: the link leaves the stack, which vents, and the
-panel returns to its own page.
+refused with `err not_controlling` until the link sends `control acquire` (§5), except `vacuum stop`,
+which any link may send. One link drives at a time, and `control release` is the graceful exit: the
+link leaves the stack, which vents, and the panel returns to its own page.
 
 If the port disappears while the link drives, the link is removed from the stack: the chamber vents
 and control falls to the link beneath, so a reconnected link is a reader until it claims again. A
@@ -100,7 +101,7 @@ detail = token / items
   `ok state=PULL`, `ok target=40.0`, `ok tone=2000,500`, `ok playing=on`, `ok log=WE`.
 * `err` carries a code and the detail that code defines. A code naming one thing takes it bare
   (`err unknown_verb frobnicate`); a code with several values uses items
-  (`err out_of_range field=target value=1 min=5.0`).
+  (`err out_of_range field=target value=101 max=60.0`).
 * A body is announced by a count on the `ok` line. `bytes=N` is followed by exactly N raw bytes;
   `fs read` is the only reply that uses it, and a zero count sends no body. `fs list` is the one
   body without a count: its rows follow `ok` and a blank line ends them.
@@ -177,17 +178,17 @@ the reply names whoever is still driving.
 | `deadband` | kPa, 2 dp | the target-reached tolerance. Stored in `/settings.cfg` and restored at boot |
 | `valve` | `open` / `closed` | the fitted valve's direction — normally open vents on power loss. Reports the fitted part; a `set valve` applies on the next boot |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
-| `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
+| `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery, `4` a fail-safe, normally open valve |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
 | `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical. Requires control |
-| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Zero or negative is `err bad_argument`. Stored across reset; requires control |
-| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Zero or negative is `err bad_argument`. Stored across reset; requires control |
-| `set floor <kPa>` | `ok floor=<kPa>` | the pump's measured reach; shallower than `min` is `err out_of_range field=floor … min=5.0`. Stored across reset; requires control |
-| `set pump_max <%>` | `ok pump_max=<%>` | the duty cap; above `PUMP_DUTY_MAX_PERCENT` is `err out_of_range field=pump_max … max=90.0`. Stored across reset; requires control |
-| `set deadband <kPa>` | `ok deadband=<kPa>` | the target-reached tolerance; zero or negative is `err bad_argument`. Stored across reset; requires control |
+| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Outside 0.05–10 is `err out_of_range field=flow …`. Stored across reset; requires control |
+| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Outside 0.005–5 is `err out_of_range field=volume …`. Stored across reset; requires control |
+| `set floor <kPa>` | `ok floor=<kPa>` | the pump's measured reach, 5–100 kPa; outside it is `err out_of_range field=floor …`. Stored across reset; requires control |
+| `set pump_max <%>` | `ok pump_max=<%>` | the duty cap, greater than 0 and at most `PUMP_DUTY_MAX_PERCENT`; outside is `err out_of_range field=pump_max …`. Stored across reset; requires control |
+| `set deadband <kPa>` | `ok deadband=<kPa>` | the target-reached tolerance, 0.05–2 kPa; outside is `err out_of_range field=deadband …`. Stored across reset; requires control |
 | `set valve <open\|closed>` | `ok valve=<token>` | the fitted valve's direction; applies on the next boot. An unknown token is `err bad_argument`. Stored across reset; requires control |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
@@ -224,7 +225,9 @@ Only `get` is available without control. A `set` or `reboot` from a connected ob
 and read back at boot. `device set flow`, `volume`, `floor`, `pump_max`, `deadband` and `valve`
 survive a reset the same way: the PID gains are derived from whatever `flow` and `volume` read, the
 loop clamps to `pump_max`, and `valve` is applied by the machine when it builds the fitted part on
-the next boot. A filesystem that will not take the write
+the next boot. Every one of the six is applied by the control task on its next pass — the reply
+echoes the value that was accepted, and the next `get` is what the machine holds. A filesystem that
+will not take the write
 still answers with the value in force for this session, and the boot log reports the failed mount.
 The machine and this wire stay in kPa either way — a display unit is a preference about the glass,
 not a second way to state a pressure. `log` is not stored at all: it is the set of levels written
@@ -247,37 +250,40 @@ panel bit, one record served by both links. The wire still does not draw on the 
 | Field | Values | Notes |
 | --- | --- | --- |
 | `pressure_kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest or while no reading can be trusted, rising as the chamber is pumped down |
-| `target` | kPa below ambient, or `-` | the current target; `-` when none is set |
+| `target` | kPa below ambient, 1 dp | the current target; `0.0` is the ambient target, which holds the chamber released |
 | `floor` | kPa, 1 dp | deepest reachable target, the `floor` device setting below the reference |
 | `duty` | %, 1 dp | pump duty |
 | `state` | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
 | `sensor` | `1` / `0` | `1` when the sensor is producing a plausible reading |
-| `fault` | `none` / `sensor` | |
+| `fault` | `none` / a code | `sensor`, `vent_timeout`, `no_progress` or `overshoot` while one is latched |
+| `hold` | s | the hold granted to the run, `0` when nothing is running |
+| `max_run` | s | the longest hold a start may ask for, `CONTROL_MAX_RUN_MS` |
 | `up` | ms | uptime |
 
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the vacuum readout; takes no argument |
-| `target <kPa\|->` | `ok target=<kPa>` / `ok target=-` | `vacuum target 40` pulls to 40 kPa below ambient. A target deeper than the reading keeps pulling; a shallower one while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached. `-` releases. Shallower than `CONTROL_MIN_TARGET_KPA` is `err out_of_range field=target value=… min=5.0`; deeper than `floor` is accepted, and only pins the duty at the cap |
-| `start` | `ok state=PULL` / `err not_ready <reason>` | closes the valve, then pulls to the target. Reasons: `no_target`, `no_reading`, `latch` |
-| `stop` | `ok state=<state>` | pump off, then vent. The normal way a run ends |
+| `target <kPa\|->` | `ok target=<kPa>` | `vacuum target 40` pulls to 40 kPa below ambient. `0` is the ambient target: it releases the chamber and stops, and `-` is a synonym for it. A target deeper than the reading keeps pulling; a shallower one while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached. Deeper than `floor` is `err out_of_range field=target … max=<floor>`, and a negative or unparsed value is `err out_of_range field=target … min=0.0` |
+| `start [<seconds>]` | `ok state=PULL` / `err not_ready <reason>` / `err out_of_range field=hold …` | closes the valve, then runs the stored target for the optional hold, in whole seconds; without one the run gets `max_run`. Valid at any target, `0` included. A start while running is a no-op. Reasons: `no_reading`, `latch` |
+| `stop` | `ok state=VENT` | pump off, then vent to ambient. The target is kept. **Accepted from any link, whether or not it is controlling** |
 | `reset` | `ok state=<state>` | clears the latched fault, then vents |
 
-Only `get` is available without control; `target`, `start`, `stop` and `reset` answer
-`err not_controlling` from a connected observer. `control release` is the observer's way to ask the
-device to stop and vent (§5).
+`get` and `stop` are the whole surface a connected observer may use: `target`, `start` and `reset`
+answer `err not_controlling` from a link that is not on top. `stop` is ungated on purpose — making
+the machine safe is not a privilege. `control release` is the observer's way to hand the machine
+back, and it vents too (§5).
 
 ```
 -> vacuum get
-<- ok pressure_kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none up=45000
+<- ok pressure_kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none hold=0 max_run=900 up=45000
 -> control acquire
 <- ok control=serial
 -> vacuum target 40
 <- ok target=40.0
--> vacuum start
+-> vacuum start 300
 <- ok state=PULL
--> vacuum target -
-<- ok target=-
+-> vacuum target 0
+<- ok target=0.0
 -> vacuum stop
 <- ok state=VENT
 ```
@@ -287,13 +293,14 @@ would mean a second control path to reason about. Characterizing the pump theref
 temporary build. That trade was made deliberately, so nobody should go looking for a raw duty
 command that is not there.
 
-Vent margin and timeout, the pump ramp and the loop's shape constants are in `Machine.h`; the
-battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. The PID gains are derived from the
-`flow` and `volume` settings, the loop clamps to `pump_max`, and `deadband` and `floor` are settings
-too. None of these are commands, so the command surface stays this table. The deadband matters to a
-controller: it is what decides that the target has been reached, and it is not on the wire.
-`CONTROL_MIN_TARGET_KPA` is the other one worth knowing: it is the shallowest target the loop will
-accept, and it is reported as `min=` on the `out_of_range` reply.
+Vent floor, margin and timeout, the pump ramp and the loop's shape constants are in `Machine.h`;
+the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. The PID gains are derived from
+the `flow` and `volume` settings, the loop clamps to `pump_max`, and `deadband` and `floor` are
+settings too. None of these are commands, so the command surface stays this table. The deadband
+matters to a controller: it is what decides that the target has been reached, and it is not on the
+wire. `floor` is the other one worth knowing: it is the deepest target accepted, and it is reported
+as `max=` on the target's `out_of_range` reply. `CONTROL_MAX_RUN_MS` is the deadline every run has,
+published as `max_run`.
 
 ## 8. `buzzer` — the piezo
 
@@ -425,8 +432,8 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `unknown_domain` | bare token | the first token is not a domain: `err unknown_domain set` |
 | `unknown_verb` | bare token | the domain does not accept that verb: `err unknown_verb frobnicate` |
 | `bad_argument` | bare token, or nothing | an argument is missing, does not parse or is left over; or the header was too long. The token is the first one at fault |
-| `out_of_range` | `field=… value=… [min=…] [max=…]` | the value parses but is not acceptable: `err out_of_range field=target value=1 min=5.0` |
-| `not_ready` | bare reason | valid, and cannot be honoured now: `no_target`, `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io` |
+| `out_of_range` | `field=… value=… [min=…] [max=…]` | the value parses but is not acceptable: `err out_of_range field=target value=101 max=60.0` |
+| `not_ready` | bare reason | valid, and cannot be honoured now: `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
 | `not_controlling` | nothing | a state-changing verb from a link that is not on top of the stack |
@@ -437,9 +444,11 @@ prose. The detail is a bare token when the code names one thing, and items when 
 -> control acquire
 <- ok control=serial
 -> vacuum start
-<- err not_ready no_target
--> vacuum target 1
-<- err out_of_range field=target value=1 min=5.0
+<- ok state=PULL
+-> vacuum target 101
+<- err out_of_range field=target value=101 max=60.0
+-> vacuum start 99999
+<- err out_of_range field=hold value=99999 max=900
 -> vacuum frobnicate
 <- err unknown_verb frobnicate
 -> frobnicate get

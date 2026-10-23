@@ -29,10 +29,10 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `vacuum.target(pressure_kpa)` | — | sets the depth to pull to, in kPa below ambient. A value below `min` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
-| `vacuum.target_off()` | — | clears the target; releases the chamber if it was pulling or holding |
+| `vacuum.target(pressure_kpa)` | — | sets the depth to pull to, in kPa below ambient; `0` is the ambient target and releases the chamber. A value outside `0` … `floor` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
+| `vacuum.target_off()` | — | sets the ambient target, `0`; releases the chamber if it was pulling or holding |
 | `vacuum.clamp(pressure_kpa)` | `real` | the same number held to the machine's bounds, `min` … `floor`. See below |
-| `vacuum.start()` | `bool` | false when the machine refuses: no target, no valid reading, or a latched fault |
+| `vacuum.start()` | `bool` | false when the machine refuses: no valid reading, or a latched fault. Valid at any target, `0` included |
 | `vacuum.stop()` | — | stops the pump and vents. The target is kept |
 | `vacuum.reset()` | — | clears a latched fault, then vents |
 | `vacuum.state()` | a `reading` record | see below |
@@ -45,12 +45,12 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `pressure_kpa` | real | current depth below ambient |
-| `target` | real | the target, **0 when none is set** |
+| `target` | real | the target; **0 is the ambient target**, which holds the chamber released |
 | `duty` | real | pump duty, percent |
-| `floor` | real | deepest target worth asking for |
-| `min` | real | shallowest target the machine accepts |
+| `floor` | real | deepest target the machine accepts |
+| `min` | real | shallowest non-zero target the machine accepts |
 | `state` | string | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT`. A `VENT` from `stop()` ends at `IDLE`; a target vent returns to `PULL`/`HOLD` |
-| `fault` | string | the latched code, or `""` |
+| `fault` | string | the latched code (`sensor`, `vent_timeout`, `no_progress`, `overshoot`), or `""` |
 | `batt` | int | percent, or **-1 when no gauge is fitted** |
 | `sensor_ok` | bool | a valid pressure reading is available |
 
@@ -85,7 +85,8 @@ var start = vacuum.clamp(s.pressure_kpa)         # a safe starting point for the
 vacuum.target(vacuum.clamp(stored))     # and a stored one it cannot trust yet
 ```
 
-`min` is inclusive: `vacuum.target(min)` is taken, and anything shallower is refused silently.
+`min` is the shallowest non-zero target: `vacuum.target(min)` is taken, anything between 0 and `min`
+is not, and `vacuum.target(0)` is the ambient target — the chamber released — and is always taken.
 
 ## `screen` — the panel
 

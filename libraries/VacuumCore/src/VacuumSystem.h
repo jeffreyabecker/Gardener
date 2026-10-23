@@ -39,8 +39,9 @@ inline const char* runStateName(RunState state) {
 // reached, and the release is over. So each command sets the state it causes and service()
 // moves the other two, which keeps one machine with one owner.
 //
-// The run's duration is not a fact about the vacuum system and is not here: the device holds until it is told to
-// stop, and nothing times a run.
+// The run's duration is here too, because it is a fact about the machine rather than about the
+// controller: a start grants a hold, the run ends as a release when it expires, and a controller
+// that keeps its port open but stops talking cannot hold the pump past the maximum.
 //
 // Pressures here are depths below ambient, in kPa: a target is a depth to pull to, and
 // currentPressureKpa() is how deep the chamber is now. The reference is the sensor's own — the part takes
@@ -60,14 +61,18 @@ class VacuumSystem {
   void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
 
   // --- commands -----------------------------------------------------------
+  // Every command ends in one decision — given the stored target, the state and the reading, the
+  // valve opens, the valve closes, or the pump runs — so the wire, the panel and the routines all
+  // ask the same question. A target is a setpoint and nothing else: 0 is ambient, which releases
+  // the chamber; a non-zero one written while stopped is stored, not acted on.
   void setTarget(float pressureKpa);  // kPa below ambient
-  // A run without a target is not a run, so clearing one releases the chamber.
-  void clearTarget();
-  bool start();                   // false: no target/reading, or faulted
-  // Which of the three refusals start() would answer with, or null when it would start. The wire
-  // reports this, so the reply and the refusal come from one place.
+  // Runs the stored target for at most `holdSeconds` (0 asks for the maximum). Refused only for a
+  // latched fault or no valid reading; a start while already running is a no-op.
+  bool start(uint32_t holdSeconds = 0);
+  // Which refusal start() would answer with, or null when it would start. The two links report
+  // this, so the reply and the refusal come from one place.
   const char* startRefusal() const;
-  void stop();                    // the one release path: stop + vent
+  void stop();  // the one release path: stop + vent to ambient, target kept
   void resetFault();
 
   // --- the reads ----------------------------------------------------------
@@ -79,10 +84,22 @@ class VacuumSystem {
   float targetPressureKpa() const { return targetPressureKpa_; }
   const char* faultCode() const { return faultCode_; }
 
-  // The devices, so the serial layer can read what the loop commands without a second copy.
+  // True while a run is being maintained: pulling, holding, or venting to a shallower target. A
+  // release is not a run, so a stopped machine reads false while it vents.
+  bool running() const;
+  // The hold granted to the last run in whole seconds, 0 before the first start; the wire reports
+  // it as 0 whenever nothing is running.
+  uint32_t holdSeconds() const { return holdMs_ / 1000; }
+  // True once when the last run ended because its deadline expired; the run log names it.
+  bool takeDeadlineExpired();
+
+  // The devices, so the serial layer can read what the loop commands without a second copy. The
+  // settings are the machine's, reached through the vacuum system because it is the one that reads
+  // them, and a command that changes one is applied by the control task here.
   Pump& pump() { return *pump_; }
   VentValve& vent() { return *vent_; }
   PressureSensor& sensor() { return *sensor_; }
+  MachineSettings& settings() { return settings_; }
 
  private:
   void setState(RunState state);
@@ -91,11 +108,20 @@ class VacuumSystem {
   // transitions that are facts about the chamber instead of orders, and service() is where
   // they are asked.
   bool atTarget() const;  // close enough to the target, deadband included
-  bool released() const;  // settled within VENT_MARGIN_KPA, or VENT_TIMEOUT_MS elapsed
+  bool released() const;  // settled at the vent floor
+  // The one decision every command ends in: open the valve, close it, or run the pump.
+  void converge();
   void release();         // stop, then open: the one release path
   void rest();            // the resting state without releasing: pump off, valve open
+  void closeValve();      // seal the chamber and hand it to the PID
   void startTargetVent(); // stop, open, and land on the current target
   void endTargetVent();   // close the valve and hand the run back to the PID
+
+  // The run's deadline, the pull's progress and the depth's overshoot, all measured against the
+  // reading on the control beat.
+  void checkRun(uint32_t nowMs);
+  void checkProgress(uint32_t nowMs, float measured, float maxDuty);
+  void checkOvershoot(float measured);
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
@@ -112,12 +138,21 @@ class VacuumSystem {
   MachineSettings& settings_;
 
   RunState state_ = RunState::Idle;
-  float targetPressureKpa_ = 0.0f;  // 0 while no target is set, which is what `vacuum get` reports
+  float targetPressureKpa_ = 0.0f;  // 0 is the ambient target, and what `vacuum get` reports
   const char* faultCode_ = "";
   uint32_t ventStartMs_ = 0;
   // VENT is either a release to ambient or a controlled vent to the current target; this is what
   // tells them apart when the end is decided.
   bool targetVent_ = false;
+
+  // The run's deadline: when it began, the hold granted to it, and whether it has expired.
+  uint32_t runStartMs_ = 0;
+  uint32_t holdMs_ = 0;
+  bool deadlineExpired_ = false;
+  // The pull's headway: the best depth it has reached, and when it last improved.
+  uint32_t progressMs_ = 0;
+  float bestDepthKpa_ = 0.0f;
+  uint8_t overshootReadings_ = 0;
 
   float pidIntegral_ = 0.0f;
   float lastMeasured_ = 0.0f;

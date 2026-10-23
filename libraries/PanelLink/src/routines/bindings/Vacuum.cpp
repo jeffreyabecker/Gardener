@@ -17,13 +17,15 @@ namespace {
 
 int vacuumTarget(bvm* vm) {
   const MachineCommand set{MachineCommand::Op::SetTarget, (float)argReal(vm, 1)};
-  postMachineCommand(set);
+  gContext->post(set);
   be_return_nil(vm);
 }
 
+// 0 is the ambient target: the chamber is released, and the target is left there rather than
+// cleared, so a page can go back to it.
 int vacuumTargetOff(bvm* vm) {
-  const MachineCommand clear{MachineCommand::Op::ClearTarget};
-  postMachineCommand(clear);
+  const MachineCommand off{MachineCommand::Op::SetTarget, 0.0f};
+  gContext->post(off);
   be_return_nil(vm);
 }
 
@@ -48,20 +50,20 @@ int vacuumStart(bvm* vm) {
     be_return(vm);
   }
   const MachineCommand start{MachineCommand::Op::Start};
-  postMachineCommand(start);
+  gContext->post(start);
   be_pushbool(vm, true);
   be_return(vm);
 }
 
 int vacuumStop(bvm* vm) {
   const MachineCommand stop{MachineCommand::Op::Stop};
-  postMachineCommand(stop);
+  gContext->post(stop);
   be_return_nil(vm);
 }
 
 int vacuumReset(bvm* vm) {
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  postMachineCommand(reset);
+  gContext->post(reset);
   be_return_nil(vm);
 }
 

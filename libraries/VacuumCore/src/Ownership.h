@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <vector>
 
+#include "MachineCommand.h"
+
 namespace gardener {
 
 // Something that can drive the machine. The stack holds these, and the control beat tells the one
@@ -26,6 +28,14 @@ class Link {
   // The stack's own word, said as the claim lands. A link that comes back and claims again is
   // still on the stack, so this is where it cancels a departure that has not been applied yet.
   virtual void claimed() {}
+
+  // Every command a link sends goes through its own outbox, so a queue that is momentarily full
+  // costs a beat rather than the command: the link retries what it could not send on its next poll.
+  bool post(const MachineCommand& command) { return outbox_.post(command); }
+  void flushCommands() { outbox_.flush(); }
+
+ private:
+  CommandOutbox outbox_;
 };
 
 // The floor of the stack: nobody is driving. It is on the stack from construction and never moves,

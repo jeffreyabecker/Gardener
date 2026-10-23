@@ -15,16 +15,23 @@ constexpr const char* kValveKey = "valve";
 }  // namespace
 
 // Reading is best effort: a value that is missing, will not parse or is out of bounds keeps the
-// compile-time default.
+// compile-time default. The bounds are Machine.h's, the same ones the setters and both links use.
 void MachineSettings::load() {
   pumpFlowLpm_ = getFloat(kFlowKey, PUMP_FLOW_LPM);
-  if (!(pumpFlowLpm_ > 0.0f)) pumpFlowLpm_ = PUMP_FLOW_LPM;
+  if (!(pumpFlowLpm_ >= PUMP_FLOW_MIN_LPM && pumpFlowLpm_ <= PUMP_FLOW_MAX_LPM)) {
+    pumpFlowLpm_ = PUMP_FLOW_LPM;
+  }
 
   chamberVolumeL_ = getFloat(kVolumeKey, CHAMBER_VOLUME_L);
-  if (!(chamberVolumeL_ > 0.0f)) chamberVolumeL_ = CHAMBER_VOLUME_L;
+  if (!(chamberVolumeL_ >= CHAMBER_VOLUME_MIN_L && chamberVolumeL_ <= CHAMBER_VOLUME_MAX_L)) {
+    chamberVolumeL_ = CHAMBER_VOLUME_L;
+  }
 
   floorPressureKpa_ = getFloat(kFloorKey, CONTROL_FLOOR_KPA);
-  if (!(floorPressureKpa_ >= CONTROL_MIN_TARGET_KPA)) floorPressureKpa_ = CONTROL_FLOOR_KPA;
+  if (!(floorPressureKpa_ >= CONTROL_MIN_TARGET_KPA &&
+        floorPressureKpa_ <= CONTROL_FLOOR_MAX_KPA)) {
+    floorPressureKpa_ = CONTROL_FLOOR_KPA;
+  }
 
   pumpMaxPercent_ = getFloat(kPumpMaxKey, PUMP_DUTY_MAX_PERCENT);
   if (!(pumpMaxPercent_ > 0.0f && pumpMaxPercent_ <= PUMP_DUTY_MAX_PERCENT)) {
@@ -32,28 +39,37 @@ void MachineSettings::load() {
   }
 
   deadbandPressureKpa_ = getFloat(kDeadbandKey, CONTROL_DEADBAND_KPA);
-  if (!(deadbandPressureKpa_ > 0.0f)) deadbandPressureKpa_ = CONTROL_DEADBAND_KPA;
+  if (!(deadbandPressureKpa_ >= CONTROL_DEADBAND_MIN_KPA &&
+        deadbandPressureKpa_ <= CONTROL_DEADBAND_MAX_KPA)) {
+    deadbandPressureKpa_ = CONTROL_DEADBAND_KPA;
+  }
 
   // "open" is the default and the fail-safe; anything that is not "closed" reads as open.
   valveNormallyOpen_ = !get(kValveKey, "open").equalsIgnoreCase("closed");
 }
 
 void MachineSettings::setPumpFlowLpm(float lpm) {
-  if (!(lpm > 0.0f) || lpm == pumpFlowLpm_) return;
+  if (!(lpm >= PUMP_FLOW_MIN_LPM && lpm <= PUMP_FLOW_MAX_LPM) || lpm == pumpFlowLpm_) return;
   pumpFlowLpm_ = lpm;
   revision_++;
   setFloat(kFlowKey, lpm, 2);
 }
 
 void MachineSettings::setChamberVolumeL(float litres) {
-  if (!(litres > 0.0f) || litres == chamberVolumeL_) return;
+  if (!(litres >= CHAMBER_VOLUME_MIN_L && litres <= CHAMBER_VOLUME_MAX_L) ||
+      litres == chamberVolumeL_) {
+    return;
+  }
   chamberVolumeL_ = litres;
   revision_++;
   setFloat(kVolumeKey, litres, 3);
 }
 
 void MachineSettings::setFloorPressureKpa(float pressureKpa) {
-  if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA) || pressureKpa == floorPressureKpa_) return;
+  if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA && pressureKpa <= CONTROL_FLOOR_MAX_KPA) ||
+      pressureKpa == floorPressureKpa_) {
+    return;
+  }
   floorPressureKpa_ = pressureKpa;
   setFloat(kFloorKey, pressureKpa, 1);
 }
@@ -66,7 +82,10 @@ void MachineSettings::setPumpMaxPercent(float percent) {
 }
 
 void MachineSettings::setDeadbandPressureKpa(float pressureKpa) {
-  if (!(pressureKpa > 0.0f) || pressureKpa == deadbandPressureKpa_) return;
+  if (!(pressureKpa >= CONTROL_DEADBAND_MIN_KPA && pressureKpa <= CONTROL_DEADBAND_MAX_KPA) ||
+      pressureKpa == deadbandPressureKpa_) {
+    return;
+  }
   deadbandPressureKpa_ = pressureKpa;
   revision_++;
   setFloat(kDeadbandKey, pressureKpa, 2);

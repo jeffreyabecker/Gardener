@@ -20,13 +20,15 @@ namespace {
 
 // The control task's queue, as a list. Everything that writes the machine posts here and the beat
 // drains it before its own tick, so a write is seen on the next beat as it is on the device rather
-// than the instant it is made.
+// than the instant it is made. A deque has no depth, so a post is always taken.
 std::deque<MachineCommand> pendingCommands;
 
 }  // namespace
 
-void postMachineCommand(const MachineCommand& command) { pendingCommands.push_back(command); }
-
+bool postMachineCommand(const MachineCommand& command) {
+  pendingCommands.push_back(command);
+  return true;
+}
 }  // namespace gardener
 
 namespace gardener {

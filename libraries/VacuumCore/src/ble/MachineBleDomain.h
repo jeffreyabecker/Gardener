@@ -13,8 +13,8 @@ class Link;
 
 // The machine's slice of the GATT table: state, pressure_kpa, target, duty, fault,
 // command, fw, ble_proto, control, sensor, floor, flow, volume, valve,
-// pump_max, deadband and caps. Everything a controller commands and reads
-// about the machine itself, before the panel adds anything of its own.
+// pump_max, deadband, caps, hold_s, max_run_s, write_result and uptime_ms. Everything a controller
+// commands and reads about the machine itself, before the panel adds anything of its own.
 class MachineBleDomain : public BleDomain {
  public:
   explicit MachineBleDomain(Machine* app);
@@ -48,14 +48,21 @@ class MachineBleDomain : public BleDomain {
     Valve = 14,
     PumpMax = 15,
     Deadband = 16,
-    Count = 17,
+    HoldS = 17,
+    MaxRunS = 18,
+    WriteResult = 19,
+    UptimeMs = 20,
+    Count = 21,
   };
 
   static const Spec kSpecs[Count];
 
   bool owned(const Link& link) const;
-  uint8_t execute(const Link& link, uint8_t opcode);
+  uint8_t execute(Link& link, uint8_t opcode);
   void applyPending(BleLink& link);
+  // A refused write is not silent: the field's suffix and the reason are notified, while the
+  // read-back stays the authority on what the machine holds.
+  void refuse(BleLink& link, uint8_t index, uint8_t reason);
   void publish(uint32_t nowMs, BleLink& link, bool baseline);
   void publishOnChange(uint8_t index, uint8_t value, uint8_t& last, bool force, BleLink& link);
   void publishOnChange(uint8_t index, float value, float& last, bool force, BleLink& link);
@@ -73,15 +80,18 @@ class MachineBleDomain : public BleDomain {
     volatile bool has = false;
     volatile float value = 0.0f;
   };
+  struct PendingUint16 {
+    volatile bool has = false;
+    volatile uint16_t value = 0;
+  };
   PendingFloat target_;
   PendingByte command_;
   PendingByte control_;
-  PendingFloat flow_;
-  PendingFloat volume_;
-  PendingFloat floor_;
-  PendingByte valve_;
-  PendingFloat pumpMax_;
-  PendingFloat deadband_;
+  PendingUint16 hold_;
+
+  // The hold a write asked for, in whole seconds; the next start grants it, and 0 asks for the
+  // compiled maximum.
+  uint16_t requestedHoldS_ = 0;
 
   // The last value sent for each on-change field, so a pass only notifies a
   // real change.
@@ -95,6 +105,7 @@ class MachineBleDomain : public BleDomain {
   float lastVolume_ = 0.0f;
   float lastPumpMax_ = 0.0f;
   float lastDeadband_ = 0.0f;
+  uint16_t lastHoldS_ = 0;
   uint32_t lastFastMs_ = 0;
 };
 
