@@ -7,7 +7,6 @@
 #include "firmwareversion.h"
 #include "Logger.h"
 #include "serial/Domain.h"
-#include "serial/Gate.h"
 #include "serial/MachineFields.h"
 #include "serial/SerialLink.h"
 #include "storage/MachineSettings.h"
@@ -26,7 +25,7 @@ String firstToken(const String& args) {
 // a link holds one domain per name.
 class MachineDeviceDomain : public Domain {
  public:
-  MachineDeviceDomain(Machine& app, Link& link) : Domain(link), app_(app) {}
+  MachineDeviceDomain(Machine& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -70,12 +69,10 @@ void MachineDeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
-    if (!requireControl(app_, link_, io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_, link_, io)) return;
     reboot(io, args);
     return;
   }
@@ -169,7 +166,7 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
 
   // The six machine settings are shared with the panel build's domain, so the bounds, the refusals
   // and the task that applies them are one definition rather than two.
-  if (setMachineField(io, app_, link_, field, value, extra)) return;
+  if (setMachineField(io, app_, outbox_, field, value, extra)) return;
 
   io.print("err bad_argument ");
   io.print(field);
@@ -188,13 +185,13 @@ void MachineDeviceDomain::reboot(Stream& io, const String& args) {
   // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
   const MachineCommand reboot{MachineCommand::Op::Reboot};
-  link_.post(reboot);
+  outbox_.post(reboot);
 }
 
 }  // namespace
 
-Domain* createMachineDeviceDomain(Machine& app, Link& link) {
-  return new MachineDeviceDomain(app, link);
+Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox) {
+  return new MachineDeviceDomain(app, outbox);
 }
 
 }  // namespace gardener

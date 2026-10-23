@@ -11,9 +11,8 @@ These are not changed and are not up for rework:
 
 - the PID and its two tuning inputs, `flow` and `volume`, and the gains derived from them;
 - `target` as the only actuator — there is still no raw-duty command;
-- the ownership stack: one link drives, a claim always succeeds, any change of the top vents — which
-  is also what makes a command from an evicted link harmless: it is applied, then vented within the
-  same 50 ms beat;
+- the peer links: every link may command the machine, there is no claim to make, and the last
+  command to reach the control task wins;
 - the fault latch: only `reset` clears it, nothing retries on its own;
 - the normally-open valve as the default, and the boot path that leaves the pump off and the valve
   open;
@@ -25,21 +24,20 @@ These are not changed and are not up for rework:
 
 ### 1. A stop can be refused, dropped or undone
 
-**Problem.** The one command that makes the machine safe is the one command allowed to fail: a
-non-owner's stop is refused before the opcode is even read, a stop behind a full command queue is
-dropped, a stop sent to a machine that is already venting restarts its vent timer, and a start that
-was queued before the stop can run after it.
+**Problem.** The one command that makes the machine safe is the one command allowed to fail: a stop
+behind a full command queue is dropped, a stop sent to a machine that is already venting restarts
+its vent timer, and a start that was queued before the stop can run after it.
 
 **Proposed solution.**
 
-- Accept `stop` from any link on either transport, before the ownership gate, and answer it exactly
-  as an owner's stop is answered today.
+- Accept `stop` from any link on either transport and answer it exactly as a `stop` is answered
+  today.
 - Keep the queue as the only way into the machine, and make a command the queue cannot take be
   requeued by its link on the next poll rather than dropped; a stop takes precedence over every
   command queued before it, and whatever it discards is logged.
 - Make stop idempotent: stopping a machine that is already venting does not restart its vent timer.
-- Stop and vent from the panel's Cancel hold whatever link drives, without the panel having to own
-  the machine. OK+Cancel stays the harder reset.
+- Stop and vent from the panel's Cancel hold whatever else is connected, without the panel having to
+  own the machine. OK+Cancel stays the harder reset.
 
 ### 2. The control surface is tangled
 
@@ -220,7 +218,7 @@ and forget-bonds action that bound it.
 Each solution names an outcome that can be observed on either link or in the log, so a build can be
 checked against it without reading the code:
 
-- a stop from a non-owner on both transports, and from the panel while a phone drives;
+- a stop from another link on both transports, and from the panel while a phone is driving;
 - writing a target of `0` vents to ambient and stops; sending `stop` vents to ambient and leaves the
   target unchanged;
 - a start at a target of `0` applied, and a start while running a no-op;

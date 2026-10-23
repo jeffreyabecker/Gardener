@@ -129,7 +129,7 @@ def harness_run_page(name)
     return
   end
 
-  # An external claim or release stops the run without asking the scene.
+  # The device's own stop, without asking the scene.
   harness.back_hold()
   harness.beat(8)
   if ux.depth() == 0

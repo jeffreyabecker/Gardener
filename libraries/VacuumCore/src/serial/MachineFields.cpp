@@ -2,7 +2,6 @@
 
 #include "Machine.h"
 #include "MachineCommand.h"
-#include "Ownership.h"
 
 namespace gardener {
 namespace {
@@ -44,13 +43,13 @@ bool inRange(Stream& io, const char* field, const String& token, float value, fl
 
 // One float field: the extra-token check, the bound, and the command that applies it on the
 // control task. The reply echoes what was asked for; the read-back stays the authority.
-bool setFloatField(Stream& io, Link& link, MachineCommand::Op op, const char* name,
+bool setFloatField(Stream& io, CommandOutbox& outbox, MachineCommand::Op op, const char* name,
                    const String& token, const String& extra, float min, float max,
                    unsigned int decimals) {
   if (refuseExtra(io, extra)) return true;
   const float value = token.toFloat();
   if (!inRange(io, name, token, value, min, max, decimals)) return true;
-  link.post(MachineCommand{op, value});
+  outbox.post(MachineCommand{op, value});
 
   io.print("ok ");
   io.print(name);
@@ -62,22 +61,22 @@ bool setFloatField(Stream& io, Link& link, MachineCommand::Op op, const char* na
 
 }  // namespace
 
-bool setMachineField(Stream& io, Machine& app, Link& link, const String& field, const String& value,
-                     const String& extra) {
+bool setMachineField(Stream& io, Machine& app, CommandOutbox& outbox, const String& field,
+                     const String& value, const String& extra) {
   (void)app;
 
   if (field.equalsIgnoreCase("flow")) {
-    return setFloatField(io, link, MachineCommand::Op::SetFlow, "flow", value, extra,
+    return setFloatField(io, outbox, MachineCommand::Op::SetFlow, "flow", value, extra,
                          PUMP_FLOW_MIN_LPM, PUMP_FLOW_MAX_LPM, 2u);
   }
 
   if (field.equalsIgnoreCase("volume")) {
-    return setFloatField(io, link, MachineCommand::Op::SetVolume, "volume", value, extra,
+    return setFloatField(io, outbox, MachineCommand::Op::SetVolume, "volume", value, extra,
                          CHAMBER_VOLUME_MIN_L, CHAMBER_VOLUME_MAX_L, 3u);
   }
 
   if (field.equalsIgnoreCase("floor")) {
-    return setFloatField(io, link, MachineCommand::Op::SetFloor, "floor", value, extra,
+    return setFloatField(io, outbox, MachineCommand::Op::SetFloor, "floor", value, extra,
                          CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_MAX_KPA, 1u);
   }
 
@@ -92,7 +91,7 @@ bool setMachineField(Stream& io, Machine& app, Link& link, const String& field, 
       return true;
     }
     if (!inRange(io, "pump_max", value, percent, 0.0f, PUMP_DUTY_MAX_PERCENT, 1u)) return true;
-    link.post(MachineCommand{MachineCommand::Op::SetPumpMax, percent});
+    outbox.post(MachineCommand{MachineCommand::Op::SetPumpMax, percent});
 
     io.print("ok pump_max=");
     io.print(percent, 1u);
@@ -101,7 +100,7 @@ bool setMachineField(Stream& io, Machine& app, Link& link, const String& field, 
   }
 
   if (field.equalsIgnoreCase("deadband")) {
-    return setFloatField(io, link, MachineCommand::Op::SetDeadband, "deadband", value, extra,
+    return setFloatField(io, outbox, MachineCommand::Op::SetDeadband, "deadband", value, extra,
                          CONTROL_DEADBAND_MIN_KPA, CONTROL_DEADBAND_MAX_KPA, 2u);
   }
 
@@ -120,7 +119,7 @@ bool setMachineField(Stream& io, Machine& app, Link& link, const String& field, 
     }
     // The command carries the direction, and the fitted part only changes on the next boot, so the
     // reply echoes what was asked for rather than what is fitted now.
-    link.post(MachineCommand{MachineCommand::Op::SetValve, normallyOpen ? 1.0f : 0.0f});
+    outbox.post(MachineCommand{MachineCommand::Op::SetValve, normallyOpen ? 1.0f : 0.0f});
 
     io.print("ok valve=");
     io.print(normallyOpen ? "open" : "closed");

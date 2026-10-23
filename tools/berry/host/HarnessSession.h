@@ -227,7 +227,7 @@ class HarnessSession {
 
   // One beat: 250 ms of the device's loop, four control ticks and one page poll.
   void beat(int count);
-  // The panel's own Back hold: the stop notice and the command, as panelTask fires them.
+  // The panel's own Back hold: the stop command, as panelTask fires it.
   void backHold();
   // Leaves the page under test and puts the chamber back at rest.
   void reset();

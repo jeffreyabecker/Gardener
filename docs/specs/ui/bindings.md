@@ -37,7 +37,6 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 | `vacuum.reset()` | — | clears a latched fault, then vents |
 | `vacuum.state()` | a `reading` record | see below |
 | `vacuum.now_ms()` | `int` | `millis()` |
-| `vacuum.stopped()` | `bool` | true once after an external link claim or release stopped and vented the machine; the next call is false |
 | `vacuum.log(text)` | — | one `[I]` diagnostic record, written when the device's `log` set includes `I` |
 
 `vacuum.state()` answers a `reading`, read with a dot:
@@ -55,24 +54,6 @@ are listed under the settings a routine registers in [routine.md](./routine.md).
 | `sensor_ok` | bool | a valid pressure reading is available |
 
 Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
-
-`vacuum.stopped()` is the one event the page cannot cause itself: an external link that claims the
-panel, or releases it back, vents the run. It is a one-shot, not a level, so a page with a phase
-machine resets it on the event rather than watching for `IDLE`:
-
-```berry
-def poll(now)
-  if vacuum.stopped() && self.phase != "ready"
-    self.abandon()
-  end
-  # ...
-end
-```
-
-A page that is showing when the hand-off happens takes the notice and abandons its run: the page
-stays, and its own `abandon()` is what puts it right. The notice a hand-off fired while a
-controller owned the device leaves behind is what the page finds on the next `poll` when control
-comes back.
 
 `vacuum.clamp(pressure_kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
@@ -337,8 +318,7 @@ state and resumes through its callback when the scene above pops. A scene whose 
 `poll()` raises is dropped with the whole stack: the panel shows the device's mark.
 
 The root scene is the `__rootScene` global `/modules/ui.be` sets, pushed at boot by the firmware. It
-is not registered anywhere; it is what the device's go-home gesture and a controller hand-off
-return to.
+is not registered anywhere; it is what the device's go-home gesture returns to.
 
 ## `routines` — the registry (a Berry class)
 

@@ -49,13 +49,12 @@ class UxStack {
   void poll(uint32_t nowMs);
   void enterPage();
   // Leave whichever scenes are showing and give the panel back to the root: the clear-and-reboot
-  // the device's go-home gesture and a controller hand-off both use.
+  // the device's go-home gesture uses.
   void showDefault();
 
-  // --- the gesture queue and the stop notice ---
+  // --- the gesture queue ---
   void pushPress(const String& gesture);
   bool takePress(String& gesture);
-  bool takeStopped();
 
  private:
   struct Frame {
@@ -92,8 +91,6 @@ class UxStack {
   uint8_t pressHead_ = 0;
   uint8_t pressCount_ = 0;
   bool pressOverflow_ = false;
-  // The stopSeq the last takeStopped() answered, so one bump is one true.
-  uint32_t lastStopSeq_ = 0;
 };
 
 }  // namespace gardener

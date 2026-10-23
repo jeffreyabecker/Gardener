@@ -317,7 +317,7 @@ class RampedInterval : Page
     ux.pop_to_root()
   end
 
-  # The run ended without this page asking: a latched fault, or a release an external claim caused.
+  # The run ended without this page asking: a latched fault, or a release the run's deadline caused.
   # The machine is already safe, so put the page's starting target back and leave the pump alone.
   def abandon()
     self.phase = "ready"
@@ -326,14 +326,10 @@ class RampedInterval : Page
     vacuum.log("ramped_interval: cycle stopped")
   end
 
-  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
-  # vents without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the ramp does not advance
     # underneath it; the restart on close is what puts the clock right.
-    if vacuum.stopped() && self.phase != "ready"
-      self.abandon()
-    end
     self.advance(now)
   end
 

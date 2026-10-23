@@ -28,8 +28,8 @@ class PanelContext {
   // The interpreter's own files: the modules and routines it compiles, and the data it reads.
   virtual Library& library() = 0;
   virtual Logger& logger() = 0;
-  // The machine's command queue, through the panel link's own outbox, so a command the queue
-  // cannot take waits for the panel's next beat rather than being dropped.
+  // The machine's command queue, through the panel's own outbox, so a command the queue cannot
+  // take waits for the panel's next beat rather than being dropped.
   virtual bool post(const MachineCommand& command) = 0;
 };
 

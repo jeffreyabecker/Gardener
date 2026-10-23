@@ -1,9 +1,9 @@
 # Gardener Bluetooth
 
 The radio is a second contract rather than the line protocol over a pipe, because a phone is a GATT
-client and not a terminal: the surface is a table of characteristics rather than lines of text. It
-shares the ownership stack with the serial line, so one link drives the machine at a time whichever
-transport it arrived on, with the panel beneath both when a panel is fitted.
+client and not a terminal: the surface is a table of characteristics rather than lines of text. A
+bonded central may write at any time, and the serial line or the panel may command the machine at
+the same time: the last write to reach the control task wins.
 
 The device advertises as `gardener`, with the name in the scan response beside the service
 `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`. Advertising stops on connect and resumes when the central
@@ -25,7 +25,6 @@ read, before it trusts the rest of the table.
 | `fw` | `0008` | read | 16 | UTF-8 version |
 | `state` | `0009` | read, notify | 1 | uint8 run state |
 | `unit` | `000A` | read, write | 1 | uint8 display unit |
-| `control` | `000B` | read, write, notify | 1 | uint8, who is on top of the stack |
 | `sensor` | `000C` | read, notify | 1 | uint8, 1 when a reading can be trusted |
 | `floor` | `000D` | read, notify | 4 | float32 LE, the pump's measured reach |
 | `caps` | `000E` | read | 1 | uint8 capability bitmask |
@@ -133,13 +132,6 @@ value above `max_run_s` is refused and reported through `write_result`.
 Write-only: one byte is an opcode, and the notification that follows carries the result. Every
 opcode is answered, applied or refused; the table is under Commands.
 
-### `control`
-
-Who is on top of the ownership stack, as one byte: `0` none, `1` serial, `2` bluetooth, `3` panel.
-Reading it says who is driving; writing a non-zero value claims the machine for the writing link and
-writing `0` gives it back. The claim is the point where commands start being accepted, and it always
-succeeds and vents the chamber.
-
 ## Parameters
 
 The seven settings that configure the machine and its panel. They are compile-time defaults,
@@ -222,22 +214,15 @@ pressure through a crash, a cut wire or a dead coil. `batt` and `unit` exist onl
 is set, so a machine-alone build reads `4`. The gauge bit says the wiring is there, not that the part
 answered — `batt` is where that shows.
 
-## Reading, writing and owning
+## Reading and writing
 
-Connecting is read-only: every characteristic with a read answers without pairing, and the page
-does not change. Writing anything other than `0` to `control` acquires the machine — the point where
-commands are accepted and the panel switches to the Bluetooth rune — and writing `0` is the graceful
-exit, which stops and vents and gives the page back. A claim always succeeds, and it vents: the
-claimant takes the top of the stack and the link beneath is set aside. The write is answered with
-the owner that resulted, so a client does not have to read `control` back to learn whether it took.
+Reading is open: every characteristic with a read answers without pairing. Writing requires an
+encrypted link. The device pairs Just Works and keeps the bond in NVS, so reads stay open to a
+scanner while nothing can write until it pairs.
 
-Disconnecting removes the link from the stack, so a run does not outlive its owner: the chamber
-vents and control falls to the link beneath — the panel, which resumes or idles, or `none`, which
-vents. A phone that disconnects while another link drives leaves the stack when it reaches the top.
-A reconnected phone is a reader until it claims again.
-
-The writable characteristics require an encrypted link. The device pairs Just Works and keeps the
-bond in NVS, so reads stay open to a scanner while nothing can command the machine until it pairs.
+There is no claim to make. A bonded central may write whenever it is connected, whatever the serial
+line or the panel is doing, and a disconnect stops nothing: a run continues to its hold and the
+machine's own deadline.
 
 ## Writes
 
@@ -251,20 +236,14 @@ refused write: the value is not echoed, and nothing is notified unless it change
 | `target` | `0` releases; anything from `0` to `floor`, in kPa | deeper than `floor`, negative, or not finite |
 | `hold_s` | `0` to `max_run_s`, whole seconds | above `max_run_s` |
 | `unit` | `0` to `3` | above `3` |
-| `control` | any uint8: non-zero claims, `0` releases | — |
 
 `floor`, `flow`, `volume`, `pump_max`, `deadband` and `valve` have no write: they are commissioning
 and tuning values, set with `device set` on the serial line. A payload of the wrong length is
 ignored rather than truncated.
 
 A refused `target` or `hold_s` is also notified on `write_result`: the field's suffix, least
-significant byte first, then a reason byte — `1` not controlling, `2` out of range, `3` not a number.
-The read-back stays the authority; the notification is how a client tells a refusal from a lost
-write.
-
-Every writable field except `control` is gated on control as well: a value written by a link
-that is not on top of the stack is dropped, and the read-back shows the unchanged setting. `command`
-is gated on control except for `0x02`.
+significant byte first, then a reason byte — `1` out of range, `2` not a number. The read-back stays
+the authority; the notification is how a client tells a refusal from a lost write.
 
 ## Commands
 
@@ -274,7 +253,7 @@ is the result, sent after every write whatever it is.
 | Opcode | Meaning |
 | --- | --- |
 | `0x01` | start: close the valve, then run the stored target for `hold_s` |
-| `0x02` | stop and vent — accepted from any bonded link, whether or not it is controlling |
+| `0x02` | stop and vent |
 | `0x03` | reset a latched fault |
 | `0x04` | reboot |
 
@@ -283,12 +262,11 @@ is the result, sent after every write whatever it is.
 | `0x00` | applied |
 | `0x02` | no valid reading |
 | `0x03` | fault latched |
-| `0xFE` | not controlling: the writing link is not on top of the stack |
 | `0xFF` | unknown opcode |
 
-`0x00`, `0x02` and `0x03` are the machine answering; `0xFE` and `0xFF` are the protocol refusing the
-request itself. `0x01` was "no target to pull to" and is retired: a start is valid at a target of
-`0`, so it is never produced.
+`0x00`, `0x02` and `0x03` are the machine answering; `0xFF` is the protocol refusing the request
+itself. `0x01` was "no target to pull to" and is retired: a start is valid at a target of `0`, so it
+is never produced.
 
 `start` refuses for the same two reasons the serial line reports — no valid reading and a latched
 fault — because both transports ask the same check, so the two surfaces cannot disagree about why a
@@ -302,8 +280,7 @@ the machine's state rather than from the first thing that moves.
 
 `pressure_kpa`, `duty` and `uptime_ms` are notified at 5 Hz while a central is connected, and `batt`
 every 10 s. Every other notifying characteristic is sent when its value changes, with `command` sent
-after every opcode, `control` after every write to it, and `write_result` after every refused target
-or hold write.
+after every opcode and `write_result` after every refused target or hold write.
 
 `uptime_ms` is how a client places a notification in time and tells a reconnect apart from a
 restart.
@@ -315,6 +292,5 @@ before its next tick reads it once after subscribing.
 
 The radio is a build fact, not a preference. A full-device image may be compiled with
 `GARDENER_BLUETOOTH=0` (`python scripts/arduino.py --task build --no-enable-bluetooth`), which
-leaves this GATT table, the NimBLE stack and the `bluetooth` link out of the image entirely: such a
-build has one transport, and `control` never reports `bluetooth`. The machine-alone build always
-keeps the radio.
+leaves this GATT table, the NimBLE stack and the `bluetooth` transport out of the image entirely:
+such a build has one transport. The machine-alone build always keeps the radio.

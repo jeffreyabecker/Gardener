@@ -6,7 +6,6 @@
 #include <Arduino.h>
 
 #include "Logger.h"
-#include "PanelTasks.h"
 
 namespace gardener {
 namespace {
@@ -365,15 +364,6 @@ bool UxStack::takePress(String& gesture) {
   presses_[pressHead_] = "";
   pressHead_ = (uint8_t)((pressHead_ + 1) % kMaxPresses);
   pressCount_--;
-  return true;
-}
-
-// A stop the scene did not make itself — control handed to or from an external link — is told to
-// the scene after the fact. The panel task bumps stopSeq on the hand-off, which vents the run, and
-// one bump is one true here. The scene that is showing when it happens asks and abandons its run.
-bool UxStack::takeStopped() {
-  if (lastStopSeq_ == stopSeq) return false;
-  lastStopSeq_ = stopSeq;
   return true;
 }
 

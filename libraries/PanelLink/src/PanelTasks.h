@@ -5,23 +5,15 @@
 namespace gardener {
 
 class Panel;
-class ConnectedUI;
-class DisconnectedUI;
+class HomeUI;
 
-// Shared scalars, one writer each. stopSeq is the panel task's counter, bumped when control is
-// handed between the panel and an external link; the routine's takeStopped() compares against it
-// and reads it dirty.
-extern volatile uint32_t stopSeq;
-
-// goHomeSeq is the panel task's counter for the force-quit: Cancel held 5 s stops and vents, and
-// the disconnected page watches this and hands the panel back to `default` on a bump. One writer,
-// read dirty.
+// The panel task's counter for the force-quit: Cancel held 5 s stops and vents, and the page watches
+// this and hands the panel back to `default` on a bump. One writer, read dirty.
 extern volatile uint32_t goHomeSeq;
 
 void panelTask(void* arg);
 
-// The panel's boot spawns the panel task, with the two screens it owns.
-void spawnPanelTask(Panel& context, ConnectedUI* connected,
-                    DisconnectedUI* disconnected);
+// The panel's boot spawns the panel task, with the one page it shows.
+void spawnPanelTask(Panel& context, HomeUI* home);
 
 }  // namespace gardener

@@ -6,7 +6,6 @@
 #include "VacuumSystem.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
-#include "serial/Gate.h"
 #include "storage/MachineSettings.h"
 
 namespace gardener {
@@ -19,7 +18,7 @@ String firstToken(const String& args) {
 
 class VacuumDomain : public Domain {
  public:
-  VacuumDomain(Machine& app, Link& link) : Domain(link), app_(app) {}
+  VacuumDomain(Machine& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
 
   const char* name() const override { return "vacuum"; }
   void execute(Stream& io) override;
@@ -63,23 +62,18 @@ void VacuumDomain::execute(Stream& io) {
     return;
   }
   if (verb == "target") {
-    if (!requireControl(app_, link_, io)) return;
     target(io, args);
     return;
   }
   if (verb == "start") {
-    if (!requireControl(app_, link_, io)) return;
     start(io, args);
     return;
   }
   if (verb == "stop") {
-    // The one state-changing verb a link may use without owning the machine: a stop is how a
-    // bystander makes the machine safe, so it is answered before the ownership gate.
     stop(io, args);
     return;
   }
   if (verb == "reset") {
-    if (!requireControl(app_, link_, io)) return;
     reset(io, args);
     return;
   }
@@ -158,7 +152,7 @@ void VacuumDomain::target(Stream& io, const String& args) {
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  link_.post(set);
+  outbox_.post(set);
   io.print("ok target=");
   io.print(pressureKpa, 1u);
   io.print('\n');
@@ -209,7 +203,7 @@ void VacuumDomain::start(Stream& io, const String& args) {
     return;
   }
   const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
-  link_.post(start);
+  outbox_.post(start);
   io.print("ok state=PULL\n");
 }
 
@@ -222,7 +216,7 @@ void VacuumDomain::stop(Stream& io, const String& args) {
   }
 
   const MachineCommand stop{MachineCommand::Op::Stop};
-  link_.post(stop);
+  outbox_.post(stop);
   io.print("ok state=VENT\n");
 }
 
@@ -235,12 +229,14 @@ void VacuumDomain::reset(Stream& io, const String& args) {
   }
 
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  link_.post(reset);
+  outbox_.post(reset);
   io.print("ok state=IDLE\n");
 }
 
 }  // namespace
 
-Domain* createVacuumDomain(Machine& app, Link& link) { return new VacuumDomain(app, link); }
+Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox) {
+  return new VacuumDomain(app, outbox);
+}
 
 }  // namespace gardener

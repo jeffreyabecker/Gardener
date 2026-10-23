@@ -74,14 +74,13 @@ void setup() {
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both
   // halves.
-  gardener::SerialLink* serial = new gardener::SerialLink(context, Serial, serialAttached, *logger);
-  serial->registerDomain(gardener::createControlDomain(context, *serial));
-  serial->registerDomain(gardener::createVacuumDomain(context, *serial));
-  serial->registerDomain(gardener::createDeviceDomain(context, *serial));
-  serial->registerDomain(gardener::createBuzzerDomain(context, *serial));
-  serial->registerDomain(gardener::createFsDomain(context, *serial));
+  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
+  serial->registerDomain(gardener::createVacuumDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createDeviceDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createFsDomain(context, serial->outbox()));
 #if GARDENER_BLUETOOTH
-  gardener::BleLink* ble = new gardener::BleLink(&context);
+  gardener::BleLink* ble = new gardener::BleLink();
   ble->registerDomain(new gardener::MachineBleDomain(&context));
   ble->registerDomain(new gardener::PanelBleDomain(&context));
 #endif
@@ -104,14 +103,13 @@ void setup() {
   // The parts, then the tasks that drive them.
   context.boot();
 
-  auto* connected = new gardener::ConnectedUI(context);
-  auto* disconnected = new gardener::DisconnectedUI(context);
+  auto* home = new gardener::HomeUI(context);
 #if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(context, serial, ble);
 #else
   gardener::spawnMachineTasks(context, serial);
 #endif
-  gardener::spawnPanelTask(context, connected, disconnected);
+  gardener::spawnPanelTask(context, home);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

@@ -4,7 +4,6 @@
 #include <Wire.h>
 
 #include "BuzzerPlayer.h"
-#include "Ownership.h"
 #include "Panel.h"
 #include "routines/Routines.h"
 #include "storage/PanelSettings.h"
@@ -46,10 +45,8 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, Library& 
   auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, fs, library,
                           routines);
 
-  // The full device has the panel and the gauge, so it is the one build with bits set. The panel
-  // pushes itself above the floor so it is the default controller.
+  // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);
-  panel->ownership().acquire(*panel);
   return *panel;
 }
 

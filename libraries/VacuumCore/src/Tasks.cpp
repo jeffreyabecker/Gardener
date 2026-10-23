@@ -6,7 +6,6 @@
 
 #include "Logger.h"
 #include "Machine.h"
-#include "Ownership.h"
 #include "SafeReboot.h"
 #include "VacuumSystem.h"
 #if GARDENER_BLUETOOTH
@@ -21,8 +20,8 @@ volatile bool bleConnected = false;
 
 namespace {
 
-// Task configuration. The control task runs above the Arduino loop's default priority so the
-// top-change vent and the PID are never preempted by a link or the screen.
+// Task configuration. The control task runs above the Arduino loop's default priority so the PID is
+// never preempted by a link or the screen.
 constexpr UBaseType_t ControlPriority = 2;
 constexpr UBaseType_t InterfacePriority = 1;
 constexpr uint32_t ControlStackWords = 4096;
@@ -40,15 +39,12 @@ constexpr UBaseType_t MachineCommandQueueDepth = 8;
 QueueHandle_t machineCommandQueue = nullptr;
 
 // The control task's own state: the machine it commands, the logger it reports through, and the
-// latch/timing fields the run log and the top-change vent need.
+// latch/timing fields the run log needs.
 struct ControlState {
   Machine& machine;
   Logger* logger;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
-  // The link that drove on the last beat: the stack's top is compared against it, and the two are
-  // told when it changes.
-  Link* lastOwner = nullptr;
 };
 
 // The interface task's own state: the machine it reports through and the links it polls.
@@ -171,20 +167,6 @@ void controlTask(void* arg) {
     // Commands first, against the machine as the last tick left it.
     drainMachineCommands(state);
 
-    // The top of the stack changed — a claim, a release or a link that has gone — so the links are
-    // told and the chamber vents: a new controller starts from an open chamber. The stop is here
-    // rather than in the callbacks because this is the one task that writes the vacuum system.
-    Link* top = &state.machine.ownership().owner();
-    if (top != state.lastOwner) {
-      if (state.lastOwner != nullptr) state.lastOwner->lostControl();
-      top->gainedControl();
-      state.lastOwner = top;
-      state.machine.vacuum().stop();
-      String changed = "app: control to ";
-      changed += top->name();
-      state.logger->info(changed.c_str());
-    }
-
     // The devices and the PID on the fixed beat, then the run log.
     state.machine.vacuum().sensor().update(now);
     state.machine.vacuum().pump().update(now);
@@ -225,10 +207,6 @@ void spawnMachineTasks(Machine& machine, SerialLink* link) {
   machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
 
   static ControlState control{machine, &machine.logger()};
-  // The stack's top when the tasks start is the controller the first beat compares against: the
-  // panel in a panel build, `None` alone otherwise. No wire claim is applied before the interface
-  // task runs, so nothing can change in between.
-  control.lastOwner = &machine.ownership().owner();
 #if GARDENER_BLUETOOTH
   static InterfaceState interface{machine, link, ble};
 #else

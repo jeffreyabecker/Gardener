@@ -4,7 +4,7 @@
 
 namespace gardener {
 
-class Link;
+class CommandOutbox;
 class Machine;
 
 // One of `device set`'s machine fields — `flow`, `volume`, `floor`, `pump_max`, `deadband` and
@@ -16,7 +16,7 @@ class Machine;
 // `extra` is whatever followed the value, so a second token is refused here like anywhere else.
 // True when `field` is one of the six and a reply has been written; false leaves the field to the
 // caller, which is where the panel's own `unit` and both builds' `log` live.
-bool setMachineField(Stream& io, Machine& app, Link& link, const String& field, const String& value,
-                     const String& extra);
+bool setMachineField(Stream& io, Machine& app, CommandOutbox& outbox, const String& field,
+                     const String& value, const String& extra);
 
 }  // namespace gardener

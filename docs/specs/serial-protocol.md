@@ -10,12 +10,12 @@ must not treat it as a compatibility guarantee. `fw` is the build.
 
 The device is a serial peripheral in the strict sense: it never initiates, keeps no session,
 and every state it has is either a command it was given or something it had to do for
-safety. Control comes from the controller at the other end of the line, with two exceptions it
-owns itself: a stop is accepted from any link, and a run ends as a release at its deadline whether
-or not the controller is still talking.
+safety. Every link may command the machine; a write applies on the control task's next beat and the
+last write wins. A run still ends as a release at its deadline whether or not a controller is
+talking.
 
-The first token is a **domain**. `control`, `device`, `vacuum`, `buzzer` and `fs` are the domains.
-There is no `help` domain: this document is the interface.
+The first token is a **domain**. `device`, `vacuum`, `buzzer` and `fs` are the domains. There is no
+`help` domain: this document is the interface.
 
 ## 1. The port
 
@@ -40,19 +40,15 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
 2. Send `device get` and check `proto` and `fw`. `proto=1` is this document.
-3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§11). Nothing is pushed.
 
-**Connecting is not controlling.** A link that has only connected can read; every writing verb is
-refused with `err not_controlling` until the link sends `control acquire` (§5), except `vacuum stop`,
-which any link may send. One link drives at a time, and `control release` is the graceful exit: the
-link leaves the stack, which vents, and the panel returns to its own page.
+Connecting has no handshake and grants nothing extra: any link with the port open may read and write,
+and another link may command the machine at the same time. There is no claim, no session and no
+hand-back to make.
 
-If the port disappears while the link drives, the link is removed from the stack: the chamber vents
-and control falls to the link beneath, so a reconnected link is a reader until it claims again. A
-port that disappears while another link drives leaves the stack when it reaches the top, so it
-cannot be left behind as an owner. The device can only notice a drop when the stream reports host
-presence, which USB CDC can and a plain UART cannot; there is no command that sets or reports
-presence.
+The device can only notice a drop when the stream reports host presence, which USB CDC can and a
+plain UART cannot; there is no command that sets or reports presence. A drop is logged and nothing
+else: a run continues to its hold, and the panel and the radio are unaffected.
 
 ## 3. Grammar
 
@@ -110,55 +106,7 @@ detail = token / items
 * Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the `log` switch chooses which
   of the three are written, and a change applies to the next record. Replies are never silenced.
 
-## 5. `control` — who may command
-
-The ownership record. A link may read at any time; this domain is how it becomes the one controller,
-and how it gives the machine back.
-
-The record is a stack of links and is not the serial link's: the Bluetooth transport claims the
-same one, and a panel build sits on it from boot, so a cable, a phone and the panel cannot all drive
-the machine at once. Whoever is on top drives; a link that is not on top is a reader. A build
-compiled without the radio has no `bluetooth` link, so the value never appears in these answers.
-
-| Verb | Reply | Notes |
-| --- | --- | --- |
-| `get` | `ok control=<serial\|bluetooth\|panel\|none>` | who is on top of the stack |
-| `acquire` | `ok control=<serial\|bluetooth\|panel\|none>` | this link goes on top, moving there if it was beneath another link. Always succeeds, and a claim from the top leaves the stack as it was |
-| `release` | `ok control=<serial\|bluetooth\|panel\|none>` | the link on top leaves the stack; a link that is not on top is a no-op. Idempotent |
-
-The reply names the top rather than answering "owned by you or not", so a controller can tell
-whether the machine is being driven by the panel or by another link. `none` is the floor: no link
-holds the machine and the chamber is vented.
-
-A link acquires once and keeps the top until it releases or drops. There is no `busy`: a claim is
-never refused, because the claimant takes the top and the link beneath is set aside rather than
-rejected. Acquiring a running chamber takes the top and vents it, so a new controller always starts
-from an open chamber and reads `vacuum get` before commanding it.
-
-Every verb that changes state is gated: `device set`, `device reboot`, `vacuum target`, `vacuum
-start`, `vacuum stop`, `vacuum reset`, `buzzer tone`, `buzzer play`, `buzzer stop`, `fs write`,
-`fs mkdir` and `fs delete` answer `err not_controlling` until the caller is on top of the stack. The
-read verbs — `control get`, `device get`, `vacuum get`, `buzzer get`, `fs list` and `fs read` — stay
-available to a connected observer. `fs write` still consumes a declared body before its refusal, so
-the next command starts on a boundary.
-
-```
--> control get
-<- ok control=panel
--> control acquire
-<- ok control=serial
--> control acquire
-<- ok control=serial
--> control release
-<- ok control=panel
-```
-
-A build with no panel has `none` at the floor, so its `get` before a claim reads `ok control=none`
-and its `release` returns there. Only the link on top can give control back: a release from beneath
-another link, or from a link that never claimed, is idempotent and does not touch the machine, and
-the reply names whoever is still driving.
-
-## 6. `device` — the machine and this stream
+## 5. `device` — the machine and this stream
 
 `device get` reports every field, in this order:
 
@@ -183,19 +131,17 @@ the reply names whoever is still driving.
 | Verb | Reply | Notes |
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
-| `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical. Requires control |
-| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Outside 0.05–10 is `err out_of_range field=flow …`. Stored across reset; requires control |
-| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Outside 0.005–5 is `err out_of_range field=volume …`. Stored across reset; requires control |
-| `set floor <kPa>` | `ok floor=<kPa>` | the pump's measured reach, 5–100 kPa; outside it is `err out_of_range field=floor …`. Stored across reset; requires control |
-| `set pump_max <%>` | `ok pump_max=<%>` | the duty cap, greater than 0 and at most `PUMP_DUTY_MAX_PERCENT`; outside is `err out_of_range field=pump_max …`. Stored across reset; requires control |
-| `set deadband <kPa>` | `ok deadband=<kPa>` | the target-reached tolerance, 0.05–2 kPa; outside is `err out_of_range field=deadband …`. Stored across reset; requires control |
-| `set valve <open\|closed>` | `ok valve=<token>` | the fitted valve's direction; applies on the next boot. An unknown token is `err bad_argument`. Stored across reset; requires control |
-| `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
-| `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
+| `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical |
+| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Outside 0.05–10 is `err out_of_range field=flow …`. Stored across reset |
+| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Outside 0.005–5 is `err out_of_range field=volume …`. Stored across reset |
+| `set floor <kPa>` | `ok floor=<kPa>` | the pump's measured reach, 5–100 kPa; outside it is `err out_of_range field=floor …`. Stored across reset |
+| `set pump_max <%>` | `ok pump_max=<%>` | the duty cap, greater than 0 and at most `PUMP_DUTY_MAX_PERCENT`; outside is `err out_of_range field=pump_max …`. Stored across reset |
+| `set deadband <kPa>` | `ok deadband=<kPa>` | the target-reached tolerance, 0.05–2 kPa; outside is `err out_of_range field=deadband …`. Stored across reset |
+| `set valve <open\|closed>` | `ok valve=<token>` | the fitted valve's direction; applies on the next boot. An unknown token is `err bad_argument`. Stored across reset |
+| `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset |
+| `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. The reply is written before the restart |
 
 ```
--> control acquire
-<- ok control=serial
 -> device get
 <- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE flow=8.00 volume=0.500 floor=60.0 pump_max=90.0 deadband=0.20 valve=open unit=kpa caps=3
 -> device set log WE
@@ -217,9 +163,6 @@ set log`. `flow`, `volume`, `floor`, `pump_max`, `deadband` and `valve` are the 
 builds report them and accept their `device set` verbs, because both builds tune a loop and fit a
 valve. The machine-alone build reads
 `ok proto=1 fw=... chip=... heap=... log=IWE flow=8.00 volume=0.500 floor=60.0 pump_max=90.0 deadband=0.20 valve=open caps=0`.
-
-Only `get` is available without control. A `set` or `reboot` from a connected observer is
-`err not_controlling`.
 
 `device set unit` survives a reset: the value is written to `/settings.cfg` as a `key=value` line
 and read back at boot. `device set flow`, `volume`, `floor`, `pump_max`, `deadband` and `valve`
@@ -243,7 +186,7 @@ both.
 `panel` is gone as a domain, and so is `display-size`: whether a panel is fitted is the `caps`
 panel bit, one record served by both links. The wire still does not draw on the panel.
 
-## 7. `vacuum` — the machine that holds pressure
+## 6. `vacuum` — the machine that holds pressure
 
 `vacuum get` reports every field, in this order:
 
@@ -265,19 +208,15 @@ panel bit, one record served by both links. The wire still does not draw on the 
 | `get` | every field | the vacuum readout; takes no argument |
 | `target <kPa\|->` | `ok target=<kPa>` | `vacuum target 40` pulls to 40 kPa below ambient. `0` is the ambient target: it releases the chamber and stops, and `-` is a synonym for it. A target deeper than the reading keeps pulling; a shallower one while `PULL` or `HOLD` stops the pump, opens the valve and runs `VENT` until it is reached. Deeper than `floor` is `err out_of_range field=target … max=<floor>`, and a negative or unparsed value is `err out_of_range field=target … min=0.0` |
 | `start [<seconds>]` | `ok state=PULL` / `err not_ready <reason>` / `err out_of_range field=hold …` | closes the valve, then runs the stored target for the optional hold, in whole seconds; without one the run gets `max_run`. Valid at any target, `0` included. A start while running is a no-op. Reasons: `no_reading`, `latch` |
-| `stop` | `ok state=VENT` | pump off, then vent to ambient. The target is kept. **Accepted from any link, whether or not it is controlling** |
+| `stop` | `ok state=VENT` | pump off, then vent to ambient. The target is kept |
 | `reset` | `ok state=<state>` | clears the latched fault, then vents |
 
-`get` and `stop` are the whole surface a connected observer may use: `target`, `start` and `reset`
-answer `err not_controlling` from a link that is not on top. `stop` is ungated on purpose — making
-the machine safe is not a privilege. `control release` is the observer's way to hand the machine
-back, and it vents too (§5).
+Every verb here is available to any link: there is no controlling state to be in. A stop and a
+target from another link are both taken, and the last one to reach the control task wins.
 
 ```
 -> vacuum get
 <- ok pressure_kpa=40.07 target=40.0 floor=60.0 duty=72.0 state=HOLD sensor=1 fault=none hold=0 max_run=900 up=45000
--> control acquire
-<- ok control=serial
 -> vacuum target 40
 <- ok target=40.0
 -> vacuum start 300
@@ -302,7 +241,7 @@ wire. `floor` is the other one worth knowing: it is the deepest target accepted,
 as `max=` on the target's `out_of_range` reply. `CONTROL_MAX_RUN_MS` is the deadline every run has,
 published as `max_run`.
 
-## 8. `buzzer` — the piezo
+## 7. `buzzer` — the piezo
 
 The piezo is the panel's part, so this domain is served only by a build with a panel. A build
 without one answers `err unknown_domain buzzer`, the same as any token it does not serve.
@@ -321,14 +260,9 @@ without one answers `err unknown_domain buzzer`, the same as any token it does n
 | `play <sequence>` | `ok playing=on` | note/duration pairs separated by spaces; the sequence is the rest of the line |
 | `stop` | `ok playing=off` | silence and stop |
 
-Only `get` is available without control; `tone`, `play` and `stop` are `err not_controlling` from a
-connected observer.
-
 ```
 -> buzzer get
 <- ok tone=- playing=off
--> control acquire
-<- ok control=serial
 -> buzzer tone 2000 500
 <- ok tone=2000,500
 -> buzzer get
@@ -351,7 +285,7 @@ positive. The frequency uses equal temperament with A4 = 440 Hz; a note outside 
 A tone or sequence continues until it is stopped or its own time runs out; the controller times a
 long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop it".
 
-## 9. `fs` — the device's files
+## 8. `fs` — the device's files
 
 The device's LittleFS tree: `/routines`, `/modules` and `/settings.cfg`. `fs` is a bench
 interface for changing what is on the device without reflashing its data image. Writing under
@@ -371,10 +305,6 @@ fs` and mounts no filesystem at all.
 
 All arguments are positional and unquoted. A path is one token and contains no spaces.
 
-`list` and `read` are available to a connected observer; `write`, `mkdir` and `delete` answer
-`err not_controlling` until the link is on top of the stack. A gated `write` still consumes the
-declared body before replying.
-
 ```
 -> fs list /routines
 <- ok
@@ -385,8 +315,6 @@ declared body before replying.
 -> fs read /routines/interval.cfg
 <- ok bytes=12
 <- [12 raw bytes]
--> control acquire
-<- ok control=serial
 -> fs write /routines/new.cfg 5
 <- ok
 -> fs mkdir /assets/icons
@@ -422,7 +350,7 @@ absent is `err not_found <path>`.
 The transfer blocks the control loop until it completes. Routines and assets are small and moving
 them is a bench operation; do not write a large file while a run is active.
 
-## 10. Errors
+## 9. Errors
 
 Every `err` is one of these codes, so a controller can switch on the code instead of parsing
 prose. The detail is a bare token when the code names one thing, and items when it names several:
@@ -436,13 +364,8 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `not_ready` | bare reason | valid, and cannot be honoured now: `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io` |
 | `not_found` | bare path | an absent path (`fs` only) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
-| `not_controlling` | nothing | a state-changing verb from a link that is not on top of the stack |
 
 ```
--> vacuum start
-<- err not_controlling
--> control acquire
-<- ok control=serial
 -> vacuum start
 <- ok state=PULL
 -> vacuum target 101
@@ -464,13 +387,13 @@ follows: `12abc` is 12, and a token with no digits at all is 0. The range check 
 malformed number arrives as `out_of_range` — or, for `fs write`, as that many declared bytes —
 rather than as `bad_argument`. A missing or leftover argument is still `bad_argument`.
 
-## 11. State model
+## 10. State model
 
 The machine's states, the transition each command causes and the protections behind them are the
 firmware's contract and live in [vacuum control](./vacuum-control.md). `vacuum start`, `vacuum stop`
 and `vacuum get` report the state; the transitions themselves are that document's.
 
-## 12. Rates
+## 11. Rates
 
 Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~90 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout than
@@ -487,7 +410,7 @@ received, in arrival order, with nothing dropped and nothing reordered — so a 
 go is handled in one pass. Replies are still exactly one per command, so a host that counts them
 reads one per line.
 
-## 13. Stability
+## 12. Stability
 
 This is the first revision of the domain-first wire. The number is `1` and stays there until the
 protocol settles; revisions are not numbered yet, and a controller should be prepared to change

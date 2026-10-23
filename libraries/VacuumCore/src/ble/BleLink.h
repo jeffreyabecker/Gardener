@@ -7,8 +7,7 @@
 #include <NimBLEDevice.h>
 #include <vector>
 
-#include "Machine.h"
-#include "Ownership.h"
+#include "MachineCommand.h"
 #include "ble/BleDomain.h"
 
 namespace gardener {
@@ -20,34 +19,26 @@ namespace gardener {
 // its characteristics, so a panel build adds its own and a machine-alone
 // build does not.
 //
-// Connecting is read-only. Ownership is the explicit write to `control`, and
-// leaving while owning pops the link off the stack, which vents the machine on
-// the next control beat.
+// A pairing is what lets a central write; there is no claim to make after it.
 //
 // NimBLE runs its host on core 0 and the loop on core 1. A status read answers
 // from the machine as it is, and a write only lands in a slot here. poll()
 // applies whatever is pending at the top of its pass, then notifies what
 // changed, so a notified value is always one the machine actually has.
-class BleLink : public Link,
-                private NimBLEServerCallbacks,
-                private NimBLECharacteristicCallbacks {
+class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallbacks {
  public:
-  static constexpr uint8_t Code = 2;
-
   // What begin() found. The radio is a bonus transport, so a link that does
   // not come up is a line in the boot log rather than a boot failure.
   enum class Start : uint8_t { Advertising, Failed };
 
-  explicit BleLink(Machine* context) : app_(context) {
+  BleLink() {
     domains_.reserve(MaxDomains);
     fields_.reserve(MaxFields);
   }
 
-  const char* name() const override { return "bluetooth"; }
-  uint8_t code() const override { return Code; }
-
-  // A claim cancels a departure the stack has not applied yet: the central is back and driving.
-  void claimed() override { linkLost_ = false; }
+  // The link's queue, shared by the domains the build registers.
+  bool post(const MachineCommand& command) { return outbox_.post(command); }
+  void flushCommands() { outbox_.flush(); }
 
   // The surface is whatever the build registers: the machine brings its
   // fields, and a panel build brings its own.
@@ -56,8 +47,8 @@ class BleLink : public Link,
   Start begin();
   void poll(uint32_t nowMs);
 
-  // Whether a central is connected. Presence, not ownership: the overlay shows
-  // this and the page follows the ownership record.
+  // Whether a central is connected. Presence only: the panel's status band
+  // shows this.
   bool connected() const;
 
   // The domain's notifier: send this characteristic if a subscriber is
@@ -90,14 +81,13 @@ class BleLink : public Link,
   // The global index of a characteristic, or -1 when it is not ours.
   int find(const NimBLECharacteristic* characteristic) const;
 
-  Machine* app_;
+  CommandOutbox outbox_;
   NimBLEServer* server_ = nullptr;
   std::vector<BleDomain*> domains_;
   std::vector<Field> fields_;
 
   // Written on core 0, read on core 1. Each is one aligned value, which is
   // all this model needs.
-  volatile bool linkLost_ = false;
   volatile uint16_t subscriptions_ = 0;
   // A central that has just subscribed gets the current value of every
   // on-change field, so it starts from the machine's state rather than from

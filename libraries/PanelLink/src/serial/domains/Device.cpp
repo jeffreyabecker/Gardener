@@ -11,7 +11,6 @@
 #include "hal/Display.h"
 #include "panel/Units.h"
 #include "serial/Domain.h"
-#include "serial/Gate.h"
 #include "serial/MachineFields.h"
 
 namespace gardener {
@@ -24,7 +23,7 @@ String firstToken(const String& args) {
 
 class DeviceDomain : public Domain {
  public:
-  DeviceDomain(Panel& app, Link& link) : Domain(link), app_(app) {}
+  DeviceDomain(Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -70,12 +69,10 @@ void DeviceDomain::execute(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("set")) {
-    if (!requireControl(app_, link_, io)) return;
     set(io, args);
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    if (!requireControl(app_, link_, io)) return;
     reboot(io, args);
     return;
   }
@@ -182,7 +179,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
   }
 
   // The six machine settings are the machine's own, shared with the machine-alone build's domain.
-  if (setMachineField(io, app_, link_, field, value, extra)) return;
+  if (setMachineField(io, app_, outbox_, field, value, extra)) return;
 
   if (field.equalsIgnoreCase("unit")) {
     DisplayUnit unit = DisplayUnit::Kpa;
@@ -223,11 +220,13 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
   // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
   const MachineCommand reboot{MachineCommand::Op::Reboot};
-  link_.post(reboot);
+  outbox_.post(reboot);
 }
 
 }  // namespace
 
-Domain* createDeviceDomain(Panel& app, Link& link) { return new DeviceDomain(app, link); }
+Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox) {
+  return new DeviceDomain(app, outbox);
+}
 
 }  // namespace gardener

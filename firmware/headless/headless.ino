@@ -3,8 +3,8 @@
 // ESP32-S3 + CFSensor XGZP6847A + vent valve, with no panel.
 //
 // This sketch is the machine-alone build's composition root: it builds the two links with the
-// machine's domains only, brings the machine up, and starts the control and interface tasks. Its
-// ownership stack is `None` alone, so an unowned machine vents and a dropped owner vents.
+// machine's domains only, brings the machine up, and starts the control and interface tasks. Either
+// link may command the machine at any time.
 
 #include <LittleFS.h>
 #include <VacuumCore.h>
@@ -53,14 +53,12 @@ void setup() {
   gardener::Machine& machine = *new gardener::Machine(*logger, Board, *settings);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
-  // Nothing pushes itself above `None`, so `None` is the only controller until a link claims.
 
   // The wire surface is this build's: the machine's domains and nothing else.
-  gardener::SerialLink* serial = new gardener::SerialLink(machine, Serial, serialAttached, *logger);
-  serial->registerDomain(gardener::createControlDomain(machine, *serial));
-  serial->registerDomain(gardener::createVacuumDomain(machine, *serial));
-  serial->registerDomain(gardener::createMachineDeviceDomain(machine, *serial));
-  gardener::BleLink* ble = new gardener::BleLink(&machine);
+  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
+  serial->registerDomain(gardener::createVacuumDomain(machine, serial->outbox()));
+  serial->registerDomain(gardener::createMachineDeviceDomain(machine, serial->outbox()));
+  gardener::BleLink* ble = new gardener::BleLink();
   ble->registerDomain(new gardener::MachineBleDomain(&machine));
 
 

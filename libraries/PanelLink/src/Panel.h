@@ -6,6 +6,7 @@
 
 #include "BuzzerPlayer.h"
 #include "Machine.h"
+#include "MachineCommand.h"
 #include "PanelContext.h"
 #include "panel/GestureClassifier.h"
 #include "panel/Overlay.h"
@@ -37,13 +38,10 @@ struct PanelPins {
 // machine it reads and commands. It *is* a Machine, so the panel's code reaches the machine by the
 // same surface a controller uses and there is no second name for it.
 //
-// It is also one of the links on the ownership stack: the composition pushes it at boot, so it is
-// the default controller. The two control notifications are what its pages follow — the panel's own
-// pages while it drives, the connected page while an external link does.
-class Panel : public Machine, public Link, public PanelContext {
+// It commands the machine through its own outbox, the same queue a wire link uses, so a press and a
+// serial command are two writers to one machine rather than two paths.
+class Panel : public Machine, public PanelContext {
  public:
-  static constexpr uint8_t Code = 3;
-
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
         Battery* battery, Display* display, PanelSettings& settings, FS& fs, Library& library,
         Routines* routines)
@@ -59,15 +57,9 @@ class Panel : public Machine, public Link, public PanelContext {
         fs_(fs),
         library_(library) {}
 
-  const char* name() const override { return "panel"; }
-  uint8_t code() const override { return Code; }
-
-  void gainedControl() override { external_ = false; }
-  void lostControl() override { external_ = true; }
-  // True while an external link drives: the panel shows that link's page rather than its own.
-  bool externalPage() const { return external_; }
-  // The panel's own route to the machine's command queue, through the link outbox it inherits.
-  bool post(const MachineCommand& command) override { return Link::post(command); }
+  // The panel's own route to the machine's command queue.
+  bool post(const MachineCommand& command) override { return outbox_.post(command); }
+  void flushCommands() { outbox_.flush(); }
 
   // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
   // interpreter.
@@ -91,6 +83,7 @@ class Panel : public Machine, public Link, public PanelContext {
   Routines& routines() { return *routines_; }
 
  private:
+  CommandOutbox outbox_;
   // Kept for boot(), which brings the display bus up on the two pins it names.
   const PanelPins pins_;
   ButtonPanel* buttons_;
@@ -102,9 +95,6 @@ class Panel : public Machine, public Link, public PanelContext {
   PanelSettings& settings_;
   FS& fs_;
   Library& library_;
-  // Written on the control beat, read on the panel beat: one aligned flag, the same trade the
-  // connection flags make.
-  volatile bool external_ = false;
 };
 
 }  // namespace gardener

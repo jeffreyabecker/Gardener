@@ -41,8 +41,8 @@ class Routines {
   // One beat: the top scene's poll(now), or nothing when the stack is empty.
   void poll(uint32_t nowMs);
 
-  // The page became visible again: run the top scene's activate(), so a scene re-reads the unit
-  // and redraws rather than trusting what it knew before the controller took over.
+  // The page became visible: run the top scene's activate(), so a scene re-reads the unit and
+  // redraws rather than trusting what it knew before.
   void enterPage();
 
   bool active() const { return stack_.active(); }
@@ -60,9 +60,6 @@ class Routines {
   // --- the `buttons` module's surface ---
   void pushPress(const String& gesture) { stack_.pushPress(gesture); }
   bool takePress(String& gesture) { return stack_.takePress(gesture); }
-
-  // --- the `vacuum` module's surface ---
-  bool takeStopped() { return stack_.takeStopped(); }
 
   // --- the `store` module's surface ---
   // A routine's own values, kept in the routine's own document by the settings source the context

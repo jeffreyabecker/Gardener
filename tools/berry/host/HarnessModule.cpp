@@ -33,8 +33,7 @@ int harnessPress(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The device's Back hold: the notice a scene reads through vacuum.stopped() and the stop command,
-// which are what panelTask fires together.
+// The device's Back hold: the stop command panelTask fires.
 int harnessBackHold(bvm* vm) {
   gSession->backHold();
   be_return_nil(vm);

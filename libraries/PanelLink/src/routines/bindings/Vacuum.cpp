@@ -99,19 +99,10 @@ int vacuumLog(bvm* vm) {
   be_return_nil(vm);
 }
 
-// A stop the scene did not make itself, as a one-shot a poll can ask about: true once after the
-// ownership hand-off vents the run, then false again. A page with a phase machine resets it here
-// rather than comparing the machine's state.
-int vacuumStopped(bvm* vm) {
-  be_pushbool(vm, gRoutines != nullptr && gRoutines->takeStopped());
-  be_return(vm);
-}
-
 const bnfuncinfo kVacuumLibrary[] = {
     {"target", vacuumTarget},   {"target_off", vacuumTargetOff}, {"clamp", vacuumClamp},
     {"start", vacuumStart},     {"stop", vacuumStop},            {"reset", vacuumReset},
     {"state", vacuumState},     {"now_ms", vacuumNowMs},         {"log", vacuumLog},
-    {"stopped", vacuumStopped},
     {nullptr, nullptr},
 };
 

@@ -1,18 +1,18 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it
-for a timer, then vents it — driven over a serial line or Bluetooth by a controller at the other
-end.
+for a timer, then vents it — driven over a serial line, Bluetooth, or the panel on the device.
 
-The controller decides everything. What the device owns is what has to happen when nobody is
-watching: pulling to the target, and venting the chamber through one path on stop, abort, link
-loss, fault or the panel's reserved key hold. Pressures are kPa, on the wire and in the firmware.
+There is no ownership handshake: the serial line, Bluetooth and the panel can all command the
+machine, and the last write wins. What the device owns is what has to happen when nobody is
+watching: pulling to the target, and venting the chamber through one path on stop, abort, fault or
+the panel's reserved key hold. Pressures are kPa, on the wire and in the firmware.
 
 The firmware ships as two builds from one tree. The **full device** is the machine, the OLED panel,
-the keys, the buzzer and the battery gauge: the panel is itself a link, so the device drives itself
-when nothing else does. The **headless** build is the machine alone — pump, sensor and vent valve
-with the serial and Bluetooth links — for a chamber with no panel on it. Each is a sketch that
-composes the libraries for its own build, so what a build has is what its sketch names.
+the keys, the buzzer and the battery gauge. The **headless** build is the machine alone — pump,
+sensor and vent valve with the serial and Bluetooth links — for a chamber with no panel on it. Each
+is a sketch that composes the libraries for its own build, so what a build has is what its sketch
+names.
 
 ## Build
 
@@ -36,9 +36,9 @@ python scripts/arduino.py --task upload --sketch headless --port COM5
 ```
 
 Bluetooth is a build option rather than a setting. The full device compiles the radio in by default;
-`--no-enable-bluetooth` leaves the NimBLE stack, the GATT table and the `bluetooth` ownership link
-out of that image. The headless build always keeps the radio, because a machine with no panel has
-only the two links to drive it.
+`--no-enable-bluetooth` leaves the NimBLE stack, the GATT table and the `bluetooth` transport out of
+that image. The headless build always keeps the radio, because a machine with no panel has only the
+two links to drive it.
 
 ```powershell
 python scripts/arduino.py --task build --no-enable-bluetooth

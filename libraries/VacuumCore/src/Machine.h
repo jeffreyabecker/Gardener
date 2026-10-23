@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "Ownership.h"
 #include "VacuumSystem.h"
 
 namespace gardener {
@@ -121,7 +120,7 @@ struct MachinePins {
 
 // The optional assemblies a composition root fitted, one byte on both links so a host gets the same
 // answer whichever transport it uses. The sketch ORs the bits it built and the machine holds the
-// byte. There is no bit for stopping when the owner leaves: every build does that.
+// byte. There is no bit for stopping when a link leaves: no build does that.
 enum Capability : uint8_t {
   PanelFitted = 0x01,    // a panel (and with it keys, pages and the VM) is fitted
   BatteryFitted = 0x02,  // a battery gauge is fitted; a wired-only device has none
@@ -134,9 +133,8 @@ class Logger;
 class MachineSettings;
 
 // The machine: the pressure loop and the policy around it, with no panel part named. It owns the
-// parts, the ownership stack, the capability byte and the device settings, and it reports through
-// the logger it was built with. boot() brings the parts up; the links and the tasks stay the
-// composition's.
+// parts, the capability byte and the device settings, and it reports through the logger it was built
+// with. boot() brings the parts up; the links and the tasks stay the composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
@@ -151,7 +149,6 @@ class Machine {
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }
-  Ownership& ownership() { return ownership_; }
   uint8_t capabilities() const { return capabilities_; }
   void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }
@@ -162,7 +159,6 @@ class Machine {
   Logger& logger_;
   MachineSettings& settings_;
   VacuumSystem vacuum_;
-  Ownership ownership_;
   uint8_t capabilities_ = 0;
 };
 

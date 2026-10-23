@@ -5,8 +5,8 @@ classifier can produce, the gestures the firmware reserves for itself, and the s
 page follows on top of them.
 
 The keys are the panel's, so everything here is a panel contract. **A build without a panel has no
-keys and therefore no gestures**: its stop is ownership alone — the chamber vents when the
-controller leaves the stack, and an unowned machine is always vented. Nothing below applies to it.
+keys and therefore no gestures**: a stop is a command on the wire or the radio. Nothing below
+applies to it.
 
 This file is the contract for **any** page. What a particular page does with a press — its own
 shortcuts, what OK starts on it, which presses it ignores — belongs in that page's own `.be` file,
@@ -89,10 +89,9 @@ gestures.
 The device's force-quit is `cancel:5`, taken before the routine sees it; `cancel:single` and
 `cancel:double` are the routine's own stop and quit.
 
-While an external link drives the machine there is no routine page: presses are logged
-(`btn: <gesture>`, for example `btn: ok:single`) and only OK+Cancel still acts, because it is the
-reboot and works whatever a controller is doing. A link that is connected but has not claimed
-anything leaves the disconnected page — and its routine — in place.
+The panel's page and its routine are always live: a press reaches the routine whatever else is
+connected, and a press with no routine active is logged (`btn: <gesture>`, for example
+`btn: ok:single`). OK+Cancel still reboots.
 
 ## Rules for a scene
 

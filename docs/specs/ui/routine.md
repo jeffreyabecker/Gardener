@@ -1,6 +1,6 @@
 # Routines
 
-The disconnected page is a Berry program. This is the contract a routine must satisfy: where it
+The panel page is a Berry program. This is the contract a routine must satisfy: where it
 lives, what it must look like, and when the firmware calls it. What a routine can call — the native
 modules and the records they answer with — is [bindings.md](./bindings.md).
 
@@ -143,8 +143,6 @@ settings scene with nil.
 | a scene becomes the top of the stack | `activate(args)` — the push's args, or `nil` |
 | every panel-task beat while the scene is on top | `poll(now)` |
 | a scene is popped off the top | the pusher's callback runs with the returned value, or the scene below re-activates |
-| a controller acquires control | nothing; the top scene stops being polled |
-| the controller releases control, or the device resets | `activate(nil)` on the top scene |
 
 `activate()` runs again on every push and on every return to a scene that was pushed without a
 callback: the display unit may have changed while the scene was not showing, and a scene should not

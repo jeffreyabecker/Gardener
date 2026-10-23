@@ -280,14 +280,10 @@ class Interval : Page
     vacuum.log("interval: cycle stopped")
   end
 
-  # poll calls tick(now) every beat, after the press drain. An external claim or release stops and
-  # vents without asking this page, so reset the phase machine on that notice.
+  # poll calls tick(now) every beat, after the press drain.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the cycle does not advance
     # underneath it; the restart on close is what puts the clock right.
-    if vacuum.stopped() && self.phase != "ready"
-      self.abandon()
-    end
     self.advance(now)
   end
 

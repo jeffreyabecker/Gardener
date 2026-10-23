@@ -42,13 +42,12 @@ carry one, but no run has a mid-run adjustment in its phase machine yet.
 
 ## Verify the two builds on hardware
 
-The machine/panel split, the ownership stack and the two builds have only ever been
-compiled. Everything the specs now promise still needs a device: the full device's serial
-and Bluetooth surfaces with `control get` naming the owner, the panel driving by default
-with Back releasing and Back+OK rebooting, and the chamber venting on a claim, a release
-and a drop. The machine-alone build needs the same: `device get` reporting `caps` and `log` with no
-battery or unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that
-cannot start unowned or survive its owner leaving.
+The machine/panel split and the two builds have only ever been compiled. Everything the specs now
+promise still needs a device: the full device's serial and Bluetooth surfaces with writes accepted
+from any link, the panel's page and routine live whatever else is connected, and Back+OK rebooting.
+The machine-alone build needs the same: `device get` reporting `caps` and `log` with no battery or
+unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that a second link can command
+mid-flight.
 
 ## Thermal and continuous-duty protection
 
@@ -67,7 +66,7 @@ deferred until a Super Mini variant with one is chosen.
 
 ## A local event log
 
-The last N claims, commands, stops, transitions and faults kept in NVS and readable over the serial
+The last N commands, stops, transitions and faults kept in NVS and readable over the serial
 line and the Bluetooth diagnostics, so an incident can be understood after the fact. Blocked by:
 nothing decided about where it lives, how it is bounded, or what reads it back.
 

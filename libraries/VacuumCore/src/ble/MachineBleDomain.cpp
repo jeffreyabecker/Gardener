@@ -7,7 +7,6 @@
 
 #include "Machine.h"
 #include "MachineCommand.h"
-#include "Ownership.h"
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
 #include "firmwareversion.h"
@@ -32,15 +31,13 @@ enum : uint8_t {
   kResultApplied = 0x00,
   kResultNoReading = 0x02,
   kResultFault = 0x03,
-  kResultNotControlling = 0xFE,
   kResultUnknownOpcode = 0xFF,
 };
 
 // Why a write was refused, in the byte `write_result` carries after the field's suffix.
 enum : uint8_t {
-  kWriteNotControlling = 0x01,
-  kWriteOutOfRange = 0x02,
-  kWriteNotANumber = 0x03,
+  kWriteOutOfRange = 0x01,
+  kWriteNotANumber = 0x02,
 };
 
 // Whether a reading can be trusted, which is what `sensor` reports and what a
@@ -67,7 +64,6 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                         // command
     {0x0008, NIMBLE_PROPERTY::READ, 16},                                                       // fw
     {0x0001, NIMBLE_PROPERTY::READ, 1},                                                        // ble_proto
-    {0x000B, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1}, // control
     {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // sensor
     {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // floor
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                        // caps
@@ -90,10 +86,6 @@ BleDomain::Spec MachineBleDomain::specAt(uint8_t index) const { return kSpecs[in
 
 void MachineBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
   characteristics_[index] = characteristic;
-}
-
-bool MachineBleDomain::owned(const Link& link) const {
-  return app_->ownership().ownedBy(link);
 }
 
 void MachineBleDomain::describe(uint8_t index) {
@@ -122,9 +114,6 @@ void MachineBleDomain::describe(uint8_t index) {
       break;
     case Protocol:
       setByte(chr, kBleProtocolVersion);
-      break;
-    case Control:
-      setByte(chr, app_->ownership().owner().code());
       break;
     case Sensor:
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
@@ -184,11 +173,6 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
       command_.value = value.data()[0];
       command_.has = true;
       break;
-    case Control:
-      if (value.size() != 1) return;
-      control_.value = value.data()[0];
-      control_.has = true;
-      break;
     case HoldS:
       if (value.size() != sizeof(uint16_t)) return;
       {
@@ -199,38 +183,17 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
       }
       break;
     default:
-      break;  // the stack refuses a write to anything else before it gets here
+      break;  // the characteristic's properties refuse a write to anything else
   }
 }
 
-// The loop's half of a write: ownership, the target and an opcode are applied
-// here rather than in the callback, so nothing from the radio task touches the
-// machine.
+// The loop's half of a write: the target and an opcode are applied here rather
+// than in the callback, so nothing from the radio task touches the machine.
 void MachineBleDomain::applyPending(BleLink& link) {
-  Ownership& ownership = app_->ownership();
-
-  // Ownership first: every other write is gated on it, and a release is the
-  // safe exit.
-  if (control_.has) {
-    control_.has = false;
-    // A claim takes the top, a release leaves it; either way the control beat vents the hand-over.
-    if (control_.value != 0) {
-      ownership.acquire(link);
-    } else {
-      ownership.release(link);
-    }
-    // The caller's view: who is on top, after the write.
-    describe(Control);
-    link.notify(characteristics_[Control]);
-    lastControl_ = ownership.owner().code();
-  }
-
   if (target_.has) {
     target_.has = false;
     const float pressureKpa = target_.value;
-    if (!owned(link)) {
-      refuse(link, Target, kWriteNotControlling);
-    } else if (!isfinite(pressureKpa)) {
+    if (!isfinite(pressureKpa)) {
       refuse(link, Target, kWriteNotANumber);
     } else if (pressureKpa < 0.0f || pressureKpa > app_->settings().floorPressureKpa()) {
       refuse(link, Target, kWriteOutOfRange);
@@ -254,9 +217,7 @@ void MachineBleDomain::applyPending(BleLink& link) {
     hold_.has = false;
     const uint16_t seconds = hold_.value;
     const uint16_t maxSeconds = static_cast<uint16_t>(CONTROL_MAX_RUN_MS / 1000);
-    if (!owned(link)) {
-      refuse(link, HoldS, kWriteNotControlling);
-    } else if (seconds > maxSeconds) {
+    if (seconds > maxSeconds) {
       refuse(link, HoldS, kWriteOutOfRange);
     } else {
       // 0 asks for the compiled maximum, which is what a start with no hold gets.
@@ -295,19 +256,14 @@ void MachineBleDomain::refuse(BleLink& link, uint8_t index, uint8_t reason) {
 // from the same VacuumSystem::startRefusal(), so the two surfaces cannot
 // disagree about why a run will not start. Every applied opcode is queued for
 // the control task; only the refusal and the result byte are answered here.
-uint8_t MachineBleDomain::execute(Link& link, uint8_t opcode) {
-  // Stop is the one opcode a bonded link may send without owning the machine: it is how a
-  // bystander makes the machine safe, so it is answered before the ownership gate.
-  if (opcode == kOpStop) {
-    const MachineCommand stop{MachineCommand::Op::Stop};
-    link.post(stop);
-    return kResultApplied;
-  }
-
-  if (!owned(link)) return kResultNotControlling;
-
+uint8_t MachineBleDomain::execute(BleLink& link, uint8_t opcode) {
   VacuumSystem& vacuum = app_->vacuum();
   switch (opcode) {
+    case kOpStop: {
+      const MachineCommand stop{MachineCommand::Op::Stop};
+      link.post(stop);
+      return kResultApplied;
+    }
     case kOpStart: {
       const char* refusal = vacuum.startRefusal();
       if (refusal != nullptr) {
@@ -342,7 +298,6 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   VacuumSystem& vacuum = app_->vacuum();
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
-  publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
   publishOnChange(Target, vacuum.targetPressureKpa(), lastTarget_, baseline, link);
   publishOnChange(Floor, app_->settings().floorPressureKpa(), lastFloor_, baseline, link);
   publishOnChange(Flow, app_->settings().pumpFlowLpm(), lastFlow_, baseline, link);

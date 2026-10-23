@@ -4,8 +4,6 @@
 
 #include <stdio.h>
 
-#include "Ownership.h"
-
 namespace gardener {
 namespace {
 
@@ -88,14 +86,6 @@ void BleLink::poll(uint32_t nowMs) {
   for (BleDomain* domain : domains_) {
     domain->poll(nowMs, *this, baseline);
   }
-
-  if (!linkLost_) return;
-  // A central that leaves is a link that has left: it pops itself once it is on
-  // top. While it sits beneath another link, this pass finds nothing to do and
-  // the next one asks again, so a departed central cannot linger as an owner.
-  if (!app_->ownership().release(*this)) return;
-  linkLost_ = false;
-  subscriptions_ = 0;
 }
 
 void BleLink::notify(NimBLECharacteristic* characteristic) {
@@ -123,10 +113,10 @@ void BleLink::onDisconnect(NimBLEServer* server, NimBLEConnInfo& info, int reaso
   (void)server;
   (void)info;
   (void)reason;
-  // Nothing is decided here: the loop applies the departure on its next pass,
-  // so core 1 keeps being the only place that touches ownership.
+  // A departure is presence only: the subscriptions are dropped and a reconnect starts
+  // from a fresh baseline. Nothing about the machine changes.
   subscriptions_ = 0;
-  linkLost_ = true;
+  baseline_ = false;
 }
 
 void BleLink::onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo& info) {

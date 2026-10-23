@@ -8,7 +8,6 @@
 
 #include "Panel.h"
 #include "serial/Domain.h"
-#include "serial/Gate.h"
 #include "storage/Settings.h"
 
 namespace gardener {
@@ -141,7 +140,7 @@ bool oneArg(const String& args, String& token, String& bad) {
 
 class FsDomain : public Domain {
  public:
-  FsDomain(Panel& app, Link& link) : Domain(link), app_(app) {}
+  FsDomain(Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
 
   const char* name() const override { return "fs"; }
   void execute(Stream& io) override;
@@ -187,9 +186,9 @@ void FsDomain::execute(Stream& io) {
   } else if (verb == "write") {
     write(io, rest);
   } else if (verb == "mkdir") {
-    if (requireControl(app_, link_, io)) makeDirectory(io, rest);
+    makeDirectory(io, rest);
   } else if (verb == "delete") {
-    if (requireControl(app_, link_, io)) remove(io, rest);
+    remove(io, rest);
   } else {
     io.print("err unknown_verb ");
     io.print(verb);
@@ -312,14 +311,6 @@ void FsDomain::write(Stream& io, const String& args) {
     io.print(" max=");
     io.print((uint32_t)WriteMaxBytes);
     io.print('\n');
-    return;
-  }
-
-  if (!hasControl(app_, link_)) {
-    // The header is valid, so its declared body still has to be consumed before the refusal: the
-    // next command has to start on a boundary even when this one is not allowed to run.
-    if (!discardPayload(io, bytes)) return;
-    io.print("err not_controlling\n");
     return;
   }
 
@@ -474,6 +465,8 @@ bool FsDomain::discardPayload(Stream& io, uint32_t bytes) {
 
 }  // namespace
 
-Domain* createFsDomain(Panel& app, Link& link) { return new FsDomain(app, link); }
+Domain* createFsDomain(Panel& app, CommandOutbox& outbox) {
+  return new FsDomain(app, outbox);
+}
 
 }  // namespace gardener

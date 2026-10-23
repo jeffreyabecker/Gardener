@@ -12,7 +12,6 @@
 #if GARDENER_BLUETOOTH
 #include "ble/PanelBleDomain.h"
 #endif
-#include "panel/ConnectedUI.h"
-#include "panel/DisconnectedUI.h"
+#include "panel/HomeUI.h"
 #include "serial/PanelDomains.h"
 #include "storage/PanelSettings.h"

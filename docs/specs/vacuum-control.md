@@ -6,9 +6,9 @@ on the depth the sensor reports, the valve, the pump, the run state and the faul
 handed the sensor, the pump and the valve, so the control law is policy and the pins stay in
 `hal/`.
 
-The controller owns the target, the hold and when to start and stop once it has acquired control.
-The device owns what happens when nobody is watching — a stop from anyone, the deadline on a run,
-and every fault — and nothing else.
+Whoever is commanding owns the target, the hold and when to start and stop. The device owns what
+happens when nobody is watching — the deadline on a run and every fault — and nothing else. Any
+link may command at any time, and the last command to reach the control task wins.
 
 Every pressure the machine holds or reports — in the loop, on the serial line and over Bluetooth —
 is a depth below ambient in kPa: zero at rest, larger as the chamber is pumped down, smaller as the
@@ -20,7 +20,7 @@ stop asks for too. Any non-zero target is held to `floor`, the deepest depth thi
 ## States
 
 ```
-       vacuum start                          vacuum stop / control release / fault / back hold
+       vacuum start                          vacuum stop / fault / back hold
 IDLE ──────────────> PULL ──(target reached)──> HOLD ───────────────────────> VENT ──(complete)──> IDLE
   ^                                                 │                           │
   │                                                 │                           v
@@ -34,11 +34,9 @@ floor after 30 s latches `vent_timeout` instead of reporting `IDLE`.
 
 | Event | From | To |
 | --- | --- | --- |
-| `control acquire` | any | the claimant takes the top of the stack and the chamber vents; the new controller starts from an open chamber |
-| `control release` | any | this link leaves the stack and the chamber vents; the link beneath is the controller again, or `none` |
 | `vacuum start [<s>]` | anything but `FAULT` | closes the valve, then runs the stored target, `0` included, for the hold or the maximum; `err not_ready` with `no_reading` or `latch`. From `VENT` it abandons the release. A start while running is a no-op |
-| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move. The target is kept. Accepted from any link, controlling or not |
-| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout; whatever link drives |
+| `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move. The target is kept |
+| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout, whatever else is connected |
 | OK+Cancel held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. `0` (or `-`) is the ambient target and releases the chamber; a target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached. Deeper than `floor` is refused and changes nothing |
 | target reached | `PULL` | `HOLD`, and the run's hold is timed from here by the controller |
@@ -49,17 +47,11 @@ floor after 30 s latches `vent_timeout` instead of reporting `IDLE`.
 | `vacuum reset` | `FAULT` | `VENT` then `IDLE` |
 | `device reboot` | any | safe reset: stop, vent up to 2 s, restart |
 
-The controller is whoever is on top of the ownership stack, and **any change of the top vents the
-chamber** — a claim, a release, or a link that drops. A new controller therefore always starts from
-an open chamber. Only the link on top can leave the stack, so a link that loses its transport
-beneath another one stays there and leaves when it reaches the top, venting then exactly as if it
-had dropped while driving: a vanished link can never leave the machine held.
-
-A build with no panel has nothing beneath an external link: its stack is `none` alone until
-something claims, so **it holds pressure only while a link owns it**. An unowned machine is vented,
-and `vacuum start` from a link that is not on top is refused. A panel build differs in one respect
-only — the panel is a controller of its own, pushed at boot, so the device can hold pressure with no
-external link attached.
+Every link can command the machine at any time; there is no ownership stack and no hand-over. A
+command is applied on the control task's next beat, so when two links disagree the last one to
+arrive is the one in force. Neither a serial detach nor a Bluetooth disconnect stops a run: it
+continues to its hold, and the deadline is the bound. A build with a panel and a build without one
+behave the same way.
 
 ## The control law
 
@@ -117,8 +109,8 @@ All of these act without consulting the controller:
   latches `no_progress`
 * a depth more than 5 kPa past the target on five consecutive readings latches `overshoot`
 * a run ends as a release at its hold, fifteen minutes at most
-* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout, whichever link
-  drives
+* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout, whatever else
+  is connected
 * holding OK and Cancel for 5 s reboots the device: stop, vent up to 2 s, restart
 
 A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cleared. Only
@@ -132,18 +124,17 @@ A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cle
   hold, and the run releases itself at the maximum whatever you do — the device will not hold the
   pump for a controller that has stopped talking.
 * **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the readout,
-  whichever link drives — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever a
-  controller is doing, so a link that dropped while owning cannot be recovered any other way.
-* **A link that drops while owning stops the run.** It leaves the stack, so the chamber vents and
-  control passes to the link beneath — the panel or `none`. A link that stops answering while its
-  port stays open keeps the top until its hold expires or OK+Cancel.
-* **A stop is always available.** Any link may send it without owning the machine, so a bystander on
-  the same wire or radio can vent the chamber.
+  whatever else is connected — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever
+  else is happening.
+* **A run ends at its hold whatever the links do.** A link that stops answering does not keep the
+  pump running; the deadline releases the chamber.
+* **A stop is always available.** Any link may send it, so a bystander on the same wire or radio can
+  vent the chamber.
 * **A long hold is the dominant battery cost.** A normally open solenoid draws current for the whole
   hold, which is why the run's deadline matters as much as the pump's.
 * **The vent valve is normally open by default**, so de-energised is open and running a vacuum
   means energising the coil. `NormallyClosedValve` in `Build.cpp` inverts that and removes the
   fail-safe.
-* **The panel is the device's.** It shows the controlling link's icon, the run state and the
-  battery; there is no drawing command, so everything else — a vent timeout, the duty, the fault
-  code — is only on the wire. Poll `vacuum get` to see it.
+* **The panel is the device's.** It shows connection presence, the run state and the battery; there
+  is no drawing command, so everything else — a vent timeout, the duty, the fault code — is only on
+  the wire. Poll `vacuum get` to see it.

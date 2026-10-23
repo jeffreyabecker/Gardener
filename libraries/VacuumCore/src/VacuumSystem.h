@@ -37,7 +37,7 @@ inline const char* runStateName(RunState state) {
 // true: the pressure, the duty, the state. The state is the vacuum system's own, because both of the
 // things that advance it are facts about the chamber rather than orders: the target has been
 // reached, and the release is over. So each command sets the state it causes and service()
-// moves the other two, which keeps one machine with one owner.
+// moves the other two, which keeps one machine with one state.
 //
 // The run's duration is here too, because it is a fact about the machine rather than about the
 // controller: a start grants a hold, the run ends as a release when it expires, and a controller

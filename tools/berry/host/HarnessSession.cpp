@@ -11,9 +11,7 @@
 
 namespace gardener {
 
-// The panel task's two counters, defined here because the panel task is not. Only the stop notice
-// is fired here; the go-home sequence belongs to the keys the drive presses itself.
-volatile uint32_t stopSeq = 0;
+// The panel task's go-home counter, defined here because the panel task is not.
 volatile uint32_t goHomeSeq = 0;
 
 namespace {
@@ -163,7 +161,6 @@ void HarnessSession::pressGesture(const char* gesture) {
 }
 
 void HarnessSession::backHold() {
-  stopSeq++;
   postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
 }
 

@@ -9,10 +9,9 @@
 namespace gardener {
 
 class Machine;
-class Link;
 
 // The machine's slice of the GATT table: state, pressure_kpa, target, duty, fault,
-// command, fw, ble_proto, control, sensor, floor, flow, volume, valve,
+// command, fw, ble_proto, sensor, floor, flow, volume, valve,
 // pump_max, deadband, caps, hold_s, max_run_s, write_result and uptime_ms. Everything a controller
 // commands and reads about the machine itself, before the panel adds anything of its own.
 class MachineBleDomain : public BleDomain {
@@ -39,26 +38,24 @@ class MachineBleDomain : public BleDomain {
     Command = 5,
     Firmware = 6,
     Protocol = 7,
-    Control = 8,
-    Sensor = 9,
-    Floor = 10,
-    Caps = 11,
-    Flow = 12,
-    Volume = 13,
-    Valve = 14,
-    PumpMax = 15,
-    Deadband = 16,
-    HoldS = 17,
-    MaxRunS = 18,
-    WriteResult = 19,
-    UptimeMs = 20,
-    Count = 21,
+    Sensor = 8,
+    Floor = 9,
+    Caps = 10,
+    Flow = 11,
+    Volume = 12,
+    Valve = 13,
+    PumpMax = 14,
+    Deadband = 15,
+    HoldS = 16,
+    MaxRunS = 17,
+    WriteResult = 18,
+    UptimeMs = 19,
+    Count = 20,
   };
 
   static const Spec kSpecs[Count];
 
-  bool owned(const Link& link) const;
-  uint8_t execute(Link& link, uint8_t opcode);
+  uint8_t execute(BleLink& link, uint8_t opcode);
   void applyPending(BleLink& link);
   // A refused write is not silent: the field's suffix and the reason are notified, while the
   // read-back stays the authority on what the machine holds.
@@ -86,7 +83,6 @@ class MachineBleDomain : public BleDomain {
   };
   PendingFloat target_;
   PendingByte command_;
-  PendingByte control_;
   PendingUint16 hold_;
 
   // The hold a write asked for, in whole seconds; the next start grants it, and 0 asks for the
@@ -100,7 +96,6 @@ class MachineBleDomain : public BleDomain {
   String lastFault_;
   uint8_t lastSensor_ = 0;
   float lastFloor_ = 0.0f;
-  uint8_t lastControl_ = 0;
   float lastFlow_ = 0.0f;
   float lastVolume_ = 0.0f;
   float lastPumpMax_ = 0.0f;
