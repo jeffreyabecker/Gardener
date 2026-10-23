@@ -56,9 +56,10 @@ PANEL_SOURCES = [
     PANEL / "src" / "routines" / "bindings" / "Ux.cpp",
     PANEL / "src" / "routines" / "bindings" / "Vacuum.cpp",
     PANEL / "src" / "storage" / "PanelSettings.cpp",
-    PANEL / "src" / "storage" / "Settings.cpp",
-    PANEL / "src" / "storage" / "Values.cpp",
     MACHINE / "src" / "MachineCommand.cpp",
+    MACHINE / "src" / "storage" / "MachineSettings.cpp",
+    MACHINE / "src" / "storage" / "Settings.cpp",
+    MACHINE / "src" / "storage" / "Values.cpp",
     MACHINE / "src" / "VacuumSystem.cpp",
 ]
 

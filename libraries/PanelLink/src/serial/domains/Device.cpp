@@ -110,6 +110,10 @@ void DeviceDomain::get(Stream& io) {
 
   io.print(" log=");
   io.print(app_.logger().levels());
+  io.print(" flow=");
+  io.print(app_.settings().pumpFlowLpm(), 2u);
+  io.print(" volume=");
+  io.print(app_.settings().chamberVolumeL(), 3u);
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
@@ -163,6 +167,50 @@ void DeviceDomain::set(Stream& io, const String& args) {
 
     io.print("ok log=");
     io.print(levels);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("flow")) {
+    const float flow = value.toFloat();
+    if (!(flow > 0.0f)) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setPumpFlowLpm(flow);
+
+    io.print("ok flow=");
+    io.print(app_.settings().pumpFlowLpm(), 2u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("volume")) {
+    const float volume = value.toFloat();
+    if (!(volume > 0.0f)) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setChamberVolumeL(volume);
+
+    io.print("ok volume=");
+    io.print(app_.settings().chamberVolumeL(), 3u);
     io.print('\n');
     return;
   }

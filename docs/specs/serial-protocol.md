@@ -170,6 +170,8 @@ the reply names whoever is still driving.
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | set of `I`/`W`/`E`, or `-` | the diagnostics levels written, in canonical order; `IWE` at boot, not stored |
+| `flow` | L/min, 2 dp | the pump's projected free-flow rate the PID is configured from. Stored in `/settings.cfg` and restored at boot |
+| `volume` | L, 3 dp | the chamber volume the PID is configured from. Stored in `/settings.cfg` and restored at boot |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
 | `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery |
 
@@ -177,6 +179,8 @@ the reply names whoever is still driving.
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
 | `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical. Requires control |
+| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Zero or negative is `err bad_argument`. Stored across reset; requires control |
+| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Zero or negative is `err bad_argument`. Stored across reset; requires control |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset; requires control |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. Requires control. The reply is written before the restart |
 
@@ -184,9 +188,11 @@ the reply names whoever is still driving.
 -> control acquire
 <- ok control=serial
 -> device get
-<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE unit=kpa caps=3
+<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE flow=8.00 volume=0.500 unit=kpa caps=3
 -> device set log WE
 <- ok log=WE
+-> device set flow 8
+<- ok flow=8.00
 -> device set unit mmhg
 <- ok unit=mmhg
 -> device reboot
@@ -196,19 +202,22 @@ the reply names whoever is still driving.
 `unit` is the panel's: it is a preference the panel persists in `/settings.cfg` and shows on its
 glass, so a build without a panel neither reports it in `device get` nor accepts `device set unit`.
 `log` is not a preference — every build owns a logger — so both builds report it and accept `device
-set log`. The machine-alone build reads `ok proto=1 fw=... chip=... heap=... log=IWE caps=0`.
+set log`. `flow` and `volume` are the machine's: both builds report them and accept `device set
+flow` / `device set volume`, because both builds tune a loop. The machine-alone build reads
+`ok proto=1 fw=... chip=... heap=... log=IWE flow=8.00 volume=0.500 caps=0`.
 
 Only `get` is available without control. A `set` or `reboot` from a connected observer is
 `err not_controlling`.
 
 `device set unit` survives a reset: the value is written to `/settings.cfg` as a `key=value` line
-and read back at boot. A filesystem that will not take the write still answers with the value in
-force for this session, and the boot log reports the failed mount. The machine and this wire stay in
-kPa either way — a display unit is a preference about the glass, not a second way to state a
-pressure. `log` is not stored at all: it is the set of levels written for the running device, `IWE`
-at boot, and `device set log -` silences all three from the next record until a link names levels
-again or the device resets. Narrowing the set keeps the levels it names: `device set log E` writes
-errors and drops the rest.
+and read back at boot. `device set flow` and `device set volume` survive a reset the same way, and
+the PID gains are derived from whatever the two read. A filesystem that will not take the write
+still answers with the value in force for this session, and the boot log reports the failed mount.
+The machine and this wire stay in kPa either way — a display unit is a preference about the glass,
+not a second way to state a pressure. `log` is not stored at all: it is the set of levels written
+for the running device, `IWE` at boot, and `device set log -` silences all three from the next
+record until a link names levels again or the device resets. Narrowing the set keeps the levels it
+names: `device set log E` writes errors and drops the rest.
 
 Battery state belongs to the device, not the vacuum system: `batt_v` and `batt_pct` are device
 fields. They are answered by the panel's gauge, so a build without a panel reports neither — it has
@@ -265,9 +274,10 @@ would mean a second control path to reason about. Characterizing the pump theref
 temporary build. That trade was made deliberately, so nobody should go looking for a raw duty
 command that is not there.
 
-Vent margin and timeout, the PID gains, the deadband, the duty cap and the slew limit are in
-`Machine.h`; the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. They are not
-commands, so the command surface stays this table. The deadband matters to a controller: it is what
+Vent margin and timeout, the deadband, the duty cap and the slew limit are in `Machine.h`; the
+battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. The PID gains are derived from the
+`flow` and `volume` settings rather than named in `Machine.h`. None of these are commands, so the
+command surface stays this table. The deadband matters to a controller: it is what
 decides that the target has been reached, and it is not on the wire. `CONTROL_MIN_TARGET_KPA` is the
 other one worth knowing: it is the shallowest target the loop will accept, and it is reported as
 `min=` on the `out_of_range` reply.

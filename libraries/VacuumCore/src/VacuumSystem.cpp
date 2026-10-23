@@ -5,6 +5,7 @@
 
 #include "Machine.h"
 #include "core/Math.h"
+#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -215,22 +216,32 @@ void VacuumSystem::service(uint32_t nowMs) {
 
 // error is how far the chamber still is from the target, so positive means "still needs
 // vacuum"; the derivative term uses the measurement slew rather than the error slope, which
-// keeps a setpoint change from kicking the output.
+// keeps a setpoint change from kicking the output. The gains are derived from the settings the
+// loop was handed, so a pump or chamber change retunes it without touching a gain.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
-  if (dt <= 0.0f) return PID_KP * error + pidIntegral_;
-  pidIntegral_ = clampf(pidIntegral_ + PID_KI * error * dt, -PID_INTEGRAL_LIMIT,
-                        PID_INTEGRAL_LIMIT);
-  return PID_KP * error + pidIntegral_ - PID_KD * measurementSlew;
+  const PidGains gains = pidGainsFor(settings_.pumpFlowLpm(), settings_.chamberVolumeL());
+  if (dt <= 0.0f) return gains.kp * error + pidIntegral_;
+  pidIntegral_ = clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit,
+                        gains.integralLimit);
+  return gains.kp * error + pidIntegral_ - gains.kd * measurementSlew;
 }
 
 void VacuumSystem::regulate(uint32_t nowMs) {
   if (nowMs - lastControlMs_ < CONTROL_PERIOD_MS) return;
 
+  // A retune — the pump's flow or the chamber's volume changed — starts the integral over, as a
+  // target change already does: the accumulated error is in the old gains' units.
+  if (settings_.revision() != lastGainsRevision_) {
+    pidReset();
+    lastGainsRevision_ = settings_.revision();
+  }
+
   float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  // The slew comes off the same reading the error is built from, so PID_KD is signed against it.
+  // The slew comes off the same reading the error is built from, so the derivative gain is
+  // signed against it.
   float measured = currentKpa();
   float error = targetKpa_ - measured;  // positive means "still needs vacuum"
 

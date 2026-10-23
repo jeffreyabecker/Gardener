@@ -9,6 +9,7 @@
 #include "serial/Domain.h"
 #include "serial/Gate.h"
 #include "serial/SerialLink.h"
+#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -96,6 +97,10 @@ void MachineDeviceDomain::get(Stream& io) {
   io.print((uint32_t)ESP.getFreeHeap());
   io.print(" log=");
   io.print(app_.logger().levels());
+  io.print(" flow=");
+  io.print(app_.settings().pumpFlowLpm(), 2u);
+  io.print(" volume=");
+  io.print(app_.settings().chamberVolumeL(), 3u);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -103,7 +108,7 @@ void MachineDeviceDomain::get(Stream& io) {
 }
 
 void MachineDeviceDomain::set(Stream& io, const String& args) {
-  // `set` is `<field> <value>`, and `log` is the only field this build has.
+  // `set` is `<field> <value>`, and `log`, `flow` and `volume` are the fields this build has.
   const int split = args.indexOf(' ');
   if (split < 0) {
     io.print("err bad_argument\n");
@@ -146,6 +151,50 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
 
     io.print("ok log=");
     io.print(levels);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("flow")) {
+    const float flow = value.toFloat();
+    if (!(flow > 0.0f)) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setPumpFlowLpm(flow);
+
+    io.print("ok flow=");
+    io.print(app_.settings().pumpFlowLpm(), 2u);
+    io.print('\n');
+    return;
+  }
+
+  if (field.equalsIgnoreCase("volume")) {
+    const float volume = value.toFloat();
+    if (!(volume > 0.0f)) {
+      io.print("err bad_argument ");
+      io.print(value);
+      io.print('\n');
+      return;
+    }
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+    app_.settings().setChamberVolumeL(volume);
+
+    io.print("ok volume=");
+    io.print(app_.settings().chamberVolumeL(), 3u);
     io.print('\n');
     return;
   }

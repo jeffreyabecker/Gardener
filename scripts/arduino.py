@@ -42,8 +42,9 @@ SKETCHES = {
 }
 SKETCH = SKETCHES["gardener"]
 
-# The builds that ship a data image. The machine-alone build mounts no storage and has no panel, so
-# there is nothing to write to a LittleFS partition.
+# The builds that ship a data image. The machine-alone build creates its settings file on the
+# device (`device set flow` / `volume`), so there is no data folder to write; the full device ships
+# routines and modules.
 SKETCHES_WITH_DATA = {"gardener"}
 
 DATA_DIR = SKETCH / "data"

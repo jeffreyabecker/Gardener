@@ -6,6 +6,7 @@
 // machine's domains only, brings the machine up, and starts the control and interface tasks. Its
 // ownership stack is `None` alone, so an unowned machine vents and a dropped owner vents.
 
+#include <LittleFS.h>
 #include <VacuumCore.h>
 
 // The machine-alone build has no panel, so the radio is one of its two ways in and is not optional.
@@ -30,10 +31,26 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // No settings file is mounted: this build has no storage and no preferences. The diagnostics
-  // stream is on from boot and a link switches it, the same as the full device's.
+  // The machine's settings live in the LittleFS partition the build reserves. It is mounted once,
+  // before anything reads one; a partition that will not mount is formatted once, because a fresh
+  // partition is not a fault. The settings are read before the machine is built.
+  bool mounted = LittleFS.begin(false);
+  bool formatted = false;
+  if (!mounted) {
+    formatted = LittleFS.format() && LittleFS.begin(false);
+    mounted = formatted;
+  }
+
+  auto* documents = new gardener::FileSettings(LittleFS);
+  auto* settings = new gardener::MachineSettings(documents);
+  settings->begin();
+
+  // The diagnostics stream is on from boot and a link switches it, the same as the full device's.
   gardener::Logger* logger = new gardener::SerialLogger(Serial);
-  gardener::Machine& machine = *new gardener::Machine(*logger, Board);
+  if (!mounted) {
+    logger->warn("fs: littlefs mount failed, settings will not persist");
+  }
+  gardener::Machine& machine = *new gardener::Machine(*logger, Board, *settings);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
   // Nothing pushes itself above `None`, so `None` is the only controller until a link claims.

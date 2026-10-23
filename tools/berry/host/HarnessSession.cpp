@@ -83,7 +83,7 @@ HarnessSession::HarnessSession(std::string dataDir)
       pump_(chamber_),
       sensor_(chamber_),
       valve_(chamber_),
-      vacuum_(&pump_, &sensor_, &valve_),
+      vacuum_(&pump_, &sensor_, &valve_, settings_),
       display_(
           [](BitmapPanel& panel) -> bool { return panel.begin(); },
           BitmapPanel::kWidth, BitmapPanel::kHeight),

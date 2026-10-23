@@ -14,13 +14,46 @@ constexpr uint32_t CONTROL_PERIOD_MS = 50;
 // wire publishes it as the `min` of `vacuum target`, so a pull of exactly this much is accepted and
 // anything gentler is refused rather than regulated.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
-constexpr float PID_KP = 30.0f;   // % duty per kPa of error: pins the pump at the cap for any
-                                  // pull deeper than ~3 kPa
-constexpr float PID_KI = 0.2f;    // % duty per kPa second; kept small so the saturated pull does
-                                  // not wind the integral past the duty that holds against the leak
-constexpr float PID_KD = 0.5f;    // % duty per kPa/s of pressure slew
-constexpr float PID_INTEGRAL_LIMIT = 150.0f;
 constexpr float CONTROL_DEADBAND_KPA = 0.2f;
+
+// --- PID configuration from the pump and the chamber ------------------------
+// The loop's gains are derived from two settings — the pump's projected free-flow rate and the
+// chamber volume — so a different pump or chamber retunes the loop by changing two numbers, not
+// three gains. The defaults are the fitted rig's, set on the bench; the wire overrides them with
+// `device set flow` and `device set volume`.
+constexpr float PUMP_FLOW_LPM = 1.0f;     // the fitted pump's free flow, in L/min
+constexpr float CHAMBER_VOLUME_L = 0.05f;  // the fitted chamber's volume, in litres
+
+// The loop's shape, rig-independent: the proportional correction time, the derivative's damping
+// fraction at full slew, the integrator time and the integral clamp. These are tuned once, not per
+// rig; the values reproduce the loop as it was hand-tuned for the reference pump and chamber.
+constexpr float PID_RESPONSE_S = 0.1f;        // seconds to correct an error proportionally
+constexpr float PID_DAMP_FRACTION = 0.17f;    // duty the derivative takes off at full slew
+constexpr float PID_INTEGRAL_TIME_S = 150.0f; // integrator time constant; slow, so the saturated
+                                              // pull does not wind the integral
+constexpr float PID_INTEGRAL_LIMIT_PERCENT = 150.0f;
+
+// The four gains the loop runs with, in the units `VacuumSystem::pidUpdate` consumes.
+struct PidGains {
+  float kp;
+  float ki;
+  float kd;
+  float integralLimit;
+};
+
+// The one function of the two settings: the chamber's drop at full duty near ambient, in kPa/s,
+// is the pump's free flow times ambient pressure over the volume, which is the same slew the
+// derivative term measures. Each gain scales against it, so the loop keeps its shape whatever
+// pump and chamber are fitted.
+inline PidGains pidGainsFor(float flowLpm, float volumeL) {
+  const float slewKpaPerSec = 101.325f * flowLpm / (60.0f * volumeL);
+  PidGains gains;
+  gains.kp = 100.0f / (PID_RESPONSE_S * slewKpaPerSec);
+  gains.ki = gains.kp / PID_INTEGRAL_TIME_S;
+  gains.kd = PID_DAMP_FRACTION * 100.0f / slewKpaPerSec;
+  gains.integralLimit = PID_INTEGRAL_LIMIT_PERCENT;
+  return gains;
+}
 
 // --- Pump limits the control loop must respect -------------------------------
 // The only protections the pump has: the controller owns when a run ends, so nothing here
@@ -64,15 +97,17 @@ enum Capability : uint8_t {
 };
 
 class Logger;
+class MachineSettings;
 
 // The machine: the pressure loop and the policy around it, with no panel part named. It owns the
-// parts, the ownership stack and the capability byte, and it reports through the logger it was
-// built with. boot() brings the parts up; the links and the tasks stay the composition's.
+// parts, the ownership stack, the capability byte and the device settings, and it reports through
+// the logger it was built with. boot() brings the parts up; the links and the tasks stay the
+// composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
  public:
-  Machine(Logger& logger, const MachinePins& pins);
+  Machine(Logger& logger, const MachinePins& pins, MachineSettings& settings);
 
   Machine(const Machine&) = delete;
   Machine& operator=(const Machine&) = delete;
@@ -86,10 +121,12 @@ class Machine {
   uint8_t capabilities() const { return capabilities_; }
   void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }
+  MachineSettings& settings() { return settings_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
   Logger& logger_;
+  MachineSettings& settings_;
   VacuumSystem vacuum_;
   Ownership ownership_;
   uint8_t capabilities_ = 0;

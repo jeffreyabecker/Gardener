@@ -47,7 +47,7 @@ class Panel : public Machine, public Link, public PanelContext {
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
         Battery* battery, Display* display, PanelSettings& settings, FS& fs, Library& library,
         Routines* routines)
-      : Machine(logger, pins.machine),
+      : Machine(logger, pins.machine, settings),
         pins_(pins),
         buttons_(buttons),
         gestures_(*buttons),

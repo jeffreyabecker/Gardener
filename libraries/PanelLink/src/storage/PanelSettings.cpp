@@ -13,6 +13,8 @@ constexpr const char* kJingleKey = "jingle";
 
 // Reading is best effort: a value this revision does not understand leaves the default in place.
 void PanelSettings::load() {
+  MachineSettings::load();
+
   DisplayUnit unit = DisplayUnit::Kpa;
   const String token = get(kUnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
   if (parseDisplayUnit(token.c_str(), unit)) unit_ = unit;

@@ -1,17 +1,18 @@
 #pragma once
 
 #include "panel/Units.h"
-#include "storage/Settings.h"
+#include "storage/MachineSettings.h"
 
 namespace gardener {
 
-// The preferences the panel adds to the device's settings: the one unit the panel prints pressure
+// The preferences the panel adds to the machine's settings: the one unit the panel prints pressure
 // in, the target the default program pulls to, and which jingle is selected. They are the panel's
 // because only a build with a panel prints a unit, pulls a target or sounds a jingle; the document,
-// its key=value form and the unknown-key carry-through stay on Settings.
-class PanelSettings : public Settings {
+// its key=value form and the unknown-key carry-through stay on Settings, and the machine's own
+// preferences stay on MachineSettings.
+class PanelSettings : public MachineSettings {
  public:
-  explicit PanelSettings(SettingsSource* source) : Settings(source) {}
+  explicit PanelSettings(SettingsSource* source) : MachineSettings(source) {}
 
   DisplayUnit unit() const { return unit_; }
   void setUnit(DisplayUnit unit);

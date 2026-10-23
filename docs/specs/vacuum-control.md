@@ -70,9 +70,11 @@ shallower target finishes at its landing and returns to `PULL`/`HOLD`, keeping t
 `VENT_TARGET_LEAD_KPA` above the target so the travel after the coil drops covers the rest; without
 it, the valve stays open until the reading passes the target and the pump pulls back.
 
-Gains and the deadband are `PID_KP`, `PID_KI`, `PID_KD` and `CONTROL_DEADBAND_KPA` in
-`Machine.h`. They are starting points, not tuned values — tune them for your chamber volume and
-pump.
+The gains are derived from the pump's projected free-flow rate and the chamber volume — two device
+settings, `flow` (L/min) and `volume` (L), with compile-time defaults in `Machine.h`, restored from
+`/settings.cfg`, and overridable over the wire (`device set flow`, `device set volume`). The
+deadband is `CONTROL_DEADBAND_KPA` in `Machine.h`. A different pump or chamber is retuned by
+setting the two numbers, not by re-deriving the gains.
 
 ## Protections
 

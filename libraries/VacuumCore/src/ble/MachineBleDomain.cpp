@@ -11,6 +11,7 @@
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
 #include "firmwareversion.h"
+#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -61,6 +62,8 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                                // sensor
     {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                                // floor
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                          // caps
+    {0x000F, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // flow
+    {0x0010, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4},   // volume
 };
 
 MachineBleDomain::MachineBleDomain(Machine* app) : app_(app) {}
@@ -116,6 +119,12 @@ void MachineBleDomain::describe(uint8_t index) {
     case Caps:
       setByte(chr, app_->capabilities());
       break;
+    case Flow:
+      setFloat(chr, app_->settings().pumpFlowLpm());
+      break;
+    case Volume:
+      setFloat(chr, app_->settings().chamberVolumeL());
+      break;
     case Count:
       break;
   }
@@ -141,6 +150,24 @@ void MachineBleDomain::write(uint8_t index, const NimBLEAttValue& value) {
       if (value.size() != 1) return;
       control_.value = value.data()[0];
       control_.has = true;
+      break;
+    case Flow:
+      if (value.size() != sizeof(float)) return;
+      {
+        float lpm = 0.0f;
+        memcpy(&lpm, value.data(), sizeof(lpm));
+        flow_.value = lpm;
+        flow_.has = true;
+      }
+      break;
+    case Volume:
+      if (value.size() != sizeof(float)) return;
+      {
+        float litres = 0.0f;
+        memcpy(&litres, value.data(), sizeof(litres));
+        volume_.value = litres;
+        volume_.has = true;
+      }
       break;
     default:
       break;  // the stack refuses a write to anything else before it gets here
@@ -190,6 +217,36 @@ void MachineBleDomain::applyPending(BleLink& link) {
     if (applied != lastTarget_) {
       lastTarget_ = applied;
       link.notify(characteristics_[Target]);
+    }
+  }
+
+  // The two loop settings, applied the same way `target` is: an owner's write
+  // retunes the loop, and the read-back is the answer.
+  if (flow_.has) {
+    flow_.has = false;
+    const float lpm = flow_.value;
+    if (owned(link) && isfinite(lpm) && lpm > 0.0f) {
+      app_->settings().setPumpFlowLpm(lpm);
+    }
+    describe(Flow);
+    const float applied = app_->settings().pumpFlowLpm();
+    if (applied != lastFlow_) {
+      lastFlow_ = applied;
+      link.notify(characteristics_[Flow]);
+    }
+  }
+
+  if (volume_.has) {
+    volume_.has = false;
+    const float litres = volume_.value;
+    if (owned(link) && isfinite(litres) && litres > 0.0f) {
+      app_->settings().setChamberVolumeL(litres);
+    }
+    describe(Volume);
+    const float applied = app_->settings().chamberVolumeL();
+    if (applied != lastVolume_) {
+      lastVolume_ = applied;
+      link.notify(characteristics_[Volume]);
     }
   }
 
@@ -253,6 +310,8 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(Control, app_->ownership().owner().code(), lastControl_, baseline, link);
   publishOnChange(Target, vacuum.targetKpa(), lastTarget_, baseline, link);
   publishOnChange(Floor, CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
+  publishOnChange(Flow, app_->settings().pumpFlowLpm(), lastFlow_, baseline, link);
+  publishOnChange(Volume, app_->settings().chamberVolumeL(), lastVolume_, baseline, link);
 
   const char* fault = vacuum.faultCode();
   if (baseline || lastFault_ != fault) {
