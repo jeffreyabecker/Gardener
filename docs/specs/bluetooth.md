@@ -7,14 +7,15 @@ transport it arrived on, with the panel beneath both when a panel is fitted.
 
 The device advertises as `gardener`, with the name in the scan response beside the service
 `6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10`. Advertising stops on connect and resumes when the central
-leaves. The last 16 bits of a characteristic's UUID select the field, so `state` is
-`6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0001`.
+leaves. The last 16 bits of a characteristic's UUID select the field, so `ble_proto` is
+`6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0001`: the contract's own revision is the first field a client can
+read, before it trusts the rest of the table.
 
 ## Characteristics at a glance
 
 | Characteristic | Suffix | Properties | Length | Payload |
 | --- | --- | --- | --- | --- |
-| `state` | `0001` | read, notify | 1 | uint8 run state |
+| `ble_proto` | `0001` | read | 1 | uint8, this contract's revision |
 | `pressure_kpa` | `0002` | read, notify | 4 | float32 LE, depth below ambient |
 | `target` | `0003` | read, write, notify | 4 | float32 LE, depth to pull to |
 | `duty` | `0004` | read, notify | 4 | float32 LE, pump duty in percent |
@@ -22,7 +23,7 @@ leaves. The last 16 bits of a characteristic's UUID select the field, so `state`
 | `batt` | `0006` | read, notify | 1 | uint8 percent, `0xFF` when the gauge is not reporting |
 | `command` | `0007` | write, notify | 1 | an opcode in, a result out |
 | `fw` | `0008` | read | 16 | UTF-8 version |
-| `ble_proto` | `0009` | read | 1 | uint8, this contract's revision |
+| `state` | `0009` | read, notify | 1 | uint8 run state |
 | `unit` | `000A` | read, write | 1 | uint8 display unit |
 | `control` | `000B` | read, write, notify | 1 | uint8, who is on top of the stack |
 | `sensor` | `000C` | read, notify | 1 | uint8, 1 when a reading can be trusted |
@@ -209,8 +210,9 @@ constant for the life of the image.
 
 ### `ble_proto`
 
-The revision of this contract, as one byte: `1`. A client compares it against the revision it was
-written for and treats a mismatch as a table it does not know.
+The revision of this contract, as one byte: `1`. It is the table's first field, at `0001`, so a
+client reads the revision before it trusts anything else. A client compares it against the revision
+it was written for and treats a mismatch as a table it does not know.
 
 ### `caps`
 
