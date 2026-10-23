@@ -24,6 +24,9 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
+- [Safety hardening](./backlogs/safety-hardening.md) — the device's safe path made independent of the
+  controller, in eleven epics
+
 The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) — currently
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
