@@ -7,6 +7,7 @@
 #include "BitmapPanel.h"
 #include "BuzzerPlayer.h"
 #include "Logger.h"
+#include "MachineCommand.h"
 #include "MemoryFiles.h"
 #include "PanelContext.h"
 #include "VacuumSystem.h"
@@ -190,6 +191,8 @@ class HarnessPanel : public PanelContext {
   BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
+  // The host has no queue to fill, so the command is always taken.
+  bool post(const MachineCommand& command) override { return postMachineCommand(command); }
 
  private:
   Display& display_;

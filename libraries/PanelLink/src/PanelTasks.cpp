@@ -58,12 +58,13 @@ void buttonsTick(PanelState& state) {
   }
 
   static const String QuitGesture = String("cancel:") + ResetHoldSeconds;
-  if (gesture == QuitGesture && state.context.ownership().ownedBy(state.context)) {
-    // The stop is the device's, not the routine's: the routine is being taken off the stack, so
-    // nothing of it runs to stop itself. goHomeSeq tells the disconnected page to show the root.
+  // The quit is the panel's own safety gesture, so it does not wait for control: whoever drives,
+  // Cancel held for five seconds stops and vents. The stop is the device's, not the routine's —
+  // the routine is being taken off the stack, so nothing of it runs to stop itself. goHomeSeq
+  // tells the disconnected page to show the root.
+  if (gesture == QuitGesture) {
     state.logger->warn("panel: cancel held, force-quitting");
-    const MachineCommand stop{MachineCommand::Op::Stop};
-    postMachineCommand(stop);
+    state.context.post(MachineCommand{MachineCommand::Op::Stop});
     goHomeSeq++;
     return;
   }
@@ -94,6 +95,8 @@ void panelTask(void* arg) {
   if (state.ui) state.ui->begin();
 
   for (;;) {
+    // A command the panel could not hand to the control task on its last beat is retried first.
+    state.context.flushCommands();
     buttonsTick(state);
 
     // The screen follows control, not the cable: an external claim paints the link's page, and a

@@ -66,6 +66,8 @@ class Panel : public Machine, public Link, public PanelContext {
   void lostControl() override { external_ = true; }
   // True while an external link drives: the panel shows that link's page rather than its own.
   bool externalPage() const { return external_; }
+  // The panel's own route to the machine's command queue, through the link outbox it inherits.
+  bool post(const MachineCommand& command) override { return Link::post(command); }
 
   // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
   // interpreter.

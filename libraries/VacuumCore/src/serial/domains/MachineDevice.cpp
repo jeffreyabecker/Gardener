@@ -8,6 +8,7 @@
 #include "Logger.h"
 #include "serial/Domain.h"
 #include "serial/Gate.h"
+#include "serial/MachineFields.h"
 #include "serial/SerialLink.h"
 #include "storage/MachineSettings.h"
 
@@ -118,7 +119,8 @@ void MachineDeviceDomain::get(Stream& io) {
 
 void MachineDeviceDomain::set(Stream& io, const String& args) {
   // `set` is `<field> <value>`, and `log`, `flow`, `volume`, `floor`, `pump_max`, `deadband` and
-  // `valve` are the fields this build has.
+  // `valve` are the fields this build has. Everything but `log` is applied on the control task:
+  // the value is checked and refused here, then posted, so one task owns the machine state.
   const int split = args.indexOf(' ');
   if (split < 0) {
     io.print("err bad_argument\n");
@@ -165,144 +167,9 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
     return;
   }
 
-  if (field.equalsIgnoreCase("flow")) {
-    const float flow = value.toFloat();
-    if (!(flow > 0.0f)) {
-      io.print("err bad_argument ");
-      io.print(value);
-      io.print('\n');
-      return;
-    }
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    app_.settings().setPumpFlowLpm(flow);
-
-    io.print("ok flow=");
-    io.print(app_.settings().pumpFlowLpm(), 2u);
-    io.print('\n');
-    return;
-  }
-
-  if (field.equalsIgnoreCase("volume")) {
-    const float volume = value.toFloat();
-    if (!(volume > 0.0f)) {
-      io.print("err bad_argument ");
-      io.print(value);
-      io.print('\n');
-      return;
-    }
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    app_.settings().setChamberVolumeL(volume);
-
-    io.print("ok volume=");
-    io.print(app_.settings().chamberVolumeL(), 3u);
-    io.print('\n');
-    return;
-  }
-
-  if (field.equalsIgnoreCase("floor")) {
-    const float pressureKpa = value.toFloat();
-    if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA)) {
-      io.print("err out_of_range field=floor value=");
-      io.print(value);
-      io.print(" min=");
-      io.print(CONTROL_MIN_TARGET_KPA, 1u);
-      io.print('\n');
-      return;
-    }
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    app_.settings().setFloorPressureKpa(pressureKpa);
-
-    io.print("ok floor=");
-    io.print(app_.settings().floorPressureKpa(), 1u);
-    io.print('\n');
-    return;
-  }
-
-  if (field.equalsIgnoreCase("pump_max")) {
-    const float percent = value.toFloat();
-    if (!(percent > 0.0f && percent <= PUMP_DUTY_MAX_PERCENT)) {
-      io.print("err out_of_range field=pump_max value=");
-      io.print(value);
-      io.print(" max=");
-      io.print(PUMP_DUTY_MAX_PERCENT, 1u);
-      io.print('\n');
-      return;
-    }
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    app_.settings().setPumpMaxPercent(percent);
-
-    io.print("ok pump_max=");
-    io.print(app_.settings().pumpMaxPercent(), 1u);
-    io.print('\n');
-    return;
-  }
-
-  if (field.equalsIgnoreCase("deadband")) {
-    const float pressureKpa = value.toFloat();
-    if (!(pressureKpa > 0.0f)) {
-      io.print("err bad_argument ");
-      io.print(value);
-      io.print('\n');
-      return;
-    }
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    app_.settings().setDeadbandPressureKpa(pressureKpa);
-
-    io.print("ok deadband=");
-    io.print(app_.settings().deadbandPressureKpa(), 2u);
-    io.print('\n');
-    return;
-  }
-
-  if (field.equalsIgnoreCase("valve")) {
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-    if (value.equalsIgnoreCase("open")) {
-      app_.settings().setValveNormallyOpen(true);
-    } else if (value.equalsIgnoreCase("closed")) {
-      app_.settings().setValveNormallyOpen(false);
-    } else {
-      io.print("err bad_argument ");
-      io.print(value);
-      io.print('\n');
-      return;
-    }
-    // Echo the stored direction: a change applies on the next boot, so the read-out and the
-    // pending setting can differ until then.
-    io.print("ok valve=");
-    io.print(app_.settings().valveNormallyOpen() ? "open" : "closed");
-    io.print('\n');
-    return;
-  }
+  // The six machine settings are shared with the panel build's domain, so the bounds, the refusals
+  // and the task that applies them are one definition rather than two.
+  if (setMachineField(io, app_, link_, field, value, extra)) return;
 
   io.print("err bad_argument ");
   io.print(field);
@@ -321,7 +188,7 @@ void MachineDeviceDomain::reboot(Stream& io, const String& args) {
   // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
   const MachineCommand reboot{MachineCommand::Op::Reboot};
-  postMachineCommand(reboot);
+  link_.post(reboot);
 }
 
 }  // namespace

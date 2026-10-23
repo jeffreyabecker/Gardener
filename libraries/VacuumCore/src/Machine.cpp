@@ -45,6 +45,10 @@ void Machine::boot() {
   logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed"
                                                  : "vent: normally open");
 
+  // The fitted valve is the fail-safe: a normally open part vents when the coil is not held, so
+  // the bit says the resting state is safe rather than that a valve is fitted at all.
+  if (!vacuum_.vent().energiseWhenOpen()) capabilities_ |= FailSafeValve;
+
   // The loop the settings describe: the two knobs and the gains they derive, one line so a bench
   // read can confirm the loop the device will run.
   const PidGains gains = pidGainsFor(settings_.pumpFlowLpm(), settings_.chamberVolumeL());

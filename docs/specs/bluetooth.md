@@ -26,13 +26,17 @@ leaves. The last 16 bits of a characteristic's UUID select the field, so `state`
 | `unit` | `000A` | read, write | 1 | uint8 display unit |
 | `control` | `000B` | read, write, notify | 1 | uint8, who is on top of the stack |
 | `sensor` | `000C` | read, notify | 1 | uint8, 1 when a reading can be trusted |
-| `floor` | `000D` | read, write, notify | 4 | float32 LE, the pump's measured reach |
+| `floor` | `000D` | read, notify | 4 | float32 LE, the pump's measured reach |
 | `caps` | `000E` | read | 1 | uint8 capability bitmask |
-| `flow` | `000F` | read, write, notify | 4 | float32 LE, the pump's projected free flow |
-| `volume` | `0010` | read, write, notify | 4 | float32 LE, the chamber volume |
-| `valve` | `0011` | read, write | 1 | uint8, the fitted valve's direction |
-| `pump_max` | `0012` | read, write, notify | 4 | float32 LE, the duty cap |
-| `deadband` | `0013` | read, write, notify | 4 | float32 LE, the target-reached tolerance |
+| `flow` | `000F` | read, notify | 4 | float32 LE, the pump's projected free flow |
+| `volume` | `0010` | read, notify | 4 | float32 LE, the chamber volume |
+| `valve` | `0011` | read | 1 | uint8, the fitted valve's direction |
+| `pump_max` | `0012` | read, notify | 4 | float32 LE, the duty cap |
+| `deadband` | `0013` | read, notify | 4 | float32 LE, the target-reached tolerance |
+| `hold_s` | `0014` | read, write, notify | 2 | uint16 LE, the hold to ask for, and the one granted |
+| `max_run_s` | `0015` | read | 2 | uint16 LE, the longest hold a start may ask for |
+| `write_result` | `0016` | read, notify | 3 | uint16 LE suffix, then a uint8 reason |
+| `uptime_ms` | `0017` | read, notify | 4 | uint32 LE, milliseconds since boot |
 
 The suffix is the last 16 bits of the characteristic's UUID, and the length is the characteristic's
 own maximum. A read answers at most that many bytes; a write has to be exactly the payload's length,
@@ -85,8 +89,10 @@ needs `1` to start, and a run that sees it fall to `0` latches a fault.
 ### `fault`
 
 The latched fault's code as text, empty when nothing is latched, at most 12 bytes. `sensor` is the
-code a lost reading raises; a fault raised without a code reads `unknown`. A code stays until the
-`0x03` opcode clears it, and while it is set `state` stays `fault`.
+code a lost reading raises, `vent_timeout` a release that never reached the vent floor, `no_progress`
+a pull driven hard without headway, and `overshoot` a depth that ran past its target; a fault raised
+without a code reads `unknown`. A code stays until the `0x03` opcode clears it, and while it is set
+`state` stays `fault`.
 
 ### `batt` (panel builds only)
 
@@ -95,17 +101,31 @@ accurate than that. `0xFF` when no gauge is reporting, which is how a panel whos
 come up reads — `caps` still says the build carries the gauge, because that is a fact about the
 wiring.
 
+### `uptime_ms`
+
+The device's uptime in milliseconds, a `uint32` that advances across notifications. It is how a
+client places a `state`, a `fault` or a command result in time, and how it tells a reconnect from a
+restart.
+
 ## Driving the machine
 
 ### `target`
 
-The depth below ambient to pull to, in kPa. `0` means no target: it is how the characteristic reads
-before one is set, and writing `0` clears one, which releases the chamber if a run is active.
+The depth below ambient to pull to, in kPa. `0` is the ambient target: it holds the chamber
+released, so writing it stops the pump and vents, and it is what the characteristic reads before
+anything else is set.
 
 While a run is active, a deeper target re-enters `pull` and the pump works to it; a shallower one
 stops the pump, opens the valve and vents to the new target before the run carries on. A target
-deeper than `floor` is accepted and only pins the duty at `pump_max` — the pump cannot reach it, and
-nothing refuses the attempt. A target shallower than `CONTROL_MIN_TARGET_KPA` (5.0 kPa) is refused.
+deeper than `floor` is refused — the pump cannot reach it — and the read-back stays where it was, so
+`write_result` is the only other notice. A negative or non-finite value is refused the same way.
+
+### `hold_s` and `max_run_s`
+
+`max_run_s` is the compiled maximum, `CONTROL_MAX_RUN_MS` in whole seconds; nothing may exceed it.
+`hold_s` is a write of the hold to ask for, in whole seconds, applied to the next `start` — `0`
+asks for the maximum — and a read of the hold granted to the run, `0` while nothing is running. A
+value above `max_run_s` is refused and reported through `write_result`.
 
 ### `command`
 
@@ -122,7 +142,8 @@ succeeds and vents the chamber.
 ## Parameters
 
 The seven settings that configure the machine and its panel. They are compile-time defaults,
-restored from `/settings.cfg`, and overridable over the wire by the link that owns the machine. A
+restored from `/settings.cfg`, and changed with `device set` on the serial line — the radio reads
+them and never writes them, so a bonded phone cannot move the bound the machine is held to. A
 stored value that is missing, unparseable or out of bounds keeps the default at boot.
 
 | Parameter | Unit | Default | What it changes |
@@ -142,37 +163,36 @@ and `valve` do not, so the read-back is their only answer.
 ### `flow`
 
 The pump's projected free-flow rate: what the fitted pump moves into an open chamber. It is one of
-the two numbers the PID gains are derived from, so a different pump is retuned by writing this and
-`volume`, never by changing the firmware. Refused at zero, negative or not finite.
+the two numbers the PID gains are derived from, so a different pump is retuned by setting this and
+`volume`, never by changing the firmware. Held to 0.05–10 L/min by the loader and the setter alike.
 
 ### `volume`
 
-The chamber volume in litres, the other number the gains are derived from. Refused at zero, negative
-or not finite.
+The chamber volume in litres, the other number the gains are derived from. Held to 0.005–5 L.
 
 ### `floor`
 
-The pump's measured reach in kPa: how deep this rig can pull. It does not clamp a target — a deeper
-one is accepted — it is what a target's useful range is measured against, and the deepest value a
-client should offer. Refused shallower than `CONTROL_MIN_TARGET_KPA`.
+The pump's measured reach in kPa: how deep this rig can pull, and the deepest target accepted. A
+target deeper than it is refused. Held to 5–100 kPa, and written only on the serial line, because it
+is the bound the machine holds a controller to.
 
 ### `pump_max`
 
 The ceiling in percent that the control loop clamps its duty to. `PUMP_DUTY_MAX_PERCENT` is also the
-pump driver's own cap, so a larger value would mean nothing. Refused at zero, above 90, or not
-finite.
+pump driver's own cap, so a larger value would mean nothing. Held above zero and at most 90.
 
 ### `deadband`
 
 The tolerance in kPa within which the loop calls the target reached and `state` becomes `hold`. It
 is the one thing a client cannot work out for itself, and the reason `hold` is the honest cue that
-the target has arrived. Refused at zero, negative or not finite.
+the target has arrived. Held to 0.05–2 kPa.
 
 ### `valve`
 
 The direction of the fitted solenoid: `0` normally open, so a de-energised coil vents; non-zero
-normally closed. It names a part rather than tuning the loop, so a write stores the choice for the
-next boot and the characteristic keeps reporting the part that is fitted until then.
+normally closed. It names a part rather than tuning the loop, so `device set valve` stores the
+choice for the next boot and the characteristic keeps reporting the part that is fitted until then.
+It is read-only over the radio: a phone may know which way the valve fails, not change it.
 
 ### `unit` (panel builds only)
 
@@ -194,9 +214,11 @@ written for and treats a mismatch as a table it does not know.
 
 ### `caps`
 
-A bitmask of what the build carries: `1` a panel is fitted, `2` the build has a battery gauge. `batt`
-and `unit` exist only when the panel bit is set, so a machine-alone build reads `0`. The gauge bit
-says the wiring is there, not that the part answered — `batt` is where that shows.
+A bitmask of what the build carries: `1` a panel is fitted, `2` the build has a battery gauge, `4` the
+fitted valve is fail-safe — normally open, so a de-energised coil vents and the chamber cannot hold
+pressure through a crash, a cut wire or a dead coil. `batt` and `unit` exist only when the panel bit
+is set, so a machine-alone build reads `4`. The gauge bit says the wiring is there, not that the part
+answered — `batt` is where that shows.
 
 ## Reading, writing and owning
 
@@ -224,22 +246,23 @@ refused write: the value is not echoed, and nothing is notified unless it change
 
 | Characteristic | Accepted | Refused |
 | --- | --- | --- |
-| `target` | `0` clears; `5.0` or deeper, in kPa | shallower than `5.0`, or not finite |
-| `floor` | `5.0` or deeper, in kPa | shallower, or not finite |
-| `flow` | greater than `0`, L/min | zero, negative, or not finite |
-| `volume` | greater than `0`, litres | zero, negative, or not finite |
-| `pump_max` | greater than `0` and at most `90`, percent | outside those bounds, or not finite |
-| `deadband` | greater than `0`, kPa | zero, negative, or not finite |
+| `target` | `0` releases; anything from `0` to `floor`, in kPa | deeper than `floor`, negative, or not finite |
+| `hold_s` | `0` to `max_run_s`, whole seconds | above `max_run_s` |
 | `unit` | `0` to `3` | above `3` |
-| `valve` | `0` normally open, non-zero normally closed | — |
 | `control` | any uint8: non-zero claims, `0` releases | — |
 
-The target and floor bounds are the loop's shallowest target, `CONTROL_MIN_TARGET_KPA`, and the
-`pump_max` bound is `PUMP_DUTY_MAX_PERCENT`. A payload of the wrong length is ignored rather than
-truncated.
+`floor`, `flow`, `volume`, `pump_max`, `deadband` and `valve` have no write: they are commissioning
+and tuning values, set with `device set` on the serial line. A payload of the wrong length is
+ignored rather than truncated.
 
-Every field except `command` and `control` is gated on control as well: a value written by a link
-that is not on top of the stack is dropped, and the read-back shows the unchanged setting.
+A refused `target` or `hold_s` is also notified on `write_result`: the field's suffix, least
+significant byte first, then a reason byte — `1` not controlling, `2` out of range, `3` not a number.
+The read-back stays the authority; the notification is how a client tells a refusal from a lost
+write.
+
+Every writable field except `control` is gated on control as well: a value written by a link
+that is not on top of the stack is dropped, and the read-back shows the unchanged setting. `command`
+is gated on control except for `0x02`.
 
 ## Commands
 
@@ -248,26 +271,26 @@ is the result, sent after every write whatever it is.
 
 | Opcode | Meaning |
 | --- | --- |
-| `0x01` | start: close the valve, then pull to the target |
-| `0x02` | stop and vent |
+| `0x01` | start: close the valve, then run the stored target for `hold_s` |
+| `0x02` | stop and vent — accepted from any bonded link, whether or not it is controlling |
 | `0x03` | reset a latched fault |
 | `0x04` | reboot |
 
 | Result | Meaning |
 | --- | --- |
 | `0x00` | applied |
-| `0x01` | no target to pull to |
 | `0x02` | no valid reading |
 | `0x03` | fault latched |
 | `0xFE` | not controlling: the writing link is not on top of the stack |
 | `0xFF` | unknown opcode |
 
-`0x00`–`0x03` are the machine answering; `0xFE` and `0xFF` are the protocol refusing the request
-itself.
+`0x00`, `0x02` and `0x03` are the machine answering; `0xFE` and `0xFF` are the protocol refusing the
+request itself. `0x01` was "no target to pull to" and is retired: a start is valid at a target of
+`0`, so it is never produced.
 
-`start` refuses for the same three reasons the serial line reports — no target, no valid reading
-and a latched fault — because both transports ask the same check, so the two surfaces cannot
-disagree about why a run will not start.
+`start` refuses for the same two reasons the serial line reports — no valid reading and a latched
+fault — because both transports ask the same check, so the two surfaces cannot disagree about why a
+run will not start. The run's hold is the last `hold_s` written, or the maximum when it was `0`.
 
 ## Notifications
 
@@ -275,12 +298,16 @@ A notification goes only to a central that has subscribed to that characteristic
 subscription the link sends the current value of every on-change field once, so a client starts from
 the machine's state rather than from the first thing that moves.
 
-`pressure_kpa` and `duty` are notified at 5 Hz while a central is connected, and `batt` every 10 s.
-Every other notifying characteristic is sent when its value changes, with `command` sent after every
-opcode and `control` after every write to it.
+`pressure_kpa`, `duty` and `uptime_ms` are notified at 5 Hz while a central is connected, and `batt`
+every 10 s. Every other notifying characteristic is sent when its value changes, with `command` sent
+after every opcode, `control` after every write to it, and `write_result` after every refused target
+or hold write.
 
-The three periodic fields are not part of the subscription baseline, so a client that wants one of
-them before its next tick reads it once after subscribing.
+`uptime_ms` is how a client places a notification in time and tells a reconnect apart from a
+restart.
+
+The periodic fields are not part of the subscription baseline, so a client that wants one of them
+before its next tick reads it once after subscribing.
 
 ## Build
 

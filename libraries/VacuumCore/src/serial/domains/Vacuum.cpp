@@ -73,7 +73,8 @@ void VacuumDomain::execute(Stream& io) {
     return;
   }
   if (verb == "stop") {
-    if (!requireControl(app_, link_, io)) return;
+    // The one state-changing verb a link may use without owning the machine: a stop is how a
+    // bystander makes the machine safe, so it is answered before the ownership gate.
     stop(io, args);
     return;
   }
@@ -93,14 +94,10 @@ void VacuumDomain::get(Stream& io) {
   io.print("ok pressure_kpa=");
   io.print(vacuum.currentPressureKpa(), 2u);
 
-  // A cleared target reads as unset rather than as 0.0, which is a real depth.
+  // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
+  // the one that holds the chamber released.
   io.print(" target=");
-  const float target = vacuum.targetPressureKpa();
-  if (target <= 0.0f) {
-    io.print('-');
-  } else {
-    io.print(target, 1u);
-  }
+  io.print(vacuum.targetPressureKpa(), 1u);
 
   io.print(" floor=");
   io.print(app_.settings().floorPressureKpa(), 1u);
@@ -113,6 +110,10 @@ void VacuumDomain::get(Stream& io) {
   io.print(" fault=");
   const char* fault = vacuum.faultCode();
   io.print(fault[0] ? fault : "none");
+  io.print(" hold=");
+  io.print(vacuum.running() ? vacuum.holdSeconds() : 0u);
+  io.print(" max_run=");
+  io.print((uint32_t)(CONTROL_MAX_RUN_MS / 1000));
   io.print(" up=");
   io.print(app_.uptimeMs());
   io.print('\n');
@@ -135,41 +136,71 @@ void VacuumDomain::target(Stream& io, const String& args) {
     return;
   }
 
-  if (token == "-") {
-    const MachineCommand clear{MachineCommand::Op::ClearTarget};
-    postMachineCommand(clear);
-    io.print("ok target=-\n");
-    return;
-  }
+  // `-` stays as the shorthand for the ambient target, which is what 0 means as well.
+  float pressureKpa = 0.0f;
+  if (token != "-") pressureKpa = token.toFloat();
 
   // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
-  const float pressureKpa = token.toFloat();
-  if (!(pressureKpa >= CONTROL_MIN_TARGET_KPA)) {
+  if (!(pressureKpa >= 0.0f)) {
     io.print("err out_of_range field=target value=");
     io.print(token);
-    io.print(" min=");
-    io.print(CONTROL_MIN_TARGET_KPA, 1u);
+    io.print(" min=0.0\n");
+    return;
+  }
+  const float floorKpa = app_.settings().floorPressureKpa();
+  if (pressureKpa > floorKpa) {
+    io.print("err out_of_range field=target value=");
+    io.print(token);
+    io.print(" max=");
+    io.print(floorKpa, 1u);
     io.print('\n');
     return;
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  postMachineCommand(set);
+  link_.post(set);
   io.print("ok target=");
   io.print(pressureKpa, 1u);
   io.print('\n');
 }
 
 void VacuumDomain::start(Stream& io, const String& args) {
+  // The optional argument is the hold, in whole seconds. Without one the run gets the compiled
+  // maximum, which is also its ceiling.
+  const uint32_t maxSeconds = CONTROL_MAX_RUN_MS / 1000;
+  uint32_t holdSeconds = 0;
   if (!args.isEmpty()) {
-    io.print("err bad_argument ");
-    io.print(firstToken(args));
-    io.print('\n');
-    return;
+    const int space = args.indexOf(' ');
+    const String token = space < 0 ? args : args.substring(0, (unsigned int)space);
+    String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
+    extra.trim();
+    if (!extra.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(extra));
+      io.print('\n');
+      return;
+    }
+
+    const float seconds = token.toFloat();
+    if (seconds > (float)maxSeconds) {
+      io.print("err out_of_range field=hold value=");
+      io.print(token);
+      io.print(" max=");
+      io.print(maxSeconds);
+      io.print('\n');
+      return;
+    }
+    if (!(seconds >= 1.0f) || seconds != (float)(uint32_t)seconds) {
+      io.print("err out_of_range field=hold value=");
+      io.print(token);
+      io.print(" min=1\n");
+      return;
+    }
+    holdSeconds = (uint32_t)seconds;
   }
 
-  // The refusal is a pure read of the machine's target, fault and reading, so it is answered from
-  // a dirty read; a would-succeed start is queued and the reply is optimistic.
+  // The refusal is a pure read of the machine's fault and reading, so it is answered from a dirty
+  // read; a would-succeed start is queued and the reply is optimistic.
   const char* refusal = app_.vacuum().startRefusal();
   if (refusal != nullptr) {
     io.print("err not_ready ");
@@ -177,8 +208,8 @@ void VacuumDomain::start(Stream& io, const String& args) {
     io.print('\n');
     return;
   }
-  const MachineCommand start{MachineCommand::Op::Start};
-  postMachineCommand(start);
+  const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
+  link_.post(start);
   io.print("ok state=PULL\n");
 }
 
@@ -191,7 +222,7 @@ void VacuumDomain::stop(Stream& io, const String& args) {
   }
 
   const MachineCommand stop{MachineCommand::Op::Stop};
-  postMachineCommand(stop);
+  link_.post(stop);
   io.print("ok state=VENT\n");
 }
 
@@ -204,7 +235,7 @@ void VacuumDomain::reset(Stream& io, const String& args) {
   }
 
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  postMachineCommand(reset);
+  link_.post(reset);
   io.print("ok state=IDLE\n");
 }
 
