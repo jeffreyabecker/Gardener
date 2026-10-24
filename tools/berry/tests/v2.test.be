@@ -158,3 +158,21 @@ def layout_measures_its_natural_size()
 end
 
 test("a layout reports its natural size", layout_measures_its_natural_size)
+
+def bubble_draws_each_shape()
+  var shapes = ["circle", "rect", "roundrect", "tri-up", "tri-down", "tri-left", "tri-right"]
+  var b = BubbleV2()
+  b.x = 0; b.y = 0; b.w = 8; b.h = 8
+  for s : shapes
+    b.shape = s
+    b.filled = true
+    b.draw()
+    b.filled = false
+    b.draw()
+  end
+  b.w = 2; b.h = 2
+  b.filled = true
+  b.draw()
+end
+
+test("a bubble draws each shape and the degenerate square", bubble_draws_each_shape)
