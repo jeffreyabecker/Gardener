@@ -78,6 +78,12 @@ it, the exposure should be bounded: cap the bonds at four and add a local action
 bond. Blocked by: the machine-alone build has no panel to show a code, and no spare input has been
 chosen for a window — a jumper read at power-up is the only candidate so far.
 
+## An overlay that adapts to the panel
+
+The page area above the overlay reflows to the panel's size, but the overlay's band is still a
+fixed 12 rows. Blocked by: nothing decided about whether the band should scale with the panel or
+stay sized to its own contents.
+
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
