@@ -105,7 +105,7 @@ parking-lot line.
   no border, formatting the reading in the panel's unit. Check: a nil reading draws `--`, and a
   reading formats with the unit's decimals in each unit.
 
-- [ ] 4.7 Add the secondary reading to `PressureDisplay` at `/system/components/v2/`:
+- [x] 4.7 Add the secondary reading to `PressureDisplay` at `/system/components/v2/`:
   `secondary_pressure`, `secondary_position`, `size_hint`, and `secondary_family` and
   `secondary_style`. Check: a secondary sits smaller in each of the four corners, and side by side
   at `size_hint` 1 on the side the second character of `secondary_position` names.

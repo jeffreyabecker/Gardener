@@ -236,3 +236,22 @@ def pressure_display_draws()
 end
 
 test("a pressure display draws a reading and dashes", pressure_display_draws)
+
+def pressure_display_secondary()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.secondary_pressure = 10.0
+  p.secondary_position = "br"
+  p.size_hint = 0.5
+  p.draw(20.0)
+  assert_eq(p.secondary.align, "right", "a br secondary is not right-aligned")
+  assert_eq(p.secondary.v_align, "bottom", "a br secondary is not bottom-aligned")
+
+  p.size_hint = 1
+  p.secondary_position = "tr"
+  p.draw(20.0)
+  assert_eq(p.number.x, 0, "the main is not in the left half")
+  assert_eq(p.secondary.x, 32, "a right secondary is not in the right half")
+end
+
+test("a pressure display places its secondary reading", pressure_display_secondary)
