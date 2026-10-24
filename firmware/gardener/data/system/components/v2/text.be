@@ -102,12 +102,23 @@ class TextV2 : ComponentV2
     return (ch - h) / 2
   end
 
+  # The effective style is bold: the built-in face has no bold, so a bold built-in line is drawn
+  # and its ink box inverted, which is what reads as bold.
+  def bold()
+    return self.style == "bold" || self.style == "bold-oblique"
+  end
+
   def draw_fitted(text, candidate)
     var cw = self.w
     var ch = self.h
     if candidate[0] == nil
       var b = screen.text_bounds(text, candidate[1])
-      screen.draw_text(self.x + self.x_offset(cw, b.w), self.y + self.v_offset(ch, b.h), candidate[1], false, text)
+      var tx = self.x + self.x_offset(cw, b.w)
+      var ty = self.y + self.v_offset(ch, b.h)
+      screen.draw_text(tx, ty, candidate[1], false, text)
+      if self.bold()
+        screen.draw_invert(tx, ty, b.w, b.h)
+      end
     else
       var b = screen.text_bounds(text, 1, candidate[0])
       screen.draw_text(self.x + self.x_offset(cw, b.w), self.y + self.v_offset(ch, b.h) + b.h, 1, false, text, candidate[0])

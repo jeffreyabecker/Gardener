@@ -50,7 +50,7 @@ parking-lot line.
   `draw_fitted` centres the smallest candidate, so the ink spills out both sides of the box. Check:
   a long string draws with an ellipsis at the box's edge and nothing past it.
 
-- [ ] 2.3 Render bold on the built-in face by inverting the text's ink box. Today bold exists only
+- [x] 2.3 Render bold on the built-in face by inverting the text's ink box. Today bold exists only
   as the compiled bold faces, so bold on the built-in face is impossible. Check: bold built-in text
   draws and its ink box is then inverted.
 
