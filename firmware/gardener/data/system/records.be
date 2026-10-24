@@ -6,6 +6,9 @@
 #
 # A record is the state at the moment of the call, and writing one of its fields changes the
 # routine's copy and nothing else.
+#
+# The file loads before any page, so it also holds the one global the pages share: `isnull`, the
+# first of its arguments that is not nil, which turns a stored-or-default choice into one line.
 
 class reading
   var pressure_kpa, target, duty, floor, min, state, fault, batt, sensor_ok
@@ -33,4 +36,16 @@ class setting
     self.editor = editor
     self.default = default
   end
+end
+
+# The first argument that is not nil, or nil when every one of them is. With no arguments it is nil,
+# so `isnull(stored, fallback)` is the stored value when there is one and the fallback when there is
+# not.
+def isnull(*values)
+  for value : values
+    if value != nil
+      return value
+    end
+  end
+  return nil
 end
