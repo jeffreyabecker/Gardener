@@ -114,12 +114,39 @@ class TextV2 : ComponentV2
     end
   end
 
+  # A string wider than the box at the built-in face is cut short with an ellipsis, because the
+  # built-in face is the last resort and nothing a text draws lies outside its box.
+  def truncated(text)
+    if self.candidate[0] != nil
+      return text
+    end
+    var b = screen.text_bounds(text, self.candidate[1])
+    if b.w <= self.w
+      return text
+    end
+    var i = string.count(text)
+    while i > 0
+      var cut = ""
+      var j = 0
+      while j < i
+        cut = cut + text[j]
+        j += 1
+      end
+      var c = screen.text_bounds(cut + "...", self.candidate[1])
+      if c.w <= self.w
+        return cut + "..."
+      end
+      i -= 1
+    end
+    return "..."
+  end
+
   def draw(text)
     if self.candidate == nil || text != self.fitted_text
       self.candidate = self.fit(text)
       self.fitted_text = text
     end
-    self.draw_fitted(text, self.candidate)
+    self.draw_fitted(self.truncated(text), self.candidate)
     self.flip()
   end
 end
