@@ -37,6 +37,23 @@ class IntervalIcon : Icon
   end
 end
 
+# The same square wave on the v2 icon base, drawing in its own box.
+class IntervalIconV2 : IconV2
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw()
+    screen.draw_hline(self.x, self.y + 1, 3)
+    screen.draw_vline(self.x + 3, self.y + 1, 6)
+    screen.draw_hline(self.x + 3, self.y + 6, 3)
+    screen.draw_vline(self.x + 6, self.y + 1, 6)
+    screen.draw_hline(self.x + 6, self.y + 1, 3)
+    screen.draw_vline(self.x + 9, self.y + 1, 6)
+    screen.draw_hline(self.x + 9, self.y + 6, 3)
+  end
+end
+
 # The ramp's glyph, and the browser's row glyph: the stairs, three solid steps four pixels wide,
 # each column standing from the baseline two rows higher than the one before, so no gap falls
 # between them, on a 12 by 8 field.
@@ -49,6 +66,19 @@ class RampedIntervalIcon : Icon
     screen.draw_fillrect(x, y + 5, 3, 2)
     screen.draw_fillrect(x + 4, y + 3, 3, 4)
     screen.draw_fillrect(x + 8, y + 1, 3, 6)
+  end
+end
+
+# The same stairs on the v2 icon base, drawing in its own box.
+class RampedIntervalIconV2 : IconV2
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw()
+    screen.draw_fillrect(self.x, self.y + 5, 3, 2)
+    screen.draw_fillrect(self.x + 4, self.y + 3, 3, 4)
+    screen.draw_fillrect(self.x + 8, self.y + 1, 3, 6)
   end
 end
 
@@ -103,6 +133,65 @@ class RampedIntervalChrome
     self.sets.draw(filled)
 
     self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
+    self.status.draw(self.owner.status_text())
+    var left = self.owner.hold_left()
+    if left != nil
+      self.bar.draw(left)
+    end
+  end
+end
+
+# The interval chrome rebuilt on the v2 layout: the pressure in the left half, the set bubbles in
+# the right, and a status-plus-bar row below. It lives beside RampedIntervalChrome until the pages
+# are ported onto the v2 components.
+class RampedIntervalChromeV2
+  var owner
+  var icon
+  var pressure
+  var sets
+  var status
+  var bar
+  var row
+
+  def init(owner)
+    self.owner = owner
+    self.icon = RampedIntervalIconV2()
+    self.pressure = PressureDisplayV2()
+    self.pressure.x = 0
+    self.pressure.y = 8
+    self.pressure.w = screen.width() / 2
+    self.pressure.h = 32
+    self.sets = ProgressBubblesV2()
+    self.sets.x = screen.width() / 2
+    self.sets.y = 0
+    self.sets.w = screen.width() / 2
+    self.sets.h = 38
+    self.status = TextV2()
+    self.status.align = "left"
+    self.bar = ProgressBarV2()
+    self.bar.grow = true
+    self.row = LayoutV2()
+    self.row.x = 0
+    self.row.y = 44
+    self.row.w = screen.width()
+    self.row.h = 8
+    self.row.add(self.status)
+    self.row.add(self.bar)
+  end
+
+  def draw(s)
+    if self.sets.max_count != self.owner.count
+      self.sets.set_count(self.owner.count)
+    end
+    var filled = 0
+    if self.owner.phase != IntervalPhase.READY
+      filled = self.owner.set + 1
+    end
+    self.status.value = self.owner.status_text()
+    self.row.place()
+    self.icon.draw()
+    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
+    self.sets.draw(filled)
     self.status.draw(self.owner.status_text())
     var left = self.owner.hold_left()
     if left != nil

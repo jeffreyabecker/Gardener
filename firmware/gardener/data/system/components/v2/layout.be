@@ -7,7 +7,7 @@ class LayoutV2 : ComponentV2
   var spacing
   var wrap
 
-  def init()
+  def init(children = [], fill_direction = "lr-tb", spacing = 0, wrap = false)
     super(self).init()
     self.children = []
     self.fill_direction = "lr-tb"

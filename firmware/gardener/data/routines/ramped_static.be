@@ -20,6 +20,18 @@ class RampedStaticIcon : Icon
   end
 end
 
+# The same glyph on the v2 icon base, drawing in its own box, so the v2 chrome has an icon of its
+# own without reaching for the v1 class.
+class RampedStaticIconV2 : IconV2
+  def init()
+    super(self).init(12, 8)
+  end
+
+  def draw()
+    screen.draw_filltriangle(self.x, self.y + 6, self.x + 11, self.y + 1, self.x + 11, self.y + 6)
+  end
+end
+
 class RampedStaticChrome
   var owner
   var icon
@@ -52,6 +64,51 @@ class RampedStaticChrome
 
   def draw(s)
     self.icon.draw(0, 0)
+    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
+    self.status.draw(self.owner.status_text())
+    var left = self.owner.run_left()
+    if left != nil
+      self.bar.draw(left)
+    end
+  end
+end
+
+# The static chrome rebuilt on the v2 layout: the pressure in the left half and a status-plus-bar
+# row below, the word measured and the bar taking the rest. It lives beside RampedStaticChrome
+# until the pages are ported onto the v2 components.
+class RampedStaticChromeV2
+  var owner
+  var icon
+  var pressure
+  var status
+  var bar
+  var row
+
+  def init(owner)
+    self.owner = owner
+    self.icon = RampedStaticIconV2()
+    self.pressure = PressureDisplayV2()
+    self.pressure.x = 0
+    self.pressure.y = 8
+    self.pressure.w = screen.width() / 2
+    self.pressure.h = 32
+    self.status = TextV2()
+    self.status.align = "left"
+    self.bar = ProgressBarV2()
+    self.bar.grow = true
+    self.row = LayoutV2()
+    self.row.x = 0
+    self.row.y = 44
+    self.row.w = screen.width()
+    self.row.h = 8
+    self.row.add(self.status)
+    self.row.add(self.bar)
+  end
+
+  def draw(s)
+    self.status.value = self.owner.status_text()
+    self.row.place()
+    self.icon.draw()
     self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
     self.status.draw(self.owner.status_text())
     var left = self.owner.run_left()

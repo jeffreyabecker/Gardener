@@ -5,7 +5,7 @@ the PC's USB port with a small pump; the 12 V build is the same machine on a ben
 deeper pump. Pick one before buying: they share most of the parts, and each build lists what it
 needs.
 
-**5 V build: ≈ $143. 12 V build: ≈ $205.** The sensor, the 12 V pump, the 12 V supply and the two
+**5 V build: ≈ $108. 12 V build: ≈ $170.** The 12 V pump, the 12 V supply and the two
 bucks are estimates; the rest are listed.
 
 ## 5 V build
@@ -20,7 +20,7 @@ attended.
 | 1 | ESP32-S3 Super Mini | The MCU, 4-pack. Native USB CDC is the control interface | **$16.99** — [B0H8MV4RGZ](https://www.amazon.com/dp/B0H8MV4RGZ) |
 | 2 | JQB2438 pump | Micro diaphragm vacuum pump, 3 V/3.7 V winding, 0.45 A | **$16.84** — [B0GR4K9K4P](https://www.amazon.com/dp/B0GR4K9K4P) |
 | 3 | Solenoid valve | Mini 2-way **normally open**, 3.0–5.0 V, ~180 mA at 3.3 V. Ports 1 and 2 in use; port 3 capped | **$9.63** — [B0HDRX4C44](https://www.amazon.com/dp/B0HDRX4C44) |
-| 4 | **XGZP6847A sensor** | CFSensor XGZP6847A100KPGN33: -100–0 kPa gauge, 3.3 V, amplified analog 0.2–2.7 V out, 6-DIP, 3 mm barbless top port. Pre-calibrated, so no bridge ADC; it takes one ADC pin rather than the I2C bus | **≈ $40** — [DigiKey](https://www.digikey.com/en/products/detail/cfsensor/XGZP6847A100KPGN33/22530823) |
+| 4 | **XGZP6847A sensor** | CFSensor XGZP6847A100KPGN33: -100–0 kPa gauge, 3.3 V, amplified analog 0.2–2.7 V out, 6-DIP, 3 mm barbless top port. Pre-calibrated, so no bridge ADC; it takes one ADC pin rather than the I2C bus | **$5.25** — [DigiKey](https://www.digikey.com/en/products/detail/cfsensor/XGZP6847A100KPGN33/22530823) |
 | 5 | **OLED** | Generic 1.3" 128x64 SH1106, I2C `0x3C`, `VCC / GND / SDA / SCL`. On its own bus | **$6.99** — [B0HFSCMGWD](https://www.amazon.com/Display-Breadboard-Multicolored-Compatible-Raspberry/dp/B0HFSCMGWD) |
 | 6 | **Six keys + 74HC165** | Six labelled momentary switches — up, down, forward, back, okay, cancel — into an 8-bit parallel-in/serial-out shift register. Three GPIOs instead of six; the two spare register inputs are tied high | **≈ $5** — any 74HC165 and six 6 mm tactile switches |
 | 7 | **DRV8833 module** | Dual H-bridge, 2 × 1.5 A, logic-level inputs. Drives the pump and the valve | **$6.99** — [B0G1RMXMSF](https://www.amazon.com/dp/B0G1RMXMSF) |
@@ -171,8 +171,8 @@ switch does the rest, so GPIO6 and the duty mean the same thing on either rail.
 | Tee | 3/32" | the 5 V build's item 11 |
 | Breadboard | 2 × 830-point + jumpers | the 5 V build's item 8 |
 
-The shared rows are the 5 V build's items 1, 3, 4, 5, 6, 7, 8, 9, 10 and 11, about $117 of its
-total. The new rows add about $88, so the 12 V build is **≈ $205**. The 5 V pump and the
+The shared rows are the 5 V build's items 1, 3, 4, 5, 6, 7, 8, 9, 10 and 11, about $82 of its
+total. The new rows add about $88, so the 12 V build is **≈ $170**. The 5 V pump and the
 5 V → 3.3 V buck are not bought. The 12 V pump, supply and two bucks are the estimates.
 
 A 6 mm barb needs a short length of 4 mm ID tube and a 4 mm-to-2.4 mm reducer: the 5 V build's
