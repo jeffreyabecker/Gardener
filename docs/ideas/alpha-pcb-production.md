@@ -1,12 +1,25 @@
 # The production build: a carrier board at 100-300 units
 
+## Summary
+
+A 5 V bench vacuum controller for a 100-300 unit run: USB-C 5 V in, a 5 V pump and a 5 V valve on
+one bare DRV8833, the ESP32-S3 Super Mini as the MCU, the 1.3" 128x64 SH1106 panel, and six keys
+through a 74HC165 — no buck, no PD. Three boards — carrier, button module, faceplate — go into an
+off-the-shelf plastic box with a PCB faceplate, and everything is AliExpress except the DigiKey
+sensor.
+
+**Parts land around $28-42 a unit at 100-300 pieces.** The pump is the biggest line ($8-12); the
+valve ($4-6) and the sensor ($5.25) follow; and the electronics — MCU, panel and both assembled
+boards — are under $15 together. Assembly, test and finishing are the other half of the cost and are
+not in that figure.
+
 The POC build is a breadboard with everything bought as a module; the alpha board commits one of
 those modules — the DRV8833 — to copper and leaves the rest plugged in. At a 100-300 unit run the
 arithmetic changes: hand-assembly, module cost and enclosure labour dominate, so what integrates and
 what stays a module is worth reopening. This document is that pass, under these constraints: one build, 5 V, fed from USB-C with a 3 A
 budget; everything is AliExpress except the XGZP6847A sensor; the panel stays the 1.3" 128x64
 SH1106; and the custom PCBs are a carrier board that everything plugs into — bulk capacitors
-included — plus button modules. Enclosure options are at the end.
+included — plus button modules. The enclosure is an off-the-shelf box with a PCB faceplate.
 
 The parts and wiring are in [the POC build guide](../guides/poc-parts.md), and the
 valve's role in the machine is in [the vacuum-control spec](../specs/vacuum-control.md).
@@ -58,49 +71,64 @@ The DRV8833 integrates as the bare `DRV8833PWPR` with its PowerPAD on copper, wh
 to reflow or a hot plate rather than an iron. The Super Mini is the MCU and stays a module on two
 female headers; its USB-C is the serial interface and the power input.
 
-## The button module: shift register or GPIO expander
+## The button module: a shift register
 
-The module itself is decided — six keys on a small PCB behind the faceplate, because the physical
-layout needs it. The open question is how the carrier reads it: a shift register, which the POC
-already uses, or an I2C GPIO expander. The trade is polling against interrupts, and five wires
-either way.
+The module is six keys on a small PCB behind the faceplate, read through one 74HC165: the eight
+inputs are latched and shifted in over three GPIOs (SH/LD, CLK, Q7), the six keys take six inputs
+in panel order and the two spares are tied high, and the register rides with the switches so the
+carrier sees a five-wire header (3V3, GND, SH/LD, CLK, Q7). This is exactly the POC's `Buttons` —
+the part has no change output, so the register is shifted on every read and a level is accepted only
+once it holds still, on the panel task's 10 ms beat. The only cost of more keys later is a second
+register daisy-chained onto the same three GPIOs.
 
-| | 74HC165 shift register | I2C GPIO expander |
+Six single-key modules are only for a faceplate that scatters the keys; with one register, one
+six-key board behind the faceplate is the natural shape.
+
+## The two PCBs, itemised
+
+The run's boards are three — the carrier, the button module, and the faceplate — and what lands on
+each is a parts decision as much as a layout one. Prices
+are LCSC/JLCPCB catalog bands to pin at order time — JLCPCB assembly adds its loading fee and a
+per-joint cost on top of the part price, and a basic part carries no extended-library fee.
+
+### The carrier
+
+| Part | Unit | Note |
 | --- | --- | --- |
-| Reads | 3 GPIOs shift the eight inputs in | 2 GPIOs address 8 or 16 lines |
-| Cable | 5 wires: 3V3, GND, SH/LD, CLK, Q7 | 5 wires: 3V3, GND, SDA, SCL, /INT |
-| Change | none — polled and shifted every read | edge interrupt, read on change only |
-| More keys | daisy-chain a second register, same 3 GPIOs | one chip to 16 lines, two on a bus |
-| Bus | none, bit-banged | I2C: shares the panel's Wire1 or takes its own |
-| Firmware | already written (`Buttons`) | a new driver and bus planning |
+| DRV8833PWPR | ~$0.50-0.90 | the driver, HTSSOP-16 |
+| Bulk 1000 µF | ~$0.15-0.40 | SMD — see below |
+| Piezo buzzer | ~$0.15-0.30 | SMD, passive, on GPIO12 |
+| Connectors | ~$0.30-0.50 | sensor socket, pump, valve, OLED, button header |
+| Passives | ~$0.20-0.40 | the driver's four caps, the sensor's 100 nF + 10 k |
 
-The POC's `Buttons` has no change output to latch, so the register is shifted on every read and a
-level is accepted only once it holds still — the panel task already does this on a 10 ms beat. An
-expander inverts that: its interrupt fires on a key change, the MCU reads only then, and a sleeping
-device can wake on the edge. For a bench instrument that never sleeps the difference is small; for
-a battery build that idles, the interrupt is the point of the expander.
+Fabrication and assembly at a few hundred boards — the bare PCB, the SMT joints and the amortised
+setup — run about $0.60-1.20 on top of those parts, so an assembled carrier lands around **$2-4**.
 
-**Chip prices, JLCPCB/LCSC at a few hundred pieces** (catalog bands, pin at order time — JLCPCB adds
-its assembly loading fee on top, and a basic part carries no extended-library fee):
+**Can the bulk cap be SMD?** Yes, and it should be. The POC's part was a 25 V through-hole can
+because that build had a 12 V rail; this rail is 5 V, so 16 V is already three times the working
+voltage. A 1000 µF 16 V SMD aluminium electrolytic — a "V-chip", about 10 × 10.5 mm — reflows with
+everything else and costs a few tens of cents. MLCCs do not reach 1000 µF at 16 V at any price worth
+paying, and a polymer or tantalum SMD part gets there but costs more than the electrolytic for
+nothing on a surge reservoir.
 
-| Part | Package | Unit | What it buys |
-| --- | --- | --- | --- |
-| 74HC165 | SOP-16 | ~$0.06-0.15, basic part | 8 inputs on 3 GPIOs, daisy-chainable |
-| PCF8574 / PCF8574A | SOP-16 | ~$0.15-0.30 | 8 I2C lines, quasi-bidirectional, /INT |
-| TCA9535 | TSSOP-24 | ~$0.40-0.70 | 16 I2C lines, true interrupt |
-| MCP23017 | SSOP-28 | ~$0.80-1.20 | 16 lines, internal pull-ups |
-| AW9523 | QFN-24 | ~$0.30-0.60 | 16 lines plus an LED driver — overkill here |
+### The button module
 
-The spread is ten cents to a dollar twenty, so over 300 units the choice is tens of dollars at worst
-— not the axis. What decides is interrupts and bus. The shift register is the cheapest thing that
-already works, and the only cost of more keys is a second register on the same three GPIOs. The
-expander is the answer if the build ever sleeps, wants a key press to wake it, or needs more lines
-than a register chain wants to give — at the price of a new driver and a decision about which bus it
-lives on (the panel's `Wire1` has room at a second address; its own bus costs two more GPIOs).
+| Part | Unit | Note |
+| --- | --- | --- |
+| 74HC165 | ~$0.06-0.15 | the shift register, rides with the switches |
+| Six SMD tact switches | ~$0.10-0.20 | 6 × 6 mm |
+| Connector | ~$0.05 | five pins to the carrier |
+| Six button caps | ~$0.12-0.30 | mechanical, snap on through the faceplate |
 
-Either chip rides on the button module with the switches, so the carrier sees the same header. Six
-single-key modules are only for a faceplate that scatters the keys; with one driver chip, one
-six-key board is the natural shape.
+The caps are not soldered — they are a mechanical part that fits over each switch through the
+faceplate, bought with the enclosure rather than placed by the assembler. Fabrication and assembly
+on a board this small are about $0.30-0.60, so the assembled module lands around **$0.50-1.00**, with
+the six caps another ~$0.12-0.30 on top.
+
+### The faceplate
+
+A bare board, no components: the OLED window and the six key holes are routed cut-outs, and the
+labels are silkscreen. Fabrication is the whole cost — about $0.20-0.50 at a few hundred boards.
 
 ## The valve: normally open or normally closed
 
@@ -113,12 +141,12 @@ the pin — so the choice is a parts and product decision, not a firmware one.
 | | Normally open | Normally closed |
 | --- | --- | --- |
 | De-energised | vents (chamber to air) | seals (chamber holds) |
-| Coil current | the whole pull and hold, ~180 mA at 3.3 V | only while venting |
+| Coil current | the whole pull and hold, ~100-180 mA at 5 V | only while venting |
 | Fail-safe | a fault vents — never holds vacuum unexpectedly | a fault seals — holds through a power loss |
 | Failure mode | power loss releases the chamber | pump running while the valve driver is dead keeps pulling |
 
 Normally open is the safe direction for a bench instrument: the thing it must never do is hold a
-vacuum nobody asked for, and the coil's continuous 0.6 W is the price of that guarantee. Its cost is
+vacuum nobody asked for, and the coil's continuous ~0.5-0.9 W is the price of that guarantee. Its cost is
 coil heat over long holds — the spec's fifteen-minute hold cap exists as much for the solenoid as
 for the pump.
 
@@ -136,24 +164,14 @@ Stay normally open unless hold-through-power-loss is a product requirement. That
 that justifies giving up the fail-safe; if it is not on the feature list, the safer valve is also
 the simpler one.
 
-## Enclosures
+## Enclosure
 
-* **Off-the-shelf plastic box + laser-cut acrylic faceplate.** A few dollars a box in lots, and the
-  faceplate carries the 1.3" OLED window and the six key holes. The standard 100-300 unit answer:
-  the enclosure is a commodity, and all the bespoke work lives on one cheap acrylic sheet.
-* **Full laser-cut acrylic stack** — two or three sheets and standoffs. Cheapest tooling, a bespoke
-  look, but scratch-prone and less drop-tolerant. Fine for a bench tool, not for a thing carried.
-* **3D-printed, FDM or SLA.** In-house flexibility, and at 300 units the constraint is print time and
-  finish, not the printer. SLA gives a clean face but is brittle; FDM is cheap and rough. A good
-  bridge if the box is still moving while the boards are fixed.
-* **Extruded aluminium with milled end plates.** The most durable, and the dearest; the OLED window
-  still needs a plate, so the faceplate work does not go away.
-* **Injection moulding.** Ruled out at this volume: tooling of a few thousand dollars only pays for
-  itself at ten times the run.
-
-The acrylic-faceplate-on-a-box is the recommendation, and it decides the button module: with a
-faceplate, a single six-key board behind it is the natural form, and single-key modules stay on the
-shelf unless the keys must scatter.
+An off-the-shelf plastic box with a PCB faceplate. The box is a few dollars in lots; the faceplate
+is a third board, with the 1.3" OLED window and the six key holes routed into it and the labels
+printed in silkscreen — same fab as the other boards, so the holes land exactly where the button
+module's switches sit and the silkscreen is already paid for. That also settles the button module:
+one six-key board behind the faceplate is the natural form, and single-key modules stay on the
+shelf.
 
 ## What a unit costs
 
@@ -168,41 +186,32 @@ one non-AliExpress line.
 | Solenoid valve, 5 V | AliExpress | $4-6 | normally open or normally closed alike |
 | ESP32-S3 Super Mini | AliExpress | $2.50-3.50 | the MCU, as a module |
 | 1.3" 128x64 SH1106 OLED | AliExpress | $2.50-3.50 | non-promo bulk figure |
-| Carrier + button PCBs | JLCPCB | $2-4 | assembled, at a few hundred boards |
-| Enclosure + acrylic face | AliExpress + local cut | $3-6 | the recommended box-plus-face |
+| Carrier PCB, assembled | JLCPCB | $2-4 | driver, bulk cap, piezo, connectors — itemised above |
+| Button module, assembled | JLCPCB | $0.60-1.30 | register, switches, connector, caps |
+| Enclosure: box + faceplate PCB | AliExpress + JLCPCB | $1.50-3.50 | a few-dollar box, the face is a bare board |
 | Tube, tee, barbs | AliExpress | $1.50-2.50 | the wetted path |
-| 74HC165 + six switches | AliExpress | $1.00-1.50 | the button module's parts |
-| DRV8833PWPR + passives | AliExpress/LCSC | ~$0.60 | bare IC plus its four capacitors |
-| Connectors, headers, misc | AliExpress | $1.50-2.50 | plus the sensor's 100 nF and 10 k |
-| 1000 µF bulk cap | AliExpress | ~$0.20 | the surge reservoir |
-| Piezo buzzer | AliExpress | ~$0.15 | on GPIO12 |
 
 Two things fall out of the numbers. The pump is now the biggest line, and the sensor is a mid-pack
-part: at $5.25 it no longer sets the BOM, which instead follows the pump, the valve and the
-enclosure. The sensor is still the one non-AliExpress part with no obvious drop-in, so its supply is
-still the thing to hedge — but it is a supply concern now, not a cost one. And the "smart" half of
-the device stays the cheap half: the OLED, the driver, the register, the passives and the
-two PCBs together are under $15.
+part: at $5.25 it no longer sets the BOM, which instead follows the pump and the valve. The sensor
+is still the one non-AliExpress part with no obvious drop-in, so its supply is still the thing to
+hedge — but it is a supply concern now, not a cost one. And the "smart" half of the device stays the
+cheap half: the Super Mini, the OLED and the three boards together are under $15.
 
-A unit lands around $32-48 in parts. That is parts only: hand assembly, test and finishing are the
+A unit lands around $28-42 in parts. That is parts only: hand assembly, test and finishing are the
 other half of the cost and are not priced here.
 
 ## What is still unknown
 
 * **Whether the valve is normally open or normally closed** — which is a product question, not an
   engineering one, and decides the fail-safe.
-* **The button driver** — shift register or GPIO expander. The 74HC165 already works and polls at
-  10 ms; an I2C expander pays a new driver for an interrupt that only matters if the build sleeps.
-* **The enclosure medium**, which decides the button-module form and the faceplate tooling.
 * **The sensor's second source.** The XGZP6847A is the one non-AliExpress part, and cheap at $5.25
   from DigiKey but with no obvious drop-in — its continuity is the run's single point of failure
   until a second channel is confirmed.
 
 ## Where I land
 
-The 300-unit build is the POC with four decisions already made — USB-C for the rail, the 1.3"
-SH1106 kept, AliExpress except the sensor, and the Super Mini as the MCU — and these still open. On
-the open ones I lean: one six-key button module, driven by the 74HC165 that
-already works unless the build ever sleeps; an off-the-shelf box with an acrylic faceplate; and a
-normally open valve. The one that could still flip is the valve, if hold-through-power-loss turns
-out to be the product.
+The 300-unit build is the POC with six decisions already made — USB-C for the rail, the 1.3"
+SH1106 kept, AliExpress except the sensor, the Super Mini as the MCU, an off-the-shelf box with a
+PCB faceplate, and a 74HC165 shift register for the keys. The one decision still open is the valve
+direction, and I lean normally open: it keeps the fail-safe that a fault vents, and only a
+hold-through-power-loss requirement would justify the normally closed part.
