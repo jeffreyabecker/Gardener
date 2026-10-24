@@ -4,98 +4,49 @@
 import math
 
 class ProgressBubblesV2 : LayoutV2
-  var max_count
-  var bubble_style
-  var unfilled
 
-  def init()
-    super(self).init()
-    self.wrap = true
-    self.max_count = 0
-    self.bubble_style = "circle"
-    self.unfilled = "outline"
-  end
+  var _bubble_style
+  var _unfilled
+  var count
 
-  # Rebuild the children when the count changes, one bubble per set, sized to fill the box.
-  def set_count(n)
-    if n == self.max_count
-      return
-    end
-    self.max_count = n
-    self.children = []
-    var s = self.bubble_size()
-    self.spacing = self.bubble_gap(s)
+  static def _gen_bubbles(max_count, bubble_style)
+    var bubbles = []
     var i = 0
-    while i < n
-      var b = BubbleV2()
-      b.shape = self.bubble_style
-      b.w = s
-      b.h = s
-      self.children.push(b)
+    while i < max_count
+      var b = BubbleV2(bubble_style, false)
+      bubbles.push(b)
       i += 1
     end
+    return bubbles
   end
 
-  def columns()
-    if self.max_count <= 0
-      return 1
-    end
-    var cols = int(math.sqrt(self.max_count * self.w / self.h))
-    if cols < 1
-      cols = 1
-    end
-    if cols > self.max_count
-      cols = self.max_count
-    end
-    return cols
+  def init(max_count, bubble_style, unfilled, fill_direction, spacing)
+    #children, fill_direction, spacing, wrap
+    spacing = spacing == nil ? 0 : spacing
+    super(self).init( _gen_bubbles(max_count, bubble_style), fill_direction, spacing, true)
+
+    self._bubble_style = bubble_style
+    unfilled = unfilled == nil || unfilled == "filled" ? "outline" : unfilled
+    self._unfilled = unfilled == nil ? "outline" : unfilled
   end
 
-  def bubble_size()
-    if self.max_count <= 0 || self.w < 1 || self.h < 1
-      return 1
-    end
-    var cols = self.columns()
-    var rows = int((self.max_count + cols - 1) / cols)
-    var size = int(self.w / cols)
-    var hsize = int(self.h / rows)
-    if hsize < size
-      size = hsize
-    end
-    if size < 1
-      size = 1
-    end
-    return size
-  end
 
-  def bubble_gap(size)
-    if self.max_count <= 1
-      return 0
-    end
-    var cols = self.columns()
-    if cols > 1 && cols * size < self.w
-      return int((self.w - cols * size) / (cols - 1))
-    end
-    return 0
-  end
+  def draw()
 
-  def draw(count)
-    if count < 0
-      count = 0
+    if self.count < 0
+      self.count = 0
     end
-    if count > self.max_count
-      count = self.max_count
+    if self.count > self.max_count
+      self.count = self.max_count
     end
     var i = 0
     while i < self.children.size()
-      self.children[i].filled = i < count
+      self.children[i].filled = i < self.count
+      if i < self.count
+        self.children[i].fill_state = "filled"
+      end
       i += 1
     end
-    self.place()
-    for child : self.children
-      if child.filled || self.unfilled == "outline"
-        child.draw()
-      end
-    end
-    self.flip()
+    super(self).draw()
   end
 end

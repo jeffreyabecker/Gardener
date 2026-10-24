@@ -7,12 +7,12 @@ class LayoutV2 : ComponentV2
   var spacing
   var wrap
 
-  def init(children = [], fill_direction = "lr-tb", spacing = 0, wrap = false)
+  def init(children, fill_direction, spacing, wrap)
     super(self).init()
-    self.children = []
-    self.fill_direction = "lr-tb"
-    self.spacing = 0
-    self.wrap = false
+    self.children = children == nil ? [] : children
+    self.fill_direction = fill_direction == nil ? "lr-tb" : fill_direction
+    self.spacing = spacing == nil ? 0 : spacing
+    self.wrap = wrap == nil ? true : wrap
   end
 
   def add(child)
@@ -181,4 +181,11 @@ class LayoutV2 : ComponentV2
     end
     return [max_cross, total]
   end
+end
+
+
+def layout_dim(layout, width, height)
+  layout.w = width
+  layout.h = height
+  return layout
 end

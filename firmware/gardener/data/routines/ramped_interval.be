@@ -144,59 +144,34 @@ end
 # The interval chrome rebuilt on the v2 layout: the pressure in the left half, the set bubbles in
 # the right, and a status-plus-bar row below. It lives beside RampedIntervalChrome until the pages
 # are ported onto the v2 components.
-class RampedIntervalChromeV2
-  var owner
-  var icon
-  var pressure
-  var sets
-  var status
-  var bar
-  var row
+class RampedIntervalChromeV2 : LayoutV2
+  #var current_set, total_sets, status, remaining_percent
 
-  def init(owner)
-    self.owner = owner
-    self.icon = RampedIntervalIconV2()
-    self.pressure = PressureDisplayV2()
-    self.pressure.x = 0
-    self.pressure.y = 8
-    self.pressure.w = screen.width() / 2
-    self.pressure.h = 32
-    self.sets = ProgressBubblesV2()
-    self.sets.x = screen.width() / 2
-    self.sets.y = 0
-    self.sets.w = screen.width() / 2
-    self.sets.h = 38
-    self.status = TextV2()
-    self.status.align = "left"
-    self.bar = ProgressBarV2()
-    self.bar.grow = true
-    self.row = LayoutV2()
-    self.row.x = 0
-    self.row.y = 44
-    self.row.w = screen.width()
-    self.row.h = 8
-    self.row.add(self.status)
-    self.row.add(self.bar)
+  def init(title, total_sets )
+    super(self).init([
+      LayoutV2([
+        RampedIntervalIconV2(),
+        layout_dim(TextV2(title), nil, 8)
+      ], "lr-tb", 0, false),
+      LayoutV2([
+        AutoPressureDisplayV2("pressure:target", "br", 0.25),
+        ProgressBubblesV2()
+      ], "lr-tb", 0, false),
+      LayoutV2([
+        TextV2("", ),
+        ProgressBarV2()
+      ], "lr-tb", 0, false)
+    ], "tb-lr", 1, false)
+
   end
 
-  def draw(s)
-    if self.sets.max_count != self.owner.count
-      self.sets.set_count(self.owner.count)
-    end
-    var filled = 0
-    if self.owner.phase != IntervalPhase.READY
-      filled = self.owner.set + 1
-    end
-    self.status.value = self.owner.status_text()
-    self.row.place()
-    self.icon.draw()
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    self.sets.draw(filled)
-    self.status.draw(self.owner.status_text())
-    var left = self.owner.hold_left()
-    if left != nil
-      self.bar.draw(left)
-    end
+  def draw(current_set, status, remaining_percent)
+    var progress_bubbles = self.children[1].children[1]
+    var status_text = self.children[2].children[0]
+    var progress_bar = self.children[2].children[1]
+    progress_bubbles.count = current_set
+    status_text.value = status
+    progress_bar.value = remaining_percent
   end
 end
 

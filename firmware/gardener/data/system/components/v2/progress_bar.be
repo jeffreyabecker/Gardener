@@ -1,7 +1,13 @@
 # progress_bar.be — the v2 ProgressBar: a framed bar filled to a percentage.
 
 class ProgressBarV2 : ComponentV2
-  def draw(value)
+  var value
+  def init(value)
+    super(self).init()
+    self.value = value == nil ? 0 : value
+  end
+  def draw()
+    var value = self.value
     if value < 0
       value = 0
     end

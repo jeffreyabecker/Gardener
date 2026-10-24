@@ -3,17 +3,23 @@
 
 class ScrollbarV2 : ComponentV2
   var hollow
+  var index
+  var count
+  var visible
 
   def init()
     super(self).init()
     self.hollow = false
+    self.index = 0
+    self.count = 0
+    self.visible = 0
   end
 
-  def draw(index, count, visible)
-    if count <= 0
+  def draw()
+    if self.count <= 0
       return
     end
-    var thumb = int(self.h * visible / count)
+    var thumb = int(self.h * self.visible / self.count)
     if thumb < 1
       thumb = 1
     end
@@ -21,9 +27,9 @@ class ScrollbarV2 : ComponentV2
       thumb = self.h
     end
     var top = self.y
-    var span = count - visible
+    var span = self.count - self.visible
     if span > 0
-      top = self.y + (self.h - thumb) * index / span
+      top = self.y + (self.h - thumb) * self.index / span
     end
     if top < self.y
       top = self.y

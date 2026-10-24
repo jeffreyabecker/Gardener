@@ -1,14 +1,16 @@
-# duration.be — the v2 Duration: whole seconds formatted in the panel's units of time, drawn with
-# Text's fit. The format property picks the largest unit shown.
+# duration.be — the v2 Duration: whole seconds formatted in the panel's units of time. It is a
+# Text, so the string is fitted, cached and aligned by the same face ladder as any other text. The
+# format property picks the largest unit shown.
 
-class DurationV2 : ComponentV2
+class DurationV2 : TextV2
   var format
-  var number
+  # The seconds last shown, so a layout can measure the duration before its first draw.
+  var seconds
 
   def init()
     super(self).init()
     self.format = "minutes"
-    self.number = TextV2()
+    self.seconds = 0
   end
 
   def text(seconds)
@@ -47,12 +49,15 @@ class DurationV2 : ComponentV2
     return str(total) + "m" + str(secs2) + "s"
   end
 
+  # A duration is measured from the loop it last showed, so a layout that places before it draws
+  # still gets the string's own ink box rather than an empty one.
+  def measure(cross)
+    self.value = self.text(self.seconds)
+    return super(self).measure(cross)
+  end
+
   def draw(seconds)
-    self.number.x = self.x
-    self.number.y = self.y
-    self.number.w = self.w
-    self.number.h = self.h
-    self.number.draw(self.text(seconds))
-    self.flip()
+    self.seconds = seconds
+    super(self).draw(self.text(seconds))
   end
 end
