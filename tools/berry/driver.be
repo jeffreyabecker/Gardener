@@ -289,6 +289,113 @@ def harness_art_scene(name, seconds, path)
   return harnessErrors == 0
 end
 
+# Draw one component by name and save the frame as a BMP. The names are the drawing primitives,
+# both frameworks, so a component can be seen without driving a whole scene.
+def harness_art_component(name, path)
+  harness.reset()
+  screen.draw_clear()
+  var drew = false
+
+  if name == "text"
+    var t = DynamicText()
+    t.x = 0; t.y = 0; t.w = 64; t.h = 16
+    t.align = "left"
+    t.draw("12.5")
+    drew = true
+  elif name == "fixed-text"
+    var t = FixedText()
+    t.x = 0; t.y = 0; t.w = 64; t.h = 16
+    t.value = "READY"
+    t.draw()
+    drew = true
+  elif name == "pressure"
+    var p = PressureDisplay()
+    p.x = 0; p.y = 0; p.w = 64; p.h = 52
+    p.draw(20.0)
+    drew = true
+  elif name == "bar"
+    var b = ProgressBar()
+    b.x = 0; b.y = 0; b.w = 96; b.h = 8
+    b.border = 1
+    b.draw(50)
+    drew = true
+  elif name == "bubbles"
+    var b = ProgressBubbles()
+    b.x = 0; b.y = 0; b.w = 64; b.h = 38
+    b.max_count = 12
+    b.draw(5)
+    drew = true
+  elif name == "scrollbar"
+    var s = Scrollbar()
+    s.x = 0; s.y = 0; s.w = 2; s.h = 48
+    s.draw(2, 10, 5)
+    drew = true
+  elif name == "triangle"
+    var t = Triangle()
+    t.x = 0; t.y = 0; t.w = 12; t.h = 12
+    t.direction = "up"
+    t.draw()
+    drew = true
+  elif name == "text-v2"
+    var t = TextV2()
+    t.x = 0; t.y = 0; t.w = 64; t.h = 16
+    t.align = "left"
+    t.draw("12.5")
+    drew = true
+  elif name == "pressure-v2"
+    var p = PressureDisplayV2()
+    p.x = 0; p.y = 0; p.w = 64; p.h = 52
+    p.draw(20.0)
+    drew = true
+  elif name == "pressure-v2-secondary"
+    var p = PressureDisplayV2()
+    p.x = 0; p.y = 0; p.w = 64; p.h = 52
+    p.secondary_pressure = 10.0
+    p.secondary_position = "br"
+    p.draw(20.0)
+    drew = true
+  elif name == "bar-v2"
+    var b = ProgressBarV2()
+    b.x = 0; b.y = 0; b.w = 96; b.h = 8
+    b.draw(50)
+    drew = true
+  elif name == "bubbles-v2"
+    var b = ProgressBubblesV2()
+    b.x = 0; b.y = 0; b.w = 64; b.h = 38
+    b.set_count(12)
+    b.draw(5)
+    drew = true
+  elif name == "scrollbar-v2"
+    var s = ScrollbarV2()
+    s.x = 0; s.y = 0; s.w = 2; s.h = 48
+    s.draw(2, 10, 5)
+    drew = true
+  elif name == "triangle-v2"
+    var t = TriangleV2()
+    t.x = 0; t.y = 0; t.w = 12; t.h = 12
+    t.direction = "up"
+    t.draw()
+    drew = true
+  elif name == "duration-v2"
+    var d = DurationV2()
+    d.x = 0; d.y = 0; d.w = 64; d.h = 16
+    d.draw(150)
+    drew = true
+  end
+
+  if !drew
+    harness_fail("component: no component named " + name)
+    return false
+  end
+
+  if !harness.save(path)
+    harness_fail("component: cannot write " + path)
+    return false
+  end
+  harness_note("component: " + name + " saved to " + path)
+  return harnessErrors == 0
+end
+
 def harness_check()
   if ux.depth() == 0
     harness_fail("vm: no root scene showing")
