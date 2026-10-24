@@ -1,10 +1,10 @@
-# real_editor.be — RealEditor: a setting whose value is a real number, stepped and bounded.
+# real_setting_cfg.be — RealSettingCfg: a setting whose value is a real number, stepped and bounded.
 
-class RealEditor : Editor
+class RealSettingCfg : SettingCfg
   var step, min, max
 
-  def init(step, min, max, nullable)
-    super(self).init(nullable)
+  def init(key, default_value, label, icon, step, min, max, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
     self.step = step
     self.min = min
     self.max = max
@@ -12,10 +12,6 @@ class RealEditor : Editor
       self.problem = "real bounds are the wrong way round"
       vacuum.log("settings: " + self.problem)
     end
-  end
-
-  def kind()
-    return "real"
   end
 
   def bounded(value)
@@ -29,10 +25,6 @@ class RealEditor : Editor
     return number
   end
 
-  def text(value)
-    return str(value)
-  end
-
   def lowest()
     if self.min != nil
       return self.min
@@ -40,8 +32,7 @@ class RealEditor : Editor
     return 0.0
   end
 
-  def scene(label, value)
-    return RealScene(label, value, self.step, self.min, self.max, self.nullable)
+  def scene(value)
+    return RealScene(self.label, value, self.step, self.min, self.max, self.nullable)
   end
 end
-

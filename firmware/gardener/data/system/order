@@ -27,10 +27,10 @@ settings/scenes/duration_scene.be
 settings/activation.be
 settings/scenes/settings_scene.be
 settings/scenes/page.be
-settings/editors/editor.be
-settings/editors/bool_editor.be
-settings/editors/choice_editor.be
-settings/editors/int_editor.be
-settings/editors/real_editor.be
-settings/editors/pressure_editor.be
-settings/editors/duration_editor.be
+settings/configs/setting_cfg.be
+settings/configs/bool_setting_cfg.be
+settings/configs/choice_setting_cfg.be
+settings/configs/int_setting_cfg.be
+settings/configs/real_setting_cfg.be
+settings/configs/pressure_setting_cfg.be
+settings/configs/duration_setting_cfg.be

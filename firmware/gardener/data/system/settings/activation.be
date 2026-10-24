@@ -35,13 +35,13 @@ class Activation
       return nil
     end
     if self.values != nil
-      return item.editor.value(self.values.find(key, nil), item.default)
+      return item.value(self.values.find(key, nil))
     end
-    return item.editor.read(self.routine, key, item.default)
+    return item.read(self.routine)
   end
 
   # The raw value, for a page rule the kind does not own: a step of zero means no step, which is
-  # not a depth any editor would produce. It is typed like a read - the store parses a value as the
+  # not a depth any setting would produce. It is typed like a read - the store parses a value as the
   # type of the fallback it is given - but not held to the bounds.
   def raw(key)
     var item = self.setting(key)
@@ -49,9 +49,9 @@ class Activation
       vacuum.log("settings: " + self.routine + " registers no " + key)
       return nil
     end
-    var fallback = item.default
+    var fallback = item.default_value
     if fallback == nil
-      fallback = item.editor.lowest()
+      fallback = item.lowest()
     end
     if self.values != nil
       return self.values.find(key, fallback)

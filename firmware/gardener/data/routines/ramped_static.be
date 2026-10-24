@@ -387,11 +387,11 @@ end
 class RampedStaticSettings : SettingsScene
   def settings()
     return [
-      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
-      setting("target_pressure", "Target", PressureEditor(1, false), 20.0),
-      setting("initial_duration", "Start time", DurationEditor(1, 0, 7200, false), 60),
-      setting("target_duration", "Target time", DurationEditor(1, 0, 7200, false), 60),
-      setting("total_duration", "Total time", DurationEditor(1, 1, 7200, false), 300)
+      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureSettingCfg("target_pressure", 20.0, "Target", nil, 1, false),
+      DurationSettingCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
+      DurationSettingCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
+      DurationSettingCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
     ]
   end
 

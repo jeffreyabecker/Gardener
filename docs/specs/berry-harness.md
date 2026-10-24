@@ -81,7 +81,7 @@ image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `bounds` and `setting` — declared in `/system/records.be`, which the
+The records `reading`, `unit` and `bounds` — declared in `/system/records.be`, which the
 image loads before anything else — and the seven native modules a routine calls:
 
 | Module | On the host |

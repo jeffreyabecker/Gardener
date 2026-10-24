@@ -1,10 +1,10 @@
-# int_editor.be — IntEditor: a setting whose value is a whole number, stepped and bounded.
+# int_setting_cfg.be — IntSettingCfg: a setting whose value is a whole number, stepped and bounded.
 
-class IntEditor : Editor
+class IntSettingCfg : SettingCfg
   var step, min, max
 
-  def init(step, min, max, nullable)
-    super(self).init(nullable)
+  def init(key, default_value, label, icon, step, min, max, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
     self.step = step
     self.min = min
     self.max = max
@@ -14,11 +14,7 @@ class IntEditor : Editor
     end
   end
 
-  def kind()
-    return "int"
-  end
-
-  # A number outside the bounds the editor steps within is brought to the bound: the bound is what
+  # A number outside the bounds the kind steps within is brought to the bound: the bound is what
   # the kind means, and a hand-edited file is not allowed to mean something else.
   def bounded(value)
     var number = int(value)
@@ -31,10 +27,6 @@ class IntEditor : Editor
     return number
   end
 
-  def text(value)
-    return str(value)
-  end
-
   def lowest()
     if self.min != nil
       return int(self.min)
@@ -42,8 +34,7 @@ class IntEditor : Editor
     return 0
   end
 
-  def scene(label, value)
-    return IntScene(label, value, self.step, self.min, self.max, self.nullable)
+  def scene(value)
+    return IntScene(self.label, value, self.step, self.min, self.max, self.nullable)
   end
 end
-

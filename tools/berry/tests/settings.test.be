@@ -6,42 +6,69 @@
 suite = "settings"
 
 def missing_keys_read_their_default()
-  var editor = IntEditor(1, 1, 20, false)
-  assert_eq(editor.read("settings_test", "no_such_key", 4), 4, "a missing int is not its default")
+  var count = IntSettingCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
+  assert_eq(count.read("settings_test"), 4, "a missing int is not its default")
 
-  var choice = ChoiceEditor(["a", "b"], false)
-  assert_eq(choice.read("settings_test", "no_choice", "b"), "b", "a missing choice is not its default")
+  var mode = ChoiceSettingCfg("no_choice", "b", "Mode", nil, ["a", "b"], false)
+  assert_eq(mode.read("settings_test"), "b", "a missing choice is not its default")
 end
 
 test("a missing key reads as the setting's default", missing_keys_read_their_default)
 
 def stored_values_are_held_to_their_kind()
   store.set("settings_test", "count", "99")
-  var editor = IntEditor(1, 1, 20, false)
-  assert_eq(editor.read("settings_test", "count", 4), 20, "a stored int above max is not held to it")
+  var count = IntSettingCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  assert_eq(count.read("settings_test"), 20, "a stored int above max is not held to it")
 
   store.set("settings_test", "mode", "sideways")
-  var choice = ChoiceEditor(["off", "on"], false)
-  assert_eq(choice.read("settings_test", "mode", "off"), "off", "a value outside the choices is not defaulted")
+  var mode = ChoiceSettingCfg("mode", "off", "Mode", nil, ["off", "on"], false)
+  assert_eq(mode.read("settings_test"), "off", "a value outside the choices is not defaulted")
 
-  var real = RealEditor(0.5, 0.0, 1.0, false)
   store.set("settings_test", "gain", "7.5")
-  assert_eq(real.read("settings_test", "gain", 0.0), 1.0, "a stored real above max is not held to it")
+  var gain = RealSettingCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  assert_eq(gain.read("settings_test"), 1.0, "a stored real above max is not held to it")
 end
 
 test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
 
 def nothing_reads_as_nil_when_nullable()
   store.set("settings_test", "empty", "")
-  var editor = IntEditor(1, 0, 10, true)
-  assert_nil(editor.read("settings_test", "empty", 5), "an empty nullable int is not nil")
-  assert_nil(editor.read("settings_test", "absent", 5), "an absent nullable int is not nil")
+  var empty = IntSettingCfg("empty", 5, "Count", nil, 1, 0, 10, true)
+  assert_nil(empty.read("settings_test"), "an empty nullable int is not nil")
+
+  var absent = IntSettingCfg("absent", 5, "Count", nil, 1, 0, 10, true)
+  assert_nil(absent.read("settings_test"), "an absent nullable int is not nil")
 
   store.set("settings_test", "zero", "0")
-  assert_eq(editor.read("settings_test", "zero", 5), 0, "a stored zero is not a value")
+  var zero = IntSettingCfg("zero", 5, "Count", nil, 1, 0, 10, true)
+  assert_eq(zero.read("settings_test"), 0, "a stored zero is not a value")
 end
 
 test("a nullable key that holds nothing reads nil, not its default", nothing_reads_as_nil_when_nullable)
+
+def every_kind_builds()
+  var flags = BoolSettingCfg("flags", true, "Flags", nil, false)
+  assert_eq(flags.text(true), "ON", "a bool does not print ON")
+  assert_eq(flags.text(false), "OFF", "a bool does not print OFF")
+  assert_eq(flags.lowest(), false, "a bool's lowest is not false")
+
+  var count = IntSettingCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  assert_eq(count.text(7), "7", "an int does not print its number")
+
+  var gain = RealSettingCfg("gain", 0.5, "Gain", nil, 0.5, 0.0, 1.0, false)
+  assert_eq(gain.text(0.5), "0.5", "a real does not print its number")
+
+  var mode = ChoiceSettingCfg("mode", "a", "Mode", nil, ["a", "b"], false)
+  assert_eq(mode.text("b"), "b", "a choice does not print its value")
+
+  var rest = PressureSettingCfg("rest", nil, "Rest", nil, 1, true)
+  assert_nil(rest.default_value, "a nullable pressure does not hold a nil default")
+
+  var hold = DurationSettingCfg("hold", 90, "Hold", nil, 1, 0, 7200, false)
+  assert_eq(hold.text(90), "1m30s", "a duration does not print minutes and seconds")
+end
+
+test("every kind builds and prints its value", every_kind_builds)
 
 def a_switch_map_is_held_too()
   var s = Activation("interval", {"set_count": 99, "resume_behavior": "sometimes"})
@@ -86,8 +113,8 @@ def a_repair_puts_a_set_back()
   scene.values[at] = 30
   scene.repair(at)
   assert_eq(scene.message, "TOTAL < HOLDS", "the repair did not report the rule it applied")
-  assert_eq(scene.values[at], scene.items[at].default, "the repair did not put the value back")
-  assert_eq(wrote[scene.items[at].key], scene.items[at].default, "the repair was not written")
+  assert_eq(scene.values[at], scene.items[at].default_value, "the repair did not put the value back")
+  assert_eq(wrote[scene.items[at].key], scene.items[at].default_value, "the repair was not written")
 end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)

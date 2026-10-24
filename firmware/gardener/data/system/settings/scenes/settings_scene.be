@@ -40,13 +40,13 @@ class SettingsScene : Scene
     self.draw()
   end
 
-  # Reads every value through its editor and default, then repairs the set. False when the routine
+  # Reads every value through its setting and default, then repairs the set. False when the routine
   # has nothing this scene can edit, which leaves the scene to pop itself.
   def open()
     var items = []
     for item : self.settings()
-      if item.editor.problem != nil
-        vacuum.log("settings: " + self.routine + " " + item.key + ": " + item.editor.problem)
+      if item.problem != nil
+        vacuum.log("settings: " + self.routine + " " + item.key + ": " + item.problem)
       else
         items.push(item)
       end
@@ -57,7 +57,7 @@ class SettingsScene : Scene
     end
     var values = []
     for item : items
-      values.push(item.editor.read(self.routine, item.key, item.default))
+      values.push(item.read(self.routine))
     end
     self.items = items
     self.values = values
@@ -79,8 +79,8 @@ class SettingsScene : Scene
     vacuum.log("settings: " + self.routine + ": " + reason)
     for i : self.repair_order(changed)
       var item = self.items[i]
-      if self.values[i] != item.default
-        self.values[i] = item.default
+      if self.values[i] != item.default_value
+        self.values[i] = item.default_value
         self.write(i)
         if self.problem(self.value_map()) == nil
           return
@@ -180,16 +180,13 @@ class SettingsScene : Scene
     if value == nil
       return "--"
     end
-    return self.items[index].editor.text(value)
+    return self.items[index].text(value)
   end
 
   def open_row()
     var item = self.items[self.list.selected]
-    var value = self.values[self.list.selected]
-    if value == nil
-      value = item.editor.lowest()
-    end
-    ux.push(item.editor.scene(item.label, value), nil, / v -> self.value_closed(item, v))
+    var value = is_nil(self.values[self.list.selected], item.default_value)
+    ux.push(item.scene(value), nil, / v -> self.value_closed(item, v))
   end
 
   # A committed value: the set is repaired to one the rule accepts, and every setting the repair

@@ -1,19 +1,15 @@
-# choice_editor.be — ChoiceEditor: a setting whose value is one of a fixed list of labels.
+# choice_setting_cfg.be — ChoiceSettingCfg: a setting whose value is one of a fixed list of labels.
 
-class ChoiceEditor : Editor
+class ChoiceSettingCfg : SettingCfg
   var values
 
-  def init(values, nullable)
-    super(self).init(nullable)
+  def init(key, default_value, label, icon, values, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
     self.values = values
     if values == nil || values.size() == 0
       self.problem = "a choice needs at least one value"
       vacuum.log("settings: " + self.problem)
     end
-  end
-
-  def kind()
-    return "choice"
   end
 
   # A stored value that is no longer one of the choices is not a choice: it reads as the default.
@@ -29,10 +25,6 @@ class ChoiceEditor : Editor
     return nil
   end
 
-  def text(value)
-    return str(value)
-  end
-
   def lowest()
     if self.values == nil || self.values.size() == 0
       return nil
@@ -40,8 +32,7 @@ class ChoiceEditor : Editor
     return self.values[0]
   end
 
-  def scene(label, value)
-    return ChoiceScene(label, value, self.values, self.nullable)
+  def scene(value)
+    return ChoiceScene(self.label, value, self.values, self.nullable)
   end
 end
-

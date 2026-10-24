@@ -498,15 +498,15 @@ end
 class RampedIntervalSettings : SettingsScene
   def settings()
     return [
-      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
-      setting("initial_pressure", "Start", PressureEditor(1, false), 5.0),
-      setting("final_pressure", "Final", PressureEditor(1, false), 20.0),
-      setting("step_pressure", "Step", PressureEditor(1, true), nil),
-      setting("rest_pressure", "Rest", PressureEditor(1, true), nil),
-      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 300),
-      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 45),
-      setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false),
-              "immediately")
+      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureSettingCfg("final_pressure", 20.0, "Final", nil, 1, false),
+      PressureSettingCfg("step_pressure", nil, "Step", nil, 1, true),
+      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationSettingCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
+      DurationSettingCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+                       ["immediately", "after ok"], false)
     ]
   end
 
@@ -523,13 +523,13 @@ end
 class IntervalSettings : SettingsScene
   def settings()
     return [
-      setting("set_count", "Sets", IntEditor(1, 1, 20, false), 4),
-      setting("target_pressure", "Target", PressureEditor(1, false), 0.0),
-      setting("work_duration", "Work", DurationEditor(30, 0, 3600, false), 30),
-      setting("rest_pressure", "Rest", PressureEditor(1, true), nil),
-      setting("rest_duration", "Rest time", DurationEditor(1, 0, 1200, false), 1),
-      setting("resume_behavior", "Resume", ChoiceEditor(["immediately", "after ok"], false),
-              "immediately")
+      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
+      DurationSettingCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
+      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationSettingCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+                       ["immediately", "after ok"], false)
     ]
   end
 end

@@ -5,15 +5,6 @@
 # own: the drive is the `harness` module, the routines are reached through the Berry `routines`
 # registry and pushed through `ux`, and a value is read or written through `store`.
 
-def harness_kind_known(kind)
-  for name : ["real", "int", "bool", "choice", "duration", "pressure"]
-    if name == kind
-      return true
-    end
-  end
-  return false
-end
-
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
 # registered, so each switch starts a fresh page; the settings map, when there is one, is that
 # activation's own values.
@@ -34,7 +25,7 @@ def harness_registered(name)
   return false
 end
 
-# The map a switch carries is the routine's own settings, typed as the editor reads them, so
+# The map a switch carries is the routine's own settings, typed as the setting reads them, so
 # activate(settings) takes the same path as a real switch.
 def harness_settings_map(name)
   var described = routines.settings(name)
@@ -47,7 +38,7 @@ def harness_settings_map(name)
   end
   var settings = {}
   for item : described
-    settings[item.key] = item.editor.read(name, item.key, item.default)
+    settings[item.key] = item.read(name)
   end
   return settings
 end
@@ -72,31 +63,23 @@ def harness_editor(name)
   var i = 0
   while i < described.size()
     var item = described[i]
-    if type(item) != "instance"
+    if !isinstance(item, SettingCfg)
       harness_fail(label + " settings returned a non-setting")
       return
     end
-    if !harness_kind_known(item.editor.kind())
-      harness_fail(label + " setting " + str(item.key) + " has kind " + str(item.editor.kind()))
-    end
-    if item.editor.kind() == "choice" && (item.editor.values == nil || item.editor.values.size() == 0)
-      harness_fail(label + " choice " + str(item.key) + " has no values")
-    end
 
-    # Forward opens the value scene for the row the list has selected. A duration opens in the
-    # minutes stage, so Forward advances to the seconds before the commit.
+    # Forward opens the value scene for the row the list has selected, and a second Forward
+    # advances a duration from its minutes stage to its seconds; every other kind ignores it.
     harness.press("forward:single")
     harness.beat(1)
-    if item.editor.kind() == "duration"
-      harness.press("forward:single")
-      harness.beat(1)
-    end
+    harness.press("forward:single")
+    harness.beat(1)
     harness.press("up:single")
     harness.beat(1)
     harness.press("ok:single")
     harness.beat(1)
 
-    if harness_kind_known(item.editor.kind()) && !harness.wrote(name, item.key)
+    if !harness.wrote(name, item.key)
       harness_fail(label + " did not write " + str(item.key))
     end
 

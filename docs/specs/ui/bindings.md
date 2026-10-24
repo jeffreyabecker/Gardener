@@ -23,9 +23,10 @@ A record is the machine as it stood when the call returned, not a live view: wri
 have raises `attribute_error`, and the fields are the ones listed under each call. The classes are
 declared in `/system/records.be`, which the image loads before any page.
 
-The `setting` record a routine registers is the same kind of object, but a routine builds it itself
-rather than a call answering it; its fields, the editor each one carries and the default it holds,
-are listed under the settings a routine registers in [routine.md](./routine.md).
+A routine's settings are not native records: each one is a setting config the routine builds from
+`/system/settings/configs/`, so it carries the key, the default and the kind's own rules rather
+than being answered by a call. The classes and their arguments are listed under the settings a
+routine registers in [routine.md](./routine.md).
 
 ## `vacuum` — the machine
 
@@ -338,7 +339,7 @@ draws its list.
 | `routines.register(name, title, icon, factory, settings)` | `bool` | bind a name to the label the browser draws, the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the name; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
 | `routines.names()` | list of strings | every registered name, in registration order |
 | `routines.title(name)` | string, or `nil` | the label the browser draws for the routine |
-| `routines.settings(name)` | list of `setting`s, or `nil` | what the routine's settings scene edits |
+| `routines.settings(name)` | list of setting configs, or `nil` | what the routine's settings scene edits |
 | `routines.settings_scene(name)` | a `SettingsScene`, or `nil` | one with no writer, for asking what a routine edits |
 | `routines.push_settings(name, on_change, closed)` | `bool` | build the routine's settings scene, hand it `on_change(key, value)` for every value it settles, and run `closed` when it pops |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |

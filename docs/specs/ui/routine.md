@@ -92,9 +92,9 @@ subfolder. A `.be` file the order does not name does not load, and one found bes
 is reported as an error. **A new system file is an edit to `/system/order`**, at the point its
 dependencies put it.
 
-`/system/records.be` declares `reading`, `unit`, `bounds` and `setting` — the classes the native
-calls answer with, and the one a routine builds for each of its own settings. They are written in
-Berry because only the parser can declare an instance variable on a class. The same file defines the
+`/system/records.be` declares `reading`, `unit` and `bounds` — the classes the native calls answer
+with. They are written in Berry because only the parser can declare an instance variable on a class.
+The same file defines the
 global `is_nil(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
 so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` is the scene stack —
 `class Ux` and the global `ux`, the frames, the callbacks and the one-beat deferral, with the
@@ -117,10 +117,11 @@ paper where its ink was — which is what a selected row, a cursor or a focused 
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list) and `page.be` is `Page` (the scene a routine
-extends). `activation.be` is `Activation`, one activation's values. `editors/` holds the editor a
-setting carries: `editor.be` is `Editor` and `bool_editor.be`, `choice_editor.be`, `int_editor.be`,
-`real_editor.be`, `pressure_editor.be` and `duration_editor.be` are the kinds, each opening the
-value scene of the same name. **`up:double`** is the standard gesture for opening the list; the
+extends). `activation.be` is `Activation`, one activation's values. `configs/` holds one setting per
+kind: `setting_cfg.be` is `SettingCfg` and `bool_setting_cfg.be`, `choice_setting_cfg.be`,
+`int_setting_cfg.be`, `real_setting_cfg.be`, `pressure_setting_cfg.be` and
+`duration_setting_cfg.be` are the kinds, each opening the value scene of the same name.
+**`up:double`** is the standard gesture for opening the list; the
 page's own gesture calls `open_settings()`, which pushes the list under the page's name and writes
 each committed value to the page's file:
 
@@ -132,7 +133,7 @@ end
 ```
 
 `SettingsScene` reads the list the routine registered and each value from its store file through the
-setting's editor; nothing in the settings folder writes. A committed value is handed to the caller's
+setting itself; nothing in the settings folder writes. A committed value is handed to the caller's
 callback, which writes where appropriate. `back:single` at the top of the list pops the settings
 scene with nil.
 
@@ -242,10 +243,10 @@ constrain one another — `problem()` with the rule that has to hold:
 class MySettings : SettingsScene
   def settings()
     return [
-      setting("target", "Target", PressureEditor(1, false), 10.0),
-      setting("hold", "Hold", DurationEditor(1, 0, 7200, false), 30),
-      setting("mode", "Mode", ChoiceEditor(["hold", "cycle"], false), "hold"),
-      setting("enabled", "Enabled", BoolEditor(true), true)
+      PressureSettingCfg("target", 10.0, "Target", nil, 1, false),
+      DurationSettingCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
+      ChoiceSettingCfg("mode", "hold", "Mode", nil, ["hold", "cycle"], false),
+      BoolSettingCfg("enabled", true, "Enabled", nil, false)
     ]
   end
 
@@ -265,35 +266,41 @@ the rows, the value scenes, the writes and the repair.
 
 ### A setting
 
-`setting(key, label, editor, default[, icon])` builds one record:
+One class per kind in `/system/settings/configs/`. Every constructor takes the same four arguments
+first, then the kind's own, and `nullable` last:
+
+| Setting | Arguments |
+| --- | --- |
+| `BoolSettingCfg` | `key`, `default_value`, `label`, `icon`, `nullable` |
+| `IntSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `RealSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `PressureSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `nullable` |
+| `DurationSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `ChoiceSettingCfg` | `key`, `default_value`, `label`, `icon`, `values`, `nullable` |
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `key` | string | the key in the routine's `store` file |
-| `label` | string | the line the editor draws beside the value |
-| `editor` | an editor | what the value is, and how it is read, printed and edited |
-| `default` | the kind's type, or `nil` | what the setting is when nothing has been stored; `nil` for a nullable one |
+| `default_value` | the kind's type, or `nil` | what the setting is when nothing has been stored; `nil` for a nullable one |
+| `label` | string | the line the value scene draws beside the value |
 | `icon` | an `Icon`, or `nil` | drawn at the left of the row; an argument left off is a text-only row |
+| `nullable` | `bool` | whether the setting can hold nothing |
 
-### Editors
+### What a setting does
 
-The editor is the whole of what a value is. There is one class per kind in
-`/system/settings/editors/`, and each keeps the rules its kind needs:
+The setting is the whole of what its value is: the rules its kind needs, and the value scene that
+edits it. It answers five questions:
 
-| Editor | `kind()` | Arguments |
-| --- | --- | --- |
-| `BoolEditor` | `bool` | `nullable` |
-| `ChoiceEditor` | `choice` | `values`, `nullable` |
-| `IntEditor` | `int` | `step`, `min`, `max`, `nullable` |
-| `RealEditor` | `real` | `step`, `min`, `max`, `nullable` |
-| `PressureEditor` | `pressure` | `step`, `nullable` |
-| `DurationEditor` | `duration` | `step`, `min`, `max`, `nullable` |
+- `read(name)` — the stored value in the kind's own type from the file it is given, or the default
+  when nothing is stored.
+- `value(raw)` — a value that came from a switch's map, held to the same rules.
+- `text(value)` — the value as the list shows it.
+- `lowest()` — the lowest real value the kind can hold, which is also the fallback that types a read
+  of a setting with no default.
+- `scene(value)` — the value scene that edits it.
 
-An editor answers four questions: `read(name, key, default)` gives the stored value in the kind's
-own type, or the default when nothing is stored; `value(raw, default)` holds a value that came from
-a switch's map to the same rules; `text(value)` prints it as the list shows it; `lowest()` is the
-value a null setting opens at; and `scene(label, value)` builds the value scene that edits it.
-`kind()` names the kind for whatever has to know, which today is only the host harness.
+Which file a value belongs to is the caller's: the config reads the name it is handed, and the
+value the scene settles on is written by the callback the caller passed, never by the config.
 
 A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
 clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
@@ -304,10 +311,11 @@ built, logs one line, and leaves its row out of the list. Up/Down steps `real`, 
 discards it.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
-default says, and shows `--` in the list and the editor. It opens at the kind's lowest real value
-(the value a non-nullable setting starts from), and `nil` sits one step below that: Down at the
-lowest value clears back to `--`, Up from `--` enters the lowest value, and Down at `--` stays. OK
-on `--` writes an empty value, which reads as `nil` again.
+default says, and shows `--` in the list. Opening its row hands the scene the stored value, or the
+setting's default when it holds nothing — so a nullable setting with no default opens at `--`.
+`nil` sits one step below the kind's lowest real value: Down at the lowest value clears back to
+`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` writes an empty
+value, which reads as `nil` again.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
 whole minute. `ok:single` opens it in the **minutes** stage, Up/Down moves that by a minute,
@@ -319,12 +327,12 @@ below zero. A nullable duration cleared from the minutes stage advances to the s
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
 `12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the overlay's, printed in its
-bottom band rather than beside any number, so a page or the editor draws the value alone. Up/Down
-moves it by `step` whole display steps — one psi, one inHg, ten mmHg — and every value goes through
-`vacuum.clamp()`, whether it was read, stepped or restored, so the editor cannot produce a target
-the machine refuses. An unset pressure reads as `0.0` and therefore clamps to the shallowest legal
-target; a nullable one reads as `nil`, and its lowest value is that same shallowest target. The
-machine's own `min` … `floor` is the range, so a pressure editor takes no `min` or `max`.
+bottom band rather than beside any number, so a page or the value scene draws the value alone.
+Up/Down moves it by `step` whole display steps — one psi, one inHg, ten mmHg — and every value goes
+through `vacuum.clamp()`, whether it was read, stepped or restored, so the scene cannot produce a
+target the machine refuses. An unset pressure reads as `0.0` and therefore clamps to the shallowest
+legal target; a nullable one reads as `nil`, and its lowest value is that same shallowest target.
+The machine's own `min` … `floor` is the range, so a pressure setting takes no `min` or `max`.
 
 ### A rule across settings
 
