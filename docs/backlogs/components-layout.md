@@ -79,7 +79,7 @@ parking-lot line.
 
 ## Epic 4 — The rebuilt primitives
 
-- [ ] 4.1 Add the `Bubble` primitive at `/system/components/v2/`: a square of a shape, filled or
+- [x] 4.1 Add the `Bubble` primitive at `/system/components/v2/`: a square of a shape, filled or
   outlined, a solid square below 3 px. Check: each shape draws, and a bubble smaller than 3 px is a
   solid square with no outline.
 
