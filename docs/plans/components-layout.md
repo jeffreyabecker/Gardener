@@ -9,25 +9,24 @@ back to the built-in face only as a last resort, a pressure display with a secon
 duration display, and bubbles rebuilt on a wrapping layout.
 
 The work is done in parallel: the new framework is built beside the existing one, and both keep
-rendering until the new one has been fully vetted, and only then do the pages switch over. This
-plan carries the requirement to bring the code to that spec and to prove it on the host with a test
-suite that captures what each component and each page renders — for the framework that exists today
-and the one that replaces it, so the two can be seen side by side.
+rendering until the new one has been fully vetted. Porting the pages onto the new framework is out
+of scope for this plan. The plan carries the requirement to bring the component framework to that
+spec and to prove it on the host with a test suite that captures what each component renders — for
+the framework that exists today and the one that replaces it, so the two can be seen side by side.
 
 ## Requirements
 
-### 1. The new framework is built beside the old one and adopted after vetting
+### 1. The new framework is built beside the old one and vetted before any switch
 
 Today the spec describes a replacement, and the requirements that follow read as rewriting the
 components in place, which would break the pages mid-way and leave nothing to compare the new
 rendering against. Instead the new component and layout framework is built alongside the existing
-one: the existing components and pages keep working unchanged throughout, the pages stay on the
-existing framework until the new one's frames match the shipped pages, and then they switch over in
-one adoption step, after which the old framework is deleted.
+one, in its own folder, and the existing components and pages keep working unchanged throughout.
+Porting the pages onto the new framework and deleting the old one is out of scope for this plan and
+is a parking-lot line.
 
 Check: while the work is under way `python tools/berry/check.py` still drives the existing pages
-and passes; the same page renders under both frameworks for the same inputs; the switch is a single
-step that happens only after the frames in requirement 9 match.
+and passes, and the existing components stay untouched.
 
 ### 2. A component is a box and a flip, and Icon is one
 
@@ -39,8 +38,8 @@ outside the box, and that `Icon` is a component with an intrinsic `w` by `h` who
 gives it and which flips when inverted.
 
 Check: the new component base carries no insets and the new `Icon` is a boxed component; the
-existing `component.be` and `icon.be` stay untouched until adoption; the Berry check still drives
-every page.
+existing `component.be` and `icon.be` stay untouched throughout this plan; the Berry check still
+drives every page.
 
 ### 3. A layout component sizes and arranges its children
 
@@ -109,15 +108,14 @@ that lets the count fill the box.
 Check: the same count in each of the four fill directions fills from the matching corner; the field
 still fills its box at every count from 1 to 20, and a bubble below 3 px is a solid square.
 
-### 8. The screen reports its size and pages stop carrying pixels
+### 8. The screen reports its size
 
 Today the `screen` module has no size call, and every page lays out against a hard-coded 128×64.
-The spec says the panel is `screen.width()` by `screen.height()`, and a page composes components
-into layouts whose boxes derive from those, never from a literal.
+The spec says the panel is `screen.width()` by `screen.height()`, so the new components and layouts
+derive their boxes from the panel's own size, never from a literal.
 
-Check: `screen.width()` and `screen.height()` answer the panel's size on the host and the device;
-the new framework's pages carry no 128 or 64 pixel literal for the panel's size, and the existing
-pages keep theirs until the adoption step.
+Check: `screen.width()` and `screen.height()` answer the panel's size on the host and the device.
+The pages keep their literals until they are ported, which is out of scope for this plan.
 
 ### 9. The Berry tooling tests and captures the rendering
 
@@ -126,18 +124,17 @@ frame, and `--tests` runs the suites in `tools/berry/tests` with a GIF per case,
 test of fit, measure, wrap or fill order, no frame of a lone component, and no captured record of
 what the old framework rendered to compare the new one against.
 
-Instead the tooling gains a complete suite that asserts each requirement above, and a capture that
-renders a named component, page or scene to a frame. The frames are kept for both frameworks: the
-framework that exists today is captured first and its frames committed as the baseline, then the
-new framework's frames are captured for the same inputs. For the shipped content the two must be
-pixel-identical — the new layout has to reproduce today's pages — and the new framework's frames
-for the changed content (the longest labels, a set count of 20, every fill direction, side-by-side
-pressures, the hours-minutes-seconds formats) must show nothing overlapping and nothing clipped at
-the panel's edge.
+Instead the tooling gains a suite that asserts each requirement above, and a capture that renders a
+named component to a frame. The frames are kept for both frameworks at the component level: the
+existing components are driven directly by a baseline suite and their frames committed, then the
+new components' frames are captured for the same inputs, so a v2 component can be seen next to the
+v1 component it replaces. The new framework's frames for the changed content (a set count of 20,
+every fill direction, side-by-side pressures, the hours-minutes-seconds formats) must show nothing
+overlapping and nothing clipped at the panel's edge.
 
 Check: `python tools/berry/check.py --tests` passes with no failing assertion; the committed
-baseline frames and the new frames for the same inputs match for shipped content, and the
-changed-content frames are written where they can be opened and looked at.
+baseline frames and the new frames for the same inputs are written where they can be opened and
+looked at.
 
 ## Consequences
 
@@ -148,6 +145,10 @@ rewritten to point at the components spec. No stored setting, wire reply or gest
 
 ## Deferred
 
+Porting the existing pages — the readout, the browser, the settings list and the two routine
+chromes — onto the new components, and deleting the old framework, is out of scope for this plan
+and is a parking-lot entry.
+
 Making the overlay's own band adapt to the panel — today it is a fixed 12 rows — is not part of
 this plan; only the page area above it reflows. That is a parking-lot entry.
 
@@ -156,7 +157,6 @@ this plan; only the page area above it reflows. That is a parking-lot entry.
 `python tools/berry/check.py --tests` runs the suite, which asserts the fit ladder and truncation,
 measure and place, the four fill directions, the secondary pressure in each corner and side by
 side, the duration formats, and the bubble field at every count. The capture pass writes the
-committed baseline and the new framework's frames; comparing the shipped pages between the two and
-opening the changed-content frames is the observation that the layout reproduces today's rendering
-and reflows it. The pages switch to the new framework — and the old one is deleted — only after
-that comparison holds, which is what vetting before adoption means in this plan.
+committed baseline of the existing components and the new framework's frames; opening them side by
+side is the observation that each new component reproduces the old one's rendering and reflows
+where the spec says it should. The pages are not ported in this plan.

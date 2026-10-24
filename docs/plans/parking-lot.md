@@ -84,6 +84,13 @@ The page area above the overlay reflows to the panel's size, but the overlay's b
 fixed 12 rows. Blocked by: nothing decided about whether the band should scale with the panel or
 stay sized to its own contents.
 
+## Port the pages onto the v2 components
+
+The v2 component and layout framework is built and vetted on its own, but the readout, the browser,
+the settings list and the two routine chromes still draw with the old components. Porting them over
+and deleting the old framework is out of scope for now. Blocked by: the page porting is a separate
+effort after the v2 framework is vetted.
+
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport

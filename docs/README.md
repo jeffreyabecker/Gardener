@@ -27,6 +27,8 @@ lands the backlog and its plan are deleted together.
 
 - [Named saved routines](./backlogs/named-saved-routines.md) — a routine's definition split from the
   configs that instantiate it
+- [Component layouts](./backlogs/components-layout.md) — the v2 component and layout framework
+  built beside the old one
 
 The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) —
