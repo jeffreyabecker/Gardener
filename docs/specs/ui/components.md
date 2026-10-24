@@ -37,35 +37,39 @@ states how the parts relate, and the layout derives every box from the panel and
 content, so a change to the content reflows the page without new pixel numbers.
 
 - `children` — the components in the layout, in order.
-- `direction` — `row` (children side by side, left to right) or `column` (children stacked, top to
-  bottom). Default `row`.
-- `spacing` — the gap in pixels between children along the direction. Default 0.
+- `fill_direction` — the order children are placed, and the way they wrap: `lr-tb` (default, left
+  to right then the next line below), `rl-tb` (right to left then the next line below), `tb-lr`
+  (top to bottom then the next column right), or `bt-lr` (bottom to top then the next column
+  right).
+- `spacing` — the gap in pixels between children along the fill direction. Default 0.
 - `wrap` — with `wrap` true a layout carries a measured child onto the next line when it no longer
-  fits the remaining space: a row wraps to the line below, a column to the next column. Each line
-  or column is separated by the same `spacing`. Default false.
+  fits the remaining space, in the wrap direction the fill direction names. Each line or column is
+  separated by the same `spacing`. Default false.
 
 A layout arranges its children in two passes.
 
-**Measure.** Each child reports its natural size along the direction: an icon its intrinsic `w`, a
-bubble field the width its count needs, a nested layout its own measured size. A text reports the
-ink box of its string at the largest face that fits the layout's cross size — the row's height in a
-row, the column's width in a column — so a word in a row of height 8 measures at the built-in 5×7.
+**Measure.** Each child reports its natural size along the fill direction: an icon its intrinsic
+`w`, a bubble field the width its count needs, a nested layout its own measured size. A text reports
+the ink box of its string at the largest face that fits the layout's cross size — the line's height
+for a horizontal fill, the column's width for a vertical fill — so a word in a line of height 8
+measures at the built-in 5×7.
 
-**Place.** Measured children keep their measured size along the direction. Growing children share,
-in equal parts, the space left after every measured child: two growing children make equal columns,
-and a measured word followed by a growing bar gives the bar the rest of the row. Every child is
-stretched to the layout's cross size, and the child's own alignment places its ink inside that box
-— a text centres by its `align` and `v_align`. A child given less than it measured fits itself into
-the box: a text shrinks its face, and a child that cannot shrink draws clipped to its box.
+**Place.** Measured children keep their measured size along the fill direction. Growing children
+share, in equal parts, the space left after every measured child: two growing children make equal
+columns, and a measured word followed by a growing bar gives the bar the rest of the line. Every
+child is stretched to the layout's cross size, and the child's own alignment places its ink inside
+that box — a text centres by its `align` and `v_align`. A child given less than it measured fits
+itself into the box: a text shrinks its face, and a child that cannot shrink draws clipped to its
+box.
 
-Children are placed in order along the direction, separated by `spacing`; space left after them
-stays at the end. In a wrapping layout each line is as tall as its tallest child and each column as
-wide as its widest child, and a growing child fills the rest of its own line or column. A child's
-box never extends outside the layout's box.
+Children are placed in fill direction order, separated by `spacing`; space left after them stays at
+the end. In a wrapping layout each line is as tall as its tallest child and each column as wide as
+its widest child, and a growing child fills the rest of its own line or column. A child's box never
+extends outside the layout's box.
 
 A layout draws by drawing its children in order. `inverted` flips the whole layout box last, so a
 highlighted layout reads as one unit. A layout's own natural size is the sum of its children's
-sizes along the direction plus the `spacing` between them, and the largest child across it.
+sizes along the fill direction plus the `spacing` between them, and the largest child across it.
 
 Every box lies inside the panel; two boxes do not overlap unless one component is meant to draw over
 the other (none does); and a derived box has non-negative width and height.
@@ -129,13 +133,12 @@ the box and fills the inside: the value is clamped to 0–100, and the fill is t
 
 ## ProgressBubbles
 
-`ProgressBubbles.draw(count)` is a wrapping row of `max_count` `Bubble` children, one per set. The
-first `count` are filled; `count` is clamped to 0–`max_count`.
+`ProgressBubbles.draw(count)` is a wrapping layout of `max_count` `Bubble` children, one per set,
+whose `fill_direction` is the field's. The first `count` children in fill order are filled; `count`
+is clamped to 0–`max_count`.
 
 - `unfilled` — how an unfilled bubble draws: `outline` (default) or `none`; `none` skips them.
-- `fill_direction` — the order bubbles fill: `lr-tb` (default), `rl-tb`, `tb-lr` or `bt-lr`. The
-  row always flows left to right and top to bottom; the direction changes which bubbles are filled
-  for a given `count`.
+- `fill_direction` — the layout's fill direction: `lr-tb` (default), `rl-tb`, `tb-lr` or `bt-lr`.
 
 Each bubble measures as the largest whole square that lets the count fill the box: columns
 `⌊√(max_count · w / h)⌋` clamped to 1–`max_count`, rows `⌈max_count / columns⌉`, and the size
