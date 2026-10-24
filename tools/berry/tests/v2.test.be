@@ -40,3 +40,20 @@ def bold_builtin_draws_and_inverts()
 end
 
 test("bold built-in text draws and inverts", bold_builtin_draws_and_inverts)
+
+def layout_places_measured_children()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 64; l.h = 8
+  l.spacing = 2
+  var a = TextV2()
+  a.value = "AB"
+  var b = TextV2()
+  b.value = "CD"
+  l.add(a); l.add(b)
+  l.place()
+  assert_eq(a.x, 0, "the first child is not at the start")
+  assert_eq(a.w, 12, "the first child is not its measured width")
+  assert_eq(b.x, 14, "the second child is not after the first plus spacing")
+end
+
+test("a layout places measured children", layout_places_measured_children)

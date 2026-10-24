@@ -56,7 +56,7 @@ parking-lot line.
 
 ## Epic 3 — The layout component
 
-- [ ] 3.1 Add the layout component at `/system/components/v2/`: a box holding children in order, a
+- [x] 3.1 Add the layout component at `/system/components/v2/`: a box holding children in order, a
   `fill_direction` (`lr-tb` first) and a `spacing`, placing measured children along the direction.
   Today no layout exists and every page writes each coordinate itself. Check: two measured children
   draw side by side with the spacing between them.
