@@ -46,7 +46,7 @@ parking-lot line.
   once per string and caching the face. Check: a string that fits at 9 px draws at 9 px, and one
   that does not draws at the built-in face.
 
-- [ ] 2.2 Truncate a string wider than its box at the built-in face with a trailing ellipsis. Today
+- [x] 2.2 Truncate a string wider than its box at the built-in face with a trailing ellipsis. Today
   `draw_fitted` centres the smallest candidate, so the ink spills out both sides of the box. Check:
   a long string draws with an ellipsis at the box's edge and nothing past it.
 
