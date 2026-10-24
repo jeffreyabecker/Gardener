@@ -12,7 +12,7 @@ ships when you want to read one. Nothing here should need to change when one of 
 The panel UI is a stack of **scenes**. A routine file registers the class its scene is built from;
 the firmware polls the top scene and only the top scene, and a scene pushes or pops scenes with the
 `ux` module. The registry the routine browser draws is a Berry class — the global `routines`
-instance in `/modules/registry.be` — and the only native additions over the older page model are
+instance in `/system/registry.be` — and the only native additions over the older page model are
 `ux.*` (the stack) and the now name-only `store.*` forms.
 
 ## Where a routine lives and what it must look like
@@ -37,21 +37,21 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 return MyPage
 ```
 
-`Page` (`/modules/settings_page.be`) is `Scene` plus the routine's own name: it is what the store
+`Page` (`/system/settings/scenes/page.be`) is `Scene` plus the routine's own name: it is what the store
 file is called, and it is the class that opens the settings list, so a page writes the name once.
 
 The second argument is the routine's **title**: the label the browser draws for its row. It is not
 the identity — the name still is — so it may contain spaces and capital letters.
 
 The third argument is the routine's **icon**: an instance of a class extending `Icon` from
-`/modules/components.be`, which draws itself with the `screen` primitives and has an intrinsic `w`.
-The browser draws it at the left of the routine's row and shifts the title right by `icon.w + 2`. A
-routine that passes `nil` has a text-only row.
+`/system/components/icon.be`, which draws itself with the `screen` primitives and has an intrinsic
+`w`. The browser draws it at the left of the routine's row and shifts the title right by
+`icon.w + 2`. A routine that passes `nil` has a text-only row.
 
 The fourth argument is the routine's **class**, not an instance: the registry builds a scene from it
 every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
-`Scene` (`/modules/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
+`Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
 dispatch, and `Page` adds the routine's name and its settings view; a routine extends `Page` and
 defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
 a scene that lacks either `activate()` or `poll`.
@@ -80,48 +80,45 @@ refused at load.
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
 `python scripts/arduino.py --task data`.
 
-## Shared code in `/modules`
+## The system in `/system`
 
-Every file under `/modules/` ending in `.be` is loaded before any file under `/routines/`. A module
-file defines classes or functions and registers nothing: it has no page, no store file and no entry
-in `routines.names()`. It is not an `import` target either — `import` reaches only the native
-modules such as `string` — its classes are simply globals by the time the pages run.
+`/system` is what the device itself provides before a page exists: the records a native call
+answers with, the components and the scene a page is built from, and the registry the browser
+draws. It loads before `/modules` and `/routines`, and its order is stated rather than sorted.
 
-Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
-data image.
+`/system/order` is that order: one path per line, relative to `/system`, with `#` for a comment.
+`components/text.be` and `scene.be` are the same kind of entry, so a system file may sit in a
+subfolder. A `.be` file the order does not name does not load, and one found beside the named files
+is reported as an error. **A new system file is an edit to `/system/order`**, at the point its
+dependencies put it.
 
-`/modules/jingles.txt` is data rather than a module. It is not compiled or loaded as a `.be` file;
-the native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
-`jingles.title()`, `jingles.label()`, `jingles.notes()`, `jingles.current()` and
-`jingles.play_current()`. Its format and the
-call list are in [bindings.md](./bindings.md#jingles--the-note-library).
+`/system/records.be` declares `reading`, `unit`, `bounds` and `setting` — the classes the native
+calls answer with, and the one a routine builds for each of its own settings. They are written in
+Berry because only the parser can declare an instance variable on a class. `/system/scene.be` is
+`Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
+`/system/registry.be` is the registry: `class RoutineRegistry` and the global `routines` instance —
+the list the browser draws, and the `push(name, callback)` that opens a routine.
+`/system/list.be` is `List`, a selectable menu.
 
-Files within `/modules/` load in directory order, which is the alphabetical order the image is
-packed in, so a module may only name a class a module that loads before it defines. That rule
-reaches inside methods as well as the top level: Berry compiles a name when it reads the file, so a
-reference to a later module's class is refused at load. Keep the dependency pointing at the earlier
-file, or move the class into the file that uses it. Define classes and functions there; leave
-constructing them to the page that uses them.
+`/system/components/` is the drawing primitives a readout composes, one class per file:
+`component.be` is `Component` (the box, its content rect and the `inverted` flip), `text.be` is
+`Text` (the face choice), then `fixed_text.be`, `dynamic_text.be`, `pressure_display.be`,
+`progress_bar.be`, `progress_bubbles.be`, `scrollbar.be`, `triangle.be` and `icon.be`. Every
+component has a box, and setting `inverted` on it flips that box as the last thing its draw does —
+paper where its ink was — which is what a selected row, a cursor or a focused readout looks like.
+`Icon` is the exception: an intrinsic size and a draw, with no box.
 
-The page framework ships the same way. `/modules/scene.be` is `Scene` — the gesture drain, the
-repaint cadence and the gesture dispatch a routine's scene extends. `/modules/registry.be` is the
-registry: `class RoutineRegistry` and the global `routines` instance — the list the browser draws,
-and the `push(name, callback)` that opens a routine. `/modules/components.be` is `Component` and the
-drawing primitives a readout composes (`FixedText`, `DynamicText`, `PressureDisplay`,
-`ProgressBar`, `ProgressBubbles`, `Scrollbar`, `Triangle`, and the `Icon` glyph). Every one of them
-has a box, and setting `inverted` on it flips that box as the last thing its draw does — paper
-where its ink was — which is what a selected row, a cursor or a focused readout looks like.
-`/modules/list.be` is `List`, a selectable menu. `/modules/ui.be` is the device's own scenes — the
-readout, the system settings and the browser — none of them registered.
-
-The settings view ships in four files under `/modules/`. `settings.be` is the pair of duration
-helpers. `settings_edit.be` is the editing screens: one value scene per kind (`BoolScene`,
-`ChoiceScene`, `RealScene`, `IntScene`, `PressureScene`, `DurationScene`) over a shared
-`ValueScene`. `settings_editors.be` is the editor each kind's setting carries. `settings_page.be`
-is `SettingsScene` (the list), `Activation` (one activation's values) and `Page` (the scene a
-routine extends). **`up:double`** is the standard gesture for opening the list; the page's own
-gesture calls `open_settings()`, which pushes the list under the page's name and writes each
-committed value to the page's file:
+`/system/settings/` is the settings view. `settings.be` is the pair of duration helpers.
+`scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
+keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
+`real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
+`settings_scene.be` is `SettingsScene` (the list) and `page.be` is `Page` (the scene a routine
+extends). `activation.be` is `Activation`, one activation's values. `editors/` holds the editor a
+setting carries: `editor.be` is `Editor` and `bool_editor.be`, `choice_editor.be`, `int_editor.be`,
+`real_editor.be`, `pressure_editor.be` and `duration_editor.be` are the kinds, each opening the
+value scene of the same name. **`up:double`** is the standard gesture for opening the list; the
+page's own gesture calls `open_settings()`, which pushes the list under the page's name and writes
+each committed value to the page's file:
 
 ```berry
 def edit()
@@ -131,9 +128,36 @@ end
 ```
 
 `SettingsScene` reads the list the routine registered and each value from its store file through the
-setting's editor; nothing in the four settings modules writes. A committed value is handed to the
-caller's callback, which writes where appropriate. `back:single` at the top of the list pops the
-settings scene with nil.
+setting's editor; nothing in the settings folder writes. A committed value is handed to the caller's
+callback, which writes where appropriate. `back:single` at the top of the list pops the settings
+scene with nil.
+
+`/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
+native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
+`jingles.title()`, `jingles.label()`, `jingles.notes()`, `jingles.current()` and
+`jingles.play_current()`. Its format and the
+call list are in [bindings.md](./bindings.md#jingles--the-note-library).
+
+## Shared code in `/modules`
+
+Every file under `/modules/` ending in `.be` is loaded after the system and before any file under
+`/routines/`. A module file defines classes or functions and registers nothing: it has no page, no
+store file and no entry in `routines.names()`. It is not an `import` target either — `import`
+reaches only the native modules such as `string` — its classes are simply globals by the time the
+pages run.
+
+Ship a module the same way as a routine: put it in `firmware/gardener/data/modules/` and upload the
+data image.
+
+Files within `/modules/` load in directory order, which is the alphabetical order the image is
+packed in, so a module may only name a class a module that loads before it defines. That rule
+reaches inside methods as well as the top level: Berry compiles a name when it reads the file, so a
+reference to a later module's class is refused at load. Keep the dependency pointing at the earlier
+file, or move the class into the file that uses it. Define classes and functions there; leave
+constructing them to the page that uses them.
+
+The device's own scenes ship in `/modules/ui.be` — the readout, the system settings and the browser
+— none of them registered.
 
 ## When the firmware calls into a scene
 
@@ -200,9 +224,9 @@ What that costs, stated plainly:
 ## The settings a routine registers
 
 A routine's settings are a scene of their own: a class extending `SettingsScene` from
-`/modules/settings_page.be`, registered as the fourth argument. It answers `settings()` with the
-values it edits, in the order the list shows them, and — when its values constrain one another —
-`problem()` with the rule that has to hold:
+`/system/settings/scenes/settings_scene.be`, registered as the fourth argument. It answers
+`settings()` with the values it edits, in the order the list shows them, and — when its values
+constrain one another — `problem()` with the rule that has to hold:
 
 ```berry
 class MySettings : SettingsScene
@@ -244,7 +268,7 @@ the rows, the value scenes, the writes and the repair.
 ### Editors
 
 The editor is the whole of what a value is. There is one class per kind in
-`/modules/settings_editors.be`, and each keeps the rules its kind needs:
+`/system/settings/editors/`, and each keeps the rules its kind needs:
 
 | Editor | `kind()` | Arguments |
 | --- | --- | --- |

@@ -1,4 +1,4 @@
-# jingles.test.be — the jingle library is data in /modules/jingles.txt: every identifier must
+# jingles.test.be — the jingle library is data in /system/jingles.txt: every identifier must
 # resolve to a title, a label and notes, and current() follows the device setting and falls back.
 
 suite = "jingles"

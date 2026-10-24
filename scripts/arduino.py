@@ -44,7 +44,7 @@ SKETCH = SKETCHES["gardener"]
 
 # The builds that ship a data image. The machine-alone build creates its settings file on the
 # device (`device set flow` / `volume`), so there is no data folder to write; the full device ships
-# routines and modules.
+# the system, the modules and the routines.
 SKETCHES_WITH_DATA = {"gardener"}
 
 DATA_DIR = SKETCH / "data"

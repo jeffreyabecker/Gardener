@@ -1,10 +1,10 @@
 # Bindings
 
-The native surface a routine calls: seven modules — `vacuum`, `screen`, `device`, `buttons`,
+The native surface a routine calls: eight modules — `vacuum`, `screen`, `device`, `buttons`,
 `buzzer`, `jingles`, `ux` and `store` — and the records those calls answer with. This is the
 reference for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
 The registry the routine browser draws is a Berry class, not a native module: it is documented
-under `routines` below but lives in `/modules/registry.be`.
+under `routines` below but lives in `/system/registry.be`.
 
 ## Values
 
@@ -19,7 +19,8 @@ var depth = s.pressure_kpa          # not s["pressure_kpa"]
 
 A record is the machine as it stood when the call returned, not a live view: writing a field
 (`s.pressure_kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
-have raises `attribute_error`, and the fields are the ones listed under each call.
+have raises `attribute_error`, and the fields are the ones listed under each call. The classes are
+declared in `/system/records.be`, which the image loads before any page.
 
 The `setting` record a routine registers is the same kind of object, but a routine builds it itself
 rather than a call answering it; its fields, the editor each one carries and the default it holds,
@@ -265,8 +266,8 @@ the whole sequence malformed and `play` returns false.
 
 ## `jingles` — the note library
 
-The device ships named note sequences in `/modules/jingles.txt`. The file is read once at boot,
-like the `.be` modules, so a change takes effect at the next reset. It is a flat text file with one
+The device ships named note sequences in `/system/jingles.txt`. The file is read once at boot,
+like the `.be` files, so a change takes effect at the next reset. It is a flat text file with one
 jingle per line and four `|`-separated fields:
 
 ```
@@ -322,7 +323,7 @@ is not registered anywhere; it is what the device's go-home gesture returns to.
 
 ## `routines` — the registry (a Berry class)
 
-The registry is not a native module. `/modules/registry.be` defines `class RoutineRegistry` and the
+The registry is not a native module. `/system/registry.be` defines `class RoutineRegistry` and the
 global instance `routines`; a routine file's top level calls its methods and the routine browser
 draws its list.
 

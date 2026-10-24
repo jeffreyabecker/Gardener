@@ -28,17 +28,17 @@ Every scene, and where it lives:
 | `ReadoutScene` — the root | `modules/ui.be` | `on` |
 | `BrowserScene` | `modules/ui.be` | `on` |
 | `SystemScene` | `modules/ui.be` | `handle_page` |
-| `SettingsScene` | `modules/settings_page.be` | `handle_page` |
-| `ValueScene` — the value base | `modules/settings_edit.be` | `handle_page` |
-| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `modules/settings_edit.be` | inherited |
-| `DurationScene` | `modules/settings_edit.be` | `handle_page` |
+| `SettingsScene` | `system/settings/scenes/settings_scene.be` | `handle_page` |
+| `ValueScene` — the value base | `system/settings/scenes/value_scene.be` | `handle_page` |
+| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `system/settings/scenes/` | inherited |
+| `DurationScene` | `system/settings/scenes/duration_scene.be` | `handle_page` |
 | `UnitScene`, `JingleScene` | `modules/ui.be` | inherited |
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
 | `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the two routine files | inherited |
-| `Page` — the routine base | `modules/settings_page.be` | — |
-| `Scene` — the base | `modules/scene.be` | — |
+| `Page` — the routine base | `system/settings/scenes/page.be` | — |
+| `Scene` — the base | `system/scene.be` | — |
 
 What each one answers:
 

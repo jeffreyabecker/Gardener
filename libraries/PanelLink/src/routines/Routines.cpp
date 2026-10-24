@@ -32,6 +32,54 @@ String routinePath(const char* name) {
   return path;
 }
 
+// The system is the files the interpreter needs before anything else: the records a native call
+// answers with, the components and the scene every page is written against, and the registry. Its
+// order is not the folder's: Berry resolves a global when it compiles a file, so a class has to be
+// a global by the time a file that names it is compiled. `/system/order` states that order, one
+// path per line relative to `/system`.
+constexpr const char* kSystemFolder = "system";
+constexpr const char* kSystemOrder = "/system/order";
+
+// A file dropped into a system folder and forgotten in the order would otherwise be a class that
+// quietly never exists, so every `.be` beside the ones the order names is reported. The folders are
+// the ones the named paths are in, `/system` itself included.
+void reportUnlisted(Library& library, Logger& logger, const std::vector<String>& listed) {
+  std::vector<String> folders;
+  folders.push_back("");
+  for (const String& path : listed) {
+    const int slash = path.lastIndexOf('/');
+    if (slash < 0) continue;
+    const String folder = path.substring(0, slash);
+    bool known = false;
+    for (const String& seen : folders) {
+      if (seen == folder) known = true;
+    }
+    if (!known) folders.push_back(folder);
+  }
+
+  for (const String& folder : folders) {
+    String path = kSystemFolder;
+    if (!folder.isEmpty()) {
+      path += '/';
+      path += folder;
+    }
+    std::vector<String> files;
+    library.list(path, files);
+    for (const String& file : files) {
+      const String key = folder.isEmpty() ? file : folder + "/" + file;
+      bool named = false;
+      for (const String& entry : listed) {
+        if (entry == key) named = true;
+      }
+      if (named) continue;
+      String message = "vm: /system/";
+      message += key;
+      message += " is not in /system/order";
+      logger.error(message.c_str());
+    }
+  }
+}
+
 }  // namespace
 
 bool Routines::begin(PanelContext& context) {
@@ -46,15 +94,20 @@ bool Routines::begin(PanelContext& context) {
   berry::install(vm_, context, *this, context.logger());
   stack_.begin(vm_, *logger_);
 
-  // Modules first: a scene may construct a class one of them defines, so those files have to have
-  // run before the routine files do.
+  // The system first, in the order `/system/order` states: a scene may construct a class one of
+  // those files defines — or answer with a record one of them declares — so they have to have run
+  // before the module and routine files do.
+  size_t systemFiles = 0;
+  const size_t system = loadSystem(systemFiles);
   size_t moduleFiles = 0;
   const size_t modules = loadAll("modules", moduleFiles);
   size_t routineFiles = 0;
   const size_t routines = loadAll("routines", routineFiles);
 
-  const size_t files = moduleFiles + routineFiles;
+  const size_t files = systemFiles + moduleFiles + routineFiles;
   String summary = "vm: ";
+  summary += String((uint32_t)system);
+  summary += " system, ";
   summary += String((uint32_t)modules);
   summary += " module";
   if (modules != 1) summary += 's';
@@ -82,6 +135,41 @@ void Routines::poll(uint32_t nowMs) { stack_.poll(nowMs); }
 void Routines::enterPage() { stack_.enterPage(); }
 
 // --- loading ---------------------------------------------------------------
+
+// The order file is a plain list: a `#` line and a blank line are skipped, and every other line is
+// a path relative to /system, so `components/text.be` and `scene.be` are the same kind of entry.
+size_t Routines::loadSystem(size_t& found) {
+  found = 0;
+
+  String order;
+  if (library_ == nullptr || !library_->read(kSystemOrder, order)) {
+    logger_->error("vm: /system/order unreadable, no system files");
+    return 0;
+  }
+
+  std::vector<String> listed;
+  size_t loaded = 0;
+  int start = 0;
+  while (start <= (int)order.length()) {
+    const int end = order.indexOf('\n', start);
+    String line = end < 0 ? order.substring(start) : order.substring(start, end);
+    line.trim();
+    if (!line.isEmpty() && !line.startsWith("#")) {
+      listed.push_back(line);
+      String path = "/";
+      path += kSystemFolder;
+      path += '/';
+      path += line;
+      if (loadFile(path)) loaded++;
+      found++;
+    }
+    if (end < 0) break;
+    start = end + 1;
+  }
+
+  reportUnlisted(*library_, *logger_, listed);
+  return loaded;
+}
 
 size_t Routines::loadAll(const char* folder, size_t& found) {
   std::vector<String> files;

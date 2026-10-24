@@ -57,14 +57,23 @@ only when every file compiled, every registration looked like a routine, and eve
 
 ## The load order
 
-1. the image: `/modules/*.be`, alphabetical, then `/routines/*.be`, alphabetical
+1. the image, in three parts:
+   1. the files `/system/order` names, in the order it names them
+   2. `/modules/*.be`, alphabetical
+   3. `/routines/*.be`, alphabetical
 2. `harness.be`
 3. `driver.be`
 
 The order is not a preference. Berry resolves a global name when it **compiles** a file, so a file
 may name only what an earlier file defined, and that reaches inside method bodies. A class a later
-file needs has to be a global by the time the earlier file is compiled: `FixedText` in
-`/modules/components.be` is used by the scenes, so it is defined in a module, not in a routine.
+file needs has to be a global by the time the earlier file is compiled.
+
+That is what `/system` is: the records the native calls answer with, the components and the scene
+every page is written against, the settings view, and the registry. Its files do not sort into their
+order, so `/system/order` states it — a path per line relative to `/system`, `#` for a comment, and
+`components/text.be` beside `scene.be` for a file in a subfolder. A `.be` file in one of the folders
+the order names, and not named by it, is reported as an error and not loaded. `/modules` then loads
+alphabetically, which is what the device's own scenes use, and the routines after them.
 
 In `--tests` mode two more load after those three: `tests/suite.be`, then `tests/*.test.be` in
 alphabetical order. A suite can name every routine, module and `harness` drive because the whole
@@ -72,8 +81,8 @@ image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `bounds` and `setting`, and the seven native modules a routine
-calls:
+The records `reading`, `unit`, `bounds` and `setting` — declared in `/system/records.be`, which the
+image loads before anything else — and the eight native modules a routine calls:
 
 | Module | On the host |
 | --- | --- |
@@ -82,11 +91,11 @@ calls:
 | `buttons` | a queue: `harness.press("ok:single")` pushes one whole gesture string, delivered one beat at a time |
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |
-| `jingles` | the library read from `/modules/jingles.txt` |
+| `jingles` | the library read from `/system/jingles.txt` |
 | `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for |
 | `ux` | the scene stack: `push()`, `pop()`, `pop_to_root()`, `top()` and `depth()` |
 
-The registry the browser draws is not native: `/modules/registry.be` defines the global `routines`
+The registry the browser draws is not native: `/system/registry.be` defines the global `routines`
 instance, which the driver and the suites reach the same way a scene does.
 
 The machine model is what a preview moves against. It starts at 0 kPa, pulls at 3 kPa/s, settles a

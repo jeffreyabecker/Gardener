@@ -15,7 +15,8 @@ class Library {
  public:
   virtual ~Library() = default;
 
-  // The `.be` files in one of the interpreter's folders, "modules" or "routines", in load order.
+  // The `.be` files in one of the interpreter's folders, "system", "modules" or "routines", in load
+  // order. A folder may be nested, such as "system/components".
   virtual void list(const String& folder, std::vector<String>& names) = 0;
   // A file's text, by full path. False when there is no file at that path.
   virtual bool read(const String& path, String& out) = 0;

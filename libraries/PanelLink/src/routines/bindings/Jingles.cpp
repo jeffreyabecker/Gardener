@@ -14,7 +14,7 @@ namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* kJinglePath = "/modules/jingles.txt";
+constexpr const char* kJinglePath = "/system/jingles.txt";
 constexpr char kFieldSeparator = '|';
 constexpr char kCommentStart = '#';
 
@@ -46,7 +46,7 @@ void report(const char* what, const String& id) {
   gLogger->error(message.c_str());
 }
 
-// `/modules/jingles.txt` is data, not a `.be` module: the resolver reads it once when the module is
+// `/system/jingles.txt` is data, not a `.be` module: the resolver reads it once when the module is
 // installed, the same way the runtime reads the module files, so a change takes effect at the next
 // reset. A line is `<id>|<title>|<label>|<notes>`, the file is not a settings document, and a `#`
 // only starts a comment at the start of a line so a sharp stays a note. The sequence is handed to

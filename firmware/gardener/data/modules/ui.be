@@ -3,9 +3,8 @@
 # None of these registers with the routines registry; they are the well-known scenes the system
 # pushes directly. The readout is the root scene (__rootScene); its gestures push the system and
 # browser scenes. The system scene is a menu that pushes the shared value scenes from
-# settings_edit.be
-# and writes their returned values through `device`; the browser drives `routines` and pushes a
-# routine's scene or its SettingsScene.
+# system/settings/scenes/ and writes their returned values through `device`; the browser drives
+# `routines` and pushes a routine's scene or its SettingsScene.
 
 import string
 

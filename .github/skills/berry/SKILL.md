@@ -7,7 +7,8 @@ description: 'Checking the Berry data image under firmware/gardener/data without
 
 ## When to use
 
-- Editing anything under `firmware/gardener/data/routines/` or `firmware/gardener/data/modules/`
+- Editing anything under `firmware/gardener/data/system/`, `firmware/gardener/data/modules/` or
+  `firmware/gardener/data/routines/`
 - Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under `routines/bindings/`
 - A page misbehaves on the panel and you want the answer without a build and a flash
 
@@ -48,7 +49,9 @@ Two things bite before the messages do:
 
 - A file resolves globals **when it compiles**, method bodies included, so a class a file names has
   to be a global an earlier file defined. A new class belongs in an earlier module, or the call is
-  inverted; it never works defined below its first user.
+  inverted; it never works defined below its first user. `/system` is loaded first and does not
+  sort: `/system/order` names its files in the order they compile, so a new system file is an edit
+  to that file, and one it does not name does not load.
 - A page that never returns hangs the check. There is no instruction budget, on either side.
 
 | Message | What it means |

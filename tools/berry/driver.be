@@ -1,9 +1,9 @@
 # driver.be — what the check does after every file has loaded.
 #
-# It names the scenes and store, so it loads after /modules and /routines: a Berry file cannot
-# compile a name that is not declared yet. Everything it calls is the firmware's own: the drive is
-# the `harness` module, the routines are reached through the Berry `routines` registry and pushed
-# through `ux`, and a value is read or written through `store`.
+# It names the scenes and store, so it loads after the image — /system, /modules and /routines: a
+# Berry file cannot compile a name that is not declared yet. Everything it calls is the firmware's
+# own: the drive is the `harness` module, the routines are reached through the Berry `routines`
+# registry and pushed through `ux`, and a value is read or written through `store`.
 
 def harness_kind_known(kind)
   for name : ["real", "int", "bool", "choice", "duration", "pressure"]

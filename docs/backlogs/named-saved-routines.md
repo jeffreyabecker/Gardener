@@ -11,13 +11,13 @@ place the contract is written.
 
 ## Epic 1 — The definition moves
 
-- [ ] 1.1 Load `/modules/routines/` as a third folder, after `/modules/*.be`. Today
-  `Routines::begin` in `routines/Routines.cpp` calls `loadAll` for `"modules"` then `"routines"`,
-  and `Library::list` in `storage/Library.h` is documented as taking one of those two. Load the third
-  folder after the modules, because every definition calls `routines` and extends `Page`, and name it
-  in the interface's contract. Both stores already list any folder path, so this is the load call and
-  that comment. Check: the boot summary reports the same registered count as today, and `--tests`
-  passes with an empty `/modules/routines/`.
+- [ ] 1.1 Load `/modules/routines/` as a fourth folder, after `/modules/*.be`. Today
+  `Routines::begin` in `routines/Routines.cpp` calls `loadSystem` and then `loadAll` for `"modules"`
+  and `"routines"`, and `Library::list` in `storage/Library.h` is documented as taking one of the
+  interpreter's folders. Load the fourth folder after the modules, because every definition calls
+  `routines` and extends `Page`, and name it in the interface's contract. Both stores already list
+  any folder path, so this is the load call and that comment. Check: the boot summary reports the
+  same registered count as today, and `--tests` passes with an empty `/modules/routines/`.
 
 - [ ] 1.2 Move the three definitions into the data image's `/modules/routines/`. Today
   `firmware/gardener/data/routines/` holds `interval.be`, `ramped_interval.be` and
@@ -33,7 +33,7 @@ place the contract is written.
   /routines/interval.cfg` shows `title=Interval` and `routine_name=interval` above the settings, and
   a fresh image's browser is unchanged.
 
-- [ ] 2.2 Let Berry enumerate the configs. Today `/modules/registry.be` enumerates definitions and
+- [ ] 2.2 Let Berry enumerate the configs. Today `/system/registry.be` enumerates definitions and
   nothing can list `/routines/*.cfg` or read a config's title and definition. Add a surface that
   returns every config's filename stem, title and definition, skipping a file that cannot be parsed
   and logging it, reporting a missing title as the stem, and refusing a config whose stem is not a
@@ -44,7 +44,7 @@ place the contract is written.
 ## Epic 3 — A page knows which saved routine it is
 
 - [ ] 3.1 Split the page's name into a definition and a saved document. Today `Page` in
-  `/modules/settings_page.be` takes one word, and `Activation` uses it both for
+  `/system/settings/scenes/page.be` takes one word, and `Activation` uses it both for
   `routines.settings(self.routine)` and for `store.get(self.routine, ...)`. Carry the config's
   filename stem as the document and keep the definition for the schema, so two configs of one
   definition read and write their own files. A definition pushed bare keeps its own name as the

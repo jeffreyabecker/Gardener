@@ -10,25 +10,23 @@ class Logger;
 
 namespace berry {
 
-// The seven native modules a scene sees, installed into a fresh VM:
+// The eight native modules a scene sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
 //   device.*   the display unit, default target and jingle the device keeps as preferences
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
-//   jingles.*  the named note sequences in /modules/jingles.txt
+//   jingles.*  the named note sequences in /system/jingles.txt
 //   ux.*       the scene stack: push, pop and pop_to_root
 //   store.*    a routine's own values, kept across a power cycle
 //
-// The registry the browser draws is a Berry class (/modules/registry.be); there is no native
-// registry module. Four of these calls answer a *record* rather than a plain value:
-// `vacuum.state()` a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`,
-// `buttons.take()` an `event`. A record is a class instance whose fields a routine reads with a
-// dot (`s.pressure_kpa`, `ev.btn`) -- the classes are declared in `kRecords` and compiled at boot, because
-// only the parser can declare an instance variable on a class. The `setting` class in the same
-// block is the record a routine builds for each of its settings: a key, a label, an icon and the
-// editor that owns the value.
+// The registry the browser draws is a Berry class (/system/registry.be); there is no native
+// registry module. Four of the classes a routine reads are records rather than plain values:
+// `vacuum.state()` answers a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a
+// `bounds`, and a routine builds a `setting` for each of its settings. They are declared in
+// /system/records.be, which `/system/order` loads first, because only the parser can declare an
+// instance variable on a class.
 //
 // The reference a routine author reads is docs/specs/ui/bindings.md (what a routine can call) and
 // docs/specs/ui/routine.md (what a routine must be). The tables in `bindings/` are the same

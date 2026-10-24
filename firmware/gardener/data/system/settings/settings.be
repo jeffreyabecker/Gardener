@@ -1,8 +1,8 @@
 # settings.be — the two helpers both halves of a duration use: whole seconds held to a setting's
 # bounds, and those seconds as the compact text the panel prints.
 #
-# The editing scenes live in settings_edit.be and the editor a setting carries in
-# settings_editors.be; both read a duration through these.
+# The editing scenes live in scenes/ and the editor a setting carries in editors/; both read a
+# duration through these.
 
 import string
 

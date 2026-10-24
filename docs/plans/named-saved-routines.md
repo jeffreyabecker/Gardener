@@ -22,17 +22,18 @@ is a scene that composes a title from the six keys.
 
 ### 1. Definitions load from `/modules/routines/`
 
-Today `/modules/*.be` and `/routines/*.be` are the two folders the interpreter's loader knows
-(`Routines::begin` in `libraries/PanelLink/src/routines/Routines.cpp`), and every `.be` under
-`/routines/` is a definition the browser lists. The code and the configs therefore share one folder:
-adding a config means adding it beside code, and the only thing that makes a `.be` file a definition
-rather than a module is which folder it sits in.
+Today `/system/*.be` (in the order `/system/order` names), `/modules/*.be` and `/routines/*.be` are
+the folders the interpreter's loader knows (`Routines::begin` in
+`libraries/PanelLink/src/routines/Routines.cpp`), and every `.be` under `/routines/` is a definition
+the browser lists. The code and the configs therefore share one folder: adding a config means adding
+it beside code, and the only thing that makes a `.be` file a definition rather than a module is
+which folder it sits in.
 
 Instead a definition lives at `/modules/routines/<name>.be` and loads **after** `/modules/*.be`.
 `/routines/` holds configs and no `.be` at all. Definitions are still compiled after
-`/modules/registry.be`, `/modules/scene.be` and `/modules/components.be`, because Berry resolves a
-global name at compile time and every definition calls `routines.register`, extends `Page` and names
-an `Icon`.
+`/system/registry.be`, `/system/scene.be` and `/system/components/component.be`, because Berry
+resolves a global name at compile time and every definition calls `routines.register`, extends `Page`
+and names an `Icon`.
 
 Check: `fs list /routines` answers only `.cfg` files; the three definitions load from
 `/modules/routines/`; the boot summary reports the same number of registered routines as today.
@@ -78,7 +79,7 @@ written without `routine_name` lists and does not open; a newly created config i
 
 ### 3. A page knows which saved routine it is
 
-Today one word does three jobs. `Page` in `/modules/settings_page.be` holds the word a routine's
+Today one word does three jobs. `Page` in `/system/settings/scenes/page.be` holds the word a routine's
 `init()` passes (`super(self).init("interval")`), and `Activation` uses that same word as the
 registration key for its schema and as the store document for its values.
 

@@ -20,14 +20,15 @@ class Library;
 // beat from this class's own frame — never from inside a Berry call — so there is nothing
 // suspended, no second core and no lock.
 //
-// The registry the browser drives is a Berry class (`/modules/registry.be`); this side keeps only
-// what the firmware has to: the VM, the files it loads, the scene stack it polls, the gesture queue,
-// and the `store` surface that reads and writes a routine's own document.
+// The registry the browser drives is a Berry class (`/system/registry.be`); this side keeps only
+// what the firmware has to: the VM, the files it loads, the scene stack it polls, the gesture
+// queue, and the `store` surface that reads and writes a routine's own document.
 class Routines {
  public:
-  // Creates the VM, installs the native modules, loads every `/modules/*.be` and then every
-  // `/routines/*.be`, and pushes the root scene. Modules come first so a scene can use what one
-  // defines. False only when the interpreter cannot be allocated at all.
+  // Creates the VM, installs the native modules, loads the files `/system/order` names, then every
+  // `/modules/*.be` and then every `/routines/*.be`, and pushes the root scene. The system and the
+  // modules come first so a page can use what one of them defines. False only when the interpreter
+  // cannot be allocated at all.
   bool begin(PanelContext& context);
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after
@@ -69,6 +70,7 @@ class Routines {
   bool storeSet(const char* routine, const char* key, const String& value);
 
  private:
+  size_t loadSystem(size_t& found);
   size_t loadAll(const char* folder, size_t& found);
   bool loadFile(const String& path);
   void reportError(const char* file, const char* what);

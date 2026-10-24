@@ -1,0 +1,35 @@
+# order — the system's files, in the order the interpreter compiles them. A file that is not named
+# here does not load: Berry resolves a global when it compiles a file, so a class has to be a global
+# by the time a file that names it is compiled.
+records.be
+components/component.be
+components/text.be
+components/fixed_text.be
+components/dynamic_text.be
+components/pressure_display.be
+components/progress_bar.be
+components/progress_bubbles.be
+components/scrollbar.be
+components/triangle.be
+components/icon.be
+scene.be
+list.be
+registry.be
+settings/settings.be
+settings/scenes/value_scene.be
+settings/scenes/bool_scene.be
+settings/scenes/choice_scene.be
+settings/scenes/real_scene.be
+settings/scenes/int_scene.be
+settings/scenes/pressure_scene.be
+settings/scenes/duration_scene.be
+settings/activation.be
+settings/scenes/settings_scene.be
+settings/scenes/page.be
+settings/editors/editor.be
+settings/editors/bool_editor.be
+settings/editors/choice_editor.be
+settings/editors/int_editor.be
+settings/editors/real_editor.be
+settings/editors/pressure_editor.be
+settings/editors/duration_editor.be

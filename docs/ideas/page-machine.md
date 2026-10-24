@@ -93,7 +93,8 @@ gives up the transitions, which is what the ladder is made of.
   describes `Page` as what a routine extends — does not grow an artifact every routine carries.
 * **No load-order constraint.** Under inheritance the machine's file would have to be reachable
   before `page.be` loads, which makes `phasemachine.be` a bug purely because of its name. A class a
-  page constructs only has to load before the routines, which every `/modules/` file does.
+  page constructs only has to load before the routines, which every `/system/` and `/modules/` file
+  does.
 * **A machine that is not a page.** The records are closures, not page methods, so the same class can
   be driven by a host script or by a page: what the machine does is entirely in the closures handed
   to it. That is what makes it possible to exercise the transitions of a page without a panel.

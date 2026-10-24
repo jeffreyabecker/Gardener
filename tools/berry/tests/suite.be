@@ -1,8 +1,8 @@
 # suite.be — the test framework the routine suites register against.
 #
-# Loaded after the image and driver.be, so a test can name every routine, module and the `harness`
-# drive. A suite file sets `suite` to its own name, registers cases with test(), and the runner
-# here executes them one at a time, each from a reset page, reporting a line per case.
+# Loaded after the image and driver.be, so a test can name every system file, module, routine and
+# the `harness` drive. A suite file sets `suite` to its own name, registers cases with test(), and
+# the runner here executes them one at a time, each from a reset page, reporting a line per case.
 
 tests = []
 suite = ""
