@@ -17,6 +17,13 @@ components/v2/component.be
 components/v2/icon.be
 components/v2/text.be
 components/v2/layout.be
+components/v2/bubble.be
+components/v2/progress_bubbles.be
+components/v2/progress_bar.be
+components/v2/scrollbar.be
+components/v2/triangle.be
+components/v2/pressure_display.be
+components/v2/duration.be
 scene.be
 list.be
 registry.be

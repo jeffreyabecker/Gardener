@@ -79,38 +79,38 @@ parking-lot line.
 
 ## Epic 4 — The rebuilt primitives
 
-- [ ] 4.1 Add the `Bubble` primitive at `/system/components/v2/`: a square of a shape, filled or
+- [x] 4.1 Add the `Bubble` primitive at `/system/components/v2/`: a square of a shape, filled or
   outlined, a solid square below 3 px. Check: each shape draws, and a bubble smaller than 3 px is a
   solid square with no outline.
 
-- [ ] 4.2 Add the new `ProgressBubbles` at `/system/components/v2/` as a wrapping layout of
+- [x] 4.2 Add the new `ProgressBubbles` at `/system/components/v2/` as a wrapping layout of
   `max_count` bubbles whose `fill_direction` is the field's, filling the first `count` children in
   fill order. Today `system/components/progress_bubbles.be` lays its own grid with `compute()` and
   maps `fill_direction` onto the grid. The bubble size stays the measure that lets the count fill
   the box. Check: every count from 1 to 20 fills from the matching corner in each of the four
   directions, and below-3-px bubbles are solid squares.
 
-- [ ] 4.3 Add the new `ProgressBar` at `/system/components/v2/`, a one-pixel frame around the box
+- [x] 4.3 Add the new `ProgressBar` at `/system/components/v2/`, a one-pixel frame around the box
   with the inside filled to a value clamped to 0–100. Check: 0 draws the frame and no fill, 100
   fills the inside, and a value past the ends clamps.
 
-- [ ] 4.4 Add the new `Scrollbar` at `/system/components/v2/` with the thumb height and position
+- [x] 4.4 Add the new `Scrollbar` at `/system/components/v2/` with the thumb height and position
   and the hollow and framed forms. Check: the thumb's height is `h·visible/count` clamped to 1–`h`,
   and its top moves from the first to the last index.
 
-- [ ] 4.5 Add the new `Triangle` at `/system/components/v2/` in the four directions, filled or
+- [x] 4.5 Add the new `Triangle` at `/system/components/v2/` in the four directions, filled or
   empty. Check: each direction draws in its box.
 
-- [ ] 4.6 Add the new `PressureDisplay` at `/system/components/v2/` with `family` and `style` and
+- [x] 4.6 Add the new `PressureDisplay` at `/system/components/v2/` with `family` and `style` and
   no border, formatting the reading in the panel's unit. Check: a nil reading draws `--`, and a
   reading formats with the unit's decimals in each unit.
 
-- [ ] 4.7 Add the secondary reading to `PressureDisplay` at `/system/components/v2/`:
+- [x] 4.7 Add the secondary reading to `PressureDisplay` at `/system/components/v2/`:
   `secondary_pressure`, `secondary_position`, `size_hint`, and `secondary_family` and
   `secondary_style`. Check: a secondary sits smaller in each of the four corners, and side by side
   at `size_hint` 1 on the side the second character of `secondary_position` names.
 
-- [ ] 4.8 Add the `Duration` component at `/system/components/v2/` with the `format` property.
+- [x] 4.8 Add the `Duration` component at `/system/components/v2/` with the `format` property.
   Today `duration_text` in `system/settings/settings.be` formats minutes and seconds only, and no
   component draws a duration. Check: `2m30s`, `1m`, `45s`, `1h2m30s` and `0s` in each of the three
   formats.

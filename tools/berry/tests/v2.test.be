@@ -158,3 +158,116 @@ def layout_measures_its_natural_size()
 end
 
 test("a layout reports its natural size", layout_measures_its_natural_size)
+
+def bubble_draws_each_shape()
+  var shapes = ["circle", "rect", "roundrect", "tri-up", "tri-down", "tri-left", "tri-right"]
+  var b = BubbleV2()
+  b.x = 0; b.y = 0; b.w = 8; b.h = 8
+  for s : shapes
+    b.shape = s
+    b.filled = true
+    b.draw()
+    b.filled = false
+    b.draw()
+  end
+  b.w = 2; b.h = 2
+  b.filled = true
+  b.draw()
+end
+
+test("a bubble draws each shape and the degenerate square", bubble_draws_each_shape)
+
+def bubbles_fill_by_count()
+  var p = ProgressBubblesV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 38
+  p.set_count(4)
+  p.draw(2)
+  assert_eq(p.children.size(), 4, "the field does not have one bubble per set")
+  assert_eq(p.children[0].w, 19, "a bubble is not sized to fill the box")
+  assert_true(p.children[0].filled, "the first bubble is not filled")
+  assert_true(p.children[1].filled, "the second bubble is not filled")
+  assert_true(!p.children[2].filled, "the third bubble is filled")
+end
+
+test("progress bubbles fill by count", bubbles_fill_by_count)
+
+def progress_bar_draws()
+  var b = ProgressBarV2()
+  b.x = 0; b.y = 0; b.w = 32; b.h = 8
+  b.draw(0)
+  b.draw(50)
+  b.draw(100)
+  b.draw(150)
+end
+
+test("a progress bar draws at its ends", progress_bar_draws)
+
+def scrollbar_draws()
+  var s = ScrollbarV2()
+  s.x = 0; s.y = 0; s.w = 2; s.h = 48
+  s.draw(0, 10, 5)
+  s.draw(5, 10, 5)
+  s.hollow = true
+  s.draw(2, 10, 5)
+end
+
+test("a scrollbar draws its thumb", scrollbar_draws)
+
+def triangle_draws()
+  var t = TriangleV2()
+  t.x = 0; t.y = 0; t.w = 8; t.h = 8
+  for d : ["up", "down", "left", "right"]
+    t.direction = d
+    t.style = "filled"
+    t.draw()
+    t.style = "empty"
+    t.draw()
+  end
+end
+
+test("a triangle draws each direction", triangle_draws)
+
+def pressure_display_draws()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.draw(nil)
+  p.draw(20.0)
+  p.draw(0.0)
+end
+
+test("a pressure display draws a reading and dashes", pressure_display_draws)
+
+def pressure_display_secondary()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.secondary_pressure = 10.0
+  p.secondary_position = "br"
+  p.size_hint = 0.5
+  p.draw(20.0)
+  assert_eq(p.secondary.align, "right", "a br secondary is not right-aligned")
+  assert_eq(p.secondary.v_align, "bottom", "a br secondary is not bottom-aligned")
+
+  p.size_hint = 1
+  p.secondary_position = "tr"
+  p.draw(20.0)
+  assert_eq(p.number.x, 0, "the main is not in the left half")
+  assert_eq(p.secondary.x, 32, "a right secondary is not in the right half")
+end
+
+test("a pressure display places its secondary reading", pressure_display_secondary)
+
+def duration_formats()
+  var d = DurationV2()
+  d.format = "minutes"
+  assert_eq(d.text(45), "45s", "minutes: under a minute")
+  assert_eq(d.text(60), "1m", "minutes: a whole minute")
+  assert_eq(d.text(150), "2m30s", "minutes: minutes and seconds")
+  d.format = "seconds"
+  assert_eq(d.text(150), "150s", "seconds: seconds only")
+  d.format = "hours"
+  assert_eq(d.text(3725), "1h2m5s", "hours: hours minutes seconds")
+  assert_eq(d.text(125), "2m5s", "hours: minutes seconds")
+  assert_eq(d.text(0), "0s", "zero is not 0s")
+end
+
+test("a duration formats each unit", duration_formats)

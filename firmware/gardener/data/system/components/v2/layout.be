@@ -120,11 +120,14 @@ class LayoutV2 : ComponentV2
       var e = entries[i]
       var main = self.main_of(e[1])
       var csize = self.cross_of(e[1])
-      if !e[0].grow && used > 0 && used + main > main_total
+      if !e[0].grow && cur.size() > 0 && used + self.spacing + main > main_total
         lines.push([cur, cur_cross])
         cur = []
         cur_cross = 0
         used = 0
+      end
+      if cur.size() > 0
+        used += self.spacing
       end
       cur.push(e)
       used += main
