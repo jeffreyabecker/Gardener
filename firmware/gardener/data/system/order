@@ -13,6 +13,7 @@ components/progress_bubbles.be
 components/scrollbar.be
 components/triangle.be
 components/icon.be
+components/v2/component.be
 scene.be
 list.be
 registry.be
