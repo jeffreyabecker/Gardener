@@ -7,9 +7,9 @@ class DurationV2 : TextV2
   # The seconds last shown, so a layout can measure the duration before its first draw.
   var seconds
 
-  def init()
+  def init(format)
     super(self).init()
-    self.format = "minutes"
+    self.format = format == nil ? "minutes" : format
     self.seconds = 0
   end
 
@@ -60,5 +60,30 @@ class DurationV2 : TextV2
     self.seconds = seconds
     self.value = self.text(seconds)
     super(self).draw()
+  end
+end
+
+# A duration the caller feeds a value to, like a progress bar: `value` is the page's own timer in
+# milliseconds, and the display formats it as a duration. Its box comes from a layout, so on its own
+# it is unsized.
+class DurationDisplayV2 : ComponentV2
+  var format
+  var value
+  var _number
+
+  def init(format)
+    super(self).init()
+    self.format = format == nil ? "minutes" : format
+    self.value = 0
+    self._number = DurationV2(format)
+  end
+
+  def draw()
+    self._number.pos.x = self.pos.x
+    self._number.pos.y = self.pos.y
+    self._number.dim.w = self.dim.w
+    self._number.dim.h = self.dim.h
+    self._number.draw(self.value / 1000)
+    self.flip()
   end
 end

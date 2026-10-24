@@ -24,11 +24,12 @@ end
 # own without reaching for the v1 class.
 class RampedStaticIconV2 : IconV2
   def init()
-    super(self).init(12, 8)
+    super(self).init()
+    self.dim = Size(12, 8)
   end
 
   def draw()
-    screen.draw_filltriangle(self.x, self.y + 6, self.x + 11, self.y + 1, self.x + 11, self.y + 6)
+    screen.draw_filltriangle(self.pos.x, self.pos.y + 6, self.pos.x + 11, self.pos.y + 1, self.pos.x + 11, self.pos.y + 6)
   end
 end
 
@@ -73,48 +74,36 @@ class RampedStaticChrome
   end
 end
 
-# The static chrome rebuilt on the v2 layout: the pressure in the left half and a status-plus-bar
-# row below, the word measured and the bar taking the rest. It lives beside RampedStaticChrome
-# until the pages are ported onto the v2 components.
-class RampedStaticChromeV2
-  var owner
-  var icon
-  var pressure
-  var status
-  var bar
-  var row
-
-  def init(owner)
-    self.owner = owner
-    self.icon = RampedStaticIconV2()
-    self.pressure = PressureDisplayV2()
-    self.pressure.x = 0
-    self.pressure.y = 8
-    self.pressure.w = screen.width() / 2
-    self.pressure.h = 32
-    self.status = TextV2()
-    self.status.align = "left"
-    self.bar = ProgressBarV2()
-    self.bar.grow = true
-    self.row = LayoutV2()
-    self.row.x = 0
-    self.row.y = 44
-    self.row.w = screen.width()
-    self.row.h = 8
-    self.row.add(self.status)
-    self.row.add(self.bar)
+# The static chrome rebuilt on the v2 layout, modeled on the interval chrome: a column of rows —
+# the glyph, the pressure, and a status-plus-bar row. It lives beside RampedStaticChrome until the
+# pages are ported onto the v2 components.
+class RampedStaticChromeV2 : ColumnLayoutV2
+  def init(title)
+    super(self).init([Position.top_left(), Size.page()], [
+      RowLayoutV2(Size.page_height(0.25), [
+        RampedStaticIconV2(),
+        TextV2(title)
+      ]),
+      RowLayoutV2(Size.page_height(0.50), [
+        AutoPressureDisplayV2("pressure:target", "br", 0.25),
+        DurationDisplayV2("minutes")
+      ]),
+      RowLayoutV2(Size.page_height(0.25), [
+        TextV2(""),
+        ProgressBarV2()
+      ])
+    ])
   end
 
-  def draw(s)
-    self.status.value = self.owner.status_text()
-    self.row.place()
-    self.icon.draw()
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    self.status.draw(self.owner.status_text())
-    var left = self.owner.run_left()
-    if left != nil
-      self.bar.draw(left)
-    end
+  def draw(status, duration, elapsed)
+    var status_text = self.children[2].children[0]
+    var progress_bar = self.children[2].children[1]
+    var remaining_time = self.children[1].children[1]
+
+    remaining_time.value = elapsed
+    status_text.value = status
+    progress_bar.value = elapsed * 100.0 / duration
+    super(self).draw()
   end
 end
 
