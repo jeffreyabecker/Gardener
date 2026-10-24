@@ -83,23 +83,25 @@ largest face that fits.
   `mono`, because only the sans and mono families are compiled.
 - `style` — `none` (default) or `bold`. `oblique` falls back to `none` and `bold-oblique` to `bold`.
 
-The candidate faces, tried in this order:
+The candidate faces, tried in this order: the compiled face at 24, 18, 12 and 9 px, bold when the
+style is bold, and then the built-in 5×7, which is the last resort.
 
 1. compiled face, 24 px (bold when the style is bold)
 2. compiled face, 18 px
-3. built-in 5×7, size 3
-4. compiled face, 12 px
-5. built-in 5×7, size 2
-6. compiled face, 9 px
-7. built-in 5×7, size 1
+3. compiled face, 12 px
+4. compiled face, 9 px
+5. built-in 5×7, size 1
 
 `fit(text)` is the first candidate whose ink box — from `screen.text_bounds` — fits the box, and
 the last candidate when none fits.
 
-The last candidate is the built-in 5×7 at size 1: 5×7 px per glyph, six pixels of advance, so a
-five-letter word measures 29 px. A string whose ink box is still wider than the box at that face is
-cut short with a trailing ellipsis at the box's edge. Nothing `Text` draws lies outside its
+The built-in 5×7 is used only when no compiled face fits: 5×7 px per glyph, six pixels of advance,
+so a five-letter word measures 29 px. A string whose ink box is still wider than the box at that
+face is cut short with a trailing ellipsis at the box's edge. Nothing `Text` draws lies outside its
 box.
+
+Bold has no built-in face. When the style is bold and the built-in 5×7 is chosen, the string is
+drawn and its ink box — the box `text_bounds` answers — is inverted, which is what reads as bold.
 
 Alignment places the ink box in the box: `align` is `left`, `center` (default) or `right`;
 `v_align` is `top`, `center` (default) or `bottom`.
@@ -116,6 +118,32 @@ draws the number filling its box, using `Text`'s fit.
 - The number is the kPa value scaled by the unit's `per_kpa`, with the unit's decimals: one decimal
   for a unit that steps in tenths (kPa, psi, inHg), none for a unit that steps whole (mmHg).
 - The number carries no suffix of its own; the unit is the overlay's, in the bottom band.
+
+- `family`, `style` — the main number's face, as in `Text`; `sans` and `none` by default.
+- `secondary_family`, `secondary_style` — the secondary number's face; nil means the main number's.
+
+- `secondary_pressure` — a second pressure in kPa, or nil (default). When set, it is formatted like
+  the main number and drawn per `size_hint`; its box may overlap the main number's.
+- `secondary_position` — `tl`, `tr`, `bl` or `br` (default `br`): the vertical corner (`t`/`b`) and
+  the side (`l`/`r`).
+- `size_hint` — a real from 0 to 1 (default 0.5). Below 1 it is a hint for the secondary's size, as
+  a fraction of the main number's face height: the fit picks the largest face no taller than the
+  hint, and the secondary is drawn smaller in the corner `secondary_position` names. At 1 the two
+  numbers are the same size and sit side by side, the secondary on the side the second character of
+  `secondary_position` names (`l` left, `r` right). Like all text, the hint gives way to fitting,
+  so the secondary still fits and truncates below the smallest face.
+
+## Duration
+
+`Duration.draw(seconds)` is a duration formatted in the panel's units of time. It takes whole
+seconds and draws the text filling its box, using `Text`'s fit.
+
+- `format` — the largest unit the text shows: `minutes` (default, minutes and seconds), `seconds`
+  (seconds only), or `hours` (hours, minutes and seconds).
+
+The text carries the value in each shown unit down to seconds, with a leading zero-valued unit
+omitted and no zero padding: `2m30s`, `1m` on a whole minute, `45s` under a minute, `1h2m30s`, and
+`0s` for nothing.
 
 ## ProgressBar
 
