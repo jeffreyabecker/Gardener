@@ -146,3 +146,15 @@ def layout_fills_columns()
 end
 
 test("a layout fills columns top to bottom and bottom to top", layout_fills_columns)
+
+def layout_measures_its_natural_size()
+  var inner = LayoutV2()
+  var a = TextV2(); a.value = "AB"
+  var b = TextV2(); b.value = "AB"
+  inner.add(a); inner.add(b)
+  var m = inner.measure(8)
+  assert_eq(m[0], 24, "the nested layout's natural width is not its children's sum")
+  assert_eq(m[1], 8, "the nested layout's natural height is not its tallest child")
+end
+
+test("a layout reports its natural size", layout_measures_its_natural_size)

@@ -154,4 +154,28 @@ class LayoutV2 : ComponentV2
     self.place()
     self.flip()
   end
+
+  # A layout's natural size: the sum of its children's sizes along the fill direction plus the
+  # spacing, and the largest child across it, so a parent layout measures it like any child.
+  def measure(cross)
+    var total = 0
+    var max_cross = 0
+    var i = 0
+    while i < self.children.size()
+      var m = self.children[i].measure(cross)
+      total += self.main_of(m)
+      var c = self.cross_of(m)
+      if c > max_cross
+        max_cross = c
+      end
+      i += 1
+    end
+    if self.children.size() > 0
+      total += self.spacing * (self.children.size() - 1)
+    end
+    if self.horizontal()
+      return [total, max_cross]
+    end
+    return [max_cross, total]
+  end
 end

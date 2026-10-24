@@ -73,7 +73,7 @@ parking-lot line.
 - [x] 3.4 Add the remaining fill directions `rl-tb`, `tb-lr` and `bt-lr`. Check: children fill from
   each named corner in order.
 
-- [ ] 3.5 Give a layout a natural size so a parent measures it: the sum of its children's sizes
+- [x] 3.5 Give a layout a natural size so a parent measures it: the sum of its children's sizes
   along the fill direction plus the spacing, and the largest child across it. Check: a layout
   inside a layout sizes to its children.
 
