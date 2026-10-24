@@ -14,6 +14,8 @@ The contracts the firmware and its tools must satisfy.
 - [Routines](./specs/ui/routine.md) — what a routine is: its lifecycle and embedded rules
 - [Bindings](./specs/ui/bindings.md) — what a routine can call: the native modules and records
 - [Scenes](./specs/ui/scenes.md) — the gestures each scene binds, and what it does with them
+- [Components](./specs/ui/components.md) — the drawing primitives a page composes, and the layout
+  that places them
 
 ## Backlogs
 

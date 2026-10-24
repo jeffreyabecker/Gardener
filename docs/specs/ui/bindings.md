@@ -98,7 +98,12 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_fillrotatedrect(cx, cy, w, h, angle)` |
 | `screen.draw_text(x, y, size, inverted, text [, font])` |
 | `screen.text_bounds(text, size [, font])` |
+| `screen.width()` |
+| `screen.height()` |
 | `screen.flush()` |
+
+`width()` and `height()` answer the panel's size in pixels, so a layout derives its boxes from the
+glass rather than from a fixed number.
 
 `draw_invert` is the one call that does not put ink or paper down: it flips what is already inside
 the rectangle, ink to paper and paper to ink, so it has to come after the pixels it is meant to
