@@ -39,7 +39,7 @@ parking-lot line.
 
 ## Epic 2 — Text
 
-- [ ] 2.1 Add the new `Text` at `/system/components/v2/` with the compiled-first ladder. Today
+- [x] 2.1 Add the new `Text` at `/system/components/v2/` with the compiled-first ladder. Today
   `system/components/text.be` interleaves the built-in 5×7 at sizes 3 and 2 among the compiled
   faces and returns the smallest candidate when nothing fits. The new `Text` tries the compiled
   face at 24, 18, 12 and 9 px, bold when the style is bold, and the built-in 5×7 only last, fitting
