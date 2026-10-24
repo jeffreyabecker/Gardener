@@ -24,6 +24,12 @@ class ComponentV2
     end
   end
 
+  # The box the component's content needs, given the cross-axis extent a layout will give it. The
+  # default is the box it already has; a text overrides this to measure its string.
+  def measure(cross)
+    return [self.w, self.h]
+  end
+
   def draw()
   end
 end

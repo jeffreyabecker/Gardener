@@ -16,6 +16,7 @@ components/icon.be
 components/v2/component.be
 components/v2/icon.be
 components/v2/text.be
+components/v2/layout.be
 scene.be
 list.be
 registry.be

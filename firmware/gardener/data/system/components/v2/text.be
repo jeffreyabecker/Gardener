@@ -8,6 +8,7 @@ class TextV2 : ComponentV2
   var v_align
   var candidate
   var fitted_text
+  var value
 
   def init()
     super(self).init()
@@ -17,6 +18,7 @@ class TextV2 : ComponentV2
     self.v_align = "center"
     self.candidate = nil
     self.fitted_text = nil
+    self.value = ""
   end
 
   # The compiled faces, largest first, bold when the style is bold, and the built-in 5x7 last.
@@ -153,11 +155,33 @@ class TextV2 : ComponentV2
   end
 
   def draw(text)
+    if text == nil
+      text = self.value
+    end
+    self.value = text
     if self.candidate == nil || text != self.fitted_text
       self.candidate = self.fit(text)
       self.fitted_text = text
     end
     self.draw_fitted(self.truncated(text), self.candidate)
     self.flip()
+  end
+
+  # The ink box of the current string at the largest face that fits the cross size, which is what
+  # a layout measures a text as.
+  def measure(cross)
+    if self.value == ""
+      return [0, 0]
+    end
+    var cands = self.candidates()
+    var i = 0
+    while i < cands.size()
+      var b = self.bounds(self.value, cands[i])
+      if b[1] <= cross
+        return [b[0], b[1]]
+      end
+      i += 1
+    end
+    return [0, 0]
   end
 end
