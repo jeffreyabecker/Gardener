@@ -58,6 +58,7 @@ class DurationV2 : TextV2
 
   def draw(seconds)
     self.seconds = seconds
-    super(self).draw(self.text(seconds))
+    self.value = self.text(seconds)
+    super(self).draw()
   end
 end

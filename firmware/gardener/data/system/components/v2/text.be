@@ -49,10 +49,10 @@ class TextV2 : ComponentV2
   var _fitted_text
 
   # --- public methods ------------------------------------------------------
-  def init(value, text_settings)
+  def init(value, settings)
     super(self).init()
-    text_settings = text_settings == nil ? text_settings.default() : text_settings
-    text_settings.apply_to(self)
+    var s = settings == nil ? text_settings.default() : settings
+    s.apply_to(self)
     self.candidate = nil
     self._fitted_text = nil
     self.value = value == nil ? "" : value
@@ -103,18 +103,18 @@ class TextV2 : ComponentV2
   # a layout measures a text as.
   def measure(cross)
     if self.value == ""
-      return [0, 0]
+      return Size(0, 0)
     end
     var cands = self._candidates()
     var i = 0
     while i < cands.size()
       var b = self.bounds(self.value, cands[i])
       if b[1] <= cross
-        return [b[0], b[1]]
+        return Size(b[0], b[1])
       end
       i += 1
     end
-    return [0, 0]
+    return Size(0, 0)
   end
 
   # --- private methods -----------------------------------------------------
@@ -162,7 +162,7 @@ class TextV2 : ComponentV2
     var i = 0
     while i < cands.size()
       var b = self.bounds(text, cands[i])
-      if b[0] <= self.w && b[1] <= self.h
+      if b[0] <= self.dim.w && b[1] <= self.dim.h
         return cands[i]
       end
       i += 1
@@ -199,20 +199,20 @@ class TextV2 : ComponentV2
   end
 
   def _draw_fitted(text, candidate)
-    var cw = self.w
-    var ch = self.h
+    var cw = self.dim.w
+    var ch = self.dim.h
     if candidate[0] == nil
       var b = screen.text_bounds(text, candidate[1])
-      var tx = self.x + self._x_offset(cw, b.w)
-      var ty = self.y + self._v_offset(ch, b.h)
+      var tx = self.pos.x + self._x_offset(cw, b.w)
+      var ty = self.pos.y + self._v_offset(ch, b.h)
       screen.draw_text(tx, ty, candidate[1], false, text)
       if self._bold()
         screen.draw_invert(tx, ty, b.w, b.h)
       end
     else
       var b = screen.text_bounds(text, 1, candidate[0])
-      var tx = self.x + self._x_offset(cw, b.w)
-      var ty = self.y + self._v_offset(ch, b.h) + b.h
+      var tx = self.pos.x + self._x_offset(cw, b.w)
+      var ty = self.pos.y + self._v_offset(ch, b.h) + b.h
       screen.draw_text(tx, ty, 1, false, text, candidate[0])
     end
   end
@@ -224,7 +224,7 @@ class TextV2 : ComponentV2
       return text
     end
     var b = screen.text_bounds(text, self.candidate[1])
-    if b.w <= self.w
+    if b.w <= self.dim.w
       return text
     end
     var i = string.count(text)
@@ -236,7 +236,7 @@ class TextV2 : ComponentV2
         j += 1
       end
       var c = screen.text_bounds(cut + "...", self.candidate[1])
-      if c.w <= self.w
+      if c.w <= self.dim.w
         return cut + "..."
       end
       i -= 1

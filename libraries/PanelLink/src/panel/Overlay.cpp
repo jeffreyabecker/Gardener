@@ -58,6 +58,11 @@ static_assert(!std::is_abstract<Overlay>::value,
 
 }  // namespace
 
+// The page area is the panel less the band: the overlay owns the band, so it is the one that knows
+// how much of the glass a page may use.
+int16_t Overlay::pageWidth() const { return inner_->width(); }
+int16_t Overlay::pageHeight() const { return inner_->height() - kBandHeight; }
+
 // The overlay goes down last, so it lands on top of whatever the page drew and no page has to know
 // it exists.
 void Overlay::display() {

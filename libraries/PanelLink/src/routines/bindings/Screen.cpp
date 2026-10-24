@@ -60,6 +60,16 @@ int screenHeight(bvm* vm) {
   be_return(vm);
 }
 
+int screenPageWidth(bvm* vm) {
+  be_pushint(vm, panel().pageWidth());
+  be_return(vm);
+}
+
+int screenPageHeight(bvm* vm) {
+  be_pushint(vm, panel().pageHeight());
+  be_return(vm);
+}
+
 int screenPixel(bvm* vm) {
   panel().pixel(argInt(vm, 1), argInt(vm, 2));
   be_return_nil(vm);
@@ -222,6 +232,8 @@ const bnfuncinfo kScreenLibrary[] = {
     {"text_bounds", screenBounds},
     {"width", screenWidth},
     {"height", screenHeight},
+    {"page_width", screenPageWidth},
+    {"page_height", screenPageHeight},
     {"flush", screenFlush},
     {"unit", screenUnit},
     {nullptr, nullptr},

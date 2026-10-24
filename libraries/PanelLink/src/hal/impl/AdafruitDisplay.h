@@ -38,6 +38,8 @@ class AdafruitDisplay : public Display {
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return panel_.width(); }
   int16_t height() const override { return panel_.height(); }
+  int16_t pageWidth() const override { return panel_.width(); }
+  int16_t pageHeight() const override { return panel_.height(); }
   uint8_t rotation() const override { return panel_.getRotation(); }
   void setRotation(uint8_t rotation) override { panel_.setRotation(rotation); }
 

@@ -100,10 +100,13 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.text_bounds(text, size [, font])` |
 | `screen.width()` |
 | `screen.height()` |
+| `screen.page_width()` |
+| `screen.page_height()` |
 | `screen.flush()` |
 
-`width()` and `height()` answer the panel's size in pixels, so a layout derives its boxes from the
-glass rather than from a fixed number.
+`width()` and `height()` answer the panel's size in pixels. `page_width()` and `page_height()`
+answer the area a page lays out within — the panel less the overlay's status band — so a layout
+derives its boxes from the glass it owns rather than subtracting a band it does not.
 
 `draw_invert` is the one call that does not put ink or paper down: it flips what is already inside
 the rectangle, ink to paper and paper to ink, so it has to come after the pixels it is meant to

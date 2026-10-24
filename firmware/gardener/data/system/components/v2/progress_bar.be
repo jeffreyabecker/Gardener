@@ -14,10 +14,10 @@ class ProgressBarV2 : ComponentV2
     if value > 100
       value = 100
     end
-    screen.draw_rect(self.x, self.y, self.w, self.h)
-    var fill_w = int((self.w - 2) * value / 100)
+    screen.draw_rect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    var fill_w = int((self.dim.w - 2) * value / 100)
     if fill_w > 0
-      screen.draw_fillrect(self.x + 1, self.y + 1, fill_w, self.h - 2)
+      screen.draw_fillrect(self.pos.x + 1, self.pos.y + 1, fill_w, self.dim.h - 2)
     end
     self.flip()
   end

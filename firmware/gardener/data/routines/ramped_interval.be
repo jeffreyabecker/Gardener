@@ -144,25 +144,22 @@ end
 # The interval chrome rebuilt on the v2 layout: the pressure in the left half, the set bubbles in
 # the right, and a status-plus-bar row below. It lives beside RampedIntervalChrome until the pages
 # are ported onto the v2 components.
-class RampedIntervalChromeV2 : LayoutV2
-  #var current_set, total_sets, status, remaining_percent
-
-  def init(title, total_sets )
-    super(self).init([
-      LayoutV2([
+class RampedIntervalChromeV2 : ColumnLayoutV2
+  def init(title, total_sets)
+    super(self).init([Position.top_left(), Size.page()], [
+      RowLayoutV2(Size.page_height(0.25), [
         RampedIntervalIconV2(),
-        layout_dim(TextV2(title), nil, 8)
-      ], "lr-tb", 0, false),
-      LayoutV2([
+        TextV2(title)
+      ]),
+      RowLayoutV2(Size.page_height(0.50), [
         AutoPressureDisplayV2("pressure:target", "br", 0.25),
         ProgressBubblesV2()
-      ], "lr-tb", 0, false),
-      LayoutV2([
-        TextV2("", ),
+      ]),
+      RowLayoutV2(Size.page_height(0.25), [
+        TextV2(""),
         ProgressBarV2()
-      ], "lr-tb", 0, false)
-    ], "tb-lr", 1, false)
-
+      ])
+    ])
   end
 
   def draw(current_set, status, remaining_percent)
@@ -172,6 +169,7 @@ class RampedIntervalChromeV2 : LayoutV2
     progress_bubbles.count = current_set
     status_text.value = status
     progress_bar.value = remaining_percent
+    super(self).draw()
   end
 end
 

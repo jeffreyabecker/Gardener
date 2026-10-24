@@ -6,6 +6,8 @@ suite = "screen"
 def reports_its_size()
   assert_eq(screen.width(), 128, "screen.width() is not the panel width")
   assert_eq(screen.height(), 64, "screen.height() is not the panel height")
+  assert_eq(screen.page_width(), 128, "screen.page_width() is not the page width")
+  assert_eq(screen.page_height(), 52, "screen.page_height() is not the page height")
 end
 
 test("the screen reports its size", reports_its_size)

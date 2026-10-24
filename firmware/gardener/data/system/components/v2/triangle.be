@@ -13,13 +13,13 @@ class TriangleV2 : ComponentV2
   def draw()
     var filled = self.style != "empty"
     if self.direction == "up"
-      self.tri(filled, self.x + self.w / 2, self.y, self.x, self.y + self.h - 1, self.x + self.w - 1, self.y + self.h - 1)
+      self.tri(filled, self.pos.x + self.dim.w / 2, self.pos.y, self.pos.x, self.pos.y + self.dim.h - 1, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h - 1)
     elif self.direction == "down"
-      self.tri(filled, self.x, self.y, self.x + self.w - 1, self.y, self.x + self.w / 2, self.y + self.h - 1)
+      self.tri(filled, self.pos.x, self.pos.y, self.pos.x + self.dim.w - 1, self.pos.y, self.pos.x + self.dim.w / 2, self.pos.y + self.dim.h - 1)
     elif self.direction == "left"
-      self.tri(filled, self.x, self.y + self.h / 2, self.x + self.w - 1, self.y, self.x + self.w - 1, self.y + self.h - 1)
+      self.tri(filled, self.pos.x, self.pos.y + self.dim.h / 2, self.pos.x + self.dim.w - 1, self.pos.y, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h - 1)
     else
-      self.tri(filled, self.x + self.w - 1, self.y + self.h / 2, self.x, self.y, self.x, self.y + self.h - 1)
+      self.tri(filled, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h / 2, self.pos.x, self.pos.y, self.pos.x, self.pos.y + self.dim.h - 1)
     end
     self.flip()
   end

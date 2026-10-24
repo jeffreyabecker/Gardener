@@ -42,6 +42,11 @@ class Display {
   // Rotation aware: width() and height() swap when the panel is turned.
   virtual int16_t width() const = 0;
   virtual int16_t height() const = 0;
+  // The area a page lays out within. On a plain panel this is the whole glass; a wrapper that
+  // reserves a band of its own (the overlay's status row) narrows it, so a page reads these rather
+  // than subtracting a band it does not own.
+  virtual int16_t pageWidth() const = 0;
+  virtual int16_t pageHeight() const = 0;
   virtual uint8_t rotation() const = 0;
   virtual void setRotation(uint8_t rotation) = 0;
 

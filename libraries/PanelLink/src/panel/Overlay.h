@@ -35,6 +35,9 @@ class Overlay : public Display {
   // --- geometry ------------------------------------------------------------
   int16_t width() const override { return inner_->width(); }
   int16_t height() const override { return inner_->height(); }
+  // The page area: the panel minus the status band across the bottom.
+  int16_t pageWidth() const override;
+  int16_t pageHeight() const override;
   uint8_t rotation() const override { return inner_->rotation(); }
   void setRotation(uint8_t rotation) override { inner_->setRotation(rotation); }
 

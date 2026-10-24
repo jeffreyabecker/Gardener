@@ -6,6 +6,8 @@
 
 import string
 
+# The text settings a pressure display applies to its readings: the face and style of the numbers
+# and the secondary's position and size hint.
 class pressure_settings
   var family
   var style
@@ -17,6 +19,17 @@ class pressure_settings
     self.style = style == nil ? "none" : style
     self.position = position == nil ? "br" : position
     self.size_hint = size_hint == nil ? 0.5 : size_hint
+  end
+
+  static def default()
+    return pressure_settings(nil, nil, nil, nil)
+  end
+
+  def apply_to(display)
+    display.family = self.family
+    display.style = self.style
+    display.secondary_position = self.position
+    display.size_hint = self.size_hint
   end
 end
 
@@ -40,22 +53,34 @@ class PressureDisplayV2 : ComponentV2
   var _secondary
 
   # --- public methods ------------------------------------------------------
-  def init(text_settings, text_settings_secondary, secondary_position, size_hint)
+  def init(settings, settings_secondary, secondary_position, size_hint)
     super(self).init()
-    text_settings = text_settings == nil ? text_settings.default() : text_settings
-    text_settings.apply_to(self)
-    self.secondary_family = text_settings_secondary ? text_settings_secondary.family : nil
-    self.secondary_style = text_settings_secondary ? text_settings_secondary.style : nil
+    self.family = "sans"
+    self.style = "none"
+    self.align = "center"
+    self.v_align = "center"
+    self.secondary_family = nil
+    self.secondary_style = nil
     self.secondary_pressure = nil
     self.secondary_position = "br"
     self.size_hint = 0.5
+    var s = settings == nil ? pressure_settings.default() : settings
+    s.apply_to(self)
+    if settings_secondary != nil
+      self.secondary_family = settings_secondary.family
+      self.secondary_style = settings_secondary.style
+    end
+    if secondary_position != nil
+      self.secondary_position = secondary_position
+    end
+    if size_hint != nil
+      self.size_hint = size_hint
+    end
     self._number = TextV2()
     self._secondary = TextV2()
   end
 
   def draw(pressure_kpa, secondary_pressure)
-    pressure_kpa = pressure_kpa == nil ? self.pressure_kpa : pressure_kpa
-    secondary_pressure = secondary_pressure == nil ? self.secondary_pressure : secondary_pressure
     var main_text = self._format(pressure_kpa)
     var sec_text = nil
     if self.secondary_position != nil && secondary_pressure != nil
@@ -87,11 +112,12 @@ class PressureDisplayV2 : ComponentV2
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.x = self.x
-    self._number.y = self.y
-    self._number.w = self.w
-    self._number.h = self.h
-    self._number.draw(text)
+    self._number.pos.x = self.pos.x
+    self._number.pos.y = self.pos.y
+    self._number.dim.w = self.dim.w
+    self._number.dim.h = self.dim.h
+    self._number.value = text
+    self._number.draw()
   end
 
   # The secondary smaller in the corner the position names: the fit is capped at size_hint of the
@@ -116,63 +142,73 @@ class PressureDisplayV2 : ComponentV2
       self._secondary.align = "right"
       self._secondary.v_align = "bottom"
     end
-    self._secondary.x = self.x
-    self._secondary.y = self.y
-    self._secondary.w = self.w
-    self._secondary.h = self.h
+    self._secondary.pos.x = self.pos.x
+    self._secondary.pos.y = self.pos.y
+    self._secondary.dim.w = self.dim.w
+    self._secondary.dim.h = self.dim.h
     self._secondary.draw_face(text, face)
   end
 
   # At size_hint 1 the two numbers are the same size, side by side; the secondary sits on the side
   # the second character of the position names.
   def _draw_side_by_side(main_text, sec_text)
-    var half = self.w / 2
+    var half = self.dim.w / 2
     var on_left = string.endswith(self.secondary_position, "l")
 
     self._number.family = self.family
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.x = on_left ? self.x + half : self.x
-    self._number.y = self.y
-    self._number.w = half
-    self._number.h = self.h
-    self._number.draw(main_text)
+    self._number.pos.x = on_left ? self.pos.x + half : self.pos.x
+    self._number.pos.y = self.pos.y
+    self._number.dim.w = half
+    self._number.dim.h = self.dim.h
+    self._number.value = main_text
+    self._number.draw()
 
     self._secondary.family = self.secondary_family != nil ? self.secondary_family : self.family
     self._secondary.style = self.secondary_style != nil ? self.secondary_style : self.style
     self._secondary.align = "center"
     self._secondary.v_align = "center"
-    self._secondary.x = on_left ? self.x : self.x + half
-    self._secondary.y = self.y
-    self._secondary.w = half
-    self._secondary.h = self.h
-    self._secondary.draw(sec_text)
+    self._secondary.pos.x = on_left ? self.pos.x : self.pos.x + half
+    self._secondary.pos.y = self.pos.y
+    self._secondary.dim.w = half
+    self._secondary.dim.h = self.dim.h
+    self._secondary.value = sec_text
+    self._secondary.draw()
   end
 end
 
-class AutoPressureDisplayV2: PressureDisplayV2
+# A pressure display that pulls its readings from the machine: the order names which of the
+# pressure and the target is primary, as "pressure:target" or "target:pressure".
+class AutoPressureDisplayV2 : PressureDisplayV2
   var _pressure_order
+
   def init(pressure_order, secondary_position, size_hint)
-    super(self).init()
+    super(self).init(nil, nil, secondary_position, size_hint)
     if pressure_order == nil
       pressure_order = "pressure:target"
+    end
     if type(pressure_order) == "string"
       var parts = string.split(pressure_order, ":")
-      var trimmed = []
+      var order = []
       for p : parts
-        p = string.strip(p)
         if p != ""
-          trimmed.push(p)
+          order.push(p)
         end
       end
-      pressure_order = trimmed
+      pressure_order = order
     end
     self._pressure_order = pressure_order
   end
+
   def draw()
-    var primary_pressure = _pressure_order[0] == "pressure" ? vacuum.pressure_kpa : vacuum.target
-    var secondary_pressure = _pressure_order.size() > 1 ? (_pressure_order[1] == "pressure" ? vacuum.pressure_kpa : vacuum.target) : nil
+    var s = vacuum.state()
+    var primary_pressure = self._pressure_order[0] == "pressure" ? s.pressure_kpa : s.target
+    var secondary_pressure = nil
+    if self._pressure_order.size() > 1
+      secondary_pressure = self._pressure_order[1] == "pressure" ? s.pressure_kpa : s.target
+    end
     super(self).draw(primary_pressure, secondary_pressure)
   end
 end
