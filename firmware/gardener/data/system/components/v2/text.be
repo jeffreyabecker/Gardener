@@ -167,6 +167,27 @@ class TextV2 : ComponentV2
     self.flip()
   end
 
+  # The largest face whose ink height fits a cap, the last candidate when none does. A pressure
+  # display uses this for its smaller secondary reading.
+  def fit_height(text, max_h)
+    var cands = self.candidates()
+    var i = 0
+    while i < cands.size()
+      var b = self.bounds(text, cands[i])
+      if b[1] <= max_h
+        return cands[i]
+      end
+      i += 1
+    end
+    return cands[cands.size() - 1]
+  end
+
+  # Draw a string at a face the caller already chose, without fitting it.
+  def draw_face(text, candidate)
+    self.draw_fitted(text, candidate)
+    self.flip()
+  end
+
   # The ink box of the current string at the largest face that fits the cross size, which is what
   # a layout measures a text as.
   def measure(cross)
