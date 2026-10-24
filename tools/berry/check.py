@@ -168,6 +168,11 @@ parser.add_argument(
     help="draw that device scene — readout, browser or system — and save the frame as a BMP",
 )
 parser.add_argument(
+    "--component",
+    metavar="NAME",
+    help="draw that component — from either framework — and save the frame as a BMP",
+)
+parser.add_argument(
     "--seconds",
     type=int,
     default=0,
@@ -195,6 +200,11 @@ parser.add_argument(
     help="run only the tests whose full name contains NAME (implies --tests)",
 )
 args = parser.parse_args()
+
+# The capture folders the harness writes into. Generated frames live here rather than in build/,
+# so a component's frame is easy to find and the build output stays machine-only.
+for sub in ("components", "baseline", "v2"):
+    (TOOL / "artifacts" / sub).mkdir(parents=True, exist_ok=True)
 
 build(compiler("c"), compiler("c++"), gfx_library())
 
@@ -232,6 +242,9 @@ if args.scene:
     command.extend(
         ["--scene", args.scene, "--seconds", str(args.seconds), "--out", str(out.resolve())]
     )
+if args.component:
+    out = Path(args.out) if args.out else TOOL / "artifacts" / "components" / f"{args.component}.bmp"
+    command.extend(["--component", args.component, "--out", str(out.resolve())])
 if args.tests or args.test:
     tests_dir = TOOL / "tests"
     command.extend(["--suite", str(tests_dir / "suite.be")])

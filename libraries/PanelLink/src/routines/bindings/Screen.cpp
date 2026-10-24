@@ -50,6 +50,16 @@ int screenFlush(bvm* vm) {
   be_return_nil(vm);
 }
 
+int screenWidth(bvm* vm) {
+  be_pushint(vm, panel().width());
+  be_return(vm);
+}
+
+int screenHeight(bvm* vm) {
+  be_pushint(vm, panel().height());
+  be_return(vm);
+}
+
 int screenPixel(bvm* vm) {
   panel().pixel(argInt(vm, 1), argInt(vm, 2));
   be_return_nil(vm);
@@ -210,6 +220,8 @@ const bnfuncinfo kScreenLibrary[] = {
     {"draw_fillrotatedrect", screenFillRotatedRect},
     {"draw_text", screenText},
     {"text_bounds", screenBounds},
+    {"width", screenWidth},
+    {"height", screenHeight},
     {"flush", screenFlush},
     {"unit", screenUnit},
     {nullptr, nullptr},

@@ -167,6 +167,26 @@ int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) 
   return ok ? 1 : 0;
 }
 
+// Draw one component by name — a drawing primitive from either framework — and save the frame.
+int callArtComponent(bvm* vm, const char* name, const char* path) {
+  if (!be_getglobal(vm, "harness_art_component")) {
+    be_pop(vm, 1);
+    printf("[E] vm: harness_art_component is missing\n");
+    return 0;
+  }
+  be_pushstring(vm, name);
+  be_pushstring(vm, path);
+  const int rc = be_pcall(vm, 2);
+  if (rc != BE_OK) {
+    report(vm, "harness_art_component", name);
+    return 0;
+  }
+  const int result = be_absindex(vm, -(2 + 1));
+  const bool ok = be_isbool(vm, result) && be_tobool(vm, result);
+  be_pop(vm, 3);
+  return ok ? 1 : 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -176,6 +196,7 @@ int main(int argc, char** argv) {
   const char* artName = nullptr;
   const char* artPath = nullptr;
   const char* sceneName = nullptr;
+  const char* componentName = nullptr;
   const char* testFilter = nullptr;
   int artSeconds = 0;
   int artSets = 0;
@@ -209,6 +230,8 @@ int main(int argc, char** argv) {
       artName = argv[++i];
     } else if (strcmp(argv[i], "--scene") == 0 && i + 1 < argc) {
       sceneName = argv[++i];
+    } else if (strcmp(argv[i], "--component") == 0 && i + 1 < argc) {
+      componentName = argv[++i];
     } else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
       artPath = argv[++i];
     } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
@@ -251,6 +274,8 @@ int main(int argc, char** argv) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
   } else if (sceneName != nullptr) {
     passed = callArtScene(vm, sceneName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
+  } else if (componentName != nullptr) {
+    passed = callArtComponent(vm, componentName, artPath != nullptr ? artPath : "frame.bmp");
   } else if (suites) {
     // One GIF per case, named from the stem the runner reads back through the harness. A .bmp
     // --out is meaningless under --tests, so it falls back to the default stem.
@@ -277,6 +302,8 @@ int main(int argc, char** argv) {
     printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
   } else if (sceneName != nullptr) {
     printf(", scene %s %s", sceneName, passed && failed == 0 ? "saved" : "failed");
+  } else if (componentName != nullptr) {
+    printf(", component %s %s", componentName, passed && failed == 0 ? "saved" : "failed");
   } else if (suites) {
     printf(", suites %s", passed && failed == 0 ? "passed" : "failed");
   } else if (!compileOnly) {
