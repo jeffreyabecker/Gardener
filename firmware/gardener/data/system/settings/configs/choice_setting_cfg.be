@@ -1,4 +1,6 @@
-# choice_setting_cfg.be — ChoiceSettingCfg: a setting whose value is one of a fixed list of labels.
+# choice_setting_cfg.be — ChoiceSettingCfg: a setting whose value is one of a fixed list of choices.
+# A choice is a value, or a [value, title] pair whose value is what is stored and whose title is
+# what the row and the editor print.
 
 class ChoiceSettingCfg : SettingCfg
   var values
@@ -18,7 +20,7 @@ class ChoiceSettingCfg : SettingCfg
       return nil
     end
     for candidate : self.values
-      if candidate == raw
+      if choice_value(candidate) == raw
         return raw
       end
     end
@@ -27,6 +29,18 @@ class ChoiceSettingCfg : SettingCfg
 
   def bounded(value)
     return self.parse(value)
+  end
+
+  # A pair prints its title, so a row names what the setting is set to rather than the value it
+  # stores.
+  def text(value)
+    for candidate : self.values
+      if choice_value(candidate) == value
+        var title = choice_title(candidate)
+        return title == nil ? str(value) : str(title)
+      end
+    end
+    return str(value)
   end
 
   def scene(value)

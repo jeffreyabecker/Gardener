@@ -48,3 +48,19 @@ def duration_text(seconds)
   end
   return str(minutes) + "m" + str(rest) + "s"
 end
+
+# A choice is a value, or a [value, title] pair: the value is what the setting stores and the title
+# is what the panel prints, so an identifier and its label are one entry rather than two lookups.
+def choice_value(entry)
+  if classname(entry) == "list"
+    return entry[0]
+  end
+  return entry
+end
+
+def choice_title(entry)
+  if classname(entry) == "list"
+    return entry[1]
+  end
+  return entry
+end

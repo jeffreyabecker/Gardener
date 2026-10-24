@@ -32,7 +32,7 @@ Every scene, and where it lives:
 | `ValueScene` — the value base | `system/settings/scenes/value_scene.be` | `handle_page` |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `system/settings/scenes/` | inherited |
 | `DurationScene` | `system/settings/scenes/duration_scene.be` | `handle_page` |
-| `UnitScene`, `JingleScene` | `modules/ui.be` | inherited |
+| `JingleScene` | `modules/ui.be` | inherited |
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
@@ -69,7 +69,12 @@ What each one answers:
 | `DurationScene` | `forward:single` | advance minutes→seconds|
 | `DurationScene` | `back:single` | go back seconds→minutes|
 | `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
-| `UnitScene`, `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
+| `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
+
+`ChoiceScene` wraps at the ends. A choice is a value, or a `[value, title]` pair: Up/Down moves
+between values and the editor prints each one's title, so a setting can store an identifier and show
+a name. `JingleScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
+it is cancelled.
 
 | `Interval` | `up:double` | stop and vent, reset the run, open its settings |
 | `Interval` | `ok:single` | begin, while the run is ready, paused or waiting |

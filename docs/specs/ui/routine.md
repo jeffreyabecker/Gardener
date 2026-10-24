@@ -298,6 +298,11 @@ first, then the kind's own, and `nullable` last:
 | `icon` | an `Icon`, or `nil` | drawn at the left of the row; an argument left off is a text-only row |
 | `nullable` | `bool` | whether the setting can hold nothing |
 
+A choice's `values` is a list of the values the setting accepts — `["hold", "cycle"]` — or of
+`[value, title]` pairs, where the value is what the file stores and the title is what the row and
+the editor print: `[["poacher", "Poacher"], ["alarm", "Alarm"]]`. A pair lets a setting hold a short
+identifier and show a name; a plain value is its own title.
+
 ### What a setting does
 
 The setting is the whole of what its value is: the rules its kind needs, and the value scene that

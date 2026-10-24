@@ -69,6 +69,30 @@ end
 
 test("every kind builds and prints its value", every_kind_builds)
 
+# A choice may be a [value, title] pair: the value is what the setting stores, the title is what
+# the row and the editor print, so an identifier and its label are one entry.
+def a_pair_choice_stores_its_value_and_prints_its_title()
+  var pairs = [["a", "Alpha"], ["b", "Beta"]]
+  var mode = ChoiceSettingCfg("mode", "b", "Mode", nil, pairs, false)
+  assert_eq(mode.read("settings_test"), "b", "a pair choice does not read its default value")
+  assert_eq(mode.text("b"), "Beta", "a pair choice does not print its title")
+
+  store.set("settings_test", "mode", "a")
+  assert_eq(mode.read("settings_test"), "a", "a pair choice does not read its stored value")
+
+  store.set("settings_test", "mode", "Alpha")
+  assert_eq(mode.read("settings_test"), "b", "a pair choice accepted a title that is not a value")
+
+  var scene = ChoiceScene("Mode", "a", pairs, false)
+  assert_eq(scene.text(), "Alpha", "a pair choice's editor does not print its title")
+  scene.nudge(1)
+  assert_eq(scene.value(), "b", "a pair choice's editor does not step to the next value")
+  assert_eq(scene.text(), "Beta", "a pair choice's editor does not print the title it stepped to")
+end
+
+test("a pair choice stores the value and prints the title",
+     a_pair_choice_stores_its_value_and_prints_its_title)
+
 # The store hands back the file's text, so a setting with no default of its type to lean on has to
 # parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
 def a_stored_value_is_parsed_by_its_kind()

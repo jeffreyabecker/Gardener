@@ -172,15 +172,33 @@ end
 
 # --- the system settings ---------------------------------------------------
 
-# The unit row cycles the device's units; the token is shown in capitals, so the row and its editor
-# print the unit the same way.
-class UnitScene : ChoiceScene
-  def init(current, values)
-    super(self).init("UNIT", current, values, false)
+# The device's own settings are not a routine's: they live behind `device` and `screen` rather than
+# in a routine's document, so a row reads its value and the choices it cycles from the call that
+# owns them, and writes the value back through the same one. The list, the rows and the editors are
+# the settings folder's.
+
+# The unit's token is shown in capitals, so the row and its editor print the unit the same way.
+def unit_choices()
+  var out = []
+  for token : device.units()
+    out.push([token, string.toupper(token)])
+  end
+  return out
+end
+
+class UnitSettingCfg : ChoiceSettingCfg
+  def init()
+    super(self).init("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
   end
 
-  def text()
-    return string.toupper(str(self.current))
+  def current()
+    return self.value(screen.unit().name)
+  end
+
+  def write(value)
+    if value != screen.unit().name
+      device.set_unit(value)
+    end
   end
 end
 
@@ -206,48 +224,11 @@ class JingleScene : ChoiceScene
     super(self).cancel()
   end
 
-  def text()
-    var label = jingles.label(self.current)
-    if label == nil
-      return "--"
-    end
-    return label
-  end
-
   def play()
     var notes = jingles.notes(self.current)
     if notes != nil
       buzzer.play(notes)
     end
-  end
-end
-
-# The device's own settings are not a routine's: they live behind `device` and `screen` rather than
-# in a routine's document, so a row reads its value and the choices it cycles from the call that
-# owns them, and writes the value back through the same one. The list, the rows and the editors are
-# the settings folder's.
-
-class UnitSettingCfg : ChoiceSettingCfg
-  def init()
-    super(self).init("unit", screen.unit().name, "UNIT", nil, device.units(), false)
-  end
-
-  def current()
-    return self.value(screen.unit().name)
-  end
-
-  def text(value)
-    return value
-  end
-
-  def write(value)
-    if value != screen.unit().name
-      device.set_unit(value)
-    end
-  end
-
-  def scene(value)
-    return UnitScene(value, self.values)
   end
 end
 
@@ -280,22 +261,23 @@ def stored_jingle()
   return id
 end
 
+# The identifier the device stores and the label the panel prints, one [key, value] pair per jingle,
+# so the row and the editor name the jingle without either of them asking the library.
+def jingle_choices()
+  var out = []
+  for id : jingles.ids()
+    out.push([id, jingles.label(id)])
+  end
+  return out
+end
+
 class JingleSettingCfg : ChoiceSettingCfg
   def init()
-    super(self).init("jingle", stored_jingle(), "JINGLE", nil, jingles.ids(), false)
+    super(self).init("jingle", stored_jingle(), "JINGLE", nil, jingle_choices(), false)
   end
 
   def current()
     return self.value(stored_jingle())
-  end
-
-  # The short label keeps the row inside the panel; the identifier is what the setting stores.
-  def text(value)
-    var label = jingles.label(value)
-    if label == nil
-      return "--"
-    end
-    return label
   end
 
   def write(value)
