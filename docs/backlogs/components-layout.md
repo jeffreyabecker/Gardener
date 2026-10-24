@@ -90,7 +90,7 @@ parking-lot line.
   the box. Check: every count from 1 to 20 fills from the matching corner in each of the four
   directions, and below-3-px bubbles are solid squares.
 
-- [ ] 4.3 Add the new `ProgressBar` at `/system/components/v2/`, a one-pixel frame around the box
+- [x] 4.3 Add the new `ProgressBar` at `/system/components/v2/`, a one-pixel frame around the box
   with the inside filled to a value clamped to 0–100. Check: 0 draws the frame and no fill, 100
   fills the inside, and a value past the ends clamps.
 

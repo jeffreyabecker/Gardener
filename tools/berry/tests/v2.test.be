@@ -190,3 +190,14 @@ def bubbles_fill_by_count()
 end
 
 test("progress bubbles fill by count", bubbles_fill_by_count)
+
+def progress_bar_draws()
+  var b = ProgressBarV2()
+  b.x = 0; b.y = 0; b.w = 32; b.h = 8
+  b.draw(0)
+  b.draw(50)
+  b.draw(100)
+  b.draw(150)
+end
+
+test("a progress bar draws at its ends", progress_bar_draws)
