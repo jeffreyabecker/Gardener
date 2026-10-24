@@ -11,13 +11,10 @@ import string
 # --- the readout -----------------------------------------------------------
 
 class ReadoutChrome
-  var owner
   var pressure
   var target_value
 
-  def init(owner)
-    self.owner = owner
-
+  def init()
     self.pressure = PressureDisplay()
     self.pressure.x = 0; self.pressure.y = 0; self.pressure.w = 64; self.pressure.h = 52
     self.pressure.margin = 1
@@ -30,19 +27,10 @@ class ReadoutChrome
 
   def draw(s)
     self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-
-    if self.owner.editing
-      self.target_value.draw(self.owner.edit_target)
-      if self.owner.border_on()
-        var f = self.target_value.frame()
-        screen.draw_rect(f[0], f[1], f[2], f[3])
-      end
+    if s.target > 0.0
+      self.target_value.draw(s.target)
     else
-      if s.target > 0.0
-        self.target_value.draw(s.target)
-      else
-        self.target_value.draw(nil)
-      end
+      self.target_value.draw(nil)
     end
   end
 end
@@ -76,28 +64,24 @@ end
 # this file, so only the system scene needs its name held here until its class exists below.
 systemScene = nil
 
+
 class ReadoutScene : Scene
   var chrome
-  var editing
-  var edit_target
+  var target_cfg
 
   def init()
     super(self).init()
-    self.chrome = ReadoutChrome(self)
-    self.editing = false
-    self.edit_target = 0.0
+    self.chrome = ReadoutChrome()
+    self.target_cfg = PressureSettingCfg("target", 0.0, "TARGET", nil, 1.0, false)
 
-    self.on("ok:single", / -> self.ok())
+    self.on("ok:single", / -> self.start())
     self.on("ok:double", / -> self.edit())
-    self.on("up:single", / -> self.step_target(1))
-    self.on("down:single", / -> self.step_target(-1))
     self.on("cancel:single", / -> self.cancel())
     self.on("forward:double", / -> ux.push(browserScene))
     self.on("up:double", / -> ux.push(systemScene))
   end
 
   def activate()
-    self.editing = false
     self.restore()
     self.draw()
   end
@@ -106,67 +90,31 @@ class ReadoutScene : Scene
     self.chrome.draw(vacuum.state())
   end
 
-  # OK starts the run, or commits the target being edited.
-  def ok()
-    if self.editing
-      return self.commit_target()
-    end
-    return self.start()
-  end
-
-  # A double OK makes the target editable, starting from the machine's current target.
+  # A double OK opens the target's own editor: the pressure scene for the target, starting from the
+  # machine's target — or the shallowest legal depth when none is set. The editor only returns a
+  # value; this scene writes the committed one.
   def edit()
-    if self.editing
-      return false
-    end
-    self.editing = true
-    self.edit_target = self.edit_start()
-    self.draw()
-    return true
-  end
-
-  # Up and Down move the target one whole display step while it is being edited.
-  def step_target(dir)
-    if !self.editing
-      return false
-    end
-    var unit = screen.unit()
-    self.edit_target = vacuum.clamp(self.edit_target + dir * unit.whole_step / unit.per_kpa)
-    self.draw()
-    return true
-  end
-
-  # OK while editing: write the target to the device setting and place it on the machine.
-  def commit_target()
-    var pressure_kpa = vacuum.clamp(self.edit_target)
-    device.set_target(pressure_kpa)
-    vacuum.target(pressure_kpa)
-    self.editing = false
-    self.draw()
-    return true
-  end
-
-  # The border blinks while the target is editable, half a second on and half off.
-  def border_on()
-    return (vacuum.now_ms() / 500) % 2 == 0
-  end
-
-  # Where an edit starts: the machine's target, or the shallowest legal depth when none is set.
-  def edit_start()
     var target = vacuum.state().target
     if target <= 0.0
       target = vacuum.clamp(vacuum.state().pressure_kpa)
     end
-    return target
+    ux.push(self.target_cfg.scene(target), nil, / v -> self.target_closed(v))
+    return true
   end
 
-  # Cancel discards an edit, or stops and vents the run.
-  def cancel()
-    if self.editing
-      self.editing = false
-      self.draw()
-      return true
+  # The editor's committed value: write the target to the device setting and place it on the
+  # machine. A cancel changes nothing.
+  def target_closed(value)
+    if value != cancelled
+      var pressure_kpa = vacuum.clamp(value)
+      device.set_target(pressure_kpa)
+      vacuum.target(pressure_kpa)
     end
+    self.draw()
+  end
+
+  # Cancel stops and vents the run.
+  def cancel()
     vacuum.stop()
     vacuum.log("default: venting")
     return true
@@ -298,7 +246,7 @@ end
 
 class JingleSettingCfg : ChoiceSettingCfg
   def init()
-    super(self).init("jingle", stored_jingle(), "JINGLE", nil, jingle_choices(), false)
+    super(self).init("jingle", stored_jingle(), "\0x0D \0x0E \0x0D", nil, jingle_choices(), false)
   end
 
   def current()

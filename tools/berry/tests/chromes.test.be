@@ -54,7 +54,7 @@ def readout_comparison()
   var owner = FakeOwner()
 
   screen.draw_clear()
-  ReadoutChrome(owner).draw(s)
+  ReadoutChrome().draw(s)
   assert_true(save_v1("readout"), "cannot save the readout's v1 frame")
 
   screen.draw_clear()
@@ -73,7 +73,7 @@ def static_comparison()
   assert_true(save_v1("static"), "cannot save the ramped static v1 frame")
 
   screen.draw_clear()
-  RampedStaticChromeV2(owner).draw(s)
+  RampedStaticChromeV2("STATIC").draw("READY", 300000, 50000)
   assert_true(save_v2("static"), "cannot save the ramped static v2 frame")
 end
 
@@ -88,7 +88,7 @@ def interval_comparison()
   assert_true(save_v1("interval"), "cannot save the ramped interval v1 frame")
 
   screen.draw_clear()
-  RampedIntervalChromeV2(owner).draw(s)
+  RampedIntervalChromeV2("INTERVAL", 4).draw(2, "READY", 50)
   assert_true(save_v2("interval"), "cannot save the ramped interval v2 frame")
 end
 
