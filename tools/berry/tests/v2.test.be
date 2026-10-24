@@ -27,3 +27,16 @@ def text_truncates_with_an_ellipsis()
 end
 
 test("text truncates below the built-in face", text_truncates_with_an_ellipsis)
+
+def bold_builtin_draws_and_inverts()
+  var t = TextV2()
+  t.w = 20; t.h = 8
+  t.style = "bold"
+  t.draw("ABC")
+  assert_nil(t.candidate[0], "a bold tiny box does not use the built-in face")
+  t.style = "none"
+  t.draw("ABC")
+  assert_nil(t.candidate[0], "a plain tiny box does not use the built-in face")
+end
+
+test("bold built-in text draws and inverts", bold_builtin_draws_and_inverts)
