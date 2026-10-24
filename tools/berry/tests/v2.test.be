@@ -57,3 +57,38 @@ def layout_places_measured_children()
 end
 
 test("a layout places measured children", layout_places_measured_children)
+
+def layout_shares_growing_children()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 64; l.h = 8
+  var a = TextV2()
+  a.value = "AB"
+  var b = TextV2()
+  b.value = "CD"
+  b.grow = true
+  l.add(a); l.add(b)
+  l.place()
+  assert_eq(a.w, 12, "the measured child is not its width")
+  assert_eq(b.x, 12, "the growing child is not after the measured one")
+  assert_eq(b.w, 52, "the growing child does not take the remainder")
+  assert_eq(a.h, 8, "a child is not stretched to the cross size")
+  assert_eq(b.h, 8, "a child is not stretched to the cross size")
+end
+
+test("a layout shares the remainder among growing children", layout_shares_growing_children)
+
+def layout_makes_equal_columns()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 64; l.h = 8
+  var a = TextV2()
+  a.grow = true
+  var b = TextV2()
+  b.grow = true
+  l.add(a); l.add(b)
+  l.place()
+  assert_eq(a.w, 32, "the first growing child is not half")
+  assert_eq(b.x, 32, "the second growing child is not after the first")
+  assert_eq(b.w, 32, "the second growing child is not half")
+end
+
+test("two growing children make equal columns", layout_makes_equal_columns)

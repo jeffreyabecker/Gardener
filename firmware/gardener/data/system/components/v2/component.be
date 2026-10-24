@@ -7,6 +7,7 @@
 class ComponentV2
   var x, y, w, h
   var inverted
+  var grow
 
   def init()
     self.x = 0
@@ -14,6 +15,7 @@ class ComponentV2
     self.w = 0
     self.h = 0
     self.inverted = false
+    self.grow = false
   end
 
   # The last thing a draw does: an inverted component flips its whole box, so everything it drew
