@@ -140,18 +140,18 @@ reconstruction of it side by side, so the two can be compared. Pixel-perfect rep
 non-goal: the two frames are written for comparison, not compared byte-for-byte. The chrome classes
 are not updated; they stay on the v1 components until the porting pass that is still parked.
 
-- [ ] 6.1 Render the readout's chrome and its v2 twin. Today `ReadoutChrome` in `modules/ui.be`
+- [x] 6.1 Render the readout's chrome and its v2 twin. Today `ReadoutChrome` in `modules/ui.be`
   hardcodes two `PressureDisplay` halves. Draw the chrome as it does today and a v2 row of two
   growing `PressureDisplayV2`s across the 128×52 page area, saving both frames into `artifacts/v2/`
   for comparison. Check: both frames are written.
 
-- [ ] 6.2 Render the ramped static chrome and its v2 twin. Today `RampedStaticChrome` in
+- [x] 6.2 Render the ramped static chrome and its v2 twin. Today `RampedStaticChrome` in
   `routines/ramped_static.be` places the icon, the pressure and a status-plus-bar row. Draw the
   chrome as it does today and a v2 reconstruction — a column of the icon, the pressure and a
   status-plus-bar row where the word is measured and the bar grows — saving both frames. Check:
   both frames are written.
 
-- [ ] 6.3 Render the ramped interval chrome and its v2 twin. Today `RampedIntervalChrome` in
+- [x] 6.3 Render the ramped interval chrome and its v2 twin. Today `RampedIntervalChrome` in
   `routines/ramped_interval.be` places the bubble field beside the pressure with the status-plus-bar
   row below. Draw the chrome as it does today and a v2 reconstruction — a column holding a
   two-column row of the pressure and a `ProgressBubblesV2` at count 4, plus the status-plus-bar row
