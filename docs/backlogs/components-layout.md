@@ -151,7 +151,7 @@ are not updated; they stay on the v1 components until the porting pass that is s
   status-plus-bar row where the word is measured and the bar grows — saving both frames. Check:
   both frames are written.
 
-- [ ] 6.3 Render the ramped interval chrome and its v2 twin. Today `RampedIntervalChrome` in
+- [x] 6.3 Render the ramped interval chrome and its v2 twin. Today `RampedIntervalChrome` in
   `routines/ramped_interval.be` places the bubble field beside the pressure with the status-plus-bar
   row below. Draw the chrome as it does today and a v2 reconstruction — a column holding a
   two-column row of the pressure and a `ProgressBubblesV2` at count 4, plus the status-plus-bar row
