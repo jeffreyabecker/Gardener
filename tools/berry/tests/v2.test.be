@@ -176,3 +176,17 @@ def bubble_draws_each_shape()
 end
 
 test("a bubble draws each shape and the degenerate square", bubble_draws_each_shape)
+
+def bubbles_fill_by_count()
+  var p = ProgressBubblesV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 38
+  p.set_count(4)
+  p.draw(2)
+  assert_eq(p.children.size(), 4, "the field does not have one bubble per set")
+  assert_eq(p.children[0].w, 19, "a bubble is not sized to fill the box")
+  assert_true(p.children[0].filled, "the first bubble is not filled")
+  assert_true(p.children[1].filled, "the second bubble is not filled")
+  assert_true(!p.children[2].filled, "the third bubble is filled")
+end
+
+test("progress bubbles fill by count", bubbles_fill_by_count)
