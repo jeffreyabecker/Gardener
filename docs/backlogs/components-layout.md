@@ -121,7 +121,7 @@ parking-lot line.
   component can be seen without driving a whole scene. Check: a frame for a named component is
   written and opens as a BMP.
 
-- [ ] 5.2 Add a baseline test suite that drives the existing `/system/components/` components
+- [x] 5.2 Add a baseline test suite that drives the existing `/system/components/` components
   directly, not through the pages: `Text`'s fit ladder, `ProgressBubbles`' grid at several counts,
   `ProgressBar`, `Scrollbar`, `Triangle`, `PressureDisplay` and `Icon`, asserting each one's current
   behaviour and capturing a frame of it. This is the record of what the old framework renders
