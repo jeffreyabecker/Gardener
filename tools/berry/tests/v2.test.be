@@ -255,3 +255,19 @@ def pressure_display_secondary()
 end
 
 test("a pressure display places its secondary reading", pressure_display_secondary)
+
+def duration_formats()
+  var d = DurationV2()
+  d.format = "minutes"
+  assert_eq(d.text(45), "45s", "minutes: under a minute")
+  assert_eq(d.text(60), "1m", "minutes: a whole minute")
+  assert_eq(d.text(150), "2m30s", "minutes: minutes and seconds")
+  d.format = "seconds"
+  assert_eq(d.text(150), "150s", "seconds: seconds only")
+  d.format = "hours"
+  assert_eq(d.text(3725), "1h2m5s", "hours: hours minutes seconds")
+  assert_eq(d.text(125), "2m5s", "hours: minutes seconds")
+  assert_eq(d.text(0), "0s", "zero is not 0s")
+end
+
+test("a duration formats each unit", duration_formats)
