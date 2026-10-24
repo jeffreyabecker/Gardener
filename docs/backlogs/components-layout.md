@@ -128,7 +128,7 @@ parking-lot line.
   before the v2 components replace it. Check: `python tools/berry/check.py --tests` passes and a
   frame per component is written.
 
-- [ ] 5.3 Add test suites under `tools/berry/tests` for the v2 components, asserting the fit ladder
+- [x] 5.3 Add test suites under `tools/berry/tests` for the v2 components, asserting the fit ladder
   and truncation, measure and place, the four fill directions, the secondary pressure in each
   corner and side by side, the duration formats, and the bubble field at every count. Check:
   `python tools/berry/check.py --tests` passes.
