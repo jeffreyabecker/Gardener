@@ -40,17 +40,18 @@ end
 # The same square wave on the v2 icon base, drawing in its own box.
 class IntervalIconV2 : IconV2
   def init()
-    super(self).init(12, 8)
+    super(self).init()
+    self.dim = Size(12, 8)
   end
 
   def draw()
-    screen.draw_hline(self.x, self.y + 1, 3)
-    screen.draw_vline(self.x + 3, self.y + 1, 6)
-    screen.draw_hline(self.x + 3, self.y + 6, 3)
-    screen.draw_vline(self.x + 6, self.y + 1, 6)
-    screen.draw_hline(self.x + 6, self.y + 1, 3)
-    screen.draw_vline(self.x + 9, self.y + 1, 6)
-    screen.draw_hline(self.x + 9, self.y + 6, 3)
+    screen.draw_hline(self.pos.x, self.pos.y + 1, 3)
+    screen.draw_vline(self.pos.x + 3, self.pos.y + 1, 6)
+    screen.draw_hline(self.pos.x + 3, self.pos.y + 6, 3)
+    screen.draw_vline(self.pos.x + 6, self.pos.y + 1, 6)
+    screen.draw_hline(self.pos.x + 6, self.pos.y + 1, 3)
+    screen.draw_vline(self.pos.x + 9, self.pos.y + 1, 6)
+    screen.draw_hline(self.pos.x + 9, self.pos.y + 6, 3)
   end
 end
 
@@ -72,13 +73,14 @@ end
 # The same stairs on the v2 icon base, drawing in its own box.
 class RampedIntervalIconV2 : IconV2
   def init()
-    super(self).init(12, 8)
+    super(self).init()
+    self.dim = Size(12, 8)
   end
 
   def draw()
-    screen.draw_fillrect(self.x, self.y + 5, 3, 2)
-    screen.draw_fillrect(self.x + 4, self.y + 3, 3, 4)
-    screen.draw_fillrect(self.x + 8, self.y + 1, 3, 6)
+    screen.draw_fillrect(self.pos.x, self.pos.y + 5, 3, 2)
+    screen.draw_fillrect(self.pos.x + 4, self.pos.y + 3, 3, 4)
+    screen.draw_fillrect(self.pos.x + 8, self.pos.y + 1, 3, 6)
   end
 end
 
