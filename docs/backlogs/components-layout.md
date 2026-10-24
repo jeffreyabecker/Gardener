@@ -94,7 +94,7 @@ parking-lot line.
   with the inside filled to a value clamped to 0–100. Check: 0 draws the frame and no fill, 100
   fills the inside, and a value past the ends clamps.
 
-- [ ] 4.4 Add the new `Scrollbar` at `/system/components/v2/` with the thumb height and position
+- [x] 4.4 Add the new `Scrollbar` at `/system/components/v2/` with the thumb height and position
   and the hollow and framed forms. Check: the thumb's height is `h·visible/count` clamped to 1–`h`,
   and its top moves from the first to the last index.
 
