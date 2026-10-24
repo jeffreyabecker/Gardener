@@ -32,7 +32,7 @@ parking-lot line.
   pages keep drawing. Check: both load, the pages render as before, and `python
   tools/berry/check.py` passes.
 
-- [ ] 1.3 Add the new `Icon` at `/system/components/v2/` as a component with an intrinsic `w` by
+- [x] 1.3 Add the new `Icon` at `/system/components/v2/` as a component with an intrinsic `w` by
   `h`, a box, and the `inverted` flip. Today `system/components/icon.be` is boxless and drawn with
   `draw(x, y)`, and the browser still needs it. Check: an icon instance draws in its box and flips
   when inverted; the browser's rows are unchanged.
