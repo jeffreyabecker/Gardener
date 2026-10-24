@@ -140,7 +140,7 @@ reconstruction of it side by side, so the two can be compared. Pixel-perfect rep
 non-goal: the two frames are written for comparison, not compared byte-for-byte. The chrome classes
 are not updated; they stay on the v1 components until the porting pass that is still parked.
 
-- [ ] 6.1 Render the readout's chrome and its v2 twin. Today `ReadoutChrome` in `modules/ui.be`
+- [x] 6.1 Render the readout's chrome and its v2 twin. Today `ReadoutChrome` in `modules/ui.be`
   hardcodes two `PressureDisplay` halves. Draw the chrome as it does today and a v2 row of two
   growing `PressureDisplayV2`s across the 128×52 page area, saving both frames into `artifacts/v2/`
   for comparison. Check: both frames are written.
