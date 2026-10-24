@@ -62,3 +62,35 @@ def static_comparison()
 end
 
 test("the ramped static chrome renders both frameworks", static_comparison)
+
+def interval_comparison()
+  var s = vacuum.state()
+
+  screen.draw_clear()
+  var page = RampedInterval()
+  page.chrome.draw(s)
+  assert_true(save_v1("interval"), "cannot save the ramped interval v1 frame")
+
+  screen.draw_clear()
+  var pressure = PressureDisplayV2()
+  pressure.x = 0; pressure.y = 8; pressure.w = 64; pressure.h = 32
+  var bubbles = ProgressBubblesV2()
+  bubbles.x = 64; bubbles.y = 0; bubbles.w = 64; bubbles.h = 38
+  bubbles.set_count(4)
+  var row = LayoutV2()
+  row.x = 0; row.y = 44; row.w = 128; row.h = 8
+  var status = TextV2()
+  status.value = "READY"
+  status.align = "left"
+  var bar = ProgressBarV2()
+  bar.grow = true
+  row.add(status); row.add(bar)
+  row.place()
+  pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
+  bubbles.draw(0)
+  status.draw("READY")
+  bar.draw(50)
+  assert_true(save_v2("interval"), "cannot save the ramped interval v2 frame")
+end
+
+test("the ramped interval chrome renders both frameworks", interval_comparison)
