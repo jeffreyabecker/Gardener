@@ -21,6 +21,7 @@ components/v2/bubble.be
 components/v2/progress_bubbles.be
 components/v2/progress_bar.be
 components/v2/scrollbar.be
+components/v2/triangle.be
 scene.be
 list.be
 registry.be

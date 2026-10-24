@@ -98,7 +98,7 @@ parking-lot line.
   and the hollow and framed forms. Check: the thumb's height is `h·visible/count` clamped to 1–`h`,
   and its top moves from the first to the last index.
 
-- [ ] 4.5 Add the new `Triangle` at `/system/components/v2/` in the four directions, filled or
+- [x] 4.5 Add the new `Triangle` at `/system/components/v2/` in the four directions, filled or
   empty. Check: each direction draws in its box.
 
 - [ ] 4.6 Add the new `PressureDisplay` at `/system/components/v2/` with `family` and `style` and
