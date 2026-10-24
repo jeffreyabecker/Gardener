@@ -117,18 +117,18 @@ parking-lot line.
 
 ## Epic 5 — The baseline suite and the component captures
 
-- [ ] 5.1 Add a capture path that renders a named component to a frame, from either framework, so a
+- [x] 5.1 Add a capture path that renders a named component to a frame, from either framework, so a
   component can be seen without driving a whole scene. Check: a frame for a named component is
   written and opens as a BMP.
 
-- [ ] 5.2 Add a baseline test suite that drives the existing `/system/components/` components
+- [x] 5.2 Add a baseline test suite that drives the existing `/system/components/` components
   directly, not through the pages: `Text`'s fit ladder, `ProgressBubbles`' grid at several counts,
   `ProgressBar`, `Scrollbar`, `Triangle`, `PressureDisplay` and `Icon`, asserting each one's current
   behaviour and capturing a frame of it. This is the record of what the old framework renders
   before the v2 components replace it. Check: `python tools/berry/check.py --tests` passes and a
   frame per component is written.
 
-- [ ] 5.3 Add test suites under `tools/berry/tests` for the v2 components, asserting the fit ladder
+- [x] 5.3 Add test suites under `tools/berry/tests` for the v2 components, asserting the fit ladder
   and truncation, measure and place, the four fill directions, the secondary pressure in each
   corner and side by side, the duration formats, and the bubble field at every count. Check:
   `python tools/berry/check.py --tests` passes.

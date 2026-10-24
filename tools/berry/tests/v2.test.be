@@ -271,3 +271,64 @@ def duration_formats()
 end
 
 test("a duration formats each unit", duration_formats)
+
+def secondary_in_each_corner()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.secondary_pressure = 10.0
+  p.size_hint = 0.5
+  for pos : ["tl", "tr", "bl", "br"]
+    p.secondary_position = pos
+    p.draw(20.0)
+    var side = pos == "tl" || pos == "bl" ? "left" : "right"
+    var row = pos == "tl" || pos == "tr" ? "top" : "bottom"
+    assert_eq(p.secondary.align, side, "the secondary is on the wrong side")
+    assert_eq(p.secondary.v_align, row, "the secondary is on the wrong row")
+  end
+end
+
+test("a pressure display puts the secondary in each corner", secondary_in_each_corner)
+
+def bubbles_at_every_count()
+  var p = ProgressBubblesV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 38
+  var n = 1
+  while n <= 20
+    p.set_count(n)
+    p.draw(n)
+    assert_eq(p.children.size(), n, "the field does not rebuild for the count")
+    assert_true(p.children[0].w > 0, "a bubble has no size")
+    n += 1
+  end
+end
+
+test("progress bubbles fill every count", bubbles_at_every_count)
+
+def capture_v2(name)
+  return harness.save("tools/berry/artifacts/v2/" + name + ".bmp")
+end
+
+def v2_captures()
+  screen.draw_clear()
+  var t = TextV2()
+  t.x = 0; t.y = 0; t.w = 64; t.h = 16
+  t.align = "left"
+  t.draw("12.5")
+  assert_true(capture_v2("text"), "cannot save v2 text")
+
+  screen.draw_clear()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.secondary_pressure = 10.0
+  p.draw(20.0)
+  assert_true(capture_v2("pressure"), "cannot save v2 pressure")
+
+  screen.draw_clear()
+  var b = ProgressBubblesV2()
+  b.x = 0; b.y = 0; b.w = 64; b.h = 38
+  b.set_count(12)
+  b.draw(5)
+  assert_true(capture_v2("bubbles"), "cannot save v2 bubbles")
+end
+
+test("the v2 components capture their frames", v2_captures)
