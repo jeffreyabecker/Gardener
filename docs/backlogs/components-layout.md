@@ -56,24 +56,24 @@ parking-lot line.
 
 ## Epic 3 — The layout component
 
-- [ ] 3.1 Add the layout component at `/system/components/v2/`: a box holding children in order, a
+- [x] 3.1 Add the layout component at `/system/components/v2/`: a box holding children in order, a
   `fill_direction` (`lr-tb` first) and a `spacing`, placing measured children along the direction.
   Today no layout exists and every page writes each coordinate itself. Check: two measured children
   draw side by side with the spacing between them.
 
-- [ ] 3.2 Add growing children and the cross axis. Measured children keep their measured size;
+- [x] 3.2 Add growing children and the cross axis. Measured children keep their measured size;
   growing children share the space left after them equally; every child is stretched to the
   layout's cross size and aligns by its own `align` and `v_align`. Check: two growing children make
   equal columns; a measured word followed by a growing bar gives the bar the rest of the line.
 
-- [ ] 3.3 Add `wrap`, carrying a child that no longer fits to the next line or column, each
+- [x] 3.3 Add `wrap`, carrying a child that no longer fits to the next line or column, each
   separated by the spacing. Check: children beyond the line's width wrap and stack, each line as
   tall as its tallest child.
 
-- [ ] 3.4 Add the remaining fill directions `rl-tb`, `tb-lr` and `bt-lr`. Check: children fill from
+- [x] 3.4 Add the remaining fill directions `rl-tb`, `tb-lr` and `bt-lr`. Check: children fill from
   each named corner in order.
 
-- [ ] 3.5 Give a layout a natural size so a parent measures it: the sum of its children's sizes
+- [x] 3.5 Give a layout a natural size so a parent measures it: the sum of its children's sizes
   along the fill direction plus the spacing, and the largest child across it. Check: a layout
   inside a layout sizes to its children.
 

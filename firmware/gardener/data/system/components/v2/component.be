@@ -7,6 +7,7 @@
 class ComponentV2
   var x, y, w, h
   var inverted
+  var grow
 
   def init()
     self.x = 0
@@ -14,6 +15,7 @@ class ComponentV2
     self.w = 0
     self.h = 0
     self.inverted = false
+    self.grow = false
   end
 
   # The last thing a draw does: an inverted component flips its whole box, so everything it drew
@@ -22,6 +24,12 @@ class ComponentV2
     if self.inverted
       screen.draw_invert(self.x, self.y, self.w, self.h)
     end
+  end
+
+  # The box the component's content needs, given the cross-axis extent a layout will give it. The
+  # default is the box it already has; a text overrides this to measure its string.
+  def measure(cross)
+    return [self.w, self.h]
   end
 
   def draw()
