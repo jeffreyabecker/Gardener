@@ -50,29 +50,23 @@ end
 # The readout's chrome rebuilt on the v2 layout: the pressure and the target share the page area
 # above the overlay's band, each filling half. It lives beside ReadoutChrome until the pages are
 # ported onto the v2 components.
-class ReadoutChromeV2
+class ReadoutChromeV2 : LayoutV2
   var owner
-  var row
   var pressure
   var target_value
 
   def init(owner)
+    super(self).init([])
     self.owner = owner
-    self.pressure = PressureDisplayV2()
-    self.target_value = PressureDisplayV2()
-    self.pressure.grow = true
-    self.target_value.grow = true
-    self.row = LayoutV2()
-    self.row.x = 0
-    self.row.y = 0
-    self.row.w = screen.width()
-    self.row.h = screen.height() - 12
-    self.row.add(self.pressure)
-    self.row.add(self.target_value)
+    var pw = screen.page_width()
+    var half = pw / 2
+    self.pressure = PressureDisplayV2(Position(0, 0), Size(half, screen.page_height()))
+    self.target_value = PressureDisplayV2(Position(half, 0), Size(half, screen.page_height()))
+    self.add(self.pressure)
+    self.add(self.target_value)
   end
 
   def draw(s)
-    self.row.place()
     self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
     self.target_value.draw(s.target > 0.0 ? s.target : nil)
   end

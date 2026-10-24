@@ -49,8 +49,8 @@ class TextV2 : ComponentV2
   var _fitted_text
 
   # --- public methods ------------------------------------------------------
-  def init(value, settings)
-    super(self).init()
+  def init(pos, dim, value, settings)
+    super(self).init(pos, dim)
     var s = settings == nil ? text_settings.default() : settings
     s.apply_to(self)
     self.candidate = nil
@@ -65,13 +65,13 @@ class TextV2 : ComponentV2
       self._fitted_text = text
     end
     self._draw_fitted(self._truncated(text), self.candidate)
-    self.flip()
+    super(self).draw()
   end
 
   # Draw a string at a face the caller already chose, without fitting it.
   def draw_face(text, candidate)
     self._draw_fitted(text, candidate)
-    self.flip()
+    super(self).draw()
   end
 
   # The largest face whose ink height fits a cap, the last candidate when none does. A pressure
@@ -97,24 +97,6 @@ class TextV2 : ComponentV2
     end
     var b = screen.text_bounds(text, 1, candidate[0])
     return [b.w, b.h]
-  end
-
-  # The ink box of the current string at the largest face that fits the cross size, which is what
-  # a layout measures a text as.
-  def measure(cross)
-    if self.value == ""
-      return Size(0, 0)
-    end
-    var cands = self._candidates()
-    var i = 0
-    while i < cands.size()
-      var b = self.bounds(self.value, cands[i])
-      if b[1] <= cross
-        return Size(b[0], b[1])
-      end
-      i += 1
-    end
-    return Size(0, 0)
   end
 
   # --- private methods -----------------------------------------------------

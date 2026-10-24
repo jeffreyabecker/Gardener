@@ -2,8 +2,8 @@
 
 class ProgressBarV2 : ComponentV2
   var value
-  def init(value)
-    super(self).init()
+  def init(pos, dim, value)
+    super(self).init(pos, dim)
     self.value = value == nil ? 0 : value
   end
   def draw()
@@ -19,6 +19,6 @@ class ProgressBarV2 : ComponentV2
     if fill_w > 0
       screen.draw_fillrect(self.pos.x + 1, self.pos.y + 1, fill_w, self.dim.h - 2)
     end
-    self.flip()
+    super(self).draw()
   end
 end

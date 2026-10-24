@@ -23,13 +23,13 @@ end
 # The same glyph on the v2 icon base, drawing in its own box, so the v2 chrome has an icon of its
 # own without reaching for the v1 class.
 class RampedStaticIconV2 : IconV2
-  def init()
-    super(self).init()
-    self.dim = Size(12, 8)
+  def init(pos, dim)
+    super(self).init(pos, dim)
   end
 
   def draw()
     screen.draw_filltriangle(self.pos.x, self.pos.y + 6, self.pos.x + 11, self.pos.y + 1, self.pos.x + 11, self.pos.y + 6)
+    super(self).draw()
   end
 end
 
@@ -74,35 +74,27 @@ class RampedStaticChrome
   end
 end
 
-# The static chrome rebuilt on the v2 layout, modeled on the interval chrome: a column of rows —
-# the glyph, the pressure, and a status-plus-bar row. It lives beside RampedStaticChrome until the
-# pages are ported onto the v2 components.
-class RampedStaticChromeV2 : ColumnLayoutV2
+# The static chrome rebuilt on the v2 layout: a flat list of explicitly placed children — the
+# glyph and title, the pressure and the duration, and a status-plus-bar row. It lives beside
+# RampedStaticChrome until the pages are ported onto the v2 components.
+class RampedStaticChromeV2 : LayoutV2
   def init(title)
-    super(self).init([Position.top_left(), Size.page()], [
-      RowLayoutV2(Size.page_height(0.25), [
-        RampedStaticIconV2(),
-        TextV2(title)
-      ]),
-      RowLayoutV2(Size.page_height(0.50), [
-        AutoPressureDisplayV2("pressure:target", "br", 0.25),
-        DurationDisplayV2("minutes")
-      ]),
-      RowLayoutV2(Size.page_height(0.25), [
-        TextV2(""),
-        ProgressBarV2()
-      ])
+    var pw = screen.page_width()
+    var half = pw / 2
+    super(self).init([
+      RampedStaticIconV2(Position(0, 0), Size(12, 8)),
+      TextV2(Position(16, 2), Size(pw - 16, 9), title),
+      AutoPressureDisplayV2(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
+      DurationV2(Position(half, 13), Size(half, 26), "minutes"),
+      TextV2(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
+      ProgressBarV2(Position(half + 8, 41), Size(half - 8, 8), nil)
     ])
   end
 
   def draw(status, duration, elapsed)
-    var status_text = self.children[2].children[0]
-    var progress_bar = self.children[2].children[1]
-    var remaining_time = self.children[1].children[1]
-
-    remaining_time.value = elapsed
-    status_text.value = status
-    progress_bar.value = elapsed * 100.0 / duration
+    self.children[4].value = status
+    self.children[3].seconds = elapsed / 1000
+    self.children[5].value = elapsed * 100.0 / duration
     super(self).draw()
   end
 end

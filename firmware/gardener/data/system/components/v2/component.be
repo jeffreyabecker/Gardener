@@ -4,9 +4,10 @@
 # construct by name; the suffix is dropped when the pages are ported. A component draws inside its
 # box, and nothing it draws lies outside it.
 #
-# A box is a `Position` and a `Size` carried in `pos` and `dim`. `measure(cross)` reports the box a
-# component needs at the given cross extent and answers with a `Size`; a component whose size is not
-# yet known answers `Size(nil, nil)`, and a layout reads that as "no size" and gives it the space.
+# A box is a `Position` and a `Size`, passed to the component's init and carried in `pos` and
+# `dim`. Every component is given its box at construction and keeps it; there is no reflow. A
+# component that draws internal subcomponents before handing them a box may pass nil and stamp the
+# box on itself before drawing.
 class Position
   var x, y
   def init(x, y)
@@ -35,13 +36,7 @@ class Size
   static def height(s)
     return Size(nil, s)
   end
-  # A percentage of the screen's width or height, 0 to 100.
-  static def page_width(fract)
-    return Size(int(screen.page_width() * fract), nil)
-  end
-  static def page_height(fract)
-    return Size(nil, int(screen.page_height() * fract))
-  end
+
   static def page()
     return Size(screen.page_width(), screen.page_height())
   end
@@ -53,29 +48,19 @@ class ComponentV2
   var pos
   var dim
   var inverted
-  var grow
 
-  def init(pos, dim, inverted, grow)
+  def init(pos, dim)
     self.pos = pos == nil ? Position(0, 0) : pos
     self.dim = dim == nil ? Size(nil, nil) : dim
-    self.inverted = inverted == nil ? false : inverted
-    self.grow = grow == nil ? false : grow
+    self.inverted = false
   end
 
-  # The last thing a draw does: an inverted component flips its whole box, so everything it drew
-  # there reads as paper on ink.
-  def flip()
+  # The base draw is the inverted flip: an inverted component inverts its whole box, so everything
+  # a subclass drew there reads as paper on ink. Every draw ends with super, so the flip is the last
+  # thing that happens.
+  def draw()
     if self.inverted
       screen.draw_invert(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
     end
-  end
-
-  # The box the component's content needs, given the cross-axis extent a layout will give it. The
-  # default is the box it already has; a text overrides this to measure its string.
-  def measure(cross)
-    return Size(self.dim.w, self.dim.h)
-  end
-
-  def draw()
   end
 end

@@ -53,8 +53,8 @@ class PressureDisplayV2 : ComponentV2
   var _secondary
 
   # --- public methods ------------------------------------------------------
-  def init(settings, settings_secondary, secondary_position, size_hint)
-    super(self).init()
+  def init(pos, dim, settings, settings_secondary, secondary_position, size_hint)
+    super(self).init(pos, dim)
     self.family = "sans"
     self.style = "none"
     self.align = "center"
@@ -76,8 +76,8 @@ class PressureDisplayV2 : ComponentV2
     if size_hint != nil
       self.size_hint = size_hint
     end
-    self._number = TextV2()
-    self._secondary = TextV2()
+    self._number = TextV2(nil, nil)
+    self._secondary = TextV2(nil, nil)
   end
 
   def draw(pressure_kpa, secondary_pressure)
@@ -95,7 +95,7 @@ class PressureDisplayV2 : ComponentV2
         self._draw_corner(sec_text)
       end
     end
-    self.flip()
+    super(self).draw()
   end
 
   # --- private methods -----------------------------------------------------
@@ -184,8 +184,8 @@ end
 class AutoPressureDisplayV2 : PressureDisplayV2
   var _pressure_order
 
-  def init(pressure_order, secondary_position, size_hint)
-    super(self).init(nil, nil, secondary_position, size_hint)
+  def init(pos, dim, pressure_order, secondary_position, size_hint)
+    super(self).init(pos, dim, nil, nil, secondary_position, size_hint)
     if pressure_order == nil
       pressure_order = "pressure:target"
     end

@@ -5,8 +5,8 @@ class BubbleV2 : ComponentV2
   # "filled" draws the solid shape, "unfilled" the outline and "none" nothing at all.
   var fill_state
 
-  def init(shape, fill_state)
-    super(self).init()
+  def init(pos, dim, shape, fill_state)
+    super(self).init(pos, dim)
     self.shape = shape == nil ? "circle" : shape
     # A boolean reaches here from callers written before the three states existed; it maps onto the
     # two states it could mean.
@@ -35,7 +35,7 @@ class BubbleV2 : ComponentV2
       if solid
         screen.draw_fillrect(x, y, s, s)
       end
-      self.flip()
+      super(self).draw()
       return
     end
     if self.shape == "rect"
@@ -67,7 +67,7 @@ class BubbleV2 : ComponentV2
         screen.draw_circle(x + r, y + r, r)
       end
     end
-    self.flip()
+    super(self).draw()
   end
 
   def tri(solid, x0, y0, x1, y1, x2, y2)

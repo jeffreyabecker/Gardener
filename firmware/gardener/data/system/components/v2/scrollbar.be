@@ -7,8 +7,8 @@ class ScrollbarV2 : ComponentV2
   var count
   var visible
 
-  def init()
-    super(self).init()
+  def init(pos, dim)
+    super(self).init(pos, dim)
     self.hollow = false
     self.index = 0
     self.count = 0
@@ -48,6 +48,6 @@ class ScrollbarV2 : ComponentV2
       screen.draw_rect(x, y, w, h)
       screen.draw_fillrect(x, top, w, thumb)
     end
-    self.flip()
+    super(self).draw()
   end
 end

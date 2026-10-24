@@ -1,14 +1,14 @@
 # duration.be — the v2 Duration: whole seconds formatted in the panel's units of time. It is a
 # Text, so the string is fitted, cached and aligned by the same face ladder as any other text. The
-# format property picks the largest unit shown.
+# format property picks the largest unit shown, and `seconds` is the count it draws.
 
 class DurationV2 : TextV2
   var format
-  # The seconds last shown, so a layout can measure the duration before its first draw.
+  # The seconds shown, set by the caller before a draw, like a text's value.
   var seconds
 
-  def init(format)
-    super(self).init()
+  def init(pos, dim, format)
+    super(self).init(pos, dim)
     self.format = format == nil ? "minutes" : format
     self.seconds = 0
   end
@@ -49,41 +49,9 @@ class DurationV2 : TextV2
     return str(total) + "m" + str(secs2) + "s"
   end
 
-  # A duration is measured from the loop it last showed, so a layout that places before it draws
-  # still gets the string's own ink box rather than an empty one.
-  def measure(cross)
-    self.value = self.text(self.seconds)
-    return super(self).measure(cross)
-  end
-
-  def draw(seconds)
-    self.seconds = seconds
-    self.value = self.text(seconds)
-    super(self).draw()
-  end
-end
-
-# A duration the caller feeds a value to, like a progress bar: `value` is the page's own timer in
-# milliseconds, and the display formats it as a duration. Its box comes from a layout, so on its own
-# it is unsized.
-class DurationDisplayV2 : ComponentV2
-  var format
-  var value
-  var _number
-
-  def init(format)
-    super(self).init()
-    self.format = format == nil ? "minutes" : format
-    self.value = 0
-    self._number = DurationV2(format)
-  end
-
+  # A duration draws the seconds set on it, formatted and fitted like any text.
   def draw()
-    self._number.pos.x = self.pos.x
-    self._number.pos.y = self.pos.y
-    self._number.dim.w = self.dim.w
-    self._number.dim.h = self.dim.h
-    self._number.draw(self.value / 1000)
-    self.flip()
+    self.value = self.text(self.seconds)
+    super(self).draw()
   end
 end

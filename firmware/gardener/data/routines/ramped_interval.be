@@ -39,9 +39,8 @@ end
 
 # The same square wave on the v2 icon base, drawing in its own box.
 class IntervalIconV2 : IconV2
-  def init()
-    super(self).init()
-    self.dim = Size(12, 8)
+  def init(pos, dim)
+    super(self).init(pos, dim)
   end
 
   def draw()
@@ -52,6 +51,7 @@ class IntervalIconV2 : IconV2
     screen.draw_hline(self.pos.x + 6, self.pos.y + 1, 3)
     screen.draw_vline(self.pos.x + 9, self.pos.y + 1, 6)
     screen.draw_hline(self.pos.x + 9, self.pos.y + 6, 3)
+    super(self).draw()
   end
 end
 
@@ -72,15 +72,15 @@ end
 
 # The same stairs on the v2 icon base, drawing in its own box.
 class RampedIntervalIconV2 : IconV2
-  def init()
-    super(self).init()
-    self.dim = Size(12, 8)
+  def init(pos, dim)
+    super(self).init(pos, dim)
   end
 
   def draw()
     screen.draw_fillrect(self.pos.x, self.pos.y + 5, 3, 2)
     screen.draw_fillrect(self.pos.x + 4, self.pos.y + 3, 3, 4)
     screen.draw_fillrect(self.pos.x + 8, self.pos.y + 1, 3, 6)
+    super(self).draw()
   end
 end
 
@@ -143,34 +143,27 @@ class RampedIntervalChrome
   end
 end
 
-# The interval chrome rebuilt on the v2 layout: the pressure in the left half, the set bubbles in
-# the right, and a status-plus-bar row below. It lives beside RampedIntervalChrome until the pages
-# are ported onto the v2 components.
-class RampedIntervalChromeV2 : ColumnLayoutV2
+# The interval chrome rebuilt on the v2 layout: a flat list of explicitly placed children — the
+# glyph and title, the pressure and the set bubbles, and a status-plus-bar row. It lives beside
+# RampedIntervalChrome until the pages are ported onto the v2 components.
+class RampedIntervalChromeV2 : LayoutV2
   def init(title, total_sets)
-    super(self).init([Position.top_left(), Size.page()], [
-      RowLayoutV2(Size.page_height(0.25), [
-        RampedIntervalIconV2(),
-        TextV2(title)
-      ]),
-      RowLayoutV2(Size.page_height(0.50), [
-        AutoPressureDisplayV2("pressure:target", "br", 0.25),
-        ProgressBubblesV2()
-      ]),
-      RowLayoutV2(Size.page_height(0.25), [
-        TextV2(""),
-        ProgressBarV2()
-      ])
+    var pw = screen.page_width()
+    var half = pw / 2
+    super(self).init([
+      RampedIntervalIconV2(Position(0, 0), Size(12, 8)),
+      TextV2(Position(16, 2), Size(pw - 16, 9), title),
+      AutoPressureDisplayV2(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
+      ProgressBubblesV2(Position(half, 13), Size(half, 26), total_sets, "circle", "lr-tb"),
+      TextV2(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
+      ProgressBarV2(Position(half + 8, 41), Size(half - 8, 8), nil)
     ])
   end
 
   def draw(current_set, status, remaining_percent)
-    var progress_bubbles = self.children[1].children[1]
-    var status_text = self.children[2].children[0]
-    var progress_bar = self.children[2].children[1]
-    progress_bubbles.count = current_set
-    status_text.value = status
-    progress_bar.value = remaining_percent
+    self.children[3].count = current_set
+    self.children[4].value = status
+    self.children[5].value = remaining_percent
     super(self).draw()
   end
 end

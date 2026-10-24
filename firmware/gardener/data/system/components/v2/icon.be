@@ -1,12 +1,14 @@
-# icon.be — the v2 Icon: a component that draws a glyph in its box. It carries no size of its own;
-# each glyph subclass sets its own size in its constructor, or the layout it sits in gives it one.
+# icon.be — the v2 Icon: a component that draws a glyph in its box. The caller passes the box at
+# init; a glyph subclass draws its own ink inside it.
 
 class IconV2 : ComponentV2
-  def init()
-    super(self).init()
+  def init(pos, dim)
+    super(self).init(pos, dim)
   end
 
-  # An icon draws its glyph in the box; a subclass overrides this.
+  # An icon draws its glyph in the box; a subclass overrides this and ends with super, so the base
+  # flip still runs.
   def draw()
+    super(self).draw()
   end
 end
