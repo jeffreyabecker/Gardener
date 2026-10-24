@@ -34,3 +34,31 @@ def readout_comparison()
 end
 
 test("the readout renders both frameworks", readout_comparison)
+
+def static_comparison()
+  var s = vacuum.state()
+
+  screen.draw_clear()
+  var page = RampedStatic()
+  page.chrome.draw(s)
+  assert_true(save_v1("static"), "cannot save the ramped static v1 frame")
+
+  screen.draw_clear()
+  var pressure = PressureDisplayV2()
+  pressure.x = 0; pressure.y = 8; pressure.w = 64; pressure.h = 32
+  var row = LayoutV2()
+  row.x = 0; row.y = 44; row.w = 128; row.h = 8
+  var status = TextV2()
+  status.value = "READY"
+  status.align = "left"
+  var bar = ProgressBarV2()
+  bar.grow = true
+  row.add(status); row.add(bar)
+  row.place()
+  pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
+  status.draw("READY")
+  bar.draw(50)
+  assert_true(save_v2("static"), "cannot save the ramped static v2 frame")
+end
+
+test("the ramped static chrome renders both frameworks", static_comparison)
