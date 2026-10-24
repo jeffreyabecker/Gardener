@@ -61,7 +61,7 @@ parking-lot line.
   Today no layout exists and every page writes each coordinate itself. Check: two measured children
   draw side by side with the spacing between them.
 
-- [ ] 3.2 Add growing children and the cross axis. Measured children keep their measured size;
+- [x] 3.2 Add growing children and the cross axis. Measured children keep their measured size;
   growing children share the space left after them equally; every child is stretched to the
   layout's cross size and aligns by its own `align` and `v_align`. Check: two growing children make
   equal columns; a measured word followed by a growing bar gives the bar the rest of the line.

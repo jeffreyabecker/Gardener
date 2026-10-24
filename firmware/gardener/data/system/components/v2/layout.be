@@ -25,25 +25,53 @@ class LayoutV2 : ComponentV2
     return self.fill_direction == "lr-tb" || self.fill_direction == "rl-tb"
   end
 
-  # Measure each child, then place the measured ones along the fill direction, separated by the
-  # spacing. A child keeps its measured size along both axes for now.
+  # Measure each child, then place them along the fill direction, separated by the spacing.
+  # Measured children keep their measured size; growing children share the space left over
+  # equally; every child is stretched to the layout's cross size.
   def place()
     var cross = self.horizontal() ? self.h : self.w
-    var cursor = self.horizontal() ? self.x : self.y
+    var main_total = self.horizontal() ? self.w : self.h
+    var n = self.children.size()
+
+    var entries = []
+    var measured_sum = 0
+    var growing = 0
     var i = 0
-    while i < self.children.size()
+    while i < n
       var child = self.children[i]
       var m = child.measure(cross)
       var main = self.horizontal() ? m[0] : m[1]
+      entries.push([child, m, main])
+      if child.grow
+        growing += 1
+      else
+        measured_sum += main
+      end
+      i += 1
+    end
+
+    var leftover = main_total - measured_sum - self.spacing * (n - 1)
+    var share = 0
+    if growing > 0 && leftover > 0
+      share = leftover / growing
+    end
+
+    var cursor = self.horizontal() ? self.x : self.y
+    i = 0
+    while i < n
+      var entry = entries[i]
+      var child = entry[0]
+      var m = entry[1]
+      var main = child.grow ? share : entry[2]
       if self.horizontal()
         child.x = cursor
         child.y = self.y
         child.w = main
-        child.h = m[1]
+        child.h = self.h
       else
         child.x = self.x
         child.y = cursor
-        child.w = m[0]
+        child.w = self.w
         child.h = main
       end
       cursor = cursor + main + self.spacing
