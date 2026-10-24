@@ -10,17 +10,17 @@ class PressureSettingCfg : SettingCfg
     self.step = step
   end
 
+  def parse(raw)
+    return real(raw)
+  end
+
   def bounded(value)
-    return vacuum.clamp(value)
+    return vacuum.clamp(self.parse(value))
   end
 
   def text(value)
     var unit = screen.unit()
     return string.format("%." + str(unit.decimals) + "f", value * unit.per_kpa)
-  end
-
-  def lowest()
-    return vacuum.clamp(0.0)
   end
 
   def scene(value)

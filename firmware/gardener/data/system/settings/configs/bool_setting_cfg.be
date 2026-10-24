@@ -1,16 +1,17 @@
 # bool_setting_cfg.be — BoolSettingCfg: a setting whose value is true or false.
 
 class BoolSettingCfg : SettingCfg
+  # The store hands a bool back as the text the file holds, so the text is part of the kind.
+  def parse(raw)
+    return raw == true || raw == "true" || raw == "1"
+  end
+
   def bounded(value)
-    return value ? true : false
+    return self.parse(value)
   end
 
   def text(value)
     return value ? "ON" : "OFF"
-  end
-
-  def lowest()
-    return false
   end
 
   def scene(value)

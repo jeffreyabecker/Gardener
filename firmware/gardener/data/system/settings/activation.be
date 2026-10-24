@@ -3,6 +3,8 @@
 # repeats the map-or-file rule or the bounds its kind is held to.
 
 class Activation
+  # The name the page registered under, which is also the name of the document its values are kept
+  # in: routines.settings() is asked with it as a declaration and store is given it as a file.
   var routine
   var values
   var settings
@@ -41,22 +43,18 @@ class Activation
   end
 
   # The raw value, for a page rule the kind does not own: a step of zero means no step, which is
-  # not a depth any setting would produce. It is typed like a read - the store parses a value as the
-  # type of the fallback it is given - but not held to the bounds.
+  # not a depth any setting would clamp to. The stored value comes back in the kind's own type but
+  # held to no bound.
   def raw(key)
     var item = self.setting(key)
     if item == nil
       vacuum.log("settings: " + self.routine + " registers no " + key)
       return nil
     end
-    var fallback = item.default_value
-    if fallback == nil
-      fallback = item.lowest()
-    end
     if self.values != nil
-      return self.values.find(key, fallback)
+      return self.values.find(key, nil)
     end
-    return store.get(self.routine, key, fallback)
+    return item.read_raw(self.routine)
   end
 
   # Whether a key holds nothing: a nullable setting whose file or map has no value for it.

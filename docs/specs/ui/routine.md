@@ -56,9 +56,9 @@ dispatch, and `Page` adds the routine's name and its settings view; a routine ex
 defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
 method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
 
-The fifth argument is the routine's **settings scene** — the class that edits its values, or `nil`
-when it has none. It is a `SettingsScene` subclass, and it is where the list and any rule that binds
-one setting to another live, so the page never names the keys itself (see below).
+The fifth argument is the routine's **settings declaration** — the class that describes the values it
+edits and any rule that binds them, or `nil` when it has none. It is asked through the class and
+never built, so both of its answers are static (see below).
 
 `activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
 none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
@@ -100,8 +100,10 @@ so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` 
 `class Ux` and the global `ux`, the frames, the callbacks and the one-beat deferral, with the
 firmware calling `reset`, `enter` and `poll` on it. `/system/scene.be` is
 `Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
-`/system/registry.be` is the registry: `class RoutineRegistry` and the global `routines` instance —
-the list the browser draws, and the `push(name, callback)` that opens a routine.
+`/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
+builds — name, title, icon, factory and settings class — and `class RoutineRegistry` with the global
+`routines` instance — the list the browser draws, and the `push(name, callback)` that opens a
+routine.
 `/system/list.be` is `List`, a selectable menu.
 
 `/system/components/` is the drawing primitives a readout composes, one class per file:
@@ -116,14 +118,14 @@ paper where its ink was — which is what a selected row, a cursor or a focused 
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
-`settings_scene.be` is `SettingsScene` (the list) and `page.be` is `Page` (the scene a routine
-extends). `activation.be` is `Activation`, one activation's values. `configs/` holds one setting per
-kind: `setting_cfg.be` is `SettingCfg` and `bool_setting_cfg.be`, `choice_setting_cfg.be`,
-`int_setting_cfg.be`, `real_setting_cfg.be`, `pressure_setting_cfg.be` and
-`duration_setting_cfg.be` are the kinds, each opening the value scene of the same name.
-**`up:double`** is the standard gesture for opening the list; the
-page's own gesture calls `open_settings()`, which pushes the list under the page's name and writes
-each committed value to the page's file:
+`settings_scene.be` is `SettingsScene` (the list, handed its rows and its values) and `page.be` is
+`Page` (the scene a routine extends). `activation.be` is `Activation`, one activation's values.
+`configs/` holds one setting per kind: `setting_cfg.be` is `SettingCfg` and
+`bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
+`pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
+of the same name. **`up:double`** is the standard gesture for opening the list; the page's own
+gesture calls `open_settings()`, which reads the values, applies the rule, pushes the list and then
+writes what it settles on:
 
 ```berry
 def edit()
@@ -132,10 +134,9 @@ def edit()
 end
 ```
 
-`SettingsScene` reads the list the routine registered and each value from its store file through the
-setting itself; nothing in the settings folder writes. A committed value is handed to the caller's
-callback, which writes where appropriate. `back:single` at the top of the list pops the settings
-scene with nil.
+Nothing in the settings folder writes: `SettingsScene` edits the values it was handed and pops them
+on `back:single`, and the caller — the page here, the browser from the routine's row — applies the
+rule and writes them.
 
 `/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
 native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
@@ -234,14 +235,13 @@ What that costs, stated plainly:
 
 ## The settings a routine registers
 
-A routine's settings are a scene of their own: a class extending `SettingsScene` from
-`/system/settings/scenes/settings_scene.be`, registered as the fourth argument. It answers
-`settings()` with the values it edits, in the order the list shows them, and — when its values
-constrain one another — `problem()` with the rule that has to hold:
+A routine's settings are a declaration of its own: a class registered as the fifth argument, holding
+the values it edits in the order the list shows them and, when its values constrain one another, the
+rule that has to hold. Both answers are static, because the class is asked and never built:
 
 ```berry
-class MySettings : SettingsScene
-  def settings()
+class MySettings
+  static def settings()
     return [
       PressureSettingCfg("target", 10.0, "Target", nil, 1, false),
       DurationSettingCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
@@ -250,7 +250,7 @@ class MySettings : SettingsScene
     ]
   end
 
-  def problem(values)
+  static def problem(values)
     if values["hold"] > 3600
       return "HOLD > 1H"
     end
@@ -261,8 +261,14 @@ end
 routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 ```
 
-A routine with nothing to edit registers `nil`. A subclass that defines only `settings()` inherits
-the rows, the value scenes, the writes and the repair.
+A routine with nothing to edit registers `nil`. A class that is registered answers both: a routine
+with no rule of its own returns `nil` from `problem`.
+
+The list itself is `SettingsScene(items, values, message)`, built by whoever opens it — the page's
+`up:double`, or the browser's Forward on the routine's row. That caller reads each value from the
+file, applies the rule and pushes the scene; the scene edits the values and pops them when Back is
+pressed; the caller applies the rule again and writes every value. The scene never touches the
+store, and nothing is written until the list closes.
 
 ### A setting
 
@@ -291,16 +297,20 @@ first, then the kind's own, and `nullable` last:
 The setting is the whole of what its value is: the rules its kind needs, and the value scene that
 edits it. It answers five questions:
 
-- `read(name)` — the stored value in the kind's own type from the file it is given, or the default
-  when nothing is stored.
+- `read(name)` — the stored value from the file it is given, held to the kind, or the default when
+  nothing is stored.
+- `read_raw(name)` — the same value in the kind's own type, held to no bound: a page rule that has to
+  see a value the kind would clamp still reads what the file says.
 - `value(raw)` — a value that came from a switch's map, held to the same rules.
 - `text(value)` — the value as the list shows it.
-- `lowest()` — the lowest real value the kind can hold, which is also the fallback that types a read
-  of a setting with no default.
 - `scene(value)` — the value scene that edits it.
 
-Which file a value belongs to is the caller's: the config reads the name it is handed, and the
-value the scene settles on is written by the callback the caller passed, never by the config.
+The store hands a value back as the text the file holds, so the kind parses it: an int or a duration
+through `int()`, a real or a pressure through `real()`, a bool from `true`/`1`, a choice from its own
+list.
+
+Which file a value belongs to is the caller's: the setting reads the name it is handed, and the
+caller writes what the list settles on.
 
 A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
 clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
@@ -314,16 +324,16 @@ A `nullable` setting whose key is unset — or holds an empty value — reads as
 default says, and shows `--` in the list. Opening its row hands the scene the stored value, or the
 setting's default when it holds nothing — so a nullable setting with no default opens at `--`.
 `nil` sits one step below the kind's lowest real value: Down at the lowest value clears back to
-`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` writes an empty
-value, which reads as `nil` again.
+`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` hands back nothing,
+which the caller writes as an empty value and reads back as `nil`.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a
 whole minute. `ok:single` opens it in the **minutes** stage, Up/Down moves that by a minute,
 `forward:single` moves on to the **seconds** stage, and Up/Down moves that by `step` seconds
-(default 1); `ok:single` then writes, and `back:single` steps back to the minutes stage.
+(default 1); `ok:single` then keeps it, and `back:single` steps back to the minutes stage.
 `cancel:single` discards from either stage. The value is held between `min` and `max`, and never
 below zero. A nullable duration cleared from the minutes stage advances to the seconds stage still
-`nil`, and the second OK writes the clear.
+`nil`, and the second OK keeps the clear.
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
 `12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the overlay's, printed in its
@@ -336,12 +346,12 @@ The machine's own `min` … `floor` is the range, so a pressure setting takes no
 
 ### A rule across settings
 
-`problem(values)` is asked with every value by key whenever the list opens and after every commit.
-The scene never hands out a set the rule refuses: while it fails, the settings that differ from
-their default are put back to them — the one just changed first, then the rest in the order the
-list shows them — and each repair is written through the page's callback. The rule that was applied
-is drawn in place of the list's title until the next press. So a file edited by hand is mended the
-moment its settings are opened, and an edit that would break a rule lands on the default instead.
+`problem(values)` is asked with every value by key when the list opens and again when it closes.
+While the rule refuses the set, the settings that differ from their default are put back to them in
+the order the list shows them, so what is written is always a set the rule accepts. The reason that
+was applied is drawn in place of the list's title until the first value is committed. So a file
+edited by hand is shown mended the moment its settings are opened and written mended when the list
+closes; an edit that would break a rule is put back when the list closes.
 
 A page starting a run from a file nobody has opened settings on still refuses: `begin()` asks the
 same rule of the values it read.
@@ -350,8 +360,8 @@ same rule of the values it read.
 
 A page reads its values through `self.activation(settings)`: `value(key)` for a setting held to its
 kind — from the switch's map when one was carried, from the routine's own file otherwise —
-`raw(key)` for a rule the kind does not own, and `unset(key)` for a nullable setting that holds
-nothing.
+`raw(key)` for a rule the kind does not own, which reads the same value in the kind's own type held
+to no bound, and `unset(key)` for a nullable setting that holds nothing.
 
 ```berry
 def read_settings(settings)

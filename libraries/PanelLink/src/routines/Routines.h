@@ -57,11 +57,11 @@ class Routines {
   bool takePress(String& gesture) { return gestures_.take(gesture); }
 
   // --- the `store` module's surface ---
-  // A routine's own values, kept in the routine's own document by the settings source the context
-  // gave. The name is a plain word: the document is named after it, so a path separator would
+  // The values a page keeps, in the document its name addresses, through the library the context
+  // gave. The document is a plain word: the file is named after it, so a path separator would
   // address another file.
-  bool storeGet(const char* routine, const char* key, String& out);
-  bool storeSet(const char* routine, const char* key, const String& value);
+  bool storeGet(const char* document, const char* key, String& out);
+  bool storeSet(const char* document, const char* key, const String& value);
 
  private:
   size_t loadSystem(size_t& found);

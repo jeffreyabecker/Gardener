@@ -14,8 +14,12 @@ class RealSettingCfg : SettingCfg
     end
   end
 
+  def parse(raw)
+    return real(raw)
+  end
+
   def bounded(value)
-    var number = value
+    var number = self.parse(value)
     if self.min != nil && number < self.min
       number = self.min
     end
@@ -23,13 +27,6 @@ class RealSettingCfg : SettingCfg
       number = self.max
     end
     return number
-  end
-
-  def lowest()
-    if self.min != nil
-      return self.min
-    end
-    return 0.0
   end
 
   def scene(value)

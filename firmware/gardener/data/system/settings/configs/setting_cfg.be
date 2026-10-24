@@ -21,22 +21,27 @@ class SettingCfg
     self.problem = nil
   end
 
-  # The setting's value from the routine's file, or its default when nothing was stored. A nullable
-  # setting that holds nothing reads as nil whatever its default says.
+  # The setting's value from the routine's file, held to the kind. A nullable setting that holds
+  # nothing reads as nil whatever its default says.
   def read(name)
     if self.problem != nil
       return self.default_value
     end
-    if self.nullable && store.get(name, self.key, "") == ""
-      return nil
+    return self.value(self.read_raw(name))
+  end
+
+  # The stored value in the kind's own type, held to no bound: a page rule that has to see a value
+  # the kind would clamp still reads what the file says. The store answers the file's text for a
+  # key it holds and nil for one it does not, and the kind parses that text.
+  def read_raw(name)
+    var raw = store.get(name, self.key, nil)
+    if raw == nil || raw == ""
+      if self.nullable
+        return nil
+      end
+      return self.default_value
     end
-    # The store reads a value as the type of the fallback it is given, so a setting with no default
-    # borrows the kind's own zero for that.
-    var fallback = self.default_value
-    if fallback == nil
-      fallback = self.lowest()
-    end
-    return self.value(store.get(name, self.key, fallback))
+    return self.parse(raw)
   end
 
   # A raw value - from a switch's map, or from a file - held to the kind: nil when the kind is

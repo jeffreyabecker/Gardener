@@ -48,26 +48,43 @@ def harness_editor_wrote(name, key, value)
   store.set(name, key, value == nil ? "" : value)
 end
 
-# The settings view is the one path every routine with settings shares: push it, edit every value,
-# and make sure each commit reaches the file through the caller.
+# A settled set the driver writes, which is the caller's half of the list: apply the routine's rule,
+# then write every value.
+def harness_editor_settled(name, items, values)
+  routines.repair(name, items, values)
+  var i = 0
+  while i < items.size()
+    harness_editor_wrote(name, items[i].key, values[i])
+    i += 1
+  end
+end
+
+# The settings view is the one path every routine with settings shares: open it the way a caller
+# does, edit every value, and make sure the set it settles on reaches the file.
 def harness_editor(name)
   var label = "settings: " + name
   var described = routines.settings(name)
   if described == nil || described.size() == 0
     return
   end
-
-  harness_activate(name, nil)
-  routines.push_settings(name, / key, value -> harness_editor_wrote(name, key, value), nil)
-
-  var i = 0
-  while i < described.size()
-    var item = described[i]
+  for item : described
     if !isinstance(item, SettingCfg)
       harness_fail(label + " settings returned a non-setting")
       return
     end
+  end
 
+  harness_activate(name, nil)
+  var values = []
+  for item : described
+    values.push(item.read(name))
+  end
+  routines.repair(name, described, values)
+  ux.push(SettingsScene(described, values, nil), nil,
+          / v -> harness_editor_settled(name, described, v))
+
+  var i = 0
+  while i < described.size()
     # Forward opens the value scene for the row the list has selected, and a second Forward
     # advances a duration from its minutes stage to its seconds; every other kind ignores it.
     harness.press("forward:single")
@@ -79,10 +96,6 @@ def harness_editor(name)
     harness.press("ok:single")
     harness.beat(1)
 
-    if !harness.wrote(name, item.key)
-      harness_fail(label + " did not write " + str(item.key))
-    end
-
     if i + 1 < described.size()
       harness.press("down:single")
       harness.beat(1)
@@ -90,9 +103,15 @@ def harness_editor(name)
     i += 1
   end
 
-  # Back closes the settings list and pops it, which hands the panel back to the routine.
+  # Back closes the settings list, which is when the values it settled on are written.
   harness.press("back:single")
   harness.beat(1)
+
+  for item : described
+    if !harness.wrote(name, item.key)
+      harness_fail(label + " did not write " + str(item.key))
+    end
+  end
 end
 
 # One routine's life: activate, a run started by a person, 400 s of virtual time, the device's own

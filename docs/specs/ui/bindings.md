@@ -336,12 +336,12 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, icon, factory, settings)` | `bool` | bind a name to the label the browser draws, the scene class that draws it and the scene class that edits its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the name; `icon` is an `Icon` instance or `nil`; `settings` is a `SettingsScene` subclass, or `nil` when the routine has nothing to edit |
+| `routines.register(name, title, icon, factory, settings)` | `bool` | bind a name to the label the browser draws, the scene class that draws it and the class that declares its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the name; `icon` is an `Icon` instance or `nil`; `settings` is a class answering static `settings()` and `problem(values)`, or `nil` when the routine has nothing to edit |
 | `routines.names()` | list of strings | every registered name, in registration order |
 | `routines.title(name)` | string, or `nil` | the label the browser draws for the routine |
-| `routines.settings(name)` | list of setting configs, or `nil` | what the routine's settings scene edits |
-| `routines.settings_scene(name)` | a `SettingsScene`, or `nil` | one with no writer, for asking what a routine edits |
-| `routines.push_settings(name, on_change, closed)` | `bool` | build the routine's settings scene, hand it `on_change(key, value)` for every value it settles, and run `closed` when it pops |
+| `routines.settings(name)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
+| `routines.repair(name, items, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
+| `routines.problem(name, items, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
 | `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
 
@@ -359,10 +359,10 @@ it grows as files register.
 | `store.get(name, key, fallback)` | the fallback's type | a routine's value, or `fallback` when the key was never set |
 | `store.set(name, key, value)` | `bool` | write a routine's value |
 
-A routine's values live in `/routines/<name>.cfg`, named after the routine, and a data-image upload
-can ship initial ones beside its `.be`. A routine writes its own; a page that edits another
-routine's values (the browser does) uses the same named forms. The name is a plain word — a name
-with `/` or `\` is refused, because it would address another file.
+A routine's values live in its own document at `/routines/<name>.cfg`, named after the routine, and a
+data-image upload can ship initial ones beside its `.be`. A routine writes its own; a page that edits
+another routine's values (the browser does) uses the same named forms. The name is a plain word — a
+name with `/` or `\` is refused, because it would address another file.
 
 The **fallback sets the type** the stored text is read back as:
 

@@ -11,16 +11,16 @@ class DurationSettingCfg : SettingCfg
     self.max = max
   end
 
+  def parse(raw)
+    return int(raw)
+  end
+
   def bounded(value)
-    return duration_seconds(value, self.min, self.max)
+    return duration_seconds(self.parse(value), self.min, self.max)
   end
 
   def text(value)
     return duration_text(value)
-  end
-
-  def lowest()
-    return duration_seconds(0, self.min, self.max)
   end
 
   def scene(value)

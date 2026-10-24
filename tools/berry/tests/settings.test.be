@@ -1,7 +1,7 @@
 # settings.test.be — what the settings model promises: a default when nothing has been stored, a
-# value held to its kind on the way in, and a set the settings scene repairs rather than hands out
-# broken. The shipped routines exercise int, pressure, duration and choice; bool, real and every
-# value past a bound are only covered here.
+# value held to its kind on the way in, and a set the caller repairs rather than hands on broken.
+# The shipped routines exercise int, pressure, duration and choice; bool, real and every value past a
+# bound are only covered here.
 
 suite = "settings"
 
@@ -50,7 +50,6 @@ def every_kind_builds()
   var flags = BoolSettingCfg("flags", true, "Flags", nil, false)
   assert_eq(flags.text(true), "ON", "a bool does not print ON")
   assert_eq(flags.text(false), "OFF", "a bool does not print OFF")
-  assert_eq(flags.lowest(), false, "a bool's lowest is not false")
 
   var count = IntSettingCfg("count", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(count.text(7), "7", "an int does not print its number")
@@ -70,6 +69,24 @@ end
 
 test("every kind builds and prints its value", every_kind_builds)
 
+# The store hands back the file's text, so a setting with no default of its type to lean on has to
+# parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
+def a_stored_value_is_parsed_by_its_kind()
+  store.set("settings_test", "rest", "12.5")
+  var rest = PressureSettingCfg("rest", nil, "Rest", nil, 1, true)
+  assert_eq(rest.read("settings_test"), 12.5, "a stored nullable pressure is not its number")
+
+  store.set("settings_test", "flags", "false")
+  var flags = BoolSettingCfg("flags", true, "Flags", nil, false)
+  assert_eq(flags.read("settings_test"), false, "a stored false does not read as false")
+
+  store.set("settings_test", "gain", "0.25")
+  var gain = RealSettingCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  assert_eq(gain.read("settings_test"), 0.25, "a stored real is not its number")
+end
+
+test("a stored value is parsed by its kind", a_stored_value_is_parsed_by_its_kind)
+
 def a_switch_map_is_held_too()
   var s = Activation("interval", {"set_count": 99, "resume_behavior": "sometimes"})
   assert_eq(s.value("set_count"), 20, "the map's set count is not held to its bounds")
@@ -83,38 +100,34 @@ end
 test("a switch map is held to the kinds like a file", a_switch_map_is_held_too)
 
 def the_rules_say_no()
-  assert_eq(RampedIntervalSettings("x", nil).problem(
+  assert_eq(RampedIntervalSettings.problem(
                 {"initial_pressure": 10.0, "final_pressure": 5.0}),
             "FINAL < START", "the ladder rule does not refuse a final below the start")
-  assert_nil(RampedIntervalSettings("x", nil).problem(
+  assert_nil(RampedIntervalSettings.problem(
                 {"initial_pressure": 5.0, "final_pressure": 10.0}),
             "the ladder rule refuses a valid pair")
 
-  assert_eq(RampedStaticSettings("x", nil).problem(
+  assert_eq(RampedStaticSettings.problem(
                 {"initial_duration": 60, "target_duration": 60, "total_duration": 100}),
             "TOTAL < HOLDS", "the profile rule does not refuse a total below the holds")
 end
 
 test("a routine's rule refuses a set that cannot run", the_rules_say_no)
 
-def settings_note(target, key, value)
-  target[key] = value
-end
-
 def a_repair_puts_a_set_back()
-  var wrote = {}
-  var scene = RampedStaticSettings("settings_test", / key, value -> settings_note(wrote, key, value))
-  assert_true(scene.open(), "the settings scene did not open")
-  assert_nil(scene.message, "a set of defaults was refused")
+  var items = routines.settings("ramped_static")
+  var values = []
+  for item : items
+    values.push(item.read("ramped_static"))
+  end
+  routines.repair("ramped_static", items, values)
+  assert_nil(routines.repair("ramped_static", items, values), "a set of valid values was refused")
 
   # A total below the two holds is what lowering Total under a longer hold pair produces.
-  var at = scene.index_of(scene.items[4])
-  assert_true(at > 0, "the settings scene does not know its own rows")
-  scene.values[at] = 30
-  scene.repair(at)
-  assert_eq(scene.message, "TOTAL < HOLDS", "the repair did not report the rule it applied")
-  assert_eq(scene.values[at], scene.items[at].default_value, "the repair did not put the value back")
-  assert_eq(wrote[scene.items[at].key], scene.items[at].default_value, "the repair was not written")
+  values[4] = 30
+  assert_eq(routines.repair("ramped_static", items, values),
+            "TOTAL < HOLDS", "the repair did not report the rule it applied")
+  assert_eq(values[4], items[4].default_value, "the repair did not put the value back")
 end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)

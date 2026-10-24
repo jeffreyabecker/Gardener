@@ -13,23 +13,20 @@ class ChoiceSettingCfg : SettingCfg
   end
 
   # A stored value that is no longer one of the choices is not a choice: it reads as the default.
-  def bounded(value)
+  def parse(raw)
     if self.values == nil
       return nil
     end
     for candidate : self.values
-      if candidate == value
-        return value
+      if candidate == raw
+        return raw
       end
     end
     return nil
   end
 
-  def lowest()
-    if self.values == nil || self.values.size() == 0
-      return nil
-    end
-    return self.values[0]
+  def bounded(value)
+    return self.parse(value)
   end
 
   def scene(value)

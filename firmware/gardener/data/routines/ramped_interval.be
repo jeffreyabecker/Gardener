@@ -494,9 +494,11 @@ class Interval : RampedInterval
 end
 
 # The values the ramp edits, in the order the settings list shows them, and the one rule that binds
-# two of them: a ladder has to climb, so the final pressure is at least where it starts.
-class RampedIntervalSettings : SettingsScene
-  def settings()
+# two of them: a ladder has to climb, so the final pressure is at least where it starts. The class is
+# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
+# the list settles on.
+class RampedIntervalSettings
+  static def settings()
     return [
       IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
@@ -510,7 +512,7 @@ class RampedIntervalSettings : SettingsScene
     ]
   end
 
-  def problem(values)
+  static def problem(values)
     if values["final_pressure"] < values["initial_pressure"]
       return "FINAL < START"
     end
@@ -519,9 +521,9 @@ class RampedIntervalSettings : SettingsScene
 end
 
 # The values the interval edits, in the order the settings list shows them. Nothing binds one
-# setting to another here, so this scene has no rule of its own.
-class IntervalSettings : SettingsScene
-  def settings()
+# setting to another here, so the rule accepts every set.
+class IntervalSettings
+  static def settings()
     return [
       IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
@@ -531,6 +533,10 @@ class IntervalSettings : SettingsScene
       ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
                        ["immediately", "after ok"], false)
     ]
+  end
+
+  static def problem(values)
+    return nil
   end
 end
 

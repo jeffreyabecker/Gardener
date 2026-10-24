@@ -20,8 +20,8 @@ namespace {
 constexpr const char* kUxGlobal = "ux";
 constexpr const char* kRootScene = "__rootScene";
 
-// A routine's values are its own document at /routines/<name>.cfg. The name is a plain word: a
-// path separator would address another file, so the path is only ever built from a name that has
+// A document's values live at /routines/<document>.cfg, so the document has to be a plain word: a
+// path separator would address another file, and the path is only ever built from a name that has
 // none.
 bool plainWord(const char* name) {
   if (name == nullptr || name[0] == '\0') return false;
@@ -29,11 +29,11 @@ bool plainWord(const char* name) {
   return named.indexOf('/') < 0 && named.indexOf('\\') < 0;
 }
 
-// The document a routine's values live in. The name has to be a plain word first, so the path
+// The file a document's values live in. The document has to be a plain word first, so the path
 // cannot escape /routines/.
-String routinePath(const char* name) {
+String documentPath(const char* document) {
   String path = "/routines/";
-  path += name;
+  path += document;
   path += ".cfg";
   return path;
 }
@@ -295,13 +295,13 @@ void Routines::reportError(const char* file, const char* what) {
   be_pop(vm_, 2);
 }
 
-// --- the routine's own values ----------------------------------------------
+// --- a document's own values ------------------------------------------------
 
-bool Routines::storeGet(const char* routine, const char* key, String& out) {
-  if (!plainWord(routine) || key == nullptr || library_ == nullptr) return false;
+bool Routines::storeGet(const char* document, const char* key, String& out) {
+  if (!plainWord(document) || key == nullptr || library_ == nullptr) return false;
 
   String text;
-  if (!library_->read(routinePath(routine), text)) return false;
+  if (!library_->read(documentPath(document), text)) return false;
 
   Values values;
   values.parse(text);
@@ -310,17 +310,17 @@ bool Routines::storeGet(const char* routine, const char* key, String& out) {
   return true;
 }
 
-bool Routines::storeSet(const char* routine, const char* key, const String& value) {
-  if (!plainWord(routine) || key == nullptr || library_ == nullptr) return false;
+bool Routines::storeSet(const char* document, const char* key, const String& value) {
+  if (!plainWord(document) || key == nullptr || library_ == nullptr) return false;
 
   String text;
   Values values;
-  if (library_->read(routinePath(routine), text)) values.parse(text);
+  if (library_->read(documentPath(document), text)) values.parse(text);
 
   // A repeat value is not worth a flash write.
   if (values.has(key) && values.get(key, "") == value) return true;
   if (!values.set(key, value)) return false;
-  return library_->write(routinePath(routine), values.text());
+  return library_->write(documentPath(document), values.text());
 }
 
 }  // namespace gardener

@@ -8,9 +8,9 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// A routine's own values, addressed by the routine's name. The fallback is both the answer for a
-// key nothing has written and the type the text is read back as, so a routine reads a number as a
-// number and a missing key is not an error it has to test for.
+// A routine's own values, addressed by the name of the document they live in. The fallback is
+// both the answer for a key nothing has written and the type the text is read back as, so a
+// routine reads a number as a number and a missing key is not an error it has to test for.
 
 int storeGet(bvm* vm) {
   if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
@@ -21,10 +21,10 @@ int storeGet(bvm* vm) {
   const bool fallbackReal = hasFallback && be_isreal(vm, 3);
   const bool fallbackBool = hasFallback && be_isbool(vm, 3);
 
-  const char* routine = argText(vm, 1);
+  const char* document = argText(vm, 1);
   const char* key = argText(vm, 2);
   String text;
-  const bool stored = gRoutines != nullptr && gRoutines->storeGet(routine, key, text);
+  const bool stored = gRoutines != nullptr && gRoutines->storeGet(document, key, text);
 
   if (!stored) {
     // Nothing under the key: the fallback the caller passed is the answer, as it stands.
@@ -53,7 +53,7 @@ int storeSet(bvm* vm) {
     be_raise(vm, "type_error", "store.set(name, key, value)");
   }
 
-  const char* routine = argText(vm, 1);
+  const char* document = argText(vm, 1);
   const char* key = argText(vm, 2);
   // be_tostring converts a number or a bool in place, so every scalar has the text form the file
   // holds. The pointer is into the VM's string table, which is why it is used before anything else
@@ -61,7 +61,7 @@ int storeSet(bvm* vm) {
   const char* value = be_tostring(vm, 3);
   const bool written =
       value != nullptr && gRoutines != nullptr &&
-      gRoutines->storeSet(routine, key, String(value));
+      gRoutines->storeSet(document, key, String(value));
   be_pushbool(vm, written);
   be_return(vm);
 }

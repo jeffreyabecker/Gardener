@@ -60,7 +60,7 @@ class ValueScene : Scene
   end
 
   def hint()
-    return "UP/DOWN  OK=SAVE"
+    return "\x1E/\x1F  OK=SAVE"
   end
 
   # Each kind overrides these three.

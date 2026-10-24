@@ -36,7 +36,6 @@ Every scene, and where it lives:
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
-| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the two routine files | inherited |
 | `Page` — the routine base | `system/settings/scenes/page.be` | — |
 | `Scene` — the base | `system/scene.be` | — |
 
@@ -71,7 +70,6 @@ What each one answers:
 | `DurationScene` | `back:single` | go back seconds→minutes|
 | `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
 | `UnitScene`, `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
-| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the four `SettingsScene` gestures | as `SettingsScene` |
 
 | `Interval` | `up:double` | stop and vent, reset the run, open its settings |
 | `Interval` | `ok:single` | begin, while the run is ready, paused or waiting |

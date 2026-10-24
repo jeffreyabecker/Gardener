@@ -383,9 +383,11 @@ class RampedStatic : Page
 end
 
 # The values this page edits, in the order the settings list shows them, and the one rule that binds
-# them: the profile is the two holds plus a ramp, so the total has to cover the holds.
-class RampedStaticSettings : SettingsScene
-  def settings()
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The class is
+# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
+# the list settles on.
+class RampedStaticSettings
+  static def settings()
     return [
       PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureSettingCfg("target_pressure", 20.0, "Target", nil, 1, false),
@@ -395,7 +397,7 @@ class RampedStaticSettings : SettingsScene
     ]
   end
 
-  def problem(values)
+  static def problem(values)
     if values["total_duration"] < values["initial_duration"] + values["target_duration"]
       return "TOTAL < HOLDS"
     end

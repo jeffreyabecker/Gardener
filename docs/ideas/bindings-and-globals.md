@@ -75,7 +75,7 @@ class Routines {
 ```
 
 `GestureQueue` is the ring buffer and its overflow, and it already exists. `RoutineStore` takes the
-`plainWord` and `routinePath` fact and the `Library` the context handed over, so the `store` module
+`plainWord` and `documentPath` fact and the `Library` the context handed over, so the `store` module
 reaches it directly and `Routines` no longer answers for a routine's values. The `SceneStack` half of
 this option is answered by `/system/ux.be`'s `Ux`: the frames, the pending push or pop and the
 activate/poll/deliver logic are Berry now, and the interpreter's collector keeps the scenes alive

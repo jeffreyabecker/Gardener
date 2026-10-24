@@ -4,7 +4,7 @@
 # pushes directly. The readout is the root scene (__rootScene); its gestures push the system and
 # browser scenes. The system scene is a menu that pushes the shared value scenes from
 # system/settings/scenes/ and writes their returned values through `device`; the browser drives
-# `routines` and pushes a routine's scene or its SettingsScene.
+# `routines` and pushes a routine's scene or its settings list.
 
 import string
 
@@ -419,14 +419,38 @@ class BrowserScene : Scene
     return routines.push(self.names[self.list.selected], nil)
   end
 
+  # Open the selected routine's settings. The browser reads the values and writes what the scene
+  # settles on, the way the routine's own page does; the scene only edits them.
   def open_selected()
     var count = self.names.size()
     if count == 0
       return false
     end
     var name = self.names[self.list.selected]
-    ux.push(SettingsScene(name, / key, value -> self.write_setting(name, key, value)), nil, / v -> self.draw())
+    var items = routines.settings(name)
+    if items == nil || items.size() == 0
+      vacuum.log("settings: " + name + " has none")
+      return false
+    end
+    var values = []
+    for item : items
+      values.push(item.read(name))
+    end
+    var message = routines.repair(name, items, values)
+    ux.push(SettingsScene(items, values, message), nil, / v -> self.settings_closed(name, items, v))
     return true
+  end
+
+  # The set is put back to one the rule accepts before it is written, so the file never holds a set
+  # a run would refuse.
+  def settings_closed(name, items, values)
+    routines.repair(name, items, values)
+    var i = 0
+    while i < items.size()
+      self.write_setting(name, items[i].key, values[i])
+      i += 1
+    end
+    self.draw()
   end
 
   def write_setting(name, key, value)

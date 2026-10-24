@@ -1,18 +1,35 @@
-# registry.be — the registry of user routines: the list the browser draws, each routine's factory
-# and the scene that edits its settings, and the way into each routine's scene.
+# registry.be — the registry of user routines: the list the browser draws, each routine's factory,
+# the class that declares its settings, and the way into each routine's scene.
 #
-# A routine file's top level calls routines.register(name, title, icon, factory, settings) and the entry
-# joins this Berry list; nothing native holds it. The factory is the routine's scene class, and the
+# A routine file's top level calls routines.register(name, title, icon, factory, settings) and a
+# RoutineRegistration joins this Berry list; nothing native holds it. The factory is the routine's
+# scene class, and the
 # registry builds the scene when the routine is pushed, so a page starts from its own activate()
 # every time and nothing a previous visit left behind survives; the scene that is showing is
-# ux.top(). The settings are the class of the scene that edits them, so the rules that bind two
-# settings together live with the values rather than in the page.
+# ux.top(). The settings are a class the routine writes itself, holding the values it edits and any
+# rule that binds two of them, so those live with the routine rather than in the page; it is asked
+# through its class and is never built, because the list it describes is opened by whoever wants to
+# edit it.
 #
 # The browser reads names()/rows() and pushes a routine with push(name, callback[, settings]), which
 # builds its scene and hands it to ux.push. The device's own scenes — the readout, system and
 # browser — are not registered here: they are well-known scenes the system pushes directly.
 
 import string
+
+# One routine's registration: the name it is known by, the label and icon the browser draws, the
+# class the registry builds its scene from, and the class that declares its settings.
+class RoutineRegistration
+  var name, title, icon, factory, settings
+
+  def init(name, title, icon, factory, settings)
+    self.name = name
+    self.title = title
+    self.icon = icon
+    self.factory = factory
+    self.settings = settings
+  end
+end
 
 class RoutineRegistry
   var entries
@@ -36,10 +53,10 @@ class RoutineRegistry
       return false
     end
     if settings != nil && type(settings) != "class"
-      vacuum.log("registry: " + name + " settings must be a scene class")
+      vacuum.log("registry: " + name + " settings must be a class")
       return false
     end
-    self.entries.push([name, title, icon, factory, settings])
+    self.entries.push(RoutineRegistration(name, title, icon, factory, settings))
     return true
   end
 
@@ -47,39 +64,67 @@ class RoutineRegistry
   def names()
     var out = []
     for e : self.entries
-      out.push(e[0])
+      out.push(e.name)
     end
     return out
   end
 
-  # The settings a routine edits, as the class it registered describes them; nil when it has none.
+  # The settings a routine can edit, as the class it registered declares them, in the order the list
+  # shows them; nil when it has none. A setting whose kind cannot work is left out, with one line
+  # saying why, because no value scene could edit it.
   def settings(name)
-    var scene = self.settings_scene(name)
-    if scene == nil
+    var e = self.entry(name)
+    if e == nil || e.settings == nil
       return nil
     end
-    return scene.settings()
+    var out = []
+    for item : e.settings.settings()
+      if item.problem != nil
+        vacuum.log("settings: " + name + " " + item.key + ": " + item.problem)
+      else
+        out.push(item)
+      end
+    end
+    return out
   end
 
-  # A settings scene for the routine, with no writer: enough to ask what it edits.
-  def settings_scene(name)
-    var e = self.entry(name)
-    if e == nil || e[4] == nil
+  # The values the routine's rule accepts: while the rule refuses the set, the settings that differ
+  # from their default are put back to them in the order the list shows them, each replacing the
+  # value in `values`. The reason that was applied is returned for the list to draw, or nil when the
+  # set was already valid. Nothing here touches a file: the caller decides what to write.
+  def repair(name, items, values)
+    var reason = self.problem(name, items, values)
+    if reason == nil
       return nil
     end
-    var factory = e[4]
-    return factory(name, nil)
+    vacuum.log("settings: " + name + ": " + reason)
+    var i = 0
+    while i < items.size()
+      if values[i] != items[i].default_value
+        values[i] = items[i].default_value
+        if self.problem(name, items, values) == nil
+          return reason
+        end
+      end
+      i += 1
+    end
+    vacuum.log("settings: " + name + ": " + reason + " even at the defaults")
+    return reason
   end
 
-  # Push a routine's settings scene, with the callback that writes a settled value and the one the
-  # stack runs when it closes. False when the routine registered no settings.
-  def push_settings(name, on_change, closed)
+  # The rule's verdict on the values held beside their settings, or nil when it accepts them.
+  def problem(name, items, values)
     var e = self.entry(name)
-    if e == nil || e[4] == nil
-      return false
+    if e == nil || e.settings == nil
+      return nil
     end
-    var factory = e[4]
-    return ux.push(factory(name, on_change), nil, closed)
+    var out = {}
+    var i = 0
+    while i < items.size()
+      out[items[i].key] = values[i]
+      i += 1
+    end
+    return e.settings.problem(out)
   end
 
   def icon(name)
@@ -87,7 +132,7 @@ class RoutineRegistry
     if e == nil
       return nil
     end
-    return e[2]
+    return e.icon
   end
 
   # The label the browser draws for a routine; the name is the identity.
@@ -96,14 +141,14 @@ class RoutineRegistry
     if e == nil
       return nil
     end
-    return e[1]
+    return e.title
   end
 
   # The browser's rows: [icon, title] per routine, ready for a List.
   def rows()
     var out = []
     for e : self.entries
-      out.push([e[2], e[1]])
+      out.push([e.icon, e.title])
     end
     return out
   end
@@ -116,13 +161,12 @@ class RoutineRegistry
     if e == nil
       return false
     end
-    var factory = e[3]
-    return ux.push(factory(), settings, callback)
+    return ux.push(e.factory(), settings, callback)
   end
 
   def entry(name)
     for e : self.entries
-      if e[0] == name
+      if e.name == name
         return e
       end
     end

@@ -14,10 +14,14 @@ class IntSettingCfg : SettingCfg
     end
   end
 
+  def parse(raw)
+    return int(raw)
+  end
+
   # A number outside the bounds the kind steps within is brought to the bound: the bound is what
   # the kind means, and a hand-edited file is not allowed to mean something else.
   def bounded(value)
-    var number = int(value)
+    var number = self.parse(value)
     if self.min != nil && number < int(self.min)
       number = int(self.min)
     end
@@ -25,13 +29,6 @@ class IntSettingCfg : SettingCfg
       number = int(self.max)
     end
     return number
-  end
-
-  def lowest()
-    if self.min != nil
-      return int(self.min)
-    end
-    return 0
   end
 
   def scene(value)

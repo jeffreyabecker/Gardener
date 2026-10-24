@@ -21,12 +21,12 @@ namespace berry {
 //   store.*    a routine's own values, kept across a power cycle
 //
 // The registry the browser draws and the scene stack it pushes onto are Berry classes
-// (/system/registry.be and /system/ux.be); there is no native module for either. Four of the
-// classes a routine reads are records rather than plain values:
-// `vacuum.state()` answers a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a
-// `bounds`, and a routine builds a `setting` for each of its settings. They are declared in
+// (/system/registry.be and /system/ux.be); there is no native module for either. Three of the
+// classes a routine reads are records rather than plain values: `vacuum.state()` answers a
+// `reading`, `screen.unit()` a `unit` and `screen.text_bounds()` a `bounds`. They are declared in
 // /system/records.be, which `/system/order` loads first, because only the parser can declare an
-// instance variable on a class.
+// instance variable on a class. The settings a routine declares are not records: they are
+// `SettingCfg` objects its own settings class builds.
 //
 // The reference a routine author reads is docs/specs/ui/bindings.md (what a routine can call) and
 // docs/specs/ui/routine.md (what a routine must be). The tables in `bindings/` are the same

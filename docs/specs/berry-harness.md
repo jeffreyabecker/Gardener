@@ -140,7 +140,9 @@ For every registered routine:
    settings list it opened, and `cancel:double` — the routine has to survive all of it and hand the
    panel back
 
-The settings view is walked first, through its whole key sequence.
+The settings view is walked first, through its whole key sequence: the drive opens it the way a
+caller does — reading every value and applying the routine's rule — edits every row, and closes it
+with Back, which is when the caller writes the set and the drive checks that every key landed.
 
 ## The test suites
 
