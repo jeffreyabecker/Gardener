@@ -212,3 +212,17 @@ def scrollbar_draws()
 end
 
 test("a scrollbar draws its thumb", scrollbar_draws)
+
+def triangle_draws()
+  var t = TriangleV2()
+  t.x = 0; t.y = 0; t.w = 8; t.h = 8
+  for d : ["up", "down", "left", "right"]
+    t.direction = d
+    t.style = "filled"
+    t.draw()
+    t.style = "empty"
+    t.draw()
+  end
+end
+
+test("a triangle draws each direction", triangle_draws)
