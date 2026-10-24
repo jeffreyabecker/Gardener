@@ -226,3 +226,13 @@ def triangle_draws()
 end
 
 test("a triangle draws each direction", triangle_draws)
+
+def pressure_display_draws()
+  var p = PressureDisplayV2()
+  p.x = 0; p.y = 0; p.w = 64; p.h = 52
+  p.draw(nil)
+  p.draw(20.0)
+  p.draw(0.0)
+end
+
+test("a pressure display draws a reading and dashes", pressure_display_draws)

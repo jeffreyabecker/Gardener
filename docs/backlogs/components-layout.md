@@ -101,7 +101,7 @@ parking-lot line.
 - [x] 4.5 Add the new `Triangle` at `/system/components/v2/` in the four directions, filled or
   empty. Check: each direction draws in its box.
 
-- [ ] 4.6 Add the new `PressureDisplay` at `/system/components/v2/` with `family` and `style` and
+- [x] 4.6 Add the new `PressureDisplay` at `/system/components/v2/` with `family` and `style` and
   no border, formatting the reading in the panel's unit. Check: a nil reading draws `--`, and a
   reading formats with the unit's decimals in each unit.
 
