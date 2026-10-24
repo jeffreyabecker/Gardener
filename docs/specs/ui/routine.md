@@ -10,10 +10,10 @@ phases and its settings keys belong in that page's own `.be` file, its gestures 
 ships when you want to read one. Nothing here should need to change when one of them changes.
 
 The panel UI is a stack of **scenes**. A routine file registers the class its scene is built from;
-the firmware polls the top scene and only the top scene, and a scene pushes or pops scenes with the
-`ux` module. The registry the routine browser draws is a Berry class — the global `routines`
-instance in `/system/registry.be` — and the only native additions over the older page model are
-`ux.*` (the stack) and the now name-only `store.*` forms.
+the firmware polls the top scene and only the top scene, and a scene pushes or pops scenes with `ux`,
+the stack `/system/ux.be` defines. The registry the routine browser draws is a Berry class too — the
+global `routines` instance in `/system/registry.be` — so the only native additions over the older
+page model are the `store.*` forms and the panel's own modules.
 
 ## Where a routine lives and what it must look like
 
@@ -53,8 +53,8 @@ every time the routine is pushed, so each visit starts from `activate()` and not
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
 dispatch, and `Page` adds the routine's name and its settings view; a routine extends `Page` and
-defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. The stack refuses to push
-a scene that lacks either `activate()` or `poll`.
+defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
+method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
 
 The fifth argument is the routine's **settings scene** — the class that edits its values, or `nil`
 when it has none. It is a `SettingsScene` subclass, and it is where the list and any rule that binds
@@ -96,7 +96,9 @@ dependencies put it.
 calls answer with, and the one a routine builds for each of its own settings. They are written in
 Berry because only the parser can declare an instance variable on a class. The same file defines the
 global `is_nil(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
-so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/scene.be` is
+so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` is the scene stack —
+`class Ux` and the global `ux`, the frames, the callbacks and the one-beat deferral, with the
+firmware calling `reset`, `enter` and `poll` on it. `/system/scene.be` is
 `Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistry` and the global `routines` instance —
 the list the browser draws, and the `push(name, callback)` that opens a routine.
@@ -196,22 +198,28 @@ list of presses, and no splitting on `:` or `+`. The standard gestures are in
 
 ## The stack
 
-`ux.push(scene [, args [, callback]])` puts a scene on top and makes it the one that is polled.
-`ux.pop([value])` leaves it and hands `value` to the pusher's callback, or re-activates the scene
-below when it was pushed without one. `ux.pop_to_root([value])` pops every scene above the root in
-one move — a finished run's way home. The root is the `__rootScene` global `/modules/ui.be` sets;
-if nothing sets it, the panel shows the device's mark.
+The stack is `/system/ux.be`: `class Ux` and the global instance `ux`, in Berry. `ux.push(scene
+[, args [, callback]])` puts a scene on top and makes it the one that is polled. `ux.pop([value])`
+leaves it and hands `value` to the pusher's callback, or re-activates the scene below when it was
+pushed without one. `ux.pop_to_root([value])` pops every scene above the root in one move — a
+finished run's way home. The root is the `__rootScene` global `/modules/ui.be` sets; if nothing sets
+it, the panel shows the device's mark. Eight scenes is the deepest the stack goes; a ninth push is
+refused and logged.
 
 Only the top scene polls and draws, so a scene below the top is suspended — it keeps its state and
-resumes through its callback when the scene above pops. A pop asked for from inside a scene's own
-`poll` is deferred until that call returns, so a scene may pop itself.
+resumes through its callback when the scene above pops. A push or pop asked for from inside a
+scene's own `poll` is deferred until that call returns, so a scene may pop itself without the rest
+of its `poll` — its draw — running over the page that came back. One held request is applied per
+beat.
 
 ## One entry per beat
 
 The runtime is the only thing that enters the interpreter, and it does so from its own frame — one
-`be_pcall` per `poll`, never from inside a Berry call. It runs on the panel task, and the one-writer
-rule is what keeps it lock-free: the machine is written only through the command queue, and read
-dirty by any task. Nothing is suspended, and there are no locks and no callbacks.
+`be_pcall` per beat into `ux.poll(now)`, never from inside a Berry call. That call and the scene
+calls it makes are the beat; the frames, the callbacks and the held push or pop are Berry's. It runs
+on the panel task, and the one-writer rule is what keeps it lock-free: the machine is written only
+through the command queue, and read dirty by any task. Nothing is suspended, and there are no locks
+and no callbacks.
 
 What that costs, stated plainly:
 

@@ -82,7 +82,7 @@ image is already compiled by then.
 ## What the harness provides
 
 The records `reading`, `unit`, `bounds` and `setting` — declared in `/system/records.be`, which the
-image loads before anything else — and the eight native modules a routine calls:
+image loads before anything else — and the seven native modules a routine calls:
 
 | Module | On the host |
 | --- | --- |
@@ -93,10 +93,10 @@ image loads before anything else — and the eight native modules a routine call
 | `device` | the unit, the jingle, and the reboot and reset requests |
 | `jingles` | the library read from `/system/jingles.txt` |
 | `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for |
-| `ux` | the scene stack: `push()`, `pop()`, `pop_to_root()`, `top()` and `depth()` |
 
-The registry the browser draws is not native: `/system/registry.be` defines the global `routines`
-instance, which the driver and the suites reach the same way a scene does.
+The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`
+defines the global `routines` instance and `/system/ux.be` the global `ux`, which the driver and the
+suites reach the same way a scene does.
 
 The machine model is what a preview moves against. It starts at 0 kPa, pulls at 3 kPa/s, settles a
 target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target below 5 kPa and caps at

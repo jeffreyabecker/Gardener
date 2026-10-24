@@ -1,10 +1,11 @@
 # Bindings
 
-The native surface a routine calls: eight modules — `vacuum`, `screen`, `device`, `buttons`,
-`buzzer`, `jingles`, `ux` and `store` — and the records those calls answer with. This is the
-reference for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
-The registry the routine browser draws is a Berry class, not a native module: it is documented
-under `routines` below but lives in `/system/registry.be`.
+The native surface a routine calls: seven modules — `vacuum`, `screen`, `device`, `buttons`,
+`buzzer`, `jingles` and `store` — and the records those calls answer with. This is the reference for
+what a routine can call; for what a routine must be, see [routine.md](./routine.md).
+Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
+browser draws (`/system/registry.be`) and the scene stack it pushes onto (`/system/ux.be`). They are
+documented here too, because a routine calls them the same way.
 
 ## Values
 
@@ -303,20 +304,25 @@ An identifier that is not in the file answers `nil` from `title`, `label` and `n
 or malformed file leaves the library empty; the System page then shows `JINGLE=--` and the rest of
 the device keeps working.
 
-## `ux` — the scene stack
+## `ux` — the scene stack (a Berry class)
+
+The stack is not a native module. `/system/ux.be` defines `class Ux` and the global instance `ux`;
+the firmware calls `reset`, `enter` and `poll` on it once a beat, and the pages call the rest.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `ux.push(scene [, args [, callback]])` | `bool` | put a scene on top and make it the one that is polled. `args` (a map or nil) is that activation's `activate(args)`; `callback` receives the value the scene returns when it pops |
+| `ux.push(scene [, args [, callback]])` | `bool` | put a scene on top and make it the one that is polled. `args` (a map or nil) is that activation's `activate(args)`; `callback` receives the value the scene returns when it pops. Refused once eight scenes are on the stack |
 | `ux.pop([value])` | `bool` | leave the top scene, handing `value` to the pusher's callback, or re-activating the scene below when it was pushed without one. Refused when only the root remains |
 | `ux.pop_to_root([value])` | `bool` | pop every scene above the root; the root re-activates |
 | `ux.top()` | the top scene, or `nil` | what the stack is showing |
 | `ux.depth()` | `int` | how many scenes are on the stack |
 
-A push or pop asked for from inside a scene's own `poll` is applied when that call returns, so the
-VM is never re-entered. Only the top scene is activated and polled; a scene below the top keeps its
-state and resumes through its callback when the scene above pops. A scene whose `activate()` or
-`poll()` raises is dropped with the whole stack: the panel shows the device's mark.
+A push or pop asked for from inside a scene's own `poll` is applied when that call returns. That is
+about drawing rather than re-entry: a scene's `poll` ends by painting, so a pop applied mid-poll
+would paint the page that just left over the one that came back. One request is applied per beat.
+Only the top scene is activated and polled; a scene below the top keeps its state and resumes
+through its callback when the scene above pops. A scene whose `activate()` or `poll()` raises is
+dropped with the whole stack: the panel shows the device's mark.
 
 The root scene is the `__rootScene` global `/modules/ui.be` sets, pushed at boot by the firmware. It
 is not registered anywhere; it is what the device's go-home gesture returns to.

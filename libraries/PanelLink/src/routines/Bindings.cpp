@@ -26,7 +26,6 @@ void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger)
   installButtonsModule(vm);
   installBuzzerModule(vm);
   installJinglesModule(vm, context.library());
-  installUxModule(vm);
   installStoreModule(vm);
 }
 

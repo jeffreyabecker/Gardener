@@ -10,7 +10,7 @@ class Logger;
 
 namespace berry {
 
-// The eight native modules a scene sees, installed into a fresh VM:
+// The seven native modules a scene sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
@@ -18,11 +18,11 @@ namespace berry {
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
 //   jingles.*  the named note sequences in /system/jingles.txt
-//   ux.*       the scene stack: push, pop and pop_to_root
 //   store.*    a routine's own values, kept across a power cycle
 //
-// The registry the browser draws is a Berry class (/system/registry.be); there is no native
-// registry module. Four of the classes a routine reads are records rather than plain values:
+// The registry the browser draws and the scene stack it pushes onto are Berry classes
+// (/system/registry.be and /system/ux.be); there is no native module for either. Four of the
+// classes a routine reads are records rather than plain values:
 // `vacuum.state()` answers a `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a
 // `bounds`, and a routine builds a `setting` for each of its settings. They are declared in
 // /system/records.be, which `/system/order` loads first, because only the parser can declare an

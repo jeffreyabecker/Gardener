@@ -14,10 +14,9 @@ HomeUI::HomeUI(Panel& context) : UserInterface(context) {}
 bool HomeUI::begin() {
   lastFrameMs_ = millis();
   lastGoHomeSeq_ = goHomeSeq;
-  if (context_.routines().active()) {
-    context_.routines().enterPage();
-    return true;
-  }
+  // The first paint also activates the root scene, so it reads the unit and redraws rather than
+  // trusting what a previous boot left on the glass.
+  if (context_.routines().enterPage()) return true;
   drawFrame();
   return true;
 }
@@ -37,10 +36,7 @@ void HomeUI::update() {
     return;
   }
 
-  if (context_.routines().active()) {
-    context_.routines().poll(millis());
-    return;
-  }
+  if (context_.routines().poll(millis())) return;
 
   uint32_t now = millis();
   if (now - lastFrameMs_ < RefreshMs) return;

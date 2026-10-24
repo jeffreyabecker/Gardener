@@ -1,6 +1,7 @@
 #include "routines/Routines.h"
 
 #include <berry.h>
+#include <stddef.h>
 
 #include <vector>
 
@@ -13,6 +14,11 @@
 
 namespace gardener {
 namespace {
+
+// The scene stack every page calls is `/system/ux.be`'s global `ux`: the frames, the callbacks and
+// the one-beat deferral are Berry's, and this side only makes the calls that a beat needs.
+constexpr const char* kUxGlobal = "ux";
+constexpr const char* kRootScene = "__rootScene";
 
 // A routine's values are its own document at /routines/<name>.cfg. The name is a plain word: a
 // path separator would address another file, so the path is only ever built from a name that has
@@ -92,7 +98,7 @@ bool Routines::begin(PanelContext& context) {
     return false;
   }
   berry::install(vm_, context, *this, context.logger());
-  stack_.begin(vm_, *logger_);
+  gestures_.begin(*logger_);
 
   // The system first, in the order `/system/order` states: a scene may construct a class one of
   // those files defines — or answer with a record one of them declares — so they have to have run
@@ -121,18 +127,72 @@ bool Routines::begin(PanelContext& context) {
   if (files != 1) summary += 's';
   logger_->info(summary.c_str());
 
-  stack_.boot();
+  resetToRoot();
   return true;
 }
 
 bool Routines::showDefault() {
-  stack_.showDefault();
-  return stack_.active();
+  gestures_.clear();
+  return resetToRoot();
 }
 
-void Routines::poll(uint32_t nowMs) { stack_.poll(nowMs); }
+bool Routines::poll(uint32_t nowMs) {
+  const int base = be_top(vm_);
+  be_pushint(vm_, (bint)nowMs);
+  const bool showing = callUx("poll", be_absindex(vm_, -1));
+  be_pop(vm_, be_top(vm_) - base);
+  return showing;
+}
 
-void Routines::enterPage() { stack_.enterPage(); }
+bool Routines::enterPage() { return callUx("enter", 0); }
+
+bool Routines::active() const { return callUx("depth", 0); }
+
+// The root scene, as a push of it and a clear of the stack when there is none: the same call at
+// boot and on the go-home gesture.
+bool Routines::resetToRoot() {
+  const int base = be_top(vm_);
+  if (!be_getglobal(vm_, kRootScene)) {
+    logger_->warn("vm: no root scene, showing the mark");
+  } else if (!be_isinstance(vm_, -1)) {
+    logger_->warn("vm: root scene is not an instance, showing the mark");
+    be_pop(vm_, 1);
+    be_pushnil(vm_);
+  }
+  const bool showing = callUx("reset", be_absindex(vm_, -1));
+  be_pop(vm_, be_top(vm_) - base);
+  return showing;
+}
+
+// Calls `method` on the `ux` global and answers its result as a truth value. `argIndex` is a value
+// already on the VM stack to pass as the one argument, or 0 for none. A raise is reported the way a
+// scene's own raise was when the stack was native: `vm: <method>: <message>`.
+bool Routines::callUx(const char* method, int argIndex) const {
+  const int base = be_top(vm_);
+  bool answer = false;
+  if (!be_getglobal(vm_, kUxGlobal) || !be_getmethod(vm_, -1, method)) {
+    logger_->error("vm: ux is missing");
+  } else {
+    be_pushvalue(vm_, -2);  // the instance, as self
+    int argc = 1;
+    if (argIndex > 0) {
+      be_pushvalue(vm_, argIndex);
+      argc++;
+    }
+    if (be_pcall(vm_, argc) == BE_OK) {
+      answer = be_tobool(vm_, -1) != 0;
+    } else {
+      String message = "vm: ";
+      message += method;
+      message += ": ";
+      const char* detail = be_tostring(vm_, -1);
+      message += detail != nullptr ? detail : "error";
+      logger_->error(message.c_str());
+    }
+  }
+  be_pop(vm_, be_top(vm_) - base);
+  return answer;
+}
 
 // --- loading ---------------------------------------------------------------
 

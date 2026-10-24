@@ -35,19 +35,21 @@ device also cures the harness.
 
 The **facade**. [Routines.h](../../libraries/PanelLink/src/routines/Routines.h) has two halves. One
 is the runtime: `begin`, `vm`, `poll`, `enterPage`, `showDefault`, `active`, and the loader. The
-other is eleven pass-throughs grouped under "the modules' surface": `push`/`pop`/`pop_to_root`/
-`top`/`depth` forward to `stack_`, `pushPress`/`takePress` forward to `stack_`, `takeStopped`
-forwards to `stack_`, and `storeGet`/`storeSet` read and write `library_`. None of those methods
-adds anything; each exists so a binding can reach state that already lives in `UxStack` or in the
+other is four pass-throughs grouped under "the modules' surface": `pushPress`/`takePress` forward to
+`gestures_`, and `storeGet`/`storeSet` read and write `library_`. None of those methods adds
+anything; each exists so a binding can reach state that lives in `GestureQueue` or in the
 `Library` the context handed over. `Routines` is the owner of the VM and the loading, and a window
-onto the stack and the store at the same time.
+onto the queue and the store at the same time.
 
-The **mixed buckets**. [UxStack.h](../../libraries/PanelLink/src/routines/UxStack.h) is three
-things: the scene stack (`frames_`, `push`/`pop`), the gesture queue (`presses_`, `pushPress`/
-`takePress`), and the stop notice (`lastStopSeq_`, `takeStopped`). The stack owns all three because
-they happen to be polled on the same beat, but a scene stack, a button queue and a one-shot flag
-are different kinds of state with different writers — the queue is filled by the panel task, the
-flag by the hand-off, the stack by the scene itself.
+The **mixed buckets**, as this was first written, was `UxStack` being three things at once: the
+scene stack (`frames_`, `push`/`pop`), the gesture queue (`presses_`, `pushPress`/`takePress`), and
+the stop notice — three states sharing a name because they were polled on the same beat. Two of the
+three have since left the question. The scene stack is `/system/ux.be` now, a Berry class, so its
+frames, its callbacks and its pending push or pop are not C++ at all. The stop notice was not in the
+file any more either; that half of the paragraph was stale by the time the stack moved. What is left
+is [GestureQueue.{h,cpp}](../../libraries/PanelLink/src/routines/GestureQueue.h): the press ring,
+written by the panel task and read by the `buttons` binding, which is exactly the case the
+"different writer, different reader" test was meant to catch.
 
 `PanelContext` itself is not part of the problem. It is an interface with two implementations — the
 device's `Panel` and the harness's session — so it is the one seam here that earns its interface the
@@ -59,50 +61,48 @@ the thing to delete.
 
 ### Split the buckets into classes of their own
 
-`UxStack` holds three kinds of state that do not change together: the scene stack, the gesture
+`UxStack` held three kinds of state that did not change together: the scene stack, the gesture
 queue, and the stop notice. Each becomes its own class, and `Routines` becomes only the runtime —
-the VM, the loader, and the beat that drives the stack:
+the VM, the loader, and the beat that drives the stack. The scene stack has since gone further than
+this option asked and left C++ altogether (`/system/ux.be`), so what remains to split is the rest:
 
 ```cpp
 class Routines {
   // begin/vm/showDefault/poll/enterPage/active, the loader, and:
-  SceneStack stack_;
   GestureQueue gestures_;
-  StopNotice stopped_;
   RoutineStore store_;
 };
 ```
 
-`SceneStack` is what `UxStack` already is minus the queue and the flag — the frames, the pending
-push/pop, and the activate/poll/deliver logic. `GestureQueue` is the ring buffer and its overflow.
-`StopNotice` is the one-shot `lastStopSeq` compare against the panel task's counter. `RoutineStore`
-takes the `plainWord` and `routinePath` fact and the `Library` the context handed over, so the
-`store` module reaches it directly and `Routines` no longer answers for a routine's values.
+`GestureQueue` is the ring buffer and its overflow, and it already exists. `RoutineStore` takes the
+`plainWord` and `routinePath` fact and the `Library` the context handed over, so the `store` module
+reaches it directly and `Routines` no longer answers for a routine's values. The `SceneStack` half of
+this option is answered by `/system/ux.be`'s `Ux`: the frames, the pending push or pop and the
+activate/poll/deliver logic are Berry now, and the interpreter's collector keeps the scenes alive
+where the `__scene<i>` globals did.
 
 This is the same reasoning the conventions already use, in the other direction: the chamber's state
 and the run's state were one state, so `VacuumSystem` is one class; the scene stack and the button
 queue are not one state, so they stop sharing a name. Each new class has one implementation and no
 interface — they are state with an owner, not a boundary.
 
-What it costs: five small classes where there were two, and a decision about who builds and holds
-them. The counterweight is the conventions' own caution against classes nobody else holds. The
-gesture queue and the stop notice are small; they earn their names only if a reader and a writer
-that are not the same thing reach them — which they do: the panel task writes the queue and the
-hand-off writes the flag, while the bindings read both, and the scene stack is written by neither.
+What it costs: a class or two where there was one, and a decision about who builds and holds them.
+The counterweight is the conventions' own caution against classes nobody else holds. The gesture
+queue is small; it earns its name because a reader and a writer that are not the same thing reach
+it — the panel task writes the queue and the bindings read it. The scene stack, which was the third
+of those, has left C++ entirely and needs no class here at all.
 
 ### A `BindingSurface` as the single point of entry
 
-The four split classes plus `PanelContext` are what a binding reaches, and a module reaches several
-at once. A `BindingSurface` wraps them in one aggregate — a plain struct holding `PanelContext&`
-and references to the four new classes, no interface — and the closures capture a `BindingSurface*`
-instead of two or three separate pointers:
+The classes a binding reaches, plus `PanelContext`, are what a module needs, and a module reaches
+several at once. A `BindingSurface` wraps them in one aggregate — a plain struct holding
+`PanelContext&` and references to the others, no interface — and the closures capture a
+`BindingSurface*` instead of two or three separate pointers:
 
 ```cpp
 struct BindingSurface {
   PanelContext& context;
-  SceneStack& stack;
   GestureQueue& gestures;
-  StopNotice& stopped;
   RoutineStore& store;
 };
 ```
@@ -164,27 +164,27 @@ fewer"; the VM-global option is ruled out by the namespace it would hand to rout
 indirection it adds for no gain over a closure.
 
 The split is ruled in by the same test that kept `VacuumSystem` whole — is it one state or three? —
-and the three buckets answer three. It is disciplined by the conventions' caution against classes
+and the buckets answered three. It is disciplined by the conventions' caution against classes
 nobody holds: a bucket earns its class only when its reader and its writer are not the same thing,
-which is true for the queue (panel task writes, bindings read) and the stop notice (hand-off writes,
-bindings read).
+which is true for the queue (panel task writes, bindings read).
 
 What has to be true for the preferred option: the surface must point at objects that outlive the
 VM — the same lifetime the globals already assume, since `Panel` and `Routines` outlive the
 interpreter they built. The `bnfuncinfo` table and its `installModule` are the only place the
 installer's shape has to change, and the harness's `installHarnessModule` follows the same shape.
 
-What is still unknown: whether the four split classes are built and owned by `Routines` or by the
+What is still unknown: whether the remaining classes are built and owned by `Routines` or by the
 composition root that hands them to both `Routines` and the surface; whether the harness migration
 rides in the same change or follows it; and whether the panel task's `stopSeq` counter, which the
 `StopNotice` compares against, is passed in as the field it already is or folded into the class.
 
 ## Where I land
 
-Do the whole thing, in this order: split `UxStack` into `SceneStack`, `GestureQueue` and
-`StopNotice`, pull `store` into a `RoutineStore`, and leave `Routines` as the runtime that owns and
-drives them. Build a `BindingSurface` over `PanelContext` and the four new classes, capture it in
-native closures, and delete the three globals.
+Do the rest of the whole thing, in this order: give `store` its own `RoutineStore`, and leave
+`Routines` as the runtime that owns and drives what is left. The scene stack is already gone from
+C++ (`/system/ux.be`) and the gesture queue already has its class. Build a `BindingSurface` over
+`PanelContext` and the remaining classes, capture it in native closures, and delete the three
+globals.
 
 The closures are not an exotic mechanism — the VM's own libraries are built on them — and they turn
 the globals from a fact of the API into a choice that was never necessary. The split is the same
