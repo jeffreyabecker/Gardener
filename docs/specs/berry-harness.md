@@ -167,9 +167,9 @@ Every case is also captured as an animation named `<stem>.<suite>.<case>.gif` â€
 `--out` value with its `.gif` stripped, defaulting to `build/runs` â€” so a failing case leaves its
 motion behind. A case that never beats has nothing to animate and writes nothing.
 
-The suites cover what a walk cannot name: the jingle library, the System scene's jingle editor, the
-interval's set count and its "after ok" pause, the ramp's three stages and its pause and resume, and
-the registry's hidden-routine rule.
+The suites cover what a walk cannot name: the jingle library, the System scene's unit, radio and
+jingle rows, the interval's set count and its "after ok" pause, the ramp's three stages and its
+pause and resume, and the registry's hidden-routine rule.
 
 ## Failing
 

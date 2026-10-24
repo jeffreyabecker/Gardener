@@ -26,8 +26,8 @@ Every scene, and where it lives:
 | Scene | Defined in | Dispatch |
 | --- | --- | --- |
 | `ReadoutScene` — the root | `modules/ui.be` | `on` |
-| `BrowserScene` | `modules/ui.be` | `on` |
-| `SystemScene` | `modules/ui.be` | `handle_page` |
+| `BrowserScene` | `modules/browser.be` | `on` |
+| `SystemScene` — a `SettingsScene` over the device's own settings | `modules/ui.be` | `handle_page` |
 | `SettingsScene` | `system/settings/scenes/settings_scene.be` | `handle_page` |
 | `ValueScene` — the value base | `system/settings/scenes/value_scene.be` | `handle_page` |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `system/settings/scenes/` | inherited |
@@ -56,11 +56,11 @@ What each one answers:
 | `BrowserScene` | `back:single` | leave |
 | `BrowserScene` | `cancel:single` | leave |
 | `SystemScene` | `up:single`, `down:single` | move the row |
-| `SystemScene` | `forward:single` | open the row |
-| `SystemScene` | `back:single` | leave |
-| `SystemScene` | `cancel:single` | leave |
+| `SystemScene` | `forward:single` | open the row's value scene; nothing on the radio row, which is a build fact |
+| `SystemScene` | `back:single` | write the set it settled on, then leave |
+| `SystemScene` | `cancel:single` | write the set it settled on, then leave |
 | `SettingsScene` | `up:single`, `down:single` | move the row |
-| `SettingsScene` | `forward:single` | open the row |
+| `SettingsScene` | `forward:single` | open the row's value scene, or nothing for a setting that has no editor |
 | `SettingsScene` | `back:single` | close the list |
 | `ValueScene` | `up:single`, `down:single` | raise or lower the value |
 | `ValueScene` | `ok:single` | close, keeping the value |

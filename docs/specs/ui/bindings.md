@@ -351,9 +351,9 @@ draws its list.
 
 Registering the same name twice is one routine: the later file wins. The title is what the browser
 shows, and a routine without one shows its name; an icon is optional too, and a routine without one,
-or one whose icon is `nil`, is a text-only row. The device's own scenes — the readout, the system
-settings and the browser — are not registered at all; they are well-known scenes in `/modules/ui.be`
-the system pushes directly. There is no fixed number of routines: the registry is a Berry list, so
+or one whose icon is `nil`, is a text-only row. The device's own scenes — the readout and the system
+settings in `/modules/ui.be`, the browser in `/modules/browser.be` — are not registered at all; they
+are well-known scenes the system pushes directly. There is no fixed number of routines: the registry is a Berry list, so
 it grows as files register.
 
 ## `store` — the routine's own values

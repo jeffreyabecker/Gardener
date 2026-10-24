@@ -20,6 +20,10 @@
 #include <Fonts/TomThumb.h>
 #include <string.h>
 
+#include "panel/fonts/UISymbolSans12pt7b.h"
+#include "panel/fonts/UISymbolSans18pt7b.h"
+#include "panel/fonts/UISymbolSans24pt7b.h"
+
 namespace gardener {
 namespace fonts {
 
@@ -41,6 +45,9 @@ const GFXfont* const MonoBold18 = &FreeMonoBold18pt7b;
 const GFXfont* const MonoBold24 = &FreeMonoBold24pt7b;
 const GFXfont* const TomThumbFace = &TomThumb;
 const GFXfont* const PicopixelFace = &Picopixel;
+const GFXfont* const Symbol12 = &UISymbolSans12pt7b;
+const GFXfont* const Symbol18 = &UISymbolSans18pt7b;
+const GFXfont* const Symbol24 = &UISymbolSans24pt7b;
 
 bool find(const char* name, const GFXfont*& face) {
   if (name == nullptr || strcmp(name, "builtin") == 0) {

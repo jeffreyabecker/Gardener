@@ -84,10 +84,14 @@ class SettingsScene : Scene
     return self.items[index].text(value)
   end
 
+  # A row whose setting has no editor - a build fact the device reports - opens nothing.
   def open_row()
     var item = self.items[self.list.selected]
-    var value = is_nil(self.values[self.list.selected], item.default_value)
-    ux.push(item.scene(value), nil, / v -> self.value_closed(item, v))
+    var scene = item.scene(is_nil(self.values[self.list.selected], item.default_value))
+    if scene == nil
+      return
+    end
+    ux.push(scene, nil, / v -> self.value_closed(item, v))
   end
 
   # A committed value replaces the one in the list the caller handed over. A cancel leaves the row
@@ -106,3 +110,30 @@ class SettingsScene : Scene
   end
 end
 
+# The two halves of opening a list, for the caller that is not a page: the browser opens any
+# routine's rows. The list edits and pops the values; these read them from the routine's document
+# and write back only a set the routine's rule accepts.
+def edit_settings(name, on_closed)
+  var items = routines.settings(name)
+  if items == nil || items.size() == 0
+    vacuum.log("settings: " + name + " has none")
+    return false
+  end
+  var values = []
+  for item : items
+    values.push(item.read(name))
+  end
+  var message = routines.repair(name, items, values)
+  ux.push(SettingsScene(items, values, message), nil, / v -> on_closed(items, v))
+  return true
+end
+
+# A value the list holds nothing for is written as nothing, which reads back as nil.
+def save_settings(name, items, values)
+  routines.repair(name, items, values)
+  var i = 0
+  while i < items.size()
+    store.set(name, items[i].key, values[i] == nil ? "" : values[i])
+    i += 1
+  end
+end

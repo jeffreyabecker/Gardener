@@ -16,39 +16,16 @@ class Page : Scene
     return Activation(self.routine, values)
   end
 
-  # Open the settings scene the routine declares. The page reads the values and writes what the
-  # scene settles on, so the scene only edits them; a run that was under way starts over at the
-  # values it settled on, which is what on_editor_closed() is for.
+  # Open the settings scene the routine declares. The page writes what the scene settles on, so the
+  # scene only edits the values; a run that was under way starts over at the values it settled on,
+  # which is what on_editor_closed() is for.
   def open_settings()
-    var items = routines.settings(self.routine)
-    if items == nil || items.size() == 0
-      vacuum.log("settings: " + self.routine + " has none")
-      return
-    end
-    var values = []
-    for item : items
-      values.push(item.read(self.routine))
-    end
-    var message = routines.repair(self.routine, items, values)
-    ux.push(SettingsScene(items, values, message), nil, / v -> self.settings_closed(items, v))
+    edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
   end
 
-  # The set is put back to one the rule accepts before it is written, so the file never holds a set
-  # a run would refuse.
   def settings_closed(items, values)
-    routines.repair(self.routine, items, values)
-    var i = 0
-    while i < items.size()
-      self.write_setting(items[i].key, values[i])
-      i += 1
-    end
+    save_settings(self.routine, items, values)
     self.on_editor_closed()
-  end
-
-  # The page writes what the list settled on; a value the list holds nothing for is written as
-  # nothing, which reads back as nil.
-  def write_setting(key, value)
-    store.set(self.routine, key, value == nil ? "" : value)
   end
 end
 

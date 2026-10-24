@@ -26,6 +26,14 @@ extern const GFXfont* const MonoBold24;
 extern const GFXfont* const TomThumbFace;
 extern const GFXfont* const PicopixelFace;
 
+// The UI symbol faces, vendored from gilesp1729/FontCollection in panel/fonts/ under MPL-2.0 with
+// its license beside them. Codes 0-31 carry the icons - play, pause, the arrows, a tick, a cross -
+// and no letters at all, so they are for the panel's own glyphs rather than a routine's text, and
+// they are deliberately not names find() answers.
+extern const GFXfont* const Symbol12;
+extern const GFXfont* const Symbol18;
+extern const GFXfont* const Symbol24;
+
 // The face for a routine's font name; nullptr is the built-in 5x7. False when the name is not one
 // of the faces above, which is a mistake in the routine rather than a face to fall back to.
 bool find(const char* name, const GFXfont*& face);

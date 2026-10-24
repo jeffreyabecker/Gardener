@@ -134,9 +134,10 @@ def edit()
 end
 ```
 
-Nothing in the settings folder writes: `SettingsScene` edits the values it was handed and pops them
-on `back:single`, and the caller — the page here, the browser from the routine's row — applies the
-rule and writes them.
+Nothing in the settings folder writes on its own: `SettingsScene` edits the values it was handed and
+pops them on `back:single`, and the caller applies the rule and writes them. That caller's half is
+`edit_settings(name, on_closed)` and `save_settings(name, items, values)` in the same file, so the
+page and the browser open a routine's list the same way instead of each carrying its own copy.
 
 `/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
 native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
@@ -162,8 +163,13 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The device's own scenes ship in `/modules/ui.be` — the readout, the system settings and the browser
-— none of them registered.
+The device's own scenes ship in `/modules/ui.be` — the readout and the system settings — and
+`/modules/browser.be` — the routine browser, whose instance `browserScene` that file builds before
+`ui.be` compiles and names it. None of them registered. The system menu is itself a `SettingsScene`, over three settings that
+read and write the device through `screen.unit()` / `device.set_unit()`, `device.bluetooth()` and
+`device.jingle()` / `device.set_jingle()` rather than through a routine's file: a row there carries
+its own `current()` and `write(value)`, the radio row's `write` is empty and its `scene()` is `nil`
+so Forward has nothing to open, and the set it settled on is written when the menu leaves.
 
 ## When the firmware calls into a scene
 

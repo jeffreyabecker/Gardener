@@ -2,9 +2,9 @@
 #
 # None of these registers with the routines registry; they are the well-known scenes the system
 # pushes directly. The readout is the root scene (__rootScene); its gestures push the system and
-# browser scenes. The system scene is a menu that pushes the shared value scenes from
-# system/settings/scenes/ and writes their returned values through `device`; the browser drives
-# `routines` and pushes a routine's scene or its settings list.
+# browser scenes. The system scene is a settings list over the device's own settings, whose rows
+# read and write `screen` and `device` instead of a routine's file; the browser drives `routines`
+# and pushes a routine's scene or, through the same list, its settings.
 
 import string
 
@@ -47,10 +47,9 @@ class ReadoutChrome
   end
 end
 
-# The well-known scenes are singletons: declared here so the classes below can name them, and
-# assigned once their classes exist.
+# The well-known scenes are singletons. The browser's is built in browser.be, which loads before
+# this file, so only the system scene needs its name held here until its class exists below.
 systemScene = nil
-browserScene = nil
 
 class ReadoutScene : Scene
   var chrome
@@ -173,10 +172,11 @@ end
 
 # --- the system settings ---------------------------------------------------
 
-# The unit row cycles the device's units; the token is shown in capitals, as the overlay prints it.
+# The unit row cycles the device's units; the token is shown in capitals, so the row and its editor
+# print the unit the same way.
 class UnitScene : ChoiceScene
-  def init(current_index, values)
-    super(self).init("UNIT", values[current_index], values, false)
+  def init(current, values)
+    super(self).init("UNIT", current, values, false)
   end
 
   def text()
@@ -222,254 +222,143 @@ class JingleScene : ChoiceScene
   end
 end
 
-# The system scene's drawing: the three-row menu list. The rows come from the scene, which owns the
-# values and formats them; the chrome owns the list and draws it.
-class SystemChrome
-  var owner
-  var list
+# The device's own settings are not a routine's: they live behind `device` and `screen` rather than
+# in a routine's document, so a row reads its value and the choices it cycles from the call that
+# owns them, and writes the value back through the same one. The list, the rows and the editors are
+# the settings folder's.
 
-  def init(owner)
-    self.owner = owner
-    self.list = List(3)
+class UnitSettingCfg : ChoiceSettingCfg
+  def init()
+    super(self).init("unit", screen.unit().name, "UNIT", nil, device.units(), false)
   end
 
-  def draw()
-    self.list.set(self.owner.rows())
-    self.list.draw(0, 10)
+  def current()
+    return self.value(screen.unit().name)
+  end
+
+  def text(value)
+    return value
+  end
+
+  def write(value)
+    if value != screen.unit().name
+      device.set_unit(value)
+    end
+  end
+
+  def scene(value)
+    return UnitScene(value, self.values)
   end
 end
 
-# The device's own settings as a menu: three rows walked with Up/Down, each opening the value scene
-# it edits. The caller writes what a scene returns through `device`.
-class SystemScene : Scene
-  var units
-  var unit
-  var unit_index
-  var bluetooth
-  var jingle
-  var jingle_ids
-  var chrome
-
+# The radio row reports what the build was compiled with: there is nothing to write and nothing to
+# edit, so Forward on it leaves the list where it is.
+class BluetoothSettingCfg : BoolSettingCfg
   def init()
-    super(self).init()
-    self.units = []
-    self.unit = nil
-    self.unit_index = 0
-    self.bluetooth = true
-    self.jingle = nil
-    self.jingle_ids = []
-    self.chrome = SystemChrome(self)
+    super(self).init("bluetooth", device.bluetooth(), "BT", nil, false)
   end
 
-  def activate()
-    self.read()
-    self.draw()
+  def current()
+    return self.value(device.bluetooth())
+  end
+
+  def write(value)
+  end
+
+  def scene(value)
+    return nil
+  end
+end
+
+# A setting that was never written, a hand-edited value or a jingle this image does not ship all
+# land on the first entry, which is what `jingles.current()` plays for the same reason.
+def stored_jingle()
+  var id = device.jingle()
+  if id == nil || id == "" || jingles.notes(id) == nil
+    return jingles.default_id()
+  end
+  return id
+end
+
+class JingleSettingCfg : ChoiceSettingCfg
+  def init()
+    super(self).init("jingle", stored_jingle(), "JINGLE", nil, jingles.ids(), false)
+  end
+
+  def current()
+    return self.value(stored_jingle())
+  end
+
+  # The short label keeps the row inside the panel; the identifier is what the setting stores.
+  def text(value)
+    var label = jingles.label(value)
+    if label == nil
+      return "--"
+    end
+    return label
+  end
+
+  def write(value)
+    if value != stored_jingle()
+      device.set_jingle(value)
+    end
+  end
+
+  def scene(value)
+    return JingleScene(value, self.values)
+  end
+end
+
+# The device's own settings are a settings list like a routine's, so this scene is the list: it
+# reads the rows it shows on every entry and writes the set it settled on before it leaves, which
+# is the one moment a list hands its values over.
+class SystemScene : SettingsScene
+  def init()
+    super(self).init([], [], nil)
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
   # device, the radio row reports what this build was compiled with, and the jingle is the
   # identifier `jingles` resolves.
+  def activate()
+    self.read()
+    super(self).activate()
+  end
+
   def read()
-    self.units = device.units()
-    self.unit = screen.unit()
-    var i = 0
-    while i < self.units.size()
-      if self.units[i] == self.unit.name
-        self.unit_index = i
-      end
-      i += 1
+    self.items = [UnitSettingCfg(), BluetoothSettingCfg()]
+    # No library is a fault the boot already reported, and a choice with no values has nothing to
+    # cycle, so the row is left out rather than opened on an empty list.
+    var jingle = JingleSettingCfg()
+    if jingle.values.size() > 0
+      self.items.push(jingle)
     end
-    self.bluetooth = device.bluetooth()
-
-    self.jingle_ids = jingles.ids()
-    self.jingle = device.jingle()
-    # A setting that was never written, a hand-edited value or a jingle this image does not ship
-    # all land on the first entry, which is what `jingles.current()` plays for the same reason.
-    if self.jingle == nil || jingles.notes(self.jingle) == nil
-      self.jingle = jingles.default_id()
+    self.values = []
+    for item : self.items
+      self.values.push(item.current())
     end
-  end
-
-  def draw_page()
-    self.chrome.draw()
-  end
-
-  def rows()
-    return [
-      [nil, "UNIT=" + self.unit.suffix],
-      [nil, self.bluetooth_text()],
-      [nil, self.jingle_text()]
-    ]
-  end
-
-  def bluetooth_text()
-    if self.bluetooth
-      return "BT=ON"
-    end
-    return "BT=OFF"
-  end
-
-  # The short label keeps the row inside the panel; the identifier is what the setting stores.
-  def jingle_text()
-    if self.jingle == nil
-      return "JINGLE=--"
-    end
-    return "JINGLE=" + jingles.label(self.jingle)
   end
 
   def handle_page(ev)
-    if ev == "up:single"
-      self.chrome.list.move(-1)
-      return true
-    end
-    if ev == "down:single"
-      self.chrome.list.move(1)
-      return true
-    end
-    if ev == "forward:single"
-      self.open_row()
-      return true
-    end
     if ev == "back:single" || ev == "cancel:single"
+      self.write()
       ux.pop(nil)
       return true
     end
-    return false
+    return super(self).handle_page(ev)
   end
 
-  def open_row()
-    if self.chrome.list.selected == 0
-      ux.push(UnitScene(self.unit_index, self.units), nil, / v -> self.set_unit(v))
-    elif self.chrome.list.selected == 2
-      # No library is a fault the boot already reported; Forward does nothing rather than opening
-      # an editor with nothing to cycle.
-      if self.jingle_ids.size() == 0
-        return
-      end
-      ux.push(JingleScene(self.jingle, self.jingle_ids), nil, / v -> self.set_jingle(v))
+  # A row whose value did not change is not written, so opening the menu and looking at it does not
+  # wear the settings file.
+  def write()
+    var i = 0
+    while i < self.items.size()
+      self.items[i].write(self.values[i])
+      i += 1
     end
-    # The radio row is a build fact: the row reports it and Forward has nothing to open.
-  end
-
-  def set_unit(value)
-    if value != cancelled && device.set_unit(value)
-      self.read()
-    end
-    self.draw()
-  end
-
-  def set_jingle(value)
-    if value != cancelled
-      self.jingle = value
-      device.set_jingle(value)
-    end
-    self.draw()
   end
 end
 
 systemScene = SystemScene()
-
-# --- the routine browser ---------------------------------------------------
-
-class BrowserScene : Scene
-  var names
-  var list
-  var scrollbar
-
-  def init()
-    super(self).init()
-    self.names = []
-    self.list = List(6)
-    self.scrollbar = Scrollbar()
-    self.scrollbar.x = 110; self.scrollbar.y = 2; self.scrollbar.w = 2; self.scrollbar.h = 48
-    self.list.scrollbar = self.scrollbar
-
-    self.on("up:single", / -> self.step(-1))
-    self.on("down:single", / -> self.step(1))
-    self.on("ok:single", / -> self.choose())
-    self.on("forward:single", / -> self.open_selected())
-    self.on("back:single", / -> self.leave())
-    self.on("cancel:single", / -> self.leave())
-  end
-
-  def activate()
-    # A routine may only start from a released chamber, so opening the browser vents whatever the
-    # readout was running: the launch it leads to is the one place a routine is allowed to begin.
-    vacuum.stop()
-    # Read again every time the scene appears: the registry is fixed after boot, but a scene that
-    # draws a list should not trust the list it drew last time either.
-    self.names = routines.names()
-    self.list.set(self.rows())
-    self.draw()
-  end
-
-  def rows()
-    return routines.rows()
-  end
-
-  def step(delta)
-    return self.list.move(delta)
-  end
-
-  def choose()
-    var count = self.names.size()
-    if count == 0
-      return false
-    end
-    return routines.push(self.names[self.list.selected], nil)
-  end
-
-  # Open the selected routine's settings. The browser reads the values and writes what the scene
-  # settles on, the way the routine's own page does; the scene only edits them.
-  def open_selected()
-    var count = self.names.size()
-    if count == 0
-      return false
-    end
-    var name = self.names[self.list.selected]
-    var items = routines.settings(name)
-    if items == nil || items.size() == 0
-      vacuum.log("settings: " + name + " has none")
-      return false
-    end
-    var values = []
-    for item : items
-      values.push(item.read(name))
-    end
-    var message = routines.repair(name, items, values)
-    ux.push(SettingsScene(items, values, message), nil, / v -> self.settings_closed(name, items, v))
-    return true
-  end
-
-  # The set is put back to one the rule accepts before it is written, so the file never holds a set
-  # a run would refuse.
-  def settings_closed(name, items, values)
-    routines.repair(name, items, values)
-    var i = 0
-    while i < items.size()
-      self.write_setting(name, items[i].key, values[i])
-      i += 1
-    end
-    self.draw()
-  end
-
-  def write_setting(name, key, value)
-    store.set(name, key, value == nil ? "" : value)
-  end
-
-  def leave()
-    ux.pop(nil)
-    return true
-  end
-
-  def draw_page()
-    if self.names.size() == 0
-      return
-    end
-    self.list.draw(0, 2)
-  end
-end
-
-browserScene = BrowserScene()
 
 __rootScene = ReadoutScene()
