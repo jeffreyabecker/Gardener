@@ -25,57 +25,113 @@ class LayoutV2 : ComponentV2
     return self.fill_direction == "lr-tb" || self.fill_direction == "rl-tb"
   end
 
+  def main_of(m)
+    return self.horizontal() ? m[0] : m[1]
+  end
+
+  def cross_of(m)
+    return self.horizontal() ? m[1] : m[0]
+  end
+
+  def set_box(child, cmain, ccross, main, cross)
+    if self.horizontal()
+      child.x = cmain
+      child.y = ccross
+      child.w = main
+      child.h = cross
+    else
+      child.x = ccross
+      child.y = cmain
+      child.w = cross
+      child.h = main
+    end
+  end
+
   # Measure each child, then place them along the fill direction, separated by the spacing.
-  # Measured children keep their measured size; growing children share the space left over
-  # equally; every child is stretched to the layout's cross size.
   def place()
     var cross = self.horizontal() ? self.h : self.w
     var main_total = self.horizontal() ? self.w : self.h
-    var n = self.children.size()
-
     var entries = []
-    var measured_sum = 0
-    var growing = 0
     var i = 0
-    while i < n
+    while i < self.children.size()
       var child = self.children[i]
-      var m = child.measure(cross)
-      var main = self.horizontal() ? m[0] : m[1]
-      entries.push([child, m, main])
-      if child.grow
-        growing += 1
-      else
-        measured_sum += main
-      end
+      entries.push([child, child.measure(cross)])
       i += 1
     end
 
-    var leftover = main_total - measured_sum - self.spacing * (n - 1)
+    if self.wrap
+      self.place_wrapped(entries, main_total)
+    else
+      self.place_line(entries, main_total, self.horizontal() ? self.y : self.x, cross)
+    end
+  end
+
+  # One line of children: measured keep their measured size, growing share the remainder equally,
+  # and every child stretches to `cross`.
+  def place_line(entries, main_total, ccross, cross)
+    var measured = 0
+    var growing = 0
+    for e : entries
+      if e[0].grow
+        growing += 1
+      else
+        measured += self.main_of(e[1])
+      end
+    end
+    var leftover = main_total - measured - self.spacing * (entries.size() - 1)
     var share = 0
     if growing > 0 && leftover > 0
       share = leftover / growing
     end
-
     var cursor = self.horizontal() ? self.x : self.y
-    i = 0
-    while i < n
-      var entry = entries[i]
-      var child = entry[0]
-      var m = entry[1]
-      var main = child.grow ? share : entry[2]
-      if self.horizontal()
-        child.x = cursor
-        child.y = self.y
-        child.w = main
-        child.h = self.h
-      else
-        child.x = self.x
-        child.y = cursor
-        child.w = self.w
-        child.h = main
+    for e : entries
+      var child = e[0]
+      var main = child.grow ? share : self.main_of(e[1])
+      self.set_box(child, cursor, ccross, main, cross)
+      cursor += main + self.spacing
+    end
+  end
+
+  # A wrapping layout carries a child that no longer fits onto the next line or column; a growing
+  # child fills the rest of its own line or column. Each line is as tall as its tallest child and
+  # each column as wide as its widest child.
+  def place_wrapped(entries, main_total)
+    var lines = []
+    var cur = []
+    var cur_cross = 0
+    var used = 0
+    var i = 0
+    while i < entries.size()
+      var e = entries[i]
+      var main = self.main_of(e[1])
+      var csize = self.cross_of(e[1])
+      if !e[0].grow && used > 0 && used + main > main_total
+        lines.push([cur, cur_cross])
+        cur = []
+        cur_cross = 0
+        used = 0
       end
-      cursor = cursor + main + self.spacing
+      cur.push(e)
+      used += main
+      if csize > cur_cross
+        cur_cross = csize
+      end
+      if e[0].grow
+        lines.push([cur, cur_cross])
+        cur = []
+        cur_cross = 0
+        used = 0
+      end
       i += 1
+    end
+    if cur.size() > 0
+      lines.push([cur, cur_cross])
+    end
+
+    var ccross = self.horizontal() ? self.y : self.x
+    for line : lines
+      self.place_line(line[0], main_total, ccross, line[1])
+      ccross += line[1] + self.spacing
     end
   end
 
