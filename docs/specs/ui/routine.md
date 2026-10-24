@@ -95,8 +95,8 @@ dependencies put it.
 `/system/records.be` declares `reading`, `unit`, `bounds` and `setting` — the classes the native
 calls answer with, and the one a routine builds for each of its own settings. They are written in
 Berry because only the parser can declare an instance variable on a class. The same file defines the
-global `isnull(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
-so a stored-or-default choice reads `isnull(stored, fallback)`. `/system/scene.be` is
+global `is_nil(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
+so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/scene.be` is
 `Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistry` and the global `routines` instance —
 the list the browser draws, and the `push(name, callback)` that opens a routine.

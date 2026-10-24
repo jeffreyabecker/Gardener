@@ -7,7 +7,7 @@
 # A record is the state at the moment of the call, and writing one of its fields changes the
 # routine's copy and nothing else.
 #
-# The file loads before any page, so it also holds the one global the pages share: `isnull`, the
+# The file loads before any page, so it also holds the one global the pages share: `is_nil`, the
 # first of its arguments that is not nil, which turns a stored-or-default choice into one line.
 
 class reading
@@ -39,9 +39,9 @@ class setting
 end
 
 # The first argument that is not nil, or nil when every one of them is. With no arguments it is nil,
-# so `isnull(stored, fallback)` is the stored value when there is one and the fallback when there is
+# so `is_nil(stored, fallback)` is the stored value when there is one and the fallback when there is
 # not.
-def isnull(*values)
+def is_nil(*values)
   for value : values
     if value != nil
       return value
