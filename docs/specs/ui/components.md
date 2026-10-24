@@ -95,10 +95,10 @@ style is bold, and then the built-in 5×7, which is the last resort.
 `fit(text)` is the first candidate whose ink box — from `screen.text_bounds` — fits the box, and
 the last candidate when none fits.
 
-The built-in 5×7 is used only when no compiled face fits: 5×7 px per glyph, six pixels of advance,
-so a five-letter word measures 29 px. A string whose ink box is still wider than the box at that
-face is cut short with a trailing ellipsis at the box's edge. Nothing `Text` draws lies outside its
-box.
+The built-in 5×7 is used only when no compiled face fits: a 5×7 glyph in a 6×8 cell, six pixels of
+advance, so a five-letter word measures 29 px and its ink box is 8 px tall. A string whose ink box
+is still wider than the box at that face is cut short with a trailing ellipsis at the box's edge.
+Nothing `Text` draws lies outside its box.
 
 Bold has no built-in face. When the style is bold and the built-in 5×7 is chosen, the string is
 drawn and its ink box — the box `text_bounds` answers — is inverted, which is what reads as bold.
