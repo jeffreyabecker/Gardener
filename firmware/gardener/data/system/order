@@ -15,6 +15,7 @@ components/triangle.be
 components/icon.be
 components/v2/component.be
 components/v2/icon.be
+components/v2/text.be
 scene.be
 list.be
 registry.be
