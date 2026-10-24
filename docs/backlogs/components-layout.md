@@ -39,18 +39,18 @@ parking-lot line.
 
 ## Epic 2 — Text
 
-- [ ] 2.1 Add the new `Text` at `/system/components/v2/` with the compiled-first ladder. Today
+- [x] 2.1 Add the new `Text` at `/system/components/v2/` with the compiled-first ladder. Today
   `system/components/text.be` interleaves the built-in 5×7 at sizes 3 and 2 among the compiled
   faces and returns the smallest candidate when nothing fits. The new `Text` tries the compiled
   face at 24, 18, 12 and 9 px, bold when the style is bold, and the built-in 5×7 only last, fitting
   once per string and caching the face. Check: a string that fits at 9 px draws at 9 px, and one
   that does not draws at the built-in face.
 
-- [ ] 2.2 Truncate a string wider than its box at the built-in face with a trailing ellipsis. Today
+- [x] 2.2 Truncate a string wider than its box at the built-in face with a trailing ellipsis. Today
   `draw_fitted` centres the smallest candidate, so the ink spills out both sides of the box. Check:
   a long string draws with an ellipsis at the box's edge and nothing past it.
 
-- [ ] 2.3 Render bold on the built-in face by inverting the text's ink box. Today bold exists only
+- [x] 2.3 Render bold on the built-in face by inverting the text's ink box. Today bold exists only
   as the compiled bold faces, so bold on the built-in face is impossible. Check: bold built-in text
   draws and its ink box is then inverted.
 
