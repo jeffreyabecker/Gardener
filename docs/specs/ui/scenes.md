@@ -33,10 +33,10 @@ Every scene, and where it lives:
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `modules/settings_edit.be` | inherited |
 | `DurationScene` | `modules/settings_edit.be` | `handle_page` |
 | `UnitScene`, `JingleScene` | `modules/ui.be` | inherited |
-| `Interval` | `routines/interval.be` | `on` |
+| `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
-| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the three routine files | inherited |
+| `IntervalSettings`, `RampedIntervalSettings`, `RampedStaticSettings` | the two routine files | inherited |
 | `Page` — the routine base | `modules/settings_page.be` | — |
 | `Scene` — the base | `modules/scene.be` | — |
 

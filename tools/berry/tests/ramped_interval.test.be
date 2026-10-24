@@ -49,12 +49,33 @@ def cancel_pauses_and_ok_restarts()
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   var page = ux.top()
   harness.press("ok:single")
-  wait_until("ramped_interval: OK did not reach the work hold", 200, / -> page.phase == "work")
+  wait_until("ramped_interval: OK did not reach the work hold", 200, / -> page.phase == IntervalPhase.WORK)
   harness.press("cancel:single")
   harness.beat(1)
-  assert_eq(page.phase, "paused", "ramped_interval: Cancel did not pause")
+  assert_eq(page.phase, IntervalPhase.PAUSED, "ramped_interval: Cancel did not pause")
   harness.press("ok:single")
-  wait_until("ramped_interval: OK did not restart the set", 200, / -> page.phase == "work")
+  wait_until("ramped_interval: OK did not restart the set", 200, / -> page.phase == IntervalPhase.WORK)
 end
 
 test("Cancel pauses and OK restarts the set", cancel_pauses_and_ok_restarts)
+
+def waits_between_sets()
+  var settings = {
+    "set_count": 2,
+    "initial_pressure": 5.0,
+    "final_pressure": 10.0,
+    "work_duration": 0,
+    "rest_duration": 0,
+    "resume_behavior": "after ok"
+  }
+  assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
+  var page = ux.top()
+  harness.press("ok:single")
+  wait_until("ramped_interval: did not wait between sets", 200,
+             / -> page.phase == IntervalPhase.WAITING)
+  harness.press("ok:single")
+  wait_until("ramped_interval: did not complete after its set count", 200,
+             / -> ux.depth() == 1)
+end
+
+test("waits between sets and completes after the set count", waits_between_sets)

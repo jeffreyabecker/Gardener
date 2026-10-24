@@ -166,7 +166,7 @@ A file that will not compile or load is reported the way the firmware reports it
 load:
 
 ```
-[E] vm: routines/interval.be compile: interval.be:3: 'Unknown' undeclared
+[E] vm: routines/ramped_interval.be compile: ramped_interval.be:3: 'Unknown' undeclared
 ```
 
 A check that fails says what it expected, prefixed with the page it was driving, and the run ends

@@ -36,7 +36,7 @@ def waits_between_sets()
   harness.press("ok:single")
   # A beat is 250 ms, so the 600 s work hold and the 60 s rest are 2640 beats before the pause, and
   # the second set is another 2400.
-  wait_until("interval: did not wait between sets", 3000, / -> page.phase == "waiting")
+  wait_until("interval: did not wait between sets", 3000, / -> page.phase == IntervalPhase.WAITING)
   harness.press("ok:single")
   wait_until("interval: did not complete after its set count", 3000,
              / -> ux.depth() == 1)
@@ -55,9 +55,9 @@ def reaches_work_hold()
   }
   assert_true(harness_activate("interval", settings), "interval: activate refused")
   var page = ux.top()
-  assert_eq(page.phase, "ready", "interval: a fresh page is not ready")
+  assert_eq(page.phase, IntervalPhase.READY, "interval: a fresh page is not ready")
   harness.press("ok:single")
-  wait_until("interval: did not reach the work hold", 200, / -> page.phase == "work")
+  wait_until("interval: did not reach the work hold", 200, / -> page.phase == IntervalPhase.WORK)
   assert_eq(vacuum.state().state, "HOLD", "interval: work is not at a hold")
   assert_eq(vacuum.state().target, 5.0, "interval: work target is not the stored target")
 end
@@ -76,12 +76,12 @@ def cancel_pauses_and_ok_resumes()
   assert_true(harness_activate("interval", settings), "interval: activate refused")
   var page = ux.top()
   harness.press("ok:single")
-  wait_until("interval: did not reach the work hold", 200, / -> page.phase == "work")
+  wait_until("interval: did not reach the work hold", 200, / -> page.phase == IntervalPhase.WORK)
   harness.press("cancel:single")
   harness.beat(1)
-  assert_eq(page.phase, "paused", "interval: Cancel did not pause the cycle")
+  assert_eq(page.phase, IntervalPhase.PAUSED, "interval: Cancel did not pause the cycle")
   harness.press("ok:single")
-  wait_until("interval: did not resume the work hold", 200, / -> page.phase == "work")
+  wait_until("interval: did not resume the work hold", 200, / -> page.phase == IntervalPhase.WORK)
 end
 
 test("Cancel pauses and OK resumes the cycle", cancel_pauses_and_ok_resumes)

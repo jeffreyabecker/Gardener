@@ -309,7 +309,7 @@ All arguments are positional and unquoted. A path is one token and contains no s
 -> fs list /routines
 <- ok
 <- file default.be
-<- file interval.be
+<- file ramped_interval.be
 <- file interval.cfg
 <- (blank line)
 -> fs read /routines/interval.cfg
