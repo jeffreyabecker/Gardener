@@ -17,7 +17,7 @@ parking-lot line.
 
 ## Epic 1 — The new foundation
 
-- [ ] 1.1 Add `width()` and `height()` to the `screen` module. Today
+- [x] 1.1 Add `width()` and `height()` to the `screen` module. Today
   `Screen.cpp` in `libraries/PanelLink/src/routines/bindings/` binds only the draw calls,
   `text_bounds`, `flush` and `unit`, and `Display::width()` and `Display::height()` exist but are
   not exposed, so a layout has no panel size to derive from. Bind the two, answering the display's
