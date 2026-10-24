@@ -110,7 +110,7 @@ parking-lot line.
   `secondary_style`. Check: a secondary sits smaller in each of the four corners, and side by side
   at `size_hint` 1 on the side the second character of `secondary_position` names.
 
-- [ ] 4.8 Add the `Duration` component at `/system/components/v2/` with the `format` property.
+- [x] 4.8 Add the `Duration` component at `/system/components/v2/` with the `format` property.
   Today `duration_text` in `system/settings/settings.be` formats minutes and seconds only, and no
   component draws a duration. Check: `2m30s`, `1m`, `45s`, `1h2m30s` and `0s` in each of the three
   formats.

@@ -23,6 +23,7 @@ components/v2/progress_bar.be
 components/v2/scrollbar.be
 components/v2/triangle.be
 components/v2/pressure_display.be
+components/v2/duration.be
 scene.be
 list.be
 registry.be
