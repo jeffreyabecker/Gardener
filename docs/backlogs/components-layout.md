@@ -117,7 +117,7 @@ parking-lot line.
 
 ## Epic 5 — The baseline suite and the component captures
 
-- [ ] 5.1 Add a capture path that renders a named component to a frame, from either framework, so a
+- [x] 5.1 Add a capture path that renders a named component to a frame, from either framework, so a
   component can be seen without driving a whole scene. Check: a frame for a named component is
   written and opens as a BMP.
 
