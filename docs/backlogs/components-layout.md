@@ -83,7 +83,7 @@ parking-lot line.
   outlined, a solid square below 3 px. Check: each shape draws, and a bubble smaller than 3 px is a
   solid square with no outline.
 
-- [ ] 4.2 Add the new `ProgressBubbles` at `/system/components/v2/` as a wrapping layout of
+- [x] 4.2 Add the new `ProgressBubbles` at `/system/components/v2/` as a wrapping layout of
   `max_count` bubbles whose `fill_direction` is the field's, filling the first `count` children in
   fill order. Today `system/components/progress_bubbles.be` lays its own grid with `compute()` and
   maps `fill_direction` onto the grid. The bubble size stays the measure that lets the count fill

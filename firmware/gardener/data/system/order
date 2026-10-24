@@ -18,6 +18,7 @@ components/v2/icon.be
 components/v2/text.be
 components/v2/layout.be
 components/v2/bubble.be
+components/v2/progress_bubbles.be
 scene.be
 list.be
 registry.be
