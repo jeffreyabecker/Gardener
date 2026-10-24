@@ -145,7 +145,7 @@ are not updated; they stay on the v1 components until the porting pass that is s
   growing `PressureDisplayV2`s across the 128×52 page area, saving both frames into `artifacts/v2/`
   for comparison. Check: both frames are written.
 
-- [ ] 6.2 Render the ramped static chrome and its v2 twin. Today `RampedStaticChrome` in
+- [x] 6.2 Render the ramped static chrome and its v2 twin. Today `RampedStaticChrome` in
   `routines/ramped_static.be` places the icon, the pressure and a status-plus-bar row. Draw the
   chrome as it does today and a v2 reconstruction — a column of the icon, the pressure and a
   status-plus-bar row where the word is measured and the bar grows — saving both frames. Check:
