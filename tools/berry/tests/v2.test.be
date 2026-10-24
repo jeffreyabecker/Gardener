@@ -201,3 +201,14 @@ def progress_bar_draws()
 end
 
 test("a progress bar draws at its ends", progress_bar_draws)
+
+def scrollbar_draws()
+  var s = ScrollbarV2()
+  s.x = 0; s.y = 0; s.w = 2; s.h = 48
+  s.draw(0, 10, 5)
+  s.draw(5, 10, 5)
+  s.hollow = true
+  s.draw(2, 10, 5)
+end
+
+test("a scrollbar draws its thumb", scrollbar_draws)
