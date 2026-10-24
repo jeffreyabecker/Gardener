@@ -8,29 +8,31 @@ that is wrong now, what is true when it lands, and the check that shows it.
 
 The work is parallel: the new framework is built beside the existing one, and the shipped pages
 stay on the existing components throughout. The new components live under
-`/system/components/v2/`, one file named in `/system/order` per component. The epics are worked in
-order and every item leaves the tree building. The spec line a behaviour changes is written in the
-commit that changes it.
+`/system/components/v2/`, one file named in `/system/order` per component. The v2 classes carry a
+`V2` suffix — `ComponentV2`, `TextV2` and so on — so they do not shadow the v1 classes the shipped
+pages construct by name; the suffix is dropped in the porting pass. The epics are worked in order
+and every item leaves the tree building. The spec line a behaviour changes is written in the commit
+that changes it.
 
 Porting the pages to the v2 components and adopting them is out of scope for now and is a
 parking-lot line.
 
 ## Epic 1 — The new foundation
 
-- [ ] 1.1 Add `width()` and `height()` to the `screen` module. Today
+- [x] 1.1 Add `width()` and `height()` to the `screen` module. Today
   `Screen.cpp` in `libraries/PanelLink/src/routines/bindings/` binds only the draw calls,
   `text_bounds`, `flush` and `unit`, and `Display::width()` and `Display::height()` exist but are
   not exposed, so a layout has no panel size to derive from. Bind the two, answering the display's
   width and height. Check: a harness assertion reads both and gets 128 and 64 on the bitmap panel.
 
-- [ ] 1.2 Add the new component base at `/system/components/v2/`. Today
+- [x] 1.2 Add the new component base at `/system/components/v2/`. Today
   `system/components/component.be` carries `margin`, `border` and `padding` and the `frame()` and
   `content()` rects; the spec's component is `x, y, w, h` plus `inverted`, drawing inside its box.
   Add the new base, named in `/system/order`, and leave the existing one in place, so the shipped
   pages keep drawing. Check: both load, the pages render as before, and `python
   tools/berry/check.py` passes.
 
-- [ ] 1.3 Add the new `Icon` at `/system/components/v2/` as a component with an intrinsic `w` by
+- [x] 1.3 Add the new `Icon` at `/system/components/v2/` as a component with an intrinsic `w` by
   `h`, a box, and the `inverted` flip. Today `system/components/icon.be` is boxless and drawn with
   `draw(x, y)`, and the browser still needs it. Check: an icon instance draws in its box and flips
   when inverted; the browser's rows are unchanged.
