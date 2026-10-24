@@ -8,13 +8,28 @@ is only a box and a flip, a layout component that sizes and arranges its childre
 back to the built-in face only as a last resort, a pressure display with a secondary reading, a
 duration display, and bubbles rebuilt on a wrapping layout.
 
-This plan carries the requirement to bring the code to that spec, and to prove it on the host with
-a test suite that captures what each component and each page renders — for the framework that
-exists today and the one that replaces it, so the two can be seen side by side.
+The work is done in parallel: the new framework is built beside the existing one, and both keep
+rendering until the new one has been fully vetted, and only then do the pages switch over. This
+plan carries the requirement to bring the code to that spec and to prove it on the host with a test
+suite that captures what each component and each page renders — for the framework that exists today
+and the one that replaces it, so the two can be seen side by side.
 
 ## Requirements
 
-### 1. A component is a box and a flip, and Icon is one
+### 1. The new framework is built beside the old one and adopted after vetting
+
+Today the spec describes a replacement, and the requirements that follow read as rewriting the
+components in place, which would break the pages mid-way and leave nothing to compare the new
+rendering against. Instead the new component and layout framework is built alongside the existing
+one: the existing components and pages keep working unchanged throughout, the pages stay on the
+existing framework until the new one's frames match the shipped pages, and then they switch over in
+one adoption step, after which the old framework is deleted.
+
+Check: while the work is under way `python tools/berry/check.py` still drives the existing pages
+and passes; the same page renders under both frameworks for the same inputs; the switch is a single
+step that happens only after the frames in requirement 9 match.
+
+### 2. A component is a box and a flip, and Icon is one
 
 Today [component.be](../../firmware/gardener/data/system/components/component.be) defines the
 `margin`, `border` and `padding` insets and the `frame()` and `content()` rects on top of the box,
@@ -23,10 +38,11 @@ with `draw(x, y)`. The spec says a component is `x, y, w, h` plus `inverted`, wi
 outside the box, and that `Icon` is a component with an intrinsic `w` by `h` whose box the layout
 gives it and which flips when inverted.
 
-Check: `component.be` carries no insets; `icon.be` is a boxed component; the Berry check still
-drives every page.
+Check: the new component base carries no insets and the new `Icon` is a boxed component; the
+existing `component.be` and `icon.be` stay untouched until adoption; the Berry check still drives
+every page.
 
-### 2. A layout component sizes and arranges its children
+### 3. A layout component sizes and arranges its children
 
 Today there is no layout: [ui.be](../../firmware/gardener/data/modules/ui.be),
 [browser.be](../../firmware/gardener/data/modules/browser.be) and the two routine chromes write
@@ -40,9 +56,9 @@ size and aligned by its own `align` and `v_align`). A layout has `fill_direction
 column when it no longer fits; a layout's own natural size is what its parent measures it as.
 
 Check: a page states relationships, not pixel numbers, and a change to the content reflows the page
-without an edit; the four fill directions and `wrap` are each exercised by the suite in requirement 8.
+without an edit; the four fill directions and `wrap` are each exercised by the suite in requirement 9.
 
-### 3. Text fits the compiled faces first, then truncates
+### 4. Text fits the compiled faces first, then truncates
 
 Today [text.be](../../firmware/gardener/data/system/components/text.be) tries the compiled faces
 interleaved with the built-in 5×7 at sizes 3 and 2, returns the smallest candidate when nothing
@@ -56,7 +72,7 @@ Check: a string that fits at 9 px draws at 9 px, one that does not draws at the 
 one wider than the box is truncated with an ellipsis at the box's edge; bold built-in text is
 inverted, and nothing a text draws lies outside its box.
 
-### 4. PressureDisplay carries a secondary reading
+### 5. PressureDisplay carries a secondary reading
 
 Today [pressure_display.be](../../firmware/gardener/data/system/components/pressure_display.be)
 draws one number, and its `border` draws a frame the spec no longer has. The spec adds
@@ -70,7 +86,7 @@ character of `secondary_position` names.
 Check: the readout still draws one number when `secondary_pressure` is nil; a set secondary appears
 smaller in each of the four corners and side by side at `size_hint` 1.
 
-### 5. Duration formats whole seconds
+### 6. Duration formats whole seconds
 
 Today a duration is formatted by `duration_text` in
 [settings.be](../../firmware/gardener/data/system/settings/settings.be), which only knows minutes
@@ -81,7 +97,7 @@ the text filling its box with `Text`'s fit, and has a `format` property — `sec
 Check: `2m30s`, `1m` on a whole minute, `45s` under a minute, `1h2m30s`, and `0s` for nothing, in
 each of the three formats.
 
-### 6. ProgressBubbles is a wrapping layout of bubbles
+### 7. ProgressBubbles is a wrapping layout of bubbles
 
 Today [progress_bubbles.be](../../firmware/gardener/data/system/components/progress_bubbles.be)
 lays its own grid with `compute()` and maps `fill_direction` onto the grid itself. The spec adds a
@@ -93,17 +109,17 @@ that lets the count fill the box.
 Check: the same count in each of the four fill directions fills from the matching corner; the field
 still fills its box at every count from 1 to 20, and a bubble below 3 px is a solid square.
 
-### 7. The screen reports its size and pages stop carrying pixels
+### 8. The screen reports its size and pages stop carrying pixels
 
 Today the `screen` module has no size call, and every page lays out against a hard-coded 128×64.
 The spec says the panel is `screen.width()` by `screen.height()`, and a page composes components
 into layouts whose boxes derive from those, never from a literal.
 
 Check: `screen.width()` and `screen.height()` answer the panel's size on the host and the device;
-no page or component file under `firmware/gardener/data` carries a 128 or 64 pixel literal for the
-panel's size.
+the new framework's pages carry no 128 or 64 pixel literal for the panel's size, and the existing
+pages keep theirs until the adoption step.
 
-### 8. The Berry tooling tests and captures the rendering
+### 9. The Berry tooling tests and captures the rendering
 
 Today [check.py](../../tools/berry/check.py) drives every page, `--art` and `--scene` save one
 frame, and `--tests` runs the suites in `tools/berry/tests` with a GIF per case, but there is no
@@ -142,4 +158,5 @@ measure and place, the four fill directions, the secondary pressure in each corn
 side, the duration formats, and the bubble field at every count. The capture pass writes the
 committed baseline and the new framework's frames; comparing the shipped pages between the two and
 opening the changed-content frames is the observation that the layout reproduces today's rendering
-and reflows it.
+and reflows it. The pages switch to the new framework — and the old one is deleted — only after
+that comparison holds, which is what vetting before adoption means in this plan.
