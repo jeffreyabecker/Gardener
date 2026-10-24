@@ -70,7 +70,7 @@ parking-lot line.
   separated by the spacing. Check: children beyond the line's width wrap and stack, each line as
   tall as its tallest child.
 
-- [ ] 3.4 Add the remaining fill directions `rl-tb`, `tb-lr` and `bt-lr`. Check: children fill from
+- [x] 3.4 Add the remaining fill directions `rl-tb`, `tb-lr` and `bt-lr`. Check: children fill from
   each named corner in order.
 
 - [ ] 3.5 Give a layout a natural size so a parent measures it: the sum of its children's sizes

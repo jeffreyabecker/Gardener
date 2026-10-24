@@ -110,3 +110,39 @@ def layout_wraps_children()
 end
 
 test("a wrapping layout carries children onto the next line", layout_wraps_children)
+
+def layout_fills_right_to_left()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 24; l.h = 8
+  l.fill_direction = "rl-tb"
+  var a = TextV2(); a.value = "AB"
+  var b = TextV2(); b.value = "AB"
+  l.add(a); l.add(b)
+  l.place()
+  assert_eq(a.x, 12, "the first child is not at the right")
+  assert_eq(b.x, 0, "the second child is not left of the first")
+end
+
+test("a layout fills right to left", layout_fills_right_to_left)
+
+def layout_fills_columns()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 8; l.h = 16
+  l.fill_direction = "tb-lr"
+  var a = TextV2(); a.value = "A"
+  var b = TextV2(); b.value = "A"
+  l.add(a); l.add(b)
+  l.place()
+  assert_eq(a.y, 0, "the first child is not at the top")
+  assert_eq(b.y, 8, "the second child is not below the first")
+
+  var r = LayoutV2()
+  r.x = 0; r.y = 0; r.w = 8; r.h = 16
+  r.fill_direction = "bt-lr"
+  r.add(a); r.add(b)
+  r.place()
+  assert_eq(a.y, 8, "the first child is not at the bottom")
+  assert_eq(b.y, 0, "the second child is not above the first")
+end
+
+test("a layout fills columns top to bottom and bottom to top", layout_fills_columns)

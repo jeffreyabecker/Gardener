@@ -25,6 +25,11 @@ class LayoutV2 : ComponentV2
     return self.fill_direction == "lr-tb" || self.fill_direction == "rl-tb"
   end
 
+  # Whether the fill runs against the reading direction: right-to-left or bottom-to-top.
+  def reverse()
+    return self.fill_direction == "rl-tb" || self.fill_direction == "bt-lr"
+  end
+
   def main_of(m)
     return self.horizontal() ? m[0] : m[1]
   end
@@ -83,12 +88,22 @@ class LayoutV2 : ComponentV2
     if growing > 0 && leftover > 0
       share = leftover / growing
     end
-    var cursor = self.horizontal() ? self.x : self.y
+    var cursor
+    if self.reverse()
+      cursor = self.horizontal() ? self.x + self.w : self.y + self.h
+    else
+      cursor = self.horizontal() ? self.x : self.y
+    end
     for e : entries
       var child = e[0]
       var main = child.grow ? share : self.main_of(e[1])
-      self.set_box(child, cursor, ccross, main, cross)
-      cursor += main + self.spacing
+      if self.reverse()
+        self.set_box(child, cursor - main, ccross, main, cross)
+        cursor -= main + self.spacing
+      else
+        self.set_box(child, cursor, ccross, main, cross)
+        cursor += main + self.spacing
+      end
     end
   end
 
