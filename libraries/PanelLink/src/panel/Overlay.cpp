@@ -21,6 +21,12 @@ constexpr int16_t kSerialIconX = 50;
 constexpr int16_t kBluetoothIconX = 66;
 constexpr int16_t kStateIconX = 100;
 
+// Pulling and venting blink, so a glance says the machine is working rather than parked: the glyph
+// is lit for the first 65% of every period. A period is four 250 ms frames and the dark 35% is
+// longer than one, so every period shows the icon dark at least once.
+constexpr uint32_t StateBlinkMs = 1000;
+constexpr uint32_t StateBlinkOnMs = StateBlinkMs * 65 / 100;
+
 constexpr int16_t kBatteryIconWidth = 12;
 constexpr int16_t kBatteryBodyWidth = 10;
 constexpr int16_t kBatteryBodyHeight = 7;
@@ -55,15 +61,17 @@ void Overlay::setConnections(bool serial, bool bluetooth) {
 
 // One glyph per state, from the built-in face's symbol range, so the mode reads without the word
 // beside it: an up triangle while the pump pulls, a down triangle while the valve vents, an
-// inverse circle at target, the sun while idle, and an X on a fault.
+// inverse circle at target, the sun while idle, and an X on a fault. The two states that move the
+// chamber blink, so the band says a machine is working rather than stopped.
 void Overlay::drawStateIcon() {
   const int16_t x = kStateIconX + 3;
+  const bool lit = (millis() % StateBlinkMs) < StateBlinkOnMs;
   switch (vacuum_->runState()) {
     case RunState::Pulling:
-      inner_->glyph(x, kFieldY, 0x1E, 1);
+      if (lit) inner_->glyph(x, kFieldY, 0x1E, 1);
       break;
     case RunState::Venting:
-      inner_->glyph(x, kFieldY, 0x1F, 1);
+      if (lit) inner_->glyph(x, kFieldY, 0x1F, 1);
       break;
     case RunState::Holding:
       inner_->glyph(x, kFieldY, 0x0A, 1);
@@ -84,15 +92,15 @@ void Overlay::drawConnections() {
   if (serial_) inner_->glyph(kSerialIconX + 3, kFieldY, 0x15, 1);
   if (bluetooth_) bluetoothIcon(kBluetoothIconX, kBandY);
 }
-// ....x.......
-// .x..x.x.....
-// ..x.x...x...
-// ....x.x.....
 // .....x......
-// ....x.x.....
-// ..x.x...x...
-// .x..x.x.....
-// ....x.......
+// ..x..x.x....
+// ...x.x...x..
+// .....x.x....
+// ......x.....
+// .....x.x....
+// ...x.x...x..
+// ..x..x.x....
+// .....x......
 
 // The Bluetooth rune: the stem, its tails and the two triangles on it.
 void Overlay::bluetoothIcon(int16_t x, int16_t y) {

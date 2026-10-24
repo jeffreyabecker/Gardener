@@ -171,6 +171,10 @@ on every `flush()`, so a routine never has to. Left to right:
 | the run state's icon | 100–111 |
 | the battery, when a pack is fitted | 116–127 |
 
+The run state's icon blinks while the pump pulls or the valve vents — lit for 65% of a 1000 ms
+period — so a machine that is working reads differently from one that has stopped; holding, idle
+and fault are steady.
+
 The band is opaque: a page's own text and shapes belong above `y` 52, and anything drawn there is
 painted over before the frame goes to the glass. The unit is one for the whole glass, so a page
 draws the number and never the suffix after it: a readout that says `12.5` is a depth in the unit
