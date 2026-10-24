@@ -92,3 +92,21 @@ def layout_makes_equal_columns()
 end
 
 test("two growing children make equal columns", layout_makes_equal_columns)
+
+def layout_wraps_children()
+  var l = LayoutV2()
+  l.x = 0; l.y = 0; l.w = 24; l.h = 8
+  l.wrap = true
+  var a = TextV2(); a.value = "AB"
+  var b = TextV2(); b.value = "AB"
+  var c = TextV2(); c.value = "AB"
+  l.add(a); l.add(b); l.add(c)
+  l.place()
+  assert_eq(a.x, 0, "the first child is not at the line start")
+  assert_eq(b.x, 12, "the second child is not beside the first")
+  assert_eq(c.x, 0, "the third child did not wrap to a new line")
+  assert_eq(c.y, 8, "the second line is not below the first line's height")
+  assert_eq(a.h, 8, "a child is not stretched to its line's height")
+end
+
+test("a wrapping layout carries children onto the next line", layout_wraps_children)

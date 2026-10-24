@@ -66,7 +66,7 @@ parking-lot line.
   layout's cross size and aligns by its own `align` and `v_align`. Check: two growing children make
   equal columns; a measured word followed by a growing bar gives the bar the rest of the line.
 
-- [ ] 3.3 Add `wrap`, carrying a child that no longer fits to the next line or column, each
+- [x] 3.3 Add `wrap`, carrying a child that no longer fits to the next line or column, each
   separated by the spacing. Check: children beyond the line's width wrap and stack, each line as
   tall as its tallest child.
 
