@@ -127,7 +127,8 @@ readout looks like.
 `ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
 declaration's list into them.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
+keys while it is on top, drawing its label, value and hint centered in a block the size of their ink)
+and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
 key).
@@ -295,6 +296,10 @@ and hands a set back on the way out: what it was edited to when **OK** kept it, 
 opened when **Back** or **Cancel** refused it. The caller applies the rule and writes what it is
 given, so a refused edit writes back the values it opened with. The scene never touches the store,
 and nothing is written until the list closes.
+
+A list that fits in the page draws a centered block the size of its rows, with no heading; a repair
+message, when there is one, is the block's first line. A longer list fills the page and scrolls,
+keeping its heading.
 
 ### A setting
 

@@ -54,16 +54,48 @@ class SettingsScene : Scene
     return false
   end
 
-  # The title line carries the reason the set was repaired when the list opened, because the rows
-  # fill everything between it and the overlay's band.
+  # A short list centers a block the size of its rows; a long one fills the page and scrolls. The
+  # heading is dropped when the block fits — a repair message is kept, as the first line, because it
+  # is why the set was mended rather than a title.
   def draw_page()
-    if self.message != nil
-      screen.draw_text(0, 0, 1, false, self.message)
-    else
-      screen.draw_text(0, 0, 1, false, "SETTINGS")
+    var rows = self.rows()
+    self.list.set(rows)
+    if rows.size() > self.list.visible
+      if self.message != nil
+        screen.draw_text(0, 0, 1, false, self.message)
+      else
+        screen.draw_text(0, 0, 1, false, "SETTINGS")
+      end
+      self.list.draw(0, 8)
+      return
     end
-    self.list.set(self.rows())
-    self.list.draw(0, 8)
+
+    var wide = 0
+    if self.message != nil
+      wide = screen.text_bounds(self.message, 1).w
+    end
+    for cfg : self.settings_cfgs
+      var w = screen.text_bounds(cfg.label + "=" + self.value_text(cfg), 1).w
+      if cfg.icon != nil
+        w += cfg.icon.dim.w + 2
+      end
+      if w > wide
+        wide = w
+      end
+    end
+
+    var block_h = rows.size() * 8
+    if self.message != nil
+      block_h += 8
+    end
+    var x = (screen.page_width() - wide) / 2
+    var y = (screen.page_height() - block_h) / 2
+    if self.message != nil
+      var mw = screen.text_bounds(self.message, 1).w
+      screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.message)
+      y += 8
+    end
+    self.list.draw(x, y)
   end
 
   def rows()

@@ -95,8 +95,10 @@ it is cancelled.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
 3. Every settings list is a `SettingsScene`: the readout's own set and a routine's are opened and
-   left the same way.
+   left the same way. A list that fits in the page draws a centered block the size of its rows,
+   with the heading dropped; a longer list fills the page and scrolls, keeping its heading.
 4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
-   stage.
+   stage. The editor draws its label, value and hint centered in a block the size of their ink, with
+   no heading.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

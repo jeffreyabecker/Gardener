@@ -52,11 +52,33 @@ class ValueScene : Scene
     ux.pop(cancelled)
   end
 
+  # The editor's three lines, centered in a block the size of their ink rather than spread across the
+  # page: the label, the value and the hint, each centered within the block. The heading is dropped
+  # because the block is always smaller than the page and the hint already says what the keys do.
   def draw_page()
-    screen.draw_text(0, 0, 1, false, "EDIT")
-    screen.draw_text(0, 8, 1, false, self.label)
-    screen.draw_text(0, 16, 3, false, self.text())
-    screen.draw_text(0, 44, 1, false, self.hint())
+    var lines = [[self.label, 1], [self.text(), 3], [self.hint(), 1]]
+    var boxes = []
+    var wide = 0
+    var tall = 0
+    for line : lines
+      var b = screen.text_bounds(line[0], line[1])
+      boxes.push(b)
+      if b.w > wide
+        wide = b.w
+      end
+      tall += b.h
+    end
+    tall += 2 * 2
+
+    var x = (screen.page_width() - wide) / 2
+    var y = (screen.page_height() - tall) / 2
+    var i = 0
+    while i < lines.size()
+      var b = boxes[i]
+      screen.draw_text(x + (wide - b.w) / 2, y, lines[i][1], false, lines[i][0])
+      y += b.h + 2
+      i += 1
+    end
   end
 
   def hint()
