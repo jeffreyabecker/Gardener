@@ -137,16 +137,16 @@ the list and, through the page's `settings_closed`, writes what it settles on:
 
 ```berry
 def edit()
-  edit_settings(self.routine_key, / items, v -> self.settings_closed(items, v))
+  edit_settings(self.routine_key, / settings_cfgs, v -> self.settings_closed(settings_cfgs, v))
   return true
 end
 ```
 
 Nothing in the settings folder writes on its own: `SettingsScene` edits the values it was handed and
-pops them on `back:single`, and the caller applies the rule and writes them. That caller's half is
-`edit_settings(routine_key, on_closed)` and `save_settings(routine_key, items, values)` in the same
-file, so the page and the browser open a routine's list the same way instead of each carrying its own
-copy.
+pops them on `back:single`, and the caller writes them. Opening the list is `edit_settings(routine_key,
+on_closed)` in the settings folder, so the page and the browser open a routine's list the same way
+instead of each carrying its own copy; writing it is the registry's
+`save_settings(routine_key, values[, settings_cfgs])`, which applies the rule and writes every value.
 
 `/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
 native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,

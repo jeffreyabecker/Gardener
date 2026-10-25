@@ -179,6 +179,27 @@ class RoutineRegistry
     return out
   end
 
+  # A settled set written back to the routine's file: the routine's rule is applied first, so what
+  # lands is a set a run accepts, and a value the list holds nothing for is written as nothing, which
+  # reads back as nil. `settings_cfgs` may be nil, and then the settings the routine declares are
+  # looked up here, so a caller that never opened a list has none to hand over. False, writing
+  # nothing, when the routine declares no settings.
+  def save_settings(routine_key, values, settings_cfgs)
+    if settings_cfgs == nil
+      settings_cfgs = self.settings(routine_key)
+    end
+    if settings_cfgs == nil
+      return false
+    end
+    self.repair(routine_key, settings_cfgs, values)
+    var i = 0
+    while i < settings_cfgs.size()
+      store.set(routine_key, settings_cfgs[i].key, values[i] == nil ? "" : values[i])
+      i += 1
+    end
+    return true
+  end
+
   # Push a registered routine's scene, built through its factory. The callback, when there is one,
   # receives the value the scene returns when it pops. `settings` is the map the scene's init() is
   # given; a nil one is the routine's own file, loaded and made clean here.

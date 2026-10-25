@@ -66,11 +66,11 @@ class BrowserScene : Scene
       return false
     end
     var routine_key = self.routine_keys[self.list.selected]
-    return edit_settings(routine_key, / items, v -> self.settings_closed(routine_key, items, v))
+    return edit_settings(routine_key, / settings_cfgs, v -> self.settings_closed(routine_key, settings_cfgs, v))
   end
 
-  def settings_closed(routine_key, items, values)
-    save_settings(routine_key, items, values)
+  def settings_closed(routine_key, settings_cfgs, values)
+    routines.save_settings(routine_key, values, settings_cfgs)
     self.draw()
   end
 

@@ -28,42 +28,32 @@ end
 # The map a switch carries is the routine's own settings, read from its file and made clean the way
 # the registry makes them, so init(settings) takes the same path as a real switch.
 def harness_settings_map(routine_key)
-  var described = routines.settings(routine_key)
-  if described == nil
+  var settings_cfgs = routines.settings(routine_key)
+  if settings_cfgs == nil
     return nil
   end
-  if !isinstance(described, list)
+  if !isinstance(settings_cfgs, list)
     harness_fail("settings: " + routine_key + " settings are not a list")
     return nil
   end
   return routines.load(routine_key)
 end
 
-# A committed value the driver writes, exactly as the routine that owns the settings would.
-def harness_editor_wrote(routine_key, key, value)
-  store.set(routine_key, key, value == nil ? "" : value)
-end
-
-# A settled set the driver writes, which is the caller's half of the list: apply the routine's rule,
-# then write every value.
-def harness_editor_settled(routine_key, items, values)
-  routines.repair(routine_key, items, values)
-  var i = 0
-  while i < items.size()
-    harness_editor_wrote(routine_key, items[i].key, values[i])
-    i += 1
-  end
+# A settled set the driver writes, through the registry's own call, so the drive takes the same path
+# a page's settings callback does.
+def harness_editor_settled(routine_key, settings_cfgs, values)
+  routines.save_settings(routine_key, values, settings_cfgs)
 end
 
 # The settings view is the one path every routine with settings shares: open it the way a caller
 # does, edit every value, and make sure the set it settles on reaches the file.
 def harness_editor(routine_key)
   var label = "settings: " + routine_key
-  var described = routines.settings(routine_key)
-  if described == nil || described.size() == 0
+  var settings_cfgs = routines.settings(routine_key)
+  if settings_cfgs == nil || settings_cfgs.size() == 0
     return
   end
-  for item : described
+  for item : settings_cfgs
     if !isinstance(item, SettingCfg)
       harness_fail(label + " settings returned a non-setting")
       return
@@ -72,15 +62,15 @@ def harness_editor(routine_key)
 
   harness_activate(routine_key, nil)
   var values = []
-  for item : described
+  for item : settings_cfgs
     values.push(item.read(routine_key))
   end
-  routines.repair(routine_key, described, values)
-  ux.push(SettingsScene(described, values, nil), nil,
-          / v -> harness_editor_settled(routine_key, described, v))
+  routines.repair(routine_key, settings_cfgs, values)
+  ux.push(SettingsScene(settings_cfgs, values, nil), nil,
+          / v -> harness_editor_settled(routine_key, settings_cfgs, v))
 
   var i = 0
-  while i < described.size()
+  while i < settings_cfgs.size()
     # Forward opens the value scene for the row the list has selected, and a second Forward
     # advances a duration from its minutes stage to its seconds; every other kind ignores it.
     harness.press("forward:single")
@@ -92,7 +82,7 @@ def harness_editor(routine_key)
     harness.press("ok:single")
     harness.beat(1)
 
-    if i + 1 < described.size()
+    if i + 1 < settings_cfgs.size()
       harness.press("down:single")
       harness.beat(1)
     end
@@ -103,7 +93,7 @@ def harness_editor(routine_key)
   harness.press("back:single")
   harness.beat(1)
 
-  for item : described
+  for item : settings_cfgs
     if !harness.wrote(routine_key, item.key)
       harness_fail(label + " did not write " + str(item.key))
     end

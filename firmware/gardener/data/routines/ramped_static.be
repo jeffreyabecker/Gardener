@@ -280,7 +280,7 @@ class RampedStatic : Scene
   # over from the approach when the settings scene closes, so it must not keep working at the old
   # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    edit_settings(self.routine_key, / items, v -> self.settings_closed(items, v))
+    edit_settings(self.routine_key, / settings_cfgs, v -> self.settings_closed(settings_cfgs, v))
     if self.phase != "ready"
       vacuum.stop()
     end
@@ -291,8 +291,8 @@ class RampedStatic : Scene
   # again even if this page was built from a set of its own. The profile is built once from the
   # settings a run begins with, so a run starts over at the new values; a ready page only takes the
   # new start pressure.
-  def settings_closed(items, values)
-    save_settings(self.routine_key, items, values)
+  def settings_closed(settings_cfgs, values)
+    routines.save_settings(self.routine_key, values, settings_cfgs)
     self.read_settings(routines.load(self.routine_key))
     if self.phase == "ready"
       self.target = self.start_pressure
