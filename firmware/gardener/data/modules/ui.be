@@ -66,7 +66,7 @@ class JingleScene : ChoiceScene
   end
 
   def play()
-    var notes = jingles.notes(self.current)
+    var notes = jingles.notes(self.value())
     if notes != nil
       buzzer.play(notes)
     end

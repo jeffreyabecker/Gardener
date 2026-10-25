@@ -2,17 +2,20 @@
 # the setting is nullable. The choices are `ChoiceItem` records — a setting normalizes its list before
 # it hands one over — so an entry's key is what is stored and its title is what the panel prints, and
 # an entry may carry gestures of its own that the editor offers once it has no answer of its own.
+#
+# Which entry is showing is a `ChoiceRing`: the entries the editor offers and the index of the one
+# named. The list arrives complete — a setting normalizes it, and a nullable one's carries the
+# nil-keyed "no choice" entry the editor opens on — so every entry is drawn, stepped and handed back
+# alike, and the ring always names one: a choice with no values at all is refused where it is built
+# and its row left out of the list.
 
 class ChoiceScene : ValueScene
-  var current
-  var values
-  var nullable
+  var ring
 
   def init(label, current, values, nullable)
     super(self).init(label, current)
-    self.current = current
-    self.values = values
-    self.nullable = nullable
+
+    self.ring = ChoiceRing(choice_items(values, nullable), current)
   end
 
   # A choice may carry actions of its own: a gesture the editor has nothing of its own for is offered
@@ -22,10 +25,7 @@ class ChoiceScene : ValueScene
     if super(self).handle_page(ev)
       return true
     end
-    if self.current == nil || self.values.size() == 0
-      return false
-    end
-    var item = self.values[self.index()]
+    var item = self.ring.current()
     if item.extra_actions == nil
       return false
     end
@@ -38,53 +38,20 @@ class ChoiceScene : ValueScene
   end
 
   def nudge(dir)
-    if self.nullable
-      if self.current == nil
-        if dir < 0
-          return
-        end
-        self.current = self.value_at(0)
-        return
-      end
-      if dir < 0 && self.current == self.value_at(0)
-        self.current = nil
-        return
-      end
-    end
-    var i = self.index()
-    self.current = self.value_at((i + dir + self.values.size()) % self.values.size())
-  end
-
-  def index()
-    var i = 0
-    while i < self.values.size()
-      if self.value_at(i) == self.current
-        return i
-      end
-      i += 1
-    end
-    # A stored value that is no longer one of the choices starts at the first one.
-    return 0
-  end
-
-  def value_at(index)
-    return self.values[index].key
+    self.ring.nudge(dir)
   end
 
   def value()
-    return self.current
+    return self.ring.current().key
   end
 
   def text()
-    if self.current == nil
-      return "--"
-    end
-    return str(self.values[self.index()].title)
+    return str(self.ring.current().title)
   end
 
   def row_width()
     var wide = 0
-    for item : self.values
+    for item : self.ring.items
       var w = screen.text_bounds(item.title, 1).w
       if item.icon != nil
         w += item.icon.dim.w + 2
@@ -98,14 +65,14 @@ class ChoiceScene : ValueScene
 
   # The rows the box has room for — the scene's box less the three pixels of frame either side, the
   # eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no more than
-  # there are choices.
+  # there are entries.
   def visible_rows()
     var fit = (self.dim.h - 26) / 8
     if fit < 1
       fit = 1
     end
-    if fit > self.values.size()
-      fit = self.values.size()
+    if fit > self.ring.items.size()
+      fit = self.ring.items.size()
     end
     return fit
   end
@@ -114,13 +81,6 @@ class ChoiceScene : ValueScene
   # list, and the content as wide as the widest of the three.
   def content_size()
     var wide = self.row_width()
-    var tall = self.visible_rows() * 8
-    if self.current == nil
-      var measure = Text(nil, nil, "--")
-      var ink = measure.bounds("--", measure.fit("--", self.dim.w - 6, 16))
-      wide = ink[0]
-      tall = ink[1]
-    end
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -129,28 +89,25 @@ class ChoiceScene : ValueScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + tall)
+    return Size(wide, 20 + self.visible_rows() * 8)
   end
 
-  # The choices as a short list, the selected one inverted and scrolled into view. A nil value is no
-  # choice at all, so the band shows the editor's `--` instead.
+  # The label row, the entries as a short list with the one showing inverted and scrolled into view,
+  # and the hint row. Every entry is a row — the nil-keyed "no choice" one included — so the whole
+  # of what the editor draws comes from the ring.
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    if self.current == nil
-      Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), "--").draw()
-    else
-      var rows = []
-      for item : self.values
-        rows.push([item.icon, item.title])
-      end
-      var visible = self.visible_rows()
-      var menu = List(visible)
-      menu.set(rows)
-      menu.selected = self.index()
-      menu.draw(pos.x + (dim.w - self.row_width()) / 2, pos.y + 10 + (dim.h - 20 - visible * 8) / 2)
+    var rows = []
+    for item : self.ring.items
+      rows.push([item.icon, item.title])
     end
+    var visible = self.visible_rows()
+    var menu = List(visible)
+    menu.set(rows)
+    menu.selected = self.ring.index
+    menu.draw(pos.x + (dim.w - self.row_width()) / 2, pos.y + 10 + (dim.h - 20 - visible * 8) / 2)
 
     var hint = self.hint()
     var hint_w = screen.text_bounds(hint, 1).w

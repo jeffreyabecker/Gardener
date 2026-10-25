@@ -125,8 +125,10 @@ thing its draw does — paper where its ink was — which is what a selected row
 readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
-`ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
-declaration's list into them. `view.be` is `SettingsView`, the list's own geometry: the row a
+`ChoiceItem` record a choice's entries are held as, `choice_items()` which normalizes a
+declaration's list into them — giving a nullable setting's list the `--` entry it opens on unless
+the declaration named one — and `ChoiceRing`, the entries a value editor steps through together
+with the index of the one showing. `view.be` is `SettingsView`, the list's own geometry: the row a
 setting is drawn on, the gap under its heading and the window a box holds.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
 keys while it is on top, frames the content a kind measures, and pops what OK holds or what Cancel
@@ -335,7 +337,9 @@ identifier and show a name; a plain value is its own title.
 The setting normalizes whatever it is given into `ChoiceItem` records, and `cfg.values` is that list
 of records: `key` is the value the setting stores, `title` the label the row and the editor print —
 the key itself when the declaration gave none — and `icon` is a glyph to draw beside it. A
-declaration may hand over records directly when it needs those.
+declaration may hand over records directly when it needs those. A nullable setting's list begins
+with a record whose key is nil and whose title is `--`, unless the declaration named that entry
+itself: it is the "no choice" the editor opens on, and the row prints it too.
 
 `extra_actions` is the other thing a record carries: a dict of gesture to callback for the gestures
 that entry answers itself. The value editor keeps its own four gestures, and any other is offered to
@@ -366,14 +370,17 @@ clamped to the bound, a duration is held between `min` and `max`, a pressure goe
 `vacuum.clamp()`, and a choice that is not one of its values reads as the default. A kind that
 cannot work at all — a choice with no values, bounds the wrong way round — says so where it is
 built, logs one line, and leaves its row out of the list. Up/Down steps `real`, `int` and
-`pressure`, toggles `bool`, and cycles `choice`; `ok:single` keeps the value the editor holds and
+`pressure`, and cycles `bool` and `choice`; `ok:single` keeps the value the editor holds and
 `cancel:single` hands back the value it opened with, which leaves the row as it stands.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
 default says, and shows `--` in the list. Opening its row hands the scene the stored value, or the
 setting's default when it holds nothing — so a nullable setting with no default opens at `--`.
-`nil` sits one step below the kind's lowest real value: Down at the lowest value clears back to
-`--`, Up from `--` enters the lowest value, and Down at `--` stays. OK on `--` hands back nothing,
+On a kind with a ladder of values — `int`, `real`, `pressure` and a `duration` — `nil` sits one
+step below the lowest of them: Down at the lowest value clears back to `--`, Up from `--` enters the
+lowest value, and Down at `--` stays. A `bool` and a `choice` are rings instead, and `--` is an
+entry of the ring: Up past the last entry wraps round to `--` and Down at `--` wraps to the last
+entry, so stepping never stops. Every one of these hands back nothing when OK is pressed on `--`,
 which the caller writes as an empty value and reads back as `nil`.
 
 A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minute or `1m` on a

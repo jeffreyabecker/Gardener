@@ -74,3 +74,18 @@ def the_helpers_report_the_device()
 end
 
 test("the device helpers report what the device answers", the_helpers_report_the_device)
+
+# The jingle editor steps through the library and plays what it shows, so what it hands the buzzer is
+# the identifier the entry stores rather than the entry itself.
+def the_jingle_editor_steps_and_plays()
+  if jingles.ids().size() < 2
+    return
+  end
+  var scene = JingleSettingCfg().scene(stored_jingle())
+  var before = scene.value()
+  scene.nudge(1)
+  assert_true(scene.value() != before, "readout: the jingle editor did not step")
+  assert_true(jingles.notes(scene.value()) != nil, "readout: the jingle editor stepped to no jingle")
+end
+
+test("the jingle editor steps and plays", the_jingle_editor_steps_and_plays)

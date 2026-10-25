@@ -1,51 +1,27 @@
 # bool_scene.be — BoolScene: true or false, walked with Up/Down, and nil when the setting is
-# nullable.
+# nullable. Its states are a choice like any other — a `ChoiceRing` of entries whose keys are the
+# values — so stepping wraps the same way whichever state it is on and the switch has no state
+# machine of its own. Only the look is a bool's: the entries as chips rather than as a list.
 
 class BoolScene : ValueScene
-  var current
-  var nullable
+  var ring
 
   def init(label, current, nullable)
     super(self).init(label, current)
-    self.current = current
-    self.nullable = nullable
+
+    self.ring = ChoiceRing(choice_items([[false, "OFF"], [true, "ON"]], nullable), current)
   end
 
   def nudge(dir)
-    if self.nullable
-      if self.current == nil
-        if dir < 0
-          return
-        end
-        self.current = false
-        return
-      end
-      if dir < 0 && self.current == false
-        self.current = nil
-        return
-      end
-    end
-    self.current = !self.current
+    self.ring.nudge(dir)
   end
 
   def value()
-    return self.current
+    return self.ring.current().key
   end
 
   def text()
-    if self.current == nil
-      return "--"
-    end
-    return self.current ? "ON" : "OFF"
-  end
-
-  # The switch the three states walk: `--`, `OFF`, `ON` left to right when the setting is nullable,
-  # `OFF`, `ON` when it is not, with the state the value is on inverted.
-  def states()
-    if self.nullable
-      return [[nil, "--"], [false, "OFF"], [true, "ON"]]
-    end
-    return [[false, "OFF"], [true, "ON"]]
+    return str(self.ring.current().title)
   end
 
   # The chips this draws, as [width, height, face]: one face for the row, the largest the widest
@@ -53,15 +29,15 @@ class BoolScene : ValueScene
   # segments, and a pixel of paper inside each one. A chip's share of the scene's box is that box
   # less the three pixels of frame either side and the gaps between the chips.
   def chip()
-    var states = self.states()
-    var room = (self.dim.w - 6 - (states.size() - 1)) / states.size() - 2
-    var widest = states[0][1]
+    var items = self.ring.items
+    var room = (self.dim.w - 6 - (items.size() - 1)) / items.size() - 2
+    var widest = items[0].title
     var wide = 0
-    for state : states
-      var w = screen.text_bounds(state[1], 1).w
+    for item : items
+      var w = screen.text_bounds(item.title, 1).w
       if w > wide
         wide = w
-        widest = state[1]
+        widest = item.title
       end
     end
     var measure = Text(nil, nil, widest)
@@ -74,7 +50,7 @@ class BoolScene : ValueScene
   # chips, and the content as wide as the widest of the three.
   def content_size()
     var chip = self.chip()
-    var count = self.states().size()
+    var count = self.ring.items.size()
     var wide = count * chip[0] + count - 1
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
@@ -87,19 +63,22 @@ class BoolScene : ValueScene
     return Size(wide, 20 + chip[1])
   end
 
+  # The entries as chips side by side, the one showing inverted, which is the whole of the switch.
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
     var chip = self.chip()
-    var states = self.states()
-    var x = pos.x + (dim.w - (states.size() * chip[0] + states.size() - 1)) / 2
+    var items = self.ring.items
+    var x = pos.x + (dim.w - (items.size() * chip[0] + items.size() - 1)) / 2
     var y = pos.y + 10 + (dim.h - 20 - chip[1]) / 2
-    for state : states
-      var drawn = Text(Position(x, y), Size(chip[0], chip[1]), state[1])
-      drawn.inverted = self.current == state[0]
-      drawn.draw_face(state[1], chip[2])
+    var i = 0
+    while i < items.size()
+      var drawn = Text(Position(x, y), Size(chip[0], chip[1]), items[i].title)
+      drawn.inverted = self.ring.index == i
+      drawn.draw_face(items[i].title, chip[2])
       x += chip[0] + 1
+      i += 1
     end
 
     var hint = self.hint()

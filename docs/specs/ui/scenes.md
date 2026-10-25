@@ -83,10 +83,18 @@ What each one answers:
 
 `ChoiceScene` wraps at the ends. Its choices are `ChoiceItem` records — a `ChoiceSettingCfg`
 normalizes whatever its declaration was written with into them — so Up/Down moves between their keys
-and the editor prints each one's title, letting a setting store an identifier and show a name. A
+and the editor prints each one's title, letting a setting store an identifier and show a name. Which
+entry is showing is a `ChoiceRing`: the entries and the index of the one named, stepped with wrap,
+rather than a value the editor has to compare against the list. A nullable choice's list carries an
+entry whose key is nil and whose title is `--`, at the front — unless the declaration named that
+entry itself, which keeps its title and its place. Every entry is then an entry like any other:
+drawn and selected as the rest are, wrapped onto at both ends, and handed back when OK is pressed. A
 record may also carry gestures of its own; the editor answers its four first and offers any other
 gesture to the choice that is showing, handing it that choice, so an entry can do something the
 editor knows nothing about.
+`BoolScene` is the same ring with two entries — `OFF` and `ON`, with `--` in front of them when the
+setting is nullable — drawn as a switch of chips rather than as a list, so Up and Down wrap there as
+they do through a choice.
 `JingleScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
 it is cancelled.
 

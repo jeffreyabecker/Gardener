@@ -128,6 +128,98 @@ end
 
 test("a choice answers the gestures it carries", a_choice_answers_its_own_gestures)
 
+# What a choice editor steps through: the ring opens on the value it is handed, wraps at both ends,
+# and — when the setting is nullable — is given "no choice" as an entry of its own by the editor, so
+# the entry a nil value is drawn and stepped as is like any other.
+def the_ring_opens_on_its_value_and_wraps()
+  var items = choice_items(["a", "b", "c"])
+
+  var ring = ChoiceRing(items, "b")
+  assert_eq(ring.index, 1, "the ring did not open on the value it was handed")
+  assert_eq(ring.current().key, "b", "the ring does not show the value it opened on")
+  ring.nudge(1)
+  assert_eq(ring.current().key, "c", "the ring does not step up")
+  ring.nudge(1)
+  assert_eq(ring.current().key, "a", "the ring does not wrap at the end")
+  ring.nudge(-1)
+  assert_eq(ring.current().key, "c", "the ring does not step down")
+
+  # A stored value that is no longer one of the entries opens on the first, which is what a setting's
+  # parse() has already refused it for.
+  var odd = ChoiceRing(items, "gone")
+  assert_eq(odd.current().key, "a", "a value outside the entries does not open on the first")
+
+  # An empty ring shows nothing and steps nowhere.
+  var empty = ChoiceRing([], nil)
+  assert_nil(empty.current(), "an empty ring shows an entry")
+  empty.nudge(1)
+  assert_nil(empty.current(), "an empty ring stepped to an entry")
+end
+
+test("the ring opens on its value and wraps", the_ring_opens_on_its_value_and_wraps)
+
+def a_nullable_choice_carries_no_choice_as_an_entry()
+  # The entry is the normalization's: a nullable list is given one whose key is nil, at the front.
+  var entries = choice_items(["a", "b"], true)
+  assert_eq(entries.size(), 3, "a nullable list is not given a no-choice entry")
+  assert_nil(entries[0].key, "the no-choice entry is not at the front")
+  assert_eq(entries[0].title, "--", "the no-choice entry does not print the editor's dash")
+
+  # A declaration that names that entry itself keeps its own title, and is not given a second one.
+  var own = choice_items([["sedate", "Sedate"], [nil, "None"]], true)
+  assert_eq(own.size(), 2, "a declared no-choice entry was given a second one")
+  assert_eq(own[1].title, "None", "the declared no-choice entry lost its own title")
+
+  # A setting that always holds a value has no such entry, nor does a list asked without one.
+  assert_eq(choice_items(["a", "b"], false).size(), 2, "a list was given a no-choice entry")
+  assert_eq(choice_items(["a", "b"]).size(), 2, "a list was given a no-choice entry by default")
+
+  var scene = ChoiceScene("Mode", nil, entries, true)
+  assert_nil(scene.value(), "a nullable choice does not open on no choice")
+  assert_eq(scene.text(), "--", "the no-choice entry does not print the editor's dash")
+
+  # Down from no choice wraps to the last entry, and up from the last lands on no choice again.
+  scene.nudge(-1)
+  assert_eq(scene.value(), "b", "down from no choice does not wrap to the last entry")
+  scene.nudge(1)
+  assert_nil(scene.value(), "up from the last entry does not land on no choice")
+
+  var plain = ChoiceScene("Mode", "a", choice_items(["a", "b"]), false)
+  assert_eq(plain.ring.items.size(), 2, "a choice that holds a value was given a no-choice entry")
+
+  var named = ChoiceScene("Mode", nil, own, true)
+  assert_eq(named.ring.items.size(), 2, "a declared no-choice entry was given a second one")
+  assert_nil(named.value(), "the editor does not open on the declared no-choice entry")
+  assert_eq(named.text(), "None", "the declared no-choice entry lost its own title")
+end
+
+test("a nullable choice carries no choice as an entry", a_nullable_choice_carries_no_choice_as_an_entry)
+
+# A bool is the same ring with two entries, and three when the setting is nullable: it opens on the
+# state it was handed and steps through them all, wrapping at the ends like any other choice.
+def a_bool_walks_its_states()
+  var flags = BoolScene("Flags", false, false)
+  assert_eq(flags.text(), "OFF", "a bool set false does not print OFF")
+  flags.nudge(1)
+  assert_eq(flags.value(), true, "up from OFF does not reach ON")
+  flags.nudge(1)
+  assert_eq(flags.value(), false, "up from ON does not come back to OFF")
+
+  var nothing = BoolScene("Flags", nil, true)
+  assert_eq(nothing.ring.items.size(), 3, "a nullable bool does not carry a no-choice entry")
+  assert_eq(nothing.text(), "--", "a nullable bool does not open on nothing")
+  nothing.nudge(1)
+  assert_eq(nothing.value(), false, "up from nothing does not reach OFF")
+  nothing.nudge(1)
+  assert_eq(nothing.value(), true, "up from OFF does not reach ON")
+  nothing.nudge(1)
+  assert_nil(nothing.value(), "up from ON does not wrap to nothing")
+  nothing.nudge(-1)
+  assert_eq(nothing.value(), true, "down from nothing does not wrap to ON")
+end
+
+test("a bool walks its states", a_bool_walks_its_states)
+
 # The store hands back the file's text, so a setting with no default of its type to lean on has to
 # parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
 def a_stored_value_is_parsed_by_its_kind()

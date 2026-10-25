@@ -7,7 +7,7 @@ class ChoiceSettingCfg : SettingCfg
 
   def init(key, default_value, label, icon, values, nullable)
     super(self).init(key, default_value, label, icon, nullable)
-    self.values = choice_items(values)
+    self.values = choice_items(values, nullable)
     if self.values.size() == 0
       self.problem = "a choice needs at least one value"
       vacuum.log("settings: " + self.problem)
