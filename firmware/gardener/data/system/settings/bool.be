@@ -1,9 +1,13 @@
-# bool_scene.be — BoolScene: true or false, walked with Up/Down, and nil when the setting is
-# nullable. Its states are a choice like any other — a `ChoiceRing` of entries whose keys are the
+# bool.be — BoolEditScene and BoolEditCfg: a value that is true or false, and the setting rules that
+# read and print it. The scene walks its states with Up/Down, and reaches nothing when the setting
+# is nullable. Its states are a choice like any other — a `ChoiceRing` of entries whose keys are the
 # values — so stepping wraps the same way whichever state it is on and the switch has no state
 # machine of its own. Only the look is a bool's: the entries as chips rather than as a list.
+#
+# The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
+# names it.
 
-class BoolScene : ValueScene
+class BoolEditScene : EditScene
   var ring
 
   def init(label, current, nullable)
@@ -88,5 +92,24 @@ class BoolScene : ValueScene
 
   def hint()
     return "\x1E/\x1F  OK=SAVE"
+  end
+end
+
+class BoolEditCfg : EditCfg
+  # The store hands a bool back as the text the file holds, so the text is part of the kind.
+  def parse(raw)
+    return raw == true || raw == "true" || raw == "1"
+  end
+
+  def bounded(value)
+    return self.parse(value)
+  end
+
+  def text(value)
+    return value ? "ON" : "OFF"
+  end
+
+  def scene(value)
+    return BoolEditScene(self.label, value, self.nullable)
   end
 end

@@ -1,9 +1,9 @@
-# settings_scene.be — SettingsScene: the list a routine's settings are edited in. It is the list and
-# nothing else: the settings and the values are handed to it, the values keyed by setting key, and it
-# pops them back on the way out — what was edited when OK kept it, and the set as it was opened when
-# Back or Cancel refused it.
+# settings_edit.be — SettingsEditScene: the list a routine's settings are edited in. It is the list
+# and nothing else: the settings and the values are handed to it, the values keyed by setting key,
+# and it pops them back on the way out — what was edited when OK kept it, and the set as it was
+# opened when Back or Cancel refused it.
 
-class SettingsScene : Scene
+class SettingsEditScene : Scene
   var settings_cfgs
   var settings_values
   var opened_settings_values

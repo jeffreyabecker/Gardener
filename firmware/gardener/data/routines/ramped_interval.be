@@ -101,14 +101,14 @@ end
 class RampedIntervalSettings
   static def settings()
     return [
-      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
-      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureSettingCfg("final_pressure", 20.0, "Final", nil, 1, false),
-      PressureSettingCfg("step_pressure", nil, "Step", nil, 1, true),
-      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationSettingCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
-      DurationSettingCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+      IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureEditCfg("final_pressure", 20.0, "Final", nil, 1, false),
+      PressureEditCfg("step_pressure", nil, "Step", nil, 1, true),
+      PressureEditCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationEditCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
+      DurationEditCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
                        ["immediately", "after ok"], false)
     ]
   end
@@ -126,12 +126,12 @@ end
 class IntervalSettings
   static def settings()
     return [
-      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
-      PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      DurationSettingCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
-      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationSettingCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+      IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
+      DurationEditCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
+      PressureEditCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationEditCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
                        ["immediately", "after ok"], false)
     ]
   end
@@ -437,7 +437,7 @@ class RampedInterval : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsScene(RampedIntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(RampedIntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
@@ -524,7 +524,7 @@ class Interval : RampedInterval
   # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
   # ladder, because those are the settings this routine registers.
   def edit()
-    ux.push(SettingsScene(IntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(IntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()

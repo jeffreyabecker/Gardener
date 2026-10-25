@@ -50,11 +50,11 @@ end
 class RampedStaticSettings
   static def settings()
     return [
-      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureSettingCfg("target_pressure", 20.0, "Target", nil, 1, false),
-      DurationSettingCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
-      DurationSettingCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
-      DurationSettingCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
+      PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureEditCfg("target_pressure", 20.0, "Target", nil, 1, false),
+      DurationEditCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
+      DurationEditCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
+      DurationEditCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
     ]
   end
 
@@ -319,7 +319,7 @@ class RampedStatic : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != "ready"
       vacuum.stop()

@@ -66,7 +66,7 @@ place the contract is written.
   definition's scene and hand it the config's stem. Check: a run started from the row titled
   `Bedtime` reads `/routines/0001.cfg`, and one started from `Workout` reads `/routines/0002.cfg`.
 
-- [ ] 4.3 Fix the Forward row. Today `open_selected()` pushes the shared base `SettingsScene`, which
+- [ ] 4.3 Fix the Forward row. Today `open_selected()` pushes the shared base `SettingsEditScene`, which
   has an empty `settings()` list, so editing a routine's settings from the browser shows nothing.
   Push the definition's settings list with the config's stem as its writer, as the page's own
   `open_settings()` does. Check: Forward on a row lists that definition's settings and a committed

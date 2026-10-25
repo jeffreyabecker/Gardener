@@ -44,7 +44,7 @@ def unit_choices()
 end
 
 # The jingle row plays what it is showing as it opens and steps, so a jingle is chosen by ear.
-class JingleScene : ChoiceScene
+class JingleEditScene : ChoiceEditScene
   def init(current, values)
     super(self).init("JINGLE", current, values, false)
   end
@@ -75,7 +75,7 @@ end
 
 # The radio row reports what the build was compiled with: there is nothing to write and nothing to
 # edit, so Forward on it leaves the list where it is.
-class BluetoothSettingCfg : BoolSettingCfg
+class BluetoothEditCfg : BoolEditCfg
   def init()
     super(self).init("bluetooth", device.bluetooth(), "BT", nil, false)
   end
@@ -105,13 +105,13 @@ def jingle_choices()
   return out
 end
 
-class JingleSettingCfg : ChoiceSettingCfg
+class JingleEditCfg : ChoiceEditCfg
   def init()
     super(self).init("jingle", stored_jingle(), "\x0D \x0E \x0D", nil, jingle_choices(), false)
   end
 
   def scene(value)
-    return JingleScene(value, self.values)
+    return JingleEditScene(value, self.values)
   end
 end
 
@@ -120,16 +120,16 @@ class ReadoutSettings
   # and the jingle it finishes with, then the radio as a build fact. The rows only declare them.
   static def settings()
     var out = [
-      PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      ChoiceSettingCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
+      PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
+      ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
     ]
     # No library is a fault the boot already reported, and a choice with no values has nothing to
     # cycle, so the row is left out rather than opened on an empty list.
-    var jingle = JingleSettingCfg()
+    var jingle = JingleEditCfg()
     if jingle.values.size() > 0
       out.push(jingle)
     end
-    out.push(BluetoothSettingCfg())
+    out.push(BluetoothEditCfg())
     return out
   end
 
@@ -191,7 +191,7 @@ class ReadoutScene : Scene
 
   # A double Up opens the readout's own list: its declaration, and the state it is holding.
   def edit()
-    ux.push(SettingsScene(ReadoutSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(ReadoutSettings.settings(), self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     return true
   end

@@ -6,10 +6,10 @@
 suite = "settings"
 
 def missing_keys_read_their_default()
-  var count = IntSettingCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
+  var count = IntEditCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(count.read("settings_test"), 4, "a missing int is not its default")
 
-  var mode = ChoiceSettingCfg("no_choice", "b", "Mode", nil, ["a", "b"], false)
+  var mode = ChoiceEditCfg("no_choice", "b", "Mode", nil, ["a", "b"], false)
   assert_eq(mode.read("settings_test"), "b", "a missing choice is not its default")
 end
 
@@ -17,15 +17,15 @@ test("a missing key reads as the setting's default", missing_keys_read_their_def
 
 def stored_values_are_held_to_their_kind()
   store.set("settings_test", "count", "99")
-  var count = IntSettingCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(count.read("settings_test"), 20, "a stored int above max is not held to it")
 
   store.set("settings_test", "mode", "sideways")
-  var mode = ChoiceSettingCfg("mode", "off", "Mode", nil, ["off", "on"], false)
+  var mode = ChoiceEditCfg("mode", "off", "Mode", nil, ["off", "on"], false)
   assert_eq(mode.read("settings_test"), "off", "a value outside the choices is not defaulted")
 
   store.set("settings_test", "gain", "7.5")
-  var gain = RealSettingCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
   assert_eq(gain.read("settings_test"), 1.0, "a stored real above max is not held to it")
 end
 
@@ -33,37 +33,37 @@ test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
 
 def nothing_reads_as_nil_when_nullable()
   store.set("settings_test", "empty", "")
-  var empty = IntSettingCfg("empty", 5, "Count", nil, 1, 0, 10, true)
+  var empty = IntEditCfg("empty", 5, "Count", nil, 1, 0, 10, true)
   assert_nil(empty.read("settings_test"), "an empty nullable int is not nil")
 
-  var absent = IntSettingCfg("absent", 5, "Count", nil, 1, 0, 10, true)
+  var absent = IntEditCfg("absent", 5, "Count", nil, 1, 0, 10, true)
   assert_nil(absent.read("settings_test"), "an absent nullable int is not nil")
 
   store.set("settings_test", "zero", "0")
-  var zero = IntSettingCfg("zero", 5, "Count", nil, 1, 0, 10, true)
+  var zero = IntEditCfg("zero", 5, "Count", nil, 1, 0, 10, true)
   assert_eq(zero.read("settings_test"), 0, "a stored zero is not a value")
 end
 
 test("a nullable key that holds nothing reads nil, not its default", nothing_reads_as_nil_when_nullable)
 
 def every_kind_builds()
-  var flags = BoolSettingCfg("flags", true, "Flags", nil, false)
+  var flags = BoolEditCfg("flags", true, "Flags", nil, false)
   assert_eq(flags.text(true), "ON", "a bool does not print ON")
   assert_eq(flags.text(false), "OFF", "a bool does not print OFF")
 
-  var count = IntSettingCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(count.text(7), "7", "an int does not print its number")
 
-  var gain = RealSettingCfg("gain", 0.5, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = RealEditCfg("gain", 0.5, "Gain", nil, 0.5, 0.0, 1.0, false)
   assert_eq(gain.text(0.5), "0.5", "a real does not print its number")
 
-  var mode = ChoiceSettingCfg("mode", "a", "Mode", nil, ["a", "b"], false)
+  var mode = ChoiceEditCfg("mode", "a", "Mode", nil, ["a", "b"], false)
   assert_eq(mode.text("b"), "b", "a choice does not print its value")
 
-  var rest = PressureSettingCfg("rest", nil, "Rest", nil, 1, true)
+  var rest = PressureEditCfg("rest", nil, "Rest", nil, 1, true)
   assert_nil(rest.default_value, "a nullable pressure does not hold a nil default")
 
-  var hold = DurationSettingCfg("hold", 90, "Hold", nil, 1, 0, 7200, false)
+  var hold = DurationEditCfg("hold", 90, "Hold", nil, 1, 0, 7200, false)
   assert_eq(hold.text(90), "1m30s", "a duration does not print minutes and seconds")
 end
 
@@ -74,7 +74,7 @@ test("every kind builds and prints its value", every_kind_builds)
 # what it hands its scene — is a ChoiceItem either way.
 def a_pair_choice_stores_its_value_and_prints_its_title()
   var pairs = [["a", "Alpha"], ["b", "Beta"]]
-  var mode = ChoiceSettingCfg("mode", "b", "Mode", nil, pairs, false)
+  var mode = ChoiceEditCfg("mode", "b", "Mode", nil, pairs, false)
   assert_eq(mode.read("settings_test"), "b", "a pair choice does not read its default value")
   assert_eq(mode.text("b"), "Beta", "a pair choice does not print its title")
 
@@ -91,7 +91,7 @@ def a_pair_choice_stores_its_value_and_prints_its_title()
   store.set("settings_test", "mode", "Alpha")
   assert_eq(mode.read("settings_test"), "b", "a pair choice accepted a title that is not a value")
 
-  var scene = ChoiceScene("Mode", "a", mode.values, false)
+  var scene = ChoiceEditScene("Mode", "a", mode.values, false)
   assert_eq(scene.text(), "Alpha", "a pair choice's editor does not print its title")
   scene.nudge(1)
   assert_eq(scene.value(), "b", "a pair choice's editor does not step to the next value")
@@ -111,7 +111,7 @@ end
 
 def a_choice_answers_its_own_gestures()
   var item = ChoiceItem("a", "Alpha", nil, {"ok:double": choice_extra})
-  var scene = ChoiceScene("Mode", "a", [item], false)
+  var scene = ChoiceEditScene("Mode", "a", [item], false)
 
   choiceExtraRan = nil
   assert_true(scene.handle_page("ok:double"), "a choice's own gesture was not handled")
@@ -174,7 +174,7 @@ def a_nullable_choice_carries_no_choice_as_an_entry()
   assert_eq(choice_items(["a", "b"], false).size(), 2, "a list was given a no-choice entry")
   assert_eq(choice_items(["a", "b"]).size(), 2, "a list was given a no-choice entry by default")
 
-  var scene = ChoiceScene("Mode", nil, entries, true)
+  var scene = ChoiceEditScene("Mode", nil, entries, true)
   assert_nil(scene.value(), "a nullable choice does not open on no choice")
   assert_eq(scene.text(), "--", "the no-choice entry does not print the editor's dash")
 
@@ -184,10 +184,10 @@ def a_nullable_choice_carries_no_choice_as_an_entry()
   scene.nudge(1)
   assert_nil(scene.value(), "up from the last entry does not land on no choice")
 
-  var plain = ChoiceScene("Mode", "a", choice_items(["a", "b"]), false)
+  var plain = ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false)
   assert_eq(plain.ring.items.size(), 2, "a choice that holds a value was given a no-choice entry")
 
-  var named = ChoiceScene("Mode", nil, own, true)
+  var named = ChoiceEditScene("Mode", nil, own, true)
   assert_eq(named.ring.items.size(), 2, "a declared no-choice entry was given a second one")
   assert_nil(named.value(), "the editor does not open on the declared no-choice entry")
   assert_eq(named.text(), "None", "the declared no-choice entry lost its own title")
@@ -198,14 +198,14 @@ test("a nullable choice carries no choice as an entry", a_nullable_choice_carrie
 # A bool is the same ring with two entries, and three when the setting is nullable: it opens on the
 # state it was handed and steps through them all, wrapping at the ends like any other choice.
 def a_bool_walks_its_states()
-  var flags = BoolScene("Flags", false, false)
+  var flags = BoolEditScene("Flags", false, false)
   assert_eq(flags.text(), "OFF", "a bool set false does not print OFF")
   flags.nudge(1)
   assert_eq(flags.value(), true, "up from OFF does not reach ON")
   flags.nudge(1)
   assert_eq(flags.value(), false, "up from ON does not come back to OFF")
 
-  var nothing = BoolScene("Flags", nil, true)
+  var nothing = BoolEditScene("Flags", nil, true)
   assert_eq(nothing.ring.items.size(), 3, "a nullable bool does not carry a no-choice entry")
   assert_eq(nothing.text(), "--", "a nullable bool does not open on nothing")
   nothing.nudge(1)
@@ -224,15 +224,15 @@ test("a bool walks its states", a_bool_walks_its_states)
 # parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
 def a_stored_value_is_parsed_by_its_kind()
   store.set("settings_test", "rest", "12.5")
-  var rest = PressureSettingCfg("rest", nil, "Rest", nil, 1, true)
+  var rest = PressureEditCfg("rest", nil, "Rest", nil, 1, true)
   assert_eq(rest.read("settings_test"), 12.5, "a stored nullable pressure is not its number")
 
   store.set("settings_test", "flags", "false")
-  var flags = BoolSettingCfg("flags", true, "Flags", nil, false)
+  var flags = BoolEditCfg("flags", true, "Flags", nil, false)
   assert_eq(flags.read("settings_test"), false, "a stored false does not read as false")
 
   store.set("settings_test", "gain", "0.25")
-  var gain = RealSettingCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
   assert_eq(gain.read("settings_test"), 0.25, "a stored real is not its number")
 end
 
@@ -360,7 +360,7 @@ test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_bac
 # inside the border, so a kind draws in a box no bigger than what it holds and nothing it draws
 # leaves the frame. The frame is centred in the scene's own box, which is the box of the scene it
 # was opened over.
-class RecordingEditor : ValueScene
+class RecordingEditor : EditScene
   var window
 
   def init(label)
@@ -414,12 +414,12 @@ test("the page frames the editor and hands it the content box",
 # hint row are in every one of them, whatever its body is. The base measures nothing of its own.
 def every_editor_measures_its_own_chrome()
   var editors = [
-    BoolScene("Flags", true, false),
-    ChoiceScene("Mode", "a", choice_items(["a", "b"]), false),
-    IntScene("Count", 7, 1, 1, 20, false),
-    RealScene("Gain", 0.5, 0.5, nil, nil, false),
-    PressureScene("Rest", 5.0, 1, false),
-    DurationScene("Hold", 90, 1, 0, 7200, false)
+    BoolEditScene("Flags", true, false),
+    ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false),
+    IntEditScene("Count", 7, 1, 1, 20, false),
+    RealEditScene("Gain", 0.5, 0.5, nil, nil, false),
+    PressureEditScene("Rest", 5.0, 1, false),
+    DurationEditScene("Hold", 90, 1, 0, 7200, false)
   ]
   for scene : editors
     scene.activate()
@@ -429,7 +429,7 @@ def every_editor_measures_its_own_chrome()
     assert_true(content.w >= screen.text_bounds(scene.label, 1).w,
                 "an editor's content is narrower than its label")
   end
-  assert_eq(ValueScene("Label").content_size().w, 0, "the base measures a content of its own")
+  assert_eq(EditScene("Label").content_size().w, 0, "the base measures a content of its own")
 end
 
 test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
@@ -450,14 +450,14 @@ def a_scene_opened_over_another_takes_its_box()
   var parent = BoxScene(Position(4, 6), Size(60, 40))
   assert_true(ux.push(parent), "the parent scene would not push")
 
-  var list = SettingsScene([IntSettingCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
                            {"count": 1}, nil)
   assert_eq(list.pos.x, 4, "the settings list does not take the box's x")
   assert_eq(list.pos.y, 6, "the settings list does not take the box's y")
   assert_eq(list.dim.w, 60, "the settings list does not take the box's width")
   assert_eq(list.dim.h, 40, "the settings list does not take the box's height")
 
-  var editor = IntScene("Count", 2, 1, 0, 10, false)
+  var editor = IntEditScene("Count", 2, 1, 0, 10, false)
   assert_eq(editor.pos.x, 4, "the value editor does not take the box's x")
   assert_eq(editor.pos.y, 6, "the value editor does not take the box's y")
   assert_eq(editor.dim.w, 60, "the value editor does not take the box's width")
@@ -471,7 +471,7 @@ test("a scene opened over another takes its box", a_scene_opened_over_another_ta
 # was stepped and then refused keeps what it held - including nothing, which a nullable setting can
 # hold and commit - and the reason the set was opened with stands.
 def cancelling_a_value_leaves_its_row_alone()
-  var list = SettingsScene([PressureSettingCfg("rest", nil, "Rest", nil, 1, true)],
+  var list = SettingsEditScene([PressureEditCfg("rest", nil, "Rest", nil, 1, true)],
                            {"rest": nil}, "MENDED")
   var depth = ux.depth()
   assert_true(ux.push(list), "the settings list would not push")
@@ -503,61 +503,61 @@ def show_editor(scene)
 end
 
 def the_bool_editor_draws_on()
-  show_editor(BoolScene("Flags", true, false))
+  show_editor(BoolEditScene("Flags", true, false))
 end
 
 test("the bool editor draws ON", the_bool_editor_draws_on)
 
 def the_bool_editor_draws_off()
-  show_editor(BoolScene("Flags", false, false))
+  show_editor(BoolEditScene("Flags", false, false))
 end
 
 test("the bool editor draws OFF", the_bool_editor_draws_off)
 
 def the_bool_editor_draws_nothing()
-  show_editor(BoolScene("Flags", nil, true))
+  show_editor(BoolEditScene("Flags", nil, true))
 end
 
 test("the bool editor draws a nullable nothing", the_bool_editor_draws_nothing)
 
 def the_choice_editor_draws_its_list()
-  show_editor(ChoiceScene("Mode", "b", choice_items(["a", "b", "c", "d", "e"]), false))
+  show_editor(ChoiceEditScene("Mode", "b", choice_items(["a", "b", "c", "d", "e"]), false))
 end
 
 test("the choice editor draws its list", the_choice_editor_draws_its_list)
 
 def the_choice_editor_draws_nothing()
-  show_editor(ChoiceScene("Mode", nil, choice_items(["a", "b"]), true))
+  show_editor(ChoiceEditScene("Mode", nil, choice_items(["a", "b"]), true))
 end
 
 test("the choice editor draws a nullable nothing", the_choice_editor_draws_nothing)
 
 def the_int_editor_draws_between_its_bounds()
-  show_editor(IntScene("Count", 7, 1, 1, 20, false))
+  show_editor(IntEditScene("Count", 7, 1, 1, 20, false))
 end
 
 test("the int editor draws between its bounds", the_int_editor_draws_between_its_bounds)
 
 def the_real_editor_draws_without_a_bar()
-  show_editor(RealScene("Gain", 0.5, 0.5, nil, nil, false))
+  show_editor(RealEditScene("Gain", 0.5, 0.5, nil, nil, false))
 end
 
 test("the real editor draws without a bar", the_real_editor_draws_without_a_bar)
 
 def the_pressure_editor_draws_in_the_panel_unit()
-  show_editor(PressureScene("Rest", 5.0, 1, false))
+  show_editor(PressureEditScene("Rest", 5.0, 1, false))
 end
 
 test("the pressure editor draws in the panel unit", the_pressure_editor_draws_in_the_panel_unit)
 
 def the_duration_editor_draws_its_minutes()
-  show_editor(DurationScene("Hold", 90, 1, 0, 7200, false))
+  show_editor(DurationEditScene("Hold", 90, 1, 0, 7200, false))
 end
 
 test("the duration editor draws its minutes", the_duration_editor_draws_its_minutes)
 
 def the_duration_editor_draws_its_seconds()
-  var scene = DurationScene("Hold", 90, 1, 0, 7200, false)
+  var scene = DurationEditScene("Hold", 90, 1, 0, 7200, false)
   scene.stage = "sec"
   show_editor(scene)
 end

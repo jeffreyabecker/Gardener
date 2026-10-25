@@ -54,14 +54,14 @@ def harness_editor(routine_key)
     return
   end
   for item : settings_cfgs
-    if !isinstance(item, SettingCfg)
+    if !isinstance(item, EditCfg)
       harness_fail(label + " settings returned a non-setting")
       return
     end
   end
 
   harness_activate(routine_key, nil)
-  ux.push(SettingsScene(settings_cfgs, routines.load(routine_key), nil), nil,
+  ux.push(SettingsEditScene(settings_cfgs, routines.load(routine_key), nil), nil,
           / v -> harness_editor_settled(routine_key, v))
 
   var i = 0

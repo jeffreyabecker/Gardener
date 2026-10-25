@@ -79,7 +79,7 @@ class BrowserScene : Scene
     end
     # A hand-edited document is shown mended, so the reason it was mended is drawn with the list.
     var message = routines.repair(routine_key, settings_cfgs, settings_values)
-    ux.push(SettingsScene(settings_cfgs, settings_values, message), nil,
+    ux.push(SettingsEditScene(settings_cfgs, settings_values, message), nil,
             / v -> self.settings_closed(routine_key, v))
     return true
   end

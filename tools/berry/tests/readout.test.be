@@ -35,15 +35,15 @@ def the_rows_open_their_editors()
   for cfg : settings_cfgs
     if cfg.key == "target_pressure"
       var scene = cfg.scene(5.0)
-      assert_eq(classname(scene), "PressureScene", "readout: the target row does not open a pressure editor")
+      assert_eq(classname(scene), "PressureEditScene", "readout: the target row does not open a pressure editor")
     elif cfg.key == "unit"
       var scene = cfg.scene(screen.unit().name)
-      assert_eq(classname(scene), "ChoiceScene", "readout: the unit row does not open a choice editor")
+      assert_eq(classname(scene), "ChoiceEditScene", "readout: the unit row does not open a choice editor")
     elif cfg.key == "bluetooth"
       assert_nil(cfg.scene(true), "readout: the radio row opens an editor for a build fact")
     elif cfg.key == "jingle"
       var scene = cfg.scene(stored_jingle())
-      assert_eq(classname(scene), "JingleScene", "readout: the jingle row does not audition")
+      assert_eq(classname(scene), "JingleEditScene", "readout: the jingle row does not audition")
     end
   end
 end
@@ -81,7 +81,7 @@ def the_jingle_editor_steps_and_plays()
   if jingles.ids().size() < 2
     return
   end
-  var scene = JingleSettingCfg().scene(stored_jingle())
+  var scene = JingleEditCfg().scene(stored_jingle())
   var before = scene.value()
   scene.nudge(1)
   assert_true(scene.value() != before, "readout: the jingle editor did not step")

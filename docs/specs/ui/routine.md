@@ -130,29 +130,26 @@ declaration's list into them — giving a nullable setting's list the `--` entry
 the declaration named one — and `ChoiceRing`, the entries a value editor steps through together
 with the index of the one showing. `view.be` is `SettingsView`, the list's own geometry: the row a
 setting is drawn on, the gap under its heading and the window a box holds.
-`scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top, frames the content a kind measures, and pops what OK holds or what Cancel
-was opened on; it draws nothing itself, so every kind measures and draws the whole of its own
-content — label row, value and hint row — and nothing about a kind's look is inherited),
-`bool_scene.be`, `choice_scene.be`,
-`real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
-`settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
-key).
-`configs/` holds one setting per kind: `setting_cfg.be` is `SettingCfg` and
-`bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
-`pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
-of the same name. **`up:double`** is the standard gesture for opening the list; the page opens it
-itself, from its own declaration and the state it is running:
+
+`edit_scene.be` is `EditScene`, the modal editor: it owns the keys while it is on top, frames the
+content a kind measures, and pops what OK holds or what Cancel was opened on. It draws nothing
+itself, so every kind measures and draws the whole of its own content — label row, value and hint
+row — and nothing about a kind's look is inherited. `edit_cfg.be` is `EditCfg`, the setting: the row
+it draws, its default, and the rules its kind is read, held and printed by. Each kind is one file
+holding both halves, its scene first and its cfg after it — `bool.be`, `choice.be`, `real.be`,
+`int.be`, `pressure.be` and `duration.be` — and `settings_edit.be` is `SettingsEditScene`, the list,
+handed its settings and the values keyed by setting key. **`up:double`** is the standard gesture for
+opening the list; the page opens it itself, from its own declaration and the state it is running:
 
 ```berry
 def edit()
-  ux.push(SettingsScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+  ux.push(SettingsEditScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
           / settings_values -> self.settings_closed(settings_values))
   return true
 end
 ```
 
-Nothing in the settings folder reads or writes anything on its own: `SettingsScene` edits the values
+Nothing in the settings folder reads or writes anything on its own: `SettingsEditScene` edits the values
 it was handed and pops them on `back:single`, and the caller writes them. A page has the state
 already, so it opens the list on that state and reads no file; a caller with no state of its own —
 the browser — reads the routine's document through the declaration, mends it when the routine's rule
@@ -274,10 +271,10 @@ rule that has to hold. Both answers are static, because the class is asked and n
 class MySettings
   static def settings()
     return [
-      PressureSettingCfg("target", 10.0, "Target", nil, 1, false),
-      DurationSettingCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
-      ChoiceSettingCfg("mode", "hold", "Mode", nil, ["hold", "cycle"], false),
-      BoolSettingCfg("enabled", true, "Enabled", nil, false)
+      PressureEditCfg("target", 10.0, "Target", nil, 1, false),
+      DurationEditCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
+      ChoiceEditCfg("mode", "hold", "Mode", nil, ["hold", "cycle"], false),
+      BoolEditCfg("enabled", true, "Enabled", nil, false)
     ]
   end
 
@@ -295,7 +292,7 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 A routine with nothing to edit registers `nil`. A class that is registered answers both: a routine
 with no rule of its own returns `nil` from `problem`.
 
-The list itself is `SettingsScene(settings_cfgs, settings_values, message)`: the settings declaration
+The list itself is `SettingsEditScene(settings_cfgs, settings_values, message)`: the settings declaration
 for the rows and a map of values keyed by setting key, built by whoever opens it — the page's
 `up:double`, or the browser's Forward on the routine's row. The scene edits the values it was handed
 and hands a set back on the way out: what it was edited to when **OK** kept it, and the set as it was
@@ -309,17 +306,18 @@ keeping its heading.
 
 ### A setting
 
-One class per kind in `/system/settings/configs/`. Every constructor takes the same four arguments
-first, then the kind's own, and `nullable` last:
+One class per kind in `/system/settings/`, its `<Kind>EditCfg` in the same file as its
+`<Kind>EditScene`. Every constructor takes the same four arguments first, then the kind's own, and
+`nullable` last:
 
 | Setting | Arguments |
 | --- | --- |
-| `BoolSettingCfg` | `key`, `default_value`, `label`, `icon`, `nullable` |
-| `IntSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
-| `RealSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
-| `PressureSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `nullable` |
-| `DurationSettingCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
-| `ChoiceSettingCfg` | `key`, `default_value`, `label`, `icon`, `values`, `nullable` |
+| `BoolEditCfg` | `key`, `default_value`, `label`, `icon`, `nullable` |
+| `IntEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `RealEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `PressureEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `nullable` |
+| `DurationEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `ChoiceEditCfg` | `key`, `default_value`, `label`, `icon`, `values`, `nullable` |
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -348,7 +346,7 @@ of its own without the editor having to know about it.
 
 ### What a setting does
 
-The setting is the whole of what its value is: the rules its kind needs, and the value scene that
+The setting is the whole of what its value is: the rules its kind needs, and the edit scene that
 edits it. It answers four questions:
 
 - `read(routine_key)` — the stored value from the file it is given, held to the kind, or the default
@@ -356,7 +354,7 @@ edits it. It answers four questions:
 - `value(raw)` — a raw value held to the same rules, which is what a value read from a file or
   carried in a map ends up as.
 - `text(value)` — the value as the list shows it.
-- `scene(value)` — the value scene that edits it.
+- `scene(value)` — the edit scene for it.
 
 The store hands a value back as the text the file holds, so the kind parses it: an int or a duration
 through `int()`, a real or a pressure through `real()`, a bool from `true`/`1`, a choice from its own

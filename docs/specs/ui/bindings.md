@@ -24,7 +24,7 @@ have raises `attribute_error`, and the fields are the ones listed under each cal
 declared in `/system/records.be`, which the image loads before any page.
 
 A routine's settings are not native records: each one is a setting config the routine builds from
-`/system/settings/configs/`, so it carries the key, the default and the kind's own rules rather
+`/system/settings/`, so it carries the key, the default and the kind's own rules rather
 than being answered by a call. The classes and their arguments are listed under the settings a
 routine registers in [routine.md](./routine.md).
 

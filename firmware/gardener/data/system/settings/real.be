@@ -1,6 +1,10 @@
-# real_scene.be — RealScene: a real number stepped by an increment, held to its bounds.
+# real.be — RealEditScene and RealEditCfg: a real number stepped by an increment, held to its
+# bounds, and the setting rules that read and print it.
+#
+# The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
+# names it.
 
-class RealScene : ValueScene
+class RealEditScene : EditScene
   var current
   var step
   var min
@@ -100,5 +104,39 @@ class RealScene : ValueScene
 
   def hint()
     return "\x1E/\x1F  OK=SAVE"
+  end
+end
+
+class RealEditCfg : EditCfg
+  var step, min, max
+
+  def init(key, default_value, label, icon, step, min, max, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
+    self.step = step
+    self.min = min
+    self.max = max
+    if min != nil && max != nil && min > max
+      self.problem = "real bounds are the wrong way round"
+      vacuum.log("settings: " + self.problem)
+    end
+  end
+
+  def parse(raw)
+    return real(raw)
+  end
+
+  def bounded(value)
+    var number = self.parse(value)
+    if self.min != nil && number < self.min
+      number = self.min
+    end
+    if self.max != nil && number > self.max
+      number = self.max
+    end
+    return number
+  end
+
+  def scene(value)
+    return RealEditScene(self.label, value, self.step, self.min, self.max, self.nullable)
   end
 end

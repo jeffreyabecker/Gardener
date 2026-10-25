@@ -1,4 +1,4 @@
-# value_scene.be — ValueScene: the modal scene a setting is edited in. It holds the half-made value
+# edit_scene.be — EditScene: the modal scene a setting is edited in. It holds the half-made value
 # and pops with it when OK is pressed; Cancel hands back the value it was opened with, which leaves
 # the row exactly as it stands, whatever it holds.
 #
@@ -6,7 +6,7 @@
 # round it, and the kind draws the whole of that content — its label row, its value and its hint row
 # — in the box it is handed. Nothing about how a value looks is in this file.
 
-class ValueScene : Scene
+class EditScene : Scene
   var label
   var opened
 

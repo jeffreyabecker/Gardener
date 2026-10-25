@@ -1,15 +1,15 @@
-# setting_cfg.be — SettingCfg: one value a routine edits, and the whole of what that value is.
+# edit_cfg.be — EditCfg: one value a routine edits, and the whole of what that value is.
 #
 # A routine builds one per setting it registers, so this object carries both the row the settings
 # list draws — key, label, icon, default — and the kind's rules for reading, printing and editing
-# it. SettingsScene and the registry's load() ask it rather than branching on a kind, and each kind
-# opens the value scene of the same name in ../scenes/.
+# it. SettingsEditScene and the registry's load() ask it rather than branching on a kind, and each
+# kind opens the edit scene of the same name from the file beside this one.
 #
 # A kind that cannot work — a choice with no values, bounds the wrong way round — says so in
 # `problem` and logs one line where it is built. It does not raise: the routine still registers, its
 # settings view leaves that row out, and a read of it answers the setting's default.
 
-class SettingCfg
+class EditCfg
   var key, default_value, label, icon, nullable, problem
 
   def init(key, default_value, label, icon, nullable)

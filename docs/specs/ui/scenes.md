@@ -31,7 +31,7 @@ A scene the stack is rooted on is the page: `Position.top_left()` and `Size.page
 
 A scene opened on top of another is given that scene's box. `ux.box()` answers the `pos` and `dim` of
 the scene on top, which — because a scene's `init()` runs before its push — is the scene it is about
-to cover. `SettingsScene` and `ValueScene` take their box that way, so a list and the editor it opens
+to cover. `SettingsEditScene` and `EditScene` take their box that way, so a list and the editor it opens
 draw where the scene they were opened from draws.
 
 ## The map
@@ -42,11 +42,11 @@ Every scene, and where it lives:
 | --- | --- | --- |
 | `ReadoutScene` — the root | `modules/ui.be` | `on` |
 | `BrowserScene` | `modules/browser.be` | `on` |
-| `SettingsScene` | `system/settings/scenes/settings_scene.be` | `handle_page` |
-| `ValueScene` — the value base | `system/settings/scenes/value_scene.be` | `handle_page` |
-| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `system/settings/scenes/` | inherited |
-| `DurationScene` | `system/settings/scenes/duration_scene.be` | `handle_page` |
-| `JingleScene` | `modules/ui.be` | inherited |
+| `SettingsEditScene` | `system/settings/settings_edit.be` | `handle_page` |
+| `EditScene` — the edit base | `system/settings/edit_scene.be` | `handle_page` |
+| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` | inherited |
+| `DurationEditScene` | `system/settings/duration.be` | `handle_page` |
+| `JingleEditScene` | `modules/ui.be` | inherited |
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
@@ -66,22 +66,22 @@ What each one answers:
 | `BrowserScene` | `ok:single` | push the selected routine |
 | `BrowserScene` | `back:single` | leave |
 | `BrowserScene` | `cancel:single` | leave |
-| `SettingsScene` | `up:single`, `down:single` | move the row |
-| `SettingsScene` | `forward:single` | open the row's value scene, or nothing for a setting that has no editor |
-| `SettingsScene` | `back:single` | close the list, handing back the set as it was opened |
-| `SettingsScene` | `cancel:single` | close the list, handing back the set as it was opened |
-| `SettingsScene` | `ok:single` | keep the set it was edited to, and close |
-| `ValueScene` | `up:single`, `down:single` | raise or lower the value |
-| `ValueScene` | `ok:single` | close, keeping the value |
-| `ValueScene` | `cancel:single` | close, handing back the value it opened with |
-| `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | the four `ValueScene` gestures | as `ValueScene` |
-| `ChoiceScene` | any other gesture | offered to the choice that is showing, which answers it when it carries that gesture |
-| `DurationScene` | `forward:single` | advance minutes→seconds|
-| `DurationScene` | `back:single` | go back seconds→minutes|
-| `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
-| `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
+| `SettingsEditScene` | `up:single`, `down:single` | move the row |
+| `SettingsEditScene` | `forward:single` | open the row's value scene, or nothing for a setting that has no editor |
+| `SettingsEditScene` | `back:single` | close the list, handing back the set as it was opened |
+| `SettingsEditScene` | `cancel:single` | close the list, handing back the set as it was opened |
+| `SettingsEditScene` | `ok:single` | keep the set it was edited to, and close |
+| `EditScene` | `up:single`, `down:single` | raise or lower the value |
+| `EditScene` | `ok:single` | close, keeping the value |
+| `EditScene` | `cancel:single` | close, handing back the value it opened with |
+| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | the four `EditScene` gestures | as `EditScene` |
+| `ChoiceEditScene` | any other gesture | offered to the choice that is showing, which answers it when it carries that gesture |
+| `DurationEditScene` | `forward:single` | advance minutes→seconds|
+| `DurationEditScene` | `back:single` | go back seconds→minutes|
+| `DurationEditScene` | the other four `EditScene` gestures | as `EditScene` |
+| `JingleEditScene` | the four `EditScene` gestures | as `EditScene` |
 
-`ChoiceScene` wraps at the ends. Its choices are `ChoiceItem` records — a `ChoiceSettingCfg`
+`ChoiceEditScene` wraps at the ends. Its choices are `ChoiceItem` records — a `ChoiceEditCfg`
 normalizes whatever its declaration was written with into them — so Up/Down moves between their keys
 and the editor prints each one's title, letting a setting store an identifier and show a name. Which
 entry is showing is a `ChoiceRing`: the entries and the index of the one named, stepped with wrap,
@@ -94,10 +94,10 @@ the entry showing and scrolls the window when the list is longer than the box. A
 carry gestures of its own; the editor answers its four first and offers any other gesture to the
 choice that is showing, handing it that choice, so an entry can do something the editor knows
 nothing about.
-`BoolScene` is the same ring with two entries — `OFF` and `ON`, with `--` in front of them when the
+`BoolEditScene` is the same ring with two entries — `OFF` and `ON`, with `--` in front of them when the
 setting is nullable — drawn as a switch of chips rather than as a list, so Up and Down wrap there as
 they do through a choice.
-`JingleScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
+`JingleEditScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
 it is cancelled.
 
 | `Interval` | `up:double` | stop and vent, reset the run, open its settings |
@@ -119,10 +119,10 @@ it is cancelled.
 1. A scene answers only what the table gives it; everything else is dropped.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
-3. Every settings list is a `SettingsScene`: the readout's own set and a routine's are opened and
+3. Every settings list is a `SettingsEditScene`: the readout's own set and a routine's are opened and
    left the same way. A list that fits draws a centered block the size of its rows, with the heading
    dropped; a longer list fills the scene's box and scrolls, keeping its heading.
-4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
+4. `EditScene` and everything built on it answer the same gestures; only `DurationEditScene` adds a
    stage. The base frames what the kind measures: `content_size()` is the whole of the editor's
    content — its label row, its body and its hint row — and `draw_page()` draws a border a pixel
    outside that content, centred in the scene's own box with at least a pixel of paper between the

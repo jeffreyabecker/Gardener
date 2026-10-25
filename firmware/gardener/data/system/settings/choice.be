@@ -1,7 +1,8 @@
-# choice_scene.be — ChoiceScene: one of a fixed list of choices, wrapped at the ends, and nil when
-# the setting is nullable. The choices are `ChoiceItem` records — a setting normalizes its list before
-# it hands one over — so an entry's key is what is stored and its title is what the panel prints, and
-# an entry may carry gestures of its own that the editor offers once it has no answer of its own.
+# choice.be — ChoiceEditScene and ChoiceEditCfg: one of a fixed list of choices, wrapped at the
+# ends, and nil when the setting is nullable, with the setting rules that read and print one. The
+# choices are `ChoiceItem` records — a setting normalizes its list before it hands one over — so an
+# entry's key is what is stored and its title is what the panel prints, and an entry may carry
+# gestures of its own that the editor offers once it has no answer of its own.
 #
 # Which entry is showing is a `ChoiceRing`: the entries the editor offers and the index of the one
 # named. The list arrives complete — a setting normalizes it, and a nullable one's carries the
@@ -11,8 +12,11 @@
 #
 # The entries are drawn by the `List` the scene holds, built once from the ring in `init()`, so the
 # highlighted row and the scroll window are the list component's rather than this file's.
+#
+# The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
+# names it.
 
-class ChoiceScene : ValueScene
+class ChoiceEditScene : EditScene
   var ring
   var list
 
@@ -116,5 +120,50 @@ class ChoiceScene : ValueScene
 
   def hint()
     return "\x1E/\x1F  OK=SAVE"
+  end
+end
+
+class ChoiceEditCfg : EditCfg
+  var values
+
+  def init(key, default_value, label, icon, values, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
+    self.values = choice_items(values, nullable)
+    if self.values.size() == 0
+      self.problem = "a choice needs at least one value"
+      vacuum.log("settings: " + self.problem)
+    end
+  end
+
+  # A stored value that is no longer one of the choices is not a choice: it reads as the default.
+  def parse(raw)
+    if self.values == nil
+      return nil
+    end
+    for candidate : self.values
+      if candidate.key == raw
+        return raw
+      end
+    end
+    return nil
+  end
+
+  def bounded(value)
+    return self.parse(value)
+  end
+
+  # An entry prints its title, so a row names what the setting is set to rather than the value it
+  # stores.
+  def text(value)
+    for candidate : self.values
+      if candidate.key == value
+        return str(candidate.title)
+      end
+    end
+    return str(value)
+  end
+
+  def scene(value)
+    return ChoiceEditScene(self.label, value, self.values, self.nullable)
   end
 end

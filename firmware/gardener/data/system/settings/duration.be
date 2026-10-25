@@ -1,6 +1,10 @@
-# duration_scene.be — Minutes and seconds, compact: `45s`, `1m`, `1m30s`. Minutes first, then
-# seconds, with OK moving between the stages.
-class DurationScene : ValueScene
+# duration.be — DurationEditScene and DurationEditCfg: minutes and seconds, compact — `45s`, `1m`,
+# `1m30s` — with the setting rules that hold and print them. Minutes first, then seconds, with OK
+# moving between the stages.
+#
+# The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
+# names it.
+class DurationEditScene : EditScene
   var current
   var stage
   var step
@@ -160,3 +164,29 @@ class DurationScene : ValueScene
   end
 end
 
+class DurationEditCfg : EditCfg
+  var step, min, max
+
+  def init(key, default_value, label, icon, step, min, max, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
+    self.step = step
+    self.min = min
+    self.max = max
+  end
+
+  def parse(raw)
+    return int(raw)
+  end
+
+  def bounded(value)
+    return duration_seconds(self.parse(value), self.min, self.max)
+  end
+
+  def text(value)
+    return duration_text(value)
+  end
+
+  def scene(value)
+    return DurationEditScene(self.label, value, self.step, self.min, self.max, self.nullable)
+  end
+end

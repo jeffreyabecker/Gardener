@@ -1,7 +1,11 @@
-# pressure_scene.be — A pressure is kPa in the store and the unit on the glass in the editor. One
-# step is one whole display step — one psi, one inHg, ten mmHg — and every value goes through
-# vacuum.clamp(), so the editor cannot produce a target the machine refuses.
-class PressureScene : ValueScene
+# pressure.be — PressureEditScene and PressureEditCfg: a pressure is kPa in the store and the unit
+# on the glass in the editor. One step is one whole display step — one psi, one inHg, ten mmHg — and
+# every value goes through vacuum.clamp(), so the editor cannot produce a target the machine refuses.
+# The cfg reads, prints and clamps it the same way the scene steps it.
+#
+# The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
+# names it.
+class PressureEditScene : EditScene
   var current
   var step
   var nullable
@@ -83,5 +87,31 @@ class PressureScene : ValueScene
 
   def hint()
     return "\x1E/\x1F  OK=SAVE"
+  end
+end
+
+class PressureEditCfg : EditCfg
+  var step
+
+  def init(key, default_value, label, icon, step, nullable)
+    super(self).init(key, default_value, label, icon, nullable)
+    self.step = step
+  end
+
+  def parse(raw)
+    return real(raw)
+  end
+
+  def bounded(value)
+    return vacuum.clamp(self.parse(value))
+  end
+
+  def text(value)
+    var unit = screen.unit()
+    return string.format("%." + str(unit.decimals) + "f", value * unit.per_kpa)
+  end
+
+  def scene(value)
+    return PressureEditScene(self.label, value, self.step, self.nullable)
   end
 end
