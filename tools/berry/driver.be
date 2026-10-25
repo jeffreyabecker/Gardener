@@ -41,8 +41,8 @@ end
 
 # A settled set the driver writes, through the registry's own call, so the drive takes the same path
 # a page's settings callback does.
-def harness_editor_settled(routine_key, settings_cfgs, values)
-  routines.save_settings(routine_key, values, settings_cfgs)
+def harness_editor_settled(routine_key, settings_values)
+  routines.save_settings(routine_key, settings_values)
 end
 
 # The settings view is the one path every routine with settings shares: open it the way a caller
@@ -61,13 +61,8 @@ def harness_editor(routine_key)
   end
 
   harness_activate(routine_key, nil)
-  var values = []
-  for item : settings_cfgs
-    values.push(item.read(routine_key))
-  end
-  routines.repair(routine_key, settings_cfgs, values)
-  ux.push(SettingsScene(settings_cfgs, values, nil), nil,
-          / v -> harness_editor_settled(routine_key, settings_cfgs, v))
+  ux.push(SettingsScene(settings_cfgs, routines.load(routine_key), nil), nil,
+          / v -> harness_editor_settled(routine_key, v))
 
   var i = 0
   while i < settings_cfgs.size()

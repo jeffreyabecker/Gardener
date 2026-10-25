@@ -250,7 +250,7 @@ end
 # is the one moment a list hands its values over.
 class SystemScene : SettingsScene
   def init()
-    super(self).init([], [], nil)
+    super(self).init([], {}, nil)
   end
 
   # Read on every entry: the unit may have changed through the wire while a controller owned the
@@ -269,9 +269,9 @@ class SystemScene : SettingsScene
     if jingle.values.size() > 0
       self.settings_cfgs.push(jingle)
     end
-    self.values = []
-    for item : self.settings_cfgs
-      self.values.push(item.current())
+    self.settings_values = {}
+    for cfg : self.settings_cfgs
+      self.settings_values[cfg.key] = cfg.current()
     end
   end
 
@@ -287,10 +287,8 @@ class SystemScene : SettingsScene
   # A row whose value did not change is not written, so opening the menu and looking at it does not
   # wear the settings file.
   def write()
-    var i = 0
-    while i < self.settings_cfgs.size()
-      self.settings_cfgs[i].write(self.values[i])
-      i += 1
+    for cfg : self.settings_cfgs
+      cfg.write(self.settings_values[cfg.key])
     end
   end
 end

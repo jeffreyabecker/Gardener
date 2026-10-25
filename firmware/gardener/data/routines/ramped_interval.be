@@ -84,6 +84,53 @@ class RampedIntervalChrome : Layout
   end
 end
 
+# The values the ramp edits, in the order the settings list shows them, and the one rule that binds
+# two of them: a ladder has to climb, so the final pressure is at least where it starts. The class is
+# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
+# the list settles on.
+class RampedIntervalSettings
+  static def settings()
+    return [
+      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureSettingCfg("final_pressure", 20.0, "Final", nil, 1, false),
+      PressureSettingCfg("step_pressure", nil, "Step", nil, 1, true),
+      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationSettingCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
+      DurationSettingCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+                       ["immediately", "after ok"], false)
+    ]
+  end
+
+  static def problem(values)
+    if values["final_pressure"] < values["initial_pressure"]
+      return "FINAL < START"
+    end
+    return nil
+  end
+end
+
+# The values the interval edits, in the order the settings list shows them. Nothing binds one
+# setting to another here, so the rule accepts every set.
+class IntervalSettings
+  static def settings()
+    return [
+      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
+      DurationSettingCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
+      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
+      DurationSettingCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
+      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
+                       ["immediately", "after ok"], false)
+    ]
+  end
+
+  static def problem(values)
+    return nil
+  end
+end
+
 class RampedInterval : Scene
   var routine_key
   var phase
@@ -374,22 +421,25 @@ class RampedInterval : Scene
 
   # Settings are entered with the chamber released, like a pause: a run that was under way starts
   # over at the first set when the settings scene closes, so it must not keep working at the old
-  # values underneath it. The scene below is not polled while the settings are showing.
+  # values underneath it. The scene below is not polled while the settings are showing. The list opens
+  # on the state this page is running — its own declaration for the rows and serialize_to_settings()
+  # for the values — so nothing is read back from the store and no rule is applied to a set the page
+  # already accepted.
   def edit()
-    edit_settings(self.routine_key, / settings_cfgs, v -> self.settings_closed(settings_cfgs, v))
+    ux.push(SettingsScene(RampedIntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+            / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
     end
     return true
   end
 
-  # The set the list settled on is written, and the edit was to the file, so the file is the source
-  # again even if this page was built from a set of its own. A run under way starts over at the first
-  # set, because the ladder is computed once from the settings a run begins with; a ready page only
-  # takes the new start pressure.
-  def settings_closed(settings_cfgs, values)
-    routines.save_settings(self.routine_key, values, settings_cfgs)
-    self.init_from_settings(routines.load(self.routine_key))
+  # The set the list settled on is written and then taken as this page's state — the set just written,
+  # not the file it went to. A run under way starts over at the first set, because the ladder is
+  # computed once from the settings a run begins with; a ready page only takes the new start pressure.
+  def settings_closed(settings_values)
+    routines.save_settings(self.routine_key, settings_values)
+    self.init_from_settings(settings_values)
     if self.phase == IntervalPhase.READY
       self.target = self.initial
       vacuum.target(self.initial)
@@ -462,6 +512,17 @@ class Interval : RampedInterval
     return IntervalIcon(Position(0, 0), Size(12, 8))
   end
 
+  # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
+  # ladder, because those are the settings this routine registers.
+  def edit()
+    ux.push(SettingsScene(IntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+            / settings_values -> self.settings_closed(settings_values))
+    if self.phase != IntervalPhase.READY
+      vacuum.stop()
+    end
+    return true
+  end
+
   # The interval's own values, out of the same clean map: the single target is the ladder's start
   # and end, and the step is always zero.
   def init_from_settings(settings_values)
@@ -503,53 +564,6 @@ class Interval : RampedInterval
       i += 1
     end
     return out
-  end
-end
-
-# The values the ramp edits, in the order the settings list shows them, and the one rule that binds
-# two of them: a ladder has to climb, so the final pressure is at least where it starts. The class is
-# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
-# the list settles on.
-class RampedIntervalSettings
-  static def settings()
-    return [
-      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
-      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureSettingCfg("final_pressure", 20.0, "Final", nil, 1, false),
-      PressureSettingCfg("step_pressure", nil, "Step", nil, 1, true),
-      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationSettingCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
-      DurationSettingCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
-                       ["immediately", "after ok"], false)
-    ]
-  end
-
-  static def problem(values)
-    if values["final_pressure"] < values["initial_pressure"]
-      return "FINAL < START"
-    end
-    return nil
-  end
-end
-
-# The values the interval edits, in the order the settings list shows them. Nothing binds one
-# setting to another here, so the rule accepts every set.
-class IntervalSettings
-  static def settings()
-    return [
-      IntSettingCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
-      PressureSettingCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      DurationSettingCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
-      PressureSettingCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationSettingCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceSettingCfg("resume_behavior", "immediately", "Resume", nil,
-                       ["immediately", "after ok"], false)
-    ]
-  end
-
-  static def problem(values)
-    return nil
   end
 end
 

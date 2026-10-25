@@ -44,6 +44,28 @@ class RampedStaticChrome : Layout
   end
 end
 
+# The values this page edits, in the order the settings list shows them, and the one rule that binds
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The class is
+# the declaration alone: the page opens the list from it and writes what the list settles on.
+class RampedStaticSettings
+  static def settings()
+    return [
+      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
+      PressureSettingCfg("target_pressure", 20.0, "Target", nil, 1, false),
+      DurationSettingCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
+      DurationSettingCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
+      DurationSettingCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
+    ]
+  end
+
+  static def problem(values)
+    if values["total_duration"] < values["initial_duration"] + values["target_duration"]
+      return "TOTAL < HOLDS"
+    end
+    return nil
+  end
+end
+
 class RampedStatic : Scene
   var routine_key
   var phase
@@ -292,22 +314,25 @@ class RampedStatic : Scene
 
   # Settings are entered with the chamber released, like a pause: a run that was under way starts
   # over from the approach when the settings scene closes, so it must not keep working at the old
-  # values underneath it. The scene below is not polled while the settings are showing.
+  # values underneath it. The scene below is not polled while the settings are showing. The list opens
+  # on the state this page is running — its own declaration for the rows and serialize_to_settings()
+  # for the values — so nothing is read back from the store and no rule is applied to a set the page
+  # already accepted.
   def edit()
-    edit_settings(self.routine_key, / settings_cfgs, v -> self.settings_closed(settings_cfgs, v))
+    ux.push(SettingsScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+            / settings_values -> self.settings_closed(settings_values))
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
   end
 
-  # The set the list settled on is written, and the edit was to the file, so the file is the source
-  # again even if this page was built from a set of its own. The profile is built once from the
-  # settings a run begins with, so a run starts over at the new values; a ready page only takes the
-  # new start pressure.
-  def settings_closed(settings_cfgs, values)
-    routines.save_settings(self.routine_key, values, settings_cfgs)
-    self.init_from_settings(routines.load(self.routine_key))
+  # The set the list settled on is written and then taken as this page's state — the set just written,
+  # not the file it went to. The profile is built once from the settings a run begins with, so a run
+  # starts over at the new values; a ready page only takes the new start pressure.
+  def settings_closed(settings_values)
+    routines.save_settings(self.routine_key, settings_values)
+    self.init_from_settings(settings_values)
     if self.phase == "ready"
       self.target = self.start_pressure
       vacuum.target(self.start_pressure)
@@ -371,29 +396,6 @@ class RampedStatic : Scene
       return "HOLD"
     end
     return "RAMP"
-  end
-end
-
-# The values this page edits, in the order the settings list shows them, and the one rule that binds
-# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The class is
-# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
-# the list settles on.
-class RampedStaticSettings
-  static def settings()
-    return [
-      PressureSettingCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureSettingCfg("target_pressure", 20.0, "Target", nil, 1, false),
-      DurationSettingCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
-      DurationSettingCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
-      DurationSettingCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
-    ]
-  end
-
-  static def problem(values)
-    if values["total_duration"] < values["initial_duration"] + values["target_duration"]
-      return "TOTAL < HOLDS"
-    end
-    return nil
   end
 end
 

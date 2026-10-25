@@ -58,19 +58,33 @@ class BrowserScene : Scene
     return routines.push(self.routine_keys[self.list.selected], nil)
   end
 
-  # Open the selected routine's settings. The browser reads the values and writes what the list
-  # settles on, the way the routine's own page does; the list only edits them.
+  # Open the selected routine's settings. The browser has no state of its own to show, so the values
+  # are the routine's document: read through the declaration, mended when the routine's rule refuses
+  # them, and written back as the list settles. The list itself only edits them.
   def open_selected()
     var count = self.routine_keys.size()
     if count == 0
       return false
     end
     var routine_key = self.routine_keys[self.list.selected]
-    return edit_settings(routine_key, / settings_cfgs, v -> self.settings_closed(routine_key, settings_cfgs, v))
+    var settings_cfgs = routines.settings(routine_key)
+    if settings_cfgs == nil || settings_cfgs.size() == 0
+      vacuum.log("settings: " + routine_key + " has none")
+      return false
+    end
+    var settings_values = {}
+    for cfg : settings_cfgs
+      settings_values[cfg.key] = cfg.read(routine_key)
+    end
+    # A hand-edited document is shown mended, so the reason it was mended is drawn with the list.
+    var message = routines.repair(routine_key, settings_cfgs, settings_values)
+    ux.push(SettingsScene(settings_cfgs, settings_values, message), nil,
+            / v -> self.settings_closed(routine_key, v))
+    return true
   end
 
-  def settings_closed(routine_key, settings_cfgs, values)
-    routines.save_settings(routine_key, values, settings_cfgs)
+  def settings_closed(routine_key, settings_values)
+    routines.save_settings(routine_key, settings_values)
     self.draw()
   end
 

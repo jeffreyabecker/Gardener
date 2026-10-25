@@ -119,11 +119,15 @@ def load_makes_a_clean_map()
   assert_eq(settings["total_duration"], 300, "load: the total duration is not the file's")
 
   # A value past its bounds arrives held to them, and a nullable key holding nothing arrives nil.
+  # The shipped interval.cfg carries a rest pressure, so the key is emptied first: an empty value is
+  # how the store says a setting holds nothing.
   store.set("interval", "set_count", "99")
+  store.set("interval", "rest_pressure", "")
   var held = routines.load("interval")
   assert_eq(held["set_count"], 20, "load: a stored int above max is not held to it")
   assert_nil(held["rest_pressure"], "load: a nullable key holding nothing is not nil")
   store.set("interval", "set_count", "4")
+  store.set("interval", "rest_pressure", "5.0")
 
   # The routine's rule is applied to the map, so a page is never initialized with a set it refuses.
   store.set("ramped_static", "total_duration", "30")
@@ -151,18 +155,15 @@ test("a routine's rule refuses a set that cannot run", the_rules_say_no)
 
 def a_repair_puts_a_set_back()
   var settings_cfgs = routines.settings("ramped_static")
-  var values = []
-  for item : settings_cfgs
-    values.push(item.read("ramped_static"))
-  end
-  routines.repair("ramped_static", settings_cfgs, values)
-  assert_nil(routines.repair("ramped_static", settings_cfgs, values), "a set of valid values was refused")
+  var settings_values = routines.load("ramped_static")
+  assert_nil(routines.repair("ramped_static", settings_cfgs, settings_values),
+             "a set of valid values was refused")
 
   # A total below the two holds is what lowering Total under a longer hold pair produces.
-  values[4] = 30
-  assert_eq(routines.repair("ramped_static", settings_cfgs, values),
+  settings_values["total_duration"] = 30
+  assert_eq(routines.repair("ramped_static", settings_cfgs, settings_values),
             "TOTAL < HOLDS", "the repair did not report the rule it applied")
-  assert_eq(values[4], settings_cfgs[4].default_value, "the repair did not put the value back")
+  assert_eq(settings_values["total_duration"], 300, "the repair did not put the value back")
 end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)

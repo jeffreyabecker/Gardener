@@ -93,39 +93,35 @@ class RoutineRegistry
 
   # The values the routine's rule accepts: while the rule refuses the set, the settings that differ
   # from their default are put back to them in the order the list shows them, each replacing the
-  # value in `values`. The reason that was applied is returned for the list to draw, or nil when the
-  # set was already valid. Nothing here touches a file: the caller decides what to write.
-  def repair(routine_key, settings_cfgs, values)
-    var reason = self.problem(routine_key, settings_cfgs, values)
+  # value under its key. The reason that was applied is returned for the list to draw, or nil when
+  # the set was already valid. Nothing here touches a file: the caller decides what to write.
+  def repair(routine_key, settings_cfgs, settings_values)
+    var reason = self.problem(routine_key, settings_cfgs, settings_values)
     if reason == nil
       return nil
     end
     vacuum.log("settings: " + routine_key + ": " + reason)
-    var i = 0
-    while i < settings_cfgs.size()
-      if values[i] != settings_cfgs[i].default_value
-        values[i] = settings_cfgs[i].default_value
-        if self.problem(routine_key, settings_cfgs, values) == nil
+    for cfg : settings_cfgs
+      if settings_values[cfg.key] != cfg.default_value
+        settings_values[cfg.key] = cfg.default_value
+        if self.problem(routine_key, settings_cfgs, settings_values) == nil
           return reason
         end
       end
-      i += 1
     end
     vacuum.log("settings: " + routine_key + ": " + reason + " even at the defaults")
     return reason
   end
 
   # The rule's verdict on the values held beside their settings, or nil when it accepts them.
-  def problem(routine_key, settings_cfgs, values)
+  def problem(routine_key, settings_cfgs, settings_values)
     var e = self.entry(routine_key)
     if e == nil || e.settings == nil
       return nil
     end
     var out = {}
-    var i = 0
-    while i < settings_cfgs.size()
-      out[settings_cfgs[i].key] = values[i]
-      i += 1
+    for cfg : settings_cfgs
+      out[cfg.key] = settings_values[cfg.key]
     end
     return e.settings.problem(out)
   end
@@ -162,40 +158,33 @@ class RoutineRegistry
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
   def load(routine_key)
     var settings_cfgs = self.settings(routine_key)
-    var out = {}
+    var settings_values = {}
     if settings_cfgs == nil
-      return out
+      return settings_values
     end
-    var values = []
-    for item : settings_cfgs
-      values.push(item.read(routine_key))
+    for cfg : settings_cfgs
+      settings_values[cfg.key] = cfg.read(routine_key)
     end
-    self.repair(routine_key, settings_cfgs, values)
-    var i = 0
-    while i < settings_cfgs.size()
-      out[settings_cfgs[i].key] = values[i]
-      i += 1
-    end
-    return out
+    self.repair(routine_key, settings_cfgs, settings_values)
+    return settings_values
   end
 
   # A settled set written back to the routine's file: the routine's rule is applied first, so what
-  # lands is a set a run accepts, and a value the list holds nothing for is written as nothing, which
+  # lands is a set a run accepts, and a value the map holds nothing for is written as nothing, which
   # reads back as nil. `settings_cfgs` may be nil, and then the settings the routine declares are
   # looked up here, so a caller that never opened a list has none to hand over. False, writing
   # nothing, when the routine declares no settings.
-  def save_settings(routine_key, values, settings_cfgs)
+  def save_settings(routine_key, settings_values, settings_cfgs)
     if settings_cfgs == nil
       settings_cfgs = self.settings(routine_key)
     end
     if settings_cfgs == nil
       return false
     end
-    self.repair(routine_key, settings_cfgs, values)
-    var i = 0
-    while i < settings_cfgs.size()
-      store.set(routine_key, settings_cfgs[i].key, values[i] == nil ? "" : values[i])
-      i += 1
+    self.repair(routine_key, settings_cfgs, settings_values)
+    for cfg : settings_cfgs
+      var value = settings_values[cfg.key]
+      store.set(routine_key, cfg.key, value == nil ? "" : value)
     end
     return true
   end

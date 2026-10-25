@@ -127,26 +127,29 @@ readout looks like.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
-`settings_scene.be` is `SettingsScene` (the list, handed its rows and its values).
+`settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
+key).
 `configs/` holds one setting per kind: `setting_cfg.be` is `SettingCfg` and
 `bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
 `pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
-of the same name. **`up:double`** is the standard gesture for opening the list; the page's own
-gesture calls `edit_settings(self.routine_key, ...)`, which reads the values, applies the rule, pushes
-the list and, through the page's `settings_closed`, writes what it settles on:
+of the same name. **`up:double`** is the standard gesture for opening the list; the page opens it
+itself, from its own declaration and the state it is running:
 
 ```berry
 def edit()
-  edit_settings(self.routine_key, / settings_cfgs, v -> self.settings_closed(settings_cfgs, v))
+  ux.push(SettingsScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+          / settings_values -> self.settings_closed(settings_values))
   return true
 end
 ```
 
-Nothing in the settings folder writes on its own: `SettingsScene` edits the values it was handed and
-pops them on `back:single`, and the caller writes them. Opening the list is `edit_settings(routine_key,
-on_closed)` in the settings folder, so the page and the browser open a routine's list the same way
-instead of each carrying its own copy; writing it is the registry's
-`save_settings(routine_key, values[, settings_cfgs])`, which applies the rule and writes every value.
+Nothing in the settings folder reads or writes anything on its own: `SettingsScene` edits the values
+it was handed and pops them on `back:single`, and the caller writes them. A page has the state
+already, so it opens the list on that state and reads no file; a caller with no state of its own —
+the browser — reads the routine's document through the declaration, mends it when the routine's rule
+refuses it, and passes the result in. Writing is the registry's
+`save_settings(routine_key, settings_values[, settings_cfgs])`, which applies the rule and writes
+every value.
 
 `/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
 native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
@@ -281,11 +284,11 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 A routine with nothing to edit registers `nil`. A class that is registered answers both: a routine
 with no rule of its own returns `nil` from `problem`.
 
-The list itself is `SettingsScene(settings_cfgs, values, message)`, built by whoever opens it — the page's
-`up:double`, or the browser's Forward on the routine's row. That caller reads each value from the
-file, applies the rule and pushes the scene; the scene edits the values and pops them when Back is
-pressed; the caller applies the rule again and writes every value. The scene never touches the
-store, and nothing is written until the list closes.
+The list itself is `SettingsScene(settings_cfgs, settings_values, message)`: the settings declaration
+for the rows and a map of values keyed by setting key, built by whoever opens it — the page's
+`up:double`, or the browser's Forward on the routine's row. The scene edits the values it was handed
+and pops them when Back is pressed; the caller applies the rule and writes every value. The scene
+never touches the store, and nothing is written until the list closes.
 
 ### A setting
 
@@ -396,7 +399,7 @@ end
 ```
 
 `serialize_to_settings()` is the other direction: the values the page is holding, as a map of the
-same shape and keyed the same way, so a set can be written back the way it was read. It runs no
-rule and writes nothing — a caller that wants the set repaired hands it to a method that does. A
-page that holds a duration in milliseconds writes it back in whole seconds, which is what the store
-holds, so the two halves of one key agree.
+same shape and keyed the same way, so a set can be written back the way it was read — and so the
+settings list can be opened on it as it stands. It runs no rule and writes nothing: a page's state is
+one it is already running, so there is nothing to mend. A page that holds a duration in milliseconds
+writes it back in whole seconds, which is what the store holds, so the two halves of one key agree.
