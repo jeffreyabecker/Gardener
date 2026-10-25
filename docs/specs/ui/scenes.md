@@ -59,8 +59,9 @@ What each one answers:
 | `SystemScene` | `cancel:single` | write the set it settled on, then leave |
 | `SettingsScene` | `up:single`, `down:single` | move the row |
 | `SettingsScene` | `forward:single` | open the row's value scene, or nothing for a setting that has no editor |
-| `SettingsScene` | `back:single` | close the list |
-| `SettingsScene` | `cancel:single` | close the list |
+| `SettingsScene` | `back:single` | close the list, handing back the set as it was opened |
+| `SettingsScene` | `cancel:single` | close the list, handing back the set as it was opened |
+| `SettingsScene` | `ok:single` | keep the set it was edited to, and close |
 | `ValueScene` | `up:single`, `down:single` | raise or lower the value |
 | `ValueScene` | `ok:single` | close, keeping the value |
 | `ValueScene` | `cancel:single` | close, discarding it |

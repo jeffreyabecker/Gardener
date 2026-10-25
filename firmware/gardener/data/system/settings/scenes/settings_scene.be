@@ -1,16 +1,24 @@
 # settings_scene.be — SettingsScene: the list a routine's settings are edited in. It is the list and
 # nothing else: the settings and the values are handed to it, the values keyed by setting key, and it
-# pops those values back with whatever was committed, so whoever opened it writes them.
+# pops them back on the way out — what was edited when OK kept it, and the set as it was opened when
+# Back or Cancel refused it.
 
 class SettingsScene : Scene
   var settings_cfgs
   var settings_values
+  var opened_settings_values
   var message
   var list
 
   def init(settings_cfgs, settings_values, message)
     super(self).init()
     self.settings_cfgs = settings_cfgs
+    # The set as it was handed over, apart from the one being edited, so Back and Cancel can hand it
+    # back untouched. A map is a reference, so this has to be a copy of what the list shows.
+    self.opened_settings_values = {}
+    for cfg : settings_cfgs
+      self.opened_settings_values[cfg.key] = settings_values[cfg.key]
+    end
     self.settings_values = settings_values
     self.message = message
     self.list = List(5)
@@ -33,10 +41,14 @@ class SettingsScene : Scene
       self.open_row()
       return true
     end
-    if ev == "back:single" || ev == "cancel:single"
-      # The list hands its values back so the caller can apply the rule and write them; nothing has
-      # been written while it was open.
+    if ev == "ok:single"
+      # OK keeps what was edited: the list hands the set it settled on back to the caller.
       ux.pop(self.settings_values)
+      return true
+    end
+    if ev == "back:single" || ev == "cancel:single"
+      # Back and Cancel keep nothing: the set as it was opened goes back untouched.
+      ux.pop(self.opened_settings_values)
       return true
     end
     return false

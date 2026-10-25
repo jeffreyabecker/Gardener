@@ -84,8 +84,9 @@ def harness_editor(routine_key)
     i += 1
   end
 
-  # Back closes the settings list, which is when the values it settled on are written.
-  harness.press("back:single")
+  # OK closes the settings list and keeps the set it settled on, which is when it is written. Back
+  # would have closed it on the set it was opened with.
+  harness.press("ok:single")
   harness.beat(1)
 
   for item : settings_cfgs

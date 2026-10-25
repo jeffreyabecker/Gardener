@@ -65,9 +65,10 @@ def forward_edits_the_selected_routines_settings()
   harness.press("ok:single")
   harness.beat(1)
 
-  harness.press("back:single")
+  # The list keeps the set on OK; Back would have closed it on the set it was opened with.
+  harness.press("ok:single")
   harness.beat(1)
-  assert_eq(ux.depth(), 2, "Back did not close the settings list")
+  assert_eq(ux.depth(), 2, "OK did not close the settings list")
 
   var after = store.get("ramped_static", "initial_pressure", 0.0)
   assert_true(after != before, "the browser did not write the value the list settled on")

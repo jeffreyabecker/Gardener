@@ -287,8 +287,10 @@ with no rule of its own returns `nil` from `problem`.
 The list itself is `SettingsScene(settings_cfgs, settings_values, message)`: the settings declaration
 for the rows and a map of values keyed by setting key, built by whoever opens it — the page's
 `up:double`, or the browser's Forward on the routine's row. The scene edits the values it was handed
-and pops them when Back is pressed; the caller applies the rule and writes every value. The scene
-never touches the store, and nothing is written until the list closes.
+and hands a set back on the way out: what it was edited to when **OK** kept it, and the set as it was
+opened when **Back** or **Cancel** refused it. The caller applies the rule and writes what it is
+given, so a refused edit writes back the values it opened with. The scene never touches the store,
+and nothing is written until the list closes.
 
 ### A setting
 

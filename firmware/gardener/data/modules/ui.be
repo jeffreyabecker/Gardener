@@ -276,7 +276,7 @@ class SystemScene : SettingsScene
   end
 
   def handle_page(ev)
-    if ev == "back:single" || ev == "cancel:single"
+    if ev == "ok:single" || ev == "back:single" || ev == "cancel:single"
       self.write()
       ux.pop(nil)
       return true
