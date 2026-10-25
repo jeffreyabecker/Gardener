@@ -55,17 +55,31 @@ class RealScene : ValueScene
     return str(self.current)
   end
 
-  # The value at the largest face in the band, over a bar showing where it sits between the bounds
-  # when the setting has both. A nil value has no place on the bar.
+  # The value at the largest face the box holds, over a bar showing where it sits between the bounds
+  # when the setting has both, the bar spanning the frame. A nil value has no place on the bar.
+  def bar_height()
+    return 6
+  end
+
+  def body_size()
+    var value = self.ink(self.text(), self.body_width(), self.ink_cap())
+    var h = value.h
+    if self.min != nil && self.max != nil
+      h += SettingsView.gap + self.bar_height()
+    end
+    return Size(value.w, h)
+  end
+
   def draw_editor(pos, dim)
     self.draw_chrome(pos, dim)
     var band = self.value_band(pos, dim)
+    var bounded = self.min != nil && self.max != nil
     var value_h = band[1].h
-    if self.min != nil && self.max != nil
-      value_h -= 8
+    if bounded
+      value_h -= SettingsView.gap + self.bar_height()
     end
     Text(band[0], Size(band[1].w, value_h), self.text()).draw()
-    if self.min == nil || self.max == nil
+    if !bounded
       return
     end
 
@@ -73,8 +87,8 @@ class RealScene : ValueScene
     if self.current != nil && self.max > self.min
       percent = int((self.current - self.min) * 100 / (self.max - self.min))
     end
-    ProgressBar(Position(band[0].x + 8, band[0].y + value_h + 2), Size(band[1].w - 16, 6),
-                percent).draw()
+    ProgressBar(Position(band[0].x, band[0].y + value_h + SettingsView.gap),
+                Size(band[1].w, self.bar_height()), percent).draw()
   end
 end
 

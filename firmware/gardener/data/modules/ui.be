@@ -14,12 +14,11 @@ class ReadoutChrome
   var pressure
   var timer
 
-  def init()
-    var pw = screen.page_width()
-    var half = pw / 2
-    var ph = screen.page_height()
-    self.pressure = AutoPressureDisplay(Position(0, 0), Size(half, ph), "pressure:target", "br", 0.25)
-    self.timer = Duration(Position(half, 0), Size(half, ph), "minutes")
+  def init(pos, dim)
+    var half = dim.w / 2
+    self.pressure = AutoPressureDisplay(Position(pos.x, pos.y), Size(half, dim.h),
+                                        "pressure:target", "br", 0.25)
+    self.timer = Duration(Position(pos.x + half, pos.y), Size(half, dim.h), "minutes")
   end
 
   def draw(elapsed)
@@ -145,8 +144,8 @@ class ReadoutScene : Scene
   var mark
 
   def init()
-    super(self).init()
-    self.chrome = ReadoutChrome()
+    super(self).init(Position.top_left(), Size.page())
+    self.chrome = ReadoutChrome(self.pos, self.dim)
     self.settings_values = {}
     self.mark = nil
 

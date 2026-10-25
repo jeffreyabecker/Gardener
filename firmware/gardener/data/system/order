@@ -18,6 +18,7 @@ scene.be
 list.be
 registry.be
 settings/settings.be
+settings/view.be
 settings/scenes/value_scene.be
 settings/scenes/bool_scene.be
 settings/scenes/choice_scene.be

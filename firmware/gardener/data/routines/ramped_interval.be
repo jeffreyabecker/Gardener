@@ -60,19 +60,21 @@ class RampedIntervalChrome : Layout
   var title
   var bubbles
 
-  def init(icon, title_text, total_sets)
-    var pw = screen.page_width()
-    var half = pw / 2
+  def init(icon, title_text, total_sets, pos, dim)
+    var half = dim.w / 2
     self.icon = icon
-    self.title = Text(Position(16, 2), Size(pw - 16, 9), title_text)
-    self.bubbles = ProgressBubbles(Position(half, 13), Size(half, 26), total_sets, "circle", "lr-tb")
+    self.icon.pos = Position(pos.x, pos.y)
+    self.title = Text(Position(pos.x + 16, pos.y + 2), Size(dim.w - 16, 9), title_text)
+    self.bubbles = ProgressBubbles(Position(pos.x + half, pos.y + 13), Size(half, 26), total_sets,
+                                   "circle", "lr-tb")
     super(self).init([
       self.icon,
       self.title,
-      AutoPressureDisplay(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
+      AutoPressureDisplay(Position(pos.x, pos.y + 13), Size(half, 26), "pressure:target", "br", 0.25),
       self.bubbles,
-      Text(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
-      ProgressBar(Position(half + 8, 41), Size(half - 8, 8), nil)
+      Text(Position(pos.x, pos.y + 39), Size(half, 13), "",
+           text_settings("sans", "none", "left", "center")),
+      ProgressBar(Position(pos.x + half + 8, pos.y + 41), Size(half - 8, 8), nil)
     ])
   end
 
@@ -149,7 +151,7 @@ class RampedInterval : Scene
   var chrome
 
   def init(settings)
-    super(self).init()
+    super(self).init(Position.top_left(), Size.page())
     # A subclass sets its own key before it delegates here; this class's key is the fallback.
     if self.routine_key == nil
       self.routine_key = "ramped_interval"
@@ -163,7 +165,8 @@ class RampedInterval : Scene
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation. The values come first: the chrome lays out one bubble per set.
     self.init_from_settings(settings)
-    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.count)
+    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.count,
+                                      self.pos, self.dim)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())

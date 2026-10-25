@@ -19,6 +19,21 @@ The stack drains the gesture queue once per beat and hands the top scene one ges
 - A gesture no binding matches is dropped. A scene never sees the device's reserved gestures, which
   are taken before the queue.
 
+## The box a scene draws in
+
+Every scene carries a box — `pos` and `dim`, as a component does. `Scene.draw()` fills that box with
+paper and then calls `draw_page()`, so a scene leaves whatever the scene below it drew outside the
+box alone rather than clearing the panel.
+
+A scene the stack is rooted on is the page: `Position.top_left()` and `Size.page()`. That is the box
+`ReadoutScene`, `BrowserScene` and every routine page — `RampedStatic`, `RampedInterval` and
+`Interval` — is constructed with, and their chromes lay their children out from it.
+
+A scene opened on top of another is given that scene's box. `ux.box()` answers the `pos` and `dim` of
+the scene on top, which — because a scene's `init()` runs before its push — is the scene it is about
+to cover. `SettingsScene` and `ValueScene` take their box that way, so a list and the editor it opens
+draw where the scene they were opened from draws.
+
 ## The map
 
 Every scene, and where it lives:
@@ -95,13 +110,15 @@ it is cancelled.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
 3. Every settings list is a `SettingsScene`: the readout's own set and a routine's are opened and
-   left the same way. A list that fits in the page draws a centered block the size of its rows,
-   with the heading dropped; a longer list fills the page and scrolls, keeping its heading.
+   left the same way. A list that fits draws a centered block the size of its rows, with the heading
+   dropped; a longer list fills the scene's box and scrolls, keeping its heading.
 4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
-   stage. The page hands the editor the whole page area — `screen.page_width()` ×
-   `screen.page_height()`, no heading — and the editor draws itself in it through
-   `draw_editor(pos, dim)`. The base draws its label, value and hint centered in a block the size of
-   their ink; each kind draws its own value, with the label across the top of the window and the
-   hint across the bottom.
+   stage. The editor draws a framed box no bigger than its content: the content is its label row, its
+   body and its hint row; the frame is that content with a pixel of paper, a pixel of border and a
+   pixel of paper again around it; and the frame is centred in the scene's own box with at least a
+   pixel of paper between itself and the edge of that box. The box handed to a kind's
+   `draw_editor(pos, dim)` is the content inside the border. The base draws the value alone; each kind
+   draws its own in that box, with the label across the top and the hint across the bottom, and sizes
+   what it draws to the ink of its own text.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

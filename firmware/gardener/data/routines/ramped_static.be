@@ -23,16 +23,16 @@ end
 # The static chrome: a flat list of explicitly placed children — the glyph and title, the pressure
 # and the duration, and a status-plus-bar row.
 class RampedStaticChrome : Layout
-  def init(title)
-    var pw = screen.page_width()
-    var half = pw / 2
+  def init(title, pos, dim)
+    var half = dim.w / 2
     super(self).init([
-      RampedStaticIcon(Position(0, 0), Size(12, 8)),
-      Text(Position(16, 2), Size(pw - 16, 9), title),
-      AutoPressureDisplay(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
-      Duration(Position(half, 13), Size(half, 26), "minutes"),
-      Text(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
-      ProgressBar(Position(half + 8, 41), Size(half - 8, 8), nil)
+      RampedStaticIcon(Position(pos.x, pos.y), Size(12, 8)),
+      Text(Position(pos.x + 16, pos.y + 2), Size(dim.w - 16, 9), title),
+      AutoPressureDisplay(Position(pos.x, pos.y + 13), Size(half, 26), "pressure:target", "br", 0.25),
+      Duration(Position(pos.x + half, pos.y + 13), Size(half, 26), "minutes"),
+      Text(Position(pos.x, pos.y + 39), Size(half, 13), "",
+           text_settings("sans", "none", "left", "center")),
+      ProgressBar(Position(pos.x + half + 8, pos.y + 41), Size(half - 8, 8), nil)
     ])
   end
 
@@ -83,7 +83,7 @@ class RampedStatic : Scene
   var chrome
 
   def init(settings)
-    super(self).init()
+    super(self).init(Position.top_left(), Size.page())
     self.routine_key = "ramped_static"
     self.phase = "ready"
     self.mark = 0
@@ -91,7 +91,7 @@ class RampedStatic : Scene
     self.target = 0.0
     self.command_at = 0
     self.command_target = 0.0
-    self.chrome = RampedStaticChrome(routines.title(self.routine_key))
+    self.chrome = RampedStaticChrome(routines.title(self.routine_key), self.pos, self.dim)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())

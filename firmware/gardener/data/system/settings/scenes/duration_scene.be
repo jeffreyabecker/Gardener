@@ -76,8 +76,40 @@ class DurationScene : ValueScene
     return super(self).handle_page(ev)
   end
 
-  # Minutes and seconds as two fields side by side, each suffixed and at the largest face, with the
-  # stage the keys are stepping inverted. A nil value has no stages to show.
+  # Minutes and seconds as two fields side by side, each suffixed and at the largest face its share
+  # of the box holds, with the stage the keys are stepping inverted. A nil value has no stages.
+  def minutes_text()
+    return str(self.current / 60) + "m"
+  end
+
+  def seconds_text()
+    return str(self.current % 60) + "s"
+  end
+
+  # The most one field's ink may take: half the room across, less the gap between the fields and the
+  # pixel of paper inside each one.
+  def field_cap()
+    return Size((self.body_width() - 1) / 2 - 2, self.ink_cap())
+  end
+
+  def field_width(text)
+    return self.ink(text, self.field_cap().w, self.field_cap().h).w + 2
+  end
+
+  def field_height()
+    var mins = self.ink(self.minutes_text(), self.field_cap().w, self.field_cap().h).h
+    var secs = self.ink(self.seconds_text(), self.field_cap().w, self.field_cap().h).h
+    return (secs > mins ? secs : mins) + 2
+  end
+
+  def body_size()
+    if self.current == nil
+      return self.ink("--", self.body_width(), self.ink_cap())
+    end
+    return Size(self.field_width(self.minutes_text()) + 1 + self.field_width(self.seconds_text()),
+                self.field_height())
+  end
+
   def draw_editor(pos, dim)
     self.draw_chrome(pos, dim)
     var band = self.value_band(pos, dim)
@@ -86,22 +118,25 @@ class DurationScene : ValueScene
       return
     end
 
-    var half = band[1].w / 2
-    var minutes = Text(Position(band[0].x, band[0].y), Size(half - 2, band[1].h),
-                       str(self.current / 60) + "m")
+    var cap = self.field_cap()
+    var minutes_w = self.field_width(self.minutes_text())
+    var field_h = self.field_height()
+    var x = band[0].x + (band[1].w - (minutes_w + 1 + self.field_width(self.seconds_text()))) / 2
+    var y = band[0].y + (band[1].h - field_h) / 2
+    var minutes = Text(Position(x, y), Size(minutes_w, field_h), self.minutes_text())
     minutes.inverted = self.stage == "min"
-    minutes.draw()
-    var seconds = Text(Position(band[0].x + half + 2, band[0].y), Size(half - 2, band[1].h),
-                       str(self.current % 60) + "s")
+    minutes.draw_face(self.minutes_text(), self.face(self.minutes_text(), cap.w, cap.h))
+    var seconds = Text(Position(x + minutes_w + 1, y),
+                      Size(self.field_width(self.seconds_text()), field_h), self.seconds_text())
     seconds.inverted = self.stage != "min"
-    seconds.draw()
+    seconds.draw_face(self.seconds_text(), self.face(self.seconds_text(), cap.w, cap.h))
   end
 
   def hint()
     if self.stage == "min"
-      return "MIN UP/DOWN  FWD=NEXT"
+      return "\x1E/\x1F MIN  FWD=NEXT"
     end
-    return "SEC UP/DOWN  OK=SAVE"
+    return "\x1E/\x1F SEC  OK=SAVE"
   end
 end
 

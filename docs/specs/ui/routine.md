@@ -27,7 +27,7 @@ class MyPage : Scene
   var routine_key
 
   def init(settings)
-    super(self).init()
+    super(self).init(Position.top_left(), Size.page())
     self.routine_key = "mypage"
     # settings is the map the registry made clean: one value per setting the routine registers
   end
@@ -103,9 +103,10 @@ with. They are written in Berry because only the parser can declare an instance 
 The same file defines the
 global `is_nil(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
 so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` is the scene stack —
-`class Ux` and the global `ux`, the frames, the callbacks and the one-beat deferral, with the
-firmware calling `reset`, `enter` and `poll` on it. `/system/scene.be` is
-`Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
+`class Ux` and the global `ux`, the frames, the callbacks, the one-beat deferral and `box()`, which
+answers the box of the scene on top, with the firmware calling `reset`, `enter` and `poll` on it.
+`/system/scene.be` is `Scene` — the box a scene draws in (`pos` and `dim`), the gesture drain, the
+repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
 builds — routine key, title, icon, factory and settings class — and `class RoutineRegistry` with the
 global `routines` instance — the list the browser draws, the `load(routine_key)` that builds a
@@ -125,10 +126,13 @@ readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
 `ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
-declaration's list into them.
+declaration's list into them. `view.be` is `SettingsView`, the one place the view's geometry lives:
+the frame's margin, border and padding, the row and gap the list and the chrome are laid out on, and
+the tallest ink a value may take.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top; `draw_page()` hands its `draw_editor(pos, dim)` the page window, and the
-base draws its label, value and hint centered in a block the size of their ink) and the value it
+keys while it is on top; `draw_page()` measures its content, frames it and hands its
+`draw_editor(pos, dim)` the box inside the border, and the base draws its label, value and hint
+centered in a block the size of their ink) and the value it
 pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
@@ -212,7 +216,7 @@ The top scene sees one gesture per poll as `ev` in `handle(ev)` — a whole stri
 
 ```berry
 def init()
-  super(self).init()
+  super(self).init(Position.top_left(), Size.page())
   self.on("ok:single", / -> self.start())
   self.on("cancel:double", / -> self.leave())
 end

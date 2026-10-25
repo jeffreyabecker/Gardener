@@ -11,7 +11,8 @@ class SettingsScene : Scene
   var list
 
   def init(settings_cfgs, settings_values, message)
-    super(self).init()
+    var box = ux.box()
+    super(self).init(box[0], box[1])
     self.settings_cfgs = settings_cfgs
     # The set as it was handed over, apart from the one being edited, so Back and Cancel can hand it
     # back untouched. A map is a reference, so this has to be a copy of what the list shows.
@@ -21,7 +22,7 @@ class SettingsScene : Scene
     end
     self.settings_values = settings_values
     self.message = message
-    self.list = List(5)
+    self.list = List(SettingsView.list_rows(self.dim))
   end
 
   def activate()
@@ -54,19 +55,20 @@ class SettingsScene : Scene
     return false
   end
 
-  # A short list centers a block the size of its rows; a long one fills the page and scrolls. The
-  # heading is dropped when the block fits — a repair message is kept, as the first line, because it
-  # is why the set was mended rather than a title.
+  # A short list centers a block the size of its rows; a long one fills the scene's box and scrolls.
+  # The heading is dropped when the block fits — a repair message is kept, as the first line, because
+  # it is why the set was mended rather than a title. The heading and the rows are laid out on the
+  # settings view's own rows, so the list and the value editors move together.
   def draw_page()
     var rows = self.rows()
     self.list.set(rows)
     if rows.size() > self.list.visible
       if self.message != nil
-        screen.draw_text(0, 0, 1, false, self.message)
+        screen.draw_text(self.pos.x, self.pos.y, 1, false, self.message)
       else
-        screen.draw_text(0, 0, 1, false, "SETTINGS")
+        screen.draw_text(self.pos.x, self.pos.y, 1, false, "SETTINGS")
       end
-      self.list.draw(0, 8)
+      self.list.draw(self.pos.x, self.pos.y + SettingsView.row + SettingsView.gap)
       return
     end
 
@@ -84,16 +86,17 @@ class SettingsScene : Scene
       end
     end
 
-    var block_h = rows.size() * 8
+    var heading_h = 0
     if self.message != nil
-      block_h += 8
+      heading_h = SettingsView.row + SettingsView.gap
     end
-    var x = (screen.page_width() - wide) / 2
-    var y = (screen.page_height() - block_h) / 2
+    var block_h = rows.size() * SettingsView.row + heading_h
+    var x = self.pos.x + (self.dim.w - wide) / 2
+    var y = self.pos.y + (self.dim.h - block_h) / 2
     if self.message != nil
       var mw = screen.text_bounds(self.message, 1).w
       screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.message)
-      y += 8
+      y += heading_h
     end
     self.list.draw(x, y)
   end

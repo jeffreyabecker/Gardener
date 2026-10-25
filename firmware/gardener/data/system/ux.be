@@ -69,6 +69,17 @@ class Ux
     return self.frames[-1][0]
   end
 
+  # The box of the scene on top: what a scene being built is about to cover, and so the box it draws
+  # in. A scene's init() runs before its push, so the top is the scene it is opened over. Nothing on
+  # the stack answers nothing, which a scene takes as the page.
+  def box()
+    var scene = self.top()
+    if scene == nil
+      return [nil, nil]
+    end
+    return [scene.pos, scene.dim]
+  end
+
   def depth()
     return self.frames.size()
   end

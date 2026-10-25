@@ -61,9 +61,11 @@ Nothing `Text` draws lies outside its box.
 
 `draw()` fits the current `value` once and caches the face it chose; the fit is recomputed only when
 the string differs from the one it last fitted. `draw_face(text, candidate)` draws a string at a
-face the caller already chose. `bounds(text, candidate)` answers the ink box, `fit_height(text,
-max_h)` the largest face whose ink height fits a cap, and `candidate` is the face the last draw
-fitted.
+face the caller already chose. `bounds(text, candidate)` answers the ink box, `fit(text, max_w,
+max_h)` the largest face whose ink fits a box — the choice `draw()` makes for its own box, and the
+one a caller makes when it has to draw several strings at one size, such as a switch's segments —
+`fit_height(text, max_h)` the largest face whose ink height fits a cap, and `candidate` is the face
+the last draw fitted.
 
 ## PressureDisplay
 

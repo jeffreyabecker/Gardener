@@ -15,6 +15,10 @@ test("the screen reports its size", reports_its_size)
 # The colour is the last argument, 1 for ink and 0 for paper, and a call without one draws ink. The
 # frame is the check: an ink page with paper shapes knocked out of it.
 class ColorScene : Scene
+  def init()
+    super(self).init(Position.top_left(), Size.page())
+  end
+
   def draw_page()
     screen.draw_fillrect(0, 0, screen.page_width(), screen.page_height())
     screen.draw_fillrect(8, 8, 48, 20, 0)

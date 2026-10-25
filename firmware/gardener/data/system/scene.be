@@ -1,5 +1,5 @@
-# scene.be — the lifecycle a scene shares: the gesture drain, the repaint cadence and the
-# declarative gesture dispatch.
+# scene.be — the lifecycle a scene shares: the box it draws in, the gesture drain, the repaint
+# cadence and the declarative gesture dispatch.
 #
 # A scene extends Scene and overrides only what differs: activate() for work that must wait until
 # the scene is on top, draw_page() for its content, and tick(now) for per-beat work. A scene built
@@ -10,14 +10,23 @@
 # matches one dimension of a gesture without the other. A scene pushes a sub-scene with
 # ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
 # callback runs when the sub-scene pops, and the scene below keeps its state.
+#
+# Every scene carries the box it draws in, `pos` and `dim`, as a component does; a scene opened over
+# another one is given that one's box.
 
 class Scene
   var last_draw
   var gestures
+  var pos
+  var dim
 
-  def init()
+  # A scene draws in a box: the page for one the stack is rooted on, and the box of the scene it is
+  # opened over for anything on top of one. `pos` and `dim` are what draw_page() lays out in.
+  def init(pos, dim)
     self.last_draw = 0
     self.gestures = []
+    self.pos = pos == nil ? Position.top_left() : pos
+    self.dim = dim == nil ? Size.page() : dim
   end
 
   # The queue is a pull: drain it every poll so a press is never left waiting for the next scene.
@@ -61,8 +70,10 @@ class Scene
     return false
   end
 
+  # The scene's own box is cleared rather than the panel: a scene opened over another one leaves what
+  # that one drew around it on the glass. 0 is paper.
   def draw()
-    screen.draw_clear()
+    screen.draw_fillrect(self.pos.x, self.pos.y, self.dim.w, self.dim.h, 0)
     self.draw_page()
     screen.flush()
     self.last_draw = vacuum.now_ms()

@@ -264,8 +264,10 @@ end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)
 
-# The editor contract: draw_page() hands draw_editor the page window and draws nothing itself, so a
-# kind's override controls the whole rendering.
+# The editor contract: draw_page() frames the content and hands draw_editor the box inside the
+# border, so a kind draws in a box no bigger than what it holds and nothing it draws leaves the
+# frame. The frame is centred in the scene's own box, which is the box of the scene it was opened
+# over.
 class RecordingEditor : ValueScene
   var window
 
@@ -279,16 +281,70 @@ class RecordingEditor : ValueScene
   end
 end
 
-def the_page_hands_the_editor_its_window()
+def the_page_frames_the_editor_and_hands_it_the_content_box()
   var scene = RecordingEditor("Label")
   scene.draw_page()
-  assert_eq(scene.window[0], 0, "the editor window does not start at the page's left")
-  assert_eq(scene.window[1], 0, "the editor window does not start at the page's top")
-  assert_eq(scene.window[2], screen.page_width(), "the editor window is not the page's width")
-  assert_eq(scene.window[3], screen.page_height(), "the editor window is not the page's height")
+
+  var content = scene.content_size()
+  assert_eq(scene.window[2], content.w, "the editor's box is not the content's width")
+  assert_eq(scene.window[3], content.h, "the editor's box is not the content's height")
+
+  var inset = SettingsView.padding + SettingsView.border
+  var frame_x = scene.window[0] - inset
+  var frame_y = scene.window[1] - inset
+  var frame_w = scene.window[2] + 2 * inset
+  var frame_h = scene.window[3] + 2 * inset
+  assert_true(frame_w < scene.dim.w, "the frame is as wide as the scene's box")
+  assert_true(frame_h < scene.dim.h, "the frame is as tall as the scene's box")
+
+  var left = frame_x - scene.pos.x
+  var right = scene.pos.x + scene.dim.w - (frame_x + frame_w)
+  assert_true(left >= SettingsView.margin, "the frame keeps no margin from the box's left")
+  assert_true(right >= SettingsView.margin, "the frame keeps no margin from the box's right")
+  assert_true(left - right < 2 && right - left < 2, "the frame is not centered across the box")
+
+  var top = frame_y - scene.pos.y
+  var bottom = scene.pos.y + scene.dim.h - (frame_y + frame_h)
+  assert_true(top >= SettingsView.margin, "the frame keeps no margin from the box's top")
+  assert_true(bottom >= SettingsView.margin, "the frame keeps no margin from the box's bottom")
+  assert_true(top - bottom < 2 && bottom - top < 2, "the frame is not centered down the box")
 end
 
-test("the page hands the editor its window", the_page_hands_the_editor_its_window)
+test("the page frames the editor and hands it the content box",
+     the_page_frames_the_editor_and_hands_it_the_content_box)
+
+# A scene opened over another draws in that scene's box: the settings list and every value editor
+# ask the stack for the box of the scene they are pushed over.
+class BoxScene : Scene
+  def init(pos, dim)
+    super(self).init(pos, dim)
+  end
+
+  def draw_page()
+    screen.draw_fillrect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+  end
+end
+
+def a_scene_opened_over_another_takes_its_box()
+  var parent = BoxScene(Position(4, 6), Size(60, 40))
+  assert_true(ux.push(parent), "the parent scene would not push")
+
+  var list = SettingsScene([IntSettingCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+                           {"count": 1}, nil)
+  assert_eq(list.pos.x, 4, "the settings list does not take the box's x")
+  assert_eq(list.pos.y, 6, "the settings list does not take the box's y")
+  assert_eq(list.dim.w, 60, "the settings list does not take the box's width")
+  assert_eq(list.dim.h, 40, "the settings list does not take the box's height")
+
+  var editor = IntScene("Count", 2, 1, 0, 10, false)
+  assert_eq(editor.pos.x, 4, "the value editor does not take the box's x")
+  assert_eq(editor.pos.y, 6, "the value editor does not take the box's y")
+  assert_eq(editor.dim.w, 60, "the value editor does not take the box's width")
+
+  ux.pop(nil)
+end
+
+test("a scene opened over another takes its box", a_scene_opened_over_another_takes_its_box)
 
 # Each kind draws itself from that window. A case pushes its editor and beats once, which is the
 # frame the runner captures — the picture to look at. The nil cases are the ones with no value to

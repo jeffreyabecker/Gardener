@@ -89,6 +89,22 @@ class Text : Component
     return cands[cands.size() - 1]
   end
 
+  # The largest face whose ink fits a box, the built-in 5x7 when none does. A caller that has to
+  # choose the face itself — a row of segments drawn at one size — measures with this; draw() fits
+  # the component's own box through it.
+  def fit(text, max_w, max_h)
+    var cands = self._candidates()
+    var i = 0
+    while i < cands.size()
+      var b = self.bounds(text, cands[i])
+      if b[0] <= max_w && b[1] <= max_h
+        return cands[i]
+      end
+      i += 1
+    end
+    return cands[cands.size() - 1]
+  end
+
   # The ink box a string takes at a face, which a caller reads to measure what it just drew.
   def bounds(text, candidate)
     if candidate[0] == nil
@@ -138,18 +154,9 @@ class Text : Component
     return out
   end
 
-  # The first candidate whose ink box fits the box; the built-in 5x7 otherwise.
+  # The first candidate whose ink box fits the component's own box; the built-in 5x7 otherwise.
   def _fit(text)
-    var cands = self._candidates()
-    var i = 0
-    while i < cands.size()
-      var b = self.bounds(text, cands[i])
-      if b[0] <= self.dim.w && b[1] <= self.dim.h
-        return cands[i]
-      end
-      i += 1
-    end
-    return cands[cands.size() - 1]
+    return self.fit(text, self.dim.w, self.dim.h)
   end
 
   # The x offset for the ink box: align is left, center or right.

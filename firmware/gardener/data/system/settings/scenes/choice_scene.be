@@ -89,18 +89,9 @@ class ChoiceScene : ValueScene
 
   # The choices as a short list in the value band, the selected one inverted and scrolled into view.
   # A nil value is no choice at all, so the band shows the editor's `--` instead.
-  def draw_editor(pos, dim)
-    self.draw_chrome(pos, dim)
-    var band = self.value_band(pos, dim)
-    if self.current == nil
-      Text(band[0], band[1], "--").draw()
-      return
-    end
-
-    var rows = []
+  def row_width()
     var wide = 0
     for item : self.values
-      rows.push([item.icon, item.title])
       var w = screen.text_bounds(item.title, 1).w
       if item.icon != nil
         w += item.icon.dim.w + 2
@@ -109,18 +100,49 @@ class ChoiceScene : ValueScene
         wide = w
       end
     end
+    return wide
+  end
 
-    var visible = band[1].h / 8
-    if visible < 1
-      visible = 1
+  # The rows the box has room for, and no more than there are choices.
+  def visible_rows()
+    var fit = self.body_cap() / SettingsView.row
+    if fit < 1
+      fit = 1
     end
-    if visible > rows.size()
-      visible = rows.size()
+    if fit > self.values.size()
+      fit = self.values.size()
     end
-    var menu = List(visible)
-    menu.set(rows)
+    return fit
+  end
+
+  def body_size()
+    if self.current == nil
+      return self.ink("--", self.body_width(), self.ink_cap())
+    end
+    return Size(self.row_width(), self.visible_rows() * SettingsView.row)
+  end
+
+  def rows()
+    var out = []
+    for item : self.values
+      out.push([item.icon, item.title])
+    end
+    return out
+  end
+
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    if self.current == nil
+      Text(band[0], band[1], "--").draw()
+      return
+    end
+
+    var menu = List(self.visible_rows())
+    menu.set(self.rows())
     menu.selected = self.index()
-    menu.draw(band[0].x + (band[1].w - wide) / 2, band[0].y + (band[1].h - visible * 8) / 2)
+    menu.draw(band[0].x + (band[1].w - self.row_width()) / 2,
+              band[0].y + (band[1].h - self.visible_rows() * SettingsView.row) / 2)
   end
 end
 
