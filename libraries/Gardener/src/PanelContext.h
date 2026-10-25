@@ -22,7 +22,7 @@ class PanelContext {
   virtual ~PanelContext() = default;
 
   virtual Display& display() = 0;
-  // The device's own document, /settings.ini: whoever needs the unit, the target or the jingle
+  // The device's own document, /cfg/settings.ini: whoever needs the unit, the target or the jingle
   // under [device] reads and writes that key here.
   virtual Config& config() = 0;
   // The jingle library: the note sequences a routine can play.

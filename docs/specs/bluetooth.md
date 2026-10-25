@@ -130,7 +130,7 @@ opcode is answered, applied or refused; the table is under Commands.
 
 The panel's one preference, and the machine's own numbers — which are not settings.
 
-`unit` is a preference the panel persists in `/settings.ini` and changes with `device set` on the
+`unit` is a preference the panel persists in `/cfg/settings.ini` and changes with `device set` on the
 serial line — the radio reads it and never writes it. A stored value that is missing, unparseable or
 out of bounds keeps the default at boot.
 

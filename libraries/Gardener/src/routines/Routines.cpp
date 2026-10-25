@@ -23,8 +23,8 @@ namespace {
 constexpr const char* UxGlobal = "ux";
 constexpr const char* RootScene = "__rootScene";
 
-// A document's values live at /routines/<document>.cfg, so the document has to be a plain word: a
-// path separator would address another file, and the path is only ever built from a name that has
+// A document's values live at /cfg/routines/<document>.cfg, so the document has to be a plain word:
+// a path separator would address another file, and the path is only ever built from a name that has
 // none.
 bool plainWord(const char* name) {
   if (name == nullptr || name[0] == '\0') return false;
@@ -33,9 +33,9 @@ bool plainWord(const char* name) {
 }
 
 // The file a document's values live in. The document has to be a plain word first, so the path
-// cannot escape /routines/.
+// cannot escape /cfg/routines/.
 String documentPath(const char* document) {
-  String path = "/routines/";
+  String path = "/cfg/routines/";
   path += document;
   path += ".cfg";
   return path;

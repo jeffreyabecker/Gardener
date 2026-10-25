@@ -157,11 +157,10 @@ refuses it, and passes the result in. Writing is the registry's
 `save_settings(routine_key, settings_values[, settings_cfgs])`, which applies the rule and writes
 every value.
 
-`/system/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
-native `jingles` binding takes it at boot and exposes its entries as `jingles.ids()`,
-`jingles.title()`, `jingles.label()`, `jingles.notes()`, `jingles.current()` and
-`jingles.play_current()`. Its format and the
-call list are in [bindings.md](./bindings.md#jingles--the-note-library).
+`/cfg/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
+device binding takes it at boot and answers its entries as `jingle` records from
+`device.all_jingles()`, and `device.play_current_jingle()` sounds the selected one. Its format and
+the record's fields are in [bindings.md](./bindings.md#the-jingle-library).
 
 ## Shared code in `/modules`
 

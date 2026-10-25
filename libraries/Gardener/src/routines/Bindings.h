@@ -10,23 +10,23 @@ class Logger;
 
 namespace berry {
 
-// The seven native modules a scene sees, installed into a fresh VM:
+// The six native modules a scene sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
-//   device.*   the display unit, default target and jingle the device keeps as preferences
+//   device.*   the device's own settings, the units it prints in and the jingle library
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
-//   jingles.*  the named note sequences in /system/jingles.ini
 //   store.*    a routine's own values, kept across a power cycle
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI
 // document through the panel's library.
 //
 // The registry the browser draws and the scene stack it pushes onto are Berry classes
-// (/system/registry.be and /system/ux.be); there is no native module for either. Three of the
-// classes a routine reads are records rather than plain values: `vacuum.state()` answers a
-// `reading`, `screen.unit()` a `unit` and `screen.text_bounds()` a `bounds`. They are declared in
+// (/system/registry.be and /system/ux.be); there is no native module for either. Some of the
+// answers a routine reads are records rather than plain values: `vacuum.state()` answers a
+// `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`, `device.units()` a list
+// of `unit` records and `device.all_jingles()` a list of `jingle` records. They are declared in
 // /system/records.be, which `/system/order` loads first, because only the parser can declare an
 // instance variable on a class. The settings a routine declares are not records: they are
 // `SettingCfg` objects its own settings class builds.

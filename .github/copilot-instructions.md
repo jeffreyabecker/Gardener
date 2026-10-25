@@ -34,8 +34,8 @@ against, and don't build twice to show a delta. A size comparison nobody request
 runs and changes no decision, so report pass or fail and leave the figures out.
 
 **Consider the Berry check before running it.** The check compiles and drives the `.be` files under
-`firmware/gardener/data/`, the `.cfg` seeds and `jingles.ini` beside them, the harness, and the
-vendored VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
+`firmware/gardener/data/`, the `.cfg` seeds and `jingles.ini` in `cfg/` beside them, the harness, and
+the vendored VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
 `libraries/berry/` cannot change what it says. Ask what a run would catch that the last one did not;
 when the answer is nothing — no Berry edit since the last check, or a check that already passed on
 this tree — don't run it. One check after a change that can break a routine is the verification.

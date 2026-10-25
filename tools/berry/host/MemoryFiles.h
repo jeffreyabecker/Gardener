@@ -10,7 +10,7 @@ namespace gardener {
 
 // The device's documents and the interpreter's files for the check, held in memory.
 //
-// It is loaded from the real data directory once, so `/settings.ini`, each routine's `.cfg`, the
+// It is loaded from the real data directory once, so `/cfg/settings.ini`, each routine's `.cfg`, the
 // system files, the modules, the routines and the jingle library are the ones the image ships;
 // every write afterwards lands here, so a run can never touch the repository. It is also the write
 // log the driver asks when it checks that the settings editor persisted a value.

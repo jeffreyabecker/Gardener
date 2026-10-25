@@ -1,7 +1,7 @@
 # Bindings
 
-The native surface a routine calls: seven modules — `vacuum`, `screen`, `device`, `buttons`,
-`buzzer`, `jingles` and `store` — and the records those calls answer with. This is the reference for
+The native surface a routine calls: six modules — `vacuum`, `screen`, `device`, `buttons`,
+`buzzer` and `store` — and the records those calls answer with. This is the reference for
 what a routine can call; for what a routine must be, see [routine.md](./routine.md).
 Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
 browser draws (`/system/registry.be`) and the scene stack it pushes onto (`/system/ux.be`). They are
@@ -11,7 +11,8 @@ documented here too, because a routine calls them the same way.
 
 Berry's numbers here are 32-bit integers and single-precision reals.
 
-Four of the calls answer a **record**: a small object whose fields are read with a dot.
+Several of the calls answer a **record**: a small object whose fields are read with a dot. Two of
+them answer a list of records.
 
 ```berry
 var s = vacuum.state()
@@ -210,7 +211,7 @@ the band names.
 ## `device` — the device's own settings
 
 The unit the panel prints, the target the default program restores and the selected jingle. All
-belong to the device rather than to a routine's `store` file, and all are keys of `/settings.ini`'s
+belong to the device rather than to a routine's `store` file, and all are keys of `/cfg/settings.ini`'s
 `[device]` section: `unit`, `target` and `jingle`. The unit is the same switch the serial `device`
 domain carries; the diagnostics switch is not here, because it belongs to the serial link rather
 than to the glass. The radio is not a setting: `device.bluetooth()` reports whether the image was
@@ -219,12 +220,14 @@ built with it.
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `device.units()` | list of `unit` records | every unit `device set unit` accepts, in `panel/Units.h` order, each carrying the fields `screen.unit()` answers |
-| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini` under `[device]`; `token` is a unit's `name`, and false for one that is not in `units()` |
+| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/cfg/settings.ini` under `[device]`; `token` is a unit's `name`, and false for one that is not in `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
-| `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
+| `device.set_target(pressure_kpa)` | — | stores a new target in `/cfg/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
-| `device.set_jingle(id)` | — | stores the identifier as `[device] jingle` in `/settings.ini` |
+| `device.set_jingle(id)` | — | stores the identifier as `[device] jingle` in `/cfg/settings.ini` |
+| `device.all_jingles()` | list of `jingle` records | every jingle this build can play, in file order |
+| `device.play_current_jingle()` | `bool` | plays the jingle `[device] jingle` selects, falling back to the first entry; `false` when the library is empty |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
@@ -299,12 +302,12 @@ leaves the page; a sequence stops itself at the end.
 The notation is strict: a comma, a missing colon, or a space between a note and its duration makes
 the whole sequence malformed and `play` returns false.
 
-## `jingles` — the note library
+## The jingle library
 
-The device ships named note sequences in `/system/jingles.ini`. The file is read once at boot,
-like the `.be` files, so a change takes effect at the next reset. It is an INI document with one
-section per jingle, three keys each; which one is selected is the device's own `[device] jingle` key
-in `/settings.ini`.
+The device ships named note sequences in `/cfg/jingles.ini`, and `device.all_jingles()` answers
+them as `jingle` records. The file is read once at boot, like the `.be` files, so a change takes
+effect at the next reset. It is an INI document with one section per jingle, three keys each; which
+one is selected is the device's own `[device] jingle` key in `/cfg/settings.ini`.
 
 ```ini
 [poacher]
@@ -323,23 +326,30 @@ escaping. A section missing one of the three keys is reported on the diagnostics
 left out of the library, and so is one whose sequence `buzzer.play()` would refuse. A missing or
 malformed file leaves the library empty.
 
-| Call | Returns | Notes |
+Each entry in the list is a `jingle` record, read with a dot:
+
+| Field | Type | Meaning |
 | --- | --- | --- |
-| `jingles.ids()` | list of strings | every identifier, in file order |
-| `jingles.title(id)` | string or `nil` | the display name |
-| `jingles.label(id)` | string or `nil` | the short label the System page draws |
-| `jingles.notes(id)` | string or `nil` | the note sequence, ready for `buzzer.play()` |
-| `jingles.current()` | string or `nil` | the notes for the jingle `[device] jingle` selects, or the first one when that identifier is empty or unknown |
-| `jingles.play_current()` | `bool` | play the current jingle, as `buzzer.play(jingles.current())` would; false when the library is empty |
-| `jingles.default_id()` | string or `nil` | the first identifier |
+| `key` | string | the identifier `device.set_jingle()` writes |
+| `full_title` | string | the display name |
+| `short_title` | string | the short label the System page draws |
+| `notes` | string | the note sequence, ready for `buzzer.play()` |
+
+The list is the whole of what a routine knows about the library, so one entry's name or sequence is
+found by scanning it.
 
 ```berry
-jingles.play_current()                  # the jingle chosen on the System page, the finish sound
-buzzer.play(jingles.notes("forelle"))   # a named jingle
+for jingle : device.all_jingles()
+  vacuum.log(jingle.key + "=" + jingle.full_title)
+end
+
+device.play_current_jingle()                          # the jingle chosen on the System page
+buzzer.play(device.all_jingles()[0].notes)            # the first one by name
 ```
 
-An identifier that is not in the file answers `nil` from `title`, `label` and `notes`. When the
-library is empty the System page shows `JINGLE=--` and the rest of the device keeps working.
+An identifier the list does not hold is not in it, and `device.play_current_jingle()` falls back to
+the first entry. When the library is empty that call answers `false`, the System page shows
+`JINGLE=--`, and the rest of the device keeps working.
 
 ## `ux` — the scene stack (a Berry class)
 
@@ -400,7 +410,7 @@ it grows as files register.
 | `store.set(name, key, value)` | `bool` | write a routine's value |
 | `store.set(name, values)` | `bool` | write every entry of `values` in one write, keeping the keys it does not name |
 
-A routine's values live in its own document at `/routines/<name>.cfg`, named after the routine, and a
+A routine's values live in its own document at `/cfg/routines/<name>.cfg`, named after the routine, and a
 data-image upload can ship initial ones beside its `.be`. A routine writes its own; a page that edits
 another routine's values (the browser does) uses the same named forms. The name is a plain word — a
 name with `/` or `\` is refused, because it would address another file.

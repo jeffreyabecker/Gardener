@@ -9,7 +9,7 @@
 namespace gardener {
 
 // Where the jingle library lives on the filesystem it mounts.
-constexpr const char* JinglesConfigPath = "/system/jingles.ini";
+constexpr const char* JinglesConfigPath = "/cfg/jingles.ini";
 
 // One jingle's entry: references into the document, so reading the library copies nothing.
 struct Jingle {

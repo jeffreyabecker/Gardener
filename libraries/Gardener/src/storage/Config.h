@@ -10,9 +10,9 @@
 
 namespace gardener {
 
-// Where the device's own document lives on the filesystem it mounts. The wire's `fs` domain refuses
-// to overwrite it.
-constexpr const char* ConfigPath = "/settings.ini";
+// Where the device's own document lives on the filesystem it mounts: the settings folder, with the
+// jingle library and the routines' documents. The wire's `fs` domain refuses to overwrite it.
+constexpr const char* ConfigPath = "/cfg/settings.ini";
 
 // A Config is an INI document read through a store: the device's own document at ConfigPath, a
 // subclass's document, or one a routine names. A key this revision does not name is carried through

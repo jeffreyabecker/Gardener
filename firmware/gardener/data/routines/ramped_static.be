@@ -290,7 +290,7 @@ class RampedStatic : Scene
     self.phase = "ready"
     self.held = 0
     vacuum.log("ramped_static: complete")
-    jingles.play_current()
+    device.play_current_jingle()
     ux.pop_to_root()
   end
 

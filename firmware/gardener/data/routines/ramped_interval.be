@@ -407,7 +407,7 @@ class RampedInterval : Scene
     vacuum.target_off()
     self.phase = IntervalPhase.READY
     vacuum.log(self.routine_key + ": complete")
-    jingles.play_current()
+    device.play_current_jingle()
     ux.pop_to_root()
   end
 

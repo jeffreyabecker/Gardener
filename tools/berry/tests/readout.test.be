@@ -21,7 +21,7 @@ def the_declaration_is_the_device_rows()
       jingle_rows += 1
     end
   end
-  if jingles.ids().size() > 0
+  if device.all_jingles().size() > 0
     assert_eq(jingle_rows, 1, "readout: the jingle row is missing")
   else
     assert_eq(jingle_rows, 0, "readout: the jingle row is there without a library")
@@ -75,14 +75,15 @@ def the_helpers_report_the_device()
   end
   assert_true(found, "readout: the unit in force is not in the device's list")
 
-  # The jingle row's choices are the library's, each titled with its label.
+  # The jingle row's choices are the records the device answers, each titled with its short label.
   var jingles_listed = jingle_choices()
-  assert_eq(jingles_listed.size(), jingles.ids().size(), "readout: the jingle row does not carry every jingle")
+  var library = device.all_jingles()
+  assert_eq(jingles_listed.size(), library.size(), "readout: the jingle row does not carry every jingle")
 
   # A jingle the image does not ship falls back to the one the library plays by default.
   var before = device.jingle()
   device.set_jingle("no_such_jingle")
-  assert_eq(stored_jingle(), jingles.default_id(), "readout: an unknown jingle does not fall back")
+  assert_eq(stored_jingle(), library[0].key, "readout: an unknown jingle does not fall back")
   device.set_jingle(before)
 end
 
@@ -91,14 +92,14 @@ test("the device helpers report what the device answers", the_helpers_report_the
 # The jingle editor steps through the library and plays what it shows, so what it hands the buzzer is
 # the identifier the entry stores rather than the entry itself.
 def the_jingle_editor_steps_and_plays()
-  if jingles.ids().size() < 2
+  if device.all_jingles().size() < 2
     return
   end
   var scene = JingleEditCfg().scene(stored_jingle())
   var before = scene.value()
   scene.nudge(1)
   assert_true(scene.value() != before, "readout: the jingle editor did not step")
-  assert_true(jingles.notes(scene.value()) != nil, "readout: the jingle editor stepped to no jingle")
+  assert_true(jingle_notes(scene.value()) != nil, "readout: the jingle editor stepped to no jingle")
 end
 
 test("the jingle editor steps and plays", the_jingle_editor_steps_and_plays)

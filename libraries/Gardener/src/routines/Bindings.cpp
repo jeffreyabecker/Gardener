@@ -29,7 +29,6 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installDeviceModule(vm);
   installButtonsModule(vm);
   installBuzzerModule(vm);
-  installJinglesModule(vm);
   installStoreModule(vm);
   installConfigClass(vm);
 }
