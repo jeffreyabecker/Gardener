@@ -53,7 +53,14 @@ class BrowserScene : Scene
     if row == nil
       return false
     end
-    return routines.push(row.value, nil)
+    var routine_key = row.value
+    var settings_cfgs = routines.settings_cfgs(routine_key)
+    if settings_cfgs == nil || settings_cfgs.size() == 0
+      vacuum.log("settings: " + routine_key + " has none")
+      return false
+    end
+    var settings_values = routines.load_settings(routine_key)
+    return routines.push(routine_key, nil, settings_values)
   end
 
   # Open the selected routine's settings. The browser has no state of its own to show, so the values
@@ -76,8 +83,11 @@ class BrowserScene : Scene
     return true
   end
 
+  # The set the list settled on is written and then launched with, so a Forward that edits a routine
+  # leads into the routine rather than back to the browser's rows.
   def settings_closed(routine_key, settings_values)
     routines.save_settings(routine_key, settings_values)
+    routines.push(routine_key, nil, settings_values)
     self.draw()
   end
 

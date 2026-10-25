@@ -62,7 +62,7 @@ What each one answers:
 | `ReadoutScene` | `up:double` | open the readout's settings list — the target, the unit, the jingle and the radio |
 
 | `BrowserScene` | `up:single`, `down:single` | move the selection |
-| `BrowserScene` | `forward:single` | open the selected routine's settings  |
+| `BrowserScene` | `forward:single` | open the selected routine's settings, then launch the routine from the set that list settles on |
 | `BrowserScene` | `ok:single` | push the selected routine |
 | `BrowserScene` | `back:single` | leave |
 | `BrowserScene` | `cancel:single` | leave |

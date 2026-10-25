@@ -162,7 +162,9 @@ state already, so it opens the list on that state and reads no file; a caller wi
 own — the browser — reads the routine's document through `routines.load_settings(routine_key)`,
 which mends it when the routine's rule refuses it, and passes the result in under the routine's
 title. Writing is the registry's `save_settings(routine_key, settings_values[, settings_cfgs])`,
-which applies the rule and writes every value.
+which applies the rule and writes every value. The browser then launches the routine from the set
+the list settled on, so editing a routine's settings there is the way into the routine rather than a
+return to the browser's rows.
 
 `/cfg/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
 device binding takes it at boot and answers its entries as `jingle` records from
