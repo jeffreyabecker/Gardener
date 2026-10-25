@@ -170,7 +170,8 @@ screen.draw_text(box.w + 4, 41, 1, false, "TGT", "sansbold9")
 | `w` | int | the ink box width, in pixels |
 | `h` | int | the ink box height, in pixels |
 
-`screen.unit()` answers a `unit` record, read with a dot:
+`screen.unit()` answers a `unit` record for the unit in force, and `device.units()` answers one for
+every unit; read with a dot:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -218,8 +219,8 @@ it belongs to the serial link rather than to the glass. The radio is not a setti
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `device.units()` | list of strings | every token `device set unit` accepts, in `panel/Units.h` order |
-| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini` under `[device]`; false for a token that is not one of `units()` |
+| `device.units()` | list of `unit` records | every unit `device set unit` accepts, in `panel/Units.h` order, each carrying the fields `screen.unit()` answers |
+| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini` under `[device]`; `token` is a unit's `name`, and false for one that is not in `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
@@ -227,7 +228,8 @@ it belongs to the serial link rather than to the glass. The radio is not a setti
 | `device.set_jingle(id)` | — | stores the identifier as `/system/jingles.ini`'s `current` key |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
-only to cycle it. `device.target()` is the stored setting, not the machine's live target: a page
+only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
+machine's live target: a page
 hands it to the machine when it becomes visible. A page that edits these values writes them through
 `device` rather than through its own `store`.
 

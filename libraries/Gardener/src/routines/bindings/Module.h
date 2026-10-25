@@ -40,13 +40,11 @@ inline void installModule(bvm* vm, const char* name, const bnfuncinfo* library) 
 
 inline int beginRecord(bvm* vm, const char* className) {
   if (!be_getglobal(vm, className)) return -1;
+  // The class the call is made on is replaced by the instance it makes, so the record is on top of
+  // the stack for the set calls below and for be_return().
   be_call(vm, 0);
   return be_absindex(vm, -1);
 }
-
-// The class value stays under the instance, so this removes the class and leaves the finished
-// record for be_return().
-inline void endRecord(bvm* vm) { be_remove(vm, -2); }
 
 inline void setReal(bvm* vm, int record, const char* field, breal value) {
   be_pushreal(vm, value);

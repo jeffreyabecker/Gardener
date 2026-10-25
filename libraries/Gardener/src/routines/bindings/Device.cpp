@@ -15,13 +15,21 @@ namespace berry {
 namespace {
 
 // The settings the device keeps as itself rather than as a routine's own values. `units()` is the
-// token table `panel/Units.h` holds, so a page cycles exactly what `device set unit` accepts and
-// carries no second list.
+// table `panel/Units.h` holds, one `unit` record per entry, so a page cycles exactly what
+// `device set unit` accepts and reads a unit's label and scale without carrying a second list.
 int deviceUnits(bvm* vm) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
   for (uint8_t i = 0; i < DisplayUnitCount; i++) {
-    be_pushstring(vm, DisplayUnits[i].name);
+    const DisplayUnit unit = static_cast<DisplayUnit>(i);
+    const DisplayUnitInfo& info = displayUnitInfo(unit);
+    const int record = beginRecord(vm, "unit");
+    if (record < 0) be_return_nil(vm);
+    setText(vm, record, "name", info.name);
+    setText(vm, record, "suffix", info.suffix);
+    setReal(vm, record, "per_kpa", info.perKpa);
+    setReal(vm, record, "whole_step", info.wholeStep);
+    setInt(vm, record, "decimals", (bint)displayDecimals(unit));
     be_data_push(vm, list);
     be_pop(vm, 1);
   }

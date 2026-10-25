@@ -6,8 +6,6 @@
 # them and reads and writes them through `screen` and `device` rather than through a routine's file;
 # the browser drives `routines` and pushes a routine's scene or, through the same list, its settings.
 
-import string
-
 # --- the readout -----------------------------------------------------------
 
 class ReadoutChrome
@@ -34,11 +32,12 @@ end
 # in a routine's document. The rows only declare them — the readout reads the device to fill the set
 # in and writes it back when the list commits — and the editors are the settings folder's.
 
-# The unit's token is shown in capitals, so the row and its editor print the unit the same way.
+# The row names a unit the way the glass prints it, so the row and its editor show the same label the
+# overlay puts after a reading.
 def unit_choices()
   var out = []
-  for token : device.units()
-    out.push([token, string.toupper(token)])
+  for unit : device.units()
+    out.push([unit.name, unit.suffix])
   end
   return out
 end

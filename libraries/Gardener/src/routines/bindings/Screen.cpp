@@ -219,7 +219,6 @@ int screenBounds(bvm* vm) {
   if (record < 0) be_return_nil(vm);
   setInt(vm, record, "w", width);
   setInt(vm, record, "h", height);
-  endRecord(vm);
   be_return(vm);
 }
 
@@ -235,7 +234,6 @@ int screenUnit(bvm* vm) {
   setReal(vm, record, "per_kpa", info.perKpa);
   setReal(vm, record, "whole_step", info.wholeStep);
   setInt(vm, record, "decimals", (bint)displayDecimals(unit));
-  endRecord(vm);
   be_return(vm);
 }
 

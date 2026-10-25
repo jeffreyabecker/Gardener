@@ -86,7 +86,6 @@ int vacuumState(bvm* vm) {
   setInt(vm, record, "batt", battery.present() ? (bint)battery.percent() : (bint)-1);
   setFlag(vm, record, "sensor_ok",
           system.sensor().present() && system.sensor().readingValid());
-  endRecord(vm);
   be_return(vm);
 }
 

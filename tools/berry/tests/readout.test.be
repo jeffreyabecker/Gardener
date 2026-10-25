@@ -51,16 +51,29 @@ end
 test("each row opens its own editor, and the radio opens nothing", the_rows_open_their_editors)
 
 def the_helpers_report_the_device()
-  # The unit row's choices are the tokens the device answers, each titled in capitals.
+  # The unit row's choices are the records the device answers: the wire token the row stores, and the
+  # label the glass prints.
   var units = device.units()
   var choices = unit_choices()
   assert_eq(choices.size(), units.size(), "readout: the unit row does not carry every unit")
   var i = 0
   while i < units.size()
-    assert_eq(choices[i][0], units[i], "readout: a unit choice is not the token the device answers")
-    assert_eq(choices[i][1], string.toupper(units[i]), "readout: a unit choice is not titled in capitals")
+    assert_eq(choices[i][0], units[i].name, "readout: a unit choice is not the token the device answers")
+    assert_eq(choices[i][1], units[i].suffix, "readout: a unit choice is not labelled with its suffix")
     i += 1
   end
+
+  # The unit in force is in the list, and its record says what the panel prints.
+  var current = screen.unit()
+  var found = false
+  for unit : units
+    if unit.name == current.name
+      found = true
+      assert_eq(unit.suffix, current.suffix, "readout: the unit in force has a different suffix")
+      assert_eq(unit.decimals, current.decimals, "readout: the unit in force has different decimals")
+    end
+  end
+  assert_true(found, "readout: the unit in force is not in the device's list")
 
   # The jingle row's choices are the library's, each titled with its label.
   var jingles_listed = jingle_choices()
