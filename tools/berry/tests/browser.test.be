@@ -1,6 +1,7 @@
-# browser.test.be — the routine_keys list is the browser's, so it carries every registration, and the
-# rows carry what each registration gave: the routine's key, and its icon when it has one. The
-# browser is also a caller that opens a routine's settings, so its Forward is driven here.
+# browser.test.be — the browser's rows are the registry's, so there is a row for every registration
+# and each carries what its registration gave: the routine's key as its value, its title, and its
+# icon when it has one. The browser is also a caller that opens a routine's settings, so its Forward
+# is driven here.
 
 suite = "browser"
 
@@ -10,9 +11,10 @@ def every_registration_is_listed()
   assert_eq(rows.size(), routine_keys.size(), "the browser has a row for every routine")
   var i = 0
   while i < routine_keys.size()
-    assert_eq(rows[i][1], routines.title(routine_keys[i]), "the browser's row " + str(i) + " does not carry the routine's title")
+    assert_eq(rows[i].title, routines.title(routine_keys[i]), "the browser's row " + str(i) + " does not carry the routine's title")
+    assert_eq(rows[i].value, routine_keys[i], "the row does not carry the routine's key")
     if routines.icon(routine_keys[i]) != nil
-      assert_eq(rows[i][0], routines.icon(routine_keys[i]), "the row does not carry the routine's icon")
+      assert_eq(rows[i].icon, routines.icon(routine_keys[i]), "the row does not carry the routine's icon")
     end
     i += 1
   end
@@ -42,8 +44,8 @@ def forward_edits_the_selected_routines_settings()
 
   var at = -1
   var i = 0
-  while i < browserScene.routine_keys.size()
-    if browserScene.routine_keys[i] == "ramped_static"
+  while i < browserScene.list.rows.size()
+    if browserScene.list.rows[i].value == "ramped_static"
       at = i
     end
     i += 1

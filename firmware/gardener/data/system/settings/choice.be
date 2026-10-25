@@ -11,7 +11,8 @@
 # and its row left out of the list.
 #
 # The entries are drawn by the `List` the scene holds, built once from the ring in `init()`, so the
-# highlighted row and the scroll window are the list component's rather than this file's.
+# highlighted row and the scroll window are the list component's rather than this file's. A row holds
+# its entry as its value, and the ring's index and the list's selected index are kept equal.
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
@@ -26,7 +27,7 @@ class ChoiceEditScene : EditScene
     self.ring = ChoiceRing(choice_items(values, nullable), current)
     var rows = []
     for item : self.ring.items
-      rows.push([item.icon, item.title])
+      rows.push(ListRow(item.icon, item.title, item))
     end
     # The rows the box has room for — the scene's box less the three pixels of frame either side,
     # the eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no
@@ -40,6 +41,7 @@ class ChoiceEditScene : EditScene
     end
     self.list = List(fit)
     self.list.set(rows)
+    self.list.selected = self.ring.index
   end
 
   # A choice may carry actions of its own: a gesture the editor has nothing of its own for is offered
@@ -63,6 +65,7 @@ class ChoiceEditScene : EditScene
 
   def nudge(dir)
     self.ring.nudge(dir)
+    self.list.selected = self.ring.index
   end
 
   def value()
@@ -103,13 +106,12 @@ class ChoiceEditScene : EditScene
   end
 
   # The label row, the entries with the one showing inverted and scrolled into view, and the hint
-  # row. The list is told which entry the ring names before it draws; every entry is a row — the
-  # nil-keyed "no choice" one included — so the whole of what the editor draws comes from the ring.
+  # row. The list is kept on the entry the ring names; every entry is a row — the nil-keyed "no
+  # choice" one included — so the whole of what the editor draws comes from the ring.
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    self.list.selected = self.ring.index
     self.list.draw(pos.x + (dim.w - self.row_width()) / 2,
                    pos.y + 10 + (dim.h - 20 - self.list.visible * 8) / 2)
 

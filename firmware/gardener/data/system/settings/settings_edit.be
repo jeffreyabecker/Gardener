@@ -1,7 +1,8 @@
 # settings_edit.be — SettingsEditScene: the list a routine's settings are edited in. It is the list
 # and nothing else: the settings and the values are handed to it, the values keyed by setting key,
 # and it pops them back on the way out — what was edited when OK kept it, and the set as it was
-# opened when Back or Cancel refused it.
+# opened when Back or Cancel refused it. A row carries its own setting as its value, so the row
+# showing is the setting Forward opens.
 
 class SettingsEditScene : Scene
   var settings_cfgs
@@ -22,7 +23,7 @@ class SettingsEditScene : Scene
     end
     self.settings_values = settings_values
     self.message = message
-    self.list = List(SettingsView.list_rows(self.dim))
+    self.list = List(SettingsView.window_rows(self.dim))
   end
 
   def activate()
@@ -40,7 +41,11 @@ class SettingsEditScene : Scene
     end
     if ev == "forward:single"
       # A row whose setting has no editor - a build fact the device reports - opens nothing.
-      var cfg = self.settings_cfgs[self.list.selected]
+      var row = self.list.selected_row()
+      if row == nil
+        return true
+      end
+      var cfg = row.value
       var scene = cfg.scene(is_nil(self.settings_values[cfg.key], cfg.default_value))
       if scene != nil
         ux.push(scene, nil, / v -> self.value_closed(cfg, v))
@@ -69,7 +74,8 @@ class SettingsEditScene : Scene
     for cfg : self.settings_cfgs
       # A setting whose key holds nothing draws an empty value rather than its default.
       var value = self.settings_values[cfg.key]
-      rows.push([cfg.icon, cfg.label + "=" + (value == nil ? "--" : cfg.text(value))])
+      rows.push(ListRow(cfg.icon,
+                        cfg.label + "=" + (value == nil ? "--" : cfg.text(value)), cfg))
     end
     self.list.set(rows)
     if rows.size() > self.list.visible
@@ -87,9 +93,9 @@ class SettingsEditScene : Scene
       wide = screen.text_bounds(self.message, 1).w
     end
     for row : rows
-      var w = screen.text_bounds(row[1], 1).w
-      if row[0] != nil
-        w += row[0].dim.w + 2
+      var w = screen.text_bounds(row.title, 1).w
+      if row.icon != nil
+        w += row.icon.dim.w + 2
       end
       if w > wide
         wide = w

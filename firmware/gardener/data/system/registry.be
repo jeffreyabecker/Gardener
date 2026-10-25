@@ -11,7 +11,7 @@
 # binds two of them, so those live with the routine rather than in the page; it is asked through its
 # class and is never built, because the list it describes is opened by whoever wants to edit it.
 #
-# The browser reads keys()/rows() and pushes a routine with push(routine_key, callback[, settings]).
+# The browser reads rows() and pushes a routine with push(routine_key, callback[, settings]).
 # The settings, when the caller has none, are built by load(): every value the routine registers,
 # read from its file, held to its kind and repaired by the routine's own rule. So a scene is built
 # from one clean map and initialization is the only activation. The device's own scenes — the
@@ -63,7 +63,7 @@ class RoutineRegistry
     return true
   end
 
-  # The browser's list: every registered key, in registration order.
+  # Every registered key, in registration order.
   def keys()
     var out = []
     for e : self.entries
@@ -143,11 +143,11 @@ class RoutineRegistry
     return e.title
   end
 
-  # The browser's rows: [icon, title] per routine, ready for a List.
+  # The browser's rows: one ListRow per routine, carrying the routine key it stands for.
   def rows()
     var out = []
     for e : self.entries
-      out.push([e.icon, e.title])
+      out.push(ListRow(e.icon, e.title, e.routine_key))
     end
     return out
   end

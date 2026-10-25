@@ -6,16 +6,15 @@
 # by the time the readout is compiled.
 #
 # Choosing a row launches the routine: the registry builds its scene from one clean settings map, so
-# the launch is the whole of the routine's initialization.
+# the launch is the whole of the routine's initialization. A row carries its routine's key as its
+# value, so the list is the only structure the browser keeps.
 
 class BrowserScene : Scene
-  var routine_keys
   var list
   var scrollbar
 
   def init()
     super(self).init(Position.top_left(), Size.page())
-    self.routine_keys = []
     self.list = List(6)
     self.scrollbar = Scrollbar(Position(self.pos.x + 110, self.pos.y + 2),
                                Size(2, self.dim.h - 4))
@@ -35,7 +34,6 @@ class BrowserScene : Scene
     vacuum.stop()
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.
-    self.routine_keys = routines.keys()
     self.list.set(self.rows())
     self.draw()
   end
@@ -51,22 +49,22 @@ class BrowserScene : Scene
   # The row's routine launched as its file describes it: the registry reads the file into one clean
   # settings map and builds the scene from it.
   def choose()
-    var count = self.routine_keys.size()
-    if count == 0
+    var row = self.list.selected_row()
+    if row == nil
       return false
     end
-    return routines.push(self.routine_keys[self.list.selected], nil)
+    return routines.push(row.value, nil)
   end
 
   # Open the selected routine's settings. The browser has no state of its own to show, so the values
   # are the routine's document: read through the declaration, mended when the routine's rule refuses
   # them, and written back as the list settles. The list itself only edits them.
   def open_selected()
-    var count = self.routine_keys.size()
-    if count == 0
+    var row = self.list.selected_row()
+    if row == nil
       return false
     end
-    var routine_key = self.routine_keys[self.list.selected]
+    var routine_key = row.value
     var settings_cfgs = routines.settings(routine_key)
     if settings_cfgs == nil || settings_cfgs.size() == 0
       vacuum.log("settings: " + routine_key + " has none")
@@ -94,7 +92,7 @@ class BrowserScene : Scene
   end
 
   def draw_page()
-    if self.routine_keys.size() == 0
+    if self.list.rows.size() == 0
       return
     end
     self.list.draw(self.pos.x, self.pos.y + 2)

@@ -111,7 +111,13 @@ repaint cadence and the gesture dispatch a routine's scene extends.
 builds — routine key, title, icon, factory and settings class — and `class RoutineRegistry` with the
 global `routines` instance — the list the browser draws, the `load(routine_key)` that builds a
 routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
-`/system/list.be` is `List`, a selectable menu.
+`/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
+wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an optional
+`Scrollbar`. A row is a `ListRow` — the icon drawn at its left, the title drawn beside it, and the
+value the row stands for — so a caller keeps the thing a row means in the row rather than in a list
+beside it. `list_rows()` holds a row written as a two-element `[icon, title]` pair, or as a bare
+title, as a `ListRow` with no value. `set(rows)` normalizes whatever it is given and `selected_row()`
+answers the row the index names. The list draws the icon and the title and never reads the value.
 
 `/system/components/` is the drawing primitives a readout composes, one class per file:
 `component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is

@@ -7,7 +7,7 @@ class SettingsView
   static var gap = 2
 
   # The rows a full-box list may show: the box less the heading row and the gap under it.
-  static def list_rows(dim)
+  static def window_rows(dim)
     return (dim.h - SettingsView.row - SettingsView.gap) / SettingsView.row
   end
 end
