@@ -1,8 +1,10 @@
 # scene.be — the lifecycle a scene shares: the gesture drain, the repaint cadence and the
 # declarative gesture dispatch.
 #
-# A scene extends Scene and overrides only what differs: activate() for when it becomes the top
-# scene, draw_page() for its content, and tick(now) for per-beat work. Gestures are registered with
+# A scene extends Scene and overrides only what differs: activate() for work that must wait until
+# the scene is on top, draw_page() for its content, and tick(now) for per-beat work. A scene built
+# around its init() — every routine page is — leaves activate() alone: it is the inherited no-op,
+# and initializing the scene is the whole of its activation. Gestures are registered with
 # on(gesture, fn) in init(), and handle_page() dispatches them. A gesture is one whole string —
 # `ok:single`, `cancel:double`, `ok:5+cancel:5` — and a registration matches it in full; a page never
 # matches one dimension of a gesture without the other. A scene pushes a sub-scene with
@@ -35,6 +37,11 @@ class Scene
 
   def handle(ev)
     return self.handle_page(ev)
+  end
+
+  # Called when the scene becomes the top one, with whatever the pusher gave it. A scene that did
+  # its work in init() has nothing to do here.
+  def activate(args)
   end
 
   # Declarative gestures: the first registered gesture whose action acts wins. The gesture is one

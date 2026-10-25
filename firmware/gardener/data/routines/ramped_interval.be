@@ -53,17 +53,17 @@ class RampedIntervalIcon : Icon
 end
 
 # The interval chrome: a flat list of explicitly placed children — the glyph and title, the pressure
-# and the set bubbles, and a status-plus-bar row. The glyph and the title are fields the Interval
-# subclass swaps for its own.
+# and the set bubbles, and a status-plus-bar row. The glyph and the title are given to it, so a
+# subclass of the page names its own and nothing is swapped after the fact.
 class RampedIntervalChrome : Layout
   var icon
   var title
   var bubbles
 
-  def init(title_text, total_sets)
+  def init(icon, title_text, total_sets)
     var pw = screen.page_width()
     var half = pw / 2
-    self.icon = RampedIntervalIcon(Position(0, 0), Size(12, 8))
+    self.icon = icon
     self.title = Text(Position(16, 2), Size(pw - 16, 9), title_text)
     self.bubbles = ProgressBubbles(Position(half, 13), Size(half, 26), total_sets, "circle", "lr-tb")
     super(self).init([
@@ -74,11 +74,6 @@ class RampedIntervalChrome : Layout
       Text(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
       ProgressBar(Position(half + 8, 41), Size(half - 8, 8), nil)
     ])
-  end
-
-  def set_icon(icon)
-    self.icon = icon
-    self.children[0] = icon
   end
 
   def draw(current_set, status, remaining_percent)
@@ -106,77 +101,68 @@ class RampedInterval : Scene
   var resume
   var chrome
 
-  def init()
+  def init(settings)
     super(self).init()
-    self.routine = "ramped_interval"
+    self.routine = self.name()
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
     self.target = 0.0
     self.targets = []
-    self.count = 4
-    self.initial = 5.0
-    self.final = 20.0
-    self.step = 5.0
-    self.work = 300
-    self.rest_pressure = 5.0
-    self.rest = 45
-    self.resume = "immediately"
-    self.chrome = RampedIntervalChrome(routines.title(self.routine), self.count)
+
+    # The scene is built from the map the registry made clean, so building it is the whole of its
+    # activation. The values come first: the chrome lays out one bubble per set.
+    self.read_settings(settings)
+    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine), self.count)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
     self.on("cancel:single", / -> self.pause())
     self.on("cancel:double", / -> self.leave())
-  end
 
-  def activate(settings)
-    self.phase = IntervalPhase.READY
-    self.set = 0
-    self.targets = []
-    self.read_settings(settings)
-    # Like default's restore: the page's starting target is the machine's target as soon as the
-    # page is visible. Setting one does not start anything.
+    # Like default's restore: the page's starting target is the machine's target as soon as the page
+    # is visible. Setting one does not start anything.
     self.target = self.initial
     vacuum.target(self.target)
     self.draw()
   end
 
+  # The name the page registered under, which is also the document its values are kept in.
+  def name()
+    return "ramped_interval"
+  end
+
+  # The glyph the page draws in its chrome, the same one its registration carries.
+  def icon()
+    return RampedIntervalIcon(Position(0, 0), Size(12, 8))
+  end
+
   # --- settings ------------------------------------------------------------
 
-  # The starting values match the shipped `ramped_interval.cfg`. A switch's settings map, when
-  # there is one, is the set for this activation; otherwise the file is. A nullable step is an even
-  # ladder from the start to the final pressure; a nullable rest vents all the way. The step's zero
-  # is a rule of the page's own - no editor would produce it - so it is read raw.
+  # The values a cycle begins with, as the registry's clean map holds them: every registered setting
+  # present, each held to its kind. The file's own values are what that map is built from until a
+  # saved routine carries a set of its own. A nullable step is an even ladder from the start to the
+  # final pressure; a nullable rest vents all the way.
   def read_settings(settings)
-    var s = Activation(self.routine, settings)
-    self.count = s.value("set_count")
-    self.initial = s.value("initial_pressure")
-    self.final = s.value("final_pressure")
+    self.count = settings["set_count"]
+    self.initial = settings["initial_pressure"]
+    self.final = settings["final_pressure"]
 
-    if s.unset("step_pressure")
+    if settings["step_pressure"] == nil
       var rise = self.final - self.initial
       self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
     else
-      var step = s.raw("step_pressure")
-      self.step = step > 0.0 ? vacuum.clamp(step) : 0.0
+      self.step = settings["step_pressure"]
     end
 
-    self.read_common(s)
-  end
-
-  # The tail every cycle page shares: the work and rest clocks, the resume behavior and the rest
-  # pressure, which vents all the way when the file leaves it unset.
-  def read_common(s)
-    if s.unset("rest_pressure")
+    if settings["rest_pressure"] == nil
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = s.value("rest_pressure")
+      self.rest_pressure = settings["rest_pressure"]
     end
-
-    self.work = s.value("work_duration")
-    self.rest = s.value("rest_duration")
-    self.resume = s.value("resume_behavior")
+    self.work = settings["work_duration"]
+    self.rest = settings["rest_duration"]
+    self.resume = settings["resume_behavior"]
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -387,11 +373,11 @@ class RampedInterval : Scene
     self.on_editor_closed()
   end
 
-  # The edit was to the file, so the file is the source again even if this activation was given a
-  # set. A run under way starts over at the first set, because the ladder is computed once from the
-  # settings a run begins with; a ready page only takes the new start pressure.
+  # The edit was to the file, so the file is the source again even if this page was built from a set
+  # of its own. A run under way starts over at the first set, because the ladder is computed once
+  # from the settings a run begins with; a ready page only takes the new start pressure.
   def on_editor_closed()
-    self.read_settings(nil)
+    self.read_settings(routines.load(self.routine))
     if self.phase == IntervalPhase.READY
       self.target = self.initial
       vacuum.target(self.initial)
@@ -455,23 +441,30 @@ end
 # The interval cycle: the same machine at one target, repeated for the set count. Its settings name
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
-  def init()
-    super(self).init()
-    self.routine = "interval"
-    self.chrome.set_icon(IntervalIcon(Position(0, 0), Size(12, 8)))
-    self.chrome.title.value = routines.title(self.routine)
+  def name()
+    return "interval"
   end
 
-  # The starting values match the shipped `interval.cfg`. A switch's settings map, when there is
-  # one, is the set for this activation; otherwise the file is. The single target is the ladder's
-  # start and end, and the step is always zero.
+  def icon()
+    return IntervalIcon(Position(0, 0), Size(12, 8))
+  end
+
+  # The interval's own values, out of the same clean map: the single target is the ladder's start
+  # and end, and the step is always zero.
   def read_settings(settings)
-    var s = Activation(self.routine, settings)
-    self.count = s.value("set_count")
-    self.initial = s.value("target_pressure")
+    self.count = settings["set_count"]
+    self.initial = settings["target_pressure"]
     self.final = self.initial
     self.step = 0.0
-    self.read_common(s)
+
+    if settings["rest_pressure"] == nil
+      self.rest_pressure = vacuum.clamp(0.0)
+    else
+      self.rest_pressure = settings["rest_pressure"]
+    end
+    self.work = settings["work_duration"]
+    self.rest = settings["rest_duration"]
+    self.resume = settings["resume_behavior"]
   end
 
   # Every set is the same target. Unlike the ramp, a flat ladder is the point here, so it is never

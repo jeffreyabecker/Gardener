@@ -355,7 +355,8 @@ draws its list.
 | `routines.repair(name, items, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
 | `routines.problem(name, items, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
 | `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
-| `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class and push it, handing the returned value to the callback. The optional settings map is that activation's `activate()` argument, as with `ux.push` |
+| `routines.load(name)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. A routine with no settings is an empty map |
+| `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class, handing `settings` to its `init()`, and push it, handing the returned value to the callback. A `nil` settings map is `routines.load(name)` |
 
 Registering the same name twice is one routine: the later file wins. The title is what the browser
 shows, and a routine without one shows its name; an icon is optional too, and a routine without one,

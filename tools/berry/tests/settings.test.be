@@ -1,7 +1,7 @@
 # settings.test.be — what the settings model promises: a default when nothing has been stored, a
-# value held to its kind on the way in, and a set the caller repairs rather than hands on broken.
-# The shipped routines exercise int, pressure, duration and choice; bool, real and every value past a
-# bound are only covered here.
+# value held to its kind on the way in, a set the caller repairs rather than hands on broken, and the
+# one clean map the registry builds from them all. The shipped routines exercise int, pressure,
+# duration and choice; bool, real and every value past a bound are only covered here.
 
 suite = "settings"
 
@@ -111,17 +111,28 @@ end
 
 test("a stored value is parsed by its kind", a_stored_value_is_parsed_by_its_kind)
 
-def a_switch_map_is_held_too()
-  var s = Activation("interval", {"set_count": 99, "resume_behavior": "sometimes"})
-  assert_eq(s.value("set_count"), 20, "the map's set count is not held to its bounds")
-  assert_eq(s.value("resume_behavior"), "immediately", "the map's choice is not defaulted")
+# A routine's values are read once, by the registry, into the map its init() is handed: held to their
+# kinds, repaired by the routine's rule, and complete. A page never reads a document itself.
+def load_makes_a_clean_map()
+  var settings = routines.load("ramped_static")
+  assert_eq(settings["initial_pressure"], 5.0, "load: the start pressure is not the file's")
+  assert_eq(settings["total_duration"], 300, "load: the total duration is not the file's")
 
-  var missing = Activation("interval", {"set_count": nil})
-  assert_eq(missing.value("set_count"), 4, "a key missing from the map does not read its default")
-  assert_eq(missing.value("work_duration"), 30, "a key missing from the map does not read its default")
+  # A value past its bounds arrives held to them, and a nullable key holding nothing arrives nil.
+  store.set("interval", "set_count", "99")
+  var held = routines.load("interval")
+  assert_eq(held["set_count"], 20, "load: a stored int above max is not held to it")
+  assert_nil(held["rest_pressure"], "load: a nullable key holding nothing is not nil")
+  store.set("interval", "set_count", "4")
+
+  # The routine's rule is applied to the map, so a page is never initialized with a set it refuses.
+  store.set("ramped_static", "total_duration", "30")
+  var repaired = routines.load("ramped_static")
+  assert_eq(repaired["total_duration"], 300, "load: a set the rule refuses is not put back")
+  store.set("ramped_static", "total_duration", "300")
 end
 
-test("a switch map is held to the kinds like a file", a_switch_map_is_held_too)
+test("loading a routine's settings makes a clean map", load_makes_a_clean_map)
 
 def the_rules_say_no()
   assert_eq(RampedIntervalSettings.problem(

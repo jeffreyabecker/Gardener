@@ -79,9 +79,9 @@ written without `routine_name` lists and does not open; a newly created config i
 
 ### 3. A page knows which saved routine it is
 
-Today one word does three jobs. `Page` in `/system/settings/scenes/page.be` holds the word a routine's
-`init()` passes (`super(self).init("interval")`), and `Activation` uses that same word as the
-registration key for its schema and as the store document for its values.
+Today one word does two jobs. A page holds the name it registered under in its `routine` field
+(`self.routine = "interval"`), and `routines.load(name)` uses that same word as the registration key
+its settings schema is found by and as the store document its values are read from.
 
 Instead a page carries two things: the **definition** it extends, which supplies the settings schema
 (`routines.settings(definition)`), and the **saved document**, which is the config's filename stem

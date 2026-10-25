@@ -43,9 +43,9 @@ place the contract is written.
 
 ## Epic 3 — A page knows which saved routine it is
 
-- [ ] 3.1 Split the page's name into a definition and a saved document. Today `Page` in
-  `/system/settings/scenes/page.be` takes one word, and `Activation` uses it both for
-  `routines.settings(self.routine)` and for `store.get(self.routine, ...)`. Carry the config's
+- [ ] 3.1 Split the page's name into a definition and a saved document. Today a page holds one word
+  in `self.routine`, and `routines.load(name)` uses it both as the registration key for
+  `routines.settings(name)` and as the store document for `item.read(name)`. Carry the config's
   filename stem as the document and keep the definition for the schema, so two configs of one
   definition read and write their own files. A definition pushed bare keeps its own name as the
   document, so the harness and `--art` are unchanged. Check: a bare push of `interval` still edits

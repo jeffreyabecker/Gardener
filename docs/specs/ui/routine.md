@@ -26,13 +26,10 @@ import string
 class MyPage : Scene
   var routine
 
-  def init()
+  def init(settings)
     super(self).init()
     self.routine = "mypage"
-  end
-
-  def activate()
-    # the scene became the top scene; draw the first frame and re-read anything cached
+    # settings is the map the registry made clean: one value per setting the routine registers
   end
 end
 
@@ -53,22 +50,26 @@ The third argument is the routine's **icon**: an instance of a class extending `
 `icon.w + 2`. A routine that passes `nil` has a text-only row.
 
 The fourth argument is the routine's **class**, not an instance: the registry builds a scene from it
-every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
-visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
+every time the routine is pushed, so each visit starts from `init()` and nothing a previous visit
+left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
 dispatch; a routine extends `Scene`, carries its own name in the `routine` field, and defines
-`activate()` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
+`init(settings)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
 method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
 
 The fifth argument is the routine's **settings declaration** — the class that describes the values it
 edits and any rule that binds them, or `nil` when it has none. It is asked through the class and
 never built, so both of its answers are static (see below).
 
-`activate()` may take one argument: the settings map a switch carried, or `nil` when it carried
-none. The map belongs to that activation alone — the runtime neither keeps it nor writes it
-anywhere. A routine that wants values across a re-entry reads them through `store`; a routine that
-accepts a map decides what a missing key means (the shipped `interval` uses its fallback, not the
-file's value).
+**Initializing the scene is the whole of its activation.** The registry builds the map the
+constructor is given: every setting the routine registers, read from its own file, held to its kind,
+and repaired by the routine's rule, so the map is complete and describes a set a run accepts. A
+routine with no settings is given an empty map. The map belongs to that activation alone — the
+runtime neither keeps it nor writes it anywhere — and a routine's `init(settings)` may rely on every
+non-nullable key being present, with a nullable key that holds nothing reading `nil`.
+
+A scene's `activate(args)` is the inherited no-op. A page that does its work in `init()` — every
+shipped routine does — leaves it alone.
 
 Every registration is listed: there is no hidden routine. The device's own scenes — the readout, the
 system settings and the browser — are not registered at all: they are well-known scenes in
@@ -106,8 +107,8 @@ firmware calling `reset`, `enter` and `poll` on it. `/system/scene.be` is
 `Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
 builds — name, title, icon, factory and settings class — and `class RoutineRegistry` with the global
-`routines` instance — the list the browser draws, and the `push(name, callback)` that opens a
-routine.
+`routines` instance — the list the browser draws, the `load(name)` that builds a routine's clean
+settings map, and the `push(name, callback)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu.
 
 `/system/components/` is the drawing primitives a readout composes, one class per file:
@@ -126,7 +127,6 @@ readout looks like.
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its rows and its values).
-`activation.be` is `Activation`, one activation's values.
 `configs/` holds one setting per kind: `setting_cfg.be` is `SettingCfg` and
 `bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
 `pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
@@ -183,14 +183,16 @@ so Forward has nothing to open, and the set it settled on is written when the me
 | Moment | Call |
 | --- | --- |
 | boot, after the files load | the firmware pushes the root scene (`__rootScene`) |
-| a scene becomes the top of the stack | `activate(args)` — the push's args, or `nil` |
+| a scene is built and pushed | `init(settings)`, then `activate(args)` — `Scene`'s no-op unless the scene overrides it |
 | every panel-task beat while the scene is on top | `poll(now)` |
 | a scene is popped off the top | the pusher's callback runs with the returned value, or the scene below re-activates |
 
-`activate()` runs again on every push and on every return to a scene that was pushed without a
-callback: the display unit may have changed while the scene was not showing, and a scene should not
-trust what it cached. A push's args are not carried across a re-entry; a re-entry without them reads
-the file.
+A scene built by the registry is a new instance every time, so its `init(settings)` runs once per
+visit and nothing a previous visit left behind survives. `activate()` runs on every push and on
+every return to a scene that was pushed without a callback; a routine page, which does all of its
+work in `init()`, inherits it as a no-op. A re-entry does not repeat `init(settings)`, so a scene
+whose values can change while it is not showing reads them again in the callback that brought it
+back — the shipped pages call `routines.load()` from their settings callback for exactly that.
 
 ## Gestures
 
@@ -313,13 +315,12 @@ identifier and show a name; a plain value is its own title.
 ### What a setting does
 
 The setting is the whole of what its value is: the rules its kind needs, and the value scene that
-edits it. It answers five questions:
+edits it. It answers four questions:
 
 - `read(name)` — the stored value from the file it is given, held to the kind, or the default when
   nothing is stored.
-- `read_raw(name)` — the same value in the kind's own type, held to no bound: a page rule that has to
-  see a value the kind would clamp still reads what the file says.
-- `value(raw)` — a value that came from a switch's map, held to the same rules.
+- `value(raw)` — a raw value held to the same rules, which is what a value read from a file or
+  carried in a map ends up as.
 - `text(value)` — the value as the list shows it.
 - `scene(value)` — the value scene that edits it.
 
@@ -364,28 +365,26 @@ The machine's own `min` … `floor` is the range, so a pressure setting takes no
 
 ### A rule across settings
 
-`problem(values)` is asked with every value by key when the list opens and again when it closes.
-While the rule refuses the set, the settings that differ from their default are put back to them in
-the order the list shows them, so what is written is always a set the rule accepts. The reason that
-was applied is drawn in place of the list's title until the first value is committed. So a file
-edited by hand is shown mended the moment its settings are opened and written mended when the list
-closes; an edit that would break a rule is put back when the list closes.
-
-A page starting a run from a file nobody has opened settings on still refuses: `begin()` asks the
-same rule of the values it read.
+`problem(values)` is asked with every value by key when the list opens and again when it closes, and
+when the registry builds the clean map a routine is initialized from. While the rule refuses the set,
+the settings that differ from their default are put back to them in the order the list shows them,
+so what is written is always a set the rule accepts. The reason that was applied is drawn in place
+of the list's title until the first value is committed. So a file edited by hand is shown mended the
+moment its settings are opened and written mended when the list closes; an edit that would break a
+rule is put back when the list closes, and a page is never initialized with a set the rule refuses.
 
 ### Reading them
 
-A page reads its values through `self.activation(settings)`: `value(key)` for a setting held to its
-kind — from the switch's map when one was carried, from the routine's own file otherwise —
-`raw(key)` for a rule the kind does not own, which reads the same value in the kind's own type held
-to no bound, and `unset(key)` for a nullable setting that holds nothing.
+A page does not read its file at all: the registry's `load(name)` reads every setting it registers,
+holds each to its kind and repairs the set, and the page's `init(settings)` is handed the result as a
+map keyed by setting key. A value is read from it directly:
 
 ```berry
 def read_settings(settings)
-  var s = self.activation(settings)
-  self.count = s.value("set_count")
-  self.target = s.value("target_pressure")
-  self.rest = s.value("rest_duration")
+  self.count = settings["set_count"]
+  self.target = settings["target_pressure"]
+  self.rest = settings["rest_duration"]
+  # a nullable setting that holds nothing arrives as nil
+  self.floor = settings["floor_pressure"] == nil ? vacuum.clamp(0.0) : settings["floor_pressure"]
 end
 ```

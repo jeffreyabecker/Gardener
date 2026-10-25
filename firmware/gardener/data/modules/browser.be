@@ -4,6 +4,10 @@
 #
 # It loads before ui.be, which names browserScene in the readout's gestures, so the instance exists
 # by the time the readout is compiled.
+#
+# Choosing a row launches the routine: the registry builds its scene from one clean settings map, so
+# the launch is the whole of the routine's initialization. A saved routine would launch the same way
+# with its own map instead of the one its file makes.
 
 class BrowserScene : Scene
   var names
@@ -44,6 +48,8 @@ class BrowserScene : Scene
     return self.list.move(delta)
   end
 
+  # The row's routine launched as its file describes it: the registry reads the file into one clean
+  # settings map and builds the scene from it.
   def choose()
     var count = self.names.size()
     if count == 0

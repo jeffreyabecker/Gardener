@@ -6,8 +6,8 @@
 # registry and pushed through `ux`, and a value is read or written through `store`.
 
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
-# registered, so each switch starts a fresh page; the settings map, when there is one, is that
-# activation's own values.
+# registered, so each switch starts a fresh page; the settings map, when there is one, is the map its
+# init() is handed, and nil means the map the routine's own file makes.
 def harness_activate(name, settings)
   ux.pop_to_root()
   # A routine is launched from the browser, and the browser vents first; a direct push models the
@@ -25,8 +25,8 @@ def harness_registered(name)
   return false
 end
 
-# The map a switch carries is the routine's own settings, typed as the setting reads them, so
-# activate(settings) takes the same path as a real switch.
+# The map a switch carries is the routine's own settings, read from its file and made clean the way
+# the registry makes them, so init(settings) takes the same path as a real switch.
 def harness_settings_map(name)
   var described = routines.settings(name)
   if described == nil
@@ -36,11 +36,7 @@ def harness_settings_map(name)
     harness_fail("settings: " + name + " settings are not a list")
     return nil
   end
-  var settings = {}
-  for item : described
-    settings[item.key] = item.read(name)
-  end
-  return settings
+  return routines.load(name)
 end
 
 # A committed value the driver writes, exactly as the routine that owns the settings would.
@@ -162,7 +158,7 @@ def harness_run_page(name)
     return
   end
 
-  # A re-entry after a control handover arrives as activate(nil) with the machine wherever it was
+  # A re-entry after a control handover arrives as a fresh page with the machine wherever it was
   # left, and a switch may carry the routine's values as a map.
   harness_activate(name, nil)
   harness.beat(4)

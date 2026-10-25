@@ -10,7 +10,8 @@ def builds_even_ladder()
     "initial_pressure": 5.0,
     "final_pressure": 15.0,
     "work_duration": 0,
-    "rest_duration": 0
+    "rest_duration": 0,
+    "resume_behavior": "immediately"
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   var page = ux.top()
@@ -29,7 +30,8 @@ def completes_and_goes_home()
     "initial_pressure": 5.0,
     "final_pressure": 10.0,
     "work_duration": 0,
-    "rest_duration": 0
+    "rest_duration": 0,
+    "resume_behavior": "immediately"
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   harness.press("ok:single")
@@ -44,7 +46,8 @@ def cancel_pauses_and_ok_restarts()
     "initial_pressure": 5.0,
     "final_pressure": 10.0,
     "work_duration": 30,
-    "rest_duration": 0
+    "rest_duration": 0,
+    "resume_behavior": "immediately"
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   var page = ux.top()

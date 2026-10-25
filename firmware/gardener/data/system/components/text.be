@@ -4,7 +4,7 @@
 # Berry has no access modifiers, so privacy here is the name: a leading underscore marks what only
 # this class touches, and everything without one is what a caller sets or calls. The test suite is
 # the one caller that reaches past the underscore, to drive the fit and the truncation directly.
-
+import string
 class text_settings
   var family
   var style

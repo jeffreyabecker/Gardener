@@ -4,16 +4,18 @@
 # A routine file's top level calls routines.register(name, title, icon, factory, settings) and a
 # RoutineRegistration joins this Berry list; nothing native holds it. The factory is the routine's
 # scene class, and the
-# registry builds the scene when the routine is pushed, so a page starts from its own activate()
-# every time and nothing a previous visit left behind survives; the scene that is showing is
-# ux.top(). The settings are a class the routine writes itself, holding the values it edits and any
-# rule that binds two of them, so those live with the routine rather than in the page; it is asked
-# through its class and is never built, because the list it describes is opened by whoever wants to
-# edit it.
+# registry builds the scene when the routine is pushed, so a page starts from its own init() every
+# time and nothing a previous visit left behind survives; the scene that is showing is ux.top(). The
+# settings are a class the routine writes itself, holding the values it edits and any rule that
+# binds two of them, so those live with the routine rather than in the page; it is asked through its
+# class and is never built, because the list it describes is opened by whoever wants to edit it.
 #
-# The browser reads names()/rows() and pushes a routine with push(name, callback[, settings]), which
-# builds its scene and hands it to ux.push. The device's own scenes — the readout, system and
-# browser — are not registered here: they are well-known scenes the system pushes directly.
+# The browser reads names()/rows() and pushes a routine with push(name, callback[, settings]). The
+# settings, when the caller has none, are built by load(): every value the routine registers, read
+# from its file, held to its kind and repaired by the routine's own rule. So a scene is built from
+# one clean map and initialization is the only activation. The device's own scenes — the readout,
+# system and browser — are not registered here: they are well-known scenes the system pushes
+# directly.
 
 import string
 
@@ -153,15 +155,41 @@ class RoutineRegistry
     return out
   end
 
+  # The settings a routine begins with, as one clean map: every setting it registers, read from its
+  # own file and held to its kind, then repaired by the routine's rule so the set is one a run
+  # accepts. A routine with no settings begins with an empty map. This is the only place the
+  # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
+  def load(name)
+    var items = self.settings(name)
+    var out = {}
+    if items == nil
+      return out
+    end
+    var values = []
+    for item : items
+      values.push(item.read(name))
+    end
+    self.repair(name, items, values)
+    var i = 0
+    while i < items.size()
+      out[items[i].key] = values[i]
+      i += 1
+    end
+    return out
+  end
+
   # Push a registered routine's scene, built through its factory. The callback, when there is one,
-  # receives the value the scene returns when it pops; `settings`, when there is one, is that
-  # activation's own values, handed to activate().
+  # receives the value the scene returns when it pops. `settings` is the map the scene's init() is
+  # given; a nil one is the routine's own file, loaded and made clean here.
   def push(name, callback, settings)
     var e = self.entry(name)
     if e == nil
       return false
     end
-    return ux.push(e.factory(), settings, callback)
+    if settings == nil
+      settings = self.load(name)
+    end
+    return ux.push(e.factory(settings), nil, callback)
   end
 
   def entry(name)

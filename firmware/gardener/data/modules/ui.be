@@ -227,7 +227,7 @@ end
 
 class JingleSettingCfg : ChoiceSettingCfg
   def init()
-    super(self).init("jingle", stored_jingle(), "\0x0D \0x0E \0x0D", nil, jingle_choices(), false)
+    super(self).init("jingle", stored_jingle(), "\x0D \x0E \x0D", nil, jingle_choices(), false)
   end
 
   def current()

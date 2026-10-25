@@ -60,19 +60,13 @@ class RampedStatic : Scene
   var command_target
   var chrome
 
-  def init()
+  def init(settings)
     super(self).init()
     self.routine = "ramped_static"
     self.phase = "ready"
     self.mark = 0
     self.held = 0
     self.target = 0.0
-    self.start_pressure = 5.0
-    self.target_pressure = 20.0
-    self.initial_ms = 60000
-    self.target_ms = 60000
-    self.total_ms = 300000
-    self.ramp_ms = 180000
     self.command_at = 0
     self.command_target = 0.0
     self.chrome = RampedStaticChrome(routines.title(self.routine))
@@ -81,11 +75,9 @@ class RampedStatic : Scene
     self.on("ok:single", / -> self.ok())
     self.on("cancel:single", / -> self.pause())
     self.on("cancel:double", / -> self.leave())
-  end
 
-  def activate(settings)
-    self.phase = "ready"
-    self.held = 0
+    # The scene is built from the map the registry made clean, so building it is the whole of its
+    # activation.
     self.read_settings(settings)
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
@@ -96,17 +88,16 @@ class RampedStatic : Scene
 
   # --- settings ------------------------------------------------------------
 
-  # The starting values match the shipped `ramped_static.cfg`. A switch's settings map, when there
-  # is one, is the set for this activation; otherwise the file is. The profile is built once from
-  # the settings a run begins with, so a hand-edited file that cannot make one is refused at the
-  # start rather than here.
+  # The values a run begins with, as the registry's clean map holds them: every registered setting
+  # present, each held to its kind. The file's own values are what that map is built from until a
+  # saved routine carries a set of its own. The profile is built once from the settings a run begins
+  # with, so a set that cannot make one is refused at the start rather than here.
   def read_settings(settings)
-    var s = Activation(self.routine, settings)
-    self.start_pressure = s.value("initial_pressure")
-    self.target_pressure = s.value("target_pressure")
-    self.initial_ms = s.value("initial_duration") * 1000
-    self.target_ms = s.value("target_duration") * 1000
-    self.total_ms = s.value("total_duration") * 1000
+    self.start_pressure = settings["initial_pressure"]
+    self.target_pressure = settings["target_pressure"]
+    self.initial_ms = settings["initial_duration"] * 1000
+    self.target_ms = settings["target_duration"] * 1000
+    self.total_ms = settings["total_duration"] * 1000
   end
 
   # --- the run -------------------------------------------------------------
@@ -301,11 +292,11 @@ class RampedStatic : Scene
     self.on_editor_closed()
   end
 
-  # The edit was to the file, so the file is the source again even if this activation was given a
-  # set. The profile is built once from the settings a run begins with, so a run starts over at the
-  # new values; a ready page only takes the new start pressure.
+  # The edit was to the file, so the file is the source again even if this page was built from a set
+  # of its own. The profile is built once from the settings a run begins with, so a run starts over
+  # at the new values; a ready page only takes the new start pressure.
   def on_editor_closed()
-    self.read_settings(nil)
+    self.read_settings(routines.load(self.routine))
     if self.phase == "ready"
       self.target = self.start_pressure
       vacuum.target(self.start_pressure)

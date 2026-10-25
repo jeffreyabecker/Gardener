@@ -2,8 +2,8 @@
 #
 # A routine builds one per setting it registers, so this object carries both the row the settings
 # list draws — key, label, icon, default — and the kind's rules for reading, printing and editing
-# it. SettingsScene and Activation ask it rather than branching on a kind, and each kind opens the
-# value scene of the same name in ../scenes/.
+# it. SettingsScene and the registry's load() ask it rather than branching on a kind, and each kind
+# opens the value scene of the same name in ../scenes/.
 #
 # A kind that cannot work — a choice with no values, bounds the wrong way round — says so in
 # `problem` and logs one line where it is built. It does not raise: the routine still registers, its
@@ -22,26 +22,17 @@ class SettingCfg
   end
 
   # The setting's value from the routine's file, held to the kind. A nullable setting that holds
-  # nothing reads as nil whatever its default says.
+  # nothing reads as nil whatever its default says. The store answers the file's text for a key it
+  # holds and nil for one it does not, and the kind parses that text.
   def read(name)
     if self.problem != nil
       return self.default_value
     end
-    return self.value(self.read_raw(name))
-  end
-
-  # The stored value in the kind's own type, held to no bound: a page rule that has to see a value
-  # the kind would clamp still reads what the file says. The store answers the file's text for a
-  # key it holds and nil for one it does not, and the kind parses that text.
-  def read_raw(name)
     var raw = store.get(name, self.key, nil)
     if raw == nil || raw == ""
-      if self.nullable
-        return nil
-      end
-      return self.default_value
+      return self.value(nil)
     end
-    return self.parse(raw)
+    return self.value(self.parse(raw))
   end
 
   # A raw value - from a switch's map, or from a file - held to the kind: nil when the kind is
