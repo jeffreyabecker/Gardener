@@ -115,7 +115,7 @@ class RampedInterval : Scene
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation. The values come first: the chrome lays out one bubble per set.
-    self.read_settings(settings)
+    self.init_from_settings(settings)
     self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.count)
 
     self.on("up:double", / -> self.edit())
@@ -141,26 +141,43 @@ class RampedInterval : Scene
   # present, each held to its kind. The file's own values are what that map is built from until a
   # saved routine carries a set of its own. A nullable step is an even ladder from the start to the
   # final pressure; a nullable rest vents all the way.
-  def read_settings(settings)
-    self.count = settings["set_count"]
-    self.initial = settings["initial_pressure"]
-    self.final = settings["final_pressure"]
+  def init_from_settings(settings_values)
+    self.count = settings_values["set_count"]
+    self.initial = settings_values["initial_pressure"]
+    self.final = settings_values["final_pressure"]
 
-    if settings["step_pressure"] == nil
+    if settings_values["step_pressure"] == nil
       var rise = self.final - self.initial
       self.step = self.count > 1 && rise > 0.0 ? rise / (self.count - 1) : 0.0
     else
-      self.step = settings["step_pressure"]
+      self.step = settings_values["step_pressure"]
     end
 
-    if settings["rest_pressure"] == nil
+    if settings_values["rest_pressure"] == nil
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = settings["rest_pressure"]
+      self.rest_pressure = settings_values["rest_pressure"]
     end
-    self.work = settings["work_duration"]
-    self.rest = settings["rest_duration"]
-    self.resume = settings["resume_behavior"]
+    self.work = settings_values["work_duration"]
+    self.rest = settings_values["rest_duration"]
+    self.resume = settings_values["resume_behavior"]
+  end
+
+  # The values this page is holding, in the same shape init_from_settings takes, so a cycle can be
+  # written back the way it was read: every setting the routine registers, with the step and the
+  # rest exactly as the page settled on them, so an even ladder reads back as the step it became.
+  # Nothing calls it yet; it is the other half of a saved routine.
+  def serialize_to_settings()
+    return {
+      "set_count": self.count,
+      "initial_pressure": self.initial,
+      "final_pressure": self.final,
+      "step_pressure": self.step,
+      "rest_pressure": self.rest_pressure,
+      "work_duration": self.work,
+      "rest_duration": self.rest,
+      "resume_behavior": self.resume
+    }
   end
 
   # --- the cycle -----------------------------------------------------------
@@ -372,7 +389,7 @@ class RampedInterval : Scene
   # takes the new start pressure.
   def settings_closed(settings_cfgs, values)
     routines.save_settings(self.routine_key, values, settings_cfgs)
-    self.read_settings(routines.load(self.routine_key))
+    self.init_from_settings(routines.load(self.routine_key))
     if self.phase == IntervalPhase.READY
       self.target = self.initial
       vacuum.target(self.initial)
@@ -447,20 +464,33 @@ class Interval : RampedInterval
 
   # The interval's own values, out of the same clean map: the single target is the ladder's start
   # and end, and the step is always zero.
-  def read_settings(settings)
-    self.count = settings["set_count"]
-    self.initial = settings["target_pressure"]
+  def init_from_settings(settings_values)
+    self.count = settings_values["set_count"]
+    self.initial = settings_values["target_pressure"]
     self.final = self.initial
     self.step = 0.0
 
-    if settings["rest_pressure"] == nil
+    if settings_values["rest_pressure"] == nil
       self.rest_pressure = vacuum.clamp(0.0)
     else
-      self.rest_pressure = settings["rest_pressure"]
+      self.rest_pressure = settings_values["rest_pressure"]
     end
-    self.work = settings["work_duration"]
-    self.rest = settings["rest_duration"]
-    self.resume = settings["resume_behavior"]
+    self.work = settings_values["work_duration"]
+    self.rest = settings_values["rest_duration"]
+    self.resume = settings_values["resume_behavior"]
+  end
+
+  # The interval's own values back out: one target, and none of the ramp's ladder keys, because this
+  # routine registers none of them.
+  def serialize_to_settings()
+    return {
+      "set_count": self.count,
+      "target_pressure": self.initial,
+      "work_duration": self.work,
+      "rest_pressure": self.rest_pressure,
+      "rest_duration": self.rest,
+      "resume_behavior": self.resume
+    }
   end
 
   # Every set is the same target. Unlike the ramp, a flat ladder is the point here, so it is never

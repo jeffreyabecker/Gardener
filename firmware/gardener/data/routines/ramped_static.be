@@ -78,7 +78,7 @@ class RampedStatic : Scene
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
-    self.read_settings(settings)
+    self.init_from_settings(settings)
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.target = self.start_pressure
@@ -92,12 +92,26 @@ class RampedStatic : Scene
   # present, each held to its kind. The file's own values are what that map is built from until a
   # saved routine carries a set of its own. The profile is built once from the settings a run begins
   # with, so a set that cannot make one is refused at the start rather than here.
-  def read_settings(settings)
-    self.start_pressure = settings["initial_pressure"]
-    self.target_pressure = settings["target_pressure"]
-    self.initial_ms = settings["initial_duration"] * 1000
-    self.target_ms = settings["target_duration"] * 1000
-    self.total_ms = settings["total_duration"] * 1000
+  def init_from_settings(settings_values)
+    self.start_pressure = settings_values["initial_pressure"]
+    self.target_pressure = settings_values["target_pressure"]
+    self.initial_ms = settings_values["initial_duration"] * 1000
+    self.target_ms = settings_values["target_duration"] * 1000
+    self.total_ms = settings_values["total_duration"] * 1000
+  end
+
+  # The values this page is holding, in the same shape init_from_settings takes, so a run can be
+  # written back the way it was read: every setting the routine registers, and a duration in whole
+  # seconds, which is what the store holds. Nothing calls it yet; it is the other half of a saved
+  # routine, whose values would come from the page rather than from its file.
+  def serialize_to_settings()
+    return {
+      "initial_pressure": self.start_pressure,
+      "target_pressure": self.target_pressure,
+      "initial_duration": self.initial_ms / 1000,
+      "target_duration": self.target_ms / 1000,
+      "total_duration": self.total_ms / 1000
+    }
   end
 
   # --- the run -------------------------------------------------------------
@@ -293,7 +307,7 @@ class RampedStatic : Scene
   # new start pressure.
   def settings_closed(settings_cfgs, values)
     routines.save_settings(self.routine_key, values, settings_cfgs)
-    self.read_settings(routines.load(self.routine_key))
+    self.init_from_settings(routines.load(self.routine_key))
     if self.phase == "ready"
       self.target = self.start_pressure
       vacuum.target(self.start_pressure)

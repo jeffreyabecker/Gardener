@@ -375,18 +375,28 @@ of the list's title until the first value is committed. So a file edited by hand
 moment its settings are opened and written mended when the list closes; an edit that would break a
 rule is put back when the list closes, and a page is never initialized with a set the rule refuses.
 
-### Reading them
+### Reading and writing them
 
 A page does not read its file at all: the registry's `load(routine_key)` reads every setting it
 registers, holds each to its kind and repairs the set, and the page's `init(settings)` is handed the
-result as a map keyed by setting key. A value is read from it directly:
+result as a map keyed by setting key. A page takes what it needs from that map in
+`init_from_settings(settings_values)`, and a value is read from it directly:
 
 ```berry
-def read_settings(settings)
-  self.count = settings["set_count"]
-  self.target = settings["target_pressure"]
-  self.rest = settings["rest_duration"]
+def init_from_settings(settings_values)
+  self.count = settings_values["set_count"]
+  self.target = settings_values["target_pressure"]
+  self.rest = settings_values["rest_duration"]
   # a nullable setting that holds nothing arrives as nil
-  self.floor = settings["floor_pressure"] == nil ? vacuum.clamp(0.0) : settings["floor_pressure"]
+  self.floor = vacuum.clamp(0.0)
+  if settings_values["floor_pressure"] != nil
+    self.floor = settings_values["floor_pressure"]
+  end
 end
 ```
+
+`serialize_to_settings()` is the other direction: the values the page is holding, as a map of the
+same shape and keyed the same way, so a set can be written back the way it was read. It runs no
+rule and writes nothing — a caller that wants the set repaired hands it to a method that does. A
+page that holds a duration in milliseconds writes it back in whole seconds, which is what the store
+holds, so the two halves of one key agree.
