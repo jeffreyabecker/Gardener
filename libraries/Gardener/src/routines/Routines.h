@@ -71,7 +71,7 @@ class Routines {
 
   // Every key `values` holds, merged into the document and written at most once. A key the
   // document already holds with the same text is skipped, and a key `values` does not name is
-  // kept. False only when a new key will not fit or the write fails.
+  // kept. False only when the document cannot be written.
   bool storeSet(const char* document, const Values& values);
 
  private:

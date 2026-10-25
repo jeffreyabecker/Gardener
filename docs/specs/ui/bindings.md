@@ -1,8 +1,9 @@
 # Bindings
 
-The native surface a routine calls: four modules — `vacuum`, `screen`, `device` and `store` — and
-the records those calls answer with. This is the reference for what a routine can call; for what a
-routine must be, see [routine.md](./routine.md).
+The native surface a routine calls: four modules — `vacuum`, `screen`, `device` and `store` — the
+records those calls answer with, and the `Config` document instance `store.config` hands back. This
+is the reference for what a routine can call; for what a routine must be, see
+[routine.md](./routine.md).
 Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
 browser draws (`/system/registry.be`) and the scene stack it pushes onto (`/system/ux.be`). They are
 documented here too, because a routine calls them the same way.
@@ -404,6 +405,7 @@ it grows as files register.
 | `store.get(name, defaults)` | `map` | one entry per key in `defaults`, typed by its default, or the default itself when the key was never set |
 | `store.set(name, key, value)` | `bool` | write a routine's value |
 | `store.set(name, values)` | `bool` | write every entry of `values` in one write, keeping the keys it does not name |
+| `store.config(path)` | a `Config` instance | the document at `/cfg/` followed by `path`, read once and held, for a page that reads it repeatedly or wants its sections |
 
 A routine's values live in its own document at `/cfg/routines/<name>.cfg`, named after the routine, and a
 data-image upload can ship initial ones beside its `.be`. A routine writes its own; a page that edits
@@ -446,8 +448,41 @@ target=12.5
 count=3
 ```
 
-Two limits. It holds **32 keys** — a `set` past that returns `false`. And a `set` writes to flash,
-though only when a value actually changed: setting the same value on every pass costs nothing,
-while storing a *changing* value on every pass wears the partition. Write on the event, not on the
-frame. A map `set` is one write for the whole map, so a settings page that commits a settled set
-pays one, not one per key.
+A **path** reaches a document the name forms cannot. `store.config(path)` answers a `Config`
+instance over `/cfg/` followed by `path` — `store.config("routines/interval.cfg")` is the file
+`store.get("interval", ...)` reads — and reads it once, so the instance holds the document rather
+than reopening it per value. The path is relative to `/cfg`: an empty path, one beginning with `/`,
+or one holding a `..` segment is refused with `value_error`, and anything that is not a string with
+`type_error`, so a page cannot name a file outside `/cfg`. A document that is not there is not an
+error: the instance holds nothing, every `get` answers its fallback, and the first `set` creates the
+file.
+
+The instance's methods are the native `Config` class's:
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `config.get(section, key, fallback)` | the fallback's type | the value for a section and key, or the fallback when the document holds none; a flat document's keys are in the empty section |
+| `config.set(section, key, value[, decimals])` | `bool` | write the value; `decimals` is the places a real is written with, two by default. `false` when the file could not be written |
+| `config.section_keys()` | list of strings | the section names holding at least one key, in document order |
+
+```berry
+var doc = store.config("routines/interval.cfg")
+var target = doc.get("", "target", 0.0)   # the flat file's key, in the empty section
+doc.set("", "target", 12.5)               # writes /cfg/routines/interval.cfg
+```
+
+The class's own `Config():init()` still opens the device's own `/cfg/settings.ini`; calling
+`init()` on an instance from `store.config` replaces its document with that one.
+
+An instance writes its **whole document** on every `set` that changes something — the sections and
+keys as they stand, in the order they were read — so a comment in the file does not survive a write
+through an instance, and a write from another route after the instance was made is overwritten by
+its next `set`. Hold an instance to read a document repeatedly; a value another writer owns is the
+name forms' business.
+
+There is **no limit** on how many keys a document holds: `store.get(name)` answers every pair the
+file holds, a `set` adds a new key whatever the count, and a `set` answers `false` only when the
+document could not be written. The one cost is flash wear: a `set` writes only when a value actually
+changed — setting the same value on every pass costs nothing, while storing a *changing* value on
+every pass wears the partition. Write on the event, not on the frame. A map `set` is one write for
+the whole map, so a settings page that commits a settled set pays one, not one per key.

@@ -19,7 +19,8 @@ namespace {
 // of defaults is the same rule for a whole document: each entry's type reads its own key.
 //
 // One key is one value; a map is the whole document, so a page that reads or writes every value
-// pays one file read and at most one write.
+// pays one file read and at most one write. `store.config` answers the document itself, held as a
+// Config, for a page that reads it repeatedly or wants its sections.
 
 // The type the stored text is read back as: the type of the fallback the caller passed.
 enum class Kind { Int, Real, Bool, Text };
@@ -66,7 +67,7 @@ void pushAllValues(bvm* vm, const char* document) {
 
   pushMap(vm);
   const int data = be_absindex(vm, -1);
-  for (uint8_t i = 0; i < held.count(); i++) {
+  for (size_t i = 0; i < held.count(); i++) {
     be_pushstring(vm, held.keyAt(i).c_str());
     be_pushstring(vm, held.valueAt(i).c_str());
     be_data_insert(vm, data);
@@ -123,8 +124,10 @@ void setAllValues(bvm* vm, const char* document, int values) {
     // Both point into the VM's string table, so they are copied before anything else is used.
     const char* keyText = be_tostring(vm, -2);
     const char* text = be_tostring(vm, -1);
-    if (keyText == nullptr || text == nullptr || !merged.set(keyText, String(text))) {
+    if (keyText == nullptr || text == nullptr) {
       written = false;
+    } else {
+      merged.set(keyText, String(text));
     }
     be_pop(vm, 2);
   }
@@ -192,9 +195,41 @@ int storeSet(bvm* vm) {
   be_return(vm);
 }
 
+// Whether a path names a document under /cfg: it is relative, it is not empty, and no segment of it
+// climbs. A page that names a document must not reach one the store does not own.
+bool underConfig(const String& path) {
+  if (path.length() == 0 || path[0] == '/') return false;
+  int start = 0;
+  while (start <= (int)path.length()) {
+    int end = path.indexOf('/', (unsigned int)start);
+    if (end < 0) end = (int)path.length();
+    if (path.substring((unsigned int)start, (unsigned int)end) == "..") return false;
+    start = end + 1;
+  }
+  return true;
+}
+
+// store.config(path): a Config over /cfg/<path>, read once and held, so a page can keep a document
+// and read or write it with the class's own methods rather than a call per value.
+int storeConfig(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "store.config(path)");
+  }
+  const String path(argText(vm, 1));
+  if (!underConfig(path)) {
+    be_raise(vm, "value_error", "store.config(path): a path under /cfg");
+  }
+
+  String document("/cfg/");
+  document += path;
+  pushConfigDocument(vm, document.c_str());
+  be_return(vm);
+}
+
 const bnfuncinfo StoreLibrary[] = {
     {"get", storeGet},
     {"set", storeSet},
+    {"config", storeConfig},
     {nullptr, nullptr},
 };
 

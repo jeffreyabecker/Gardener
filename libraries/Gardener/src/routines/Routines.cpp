@@ -316,7 +316,7 @@ bool Routines::storeGet(const char* document, const char* key, String& out) {
 bool Routines::storeSet(const char* document, const char* key, const String& value) {
   if (key == nullptr) return false;
   Values one;
-  if (!one.set(key, value)) return false;
+  one.set(key, value);
   return storeSet(document, one);
 }
 
@@ -339,11 +339,11 @@ bool Routines::storeSet(const char* document, const Values& values) {
   // A repeat value is not worth a flash write, and it is the value that decides, not the
   // rewritten text: a document carrying comments is not written back for nothing.
   bool changed = false;
-  for (uint8_t i = 0; i < values.count(); i++) {
+  for (size_t i = 0; i < values.count(); i++) {
     const String& key = values.keyAt(i);
     const String& value = values.valueAt(i);
     if (held.has(key.c_str()) && held.get(key.c_str(), "") == value) continue;
-    if (!held.set(key.c_str(), value)) return false;
+    held.set(key.c_str(), value);
     changed = true;
   }
   if (!changed) return true;

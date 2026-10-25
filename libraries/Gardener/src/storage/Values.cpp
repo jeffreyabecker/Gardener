@@ -29,8 +29,6 @@ void Values::parse(const String& text) {
       entry->value = value;
       continue;
     }
-    // A file with more keys than the document holds keeps the keys it read first.
-    if (entries_.size() >= MaxEntries) continue;
     entries_.push_back({key, value});
   }
 }
@@ -40,14 +38,12 @@ String Values::get(const char* key, const char* fallback) const {
   return entry ? entry->value : String(fallback);
 }
 
-bool Values::set(const char* key, const String& value) {
+void Values::set(const char* key, const String& value) {
   if (Entry* entry = find(key)) {
     entry->value = value;
-    return true;
+    return;
   }
-  if (entries_.size() >= MaxEntries) return false;
   entries_.push_back({key, value});
-  return true;
 }
 
 // Entries keep the order they were read in, so an unknown key keeps its place rather than moving.

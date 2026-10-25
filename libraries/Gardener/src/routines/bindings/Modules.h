@@ -14,6 +14,9 @@ void installDeviceModule(bvm* vm);
 void installStoreModule(bvm* vm);
 // The native Config class a routine can instantiate for its own INI document.
 void installConfigClass(bvm* vm);
+// Answers an instance of that class over `document`, read once: the document and the name it was
+// opened with belong to the instance. The store's `config` call answers this.
+void pushConfigDocument(bvm* vm, const char* document);
 
 }  // namespace berry
 }  // namespace gardener
