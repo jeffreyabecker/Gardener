@@ -99,24 +99,6 @@ minute, `1h2m5s`, `0s` for nothing and `--` for nil.
 `ProgressBar` is a framed bar filled to a percentage. `value` is clamped to 0–100; the fill is the
 left `(w − 2) · value / 100` pixels inside the one-pixel frame. 0 draws the frame and no fill.
 
-## Bubble
-
-`Bubble` is a square drawn to fill its box, filled or outlined. `shape` — `circle` (default),
-`rect`, `roundrect`, `tri-up`, `tri-down`, `tri-left` or `tri-right`; `fill_state` — `filled`,
-`unfilled` or `none` (`none` draws nothing). Smaller than 3 px it is a solid square.
-
-## ProgressBubbles
-
-`ProgressBubbles` is a field of `max_count` `Bubble` children laid out in a grid that fills its box.
-The first `count` children in fill order are filled; `count` is clamped to 0–`max_count`.
-`fill_direction` — `lr-tb` (default), `rl-tb`, `tb-lr` or `bt-lr` — names the order the cells are
-assigned. `set_count(total)` rebuilds the field for a new total.
-
-Each bubble is the largest whole square that lets the count fill the box: columns
-`⌊√(max_count · w / h)⌋` clamped to 1–`max_count`, rows `⌈max_count / columns⌉`, size
-`min(⌊w / columns⌋, ⌊h / rows⌋)`, at least 1 px, with the leftover width and height as the gaps
-between bubbles.
-
 ## Scrollbar
 
 `Scrollbar` is the thumb that shows where a window sits in a list. `index`, `count` and `visible`

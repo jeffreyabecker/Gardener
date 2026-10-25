@@ -53,33 +53,41 @@ class RampedIntervalIcon : Icon
 end
 
 # The interval chrome: a flat list of explicitly placed children — the glyph and title, the pressure
-# and the set bubbles, and a status-plus-bar row. The glyph and the title are given to it, so a
+# and the set count, and a status-plus-bar row. The glyph and the title are given to it, so a
 # subclass of the page names its own and nothing is swapped after the fact.
 class RampedIntervalChrome : Layout
   var icon
   var title
-  var bubbles
+  var sets
 
-  def init(icon, title_text, total_sets, pos, dim)
+  def init(icon, title_text, pos, dim)
     var half = dim.w / 2
     self.icon = icon
     self.icon.pos = Position(pos.x, pos.y)
     self.title = Text(Position(pos.x + 16, pos.y + 2), Size(dim.w - 16, 9), title_text)
-    self.bubbles = ProgressBubbles(Position(pos.x + half, pos.y + 13), Size(half, 26), total_sets,
-                                   "circle", "lr-tb")
+    self.sets = Text(Position(pos.x + half, pos.y + 13), Size(half, 26), "")
     super(self).init([
       self.icon,
       self.title,
       AutoPressureDisplay(Position(pos.x, pos.y + 13), Size(half, 26), "pressure:target", "br", 0.25),
-      self.bubbles,
+      self.sets,
       Text(Position(pos.x, pos.y + 39), Size(half, 13), "",
            text_settings("sans", "none", "left", "center")),
       ProgressBar(Position(pos.x + half + 8, pos.y + 41), Size(half - 8, 8), nil)
     ])
   end
 
-  def draw(current_set, status, remaining_percent)
-    self.bubbles.count = current_set
+  # A page with a set under way shows where it has got to, `2 / 12`; a ready page has no set to count
+  # and shows how many the run will make, `12 sets`.
+  def draw(current_set, total_sets, status, remaining_percent)
+    if current_set > 0
+      if current_set > total_sets
+        current_set = total_sets
+      end
+      self.sets.value = str(current_set) + " / " + str(total_sets)
+    else
+      self.sets.value = str(total_sets) + (total_sets == 1 ? " set" : " sets")
+    end
     self.children[4].value = status
     self.children[5].value = remaining_percent
     super(self).draw()
@@ -163,10 +171,10 @@ class RampedInterval : Scene
     self.targets = []
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
-    # activation. The values come first: the chrome lays out one bubble per set.
+    # activation.
     self.init_from_settings(settings)
-    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.count,
-                                      self.pos, self.dim)
+    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.pos,
+                                       self.dim)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -459,15 +467,13 @@ class RampedInterval : Scene
   # --- drawing -------------------------------------------------------------
 
   def draw_page()
-    # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
-    # ladder still empty. The count can change under the settings editor, so the field re-lays
-    # itself for the current total.
+    # The set being worked is the count the chrome shows; a ready page has none under way, so it
+    # shows how many the run will make.
     var filled = 0
     if self.phase != IntervalPhase.READY
       filled = self.set + 1
     end
-    self.chrome.bubbles.set_count(self.count)
-    self.chrome.draw(filled, self.status_text(), self.hold_left())
+    self.chrome.draw(filled, self.count, self.status_text(), self.hold_left())
   end
 
   # The page has one word per thing the chamber is doing, and the target and rest phases read as

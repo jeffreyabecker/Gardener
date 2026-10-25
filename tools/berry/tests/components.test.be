@@ -41,36 +41,6 @@ test("bold built-in text draws and inverts", bold_builtin_draws_and_inverts)
 # The flat layout's behaviour — drawing its children in order and keeping their boxes — is pinned in
 # layout.test.be, so the layout cases live there and not here.
 
-def bubble_draws_each_shape()
-  var shapes = ["circle", "rect", "roundrect", "tri-up", "tri-down", "tri-left", "tri-right"]
-  var b = Bubble(Position(0, 0), Size(8, 8), "circle", "unfilled")
-  for s : shapes
-    b.shape = s
-    b.fill_state = "filled"
-    b.draw()
-    b.fill_state = "unfilled"
-    b.draw()
-  end
-  b.dim = Size(2, 2)
-  b.fill_state = "filled"
-  b.draw()
-end
-
-test("a bubble draws each shape and the degenerate square", bubble_draws_each_shape)
-
-def bubbles_fill_by_count()
-  var p = ProgressBubbles(Position(0, 0), Size(64, 38), 4, "circle", "lr-tb")
-  p.count = 2
-  p.draw()
-  assert_eq(p.children.size(), 4, "the field does not have one bubble per set")
-  assert_eq(p.children[0].dim.w, 19, "a bubble is not sized to fill the box")
-  assert_eq(p.children[0].fill_state, "filled", "the first bubble is not filled")
-  assert_eq(p.children[1].fill_state, "filled", "the second bubble is not filled")
-  assert_eq(p.children[2].fill_state, "unfilled", "the third bubble is filled")
-end
-
-test("progress bubbles fill by count", bubbles_fill_by_count)
-
 def progress_bar_draws()
   var b = ProgressBar(Position(0, 0), Size(32, 8), 0)
   b.value = 0
@@ -169,21 +139,6 @@ end
 
 test("a pressure display puts the secondary in each corner", secondary_in_each_corner)
 
-def bubbles_at_every_count()
-  var p = ProgressBubbles(Position(0, 0), Size(64, 38), 1, "circle", "lr-tb")
-  var n = 1
-  while n <= 20
-    p.set_count(n)
-    p.count = n
-    p.draw()
-    assert_eq(p.children.size(), n, "the field does not rebuild for the count")
-    assert_true(p.children[0].dim.w > 0, "a bubble has no size")
-    n += 1
-  end
-end
-
-test("progress bubbles fill every count", bubbles_at_every_count)
-
 def capture(name)
   return harness.save("tools/berry/artifacts/components/" + name + ".bmp")
 end
@@ -200,12 +155,6 @@ def captures()
   p.secondary_pressure = 10.0
   p.draw(20.0)
   assert_true(capture("pressure"), "cannot save pressure")
-
-  screen.draw_clear()
-  var b = ProgressBubbles(Position(0, 0), Size(64, 38), 12, "circle", "lr-tb")
-  b.count = 5
-  b.draw()
-  assert_true(capture("bubbles"), "cannot save bubbles")
 end
 
 test("the components capture their frames", captures)

@@ -158,8 +158,8 @@ end
 # Draw one routine and save what it drew. A .gif path captures every beat as an animation; a .bmp
 # path saves the one frame it has today. No seconds is the page as it appears; seconds presses OK
 # and runs that much virtual time first, so a cycle can be caught mid-phase. A set count overrides
-# the routine's own before it is activated, which is how a preview shows a run long enough to fill
-# the bubbles; zero leaves the file's value alone.
+# the routine's own before it is activated, which is how a preview shows a run with the sets it
+# needs; zero leaves the file's value alone.
 def harness_art(routine_key, seconds, path, sets)
   if !harness_registered(routine_key)
     harness_fail("art: no routine " + routine_key)
@@ -293,11 +293,6 @@ def harness_art_component(name, path)
     drew = true
   elif name == "bar"
     var b = ProgressBar(Position(0, 0), Size(96, 8), 50)
-    b.draw()
-    drew = true
-  elif name == "bubbles"
-    var b = ProgressBubbles(Position(0, 0), Size(64, 38), 12, "circle", "lr-tb")
-    b.count = 5
     b.draw()
     drew = true
   elif name == "scrollbar"

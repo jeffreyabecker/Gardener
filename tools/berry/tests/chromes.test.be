@@ -25,9 +25,17 @@ test("the ramped static chrome draws", static_draws)
 
 def interval_draws()
   screen.draw_clear()
-  RampedIntervalChrome(IntervalIcon(Position.top_left(), Size(12, 8)), "INTERVAL", 4,
-                       Position.top_left(), Size.page()).draw(2, "READY", 50)
+  var chrome = RampedIntervalChrome(IntervalIcon(Position.top_left(), Size(12, 8)), "INTERVAL",
+                                    Position.top_left(), Size.page())
+  chrome.draw(2, 4, "READY", 50)
   assert_true(save("interval"), "cannot save the ramped interval frame")
+  assert_eq(chrome.sets.value, "2 / 4", "the chrome does not count the set under way")
+
+  # A ready page has no set to count, so it shows what the run will make.
+  chrome.draw(0, 4, "READY", 50)
+  assert_eq(chrome.sets.value, "4 sets", "a ready chrome does not show the run's sets")
+  chrome.draw(0, 1, "READY", 50)
+  assert_eq(chrome.sets.value, "1 set", "a single set is not singular")
 end
 
 test("the ramped interval chrome draws", interval_draws)

@@ -7,8 +7,6 @@ components/component.be
 components/icon.be
 components/text.be
 components/layout.be
-components/bubble.be
-components/progress_bubbles.be
 components/progress_bar.be
 components/scrollbar.be
 components/triangle.be

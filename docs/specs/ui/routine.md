@@ -116,10 +116,10 @@ routine's clean settings map, and the `push(routine_key, callback)` that opens a
 `/system/components/` is the drawing primitives a readout composes, one class per file:
 `component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is
 `Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
-`layout.be` is `Layout` (a flat list of children drawn in order), `bubble.be` is `Bubble`,
-`progress_bubbles.be` is `ProgressBubbles`, `progress_bar.be` is `ProgressBar`, `scrollbar.be` is
-`Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is `PressureDisplay` and
-`AutoPressureDisplay`, and `duration.be` is `Duration`. Every component is given its box at
+`layout.be` is `Layout` (a flat list of children drawn in order), `progress_bar.be` is
+`ProgressBar`, `scrollbar.be` is `Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is
+`PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. Every component is
+given its box at
 construction (`pos` and `dim`) and keeps it; setting `inverted` on it flips that box as the last
 thing its draw does — paper where its ink was — which is what a selected row, a cursor or a focused
 readout looks like.
