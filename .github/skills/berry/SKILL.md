@@ -43,6 +43,36 @@ enlarged 2 x by `kRenderScale` — and a `.bmp` `--out` asks for one native-size
 a full-width strip across the top showing each injected press (`OK`, `OK×2`, `CANCEL 5s`) for one
 beat, behind `kGestureCalloutBeats`. Writing a frame out as text loses the thing the render is for.
 
+**The frame belongs to the person who opens it.** Nothing in a run reads a capture back, and
+nothing it prints describes one: a `.gif` or `.bmp` under `tools/berry/build/` or
+`tools/berry/artifacts/` is there for a human to look at. Do not convert one, enlarge it,
+transcribe it or diff two of them to decide whether a change is right. That is a reading the
+harness never made a claim about, of pixels that are the host's rendering rather than the
+panel's, and an approval it cannot support. Say what the code draws and where; leave the file for
+the human, and let a layout question be answered by the numbers a case asserts — the ink a `Text`
+measures, the box a component places.
+
+## When to run it
+
+The check proves a change; it is not a step in making one. A run compiles the image, loads it and
+drives a page for every registered routine, then prints a line per page and per case — long output,
+most of it the same lines as last time. Read the code while working, and run the check when the
+change is done, or when a failure needs a diagnosis that reading the code cannot give.
+
+Two things make a run worth nothing. The first is a tree the last run already answered for. The
+second is a change that cannot reach the image: a document, a `.cfg` seed, an `assets/` image, a
+comment, or C++ outside `libraries/berry/`. A refactor that moves code without changing what it
+draws is the same case one step in: a frame captured before the edit and again after it, to diff
+them, is two runs to learn what the diff of the code already said. Write a frame when a human needs
+to see a layout, a face or a glyph, and leave it alone when the picture is not in doubt. And a suite
+already red for a reason that has been diagnosed stays red: that failure is the baseline, not an
+invitation to run it again.
+
+When several edits are ahead, hold the check until the last of them; a run between them is a run
+that the next edit invalidates. When the user asks for one, run it. Otherwise one check at the end
+of a change that can break a routine is the verification, and a second is waiting for an answer it
+already gave.
+
 ## Reading the output
 
 Two things bite before the messages do:
