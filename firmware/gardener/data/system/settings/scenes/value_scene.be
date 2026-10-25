@@ -34,7 +34,7 @@ class ValueScene : Scene
       return true
     end
     if ev == "ok:single"
-      self.finish()
+      ux.pop(self.value())
       return true
     end
     if ev == "cancel:single"
@@ -42,10 +42,6 @@ class ValueScene : Scene
       return true
     end
     return false
-  end
-
-  def finish()
-    ux.pop(self.value())
   end
 
   # Cancel is the row as it stands: the value the editor was opened on goes back, and the list takes

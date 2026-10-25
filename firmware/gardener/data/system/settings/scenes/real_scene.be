@@ -16,13 +16,9 @@ class RealScene : ValueScene
     self.nullable = nullable
   end
 
-  def lowest()
-    return self.min != nil ? self.min : 0.0
-  end
-
   def nudge(dir)
     if self.nullable
-      var low = self.lowest()
+      var low = self.min != nil ? self.min : 0.0
       if self.current == nil
         if dir < 0
           return

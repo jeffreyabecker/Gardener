@@ -88,10 +88,12 @@ entry is showing is a `ChoiceRing`: the entries and the index of the one named, 
 rather than a value the editor has to compare against the list. A nullable choice's list carries an
 entry whose key is nil and whose title is `--`, at the front — unless the declaration named that
 entry itself, which keeps its title and its place. Every entry is then an entry like any other:
-drawn and selected as the rest are, wrapped onto at both ends, and handed back when OK is pressed. A
-record may also carry gestures of its own; the editor answers its four first and offers any other
-gesture to the choice that is showing, handing it that choice, so an entry can do something the
-editor knows nothing about.
+drawn and selected as the rest are, wrapped onto at both ends, and handed back when OK is pressed.
+The entries are drawn through the `List` the editor holds, which is what puts the highlight on
+the entry showing and scrolls the window when the list is longer than the box. A record may also
+carry gestures of its own; the editor answers its four first and offers any other gesture to the
+choice that is showing, handing it that choice, so an entry can do something the editor knows
+nothing about.
 `BoolScene` is the same ring with two entries — `OFF` and `ON`, with `--` in front of them when the
 setting is nullable — drawn as a switch of chips rather than as a list, so Up and Down wrap there as
 they do through a choice.

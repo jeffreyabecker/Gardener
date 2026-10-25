@@ -39,7 +39,12 @@ class SettingsScene : Scene
       return true
     end
     if ev == "forward:single"
-      self.open_row()
+      # A row whose setting has no editor - a build fact the device reports - opens nothing.
+      var cfg = self.settings_cfgs[self.list.selected]
+      var scene = cfg.scene(is_nil(self.settings_values[cfg.key], cfg.default_value))
+      if scene != nil
+        ux.push(scene, nil, / v -> self.value_closed(cfg, v))
+      end
       return true
     end
     if ev == "ok:single"
@@ -60,7 +65,12 @@ class SettingsScene : Scene
   # it is why the set was mended rather than a title. The heading and the rows are laid out on the
   # settings view's own rows, so the list and the value editors move together.
   def draw_page()
-    var rows = self.rows()
+    var rows = []
+    for cfg : self.settings_cfgs
+      # A setting whose key holds nothing draws an empty value rather than its default.
+      var value = self.settings_values[cfg.key]
+      rows.push([cfg.icon, cfg.label + "=" + (value == nil ? "--" : cfg.text(value))])
+    end
     self.list.set(rows)
     if rows.size() > self.list.visible
       if self.message != nil
@@ -76,10 +86,10 @@ class SettingsScene : Scene
     if self.message != nil
       wide = screen.text_bounds(self.message, 1).w
     end
-    for cfg : self.settings_cfgs
-      var w = screen.text_bounds(cfg.label + "=" + self.value_text(cfg), 1).w
-      if cfg.icon != nil
-        w += cfg.icon.dim.w + 2
+    for row : rows
+      var w = screen.text_bounds(row[1], 1).w
+      if row[0] != nil
+        w += row[0].dim.w + 2
       end
       if w > wide
         wide = w
@@ -99,33 +109,6 @@ class SettingsScene : Scene
       y += heading_h
     end
     self.list.draw(x, y)
-  end
-
-  def rows()
-    var out = []
-    for cfg : self.settings_cfgs
-      out.push([cfg.icon, cfg.label + "=" + self.value_text(cfg)])
-    end
-    return out
-  end
-
-  # A setting whose key holds nothing draws an empty value rather than its default.
-  def value_text(cfg)
-    var value = self.settings_values[cfg.key]
-    if value == nil
-      return "--"
-    end
-    return cfg.text(value)
-  end
-
-  # A row whose setting has no editor - a build fact the device reports - opens nothing.
-  def open_row()
-    var cfg = self.settings_cfgs[self.list.selected]
-    var scene = cfg.scene(is_nil(self.settings_values[cfg.key], cfg.default_value))
-    if scene == nil
-      return
-    end
-    ux.push(scene, nil, / v -> self.value_closed(cfg, v))
   end
 
   # The value an editor handed back replaces the one in the values the caller gave, and a value that

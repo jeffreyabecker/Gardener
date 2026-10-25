@@ -8,14 +8,34 @@
 # nil-keyed "no choice" entry the editor opens on — so every entry is drawn, stepped and handed back
 # alike, and the ring always names one: a choice with no values at all is refused where it is built
 # and its row left out of the list.
+#
+# The entries are drawn by the `List` the scene holds, built once from the ring in `init()`, so the
+# highlighted row and the scroll window are the list component's rather than this file's.
 
 class ChoiceScene : ValueScene
   var ring
+  var list
 
   def init(label, current, values, nullable)
     super(self).init(label, current)
 
     self.ring = ChoiceRing(choice_items(values, nullable), current)
+    var rows = []
+    for item : self.ring.items
+      rows.push([item.icon, item.title])
+    end
+    # The rows the box has room for — the scene's box less the three pixels of frame either side,
+    # the eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no
+    # more than there are entries.
+    var fit = (self.dim.h - 26) / 8
+    if fit < 1
+      fit = 1
+    end
+    if fit > self.ring.items.size()
+      fit = self.ring.items.size()
+    end
+    self.list = List(fit)
+    self.list.set(rows)
   end
 
   # A choice may carry actions of its own: a gesture the editor has nothing of its own for is offered
@@ -63,20 +83,6 @@ class ChoiceScene : ValueScene
     return wide
   end
 
-  # The rows the box has room for — the scene's box less the three pixels of frame either side, the
-  # eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no more than
-  # there are entries.
-  def visible_rows()
-    var fit = (self.dim.h - 26) / 8
-    if fit < 1
-      fit = 1
-    end
-    if fit > self.ring.items.size()
-      fit = self.ring.items.size()
-    end
-    return fit
-  end
-
   # The label row, the list and the hint row: eight pixels a row, a gap of two above and below the
   # list, and the content as wide as the widest of the three.
   def content_size()
@@ -89,25 +95,19 @@ class ChoiceScene : ValueScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + self.visible_rows() * 8)
+    return Size(wide, 20 + self.list.visible * 8)
   end
 
-  # The label row, the entries as a short list with the one showing inverted and scrolled into view,
-  # and the hint row. Every entry is a row — the nil-keyed "no choice" one included — so the whole
-  # of what the editor draws comes from the ring.
+  # The label row, the entries with the one showing inverted and scrolled into view, and the hint
+  # row. The list is told which entry the ring names before it draws; every entry is a row — the
+  # nil-keyed "no choice" one included — so the whole of what the editor draws comes from the ring.
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    var rows = []
-    for item : self.ring.items
-      rows.push([item.icon, item.title])
-    end
-    var visible = self.visible_rows()
-    var menu = List(visible)
-    menu.set(rows)
-    menu.selected = self.ring.index
-    menu.draw(pos.x + (dim.w - self.row_width()) / 2, pos.y + 10 + (dim.h - 20 - visible * 8) / 2)
+    self.list.selected = self.ring.index
+    self.list.draw(pos.x + (dim.w - self.row_width()) / 2,
+                   pos.y + 10 + (dim.h - 20 - self.list.visible * 8) / 2)
 
     var hint = self.hint()
     var hint_w = screen.text_bounds(hint, 1).w

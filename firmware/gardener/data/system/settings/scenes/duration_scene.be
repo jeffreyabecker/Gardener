@@ -21,13 +21,9 @@ class DurationScene : ValueScene
     self.nullable = nullable
   end
 
-  def lowest()
-    return duration_seconds(0, self.min, self.max)
-  end
-
   def nudge(dir)
     if self.nullable
-      var low = self.lowest()
+      var low = duration_seconds(0, self.min, self.max)
       if self.current == nil
         if dir < 0
           return
@@ -158,7 +154,7 @@ class DurationScene : ValueScene
 
   def hint()
     if self.stage == "min"
-      return "\x1E/\x1F MIN  FWD=NEXT"
+      return "\x1E/\x1F MIN  \x1A=NEXT"
     end
     return "\x1E/\x1F SEC  OK=SAVE"
   end

@@ -23,13 +23,9 @@ class PressureScene : ValueScene
     self.draw()
   end
 
-  def lowest()
-    return vacuum.clamp(0.0)
-  end
-
   def nudge(dir)
     if self.nullable
-      var low = self.lowest()
+      var low = vacuum.clamp(0.0)
       if self.current == nil
         if dir < 0
           return
