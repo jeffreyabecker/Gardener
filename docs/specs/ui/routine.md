@@ -281,7 +281,7 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 A routine with nothing to edit registers `nil`. A class that is registered answers both: a routine
 with no rule of its own returns `nil` from `problem`.
 
-The list itself is `SettingsScene(items, values, message)`, built by whoever opens it — the page's
+The list itself is `SettingsScene(settings_cfgs, values, message)`, built by whoever opens it — the page's
 `up:double`, or the browser's Forward on the routine's row. That caller reads each value from the
 file, applies the rule and pushes the scene; the scene edits the values and pops them when Back is
 pressed; the caller applies the rule again and writes every value. The scene never touches the

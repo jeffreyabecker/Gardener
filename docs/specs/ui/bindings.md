@@ -352,8 +352,8 @@ draws its list.
 | `routines.keys()` | list of strings | every registered routine key, in registration order |
 | `routines.title(routine_key)` | string, or `nil` | the label the browser draws for the routine |
 | `routines.settings(routine_key)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
-| `routines.repair(routine_key, items, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
-| `routines.problem(routine_key, items, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
+| `routines.repair(routine_key, settings_cfgs, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
+| `routines.problem(routine_key, settings_cfgs, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
 | `routines.icon(routine_key)` | the icon object, or `nil` | what the file passed as its icon |
 | `routines.load(routine_key)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. A routine with no settings is an empty map |
 | `routines.save_settings(routine_key, values[, settings_cfgs])` | `bool` | write a settled set back to the routine's file, applying the routine's rule first so what lands is a set a run accepts, and writing an empty value for a setting the list holds nothing for. `settings_cfgs` may be left off, and then the settings the routine declares are looked up by its key. `false`, writing nothing, when the routine declares no settings |

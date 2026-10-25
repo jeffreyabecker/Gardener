@@ -150,19 +150,19 @@ end
 test("a routine's rule refuses a set that cannot run", the_rules_say_no)
 
 def a_repair_puts_a_set_back()
-  var items = routines.settings("ramped_static")
+  var settings_cfgs = routines.settings("ramped_static")
   var values = []
-  for item : items
+  for item : settings_cfgs
     values.push(item.read("ramped_static"))
   end
-  routines.repair("ramped_static", items, values)
-  assert_nil(routines.repair("ramped_static", items, values), "a set of valid values was refused")
+  routines.repair("ramped_static", settings_cfgs, values)
+  assert_nil(routines.repair("ramped_static", settings_cfgs, values), "a set of valid values was refused")
 
   # A total below the two holds is what lowering Total under a longer hold pair produces.
   values[4] = 30
-  assert_eq(routines.repair("ramped_static", items, values),
+  assert_eq(routines.repair("ramped_static", settings_cfgs, values),
             "TOTAL < HOLDS", "the repair did not report the rule it applied")
-  assert_eq(values[4], items[4].default_value, "the repair did not put the value back")
+  assert_eq(values[4], settings_cfgs[4].default_value, "the repair did not put the value back")
 end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)

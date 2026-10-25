@@ -3,14 +3,14 @@
 # pops the values it was given, so whoever opens it reads them from the file and writes them back.
 
 class SettingsScene : Scene
-  var items
+  var settings_cfgs
   var values
   var message
   var list
 
-  def init(items, values, message)
+  def init(settings_cfgs, values, message)
     super(self).init()
-    self.items = items
+    self.settings_cfgs = settings_cfgs
     self.values = values
     self.message = message
     self.list = List(5)
@@ -22,8 +22,8 @@ class SettingsScene : Scene
 
   def index_of(item)
     var i = 0
-    while i < self.items.size()
-      if self.items[i].key == item.key
+    while i < self.settings_cfgs.size()
+      if self.settings_cfgs[i].key == item.key
         return i
       end
       i += 1
@@ -68,8 +68,8 @@ class SettingsScene : Scene
   def rows()
     var out = []
     var i = 0
-    while i < self.items.size()
-      var item = self.items[i]
+    while i < self.settings_cfgs.size()
+      var item = self.settings_cfgs[i]
       out.push([item.icon, item.label + "=" + self.value_text(i)])
       i += 1
     end
@@ -81,12 +81,12 @@ class SettingsScene : Scene
     if value == nil
       return "--"
     end
-    return self.items[index].text(value)
+    return self.settings_cfgs[index].text(value)
   end
 
   # A row whose setting has no editor - a build fact the device reports - opens nothing.
   def open_row()
-    var item = self.items[self.list.selected]
+    var item = self.settings_cfgs[self.list.selected]
     var scene = item.scene(is_nil(self.values[self.list.selected], item.default_value))
     if scene == nil
       return
@@ -114,16 +114,16 @@ end
 # edits and pops the values; this reads them from the routine's document, so the caller writes what
 # the list settles on through the registry's own save_settings.
 def edit_settings(routine_key, on_closed)
-  var items = routines.settings(routine_key)
-  if items == nil || items.size() == 0
+  var settings_cfgs = routines.settings(routine_key)
+  if settings_cfgs == nil || settings_cfgs.size() == 0
     vacuum.log("settings: " + routine_key + " has none")
     return false
   end
   var values = []
-  for item : items
+  for item : settings_cfgs
     values.push(item.read(routine_key))
   end
-  var message = routines.repair(routine_key, items, values)
-  ux.push(SettingsScene(items, values, message), nil, / v -> on_closed(items, v))
+  var message = routines.repair(routine_key, settings_cfgs, values)
+  ux.push(SettingsScene(settings_cfgs, values, message), nil, / v -> on_closed(settings_cfgs, v))
   return true
 end

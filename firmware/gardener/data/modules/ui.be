@@ -262,15 +262,15 @@ class SystemScene : SettingsScene
   end
 
   def read()
-    self.items = [UnitSettingCfg(), BluetoothSettingCfg()]
+    self.settings_cfgs = [UnitSettingCfg(), BluetoothSettingCfg()]
     # No library is a fault the boot already reported, and a choice with no values has nothing to
     # cycle, so the row is left out rather than opened on an empty list.
     var jingle = JingleSettingCfg()
     if jingle.values.size() > 0
-      self.items.push(jingle)
+      self.settings_cfgs.push(jingle)
     end
     self.values = []
-    for item : self.items
+    for item : self.settings_cfgs
       self.values.push(item.current())
     end
   end
@@ -288,8 +288,8 @@ class SystemScene : SettingsScene
   # wear the settings file.
   def write()
     var i = 0
-    while i < self.items.size()
-      self.items[i].write(self.values[i])
+    while i < self.settings_cfgs.size()
+      self.settings_cfgs[i].write(self.values[i])
       i += 1
     end
   end

@@ -95,17 +95,17 @@ class RoutineRegistry
   # from their default are put back to them in the order the list shows them, each replacing the
   # value in `values`. The reason that was applied is returned for the list to draw, or nil when the
   # set was already valid. Nothing here touches a file: the caller decides what to write.
-  def repair(routine_key, items, values)
-    var reason = self.problem(routine_key, items, values)
+  def repair(routine_key, settings_cfgs, values)
+    var reason = self.problem(routine_key, settings_cfgs, values)
     if reason == nil
       return nil
     end
     vacuum.log("settings: " + routine_key + ": " + reason)
     var i = 0
-    while i < items.size()
-      if values[i] != items[i].default_value
-        values[i] = items[i].default_value
-        if self.problem(routine_key, items, values) == nil
+    while i < settings_cfgs.size()
+      if values[i] != settings_cfgs[i].default_value
+        values[i] = settings_cfgs[i].default_value
+        if self.problem(routine_key, settings_cfgs, values) == nil
           return reason
         end
       end
@@ -116,15 +116,15 @@ class RoutineRegistry
   end
 
   # The rule's verdict on the values held beside their settings, or nil when it accepts them.
-  def problem(routine_key, items, values)
+  def problem(routine_key, settings_cfgs, values)
     var e = self.entry(routine_key)
     if e == nil || e.settings == nil
       return nil
     end
     var out = {}
     var i = 0
-    while i < items.size()
-      out[items[i].key] = values[i]
+    while i < settings_cfgs.size()
+      out[settings_cfgs[i].key] = values[i]
       i += 1
     end
     return e.settings.problem(out)
@@ -161,19 +161,19 @@ class RoutineRegistry
   # accepts. A routine with no settings begins with an empty map. This is the only place the
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
   def load(routine_key)
-    var items = self.settings(routine_key)
+    var settings_cfgs = self.settings(routine_key)
     var out = {}
-    if items == nil
+    if settings_cfgs == nil
       return out
     end
     var values = []
-    for item : items
+    for item : settings_cfgs
       values.push(item.read(routine_key))
     end
-    self.repair(routine_key, items, values)
+    self.repair(routine_key, settings_cfgs, values)
     var i = 0
-    while i < items.size()
-      out[items[i].key] = values[i]
+    while i < settings_cfgs.size()
+      out[settings_cfgs[i].key] = values[i]
       i += 1
     end
     return out
