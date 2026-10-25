@@ -40,8 +40,6 @@ class JinglesConfig : public Config {
  protected:
   // Restores the library; begin() calls it once the document has been read.
   void load() override;
-  // The jingle library is its own document.
-  const char* documentPath() const override { return JinglesConfigPath; }
 
  private:
   String current_jingle_key_;

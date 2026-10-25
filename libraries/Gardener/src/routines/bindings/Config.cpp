@@ -15,10 +15,18 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The instance's `.p` member is the Config this class wraps. A method that runs without one is a
-// broken call rather than a missing preference.
+// This Berry has no userdata slot, so the instance's `.p` member holds the Config as a comobj: the
+// value owns the C++ object and the interpreter frees it with the instance. Nothing a page can call
+// releases the document while a caller still holds the instance.
+int configRelease(bvm* vm) {
+  delete static_cast<Config*>(be_tocomptr(vm, 1));
+  be_return_nil(vm);
+}
+
+// The document this instance wraps. A method that runs without one is a broken call rather than a
+// missing preference.
 Config* configOf(bvm* vm) {
-  if (!be_getmember(vm, 1, ".p") || !be_iscomptr(vm, -1)) {
+  if (!be_getmember(vm, 1, ".p") || !be_iscomobj(vm, -1)) {
     be_pop(vm, 1);
     be_raise(vm, "type_error", "config: not initialized");
     return nullptr;
@@ -28,27 +36,15 @@ Config* configOf(bvm* vm) {
   return config;
 }
 
+// init: a Config over the panel's library, read once. A second init hands over a fresh document,
+// dropping the first to the interpreter, so an instance never wraps two.
 int configInit(bvm* vm) {
   if (context == nullptr) {
     be_raise(vm, "runtime_error", "config: no panel context");
   }
   Config* config = new Config(&context->library());
   config->begin();
-  be_pushcomptr(vm, config);
-  be_setmember(vm, 1, ".p");
-  be_pop(vm, 1);
-  be_return_nil(vm);
-}
-
-int configDeinit(bvm* vm) {
-  if (!be_getmember(vm, 1, ".p") || !be_iscomptr(vm, -1)) {
-    be_pop(vm, 1);
-    be_return_nil(vm);
-  }
-  Config* config = static_cast<Config*>(be_tocomptr(vm, -1));
-  be_pop(vm, 1);
-  delete config;
-  be_pushnil(vm);
+  be_newcomobj(vm, config, configRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
   be_return_nil(vm);
@@ -121,7 +117,6 @@ int configSectionKeys(bvm* vm) {
 const bnfuncinfo ConfigMembers[] = {
     {".p", nullptr},
     {"init", configInit},
-    {"deinit", configDeinit},
     {"get", configGet},
     {"set", configSet},
     {"section_keys", configSectionKeys},

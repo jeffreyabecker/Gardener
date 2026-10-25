@@ -2,7 +2,7 @@
 
 namespace gardener {
 
-JinglesConfig::JinglesConfig(Library* store) : Config(store) {}
+JinglesConfig::JinglesConfig(Library* store) : Config(store, JinglesConfigPath) {}
 
 // One section per jingle, with the global current key naming the selected one. A section without
 // all three keys is not a jingle: it is recorded so the boot can name it and left out of the

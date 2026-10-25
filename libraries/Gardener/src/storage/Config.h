@@ -25,8 +25,9 @@ constexpr const char* ConfigPath = "/settings.ini";
 class Config : public Ini {
  public:
   // `store` is where the documents live, or null when the build has none: then nothing is read or
-  // written and every value is its fallback.
-  explicit Config(Library* store);
+  // written and every value is its fallback. `path` is the document's own path, and has to outlive
+  // the Config: a literal, or a constant beside the type that names it.
+  explicit Config(Library* store, const char* path = ConfigPath);
 
   virtual ~Config() = default;
 
@@ -89,9 +90,6 @@ class Config : public Ini {
   }
 
  protected:
-  // The document this class reads and writes. A subclass names its own file.
-  virtual const char* documentPath() const { return ConfigPath; }
-
   // Restores the values a subclass names; begin() calls it once the document has been read.
   virtual void load() {}
 
@@ -99,6 +97,7 @@ class Config : public Ini {
   bool save() const;
 
   Library* store_;
+  const char* path_;
 };
 
 }  // namespace gardener
