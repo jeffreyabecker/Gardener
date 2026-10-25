@@ -12,26 +12,20 @@ import string
 
 class ReadoutChrome
   var pressure
-  var target_value
+  var timer
 
   def init()
-    self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 0; self.pressure.w = 64; self.pressure.h = 52
-    self.pressure.margin = 1
-
-    self.target_value = PressureDisplay()
-    self.target_value.x = 64; self.target_value.y = 0; self.target_value.w = 64; self.target_value.h = 52
-    self.target_value.border = 1
-    self.target_value.margin = 1
+    var pw = screen.page_width()
+    var half = pw / 2
+    var ph = screen.page_height()
+    self.pressure = AutoPressureDisplayV2(Position(0, 0), Size(half, ph), "pressure:target", "br", 0.25)
+    self.timer = DurationV2(Position(half, 0), Size(half, ph), "minutes")
   end
 
-  def draw(s)
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    if s.target > 0.0
-      self.target_value.draw(s.target)
-    else
-      self.target_value.draw(nil)
-    end
+  def draw(elapsed)
+    self.pressure.draw()
+    self.timer.seconds = elapsed
+    self.timer.draw()
   end
 end
 
@@ -68,11 +62,13 @@ systemScene = nil
 class ReadoutScene : Scene
   var chrome
   var target_cfg
+  var mark
 
   def init()
     super(self).init()
     self.chrome = ReadoutChrome()
     self.target_cfg = PressureSettingCfg("target", 0.0, "TARGET", nil, 1.0, false)
+    self.mark = nil
 
     self.on("ok:single", / -> self.start())
     self.on("ok:double", / -> self.edit())
@@ -87,7 +83,17 @@ class ReadoutScene : Scene
   end
 
   def draw_page()
-    self.chrome.draw(vacuum.state())
+    var s = vacuum.state()
+    var running = s.state == "PULL" || s.state == "HOLD"
+    if running
+      if self.mark == nil
+        self.mark = vacuum.now_ms()
+      end
+      self.chrome.draw((vacuum.now_ms() - self.mark) / 1000)
+    else
+      self.mark = nil
+      self.chrome.draw(nil)
+    end
   end
 
   # A double OK opens the target's own editor: the pressure scene for the target, starting from the

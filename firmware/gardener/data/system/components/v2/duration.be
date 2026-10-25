@@ -14,6 +14,9 @@ class DurationV2 : TextV2
   end
 
   def text(seconds)
+    if seconds == nil
+      return "--"
+    end
     var whole = int(seconds)
     if whole <= 0
       return "0s"

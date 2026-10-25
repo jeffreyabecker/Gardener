@@ -54,7 +54,7 @@ def readout_comparison()
   var owner = FakeOwner()
 
   screen.draw_clear()
-  ReadoutChrome().draw(s)
+  ReadoutChrome().draw(50.0)
   assert_true(save_v1("readout"), "cannot save the readout's v1 frame")
 
   screen.draw_clear()
