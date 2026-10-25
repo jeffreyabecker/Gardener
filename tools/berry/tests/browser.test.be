@@ -1,18 +1,18 @@
-# browser.test.be — the names list is the browser's, so it carries every registration, and the rows
-# carry what each registration gave: the routine's name, and its icon when it has one. The browser
-# is also a caller that opens a routine's settings, so its Forward is driven here.
+# browser.test.be — the routine_keys list is the browser's, so it carries every registration, and the
+# rows carry what each registration gave: the routine's key, and its icon when it has one. The
+# browser is also a caller that opens a routine's settings, so its Forward is driven here.
 
 suite = "browser"
 
 def every_registration_is_listed()
-  var names = routines.names()
+  var routine_keys = routines.keys()
   var rows = routines.rows()
-  assert_eq(rows.size(), names.size(), "the browser has a row for every routine")
+  assert_eq(rows.size(), routine_keys.size(), "the browser has a row for every routine")
   var i = 0
-  while i < names.size()
-    assert_eq(rows[i][1], routines.title(names[i]), "the browser's row " + str(i) + " does not carry the routine's title")
-    if routines.icon(names[i]) != nil
-      assert_eq(rows[i][0], routines.icon(names[i]), "the row does not carry the routine's icon")
+  while i < routine_keys.size()
+    assert_eq(rows[i][1], routines.title(routine_keys[i]), "the browser's row " + str(i) + " does not carry the routine's title")
+    if routines.icon(routine_keys[i]) != nil
+      assert_eq(rows[i][0], routines.icon(routine_keys[i]), "the row does not carry the routine's icon")
     end
     i += 1
   end
@@ -21,14 +21,14 @@ end
 test("every registration is listed with its icon", every_registration_is_listed)
 
 def shipped_routines_are_listed()
-  for name : ["interval", "ramped_interval", "ramped_static"]
+  for routine_key : ["interval", "ramped_interval", "ramped_static"]
     var found = false
-    for listed : routines.names()
-      if listed == name
+    for listed : routines.keys()
+      if listed == routine_key
         found = true
       end
     end
-    assert_true(found, "routines.names() is missing " + name)
+    assert_true(found, "routines.keys() is missing " + routine_key)
   end
 end
 
@@ -42,8 +42,8 @@ def forward_edits_the_selected_routines_settings()
 
   var at = -1
   var i = 0
-  while i < browserScene.names.size()
-    if browserScene.names[i] == "ramped_static"
+  while i < browserScene.routine_keys.size()
+    if browserScene.routine_keys[i] == "ramped_static"
       at = i
     end
     i += 1

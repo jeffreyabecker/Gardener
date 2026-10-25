@@ -1,31 +1,32 @@
 # registry.be — the registry of user routines: the list the browser draws, each routine's factory,
 # the class that declares its settings, and the way into each routine's scene.
 #
-# A routine file's top level calls routines.register(name, title, icon, factory, settings) and a
-# RoutineRegistration joins this Berry list; nothing native holds it. The factory is the routine's
-# scene class, and the
+# A routine file's top level calls routines.register(routine_key, title, icon, factory, settings) and
+# a RoutineRegistration joins this Berry list; nothing native holds it. The key is the routine's
+# identity: the registration it is found by and the document its values are kept in. The factory is
+# the routine's scene class, and the
 # registry builds the scene when the routine is pushed, so a page starts from its own init() every
 # time and nothing a previous visit left behind survives; the scene that is showing is ux.top(). The
 # settings are a class the routine writes itself, holding the values it edits and any rule that
 # binds two of them, so those live with the routine rather than in the page; it is asked through its
 # class and is never built, because the list it describes is opened by whoever wants to edit it.
 #
-# The browser reads names()/rows() and pushes a routine with push(name, callback[, settings]). The
-# settings, when the caller has none, are built by load(): every value the routine registers, read
-# from its file, held to its kind and repaired by the routine's own rule. So a scene is built from
-# one clean map and initialization is the only activation. The device's own scenes — the readout,
-# system and browser — are not registered here: they are well-known scenes the system pushes
-# directly.
+# The browser reads keys()/rows() and pushes a routine with push(routine_key, callback[, settings]).
+# The settings, when the caller has none, are built by load(): every value the routine registers,
+# read from its file, held to its kind and repaired by the routine's own rule. So a scene is built
+# from one clean map and initialization is the only activation. The device's own scenes — the
+# readout, system and browser — are not registered here: they are well-known scenes the system
+# pushes directly.
 
 import string
 
-# One routine's registration: the name it is known by, the label and icon the browser draws, the
+# One routine's registration: the key it is known by, the label and icon the browser draws, the
 # class the registry builds its scene from, and the class that declares its settings.
 class RoutineRegistration
-  var name, title, icon, factory, settings
+  var routine_key, title, icon, factory, settings
 
-  def init(name, title, icon, factory, settings)
-    self.name = name
+  def init(routine_key, title, icon, factory, settings)
+    self.routine_key = routine_key
     self.title = title
     self.icon = icon
     self.factory = factory
@@ -40,33 +41,33 @@ class RoutineRegistry
     self.entries = []
   end
 
-  def register(name, title, icon, factory, settings)
-    # The name is also the file store reads and writes, so it has to be a plain word. The title is
-    # the label the browser draws; a missing one falls back to the name.
-    if name == nil || string.find(name, "/") >= 0 || string.find(name, "\\") >= 0
-      vacuum.log("registry: routine name must be a plain word")
+  def register(routine_key, title, icon, factory, settings)
+    # The key is also the file store reads and writes, so it has to be a plain word. The title is
+    # the label the browser draws; a missing one falls back to the key.
+    if routine_key == nil || string.find(routine_key, "/") >= 0 || string.find(routine_key, "\\") >= 0
+      vacuum.log("registry: routine key must be a plain word")
       return false
     end
     if title == nil
-      title = name
+      title = routine_key
     end
     if factory == nil
       vacuum.log("registry: routine must name its scene class")
       return false
     end
     if settings != nil && type(settings) != "class"
-      vacuum.log("registry: " + name + " settings must be a class")
+      vacuum.log("registry: " + routine_key + " settings must be a class")
       return false
     end
-    self.entries.push(RoutineRegistration(name, title, icon, factory, settings))
+    self.entries.push(RoutineRegistration(routine_key, title, icon, factory, settings))
     return true
   end
 
-  # The browser's list: every registered name.
-  def names()
+  # The browser's list: every registered key, in registration order.
+  def keys()
     var out = []
     for e : self.entries
-      out.push(e.name)
+      out.push(e.routine_key)
     end
     return out
   end
@@ -74,15 +75,15 @@ class RoutineRegistry
   # The settings a routine can edit, as the class it registered declares them, in the order the list
   # shows them; nil when it has none. A setting whose kind cannot work is left out, with one line
   # saying why, because no value scene could edit it.
-  def settings(name)
-    var e = self.entry(name)
+  def settings(routine_key)
+    var e = self.entry(routine_key)
     if e == nil || e.settings == nil
       return nil
     end
     var out = []
     for item : e.settings.settings()
       if item.problem != nil
-        vacuum.log("settings: " + name + " " + item.key + ": " + item.problem)
+        vacuum.log("settings: " + routine_key + " " + item.key + ": " + item.problem)
       else
         out.push(item)
       end
@@ -94,29 +95,29 @@ class RoutineRegistry
   # from their default are put back to them in the order the list shows them, each replacing the
   # value in `values`. The reason that was applied is returned for the list to draw, or nil when the
   # set was already valid. Nothing here touches a file: the caller decides what to write.
-  def repair(name, items, values)
-    var reason = self.problem(name, items, values)
+  def repair(routine_key, items, values)
+    var reason = self.problem(routine_key, items, values)
     if reason == nil
       return nil
     end
-    vacuum.log("settings: " + name + ": " + reason)
+    vacuum.log("settings: " + routine_key + ": " + reason)
     var i = 0
     while i < items.size()
       if values[i] != items[i].default_value
         values[i] = items[i].default_value
-        if self.problem(name, items, values) == nil
+        if self.problem(routine_key, items, values) == nil
           return reason
         end
       end
       i += 1
     end
-    vacuum.log("settings: " + name + ": " + reason + " even at the defaults")
+    vacuum.log("settings: " + routine_key + ": " + reason + " even at the defaults")
     return reason
   end
 
   # The rule's verdict on the values held beside their settings, or nil when it accepts them.
-  def problem(name, items, values)
-    var e = self.entry(name)
+  def problem(routine_key, items, values)
+    var e = self.entry(routine_key)
     if e == nil || e.settings == nil
       return nil
     end
@@ -129,17 +130,17 @@ class RoutineRegistry
     return e.settings.problem(out)
   end
 
-  def icon(name)
-    var e = self.entry(name)
+  def icon(routine_key)
+    var e = self.entry(routine_key)
     if e == nil
       return nil
     end
     return e.icon
   end
 
-  # The label the browser draws for a routine; the name is the identity.
-  def title(name)
-    var e = self.entry(name)
+  # The label the browser draws for a routine; the key is the identity.
+  def title(routine_key)
+    var e = self.entry(routine_key)
     if e == nil
       return nil
     end
@@ -159,17 +160,17 @@ class RoutineRegistry
   # own file and held to its kind, then repaired by the routine's rule so the set is one a run
   # accepts. A routine with no settings begins with an empty map. This is the only place the
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
-  def load(name)
-    var items = self.settings(name)
+  def load(routine_key)
+    var items = self.settings(routine_key)
     var out = {}
     if items == nil
       return out
     end
     var values = []
     for item : items
-      values.push(item.read(name))
+      values.push(item.read(routine_key))
     end
-    self.repair(name, items, values)
+    self.repair(routine_key, items, values)
     var i = 0
     while i < items.size()
       out[items[i].key] = values[i]
@@ -181,20 +182,20 @@ class RoutineRegistry
   # Push a registered routine's scene, built through its factory. The callback, when there is one,
   # receives the value the scene returns when it pops. `settings` is the map the scene's init() is
   # given; a nil one is the routine's own file, loaded and made clean here.
-  def push(name, callback, settings)
-    var e = self.entry(name)
+  def push(routine_key, callback, settings)
+    var e = self.entry(routine_key)
     if e == nil
       return false
     end
     if settings == nil
-      settings = self.load(name)
+      settings = self.load(routine_key)
     end
     return ux.push(e.factory(settings), nil, callback)
   end
 
-  def entry(name)
+  def entry(routine_key)
     for e : self.entries
-      if e.name == name
+      if e.routine_key == routine_key
         return e
       end
     end

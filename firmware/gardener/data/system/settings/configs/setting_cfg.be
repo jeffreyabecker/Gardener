@@ -24,11 +24,11 @@ class SettingCfg
   # The setting's value from the routine's file, held to the kind. A nullable setting that holds
   # nothing reads as nil whatever its default says. The store answers the file's text for a key it
   # holds and nil for one it does not, and the kind parses that text.
-  def read(name)
+  def read(routine_key)
     if self.problem != nil
       return self.default_value
     end
-    var raw = store.get(name, self.key, nil)
+    var raw = store.get(routine_key, self.key, nil)
     if raw == nil || raw == ""
       return self.value(nil)
     end

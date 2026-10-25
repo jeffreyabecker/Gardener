@@ -45,7 +45,7 @@ class RampedStaticChrome : Layout
 end
 
 class RampedStatic : Scene
-  var routine
+  var routine_key
   var phase
   var mark
   var held
@@ -62,14 +62,14 @@ class RampedStatic : Scene
 
   def init(settings)
     super(self).init()
-    self.routine = "ramped_static"
+    self.routine_key = "ramped_static"
     self.phase = "ready"
     self.mark = 0
     self.held = 0
     self.target = 0.0
     self.command_at = 0
     self.command_target = 0.0
-    self.chrome = RampedStaticChrome(routines.title(self.routine))
+    self.chrome = RampedStaticChrome(routines.title(self.routine_key))
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -280,23 +280,20 @@ class RampedStatic : Scene
   # over from the approach when the settings scene closes, so it must not keep working at the old
   # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
+    edit_settings(self.routine_key, / items, v -> self.settings_closed(items, v))
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
   end
 
+  # The set the list settled on is written, and the edit was to the file, so the file is the source
+  # again even if this page was built from a set of its own. The profile is built once from the
+  # settings a run begins with, so a run starts over at the new values; a ready page only takes the
+  # new start pressure.
   def settings_closed(items, values)
-    save_settings(self.routine, items, values)
-    self.on_editor_closed()
-  end
-
-  # The edit was to the file, so the file is the source again even if this page was built from a set
-  # of its own. The profile is built once from the settings a run begins with, so a run starts over
-  # at the new values; a ready page only takes the new start pressure.
-  def on_editor_closed()
-    self.read_settings(routines.load(self.routine))
+    save_settings(self.routine_key, items, values)
+    self.read_settings(routines.load(self.routine_key))
     if self.phase == "ready"
       self.target = self.start_pressure
       vacuum.target(self.start_pressure)

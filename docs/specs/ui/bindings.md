@@ -348,18 +348,18 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(name, title, icon, factory, settings)` | `bool` | bind a name to the label the browser draws, the scene class that draws it and the class that declares its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the name; `icon` is an `Icon` instance or `nil`; `settings` is a class answering static `settings()` and `problem(values)`, or `nil` when the routine has nothing to edit |
-| `routines.names()` | list of strings | every registered name, in registration order |
-| `routines.title(name)` | string, or `nil` | the label the browser draws for the routine |
-| `routines.settings(name)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
-| `routines.repair(name, items, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
-| `routines.problem(name, items, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
-| `routines.icon(name)` | the icon object, or `nil` | what the file passed as its icon |
-| `routines.load(name)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. A routine with no settings is an empty map |
-| `routines.push(name, callback[, settings])` | `bool` | build the routine's scene from its class, handing `settings` to its `init()`, and push it, handing the returned value to the callback. A `nil` settings map is `routines.load(name)` |
+| `routines.register(routine_key, title, icon, factory, settings)` | `bool` | bind a routine key to the label the browser draws, the scene class that draws it and the class that declares its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the key; `icon` is an `Icon` instance or `nil`; `settings` is a class answering static `settings()` and `problem(values)`, or `nil` when the routine has nothing to edit |
+| `routines.keys()` | list of strings | every registered routine key, in registration order |
+| `routines.title(routine_key)` | string, or `nil` | the label the browser draws for the routine |
+| `routines.settings(routine_key)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
+| `routines.repair(routine_key, items, values)` | string, or `nil` | apply the routine's rule to the values held beside their settings, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
+| `routines.problem(routine_key, items, values)` | string, or `nil` | the rule's verdict on the same pair of lists, applying nothing |
+| `routines.icon(routine_key)` | the icon object, or `nil` | what the file passed as its icon |
+| `routines.load(routine_key)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. A routine with no settings is an empty map |
+| `routines.push(routine_key, callback[, settings])` | `bool` | build the routine's scene from its class, handing `settings` to its `init()`, and push it, handing the returned value to the callback. A `nil` settings map is `routines.load(routine_key)` |
 
-Registering the same name twice is one routine: the later file wins. The title is what the browser
-shows, and a routine without one shows its name; an icon is optional too, and a routine without one,
+Registering the same key twice is one routine: the later file wins. The title is what the browser
+shows, and a routine without one shows its key; an icon is optional too, and a routine without one,
 or one whose icon is `nil`, is a text-only row. The device's own scenes — the readout and the system
 settings in `/modules/ui.be`, the browser in `/modules/browser.be` — are not registered at all; they
 are well-known scenes the system pushes directly. There is no fixed number of routines: the registry is a Berry list, so

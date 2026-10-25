@@ -24,11 +24,11 @@ registers an object and is done:
 import string
 
 class MyPage : Scene
-  var routine
+  var routine_key
 
   def init(settings)
     super(self).init()
-    self.routine = "mypage"
+    self.routine_key = "mypage"
     # settings is the map the registry made clean: one value per setting the routine registers
   end
 end
@@ -37,12 +37,12 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 return MyPage
 ```
 
-A routine carries its own name in the `routine` field it sets in `init()`: it is what the store
-file is called, and it is the name its settings are read and written under, so the class that owns
-the name writes it once.
+A routine carries its own **routine key** in the `routine_key` field it sets in `init()`: the key is
+its identity, it is what the store file is called, and it is what its settings are read and written
+under, so the class that owns the key writes it once.
 
 The second argument is the routine's **title**: the label the browser draws for its row. It is not
-the identity — the name still is — so it may contain spaces and capital letters.
+the identity — the routine key still is — so it may contain spaces and capital letters.
 
 The third argument is the routine's **icon**: an instance of a class extending `Icon` from
 `/system/components/icon.be`, which draws itself with the `screen` primitives and has an intrinsic
@@ -53,9 +53,10 @@ The fourth argument is the routine's **class**, not an instance: the registry bu
 every time the routine is pushed, so each visit starts from `init()` and nothing a previous visit
 left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
-dispatch; a routine extends `Scene`, carries its own name in the `routine` field, and defines
-`init(settings)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
-method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
+dispatch; a routine extends `Scene`, carries its own routine key in the `routine_key` field, and
+defines `init(settings)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is
+missing a method the stack calls raises when it is pushed or polled, which drops the stack and shows
+the mark.
 
 The fifth argument is the routine's **settings declaration** — the class that describes the values it
 edits and any rule that binds them, or `nil` when it has none. It is asked through the class and
@@ -78,8 +79,8 @@ system settings and the browser — are not registered at all: they are well-kno
 The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
 
-A routine's name is also the name of the file its values are kept in (see `store` in
-[bindings.md](./bindings.md)), so it has to be a plain word: a name containing `/` or `\` is
+A routine's key is also the name of the file its values are kept in (see `store` in
+[bindings.md](./bindings.md)), so it has to be a plain word: a key containing `/` or `\` is
 refused at load.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
@@ -106,9 +107,9 @@ so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` 
 firmware calling `reset`, `enter` and `poll` on it. `/system/scene.be` is
 `Scene` — the gesture drain, the repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
-builds — name, title, icon, factory and settings class — and `class RoutineRegistry` with the global
-`routines` instance — the list the browser draws, the `load(name)` that builds a routine's clean
-settings map, and the `push(name, callback)` that opens a routine.
+builds — routine key, title, icon, factory and settings class — and `class RoutineRegistry` with the
+global `routines` instance — the list the browser draws, the `load(routine_key)` that builds a
+routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu.
 
 `/system/components/` is the drawing primitives a readout composes, one class per file:
@@ -131,20 +132,21 @@ keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choi
 `bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
 `pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
 of the same name. **`up:double`** is the standard gesture for opening the list; the page's own
-gesture calls `edit_settings(self.routine, ...)`, which reads the values, applies the rule, pushes
+gesture calls `edit_settings(self.routine_key, ...)`, which reads the values, applies the rule, pushes
 the list and, through the page's `settings_closed`, writes what it settles on:
 
 ```berry
 def edit()
-  edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
+  edit_settings(self.routine_key, / items, v -> self.settings_closed(items, v))
   return true
 end
 ```
 
 Nothing in the settings folder writes on its own: `SettingsScene` edits the values it was handed and
 pops them on `back:single`, and the caller applies the rule and writes them. That caller's half is
-`edit_settings(name, on_closed)` and `save_settings(name, items, values)` in the same file, so the
-page and the browser open a routine's list the same way instead of each carrying its own copy.
+`edit_settings(routine_key, on_closed)` and `save_settings(routine_key, items, values)` in the same
+file, so the page and the browser open a routine's list the same way instead of each carrying its own
+copy.
 
 `/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
 native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
@@ -156,7 +158,7 @@ call list are in [bindings.md](./bindings.md#jingles--the-note-library).
 
 Every file under `/modules/` ending in `.be` is loaded after the system and before any file under
 `/routines/`. A module file defines classes or functions and registers nothing: it has no page, no
-store file and no entry in `routines.names()`. It is not an `import` target either — `import`
+store file and no entry in `routines.keys()`. It is not an `import` target either — `import`
 reaches only the native modules such as `string` — its classes are simply globals by the time the
 pages run.
 
@@ -317,8 +319,8 @@ identifier and show a name; a plain value is its own title.
 The setting is the whole of what its value is: the rules its kind needs, and the value scene that
 edits it. It answers four questions:
 
-- `read(name)` — the stored value from the file it is given, held to the kind, or the default when
-  nothing is stored.
+- `read(routine_key)` — the stored value from the file it is given, held to the kind, or the default
+  when nothing is stored.
 - `value(raw)` — a raw value held to the same rules, which is what a value read from a file or
   carried in a map ends up as.
 - `text(value)` — the value as the list shows it.
@@ -328,8 +330,8 @@ The store hands a value back as the text the file holds, so the kind parses it: 
 through `int()`, a real or a pressure through `real()`, a bool from `true`/`1`, a choice from its own
 list.
 
-Which file a value belongs to is the caller's: the setting reads the name it is handed, and the
-caller writes what the list settles on.
+Which file a value belongs to is the caller's: the setting reads the routine key it is handed, and
+the caller writes what the list settles on.
 
 A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
 clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
@@ -375,9 +377,9 @@ rule is put back when the list closes, and a page is never initialized with a se
 
 ### Reading them
 
-A page does not read its file at all: the registry's `load(name)` reads every setting it registers,
-holds each to its kind and repairs the set, and the page's `init(settings)` is handed the result as a
-map keyed by setting key. A value is read from it directly:
+A page does not read its file at all: the registry's `load(routine_key)` reads every setting it
+registers, holds each to its kind and repairs the set, and the page's `init(settings)` is handed the
+result as a map keyed by setting key. A value is read from it directly:
 
 ```berry
 def read_settings(settings)

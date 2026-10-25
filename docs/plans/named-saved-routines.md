@@ -79,9 +79,9 @@ written without `routine_name` lists and does not open; a newly created config i
 
 ### 3. A page knows which saved routine it is
 
-Today one word does two jobs. A page holds the name it registered under in its `routine` field
-(`self.routine = "interval"`), and `routines.load(name)` uses that same word as the registration key
-its settings schema is found by and as the store document its values are read from.
+Today one word does two jobs. A page holds the key it registered under in its `routine_key` field
+(`self.routine_key = "interval"`), and `routines.load(routine_key)` uses that same word as the
+registration key its settings schema is found by and as the store document its values are read from.
 
 Instead a page carries two things: the **definition** it extends, which supplies the settings schema
 (`routines.settings(definition)`), and the **saved document**, which is the config's filename stem
@@ -97,7 +97,7 @@ editing one never moves the other; a bare push of `interval` still reads and wri
 
 ### 4. The browser lists saved routines by title
 
-Today `BrowserScene.activate()` in `/modules/ui.be` sets `self.names = routines.names()` and
+Today `BrowserScene.activate()` in `/modules/ui.be` sets `self.routine_keys = routines.keys()` and
 `rows()` returns `routines.rows()`, so the list is the set of definitions this build ships.
 
 Instead the list is the set of configs in `/routines/`, re-read on every `activate()` so a config
@@ -151,7 +151,7 @@ newline and no leading `=`, so the editor cannot produce a title that would corr
 
 - `docs/specs/ui/routine.md`: where a definition lives, the config, its title and `routine_name`,
   the generated filename, and how a page is told its document.
-- `docs/specs/ui/bindings.md`: `routines.names()` enumerates definitions; the saved-routine list and
+- `docs/specs/ui/bindings.md`: `routines.keys()` enumerates definitions; the saved-routine list and
   the reserved keys are a new surface; `store` addresses a config's filename stem.
 - `docs/specs/ui/scenes.md`: the browser's rows change meaning, and the picker and title-entry scenes
   join the map.
@@ -162,7 +162,7 @@ newline and no leading `=`, so the editor cannot produce a title that would corr
 - `tools/berry/tests/browser.test.be`: its premise — rows are `routines.rows()` — no longer holds.
   It becomes: definitions are enumerated by the registry, saved routines are listed by title with
   their definition's icon, and a config naming an unknown definition is listed but refuses to open.
-- `tools/berry/driver.be` keeps driving `routines.names()` — definitions still exist — so the smoke
+- `tools/berry/driver.be` keeps driving `routines.keys()` — definitions still exist — so the smoke
   walk is unchanged, and a drive of a definition with a shipped config writes that config.
 
 ## Deferred

@@ -113,27 +113,27 @@ end
 # The two halves of opening a list, for the caller that is not a page: the browser opens any
 # routine's rows. The list edits and pops the values; these read them from the routine's document
 # and write back only a set the routine's rule accepts.
-def edit_settings(name, on_closed)
-  var items = routines.settings(name)
+def edit_settings(routine_key, on_closed)
+  var items = routines.settings(routine_key)
   if items == nil || items.size() == 0
-    vacuum.log("settings: " + name + " has none")
+    vacuum.log("settings: " + routine_key + " has none")
     return false
   end
   var values = []
   for item : items
-    values.push(item.read(name))
+    values.push(item.read(routine_key))
   end
-  var message = routines.repair(name, items, values)
+  var message = routines.repair(routine_key, items, values)
   ux.push(SettingsScene(items, values, message), nil, / v -> on_closed(items, v))
   return true
 end
 
 # A value the list holds nothing for is written as nothing, which reads back as nil.
-def save_settings(name, items, values)
-  routines.repair(name, items, values)
+def save_settings(routine_key, items, values)
+  routines.repair(routine_key, items, values)
   var i = 0
   while i < items.size()
-    store.set(name, items[i].key, values[i] == nil ? "" : values[i])
+    store.set(routine_key, items[i].key, values[i] == nil ? "" : values[i])
     i += 1
   end
 end

@@ -10,13 +10,13 @@
 # with its own map instead of the one its file makes.
 
 class BrowserScene : Scene
-  var names
+  var routine_keys
   var list
   var scrollbar
 
   def init()
     super(self).init()
-    self.names = []
+    self.routine_keys = []
     self.list = List(6)
     self.scrollbar = Scrollbar(Position(110, 2), Size(2, 48))
     self.list.scrollbar = self.scrollbar
@@ -35,7 +35,7 @@ class BrowserScene : Scene
     vacuum.stop()
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.
-    self.names = routines.names()
+    self.routine_keys = routines.keys()
     self.list.set(self.rows())
     self.draw()
   end
@@ -51,26 +51,26 @@ class BrowserScene : Scene
   # The row's routine launched as its file describes it: the registry reads the file into one clean
   # settings map and builds the scene from it.
   def choose()
-    var count = self.names.size()
+    var count = self.routine_keys.size()
     if count == 0
       return false
     end
-    return routines.push(self.names[self.list.selected], nil)
+    return routines.push(self.routine_keys[self.list.selected], nil)
   end
 
   # Open the selected routine's settings. The browser reads the values and writes what the list
   # settles on, the way the routine's own page does; the list only edits them.
   def open_selected()
-    var count = self.names.size()
+    var count = self.routine_keys.size()
     if count == 0
       return false
     end
-    var name = self.names[self.list.selected]
-    return edit_settings(name, / items, v -> self.settings_closed(name, items, v))
+    var routine_key = self.routine_keys[self.list.selected]
+    return edit_settings(routine_key, / items, v -> self.settings_closed(routine_key, items, v))
   end
 
-  def settings_closed(name, items, values)
-    save_settings(name, items, values)
+  def settings_closed(routine_key, items, values)
+    save_settings(routine_key, items, values)
     self.draw()
   end
 
@@ -80,7 +80,7 @@ class BrowserScene : Scene
   end
 
   def draw_page()
-    if self.names.size() == 0
+    if self.routine_keys.size() == 0
       return
     end
     self.list.draw(0, 2)

@@ -8,17 +8,17 @@
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
 # registered, so each switch starts a fresh page; the settings map, when there is one, is the map its
 # init() is handed, and nil means the map the routine's own file makes.
-def harness_activate(name, settings)
+def harness_activate(routine_key, settings)
   ux.pop_to_root()
   # A routine is launched from the browser, and the browser vents first; a direct push models the
   # same path, so a test never starts a routine against a chamber the readout left pressurised.
   vacuum.stop()
-  return routines.push(name, nil, settings)
+  return routines.push(routine_key, nil, settings)
 end
 
-def harness_registered(name)
-  for listed : routines.names()
-    if listed == name
+def harness_registered(routine_key)
+  for listed : routines.keys()
+    if listed == routine_key
       return true
     end
   end
@@ -27,39 +27,39 @@ end
 
 # The map a switch carries is the routine's own settings, read from its file and made clean the way
 # the registry makes them, so init(settings) takes the same path as a real switch.
-def harness_settings_map(name)
-  var described = routines.settings(name)
+def harness_settings_map(routine_key)
+  var described = routines.settings(routine_key)
   if described == nil
     return nil
   end
   if !isinstance(described, list)
-    harness_fail("settings: " + name + " settings are not a list")
+    harness_fail("settings: " + routine_key + " settings are not a list")
     return nil
   end
-  return routines.load(name)
+  return routines.load(routine_key)
 end
 
 # A committed value the driver writes, exactly as the routine that owns the settings would.
-def harness_editor_wrote(name, key, value)
-  store.set(name, key, value == nil ? "" : value)
+def harness_editor_wrote(routine_key, key, value)
+  store.set(routine_key, key, value == nil ? "" : value)
 end
 
 # A settled set the driver writes, which is the caller's half of the list: apply the routine's rule,
 # then write every value.
-def harness_editor_settled(name, items, values)
-  routines.repair(name, items, values)
+def harness_editor_settled(routine_key, items, values)
+  routines.repair(routine_key, items, values)
   var i = 0
   while i < items.size()
-    harness_editor_wrote(name, items[i].key, values[i])
+    harness_editor_wrote(routine_key, items[i].key, values[i])
     i += 1
   end
 end
 
 # The settings view is the one path every routine with settings shares: open it the way a caller
 # does, edit every value, and make sure the set it settles on reaches the file.
-def harness_editor(name)
-  var label = "settings: " + name
-  var described = routines.settings(name)
+def harness_editor(routine_key)
+  var label = "settings: " + routine_key
+  var described = routines.settings(routine_key)
   if described == nil || described.size() == 0
     return
   end
@@ -70,14 +70,14 @@ def harness_editor(name)
     end
   end
 
-  harness_activate(name, nil)
+  harness_activate(routine_key, nil)
   var values = []
   for item : described
-    values.push(item.read(name))
+    values.push(item.read(routine_key))
   end
-  routines.repair(name, described, values)
+  routines.repair(routine_key, described, values)
   ux.push(SettingsScene(described, values, nil), nil,
-          / v -> harness_editor_settled(name, described, v))
+          / v -> harness_editor_settled(routine_key, described, v))
 
   var i = 0
   while i < described.size()
@@ -104,7 +104,7 @@ def harness_editor(name)
   harness.beat(1)
 
   for item : described
-    if !harness.wrote(name, item.key)
+    if !harness.wrote(routine_key, item.key)
       harness_fail(label + " did not write " + str(item.key))
     end
   end
@@ -113,9 +113,9 @@ end
 # One routine's life: activate, a run started by a person, 400 s of virtual time, the device's own
 # stop, every gesture, and a re-entry. The active scene may change under it when a scene pushes
 # another (the browser does), which is the point.
-def harness_run_page(name)
+def harness_run_page(routine_key)
   harness.reset()
-  if !harness_activate(name, nil)
+  if !harness_activate(routine_key, nil)
     return
   end
   if !harness.beat(8)
@@ -160,11 +160,11 @@ def harness_run_page(name)
 
   # A re-entry after a control handover arrives as a fresh page with the machine wherever it was
   # left, and a switch may carry the routine's values as a map.
-  harness_activate(name, nil)
+  harness_activate(routine_key, nil)
   harness.beat(4)
-  var settings = harness_settings_map(name)
+  var settings = harness_settings_map(routine_key)
   if settings != nil
-    harness_activate(name, settings)
+    harness_activate(routine_key, settings)
     harness.beat(8)
   end
 end
@@ -174,14 +174,14 @@ end
 # and runs that much virtual time first, so a cycle can be caught mid-phase. A set count overrides
 # the routine's own before it is activated, which is how a preview shows a run long enough to fill
 # the bubbles; zero leaves the file's value alone.
-def harness_art(name, seconds, path, sets)
-  if !harness_registered(name)
-    harness_fail("art: no routine named " + name)
+def harness_art(routine_key, seconds, path, sets)
+  if !harness_registered(routine_key)
+    harness_fail("art: no routine " + routine_key)
     return false
   end
   harness.reset()
-  if sets > 0 && store.get(name, "set_count", nil) != nil
-    store.set(name, "set_count", sets)
+  if sets > 0 && store.get(routine_key, "set_count", nil) != nil
+    store.set(routine_key, "set_count", sets)
   end
 
   var gif = harness.is_gif(path)
@@ -189,7 +189,7 @@ def harness_art(name, seconds, path, sets)
     harness.capture_start(path)
   end
 
-  if !harness_activate(name, nil)
+  if !harness_activate(routine_key, nil)
     if gif
       harness.capture_finish()
     end
@@ -219,7 +219,7 @@ def harness_art(name, seconds, path, sets)
   else
     return false
   end
-  harness_note("art: " + name + " saved to " + path)
+  harness_note("art: " + routine_key + " saved to " + path)
   return harnessErrors == 0
 end
 
@@ -353,14 +353,14 @@ def harness_check()
     harness_fail("vm: no root scene showing")
   end
 
-  for name : routines.names()
+  for routine_key : routines.keys()
     try
-      harness_editor(name)
-      harness_run_page(name)
+      harness_editor(routine_key)
+      harness_run_page(routine_key)
     except .. as e, m
-      harness_fail("vm: " + name + " check: " + e + ": " + m)
+      harness_fail("vm: " + routine_key + " check: " + e + ": " + m)
     end
   end
-  harness_note("checked " + str(routines.names().size()) + " routines")
+  harness_note("checked " + str(routines.keys().size()) + " routines")
   return harnessErrors == 0
 end

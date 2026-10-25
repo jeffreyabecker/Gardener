@@ -2,7 +2,7 @@
 
 Three routine pages run a state machine and none of them declares one. `interval`, `ramped_interval`
 and `ramped_static` each keep a `phase` string and move it from `advance()`, `ok()`, `pause()`,
-`edit()` and `on_editor_closed()`. They share a vocabulary — `ready`, `waiting`, `paused`,
+`edit()` and `settings_closed()`. They share a vocabulary — `ready`, `waiting`, `paused`,
 `approach`, `work`, `run`, `rest_approach`, `rest` — but each page re-derives which of those it is
 in, and which of them mean "running", in its own methods. Roughly thirty `self.phase` mentions per
 page, and about ten methods per page consult it.

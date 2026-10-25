@@ -85,7 +85,7 @@ class RampedIntervalChrome : Layout
 end
 
 class RampedInterval : Scene
-  var routine
+  var routine_key
   var phase
   var mark
   var set
@@ -103,7 +103,10 @@ class RampedInterval : Scene
 
   def init(settings)
     super(self).init()
-    self.routine = self.name()
+    # A subclass sets its own key before it delegates here; this class's key is the fallback.
+    if self.routine_key == nil
+      self.routine_key = "ramped_interval"
+    end
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
@@ -113,7 +116,7 @@ class RampedInterval : Scene
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation. The values come first: the chrome lays out one bubble per set.
     self.read_settings(settings)
-    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine), self.count)
+    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.count)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -125,11 +128,6 @@ class RampedInterval : Scene
     self.target = self.initial
     vacuum.target(self.target)
     self.draw()
-  end
-
-  # The name the page registered under, which is also the document its values are kept in.
-  def name()
-    return "ramped_interval"
   end
 
   # The glyph the page draws in its chrome, the same one its registration carries.
@@ -202,13 +200,13 @@ class RampedInterval : Scene
     end
     vacuum.stop()
     self.phase = IntervalPhase.PAUSED
-    vacuum.log(self.routine + ": paused")
+    vacuum.log(self.routine_key + ": paused")
     return true
   end
 
   def leave()
     vacuum.stop()
-    vacuum.log(self.routine + ": left")
+    vacuum.log(self.routine_key + ": left")
     ux.pop(nil)
     return true
   end
@@ -217,11 +215,11 @@ class RampedInterval : Scene
   # is pinned to the final pressure, so the ramp always ends where it was asked to.
   def target_list()
     if self.count > 1 && self.step <= 0.0
-      vacuum.log(self.routine + ": no step")
+      vacuum.log(self.routine_key + ": no step")
       return nil
     end
     if self.count > 1 && self.final < self.initial
-      vacuum.log(self.routine + ": final below start")
+      vacuum.log(self.routine_key + ": final below start")
       return nil
     end
     var out = []
@@ -250,7 +248,7 @@ class RampedInterval : Scene
       return true
     end
     if !vacuum.start()
-      vacuum.log(self.routine + ": start refused")
+      vacuum.log(self.routine_key + ": start refused")
       self.phase = IntervalPhase.READY
       return false
     end
@@ -334,7 +332,7 @@ class RampedInterval : Scene
   def finish()
     vacuum.target_off()
     self.phase = IntervalPhase.READY
-    vacuum.log(self.routine + ": complete")
+    vacuum.log(self.routine_key + ": complete")
     jingles.play_current()
     ux.pop_to_root()
   end
@@ -347,7 +345,7 @@ class RampedInterval : Scene
     self.set = 0
     self.target = self.initial
     vacuum.target(self.initial)
-    vacuum.log(self.routine + ": cycle stopped")
+    vacuum.log(self.routine_key + ": cycle stopped")
   end
 
   # poll calls tick(now) every beat, after the press drain.
@@ -361,23 +359,20 @@ class RampedInterval : Scene
   # over at the first set when the settings scene closes, so it must not keep working at the old
   # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
+    edit_settings(self.routine_key, / items, v -> self.settings_closed(items, v))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
     end
     return true
   end
 
+  # The set the list settled on is written, and the edit was to the file, so the file is the source
+  # again even if this page was built from a set of its own. A run under way starts over at the first
+  # set, because the ladder is computed once from the settings a run begins with; a ready page only
+  # takes the new start pressure.
   def settings_closed(items, values)
-    save_settings(self.routine, items, values)
-    self.on_editor_closed()
-  end
-
-  # The edit was to the file, so the file is the source again even if this page was built from a set
-  # of its own. A run under way starts over at the first set, because the ladder is computed once
-  # from the settings a run begins with; a ready page only takes the new start pressure.
-  def on_editor_closed()
-    self.read_settings(routines.load(self.routine))
+    save_settings(self.routine_key, items, values)
+    self.read_settings(routines.load(self.routine_key))
     if self.phase == IntervalPhase.READY
       self.target = self.initial
       vacuum.target(self.initial)
@@ -441,8 +436,9 @@ end
 # The interval cycle: the same machine at one target, repeated for the set count. Its settings name
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
-  def name()
-    return "interval"
+  def init(settings)
+    self.routine_key = "interval"
+    super(self).init(settings)
   end
 
   def icon()
