@@ -101,4 +101,8 @@ class RealScene : ValueScene
     var hint_w = screen.text_bounds(hint, 1).w
     screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
   end
+
+  def hint()
+    return "\x1E/\x1F  OK=SAVE"
+  end
 end

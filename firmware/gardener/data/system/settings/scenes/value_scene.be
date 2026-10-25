@@ -87,17 +87,9 @@ class ValueScene : Scene
   def draw_editor(pos, dim)
   end
 
-  def hint()
-    return "\x1E/\x1F  OK=SAVE"
-  end
-
-  # Each kind overrides these three.
+  # The keys act on the value a kind holds: OK pops it, Up/Down hand it to nudge().
   def value()
     return nil
-  end
-
-  def text()
-    return "--"
   end
 
   def nudge(dir)
