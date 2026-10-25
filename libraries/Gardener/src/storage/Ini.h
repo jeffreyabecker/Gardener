@@ -41,7 +41,11 @@ class Ini {
   // section, when it holds a key, is the empty name.
   void sectionKeys(std::vector<String>& keys) const;
 
- private:
+ protected:
+  // The document's sections in the order they appear, for a subclass that reads its own shape.
+  const std::vector<Section>& sections() const { return sections_; }
+
+ protected:
   // A document is a handful of keys. The limit is the document's contract, not the storage's:
   // `set` refuses a new key past it, and a parse keeps the keys it read first.
   static constexpr uint8_t MaxEntries = 32;

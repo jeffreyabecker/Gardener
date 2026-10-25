@@ -14,20 +14,23 @@ namespace gardener {
 // to overwrite it.
 constexpr const char* ConfigPath = "/settings.ini";
 
-// The Config the panel keeps across a reset: an INI document, with the preferences a subclass
+// The Config the panel keeps across a reset is an INI document, with the preferences a subclass
 // names in one section and any other key carried through a write. A missing document, or a value
 // that will not parse, leaves the default in place rather than refusing to boot.
 //
 // The document is read and written through the store it was given, so this class does not know
 // where the device keeps it beyond the path. A caller names a section and a key; the store knows
 // the file.
-class Config {
+class Config : public Ini {
  public:
   // `store` is where the documents live, or null when the build has none: then nothing is read or
   // written and every value is its fallback.
   explicit Config(Library* store);
 
   virtual ~Config() = default;
+
+  // The inherited string read stays visible beside the typed get below.
+  using Ini::get;
 
   // Reads the device's document, then restores the values its subclass names. False when there was
   // nothing to read, in which case every value keeps its default.
@@ -37,7 +40,7 @@ class Config {
   // `int`.
   template <typename T>
   T get(const char* section, const char* key, T fallback) const {
-    const String stored = ini_.get(section, key, "");
+    const String stored = Ini::get(section, key, "");
     if constexpr (std::is_same<T, String>::value) {
       return stored.isEmpty() ? fallback : stored;
     } else if constexpr (std::is_same<T, bool>::value) {
@@ -68,6 +71,8 @@ class Config {
     String text;
     if constexpr (std::is_same<T, String>::value) {
       text = value;
+    } else if constexpr (std::is_same<T, const char*>::value) {
+      text = value;
     } else if constexpr (std::is_same<T, bool>::value) {
       text = value ? "on" : "off";
     } else if constexpr (std::is_same<T, float>::value) {
@@ -77,18 +82,15 @@ class Config {
     } else {
       return false;
     }
-    if (ini_.get(section, key, "") == text && ini_.has(section, key)) return true;
-    if (!ini_.set(section, key, text)) return false;
+    if (Ini::get(section, key, "") == text && Ini::has(section, key)) return true;
+    if (!Ini::set(section, key, text)) return false;
     return save();
   }
 
-  // The names of the sections that hold at least one key, in the order they appear. The global
-  // section, when it holds a key, is the empty name.
-  void sectionKeys(std::vector<String>& keys) const {
-    ini_.sectionKeys(keys);
-  }
-
  protected:
+  // The document this class reads and writes. A subclass names its own file.
+  virtual const char* documentPath() const { return ConfigPath; }
+
   // Restores the values a subclass names; begin() calls it once the document has been read.
   virtual void load() {}
 
@@ -96,7 +98,6 @@ class Config {
   bool save() const;
 
   Library* store_;
-  Ini ini_;
 };
 
 }  // namespace gardener

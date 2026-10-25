@@ -6,7 +6,7 @@ Config::Config(Library* store) : store_(store) {}
 
 bool Config::save() const {
   if (store_ == nullptr) return false;
-  return store_->write(ConfigPath, ini_.text());
+  return store_->write(documentPath(), text());
 }
 
 // Reading is best effort: a document that is not there or does not parse leaves the defaults in
@@ -15,8 +15,8 @@ bool Config::begin() {
   bool read = false;
   if (store_ != nullptr) {
     String text;
-    if (store_->read(ConfigPath, text)) {
-      ini_.parse(text);
+    if (store_->read(documentPath(), text)) {
+      parse(text);
       read = true;
     }
   }
