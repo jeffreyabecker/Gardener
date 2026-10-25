@@ -128,15 +128,15 @@ class SettingsScene : Scene
     ux.push(scene, nil, / v -> self.value_closed(cfg, v))
   end
 
-  # A committed value replaces the one in the values the caller handed over. A cancel leaves the row
-  # alone, and a commit takes the opening reason with it: it named the set that was opened.
+  # The value an editor handed back replaces the one in the values the caller gave, and a value that
+  # changed takes the opening reason with it: that reason named the set as it was opened, so what
+  # ends it is a change. A cancel hands the row's own value back, so the row and the reason stay as
+  # they were.
   def value_closed(cfg, value)
-    if value == cancelled
-      self.draw()
-      return
+    if self.settings_values[cfg.key] != value
+      self.settings_values[cfg.key] = value
+      self.message = nil
     end
-    self.settings_values[cfg.key] = value
-    self.message = nil
     self.draw()
   end
 end

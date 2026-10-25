@@ -9,7 +9,7 @@ class PressureScene : ValueScene
   var fmt
 
   def init(label, current, step, nullable)
-    super(self).init(label)
+    super(self).init(label, current)
     self.current = current
     self.step = step == nil ? 1.0 : step
     self.nullable = nullable

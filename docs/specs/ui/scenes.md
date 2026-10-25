@@ -73,7 +73,7 @@ What each one answers:
 | `SettingsScene` | `ok:single` | keep the set it was edited to, and close |
 | `ValueScene` | `up:single`, `down:single` | raise or lower the value |
 | `ValueScene` | `ok:single` | close, keeping the value |
-| `ValueScene` | `cancel:single` | close, discarding it |
+| `ValueScene` | `cancel:single` | close, handing back the value it opened with |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | the four `ValueScene` gestures | as `ValueScene` |
 | `ChoiceScene` | any other gesture | offered to the choice that is showing, which answers it when it carries that gesture |
 | `DurationScene` | `forward:single` | advance minutes→seconds|

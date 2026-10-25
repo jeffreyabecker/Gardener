@@ -272,7 +272,7 @@ class RecordingEditor : ValueScene
   var window
 
   def init(label)
-    super(self).init(label)
+    super(self).init(label, nil)
     self.window = nil
   end
 
@@ -374,6 +374,33 @@ def a_scene_opened_over_another_takes_its_box()
 end
 
 test("a scene opened over another takes its box", a_scene_opened_over_another_takes_its_box)
+
+# A cancel is the row as it stands: the editor hands back the value it was opened on, so a row that
+# was stepped and then refused keeps what it held - including nothing, which a nullable setting can
+# hold and commit - and the reason the set was opened with stands.
+def cancelling_a_value_leaves_its_row_alone()
+  var list = SettingsScene([PressureSettingCfg("rest", nil, "Rest", nil, 1, true)],
+                           {"rest": nil}, "MENDED")
+  var depth = ux.depth()
+  assert_true(ux.push(list), "the settings list would not push")
+  harness.beat(1)
+
+  harness.press("forward:single")
+  harness.beat(1)
+  harness.press("up:single")
+  harness.beat(1)
+  harness.press("cancel:single")
+  harness.beat(1)
+
+  assert_nil(list.settings_values["rest"], "a cancelled edit changed the row's value")
+  assert_eq(list.message, "MENDED", "a cancelled edit took the opening reason with it")
+  assert_eq(ux.depth(), depth + 1, "Cancel did not close the value scene")
+
+  ux.pop(nil)
+  harness.beat(1)
+end
+
+test("a cancel leaves its row alone", cancelling_a_value_leaves_its_row_alone)
 
 # Each kind draws itself from that window. A case pushes its editor and beats once, which is the
 # frame the runner captures — the picture to look at. The nil cases are the ones with no value to

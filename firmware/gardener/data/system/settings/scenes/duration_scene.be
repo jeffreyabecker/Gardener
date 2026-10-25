@@ -9,7 +9,7 @@ class DurationScene : ValueScene
   var nullable
 
   def init(label, current, step, min, max, nullable)
-    super(self).init(label)
+    super(self).init(label, current)
     self.current = current
     self.stage = "min"
     self.step = step == nil ? 1 : int(step)

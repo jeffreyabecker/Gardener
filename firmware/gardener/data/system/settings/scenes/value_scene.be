@@ -1,30 +1,25 @@
 # value_scene.be — ValueScene: the modal scene a setting is edited in. It holds the half-made value
-# and pops with it when OK is pressed; Cancel pops `cancelled` rather than nil, because nil is a
-# value a nullable setting can commit and the settings list compares against it.
+# and pops with it when OK is pressed; Cancel hands back the value it was opened with, which leaves
+# the row exactly as it stands, whatever it holds.
 #
 # The base is the frame and the keys: it measures the content a kind answers for and draws a border
 # round it, and the kind draws the whole of that content — its label row, its value and its hint row
 # — in the box it is handed. Nothing about how a value looks is in this file.
 
-# What a value scene pops when Cancel was pressed. A setting whose kind allows nothing cannot use
-# nil to mean both "cleared" and "cancelled", so a cancel needs a value of its own.
-class Cancelled
-end
-
-cancelled = Cancelled()
-
 class ValueScene : Scene
   var label
+  var opened
 
-  def init(label)
+  def init(label, current)
     var box = ux.box()
     super(self).init(box[0], box[1])
     self.label = label
+    self.opened = current
   end
 
   # The scene owns the keys while it is on top: Up/Down changes the value, OK pops with it, Cancel
-  # pops with nil. A scene that pops itself pops from inside its own poll; the runtime defers the
-  # pop until the poll returns, so it is safe to ask for it here.
+  # pops with the value the scene was opened on. A scene that pops itself pops from inside its own
+  # poll; the runtime defers the pop until the poll returns, so it is safe to ask for it here.
   def activate()
     self.draw()
   end
@@ -53,8 +48,11 @@ class ValueScene : Scene
     ux.pop(self.value())
   end
 
+  # Cancel is the row as it stands: the value the editor was opened on goes back, and the list takes
+  # it as it takes any other. A kind that has to do something on the way out - the jingle that was
+  # auditioning goes quiet - overrides this and calls up.
   def cancel()
-    ux.pop(cancelled)
+    ux.pop(self.opened)
   end
 
   # The editor is a framed box no bigger than the content the kind measured: a pixel of paper, a

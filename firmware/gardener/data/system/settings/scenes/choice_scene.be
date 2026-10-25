@@ -9,7 +9,7 @@ class ChoiceScene : ValueScene
   var nullable
 
   def init(label, current, values, nullable)
-    super(self).init(label)
+    super(self).init(label, current)
     self.current = current
     self.values = values
     self.nullable = nullable

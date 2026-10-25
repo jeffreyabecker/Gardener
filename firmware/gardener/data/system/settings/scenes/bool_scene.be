@@ -6,7 +6,7 @@ class BoolScene : ValueScene
   var nullable
 
   def init(label, current, nullable)
-    super(self).init(label)
+    super(self).init(label, current)
     self.current = current
     self.nullable = nullable
   end

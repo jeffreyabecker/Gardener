@@ -129,10 +129,10 @@ readout looks like.
 declaration's list into them. `view.be` is `SettingsView`, the list's own geometry: the row a
 setting is drawn on, the gap under its heading and the window a box holds.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top, frames the content a kind measures, and pops the value it holds; it draws
-nothing itself, so every kind measures and draws the whole of its own content — label row, value and
-hint row — and nothing about a kind's look is inherited) and the value it
-pops on Cancel, `bool_scene.be`, `choice_scene.be`,
+keys while it is on top, frames the content a kind measures, and pops what OK holds or what Cancel
+was opened on; it draws nothing itself, so every kind measures and draws the whole of its own
+content — label row, value and hint row — and nothing about a kind's look is inherited),
+`bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
 key).
@@ -366,8 +366,8 @@ clamped to the bound, a duration is held between `min` and `max`, a pressure goe
 `vacuum.clamp()`, and a choice that is not one of its values reads as the default. A kind that
 cannot work at all — a choice with no values, bounds the wrong way round — says so where it is
 built, logs one line, and leaves its row out of the list. Up/Down steps `real`, `int` and
-`pressure`, toggles `bool`, and cycles `choice`; `ok:single` keeps the value and `cancel:single`
-discards it.
+`pressure`, toggles `bool`, and cycles `choice`; `ok:single` keeps the value the editor holds and
+`cancel:single` hands back the value it opened with, which leaves the row as it stands.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
 default says, and shows `--` in the list. Opening its row hands the scene the stored value, or the
@@ -380,7 +380,8 @@ A `duration` is stored as whole seconds and shown as `2m30s`, `45s` under a minu
 whole minute. `ok:single` opens it in the **minutes** stage, Up/Down moves that by a minute,
 `forward:single` moves on to the **seconds** stage, and Up/Down moves that by `step` seconds
 (default 1); `ok:single` then keeps it, and `back:single` steps back to the minutes stage.
-`cancel:single` discards from either stage. The value is held between `min` and `max`, and never
+`cancel:single` hands back the value the editor opened with, from either stage. The value is held
+between `min` and `max`, and never
 below zero. A nullable duration cleared from the minutes stage advances to the seconds stage still
 `nil`, and the second OK keeps the clear.
 
