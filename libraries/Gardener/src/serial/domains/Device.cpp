@@ -113,7 +113,7 @@ void DeviceDomain::get(Stream& io) {
   io.print(app_.logger().levels());
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
-  io.print(displayUnitInfo(app_.settings().unit()).name);
+  io.print(displayUnitInfo(app_.unit()).name);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -184,7 +184,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.settings().setUnit(unit);
+    app_.setUnit(unit);
 
     io.print("ok unit=");
     io.print(displayUnitInfo(unit).name);

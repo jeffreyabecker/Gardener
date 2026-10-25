@@ -92,7 +92,7 @@ reach), `PUMP_DUTY_MAX_PERCENT` (the duty cap), `CONTROL_DEADBAND_KPA` (the targ
 tolerance) and `VALVE_NORMALLY_OPEN` (the fitted valve's direction). A build sets them with `-D` —
 `scripts/arduino.py --define NAME=VALUE` — and a value that could not work, a flow or volume of
 zero or a duty cap outside 0–100, is a compile error rather than a strange boot. None of them is
-read from `/settings.cfg` or written over a link: they describe the rig rather than a preference a
+read from `/settings.ini` or written over a link: they describe the rig rather than a preference a
 device holds.
 
 ## Protections

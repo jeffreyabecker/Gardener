@@ -18,6 +18,12 @@ namespace gardener {
 void Panel::boot() {
   Machine::boot();
 
+  // The device's own documents come up before the interpreter, which reads the jingle library when
+  // its modules are installed.
+  config_.begin();
+  loadDevicePreferences(config_, preferences_);
+  jingles_.begin();
+
   Logger& log = logger();
 
   // The panel is the one part with no fallback: nothing on the device can draw
@@ -47,7 +53,7 @@ void Panel::boot() {
   log.info("buttons: four keys on interrupt");
 
   String stored = "settings: unit=";
-  stored += displayUnitInfo(settings().unit()).name;
+  stored += displayUnitInfo(unit()).name;
   log.info(stored.c_str());
 
   String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";

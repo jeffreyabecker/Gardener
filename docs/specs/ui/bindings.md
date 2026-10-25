@@ -209,20 +209,22 @@ the band names.
 ## `device` — the device's own settings
 
 The unit the panel prints, the target the default program restores and the selected jingle. All
-belong to the device rather than to a routine's `store` file. The unit is the same switch the serial
-`device` domain carries; the diagnostics switch is not here, because it belongs to the serial link
-rather than to the glass. The radio is not a setting: `device.bluetooth()` reports whether the
-image was built with it.
+belong to the device rather than to a routine's `store` file. The unit and the target are the keys
+`unit` and `target` of `/settings.ini`'s `[device]` section; the jingle is the jingle library's own
+`current` key in `/system/jingles.ini`, because the library is where the identifiers live. The unit
+is the same switch the serial `device` domain carries; the diagnostics switch is not here, because
+it belongs to the serial link rather than to the glass. The radio is not a setting:
+`device.bluetooth()` reports whether the image was built with it.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `device.units()` | list of strings | every token `device set unit` accepts, in `panel/Units.h` order |
-| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.cfg`; false for a token that is not one of `units()` |
+| `device.set_unit(token)` | `bool` | applies the unit and writes it to `/settings.ini` under `[device]`; false for a token that is not one of `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
-| `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.cfg`; clamp it with `vacuum.clamp()` first |
+| `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
-| `device.set_jingle(id)` | — | stores a jingle identifier in `/settings.cfg` |
+| `device.set_jingle(id)` | — | stores the identifier as `/system/jingles.ini`'s `current` key |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it. `device.target()` is the stored setting, not the machine's live target: a page
@@ -298,23 +300,27 @@ the whole sequence malformed and `play` returns false.
 
 ## `jingles` — the note library
 
-The device ships named note sequences in `/system/jingles.txt`. The file is read once at boot,
-like the `.be` files, so a change takes effect at the next reset. It is a flat text file with one
-jingle per line and four `|`-separated fields:
+The device ships named note sequences in `/system/jingles.ini`. The file is read once at boot,
+like the `.be` files, so a change takes effect at the next reset. It is an INI document: the global
+`current` key names the selected jingle, and each jingle is a section with three keys.
 
+```ini
+current=poacher
+
+[poacher]
+full_title=Lincolnshire Poacher
+short_title=Poacher
+notes=E5:200 G5:200 E6:200 ...
 ```
-poacher|Lincolnshire Poacher|Poacher|E5:200 G5:200 E6:200 ...
-```
 
-The first field is the jingle's **identifier**: lowercase, stable, and the value the global setting
-stores. Then the display name, the short panel label and the note string, which is in
-`buzzer.play()` notation.
+The section name is the jingle's **identifier**: lowercase, stable, and the value `current` stores.
+`full_title` is the display name, `short_title` the label that fits on the panel, and `notes` the
+sequence in `buzzer.play()` notation.
 
-A line beginning with `#` is a comment and a blank line is skipped; anywhere else `#` is a note, so
-a sharp like `F#5` needs no escaping. The file is not a `key=value` settings document and is not
-read by the settings parser, so there is no key/value form and no key limit. A line without three
-separators, one with an empty field, or one whose sequence `buzzer.play()` would refuse is reported
-on the diagnostics stream at boot and left out of the library.
+A line beginning with `;` is a comment; anywhere else `#` is a note, so a sharp like `F#5` needs no
+escaping. A section missing one of the three keys is reported on the diagnostics stream at boot and
+left out of the library, and so is one whose sequence `buzzer.play()` would refuse. A missing or
+malformed file leaves the library empty.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -322,7 +328,7 @@ on the diagnostics stream at boot and left out of the library.
 | `jingles.title(id)` | string or `nil` | the display name |
 | `jingles.label(id)` | string or `nil` | the short label the System page draws |
 | `jingles.notes(id)` | string or `nil` | the note sequence, ready for `buzzer.play()` |
-| `jingles.current()` | string or `nil` | the notes for `device.jingle()`, or the first jingle when that identifier is empty or unknown |
+| `jingles.current()` | string or `nil` | the notes for the document's `current`, or the first jingle when that identifier is empty or unknown |
 | `jingles.play_current()` | `bool` | play the current jingle, as `buzzer.play(jingles.current())` would; false when the library is empty |
 | `jingles.default_id()` | string or `nil` | the first identifier |
 
@@ -331,9 +337,8 @@ jingles.play_current()                  # the jingle chosen on the System page, 
 buzzer.play(jingles.notes("forelle"))   # a named jingle
 ```
 
-An identifier that is not in the file answers `nil` from `title`, `label` and `notes`. A missing
-or malformed file leaves the library empty; the System page then shows `JINGLE=--` and the rest of
-the device keeps working.
+An identifier that is not in the file answers `nil` from `title`, `label` and `notes`. When the
+library is empty the System page shows `JINGLE=--` and the rest of the device keeps working.
 
 ## `ux` — the scene stack (a Berry class)
 

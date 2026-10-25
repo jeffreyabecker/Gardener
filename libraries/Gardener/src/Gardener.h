@@ -27,5 +27,4 @@
 #endif
 #include "panel/HomeUI.h"
 #include "serial/PanelDomains.h"
-#include "storage/PanelSettings.h"
 #endif

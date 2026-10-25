@@ -78,7 +78,8 @@ void ModelPump::update(uint32_t nowMs) {
 
 HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
     : dataDir_(std::move(dataDir)),
-      settings_(&files_),
+      config_(&files_),
+      jingles_(&files_),
       chamber_(ceilingKpa),
       pump_(chamber_),
       sensor_(chamber_),
@@ -88,16 +89,20 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
           [](BitmapPanel& panel) -> bool { return panel.begin(); },
           BitmapPanel::Width, BitmapPanel::Height),
       buzzer_(buzzerPart_),
-      overlay_(&display_, &battery_, &vacuum_, &settings_),
-      context_(overlay_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      overlay_(&display_, &battery_, &vacuum_, &preferences_),
+      context_(overlay_, config_, jingles_, preferences_, vacuum_, battery_, buzzer_, files_,
+               logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
 bool HarnessSession::begin() {
   if (!files_.load(dataDir_)) return false;
 
-  // The order Panel::boot brings them up in, minus the bus and the keys.
-  settings_.begin();
+  // The order Panel::boot brings them up in, minus the bus and the keys. The documents are read
+  // before the interpreter, which takes the jingle library when its modules are installed.
+  config_.begin();
+  loadDevicePreferences(config_, preferences_);
+  jingles_.begin();
   battery_.begin();
   buzzerPart_.begin();
   buzzer_.begin();

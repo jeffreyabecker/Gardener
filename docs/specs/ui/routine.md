@@ -157,8 +157,8 @@ refuses it, and passes the result in. Writing is the registry's
 `save_settings(routine_key, settings_values[, settings_cfgs])`, which applies the rule and writes
 every value.
 
-`/system/jingles.txt` is data rather than code. It is not compiled or loaded as a `.be` file; the
-native `jingles` binding reads it at boot and exposes its entries as `jingles.ids()`,
+`/system/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
+native `jingles` binding takes it at boot and exposes its entries as `jingles.ids()`,
 `jingles.title()`, `jingles.label()`, `jingles.notes()`, `jingles.current()` and
 `jingles.play_current()`. Its format and the
 call list are in [bindings.md](./bindings.md#jingles--the-note-library).

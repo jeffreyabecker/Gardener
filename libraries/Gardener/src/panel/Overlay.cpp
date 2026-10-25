@@ -7,7 +7,7 @@
 #include <type_traits>
 
 #include "panel/Units.h"
-#include "storage/PanelSettings.h"
+#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace {
@@ -165,7 +165,7 @@ void Overlay::emptyBatteryIcon(int16_t x, int16_t y) {
 // after its number. It reads the setting on each frame, so a unit set from the wire or the system
 // page is on the glass with the next one.
 void Overlay::drawUnit() {
-  inner_->text(UnitX, FieldY, displayUnitInfo(settings_->unit()).suffix, 1, false);
+  inner_->text(UnitX, FieldY, displayUnitInfo(preferences_->unit).suffix, 1, false);
 }
 
 }  // namespace gardener

@@ -11,30 +11,20 @@
 #include "Logger.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "storage/Library.h"
-#include "storage/PanelSettings.h"
+#include "storage/Jingles.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* JinglePath = "/system/jingles.txt";
-constexpr char FieldSeparator = '|';
-constexpr char CommentStart = '#';
-
-struct Jingle {
-  String id;
-  String title;
-  String label;
-  String notes;
-};
-
-std::vector<Jingle> jingles;
+// The entries this build can play, pointing into the library the panel read at boot. A sequence the
+// player refuses is reported once and left out, so nothing a page asks for is unplayable.
+std::vector<const Jingle*> entries;
 
 const Jingle* findJingle(const char* id) {
   if (id == nullptr) return nullptr;
-  for (const Jingle& jingle : jingles) {
-    if (jingle.id == id) return &jingle;
+  for (const Jingle* jingle : entries) {
+    if (jingle->key == id) return jingle;
   }
   return nullptr;
 }
@@ -50,62 +40,24 @@ void report(const char* what, const String& id) {
   logger->error(message.c_str());
 }
 
-// `/system/jingles.txt` is data, not a `.be` module: the resolver reads it once when the module is
-// installed, the same way the runtime reads the module files, so a change takes effect at the next
-// reset. A line is `<id>|<title>|<label>|<notes>`, the file is not a settings document, and a `#`
-// only starts a comment at the start of a line so a sharp stays a note. The sequence is handed to
-// the player's own parser here, so a jingle that could not be played is reported at boot rather
-// than when a routine asks for it.
-void loadJingles(Library& library) {
-  jingles.clear();
+// `/system/jingles.ini` is data, not a `.be` module: the panel reads it at boot and this binding
+// takes the entries when the module is installed, so a change takes effect at the next reset. A
+// section the document could not make a jingle of, and a sequence this build cannot play, are
+// reported here rather than when a routine asks for one.
+void takeJingles() {
+  entries.clear();
 
-  String text;
-  if (!library.read(JinglePath, text)) {
-    report("missing", "");
-    return;
-  }
-
-  int start = 0;
-  while (start <= (int)text.length()) {
-    int end = text.indexOf('\n', (unsigned int)start);
-    if (end < 0) end = (int)text.length();
-    String line = text.substring((unsigned int)start, (unsigned int)end);
-    start = end + 1;
-    line.trim();
-    if (line.length() == 0 || line[0] == CommentStart) continue;
-
-    const int idEnd = line.indexOf(FieldSeparator);
-    const int titleEnd = idEnd < 0 ? -1 : line.indexOf(FieldSeparator, (unsigned int)idEnd + 1);
-    const int labelEnd =
-        titleEnd < 0 ? -1 : line.indexOf(FieldSeparator, (unsigned int)titleEnd + 1);
-    if (labelEnd < 0) {
-      report("malformed entry", idEnd < 0 ? line : line.substring(0, (unsigned int)idEnd));
-      continue;
-    }
-
-    Jingle jingle;
-    jingle.id = line.substring(0, (unsigned int)idEnd);
-    jingle.title = line.substring((unsigned int)idEnd + 1, (unsigned int)titleEnd);
-    jingle.label = line.substring((unsigned int)titleEnd + 1, (unsigned int)labelEnd);
-    jingle.notes = line.substring((unsigned int)labelEnd + 1);
-    jingle.id.trim();
-    jingle.title.trim();
-    jingle.label.trim();
-    jingle.notes.trim();
-
-    if (jingle.id.isEmpty() || jingle.title.isEmpty() || jingle.label.isEmpty() ||
-        jingle.notes.isEmpty()) {
-      report("empty field", jingle.id);
-      continue;
-    }
+  const JinglesConfig& library = context->jingles();
+  for (const String& section : library.incompleteSections()) report("incomplete entry", section);
+  for (const Jingle& jingle : library.jingles()) {
     if (!BuzzerPlayer::validate(jingle.notes.c_str())) {
-      report("bad notes", jingle.id);
+      report("bad notes", jingle.key);
       continue;
     }
-    jingles.push_back(jingle);
+    entries.push_back(&jingle);
   }
 
-  if (jingles.empty()) report("no entries", "");
+  if (entries.empty()) report("no entries", "");
 }
 
 // --- the module -----------------------------------------------------------
@@ -113,8 +65,8 @@ void loadJingles(Library& library) {
 int jinglesIds(bvm* vm) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const Jingle& jingle : jingles) {
-    be_pushstring(vm, jingle.id.c_str());
+  for (const Jingle* jingle : entries) {
+    be_pushstring(vm, jingle->key.c_str());
     be_data_push(vm, list);
     be_pop(vm, 1);
   }
@@ -130,7 +82,7 @@ int jinglesTitle(bvm* vm) {
   if (jingle == nullptr) {
     be_pushnil(vm);
   } else {
-    be_pushstring(vm, jingle->title.c_str());
+    be_pushstring(vm, jingle->full_title.c_str());
   }
   be_return(vm);
 }
@@ -143,7 +95,7 @@ int jinglesLabel(bvm* vm) {
   if (jingle == nullptr) {
     be_pushnil(vm);
   } else {
-    be_pushstring(vm, jingle->label.c_str());
+    be_pushstring(vm, jingle->short_title.c_str());
   }
   be_return(vm);
 }
@@ -161,13 +113,12 @@ int jinglesNotes(bvm* vm) {
   be_return(vm);
 }
 
-// The selected jingle, or the first one when nothing valid has been chosen yet. The settings read
-// is a direct one, like device.target(): the identifier is a small preferences field, not a file.
+// The selected jingle, or the first one when nothing valid has been chosen yet. The selection is
+// the jingle document's own current key, so the library owns it rather than the device's settings.
 const Jingle* currentJingle() {
-  String selected;
-  if (context != nullptr) selected = context->settings().jingle();
-  const Jingle* jingle = findJingle(selected.c_str());
-  if (jingle == nullptr && !jingles.empty()) jingle = &jingles.front();
+  if (context == nullptr) return nullptr;
+  const Jingle* jingle = findJingle(context->jingles().currentJingleKey().c_str());
+  if (jingle == nullptr && !entries.empty()) jingle = entries.front();
   return jingle;
 }
 
@@ -195,10 +146,10 @@ int jinglesPlayCurrent(bvm* vm) {
 }
 
 int jinglesDefaultId(bvm* vm) {
-  if (jingles.empty()) {
+  if (entries.empty()) {
     be_pushnil(vm);
   } else {
-    be_pushstring(vm, jingles.front().id.c_str());
+    be_pushstring(vm, entries.front()->key.c_str());
   }
   be_return(vm);
 }
@@ -216,8 +167,8 @@ const bnfuncinfo JinglesLibrary[] = {
 
 }  // namespace
 
-void installJinglesModule(bvm* vm, Library& library) {
-  loadJingles(library);
+void installJinglesModule(bvm* vm) {
+  takeJingles();
   installModule(vm, "jingles", JinglesLibrary);
 }
 

@@ -35,8 +35,6 @@ void Ini::parse(const String& text) {
       entry->second = value;
       continue;
     }
-    // A file with more keys than the document holds keeps the keys it read first.
-    if (count() >= MaxEntries) continue;
 
     Section* held = findSection(section.c_str());
     if (held == nullptr) {
@@ -52,12 +50,11 @@ String Ini::get(const char* section, const char* key, const char* fallback) cons
   return entry ? entry->second : String(fallback);
 }
 
-bool Ini::set(const char* section, const char* key, const String& value) {
+void Ini::set(const char* section, const char* key, const String& value) {
   if (KeyValue* entry = find(section, key)) {
     entry->second = value;
-    return true;
+    return;
   }
-  if (count() >= MaxEntries) return false;
 
   Section* held = findSection(section);
   if (held == nullptr) {
@@ -65,7 +62,6 @@ bool Ini::set(const char* section, const char* key, const String& value) {
     held = &sections_.back();
   }
   held->second.push_back({String(key), value});
-  return true;
 }
 
 // Sections are emitted in the order they first appear, with the empty section's keys unheaded.
@@ -128,14 +124,6 @@ const Ini::KeyValue* Ini::find(const char* section, const char* key) const {
     if (entry.first == key) return &entry;
   }
   return nullptr;
-}
-
-uint16_t Ini::count() const {
-  uint16_t total = 0;
-  for (const Section& section : sections_) {
-    total += (uint16_t)section.second.size();
-  }
-  return total;
 }
 
 }  // namespace gardener

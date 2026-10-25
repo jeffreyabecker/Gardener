@@ -35,7 +35,7 @@ void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
 void PanelBleDomain::describe(uint8_t index) {
   switch (index) {
     case Unit:
-      setByte(characteristics_[Unit], static_cast<uint8_t>(app_->settings().unit()));
+      setByte(characteristics_[Unit], static_cast<uint8_t>(app_->unit()));
       break;
     case Batt:
       setByte(characteristics_[Batt],
@@ -60,7 +60,7 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
     if (unitWrite_.value < DisplayUnitCount) {
-      app_->settings().setUnit(static_cast<DisplayUnit>(unitWrite_.value));
+      app_->setUnit(static_cast<DisplayUnit>(unitWrite_.value));
     }
     describe(Unit);
   }

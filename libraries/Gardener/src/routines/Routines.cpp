@@ -13,7 +13,6 @@
 #include "PanelContext.h"
 #include "routines/Bindings.h"
 #include "storage/Library.h"
-#include "storage/PanelSettings.h"
 #include "storage/Values.h"
 
 namespace gardener {

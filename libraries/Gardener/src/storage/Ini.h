@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <stdint.h>
 
 #include <utility>
 #include <vector>
@@ -30,9 +29,8 @@ class Ini {
   // both come back as the fallback.
   bool has(const char* section, const char* key) const { return find(section, key) != nullptr; }
 
-  // Sets a key, adding its section and the key when they are new. False only when the document is
-  // full and the key is new.
-  bool set(const char* section, const char* key, const String& value);
+  // Sets a key, adding its section and the key when they are new.
+  void set(const char* section, const char* key, const String& value);
 
   // The document as text, ready to write.
   String text() const;
@@ -45,18 +43,11 @@ class Ini {
   // The document's sections in the order they appear, for a subclass that reads its own shape.
   const std::vector<Section>& sections() const { return sections_; }
 
- protected:
-  // A document is a handful of keys. The limit is the document's contract, not the storage's:
-  // `set` refuses a new key past it, and a parse keeps the keys it read first.
-  static constexpr uint8_t MaxEntries = 32;
-
   Section* findSection(const char* section);
   const Section* findSection(const char* section) const;
 
   KeyValue* find(const char* section, const char* key);
   const KeyValue* find(const char* section, const char* key) const;
-
-  uint16_t count() const;
 
   std::vector<Section> sections_;
 };

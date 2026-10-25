@@ -8,7 +8,7 @@
 
 namespace gardener {
 
-class PanelSettings;
+struct DevicePreferences;
 
 // The display the app draws through: it wraps any Display, and puts the device's own status in a
 // band across the bottom of whatever was drawn there just before the frame goes to the glass.
@@ -20,8 +20,8 @@ class PanelSettings;
 class Overlay : public Display {
  public:
   Overlay(Display* inner, const Battery* battery, const VacuumSystem* vacuum,
-          const PanelSettings* settings)
-      : inner_(inner), battery_(battery), vacuum_(vacuum), settings_(settings) {}
+          const DevicePreferences* preferences)
+      : inner_(inner), battery_(battery), vacuum_(vacuum), preferences_(preferences) {}
   ~Overlay() override = default;
 
   // --- the panel -----------------------------------------------------------
@@ -141,7 +141,7 @@ class Overlay : public Display {
   Display* inner_;
   const Battery* battery_;
   const VacuumSystem* vacuum_;
-  const PanelSettings* settings_;
+  const DevicePreferences* preferences_;
   bool serial_ = false;
   bool bluetooth_ = false;
 };

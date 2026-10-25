@@ -14,9 +14,10 @@ namespace gardener {
 // to overwrite it.
 constexpr const char* ConfigPath = "/settings.ini";
 
-// The Config the panel keeps across a reset is an INI document, with the preferences a subclass
-// names in one section and any other key carried through a write. A missing document, or a value
-// that will not parse, leaves the default in place rather than refusing to boot.
+// A Config is an INI document read through a store: the device's own document at ConfigPath, a
+// subclass's document, or one a routine names. A key this revision does not name is carried through
+// a write, and a missing document, or a value that will not parse, leaves the default in place
+// rather than refusing to boot.
 //
 // The document is read and written through the store it was given, so this class does not know
 // where the device keeps it beyond the path. A caller names a section and a key; the store knows
@@ -32,8 +33,8 @@ class Config : public Ini {
   // The inherited string read stays visible beside the typed get below.
   using Ini::get;
 
-  // Reads the device's document, then restores the values its subclass names. False when there was
-  // nothing to read, in which case every value keeps its default.
+  // Reads the document, then restores the values a subclass names. False when there was nothing to
+  // read, in which case every value keeps its default.
   bool begin();
 
   // The value for a section/key, read back as the fallback's type: `String`, `bool`, `float` or
@@ -83,7 +84,7 @@ class Config : public Ini {
       return false;
     }
     if (Ini::get(section, key, "") == text && Ini::has(section, key)) return true;
-    if (!Ini::set(section, key, text)) return false;
+    Ini::set(section, key, text);
     return save();
   }
 

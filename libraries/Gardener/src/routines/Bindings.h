@@ -17,7 +17,7 @@ namespace berry {
 //   device.*   the display unit, default target and jingle the device keeps as preferences
 //   buttons.*  the presses since the last call
 //   buzzer.*   the piezo: a timed tone, a note sequence, or silence
-//   jingles.*  the named note sequences in /system/jingles.txt
+//   jingles.*  the named note sequences in /system/jingles.ini
 //   store.*    a routine's own values, kept across a power cycle
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI

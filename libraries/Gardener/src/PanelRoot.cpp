@@ -10,7 +10,6 @@
 #include "BuzzerPlayer.h"
 #include "Panel.h"
 #include "routines/Routines.h"
-#include "storage/PanelSettings.h"
 #include "hal/impl/AdafruitDisplay.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
@@ -33,8 +32,7 @@ constexpr int16_t PanelNoResetLine = -1;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, Library& library,
-                      const PanelPins& pins) {
+Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins& pins) {
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -46,8 +44,8 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, Library& 
       [](Adafruit_SH1106G& panel) -> bool { return panel.begin(PanelAddress, false); },
       PanelWidth, PanelHeight, &Wire1, PanelNoResetLine);
   auto* routines = new Routines();
-  auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, fs, library,
-                          routines);
+  auto* panel =
+      new Panel(logger, pins, buttons, buzzer, battery, display, fs, library, routines);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);

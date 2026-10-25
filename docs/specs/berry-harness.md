@@ -91,7 +91,7 @@ image loads before anything else — and the seven native modules a routine call
 | `buttons` | a queue: `harness.press("ok:single")` pushes one whole gesture string, delivered one beat at a time |
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |
-| `jingles` | the library read from `/system/jingles.txt` |
+| `jingles` | the library read from `/system/jingles.ini` |
 | `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for, and `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`

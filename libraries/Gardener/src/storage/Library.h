@@ -8,9 +8,9 @@ namespace gardener {
 
 // The device's file store: the text documents the firmware reads and writes. The implementation
 // knows the filesystem it was mounted on; callers name a full path, or a folder for the one list
-// operation. Settings reads and writes the device's own document, Routines each routine's document
-// and the interpreter's `.be` files, and the jingle resolver its data file — all through this one
-// surface, whether the store is the device's filesystem or the host's in-memory image.
+// operation. Config reads and writes the device's own document and the jingle library, Routines
+// each routine's document and the interpreter's `.be` files — all through this one surface, whether
+// the store is the device's filesystem or the host's in-memory image.
 class Library {
  public:
   virtual ~Library() = default;
