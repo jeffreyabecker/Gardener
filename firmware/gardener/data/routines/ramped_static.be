@@ -85,9 +85,9 @@ class RampedStatic : Scene
   var command_target
   var chrome
 
-  def init(settings)
+  def init(activation)
     super(self).init(Position.top_left(), Size.page())
-    self.routine_key = "ramped_static"
+    self.routine_key = activation.routine_key
     self.phase = "ready"
     self.mark = 0
     self.held = 0
@@ -103,7 +103,7 @@ class RampedStatic : Scene
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
-    self.init_from_settings(settings)
+    self.init_from_settings(activation.settings_values)
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.target = self.start_pressure

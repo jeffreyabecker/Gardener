@@ -21,7 +21,8 @@ constexpr const char* ConfigPath = "/cfg/settings.ini";
 //
 // The document is read and written through the store it was given, so this class does not know
 // where the device keeps it beyond the path. A caller names a section and a key; the store knows
-// the file.
+// the file. set() only changes the document in memory, so a caller that changes several keys pays
+// one write when it calls save().
 class Config : public Ini {
  public:
   // `store` is where the documents live, or null when the build has none: then nothing is read or
@@ -66,10 +67,10 @@ class Config : public Ini {
     }
   }
 
-  // The text form a section/key is written with: `on`/`off` for a bool, the number for an int or
-  // float.
+  // The text form a section/key is put into the document with: `on`/`off` for a bool, the number
+  // for an int or float. The document is changed in memory only; save() writes it.
   template <typename T>
-  bool set(const char* section, const char* key, T value, uint8_t decimals = 2) {
+  void set(const char* section, const char* key, T value, uint8_t decimals = 2) {
     String text;
     if constexpr (std::is_same<T, String>::value) {
       text = value;
@@ -82,22 +83,26 @@ class Config : public Ini {
     } else if constexpr (std::is_same<T, int>::value) {
       text = String(value);
     } else {
-      return false;
+      return;
     }
-    if (Ini::get(section, key, "") == text && Ini::has(section, key)) return true;
+    if (Ini::get(section, key, "") == text && Ini::has(section, key)) return;
     Ini::set(section, key, text);
-    return save();
+    dirty_ = true;
   }
+
+  // Writes the whole document as it stands, once, and answers whether it is written. A document
+  // nothing has changed since it was read is not written at all, so setting a value it already
+  // holds costs no flash. False when the build has no store behind it.
+  bool save();
 
  protected:
   // Restores the values a subclass names; begin() calls it once the document has been read.
   virtual void load() {}
 
  private:
-  bool save() const;
-
   Library* store_;
   const char* path_;
+  bool dirty_ = false;
 };
 
 }  // namespace gardener

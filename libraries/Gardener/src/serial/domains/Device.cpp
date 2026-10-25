@@ -188,6 +188,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
       return;
     }
     app_.config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    app_.config().save();
 
     io.print("ok unit=");
     io.print(displayUnitInfo(unit).name);

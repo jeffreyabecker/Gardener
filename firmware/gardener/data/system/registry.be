@@ -11,12 +11,12 @@
 # values it edits in its settings_cfgs property and any rule that binds two of them in its problem()
 # method, so those live with the routine rather than in the page.
 #
-# The browser reads rows() and pushes a routine with push(routine_key, callback[, settings]).
-# The values, when the caller has none, are built by load_settings(): every value the routine
-# registers, read from its file, held to its kind and repaired by the routine's own rule. So
-# a scene is built from one clean map and initialization is the only activation. The device's own
-# scenes — the readout, system and browser — are not registered here: they are well-known scenes
-# the system pushes directly.
+# The browser reads rows() and pushes a routine with push(routine_key, callback, activation).
+# A launch hands the factory a RoutineActivation: the routine key and one clean settings map, built
+# by load_settings() — every value the routine registers, read from its file, held to its kind and
+# repaired by the routine's own rule. So a scene is built from one clean map and initialization is
+# the only activation. The device's own scenes — the readout, system and browser — are not
+# registered here: they are well-known scenes the system pushes directly.
 
 import string
 
@@ -153,8 +153,9 @@ class RoutineRegistry
   end
 
   # The settings a routine begins with, as one clean map: every setting it registers, read from its
-  # own file and held to its kind, then repaired by the routine's rule so the set is one a run
-  # accepts. A routine with no settings begins with an empty map. This is the only place the
+  # own document and held to its kind, then repaired by the routine's rule so the set is one a run
+  # accepts. The document is opened once, so reading every key costs one file read rather than one
+  # per key. A routine with no settings begins with an empty map. This is the only place the
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
   def load_settings(routine_key)
     var settings_cfgs = self.settings_cfgs(routine_key)
@@ -162,18 +163,26 @@ class RoutineRegistry
     if settings_cfgs == nil
       return settings_values
     end
+    var document = store.config("routines/" + routine_key + ".cfg")
     for cfg : settings_cfgs
-      settings_values[cfg.key] = cfg.read(routine_key)
+      var raw = document.get("", cfg.key, "")
+      if raw == ""
+        settings_values[cfg.key] = cfg.value(nil)
+      else
+        settings_values[cfg.key] = cfg.value(cfg.parse(raw))
+      end
     end
     self.repair(routine_key, settings_cfgs, settings_values)
     return settings_values
   end
 
-  # A settled set written back to the routine's file, in one write: the routine's rule is applied
-  # first, so what lands is a set a run accepts, and a value the map holds nothing for is written as
-  # nothing, which reads back as nil. `settings_cfgs` may be nil, and then the settings the routine
-  # declares are looked up here, so a caller that never opened a list has none to hand over. False,
-  # writing nothing, when the routine declares no settings.
+  # A settled set written back to the routine's document: the routine's rule is applied first, so
+  # what lands is a set a run accepts, and a value the map holds nothing for is written as nothing,
+  # which reads back as nil. Every key is put into one document and the document is written once, so
+  # a settled set costs one write and a set that changes nothing costs none. `settings_cfgs` may be
+  # nil, and then the settings the routine declares are looked up here, so a caller that never
+  # opened a list has none to hand over. False, writing nothing, when the routine declares no
+  # settings.
   def save_settings(routine_key, settings_values, settings_cfgs)
     if settings_cfgs == nil
       settings_cfgs = self.settings_cfgs(routine_key)
@@ -182,27 +191,23 @@ class RoutineRegistry
       return false
     end
     self.repair(routine_key, settings_cfgs, settings_values)
-    var values = {}
+    var document = store.config("routines/" + routine_key + ".cfg")
     for cfg : settings_cfgs
       var value = settings_values[cfg.key]
-      values[cfg.key] = value == nil ? "" : value
+      document.set("", cfg.key, value == nil ? "" : value)
     end
-    store.set(routine_key, values)
-    return true
+    return document.save()
   end
 
-  # Push a registered routine's scene, built through its factory. The callback, when there is one,
-  # receives the value the scene returns when it pops. `settings` is the map the scene's init() is
-  # given; a nil one is the routine's own file, loaded and made clean here.
-  def push(routine_key, callback, settings)
+  # Push a registered routine's scene, built through its factory from the activation the caller
+  # loaded: the routine key and the clean settings map the scene's init() is given. The callback,
+  # when there is one, receives the value the scene returns when it pops.
+  def push(routine_key, callback, activation)
     var e = self.entry(routine_key)
     if e == nil
       return false
     end
-    if settings == nil
-      settings = self.load_settings(routine_key)
-    end
-    return ux.push(e.factory(settings), nil, callback)
+    return ux.push(e.factory(activation), nil, callback)
   end
 
   def entry(routine_key)

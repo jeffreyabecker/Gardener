@@ -48,6 +48,7 @@ int deviceSetUnit(bvm* vm) {
       be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
   if (accepted) {
     context->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    context->config().save();
   }
   be_pushbool(vm, accepted);
   be_return(vm);
@@ -63,6 +64,7 @@ int deviceTarget(bvm* vm) {
 
 int deviceSetTarget(bvm* vm) {
   context->config().set(DeviceSection, TargetKey, (float)argReal(vm, 1));
+  context->config().save();
   be_return_nil(vm);
 }
 
@@ -136,6 +138,7 @@ int deviceSetJingle(bvm* vm) {
     be_raise(vm, "type_error", "device.set_jingle(id)");
   }
   context->config().set(DeviceSection, JingleKey, String(argText(vm, 1)));
+  context->config().save();
   be_return_nil(vm);
 }
 

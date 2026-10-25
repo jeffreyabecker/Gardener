@@ -162,12 +162,9 @@ class RampedInterval : Scene
   var resume
   var chrome
 
-  def init(settings)
+  def init(activation)
     super(self).init(Position.top_left(), Size.page())
-    # A subclass sets its own key before it delegates here; this class's key is the fallback.
-    if self.routine_key == nil
-      self.routine_key = "ramped_interval"
-    end
+    self.routine_key = activation.routine_key
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
@@ -176,7 +173,7 @@ class RampedInterval : Scene
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
-    self.init_from_settings(settings)
+    self.init_from_settings(activation.settings_values)
     self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.pos,
                                        self.dim)
 
@@ -515,11 +512,6 @@ end
 # The interval cycle: the same machine at one target, repeated for the set count. Its settings name
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
-  def init(settings)
-    self.routine_key = "interval"
-    super(self).init(settings)
-  end
-
   def icon()
     return IntervalIcon(Position(0, 0), Size(12, 8))
   end

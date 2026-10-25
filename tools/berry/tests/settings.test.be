@@ -5,12 +5,23 @@
 
 suite = "settings"
 
+# One setting read from a document the way the registry's load_settings() reads every key: the
+# stored text parsed by the kind and held to it, and a key holding nothing reading as nothing.
+def read_setting(cfg, name)
+  var document = store.config("routines/" + name + ".cfg")
+  var raw = document.get("", cfg.key, "")
+  if raw == ""
+    return cfg.value(nil)
+  end
+  return cfg.value(cfg.parse(raw))
+end
+
 def missing_keys_read_their_default()
   var count = IntEditCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
-  assert_eq(count.read("settings_test"), 4, "a missing int is not its default")
+  assert_eq(read_setting(count, "settings_test"), 4, "a missing int is not its default")
 
   var mode = ChoiceEditCfg("no_choice", "b", "Mode", nil, ["a", "b"], false)
-  assert_eq(mode.read("settings_test"), "b", "a missing choice is not its default")
+  assert_eq(read_setting(mode, "settings_test"), "b", "a missing choice is not its default")
 end
 
 test("a missing key reads as the setting's default", missing_keys_read_their_default)
@@ -18,15 +29,15 @@ test("a missing key reads as the setting's default", missing_keys_read_their_def
 def stored_values_are_held_to_their_kind()
   store.set("settings_test", "count", "99")
   var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
-  assert_eq(count.read("settings_test"), 20, "a stored int above max is not held to it")
+  assert_eq(read_setting(count, "settings_test"), 20, "a stored int above max is not held to it")
 
   store.set("settings_test", "mode", "sideways")
   var mode = ChoiceEditCfg("mode", "off", "Mode", nil, ["off", "on"], false)
-  assert_eq(mode.read("settings_test"), "off", "a value outside the choices is not defaulted")
+  assert_eq(read_setting(mode, "settings_test"), "off", "a value outside the choices is not defaulted")
 
   store.set("settings_test", "gain", "7.5")
   var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
-  assert_eq(gain.read("settings_test"), 1.0, "a stored real above max is not held to it")
+  assert_eq(read_setting(gain, "settings_test"), 1.0, "a stored real above max is not held to it")
 end
 
 test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
@@ -34,14 +45,14 @@ test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
 def nothing_reads_as_nil_when_nullable()
   store.set("settings_test", "empty", "")
   var empty = IntEditCfg("empty", 5, "Count", nil, 1, 0, 10, true)
-  assert_nil(empty.read("settings_test"), "an empty nullable int is not nil")
+  assert_nil(read_setting(empty, "settings_test"), "an empty nullable int is not nil")
 
   var absent = IntEditCfg("absent", 5, "Count", nil, 1, 0, 10, true)
-  assert_nil(absent.read("settings_test"), "an absent nullable int is not nil")
+  assert_nil(read_setting(absent, "settings_test"), "an absent nullable int is not nil")
 
   store.set("settings_test", "zero", "0")
   var zero = IntEditCfg("zero", 5, "Count", nil, 1, 0, 10, true)
-  assert_eq(zero.read("settings_test"), 0, "a stored zero is not a value")
+  assert_eq(read_setting(zero, "settings_test"), 0, "a stored zero is not a value")
 end
 
 test("a nullable key that holds nothing reads nil, not its default", nothing_reads_as_nil_when_nullable)
@@ -75,7 +86,7 @@ test("every kind builds and prints its value", every_kind_builds)
 def a_pair_choice_stores_its_value_and_prints_its_title()
   var pairs = [["a", "Alpha"], ["b", "Beta"]]
   var mode = ChoiceEditCfg("mode", "b", "Mode", nil, pairs, false)
-  assert_eq(mode.read("settings_test"), "b", "a pair choice does not read its default value")
+  assert_eq(read_setting(mode, "settings_test"), "b", "a pair choice does not read its default value")
   assert_eq(mode.text("b"), "Beta", "a pair choice does not print its title")
 
   # The list is normalized on the way in, and a bare value is its own title.
@@ -86,10 +97,10 @@ def a_pair_choice_stores_its_value_and_prints_its_title()
   assert_eq(plain[1].title, "b", "a bare value is not its own title")
 
   store.set("settings_test", "mode", "a")
-  assert_eq(mode.read("settings_test"), "a", "a pair choice does not read its stored value")
+  assert_eq(read_setting(mode, "settings_test"), "a", "a pair choice does not read its stored value")
 
   store.set("settings_test", "mode", "Alpha")
-  assert_eq(mode.read("settings_test"), "b", "a pair choice accepted a title that is not a value")
+  assert_eq(read_setting(mode, "settings_test"), "b", "a pair choice accepted a title that is not a value")
 
   var scene = ChoiceEditScene("Mode", "a", mode.values, false)
   assert_eq(scene.text(), "Alpha", "a pair choice's editor does not print its title")
@@ -225,15 +236,15 @@ test("a bool walks its states", a_bool_walks_its_states)
 def a_stored_value_is_parsed_by_its_kind()
   store.set("settings_test", "rest", "12.5")
   var rest = PressureEditCfg("rest", nil, "Rest", nil, 1, true)
-  assert_eq(rest.read("settings_test"), 12.5, "a stored nullable pressure is not its number")
+  assert_eq(read_setting(rest, "settings_test"), 12.5, "a stored nullable pressure is not its number")
 
   store.set("settings_test", "flags", "false")
   var flags = BoolEditCfg("flags", true, "Flags", nil, false)
-  assert_eq(flags.read("settings_test"), false, "a stored false does not read as false")
+  assert_eq(read_setting(flags, "settings_test"), false, "a stored false does not read as false")
 
   store.set("settings_test", "gain", "0.25")
   var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
-  assert_eq(gain.read("settings_test"), 0.25, "a stored real is not its number")
+  assert_eq(read_setting(gain, "settings_test"), 0.25, "a stored real is not its number")
 end
 
 test("a stored value is parsed by its kind", a_stored_value_is_parsed_by_its_kind)

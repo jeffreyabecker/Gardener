@@ -21,20 +21,6 @@ class EditCfg
     self.problem = nil
   end
 
-  # The setting's value from the routine's file, held to the kind. A nullable setting that holds
-  # nothing reads as nil whatever its default says. The store answers the file's text for a key it
-  # holds and nil for one it does not, and the kind parses that text.
-  def read(routine_key)
-    if self.problem != nil
-      return self.default_value
-    end
-    var raw = store.get(routine_key, self.key, nil)
-    if raw == nil || raw == ""
-      return self.value(nil)
-    end
-    return self.value(self.parse(raw))
-  end
-
   # A raw value - from a switch's map, or from a file - held to the kind: nil when the kind is
   # nullable and there is nothing, the default when there is nothing else, and otherwise what
   # bounded() makes of it.

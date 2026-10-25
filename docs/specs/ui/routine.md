@@ -26,10 +26,10 @@ import string
 class MyPage : Scene
   var routine_key
 
-  def init(settings)
+  def init(activation)
     super(self).init(Position.top_left(), Size.page())
-    self.routine_key = "mypage"
-    # settings is the map the registry made clean: one value per setting the routine registers
+    self.routine_key = activation.routine_key
+    # activation.settings_values is the map the registry made clean: one value per setting
   end
 end
 
@@ -37,9 +37,10 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
 return MyPage
 ```
 
-A routine carries its own **routine key** in the `routine_key` field it sets in `init()`: the key is
-its identity, it is what the store file is called, and it is what its settings are read and written
-under, so the class that owns the key writes it once.
+A routine carries its own **routine key** in the `routine_key` field its `init()` takes from the
+activation: the key is its identity, it is what the store file is called, and it is what its settings
+are read and written under. The registry passes the key the routine was launched under, so a page
+that extends another inherits its `init()` and is still launched under its own key.
 
 The second argument is the routine's **title**: the label the browser draws for its row. It is not
 the identity — the routine key still is — so it may contain spaces and capital letters.
@@ -54,7 +55,7 @@ every time the routine is pushed, so each visit starts from `init()` and nothing
 left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
 dispatch; a routine extends `Scene`, carries its own routine key in the `routine_key` field, and
-defines `init(settings)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is
+defines `init(activation)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is
 missing a method the stack calls raises when it is pushed or polled, which drops the stack and shows
 the mark.
 
@@ -63,12 +64,13 @@ it edits in its `settings_cfgs` property and any rule that binds them in `proble
 when it has none. It is built where the file registers, so its declaration is made once, at
 registration time (see below).
 
-**Initializing the scene is the whole of its activation.** The registry builds the map the
-constructor is given: every setting the routine registers, read from its own file, held to its kind,
-and repaired by the routine's rule, so the map is complete and describes a set a run accepts. A
-routine with no settings is given an empty map. The map belongs to that activation alone — the
-runtime neither keeps it nor writes it anywhere — and a routine's `init(settings)` may rely on every
-non-nullable key being present, with a nullable key that holds nothing reading `nil`.
+**Initializing the scene is the whole of its activation.** The constructor is handed a
+`RoutineActivation`: the routine key and the map `load_settings` built — every setting the routine
+registers, read from its own file, held to its kind, and repaired by the routine's rule, so the map
+is complete and describes a set a run accepts. A routine with no settings is given an empty map. The
+map belongs to that activation alone — the runtime neither keeps it nor writes it anywhere — and a
+routine's `init(activation)` may rely on every non-nullable key being present, with a nullable key
+that holds nothing reading `nil`.
 
 A scene's `activate(args)` is the inherited no-op. A page that does its work in `init()` — every
 shipped routine does — leaves it alone.
@@ -111,7 +113,8 @@ repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
 builds — routine key, title, icon, factory and settings instance — and `class RoutineRegistry` with the
 global `routines` instance — the list the browser draws, the `load_settings(routine_key)` that
-builds a routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
+builds a routine's clean settings map, and the `push(routine_key, callback, activation)` that opens a
+routine.
 `/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
 wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an optional
 `Scrollbar`. A row is a `ListRow` — the icon drawn at its left, the title drawn beside it, and the
@@ -162,7 +165,8 @@ state already, so it opens the list on that state and reads no file; a caller wi
 own — the browser — reads the routine's document through `routines.load_settings(routine_key)`,
 which mends it when the routine's rule refuses it, and passes the result in under the routine's
 title. Writing is the registry's `save_settings(routine_key, settings_values[, settings_cfgs])`,
-which applies the rule and writes every value. The browser then launches the routine from the set
+which applies the rule and writes the whole set to the routine's document in one `save()`, so a set
+that changes nothing costs no write. The browser then launches the routine from the set
 the list settled on, so editing a routine's settings there is the way into the routine rather than a
 return to the browser's rows.
 
@@ -191,6 +195,8 @@ constructing them to the page that uses them.
 
 The device's own scenes ship in `/modules/ui.be` — the readout — and `/modules/browser.be` — the
 routine browser, whose instance `browserScene` that file builds before `ui.be` compiles and names it.
+The browser file also defines `RoutineActivation`, the record a launch hands a routine's class: the
+routine key and the clean settings map.
 None of them registered. The readout holds a set of its own and opens the same list a page does, over
 `ReadoutSettings`: the target it works to, the unit it prints, the jingle it finishes with and the
 radio as a build fact. Every one of those is a device setting rather than a document, so the readout
@@ -204,14 +210,14 @@ on it opens nothing — and the readout is what reads and writes them.
 | Moment | Call |
 | --- | --- |
 | boot, after the files load | the firmware pushes the root scene (`__rootScene`) |
-| a scene is built and pushed | `init(settings)`, then `activate(args)` — `Scene`'s no-op unless the scene overrides it |
+| a scene is built and pushed | `init(activation)`, then `activate(args)` — `Scene`'s no-op unless the scene overrides it |
 | every panel-task beat while the scene is on top | `poll(now)` |
 | a scene is popped off the top | the pusher's callback runs with the returned value, or the scene below re-activates |
 
-A scene built by the registry is a new instance every time, so its `init(settings)` runs once per
+A scene built by the registry is a new instance every time, so its `init(activation)` runs once per
 visit and nothing a previous visit left behind survives. `activate()` runs on every push and on
 every return to a scene that was pushed without a callback; a routine page, which does all of its
-work in `init()`, inherits it as a no-op. A re-entry does not repeat `init(settings)`, so a scene
+work in `init()`, inherits it as a no-op. A re-entry does not repeat `init(activation)`, so a scene
 whose values can change while it is not showing reads them again in the callback that brought it
 back — the shipped pages keep the settled set their settings list pops in that callback, and do not
 read the file back.
@@ -360,21 +366,19 @@ of its own without the editor having to know about it.
 ### What a setting does
 
 The setting is the whole of what its value is: the rules its kind needs, and the edit scene that
-edits it. It answers four questions:
+edits it. It answers three questions:
 
-- `read(routine_key)` — the stored value from the file it is given, held to the kind, or the default
-  when nothing is stored.
-- `value(raw)` — a raw value held to the same rules, which is what a value read from a file or
-  carried in a map ends up as.
+- `value(raw)` — a raw value held to the kind's rules, which is what a parsed value from a file or a
+  value carried in a map ends up as.
 - `text(value)` — the value as the list shows it.
 - `scene(value)` — the edit scene for it.
 
-The store hands a value back as the text the file holds, so the kind parses it: an int or a duration
-through `int()`, a real or a pressure through `real()`, a bool from `true`/`1`, a choice from its own
-list.
-
-Which file a value belongs to is the caller's: the setting reads the routine key it is handed, and
-the caller writes what the list settles on.
+The store hands a value back as the text the file holds, so the kind parses it — `parse(text)`, one
+per kind: an int or a duration through `int()`, a real or a pressure through `real()`, a bool from
+`true`/`1`, a choice from its own list — and `value` holds the result. The registry does the
+reading: `load_settings` opens the routine's document once with `store.config` and asks it for each
+declared key, so a setting names no file and opens none. Which file a value belongs to is the
+caller's, and the caller writes what the list settles on.
 
 A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
 clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
@@ -425,8 +429,9 @@ back when the list closes, and a page is never initialized with a set the rule r
 ### Reading and writing them
 
 A page does not read its file at all: the registry's `load_settings(routine_key)` reads every setting
-it registers, holds each to its kind and repairs the set, and the page's `init(settings)` is handed
-the result as a map keyed by setting key. A page takes what it needs from that map in
+it registers, holds each to its kind and repairs the set, and the page's `init(activation)` is handed
+the result as `activation.settings_values`, a map keyed by setting key. A page takes what it needs
+from that map in
 `init_from_settings(settings_values)`, and a value is read from it directly:
 
 ```berry

@@ -5,9 +5,21 @@
 # It loads before ui.be, which names browserScene in the readout's gestures, so the instance exists
 # by the time the readout is compiled.
 #
-# Choosing a row launches the routine: the registry builds its scene from one clean settings map, so
-# the launch is the whole of the routine's initialization. A row carries its routine's key as its
-# value, so the list is the only structure the browser keeps.
+# Choosing a row launches the routine: the browser reads the routine's file into one clean settings
+# map and hands it, with the routine's key, to the registry, which builds the scene from it, so the
+# launch is the whole of the routine's initialization. A row carries its routine's key as its value,
+# so the list is the only structure the browser keeps.
+
+# What a launch hands a routine's class: the key the routine was launched under, which the scene
+# takes as its own, and the clean settings map its init_from_settings() reads.
+class RoutineActivation
+  var routine_key, settings_values
+
+  def init(routine_key, settings_values)
+    self.routine_key = routine_key
+    self.settings_values = settings_values
+  end
+end
 
 class BrowserScene : Scene
   var list
@@ -60,7 +72,7 @@ class BrowserScene : Scene
       return false
     end
     var settings_values = routines.load_settings(routine_key)
-    return routines.push(routine_key, nil, settings_values)
+    return routines.push(routine_key, nil, RoutineActivation(routine_key, settings_values))
   end
 
   # Open the selected routine's settings. The browser has no state of its own to show, so the values
@@ -87,7 +99,7 @@ class BrowserScene : Scene
   # leads into the routine rather than back to the browser's rows.
   def settings_closed(routine_key, settings_values)
     routines.save_settings(routine_key, settings_values)
-    routines.push(routine_key, nil, settings_values)
+    routines.push(routine_key, nil, RoutineActivation(routine_key, settings_values))
     self.draw()
   end
 

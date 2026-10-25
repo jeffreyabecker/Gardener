@@ -86,7 +86,8 @@ int configGet(bvm* vm) {
   be_return(vm);
 }
 
-// config.set(section, key, value[, decimals]): the value decides the text form.
+// config.set(section, key, value[, decimals]): the value decides the text form. The document is
+// changed in memory, so a caller that sets several values saves once when it is done.
 int configSet(bvm* vm) {
   if (be_top(vm) < 4 || !be_isstring(vm, 2) || !be_isstring(vm, 3)) {
     be_raise(vm, "type_error", "config.set(section, key, value)");
@@ -96,19 +97,25 @@ int configSet(bvm* vm) {
   const char* key = argText(vm, 3);
   const uint8_t decimals =
       be_top(vm) >= 5 && be_isint(vm, 5) ? (uint8_t)be_toint(vm, 5) : 2;
-  bool written = false;
   if (be_isbool(vm, 4)) {
-    written = config->set(section, key, (bool)be_tobool(vm, 4));
+    config->set(section, key, (bool)be_tobool(vm, 4));
   } else if (be_isint(vm, 4)) {
-    written = config->set(section, key, (int)be_toint(vm, 4));
+    config->set(section, key, (int)be_toint(vm, 4));
   } else if (be_isreal(vm, 4)) {
-    written = config->set(section, key, (float)be_toreal(vm, 4), decimals);
+    config->set(section, key, (float)be_toreal(vm, 4), decimals);
   } else if (be_isstring(vm, 4)) {
-    written = config->set(section, key, String(argText(vm, 4)));
+    config->set(section, key, String(argText(vm, 4)));
   } else {
     be_raise(vm, "type_error", "config.set(section, key, value)");
   }
-  be_pushbool(vm, written);
+  be_return_nil(vm);
+}
+
+// config.save(): the whole document as it stands, written once. True when it is written, or when
+// nothing had changed since it was read; false when the store refused it.
+int configSave(bvm* vm) {
+  Config* config = configOf(vm);
+  be_pushbool(vm, config->save());
   be_return(vm);
 }
 
@@ -133,6 +140,7 @@ const bnfuncinfo ConfigMembers[] = {
     {"init", configInit},
     {"get", configGet},
     {"set", configSet},
+    {"save", configSave},
     {"section_keys", configSectionKeys},
     {nullptr, nullptr},
 };

@@ -6,14 +6,17 @@
 # registry and pushed through `ux`, and a value is read or written through `store`.
 
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
-# registered, so each switch starts a fresh page; the settings map, when there is one, is the map its
-# init() is handed, and nil means the map the routine's own file makes.
+# registered, so each switch starts a fresh page; the settings map, when the caller has one, is the
+# map the activation carries, and nil means the map the routine's own file makes.
 def harness_activate(routine_key, settings)
   ux.pop_to_root()
   # A routine is launched from the browser, and the browser vents first; a direct push models the
   # same path, so a test never starts a routine against a chamber the readout left pressurised.
   vacuum.stop()
-  return routines.push(routine_key, nil, settings)
+  if settings == nil
+    settings = routines.load_settings(routine_key)
+  end
+  return routines.push(routine_key, nil, RoutineActivation(routine_key, settings))
 end
 
 def harness_registered(routine_key)
@@ -26,7 +29,7 @@ def harness_registered(routine_key)
 end
 
 # The map a switch carries is the routine's own settings, read from its file and made clean the way
-# the registry makes them, so init(settings) takes the same path as a real switch.
+# the registry makes them, so the activation a switch carries takes the same path as a real launch.
 def harness_settings_map(routine_key)
   var settings_cfgs = routines.settings_cfgs(routine_key)
   if settings_cfgs == nil

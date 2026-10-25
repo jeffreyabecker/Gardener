@@ -66,6 +66,7 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     if (unitWrite_.value < DisplayUnitCount) {
       const DisplayUnit unit = static_cast<DisplayUnit>(unitWrite_.value);
       app_->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+      app_->config().save();
     }
     describe(Unit);
   }

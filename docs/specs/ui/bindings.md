@@ -386,8 +386,8 @@ draws its list.
 | `routines.problem(routine_key, settings_cfgs, settings_values)` | string, or `nil` | the rule's verdict on the same settings and values, applying nothing |
 | `routines.icon(routine_key)` | the icon object, or `nil` | what the file passed as its icon |
 | `routines.load_settings(routine_key)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. A routine with no settings is an empty map |
-| `routines.save_settings(routine_key, settings_values[, settings_cfgs])` | `bool` | write a settled set back to the routine's file, applying the routine's rule first so what lands is a set a run accepts, and writing an empty value for a setting the map holds nothing for. `settings_cfgs` may be left off, and then the settings the routine declares are looked up by its key. `false`, writing nothing, when the routine declares no settings |
-| `routines.push(routine_key, callback[, settings])` | `bool` | build the routine's scene from its class, handing `settings` to its `init()`, and push it, handing the returned value to the callback. A `nil` settings map is `routines.load_settings(routine_key)` |
+| `routines.save_settings(routine_key, settings_values[, settings_cfgs])` | `bool` | write a settled set back to the routine's document, applying the routine's rule first so what lands is a set a run accepts, and writing an empty value for a setting the map holds nothing for. The document is opened once, every key put into it, and written once by `save()`; a set that changes nothing writes nothing. `settings_cfgs` may be left off, and then the settings the routine declares are looked up by its key. `false`, writing nothing, when the routine declares no settings |
+| `routines.push(routine_key, callback, activation)` | `bool` | build the routine's scene from its class, handing the activation to its `init()`, and push it, handing the returned value to the callback. The activation is a `RoutineActivation(routine_key, settings_values)` — the key the routine is launched under and the map its settings are read from, which is `routines.load_settings(routine_key)` for a launch from the routine's own file |
 
 Registering the same key twice is one routine: the later file wins. The title is what the browser
 shows, and a routine without one shows its key; an icon is optional too, and a routine without one,
@@ -454,7 +454,7 @@ instance over `/cfg/` followed by `path` — `store.config("routines/interval.cf
 than reopening it per value. The path is relative to `/cfg`: an empty path, one beginning with `/`,
 or one holding a `..` segment is refused with `value_error`, and anything that is not a string with
 `type_error`, so a page cannot name a file outside `/cfg`. A document that is not there is not an
-error: the instance holds nothing, every `get` answers its fallback, and the first `set` creates the
+error: the instance holds nothing, every `get` answers its fallback, and the first `save` creates the
 file.
 
 The instance's methods are the native `Config` class's:
@@ -462,27 +462,30 @@ The instance's methods are the native `Config` class's:
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `config.get(section, key, fallback)` | the fallback's type | the value for a section and key, or the fallback when the document holds none; a flat document's keys are in the empty section |
-| `config.set(section, key, value[, decimals])` | `bool` | write the value; `decimals` is the places a real is written with, two by default. `false` when the file could not be written |
+| `config.set(section, key, value[, decimals])` | — | put the value into the document in memory; `decimals` is the places a real is written with, two by default. Nothing is written until `save()` |
+| `config.save()` | `bool` | write the whole document as it stands, once: `true` when it is written or nothing had changed since the document was read, `false` when the store refused it. A document that is not there is created |
 | `config.section_keys()` | list of strings | the section names holding at least one key, in document order |
 
 ```berry
 var doc = store.config("routines/interval.cfg")
 var target = doc.get("", "target", 0.0)   # the flat file's key, in the empty section
-doc.set("", "target", 12.5)               # writes /cfg/routines/interval.cfg
+doc.set("", "target", 12.5)               # changes the document in memory
+doc.save()                                # writes /cfg/routines/interval.cfg
 ```
 
 The class's own `Config():init()` still opens the device's own `/cfg/settings.ini`; calling
 `init()` on an instance from `store.config` replaces its document with that one.
 
-An instance writes its **whole document** on every `set` that changes something — the sections and
+An instance writes its **whole document** on every `save()` that follows a change — the sections and
 keys as they stand, in the order they were read — so a comment in the file does not survive a write
 through an instance, and a write from another route after the instance was made is overwritten by
-its next `set`. Hold an instance to read a document repeatedly; a value another writer owns is the
+its next `save`. Hold an instance to read a document repeatedly; a value another writer owns is the
 name forms' business.
 
 There is **no limit** on how many keys a document holds: `store.get(name)` answers every pair the
-file holds, a `set` adds a new key whatever the count, and a `set` answers `false` only when the
-document could not be written. The one cost is flash wear: a `set` writes only when a value actually
-changed — setting the same value on every pass costs nothing, while storing a *changing* value on
-every pass wears the partition. Write on the event, not on the frame. A map `set` is one write for
-the whole map, so a settings page that commits a settled set pays one, not one per key.
+file holds, a `set` adds a new key whatever the count, and a `save` answers `false` only when the
+document could not be written. The one cost is flash wear: a `save` writes only when a value changed
+since the document was read — setting the same value on every pass costs nothing, while storing a
+*changing* value on every pass wears the partition. Write on the event, not on the frame. A map
+`set` is one write for the whole map, and so is one `save` after any number of `set`s: however many
+keys a caller changes first, the document is written once.
