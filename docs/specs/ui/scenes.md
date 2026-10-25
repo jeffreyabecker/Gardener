@@ -121,7 +121,8 @@ it is cancelled.
    no binding here may claim them.
 3. Every settings list is a `SettingsEditScene`: the readout's own set and a routine's are opened and
    left the same way. A list that fits draws a centered block the size of its rows, with the heading
-   dropped; a longer list fills the scene's box and scrolls, keeping its heading.
+   dropped unless it was given a title; a longer list fills the scene's box and scrolls, keeping its
+   heading.
 4. `EditScene` and everything built on it answer the same gestures; only `DurationEditScene` adds a
    stage. The base frames what the kind measures: `content_size()` is the whole of the editor's
    content — its label row, its body and its hint row — and `draw_page()` draws a border a pixel

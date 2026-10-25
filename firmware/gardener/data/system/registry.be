@@ -12,11 +12,11 @@
 # method, so those live with the routine rather than in the page.
 #
 # The browser reads rows() and pushes a routine with push(routine_key, callback[, settings]).
-# The values, when the caller has none, are built by load(): every value the routine registers,
-# read from its file, held to its kind and repaired by the routine's own rule. So a scene is built
-# from one clean map and initialization is the only activation. The device's own scenes — the
-# readout, system and browser — are not registered here: they are well-known scenes the system
-# pushes directly.
+# The values, when the caller has none, are built by load_settings(): every value the routine
+# registers, read from its file, held to its kind and repaired by the routine's own rule. So
+# a scene is built from one clean map and initialization is the only activation. The device's own
+# scenes — the readout, system and browser — are not registered here: they are well-known scenes
+# the system pushes directly.
 
 import string
 
@@ -156,7 +156,7 @@ class RoutineRegistry
   # own file and held to its kind, then repaired by the routine's rule so the set is one a run
   # accepts. A routine with no settings begins with an empty map. This is the only place the
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
-  def load(routine_key)
+  def load_settings(routine_key)
     var settings_cfgs = self.settings_cfgs(routine_key)
     var settings_values = {}
     if settings_cfgs == nil
@@ -200,7 +200,7 @@ class RoutineRegistry
       return false
     end
     if settings == nil
-      settings = self.load(routine_key)
+      settings = self.load_settings(routine_key)
     end
     return ux.push(e.factory(settings), nil, callback)
   end

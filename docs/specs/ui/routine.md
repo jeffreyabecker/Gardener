@@ -110,8 +110,8 @@ answers the box of the scene on top, with the firmware calling `reset`, `enter` 
 repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
 builds — routine key, title, icon, factory and settings instance — and `class RoutineRegistry` with the
-global `routines` instance — the list the browser draws, the `load(routine_key)` that builds a
-routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
+global `routines` instance — the list the browser draws, the `load_settings(routine_key)` that
+builds a routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
 wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an optional
 `Scrollbar`. A row is a `ListRow` — the icon drawn at its left, the title drawn beside it, and the
@@ -156,13 +156,13 @@ def edit()
 end
 ```
 
-Nothing in the settings folder reads or writes anything on its own: `SettingsEditScene` edits the values
-it was handed and pops them on `back:single`, and the caller writes them. A page has the state
-already, so it opens the list on that state and reads no file; a caller with no state of its own —
-the browser — reads the routine's document through the declaration, mends it when the routine's rule
-refuses it, and passes the result in. Writing is the registry's
-`save_settings(routine_key, settings_values[, settings_cfgs])`, which applies the rule and writes
-every value.
+Nothing in the settings folder reads or writes anything on its own: `SettingsEditScene` edits the
+values it was handed and pops them on `back:single`, and the caller writes them. A page has the
+state already, so it opens the list on that state and reads no file; a caller with no state of its
+own — the browser — reads the routine's document through `routines.load_settings(routine_key)`,
+which mends it when the routine's rule refuses it, and passes the result in under the routine's
+title. Writing is the registry's `save_settings(routine_key, settings_values[, settings_cfgs])`,
+which applies the rule and writes every value.
 
 `/cfg/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
 device binding takes it at boot and answers its entries as `jingle` records from
@@ -211,7 +211,8 @@ visit and nothing a previous visit left behind survives. `activate()` runs on ev
 every return to a scene that was pushed without a callback; a routine page, which does all of its
 work in `init()`, inherits it as a no-op. A re-entry does not repeat `init(settings)`, so a scene
 whose values can change while it is not showing reads them again in the callback that brought it
-back — the shipped pages call `routines.load()` from their settings callback for exactly that.
+back — the shipped pages keep the settled set their settings list pops in that callback, and do not
+read the file back.
 
 ## Gestures
 
@@ -301,17 +302,18 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
 A routine with nothing to edit registers `nil`. An instance that is registered answers both: a
 routine with no rule of its own returns `nil` from `problem`.
 
-The list itself is `SettingsEditScene(settings_cfgs, settings_values, message)`: the settings declaration
-for the rows and a map of values keyed by setting key, built by whoever opens it — the page's
-`up:double`, or the browser's Forward on the routine's row. The scene edits the values it was handed
-and hands a set back on the way out: what it was edited to when **OK** kept it, and the set as it was
-opened when **Back** or **Cancel** refused it. The caller applies the rule and writes what it is
-given, so a refused edit writes back the values it opened with. The scene never touches the store,
-and nothing is written until the list closes.
+The list itself is `SettingsEditScene(settings_cfgs, settings_values, title)`: the settings
+declaration for the rows, a map of values keyed by setting key, and the title drawn above them, or
+`nil` for none. It is built by whoever opens it — the page's `up:double`, or the browser's Forward
+on the routine's row. The scene edits the values it was handed and hands a set back on the way out:
+what it was edited to when **OK** kept it, and the set as it was opened when **Back** or **Cancel**
+refused it. The caller applies the rule and writes what it is given, so a refused edit writes back
+the values it opened with. The scene never touches the store, and nothing is written until the list
+closes.
 
-A list that fits in the page draws a centered block the size of its rows, with no heading; a repair
-message, when there is one, is the block's first line. A longer list fills the page and scrolls,
-keeping its heading.
+A list that fits in the page draws a centered block the size of its rows; a title, when there is one,
+is the block's first line. A longer list fills the page and scrolls, keeping its heading — the title,
+or `SETTINGS` when it has none.
 
 ### A setting
 
@@ -413,16 +415,16 @@ The machine's own `min` … `floor` is the range, so a pressure setting takes no
 `problem(values)` is asked with every value by key when the list opens and again when it closes, and
 when the registry builds the clean map a routine is initialized from. While the rule refuses the set,
 the settings that differ from their default are put back to them in the order the list shows them,
-so what is written is always a set the rule accepts. The reason that was applied is drawn in place
-of the list's title until the first value is committed. So a file edited by hand is shown mended the
-moment its settings are opened and written mended when the list closes; an edit that would break a
-rule is put back when the list closes, and a page is never initialized with a set the rule refuses.
+so what is written is always a set the rule accepts. The reason that was applied is logged, not
+drawn: the list's heading is the routine's title. So a file edited by hand is mended the moment its
+settings are opened and written mended when the list closes; an edit that would break a rule is put
+back when the list closes, and a page is never initialized with a set the rule refuses.
 
 ### Reading and writing them
 
-A page does not read its file at all: the registry's `load(routine_key)` reads every setting it
-registers, holds each to its kind and repairs the set, and the page's `init(settings)` is handed the
-result as a map keyed by setting key. A page takes what it needs from that map in
+A page does not read its file at all: the registry's `load_settings(routine_key)` reads every setting
+it registers, holds each to its kind and repairs the set, and the page's `init(settings)` is handed
+the result as a map keyed by setting key. A page takes what it needs from that map in
 `init_from_settings(settings_values)`, and a value is read from it directly:
 
 ```berry

@@ -70,13 +70,8 @@ class BrowserScene : Scene
       vacuum.log("settings: " + routine_key + " has none")
       return false
     end
-    var settings_values = {}
-    for cfg : settings_cfgs
-      settings_values[cfg.key] = cfg.read(routine_key)
-    end
-    # A hand-edited document is shown mended, so the reason it was mended is drawn with the list.
-    var message = routines.repair(routine_key, settings_cfgs, settings_values)
-    ux.push(SettingsEditScene(settings_cfgs, settings_values, message), nil,
+    var settings_values = routines.load_settings(routine_key)
+    ux.push(SettingsEditScene(settings_cfgs, settings_values, routines.title(routine_key)), nil,
             / v -> self.settings_closed(routine_key, v))
     return true
   end

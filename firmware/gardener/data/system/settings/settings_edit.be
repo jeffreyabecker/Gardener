@@ -1,17 +1,17 @@
 # settings_edit.be — SettingsEditScene: the list a routine's settings are edited in. It is the list
 # and nothing else: the settings and the values are handed to it, the values keyed by setting key,
 # and it pops them back on the way out — what was edited when OK kept it, and the set as it was
-# opened when Back or Cancel refused it. A row carries its own setting as its value, so the row
-# showing is the setting Forward opens.
+# opened when Back or Cancel refused it. A title, when it is handed one, is drawn above the rows. A
+# row carries its own setting as its value, so the row showing is the setting Forward opens.
 
 class SettingsEditScene : Scene
   var settings_cfgs
   var settings_values
   var opened_settings_values
-  var message
+  var title
   var list
 
-  def init(settings_cfgs, settings_values, message)
+  def init(settings_cfgs, settings_values, title)
     var box = ux.box()
     super(self).init(box[0], box[1])
     self.settings_cfgs = settings_cfgs
@@ -22,7 +22,7 @@ class SettingsEditScene : Scene
       self.opened_settings_values[cfg.key] = settings_values[cfg.key]
     end
     self.settings_values = settings_values
-    self.message = message
+    self.title = title
     self.list = List(SettingsView.window_rows(self.dim))
   end
 
@@ -66,9 +66,9 @@ class SettingsEditScene : Scene
   end
 
   # A short list centers a block the size of its rows; a long one fills the scene's box and scrolls.
-  # The heading is dropped when the block fits — a repair message is kept, as the first line, because
-  # it is why the set was mended rather than a title. The heading and the rows are laid out on the
-  # settings view's own rows, so the list and the value editors move together.
+  # A title, when there is one, is the block's first line and the scrolling list's heading, standing
+  # in for the default "SETTINGS". The heading and the rows are laid out on the settings view's own
+  # rows, so the list and the value editors move together.
   def draw_page()
     var rows = []
     for cfg : self.settings_cfgs
@@ -79,8 +79,8 @@ class SettingsEditScene : Scene
     end
     self.list.set(rows)
     if rows.size() > self.list.visible
-      if self.message != nil
-        screen.draw_text(self.pos.x, self.pos.y, 1, false, self.message)
+      if self.title != nil
+        screen.draw_text(self.pos.x, self.pos.y, 1, false, self.title)
       else
         screen.draw_text(self.pos.x, self.pos.y, 1, false, "SETTINGS")
       end
@@ -89,8 +89,8 @@ class SettingsEditScene : Scene
     end
 
     var wide = 0
-    if self.message != nil
-      wide = screen.text_bounds(self.message, 1).w
+    if self.title != nil
+      wide = screen.text_bounds(self.title, 1).w
     end
     for row : rows
       var w = screen.text_bounds(row.title, 1).w
@@ -103,29 +103,24 @@ class SettingsEditScene : Scene
     end
 
     var heading_h = 0
-    if self.message != nil
+    if self.title != nil
       heading_h = SettingsView.row + SettingsView.gap
     end
     var block_h = rows.size() * SettingsView.row + heading_h
     var x = self.pos.x + (self.dim.w - wide) / 2
     var y = self.pos.y + (self.dim.h - block_h) / 2
-    if self.message != nil
-      var mw = screen.text_bounds(self.message, 1).w
-      screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.message)
+    if self.title != nil
+      var mw = screen.text_bounds(self.title, 1).w
+      screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.title)
       y += heading_h
     end
     self.list.draw(x, y)
   end
 
-  # The value an editor handed back replaces the one in the values the caller gave, and a value that
-  # changed takes the opening reason with it: that reason named the set as it was opened, so what
-  # ends it is a change. A cancel hands the row's own value back, so the row and the reason stay as
-  # they were.
+  # The value an editor handed back replaces the one in the values the caller gave. The title is not
+  # part of the set, so it stays over the rows however many values change.
   def value_closed(cfg, value)
-    if self.settings_values[cfg.key] != value
-      self.settings_values[cfg.key] = value
-      self.message = nil
-    end
+    self.settings_values[cfg.key] = value
     self.draw()
   end
 end

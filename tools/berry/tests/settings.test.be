@@ -302,25 +302,30 @@ test("a map write of the values already there writes nothing",
 # A routine's values are read once, by the registry, into the map its init() is handed: held to their
 # kinds, repaired by the routine's rule, and complete. A page never reads a document itself.
 def load_makes_a_clean_map()
-  var settings = routines.load("ramped_static")
-  assert_eq(settings["initial_pressure"], 5.0, "load: the start pressure is not the file's")
-  assert_eq(settings["total_duration"], 300, "load: the total duration is not the file's")
+  var settings = routines.load_settings("ramped_static")
+  assert_eq(settings["initial_pressure"], 5.0,
+            "load_settings: the start pressure is not the file's")
+  assert_eq(settings["total_duration"], 300,
+            "load_settings: the total duration is not the file's")
 
   # A value past its bounds arrives held to them, and a nullable key holding nothing arrives nil.
   # The shipped interval.cfg carries a rest pressure, so the key is emptied first: an empty value is
   # how the store says a setting holds nothing.
   store.set("interval", "set_count", "99")
   store.set("interval", "rest_pressure", "")
-  var held = routines.load("interval")
-  assert_eq(held["set_count"], 20, "load: a stored int above max is not held to it")
-  assert_nil(held["rest_pressure"], "load: a nullable key holding nothing is not nil")
+  var held = routines.load_settings("interval")
+  assert_eq(held["set_count"], 20,
+            "load_settings: a stored int above max is not held to it")
+  assert_nil(held["rest_pressure"],
+             "load_settings: a nullable key holding nothing is not nil")
   store.set("interval", "set_count", "4")
   store.set("interval", "rest_pressure", "5.0")
 
   # The routine's rule is applied to the map, so a page is never initialized with a set it refuses.
   store.set("ramped_static", "total_duration", "30")
-  var repaired = routines.load("ramped_static")
-  assert_eq(repaired["total_duration"], 300, "load: a set the rule refuses is not put back")
+  var repaired = routines.load_settings("ramped_static")
+  assert_eq(repaired["total_duration"], 300,
+            "load_settings: a set the rule refuses is not put back")
   store.set("ramped_static", "total_duration", "300")
 end
 
@@ -343,7 +348,7 @@ test("a routine's rule refuses a set that cannot run", the_rules_say_no)
 
 def a_repair_puts_a_set_back()
   var settings_cfgs = routines.settings_cfgs("ramped_static")
-  var settings_values = routines.load("ramped_static")
+  var settings_values = routines.load_settings("ramped_static")
   assert_nil(routines.repair("ramped_static", settings_cfgs, settings_values),
              "a set of valid values was refused")
 
@@ -469,10 +474,10 @@ test("a scene opened over another takes its box", a_scene_opened_over_another_ta
 
 # A cancel is the row as it stands: the editor hands back the value it was opened on, so a row that
 # was stepped and then refused keeps what it held - including nothing, which a nullable setting can
-# hold and commit - and the reason the set was opened with stands.
+# hold and commit - and the title the list was opened with stands.
 def cancelling_a_value_leaves_its_row_alone()
   var list = SettingsEditScene([PressureEditCfg("rest", nil, "Rest", nil, 1, true)],
-                           {"rest": nil}, "MENDED")
+                           {"rest": nil}, "MY ROUTINE")
   var depth = ux.depth()
   assert_true(ux.push(list), "the settings list would not push")
   harness.beat(1)
@@ -485,7 +490,7 @@ def cancelling_a_value_leaves_its_row_alone()
   harness.beat(1)
 
   assert_nil(list.settings_values["rest"], "a cancelled edit changed the row's value")
-  assert_eq(list.message, "MENDED", "a cancelled edit took the opening reason with it")
+  assert_eq(list.title, "MY ROUTINE", "a cancelled edit took the title with it")
   assert_eq(ux.depth(), depth + 1, "Cancel did not close the value scene")
 
   ux.pop(nil)
@@ -493,6 +498,31 @@ def cancelling_a_value_leaves_its_row_alone()
 end
 
 test("a cancel leaves its row alone", cancelling_a_value_leaves_its_row_alone)
+
+# The title is the list's heading rather than part of the set, so a value that commits keeps it.
+def committing_a_value_keeps_the_title()
+  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+                           {"count": 1}, "MY ROUTINE")
+  var depth = ux.depth()
+  assert_true(ux.push(list), "the settings list would not push")
+  harness.beat(1)
+
+  harness.press("forward:single")
+  harness.beat(1)
+  harness.press("up:single")
+  harness.beat(1)
+  harness.press("ok:single")
+  harness.beat(1)
+
+  assert_eq(list.settings_values["count"], 2, "a committed edit did not change the row's value")
+  assert_eq(list.title, "MY ROUTINE", "a committed edit took the title with it")
+  assert_eq(ux.depth(), depth + 1, "OK did not close the value scene")
+
+  ux.pop(nil)
+  harness.beat(1)
+end
+
+test("a committed edit keeps the title", committing_a_value_keeps_the_title)
 
 # Each kind draws itself from that window. A case pushes its editor and beats once, which is the
 # frame the runner captures — the picture to look at. The nil cases are the ones with no value to

@@ -36,7 +36,7 @@ def harness_settings_map(routine_key)
     harness_fail("settings: " + routine_key + " settings are not a list")
     return nil
   end
-  return routines.load(routine_key)
+  return routines.load_settings(routine_key)
 end
 
 # A settled set the driver writes, through the registry's own call, so the drive takes the same path
@@ -61,7 +61,7 @@ def harness_editor(routine_key)
   end
 
   harness_activate(routine_key, nil)
-  ux.push(SettingsEditScene(settings_cfgs, routines.load(routine_key), nil), nil,
+  ux.push(SettingsEditScene(settings_cfgs, routines.load_settings(routine_key), nil), nil,
           / v -> harness_editor_settled(routine_key, v))
 
   var i = 0

@@ -2,8 +2,8 @@
 #
 # A routine builds one per setting it registers, so this object carries both the row the settings
 # list draws — key, label, icon, default — and the kind's rules for reading, printing and editing
-# it. SettingsEditScene and the registry's load() ask it rather than branching on a kind, and each
-# kind opens the edit scene of the same name from the file beside this one.
+# it. SettingsEditScene and the registry's load_settings() ask it rather than branching on a kind,
+# and each kind opens the edit scene of the same name from the file beside this one.
 #
 # A kind that cannot work — a choice with no values, bounds the wrong way round — says so in
 # `problem` and logs one line where it is built. It does not raise: the routine still registers, its
