@@ -8,6 +8,8 @@
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/Config.h"
+#include "storage/DeviceConfig.h"
 #include "storage/Jingles.h"
 
 namespace gardener {
@@ -41,7 +43,9 @@ int deviceSetUnit(bvm* vm) {
   DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
       be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
-  if (accepted) context->setUnit(unit);
+  if (accepted) {
+    context->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+  }
   be_pushbool(vm, accepted);
   be_return(vm);
 }
@@ -49,12 +53,13 @@ int deviceSetUnit(bvm* vm) {
 // The target the default program pulls to; 0 when none has been set. The page clamps a new value to
 // the machine's bounds before it writes it, and the default page clamps again when it restores one.
 int deviceTarget(bvm* vm) {
-  be_pushreal(vm, context->targetPressureKpa());
+  const float target = context->config().get<float>(DeviceSection, TargetKey, 0.0f);
+  be_pushreal(vm, target > 0.0f ? target : 0.0f);
   be_return(vm);
 }
 
 int deviceSetTarget(bvm* vm) {
-  context->setTarget((float)argReal(vm, 1));
+  context->config().set(DeviceSection, TargetKey, (float)argReal(vm, 1));
   be_return_nil(vm);
 }
 
@@ -69,7 +74,8 @@ int deviceBluetooth(bvm* vm) {
 // empty or unknown value to its first entry; the system page writes one of the identifiers it read
 // from that list.
 int deviceJingle(bvm* vm) {
-  be_pushstring(vm, context->jingles().currentJingleKey().c_str());
+  const String id = context->config().get<String>(DeviceSection, JingleKey, "");
+  be_pushstring(vm, id.c_str());
   be_return(vm);
 }
 
@@ -77,7 +83,7 @@ int deviceSetJingle(bvm* vm) {
   if (!be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "device.set_jingle(id)");
   }
-  context->jingles().setCurrentJingle(String(argText(vm, 1)));
+  context->config().set(DeviceSection, JingleKey, String(argText(vm, 1)));
   be_return_nil(vm);
 }
 

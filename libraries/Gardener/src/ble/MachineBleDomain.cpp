@@ -58,7 +58,6 @@ const BleDomain::Spec MachineBleDomain::Specs[] = {
     {0x0009, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // state
     {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pressure_kpa
     {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4}, // target
-    {0x0004, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // duty
     {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                             // fault
     {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                         // command
     {0x0008, NIMBLE_PROPERTY::READ, 16},                                                       // fw
@@ -94,9 +93,6 @@ void MachineBleDomain::describe(uint8_t index) {
       break;
     case Target:
       setFloat(chr, vacuum.targetPressureKpa());
-      break;
-    case Duty:
-      setFloat(chr, vacuum.pump().dutyPercent());
       break;
     case Fault:
       chr->setValue(vacuum.faultCode());
@@ -297,8 +293,6 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
     lastFastMs_ = nowMs;
     describe(PressureKpa);
     link.notify(characteristics_[PressureKpa]);
-    describe(Duty);
-    link.notify(characteristics_[Duty]);
     describe(UptimeMs);
     link.notify(characteristics_[UptimeMs]);
   }

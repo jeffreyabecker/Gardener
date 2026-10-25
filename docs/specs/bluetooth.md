@@ -18,7 +18,6 @@ read, before it trusts the rest of the table.
 | `ble_proto` | `0001` | read | 1 | uint8, this contract's revision |
 | `pressure_kpa` | `0002` | read, notify | 4 | float32 LE, depth below ambient |
 | `target` | `0003` | read, write, notify | 4 | float32 LE, depth to pull to |
-| `duty` | `0004` | read, notify | 4 | float32 LE, pump duty in percent |
 | `fault` | `0005` | read, notify | 12 | UTF-8 code, empty when none |
 | `batt` | `0006` | read, notify | 1 | uint8 percent, `0xFF` when the gauge is not reporting |
 | `command` | `0007` | write, notify | 1 | an opcode in, a result out |
@@ -42,17 +41,19 @@ preference its pages print in. A build without a panel has neither characteristi
 finds `caps` with the panel bit clear and no `batt` or `unit` to read. Every other characteristic is
 the machine's and is always present.
 
-The suffixes `000F`, `0010`, `0011`, `0012` and `0013` are retired: they carried the rig's tuning
-numbers — the pump's flow, the chamber volume, the valve's direction, the duty cap and the
-deadband — which are build symbols now and have no characteristic. A retired suffix is not reused.
+The suffixes `0004`, `000F`, `0010`, `0011`, `0012` and `0013` are retired. `0004` carried the pump's
+duty, which the radio no longer reports — the serial line's `duty=` is unchanged. The rest carried the
+rig's tuning numbers — the pump's flow, the chamber volume, the valve's direction, the duty cap and
+the deadband — which are build symbols now and have no characteristic. A retired suffix is not
+reused.
 
 `pressure_kpa`, `target` and `floor` are always kPa: `unit` says what the panel prints, not what the
 numbers mean.
 
 ## What the machine reports
 
-These carry what the machine knows: the run state, the reading it regulates on, the pump's output,
-whether the sensor can be trusted, the fault latch, and the panel's pack.
+These carry what the machine knows: the run state, the reading it regulates on, whether the sensor
+can be trusted, the fault latch, and the panel's pack.
 
 ### `state`
 
@@ -73,12 +74,6 @@ The depth below ambient in kPa — zero at ambient and rising as the chamber is 
 the frame every target and every reach is stated in. It is the same number the serial line reports
 as `pressure_kpa`, and it reads zero while no reading can be trusted, which `sensor` distinguishes
 from a chamber at ambient.
-
-### `duty`
-
-The pump drive in percent, bounded by `PUMP_DUTY_MAX_PERCENT`, after the driver's slew limit: what
-the part is being driven at now rather than what the loop last asked for. There is no write: the
-pump is driven by the loop alone.
 
 ### `sensor`
 
@@ -247,9 +242,9 @@ A notification goes only to a central that has subscribed to that characteristic
 subscription the link sends the current value of every on-change field once, so a client starts from
 the machine's state rather than from the first thing that moves.
 
-`pressure_kpa`, `duty` and `uptime_ms` are notified at 5 Hz while a central is connected, and `batt`
-every 10 s. Every other notifying characteristic is sent when its value changes, with `command` sent
-after every opcode and `write_result` after every refused target or hold write.
+`pressure_kpa` and `uptime_ms` are notified at 5 Hz while a central is connected, and `batt` every
+10 s. Every other notifying characteristic is sent when its value changes, with `command` sent after
+every opcode and `write_result` after every refused target or hold write.
 
 `uptime_ms` is how a client places a notification in time and tells a reconnect apart from a
 restart.

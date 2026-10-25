@@ -10,6 +10,8 @@
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/Config.h"
+#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace berry {
@@ -225,7 +227,8 @@ int screenBounds(bvm* vm) {
 // The unit the panel prints, as the same fields panel/Units.h holds: a page formats and steps a
 // target in the unit on the glass without carrying a table of its own.
 int screenUnit(bvm* vm) {
-  const DisplayUnit unit = context->unit();
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   const DisplayUnitInfo& info = displayUnitInfo(unit);
   const int record = beginRecord(vm, "unit");
   if (record < 0) be_return_nil(vm);

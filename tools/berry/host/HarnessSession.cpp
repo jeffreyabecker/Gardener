@@ -89,9 +89,8 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
           [](BitmapPanel& panel) -> bool { return panel.begin(); },
           BitmapPanel::Width, BitmapPanel::Height),
       buzzer_(buzzerPart_),
-      overlay_(&display_, &battery_, &vacuum_, &preferences_),
-      context_(overlay_, config_, jingles_, preferences_, vacuum_, battery_, buzzer_, files_,
-               logger_) {}
+      overlay_(&display_, &battery_, &vacuum_, &config_),
+      context_(overlay_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -101,7 +100,6 @@ bool HarnessSession::begin() {
   // The order Panel::boot brings them up in, minus the bus and the keys. The documents are read
   // before the interpreter, which takes the jingle library when its modules are installed.
   config_.begin();
-  loadDevicePreferences(config_, preferences_);
   jingles_.begin();
   battery_.begin();
   buzzerPart_.begin();

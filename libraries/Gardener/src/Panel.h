@@ -12,7 +12,6 @@
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 #include "storage/Jingles.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
@@ -52,10 +51,10 @@ class Panel : public Machine, public PanelContext {
         gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
-        overlay_(new Overlay(display, battery, &vacuum(), &preferences_)),
-        routines_(routines),
         config_(&library),
         jingles_(&library),
+        overlay_(new Overlay(display, battery, &vacuum(), &config_)),
+        routines_(routines),
         fs_(fs),
         library_(library) {}
 
@@ -77,13 +76,8 @@ class Panel : public Machine, public PanelContext {
   // The display is the overlay — every drawing verb goes through it — so both are the same object.
   Display& display() override { return *overlay_; }
   Overlay& overlay() { return *overlay_; }
+  Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
-  DisplayUnit unit() const override { return preferences_.unit; }
-  void setUnit(DisplayUnit unit) override { setDeviceUnit(config_, preferences_, unit); }
-  float targetPressureKpa() const override { return preferences_.targetKpa; }
-  void setTarget(float pressureKpa) override {
-    setDeviceTarget(config_, preferences_, pressureKpa);
-  }
   Library& library() override { return library_; }
   // The filesystem is the panel's own, for the mark it draws and the `fs` wire domain. It is not
   // part of the context: no routine reaches a file.
@@ -98,13 +92,12 @@ class Panel : public Machine, public PanelContext {
   GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;
-  // The in-force preferences, ahead of the overlay that reads the unit, and the two documents they
-  // and the interpreter are restored from.
-  DevicePreferences preferences_;
-  Overlay* overlay_;
-  Routines* routines_;
+  // The device's documents, ahead of the overlay that reads the unit and of the interpreter that
+  // is installed over the jingle library.
   Config config_;
   JinglesConfig jingles_;
+  Overlay* overlay_;
+  Routines* routines_;
   FS& fs_;
   Library& library_;
 };

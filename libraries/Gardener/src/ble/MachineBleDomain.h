@@ -10,7 +10,7 @@ namespace gardener {
 
 class Machine;
 
-// The machine's slice of the GATT table: state, pressure_kpa, target, duty, fault,
+// The machine's slice of the GATT table: state, pressure_kpa, target, fault,
 // command, fw, ble_proto, sensor, floor, caps, hold_s, max_run_s, write_result and uptime_ms.
 // Everything a controller commands and reads about the machine itself, before the panel adds
 // anything of its own. `floor` is here because it bounds a target, not because it is a setting: the
@@ -34,19 +34,18 @@ class MachineBleDomain : public BleDomain {
     State = 0,
     PressureKpa = 1,
     Target = 2,
-    Duty = 3,
-    Fault = 4,
-    Command = 5,
-    Firmware = 6,
-    Protocol = 7,
-    Sensor = 8,
-    Floor = 9,
-    Caps = 10,
-    HoldS = 11,
-    MaxRunS = 12,
-    WriteResult = 13,
-    UptimeMs = 14,
-    Count = 15,
+    Fault = 3,
+    Command = 4,
+    Firmware = 5,
+    Protocol = 6,
+    Sensor = 7,
+    Floor = 8,
+    Caps = 9,
+    HoldS = 10,
+    MaxRunS = 11,
+    WriteResult = 12,
+    UptimeMs = 13,
+    Count = 14,
   };
 
   static const Spec Specs[Count];

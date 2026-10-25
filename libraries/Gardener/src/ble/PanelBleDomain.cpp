@@ -9,6 +9,7 @@
 #include "Panel.h"
 #include "ble/BleLink.h"
 #include "panel/Units.h"
+#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace {
@@ -34,9 +35,12 @@ void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
 
 void PanelBleDomain::describe(uint8_t index) {
   switch (index) {
-    case Unit:
-      setByte(characteristics_[Unit], static_cast<uint8_t>(app_->unit()));
+    case Unit: {
+      DisplayUnit unit = DisplayUnit::Kpa;
+      parseDisplayUnit(app_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+      setByte(characteristics_[Unit], static_cast<uint8_t>(unit));
       break;
+    }
     case Batt:
       setByte(characteristics_[Batt],
               app_->battery().present() ? app_->battery().percent() : 0xFF);
@@ -60,7 +64,8 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
     if (unitWrite_.value < DisplayUnitCount) {
-      app_->setUnit(static_cast<DisplayUnit>(unitWrite_.value));
+      const DisplayUnit unit = static_cast<DisplayUnit>(unitWrite_.value);
+      app_->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
     }
     describe(Unit);
   }

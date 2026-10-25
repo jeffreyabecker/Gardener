@@ -20,6 +20,9 @@ end
 class bounds
   var w, h
 end
+class jingle
+  var key, full_title, short_title, notes
+end
 
 # The first argument that is not nil, or nil when every one of them is. With no arguments it is nil,
 # so `is_nil(stored, fallback)` is the stored value when there is one and the fallback when there is

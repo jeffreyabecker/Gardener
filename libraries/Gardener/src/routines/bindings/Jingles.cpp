@@ -11,6 +11,8 @@
 #include "Logger.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
+#include "storage/Config.h"
+#include "storage/DeviceConfig.h"
 #include "storage/Jingles.h"
 
 namespace gardener {
@@ -114,10 +116,11 @@ int jinglesNotes(bvm* vm) {
 }
 
 // The selected jingle, or the first one when nothing valid has been chosen yet. The selection is
-// the jingle document's own current key, so the library owns it rather than the device's settings.
+// the device's own `[device] jingle` key in /settings.ini.
 const Jingle* currentJingle() {
   if (context == nullptr) return nullptr;
-  const Jingle* jingle = findJingle(context->jingles().currentJingleKey().c_str());
+  const String id = context->config().get<String>(DeviceSection, JingleKey, "");
+  const Jingle* jingle = findJingle(id.c_str());
   if (jingle == nullptr && !entries.empty()) jingle = entries.front();
   return jingle;
 }

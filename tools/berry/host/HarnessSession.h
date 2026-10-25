@@ -20,7 +20,6 @@
 #include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 #include "storage/Jingles.h"
 
 struct bvm;
@@ -177,12 +176,11 @@ class BufferLogger : public Logger {
 class HarnessPanel : public PanelContext {
  public:
   HarnessPanel(Display& display, Config& config, JinglesConfig& jingles,
-                DevicePreferences& preferences, VacuumSystem& vacuum, Battery& battery,
+                VacuumSystem& vacuum, Battery& battery,
                 BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
         config_(config),
         jingles_(jingles),
-        preferences_(preferences),
         vacuum_(vacuum),
         battery_(battery),
         buzzer_(buzzer),
@@ -190,13 +188,8 @@ class HarnessPanel : public PanelContext {
         logger_(logger) {}
 
   Display& display() override { return display_; }
+  Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
-  DisplayUnit unit() const override { return preferences_.unit; }
-  void setUnit(DisplayUnit unit) override { setDeviceUnit(config_, preferences_, unit); }
-  float targetPressureKpa() const override { return preferences_.targetKpa; }
-  void setTarget(float pressureKpa) override {
-    setDeviceTarget(config_, preferences_, pressureKpa);
-  }
   VacuumSystem& vacuum() override { return vacuum_; }
   Battery& battery() override { return battery_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
@@ -209,7 +202,6 @@ class HarnessPanel : public PanelContext {
   Display& display_;
   Config& config_;
   JinglesConfig& jingles_;
-  DevicePreferences& preferences_;
   VacuumSystem& vacuum_;
   Battery& battery_;
   BuzzerPlayer& buzzer_;
@@ -270,7 +262,6 @@ class HarnessSession {
   BufferLogger logger_;
   Config config_;
   JinglesConfig jingles_;
-  DevicePreferences preferences_;
   Chamber chamber_;
   ModelPump pump_;
   ModelSensor sensor_;

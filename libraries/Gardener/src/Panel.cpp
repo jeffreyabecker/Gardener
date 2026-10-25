@@ -9,6 +9,7 @@
 
 #include "Logger.h"
 #include "panel/Units.h"
+#include "storage/DeviceConfig.h"
 
 namespace gardener {
 
@@ -21,7 +22,6 @@ void Panel::boot() {
   // The device's own documents come up before the interpreter, which reads the jingle library when
   // its modules are installed.
   config_.begin();
-  loadDevicePreferences(config_, preferences_);
   jingles_.begin();
 
   Logger& log = logger();
@@ -52,8 +52,10 @@ void Panel::boot() {
   log.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   log.info("buttons: four keys on interrupt");
 
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   String stored = "settings: unit=";
-  stored += displayUnitInfo(unit()).name;
+  stored += displayUnitInfo(unit).name;
   log.info(stored.c_str());
 
   String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";

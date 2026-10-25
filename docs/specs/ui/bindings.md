@@ -210,12 +210,11 @@ the band names.
 ## `device` — the device's own settings
 
 The unit the panel prints, the target the default program restores and the selected jingle. All
-belong to the device rather than to a routine's `store` file. The unit and the target are the keys
-`unit` and `target` of `/settings.ini`'s `[device]` section; the jingle is the jingle library's own
-`current` key in `/system/jingles.ini`, because the library is where the identifiers live. The unit
-is the same switch the serial `device` domain carries; the diagnostics switch is not here, because
-it belongs to the serial link rather than to the glass. The radio is not a setting:
-`device.bluetooth()` reports whether the image was built with it.
+belong to the device rather than to a routine's `store` file, and all are keys of `/settings.ini`'s
+`[device]` section: `unit`, `target` and `jingle`. The unit is the same switch the serial `device`
+domain carries; the diagnostics switch is not here, because it belongs to the serial link rather
+than to the glass. The radio is not a setting: `device.bluetooth()` reports whether the image was
+built with it.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -225,7 +224,7 @@ it belongs to the serial link rather than to the glass. The radio is not a setti
 | `device.set_target(pressure_kpa)` | — | stores a new target in `/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
-| `device.set_jingle(id)` | — | stores the identifier as `/system/jingles.ini`'s `current` key |
+| `device.set_jingle(id)` | — | stores the identifier as `[device] jingle` in `/settings.ini` |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
@@ -303,19 +302,19 @@ the whole sequence malformed and `play` returns false.
 ## `jingles` — the note library
 
 The device ships named note sequences in `/system/jingles.ini`. The file is read once at boot,
-like the `.be` files, so a change takes effect at the next reset. It is an INI document: the global
-`current` key names the selected jingle, and each jingle is a section with three keys.
+like the `.be` files, so a change takes effect at the next reset. It is an INI document with one
+section per jingle, three keys each; which one is selected is the device's own `[device] jingle` key
+in `/settings.ini`.
 
 ```ini
-current=poacher
-
 [poacher]
 full_title=Lincolnshire Poacher
 short_title=Poacher
 notes=E5:200 G5:200 E6:200 ...
 ```
 
-The section name is the jingle's **identifier**: lowercase, stable, and the value `current` stores.
+The section name is the jingle's **identifier**: lowercase, stable, and the value `[device] jingle`
+stores.
 `full_title` is the display name, `short_title` the label that fits on the panel, and `notes` the
 sequence in `buzzer.play()` notation.
 
@@ -330,7 +329,7 @@ malformed file leaves the library empty.
 | `jingles.title(id)` | string or `nil` | the display name |
 | `jingles.label(id)` | string or `nil` | the short label the System page draws |
 | `jingles.notes(id)` | string or `nil` | the note sequence, ready for `buzzer.play()` |
-| `jingles.current()` | string or `nil` | the notes for the document's `current`, or the first jingle when that identifier is empty or unknown |
+| `jingles.current()` | string or `nil` | the notes for the jingle `[device] jingle` selects, or the first one when that identifier is empty or unknown |
 | `jingles.play_current()` | `bool` | play the current jingle, as `buzzer.play(jingles.current())` would; false when the library is empty |
 | `jingles.default_id()` | string or `nil` | the first identifier |
 

@@ -2,12 +2,11 @@
 
 #include <stdint.h>
 
-#include "panel/Units.h"
-
 namespace gardener {
 
 class Battery;
 class BuzzerPlayer;
+class Config;
 class Display;
 class JinglesConfig;
 class Library;
@@ -23,15 +22,11 @@ class PanelContext {
   virtual ~PanelContext() = default;
 
   virtual Display& display() = 0;
-  // The jingle library, which is also where the selected jingle is kept.
+  // The device's own document, /settings.ini: whoever needs the unit, the target or the jingle
+  // under [device] reads and writes that key here.
+  virtual Config& config() = 0;
+  // The jingle library: the note sequences a routine can play.
   virtual JinglesConfig& jingles() = 0;
-  // The preferences in force: the values the device's own document holds, restored at boot and
-  // written back on a change. A read never touches the document, so the panel task and the
-  // interface task do not share a String.
-  virtual DisplayUnit unit() const = 0;
-  virtual void setUnit(DisplayUnit unit) = 0;
-  virtual float targetPressureKpa() const = 0;
-  virtual void setTarget(float pressureKpa) = 0;
   virtual VacuumSystem& vacuum() = 0;
   virtual Battery& battery() = 0;
   virtual BuzzerPlayer& buzzer() = 0;

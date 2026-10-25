@@ -15,6 +15,7 @@
 #include "hal/Display.h"
 #include "panel/Units.h"
 #include "serial/Domain.h"
+#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace {
@@ -112,8 +113,10 @@ void DeviceDomain::get(Stream& io) {
   io.print(" log=");
   io.print(app_.logger().levels());
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(app_.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   io.print(" unit=");
-  io.print(displayUnitInfo(app_.unit()).name);
+  io.print(displayUnitInfo(unit).name);
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -184,7 +187,7 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.setUnit(unit);
+    app_.config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
 
     io.print("ok unit=");
     io.print(displayUnitInfo(unit).name);
