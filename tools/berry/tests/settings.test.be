@@ -146,6 +146,67 @@ end
 
 test("a stored value is parsed by its kind", a_stored_value_is_parsed_by_its_kind)
 
+# --- the map forms ---------------------------------------------------------
+#
+# One call for the whole document: a page reads every value it keeps in one pass and commits a
+# settled set in one write, rather than a `get` or a flash write per key.
+
+def a_map_read_answers_every_stored_key()
+  store.set("settings_test", "map_count", "12")
+  store.set("settings_test", "map_gain", "0.25")
+
+  var all = store.get("settings_test")
+  assert_eq(all["map_count"], "12", "the whole read does not answer a stored key")
+  assert_eq(all["map_gain"], "0.25", "the whole read does not answer every stored key")
+  assert_nil(all.find("map_absent"), "the whole read answers a key nothing stored")
+end
+
+test("a map read answers every stored key as text", a_map_read_answers_every_stored_key)
+
+# The fallback sets the type of one key; a map of defaults does the same for every key it names,
+# and stands as the answer for a key the document holds nothing for.
+def a_default_map_types_each_key()
+  store.set("settings_test", "map_count", "12")
+  store.set("settings_test", "map_gain", "0.25")
+
+  var typed = store.get("settings_test",
+                        {"map_count": 0, "map_gain": 0.0, "map_flags": true,
+                         "map_label": "x", "map_absent": 7})
+  assert_eq(typed["map_count"], 12, "a stored int is not read as an int")
+  assert_eq(typed["map_gain"], 0.25, "a stored real is not read as a real")
+  assert_eq(typed["map_flags"], true, "an absent bool is not its default")
+  assert_eq(typed["map_label"], "x", "an absent string is not its default")
+  assert_eq(typed["map_absent"], 7, "an absent int is not its default")
+end
+
+test("a map of defaults types each key it names", a_default_map_types_each_key)
+
+def a_map_write_merges_in_one_write()
+  store.set("settings_test", "map_keep", "kept")
+  store.set("settings_test", "map_count", "1")
+
+  var before = harness.writes()
+  assert_true(store.set("settings_test", {"map_count": 9, "map_gain": 0.5}),
+              "a map write is not accepted")
+  assert_eq(harness.writes() - before, 1, "a map write is not one write")
+  assert_eq(store.get("settings_test", "map_count", 0), 9, "a map write did not land")
+  assert_eq(store.get("settings_test", "map_keep", ""), "kept",
+            "a map write dropped a key it did not name")
+end
+
+test("a map write merges in one write", a_map_write_merges_in_one_write)
+
+def a_map_write_of_the_same_values_writes_nothing()
+  store.set("settings_test", "map_count", "4")
+
+  var before = harness.writes()
+  assert_true(store.set("settings_test", {"map_count": 4}), "a repeat map write is not accepted")
+  assert_eq(harness.writes(), before, "a map write of the same values wrote the file")
+end
+
+test("a map write of the values already there writes nothing",
+     a_map_write_of_the_same_values_writes_nothing)
+
 # A routine's values are read once, by the registry, into the map its init() is handed: held to their
 # kinds, repaired by the routine's rule, and complete. A page never reads a document itself.
 def load_makes_a_clean_map()

@@ -27,11 +27,16 @@ class MemoryFiles : public Library {
   // Whether a `key=value` line for `key` changed in `path` since the run began.
   bool wrote(const std::string& path, const std::string& key) const;
 
+  // How many writes landed since the run began: one call to `store.set` with a map is one, whatever
+  // it names.
+  int writes() const { return writes_; }
+
  private:
   bool textAt(const std::string& path, std::string& out) const;
 
   std::map<std::string, std::string> files_;
   std::vector<std::string> written_;
+  int writes_ = 0;
 };
 
 }  // namespace gardener

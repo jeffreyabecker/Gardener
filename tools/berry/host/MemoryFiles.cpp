@@ -76,6 +76,7 @@ bool MemoryFiles::read(const String& path, String& out) {
 
 bool MemoryFiles::write(const String& path, const String& text) {
   const std::string filePath = path.c_str();
+  writes_++;
 
   std::string previous;
   textAt(filePath, previous);

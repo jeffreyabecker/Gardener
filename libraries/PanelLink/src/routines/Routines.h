@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "routines/GestureQueue.h"
+#include "storage/Values.h"
 
 // The vendored interpreter's VM type, forward declared so its header stops here.
 struct bvm;
@@ -59,9 +60,19 @@ class Routines {
   // --- the `store` module's surface ---
   // The values a page keeps, in the document its name addresses, through the library the context
   // gave. The document is a plain word: the file is named after it, so a path separator would
-  // address another file.
+  // address another file. The pair forms are one key; the document forms are the whole map of
+  // them, so a page that reads or writes every value pays one file read and at most one write.
   bool storeGet(const char* document, const char* key, String& out);
   bool storeSet(const char* document, const char* key, const String& value);
+
+  // Every value the document holds, in the order the file lists them. False when the name is not a
+  // plain word, the file is not there, or there is no library; `out` is left as it was.
+  bool storeGet(const char* document, Values& out);
+
+  // Every key `values` holds, merged into the document and written at most once. A key the
+  // document already holds with the same text is skipped, and a key `values` does not name is
+  // kept. False only when a new key will not fit or the write fails.
+  bool storeSet(const char* document, const Values& values);
 
  private:
   size_t loadSystem(size_t& found);

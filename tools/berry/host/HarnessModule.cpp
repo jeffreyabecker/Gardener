@@ -68,6 +68,11 @@ int harnessWrote(bvm* vm) {
   be_return(vm);
 }
 
+int harnessWrites(bvm* vm) {
+  be_pushint(vm, gSession->files().writes());
+  be_return(vm);
+}
+
 int harnessBuzzerSounds(bvm* vm) {
   be_pushint(vm, gSession->buzzerPart().sounds());
   be_return(vm);
@@ -106,7 +111,7 @@ int harnessIsGif(bvm* vm) {
 const bnfuncinfo kHarnessLibrary[] = {
     {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
     {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
-    {"wrote", harnessWrote},    {"buzzer_sounds", harnessBuzzerSounds},
+    {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
     {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},
     {"capture_stem", harnessCaptureStem},   {"is_gif", harnessIsGif},
     {nullptr, nullptr},

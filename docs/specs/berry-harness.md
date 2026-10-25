@@ -92,7 +92,7 @@ image loads before anything else — and the seven native modules a routine call
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |
 | `jingles` | the library read from `/system/jingles.txt` |
-| `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for |
+| `store` | every `/routines/*.cfg`, as text, with the type taken from the default asked for, and `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`
 defines the global `routines` instance and `/system/ux.be` the global `ux`, which the driver and the

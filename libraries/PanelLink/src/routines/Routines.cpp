@@ -311,16 +311,40 @@ bool Routines::storeGet(const char* document, const char* key, String& out) {
 }
 
 bool Routines::storeSet(const char* document, const char* key, const String& value) {
-  if (!plainWord(document) || key == nullptr || library_ == nullptr) return false;
+  if (key == nullptr) return false;
+  Values one;
+  if (!one.set(key, value)) return false;
+  return storeSet(document, one);
+}
+
+bool Routines::storeGet(const char* document, Values& out) {
+  if (!plainWord(document) || library_ == nullptr) return false;
 
   String text;
-  Values values;
-  if (library_->read(documentPath(document), text)) values.parse(text);
+  if (!library_->read(documentPath(document), text)) return false;
+  out.parse(text);
+  return true;
+}
 
-  // A repeat value is not worth a flash write.
-  if (values.has(key) && values.get(key, "") == value) return true;
-  if (!values.set(key, value)) return false;
-  return library_->write(documentPath(document), values.text());
+bool Routines::storeSet(const char* document, const Values& values) {
+  if (!plainWord(document) || library_ == nullptr) return false;
+
+  String text;
+  Values held;
+  if (library_->read(documentPath(document), text)) held.parse(text);
+
+  // A repeat value is not worth a flash write, and it is the value that decides, not the
+  // rewritten text: a document carrying comments is not written back for nothing.
+  bool changed = false;
+  for (uint8_t i = 0; i < values.count(); i++) {
+    const String& key = values.keyAt(i);
+    const String& value = values.valueAt(i);
+    if (held.has(key.c_str()) && held.get(key.c_str(), "") == value) continue;
+    if (!held.set(key.c_str(), value)) return false;
+    changed = true;
+  }
+  if (!changed) return true;
+  return library_->write(documentPath(document), held.text());
 }
 
 }  // namespace gardener

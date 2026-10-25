@@ -389,7 +389,10 @@ it grows as files register.
 | Call | Returns | Notes |
 | --- | --- | --- |
 | `store.get(name, key, fallback)` | the fallback's type | a routine's value, or `fallback` when the key was never set |
+| `store.get(name)` | `map` | every key in the document, as the text the file holds |
+| `store.get(name, defaults)` | `map` | one entry per key in `defaults`, typed by its default, or the default itself when the key was never set |
 | `store.set(name, key, value)` | `bool` | write a routine's value |
+| `store.set(name, values)` | `bool` | write every entry of `values` in one write, keeping the keys it does not name |
 
 A routine's values live in its own document at `/routines/<name>.cfg`, named after the routine, and a
 data-image upload can ship initial ones beside its `.be`. A routine writes its own; a page that edits
@@ -410,6 +413,20 @@ A key that was never set returns the fallback rather than `nil`, so a first boot
 case. A key that holds an empty value reads back as `""` — the way a cleared nullable setting is
 kept, and the sentinel the settings view tests to tell "nothing" from a real value.
 
+The **map forms** are the same rule for the whole document, read once and written once.
+`store.get(name)` answers every key as the text the file holds; `store.get(name, defaults)` answers
+one entry per key in `defaults`, each read back as that default's type and answered by the default
+itself when the document holds nothing for it. `store.set(name, values)` merges the map into the
+document: a key the map does not name is kept, and the file is written at most once however many
+keys the map carries. A document that is not there reads as an empty map, so a first boot needs no
+special case either, and a map that changes nothing writes nothing.
+
+```berry
+var all      = store.get("interval")   # every key, as text
+var settings = store.get("interval", {target: 0.0, count: 0, muted: false})
+store.set("interval", {target: 12.5, count: 3})   # one write; `muted` is kept
+```
+
 The file is a flat `key=value` document, which is what makes it readable off the device and
 editable in the data image:
 
@@ -419,6 +436,7 @@ count=3
 ```
 
 Two limits. It holds **32 keys** — a `set` past that returns `false`. And a `set` writes to flash,
-though only when the value actually changed: setting the same value on every pass costs nothing,
+though only when a value actually changed: setting the same value on every pass costs nothing,
 while storing a *changing* value on every pass wears the partition. Write on the event, not on the
-frame.
+frame. A map `set` is one write for the whole map, so a settings page that commits a settled set
+pays one, not one per key.

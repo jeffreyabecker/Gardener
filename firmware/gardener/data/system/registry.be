@@ -169,11 +169,11 @@ class RoutineRegistry
     return settings_values
   end
 
-  # A settled set written back to the routine's file: the routine's rule is applied first, so what
-  # lands is a set a run accepts, and a value the map holds nothing for is written as nothing, which
-  # reads back as nil. `settings_cfgs` may be nil, and then the settings the routine declares are
-  # looked up here, so a caller that never opened a list has none to hand over. False, writing
-  # nothing, when the routine declares no settings.
+  # A settled set written back to the routine's file, in one write: the routine's rule is applied
+  # first, so what lands is a set a run accepts, and a value the map holds nothing for is written as
+  # nothing, which reads back as nil. `settings_cfgs` may be nil, and then the settings the routine
+  # declares are looked up here, so a caller that never opened a list has none to hand over. False,
+  # writing nothing, when the routine declares no settings.
   def save_settings(routine_key, settings_values, settings_cfgs)
     if settings_cfgs == nil
       settings_cfgs = self.settings(routine_key)
@@ -182,10 +182,12 @@ class RoutineRegistry
       return false
     end
     self.repair(routine_key, settings_cfgs, settings_values)
+    var values = {}
     for cfg : settings_cfgs
       var value = settings_values[cfg.key]
-      store.set(routine_key, cfg.key, value == nil ? "" : value)
+      values[cfg.key] = value == nil ? "" : value
     end
+    store.set(routine_key, values)
     return true
   end
 

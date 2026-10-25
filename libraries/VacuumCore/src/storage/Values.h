@@ -28,6 +28,12 @@ class Values {
   // come back as the fallback.
   bool has(const char* key) const { return find(key) != nullptr; }
 
+  // How many keys the document holds, and the key and the value at a position in the order they
+  // were read: enough to hand the whole document on without a `get` per key.
+  uint8_t count() const { return (uint8_t)entries_.size(); }
+  const String& keyAt(uint8_t index) const { return entries_[index].key; }
+  const String& valueAt(uint8_t index) const { return entries_[index].value; }
+
   // Sets a key, adding it when it is new. False only when the table is full and the key is new.
   bool set(const char* key, const String& value);
 
