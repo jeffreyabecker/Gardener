@@ -1,48 +1,62 @@
-# component.be — the box a component draws in: x, y, w, h plus margin, border and
-# padding, the content rect inside them, and the flip an inverted component does last.
+# component.be — the component base: a box and the inverted flip, nothing else.
 #
-# The components in this folder are stateless: the same config and args draw the same thing,
-# and where config alone fixes a derived value it is computed once and cached. An inverted
-# component flips its own box as the last thing its draw does, so whatever it drew reads as
-# paper on ink: that is a highlighted row, a cursor or a focused readout.
+# A component draws inside its box, and nothing it draws lies outside it. A box is a `Position`
+# and a `Size`, passed to the component's init and carried in `pos` and `dim`. Every component is
+# given its box at construction and keeps it; there is no reflow. A component that draws internal
+# subcomponents before handing them a box may pass nil and stamp the box on itself before drawing.
+class Position
+  var x, y
+  def init(x, y)
+    self.x = x
+    self.y = y
+  end
+  static def top(y)
+    return Position(nil, y)
+  end
+  static def left(x)
+    return Position(x, nil)
+  end
+  static def top_left()
+    return Position(0, 0)
+  end
+end
+class Size 
+  var w, h
+  def init(w, h)
+    self.w = w
+    self.h = h
+  end
+  static def width(s)
+    return Size(s, nil)
+  end
+  static def height(s)
+    return Size(nil, s)
+  end
 
+  static def page()
+    return Size(screen.page_width(), screen.page_height())
+  end
+  static def screen()
+    return Size(screen.width(), screen.height())
+  end
+end
 class Component
-  var x, y, w, h
-  var margin, border, padding
+  var pos
+  var dim
   var inverted
 
-  def init()
-    self.x = 0
-    self.y = 0
-    self.w = 0
-    self.h = 0
-    self.margin = 0
-    self.border = 0
-    self.padding = 0
+  def init(pos, dim)
+    self.pos = pos == nil ? Position(0, 0) : pos
+    self.dim = dim == nil ? Size(nil, nil) : dim
     self.inverted = false
   end
 
-  # The rectangle a component draws into, inset by margin + border + padding.
-  def content()
-    var inset = self.margin + self.border + self.padding
-    return [self.x + inset, self.y + inset, self.w - 2 * inset, self.h - 2 * inset]
-  end
-
-  # The border box, where a component's frame (if it has one) is drawn.
-  def frame()
-    return [self.x + self.margin, self.y + self.margin,
-            self.w - 2 * self.margin, self.h - 2 * self.margin]
-  end
-
-  # The last thing a draw does. An inverted component flips its own box, so everything it drew in
-  # there reads as paper on ink; a component that returns before drawing anything leaves its box
-  # alone, because there is nothing to highlight.
-  def flip()
-    if self.inverted
-      screen.draw_invert(self.x, self.y, self.w, self.h)
-    end
-  end
-
+  # The base draw is the inverted flip: an inverted component inverts its whole box, so everything
+  # a subclass drew there reads as paper on ink. Every draw ends with super, so the flip is the last
+  # thing that happens.
   def draw()
+    if self.inverted
+      screen.draw_invert(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    end
   end
 end

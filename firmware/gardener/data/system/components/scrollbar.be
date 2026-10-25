@@ -1,49 +1,53 @@
-# scrollbar.be — Scrollbar: a thumb sized and placed from the index, the count and the
+# scrollbar.be — the Scrollbar: a thumb sized and placed from the index, the count and the
 # visible rows.
 
 class Scrollbar : Component
   var hollow
+  var index
+  var count
+  var visible
 
-  def init()
-    super(self).init()
+  def init(pos, dim)
+    super(self).init(pos, dim)
     self.hollow = false
+    self.index = 0
+    self.count = 0
+    self.visible = 0
   end
 
-  def draw(index, count, visible)
-    if count <= 0
+  def draw()
+    if self.count <= 0
       return
     end
-    var c = self.content()
-    var cx = c[0]
-    var cy = c[1]
-    var cw = c[2]
-    var ch = c[3]
-    var thumb = int(ch * visible / count)
+    var w = self.dim.w
+    var h = self.dim.h
+    var x = self.pos.x
+    var y = self.pos.y
+    var thumb = int(h * self.visible / self.count)
     if thumb < 1
       thumb = 1
     end
-    if thumb > ch
-      thumb = ch
+    if thumb > h
+      thumb = h
     end
-    var top = cy
-    var span = count - visible
+    var top = y
+    var span = self.count - self.visible
     if span > 0
-      top = cy + (ch - thumb) * index / span
+      top = y + (h - thumb) * self.index / span
     end
-    if top < cy
-      top = cy
+    if top < y
+      top = y
     end
-    if top + thumb > cy + ch
-      top = cy + ch - thumb
+    if top + thumb > y + h
+      top = y + h - thumb
     end
     if self.hollow
-      screen.draw_invert(cx, cy, cw, top - cy)
-      screen.draw_invert(cx, top + thumb, cw, (cy + ch) - (top + thumb))
+      screen.draw_invert(x, y, w, top - y)
+      screen.draw_invert(x, top + thumb, w, (y + h) - (top + thumb))
     else
-      var f = self.frame()
-      screen.draw_rect(f[0], f[1], f[2], f[3])
-      screen.draw_fillrect(cx, top, cw, thumb)
+      screen.draw_rect(x, y, w, h)
+      screen.draw_fillrect(x, top, w, thumb)
     end
-    self.flip()
+    super(self).draw()
   end
 end

@@ -1,20 +1,24 @@
-# progress_bar.be — ProgressBar: a framed bar filled to a percentage.
+# progress_bar.be — the ProgressBar: a framed bar filled to a percentage.
 
 class ProgressBar : Component
-  def draw(value)
+  var value
+  def init(pos, dim, value)
+    super(self).init(pos, dim)
+    self.value = value == nil ? 0 : value
+  end
+  def draw()
+    var value = self.value
     if value < 0
       value = 0
     end
     if value > 100
       value = 100
     end
-    var f = self.frame()
-    var c = self.content()
-    screen.draw_rect(f[0], f[1], f[2], f[3])
-    var fill_w = int(c[2] * value / 100)
+    screen.draw_rect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    var fill_w = int((self.dim.w - 2) * value / 100)
     if fill_w > 0
-      screen.draw_fillrect(c[0], c[1], fill_w, c[3])
+      screen.draw_fillrect(self.pos.x + 1, self.pos.y + 1, fill_w, self.dim.h - 2)
     end
-    self.flip()
+    super(self).draw()
   end
 end

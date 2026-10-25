@@ -7,22 +7,9 @@
 # business and a pull that ate into the start hold would move the ramp's start — the two things the
 # profile is asked to guarantee.
 
-# The page's glyph, and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
-# run rising from the first row to the last, on a 12 by 8 field. It is defined before the chrome
-# that draws it, because a class has to be a global by the time the file names it.
+# The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
+# run rising from the first row to the last, on a 12 by 8 field.
 class RampedStaticIcon : Icon
-  def init()
-    super(self).init(12, 8)
-  end
-
-  def draw(x, y)
-    screen.draw_filltriangle(x, y + 6, x + 11, y + 1, x + 11, y + 6)
-  end
-end
-
-# The same glyph on the v2 icon base, drawing in its own box, so the v2 chrome has an icon of its
-# own without reaching for the v1 class.
-class RampedStaticIconV2 : IconV2
   def init(pos, dim)
     super(self).init(pos, dim)
   end
@@ -33,61 +20,19 @@ class RampedStaticIconV2 : IconV2
   end
 end
 
-class RampedStaticChrome
-  var owner
-  var icon
-  var pressure
-  var status
-  var bar
-
-  def init(owner)
-    self.owner = owner
-
-    # There are no sets, so the right half is empty; the readout sits where it does on the cycle
-    # pages, under the glyph in the left half, and the stage and the remaining time take the last
-    # row above the overlay's band.
-    self.icon = RampedStaticIcon()
-
-    self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 64; self.pressure.h = 32
-
-    # The stage and the run's remaining time share the last row above the band: thirty pixels of
-    # words on the left, the bar taking the rest of the width. "READY" is the longest stage, 29
-    # pixels of built-in face.
-    self.status = DynamicText()
-    self.status.x = 0; self.status.y = 44; self.status.w = 30; self.status.h = 8
-    self.status.align = "left"
-
-    self.bar = ProgressBar()
-    self.bar.x = 32; self.bar.y = 44; self.bar.w = 96; self.bar.h = 8
-    self.bar.border = 1
-  end
-
-  def draw(s)
-    self.icon.draw(0, 0)
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    self.status.draw(self.owner.status_text())
-    var left = self.owner.run_left()
-    if left != nil
-      self.bar.draw(left)
-    end
-  end
-end
-
-# The static chrome rebuilt on the v2 layout: a flat list of explicitly placed children — the
-# glyph and title, the pressure and the duration, and a status-plus-bar row. It lives beside
-# RampedStaticChrome until the pages are ported onto the v2 components.
-class RampedStaticChromeV2 : LayoutV2
+# The static chrome: a flat list of explicitly placed children — the glyph and title, the pressure
+# and the duration, and a status-plus-bar row.
+class RampedStaticChrome : Layout
   def init(title)
     var pw = screen.page_width()
     var half = pw / 2
     super(self).init([
-      RampedStaticIconV2(Position(0, 0), Size(12, 8)),
-      TextV2(Position(16, 2), Size(pw - 16, 9), title),
-      AutoPressureDisplayV2(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
-      DurationV2(Position(half, 13), Size(half, 26), "minutes"),
-      TextV2(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
-      ProgressBarV2(Position(half + 8, 41), Size(half - 8, 8), nil)
+      RampedStaticIcon(Position(0, 0), Size(12, 8)),
+      Text(Position(16, 2), Size(pw - 16, 9), title),
+      AutoPressureDisplay(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
+      Duration(Position(half, 13), Size(half, 26), "minutes"),
+      Text(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
+      ProgressBar(Position(half + 8, 41), Size(half - 8, 8), nil)
     ])
   end
 
@@ -128,7 +73,7 @@ class RampedStatic : Page
     self.ramp_ms = 180000
     self.command_at = 0
     self.command_target = 0.0
-    self.chrome = RampedStaticChrome(self)
+    self.chrome = RampedStaticChrome(routines.title(self.routine))
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -370,7 +315,7 @@ class RampedStatic : Page
   # --- drawing -------------------------------------------------------------
 
   def draw_page()
-    self.chrome.draw(vacuum.state())
+    self.chrome.draw(self.status_text(), self.total_ms, self.elapsed())
   end
 
   # The run's own clock, frozen while paused: zero until the arrival starts it.
@@ -443,5 +388,5 @@ class RampedStaticSettings
   end
 end
 
-routines.register("ramped_static", "Ramped Static", RampedStaticIcon(), RampedStatic, RampedStaticSettings)
+routines.register("ramped_static", "Ramped Static", RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic, RampedStaticSettings)
 return RampedStatic

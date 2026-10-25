@@ -45,15 +45,20 @@ class List
       var icon = self.rows[start + row][0]
       var label = self.rows[start + row][1]
       if icon != nil
-        icon.draw(x, y + row * 8)
-        screen.draw_text(x + icon.w + 2, y + row * 8, 1, start + row == self.selected, label)
+        icon.pos.x = x
+        icon.pos.y = y + row * 8
+        icon.draw()
+        screen.draw_text(x + icon.dim.w + 2, y + row * 8, 1, start + row == self.selected, label)
       else
         screen.draw_text(x, y + row * 8, 1, start + row == self.selected, label)
       end
       row += 1
     end
     if self.scrollbar != nil
-      self.scrollbar.draw(start, self.rows.size(), self.visible)
+      self.scrollbar.index = start
+      self.scrollbar.count = self.rows.size()
+      self.scrollbar.visible = self.visible
+      self.scrollbar.draw()
     end
   end
 end

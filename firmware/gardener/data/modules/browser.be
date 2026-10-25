@@ -14,8 +14,7 @@ class BrowserScene : Scene
     super(self).init()
     self.names = []
     self.list = List(6)
-    self.scrollbar = Scrollbar()
-    self.scrollbar.x = 110; self.scrollbar.y = 2; self.scrollbar.w = 2; self.scrollbar.h = 48
+    self.scrollbar = Scrollbar(Position(110, 2), Size(2, 48))
     self.list.scrollbar = self.scrollbar
 
     self.on("up:single", / -> self.step(-1))

@@ -18,27 +18,9 @@ class IntervalPhase
   static var REST = 7
 end
 
-# The interval page's glyph, and the browser's row glyph: a square wave, two highs and two lows on
-# a 12 by 8 field, drawn with one-pixel lines. The ink sits on the rows a line of text does, from
-# y + 1 to y + 6.
+# The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
+# 12 by 8 field, drawn with one-pixel lines.
 class IntervalIcon : Icon
-  def init()
-    super(self).init(12, 8)
-  end
-
-  def draw(x, y)
-    screen.draw_hline(x, y + 1, 3)
-    screen.draw_vline(x + 3, y + 1, 6)
-    screen.draw_hline(x + 3, y + 6, 3)
-    screen.draw_vline(x + 6, y + 1, 6)
-    screen.draw_hline(x + 6, y + 1, 3)
-    screen.draw_vline(x + 9, y + 1, 6)
-    screen.draw_hline(x + 9, y + 6, 3)
-  end
-end
-
-# The same square wave on the v2 icon base, drawing in its own box.
-class IntervalIconV2 : IconV2
   def init(pos, dim)
     super(self).init(pos, dim)
   end
@@ -55,23 +37,9 @@ class IntervalIconV2 : IconV2
   end
 end
 
-# The ramp's glyph, and the browser's row glyph: the stairs, three solid steps four pixels wide,
-# each column standing from the baseline two rows higher than the one before, so no gap falls
-# between them, on a 12 by 8 field.
+# The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
+# each column standing from the baseline two rows higher than the one before.
 class RampedIntervalIcon : Icon
-  def init()
-    super(self).init(12, 8)
-  end
-
-  def draw(x, y)
-    screen.draw_fillrect(x, y + 5, 3, 2)
-    screen.draw_fillrect(x + 4, y + 3, 3, 4)
-    screen.draw_fillrect(x + 8, y + 1, 3, 6)
-  end
-end
-
-# The same stairs on the v2 icon base, drawing in its own box.
-class RampedIntervalIconV2 : IconV2
   def init(pos, dim)
     super(self).init(pos, dim)
   end
@@ -84,84 +52,37 @@ class RampedIntervalIconV2 : IconV2
   end
 end
 
-class RampedIntervalChrome
-  var owner
+# The interval chrome: a flat list of explicitly placed children — the glyph and title, the pressure
+# and the set bubbles, and a status-plus-bar row. The glyph and the title are fields the Interval
+# subclass swaps for its own.
+class RampedIntervalChrome : Layout
   var icon
-  var sets
-  var pressure
-  var status
-  var bar
+  var title
+  var bubbles
 
-  def init(owner)
-    self.owner = owner
-
-    # The left half is the glyph on the page's first row and the readout under it; the right half
-    # is the set bubbles. The status and the hold's remaining time take the last row above the
-    # overlay's band.
-    self.icon = RampedIntervalIcon()
-
-    self.pressure = PressureDisplay()
-    self.pressure.x = 0; self.pressure.y = 8; self.pressure.w = 64; self.pressure.h = 32
-
-    self.sets = ProgressBubbles()
-    self.sets.x = 64; self.sets.y = 0; self.sets.w = 64; self.sets.h = 38
-
-    # The status and the hold's remaining time share the last row above the band: thirty pixels of
-    # words on the left, the bar taking the rest of the width. "READY" is the longest status, 29
-    # pixels of built-in face.
-    self.status = DynamicText()
-    self.status.x = 0; self.status.y = 44; self.status.w = 30; self.status.h = 8
-    self.status.align = "left"
-
-    self.bar = ProgressBar()
-    self.bar.x = 32; self.bar.y = 44; self.bar.w = 96; self.bar.h = 8
-    self.bar.border = 1
-  end
-
-  def draw(s)
-    self.icon.draw(0, 0)
-
-    # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
-    # ramp still empty. The count can change under the settings editor, so the cached layout goes
-    # with it.
-    if self.sets.max_count != self.owner.count
-      self.sets.max_count = self.owner.count
-      self.sets.layout = nil
-    end
-    var filled = 0
-    if self.owner.phase != IntervalPhase.READY
-      filled = self.owner.set + 1
-    end
-    self.sets.draw(filled)
-
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    self.status.draw(self.owner.status_text())
-    var left = self.owner.hold_left()
-    if left != nil
-      self.bar.draw(left)
-    end
-  end
-end
-
-# The interval chrome rebuilt on the v2 layout: a flat list of explicitly placed children — the
-# glyph and title, the pressure and the set bubbles, and a status-plus-bar row. It lives beside
-# RampedIntervalChrome until the pages are ported onto the v2 components.
-class RampedIntervalChromeV2 : LayoutV2
-  def init(title, total_sets)
+  def init(title_text, total_sets)
     var pw = screen.page_width()
     var half = pw / 2
+    self.icon = RampedIntervalIcon(Position(0, 0), Size(12, 8))
+    self.title = Text(Position(16, 2), Size(pw - 16, 9), title_text)
+    self.bubbles = ProgressBubbles(Position(half, 13), Size(half, 26), total_sets, "circle", "lr-tb")
     super(self).init([
-      RampedIntervalIconV2(Position(0, 0), Size(12, 8)),
-      TextV2(Position(16, 2), Size(pw - 16, 9), title),
-      AutoPressureDisplayV2(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
-      ProgressBubblesV2(Position(half, 13), Size(half, 26), total_sets, "circle", "lr-tb"),
-      TextV2(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
-      ProgressBarV2(Position(half + 8, 41), Size(half - 8, 8), nil)
+      self.icon,
+      self.title,
+      AutoPressureDisplay(Position(0, 13), Size(half, 26), "pressure:target", "br", 0.25),
+      self.bubbles,
+      Text(Position(0, 39), Size(half, 13), "", text_settings("sans", "none", "left", "center")),
+      ProgressBar(Position(half + 8, 41), Size(half - 8, 8), nil)
     ])
   end
 
+  def set_icon(icon)
+    self.icon = icon
+    self.children[0] = icon
+  end
+
   def draw(current_set, status, remaining_percent)
-    self.children[3].count = current_set
+    self.bubbles.count = current_set
     self.children[4].value = status
     self.children[5].value = remaining_percent
     super(self).draw()
@@ -199,7 +120,7 @@ class RampedInterval : Page
     self.rest_pressure = 5.0
     self.rest = 45
     self.resume = "immediately"
-    self.chrome = RampedIntervalChrome(self)
+    self.chrome = RampedIntervalChrome(routines.title(self.routine), self.count)
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -480,7 +401,15 @@ class RampedInterval : Page
   # --- drawing -------------------------------------------------------------
 
   def draw_page()
-    self.chrome.draw(vacuum.state())
+    # One bubble per set; the set being worked is the filled one, and a ready page shows the whole
+    # ladder still empty. The count can change under the settings editor, so the field re-lays
+    # itself for the current total.
+    var filled = 0
+    if self.phase != IntervalPhase.READY
+      filled = self.set + 1
+    end
+    self.chrome.bubbles.set_count(self.count)
+    self.chrome.draw(filled, self.status_text(), self.hold_left())
   end
 
   # The page has one word per thing the chamber is doing, and the target and rest phases read as
@@ -522,7 +451,8 @@ class Interval : RampedInterval
   def init()
     super(self).init()
     self.routine = "interval"
-    self.chrome.icon = IntervalIcon()
+    self.chrome.set_icon(IntervalIcon(Position(0, 0), Size(12, 8)))
+    self.chrome.title.value = routines.title(self.routine)
   end
 
   # The starting values match the shipped `interval.cfg`. A switch's settings map, when there is
@@ -597,5 +527,5 @@ class IntervalSettings
   end
 end
 
-routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(), RampedInterval, RampedIntervalSettings)
-routines.register("interval", "Interval", IntervalIcon(), Interval, IntervalSettings)
+routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(Position(0, 0), Size(12, 8)), RampedInterval, RampedIntervalSettings)
+routines.register("interval", "Interval", IntervalIcon(Position(0, 0), Size(12, 8)), Interval, IntervalSettings)

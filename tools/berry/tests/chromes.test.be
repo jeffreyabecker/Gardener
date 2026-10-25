@@ -1,95 +1,32 @@
-# chromes.test.be — each routine chrome as it draws today and its v2 twin, side by side, so the
-# two can be compared. Pixel-perfect reproduction is a non-goal. Frames land in
-# tools/berry/artifacts/v2/.
+# chromes.test.be — each chrome draws with live values and saves a frame, so a chrome can be seen
+# without driving a whole page. Frames land in tools/berry/artifacts/components/.
 
 suite = "chromes"
 
-def save_v1(name)
-  return harness.save("tools/berry/artifacts/v2/" + name + "-v1.bmp")
+def save(name)
+  return harness.save("tools/berry/artifacts/components/" + name + ".bmp")
 end
 
-def save_v2(name)
-  return harness.save("tools/berry/artifacts/v2/" + name + "-v2.bmp")
-end
-
-# A page owner with the fields each chrome reads and values that draw everything that can be drawn:
-# a run in progress (non-zero time left) and a ready interval with its sets built.
-class FakeOwner
-  var editing
-  var count
-  var phase
-  var set
-
-  def init()
-    self.editing = false
-    self.count = 4
-    self.phase = IntervalPhase.READY
-    self.set = 0
-  end
-
-  def status_text()
-    return "READY"
-  end
-
-  def run_left()
-    return 50.0
-  end
-
-  def hold_left()
-    return 50.0
-  end
-end
-
-# A reading with a live pressure and a target, so both numbers render.
-def fake_reading()
-  var s = reading()
-  s.pressure_kpa = 20.0
-  s.target = 12.0
-  s.sensor_ok = true
-  return s
-end
-
-def readout_comparison()
-  var s = fake_reading()
-  var owner = FakeOwner()
-
+def readout_draws()
   screen.draw_clear()
   ReadoutChrome().draw(50.0)
-  assert_true(save_v1("readout"), "cannot save the readout's v1 frame")
-
-  screen.draw_clear()
-  ReadoutChromeV2(owner).draw(s)
-  assert_true(save_v2("readout"), "cannot save the readout's v2 frame")
+  assert_true(save("readout"), "cannot save the readout frame")
 end
 
-test("the readout renders both frameworks", readout_comparison)
+test("the readout chrome draws", readout_draws)
 
-def static_comparison()
-  var s = fake_reading()
-  var owner = FakeOwner()
-
+def static_draws()
   screen.draw_clear()
-  RampedStaticChrome(owner).draw(s)
-  assert_true(save_v1("static"), "cannot save the ramped static v1 frame")
-
-  screen.draw_clear()
-  RampedStaticChromeV2("STATIC").draw("READY", 300000, 50000)
-  assert_true(save_v2("static"), "cannot save the ramped static v2 frame")
+  RampedStaticChrome("STATIC").draw("READY", 300000, 50000)
+  assert_true(save("static"), "cannot save the ramped static frame")
 end
 
-test("the ramped static chrome renders both frameworks", static_comparison)
+test("the ramped static chrome draws", static_draws)
 
-def interval_comparison()
-  var s = fake_reading()
-  var owner = FakeOwner()
-
+def interval_draws()
   screen.draw_clear()
-  RampedIntervalChrome(owner).draw(s)
-  assert_true(save_v1("interval"), "cannot save the ramped interval v1 frame")
-
-  screen.draw_clear()
-  RampedIntervalChromeV2("INTERVAL", 4).draw(2, "READY", 50)
-  assert_true(save_v2("interval"), "cannot save the ramped interval v2 frame")
+  RampedIntervalChrome("INTERVAL", 4).draw(2, "READY", 50)
+  assert_true(save("interval"), "cannot save the ramped interval frame")
 end
 
-test("the ramped interval chrome renders both frameworks", interval_comparison)
+test("the ramped interval chrome draws", interval_draws)

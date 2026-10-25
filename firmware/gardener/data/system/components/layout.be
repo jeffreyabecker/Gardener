@@ -1,8 +1,8 @@
-# layout.be — the v2 Layout: a flat list of components, nothing more. It holds no box of its own,
+# layout.be — the Layout: a flat list of components, nothing more. It holds no box of its own,
 # so it has no pixels to draw and no position or size; its draw walks the children in order. The
 # caller positions each child itself, once, when it builds the list.
 
-class LayoutV2
+class Layout
   var children
 
   def init(children)

@@ -27,17 +27,17 @@ lands the backlog and its plan are deleted together.
 
 - [Named saved routines](./backlogs/named-saved-routines.md) — a routine's definition split from the
   configs that instantiate it
-- [Component layouts](./backlogs/components-layout.md) — the v2 component and layout framework
-  built beside the old one
 
 The summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) —
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine
 from the panel into two libraries, made both links pluggable, and shipped a panel-less build with a
 capability surface; [the six-key panel](./backlogs/completed/six-key-panel/), whose epics read
-six keys through a shift register, added the gesture classifier and bound the six-key map; and
+six keys through a shift register, added the gesture classifier and bound the six-key map;
 [safety hardening](./backlogs/completed/safety-hardening/), whose epics made the device's safe path
-independent of the controller.
+independent of the controller; and [the component and layout framework](./backlogs/completed/components-layout/),
+whose epics built the box-and-flip component, the compiled-first text and the flat layout the pages
+now draw with.
 
 ## Guides
 

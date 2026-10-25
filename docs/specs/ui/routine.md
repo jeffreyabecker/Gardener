@@ -107,12 +107,15 @@ routine.
 `/system/list.be` is `List`, a selectable menu.
 
 `/system/components/` is the drawing primitives a readout composes, one class per file:
-`component.be` is `Component` (the box, its content rect and the `inverted` flip), `text.be` is
-`Text` (the face choice), then `fixed_text.be`, `dynamic_text.be`, `pressure_display.be`,
-`progress_bar.be`, `progress_bubbles.be`, `scrollbar.be`, `triangle.be` and `icon.be`. Every
-component has a box, and setting `inverted` on it flips that box as the last thing its draw does —
-paper where its ink was — which is what a selected row, a cursor or a focused readout looks like.
-`Icon` is the exception: an intrinsic size and a draw, with no box.
+`component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is
+`Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
+`layout.be` is `Layout` (a flat list of children drawn in order), `bubble.be` is `Bubble`,
+`progress_bubbles.be` is `ProgressBubbles`, `progress_bar.be` is `ProgressBar`, `scrollbar.be` is
+`Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is `PressureDisplay` and
+`AutoPressureDisplay`, and `duration.be` is `Duration`. Every component is given its box at
+construction (`pos` and `dim`) and keeps it; setting `inverted` on it flips that box as the last
+thing its draw does — paper where its ink was — which is what a selected row, a cursor or a focused
+readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the

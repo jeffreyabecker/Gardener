@@ -1,6 +1,6 @@
-# bubble.be — the v2 Bubble: a square of a shape, filled, outlined or empty, drawn to fill its box.
+# bubble.be — the Bubble: a square of a shape, filled, outlined or empty, drawn to fill its box.
 
-class BubbleV2 : ComponentV2
+class Bubble : Component
   var shape
   # "filled" draws the solid shape, "unfilled" the outline and "none" nothing at all.
   var fill_state

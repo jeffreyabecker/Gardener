@@ -1,32 +1,27 @@
-# triangle.be — Triangle: an arrow in one of the four directions, filled or empty.
+# triangle.be — the Triangle: an arrow in one of the four directions, filled or empty.
 
 class Triangle : Component
   var direction
   var style
 
-  def init()
-    super(self).init()
+  def init(pos, dim)
+    super(self).init(pos, dim)
     self.direction = "up"
     self.style = "filled"
   end
 
   def draw()
-    var c = self.content()
-    var cx = c[0]
-    var cy = c[1]
-    var cw = c[2]
-    var ch = c[3]
     var filled = self.style != "empty"
     if self.direction == "up"
-      self.tri(filled, cx + cw / 2, cy, cx, cy + ch - 1, cx + cw - 1, cy + ch - 1)
+      self.tri(filled, self.pos.x + self.dim.w / 2, self.pos.y, self.pos.x, self.pos.y + self.dim.h - 1, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h - 1)
     elif self.direction == "down"
-      self.tri(filled, cx, cy, cx + cw - 1, cy, cx + cw / 2, cy + ch - 1)
+      self.tri(filled, self.pos.x, self.pos.y, self.pos.x + self.dim.w - 1, self.pos.y, self.pos.x + self.dim.w / 2, self.pos.y + self.dim.h - 1)
     elif self.direction == "left"
-      self.tri(filled, cx, cy + ch / 2, cx + cw - 1, cy, cx + cw - 1, cy + ch - 1)
+      self.tri(filled, self.pos.x, self.pos.y + self.dim.h / 2, self.pos.x + self.dim.w - 1, self.pos.y, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h - 1)
     else
-      self.tri(filled, cx + cw - 1, cy + ch / 2, cx, cy, cx, cy + ch - 1)
+      self.tri(filled, self.pos.x + self.dim.w - 1, self.pos.y + self.dim.h / 2, self.pos.x, self.pos.y, self.pos.x, self.pos.y + self.dim.h - 1)
     end
-    self.flip()
+    super(self).draw()
   end
 
   def tri(filled, x0, y0, x1, y1, x2, y2)

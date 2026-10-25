@@ -203,7 +203,7 @@ args = parser.parse_args()
 
 # The capture folders the harness writes into. Generated frames live here rather than in build/,
 # so a component's frame is easy to find and the build output stays machine-only.
-for sub in ("components", "baseline", "v2"):
+for sub in ("components",):
     (TOOL / "artifacts" / sub).mkdir(parents=True, exist_ok=True)
 
 build(compiler("c"), compiler("c++"), gfx_library())

@@ -1,10 +1,10 @@
-# layoutv2.test.be — the flat layout and the box-at-init contract. A layout draws its children in
+# layout.test.be — the flat layout and the box-at-init contract. A layout draws its children in
 # order and nothing more; a component keeps the box it was given, however its value changes.
 
-suite = "layoutv2"
+suite = "layout"
 
 # A component that records the order its draw ran in, for pinning the layout's child walk.
-class RecordingChild : ComponentV2
+class RecordingChild : Component
   var name
   var log
 
@@ -21,7 +21,7 @@ class RecordingChild : ComponentV2
 end
 
 def component_stores_its_box()
-  var t = TextV2(Position(3, 7), Size(40, 12), "x")
+  var t = Text(Position(3, 7), Size(40, 12), "x")
   assert_eq(t.pos.x, 3, "the box's x is not stored")
   assert_eq(t.pos.y, 7, "the box's y is not stored")
   assert_eq(t.dim.w, 40, "the box's width is not stored")
@@ -32,7 +32,7 @@ test("a component stores the box it was given", component_stores_its_box)
 
 def layout_draws_children_in_order()
   var log = []
-  var l = LayoutV2([
+  var l = Layout([
     RecordingChild(Position(0, 0), Size(1, 1), "first", log),
     RecordingChild(Position(0, 0), Size(1, 1), "second", log)
   ])
@@ -46,7 +46,7 @@ test("a layout draws its children in order", layout_draws_children_in_order)
 
 def layout_add_grows_the_list()
   var log = []
-  var l = LayoutV2([])
+  var l = Layout([])
   assert_eq(l.children.size(), 0, "a new layout is not empty")
   l.add(RecordingChild(Position(0, 0), Size(1, 1), "added", log))
   assert_eq(l.children.size(), 1, "add did not grow the list")
@@ -58,7 +58,7 @@ end
 test("add grows the flat list", layout_add_grows_the_list)
 
 def text_keeps_its_box()
-  var t = TextV2(Position(4, 5), Size(60, 20), "42")
+  var t = Text(Position(4, 5), Size(60, 20), "42")
   t.draw()
   t.value = "a much longer string than before"
   t.draw()
@@ -71,7 +71,7 @@ end
 test("a text keeps its box across a value change", text_keeps_its_box)
 
 def bubbles_fill_the_box_and_hold()
-  var b = ProgressBubblesV2(Position(0, 0), Size(64, 38), 4, "circle", "lr-tb")
+  var b = ProgressBubbles(Position(0, 0), Size(64, 38), 4, "circle", "lr-tb")
   b.count = 2
   b.draw()
   assert_eq(b.children.size(), 4, "the field does not have one bubble per set")
@@ -98,7 +98,7 @@ end
 test("bubbles fill the box and hold their places", bubbles_fill_the_box_and_hold)
 
 def bubbles_replace_on_set_count()
-  var b = ProgressBubblesV2(Position(0, 0), Size(64, 38), 4, "circle", "lr-tb")
+  var b = ProgressBubbles(Position(0, 0), Size(64, 38), 4, "circle", "lr-tb")
   b.draw()
   assert_eq(b.children.size(), 4, "the field does not start at its total")
   b.set_count(12)

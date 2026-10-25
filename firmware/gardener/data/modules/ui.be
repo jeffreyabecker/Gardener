@@ -18,39 +18,14 @@ class ReadoutChrome
     var pw = screen.page_width()
     var half = pw / 2
     var ph = screen.page_height()
-    self.pressure = AutoPressureDisplayV2(Position(0, 0), Size(half, ph), "pressure:target", "br", 0.25)
-    self.timer = DurationV2(Position(half, 0), Size(half, ph), "minutes")
+    self.pressure = AutoPressureDisplay(Position(0, 0), Size(half, ph), "pressure:target", "br", 0.25)
+    self.timer = Duration(Position(half, 0), Size(half, ph), "minutes")
   end
 
   def draw(elapsed)
     self.pressure.draw()
     self.timer.seconds = elapsed
     self.timer.draw()
-  end
-end
-
-# The readout's chrome rebuilt on the v2 layout: the pressure and the target share the page area
-# above the overlay's band, each filling half. It lives beside ReadoutChrome until the pages are
-# ported onto the v2 components.
-class ReadoutChromeV2 : LayoutV2
-  var owner
-  var pressure
-  var target_value
-
-  def init(owner)
-    super(self).init([])
-    self.owner = owner
-    var pw = screen.page_width()
-    var half = pw / 2
-    self.pressure = PressureDisplayV2(Position(0, 0), Size(half, screen.page_height()))
-    self.target_value = PressureDisplayV2(Position(half, 0), Size(half, screen.page_height()))
-    self.add(self.pressure)
-    self.add(self.target_value)
-  end
-
-  def draw(s)
-    self.pressure.draw(s.sensor_ok ? s.pressure_kpa : nil)
-    self.target_value.draw(s.target > 0.0 ? s.target : nil)
   end
 end
 

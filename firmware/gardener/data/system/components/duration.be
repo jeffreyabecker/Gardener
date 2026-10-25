@@ -1,8 +1,8 @@
-# duration.be — the v2 Duration: whole seconds formatted in the panel's units of time. It is a
+# duration.be — the Duration: whole seconds formatted in the panel's units of time. It is a
 # Text, so the string is fitted, cached and aligned by the same face ladder as any other text. The
 # format property picks the largest unit shown, and `seconds` is the count it draws.
 
-class DurationV2 : TextV2
+class Duration : Text
   var format
   # The seconds shown, set by the caller before a draw, like a text's value.
   var seconds

@@ -297,83 +297,43 @@ def harness_art_component(name, path)
   var drew = false
 
   if name == "text"
-    var t = DynamicText()
-    t.x = 0; t.y = 0; t.w = 64; t.h = 16
+    var t = Text(Position(0, 0), Size(64, 16), "12.5")
     t.align = "left"
-    t.draw("12.5")
-    drew = true
-  elif name == "fixed-text"
-    var t = FixedText()
-    t.x = 0; t.y = 0; t.w = 64; t.h = 16
-    t.value = "READY"
     t.draw()
     drew = true
   elif name == "pressure"
-    var p = PressureDisplay()
-    p.x = 0; p.y = 0; p.w = 64; p.h = 52
+    var p = PressureDisplay(Position(0, 0), Size(64, 52))
     p.draw(20.0)
     drew = true
-  elif name == "bar"
-    var b = ProgressBar()
-    b.x = 0; b.y = 0; b.w = 96; b.h = 8
-    b.border = 1
-    b.draw(50)
-    drew = true
-  elif name == "bubbles"
-    var b = ProgressBubbles()
-    b.x = 0; b.y = 0; b.w = 64; b.h = 38
-    b.max_count = 12
-    b.draw(5)
-    drew = true
-  elif name == "scrollbar"
-    var s = Scrollbar()
-    s.x = 0; s.y = 0; s.w = 2; s.h = 48
-    s.draw(2, 10, 5)
-    drew = true
-  elif name == "triangle"
-    var t = Triangle()
-    t.x = 0; t.y = 0; t.w = 12; t.h = 12
-    t.direction = "up"
-    t.draw()
-    drew = true
-  elif name == "text-v2"
-    var t = TextV2(Position(0, 0), Size(64, 16), "12.5")
-    t.align = "left"
-    t.draw()
-    drew = true
-  elif name == "pressure-v2"
-    var p = PressureDisplayV2(Position(0, 0), Size(64, 52))
-    p.draw(20.0)
-    drew = true
-  elif name == "pressure-v2-secondary"
-    var p = PressureDisplayV2(Position(0, 0), Size(64, 52))
+  elif name == "pressure-secondary"
+    var p = PressureDisplay(Position(0, 0), Size(64, 52))
     p.secondary_pressure = 10.0
     p.secondary_position = "br"
     p.draw(20.0)
     drew = true
-  elif name == "bar-v2"
-    var b = ProgressBarV2(Position(0, 0), Size(96, 8), 50)
+  elif name == "bar"
+    var b = ProgressBar(Position(0, 0), Size(96, 8), 50)
     b.draw()
     drew = true
-  elif name == "bubbles-v2"
-    var b = ProgressBubblesV2(Position(0, 0), Size(64, 38), 12, "circle", "lr-tb")
+  elif name == "bubbles"
+    var b = ProgressBubbles(Position(0, 0), Size(64, 38), 12, "circle", "lr-tb")
     b.count = 5
     b.draw()
     drew = true
-  elif name == "scrollbar-v2"
-    var s = ScrollbarV2(Position(0, 0), Size(2, 48))
+  elif name == "scrollbar"
+    var s = Scrollbar(Position(0, 0), Size(2, 48))
     s.index = 2
     s.count = 10
     s.visible = 5
     s.draw()
     drew = true
-  elif name == "triangle-v2"
-    var t = TriangleV2(Position(0, 0), Size(12, 12))
+  elif name == "triangle"
+    var t = Triangle(Position(0, 0), Size(12, 12))
     t.direction = "up"
     t.draw()
     drew = true
-  elif name == "duration-v2"
-    var d = DurationV2(Position(0, 0), Size(64, 16), "minutes")
+  elif name == "duration"
+    var d = Duration(Position(0, 0), Size(64, 16), "minutes")
     d.seconds = 150
     d.draw()
     drew = true
