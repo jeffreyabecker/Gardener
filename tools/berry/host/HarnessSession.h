@@ -27,7 +27,7 @@ namespace gardener {
 
 // The model chamber's ceiling, in kPa of depth: the deepest the modelled pump pulls it. A rig that
 // reaches deeper or shallower is this number, and `--ceiling-kpa` sets it.
-constexpr float kChamberCeilingKpa = 70.0f;
+constexpr float ChamberCeilingKpa = 70.0f;
 
 // The chamber the check pulls against: depth below ambient, pulled in proportion to the duty and
 // vented while the valve is open. It is the one thing here that is a model rather than a part,
@@ -241,7 +241,7 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
-  // Records a gesture for the callout strip, shown on the next kGestureCalloutBeats captures.
+  // Records a gesture for the callout strip, shown on the next GestureCalloutBeats captures.
   void pressGesture(const char* gesture);
 
  private:
@@ -271,6 +271,6 @@ class HarnessSession {
   bvm* vm_ = nullptr;
 };
 
-void installHarnessModule(bvm* vm, HarnessSession& session);
+void installHarnessModule(bvm* vm, HarnessSession& appSession);
 
 }  // namespace gardener

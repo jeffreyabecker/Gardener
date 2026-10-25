@@ -36,18 +36,18 @@ std::vector<uint8_t> unpackScaled(const uint8_t* packed, int16_t width, int16_t 
 
 // The one-byte-per-pixel image, compressed.
 std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
-  constexpr int kMinCodeSize = 2;
-  constexpr int kClearCode = 1 << kMinCodeSize;  // 4
-  constexpr int kEndCode = kClearCode + 1;       // 5
-  constexpr int kMaxCode = 4096;
+  constexpr int MinCodeSize = 2;
+  constexpr int ClearCode = 1 << MinCodeSize;  // 4
+  constexpr int EndCode = ClearCode + 1;       // 5
+  constexpr int MaxCode = 4096;
 
   // The dictionary: (prefix << 8 | pixel) -> code. A clear wipes it, which a per-node table full
   // of -1 would make O(4096) for no gain.
   std::unordered_map<int, int> children;
-  children.reserve(kMaxCode);
+  children.reserve(MaxCode);
 
-  int codeSize = kMinCodeSize + 1;
-  int nextCode = kEndCode + 1;
+  int codeSize = MinCodeSize + 1;
+  int nextCode = EndCode + 1;
 
   // GIF packs codes least-significant bit first into each byte.
   std::vector<uint8_t> out;
@@ -63,7 +63,7 @@ std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
     }
   };
 
-  emit(kClearCode);
+  emit(ClearCode);
   int current = indices[0];
   for (size_t i = 1; i < count; i++) {
     const uint8_t pixel = indices[i];
@@ -74,22 +74,22 @@ std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
       continue;
     }
     emit(current);
-    if (nextCode < kMaxCode) {
+    if (nextCode < MaxCode) {
       // The code being assigned is what decides the size, checked before it is assigned: the
       // decoder grows its code size the moment it receives a code that fills the table.
       if (nextCode == (1 << codeSize) && codeSize < 12) codeSize++;
       children[key] = nextCode++;
     } else {
       // The table is full: clear it at the size in effect, then start over smaller.
-      emit(kClearCode);
+      emit(ClearCode);
       children.clear();
-      codeSize = kMinCodeSize + 1;
-      nextCode = kEndCode + 1;
+      codeSize = MinCodeSize + 1;
+      nextCode = EndCode + 1;
     }
     current = pixel;
   }
   emit(current);
-  emit(kEndCode);
+  emit(EndCode);
   if (accBits > 0) out.push_back((uint8_t)(acc & 0xFF));
   return out;
 }
@@ -100,8 +100,8 @@ bool writeGif(const char* path, int16_t width, int16_t height,
               const std::vector<std::vector<uint8_t>>& frames) {
   if (frames.empty()) return false;
 
-  const int16_t outWidth = width * kRenderScale;
-  const int16_t outHeight = height * kRenderScale;
+  const int16_t outWidth = width * RenderScale;
+  const int16_t outHeight = height * RenderScale;
 
   FILE* file = fopen(path, "wb");
   if (file == nullptr) return false;
@@ -122,10 +122,10 @@ bool writeGif(const char* path, int16_t width, int16_t height,
   fputc(0x00, file);
 
   // Loop forever.
-  const uint8_t kLoopExtension[] = {0x21, 0xFF, 0x0B, 'N', 'E', 'T', 'S', 'C',
+  const uint8_t LoopExtension[] = {0x21, 0xFF, 0x0B, 'N', 'E', 'T', 'S', 'C',
                                     'A',  'P',  'E',  '2', '.', '0', 0x03, 0x01,
                                     0x00, 0x00, 0x00};
-  fwrite(kLoopExtension, 1, sizeof kLoopExtension, file);
+  fwrite(LoopExtension, 1, sizeof LoopExtension, file);
 
   for (const std::vector<uint8_t>& frame : frames) {
     // Graphic control extension: no disposal, no transparency, the delay.
@@ -133,7 +133,7 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put8(file, 0xF9);
     put8(file, 0x04);
     put8(file, 0x00);
-    put16(file, kGifDelayCs);
+    put16(file, GifDelayCs);
     put8(file, 0x00);
     put8(file, 0x00);
 
@@ -145,7 +145,7 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put16(file, (uint16_t)outHeight);
     put8(file, 0x00);  // no local colour table, not interlaced
 
-    const std::vector<uint8_t> pixels = unpackScaled(frame.data(), width, height, kRenderScale);
+    const std::vector<uint8_t> pixels = unpackScaled(frame.data(), width, height, RenderScale);
     const std::vector<uint8_t> compressed = lzwEncode(pixels.data(), pixels.size());
     put8(file, 2);  // min code size
     size_t at = 0;

@@ -14,29 +14,29 @@
 namespace gardener {
 namespace {
 
-constexpr uint8_t kBleProtocolVersion = 1;
+constexpr uint8_t BleProtocolVersion = 1;
 
 // The two rates; everything else is sent on change. 5 Hz is about as fast as
 // a phone screen needs.
-constexpr uint32_t kFastRateMs = 200;
+constexpr uint32_t FastRateMs = 200;
 
 // The opcodes a controller writes to `command`, and the results it is
 // notified. The machine's answers fill the bottom of the range and the
 // protocol's refusals sit at the top, so a client can tell which of the two
 // spoke without knowing the list. `0x01` is retired: a start is valid at a
 // target of 0 now, so "no target" is never answered.
-enum : uint8_t { kOpStart = 0x01, kOpStop = 0x02, kOpResetFault = 0x03, kOpReboot = 0x04 };
+enum : uint8_t { OpStart = 0x01, OpStop = 0x02, OpResetFault = 0x03, OpReboot = 0x04 };
 enum : uint8_t {
-  kResultApplied = 0x00,
-  kResultNoReading = 0x02,
-  kResultFault = 0x03,
-  kResultUnknownOpcode = 0xFF,
+  ResultApplied = 0x00,
+  ResultNoReading = 0x02,
+  ResultFault = 0x03,
+  ResultUnknownOpcode = 0xFF,
 };
 
 // Why a write was refused, in the byte `write_result` carries after the field's suffix.
 enum : uint8_t {
-  kWriteOutOfRange = 0x01,
-  kWriteNotANumber = 0x02,
+  WriteOutOfRange = 0x01,
+  WriteNotANumber = 0x02,
 };
 
 // Whether a reading can be trusted, which is what `sensor` reports and what a
@@ -54,7 +54,7 @@ static_assert(static_cast<uint8_t>(RunState::Idle) == 0 &&
 
 }  // namespace
 
-const BleDomain::Spec MachineBleDomain::kSpecs[] = {
+const BleDomain::Spec MachineBleDomain::Specs[] = {
     {0x0009, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // state
     {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pressure_kpa
     {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4}, // target
@@ -76,7 +76,7 @@ MachineBleDomain::MachineBleDomain(Machine* app) : app_(app) {}
 
 uint8_t MachineBleDomain::specCount() const { return Count; }
 
-BleDomain::Spec MachineBleDomain::specAt(uint8_t index) const { return kSpecs[index]; }
+BleDomain::Spec MachineBleDomain::specAt(uint8_t index) const { return Specs[index]; }
 
 void MachineBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
   characteristics_[index] = characteristic;
@@ -107,7 +107,7 @@ void MachineBleDomain::describe(uint8_t index) {
       chr->setValue(FirmwareVersion);
       break;
     case Protocol:
-      setByte(chr, kBleProtocolVersion);
+      setByte(chr, BleProtocolVersion);
       break;
     case Sensor:
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
@@ -172,9 +172,9 @@ void MachineBleDomain::applyPending(BleLink& link) {
     target_.has = false;
     const float pressureKpa = target_.value;
     if (!isfinite(pressureKpa)) {
-      refuse(link, Target, kWriteNotANumber);
+      refuse(link, Target, WriteNotANumber);
     } else if (pressureKpa < 0.0f || pressureKpa > CONTROL_FLOOR_KPA) {
-      refuse(link, Target, kWriteOutOfRange);
+      refuse(link, Target, WriteOutOfRange);
     } else {
       // 0 is the ambient target, which releases the chamber; anything else is a setpoint the
       // vacuum system accepts or refuses against the same floor.
@@ -196,7 +196,7 @@ void MachineBleDomain::applyPending(BleLink& link) {
     const uint16_t seconds = hold_.value;
     const uint16_t maxSeconds = static_cast<uint16_t>(CONTROL_MAX_RUN_MS / 1000);
     if (seconds > maxSeconds) {
-      refuse(link, HoldS, kWriteOutOfRange);
+      refuse(link, HoldS, WriteOutOfRange);
     } else {
       // 0 asks for the compiled maximum, which is what a start with no hold gets.
       requestedHoldS_ = seconds;
@@ -223,7 +223,7 @@ void MachineBleDomain::applyPending(BleLink& link) {
 void MachineBleDomain::refuse(BleLink& link, uint8_t index, uint8_t reason) {
   NimBLECharacteristic* chr = characteristics_[WriteResult];
   if (chr == nullptr) return;
-  const uint16_t suffix = kSpecs[index].suffix;
+  const uint16_t suffix = Specs[index].suffix;
   const uint8_t payload[3] = {static_cast<uint8_t>(suffix & 0xFF),
                               static_cast<uint8_t>(suffix >> 8), reason};
   chr->setValue(payload, sizeof(payload));
@@ -237,34 +237,34 @@ void MachineBleDomain::refuse(BleLink& link, uint8_t index, uint8_t reason) {
 uint8_t MachineBleDomain::execute(BleLink& link, uint8_t opcode) {
   VacuumSystem& vacuum = app_->vacuum();
   switch (opcode) {
-    case kOpStop: {
+    case OpStop: {
       const MachineCommand stop{MachineCommand::Op::Stop};
       link.post(stop);
-      return kResultApplied;
+      return ResultApplied;
     }
-    case kOpStart: {
+    case OpStart: {
       const char* refusal = vacuum.startRefusal();
       if (refusal != nullptr) {
-        if (strcmp(refusal, "latch") == 0) return kResultFault;
-        if (strcmp(refusal, "no_reading") == 0) return kResultNoReading;
-        return kResultUnknownOpcode;
+        if (strcmp(refusal, "latch") == 0) return ResultFault;
+        if (strcmp(refusal, "no_reading") == 0) return ResultNoReading;
+        return ResultUnknownOpcode;
       }
       const MachineCommand start{MachineCommand::Op::Start, (float)requestedHoldS_};
       link.post(start);
-      return kResultApplied;
+      return ResultApplied;
     }
-    case kOpResetFault: {
+    case OpResetFault: {
       const MachineCommand reset{MachineCommand::Op::ResetFault};
       link.post(reset);
-      return kResultApplied;
+      return ResultApplied;
     }
-    case kOpReboot: {
+    case OpReboot: {
       const MachineCommand reboot{MachineCommand::Op::Reboot};
       link.post(reboot);
-      return kResultApplied;
+      return ResultApplied;
     }
     default:
-      return kResultUnknownOpcode;
+      return ResultUnknownOpcode;
   }
 }
 
@@ -293,7 +293,7 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
     link.notify(characteristics_[Fault]);
   }
 
-  if (nowMs - lastFastMs_ >= kFastRateMs) {
+  if (nowMs - lastFastMs_ >= FastRateMs) {
     lastFastMs_ = nowMs;
     describe(PressureKpa);
     link.notify(characteristics_[PressureKpa]);

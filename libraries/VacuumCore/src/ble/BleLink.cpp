@@ -9,13 +9,13 @@ namespace {
 
 // The service's base UUID: the last 16 bits select the characteristic, so the
 // suffix in each domain's spec is the whole of a characteristic's name.
-constexpr const char* kServiceUuid = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10";
-constexpr const char* kUuidPrefix = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e";
-constexpr const char* kDeviceName = "gardener";
+constexpr const char* ServiceUuid = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10";
+constexpr const char* UuidPrefix = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e";
+constexpr const char* DeviceName = "gardener";
 
 String characteristicUuid(uint16_t suffix) {
   char text[37];
-  snprintf(text, sizeof(text), "%s%04x", kUuidPrefix, suffix);
+  snprintf(text, sizeof(text), "%s%04x", UuidPrefix, suffix);
   return String(text);
 }
 
@@ -27,7 +27,7 @@ void BleLink::registerDomain(BleDomain* domain) {
 }
 
 BleLink::Start BleLink::begin() {
-  if (!NimBLEDevice::init(kDeviceName)) return Start::Failed;
+  if (!NimBLEDevice::init(DeviceName)) return Start::Failed;
 
   // Just Works, bonded: the device pairs without a passkey and keeps the bond
   // in NVS. That is a guard against a casual neighbour at the bench rather
@@ -43,7 +43,7 @@ BleLink::Start BleLink::begin() {
   // central leaves.
   server_->advertiseOnDisconnect(true);
 
-  NimBLEService* service = server_->createService(kServiceUuid);
+  NimBLEService* service = server_->createService(ServiceUuid);
   if (service == nullptr) return Start::Failed;
 
   // Each registered domain contributes its characteristics in registration
@@ -63,7 +63,7 @@ BleLink::Start BleLink::begin() {
 
   NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
   advertising->addServiceUUID(service->getUUID());
-  advertising->setName(kDeviceName);
+  advertising->setName(DeviceName);
   advertising->enableScanResponse(true);
   return advertising->start() ? Start::Advertising : Start::Failed;
 }

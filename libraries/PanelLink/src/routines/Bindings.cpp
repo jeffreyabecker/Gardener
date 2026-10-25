@@ -11,21 +11,21 @@ namespace gardener {
 namespace berry {
 
 // The pointers `bindings/Module.h` declares. install() is the one assignment.
-PanelContext* gContext = nullptr;
-Routines* gRoutines = nullptr;
-Logger* gLogger = nullptr;
+PanelContext* context = nullptr;
+Routines* routines = nullptr;
+Logger* logger = nullptr;
 
-void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger) {
-  gContext = &context;
-  gRoutines = &routines;
-  gLogger = &logger;
+void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& appLogger) {
+  context = &appContext;
+  routines = &appRoutines;
+  logger = &appLogger;
 
   installVacuumModule(vm);
   installScreenModule(vm);
   installDeviceModule(vm);
   installButtonsModule(vm);
   installBuzzerModule(vm);
-  installJinglesModule(vm, context.library());
+  installJinglesModule(vm, appContext.library());
   installStoreModule(vm);
 }
 

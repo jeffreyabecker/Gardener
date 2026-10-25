@@ -10,19 +10,19 @@ namespace {
 // runs while a native call is on the stack.
 int buttonsTake(bvm* vm) {
   String gesture;
-  if (gRoutines == nullptr || !gRoutines->takePress(gesture)) be_return_nil(vm);
+  if (routines == nullptr || !routines->takePress(gesture)) be_return_nil(vm);
   be_pushstring(vm, gesture.c_str());
   be_return(vm);
 }
 
-const bnfuncinfo kButtonsLibrary[] = {
+const bnfuncinfo ButtonsLibrary[] = {
     {"take", buttonsTake},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
-void installButtonsModule(bvm* vm) { installModule(vm, "buttons", kButtonsLibrary); }
+void installButtonsModule(bvm* vm) { installModule(vm, "buttons", ButtonsLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

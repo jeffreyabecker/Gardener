@@ -24,24 +24,24 @@ struct DisplayUnitInfo {
 };
 
 // In DisplayUnit order, kPa first because it is the unit the machine works in.
-constexpr DisplayUnitInfo kDisplayUnits[] = {
+constexpr DisplayUnitInfo DisplayUnits[] = {
     {"kpa", "kPa", 1.0f, 1.0f, 0.1f},
     {"psi", "psi", 0.14503774f, 1.0f, 0.1f},
     {"inhg", "inHg", 0.29529991f, 1.0f, 0.1f},
     {"mmhg", "mmHg", 7.50061683f, 10.0f, 1.0f},
 };
 
-constexpr uint8_t kDisplayUnitCount =
-    static_cast<uint8_t>(sizeof(kDisplayUnits) / sizeof(kDisplayUnits[0]));
+constexpr uint8_t DisplayUnitCount =
+    static_cast<uint8_t>(sizeof(DisplayUnits) / sizeof(DisplayUnits[0]));
 
 inline const DisplayUnitInfo& displayUnitInfo(DisplayUnit unit) {
-  return kDisplayUnits[static_cast<uint8_t>(unit)];
+  return DisplayUnits[static_cast<uint8_t>(unit)];
 }
 
 // The wire's token for a unit, case insensitive; false leaves `out` alone.
 inline bool parseDisplayUnit(const char* token, DisplayUnit& out) {
-  for (uint8_t i = 0; i < kDisplayUnitCount; ++i) {
-    if (strcasecmp(token, kDisplayUnits[i].name) == 0) {
+  for (uint8_t i = 0; i < DisplayUnitCount; ++i) {
+    if (strcasecmp(token, DisplayUnits[i].name) == 0) {
       out = static_cast<DisplayUnit>(i);
       return true;
     }

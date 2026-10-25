@@ -14,7 +14,7 @@ class Logger;
 // arrives, and the log says so once rather than on every drop.
 class GestureQueue {
  public:
-  static constexpr uint8_t kCapacity = 8;
+  static constexpr uint8_t Capacity = 8;
 
   void begin(Logger& logger) { logger_ = &logger; }
 
@@ -24,7 +24,7 @@ class GestureQueue {
 
  private:
   Logger* logger_ = nullptr;
-  String presses_[kCapacity];
+  String presses_[Capacity];
   uint8_t head_ = 0;
   uint8_t count_ = 0;
   bool overflowed_ = false;

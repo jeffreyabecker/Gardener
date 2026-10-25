@@ -37,9 +37,8 @@ already says which one it is, and nobody has to decode a letter to read the line
 `logger`. The same reason: a prefix repeats what the declaration already tells the reader, and a
 name that needs a letter in front of it to be understood is working against the language.
 
-Existing prefixed names are not a rewrite-on-sight target. `gContext`, `gRoutines` and `gLogger` in
-`libraries/PanelLink/src/routines/bindings/`, and the `SCREAMING_SNAKE_CASE` constants in
-`libraries/VacuumCore/src/Machine.h`, are earlier decisions. Rename them where you are already
+Existing prefixed names are not a rewrite-on-sight target. The `SCREAMING_SNAKE_CASE` constants in
+`libraries/VacuumCore/src/Machine.h` are an earlier decision. Rename them where you are already
 changing those lines for another reason; a sweep of the codebase for its own sake is its own
 decision with its own measurement.
 

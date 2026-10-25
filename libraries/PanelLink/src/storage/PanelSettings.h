@@ -32,11 +32,11 @@ class PanelSettings : public Settings {
  private:
   // An identifier is a short token. A fixed buffer keeps the panel's read of a preference free of
   // the String reallocation the interface task would otherwise race it with.
-  static constexpr size_t kJingleIdLength = 32;
+  static constexpr size_t JingleIdLength = 32;
 
   DisplayUnit unit_ = DisplayUnit::Kpa;
   float targetPressureKpa_ = 0.0f;
-  char jingle_[kJingleIdLength] = "";
+  char jingle_[JingleIdLength] = "";
 };
 
 }  // namespace gardener

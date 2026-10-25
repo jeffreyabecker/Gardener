@@ -6,7 +6,7 @@ Settings::Settings(Library* store) : store_(store) {}
 
 bool Settings::save() const {
   if (store_ == nullptr) return false;
-  return store_->write(kDevicePath, values_.text());
+  return store_->write(DevicePath, values_.text());
 }
 
 // Reading is best effort: a document that is not there or does not parse leaves the defaults in
@@ -15,7 +15,7 @@ bool Settings::begin() {
   bool read = false;
   if (store_ != nullptr) {
     String text;
-    if (store_->read(kDevicePath, text)) {
+    if (store_->read(DevicePath, text)) {
       values_.parse(text);
       read = true;
     }

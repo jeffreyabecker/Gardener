@@ -28,7 +28,7 @@ class MachineBleDomain : public BleDomain {
 
  private:
   // The slot of each characteristic this domain declares, numbered in the
-  // order kSpecs lists them. The values are written out so a slot keeps its
+  // order Specs lists them. The values are written out so a slot keeps its
   // number when its neighbours move.
   enum : uint8_t {
     State = 0,
@@ -49,7 +49,7 @@ class MachineBleDomain : public BleDomain {
     Count = 15,
   };
 
-  static const Spec kSpecs[Count];
+  static const Spec Specs[Count];
 
   uint8_t execute(BleLink& link, uint8_t opcode);
   void applyPending(BleLink& link);

@@ -16,10 +16,10 @@
 
 class BitmapPanel {
  public:
-  static constexpr int16_t kWidth = 128;
-  static constexpr int16_t kHeight = 64;
+  static constexpr int16_t Width = 128;
+  static constexpr int16_t Height = 64;
 
-  explicit BitmapPanel(int16_t width = kWidth, int16_t height = kHeight);
+  explicit BitmapPanel(int16_t width = Width, int16_t height = Height);
 
   // --- the panel -----------------------------------------------------------
   bool begin();
@@ -101,7 +101,7 @@ class BitmapPanel {
   int16_t height_;
   uint8_t rotation_ = 0;
   bool inverted_ = false;
-  uint8_t frame_[kHeight][kWidth] = {};
+  uint8_t frame_[Height][Width] = {};
 
   const GFXfont* font_ = nullptr;
   uint8_t textSize_ = 1;

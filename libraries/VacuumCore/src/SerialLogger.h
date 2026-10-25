@@ -12,7 +12,7 @@ namespace gardener {
 // a level that is not in it is not written, and the replies are unaffected either way.
 class SerialLogger : public Logger {
  public:
-  explicit SerialLogger(Stream& serial) : serial_(serial) { levels_.reserve(kLevelsReserve); }
+  explicit SerialLogger(Stream& serial) : serial_(serial) { levels_.reserve(LevelsReserve); }
 
   String levels() const override { return levels_; }
   void setLevels(const String& levels) override { levels_ = levels; }
@@ -25,7 +25,7 @@ class SerialLogger : public Logger {
   // The longest set, `IWE`, and its terminator. The buffer is reserved so a change never
   // reallocates: a reader on another task may then see a torn value for one call, which drops or
   // repeats a single record and nothing more.
-  static constexpr unsigned int kLevelsReserve = 4;
+  static constexpr unsigned int LevelsReserve = 4;
 
   void write(char level, const char* text) {
     if (!text || levels_.indexOf(level) < 0) return;

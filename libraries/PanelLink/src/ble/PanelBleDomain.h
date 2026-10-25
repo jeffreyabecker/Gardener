@@ -26,7 +26,7 @@ class PanelBleDomain : public BleDomain {
  private:
   enum : uint8_t { Unit, Batt, Count };
 
-  static const Spec kSpecs[Count];
+  static const Spec Specs[Count];
 
   Panel* app_;
   NimBLECharacteristic* characteristics_[Count] = {};

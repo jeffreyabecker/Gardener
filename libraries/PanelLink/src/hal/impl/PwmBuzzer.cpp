@@ -10,8 +10,8 @@ namespace {
 
 // The channel is attached once at a nominal tone; ledcWriteTone() changes the frequency without
 // re-attaching. Ten bits is the same resolution the pump uses and is enough for the audible range.
-constexpr uint32_t kIdleHz = 1000;
-constexpr uint8_t kPwmResolution = 10;
+constexpr uint32_t IdleHz = 1000;
+constexpr uint8_t PwmResolution = 10;
 
 }  // namespace
 
@@ -22,7 +22,7 @@ static_assert(!std::is_abstract<PwmBuzzer>::value, "PwmBuzzer must implement eve
 bool PwmBuzzer::begin() {
   pinMode(pin_, OUTPUT);
   digitalWrite(pin_, LOW);
-  if (!ledcAttach(pin_, kIdleHz, kPwmResolution)) return false;
+  if (!ledcAttach(pin_, IdleHz, PwmResolution)) return false;
   off();
   return true;
 }

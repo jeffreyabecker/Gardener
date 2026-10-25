@@ -38,7 +38,7 @@ namespace berry {
 //
 // One VM and one app, so the native callbacks -- plain C functions with no user data -- reach their
 // owners through the pointers given here.
-void install(bvm* vm, PanelContext& context, Routines& routines, Logger& logger);
+void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& appLogger);
 
 }  // namespace berry
 }  // namespace gardener

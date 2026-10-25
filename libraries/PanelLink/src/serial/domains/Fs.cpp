@@ -13,7 +13,7 @@
 namespace gardener {
 namespace {
 
-constexpr size_t kCopyChunk = 512;
+constexpr size_t CopyChunk = 512;
 
 // The serial `fs` domain's write body. The declared byte count is authoritative and is capped here;
 // a body that stops arriving for this long is abandoned and its partial file removed.
@@ -270,7 +270,7 @@ void FsDomain::read(Stream& io, const String& args) {
   io.print((uint32_t)file.size());
   io.print('\n');
 
-  uint8_t buffer[kCopyChunk];
+  uint8_t buffer[CopyChunk];
   while (true) {
     const size_t got = file.read(buffer, sizeof(buffer));
     if (got == 0) break;
@@ -314,7 +314,7 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (path == kDevicePath) {
+  if (path == DevicePath) {
     if (!discardPayload(io, bytes)) return;
     replyUnsupported(io, path);
     return;
@@ -396,7 +396,7 @@ void FsDomain::remove(Stream& io, const String& args) {
     replyBadArgument(io, path);
     return;
   }
-  if (path == kDevicePath) {
+  if (path == DevicePath) {
     replyUnsupported(io, path);
     return;
   }
@@ -413,7 +413,7 @@ void FsDomain::remove(Stream& io, const String& args) {
 }
 
 FsDomain::Payload FsDomain::readPayload(Stream& io, uint32_t bytes, File* file) {
-  uint8_t buffer[kCopyChunk];
+  uint8_t buffer[CopyChunk];
   size_t filled = 0;
   uint32_t received = 0;
   uint32_t last = millis();

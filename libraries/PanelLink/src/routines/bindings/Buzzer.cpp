@@ -17,12 +17,12 @@ int buzzerTone(bvm* vm) {
   float hz = (float)argReal(vm, 1);
   const bint duration = argInt(vm, 2);
   if (hz <= 0.0f || duration < 0) {
-    gContext->buzzer().off();
+    context->buzzer().off();
     be_return_nil(vm);
   }
   if (hz < BuzzerMinHz) hz = BuzzerMinHz;
   if (hz > BuzzerMaxHz) hz = BuzzerMaxHz;
-  gContext->buzzer().tone((uint16_t)hz, (uint32_t)duration);
+  context->buzzer().tone((uint16_t)hz, (uint32_t)duration);
   be_return_nil(vm);
 }
 
@@ -33,18 +33,18 @@ int buzzerPlay(bvm* vm) {
   const char* sequence = argText(vm, 1);
   const bool ok = BuzzerPlayer::validate(sequence);
   if (ok) {
-    gContext->buzzer().play(sequence);
+    context->buzzer().play(sequence);
   }
   be_pushbool(vm, ok);
   be_return(vm);
 }
 
 int buzzerOff(bvm* vm) {
-  gContext->buzzer().off();
+  context->buzzer().off();
   be_return_nil(vm);
 }
 
-const bnfuncinfo kBuzzerLibrary[] = {
+const bnfuncinfo BuzzerLibrary[] = {
     {"tone", buzzerTone},
     {"play", buzzerPlay},
     {"off", buzzerOff},
@@ -53,7 +53,7 @@ const bnfuncinfo kBuzzerLibrary[] = {
 
 }  // namespace
 
-void installBuzzerModule(bvm* vm) { installModule(vm, "buzzer", kBuzzerLibrary); }
+void installBuzzerModule(bvm* vm) { installModule(vm, "buzzer", BuzzerLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

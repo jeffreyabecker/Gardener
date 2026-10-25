@@ -16,7 +16,7 @@ messy is how they are wired to their owners.
 Three seams carry the bindings' state today.
 
 The **globals**. [Module.h](../../libraries/PanelLink/src/routines/bindings/Module.h) declares
-`gContext`, `gRoutines` and `gLogger`, and [Bindings.cpp](../../libraries/PanelLink/src/routines/Bindings.cpp)
+`context`, `routines` and `logger`, and [Bindings.cpp](../../libraries/PanelLink/src/routines/Bindings.cpp)
 is their one writer. These three are the globals in question, and they are not the only file-scope
 names in the library: `stopSeq` and `goHomeSeq` in `PanelTasks.h` are cross-task scalars with one
 writer each, and the font tables in `panel/Fonts.h` are const data. Those two groups are a
@@ -28,9 +28,9 @@ The reason the bindings globals exist is stated in the header: the native callba
 functions with no user data, and there is one VM and one app. Three things are wrong with that. The VM ships
 native closures with upvalues — `be_pushntvclosure`, `be_pushcomptr`, `be_setupval`, and the same
 list and range libraries use them — so the premise is narrower than it claims: a callback *can*
-carry data, just not through `be_pushntvfunction`. And `gLogger` is a second name for
-`gContext->logger()`, so one of the three is already redundant. The host harness has the same seam
-in [HarnessModule.cpp](../../tools/berry/host/HarnessModule.cpp) (`gSession`), so whatever cures the
+carry data, just not through `be_pushntvfunction`. And `logger` is a second name for
+`context->logger()`, so one of the three is already redundant. The host harness has the same seam
+in [HarnessModule.cpp](../../tools/berry/host/HarnessModule.cpp) (`session`), so whatever cures the
 device also cures the harness.
 
 The **facade**. [Routines.h](../../libraries/PanelLink/src/routines/Routines.h) has two halves. One
@@ -120,16 +120,16 @@ module and every function in that module closes over it:
 
 ```cpp
 // today
-void installScreenModule(bvm* vm) { installModule(vm, "screen", kScreenLibrary); }
+void installScreenModule(bvm* vm) { installModule(vm, "screen", ScreenLibrary); }
 // after
 void installScreenModule(bvm* vm, BindingSurface& surface) {
-  installModule(vm, "screen", kScreenLibrary, &surface);
+  installModule(vm, "screen", ScreenLibrary, &surface);
 }
 ```
 
 `installModule` pushes each function as a closure with one upvalue holding the pointer, and a
-callback reads its owner back at entry instead of naming `gContext`. `gContext`, `gRoutines` and
-`gLogger` disappear; `install()` shrinks to the one surface, and the harness's `gSession` goes the
+callback reads its owner back at entry instead of naming `context`. `context`, `routines` and
+`logger` disappear; `install()` shrinks to the one surface, and the harness's `session` goes the
 same way.
 
 Cost: one unpack line at the top of each callback, hidden behind a helper. The `bnfuncinfo` table
@@ -142,7 +142,7 @@ surface, which globals cannot express at all.
 
 ### Keep the globals but reduce them to one
 
-Delete `gLogger` and derive it from `gContext->logger()`, and either fold `gRoutines` into the
+Delete `logger` and derive it from `context->logger()`, and either fold `routines` into the
 context or leave the two globals and call it good. This is the smallest change and removes the
 redundant name, but it keeps the pattern the question is about. It would be the answer only if the
 dislike were of the count rather than of the mechanism, which it is not.

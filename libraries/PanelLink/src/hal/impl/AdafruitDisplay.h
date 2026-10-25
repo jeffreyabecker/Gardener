@@ -56,11 +56,11 @@ class AdafruitDisplay : public Display {
     panel_.drawPixel(x, y, color);
   }
   void invert(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    // kFlip is Adafruit's own "toggle this pixel" colour: the monochrome drivers xor the bit
+    // Flip is Adafruit's own "toggle this pixel" colour: the monochrome drivers xor the bit
     // rather than write a value, so each pixel keeps its state until it is flipped.
     for (int16_t row = y; row < y + h; row++) {
       for (int16_t col = x; col < x + w; col++) {
-        panel_.drawPixel(col, row, kFlip);
+        panel_.drawPixel(col, row, Flip);
       }
     }
   }
@@ -153,7 +153,7 @@ class AdafruitDisplay : public Display {
   }
 
  private:
-  static constexpr uint16_t kFlip = 2;
+  static constexpr uint16_t Flip = 2;
 
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) {
     panel_.setTextSize(size);

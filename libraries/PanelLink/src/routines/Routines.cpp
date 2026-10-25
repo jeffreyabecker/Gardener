@@ -17,8 +17,8 @@ namespace {
 
 // The scene stack every page calls is `/system/ux.be`'s global `ux`: the frames, the callbacks and
 // the one-beat deferral are Berry's, and this side only makes the calls that a beat needs.
-constexpr const char* kUxGlobal = "ux";
-constexpr const char* kRootScene = "__rootScene";
+constexpr const char* UxGlobal = "ux";
+constexpr const char* RootScene = "__rootScene";
 
 // A document's values live at /routines/<document>.cfg, so the document has to be a plain word: a
 // path separator would address another file, and the path is only ever built from a name that has
@@ -43,8 +43,8 @@ String documentPath(const char* document) {
 // order is not the folder's: Berry resolves a global when it compiles a file, so a class has to be
 // a global by the time a file that names it is compiled. `/system/order` states that order, one
 // path per line relative to `/system`.
-constexpr const char* kSystemFolder = "system";
-constexpr const char* kSystemOrder = "/system/order";
+constexpr const char* SystemFolder = "system";
+constexpr const char* SystemOrder = "/system/order";
 
 // A file dropped into a system folder and forgotten in the order would otherwise be a class that
 // quietly never exists, so every `.be` beside the ones the order names is reported. The folders are
@@ -64,7 +64,7 @@ void reportUnlisted(Library& library, Logger& logger, const std::vector<String>&
   }
 
   for (const String& folder : folders) {
-    String path = kSystemFolder;
+    String path = SystemFolder;
     if (!folder.isEmpty()) {
       path += '/';
       path += folder;
@@ -152,7 +152,7 @@ bool Routines::active() const { return callUx("depth", 0); }
 // boot and on the go-home gesture.
 bool Routines::resetToRoot() {
   const int base = be_top(vm_);
-  if (!be_getglobal(vm_, kRootScene)) {
+  if (!be_getglobal(vm_, RootScene)) {
     logger_->warn("vm: no root scene, showing the mark");
   } else if (!be_isinstance(vm_, -1)) {
     logger_->warn("vm: root scene is not an instance, showing the mark");
@@ -170,7 +170,7 @@ bool Routines::resetToRoot() {
 bool Routines::callUx(const char* method, int argIndex) const {
   const int base = be_top(vm_);
   bool answer = false;
-  if (!be_getglobal(vm_, kUxGlobal) || !be_getmethod(vm_, -1, method)) {
+  if (!be_getglobal(vm_, UxGlobal) || !be_getmethod(vm_, -1, method)) {
     logger_->error("vm: ux is missing");
   } else {
     be_pushvalue(vm_, -2);  // the instance, as self
@@ -202,7 +202,7 @@ size_t Routines::loadSystem(size_t& found) {
   found = 0;
 
   String order;
-  if (library_ == nullptr || !library_->read(kSystemOrder, order)) {
+  if (library_ == nullptr || !library_->read(SystemOrder, order)) {
     logger_->error("vm: /system/order unreadable, no system files");
     return 0;
   }
@@ -217,7 +217,7 @@ size_t Routines::loadSystem(size_t& found) {
     if (!line.isEmpty() && !line.startsWith("#")) {
       listed.push_back(line);
       String path = "/";
-      path += kSystemFolder;
+      path += SystemFolder;
       path += '/';
       path += line;
       if (loadFile(path)) loaded++;

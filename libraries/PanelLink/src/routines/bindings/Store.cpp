@@ -58,7 +58,7 @@ int pushMapData(bvm* vm, int map) {
 // store.get(name): every value the document holds, each as the text the file was written with.
 void pushAllValues(bvm* vm, const char* document) {
   Values held;
-  if (gRoutines != nullptr) gRoutines->storeGet(document, held);
+  if (routines != nullptr) routines->storeGet(document, held);
 
   pushMap(vm);
   const int data = be_absindex(vm, -1);
@@ -75,7 +75,7 @@ void pushAllValues(bvm* vm, const char* document) {
 // default itself when the document holds nothing for it. The document is read once, not per key.
 void pushDefaultedValues(bvm* vm, const char* document, int defaults) {
   Values held;
-  const bool stored = gRoutines != nullptr && gRoutines->storeGet(document, held);
+  const bool stored = routines != nullptr && routines->storeGet(document, held);
 
   pushMap(vm);
   const int data = be_absindex(vm, -1);
@@ -111,7 +111,7 @@ void pushDefaultedValues(bvm* vm, const char* document, int defaults) {
 // store.set(name, values): every entry the map names, merged and written at most once.
 void setAllValues(bvm* vm, const char* document, int values) {
   Values merged;
-  bool written = gRoutines != nullptr;
+  bool written = routines != nullptr;
   const int source = pushMapData(vm, values);
   const bool iterating = be_ismap(vm, source) && be_pushiter(vm, source);
   while (iterating && be_iter_hasnext(vm, source)) {
@@ -127,7 +127,7 @@ void setAllValues(bvm* vm, const char* document, int values) {
   // The iterator, when one was pushed, and the map's own table.
   be_pop(vm, iterating ? 2 : 1);
 
-  if (written) written = gRoutines->storeSet(document, merged);
+  if (written) written = routines->storeSet(document, merged);
   be_pushbool(vm, written);
 }
 
@@ -152,7 +152,7 @@ int storeGet(bvm* vm) {
   const Kind kind = kindOf(vm, 3);
   const char* key = argText(vm, 2);
   String text;
-  const bool stored = gRoutines != nullptr && gRoutines->storeGet(document.c_str(), key, text);
+  const bool stored = routines != nullptr && routines->storeGet(document.c_str(), key, text);
 
   if (!stored) {
     // Nothing under the key: the fallback the caller passed is the answer, as it stands.
@@ -182,13 +182,13 @@ int storeSet(bvm* vm) {
   // holds. The pointer is into the VM's string table, which is why it is used before anything else
   // is pushed.
   const char* value = be_tostring(vm, 3);
-  const bool written = value != nullptr && gRoutines != nullptr &&
-                       gRoutines->storeSet(document.c_str(), key, String(value));
+  const bool written = value != nullptr && routines != nullptr &&
+                       routines->storeSet(document.c_str(), key, String(value));
   be_pushbool(vm, written);
   be_return(vm);
 }
 
-const bnfuncinfo kStoreLibrary[] = {
+const bnfuncinfo StoreLibrary[] = {
     {"get", storeGet},
     {"set", storeSet},
     {nullptr, nullptr},
@@ -196,7 +196,7 @@ const bnfuncinfo kStoreLibrary[] = {
 
 }  // namespace
 
-void installStoreModule(bvm* vm) { installModule(vm, "store", kStoreLibrary); }
+void installStoreModule(bvm* vm) { installModule(vm, "store", StoreLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

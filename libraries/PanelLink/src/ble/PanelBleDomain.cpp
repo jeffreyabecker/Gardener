@@ -9,11 +9,11 @@
 namespace gardener {
 namespace {
 
-constexpr uint32_t kBattRateMs = 10000;
+constexpr uint32_t BattRateMs = 10000;
 
 }  // namespace
 
-const BleDomain::Spec PanelBleDomain::kSpecs[] = {
+const BleDomain::Spec PanelBleDomain::Specs[] = {
     {0x000A, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},  // unit
     {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},    // batt
 };
@@ -22,7 +22,7 @@ PanelBleDomain::PanelBleDomain(Panel* app) : app_(app) {}
 
 uint8_t PanelBleDomain::specCount() const { return Count; }
 
-BleDomain::Spec PanelBleDomain::specAt(uint8_t index) const { return kSpecs[index]; }
+BleDomain::Spec PanelBleDomain::specAt(uint8_t index) const { return Specs[index]; }
 
 void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
   characteristics_[index] = characteristic;
@@ -55,13 +55,13 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     unitWrite_.has = false;
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
-    if (unitWrite_.value < kDisplayUnitCount) {
+    if (unitWrite_.value < DisplayUnitCount) {
       app_->settings().setUnit(static_cast<DisplayUnit>(unitWrite_.value));
     }
     describe(Unit);
   }
 
-  if (nowMs - lastBattMs_ >= kBattRateMs) {
+  if (nowMs - lastBattMs_ >= BattRateMs) {
     lastBattMs_ = nowMs;
     describe(Batt);
     link.notify(characteristics_[Batt]);

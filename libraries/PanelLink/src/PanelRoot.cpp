@@ -18,11 +18,11 @@ namespace {
 // The fitted panel: an Adafruit 1.3" 128x64 monochrome SH1106 on the STEMMA QT bus. Its geometry
 // is the part's own, which is why it is named here with the part rather than in the board's pin
 // map — the 128x32 alternative is the same wiring with different numbers.
-constexpr uint16_t kPanelWidth = 128;
-constexpr uint16_t kPanelHeight = 64;
-constexpr uint8_t kPanelAddress = 0x3C;
+constexpr uint16_t PanelWidth = 128;
+constexpr uint16_t PanelHeight = 64;
+constexpr uint8_t PanelAddress = 0x3C;
 // The STEMMA QT breakout has no reset line, and the library spells that as a pin of -1.
-constexpr int16_t kPanelNoResetLine = -1;
+constexpr int16_t PanelNoResetLine = -1;
 
 }  // namespace
 
@@ -39,8 +39,8 @@ Panel& buildPanelRoot(Logger& logger, PanelSettings& settings, FS& fs, Library& 
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction; the callback is where it comes up, once App has the bus running.
   auto* display = new AdafruitDisplay<Adafruit_SH1106G>(
-      [](Adafruit_SH1106G& panel) -> bool { return panel.begin(kPanelAddress, false); },
-      kPanelWidth, kPanelHeight, &Wire1, kPanelNoResetLine);
+      [](Adafruit_SH1106G& panel) -> bool { return panel.begin(PanelAddress, false); },
+      PanelWidth, PanelHeight, &Wire1, PanelNoResetLine);
   auto* routines = new Routines();
   auto* panel = new Panel(logger, pins, buttons, buzzer, battery, display, settings, fs, library,
                           routines);

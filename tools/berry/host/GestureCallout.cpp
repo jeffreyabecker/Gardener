@@ -100,8 +100,8 @@ std::string gestureLabel(const std::string& gesture) {
 
 void drawGestureStrip(uint8_t* packed, int16_t width, int16_t height, const std::string& label) {
   const int16_t rowBytes = (width + 7) / 8;
-  constexpr int16_t kStripHeight = 10;  // one pad, the 8-row face, one pad
-  const int16_t stripRows = kStripHeight < height ? kStripHeight : height;
+  constexpr int16_t StripHeight = 10;  // one pad, the 8-row face, one pad
+  const int16_t stripRows = StripHeight < height ? StripHeight : height;
   for (int16_t y = 0; y < stripRows; y++) {
     memset(packed + y * rowBytes, 0, (size_t)rowBytes);
   }

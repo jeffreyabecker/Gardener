@@ -5,22 +5,22 @@
 namespace gardener {
 namespace {
 
-constexpr const char* kUnitKey = "unit";
-constexpr const char* kTargetKey = "target";
-constexpr const char* kJingleKey = "jingle";
+constexpr const char* UnitKey = "unit";
+constexpr const char* TargetKey = "target";
+constexpr const char* JingleKey = "jingle";
 
 }  // namespace
 
 // Reading is best effort: a value this revision does not understand leaves the default in place.
 void PanelSettings::load() {
   DisplayUnit unit = DisplayUnit::Kpa;
-  const String token = get(kUnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
+  const String token = get(UnitKey, displayUnitInfo(DisplayUnit::Kpa).name);
   if (parseDisplayUnit(token.c_str(), unit)) unit_ = unit;
 
-  const float target = getFloat(kTargetKey, 0.0f);
+  const float target = getFloat(TargetKey, 0.0f);
   if (target > 0.0f) targetPressureKpa_ = target;
 
-  get(kJingleKey, "").toCharArray(jingle_, sizeof jingle_);
+  get(JingleKey, "").toCharArray(jingle_, sizeof jingle_);
 }
 
 // The wire echoes the field after a write, so the value is applied whatever the flash does: a device
@@ -29,7 +29,7 @@ void PanelSettings::load() {
 void PanelSettings::setUnit(DisplayUnit unit) {
   if (unit == unit_) return;
   unit_ = unit;
-  set(kUnitKey, displayUnitInfo(unit).name);
+  set(UnitKey, displayUnitInfo(unit).name);
 }
 
 // The page clamps this to the machine's bounds before it gets here; setFloat() only keeps a
@@ -37,7 +37,7 @@ void PanelSettings::setUnit(DisplayUnit unit) {
 void PanelSettings::setTarget(float pressureKpa) {
   if (pressureKpa == targetPressureKpa_) return;
   targetPressureKpa_ = pressureKpa;
-  setFloat(kTargetKey, pressureKpa);
+  setFloat(TargetKey, pressureKpa);
 }
 
 String PanelSettings::jingle() const { return String(jingle_); }
@@ -48,7 +48,7 @@ void PanelSettings::setJingle(const String& id) {
   // copied; a partial value simply fails the jingles lookup and falls back to the first entry.
   memset(jingle_, 0, sizeof jingle_);
   id.toCharArray(jingle_, sizeof jingle_);
-  set(kJingleKey, id);
+  set(JingleKey, id);
 }
 
 }  // namespace gardener

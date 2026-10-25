@@ -14,9 +14,9 @@ namespace gardener {
 namespace berry {
 namespace {
 
-constexpr const char* kJinglePath = "/system/jingles.txt";
-constexpr char kFieldSeparator = '|';
-constexpr char kCommentStart = '#';
+constexpr const char* JinglePath = "/system/jingles.txt";
+constexpr char FieldSeparator = '|';
+constexpr char CommentStart = '#';
 
 struct Jingle {
   String id;
@@ -36,14 +36,14 @@ const Jingle* findJingle(const char* id) {
 }
 
 void report(const char* what, const String& id) {
-  if (gLogger == nullptr) return;
+  if (logger == nullptr) return;
   String message = "jingles: ";
   message += what;
   if (!id.isEmpty()) {
     message += ' ';
     message += id;
   }
-  gLogger->error(message.c_str());
+  logger->error(message.c_str());
 }
 
 // `/system/jingles.txt` is data, not a `.be` module: the resolver reads it once when the module is
@@ -56,7 +56,7 @@ void loadJingles(Library& library) {
   jingles.clear();
 
   String text;
-  if (!library.read(kJinglePath, text)) {
+  if (!library.read(JinglePath, text)) {
     report("missing", "");
     return;
   }
@@ -68,12 +68,12 @@ void loadJingles(Library& library) {
     String line = text.substring((unsigned int)start, (unsigned int)end);
     start = end + 1;
     line.trim();
-    if (line.length() == 0 || line[0] == kCommentStart) continue;
+    if (line.length() == 0 || line[0] == CommentStart) continue;
 
-    const int idEnd = line.indexOf(kFieldSeparator);
-    const int titleEnd = idEnd < 0 ? -1 : line.indexOf(kFieldSeparator, (unsigned int)idEnd + 1);
+    const int idEnd = line.indexOf(FieldSeparator);
+    const int titleEnd = idEnd < 0 ? -1 : line.indexOf(FieldSeparator, (unsigned int)idEnd + 1);
     const int labelEnd =
-        titleEnd < 0 ? -1 : line.indexOf(kFieldSeparator, (unsigned int)titleEnd + 1);
+        titleEnd < 0 ? -1 : line.indexOf(FieldSeparator, (unsigned int)titleEnd + 1);
     if (labelEnd < 0) {
       report("malformed entry", idEnd < 0 ? line : line.substring(0, (unsigned int)idEnd));
       continue;
@@ -161,7 +161,7 @@ int jinglesNotes(bvm* vm) {
 // is a direct one, like device.target(): the identifier is a small preferences field, not a file.
 const Jingle* currentJingle() {
   String selected;
-  if (gContext != nullptr) selected = gContext->settings().jingle();
+  if (context != nullptr) selected = context->settings().jingle();
   const Jingle* jingle = findJingle(selected.c_str());
   if (jingle == nullptr && !jingles.empty()) jingle = &jingles.front();
   return jingle;
@@ -185,7 +185,7 @@ int jinglesPlayCurrent(bvm* vm) {
     be_pushbool(vm, false);
     be_return(vm);
   }
-  gContext->buzzer().play(jingle->notes.c_str());
+  context->buzzer().play(jingle->notes.c_str());
   be_pushbool(vm, true);
   be_return(vm);
 }
@@ -199,7 +199,7 @@ int jinglesDefaultId(bvm* vm) {
   be_return(vm);
 }
 
-const bnfuncinfo kJinglesLibrary[] = {
+const bnfuncinfo JinglesLibrary[] = {
     {"ids", jinglesIds},
     {"title", jinglesTitle},
     {"label", jinglesLabel},
@@ -214,7 +214,7 @@ const bnfuncinfo kJinglesLibrary[] = {
 
 void installJinglesModule(bvm* vm, Library& library) {
   loadJingles(library);
-  installModule(vm, "jingles", kJinglesLibrary);
+  installModule(vm, "jingles", JinglesLibrary);
 }
 
 }  // namespace berry

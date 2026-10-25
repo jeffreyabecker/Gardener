@@ -33,21 +33,21 @@ namespace gardener {
 
 namespace {
 
-constexpr float kPullKpaPerSecond = 3.0f;   // at full duty
-constexpr float kVentKpaPerSecond = 40.0f;
-constexpr float kLeakKpaPerSecond = 0.2f;
-constexpr uint32_t kBeatMs = 250;
-constexpr uint32_t kTickMs = 50;
+constexpr float PullKpaPerSecond = 3.0f;   // at full duty
+constexpr float VentKpaPerSecond = 40.0f;
+constexpr float LeakKpaPerSecond = 0.2f;
+constexpr uint32_t BeatMs = 250;
+constexpr uint32_t TickMs = 50;
 
 }  // namespace
 
 void Chamber::advance(uint32_t ms) {
   const float seconds = (float)ms / 1000.0f;
   if (venting_) {
-    pressureKpa_ -= kVentKpaPerSecond * seconds;
+    pressureKpa_ -= VentKpaPerSecond * seconds;
   } else {
-    pressureKpa_ += (duty_ / 100.0f) * kPullKpaPerSecond * seconds;
-    pressureKpa_ -= kLeakKpaPerSecond * seconds;
+    pressureKpa_ += (duty_ / 100.0f) * PullKpaPerSecond * seconds;
+    pressureKpa_ -= LeakKpaPerSecond * seconds;
   }
   if (pressureKpa_ < 0.0f) pressureKpa_ = 0.0f;
   if (pressureKpa_ > ceilingKpa_) pressureKpa_ = ceilingKpa_;
@@ -86,7 +86,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       vacuum_(&pump_, &sensor_, &valve_),
       display_(
           [](BitmapPanel& panel) -> bool { return panel.begin(); },
-          BitmapPanel::kWidth, BitmapPanel::kHeight),
+          BitmapPanel::Width, BitmapPanel::Height),
       buzzer_(buzzerPart_),
       overlay_(&display_, &battery_, &vacuum_, &settings_),
       context_(overlay_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {}
@@ -120,11 +120,11 @@ bool HarnessSession::begin() {
 
 void HarnessSession::beat(int count) {
   for (int beat = 0; beat < count; beat++) {
-    for (uint32_t tick = 0; tick < kBeatMs / kTickMs; tick++) {
-      host::advance(kTickMs);
+    for (uint32_t tick = 0; tick < BeatMs / TickMs; tick++) {
+      host::advance(TickMs);
       const uint32_t now = millis();
 
-      chamber_.advance(kTickMs);
+      chamber_.advance(TickMs);
 
       // controlTask's three calls, in its order, with its commands drained first.
       while (!pendingCommands.empty()) {
@@ -157,7 +157,7 @@ void HarnessSession::beat(int count) {
 
 void HarnessSession::pressGesture(const char* gesture) {
   gesture_ = gesture != nullptr ? gesture : "";
-  gestureBeats_ = kGestureCalloutBeats;
+  gestureBeats_ = GestureCalloutBeats;
 }
 
 void HarnessSession::backHold() {

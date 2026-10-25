@@ -12,7 +12,7 @@ namespace gardener {
 namespace berry {
 namespace {
 
-Display& panel() { return gContext->display(); }
+Display& panel() { return context->display(); }
 
 // The face named by an optional argument; nil and "builtin" both mean the built-in 5x7, which is
 // also what an absent argument means. `function` is the Berry spelling used in the error, so a
@@ -223,7 +223,7 @@ int screenBounds(bvm* vm) {
 // The unit the panel prints, as the same fields panel/Units.h holds: a page formats and steps a
 // target in the unit on the glass without carrying a table of its own.
 int screenUnit(bvm* vm) {
-  const DisplayUnit unit = gContext->settings().unit();
+  const DisplayUnit unit = context->settings().unit();
   const DisplayUnitInfo& info = displayUnitInfo(unit);
   const int record = beginRecord(vm, "unit");
   if (record < 0) be_return_nil(vm);
@@ -236,7 +236,7 @@ int screenUnit(bvm* vm) {
   be_return(vm);
 }
 
-const bnfuncinfo kScreenLibrary[] = {
+const bnfuncinfo ScreenLibrary[] = {
     {"draw_clear", screenClear},
     {"draw_pixel", screenPixel},
     {"draw_line", screenLine},
@@ -268,7 +268,7 @@ const bnfuncinfo kScreenLibrary[] = {
 
 }  // namespace
 
-void installScreenModule(bvm* vm) { installModule(vm, "screen", kScreenLibrary); }
+void installScreenModule(bvm* vm) { installModule(vm, "screen", ScreenLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

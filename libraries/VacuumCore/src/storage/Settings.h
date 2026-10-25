@@ -10,7 +10,7 @@ namespace gardener {
 
 // Where the device's own document lives on the filesystem it mounts. The wire's `fs` domain refuses
 // to overwrite it.
-constexpr const char* kDevicePath = "/settings.cfg";
+constexpr const char* DevicePath = "/settings.cfg";
 
 // The settings the panel keeps across a reset: a flat `key=value` document, with the preferences a
 // subclass names and any other key carried through a write. A missing document, or a value that

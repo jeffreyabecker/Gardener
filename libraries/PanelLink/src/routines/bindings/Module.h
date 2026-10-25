@@ -12,9 +12,9 @@ namespace berry {
 
 // One VM and one app, so the native callbacks -- plain C functions with no user data -- reach their
 // owners through these. install() is the only writer.
-extern PanelContext* gContext;
-extern Routines* gRoutines;
-extern Logger* gLogger;
+extern PanelContext* context;
+extern Routines* routines;
+extern Logger* logger;
 
 // --- building a module -----------------------------------------------------
 

@@ -17,7 +17,7 @@ namespace {
 
 int vacuumTarget(bvm* vm) {
   const MachineCommand set{MachineCommand::Op::SetTarget, (float)argReal(vm, 1)};
-  gContext->post(set);
+  context->post(set);
   be_return_nil(vm);
 }
 
@@ -25,7 +25,7 @@ int vacuumTarget(bvm* vm) {
 // cleared, so a page can go back to it.
 int vacuumTargetOff(bvm* vm) {
   const MachineCommand off{MachineCommand::Op::SetTarget, 0.0f};
-  gContext->post(off);
+  context->post(off);
   be_return_nil(vm);
 }
 
@@ -45,31 +45,31 @@ int vacuumClamp(bvm* vm) {
 }
 
 int vacuumStart(bvm* vm) {
-  if (gContext->vacuum().startRefusal() != nullptr) {
+  if (context->vacuum().startRefusal() != nullptr) {
     be_pushbool(vm, false);
     be_return(vm);
   }
   const MachineCommand start{MachineCommand::Op::Start};
-  gContext->post(start);
+  context->post(start);
   be_pushbool(vm, true);
   be_return(vm);
 }
 
 int vacuumStop(bvm* vm) {
   const MachineCommand stop{MachineCommand::Op::Stop};
-  gContext->post(stop);
+  context->post(stop);
   be_return_nil(vm);
 }
 
 int vacuumReset(bvm* vm) {
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  gContext->post(reset);
+  context->post(reset);
   be_return_nil(vm);
 }
 
 int vacuumState(bvm* vm) {
-  VacuumSystem& system = gContext->vacuum();
-  const Battery& battery = gContext->battery();
+  VacuumSystem& system = context->vacuum();
+  const Battery& battery = context->battery();
   const int record = beginRecord(vm, "reading");
   if (record < 0) be_return_nil(vm);
   setReal(vm, record, "pressure_kpa", system.currentPressureKpa());
@@ -93,13 +93,13 @@ int vacuumNowMs(bvm* vm) {
 }
 
 int vacuumLog(bvm* vm) {
-  if (be_top(vm) >= 1 && be_isstring(vm, 1) && gLogger != nullptr) {
-    gLogger->info(argText(vm, 1));
+  if (be_top(vm) >= 1 && be_isstring(vm, 1) && logger != nullptr) {
+    logger->info(argText(vm, 1));
   }
   be_return_nil(vm);
 }
 
-const bnfuncinfo kVacuumLibrary[] = {
+const bnfuncinfo VacuumLibrary[] = {
     {"target", vacuumTarget},   {"target_off", vacuumTargetOff}, {"clamp", vacuumClamp},
     {"start", vacuumStart},     {"stop", vacuumStop},            {"reset", vacuumReset},
     {"state", vacuumState},     {"now_ms", vacuumNowMs},         {"log", vacuumLog},
@@ -108,7 +108,7 @@ const bnfuncinfo kVacuumLibrary[] = {
 
 }  // namespace
 
-void installVacuumModule(bvm* vm) { installModule(vm, "vacuum", kVacuumLibrary); }
+void installVacuumModule(bvm* vm) { installModule(vm, "vacuum", VacuumLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

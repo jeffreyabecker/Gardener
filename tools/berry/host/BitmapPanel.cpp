@@ -10,8 +10,8 @@
 #include <glcdfont.c>
 
 namespace {
-constexpr float kPi = 3.14159265f;
-constexpr uint16_t kInk = 1;
+constexpr float Pi = 3.14159265f;
+constexpr uint16_t Ink = 1;
 }  // namespace
 
 BitmapPanel::BitmapPanel(int16_t width, int16_t height) : width_(width), height_(height) {}
@@ -347,7 +347,7 @@ void BitmapPanel::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int1
 }
 
 void BitmapPanel::rotatePoint(int16_t* x, int16_t* y, int16_t angleDegrees) {
-  const float angleRad = (float)angleDegrees * kPi / 180.0f;
+  const float angleRad = (float)angleDegrees * Pi / 180.0f;
   const float s = sinf(angleRad);
   const float c = cosf(angleRad);
   const float originalX = (float)*x;

@@ -9,12 +9,12 @@
 
 namespace gardener {
 namespace {
-constexpr uint32_t kMaxStepMs = 250;
+constexpr uint32_t MaxStepMs = 250;
 
 // The LEDC channel's own setup, which is a property of the drive rather than of the loop: a
 // switching frequency above hearing, and ten bits of resolution for the duty.
-constexpr uint32_t kPwmFreqHz = 20000;
-constexpr uint8_t kPwmResolution = 10;
+constexpr uint32_t PwmFreqHz = 20000;
+constexpr uint8_t PwmResolution = 10;
 }  // namespace
 
 // Nothing else spells the interface out, so a verb added to Pump and not implemented here would
@@ -24,7 +24,7 @@ static_assert(!std::is_abstract<PwmPump>::value, "PwmPump must implement every P
 bool PwmPump::begin() {
   pinMode(pin_, OUTPUT);
   digitalWrite(pin_, LOW);
-  if (!ledcAttach(pin_, kPwmFreqHz, kPwmResolution)) {
+  if (!ledcAttach(pin_, PwmFreqHz, PwmResolution)) {
     return false;
   }
   write(0.0f);
@@ -32,7 +32,7 @@ bool PwmPump::begin() {
 }
 
 void PwmPump::write(float percent) {
-  const uint32_t maxDuty = (1u << kPwmResolution) - 1u;
+  const uint32_t maxDuty = (1u << PwmResolution) - 1u;
   float limited = clampf(percent, 0.0f, PUMP_DUTY_MAX_PERCENT);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
   ledcWrite(pin_, duty);
@@ -51,7 +51,7 @@ void PwmPump::halt() {
 void PwmPump::update(uint32_t nowMs) {
   if (lastUpdateMs_ == 0) lastUpdateMs_ = nowMs;
   uint32_t dt = nowMs - lastUpdateMs_;
-  if (dt > kMaxStepMs) dt = kMaxStepMs;
+  if (dt > MaxStepMs) dt = MaxStepMs;
   lastUpdateMs_ = nowMs;
 
   // Slew rate limited approach to the requested duty.

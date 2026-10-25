@@ -7,7 +7,7 @@ namespace gardener {
 
 // How many beats a pressed gesture stays on the capture; 1 is the beat it lands on. Raise it to
 // keep the callout readable in a tutorial.
-constexpr int kGestureCalloutBeats = 1;
+constexpr int GestureCalloutBeats = 1;
 
 // The label a gesture token renders as: ok:single -> OK, up:double -> OK×2, cancel:5 -> CANCEL 5s,
 // and a sum joins its parts with " + ". Anything unrecognised comes back as the token uppercased.

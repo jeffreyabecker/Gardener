@@ -16,7 +16,7 @@
 
 namespace {
 
-const char* kDefaultData = "firmware/gardener/data";
+const char* DefaultData = "firmware/gardener/data";
 
 // A file the check loads by name: the fallback is the driver's, next to this program's sources.
 char* readFile(const char* path, size_t* length) {
@@ -190,7 +190,7 @@ int callArtComponent(bvm* vm, const char* name, const char* path) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  const char* data = kDefaultData;
+  const char* data = DefaultData;
   const char* harnessPath = "harness.be";
   const char* driverPath = "driver.be";
   const char* artName = nullptr;
@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
   const char* testFilter = nullptr;
   int artSeconds = 0;
   int artSets = 0;
-  float ceilingKpa = gardener::kChamberCeilingKpa;
+  float ceilingKpa = gardener::ChamberCeilingKpa;
   bool compileOnly = false;
   bool verbose = false;
   bool suites = false;

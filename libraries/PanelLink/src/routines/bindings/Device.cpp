@@ -16,8 +16,8 @@ namespace {
 int deviceUnits(bvm* vm) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (uint8_t i = 0; i < kDisplayUnitCount; i++) {
-    be_pushstring(vm, kDisplayUnits[i].name);
+  for (uint8_t i = 0; i < DisplayUnitCount; i++) {
+    be_pushstring(vm, DisplayUnits[i].name);
     be_data_push(vm, list);
     be_pop(vm, 1);
   }
@@ -29,7 +29,7 @@ int deviceSetUnit(bvm* vm) {
   DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
       be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
-  if (accepted) gContext->settings().setUnit(unit);
+  if (accepted) context->settings().setUnit(unit);
   be_pushbool(vm, accepted);
   be_return(vm);
 }
@@ -37,12 +37,12 @@ int deviceSetUnit(bvm* vm) {
 // The target the default program pulls to; 0 when none has been set. The page clamps a new value to
 // the machine's bounds before it writes it, and the default page clamps again when it restores one.
 int deviceTarget(bvm* vm) {
-  be_pushreal(vm, gContext->settings().targetPressureKpa());
+  be_pushreal(vm, context->settings().targetPressureKpa());
   be_return(vm);
 }
 
 int deviceSetTarget(bvm* vm) {
-  gContext->settings().setTarget((float)argReal(vm, 1));
+  context->settings().setTarget((float)argReal(vm, 1));
   be_return_nil(vm);
 }
 
@@ -57,7 +57,7 @@ int deviceBluetooth(bvm* vm) {
 // empty or unknown value to its first entry; the system page writes one of the identifiers it read
 // from that list.
 int deviceJingle(bvm* vm) {
-  const String id = gContext->settings().jingle();
+  const String id = context->settings().jingle();
   be_pushstring(vm, id.c_str());
   be_return(vm);
 }
@@ -66,11 +66,11 @@ int deviceSetJingle(bvm* vm) {
   if (!be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "device.set_jingle(id)");
   }
-  gContext->settings().setJingle(String(argText(vm, 1)));
+  context->settings().setJingle(String(argText(vm, 1)));
   be_return_nil(vm);
 }
 
-const bnfuncinfo kDeviceLibrary[] = {
+const bnfuncinfo DeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
     {"target", deviceTarget},
@@ -83,7 +83,7 @@ const bnfuncinfo kDeviceLibrary[] = {
 
 }  // namespace
 
-void installDeviceModule(bvm* vm) { installModule(vm, "device", kDeviceLibrary); }
+void installDeviceModule(bvm* vm) { installModule(vm, "device", DeviceLibrary); }
 
 }  // namespace berry
 }  // namespace gardener

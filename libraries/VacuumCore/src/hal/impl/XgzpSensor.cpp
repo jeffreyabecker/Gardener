@@ -8,17 +8,17 @@ namespace {
 
 // The part's own numbers, at its 3.3 V variant. The output spans 0.2 V at -100 kPa to 2.7 V at
 // 0 kPa, which is 0.025 V per kPa.
-constexpr float kVoltsPerKpa = 0.025f;
+constexpr float VoltsPerKpa = 0.025f;
 
 // A connected part always sits inside its output span. A pin pulled to ground reads as "no
 // part", and so does one pulled to the rail: both are refused rather than believed. The window
 // is wider than the span so a part powered from a slightly high rail still reads.
-constexpr float kMinPlausibleVolts = 0.1f;
-constexpr float kMaxPlausibleVolts = 3.0f;
+constexpr float MinPlausibleVolts = 0.1f;
+constexpr float MaxPlausibleVolts = 3.0f;
 
-constexpr uint8_t kSamples = 8;
-constexpr uint32_t kPollMs = 20;
-constexpr float kFilterAlpha = 0.3f;
+constexpr uint8_t Samples = 8;
+constexpr uint32_t PollMs = 20;
+constexpr float FilterAlpha = 0.3f;
 
 }  // namespace
 
@@ -41,10 +41,10 @@ bool XgzpSensor::begin() {
 
 bool XgzpSensor::sample(float& outVolts) {
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < kSamples; i++) totalMilliVolts += analogReadMilliVolts(pin_);
+  for (uint8_t i = 0; i < Samples; i++) totalMilliVolts += analogReadMilliVolts(pin_);
 
-  float volts = (float)totalMilliVolts / (float)kSamples / 1000.0f;
-  if (volts < kMinPlausibleVolts || volts > kMaxPlausibleVolts) return false;
+  float volts = (float)totalMilliVolts / (float)Samples / 1000.0f;
+  if (volts < MinPlausibleVolts || volts > MaxPlausibleVolts) return false;
   outVolts = volts;
   return true;
 }
@@ -57,12 +57,12 @@ void XgzpSensor::applySample(float volts) {
     valid_ = true;
     return;
   }
-  filteredVolts_ += kFilterAlpha * (volts - filteredVolts_);
+  filteredVolts_ += FilterAlpha * (volts - filteredVolts_);
 }
 
 void XgzpSensor::update(uint32_t nowMs) {
   if (!configured_) return;
-  if (nowMs - lastPollMs_ < kPollMs) return;
+  if (nowMs - lastPollMs_ < PollMs) return;
   lastPollMs_ = nowMs;
 
   float volts = 0.0f;
@@ -72,7 +72,7 @@ void XgzpSensor::update(uint32_t nowMs) {
 
 float XgzpSensor::pressureKpa() const {
   if (!valid_) return 0.0f;
-  const float depth = (ambientVolts_ - filteredVolts_) / kVoltsPerKpa;
+  const float depth = (ambientVolts_ - filteredVolts_) / VoltsPerKpa;
   return depth > 0.0f ? depth : 0.0f;
 }
 
