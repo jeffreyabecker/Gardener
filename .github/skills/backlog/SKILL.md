@@ -37,7 +37,7 @@ is never done at epic size, however the effort is organised.
   verified still holds.
 - No estimates, no owners, no priorities. One file, one effort, one order.
 
-A line written at epic size — "add the headless build", "move the panel into `PanelLink`" — is
+A line written at epic size — "add the headless build", "split the control law out of `Machine`" — is
 a heading that has not been split. The tells are that it names several files or several unrelated
 behaviours, that it cannot be ticked off in one sitting, or that its commit message needs "and" to
 describe it. Split it until each line is a step rather than a phase.

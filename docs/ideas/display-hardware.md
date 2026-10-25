@@ -62,7 +62,7 @@ change stays a driver name and two constants, but it drags SPI in with it.
 
 **1.5" grayscale 128x128 (SSD1327).** Doubles the rows for a settings list or a taller graph, but its
 pitch is finer, so a 24 px glyph is *smaller* than the fitted panel. It also breaks a contract rather
-than changing a part: [the display's own surface](../../libraries/PanelLink/src/hal/Display.h) is ink,
+than changing a part: [the display's own surface](../../libraries/Gardener/src/hal/Display.h) is ink,
 paper and a rectangle of pixels that flips, [the asset pipeline](../specs/assets.md) cuts an image to
 one bit, and the components spec is written in those terms. Sixteen greys would be pleasant for a
 graph and expensive everywhere else, and the part is niche.

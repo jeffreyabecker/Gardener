@@ -31,8 +31,7 @@ from pathlib import Path
 TOOL = Path(__file__).resolve().parent
 ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
-PANEL = ROOT / "libraries" / "PanelLink"
-MACHINE = ROOT / "libraries" / "VacuumCore"
+GARDENER = ROOT / "libraries" / "Gardener"
 DATA = ROOT / "firmware" / "gardener" / "data"
 HOST = TOOL / "host"
 BUILD = TOOL / "build"
@@ -40,25 +39,25 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 
 # The firmware's own sources, compiled on the host. What is not here is what needs a board: the
 # composition roots, the tasks, the links, the device drivers and the vendor display.
-PANEL_SOURCES = [
-    PANEL / "src" / "BuzzerPlayer.cpp",
-    PANEL / "src" / "panel" / "Overlay.cpp",
-    PANEL / "src" / "panel" / "Fonts.cpp",
-    PANEL / "src" / "routines" / "Bindings.cpp",
-    PANEL / "src" / "routines" / "Routines.cpp",
-    PANEL / "src" / "routines" / "GestureQueue.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Buttons.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Buzzer.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Device.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Jingles.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Screen.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Store.cpp",
-    PANEL / "src" / "routines" / "bindings" / "Vacuum.cpp",
-    PANEL / "src" / "storage" / "PanelSettings.cpp",
-    MACHINE / "src" / "MachineCommand.cpp",
-    MACHINE / "src" / "storage" / "Settings.cpp",
-    MACHINE / "src" / "storage" / "Values.cpp",
-    MACHINE / "src" / "VacuumSystem.cpp",
+FIRMWARE_SOURCES = [
+    GARDENER / "src" / "BuzzerPlayer.cpp",
+    GARDENER / "src" / "panel" / "Overlay.cpp",
+    GARDENER / "src" / "panel" / "Fonts.cpp",
+    GARDENER / "src" / "routines" / "Bindings.cpp",
+    GARDENER / "src" / "routines" / "Routines.cpp",
+    GARDENER / "src" / "routines" / "GestureQueue.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Buttons.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Buzzer.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Device.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Jingles.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Screen.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Store.cpp",
+    GARDENER / "src" / "routines" / "bindings" / "Vacuum.cpp",
+    GARDENER / "src" / "storage" / "PanelSettings.cpp",
+    GARDENER / "src" / "MachineCommand.cpp",
+    GARDENER / "src" / "storage" / "Settings.cpp",
+    GARDENER / "src" / "storage" / "Values.cpp",
+    GARDENER / "src" / "VacuumSystem.cpp",
 ]
 
 # The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
@@ -131,8 +130,7 @@ def build(cc, cxx, gfx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
-    for path in (HOST, BERRY / "src", BERRY / "generate", TOOL / "gfx", gfx, PANEL / "src",
-                 MACHINE / "src"):
+    for path in (HOST, BERRY / "src", BERRY / "generate", TOOL / "gfx", gfx, GARDENER / "src"):
         includes.extend(["-I", str(path)])
 
     built = []
@@ -146,7 +144,7 @@ def build(cc, cxx, gfx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *PANEL_SOURCES):
+    for source in (*MAIN_SOURCES, *FIRMWARE_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then

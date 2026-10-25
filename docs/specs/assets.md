@@ -11,7 +11,7 @@ Save the drawing as an **uncompressed BMP** — 1, 4, 8, 24 or 32 bits per pixel
 
 ```powershell
 python scripts/asset.py --source firmware/gardener/assets/eggplant.bmp \
-                        --out libraries/PanelLink/src/panel/Mark.h --threshold 224
+                        --out libraries/Gardener/src/panel/Mark.h --threshold 224
 ```
 
 Whatever the source depth, the output is one bit: a pixel becomes ink when its luminance falls below

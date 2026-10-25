@@ -13,7 +13,7 @@ that cut, which is what a photo or a gradient needs to survive on one bit; line 
 without it.
 
     python scripts/asset.py --source firmware/gardener/assets/eggplant.bmp \
-                            --out libraries/PanelLink/src/panel/Mark.h --threshold 224
+                            --out libraries/Gardener/src/panel/Mark.h --threshold 224
 """
 
 import argparse

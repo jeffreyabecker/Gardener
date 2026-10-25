@@ -149,7 +149,7 @@ set log`. The machine-alone build reads
 The machine's tuning numbers are not on this wire at all. The pump's flow, the chamber volume, the
 floor, the duty cap, the deadband and the valve's direction describe the rig the firmware was built
 for, not a preference a device holds, so they are build symbols in
-`libraries/VacuumCore/src/Machine.h` — `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
+`libraries/Gardener/src/Machine.h` — `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
 `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and `VALVE_NORMALLY_OPEN` — and a build for another
 pump, chamber or valve overrides them (`scripts/arduino.py --define NAME=VALUE`, or `-D` on any
 `arduino-cli` line). Nothing on a running device changes one. `floor` is still readable where it is

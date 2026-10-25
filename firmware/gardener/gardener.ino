@@ -7,7 +7,7 @@
 // three tasks. A build with no panel does the same with two tasks and no panel domain.
 
 #include <LittleFS.h>
-#include <PanelLink.h>
+#include <Gardener.h>
 
 namespace {
 

@@ -7,13 +7,19 @@
 // link may command the machine at any time.
 
 #include <LittleFS.h>
-#include <VacuumCore.h>
+#include <Gardener.h>
 
 // The machine-alone build has no panel, so the radio is one of its two ways in and is not optional.
 // `scripts/arduino.py` always enables it for this sketch; a build that tries to remove it stops
 // here rather than linking half a composition.
 #if !GARDENER_BLUETOOTH
 #error "the headless build always includes the Bluetooth transport"
+#endif
+
+// Nor does it compile the panel: `scripts/arduino.py` builds it with `GARDENER_PANEL=0`, and the
+// panel's sources, the Adafruit display stack and the Berry interpreter stay out of the image.
+#if GARDENER_PANEL
+#error "the headless build has no panel"
 #endif
 
 namespace {

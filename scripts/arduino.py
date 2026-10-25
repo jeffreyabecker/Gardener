@@ -9,7 +9,9 @@
 --task clean    remove the build output
 
 --sketch picks the build: `gardener` is the full device and the default, `headless` is the machine
-with no panel. Each sketch is its own composition root, so this only says which one to build.
+with no panel. Each sketch is its own composition root, so this only says which one to build — and it
+is what sets `GARDENER_PANEL`, which leaves the panel and the Adafruit and Berry code behind it out
+of the machine-alone build.
 
 `--no-enable-bluetooth` compiles the full device without the radio: the GATT link, its domains and
 all of NimBLE are left out of the image. The headless build always keeps the radio, because a
@@ -18,7 +20,7 @@ machine with no panel has only the two links to drive it, so the switch is ignor
 `--define NAME=VALUE` passes a build symbol through to every translation unit, and repeats. The
 rig's own numbers are the reason: `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
 `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and `VALVE_NORMALLY_OPEN` default to the reference
-rig in `libraries/VacuumCore/src/Machine.h`, and a build for a different pump, chamber or valve
+rig in `libraries/Gardener/src/Machine.h`, and a build for a different pump, chamber or valve
 overrides them here.
 
     python scripts/arduino.py --task upload --port COM5
@@ -92,6 +94,10 @@ VERBOSE = False
 # Whether the build compiles the radio in. It has to reach every translation unit, so it travels as
 # the `GARDENER_BLUETOOTH` build define rather than as anything in a sketch.
 BLUETOOTH = True
+# Whether the build has a panel. Like the radio it reaches every translation unit, so the panel's
+# own sources compile or are skipped by the `GARDENER_PANEL` define: the machine-alone build
+# carries neither the panel nor the Adafruit display stack and the Berry interpreter behind it.
+PANEL = True
 # The rig's own build symbols, as `NAME=VALUE` from `--define`. Empty leaves Machine.h's defaults.
 DEFINES = []
 
@@ -164,7 +170,8 @@ def spiffs_partition(table):
 
 
 def build_defines():
-    defines = [f"-DGARDENER_BLUETOOTH={1 if BLUETOOTH else 0}"]
+    defines = [f"-DGARDENER_BLUETOOTH={1 if BLUETOOTH else 0}",
+               f"-DGARDENER_PANEL={1 if PANEL else 0}"]
     if BLUETOOTH:
         defines.append(BLE_DEFINES)
     defines.extend(f"-D{symbol}" for symbol in DEFINES)
@@ -252,7 +259,7 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH, DEFINES
+    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH, PANEL, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
@@ -281,6 +288,7 @@ def main():
     if SKETCH.name == "headless" and not args.enable_bluetooth:
         print("headless always compiles the radio in; --no-enable-bluetooth ignored")
     BLUETOOTH = args.enable_bluetooth or SKETCH.name == "headless"
+    PANEL = SKETCH.name != "headless"
 
     if args.task == "libs":
         install_libs()

@@ -15,8 +15,8 @@ messy is how they are wired to their owners.
 
 Three seams carry the bindings' state today.
 
-The **globals**. [Module.h](../../libraries/PanelLink/src/routines/bindings/Module.h) declares
-`context`, `routines` and `logger`, and [Bindings.cpp](../../libraries/PanelLink/src/routines/Bindings.cpp)
+The **globals**. [Module.h](../../libraries/Gardener/src/routines/bindings/Module.h) declares
+`context`, `routines` and `logger`, and [Bindings.cpp](../../libraries/Gardener/src/routines/Bindings.cpp)
 is their one writer. These three are the globals in question, and they are not the only file-scope
 names in the library: `stopSeq` and `goHomeSeq` in `PanelTasks.h` are cross-task scalars with one
 writer each, and the font tables in `panel/Fonts.h` are const data. Those two groups are a
@@ -33,7 +33,7 @@ carry data, just not through `be_pushntvfunction`. And `logger` is a second name
 in [HarnessModule.cpp](../../tools/berry/host/HarnessModule.cpp) (`session`), so whatever cures the
 device also cures the harness.
 
-The **facade**. [Routines.h](../../libraries/PanelLink/src/routines/Routines.h) has two halves. One
+The **facade**. [Routines.h](../../libraries/Gardener/src/routines/Routines.h) has two halves. One
 is the runtime: `begin`, `vm`, `poll`, `enterPage`, `showDefault`, `active`, and the loader. The
 other is four pass-throughs grouped under "the modules' surface": `pushPress`/`takePress` forward to
 `gestures_`, and `storeGet`/`storeSet` read and write `library_`. None of those methods adds
@@ -47,7 +47,7 @@ the stop notice — three states sharing a name because they were polled on the 
 three have since left the question. The scene stack is `/system/ux.be` now, a Berry class, so its
 frames, its callbacks and its pending push or pop are not C++ at all. The stop notice was not in the
 file any more either; that half of the paragraph was stale by the time the stack moved. What is left
-is [GestureQueue.{h,cpp}](../../libraries/PanelLink/src/routines/GestureQueue.h): the press ring,
+is [GestureQueue.{h,cpp}](../../libraries/Gardener/src/routines/GestureQueue.h): the press ring,
 written by the panel task and read by the `buttons` binding, which is exactly the case the
 "different writer, different reader" test was meant to catch.
 

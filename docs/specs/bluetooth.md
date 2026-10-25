@@ -144,7 +144,7 @@ out of bounds keeps the default at boot.
 | `unit` | `0`–`3` | `0`, kPa | the unit the panel prints pressure in |
 
 The machine's tuning numbers — `flow`, `volume`, `floor`, `pump_max`, `deadband` and the fitted
-valve's direction — are build symbols in `libraries/VacuumCore/src/Machine.h`, not settings: they
+valve's direction — are build symbols in `libraries/Gardener/src/Machine.h`, not settings: they
 describe the rig the firmware was built for, so a build for another pump, chamber or valve
 overrides them (`scripts/arduino.py --define NAME=VALUE`). Only `floor` is on the radio, as the read
 that bounds a target; none of the others has a characteristic, because a phone has no use for them

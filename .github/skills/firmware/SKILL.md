@@ -7,7 +7,7 @@ description: 'Design conventions for the Gardener ESP32 firmware. Use when writi
 
 ## When to use
 
-- Adding or changing anything under `libraries/VacuumCore/` or `firmware/gardener/`
+- Adding or changing anything under `libraries/Gardener/` or `firmware/gardener/`
 - Deciding where a new type, a driver or an interface belongs
 - Reviewing a firmware change
 
@@ -55,7 +55,7 @@ Work out what the code has to do and write that — don't dither about the desig
 boundary described next is a decision already made, not a precedent for the next abstraction.
 
 **One class where one class works, and one file per device.**
-`libraries/VacuumCore/src/VacuumSystem.h` is the vacuum system *and* the machine, because the
+`libraries/Gardener/src/VacuumSystem.h` is the vacuum system *and* the machine, because the
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
 a part is an abstract class in `hal/` with its implementation in `hal/impl/`, and the vacuum system

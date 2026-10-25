@@ -20,6 +20,13 @@ nothing — the same tree, a tree changed only in prose or data, a build before 
 that already passed — don't run it. One build after a change that can break the compile is the
 verification; a second one is only waiting for the answer it already gave.
 
+**A build is minutes, so the spinning is the expensive part.** Every rebuild waits minutes for an
+answer, and a fix-one-error-and-rebuild loop is the likeliest way a task spends its whole budget
+without moving. Make the change whole before the compiler sees any of it — every file of a refactor,
+every caller of a renamed function — then build once. When a build fails, read the whole output and
+fix everything it named in that same pass; when a change spans several files, don't verify them one
+at a time.
+
 **The build's answer is whether it compiles.** `arduino-cli` ends every run with the program-storage
 and global-variables figures, and they move a little with every edit; that is a number to keep out of
 the report unless someone asks how much room the firmware has. Don't build a baseline to compare
