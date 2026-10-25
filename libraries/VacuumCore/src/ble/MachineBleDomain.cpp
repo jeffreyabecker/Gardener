@@ -10,7 +10,6 @@
 #include "VacuumSystem.h"
 #include "ble/BleLink.h"
 #include "firmwareversion.h"
-#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -67,11 +66,6 @@ const BleDomain::Spec MachineBleDomain::kSpecs[] = {
     {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // sensor
     {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // floor
     {0x000E, NIMBLE_PROPERTY::READ, 1},                                                        // caps
-    {0x000F, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // flow
-    {0x0010, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // volume
-    {0x0011, NIMBLE_PROPERTY::READ, 1},                                                        // valve
-    {0x0012, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pump_max
-    {0x0013, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // deadband
     {0x0014, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 2}, // hold_s
     {0x0015, NIMBLE_PROPERTY::READ, 2},                                                        // max_run_s
     {0x0016, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 3},                              // write_result
@@ -119,26 +113,10 @@ void MachineBleDomain::describe(uint8_t index) {
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
       break;
     case Floor:
-      setFloat(chr, app_->settings().floorPressureKpa());
+      setFloat(chr, CONTROL_FLOOR_KPA);
       break;
     case Caps:
       setByte(chr, app_->capabilities());
-      break;
-    case Flow:
-      setFloat(chr, app_->settings().pumpFlowLpm());
-      break;
-    case Volume:
-      setFloat(chr, app_->settings().chamberVolumeL());
-      break;
-    case Valve:
-      // The fitted direction, not the stored key: a pending change applies on the next boot.
-      setByte(chr, app_->vacuum().vent().energiseWhenOpen() ? 1 : 0);
-      break;
-    case PumpMax:
-      setFloat(chr, app_->settings().pumpMaxPercent());
-      break;
-    case Deadband:
-      setFloat(chr, app_->settings().deadbandPressureKpa());
       break;
     case HoldS:
       // The hold granted to the run, not the one a write asked for: 0 while nothing is running.
@@ -195,7 +173,7 @@ void MachineBleDomain::applyPending(BleLink& link) {
     const float pressureKpa = target_.value;
     if (!isfinite(pressureKpa)) {
       refuse(link, Target, kWriteNotANumber);
-    } else if (pressureKpa < 0.0f || pressureKpa > app_->settings().floorPressureKpa()) {
+    } else if (pressureKpa < 0.0f || pressureKpa > CONTROL_FLOOR_KPA) {
       refuse(link, Target, kWriteOutOfRange);
     } else {
       // 0 is the ambient target, which releases the chamber; anything else is a setpoint the
@@ -299,11 +277,7 @@ void MachineBleDomain::publish(uint32_t nowMs, BleLink& link, bool baseline) {
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline, link);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline, link);
   publishOnChange(Target, vacuum.targetPressureKpa(), lastTarget_, baseline, link);
-  publishOnChange(Floor, app_->settings().floorPressureKpa(), lastFloor_, baseline, link);
-  publishOnChange(Flow, app_->settings().pumpFlowLpm(), lastFlow_, baseline, link);
-  publishOnChange(Volume, app_->settings().chamberVolumeL(), lastVolume_, baseline, link);
-  publishOnChange(PumpMax, app_->settings().pumpMaxPercent(), lastPumpMax_, baseline, link);
-  publishOnChange(Deadband, app_->settings().deadbandPressureKpa(), lastDeadband_, baseline, link);
+  publishOnChange(Floor, CONTROL_FLOOR_KPA, lastFloor_, baseline, link);
 
   const uint16_t holdS = vacuum.running() ? static_cast<uint16_t>(vacuum.holdSeconds()) : 0;
   if (baseline || holdS != lastHoldS_) {

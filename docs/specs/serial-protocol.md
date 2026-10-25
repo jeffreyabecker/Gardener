@@ -119,12 +119,6 @@ detail = token / items
 | `batt_v` | volts, 2 dp, `-` | pack volts, `-` when no pack is fitted |
 | `batt_pct` | percent, `-` | pack charge, `-` when no pack is fitted |
 | `log` | set of `I`/`W`/`E`, or `-` | the diagnostics levels written, in canonical order; `IWE` at boot, not stored |
-| `flow` | L/min, 2 dp | the pump's projected free-flow rate the PID is configured from. Stored in `/settings.cfg` and restored at boot |
-| `volume` | L, 3 dp | the chamber volume the PID is configured from. Stored in `/settings.cfg` and restored at boot |
-| `floor` | kPa, 1 dp | the pump's measured reach, the deepest target worth offering. Stored in `/settings.cfg` and restored at boot |
-| `pump_max` | %, 1 dp | the duty cap the loop clamps to, at most `PUMP_DUTY_MAX_PERCENT`. Stored in `/settings.cfg` and restored at boot |
-| `deadband` | kPa, 2 dp | the target-reached tolerance. Stored in `/settings.cfg` and restored at boot |
-| `valve` | `open` / `closed` | the fitted valve's direction — normally open vents on power loss. Reports the fitted part; a `set valve` applies on the next boot |
 | `unit` | `kpa` / `psi` / `inhg` / `mmhg` | the unit the panel prints pressure in. Stored in `/settings.cfg` and restored at boot |
 | `caps` | int, bitmask | which assemblies are fitted: `1` panel, `2` battery, `4` a fail-safe, normally open valve |
 
@@ -132,24 +126,14 @@ detail = token / items
 | --- | --- | --- |
 | `get` | every field | the readout of the machine; takes no argument |
 | `set log <levels>` | `ok log=<levels>` | the levels to write, in any case and order; the reply is canonical |
-| `set flow <lpm>` | `ok flow=<lpm>` | the pump's projected free-flow rate, L/min; the gains follow. Outside 0.05–10 is `err out_of_range field=flow …`. Stored across reset |
-| `set volume <l>` | `ok volume=<l>` | the chamber volume, litres; the gains follow. Outside 0.005–5 is `err out_of_range field=volume …`. Stored across reset |
-| `set floor <kPa>` | `ok floor=<kPa>` | the pump's measured reach, 5–100 kPa; outside it is `err out_of_range field=floor …`. Stored across reset |
-| `set pump_max <%>` | `ok pump_max=<%>` | the duty cap, greater than 0 and at most `PUMP_DUTY_MAX_PERCENT`; outside is `err out_of_range field=pump_max …`. Stored across reset |
-| `set deadband <kPa>` | `ok deadband=<kPa>` | the target-reached tolerance, 0.05–2 kPa; outside is `err out_of_range field=deadband …`. Stored across reset |
-| `set valve <open\|closed>` | `ok valve=<token>` | the fitted valve's direction; applies on the next boot. An unknown token is `err bad_argument`. Stored across reset |
 | `set unit <kpa\|psi\|inhg\|mmhg>` | `ok unit=<token>` | the panel's unit; stored across reset |
 | `reboot` | `ok` | safe reset: stop and vent, wait up to 2 s for `VENT`, then restart. The reply is written before the restart |
 
 ```
 -> device get
-<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE flow=8.00 volume=0.500 floor=60.0 pump_max=90.0 deadband=0.20 valve=open unit=kpa caps=3
+<- ok proto=1 fw=0.7.0 chip=ESP32-S3 heap=298412 batt_v=3.94 batt_pct=78 log=IWE unit=kpa caps=3
 -> device set log WE
 <- ok log=WE
--> device set flow 8
-<- ok flow=8.00
--> device set floor 70
-<- ok floor=70.0
 -> device set unit mmhg
 <- ok unit=mmhg
 -> device reboot
@@ -159,21 +143,24 @@ detail = token / items
 `unit` is the panel's: it is a preference the panel persists in `/settings.cfg` and shows on its
 glass, so a build without a panel neither reports it in `device get` nor accepts `device set unit`.
 `log` is not a preference — every build owns a logger — so both builds report it and accept `device
-set log`. `flow`, `volume`, `floor`, `pump_max`, `deadband` and `valve` are the machine's: both
-builds report them and accept their `device set` verbs, because both builds tune a loop and fit a
-valve. The machine-alone build reads
-`ok proto=1 fw=... chip=... heap=... log=IWE flow=8.00 volume=0.500 floor=60.0 pump_max=90.0 deadband=0.20 valve=open caps=0`.
+set log`. The machine-alone build reads
+`ok proto=1 fw=... chip=... heap=... log=IWE caps=0`.
+
+The machine's tuning numbers are not on this wire at all. The pump's flow, the chamber volume, the
+floor, the duty cap, the deadband and the valve's direction describe the rig the firmware was built
+for, not a preference a device holds, so they are build symbols in
+`libraries/VacuumCore/src/Machine.h` — `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
+`PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and `VALVE_NORMALLY_OPEN` — and a build for another
+pump, chamber or valve overrides them (`scripts/arduino.py --define NAME=VALUE`, or `-D` on any
+`arduino-cli` line). Nothing on a running device changes one. `floor` is still readable where it is
+needed: `vacuum get` reports it as `floor=`, and it is the `max=` of a target's `out_of_range`
+reply. `caps`' bit `4` is how a host learns the fitted valve fails safe.
 
 `device set unit` survives a reset: the value is written to `/settings.cfg` as a `key=value` line
-and read back at boot. `device set flow`, `volume`, `floor`, `pump_max`, `deadband` and `valve`
-survive a reset the same way: the PID gains are derived from whatever `flow` and `volume` read, the
-loop clamps to `pump_max`, and `valve` is applied by the machine when it builds the fitted part on
-the next boot. Every one of the six is applied by the control task on its next pass — the reply
-echoes the value that was accepted, and the next `get` is what the machine holds. A filesystem that
-will not take the write
-still answers with the value in force for this session, and the boot log reports the failed mount.
-The machine and this wire stay in kPa either way — a display unit is a preference about the glass,
-not a second way to state a pressure. `log` is not stored at all: it is the set of levels written
+and read back at boot. A filesystem that will not take the write still answers with the value in
+force for this session, and the boot log reports the failed mount. The machine and this wire stay in
+kPa either way — a display unit is a preference about the glass, not a second way to state a
+pressure. `log` is not stored at all: it is the set of levels written
 for the running device, `IWE` at boot, and `device set log -` silences all three from the next
 record until a link names levels again or the device resets. Narrowing the set keeps the levels it
 names: `device set log E` writes errors and drops the rest.
@@ -194,7 +181,7 @@ panel bit, one record served by both links. The wire still does not draw on the 
 | --- | --- | --- |
 | `pressure_kpa` | kPa, 2 dp | filtered vacuum depth below ambient: 0 at rest or while no reading can be trusted, rising as the chamber is pumped down |
 | `target` | kPa below ambient, 1 dp | the current target; `0.0` is the ambient target, which holds the chamber released |
-| `floor` | kPa, 1 dp | deepest reachable target, the `floor` device setting below the reference |
+| `floor` | kPa, 1 dp | deepest reachable target, `CONTROL_FLOOR_KPA` below the reference |
 | `duty` | %, 1 dp | pump duty |
 | `state` | `IDLE` / `PULL` / `HOLD` / `VENT` / `FAULT` | |
 | `sensor` | `1` / `0` | `1` when the sensor is producing a plausible reading |
@@ -232,14 +219,16 @@ would mean a second control path to reason about. Characterizing the pump theref
 temporary build. That trade was made deliberately, so nobody should go looking for a raw duty
 command that is not there.
 
-Vent floor, margin and timeout, the pump ramp and the loop's shape constants are in `Machine.h`;
-the battery thresholds are in the panel's `hal/impl/AdcBattery.cpp`. The PID gains are derived from
-the `flow` and `volume` settings, the loop clamps to `pump_max`, and `deadband` and `floor` are
-settings too. None of these are commands, so the command surface stays this table. The deadband
-matters to a controller: it is what decides that the target has been reached, and it is not on the
-wire. `floor` is the other one worth knowing: it is the deepest target accepted, and it is reported
-as `max=` on the target's `out_of_range` reply. `CONTROL_MAX_RUN_MS` is the deadline every run has,
-published as `max_run`.
+Vent floor, margin and timeout, the pump ramp and the loop's shape constants are in `Machine.h`,
+and so are the rig's own numbers — the pump's flow, the chamber volume, the floor, the duty cap, the
+deadband and the valve's direction. The battery thresholds are in the panel's
+`hal/impl/AdcBattery.cpp`. The PID gains are derived from `PUMP_FLOW_LPM` and `CHAMBER_VOLUME_L`,
+the loop clamps to `PUMP_DUTY_MAX_PERCENT`, and `CONTROL_DEADBAND_KPA` and `CONTROL_FLOOR_KPA` are
+build symbols besides. None of these are commands, so the command surface stays this table. The
+deadband matters to a controller: it is what decides that the target has been reached, and it is
+not on the wire. `floor` is the other one worth knowing: it is the deepest target accepted, it is
+reported in `vacuum get`, and it is the `max=` of the target's `out_of_range` reply.
+`CONTROL_MAX_RUN_MS` is the deadline every run has, published as `max_run`.
 
 ## 7. `buzzer` — the piezo
 

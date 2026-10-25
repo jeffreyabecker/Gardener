@@ -31,26 +31,18 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // The machine's settings live in the LittleFS partition the build reserves. It is mounted once,
-  // before anything reads one; a partition that will not mount is formatted once, because a fresh
-  // partition is not a fault. The settings are read before the machine is built.
+  // The LittleFS partition is mounted once before anything runs; a partition that will not mount is
+  // formatted once, because a fresh partition is not a fault. The machine alone keeps the mount and
+  // nothing reads it: its numbers are build symbols, so it has no document of its own to load.
   bool mounted = LittleFS.begin(false);
-  bool formatted = false;
-  if (!mounted) {
-    formatted = LittleFS.format() && LittleFS.begin(false);
-    mounted = formatted;
-  }
-
-  auto* files = new gardener::FileLibrary(LittleFS);
-  auto* settings = new gardener::MachineSettings(files);
-  settings->begin();
+  if (!mounted) mounted = LittleFS.format() && LittleFS.begin(false);
 
   // The diagnostics stream is on from boot and a link switches it, the same as the full device's.
   gardener::Logger* logger = new gardener::SerialLogger(Serial);
   if (!mounted) {
-    logger->warn("fs: littlefs mount failed, settings will not persist");
+    logger->warn("fs: littlefs mount failed");
   }
-  gardener::Machine& machine = *new gardener::Machine(*logger, Board, *settings);
+  gardener::Machine& machine = *new gardener::Machine(*logger, Board);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
 

@@ -7,9 +7,7 @@
 #include "firmwareversion.h"
 #include "Logger.h"
 #include "serial/Domain.h"
-#include "serial/MachineFields.h"
 #include "serial/SerialLink.h"
-#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -95,19 +93,6 @@ void MachineDeviceDomain::get(Stream& io) {
   io.print((uint32_t)ESP.getFreeHeap());
   io.print(" log=");
   io.print(app_.logger().levels());
-  io.print(" flow=");
-  io.print(app_.settings().pumpFlowLpm(), 2u);
-  io.print(" volume=");
-  io.print(app_.settings().chamberVolumeL(), 3u);
-  io.print(" floor=");
-  io.print(app_.settings().floorPressureKpa(), 1u);
-  io.print(" pump_max=");
-  io.print(app_.settings().pumpMaxPercent(), 1u);
-  io.print(" deadband=");
-  io.print(app_.settings().deadbandPressureKpa(), 2u);
-  // The fitted direction, not the stored key: a pending change takes effect on the next boot.
-  io.print(" valve=");
-  io.print(app_.vacuum().vent().energiseWhenOpen() ? "closed" : "open");
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -115,9 +100,7 @@ void MachineDeviceDomain::get(Stream& io) {
 }
 
 void MachineDeviceDomain::set(Stream& io, const String& args) {
-  // `set` is `<field> <value>`, and `log`, `flow`, `volume`, `floor`, `pump_max`, `deadband` and
-  // `valve` are the fields this build has. Everything but `log` is applied on the control task:
-  // the value is checked and refused here, then posted, so one task owns the machine state.
+  // `set` is `<field> <value>`, and `log` is the only field this build has.
   const int split = args.indexOf(' ');
   if (split < 0) {
     io.print("err bad_argument\n");
@@ -163,10 +146,6 @@ void MachineDeviceDomain::set(Stream& io, const String& args) {
     io.print('\n');
     return;
   }
-
-  // The six machine settings are shared with the panel build's domain, so the bounds, the refusals
-  // and the task that applies them are one definition rather than two.
-  if (setMachineField(io, app_, outbox_, field, value, extra)) return;
 
   io.print("err bad_argument ");
   io.print(field);

@@ -15,9 +15,16 @@ with no panel. Each sketch is its own composition root, so this only says which 
 all of NimBLE are left out of the image. The headless build always keeps the radio, because a
 machine with no panel has only the two links to drive it, so the switch is ignored there.
 
+`--define NAME=VALUE` passes a build symbol through to every translation unit, and repeats. The
+rig's own numbers are the reason: `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
+`PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and `VALVE_NORMALLY_OPEN` default to the reference
+rig in `libraries/VacuumCore/src/Machine.h`, and a build for a different pump, chamber or valve
+overrides them here.
+
     python scripts/arduino.py --task upload --port COM5
     python scripts/arduino.py --task build --sketch headless
     python scripts/arduino.py --task build --no-enable-bluetooth
+    python scripts/arduino.py --task build --define PUMP_FLOW_LPM=2.0f --define CHAMBER_VOLUME_L=0.25f
     python scripts/arduino.py --task data --port COM5
 """
 
@@ -42,9 +49,9 @@ SKETCHES = {
 }
 SKETCH = SKETCHES["gardener"]
 
-# The builds that ship a data image. The machine-alone build creates its settings file on the
-# device (`device set flow` / `volume`), so there is no data folder to write; the full device ships
-# the system, the modules and the routines.
+# The builds that ship a data image. The machine-alone build has no settings of its own — its
+# numbers are build symbols — so there is no data folder to write; the full device ships the
+# system, the modules and the routines.
 SKETCHES_WITH_DATA = {"gardener"}
 
 DATA_DIR = SKETCH / "data"
@@ -85,6 +92,8 @@ VERBOSE = False
 # Whether the build compiles the radio in. It has to reach every translation unit, so it travels as
 # the `GARDENER_BLUETOOTH` build define rather than as anything in a sketch.
 BLUETOOTH = True
+# The rig's own build symbols, as `NAME=VALUE` from `--define`. Empty leaves Machine.h's defaults.
+DEFINES = []
 
 
 def run(command):
@@ -158,6 +167,7 @@ def build_defines():
     defines = [f"-DGARDENER_BLUETOOTH={1 if BLUETOOTH else 0}"]
     if BLUETOOTH:
         defines.append(BLE_DEFINES)
+    defines.extend(f"-D{symbol}" for symbol in DEFINES)
     return " ".join(defines)
 
 
@@ -242,7 +252,7 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH
+    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
@@ -254,12 +264,16 @@ def main():
     parser.add_argument("--enable-bluetooth", action=argparse.BooleanOptionalAction, default=True,
                         help="compile the radio in (default: on; --no-enable-bluetooth leaves it "
                              "out of the full device; the headless build always keeps it)")
+    parser.add_argument("--define", action="append", default=[], metavar="NAME=VALUE",
+                        help="a build symbol for the rig's own numbers, e.g. PUMP_FLOW_LPM=2.0f; "
+                             "repeatable")
     parser.add_argument("--verbose", action="store_true", help="echo each arduino-cli command")
     args = parser.parse_args()
 
     FQBN = args.fqbn
     PORT = args.port
     VERBOSE = args.verbose
+    DEFINES = args.define
     SKETCH = SKETCHES[args.sketch]
     DATA_DIR = SKETCH / "data"
     BUILD_DIR = SKETCH / "build"

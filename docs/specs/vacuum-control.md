@@ -84,24 +84,25 @@ A run has a deadline. `vacuum start` may carry a hold in whole seconds, and a st
 `max_run`. When it expires the machine releases the chamber and the run log names it. That is a
 release, not a fault: the machine did what it was told for as long as it was allowed to.
 
-The gains are derived from the pump's projected free-flow rate and the chamber volume — two device
-settings, `flow` (L/min) and `volume` (L), with compile-time defaults in `Machine.h`, restored from
-`/settings.cfg`, and overridable over the wire (`device set flow`, `device set volume`). A different
-pump or chamber is retuned by setting the two numbers, not by re-deriving the gains. The loop's
-other rig numbers are settings the same way: `floor` (the pump's measured reach), `pump_max` (the
-duty cap) and `deadband` (the target-reached tolerance), each with a `Machine.h` default and a
-`device set` verb. `valve` (`open` or `closed`) names the fitted valve's direction and is read once
-at boot, so it is the one setting a change to does not take up until the next boot.
+The gains are derived from the pump's projected free-flow rate and the chamber volume —
+`PUMP_FLOW_LPM` (L/min) and `CHAMBER_VOLUME_L` (L), two build symbols in `Machine.h`. A different
+pump or chamber is retuned by building with the two numbers rather than by re-deriving the gains. The
+loop's other rig numbers are build symbols the same way: `CONTROL_FLOOR_KPA` (the pump's measured
+reach), `PUMP_DUTY_MAX_PERCENT` (the duty cap), `CONTROL_DEADBAND_KPA` (the target-reached
+tolerance) and `VALVE_NORMALLY_OPEN` (the fitted valve's direction). A build sets them with `-D` —
+`scripts/arduino.py --define NAME=VALUE` — and a value that could not work, a flow or volume of
+zero or a duty cap outside 0–100, is a compile error rather than a strange boot. None of them is
+read from `/settings.cfg` or written over a link: they describe the rig rather than a preference a
+device holds.
 
 ## Protections
 
 All of these act without consulting the controller:
 
-* duty is hard capped at the `pump_max` setting, with the pump driver's own
-  `PUMP_DUTY_MAX_PERCENT` as the part's ceiling, and `PUMP_RAMP_PERCENT_PER_SEC` avoids step
+* duty is hard capped at `PUMP_DUTY_MAX_PERCENT`, with `PUMP_RAMP_PERCENT_PER_SEC` avoiding step
   changes into the pump
-* a target deeper than `floor` is refused on every path that sets one — the serial line, Bluetooth
-  and a routine alike — and the refusal names the bound
+* a target deeper than `CONTROL_FLOOR_KPA` is refused on every path that sets one — the serial
+  line, Bluetooth and a routine alike — and the refusal names the bound
 * if the sensor stops producing a plausible reading while the machine is not idle, the pump is cut
   and the state latches `sensor` — a pull, a hold, a target vent and a release all steer on it
 * a release that has not reached the vent floor after 30 s latches `vent_timeout`
@@ -133,8 +134,8 @@ A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cle
 * **A long hold is the dominant battery cost.** A normally open solenoid draws current for the whole
   hold, which is why the run's deadline matters as much as the pump's.
 * **The vent valve is normally open by default**, so de-energised is open and running a vacuum
-  means energising the coil. `NormallyClosedValve` in `Build.cpp` inverts that and removes the
-  fail-safe.
+  means energising the coil. `VALVE_NORMALLY_OPEN=0` on the build line picks the normally closed
+  part in `Machine.cpp` instead, and removes the fail-safe along with the `caps` bit.
 * **The panel is the device's.** It shows connection presence, the run state and the battery; there
   is no drawing command, so everything else — a vent timeout, the duty, the fault code — is only on
   the wire. Poll `vacuum get` to see it.

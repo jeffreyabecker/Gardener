@@ -5,14 +5,13 @@
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
 #include "hal/impl/XgzpSensor.h"
-#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
 
-// The fitted valve is one of two parts, chosen from the setting once at boot: normally open keeps
-// the fail-safe (de-energised vents), normally closed inverts it. The pin is the board's, the
-// direction is the setting's.
+// The fitted valve is one of two parts, chosen from the build's VALVE_NORMALLY_OPEN: normally open
+// keeps the fail-safe (de-energised vents), normally closed inverts it. The pin is the board's, the
+// direction is the build's.
 VentValve* makeValve(uint8_t pin, bool normallyOpen) {
   if (normallyOpen) return new NormallyOpenValve(pin);
   return new NormallyClosedValve(pin);
@@ -23,11 +22,10 @@ VentValve* makeValve(uint8_t pin, bool normallyOpen) {
 // The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
 // so nothing owns them. The pins come from the sketch, so a board variant edits its sketch and
 // nothing under hal/impl/.
-Machine::Machine(Logger& logger, const MachinePins& pins, MachineSettings& settings)
+Machine::Machine(Logger& logger, const MachinePins& pins)
     : logger_(logger),
-      settings_(settings),
       vacuum_(new PwmPump(pins.pumpPwm), new XgzpSensor(pins.sensorAdc),
-              makeValve(pins.ventValve, settings.valveNormallyOpen()), settings) {}
+              makeValve(pins.ventValve, VALVE_NORMALLY_OPEN)) {}
 
 void Machine::boot() {
   String boot = "gardener ";
@@ -49,13 +47,13 @@ void Machine::boot() {
   // the bit says the resting state is safe rather than that a valve is fitted at all.
   if (!vacuum_.vent().energiseWhenOpen()) capabilities_ |= FailSafeValve;
 
-  // The loop the settings describe: the two knobs and the gains they derive, one line so a bench
-  // read can confirm the loop the device will run.
-  const PidGains gains = pidGainsFor(settings_.pumpFlowLpm(), settings_.chamberVolumeL());
+  // The loop the build describes: the two rig numbers and the gains they derive, one line so a
+  // bench read can confirm the loop the device will run.
+  const PidGains gains = pidGainsFor(PUMP_FLOW_LPM, CHAMBER_VOLUME_L);
   String pid = "pid: flow ";
-  pid += String(settings_.pumpFlowLpm(), 2u);
+  pid += String(PUMP_FLOW_LPM, 2u);
   pid += " lpm, chamber ";
-  pid += String(settings_.chamberVolumeL(), 3u);
+  pid += String(CHAMBER_VOLUME_L, 3u);
   pid += " l, kp=";
   pid += String(gains.kp, 2u);
   pid += " ki=";

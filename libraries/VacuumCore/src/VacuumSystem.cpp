@@ -5,7 +5,6 @@
 
 #include "Machine.h"
 #include "core/Math.h"
-#include "storage/MachineSettings.h"
 
 namespace gardener {
 
@@ -133,7 +132,7 @@ void VacuumSystem::closeValve() {
 // a reading shallower than the target opens the valve, and anything else closes it and lets the
 // loop work. Every command ends here, so the vent/start/stop choice is made once.
 void VacuumSystem::converge() {
-  const float deadband = settings_.deadbandPressureKpa();
+  const float deadband = CONTROL_DEADBAND_KPA;
   const float measured = currentPressureKpa();
 
   // Ambient is the release, whichever way it was asked for.
@@ -156,7 +155,7 @@ void VacuumSystem::converge() {
 void VacuumSystem::setTarget(float pressureKpa) {
   // The bounds are the machine's, not the wire's: 0 is ambient, and anything deeper than the
   // fitted floor is a depth the pump cannot reach. A refused value leaves the target unchanged.
-  if (!(pressureKpa >= 0.0f) || pressureKpa > settings_.floorPressureKpa()) return;
+  if (!(pressureKpa >= 0.0f) || pressureKpa > CONTROL_FLOOR_KPA) return;
   if (pressureKpa == targetPressureKpa_) return;
   targetPressureKpa_ = pressureKpa;
   pidReset();
@@ -232,7 +231,7 @@ void VacuumSystem::service(uint32_t nowMs) {
   // been reached, and the release is over. A latched fault owns the state, so neither can
   // fire while one is held.
   if (state_ == RunState::Pulling &&
-      currentPressureKpa() >= targetPressureKpa_ - settings_.deadbandPressureKpa()) {
+      currentPressureKpa() >= targetPressureKpa_ - CONTROL_DEADBAND_KPA) {
     setState(RunState::Holding);
   }
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
@@ -251,10 +250,10 @@ void VacuumSystem::service(uint32_t nowMs) {
 
 // error is how far the chamber still is from the target, so positive means "still needs
 // vacuum"; the derivative term uses the measurement slew rather than the error slope, which
-// keeps a setpoint change from kicking the output. The gains are derived from the settings the
-// loop was handed, so a pump or chamber change retunes it without touching a gain.
+// keeps a setpoint change from kicking the output. The gains are derived from the build's two rig
+// numbers, so a pump or chamber change retunes it without touching a gain.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
-  const PidGains gains = pidGainsFor(settings_.pumpFlowLpm(), settings_.chamberVolumeL());
+  const PidGains gains = pidGainsFor(PUMP_FLOW_LPM, CHAMBER_VOLUME_L);
   pidIntegral_ = clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit,
                         gains.integralLimit);
   return gains.kp * error + pidIntegral_ - gains.kd * measurementSlew;
@@ -263,19 +262,12 @@ float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
 void VacuumSystem::regulate(uint32_t nowMs) {
   if (nowMs - lastControlMs_ < CONTROL_PERIOD_MS) return;
 
-  // A retune — a loop input the settings hold changed — starts the integral over, as a target
-  // change already does: the accumulated error is in the old gains' units.
-  if (settings_.revision() != lastGainsRevision_) {
-    pidReset();
-    lastGainsRevision_ = settings_.revision();
-  }
-
   float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  const float deadband = settings_.deadbandPressureKpa();
-  const float maxDuty = settings_.pumpMaxPercent();
+  const float deadband = CONTROL_DEADBAND_KPA;
+  const float maxDuty = PUMP_DUTY_MAX_PERCENT;
 
   // The slew comes off the same reading the error is built from, so the derivative gain is
   // signed against it.

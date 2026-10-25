@@ -28,11 +28,6 @@ read, before it trusts the rest of the table.
 | `sensor` | `000C` | read, notify | 1 | uint8, 1 when a reading can be trusted |
 | `floor` | `000D` | read, notify | 4 | float32 LE, the pump's measured reach |
 | `caps` | `000E` | read | 1 | uint8 capability bitmask |
-| `flow` | `000F` | read, notify | 4 | float32 LE, the pump's projected free flow |
-| `volume` | `0010` | read, notify | 4 | float32 LE, the chamber volume |
-| `valve` | `0011` | read | 1 | uint8, the fitted valve's direction |
-| `pump_max` | `0012` | read, notify | 4 | float32 LE, the duty cap |
-| `deadband` | `0013` | read, notify | 4 | float32 LE, the target-reached tolerance |
 | `hold_s` | `0014` | read, write, notify | 2 | uint16 LE, the hold to ask for, and the one granted |
 | `max_run_s` | `0015` | read | 2 | uint16 LE, the longest hold a start may ask for |
 | `write_result` | `0016` | read, notify | 3 | uint16 LE suffix, then a uint8 reason |
@@ -46,6 +41,10 @@ and a short or long one is ignored rather than padded or truncated.
 preference its pages print in. A build without a panel has neither characteristic, so a client
 finds `caps` with the panel bit clear and no `batt` or `unit` to read. Every other characteristic is
 the machine's and is always present.
+
+The suffixes `000F`, `0010`, `0011`, `0012` and `0013` are retired: they carried the rig's tuning
+numbers — the pump's flow, the chamber volume, the valve's direction, the duty cap and the
+deadband — which are build symbols now and have no characteristic. A retired suffix is not reused.
 
 `pressure_kpa`, `target` and `floor` are always kPa: `unit` says what the panel prints, not what the
 numbers mean.
@@ -64,7 +63,7 @@ and the serial line reports the same state in `state=`.
 | --- | --- | --- |
 | `0` | idle | the valve is open and the pump stopped; the chamber is released, or was never pulled |
 | `1` | pull | the valve is closed and the pump is working toward the target |
-| `2` | hold | the loop has called the target reached — within `deadband` on a pull, or a vent's lead short of it — and keeps regulating to stay there |
+| `2` | hold | the loop has called the target reached — within `CONTROL_DEADBAND_KPA` on a pull, or a vent's lead short of it — and keeps regulating to stay there |
 | `3` | vent | the pump is stopped and the valve open, so the depth falls back toward ambient: a release, or a vent to a shallower target |
 | `4` | fault | a fault is latched; the pump is cut, the valve is open, and only the `0x03` opcode clears it |
 
@@ -77,9 +76,9 @@ from a chamber at ambient.
 
 ### `duty`
 
-The pump drive in percent, bounded by `pump_max`, after the driver's slew limit: what the part is
-being driven at now rather than what the loop last asked for. There is no write: the pump is driven
-by the loop alone.
+The pump drive in percent, bounded by `PUMP_DUTY_MAX_PERCENT`, after the driver's slew limit: what
+the part is being driven at now rather than what the loop last asked for. There is no write: the
+pump is driven by the loop alone.
 
 ### `sensor`
 
@@ -134,58 +133,29 @@ opcode is answered, applied or refused; the table is under Commands.
 
 ## Parameters
 
-The seven settings that configure the machine and its panel. They are compile-time defaults,
-restored from `/settings.cfg`, and changed with `device set` on the serial line — the radio reads
-them and never writes them, so a bonded phone cannot move the bound the machine is held to. A
-stored value that is missing, unparseable or out of bounds keeps the default at boot.
+The panel's one preference, and the machine's own numbers — which are not settings.
+
+`unit` is a preference the panel persists in `/settings.cfg` and changes with `device set` on the
+serial line — the radio reads it and never writes it. A stored value that is missing, unparseable or
+out of bounds keeps the default at boot.
 
 | Parameter | Unit | Default | What it changes |
 | --- | --- | --- | --- |
-| `flow` | L/min | `PUMP_FLOW_LPM`, 1.0 | the pump's projected free-flow rate; with `volume`, the loop's gains |
-| `volume` | L | `CHAMBER_VOLUME_L`, 0.05 | the chamber volume; the other half of the gains |
-| `floor` | kPa | `CONTROL_FLOOR_KPA`, 60.0 | the pump's measured reach, the deepest target worth offering |
-| `pump_max` | percent | `PUMP_DUTY_MAX_PERCENT`, 90.0 | the duty cap the loop clamps to |
-| `deadband` | kPa | `CONTROL_DEADBAND_KPA`, 0.2 | the target-reached tolerance |
-| `valve` | `0` or `1` | `0`, normally open | the fitted valve's direction; applies on the next boot |
 | `unit` | `0`–`3` | `0`, kPa | the unit the panel prints pressure in |
 
-Every one of them except `valve` takes effect on the next pass of the loop or of the panel.
-`flow`, `volume`, `floor`, `pump_max` and `deadband` notify when the applied value changes; `unit`
-and `valve` do not, so the read-back is their only answer.
-
-### `flow`
-
-The pump's projected free-flow rate: what the fitted pump moves into an open chamber. It is one of
-the two numbers the PID gains are derived from, so a different pump is retuned by setting this and
-`volume`, never by changing the firmware. Held to 0.05–10 L/min by the loader and the setter alike.
-
-### `volume`
-
-The chamber volume in litres, the other number the gains are derived from. Held to 0.005–5 L.
+The machine's tuning numbers — `flow`, `volume`, `floor`, `pump_max`, `deadband` and the fitted
+valve's direction — are build symbols in `libraries/VacuumCore/src/Machine.h`, not settings: they
+describe the rig the firmware was built for, so a build for another pump, chamber or valve
+overrides them (`scripts/arduino.py --define NAME=VALUE`). Only `floor` is on the radio, as the read
+that bounds a target; none of the others has a characteristic, because a phone has no use for them
+and no way to change them.
 
 ### `floor`
 
-The pump's measured reach in kPa: how deep this rig can pull, and the deepest target accepted. A
-target deeper than it is refused. Held to 5–100 kPa, and written only on the serial line, because it
-is the bound the machine holds a controller to.
-
-### `pump_max`
-
-The ceiling in percent that the control loop clamps its duty to. `PUMP_DUTY_MAX_PERCENT` is also the
-pump driver's own cap, so a larger value would mean nothing. Held above zero and at most 90.
-
-### `deadband`
-
-The tolerance in kPa within which the loop calls the target reached and `state` becomes `hold`. It
-is the one thing a client cannot work out for itself, and the reason `hold` is the honest cue that
-the target has arrived. Held to 0.05–2 kPa.
-
-### `valve`
-
-The direction of the fitted solenoid: `0` normally open, so a de-energised coil vents; non-zero
-normally closed. It names a part rather than tuning the loop, so `device set valve` stores the
-choice for the next boot and the characteristic keeps reporting the part that is fitted until then.
-It is read-only over the radio: a phone may know which way the valve fails, not change it.
+The pump's measured reach in kPa — `CONTROL_FLOOR_KPA` — how deep this rig can pull and therefore
+the deepest target accepted. A target deeper than it is refused, and `write_result` says
+`out_of_range`. Read only: it is a build symbol, and it is the bound the machine holds a controller
+to.
 
 ### `unit` (panel builds only)
 
@@ -237,9 +207,8 @@ refused write: the value is not echoed, and nothing is notified unless it change
 | `hold_s` | `0` to `max_run_s`, whole seconds | above `max_run_s` |
 | `unit` | `0` to `3` | above `3` |
 
-`floor`, `flow`, `volume`, `pump_max`, `deadband` and `valve` have no write: they are commissioning
-and tuning values, set with `device set` on the serial line. A payload of the wrong length is
-ignored rather than truncated.
+`floor` has no write: it is the pump's measured reach, a build symbol the machine holds a
+controller to. A payload of the wrong length is ignored rather than truncated.
 
 A refused `target` or `hold_s` is also notified on `write_result`: the field's suffix, least
 significant byte first, then a reason byte — `1` out of range, `2` not a number. The read-back stays

@@ -8,19 +8,13 @@ class VacuumSystem;
 
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; `value` is the op's own — kPa for a target, whole
-// seconds for a start's hold, the value for a setting — so an op that has none leaves it at zero.
+// seconds for a start's hold — so an op that has none leaves it at zero.
 struct MachineCommand {
   enum class Op : uint8_t {
     Start,
     Stop,
     ResetFault,
     SetTarget,
-    SetFlow,
-    SetVolume,
-    SetFloor,
-    SetPumpMax,
-    SetDeadband,
-    SetValve,
     Reboot,
   };
   Op op;

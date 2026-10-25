@@ -8,8 +8,6 @@
 
 namespace gardener {
 
-class MachineSettings;
-
 // What the device is doing, which is also the state a controller watches. There is no DONE:
 // after a release it is IDLE, and the controller knows when the run is over because it is the one
 // that ended it. HOLD is the target-reached edge, and it is the cue a controller times its hold
@@ -54,8 +52,8 @@ inline const char* runStateName(RunState state) {
 // reached, then the run carries on. Gains live in Machine.h.
 class VacuumSystem {
  public:
-  VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent, MachineSettings& settings)
-      : pump_(pump), sensor_(sensor), vent_(vent), settings_(settings) {}
+  VacuumSystem(Pump* pump, PressureSensor* sensor, VentValve* vent)
+      : pump_(pump), sensor_(sensor), vent_(vent) {}
 
   void begin();                  // pump off, valve open: the safe resting state
   void service(uint32_t nowMs);  // the state machine, the PID step and the fault detection
@@ -93,13 +91,10 @@ class VacuumSystem {
   // True once when the last run ended because its deadline expired; the run log names it.
   bool takeDeadlineExpired();
 
-  // The devices, so the serial layer can read what the loop commands without a second copy. The
-  // settings are the machine's, reached through the vacuum system because it is the one that reads
-  // them, and a command that changes one is applied by the control task here.
+  // The devices, so the serial layer can read what the loop commands without a second copy.
   Pump& pump() { return *pump_; }
   VentValve& vent() { return *vent_; }
   PressureSensor& sensor() { return *sensor_; }
-  MachineSettings& settings() { return settings_; }
 
  private:
   void setState(RunState state);
@@ -126,7 +121,6 @@ class VacuumSystem {
   Pump* pump_;
   PressureSensor* sensor_;
   VentValve* vent_;
-  MachineSettings& settings_;
 
   RunState state_ = RunState::Idle;
   float targetPressureKpa_ = 0.0f;  // 0 is the ambient target, and what `vacuum get` reports
@@ -149,8 +143,6 @@ class VacuumSystem {
   float lastMeasured_ = 0.0f;
   float output_ = 0.0f;
   uint32_t lastControlMs_ = 0;
-  // The settings revision the integral was last computed against; a change starts it over.
-  uint8_t lastGainsRevision_ = 0;
 };
 
 }  // namespace gardener

@@ -11,7 +11,6 @@
 #include "hal/Display.h"
 #include "panel/Units.h"
 #include "serial/Domain.h"
-#include "serial/MachineFields.h"
 
 namespace gardener {
 namespace {
@@ -108,19 +107,6 @@ void DeviceDomain::get(Stream& io) {
 
   io.print(" log=");
   io.print(app_.logger().levels());
-  io.print(" flow=");
-  io.print(app_.settings().pumpFlowLpm(), 2u);
-  io.print(" volume=");
-  io.print(app_.settings().chamberVolumeL(), 3u);
-  io.print(" floor=");
-  io.print(app_.settings().floorPressureKpa(), 1u);
-  io.print(" pump_max=");
-  io.print(app_.settings().pumpMaxPercent(), 1u);
-  io.print(" deadband=");
-  io.print(app_.settings().deadbandPressureKpa(), 2u);
-  // The fitted direction, not the stored key: a pending change takes effect on the next boot.
-  io.print(" valve=");
-  io.print(app_.vacuum().vent().energiseWhenOpen() ? "closed" : "open");
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   io.print(" unit=");
   io.print(displayUnitInfo(app_.settings().unit()).name);
@@ -178,9 +164,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
     return;
   }
 
-  // The six machine settings are the machine's own, shared with the machine-alone build's domain.
-  if (setMachineField(io, app_, outbox_, field, value, extra)) return;
-
+  // The machine's settings are build symbols now, so `unit` is the only preference this domain
+  // takes.
   if (field.equalsIgnoreCase("unit")) {
     DisplayUnit unit = DisplayUnit::Kpa;
     if (!parseDisplayUnit(value.c_str(), unit)) {

@@ -11,9 +11,10 @@ namespace gardener {
 class Machine;
 
 // The machine's slice of the GATT table: state, pressure_kpa, target, duty, fault,
-// command, fw, ble_proto, sensor, floor, flow, volume, valve,
-// pump_max, deadband, caps, hold_s, max_run_s, write_result and uptime_ms. Everything a controller
-// commands and reads about the machine itself, before the panel adds anything of its own.
+// command, fw, ble_proto, sensor, floor, caps, hold_s, max_run_s, write_result and uptime_ms.
+// Everything a controller commands and reads about the machine itself, before the panel adds
+// anything of its own. `floor` is here because it bounds a target, not because it is a setting: the
+// rig's numbers are build symbols and no link carries them.
 class MachineBleDomain : public BleDomain {
  public:
   explicit MachineBleDomain(Machine* app);
@@ -41,16 +42,11 @@ class MachineBleDomain : public BleDomain {
     Sensor = 8,
     Floor = 9,
     Caps = 10,
-    Flow = 11,
-    Volume = 12,
-    Valve = 13,
-    PumpMax = 14,
-    Deadband = 15,
-    HoldS = 16,
-    MaxRunS = 17,
-    WriteResult = 18,
-    UptimeMs = 19,
-    Count = 20,
+    HoldS = 11,
+    MaxRunS = 12,
+    WriteResult = 13,
+    UptimeMs = 14,
+    Count = 15,
   };
 
   static const Spec kSpecs[Count];
@@ -96,10 +92,6 @@ class MachineBleDomain : public BleDomain {
   String lastFault_;
   uint8_t lastSensor_ = 0;
   float lastFloor_ = 0.0f;
-  float lastFlow_ = 0.0f;
-  float lastVolume_ = 0.0f;
-  float lastPumpMax_ = 0.0f;
-  float lastDeadband_ = 0.0f;
   uint16_t lastHoldS_ = 0;
   uint32_t lastFastMs_ = 0;
 };

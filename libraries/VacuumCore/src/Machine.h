@@ -14,18 +14,42 @@ constexpr uint32_t CONTROL_PERIOD_MS = 50;
 // is accepted and anything gentler is refused rather than regulated. Zero is not below this bound:
 // it is the ambient target, which releases the chamber.
 constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
-constexpr float CONTROL_DEADBAND_KPA = 0.2f;
 
-// The bounds a loop input may hold, one definition for the loader, the setters and both links'
-// refusals, so a stored value and a written one are judged by the same numbers. `pump_max` is
-// bounded above by PUMP_DUTY_MAX_PERCENT, which is also the pump driver's ceiling.
-constexpr float PUMP_FLOW_MIN_LPM = 0.05f;
-constexpr float PUMP_FLOW_MAX_LPM = 10.0f;
-constexpr float CHAMBER_VOLUME_MIN_L = 0.005f;
-constexpr float CHAMBER_VOLUME_MAX_L = 5.0f;
-constexpr float CONTROL_DEADBAND_MIN_KPA = 0.05f;
-constexpr float CONTROL_DEADBAND_MAX_KPA = 2.0f;
-constexpr float CONTROL_FLOOR_MAX_KPA = 100.0f;
+// --- The rig's own numbers ---------------------------------------------------
+// What a different pump, chamber or valve changes. These are facts about the build rather than
+// preferences a running device holds, so each is a macro: the value here is the fitted rig's,
+// measured on the bench, and a build for another rig replaces it with `-DNAME=value` (see
+// scripts/arduino.py's `--define`). Neither link carries them, because nothing changes one at run
+// time.
+#ifndef PUMP_FLOW_LPM
+#define PUMP_FLOW_LPM 1.0f  // the fitted pump's free flow, in L/min
+#endif
+#ifndef CHAMBER_VOLUME_L
+#define CHAMBER_VOLUME_L 0.05f  // the fitted chamber's volume, in litres
+#endif
+#ifndef CONTROL_FLOOR_KPA
+#define CONTROL_FLOOR_KPA 60.0f  // the deepest target the pump reaches, kPa below ambient
+#endif
+#ifndef PUMP_DUTY_MAX_PERCENT
+#define PUMP_DUTY_MAX_PERCENT 90.0f  // the pump's duty ceiling, and the driver's
+#endif
+#ifndef CONTROL_DEADBAND_KPA
+#define CONTROL_DEADBAND_KPA 0.2f  // how close to the target counts as reached
+#endif
+#ifndef VALVE_NORMALLY_OPEN
+#define VALVE_NORMALLY_OPEN true  // the fitted solenoid is normally open: de-energised vents
+#endif
+
+// A rig number that would divide the loop's gains by zero, cap the pump at nothing, or ask for a
+// depth outside the sensor's range is a mistake in the build, so it is refused here rather than at
+// boot.
+static_assert(PUMP_FLOW_LPM > 0.0f, "PUMP_FLOW_LPM must be positive");
+static_assert(CHAMBER_VOLUME_L > 0.0f, "CHAMBER_VOLUME_L must be positive");
+static_assert(PUMP_DUTY_MAX_PERCENT > 0.0f && PUMP_DUTY_MAX_PERCENT <= 100.0f,
+              "PUMP_DUTY_MAX_PERCENT is a percentage of full duty");
+static_assert(CONTROL_DEADBAND_KPA > 0.0f, "CONTROL_DEADBAND_KPA must be positive");
+static_assert(CONTROL_FLOOR_KPA >= CONTROL_MIN_TARGET_KPA, "the floor must admit a target");
+static_assert(CONTROL_FLOOR_KPA <= 100.0f, "the sensor reads to 100 kPa below ambient");
 
 // --- The deadline on a run --------------------------------------------------
 // The longest hold the device will grant, and the most a start may ask for. Nothing else ends a
@@ -33,13 +57,6 @@ constexpr float CONTROL_FLOOR_MAX_KPA = 100.0f;
 constexpr uint32_t CONTROL_MAX_RUN_MS = 900000;
 
 // --- PID configuration from the pump and the chamber ------------------------
-// The loop's gains are derived from two settings — the pump's projected free-flow rate and the
-// chamber volume — so a different pump or chamber retunes the loop by changing two numbers, not
-// three gains. The defaults are the fitted rig's, set on the bench; the wire overrides them with
-// `device set flow` and `device set volume`.
-constexpr float PUMP_FLOW_LPM = 1.0f;     // the fitted pump's free flow, in L/min
-constexpr float CHAMBER_VOLUME_L = 0.05f;  // the fitted chamber's volume, in litres
-
 // The loop's shape, rig-independent: the proportional correction time, the derivative's damping
 // fraction at full slew, the integrator time and the integral clamp. These are tuned once, not per
 // rig; the values reproduce the loop as it was hand-tuned for the reference pump and chamber.
@@ -57,7 +74,7 @@ struct PidGains {
   float integralLimit;
 };
 
-// The one function of the two settings: the rate the depth rises at full duty near ambient, in
+// The one function of the two numbers: the rate the depth rises at full duty near ambient, in
 // kPa/s, is the pump's free flow times ambient pressure over the volume, which is the same slew
 // the derivative term measures. Each gain scales against it, so the loop keeps its shape
 // whatever pump and chamber are fitted.
@@ -72,18 +89,14 @@ inline PidGains pidGainsFor(float flowLpm, float volumeL) {
 }
 
 // --- Pump limits the control loop must respect -------------------------------
-// The duty cap keeps the pump inside its own rating; a run is ended by its deadline or by a fault,
-// and both are the vacuum system's.
-constexpr float PUMP_DUTY_MAX_PERCENT = 90.0f;
+// The duty cap (`PUMP_DUTY_MAX_PERCENT`, a rig number) keeps the pump inside its own rating; a run
+// is ended by its deadline or by a fault, and both are the vacuum system's.
 constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
-// The floor `status` reports: the deepest target worth offering. About 60 kPa of suction below
-// ambient is the pump's measured reach, and targets are relative to the same ambient, so this is
-// also the deepest one it can hold. A constant because both bounds are.
-constexpr float CONTROL_FLOOR_KPA = 60.0f;
 
 // --- Vent valve --------------------------------------------------------------
 // Timing only; which part is fitted, and therefore which coil level means "open", is the
-// composition root's call in Machine.cpp — normally open is the fail-safe default.
+// composition root's call in Machine.cpp from the VALVE_NORMALLY_OPEN build symbol — normally open
+// is the fail-safe default.
 constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to the vent floor to be released
 // The depth this rig settles at with the valve open, measured on the bench. A chamber with the
 // valve open does not reach ambient: the tube, the orifice and the sensor's offset leave it a
@@ -130,16 +143,15 @@ enum Capability : uint8_t {
 };
 
 class Logger;
-class MachineSettings;
 
 // The machine: the pressure loop and the policy around it, with no panel part named. It owns the
-// parts, the capability byte and the device settings, and it reports through the logger it was built
-// with. boot() brings the parts up; the links and the tasks stay the composition's.
+// parts and the capability byte, and it reports through the logger it was built with. boot() brings
+// the parts up; the links and the tasks stay the composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
  public:
-  Machine(Logger& logger, const MachinePins& pins, MachineSettings& settings);
+  Machine(Logger& logger, const MachinePins& pins);
 
   Machine(const Machine&) = delete;
   Machine& operator=(const Machine&) = delete;
@@ -152,12 +164,10 @@ class Machine {
   uint8_t capabilities() const { return capabilities_; }
   void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }
-  MachineSettings& settings() { return settings_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
   Logger& logger_;
-  MachineSettings& settings_;
   VacuumSystem vacuum_;
   uint8_t capabilities_ = 0;
 };

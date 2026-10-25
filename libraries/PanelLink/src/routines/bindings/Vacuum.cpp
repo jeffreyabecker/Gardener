@@ -37,8 +37,8 @@ int vacuumClamp(bvm* vm) {
   float pressureKpa = (float)argReal(vm, 1);
   if (pressureKpa < CONTROL_MIN_TARGET_KPA) {
     pressureKpa = CONTROL_MIN_TARGET_KPA;
-  } else if (pressureKpa > gContext->settings().floorPressureKpa()) {
-    pressureKpa = gContext->settings().floorPressureKpa();
+  } else if (pressureKpa > CONTROL_FLOOR_KPA) {
+    pressureKpa = CONTROL_FLOOR_KPA;
   }
   be_pushreal(vm, pressureKpa);
   be_return(vm);
@@ -75,7 +75,7 @@ int vacuumState(bvm* vm) {
   setReal(vm, record, "pressure_kpa", system.currentPressureKpa());
   setReal(vm, record, "target", system.targetPressureKpa());
   setReal(vm, record, "duty", system.pump().dutyPercent());
-  setReal(vm, record, "floor", gContext->settings().floorPressureKpa());
+  setReal(vm, record, "floor", CONTROL_FLOOR_KPA);
   setReal(vm, record, "min", CONTROL_MIN_TARGET_KPA);
   setText(vm, record, "state", runStateName(system.runState()));
   setText(vm, record, "fault", system.faultCode());

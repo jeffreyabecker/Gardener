@@ -6,7 +6,6 @@
 #include "VacuumSystem.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
-#include "storage/MachineSettings.h"
 
 namespace gardener {
 namespace {
@@ -94,7 +93,7 @@ void VacuumDomain::get(Stream& io) {
   io.print(vacuum.targetPressureKpa(), 1u);
 
   io.print(" floor=");
-  io.print(app_.settings().floorPressureKpa(), 1u);
+  io.print(CONTROL_FLOOR_KPA, 1u);
   io.print(" duty=");
   io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");
@@ -141,12 +140,11 @@ void VacuumDomain::target(Stream& io, const String& args) {
     io.print(" min=0.0\n");
     return;
   }
-  const float floorKpa = app_.settings().floorPressureKpa();
-  if (pressureKpa > floorKpa) {
+  if (pressureKpa > CONTROL_FLOOR_KPA) {
     io.print("err out_of_range field=target value=");
     io.print(token);
     io.print(" max=");
-    io.print(floorKpa, 1u);
+    io.print(CONTROL_FLOOR_KPA, 1u);
     io.print('\n');
     return;
   }
