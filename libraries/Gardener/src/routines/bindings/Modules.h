@@ -11,8 +11,6 @@ namespace berry {
 void installVacuumModule(bvm* vm);
 void installScreenModule(bvm* vm);
 void installDeviceModule(bvm* vm);
-void installButtonsModule(bvm* vm);
-void installBuzzerModule(bvm* vm);
 void installStoreModule(bvm* vm);
 // The native Config class a routine can instantiate for its own INI document.
 void installConfigClass(bvm* vm);

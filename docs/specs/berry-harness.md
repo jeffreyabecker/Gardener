@@ -82,15 +82,13 @@ image is already compiled by then.
 ## What the harness provides
 
 The records `reading`, `unit`, `bounds` and `jingle` — declared in `/system/records.be`, which the
-image loads before anything else — and the six native modules a routine calls:
+image loads before anything else — and the four native modules a routine calls:
 
 | Module | On the host |
 | --- | --- |
 | `vacuum` | a machine model: `state()`, `target()`, `start()`, `stop()`, `log()` |
 | `screen` | every drawing verb forwarded to `frame` with its ink-or-paper colour, real `text_bounds`, and the unit |
-| `buttons` | a queue: `harness.press("ok:single")` pushes one whole gesture string, delivered one beat at a time |
-| `buzzer` | counts sounds rather than playing them |
-| `device` | the unit, the jingle selection, the library of jingle records, and the reboot and reset requests |
+| `device` | the unit, the jingle selection and library, the piezo counting sounds rather than playing them, a press queue, and the reboot and reset requests |
 | `store` | every `/cfg/routines/*.cfg`, as text, with the type taken from the default asked for, and `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`

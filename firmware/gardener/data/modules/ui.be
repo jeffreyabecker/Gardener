@@ -71,14 +71,14 @@ class JingleEditScene : ChoiceEditScene
 
   def cancel()
     # What was auditioning is the value being refused, so it goes quiet on the way out.
-    buzzer.off()
+    device.silence()
     super(self).cancel()
   end
 
   def play()
     var notes = jingle_notes(self.value())
     if notes != nil
-      buzzer.play(notes)
+      device.play_sequence(notes)
     end
   end
 end

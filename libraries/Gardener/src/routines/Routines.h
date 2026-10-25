@@ -53,7 +53,7 @@ class Routines {
   // which asks once per press.
   bool active() const;
 
-  // --- the `buttons` module's surface ---
+  // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { gestures_.push(gesture); }
   bool takePress(String& gesture) { return gestures_.take(gesture); }
 

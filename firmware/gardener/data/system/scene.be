@@ -33,7 +33,7 @@ class Scene
   def take_events()
     var acted = false
     while true
-      var ev = buttons.take()
+      var ev = device.take_gesture()
       if ev == nil
         break
       end

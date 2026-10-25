@@ -1,8 +1,8 @@
 # Bindings
 
-The native surface a routine calls: six modules — `vacuum`, `screen`, `device`, `buttons`,
-`buzzer` and `store` — and the records those calls answer with. This is the reference for
-what a routine can call; for what a routine must be, see [routine.md](./routine.md).
+The native surface a routine calls: four modules — `vacuum`, `screen`, `device` and `store` — and
+the records those calls answer with. This is the reference for what a routine can call; for what a
+routine must be, see [routine.md](./routine.md).
 Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
 browser draws (`/system/registry.be`) and the scene stack it pushes onto (`/system/ux.be`). They are
 documented here too, because a routine calls them the same way.
@@ -208,14 +208,14 @@ painted over before the frame goes to the glass. The unit is one for the whole g
 draws the number and never the suffix after it: a readout that says `12.5` is a depth in the unit
 the band names.
 
-## `device` — the device's own settings
+## `device` — the device around the machine
 
-The unit the panel prints, the target the default program restores and the selected jingle. All
-belong to the device rather than to a routine's `store` file, and all are keys of `/cfg/settings.ini`'s
-`[device]` section: `unit`, `target` and `jingle`. The unit is the same switch the serial `device`
-domain carries; the diagnostics switch is not here, because it belongs to the serial link rather
-than to the glass. The radio is not a setting: `device.bluetooth()` reports whether the image was
-built with it.
+The unit the panel prints, the target the default program restores, the selected jingle, the piezo
+and the presses a page has been given. The first three belong to the device rather than to a
+routine's `store` file, and all are keys of `/cfg/settings.ini`'s `[device]` section: `unit`,
+`target` and `jingle`. The unit is the same switch the serial `device` domain carries; the
+diagnostics switch is not here, because it belongs to the serial link rather than to the glass. The
+radio is not a setting: `device.bluetooth()` reports whether the image was built with it.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
@@ -228,6 +228,10 @@ built with it.
 | `device.set_jingle(id)` | — | stores the identifier as `[device] jingle` in `/cfg/settings.ini` |
 | `device.all_jingles()` | list of `jingle` records | every jingle this build can play, in file order |
 | `device.play_current_jingle()` | `bool` | plays the jingle `[device] jingle` selects, falling back to the first entry; `false` when the library is empty |
+| `device.play_sequence(notes)` | `bool` | a sequence of note/duration pairs; `false` when malformed |
+| `device.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `device.silence()`; `hz` is clamped to `BuzzerMinHz` … `BuzzerMaxHz` |
+| `device.silence()` | — | silence and stop any sequence |
+| `device.take_gesture()` | a gesture string, or `nil` when the queue is empty | one whole gesture, from the panel's own queue |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
@@ -242,16 +246,30 @@ if pressure_kpa > 0.0
 end
 ```
 
-## `buttons` — the gestures
+### The piezo
 
-| Call | Returns |
-| --- | --- |
-| `buttons.take()` | a gesture string, or `nil` when the queue is empty |
+`device.play_sequence` takes note names with an optional `#` or `b`, then one octave digit (`a4`,
+`c#5`, `bb3`); `r` is a rest. Durations are milliseconds. The only valid notation is `note:duration`
+pairs separated by spaces:
 
-The string is the classifier's whole gesture: one or more keys, each with the form of its press,
-joined by `+` in panel order. A key is `up`, `down`, `forward`, `back`, `ok` or `cancel`; its form
-is `single`, `double`, or whole seconds from `2` up once the key passes `ExtendedHoldMs`.
-`ok:single`, `cancel:double` and `ok:5+cancel:5` are all gestures.
+```berry
+device.tone(2000, 500)
+device.play_sequence("a4:1000 c6:500 a4:500")
+device.silence()
+```
+
+The player is non-blocking: `tone` and `play_sequence` start a schedule and return, and the firmware
+advances it in the loop. A note outside the buzzer's range makes `play_sequence` return false rather
+than clamp. A non-positive `hz` means silence. A routine that starts a tone or sequence owns stopping
+it before it leaves the page; a sequence stops itself at the end.
+
+### The presses
+
+`device.take_gesture()` answers the classifier's whole gesture, or `nil` when the queue is empty:
+one or more keys, each with the form of its press, joined by `+` in panel order. A key is `up`,
+`down`, `forward`, `back`, `ok` or `cancel`; its form is `single`, `double`, or whole seconds from
+`2` up once the key passes `ExtendedHoldMs`. `ok:single`, `cancel:double` and `ok:5+cancel:5` are
+all gestures.
 
 A gesture is queued only while this page is showing. The queue holds eight; the oldest is dropped
 if a routine falls behind, and that is logged once.
@@ -261,7 +279,7 @@ Draining the queue is the routine's job, usually at the top of `poll`:
 ```berry
 def poll(now)
   while true
-    var ev = buttons.take()
+    var ev = device.take_gesture()
     if ev == nil
       break
     end
@@ -275,29 +293,6 @@ Holding **Back and OK together for 5 s** is the reboot: the same safe reset the 
 and a routine cannot suppress it. The panel task acts on it before a page sees it.
 
 The standard gestures a page should follow are in [gestures.md](../gestures.md).
-
-## `buzzer` — the piezo
-
-| Call | Returns | Notes |
-| --- | --- | --- |
-| `buzzer.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `buzzer.off()`; `hz` is clamped to `BuzzerMinHz` … `BuzzerMaxHz` |
-| `buzzer.play(sequence)` | `bool` | a sequence of note/duration pairs; false when malformed |
-| `buzzer.off()` | — | silence and stop any sequence |
-
-`play` takes note names with an optional `#` or `b`, then one octave digit (`a4`, `c#5`, `bb3`); `r`
-is a rest. Durations are milliseconds. The only valid notation is `note:duration` pairs separated by
-spaces:
-
-```berry
-buzzer.tone(2000, 500)
-buzzer.play("a4:1000 c6:500 a4:500")
-buzzer.off()
-```
-
-The player is non-blocking: `tone` and `play` start a schedule and return, and the firmware advances
-it in the loop. A note outside the buzzer's range makes `play` return false rather than clamp. A
-non-positive `hz` means silence. A routine that starts a tone or sequence owns stopping it before it
-leaves the page; a sequence stops itself at the end.
 
 The notation is strict: a comma, a missing colon, or a space between a note and its duration makes
 the whole sequence malformed and `play` returns false.
@@ -319,11 +314,11 @@ notes=E5:200 G5:200 E6:200 ...
 The section name is the jingle's **identifier**: lowercase, stable, and the value `[device] jingle`
 stores.
 `full_title` is the display name, `short_title` the label that fits on the panel, and `notes` the
-sequence in `buzzer.play()` notation.
+sequence in `device.play_sequence()` notation.
 
 A line beginning with `;` is a comment; anywhere else `#` is a note, so a sharp like `F#5` needs no
 escaping. A section missing one of the three keys is reported on the diagnostics stream at boot and
-left out of the library, and so is one whose sequence `buzzer.play()` would refuse. A missing or
+left out of the library, and so is one whose sequence `device.play_sequence()` would refuse. A missing or
 malformed file leaves the library empty.
 
 Each entry in the list is a `jingle` record, read with a dot:
@@ -333,7 +328,7 @@ Each entry in the list is a `jingle` record, read with a dot:
 | `key` | string | the identifier `device.set_jingle()` writes |
 | `full_title` | string | the display name |
 | `short_title` | string | the short label the System page draws |
-| `notes` | string | the note sequence, ready for `buzzer.play()` |
+| `notes` | string | the note sequence, ready for `device.play_sequence()` |
 
 The list is the whole of what a routine knows about the library, so one entry's name or sequence is
 found by scanning it.
@@ -344,7 +339,7 @@ for jingle : device.all_jingles()
 end
 
 device.play_current_jingle()                          # the jingle chosen on the System page
-buzzer.play(device.all_jingles()[0].notes)            # the first one by name
+device.play_sequence(device.all_jingles()[0].notes)            # the first one by name
 ```
 
 An identifier the list does not hold is not in it, and `device.play_current_jingle()` falls back to

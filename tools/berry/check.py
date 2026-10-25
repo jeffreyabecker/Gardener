@@ -46,8 +46,6 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "routines" / "Bindings.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",
     GARDENER / "src" / "routines" / "GestureQueue.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Buttons.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Buzzer.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Config.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Device.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Screen.cpp",

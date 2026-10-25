@@ -8,6 +8,7 @@
 #include "Logger.h"
 #include "PanelContext.h"
 #include "panel/Units.h"
+#include "routines/Routines.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 #include "storage/Config.h"
@@ -170,6 +171,53 @@ int devicePlayCurrentJingle(bvm* vm) {
   be_return(vm);
 }
 
+// A sequence of note/duration pairs, the same notation the jingle library holds: false when it is
+// malformed, and nothing is played.
+int devicePlaySequence(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "device.play_sequence(notes)");
+  }
+  const char* sequence = argText(vm, 1);
+  const bool ok = BuzzerPlayer::validate(sequence);
+  if (ok) context->buzzer().play(sequence);
+  be_pushbool(vm, ok);
+  be_return(vm);
+}
+
+// A tone with a duration; 0 ms means until silence(). A frequency outside the machine's range is
+// clamped rather than dropped, and a non-positive one is silence.
+int deviceTone(bvm* vm) {
+  if (be_top(vm) < 2) {
+    be_raise(vm, "type_error", "device.tone(hz, duration_ms)");
+  }
+
+  float hz = (float)argReal(vm, 1);
+  const bint duration = argInt(vm, 2);
+  if (hz <= 0.0f || duration < 0) {
+    context->buzzer().off();
+    be_return_nil(vm);
+  }
+  if (hz < BuzzerMinHz) hz = BuzzerMinHz;
+  if (hz > BuzzerMaxHz) hz = BuzzerMaxHz;
+  context->buzzer().tone((uint16_t)hz, (uint32_t)duration);
+  be_return_nil(vm);
+}
+
+// Silence, and stop whatever is playing.
+int deviceSilence(bvm* vm) {
+  context->buzzer().off();
+  be_return_nil(vm);
+}
+
+// A pull, not a callback: the queue is drained by the routine when it is ready, so no Berry code
+// runs while a native call is on the stack.
+int deviceTakeGesture(bvm* vm) {
+  String gesture;
+  if (routines == nullptr || !routines->takePress(gesture)) be_return_nil(vm);
+  be_pushstring(vm, gesture.c_str());
+  be_return(vm);
+}
+
 const bnfuncinfo DeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
@@ -180,6 +228,10 @@ const bnfuncinfo DeviceLibrary[] = {
     {"set_jingle", deviceSetJingle},
     {"all_jingles", deviceAllJingles},
     {"play_current_jingle", devicePlayCurrentJingle},
+    {"play_sequence", devicePlaySequence},
+    {"tone", deviceTone},
+    {"silence", deviceSilence},
+    {"take_gesture", deviceTakeGesture},
     {nullptr, nullptr},
 };
 

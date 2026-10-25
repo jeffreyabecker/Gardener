@@ -10,13 +10,12 @@ class Logger;
 
 namespace berry {
 
-// The six native modules a scene sees, installed into a fresh VM:
+// The four native modules a scene sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the panel, the faces it draws in, and the unit it prints
-//   device.*   the device's own settings, the units it prints in and the jingle library
-//   buttons.*  the presses since the last call
-//   buzzer.*   the piezo: a timed tone, a note sequence, or silence
+//   device.*   the device: its settings, the units it prints in, the jingle library, the piezo
+//              and the presses waiting for a page
 //   store.*    a routine's own values, kept across a power cycle
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI

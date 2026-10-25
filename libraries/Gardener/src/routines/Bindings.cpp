@@ -27,8 +27,6 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installVacuumModule(vm);
   installScreenModule(vm);
   installDeviceModule(vm);
-  installButtonsModule(vm);
-  installBuzzerModule(vm);
   installStoreModule(vm);
   installConfigClass(vm);
 }
