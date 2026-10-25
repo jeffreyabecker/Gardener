@@ -49,13 +49,11 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "routines" / "bindings" / "Config.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Device.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Screen.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Store.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Vacuum.cpp",
     GARDENER / "src" / "MachineCommand.cpp",
     GARDENER / "src" / "storage" / "Config.cpp",
     GARDENER / "src" / "storage" / "Ini.cpp",
     GARDENER / "src" / "storage" / "Jingles.cpp",
-    GARDENER / "src" / "storage" / "Values.cpp",
     GARDENER / "src" / "VacuumSystem.cpp",
 ]
 

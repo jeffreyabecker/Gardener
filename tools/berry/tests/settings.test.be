@@ -8,12 +8,19 @@ suite = "settings"
 # One setting read from a document the way the registry's load_settings() reads every key: the
 # stored text parsed by the kind and held to it, and a key holding nothing reading as nothing.
 def read_setting(cfg, name)
-  var document = store.config("routines/" + name + ".cfg")
+  var document = device.config("routines/" + name + ".cfg")
   var raw = document.get("", cfg.key, "")
   if raw == ""
     return cfg.value(nil)
   end
   return cfg.value(cfg.parse(raw))
+end
+
+# One key written through the document, opened fresh, so a case seeds the same file a page reads.
+def write_setting(name, key, value)
+  var document = device.config("routines/" + name + ".cfg")
+  document.set("", key, value)
+  document.save()
 end
 
 def missing_keys_read_their_default()
@@ -27,15 +34,15 @@ end
 test("a missing key reads as the setting's default", missing_keys_read_their_default)
 
 def stored_values_are_held_to_their_kind()
-  store.set("settings_test", "count", "99")
+  write_setting("settings_test", "count", "99")
   var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(read_setting(count, "settings_test"), 20, "a stored int above max is not held to it")
 
-  store.set("settings_test", "mode", "sideways")
+  write_setting("settings_test", "mode", "sideways")
   var mode = ChoiceEditCfg("mode", "off", "Mode", nil, ["off", "on"], false)
   assert_eq(read_setting(mode, "settings_test"), "off", "a value outside the choices is not defaulted")
 
-  store.set("settings_test", "gain", "7.5")
+  write_setting("settings_test", "gain", "7.5")
   var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
   assert_eq(read_setting(gain, "settings_test"), 1.0, "a stored real above max is not held to it")
 end
@@ -43,14 +50,14 @@ end
 test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
 
 def nothing_reads_as_nil_when_nullable()
-  store.set("settings_test", "empty", "")
+  write_setting("settings_test", "empty", "")
   var empty = IntEditCfg("empty", 5, "Count", nil, 1, 0, 10, true)
   assert_nil(read_setting(empty, "settings_test"), "an empty nullable int is not nil")
 
   var absent = IntEditCfg("absent", 5, "Count", nil, 1, 0, 10, true)
   assert_nil(read_setting(absent, "settings_test"), "an absent nullable int is not nil")
 
-  store.set("settings_test", "zero", "0")
+  write_setting("settings_test", "zero", "0")
   var zero = IntEditCfg("zero", 5, "Count", nil, 1, 0, 10, true)
   assert_eq(read_setting(zero, "settings_test"), 0, "a stored zero is not a value")
 end
@@ -96,10 +103,10 @@ def a_pair_choice_stores_its_value_and_prints_its_title()
   assert_eq(plain[1].key, "b", "a bare value is not a record's key")
   assert_eq(plain[1].title, "b", "a bare value is not its own title")
 
-  store.set("settings_test", "mode", "a")
+  write_setting("settings_test", "mode", "a")
   assert_eq(read_setting(mode, "settings_test"), "a", "a pair choice does not read its stored value")
 
-  store.set("settings_test", "mode", "Alpha")
+  write_setting("settings_test", "mode", "Alpha")
   assert_eq(read_setting(mode, "settings_test"), "b", "a pair choice accepted a title that is not a value")
 
   var scene = ChoiceEditScene("Mode", "a", mode.values, false)
@@ -234,81 +241,20 @@ test("a bool walks its states", a_bool_walks_its_states)
 # The store hands back the file's text, so a setting with no default of its type to lean on has to
 # parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
 def a_stored_value_is_parsed_by_its_kind()
-  store.set("settings_test", "rest", "12.5")
+  write_setting("settings_test", "rest", "12.5")
   var rest = PressureEditCfg("rest", nil, "Rest", nil, 1, true)
   assert_eq(read_setting(rest, "settings_test"), 12.5, "a stored nullable pressure is not its number")
 
-  store.set("settings_test", "flags", "false")
+  write_setting("settings_test", "flags", "false")
   var flags = BoolEditCfg("flags", true, "Flags", nil, false)
   assert_eq(read_setting(flags, "settings_test"), false, "a stored false does not read as false")
 
-  store.set("settings_test", "gain", "0.25")
+  write_setting("settings_test", "gain", "0.25")
   var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
   assert_eq(read_setting(gain, "settings_test"), 0.25, "a stored real is not its number")
 end
 
 test("a stored value is parsed by its kind", a_stored_value_is_parsed_by_its_kind)
-
-# --- the map forms ---------------------------------------------------------
-#
-# One call for the whole document: a page reads every value it keeps in one pass and commits a
-# settled set in one write, rather than a `get` or a flash write per key.
-
-def a_map_read_answers_every_stored_key()
-  store.set("settings_test", "map_count", "12")
-  store.set("settings_test", "map_gain", "0.25")
-
-  var all = store.get("settings_test")
-  assert_eq(all["map_count"], "12", "the whole read does not answer a stored key")
-  assert_eq(all["map_gain"], "0.25", "the whole read does not answer every stored key")
-  assert_nil(all.find("map_absent"), "the whole read answers a key nothing stored")
-end
-
-test("a map read answers every stored key as text", a_map_read_answers_every_stored_key)
-
-# The fallback sets the type of one key; a map of defaults does the same for every key it names,
-# and stands as the answer for a key the document holds nothing for.
-def a_default_map_types_each_key()
-  store.set("settings_test", "map_count", "12")
-  store.set("settings_test", "map_gain", "0.25")
-
-  var typed = store.get("settings_test",
-                        {"map_count": 0, "map_gain": 0.0, "map_flags": true,
-                         "map_label": "x", "map_absent": 7})
-  assert_eq(typed["map_count"], 12, "a stored int is not read as an int")
-  assert_eq(typed["map_gain"], 0.25, "a stored real is not read as a real")
-  assert_eq(typed["map_flags"], true, "an absent bool is not its default")
-  assert_eq(typed["map_label"], "x", "an absent string is not its default")
-  assert_eq(typed["map_absent"], 7, "an absent int is not its default")
-end
-
-test("a map of defaults types each key it names", a_default_map_types_each_key)
-
-def a_map_write_merges_in_one_write()
-  store.set("settings_test", "map_keep", "kept")
-  store.set("settings_test", "map_count", "1")
-
-  var before = harness.writes()
-  assert_true(store.set("settings_test", {"map_count": 9, "map_gain": 0.5}),
-              "a map write is not accepted")
-  assert_eq(harness.writes() - before, 1, "a map write is not one write")
-  assert_eq(store.get("settings_test", "map_count", 0), 9, "a map write did not land")
-  assert_eq(store.get("settings_test", "map_keep", ""), "kept",
-            "a map write dropped a key it did not name")
-end
-
-test("a map write merges in one write", a_map_write_merges_in_one_write)
-
-def a_map_write_of_the_same_values_writes_nothing()
-  store.set("settings_test", "map_count", "4")
-
-  var before = harness.writes()
-  assert_true(store.set("settings_test", {"map_count": 4}), "a repeat map write is not accepted")
-  assert_eq(harness.writes(), before, "a map write of the same values wrote the file")
-end
-
-test("a map write of the values already there writes nothing",
-     a_map_write_of_the_same_values_writes_nothing)
 
 # A routine's values are read once, by the registry, into the map its init() is handed: held to their
 # kinds, repaired by the routine's rule, and complete. A page never reads a document itself.
@@ -322,22 +268,22 @@ def load_makes_a_clean_map()
   # A value past its bounds arrives held to them, and a nullable key holding nothing arrives nil.
   # The shipped interval.cfg carries a rest pressure, so the key is emptied first: an empty value is
   # how the store says a setting holds nothing.
-  store.set("interval", "set_count", "99")
-  store.set("interval", "rest_pressure", "")
+  write_setting("interval", "set_count", "99")
+  write_setting("interval", "rest_pressure", "")
   var held = routines.load_settings("interval")
   assert_eq(held["set_count"], 20,
             "load_settings: a stored int above max is not held to it")
   assert_nil(held["rest_pressure"],
              "load_settings: a nullable key holding nothing is not nil")
-  store.set("interval", "set_count", "4")
-  store.set("interval", "rest_pressure", "5.0")
+  write_setting("interval", "set_count", "4")
+  write_setting("interval", "rest_pressure", "5.0")
 
   # The routine's rule is applied to the map, so a page is never initialized with a set it refuses.
-  store.set("ramped_static", "total_duration", "30")
+  write_setting("ramped_static", "total_duration", "30")
   var repaired = routines.load_settings("ramped_static")
   assert_eq(repaired["total_duration"], 300,
             "load_settings: a set the rule refuses is not put back")
-  store.set("ramped_static", "total_duration", "300")
+  write_setting("ramped_static", "total_duration", "300")
 end
 
 test("loading a routine's settings makes a clean map", load_makes_a_clean_map)

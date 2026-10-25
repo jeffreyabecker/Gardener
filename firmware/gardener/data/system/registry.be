@@ -42,8 +42,8 @@ class RoutineRegistry
   end
 
   def register(routine_key, title, icon, factory, settings)
-    # The key is also the file store reads and writes, so it has to be a plain word. The title is
-    # the label the browser draws; a missing one falls back to the key.
+    # The key is also the name of the document its values live in, so it has to be a plain word.
+    # The title is the label the browser draws; a missing one falls back to the key.
     if routine_key == nil || string.find(routine_key, "/") >= 0 || string.find(routine_key, "\\") >= 0
       vacuum.log("registry: routine key must be a plain word")
       return false
@@ -163,7 +163,7 @@ class RoutineRegistry
     if settings_cfgs == nil
       return settings_values
     end
-    var document = store.config("routines/" + routine_key + ".cfg")
+    var document = device.config("routines/" + routine_key + ".cfg")
     for cfg : settings_cfgs
       var raw = document.get("", cfg.key, "")
       if raw == ""
@@ -191,7 +191,7 @@ class RoutineRegistry
       return false
     end
     self.repair(routine_key, settings_cfgs, settings_values)
-    var document = store.config("routines/" + routine_key + ".cfg")
+    var document = device.config("routines/" + routine_key + ".cfg")
     for cfg : settings_cfgs
       var value = settings_values[cfg.key]
       document.set("", cfg.key, value == nil ? "" : value)

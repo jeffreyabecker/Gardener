@@ -13,7 +13,6 @@
 #include "PanelContext.h"
 #include "routines/Bindings.h"
 #include "storage/Library.h"
-#include "storage/Values.h"
 
 namespace gardener {
 namespace {
@@ -22,24 +21,6 @@ namespace {
 // the one-beat deferral are Berry's, and this side only makes the calls that a beat needs.
 constexpr const char* UxGlobal = "ux";
 constexpr const char* RootScene = "__rootScene";
-
-// A document's values live at /cfg/routines/<document>.cfg, so the document has to be a plain word:
-// a path separator would address another file, and the path is only ever built from a name that has
-// none.
-bool plainWord(const char* name) {
-  if (name == nullptr || name[0] == '\0') return false;
-  const String named(name);
-  return named.indexOf('/') < 0 && named.indexOf('\\') < 0;
-}
-
-// The file a document's values live in. The document has to be a plain word first, so the path
-// cannot escape /cfg/routines/.
-String documentPath(const char* document) {
-  String path = "/cfg/routines/";
-  path += document;
-  path += ".cfg";
-  return path;
-}
 
 // The system is the files the interpreter needs before anything else: the records a native call
 // answers with, the components and the scene every page is written against, and the registry. Its
@@ -296,58 +277,6 @@ void Routines::reportError(const char* file, const char* what) {
   message += detail != nullptr ? detail : "error";
   logger_->error(message.c_str());
   be_pop(vm_, 2);
-}
-
-// --- a document's own values ------------------------------------------------
-
-bool Routines::storeGet(const char* document, const char* key, String& out) {
-  if (!plainWord(document) || key == nullptr || library_ == nullptr) return false;
-
-  String text;
-  if (!library_->read(documentPath(document), text)) return false;
-
-  Values values;
-  values.parse(text);
-  if (!values.has(key)) return false;
-  out = values.get(key, "");
-  return true;
-}
-
-bool Routines::storeSet(const char* document, const char* key, const String& value) {
-  if (key == nullptr) return false;
-  Values one;
-  one.set(key, value);
-  return storeSet(document, one);
-}
-
-bool Routines::storeGet(const char* document, Values& out) {
-  if (!plainWord(document) || library_ == nullptr) return false;
-
-  String text;
-  if (!library_->read(documentPath(document), text)) return false;
-  out.parse(text);
-  return true;
-}
-
-bool Routines::storeSet(const char* document, const Values& values) {
-  if (!plainWord(document) || library_ == nullptr) return false;
-
-  String text;
-  Values held;
-  if (library_->read(documentPath(document), text)) held.parse(text);
-
-  // A repeat value is not worth a flash write, and it is the value that decides, not the
-  // rewritten text: a document carrying comments is not written back for nothing.
-  bool changed = false;
-  for (size_t i = 0; i < values.count(); i++) {
-    const String& key = values.keyAt(i);
-    const String& value = values.valueAt(i);
-    if (held.has(key.c_str()) && held.get(key.c_str(), "") == value) continue;
-    held.set(key.c_str(), value);
-    changed = true;
-  }
-  if (!changed) return true;
-  return library_->write(documentPath(document), held.text());
 }
 
 }  // namespace gardener

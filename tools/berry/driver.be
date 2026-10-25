@@ -1,9 +1,10 @@
 # driver.be — what the check does after every file has loaded.
 #
-# It names the scenes and store, so it loads after the image — /system, /modules and /routines: a
-# Berry file cannot compile a name that is not declared yet. Everything it calls is the firmware's
-# own: the drive is the `harness` module, the routines are reached through the Berry `routines`
-# registry and pushed through `ux`, and a value is read or written through `store`.
+# It names the scenes and the device, so it loads after the image — /system, /modules and
+# /routines: a Berry file cannot compile a name that is not declared yet. Everything it calls is the
+# firmware's own: the drive is the `harness` module, the routines are reached through the Berry
+# `routines` registry and pushed through `ux`, and a value is read or written through a document the
+# device opens.
 
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
 # registered, so each switch starts a fresh page; the settings map, when the caller has one, is the
@@ -169,8 +170,12 @@ def harness_art(routine_key, seconds, path, sets)
     return false
   end
   harness.reset()
-  if sets > 0 && store.get(routine_key, "set_count", nil) != nil
-    store.set(routine_key, "set_count", sets)
+  if sets > 0
+    var document = device.config("routines/" + routine_key + ".cfg")
+    if document.get("", "set_count", "") != ""
+      document.set("", "set_count", sets)
+      document.save()
+    end
   end
 
   var gif = harness.is_gif(path)

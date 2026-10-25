@@ -1,7 +1,7 @@
 # Bindings
 
-The native surface a routine calls: four modules — `vacuum`, `screen`, `device` and `store` — the
-records those calls answer with, and the `Config` document instance `store.config` hands back. This
+The native surface a routine calls: three modules — `vacuum`, `screen` and `device` — the records
+those calls answer with, and the `Config` document instance `device.config` hands back. This
 is the reference for what a routine can call; for what a routine must be, see
 [routine.md](./routine.md).
 Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
@@ -213,7 +213,7 @@ the band names.
 
 The unit the panel prints, the target the default program restores, the selected jingle, the piezo
 and the presses a page has been given. The first three belong to the device rather than to a
-routine's `store` file, and all are keys of `/cfg/settings.ini`'s `[device]` section: `unit`,
+routine's own document, and all are keys of `/cfg/settings.ini`'s `[device]` section: `unit`,
 `target` and `jingle`. The unit is the same switch the serial `device` domain carries; the
 diagnostics switch is not here, because it belongs to the serial link rather than to the glass. The
 radio is not a setting: `device.bluetooth()` reports whether the image was built with it.
@@ -233,12 +233,13 @@ radio is not a setting: `device.bluetooth()` reports whether the image was built
 | `device.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `device.silence()`; `hz` is clamped to `BuzzerMinHz` … `BuzzerMaxHz` |
 | `device.silence()` | — | silence and stop any sequence |
 | `device.take_gesture()` | a gesture string, or `nil` when the queue is empty | one whole gesture, from the panel's own queue |
+| `device.config(path)` | a `Config` instance | the document at `/cfg/` followed by `path`, read once and held; see below |
 
 `screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
 machine's live target: a page
 hands it to the machine when it becomes visible. A page that edits these values writes them through
-`device` rather than through its own `store`.
+`device` rather than through a document of its own.
 
 ```berry
 var pressure_kpa = device.target()
@@ -246,6 +247,55 @@ if pressure_kpa > 0.0
   vacuum.target(vacuum.clamp(pressure_kpa))
 end
 ```
+
+### The document instance
+
+`device.config(path)` answers a `Config` over `/cfg/` followed by `path`, read once and held, so a
+page can keep a document and read or write it with the class's own methods rather than a call per
+value. A routine's values live at `/cfg/routines/<name>.cfg`, named after the routine, and a
+data-image upload can ship initial ones beside its `.be`. The path is relative to `/cfg`: an empty
+path, one beginning with `/`, or one holding a `..` segment is refused with `value_error`, and
+anything that is not a string with `type_error`, so a page cannot name a file outside `/cfg`. A
+document that is not there is not an error: the instance holds nothing, every `get` answers its
+fallback, and the first `save` creates the file.
+
+The instance's methods are the native `Config` class's:
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `config.get(section, key, fallback)` | the fallback's type | the value for a section and key, or the fallback when the document holds none; a flat document's keys are in the empty section |
+| `config.set(section, key, value[, decimals])` | — | put the value into the document in memory; `decimals` is the places a real is written with, two by default. Nothing is written until `save()` |
+| `config.save()` | `bool` | write the whole document as it stands, once: `true` when it is written or nothing had changed since the document was read, `false` when the library refused it. A document that is not there is created |
+| `config.section_keys()` | list of strings | the section names holding at least one key, in document order |
+
+```berry
+var doc = device.config("routines/interval.cfg")
+var target = doc.get("", "target", 0.0)   # the flat file's key, in the empty section
+doc.set("", "target", 12.5)               # changes the document in memory
+doc.save()                                # writes /cfg/routines/interval.cfg
+```
+
+The file is a flat `key=value` document, which is what makes it readable off the device and
+editable in the data image:
+
+```
+target=12.5
+count=3
+```
+
+The class's own `Config():init()` still opens the device's own `/cfg/settings.ini`; calling
+`init()` on an instance from `device.config` replaces its document with that one.
+
+An instance writes its **whole document** on every `save()` that follows a change — the sections and
+keys as they stand, in the order they were read — so a comment in the file does not survive a write
+through an instance, and a write from another route after the instance was made is overwritten by
+its next `save`. Hold an instance to read a document repeatedly.
+
+There is **no limit** on how many keys a document holds: a `set` adds a new key whatever the count,
+and a `save` answers `false` only when the document could not be written. The one cost is flash
+wear: a `save` writes only when a value changed since the document was read — setting the same value
+on every pass costs nothing, while storing a *changing* value on every pass wears the partition.
+Write on the event, not on the frame. One `save` after any number of `set`s is one write.
 
 ### The piezo
 
@@ -395,97 +445,3 @@ or one whose icon is `nil`, is a text-only row. The device's own scenes — the 
 settings in `/modules/ui.be`, the browser in `/modules/browser.be` — are not registered at all; they
 are well-known scenes the system pushes directly. There is no fixed number of routines: the registry is a Berry list, so
 it grows as files register.
-
-## `store` — the routine's own values
-
-| Call | Returns | Notes |
-| --- | --- | --- |
-| `store.get(name, key, fallback)` | the fallback's type | a routine's value, or `fallback` when the key was never set |
-| `store.get(name)` | `map` | every key in the document, as the text the file holds |
-| `store.get(name, defaults)` | `map` | one entry per key in `defaults`, typed by its default, or the default itself when the key was never set |
-| `store.set(name, key, value)` | `bool` | write a routine's value |
-| `store.set(name, values)` | `bool` | write every entry of `values` in one write, keeping the keys it does not name |
-| `store.config(path)` | a `Config` instance | the document at `/cfg/` followed by `path`, read once and held, for a page that reads it repeatedly or wants its sections |
-
-A routine's values live in its own document at `/cfg/routines/<name>.cfg`, named after the routine, and a
-data-image upload can ship initial ones beside its `.be`. A routine writes its own; a page that edits
-another routine's values (the browser does) uses the same named forms. The name is a plain word — a
-name with `/` or `\` is refused, because it would address another file.
-
-The **fallback sets the type** the stored text is read back as:
-
-```berry
-var target = store.get("interval", "target", 0.0)   # real
-var count  = store.get("interval", "count", 0)      # int
-var muted  = store.get("interval", "muted", false)  # bool: "true" and "1" are true
-var label  = store.get("interval", "label", "")     # anything else: the text as written
-```
-
-`store.set` writes a string as it stands, and a number or a bool in the interpreter's own text form.
-A key that was never set returns the fallback rather than `nil`, so a first boot needs no special
-case. A key that holds an empty value reads back as `""` — the way a cleared nullable setting is
-kept, and the sentinel the settings view tests to tell "nothing" from a real value.
-
-The **map forms** are the same rule for the whole document, read once and written once.
-`store.get(name)` answers every key as the text the file holds; `store.get(name, defaults)` answers
-one entry per key in `defaults`, each read back as that default's type and answered by the default
-itself when the document holds nothing for it. `store.set(name, values)` merges the map into the
-document: a key the map does not name is kept, and the file is written at most once however many
-keys the map carries. A document that is not there reads as an empty map, so a first boot needs no
-special case either, and a map that changes nothing writes nothing.
-
-```berry
-var all      = store.get("interval")   # every key, as text
-var settings = store.get("interval", {target: 0.0, count: 0, muted: false})
-store.set("interval", {target: 12.5, count: 3})   # one write; `muted` is kept
-```
-
-The file is a flat `key=value` document, which is what makes it readable off the device and
-editable in the data image:
-
-```
-target=12.5
-count=3
-```
-
-A **path** reaches a document the name forms cannot. `store.config(path)` answers a `Config`
-instance over `/cfg/` followed by `path` — `store.config("routines/interval.cfg")` is the file
-`store.get("interval", ...)` reads — and reads it once, so the instance holds the document rather
-than reopening it per value. The path is relative to `/cfg`: an empty path, one beginning with `/`,
-or one holding a `..` segment is refused with `value_error`, and anything that is not a string with
-`type_error`, so a page cannot name a file outside `/cfg`. A document that is not there is not an
-error: the instance holds nothing, every `get` answers its fallback, and the first `save` creates the
-file.
-
-The instance's methods are the native `Config` class's:
-
-| Call | Returns | Notes |
-| --- | --- | --- |
-| `config.get(section, key, fallback)` | the fallback's type | the value for a section and key, or the fallback when the document holds none; a flat document's keys are in the empty section |
-| `config.set(section, key, value[, decimals])` | — | put the value into the document in memory; `decimals` is the places a real is written with, two by default. Nothing is written until `save()` |
-| `config.save()` | `bool` | write the whole document as it stands, once: `true` when it is written or nothing had changed since the document was read, `false` when the store refused it. A document that is not there is created |
-| `config.section_keys()` | list of strings | the section names holding at least one key, in document order |
-
-```berry
-var doc = store.config("routines/interval.cfg")
-var target = doc.get("", "target", 0.0)   # the flat file's key, in the empty section
-doc.set("", "target", 12.5)               # changes the document in memory
-doc.save()                                # writes /cfg/routines/interval.cfg
-```
-
-The class's own `Config():init()` still opens the device's own `/cfg/settings.ini`; calling
-`init()` on an instance from `store.config` replaces its document with that one.
-
-An instance writes its **whole document** on every `save()` that follows a change — the sections and
-keys as they stand, in the order they were read — so a comment in the file does not survive a write
-through an instance, and a write from another route after the instance was made is overwritten by
-its next `save`. Hold an instance to read a document repeatedly; a value another writer owns is the
-name forms' business.
-
-There is **no limit** on how many keys a document holds: `store.get(name)` answers every pair the
-file holds, a `set` adds a new key whatever the count, and a `save` answers `false` only when the
-document could not be written. The one cost is flash wear: a `save` writes only when a value changed
-since the document was read — setting the same value on every pass costs nothing, while storing a
-*changing* value on every pass wears the partition. Write on the event, not on the frame. A map
-`set` is one write for the whole map, and so is one `save` after any number of `set`s: however many
-keys a caller changes first, the document is written once.

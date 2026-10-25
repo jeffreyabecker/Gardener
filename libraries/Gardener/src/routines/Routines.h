@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "routines/GestureQueue.h"
-#include "storage/Values.h"
 
 // The vendored interpreter's VM type, forward declared so its header stops here.
 struct bvm;
@@ -23,8 +22,7 @@ class Library;
 //
 // The registry the browser drives is a Berry class (`/system/registry.be`) and the scene stack it
 // pushes onto is another (`/system/ux.be`); this side keeps only what the firmware has to: the VM,
-// the files it loads, the beat that drives the stack, the gesture queue, and the `store` surface that
-// reads and writes a routine's own document.
+// the files it loads, the beat that drives the stack, and the gesture queue.
 class Routines {
  public:
   // Creates the VM, installs the native modules, loads the files `/system/order` names, then every
@@ -56,23 +54,6 @@ class Routines {
   // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { gestures_.push(gesture); }
   bool takePress(String& gesture) { return gestures_.take(gesture); }
-
-  // --- the `store` module's surface ---
-  // The values a page keeps, in the document its name addresses, through the library the context
-  // gave. The document is a plain word: the file is named after it, so a path separator would
-  // address another file. The pair forms are one key; the document forms are the whole map of
-  // them, so a page that reads or writes every value pays one file read and at most one write.
-  bool storeGet(const char* document, const char* key, String& out);
-  bool storeSet(const char* document, const char* key, const String& value);
-
-  // Every value the document holds, in the order the file lists them. False when the name is not a
-  // plain word, the file is not there, or there is no library; `out` is left as it was.
-  bool storeGet(const char* document, Values& out);
-
-  // Every key `values` holds, merged into the document and written at most once. A key the
-  // document already holds with the same text is skipped, and a key `values` does not name is
-  // kept. False only when the document cannot be written.
-  bool storeSet(const char* document, const Values& values);
 
  private:
   size_t loadSystem(size_t& found);

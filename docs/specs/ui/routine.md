@@ -12,8 +12,8 @@ ships when you want to read one. Nothing here should need to change when one of 
 The panel UI is a stack of **scenes**. A routine file registers the class its scene is built from;
 the firmware polls the top scene and only the top scene, and a scene pushes or pops scenes with `ux`,
 the stack `/system/ux.be` defines. The registry the routine browser draws is a Berry class too — the
-global `routines` instance in `/system/registry.be` — so the only native additions over the older
-page model are the `store.*` forms and the panel's own modules.
+global `routines` instance in `/system/registry.be` — so the only native addition over the older
+page model is the `device` module's document call beside the panel's own modules.
 
 ## Where a routine lives and what it must look like
 
@@ -82,7 +82,7 @@ pushes directly.
 The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
 
-A routine's key is also the name of the file its values are kept in (see `store` in
+A routine's key is also the name of the file its values are kept in (see `device.config` in
 [bindings.md](./bindings.md)), so it has to be a plain word: a key containing `/` or `\` is
 refused at load.
 
@@ -376,7 +376,7 @@ edits it. It answers three questions:
 The store hands a value back as the text the file holds, so the kind parses it — `parse(text)`, one
 per kind: an int or a duration through `int()`, a real or a pressure through `real()`, a bool from
 `true`/`1`, a choice from its own list — and `value` holds the result. The registry does the
-reading: `load_settings` opens the routine's document once with `store.config` and asks it for each
+reading: `load_settings` opens the routine's document once with `device.config` and asks it for each
 declared key, so a setting names no file and opens none. Which file a value belongs to is the
 caller's, and the caller writes what the list settles on.
 

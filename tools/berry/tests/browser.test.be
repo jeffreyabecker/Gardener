@@ -5,6 +5,18 @@
 
 suite = "browser"
 
+# The document a routine's settings live in, opened fresh so a value a page wrote is seen by the
+# next read, and one key written through it.
+def settings_document(name)
+  return device.config("routines/" + name + ".cfg")
+end
+
+def write_setting(name, key, value)
+  var document = settings_document(name)
+  document.set("", key, value)
+  document.save()
+end
+
 def every_registration_is_listed()
   var routine_keys = routines.keys()
   var rows = routines.rows()
@@ -53,7 +65,7 @@ def forward_edits_the_selected_routines_settings()
   assert_true(at >= 0, "the browser does not list ramped_static")
   browserScene.list.selected = at
 
-  var before = store.get("ramped_static", "initial_pressure", 0.0)
+  var before = settings_document("ramped_static").get("", "initial_pressure", 0.0)
 
   harness.press("forward:single")
   harness.beat(1)
@@ -74,12 +86,12 @@ def forward_edits_the_selected_routines_settings()
   harness.beat(1)
   assert_eq(ux.depth(), 3, "OK did not close the settings list and launch the routine")
 
-  var after = store.get("ramped_static", "initial_pressure", 0.0)
+  var after = settings_document("ramped_static").get("", "initial_pressure", 0.0)
   assert_true(after != before, "the browser did not write the value the list settled on")
   assert_eq(ux.top().start_pressure, after, "the launched page did not start on the settled set")
   ux.pop_to_root()
   # The suites share one store, so the value this test stepped goes back where it was.
-  store.set("ramped_static", "initial_pressure", before)
+  write_setting("ramped_static", "initial_pressure", before)
 end
 
 test("Forward edits the selected routine's settings", forward_edits_the_selected_routines_settings)
@@ -88,8 +100,8 @@ test("Forward edits the selected routine's settings", forward_edits_the_selected
 # page starts on the values its file holds.
 def ok_launches_the_selected_routine()
   ux.pop_to_root()
-  var before = store.get("ramped_static", "initial_pressure", 0.0)
-  store.set("ramped_static", "initial_pressure", 7.5)
+  var before = settings_document("ramped_static").get("", "initial_pressure", 0.0)
+  write_setting("ramped_static", "initial_pressure", 7.5)
 
   assert_true(ux.push(browserScene), "the browser would not push")
   var at = -1
@@ -111,7 +123,7 @@ def ok_launches_the_selected_routine()
             "the launched page did not start on the values in its file")
 
   ux.pop_to_root()
-  store.set("ramped_static", "initial_pressure", before)
+  write_setting("ramped_static", "initial_pressure", before)
 end
 
 test("OK launches the selected routine on its values", ok_launches_the_selected_routine)

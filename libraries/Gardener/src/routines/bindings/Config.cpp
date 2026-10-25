@@ -148,17 +148,17 @@ const bnfuncinfo ConfigMembers[] = {
 }  // namespace
 
 // Answers an instance of the Config class over `document`, read once, with the document and its
-// name owned by the instance. The store's `config` call builds its document this way.
+// name owned by the instance. The device's `config` call builds its document this way.
 void pushConfigDocument(bvm* vm, const char* document) {
   if (context == nullptr) {
-    be_raise(vm, "runtime_error", "store.config: no panel context");
+    be_raise(vm, "runtime_error", "device.config: no panel context");
     return;
   }
   // The class makes the instance, and its own init opens the device's own document; that one is
   // replaced below and freed with the comobj the instance no longer holds.
   if (!be_getglobal(vm, "Config")) {
     be_pop(vm, 1);
-    be_raise(vm, "runtime_error", "store.config: no Config class");
+    be_raise(vm, "runtime_error", "device.config: no Config class");
     return;
   }
   be_call(vm, 0);

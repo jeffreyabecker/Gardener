@@ -1,7 +1,7 @@
 # harness.be — the driver's own bookkeeping, loaded after the image.
 #
 # There are no stubs here any more. The check compiles the firmware's bindings and runs them, so
-# `vacuum`, `screen`, `device`, `routines` and `store` are the device's own modules, the record
+# `vacuum`, `screen`, `device` and `routines` are the device's own modules, the record
 # classes are the ones Bindings.cpp declares, and the drive reaches the parts through the native
 # `harness` module (HarnessModule.cpp) instead of a model written in Berry.
 #

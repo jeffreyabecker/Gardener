@@ -221,6 +221,37 @@ int deviceTakeGesture(bvm* vm) {
   be_return(vm);
 }
 
+// Whether a path names a document under /cfg: it is relative, it is not empty, and no segment of it
+// climbs. A page that names a document must not reach one the store does not own.
+bool underConfig(const String& path) {
+  if (path.length() == 0 || path[0] == '/') return false;
+  int start = 0;
+  while (start <= (int)path.length()) {
+    int end = path.indexOf('/', (unsigned int)start);
+    if (end < 0) end = (int)path.length();
+    if (path.substring((unsigned int)start, (unsigned int)end) == "..") return false;
+    start = end + 1;
+  }
+  return true;
+}
+
+// device.config(path): a Config over /cfg/<path>, read once and held, so a page can keep a document
+// and read or write it with the class's own methods rather than a call per value.
+int deviceConfig(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "device.config(path)");
+  }
+  const String path(argText(vm, 1));
+  if (!underConfig(path)) {
+    be_raise(vm, "value_error", "device.config(path): a path under /cfg");
+  }
+
+  String document("/cfg/");
+  document += path;
+  pushConfigDocument(vm, document.c_str());
+  be_return(vm);
+}
+
 const bnfuncinfo DeviceLibrary[] = {
     {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
@@ -235,6 +266,7 @@ const bnfuncinfo DeviceLibrary[] = {
     {"tone", deviceTone},
     {"silence", deviceSilence},
     {"take_gesture", deviceTakeGesture},
+    {"config", deviceConfig},
     {nullptr, nullptr},
 };
 
