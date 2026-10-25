@@ -210,8 +210,8 @@ def harness_art(routine_key, seconds, path, sets)
 end
 
 # Draw one of the device's own scenes and save the frame as a BMP. The well-known scenes are not
-# registry entries — the readout is the root, and the browser and system scenes are the globals
-# ui.be sets — so they are reached by name here rather than through routines.push.
+# registry entries — the readout is the root, and the browser is the global browser.be sets — so they
+# are reached by name here rather than through routines.push.
 def harness_art_scene(name, seconds, path)
   harness.reset()
   var gif = harness.is_gif(path)
@@ -223,8 +223,6 @@ def harness_art_scene(name, seconds, path)
     var scene = nil
     if name == "browser"
       scene = browserScene
-    elif name == "system"
-      scene = systemScene
     end
     if scene == nil
       harness_fail("art: no scene named " + name)

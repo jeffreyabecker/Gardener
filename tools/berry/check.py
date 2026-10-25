@@ -17,7 +17,7 @@ driver walks the image's own routines.
 
 --art runs one routine and saves what it drew, using the Adafruit GFX library the device compiles
 for the fonts: an animated GIF of every beat by default, or a one-bit BMP when --out names a .bmp
-file. --scene does the same for one of the device's own scenes: readout, browser or system.
+file. --scene does the same for one of the device's own scenes: readout or browser.
 --tests saves a GIF per case that ran.
 """
 
@@ -165,7 +165,7 @@ parser.add_argument("--art", metavar="NAME", help="draw that routine and save th
 parser.add_argument(
     "--scene",
     metavar="NAME",
-    help="draw that device scene — readout, browser or system — and save the frame as a BMP",
+    help="draw that device scene — readout or browser — and save the frame as a BMP",
 )
 parser.add_argument(
     "--component",

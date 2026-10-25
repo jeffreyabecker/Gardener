@@ -72,9 +72,9 @@ non-nullable key being present, with a nullable key that holds nothing reading `
 A scene's `activate(args)` is the inherited no-op. A page that does its work in `init()` — every
 shipped routine does — leaves it alone.
 
-Every registration is listed: there is no hidden routine. The device's own scenes — the readout, the
-system settings and the browser — are not registered at all: they are well-known scenes in
-`/modules/ui.be` the system pushes directly.
+Every registration is listed: there is no hidden routine. The device's own scenes — the readout and
+the browser — are not registered at all: they are well-known scenes in `/modules/ui.be` the system
+pushes directly.
 
 The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
@@ -175,13 +175,15 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The device's own scenes ship in `/modules/ui.be` — the readout and the system settings — and
-`/modules/browser.be` — the routine browser, whose instance `browserScene` that file builds before
-`ui.be` compiles and names it. None of them registered. The system menu is itself a `SettingsScene`, over three settings that
-read and write the device through `screen.unit()` / `device.set_unit()`, `device.bluetooth()` and
-`device.jingle()` / `device.set_jingle()` rather than through a routine's file: a row there carries
-its own `current()` and `write(value)`, the radio row's `write` is empty and its `scene()` is `nil`
-so Forward has nothing to open, and the set it settled on is written when the menu leaves.
+The device's own scenes ship in `/modules/ui.be` — the readout — and `/modules/browser.be` — the
+routine browser, whose instance `browserScene` that file builds before `ui.be` compiles and names it.
+None of them registered. The readout holds a set of its own and opens the same list a page does, over
+`ReadoutSettings`: the target it works to, the unit it prints, the jingle it finishes with and the
+radio as a build fact. Every one of those is a device setting rather than a document, so the readout
+fills the set in from `device.target()`, `screen.unit()`, `device.jingle()` and `device.bluetooth()`,
+and writes it back through `device.set_target()`, `device.set_unit()` and `device.set_jingle()` when
+the list commits. The rows only declare their kinds — the radio row's `scene()` is `nil`, so Forward
+on it opens nothing — and the readout is what reads and writes them.
 
 ## When the firmware calls into a scene
 

@@ -27,7 +27,6 @@ Every scene, and where it lives:
 | --- | --- | --- |
 | `ReadoutScene` — the root | `modules/ui.be` | `on` |
 | `BrowserScene` | `modules/browser.be` | `on` |
-| `SystemScene` — a `SettingsScene` over the device's own settings | `modules/ui.be` | `handle_page` |
 | `SettingsScene` | `system/settings/scenes/settings_scene.be` | `handle_page` |
 | `ValueScene` — the value base | `system/settings/scenes/value_scene.be` | `handle_page` |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | `system/settings/scenes/` | inherited |
@@ -43,20 +42,15 @@ What each one answers:
 | Scene | Gesture | What it does |
 | --- | --- | --- |
 | `ReadoutScene` | `ok:single` | start or resume the run |
-| `ReadoutScene` | `ok:double` | open the target's pressure editor |
 | `ReadoutScene` | `cancel:single` | stop and vent |
 | `ReadoutScene` | `forward:double` | stop and vent, then push the routine browser |
-| `ReadoutScene` | `up:double` | push the system settings |
+| `ReadoutScene` | `up:double` | open the readout's settings list — the target, the unit, the jingle and the radio |
 
 | `BrowserScene` | `up:single`, `down:single` | move the selection |
 | `BrowserScene` | `forward:single` | open the selected routine's settings  |
 | `BrowserScene` | `ok:single` | push the selected routine |
 | `BrowserScene` | `back:single` | leave |
 | `BrowserScene` | `cancel:single` | leave |
-| `SystemScene` | `up:single`, `down:single` | move the row |
-| `SystemScene` | `forward:single` | open the row's value scene; nothing on the radio row, which is a build fact |
-| `SystemScene` | `back:single` | write the set it settled on, then leave |
-| `SystemScene` | `cancel:single` | write the set it settled on, then leave |
 | `SettingsScene` | `up:single`, `down:single` | move the row |
 | `SettingsScene` | `forward:single` | open the row's value scene, or nothing for a setting that has no editor |
 | `SettingsScene` | `back:single` | close the list, handing back the set as it was opened |
@@ -95,8 +89,8 @@ it is cancelled.
 1. A scene answers only what the table gives it; everything else is dropped.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
-3. `SettingsScene` and `SystemScene` answer the same gestures; a row and a setting are opened and
-   left the same way in both.
+3. Every settings list is a `SettingsScene`: the readout's own set and a routine's are opened and
+   left the same way.
 4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
    stage.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
