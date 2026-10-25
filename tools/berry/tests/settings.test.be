@@ -264,16 +264,20 @@ end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)
 
-# The editor contract: draw_page() frames the content and hands draw_editor the box inside the
-# border, so a kind draws in a box no bigger than what it holds and nothing it draws leaves the
-# frame. The frame is centred in the scene's own box, which is the box of the scene it was opened
-# over.
+# The editor contract: draw_page() frames the content a kind measures and hands draw_editor the box
+# inside the border, so a kind draws in a box no bigger than what it holds and nothing it draws
+# leaves the frame. The frame is centred in the scene's own box, which is the box of the scene it
+# was opened over.
 class RecordingEditor : ValueScene
   var window
 
   def init(label)
     super(self).init(label)
     self.window = nil
+  end
+
+  def content_size()
+    return Size(60, 30)
   end
 
   def draw_editor(pos, dim)
@@ -315,10 +319,9 @@ test("the page frames the editor and hands it the content box",
      the_page_frames_the_editor_and_hands_it_the_content_box)
 
 # Every kind measures and draws the whole of its own content, chrome included: a label row and a
-# hint row are in every one of them, whatever its body is.
+# hint row are in every one of them, whatever its body is. The base measures nothing of its own.
 def every_editor_measures_its_own_chrome()
   var editors = [
-    ValueScene("Label"),
     BoolScene("Flags", true, false),
     ChoiceScene("Mode", "a", choice_items(["a", "b"]), false),
     IntScene("Count", 7, 1, 1, 20, false),
@@ -334,6 +337,7 @@ def every_editor_measures_its_own_chrome()
     assert_true(content.w >= screen.text_bounds(scene.label, 1).w,
                 "an editor's content is narrower than its label")
   end
+  assert_eq(ValueScene("Label").content_size().w, 0, "the base measures a content of its own")
 end
 
 test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
@@ -378,12 +382,6 @@ def show_editor(scene)
   assert_true(ux.push(scene), "the editor would not push")
   harness.beat(1)
 end
-
-def the_default_editor_draws_its_three_lines()
-  show_editor(ValueScene("Label"))
-end
-
-test("the default editor draws its three lines", the_default_editor_draws_its_three_lines)
 
 def the_bool_editor_draws_on()
   show_editor(BoolScene("Flags", true, false))

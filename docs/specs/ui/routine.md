@@ -129,9 +129,9 @@ readout looks like.
 declaration's list into them. `view.be` is `SettingsView`, the list's own geometry: the row a
 setting is drawn on, the gap under its heading and the window a box holds.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top, frames the content a kind measures, and pops the value it holds; the base
-and every kind measure and draw the whole of their own content — label row, value and hint row — so
-nothing about a kind's look is inherited) and the value it
+keys while it is on top, frames the content a kind measures, and pops the value it holds; it draws
+nothing itself, so every kind measures and draws the whole of its own content — label row, value and
+hint row — and nothing about a kind's look is inherited) and the value it
 pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting

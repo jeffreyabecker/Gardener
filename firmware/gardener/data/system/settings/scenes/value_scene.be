@@ -4,8 +4,7 @@
 #
 # The base is the frame and the keys: it measures the content a kind answers for and draws a border
 # round it, and the kind draws the whole of that content — its label row, its value and its hint row
-# — in the box it is handed. Nothing about how a value looks is inherited; the editor at the bottom
-# of this file is the default for a scene with no kind of its own.
+# — in the box it is handed. Nothing about how a value looks is in this file.
 
 # What a value scene pops when Cancel was pressed. A setting whose kind allows nothing cannot use
 # nil to mean both "cleared" and "cancelled", so a cancel needs a value of its own.
@@ -78,30 +77,14 @@ class ValueScene : Scene
     self.draw_editor(Position(x + 2, y + 2), Size(w - 4, h - 4))
   end
 
-  # The default editor: the value on a line of its own, under the label and over the hint. A kind
-  # measures its own content and draws the whole of it, label and hint included.
+  # What this editor draws, as the content the frame wraps: the whole of it, its label row and hint
+  # row included. A kind answers it; the base draws nothing of its own.
   def content_size()
-    var value = Text(nil, nil, self.text())
-    var bounds = value.bounds(self.text(), value.fit(self.text(), self.dim.w - 6, 16))
-    var wide = bounds[0]
-    var label_w = screen.text_bounds(self.label, 1).w
-    if label_w > wide
-      wide = label_w
-    end
-    var hint_w = screen.text_bounds(self.hint(), 1).w
-    if hint_w > wide
-      wide = hint_w
-    end
-    return Size(wide, 20 + bounds[1])
+    return Size(0, 0)
   end
 
+  # The editor itself, in the box inside the frame. A kind draws the whole of its content here.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-    Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), self.text()).draw()
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
   end
 
   def hint()

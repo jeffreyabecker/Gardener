@@ -117,7 +117,8 @@ it is cancelled.
    content — its label row, its body and its hint row — and `draw_page()` draws a border a pixel
    outside that content, centred in the scene's own box with at least a pixel of paper between the
    frame and the edge of the box, then hands `draw_editor(pos, dim)` the content box inside the
-   border. Each kind measures and draws the whole of its content in that box, chrome included: no
-   label row, hint row or spacing is inherited, so a kind's look is its own.
+   border. The base measures nothing and draws nothing of its own: every kind answers both, and
+   draws the whole of its content in that box, chrome included. No label row, hint row or spacing is
+   inherited, so a kind's look is its own.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.
