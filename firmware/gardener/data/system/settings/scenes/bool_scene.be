@@ -63,11 +63,22 @@ class BoolScene : ValueScene
     return widest
   end
 
-  # The most a chip's ink may be: its share of the room the box has across, less the gaps between
-  # the chips and the pixel of paper inside each one.
+  def ink(text, max_w, max_h)
+    var text_box = Text(nil, nil, text)
+    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
+    return Size(bounds[0], bounds[1])
+  end
+
+  def face(text, max_w, max_h)
+    return Text(nil, nil, text).fit(text, max_w, max_h)
+  end
+
+  # The most a chip's ink may be: its share of the scene's box across, less the three pixels of
+  # frame either side, the gaps between the chips and the pixel of paper inside each one — and no
+  # taller than 16, so the switch stays a control rather than a readout.
   def chip_cap()
     var count = self.states().size()
-    return Size((self.body_width() - (count - 1)) / count - 2, self.ink_cap())
+    return Size((self.dim.w - 6 - (count - 1)) / count - 2, 16)
   end
 
   # The face every chip is drawn in, so the segments are one size.
@@ -83,14 +94,27 @@ class BoolScene : ValueScene
     return self.ink(self.widest_label(), self.chip_cap().w, self.chip_cap().h).h + 2
   end
 
-  def body_size()
+  # The label row, the chips and the hint row: eight pixels a row, a gap of two above and below the
+  # chips, and the content as wide as the widest of the three.
+  def content_size()
     var count = self.states().size()
-    return Size(count * self.chip_width() + count - 1, self.chip_height())
+    var wide = count * self.chip_width() + count - 1
+    var label_w = screen.text_bounds(self.label, 1).w
+    if label_w > wide
+      wide = label_w
+    end
+    var hint_w = screen.text_bounds(self.hint(), 1).w
+    if hint_w > wide
+      wide = hint_w
+    end
+    return Size(wide, 20 + self.chip_height())
   end
 
   def draw_editor(pos, dim)
-    self.draw_chrome(pos, dim)
-    var band = self.value_band(pos, dim)
+    var label_w = screen.text_bounds(self.label, 1).w
+    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
+
+    var band = [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20)]
     var states = self.states()
     var chip_w = self.chip_width()
     var chip_h = self.chip_height()
@@ -105,6 +129,10 @@ class BoolScene : ValueScene
       x += chip_w + 1
       i += 1
     end
+
+    var hint = self.hint()
+    var hint_w = screen.text_bounds(hint, 1).w
+    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
   end
 end
 

@@ -87,8 +87,12 @@ class ChoiceScene : ValueScene
     return str(self.title_at(self.index()))
   end
 
-  # The choices as a short list in the value band, the selected one inverted and scrolled into view.
-  # A nil value is no choice at all, so the band shows the editor's `--` instead.
+  def ink(text, max_w, max_h)
+    var text_box = Text(nil, nil, text)
+    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
+    return Size(bounds[0], bounds[1])
+  end
+
   def row_width()
     var wide = 0
     for item : self.values
@@ -103,9 +107,11 @@ class ChoiceScene : ValueScene
     return wide
   end
 
-  # The rows the box has room for, and no more than there are choices.
+  # The rows the box has room for — the scene's box less the three pixels of frame either side, the
+  # eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no more than
+  # there are choices.
   def visible_rows()
-    var fit = self.body_cap() / SettingsView.row
+    var fit = (self.dim.h - 26) / 8
     if fit < 1
       fit = 1
     end
@@ -113,13 +119,6 @@ class ChoiceScene : ValueScene
       fit = self.values.size()
     end
     return fit
-  end
-
-  def body_size()
-    if self.current == nil
-      return self.ink("--", self.body_width(), self.ink_cap())
-    end
-    return Size(self.row_width(), self.visible_rows() * SettingsView.row)
   end
 
   def rows()
@@ -130,19 +129,46 @@ class ChoiceScene : ValueScene
     return out
   end
 
+  # The label row, the list and the hint row: eight pixels a row, a gap of two above and below the
+  # list, and the content as wide as the widest of the three.
+  def content_size()
+    var wide = self.row_width()
+    var tall = self.visible_rows() * 8
+    if self.current == nil
+      wide = self.ink("--", self.dim.w - 6, 16).w
+      tall = self.ink("--", self.dim.w - 6, 16).h
+    end
+    var label_w = screen.text_bounds(self.label, 1).w
+    if label_w > wide
+      wide = label_w
+    end
+    var hint_w = screen.text_bounds(self.hint(), 1).w
+    if hint_w > wide
+      wide = hint_w
+    end
+    return Size(wide, 20 + tall)
+  end
+
+  # The choices as a short list, the selected one inverted and scrolled into view. A nil value is no
+  # choice at all, so the band shows the editor's `--` instead.
   def draw_editor(pos, dim)
-    self.draw_chrome(pos, dim)
-    var band = self.value_band(pos, dim)
+    var label_w = screen.text_bounds(self.label, 1).w
+    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
+
+    var band = [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20)]
     if self.current == nil
       Text(band[0], band[1], "--").draw()
-      return
+    else
+      var menu = List(self.visible_rows())
+      menu.set(self.rows())
+      menu.selected = self.index()
+      menu.draw(band[0].x + (band[1].w - self.row_width()) / 2,
+                band[0].y + (band[1].h - self.visible_rows() * 8) / 2)
     end
 
-    var menu = List(self.visible_rows())
-    menu.set(self.rows())
-    menu.selected = self.index()
-    menu.draw(band[0].x + (band[1].w - self.row_width()) / 2,
-              band[0].y + (band[1].h - self.visible_rows() * SettingsView.row) / 2)
+    var hint = self.hint()
+    var hint_w = screen.text_bounds(hint, 1).w
+    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
   end
 end
 

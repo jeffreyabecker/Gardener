@@ -126,13 +126,12 @@ readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
 `ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
-declaration's list into them. `view.be` is `SettingsView`, the one place the view's geometry lives:
-the frame's margin, border and padding, the row and gap the list and the chrome are laid out on, and
-the tallest ink a value may take.
+declaration's list into them. `view.be` is `SettingsView`, the list's own geometry: the row a
+setting is drawn on, the gap under its heading and the window a box holds.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top; `draw_page()` measures its content, frames it and hands its
-`draw_editor(pos, dim)` the box inside the border, and the base draws its label, value and hint
-centered in a block the size of their ink) and the value it
+keys while it is on top, frames the content a kind measures, and pops the value it holds; the base
+and every kind measure and draw the whole of their own content — label row, value and hint row — so
+nothing about a kind's look is inherited) and the value it
 pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting

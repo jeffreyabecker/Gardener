@@ -289,29 +289,54 @@ def the_page_frames_the_editor_and_hands_it_the_content_box()
   assert_eq(scene.window[2], content.w, "the editor's box is not the content's width")
   assert_eq(scene.window[3], content.h, "the editor's box is not the content's height")
 
-  var inset = SettingsView.padding + SettingsView.border
-  var frame_x = scene.window[0] - inset
-  var frame_y = scene.window[1] - inset
-  var frame_w = scene.window[2] + 2 * inset
-  var frame_h = scene.window[3] + 2 * inset
+  # The frame is the content and the two pixels the border keeps either side of it: one of paper, one
+  # of ink.
+  var frame_x = scene.window[0] - 2
+  var frame_y = scene.window[1] - 2
+  var frame_w = scene.window[2] + 4
+  var frame_h = scene.window[3] + 4
   assert_true(frame_w < scene.dim.w, "the frame is as wide as the scene's box")
   assert_true(frame_h < scene.dim.h, "the frame is as tall as the scene's box")
 
   var left = frame_x - scene.pos.x
   var right = scene.pos.x + scene.dim.w - (frame_x + frame_w)
-  assert_true(left >= SettingsView.margin, "the frame keeps no margin from the box's left")
-  assert_true(right >= SettingsView.margin, "the frame keeps no margin from the box's right")
+  assert_true(left >= 1, "the frame keeps no margin from the box's left")
+  assert_true(right >= 1, "the frame keeps no margin from the box's right")
   assert_true(left - right < 2 && right - left < 2, "the frame is not centered across the box")
 
   var top = frame_y - scene.pos.y
   var bottom = scene.pos.y + scene.dim.h - (frame_y + frame_h)
-  assert_true(top >= SettingsView.margin, "the frame keeps no margin from the box's top")
-  assert_true(bottom >= SettingsView.margin, "the frame keeps no margin from the box's bottom")
+  assert_true(top >= 1, "the frame keeps no margin from the box's top")
+  assert_true(bottom >= 1, "the frame keeps no margin from the box's bottom")
   assert_true(top - bottom < 2 && bottom - top < 2, "the frame is not centered down the box")
 end
 
 test("the page frames the editor and hands it the content box",
      the_page_frames_the_editor_and_hands_it_the_content_box)
+
+# Every kind measures and draws the whole of its own content, chrome included: a label row and a
+# hint row are in every one of them, whatever its body is.
+def every_editor_measures_its_own_chrome()
+  var editors = [
+    ValueScene("Label"),
+    BoolScene("Flags", true, false),
+    ChoiceScene("Mode", "a", choice_items(["a", "b"]), false),
+    IntScene("Count", 7, 1, 1, 20, false),
+    RealScene("Gain", 0.5, 0.5, nil, nil, false),
+    PressureScene("Rest", 5.0, 1, false),
+    DurationScene("Hold", 90, 1, 0, 7200, false)
+  ]
+  for scene : editors
+    scene.activate()
+    var content = scene.content_size()
+    assert_true(content.h >= 20, "an editor does not measure its own label and hint rows")
+    assert_true(content.w > 0, "an editor measures itself as no wider than nothing")
+    assert_true(content.w >= screen.text_bounds(scene.label, 1).w,
+                "an editor's content is narrower than its label")
+  end
+end
+
+test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
 
 # A scene opened over another draws in that scene's box: the settings list and every value editor
 # ask the stack for the box of the scene they are pushed over.
