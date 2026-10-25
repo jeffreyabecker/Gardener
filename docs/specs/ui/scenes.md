@@ -98,7 +98,10 @@ it is cancelled.
    left the same way. A list that fits in the page draws a centered block the size of its rows,
    with the heading dropped; a longer list fills the page and scrolls, keeping its heading.
 4. `ValueScene` and everything built on it answer the same gestures; only `DurationScene` adds a
-   stage. The editor draws its label, value and hint centered in a block the size of their ink, with
-   no heading.
+   stage. The page hands the editor the whole page area — `screen.page_width()` ×
+   `screen.page_height()`, no heading — and the editor draws itself in it through
+   `draw_editor(pos, dim)`. The base draws its label, value and hint centered in a block the size of
+   their ink; each kind draws its own value, with the label across the top of the window and the
+   hint across the bottom.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

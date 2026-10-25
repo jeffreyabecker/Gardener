@@ -46,7 +46,7 @@ void HomeUI::update() {
 
 void HomeUI::drawFrame() {
   Display& panel = context_.display();
-  panel.clear();
+  panel.clear(Paper);
   panel.bitmap(0, 0, MarkBits);
   panel.display();
 }

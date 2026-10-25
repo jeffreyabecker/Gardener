@@ -66,7 +66,7 @@ int16_t Overlay::pageHeight() const { return inner_->height() - kBandHeight; }
 // The overlay goes down last, so it lands on top of whatever the page drew and no page has to know
 // it exists.
 void Overlay::display() {
-  inner_->clearRect(0, kBandY, inner_->width(), kBandHeight);
+  inner_->fillRect(0, kBandY, inner_->width(), kBandHeight, Paper);
   drawUnit();
   drawConnections();
   drawStateIcon();
@@ -136,24 +136,25 @@ void Overlay::batteryIcon(int16_t x, int16_t y, uint8_t percent) {
   // The icon owns its whole footprint, so it erases it first: a page may have drawn anything
   // under it, and filling over the page without clearing would read as a battery with the page's
   // pixels still visible inside it.
-  inner_->clearRect(x, y, kBatteryIconWidth, kBatteryBodyHeight);
-  inner_->rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight);
-  inner_->fillRect(x + kBatteryBodyWidth, y + 2, 2, 3);  // nub
+  inner_->fillRect(x, y, kBatteryIconWidth, kBatteryBodyHeight, Paper);
+  inner_->rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight, Ink);
+  inner_->fillRect(x + kBatteryBodyWidth, y + 2, 2, 3, Ink);  // nub
   if (percent == 0) return;
   int16_t interior = kBatteryBodyWidth - 4;  // 1 px frame plus 1 px of gap
   int16_t fill = (int16_t)((int32_t)interior * percent / 100);
   if (fill < 1) fill = 1;  // any charge at all shows something
   if (fill > interior) fill = interior;
-  inner_->fillRect(x + 2, y + 2, fill, kBatteryBodyHeight - 4);
+  inner_->fillRect(x + 2, y + 2, fill, kBatteryBodyHeight - 4, Ink);
 }
 
 // No gauge fitted: the battery's outline with a slash through it, so the cell says there is no
 // battery rather than no charge.
 void Overlay::emptyBatteryIcon(int16_t x, int16_t y) {
-  inner_->clearRect(x, y, kBatteryIconWidth, kBatteryBodyHeight);
-  inner_->rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight);
-  inner_->fillRect(x + kBatteryBodyWidth, y + 2, 2, 3);  // nub
-  inner_->line(x + 1, y + 1, x + kBatteryBodyWidth - 2, y + kBatteryBodyHeight - 2);
+  inner_->fillRect(x, y, kBatteryIconWidth, kBatteryBodyHeight, Paper);
+  inner_->rect(x, y, kBatteryBodyWidth, kBatteryBodyHeight, Ink);
+  inner_->fillRect(x + kBatteryBodyWidth, y + 2, 2, 3, Ink);  // nub
+  inner_->line(x + 1, y + 1, x + kBatteryBodyWidth - 2, y + kBatteryBodyHeight - 2,
+               Ink);
 }
 
 // The glass prints one unit, so the overlay says which rather than every page writing the suffix

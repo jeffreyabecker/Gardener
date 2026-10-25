@@ -76,6 +76,27 @@ class DurationScene : ValueScene
     return super(self).handle_page(ev)
   end
 
+  # Minutes and seconds as two fields side by side, each suffixed and at the largest face, with the
+  # stage the keys are stepping inverted. A nil value has no stages to show.
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    if self.current == nil
+      Text(band[0], band[1], "--").draw()
+      return
+    end
+
+    var half = band[1].w / 2
+    var minutes = Text(Position(band[0].x, band[0].y), Size(half - 2, band[1].h),
+                       str(self.current / 60) + "m")
+    minutes.inverted = self.stage == "min"
+    minutes.draw()
+    var seconds = Text(Position(band[0].x + half + 2, band[0].y), Size(half - 2, band[1].h),
+                       str(self.current % 60) + "s")
+    seconds.inverted = self.stage != "min"
+    seconds.draw()
+  end
+
   def hint()
     if self.stage == "min"
       return "MIN UP/DOWN  FWD=NEXT"

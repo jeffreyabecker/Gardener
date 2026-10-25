@@ -44,7 +44,7 @@ class AdafruitDisplay : public Display {
   void setRotation(uint8_t rotation) override { panel_.setRotation(rotation); }
 
   // --- the screen ----------------------------------------------------------
-  void clear() override { panel_.fillScreen(kPaper); }
+  void clear(uint8_t color) override { panel_.fillScreen(color); }
   void setInverted(bool on) override {
     inverted_ = on;
     panel_.invertDisplay(on);
@@ -52,9 +52,8 @@ class AdafruitDisplay : public Display {
   bool inverted() const override { return inverted_; }
 
   // --- pixels, lines and shapes --------------------------------------------
-  void pixel(int16_t x, int16_t y) override { panel_.drawPixel(x, y, kInk); }
-  void clearRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.fillRect(x, y, w, h, kPaper);
+  void pixel(int16_t x, int16_t y, uint8_t color) override {
+    panel_.drawPixel(x, y, color);
   }
   void invert(int16_t x, int16_t y, int16_t w, int16_t h) override {
     // kFlip is Adafruit's own "toggle this pixel" colour: the monochrome drivers xor the bit
@@ -65,45 +64,56 @@ class AdafruitDisplay : public Display {
       }
     }
   }
-  void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) override {
-    panel_.drawLine(x0, y0, x1, y1, kInk);
+  void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) override {
+    panel_.drawLine(x0, y0, x1, y1, color);
   }
-  void hLine(int16_t x, int16_t y, int16_t w) override { panel_.drawFastHLine(x, y, w, kInk); }
-  void vLine(int16_t x, int16_t y, int16_t h) override { panel_.drawFastVLine(x, y, h, kInk); }
-  void rect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.drawRect(x, y, w, h, kInk);
+  void hLine(int16_t x, int16_t y, int16_t w, uint8_t color) override {
+    panel_.drawFastHLine(x, y, w, color);
   }
-  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    panel_.fillRect(x, y, w, h, kInk);
+  void vLine(int16_t x, int16_t y, int16_t h, uint8_t color) override {
+    panel_.drawFastVLine(x, y, h, color);
   }
-  void roundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    panel_.drawRoundRect(x, y, w, h, r, kInk);
+  void rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color) override {
+    panel_.drawRect(x, y, w, h, color);
   }
-  void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    panel_.fillRoundRect(x, y, w, h, r, kInk);
+  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color) override {
+    panel_.fillRect(x, y, w, h, color);
   }
-  void circle(int16_t x, int16_t y, int16_t r) override { panel_.drawCircle(x, y, r, kInk); }
-  void fillCircle(int16_t x, int16_t y, int16_t r) override { panel_.fillCircle(x, y, r, kInk); }
-  void ellipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    panel_.drawEllipse(x, y, rw, rh, kInk);
+  void roundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                 uint8_t color) override {
+    panel_.drawRoundRect(x, y, w, h, r, color);
   }
-  void fillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    panel_.fillEllipse(x, y, rw, rh, kInk);
+  void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                     uint8_t color) override {
+    panel_.fillRoundRect(x, y, w, h, r, color);
   }
-  void triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                int16_t y2) override {
-    panel_.drawTriangle(x0, y0, x1, y1, x2, y2, kInk);
+  void circle(int16_t x, int16_t y, int16_t r, uint8_t color) override {
+    panel_.drawCircle(x, y, r, color);
   }
-  void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                    int16_t y2) override {
-    panel_.fillTriangle(x0, y0, x1, y1, x2, y2, kInk);
+  void fillCircle(int16_t x, int16_t y, int16_t r, uint8_t color) override {
+    panel_.fillCircle(x, y, r, color);
   }
-  void rotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle) override {
-    panel_.drawRotatedRect(cx, cy, w, h, angle, kInk);
+  void ellipse(int16_t x, int16_t y, int16_t rw, int16_t rh, uint8_t color) override {
+    panel_.drawEllipse(x, y, rw, rh, color);
   }
-  void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h,
-                       int16_t angle) override {
-    panel_.fillRotatedRect(cx, cy, w, h, angle, kInk);
+  void fillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh, uint8_t color) override {
+    panel_.fillEllipse(x, y, rw, rh, color);
+  }
+  void triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+                uint8_t color) override {
+    panel_.drawTriangle(x0, y0, x1, y1, x2, y2, color);
+  }
+  void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+                    uint8_t color) override {
+    panel_.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+  }
+  void rotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle,
+                   uint8_t color) override {
+    panel_.drawRotatedRect(cx, cy, w, h, angle, color);
+  }
+  void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle,
+                       uint8_t color) override {
+    panel_.fillRotatedRect(cx, cy, w, h, angle, color);
   }
   void bitmap(int16_t x, int16_t y, const uint8_t* bits) override {
     const int16_t width = bits[0];
@@ -115,7 +125,7 @@ class AdafruitDisplay : public Display {
     for (int16_t row = 0; row < height; row++) {
       const uint8_t* line = rows + row * stride;
       for (int16_t col = 0; col < width; col++) {
-        if (inkAt(line, col)) hLine(x + col, y + row, 1);
+        if (inkAt(line, col)) hLine(x + col, y + row, 1, Ink);
       }
     }
   }
@@ -139,12 +149,10 @@ class AdafruitDisplay : public Display {
   void glyph(int16_t x, int16_t y, uint8_t code, uint8_t size) override {
     // drawChar is the one verb that takes a raw code: print() would read 0x0A as a newline, and
     // the band's state icons need the glyph itself. Ink for both colours means no background.
-    panel_.drawChar(x, y, code, kInk, kInk, size);
+    panel_.drawChar(x, y, code, Ink, Ink, size);
   }
 
  private:
-  static constexpr uint16_t kInk = 1;
-  static constexpr uint16_t kPaper = 0;
   static constexpr uint16_t kFlip = 2;
 
   void draw(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) {
@@ -152,9 +160,9 @@ class AdafruitDisplay : public Display {
     // An opaque background is what makes inverted text readable; Adafruit_GFX spells "no
     // background" by setting the ink and the paper to the same value.
     if (inverted) {
-      panel_.setTextColor(kPaper, kInk);
+      panel_.setTextColor(Paper, Ink);
     } else {
-      panel_.setTextColor(kInk);
+      panel_.setTextColor(Ink);
     }
     panel_.setCursor(x, y);
     panel_.print(value);

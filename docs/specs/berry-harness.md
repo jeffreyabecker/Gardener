@@ -87,7 +87,7 @@ image loads before anything else — and the seven native modules a routine call
 | Module | On the host |
 | --- | --- |
 | `vacuum` | a machine model: `state()`, `target()`, `start()`, `stop()`, `log()` |
-| `screen` | every drawing verb forwarded to `frame`, real `text_bounds`, ink and unit |
+| `screen` | every drawing verb forwarded to `frame` with its ink-or-paper colour, real `text_bounds`, and the unit |
 | `buttons` | a queue: `harness.press("ok:single")` pushes one whole gesture string, delivered one beat at a time |
 | `buzzer` | counts sounds rather than playing them |
 | `device` | the unit, the jingle, and the reboot and reset requests |

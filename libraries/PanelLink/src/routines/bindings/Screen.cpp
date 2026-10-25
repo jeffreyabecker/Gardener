@@ -35,8 +35,24 @@ const GFXfont* argFont(bvm* vm, int index, const char* function) {
   return face;
 }
 
+// The colour a drawing call asks for: an optional last argument, and the fallback the call names
+// when it is absent or nil. Only 0 — paper — and 1 — ink — are colours, so a call can erase as well
+// as draw; nothing else is a third shade. The message names the call that got it wrong, as the
+// face argument's does.
+uint8_t argColor(bvm* vm, int index, const char* function, uint8_t fallback) {
+  if (be_top(vm) < index || be_isnil(vm, index)) return fallback;
+  const bool integer = be_isint(vm, index);
+  const bint value = integer ? be_toint(vm, index) : 0;
+  if (!integer || (value != 0 && value != 1)) {
+    char message[64];
+    snprintf(message, sizeof(message), "screen.%s: colour 0 or 1 expected", function);
+    be_raise(vm, integer ? "value_error" : "type_error", message);
+  }
+  return static_cast<uint8_t>(value);
+}
+
 int screenClear(bvm* vm) {
-  panel().clear();
+  panel().clear(argColor(vm, 1, "draw_clear", Paper));
   be_return_nil(vm);
 }
 
@@ -71,86 +87,97 @@ int screenPageHeight(bvm* vm) {
 }
 
 int screenPixel(bvm* vm) {
-  panel().pixel(argInt(vm, 1), argInt(vm, 2));
+  panel().pixel(argInt(vm, 1), argInt(vm, 2), argColor(vm, 3, "draw_pixel", Ink));
   be_return_nil(vm);
 }
 
 int screenLine(bvm* vm) {
-  panel().line(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  panel().line(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+               argColor(vm, 5, "draw_line", Ink));
   be_return_nil(vm);
 }
 
 int screenHLine(bvm* vm) {
-  panel().hLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3));
+  panel().hLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                argColor(vm, 4, "draw_hline", Ink));
   be_return_nil(vm);
 }
 
 int screenVLine(bvm* vm) {
-  panel().vLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3));
+  panel().vLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                argColor(vm, 4, "draw_vline", Ink));
   be_return_nil(vm);
 }
 
 int screenRect(bvm* vm) {
-  panel().rect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  panel().rect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+               argColor(vm, 5, "draw_rect", Ink));
   be_return_nil(vm);
 }
 
 int screenFillRect(bvm* vm) {
-  panel().fillRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  panel().fillRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                   argColor(vm, 5, "draw_fillrect", Ink));
   be_return_nil(vm);
 }
 
 int screenRoundRect(bvm* vm) {
-  panel().roundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5));
+  panel().roundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
+                    argColor(vm, 6, "draw_roundrect", Ink));
   be_return_nil(vm);
 }
 
 int screenFillRoundRect(bvm* vm) {
   panel().fillRoundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                        argInt(vm, 5));
+                        argInt(vm, 5), argColor(vm, 6, "draw_fillroundrect", Ink));
   be_return_nil(vm);
 }
 
 int screenCircle(bvm* vm) {
-  panel().circle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3));
+  panel().circle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                 argColor(vm, 4, "draw_circle", Ink));
   be_return_nil(vm);
 }
 
 int screenFillCircle(bvm* vm) {
-  panel().fillCircle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3));
+  panel().fillCircle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                     argColor(vm, 4, "draw_fillcircle", Ink));
   be_return_nil(vm);
 }
 
 int screenEllipse(bvm* vm) {
-  panel().ellipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  panel().ellipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                  argColor(vm, 5, "draw_ellipse", Ink));
   be_return_nil(vm);
 }
 
 int screenFillEllipse(bvm* vm) {
-  panel().fillEllipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  panel().fillEllipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                      argColor(vm, 5, "draw_fillellipse", Ink));
   be_return_nil(vm);
 }
 
 int screenTriangle(bvm* vm) {
   panel().triangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                   argInt(vm, 6));
+                   argInt(vm, 6), argColor(vm, 7, "draw_triangle", Ink));
   be_return_nil(vm);
 }
 
 int screenFillTriangle(bvm* vm) {
   panel().fillTriangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                       argInt(vm, 6));
+                       argInt(vm, 6), argColor(vm, 7, "draw_filltriangle", Ink));
   be_return_nil(vm);
 }
 
 int screenRotatedRect(bvm* vm) {
-  panel().rotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5));
+  panel().rotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
+                      argColor(vm, 6, "draw_rotatedrect", Ink));
   be_return_nil(vm);
 }
 
 int screenFillRotatedRect(bvm* vm) {
   panel().fillRotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                          argInt(vm, 5));
+                          argInt(vm, 5), argColor(vm, 6, "draw_fillrotatedrect", Ink));
   be_return_nil(vm);
 }
 

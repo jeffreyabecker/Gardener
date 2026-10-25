@@ -202,3 +202,105 @@ def a_repair_puts_a_set_back()
 end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)
+
+# The editor contract: draw_page() hands draw_editor the page window and draws nothing itself, so a
+# kind's override controls the whole rendering.
+class RecordingEditor : ValueScene
+  var window
+
+  def init(label)
+    super(self).init(label)
+    self.window = nil
+  end
+
+  def draw_editor(pos, dim)
+    self.window = [pos.x, pos.y, dim.w, dim.h]
+  end
+end
+
+def the_page_hands_the_editor_its_window()
+  var scene = RecordingEditor("Label")
+  scene.draw_page()
+  assert_eq(scene.window[0], 0, "the editor window does not start at the page's left")
+  assert_eq(scene.window[1], 0, "the editor window does not start at the page's top")
+  assert_eq(scene.window[2], screen.page_width(), "the editor window is not the page's width")
+  assert_eq(scene.window[3], screen.page_height(), "the editor window is not the page's height")
+end
+
+test("the page hands the editor its window", the_page_hands_the_editor_its_window)
+
+# Each kind draws itself from that window. A case pushes its editor and beats once, which is the
+# frame the runner captures — the picture to look at. The nil cases are the ones with no value to
+# show and no bar or highlight to place.
+def show_editor(scene)
+  assert_true(ux.push(scene), "the editor would not push")
+  harness.beat(1)
+end
+
+def the_default_editor_draws_its_three_lines()
+  show_editor(ValueScene("Label"))
+end
+
+test("the default editor draws its three lines", the_default_editor_draws_its_three_lines)
+
+def the_bool_editor_draws_on()
+  show_editor(BoolScene("Flags", true, false))
+end
+
+test("the bool editor draws ON", the_bool_editor_draws_on)
+
+def the_bool_editor_draws_off()
+  show_editor(BoolScene("Flags", false, false))
+end
+
+test("the bool editor draws OFF", the_bool_editor_draws_off)
+
+def the_bool_editor_draws_nothing()
+  show_editor(BoolScene("Flags", nil, true))
+end
+
+test("the bool editor draws a nullable nothing", the_bool_editor_draws_nothing)
+
+def the_choice_editor_draws_its_list()
+  show_editor(ChoiceScene("Mode", "b", choice_items(["a", "b", "c", "d", "e"]), false))
+end
+
+test("the choice editor draws its list", the_choice_editor_draws_its_list)
+
+def the_choice_editor_draws_nothing()
+  show_editor(ChoiceScene("Mode", nil, choice_items(["a", "b"]), true))
+end
+
+test("the choice editor draws a nullable nothing", the_choice_editor_draws_nothing)
+
+def the_int_editor_draws_between_its_bounds()
+  show_editor(IntScene("Count", 7, 1, 1, 20, false))
+end
+
+test("the int editor draws between its bounds", the_int_editor_draws_between_its_bounds)
+
+def the_real_editor_draws_without_a_bar()
+  show_editor(RealScene("Gain", 0.5, 0.5, nil, nil, false))
+end
+
+test("the real editor draws without a bar", the_real_editor_draws_without_a_bar)
+
+def the_pressure_editor_draws_in_the_panel_unit()
+  show_editor(PressureScene("Rest", 5.0, 1, false))
+end
+
+test("the pressure editor draws in the panel unit", the_pressure_editor_draws_in_the_panel_unit)
+
+def the_duration_editor_draws_its_minutes()
+  show_editor(DurationScene("Hold", 90, 1, 0, 7200, false))
+end
+
+test("the duration editor draws its minutes", the_duration_editor_draws_its_minutes)
+
+def the_duration_editor_draws_its_seconds()
+  var scene = DurationScene("Hold", 90, 1, 0, 7200, false)
+  scene.stage = "sec"
+  show_editor(scene)
+end
+
+test("the duration editor draws its seconds", the_duration_editor_draws_its_seconds)

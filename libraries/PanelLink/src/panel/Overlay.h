@@ -42,57 +42,65 @@ class Overlay : public Display {
   void setRotation(uint8_t rotation) override { inner_->setRotation(rotation); }
 
   // --- the screen ----------------------------------------------------------
-  void clear() override { inner_->clear(); }
+  void clear(uint8_t color) override { inner_->clear(color); }
   void setInverted(bool on) override { inner_->setInverted(on); }
   bool inverted() const override { return inner_->inverted(); }
 
   // --- pixels, lines and shapes --------------------------------------------
-  void pixel(int16_t x, int16_t y) override { inner_->pixel(x, y); }
-  void clearRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    inner_->clearRect(x, y, w, h);
-  }
+  void pixel(int16_t x, int16_t y, uint8_t color) override { inner_->pixel(x, y, color); }
   void invert(int16_t x, int16_t y, int16_t w, int16_t h) override {
     inner_->invert(x, y, w, h);
   }
-  void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1) override {
-    inner_->line(x0, y0, x1, y1);
+  void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) override {
+    inner_->line(x0, y0, x1, y1, color);
   }
-  void hLine(int16_t x, int16_t y, int16_t w) override { inner_->hLine(x, y, w); }
-  void vLine(int16_t x, int16_t y, int16_t h) override { inner_->vLine(x, y, h); }
-  void rect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    inner_->rect(x, y, w, h);
+  void hLine(int16_t x, int16_t y, int16_t w, uint8_t color) override {
+    inner_->hLine(x, y, w, color);
   }
-  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h) override {
-    inner_->fillRect(x, y, w, h);
+  void vLine(int16_t x, int16_t y, int16_t h, uint8_t color) override {
+    inner_->vLine(x, y, h, color);
   }
-  void roundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    inner_->roundRect(x, y, w, h, r);
+  void rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color) override {
+    inner_->rect(x, y, w, h, color);
   }
-  void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r) override {
-    inner_->fillRoundRect(x, y, w, h, r);
+  void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color) override {
+    inner_->fillRect(x, y, w, h, color);
   }
-  void circle(int16_t x, int16_t y, int16_t r) override { inner_->circle(x, y, r); }
-  void fillCircle(int16_t x, int16_t y, int16_t r) override { inner_->fillCircle(x, y, r); }
-  void ellipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    inner_->ellipse(x, y, rw, rh);
+  void roundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                 uint8_t color) override {
+    inner_->roundRect(x, y, w, h, r, color);
   }
-  void fillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh) override {
-    inner_->fillEllipse(x, y, rw, rh);
+  void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                     uint8_t color) override {
+    inner_->fillRoundRect(x, y, w, h, r, color);
   }
-  void triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                int16_t y2) override {
-    inner_->triangle(x0, y0, x1, y1, x2, y2);
+  void circle(int16_t x, int16_t y, int16_t r, uint8_t color) override {
+    inner_->circle(x, y, r, color);
   }
-  void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2,
-                    int16_t y2) override {
-    inner_->fillTriangle(x0, y0, x1, y1, x2, y2);
+  void fillCircle(int16_t x, int16_t y, int16_t r, uint8_t color) override {
+    inner_->fillCircle(x, y, r, color);
   }
-  void rotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle) override {
-    inner_->rotatedRect(cx, cy, w, h, angle);
+  void ellipse(int16_t x, int16_t y, int16_t rw, int16_t rh, uint8_t color) override {
+    inner_->ellipse(x, y, rw, rh, color);
   }
-  void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h,
-                       int16_t angle) override {
-    inner_->fillRotatedRect(cx, cy, w, h, angle);
+  void fillEllipse(int16_t x, int16_t y, int16_t rw, int16_t rh, uint8_t color) override {
+    inner_->fillEllipse(x, y, rw, rh, color);
+  }
+  void triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+                uint8_t color) override {
+    inner_->triangle(x0, y0, x1, y1, x2, y2, color);
+  }
+  void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+                    uint8_t color) override {
+    inner_->fillTriangle(x0, y0, x1, y1, x2, y2, color);
+  }
+  void rotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle,
+                   uint8_t color) override {
+    inner_->rotatedRect(cx, cy, w, h, angle, color);
+  }
+  void fillRotatedRect(int16_t cx, int16_t cy, int16_t w, int16_t h, int16_t angle,
+                       uint8_t color) override {
+    inner_->fillRotatedRect(cx, cy, w, h, angle, color);
   }
   void bitmap(int16_t x, int16_t y, const uint8_t* bits) override {
     inner_->bitmap(x, y, bits);

@@ -38,5 +38,26 @@ class BoolScene : ValueScene
     end
     return self.current ? "ON" : "OFF"
   end
+
+  # The switch the three states walk: `--`, `OFF`, `ON` left to right when the setting is nullable,
+  # `OFF`, `ON` when it is not, with the state the value is on inverted.
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    var states = [[nil, "--"], [false, "OFF"], [true, "ON"]]
+    if !self.nullable
+      states = [[false, "OFF"], [true, "ON"]]
+    end
+
+    var segment_w = band[1].w / states.size()
+    var i = 0
+    while i < states.size()
+      var segment = Text(Position(band[0].x + i * segment_w, band[0].y),
+                         Size(segment_w, band[1].h), states[i][1])
+      segment.inverted = self.current == states[i][0]
+      segment.draw()
+      i += 1
+    end
+  end
 end
 

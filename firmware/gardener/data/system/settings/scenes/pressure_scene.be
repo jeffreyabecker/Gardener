@@ -56,5 +56,13 @@ class PressureScene : ValueScene
     end
     return string.format(self.fmt, self.current * self.unit.per_kpa)
   end
+
+  # The depth at the largest face the band holds, formatted in the panel's unit — the same string
+  # the row prints, with the unit's decimals, not a scaled built-in line.
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    Text(band[0], band[1], self.text()).draw()
+  end
 end
 

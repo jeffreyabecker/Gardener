@@ -57,5 +57,27 @@ class IntScene : ValueScene
     end
     return str(self.current)
   end
+
+  # The value at the largest face in the band, over a bar showing where it sits between the bounds
+  # when the setting has both. A nil value has no place on the bar.
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    var value_h = band[1].h
+    if self.min != nil && self.max != nil
+      value_h -= 8
+    end
+    Text(band[0], Size(band[1].w, value_h), self.text()).draw()
+    if self.min == nil || self.max == nil
+      return
+    end
+
+    var percent = 0
+    if self.current != nil && self.max > self.min
+      percent = int((self.current - self.min) * 100 / (self.max - self.min))
+    end
+    ProgressBar(Position(band[0].x + 8, band[0].y + value_h + 2), Size(band[1].w - 16, 6),
+                percent).draw()
+  end
 end
 

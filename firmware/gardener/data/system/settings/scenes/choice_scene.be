@@ -86,5 +86,41 @@ class ChoiceScene : ValueScene
     end
     return str(self.title_at(self.index()))
   end
+
+  # The choices as a short list in the value band, the selected one inverted and scrolled into view.
+  # A nil value is no choice at all, so the band shows the editor's `--` instead.
+  def draw_editor(pos, dim)
+    self.draw_chrome(pos, dim)
+    var band = self.value_band(pos, dim)
+    if self.current == nil
+      Text(band[0], band[1], "--").draw()
+      return
+    end
+
+    var rows = []
+    var wide = 0
+    for item : self.values
+      rows.push([item.icon, item.title])
+      var w = screen.text_bounds(item.title, 1).w
+      if item.icon != nil
+        w += item.icon.dim.w + 2
+      end
+      if w > wide
+        wide = w
+      end
+    end
+
+    var visible = band[1].h / 8
+    if visible < 1
+      visible = 1
+    end
+    if visible > rows.size()
+      visible = rows.size()
+    end
+    var menu = List(visible)
+    menu.set(rows)
+    menu.selected = self.index()
+    menu.draw(band[0].x + (band[1].w - wide) / 2, band[0].y + (band[1].h - visible * 8) / 2)
+  end
 end
 

@@ -127,8 +127,9 @@ readout looks like.
 `ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
 declaration's list into them.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
-keys while it is on top, drawing its label, value and hint centered in a block the size of their ink)
-and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
+keys while it is on top; `draw_page()` hands its `draw_editor(pos, dim)` the page window, and the
+base draws its label, value and hint centered in a block the size of their ink) and the value it
+pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
 `settings_scene.be` is `SettingsScene` (the list, handed its settings and the values keyed by setting
 key).

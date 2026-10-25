@@ -52,10 +52,16 @@ class ValueScene : Scene
     ux.pop(cancelled)
   end
 
-  # The editor's three lines, centered in a block the size of their ink rather than spread across the
-  # page: the label, the value and the hint, each centered within the block. The heading is dropped
-  # because the block is always smaller than the page and the hint already says what the keys do.
+  # The page hands the editor its window and nothing else, so a kind controls the whole drawing. The
+  # window is the page area above the overlay, which is the only room a page has.
   def draw_page()
+    self.draw_editor(Position.top_left(), Size.page())
+  end
+
+  # The default editor: the label, the value and the hint centered in a block the size of their ink
+  # rather than spread across the window, each line centered within the block. A kind overrides this
+  # to draw its value its own way.
+  def draw_editor(pos, dim)
     var lines = [[self.label, 1], [self.text(), 3], [self.hint(), 1]]
     var boxes = []
     var wide = 0
@@ -70,8 +76,8 @@ class ValueScene : Scene
     end
     tall += 2 * 2
 
-    var x = (screen.page_width() - wide) / 2
-    var y = (screen.page_height() - tall) / 2
+    var x = pos.x + (dim.w - wide) / 2
+    var y = pos.y + (dim.h - tall) / 2
     var i = 0
     while i < lines.size()
       var b = boxes[i]
@@ -79,6 +85,21 @@ class ValueScene : Scene
       y += b.h + 2
       i += 1
     end
+  end
+
+  # The label across the top of the window and the hint across the bottom, one row each in the
+  # built-in face, so a kind draws its value in the room between them.
+  def draw_chrome(pos, dim)
+    var label_w = screen.text_bounds(self.label, 1).w
+    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
+    var hint = self.hint()
+    var hint_w = screen.text_bounds(hint, 1).w
+    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+  end
+
+  # The room between the chrome's two rows: a Position and a Size, read as a pair.
+  def value_band(pos, dim)
+    return [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 18)]
   end
 
   def hint()

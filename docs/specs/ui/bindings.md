@@ -78,24 +78,24 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 
 | Call |
 | --- |
-| `screen.draw_clear()` |
-| `screen.draw_pixel(x, y)` |
-| `screen.draw_line(x0, y0, x1, y1)` |
-| `screen.draw_hline(x, y, w)` |
-| `screen.draw_vline(x, y, h)` |
-| `screen.draw_rect(x, y, w, h)` |
-| `screen.draw_fillrect(x, y, w, h)` |
+| `screen.draw_clear([color])` |
+| `screen.draw_pixel(x, y [, color])` |
+| `screen.draw_line(x0, y0, x1, y1 [, color])` |
+| `screen.draw_hline(x, y, w [, color])` |
+| `screen.draw_vline(x, y, h [, color])` |
+| `screen.draw_rect(x, y, w, h [, color])` |
+| `screen.draw_fillrect(x, y, w, h [, color])` |
 | `screen.draw_invert(x, y, w, h)` |
-| `screen.draw_roundrect(x, y, w, h, r)` |
-| `screen.draw_fillroundrect(x, y, w, h, r)` |
-| `screen.draw_circle(x, y, r)` |
-| `screen.draw_fillcircle(x, y, r)` |
-| `screen.draw_ellipse(x, y, rw, rh)` |
-| `screen.draw_fillellipse(x, y, rw, rh)` |
-| `screen.draw_triangle(x0, y0, x1, y1, x2, y2)` |
-| `screen.draw_filltriangle(x0, y0, x1, y1, x2, y2)` |
-| `screen.draw_rotatedrect(cx, cy, w, h, angle)` |
-| `screen.draw_fillrotatedrect(cx, cy, w, h, angle)` |
+| `screen.draw_roundrect(x, y, w, h, r [, color])` |
+| `screen.draw_fillroundrect(x, y, w, h, r [, color])` |
+| `screen.draw_circle(x, y, r [, color])` |
+| `screen.draw_fillcircle(x, y, r [, color])` |
+| `screen.draw_ellipse(x, y, rw, rh [, color])` |
+| `screen.draw_fillellipse(x, y, rw, rh [, color])` |
+| `screen.draw_triangle(x0, y0, x1, y1, x2, y2 [, color])` |
+| `screen.draw_filltriangle(x0, y0, x1, y1, x2, y2 [, color])` |
+| `screen.draw_rotatedrect(cx, cy, w, h, angle [, color])` |
+| `screen.draw_fillrotatedrect(cx, cy, w, h, angle [, color])` |
 | `screen.draw_text(x, y, size, inverted, text [, font])` |
 | `screen.text_bounds(text, size [, font])` |
 | `screen.width()` |
@@ -108,10 +108,28 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 answer the area a page lays out within — the panel less the overlay's status band — so a layout
 derives its boxes from the glass it owns rather than subtracting a band it does not.
 
-`draw_invert` is the one call that does not put ink or paper down: it flips what is already inside
-the rectangle, ink to paper and paper to ink, so it has to come after the pixels it is meant to
-flip. That is also the only way to highlight a line drawn in a proportional face, which `draw_text`'s
-`inverted` cannot do — see Faces below.
+### Colours
+
+The optional last argument is the colour: `1` is ink and `0` is paper. With no argument the shape
+and line calls draw ink, so a call written before colours existed draws what it always drew;
+`draw_clear` with no argument clears the panel to paper, because a page's first call has to leave
+paper behind it.
+
+Paper draws exactly as ink does, one colour instead of the other: `draw_fillrect` with `0` clears a
+box, `draw_line` with `0` rubs a line out, and `draw_circle` with `0` erases a disc. That is how a
+page takes back part of what it drew without clearing the whole panel.
+
+`1` and `0` are the whole vocabulary. A non-integer raises `type_error` and any other integer
+raises `value_error` — `screen.<name>: colour 0 or 1 expected` — and the page is dropped like any
+other mistake, so a third shade cannot quietly read as paper.
+
+A saved frame draws ink black and paper white, which is the opposite of the glass, where a pixel
+is lit for ink and dark for paper; in either it is the same pair of colours.
+
+`draw_invert` takes no colour because it is the one call that does not put ink or paper down: it
+flips what is already inside the rectangle, ink to paper and paper to ink, so it has to come after
+the pixels it is meant to flip. That is also the only way to highlight a line drawn in a
+proportional face, which `draw_text`'s `inverted` cannot do — see Faces below.
 
 ### Faces
 
