@@ -123,7 +123,9 @@ construction (`pos` and `dim`) and keeps it; setting `inverted` on it flips that
 thing its draw does — paper where its ink was — which is what a selected row, a cursor or a focused
 readout looks like.
 
-`/system/settings/` is the settings view. `settings.be` is the pair of duration helpers.
+`/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
+`ChoiceItem` record a choice's entries are held as, and `choice_items()` which normalizes a
+declaration's list into them.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
@@ -320,6 +322,16 @@ A choice's `values` is a list of the values the setting accepts — `["hold", "c
 `[value, title]` pairs, where the value is what the file stores and the title is what the row and
 the editor print: `[["poacher", "Poacher"], ["alarm", "Alarm"]]`. A pair lets a setting hold a short
 identifier and show a name; a plain value is its own title.
+
+The setting normalizes whatever it is given into `ChoiceItem` records, and `cfg.values` is that list
+of records: `key` is the value the setting stores, `title` the label the row and the editor print —
+the key itself when the declaration gave none — and `icon` is a glyph to draw beside it. A
+declaration may hand over records directly when it needs those.
+
+`extra_actions` is the other thing a record carries: a dict of gesture to callback for the gestures
+that entry answers itself. The value editor keeps its own four gestures, and any other is offered to
+the choice that is showing, with that choice handed to the callback — so an entry can offer an action
+of its own without the editor having to know about it.
 
 ### What a setting does
 

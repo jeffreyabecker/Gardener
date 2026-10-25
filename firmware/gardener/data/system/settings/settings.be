@@ -1,8 +1,9 @@
 # settings.be — the two helpers both halves of a duration use: whole seconds held to a setting's
-# bounds, and those seconds as the compact text the panel prints.
+# bounds, and those seconds as the compact text the panel prints — plus the record a choice setting's
+# entries are held as.
 #
 # The editing scenes live in scenes/ and the settings a routine builds in configs/; both read a
-# duration through these.
+# duration through these, and a choice through the record and the normalizer below.
 
 import string
 
@@ -49,18 +50,36 @@ def duration_text(seconds)
   return str(minutes) + "m" + str(rest) + "s"
 end
 
-# A choice is a value, or a [value, title] pair: the value is what the setting stores and the title
-# is what the panel prints, so an identifier and its label are one entry rather than two lookups.
-def choice_value(entry)
-  if classname(entry) == "list"
-    return entry[0]
+# One entry of a choice setting: the value the setting stores, the label the row and the editor print,
+# a glyph to draw beside it, and the gestures that entry answers itself — a dict of gesture to
+# callback, nil when it offers nothing beyond being picked. A choice is written as a bare value, a
+# [value, title] pair or one of these; it is always held as one of these.
+class ChoiceItem
+  var key, title, icon, extra_actions
+
+  def init(key, title, icon, extra_actions)
+    self.key = key
+    self.title = title == nil ? str(key) : title
+    self.icon = icon
+    self.extra_actions = extra_actions
   end
-  return entry
 end
 
-def choice_title(entry)
-  if classname(entry) == "list"
-    return entry[1]
+# A setting's choices as ChoiceItems, whatever the declaration was written with: a bare value is both
+# the key and its own title, a [value, title] pair splits, and a record is already one.
+def choice_items(values)
+  var out = []
+  if values == nil
+    return out
   end
-  return entry
+  for entry : values
+    if isinstance(entry, ChoiceItem)
+      out.push(entry)
+    elif isinstance(entry, list)
+      out.push(ChoiceItem(entry[0], entry.size() > 1 ? entry[1] : nil, nil, nil))
+    else
+      out.push(ChoiceItem(entry, nil, nil, nil))
+    end
+  end
+  return out
 end

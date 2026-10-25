@@ -60,14 +60,19 @@ What each one answers:
 | `ValueScene` | `ok:single` | close, keeping the value |
 | `ValueScene` | `cancel:single` | close, discarding it |
 | `BoolScene`, `ChoiceScene`, `RealScene`, `IntScene`, `PressureScene` | the four `ValueScene` gestures | as `ValueScene` |
+| `ChoiceScene` | any other gesture | offered to the choice that is showing, which answers it when it carries that gesture |
 | `DurationScene` | `forward:single` | advance minutes→seconds|
 | `DurationScene` | `back:single` | go back seconds→minutes|
 | `DurationScene` | the other four `ValueScene` gestures | as `ValueScene` |
 | `JingleScene` | the four `ValueScene` gestures | as `ValueScene` |
 
-`ChoiceScene` wraps at the ends. A choice is a value, or a `[value, title]` pair: Up/Down moves
-between values and the editor prints each one's title, so a setting can store an identifier and show
-a name. `JingleScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
+`ChoiceScene` wraps at the ends. Its choices are `ChoiceItem` records — a `ChoiceSettingCfg`
+normalizes whatever its declaration was written with into them — so Up/Down moves between their keys
+and the editor prints each one's title, letting a setting store an identifier and show a name. A
+record may also carry gestures of its own; the editor answers its four first and offers any other
+gesture to the choice that is showing, handing it that choice, so an entry can do something the
+editor knows nothing about.
+`JingleScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
 it is cancelled.
 
 | `Interval` | `up:double` | stop and vent, reset the run, open its settings |

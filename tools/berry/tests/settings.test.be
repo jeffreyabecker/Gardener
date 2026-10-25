@@ -70,12 +70,20 @@ end
 test("every kind builds and prints its value", every_kind_builds)
 
 # A choice may be a [value, title] pair: the value is what the setting stores, the title is what
-# the row and the editor print, so an identifier and its label are one entry.
+# the row and the editor print. The setting normalizes the list it is given, so what it holds — and
+# what it hands its scene — is a ChoiceItem either way.
 def a_pair_choice_stores_its_value_and_prints_its_title()
   var pairs = [["a", "Alpha"], ["b", "Beta"]]
   var mode = ChoiceSettingCfg("mode", "b", "Mode", nil, pairs, false)
   assert_eq(mode.read("settings_test"), "b", "a pair choice does not read its default value")
   assert_eq(mode.text("b"), "Beta", "a pair choice does not print its title")
+
+  # The list is normalized on the way in, and a bare value is its own title.
+  assert_eq(mode.values[0].key, "a", "a pair is not normalized to a record's key")
+  assert_eq(mode.values[0].title, "Alpha", "a pair is not normalized to a record's title")
+  var plain = choice_items(["a", "b"])
+  assert_eq(plain[1].key, "b", "a bare value is not a record's key")
+  assert_eq(plain[1].title, "b", "a bare value is not its own title")
 
   store.set("settings_test", "mode", "a")
   assert_eq(mode.read("settings_test"), "a", "a pair choice does not read its stored value")
@@ -83,7 +91,7 @@ def a_pair_choice_stores_its_value_and_prints_its_title()
   store.set("settings_test", "mode", "Alpha")
   assert_eq(mode.read("settings_test"), "b", "a pair choice accepted a title that is not a value")
 
-  var scene = ChoiceScene("Mode", "a", pairs, false)
+  var scene = ChoiceScene("Mode", "a", mode.values, false)
   assert_eq(scene.text(), "Alpha", "a pair choice's editor does not print its title")
   scene.nudge(1)
   assert_eq(scene.value(), "b", "a pair choice's editor does not step to the next value")
@@ -92,6 +100,33 @@ end
 
 test("a pair choice stores the value and prints the title",
      a_pair_choice_stores_its_value_and_prints_its_title)
+
+# A choice may answer gestures of its own: the editor offers whatever it has no answer of its own for
+# to the choice that is showing, and hands that choice to the action.
+choiceExtraRan = nil
+
+def choice_extra(item)
+  choiceExtraRan = item
+end
+
+def a_choice_answers_its_own_gestures()
+  var item = ChoiceItem("a", "Alpha", nil, {"ok:double": choice_extra})
+  var scene = ChoiceScene("Mode", "a", [item], false)
+
+  choiceExtraRan = nil
+  assert_true(scene.handle_page("ok:double"), "a choice's own gesture was not handled")
+  assert_eq(choiceExtraRan, item, "a choice's own gesture did not receive the choice it belongs to")
+
+  # The editor keeps its own gestures: one of those is answered before any choice is asked.
+  choiceExtraRan = nil
+  assert_true(scene.handle_page("up:single"), "the editor did not answer its own gesture")
+  assert_nil(choiceExtraRan, "a choice's own gesture ran for one the editor owns")
+
+  # A gesture nobody answers is dropped.
+  assert_true(!scene.handle_page("down:double"), "a gesture nobody answers was handled")
+end
+
+test("a choice answers the gestures it carries", a_choice_answers_its_own_gestures)
 
 # The store hands back the file's text, so a setting with no default of its type to lean on has to
 # parse it: a nullable pressure, and a bool, are the two that would go wrong quietly.
