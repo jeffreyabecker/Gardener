@@ -18,6 +18,8 @@ void installBuzzerModule(bvm* vm);
 // The jingle library is read once, when the module is installed, from the interpreter's library.
 void installJinglesModule(bvm* vm, Library& library);
 void installStoreModule(bvm* vm);
+// The native Config class a routine can instantiate for its own INI document.
+void installConfigClass(bvm* vm);
 
 }  // namespace berry
 }  // namespace gardener

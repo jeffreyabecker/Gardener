@@ -10,9 +10,13 @@
 
 namespace gardener {
 
-// The Config the panel keeps across a reset: an INI document, with the preferences a subclass names
-// in one section and any other key carried through a write. A missing document, or a value that will
-// not parse, leaves the default in place rather than refusing to boot.
+// Where the device's own document lives on the filesystem it mounts. The wire's `fs` domain refuses
+// to overwrite it.
+constexpr const char* ConfigPath = "/settings.ini";
+
+// The Config the panel keeps across a reset: an INI document, with the preferences a subclass
+// names in one section and any other key carried through a write. A missing document, or a value
+// that will not parse, leaves the default in place rather than refusing to boot.
 //
 // The document is read and written through the store it was given, so this class does not know
 // where the device keeps it beyond the path. A caller names a section and a key; the store knows
@@ -78,9 +82,9 @@ class Config {
     return save();
   }
 
-    // The names of the sections that hold at least one key, in the order they appear. The global
+  // The names of the sections that hold at least one key, in the order they appear. The global
   // section, when it holds a key, is the empty name.
-  void sectionKeys(std::vector<String>& keys) const{
+  void sectionKeys(std::vector<String>& keys) const {
     ini_.sectionKeys(keys);
   }
 

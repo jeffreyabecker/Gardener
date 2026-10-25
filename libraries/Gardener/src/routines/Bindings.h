@@ -20,6 +20,9 @@ namespace berry {
 //   jingles.*  the named note sequences in /system/jingles.txt
 //   store.*    a routine's own values, kept across a power cycle
 //
+// A routine can also instantiate the native `Config` class, which reads and writes one INI
+// document through the panel's library.
+//
 // The registry the browser draws and the scene stack it pushes onto are Berry classes
 // (/system/registry.be and /system/ux.be); there is no native module for either. Three of the
 // classes a routine reads are records rather than plain values: `vacuum.state()` answers a

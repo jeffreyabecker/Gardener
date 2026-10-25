@@ -31,6 +31,7 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installBuzzerModule(vm);
   installJinglesModule(vm, appContext.library());
   installStoreModule(vm);
+  installConfigClass(vm);
 }
 
 }  // namespace berry
