@@ -76,8 +76,6 @@ class DurationScene : ValueScene
     return super(self).handle_page(ev)
   end
 
-  # Minutes and seconds as two fields side by side, each suffixed and at the largest face its share
-  # of the box holds, with the stage the keys are stepping inverted. A nil value has no stages.
   def minutes_text()
     return str(self.current / 60) + "m"
   end
@@ -86,39 +84,40 @@ class DurationScene : ValueScene
     return str(self.current % 60) + "s"
   end
 
-  def ink(text, max_w, max_h)
-    var text_box = Text(nil, nil, text)
-    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
-    return Size(bounds[0], bounds[1])
-  end
-
-  def face(text, max_w, max_h)
-    return Text(nil, nil, text).fit(text, max_w, max_h)
-  end
-
-  # The most one field's ink may be: half the scene's box across, less the three pixels of frame
-  # either side, the gap between the fields and the pixel of paper inside each one — and no taller
-  # than 16.
-  def field_cap()
-    return Size((self.dim.w - 6 - 1) / 2 - 2, 16)
-  end
-
-  def field_width(text)
-    return self.ink(text, self.field_cap().w, self.field_cap().h).w + 2
-  end
-
-  def field_height()
-    var mins = self.ink(self.minutes_text(), self.field_cap().w, self.field_cap().h).h
-    var secs = self.ink(self.seconds_text(), self.field_cap().w, self.field_cap().h).h
-    return (secs > mins ? secs : mins) + 2
+  # The two fields this draws, as [minutes width, seconds width, height, face]: both drawn at one
+  # face, the largest the longer of the two fits its half of the scene's box at 16 pixels, and a
+  # pixel of paper inside each field. A field's half is the box less the three pixels of frame
+  # either side and the gap between the fields.
+  def fields()
+    var minutes = self.minutes_text()
+    var seconds = self.seconds_text()
+    var room = (self.dim.w - 6 - 1) / 2 - 2
+    var longer = minutes
+    if screen.text_bounds(seconds, 1).w > screen.text_bounds(minutes, 1).w
+      longer = seconds
+    end
+    var face = Text(nil, nil, longer).fit(longer, room, 16)
+    var minutes_box = Text(nil, nil, minutes)
+    var seconds_box = Text(nil, nil, seconds)
+    var minutes_ink = minutes_box.bounds(minutes, face)
+    var seconds_ink = seconds_box.bounds(seconds, face)
+    return [minutes_ink[0] + 2, seconds_ink[0] + 2, minutes_ink[1] + 2, face]
   end
 
   # The label row, the fields and the hint row: eight pixels a row, a gap of two above and below the
   # fields, and the content as wide as the widest of the three.
   def content_size()
-    var wide = self.ink("--", self.dim.w - 6, 16).w
+    var wide = 0
+    var tall = 0
     if self.current != nil
-      wide = self.field_width(self.minutes_text()) + 1 + self.field_width(self.seconds_text())
+      var fields = self.fields()
+      wide = fields[0] + 1 + fields[1]
+      tall = fields[2]
+    else
+      var measure = Text(nil, nil, "--")
+      var ink = measure.bounds("--", measure.fit("--", self.dim.w - 6, 16))
+      wide = ink[0]
+      tall = ink[1]
     end
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
@@ -128,33 +127,28 @@ class DurationScene : ValueScene
     if hint_w > wide
       wide = hint_w
     end
-    var tall = self.ink("--", self.dim.w - 6, 16).h
-    if self.current != nil
-      tall = self.field_height()
-    end
     return Size(wide, 20 + tall)
   end
 
+  # Minutes and seconds as two fields side by side, each suffixed and at the one face, with the
+  # stage the keys are stepping inverted. A nil value has no stages to show.
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    var band = [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20)]
     if self.current != nil
-      var cap = self.field_cap()
-      var minutes_w = self.field_width(self.minutes_text())
-      var field_h = self.field_height()
-      var x = band[0].x + (band[1].w - (minutes_w + 1 + self.field_width(self.seconds_text()))) / 2
-      var y = band[0].y + (band[1].h - field_h) / 2
-      var minutes = Text(Position(x, y), Size(minutes_w, field_h), self.minutes_text())
+      var fields = self.fields()
+      var x = pos.x + (dim.w - (fields[0] + 1 + fields[1])) / 2
+      var y = pos.y + 10 + (dim.h - 20 - fields[2]) / 2
+      var minutes = Text(Position(x, y), Size(fields[0], fields[2]), self.minutes_text())
       minutes.inverted = self.stage == "min"
-      minutes.draw_face(self.minutes_text(), self.face(self.minutes_text(), cap.w, cap.h))
-      var seconds = Text(Position(x + minutes_w + 1, y),
-                        Size(self.field_width(self.seconds_text()), field_h), self.seconds_text())
+      minutes.draw_face(self.minutes_text(), fields[3])
+      var seconds = Text(Position(x + fields[0] + 1, y), Size(fields[1], fields[2]),
+                         self.seconds_text())
       seconds.inverted = self.stage != "min"
-      seconds.draw_face(self.seconds_text(), self.face(self.seconds_text(), cap.w, cap.h))
+      seconds.draw_face(self.seconds_text(), fields[3])
     else
-      Text(band[0], band[1], "--").draw()
+      Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), "--").draw()
     end
 
     var hint = self.hint()

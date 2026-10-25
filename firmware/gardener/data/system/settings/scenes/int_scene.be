@@ -58,20 +58,13 @@ class IntScene : ValueScene
     return str(self.current)
   end
 
-  def ink(text, max_w, max_h)
-    var text_box = Text(nil, nil, text)
-    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
-    return Size(bounds[0], bounds[1])
-  end
-
-  def bar_height()
-    return 6
-  end
-
   # The label row, the value and the hint row: eight pixels a row, a gap of two above and below the
-  # value, and the content as wide as the widest of the three.
+  # value, and the content as wide as the widest of the three. A bounded setting carries the bar
+  # under the value, six pixels of it with a gap of two above.
   def content_size()
-    var wide = self.ink(self.text(), self.dim.w - 6, 16).w
+    var measure = Text(nil, nil, self.text())
+    var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
+    var wide = ink[0]
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -80,9 +73,9 @@ class IntScene : ValueScene
     if hint_w > wide
       wide = hint_w
     end
-    var tall = self.ink(self.text(), self.dim.w - 6, 16).h
+    var tall = ink[1]
     if self.min != nil && self.max != nil
-      tall += 2 + self.bar_height()
+      tall += 2 + 6
     end
     return Size(wide, 20 + tall)
   end
@@ -93,20 +86,18 @@ class IntScene : ValueScene
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    var band = [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20)]
     var bounded = self.min != nil && self.max != nil
-    var value_h = band[1].h
+    var value_h = dim.h - 20
     if bounded
-      value_h -= 2 + self.bar_height()
+      value_h -= 2 + 6
     end
-    Text(band[0], Size(band[1].w, value_h), self.text()).draw()
+    Text(Position(pos.x, pos.y + 10), Size(dim.w, value_h), self.text()).draw()
     if bounded
       var percent = 0
       if self.current != nil && self.max > self.min
         percent = int((self.current - self.min) * 100 / (self.max - self.min))
       end
-      ProgressBar(Position(band[0].x, band[0].y + value_h + 2),
-                  Size(band[1].w, self.bar_height()), percent).draw()
+      ProgressBar(Position(pos.x, pos.y + 10 + value_h + 2), Size(dim.w, 6), percent).draw()
     end
 
     var hint = self.hint()
@@ -114,4 +105,3 @@ class IntScene : ValueScene
     screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
   end
 end
-

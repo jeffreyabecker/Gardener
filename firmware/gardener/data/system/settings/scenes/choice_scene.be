@@ -67,13 +67,8 @@ class ChoiceScene : ValueScene
     return 0
   end
 
-  # What the choice at an index stores, and what it prints.
   def value_at(index)
     return self.values[index].key
-  end
-
-  def title_at(index)
-    return self.values[index].title
   end
 
   def value()
@@ -84,13 +79,7 @@ class ChoiceScene : ValueScene
     if self.current == nil
       return "--"
     end
-    return str(self.title_at(self.index()))
-  end
-
-  def ink(text, max_w, max_h)
-    var text_box = Text(nil, nil, text)
-    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
-    return Size(bounds[0], bounds[1])
+    return str(self.values[self.index()].title)
   end
 
   def row_width()
@@ -121,22 +110,16 @@ class ChoiceScene : ValueScene
     return fit
   end
 
-  def rows()
-    var out = []
-    for item : self.values
-      out.push([item.icon, item.title])
-    end
-    return out
-  end
-
   # The label row, the list and the hint row: eight pixels a row, a gap of two above and below the
   # list, and the content as wide as the widest of the three.
   def content_size()
     var wide = self.row_width()
     var tall = self.visible_rows() * 8
     if self.current == nil
-      wide = self.ink("--", self.dim.w - 6, 16).w
-      tall = self.ink("--", self.dim.w - 6, 16).h
+      var measure = Text(nil, nil, "--")
+      var ink = measure.bounds("--", measure.fit("--", self.dim.w - 6, 16))
+      wide = ink[0]
+      tall = ink[1]
     end
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
@@ -155,15 +138,18 @@ class ChoiceScene : ValueScene
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    var band = [Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20)]
     if self.current == nil
-      Text(band[0], band[1], "--").draw()
+      Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), "--").draw()
     else
-      var menu = List(self.visible_rows())
-      menu.set(self.rows())
+      var rows = []
+      for item : self.values
+        rows.push([item.icon, item.title])
+      end
+      var visible = self.visible_rows()
+      var menu = List(visible)
+      menu.set(rows)
       menu.selected = self.index()
-      menu.draw(band[0].x + (band[1].w - self.row_width()) / 2,
-                band[0].y + (band[1].h - self.visible_rows() * 8) / 2)
+      menu.draw(pos.x + (dim.w - self.row_width()) / 2, pos.y + 10 + (dim.h - 20 - visible * 8) / 2)
     end
 
     var hint = self.hint()

@@ -57,16 +57,12 @@ class PressureScene : ValueScene
     return string.format(self.fmt, self.current * self.unit.per_kpa)
   end
 
-  def ink(text, max_w, max_h)
-    var text_box = Text(nil, nil, text)
-    var bounds = text_box.bounds(text, text_box.fit(text, max_w, max_h))
-    return Size(bounds[0], bounds[1])
-  end
-
   # The label row, the value and the hint row: eight pixels a row, a gap of two above and below the
   # value, and the content as wide as the widest of the three.
   def content_size()
-    var wide = self.ink(self.text(), self.dim.w - 6, 16).w
+    var measure = Text(nil, nil, self.text())
+    var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
+    var wide = ink[0]
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -75,7 +71,7 @@ class PressureScene : ValueScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + self.ink(self.text(), self.dim.w - 6, 16).h)
+    return Size(wide, 20 + ink[1])
   end
 
   # The depth at the largest face the box holds, formatted in the panel's unit — the same string the
