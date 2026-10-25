@@ -378,10 +378,10 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(routine_key, title, icon, factory, settings)` | `bool` | bind a routine key to the label the browser draws, the scene class that draws it and the class that declares its settings. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the key; `icon` is an `Icon` instance or `nil`; `settings` is a class answering static `settings()` and `problem(values)`, or `nil` when the routine has nothing to edit |
+| `routines.register(routine_key, title, icon, factory, settings)` | `bool` | bind a routine key to the label the browser draws, the scene class that draws it and the settings instance that declares them. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the key; `icon` is an `Icon` instance or `nil`; `settings` is an instance whose `settings_cfgs` property is the list of setting configs and that answers `problem(values)`, or `nil` when the routine has nothing to edit |
 | `routines.keys()` | list of strings | every registered routine key, in registration order |
 | `routines.title(routine_key)` | string, or `nil` | the label the browser draws for the routine |
-| `routines.settings(routine_key)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
+| `routines.settings_cfgs(routine_key)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out |
 | `routines.repair(routine_key, settings_cfgs, settings_values)` | string, or `nil` | apply the routine's rule to the values, keyed by setting key, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
 | `routines.problem(routine_key, settings_cfgs, settings_values)` | string, or `nil` | the rule's verdict on the same settings and values, applying nothing |
 | `routines.icon(routine_key)` | the icon object, or `nil` | what the file passed as its icon |

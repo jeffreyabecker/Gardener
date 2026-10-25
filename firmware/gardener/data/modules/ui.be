@@ -132,7 +132,9 @@ end
 class ReadoutSettings
   # The readout's set, in the order the list shows them: the target it works to, the unit it prints
   # and the jingle it finishes with, then the radio as a build fact. The rows only declare them.
-  static def settings()
+  var settings_cfgs
+
+  def init()
     var out = [
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
       ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
@@ -144,10 +146,10 @@ class ReadoutSettings
       out.push(jingle)
     end
     out.push(BluetoothEditCfg())
-    return out
+    self.settings_cfgs = out
   end
 
-  static def problem(values)
+  def problem(values)
     return nil
   end
 end
@@ -205,7 +207,7 @@ class ReadoutScene : Scene
 
   # A double Up opens the readout's own list: its declaration, and the state it is holding.
   def edit()
-    ux.push(SettingsEditScene(ReadoutSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(ReadoutSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     return true
   end

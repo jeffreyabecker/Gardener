@@ -6,7 +6,7 @@
 suite = "readout"
 
 def the_declaration_is_the_device_rows()
-  var settings_cfgs = ReadoutSettings.settings()
+  var settings_cfgs = ReadoutSettings().settings_cfgs
   # The target first, then the unit, the jingle and the radio last.
   assert_eq(settings_cfgs[0].key, "target_pressure", "readout: the first row is not the target")
   assert_eq(settings_cfgs[1].key, "unit", "readout: the second row is not the unit")
@@ -31,7 +31,7 @@ end
 test("the declaration is the device's rows, target first", the_declaration_is_the_device_rows)
 
 def the_rows_open_their_editors()
-  var settings_cfgs = ReadoutSettings.settings()
+  var settings_cfgs = ReadoutSettings().settings_cfgs
   for cfg : settings_cfgs
     if cfg.key == "target_pressure"
       var scene = cfg.scene(5.0)

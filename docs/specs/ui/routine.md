@@ -33,7 +33,7 @@ class MyPage : Scene
   end
 end
 
-routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
+routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
 return MyPage
 ```
 
@@ -58,9 +58,10 @@ defines `init(settings)` plus whatever `draw_page()` and `tick(now)` it needs. A
 missing a method the stack calls raises when it is pushed or polled, which drops the stack and shows
 the mark.
 
-The fifth argument is the routine's **settings declaration** — the class that describes the values it
-edits and any rule that binds them, or `nil` when it has none. It is asked through the class and
-never built, so both of its answers are static (see below).
+The fifth argument is the routine's **settings declaration** — an instance that describes the values
+it edits in its `settings_cfgs` property and any rule that binds them in `problem(values)`, or `nil`
+when it has none. It is built where the file registers, so its declaration is made once, at
+registration time (see below).
 
 **Initializing the scene is the whole of its activation.** The registry builds the map the
 constructor is given: every setting the routine registers, read from its own file, held to its kind,
@@ -108,7 +109,7 @@ answers the box of the scene on top, with the firmware calling `reset`, `enter` 
 `/system/scene.be` is `Scene` — the box a scene draws in (`pos` and `dim`), the gesture drain, the
 repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
-builds — routine key, title, icon, factory and settings class — and `class RoutineRegistry` with the
+builds — routine key, title, icon, factory and settings instance — and `class RoutineRegistry` with the
 global `routines` instance — the list the browser draws, the `load(routine_key)` that builds a
 routine's clean settings map, and the `push(routine_key, callback)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
@@ -149,7 +150,7 @@ opening the list; the page opens it itself, from its own declaration and the sta
 
 ```berry
 def edit()
-  ux.push(SettingsEditScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+  ux.push(SettingsEditScene(RampedStaticSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
           / settings_values -> self.settings_closed(settings_values))
   return true
 end
@@ -268,14 +269,17 @@ What that costs, stated plainly:
 
 ## The settings a routine registers
 
-A routine's settings are a declaration of its own: a class registered as the fifth argument, holding
-the values it edits in the order the list shows them and, when its values constrain one another, the
-rule that has to hold. Both answers are static, because the class is asked and never built:
+A routine's settings are a declaration of its own: an instance registered as the fifth argument,
+holding the values it edits in its `settings_cfgs` property, in the order the list shows them, and,
+when its values constrain one another, the rule that has to hold in `problem(values)`. It is built
+where the file registers, so the declaration is made once, at registration time:
 
 ```berry
 class MySettings
-  static def settings()
-    return [
+  var settings_cfgs
+
+  def init()
+    self.settings_cfgs = [
       PressureEditCfg("target", 10.0, "Target", nil, 1, false),
       DurationEditCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
       ChoiceEditCfg("mode", "hold", "Mode", nil, ["hold", "cycle"], false),
@@ -283,7 +287,7 @@ class MySettings
     ]
   end
 
-  static def problem(values)
+  def problem(values)
     if values["hold"] > 3600
       return "HOLD > 1H"
     end
@@ -291,11 +295,11 @@ class MySettings
   end
 end
 
-routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
+routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
 ```
 
-A routine with nothing to edit registers `nil`. A class that is registered answers both: a routine
-with no rule of its own returns `nil` from `problem`.
+A routine with nothing to edit registers `nil`. An instance that is registered answers both: a
+routine with no rule of its own returns `nil` from `problem`.
 
 The list itself is `SettingsEditScene(settings_cfgs, settings_values, message)`: the settings declaration
 for the rows and a map of values keyed by setting key, built by whoever opens it — the page's

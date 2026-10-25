@@ -95,12 +95,14 @@ class RampedIntervalChrome : Layout
 end
 
 # The values the ramp edits, in the order the settings list shows them, and the one rule that binds
-# two of them: a ladder has to climb, so the final pressure is at least where it starts. The class is
-# the declaration alone: whoever opens the list reads the values, applies the rule and writes what
+# two of them: a ladder has to climb, so the final pressure is at least where it starts. The instance
+# is the declaration alone: whoever opens the list reads the values, applies the rule and writes what
 # the list settles on.
 class RampedIntervalSettings
-  static def settings()
-    return [
+  var settings_cfgs
+
+  def init()
+    self.settings_cfgs = [
       IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureEditCfg("final_pressure", 20.0, "Final", nil, 1, false),
@@ -113,7 +115,7 @@ class RampedIntervalSettings
     ]
   end
 
-  static def problem(values)
+  def problem(values)
     if values["final_pressure"] < values["initial_pressure"]
       return "FINAL < START"
     end
@@ -124,8 +126,10 @@ end
 # The values the interval edits, in the order the settings list shows them. Nothing binds one
 # setting to another here, so the rule accepts every set.
 class IntervalSettings
-  static def settings()
-    return [
+  var settings_cfgs
+
+  def init()
+    self.settings_cfgs = [
       IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
       DurationEditCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
@@ -136,7 +140,7 @@ class IntervalSettings
     ]
   end
 
-  static def problem(values)
+  def problem(values)
     return nil
   end
 end
@@ -436,7 +440,7 @@ class RampedInterval : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsEditScene(RampedIntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(RampedIntervalSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
@@ -523,7 +527,7 @@ class Interval : RampedInterval
   # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
   # ladder, because those are the settings this routine registers.
   def edit()
-    ux.push(SettingsEditScene(IntervalSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(IntervalSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
@@ -575,5 +579,5 @@ class Interval : RampedInterval
   end
 end
 
-routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(Position(0, 0), Size(12, 8)), RampedInterval, RampedIntervalSettings)
-routines.register("interval", "Interval", IntervalIcon(Position(0, 0), Size(12, 8)), Interval, IntervalSettings)
+routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(Position(0, 0), Size(12, 8)), RampedInterval, RampedIntervalSettings())
+routines.register("interval", "Interval", IntervalIcon(Position(0, 0), Size(12, 8)), Interval, IntervalSettings())

@@ -1,5 +1,5 @@
 # registry.be — the registry of user routines: the list the browser draws, each routine's factory,
-# the class that declares its settings, and the way into each routine's scene.
+# the settings declaration it registers, and the way into each routine's scene.
 #
 # A routine file's top level calls routines.register(routine_key, title, icon, factory, settings) and
 # a RoutineRegistration joins this Berry list; nothing native holds it. The key is the routine's
@@ -7,12 +7,12 @@
 # the routine's scene class, and the
 # registry builds the scene when the routine is pushed, so a page starts from its own init() every
 # time and nothing a previous visit left behind survives; the scene that is showing is ux.top(). The
-# settings are a class the routine writes itself, holding the values it edits and any rule that
-# binds two of them, so those live with the routine rather than in the page; it is asked through its
-# class and is never built, because the list it describes is opened by whoever wants to edit it.
+# settings are an instance the routine writes itself, built when the file registers, holding the
+# values it edits in its settings_cfgs property and any rule that binds two of them in its problem()
+# method, so those live with the routine rather than in the page.
 #
 # The browser reads rows() and pushes a routine with push(routine_key, callback[, settings]).
-# The settings, when the caller has none, are built by load(): every value the routine registers,
+# The values, when the caller has none, are built by load(): every value the routine registers,
 # read from its file, held to its kind and repaired by the routine's own rule. So a scene is built
 # from one clean map and initialization is the only activation. The device's own scenes — the
 # readout, system and browser — are not registered here: they are well-known scenes the system
@@ -21,7 +21,7 @@
 import string
 
 # One routine's registration: the key it is known by, the label and icon the browser draws, the
-# class the registry builds its scene from, and the class that declares its settings.
+# class the registry builds its scene from, and the settings instance that declares them.
 class RoutineRegistration
   var routine_key, title, icon, factory, settings
 
@@ -55,8 +55,8 @@ class RoutineRegistry
       vacuum.log("registry: routine must name its scene class")
       return false
     end
-    if settings != nil && type(settings) != "class"
-      vacuum.log("registry: " + routine_key + " settings must be a class")
+    if settings != nil && type(settings) != "instance"
+      vacuum.log("registry: " + routine_key + " settings must be an instance")
       return false
     end
     self.entries.push(RoutineRegistration(routine_key, title, icon, factory, settings))
@@ -72,16 +72,16 @@ class RoutineRegistry
     return out
   end
 
-  # The settings a routine can edit, as the class it registered declares them, in the order the list
-  # shows them; nil when it has none. A setting whose kind cannot work is left out, with one line
-  # saying why, because no value scene could edit it.
-  def settings(routine_key)
+  # The settings a routine can edit, as the instance it registered declares them in settings_cfgs,
+  # in the order the list shows them; nil when it has none. A setting whose kind cannot work is left
+  # out, with one line saying why, because no value scene could edit it.
+  def settings_cfgs(routine_key)
     var e = self.entry(routine_key)
     if e == nil || e.settings == nil
       return nil
     end
     var out = []
-    for item : e.settings.settings()
+    for item : e.settings.settings_cfgs
       if item.problem != nil
         vacuum.log("settings: " + routine_key + " " + item.key + ": " + item.problem)
       else
@@ -157,7 +157,7 @@ class RoutineRegistry
   # accepts. A routine with no settings begins with an empty map. This is the only place the
   # file-or-nothing rule is applied; a scene is handed the answer and never reads a document.
   def load(routine_key)
-    var settings_cfgs = self.settings(routine_key)
+    var settings_cfgs = self.settings_cfgs(routine_key)
     var settings_values = {}
     if settings_cfgs == nil
       return settings_values
@@ -176,7 +176,7 @@ class RoutineRegistry
   # writing nothing, when the routine declares no settings.
   def save_settings(routine_key, settings_values, settings_cfgs)
     if settings_cfgs == nil
-      settings_cfgs = self.settings(routine_key)
+      settings_cfgs = self.settings_cfgs(routine_key)
     end
     if settings_cfgs == nil
       return false

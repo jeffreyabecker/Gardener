@@ -28,7 +28,7 @@ end
 # The map a switch carries is the routine's own settings, read from its file and made clean the way
 # the registry makes them, so init(settings) takes the same path as a real switch.
 def harness_settings_map(routine_key)
-  var settings_cfgs = routines.settings(routine_key)
+  var settings_cfgs = routines.settings_cfgs(routine_key)
   if settings_cfgs == nil
     return nil
   end
@@ -49,7 +49,7 @@ end
 # does, edit every value, and make sure the set it settles on reaches the file.
 def harness_editor(routine_key)
   var label = "settings: " + routine_key
-  var settings_cfgs = routines.settings(routine_key)
+  var settings_cfgs = routines.settings_cfgs(routine_key)
   if settings_cfgs == nil || settings_cfgs.size() == 0
     return
   end

@@ -65,7 +65,7 @@ class BrowserScene : Scene
       return false
     end
     var routine_key = row.value
-    var settings_cfgs = routines.settings(routine_key)
+    var settings_cfgs = routines.settings_cfgs(routine_key)
     if settings_cfgs == nil || settings_cfgs.size() == 0
       vacuum.log("settings: " + routine_key + " has none")
       return false

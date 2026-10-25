@@ -327,14 +327,14 @@ end
 test("loading a routine's settings makes a clean map", load_makes_a_clean_map)
 
 def the_rules_say_no()
-  assert_eq(RampedIntervalSettings.problem(
+  assert_eq(RampedIntervalSettings().problem(
                 {"initial_pressure": 10.0, "final_pressure": 5.0}),
             "FINAL < START", "the ladder rule does not refuse a final below the start")
-  assert_nil(RampedIntervalSettings.problem(
+  assert_nil(RampedIntervalSettings().problem(
                 {"initial_pressure": 5.0, "final_pressure": 10.0}),
             "the ladder rule refuses a valid pair")
 
-  assert_eq(RampedStaticSettings.problem(
+  assert_eq(RampedStaticSettings().problem(
                 {"initial_duration": 60, "target_duration": 60, "total_duration": 100}),
             "TOTAL < HOLDS", "the profile rule does not refuse a total below the holds")
 end
@@ -342,7 +342,7 @@ end
 test("a routine's rule refuses a set that cannot run", the_rules_say_no)
 
 def a_repair_puts_a_set_back()
-  var settings_cfgs = routines.settings("ramped_static")
+  var settings_cfgs = routines.settings_cfgs("ramped_static")
   var settings_values = routines.load("ramped_static")
   assert_nil(routines.repair("ramped_static", settings_cfgs, settings_values),
              "a set of valid values was refused")

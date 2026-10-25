@@ -45,11 +45,14 @@ class RampedStaticChrome : Layout
 end
 
 # The values this page edits, in the order the settings list shows them, and the one rule that binds
-# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The class is
-# the declaration alone: the page opens the list from it and writes what the list settles on.
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The instance
+# is the declaration alone: the page opens the list from its settings_cfgs and writes what the list
+# settles on.
 class RampedStaticSettings
-  static def settings()
-    return [
+  var settings_cfgs
+
+  def init()
+    self.settings_cfgs = [
       PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureEditCfg("target_pressure", 20.0, "Target", nil, 1, false),
       DurationEditCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
@@ -58,7 +61,7 @@ class RampedStaticSettings
     ]
   end
 
-  static def problem(values)
+  def problem(values)
     if values["total_duration"] < values["initial_duration"] + values["target_duration"]
       return "TOTAL < HOLDS"
     end
@@ -318,7 +321,7 @@ class RampedStatic : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsEditScene(RampedStaticSettings.settings(), self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(RampedStaticSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != "ready"
       vacuum.stop()
@@ -398,5 +401,5 @@ class RampedStatic : Scene
   end
 end
 
-routines.register("ramped_static", "Ramped Static", RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic, RampedStaticSettings)
+routines.register("ramped_static", "Ramped Static", RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic, RampedStaticSettings())
 return RampedStatic
