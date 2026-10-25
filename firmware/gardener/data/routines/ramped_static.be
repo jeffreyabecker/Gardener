@@ -44,7 +44,8 @@ class RampedStaticChrome : Layout
   end
 end
 
-class RampedStatic : Page
+class RampedStatic : Scene
+  var routine
   var phase
   var mark
   var held
@@ -60,7 +61,8 @@ class RampedStatic : Page
   var chrome
 
   def init()
-    super(self).init("ramped_static")
+    super(self).init()
+    self.routine = "ramped_static"
     self.phase = "ready"
     self.mark = 0
     self.held = 0
@@ -99,7 +101,7 @@ class RampedStatic : Page
   # the settings a run begins with, so a hand-edited file that cannot make one is refused at the
   # start rather than here.
   def read_settings(settings)
-    var s = self.activation(settings)
+    var s = Activation(self.routine, settings)
     self.start_pressure = s.value("initial_pressure")
     self.target_pressure = s.value("target_pressure")
     self.initial_ms = s.value("initial_duration") * 1000
@@ -287,11 +289,16 @@ class RampedStatic : Page
   # over from the approach when the settings scene closes, so it must not keep working at the old
   # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    self.open_settings()
+    edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
     if self.phase != "ready"
       vacuum.stop()
     end
     return true
+  end
+
+  def settings_closed(items, values)
+    save_settings(self.routine, items, values)
+    self.on_editor_closed()
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a

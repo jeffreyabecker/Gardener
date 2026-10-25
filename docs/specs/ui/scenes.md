@@ -36,7 +36,6 @@ Every scene, and where it lives:
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |
-| `Page` — the routine base | `system/settings/scenes/page.be` | — |
 | `Scene` — the base | `system/scene.be` | — |
 
 What each one answers:
@@ -87,7 +86,7 @@ it is cancelled.
 | `RampedStatic` | `ok:single` | begin, while the run is ready, paused or waiting |
 | `RampedStatic` | `cancel:single` | stop and vent, pause the run |
 | `RampedStatic` | `cancel:double` | stop and vent, pop off the stack |
-| `Page`, `Scene` | none | the bases answer nothing |
+| `Scene` | none | the base answers nothing |
 
 ## Rules
 

@@ -27,7 +27,6 @@ settings/scenes/pressure_scene.be
 settings/scenes/duration_scene.be
 settings/activation.be
 settings/scenes/settings_scene.be
-settings/scenes/page.be
 settings/configs/setting_cfg.be
 settings/configs/bool_setting_cfg.be
 settings/configs/choice_setting_cfg.be

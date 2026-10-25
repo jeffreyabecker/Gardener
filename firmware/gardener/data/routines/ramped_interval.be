@@ -89,7 +89,8 @@ class RampedIntervalChrome : Layout
   end
 end
 
-class RampedInterval : Page
+class RampedInterval : Scene
+  var routine
   var phase
   var mark
   var set
@@ -106,7 +107,8 @@ class RampedInterval : Page
   var chrome
 
   def init()
-    super(self).init("ramped_interval")
+    super(self).init()
+    self.routine = "ramped_interval"
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
@@ -147,7 +149,7 @@ class RampedInterval : Page
   # ladder from the start to the final pressure; a nullable rest vents all the way. The step's zero
   # is a rule of the page's own - no editor would produce it - so it is read raw.
   def read_settings(settings)
-    var s = self.activation(settings)
+    var s = Activation(self.routine, settings)
     self.count = s.value("set_count")
     self.initial = s.value("initial_pressure")
     self.final = s.value("final_pressure")
@@ -373,11 +375,16 @@ class RampedInterval : Page
   # over at the first set when the settings scene closes, so it must not keep working at the old
   # values underneath it. The scene below is not polled while the settings are showing.
   def edit()
-    self.open_settings()
+    edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
     end
     return true
+  end
+
+  def settings_closed(items, values)
+    save_settings(self.routine, items, values)
+    self.on_editor_closed()
   end
 
   # The edit was to the file, so the file is the source again even if this activation was given a
@@ -459,7 +466,7 @@ class Interval : RampedInterval
   # one, is the set for this activation; otherwise the file is. The single target is the ladder's
   # start and end, and the step is always zero.
   def read_settings(settings)
-    var s = self.activation(settings)
+    var s = Activation(self.routine, settings)
     self.count = s.value("set_count")
     self.initial = s.value("target_pressure")
     self.final = self.initial

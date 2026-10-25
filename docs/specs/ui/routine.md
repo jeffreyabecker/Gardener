@@ -23,9 +23,12 @@ registers an object and is done:
 ```berry
 import string
 
-class MyPage : Page
+class MyPage : Scene
+  var routine
+
   def init()
-    super(self).init("mypage")
+    super(self).init()
+    self.routine = "mypage"
   end
 
   def activate()
@@ -37,8 +40,9 @@ routines.register("mypage", "My page", MyIcon(), MyPage, MySettings)
 return MyPage
 ```
 
-`Page` (`/system/settings/scenes/page.be`) is `Scene` plus the routine's own name: it is what the store
-file is called, and it is the class that opens the settings list, so a page writes the name once.
+A routine carries its own name in the `routine` field it sets in `init()`: it is what the store
+file is called, and it is the name its settings are read and written under, so the class that owns
+the name writes it once.
 
 The second argument is the routine's **title**: the label the browser draws for its row. It is not
 the identity — the name still is — so it may contain spaces and capital letters.
@@ -52,8 +56,8 @@ The fourth argument is the routine's **class**, not an instance: the registry bu
 every time the routine is pushed, so each visit starts from `activate()` and nothing a previous
 visit left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
 `Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
-dispatch, and `Page` adds the routine's name and its settings view; a routine extends `Page` and
-defines `activate()` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
+dispatch; a routine extends `Scene`, carries its own name in the `routine` field, and defines
+`activate()` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
 method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
 
 The fifth argument is the routine's **settings declaration** — the class that describes the values it
@@ -121,18 +125,18 @@ readout looks like.
 `scenes/` holds one scene per file: `value_scene.be` is `ValueScene` (the modal editor that owns the
 keys while it is on top) and the value it pops on Cancel, `bool_scene.be`, `choice_scene.be`,
 `real_scene.be`, `int_scene.be`, `pressure_scene.be` and `duration_scene.be` are the kinds,
-`settings_scene.be` is `SettingsScene` (the list, handed its rows and its values) and `page.be` is
-`Page` (the scene a routine extends). `activation.be` is `Activation`, one activation's values.
+`settings_scene.be` is `SettingsScene` (the list, handed its rows and its values).
+`activation.be` is `Activation`, one activation's values.
 `configs/` holds one setting per kind: `setting_cfg.be` is `SettingCfg` and
 `bool_setting_cfg.be`, `choice_setting_cfg.be`, `int_setting_cfg.be`, `real_setting_cfg.be`,
 `pressure_setting_cfg.be` and `duration_setting_cfg.be` are the kinds, each opening the value scene
 of the same name. **`up:double`** is the standard gesture for opening the list; the page's own
-gesture calls `open_settings()`, which reads the values, applies the rule, pushes the list and then
-writes what it settles on:
+gesture calls `edit_settings(self.routine, ...)`, which reads the values, applies the rule, pushes
+the list and, through the page's `settings_closed`, writes what it settles on:
 
 ```berry
 def edit()
-  self.open_settings()
+  edit_settings(self.routine, / items, v -> self.settings_closed(items, v))
   return true
 end
 ```
