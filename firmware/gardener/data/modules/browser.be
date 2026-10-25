@@ -6,8 +6,7 @@
 # by the time the readout is compiled.
 #
 # Choosing a row launches the routine: the registry builds its scene from one clean settings map, so
-# the launch is the whole of the routine's initialization. A saved routine would launch the same way
-# with its own map instead of the one its file makes.
+# the launch is the whole of the routine's initialization.
 
 class BrowserScene : Scene
   var routine_keys

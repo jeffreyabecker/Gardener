@@ -111,9 +111,9 @@ class RampedStatic : Scene
   # --- settings ------------------------------------------------------------
 
   # The values a run begins with, as the registry's clean map holds them: every registered setting
-  # present, each held to its kind. The file's own values are what that map is built from until a
-  # saved routine carries a set of its own. The profile is built once from the settings a run begins
-  # with, so a set that cannot make one is refused at the start rather than here.
+  # present, each held to its kind, built from the values the routine's file holds. The profile is
+  # built once from the settings a run begins with, so a set that cannot make one is refused at the
+  # start rather than here.
   def init_from_settings(settings_values)
     self.start_pressure = settings_values["initial_pressure"]
     self.target_pressure = settings_values["target_pressure"]
@@ -124,8 +124,7 @@ class RampedStatic : Scene
 
   # The values this page is holding, in the same shape init_from_settings takes, so a run can be
   # written back the way it was read: every setting the routine registers, and a duration in whole
-  # seconds, which is what the store holds. Nothing calls it yet; it is the other half of a saved
-  # routine, whose values would come from the page rather than from its file.
+  # seconds, which is what the store holds. It is what the page hands the settings list it opens.
   def serialize_to_settings()
     return {
       "initial_pressure": self.start_pressure,

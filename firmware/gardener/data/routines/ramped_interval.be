@@ -196,9 +196,8 @@ class RampedInterval : Scene
   # --- settings ------------------------------------------------------------
 
   # The values a cycle begins with, as the registry's clean map holds them: every registered setting
-  # present, each held to its kind. The file's own values are what that map is built from until a
-  # saved routine carries a set of its own. A nullable step is an even ladder from the start to the
-  # final pressure; a nullable rest vents all the way.
+  # present, each held to its kind, built from the values the routine's file holds. A nullable step
+  # is an even ladder from the start to the final pressure; a nullable rest vents all the way.
   def init_from_settings(settings_values)
     self.count = settings_values["set_count"]
     self.initial = settings_values["initial_pressure"]
@@ -224,7 +223,7 @@ class RampedInterval : Scene
   # The values this page is holding, in the same shape init_from_settings takes, so a cycle can be
   # written back the way it was read: every setting the routine registers, with the step and the
   # rest exactly as the page settled on them, so an even ladder reads back as the step it became.
-  # Nothing calls it yet; it is the other half of a saved routine.
+  # It is what the page hands the settings list it opens.
   def serialize_to_settings()
     return {
       "set_count": self.count,
