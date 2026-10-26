@@ -23,8 +23,8 @@ class Scene
   # scene opened over another one covers the page and clears it when it draws.
   def init()
     self.last_draw = 0
-    self.pos = Position.top_left()
-    self.dim = Size.page()
+    self.pos = point(0, 0)
+    self.dim = bounds(screen.page_width(), screen.page_height() - overlay_band_height)
   end
 
   # The queue is a pull: drain it every poll so a press is never left waiting for the next scene.

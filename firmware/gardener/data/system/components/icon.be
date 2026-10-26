@@ -6,7 +6,7 @@ class Icon : Component
   # it a box of its own.
   def init()
     super(self).init()
-    self.set_box(Position(0, 0), Size(12, 8))
+    self.set_box(point(0, 0), bounds(12, 8))
   end
 
   # An icon draws its glyph in the box; a subclass overrides this and ends with super, so the base

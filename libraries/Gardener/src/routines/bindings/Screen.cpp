@@ -204,8 +204,8 @@ int screenText(bvm* vm) {
 }
 
 // The ink box of a string in the face it will be drawn in, which is what centring a proportional
-// face or placing a suffix after it needs. The record is the same two numbers Display::textBounds
-// answers.
+// face or placing a suffix after it needs. The record is a `bounds`: the same two numbers
+// Display::textBounds answers.
 int screenBounds(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "screen.text_bounds(text, size[, font])");

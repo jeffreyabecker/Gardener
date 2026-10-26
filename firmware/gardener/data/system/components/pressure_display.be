@@ -114,7 +114,7 @@ class PressureDisplay : Component
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.set_box(Position(self.pos.x, self.pos.y), Size(self.dim.w, self.dim.h))
+    self._number.set_box(point(self.pos.x, self.pos.y), bounds(self.dim.w, self.dim.h))
     self._number.value = text
     self._number.draw()
   end
@@ -141,7 +141,7 @@ class PressureDisplay : Component
       self._secondary.align = "right"
       self._secondary.v_align = "bottom"
     end
-    self._secondary.set_box(Position(self.pos.x, self.pos.y), Size(self.dim.w, self.dim.h))
+    self._secondary.set_box(point(self.pos.x, self.pos.y), bounds(self.dim.w, self.dim.h))
     self._secondary.draw_face(text, face)
   end
 
@@ -155,8 +155,8 @@ class PressureDisplay : Component
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.set_box(Position(on_left ? self.pos.x + half : self.pos.x, self.pos.y),
-                         Size(half, self.dim.h))
+    self._number.set_box(point(on_left ? self.pos.x + half : self.pos.x, self.pos.y),
+                         bounds(half, self.dim.h))
     self._number.value = main_text
     self._number.draw()
 
@@ -164,8 +164,8 @@ class PressureDisplay : Component
     self._secondary.style = self.secondary_style != nil ? self.secondary_style : self.style
     self._secondary.align = "center"
     self._secondary.v_align = "center"
-    self._secondary.set_box(Position(on_left ? self.pos.x : self.pos.x + half, self.pos.y),
-                            Size(half, self.dim.h))
+    self._secondary.set_box(point(on_left ? self.pos.x : self.pos.x + half, self.pos.y),
+                            bounds(half, self.dim.h))
     self._secondary.value = sec_text
     self._secondary.draw()
   end

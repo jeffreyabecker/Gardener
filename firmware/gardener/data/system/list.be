@@ -82,7 +82,7 @@ class List
     while line < self.visible && start + line < self.rows.size()
       var entry = self.rows[start + line]
       if entry.icon != nil
-        entry.icon.set_box(Position(x, y + line * 8), entry.icon.dim)
+        entry.icon.set_box(point(x, y + line * 8), entry.icon.dim)
         entry.icon.draw()
         screen.draw_text(x + entry.icon.dim.w + 2, y + line * 8, 1, start + line == self.selected,
                          entry.title)

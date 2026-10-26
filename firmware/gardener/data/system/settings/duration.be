@@ -127,7 +127,7 @@ class DurationEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + tall)
+    return bounds(wide, 20 + tall)
   end
 
   # Minutes and seconds as two fields side by side, each suffixed and at the one face, with the
@@ -141,16 +141,16 @@ class DurationEditScene : EditScene
       var x = pos.x + (dim.w - (fields[0] + 1 + fields[1])) / 2
       var y = pos.y + 10 + (dim.h - 20 - fields[2]) / 2
       var minutes = Text(self.minutes_text())
-      minutes.set_box(Position(x, y), Size(fields[0], fields[2]))
+      minutes.set_box(point(x, y), bounds(fields[0], fields[2]))
       minutes.inverted = self.stage == "min"
       minutes.draw_face(self.minutes_text(), fields[3])
       var seconds = Text(self.seconds_text())
-      seconds.set_box(Position(x + fields[0] + 1, y), Size(fields[1], fields[2]))
+      seconds.set_box(point(x + fields[0] + 1, y), bounds(fields[1], fields[2]))
       seconds.inverted = self.stage != "min"
       seconds.draw_face(self.seconds_text(), fields[3])
     else
       var value = Text("--")
-      value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20))
+      value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, dim.h - 20))
       value.draw()
     end
 

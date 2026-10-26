@@ -15,21 +15,23 @@ The panel is `screen.width()` by `screen.height()`, one bit per pixel, origin to
 are whole pixels. Nothing reaches the glass until `screen.flush()`.
 
 The `ux` component owns the bottom 12 rows — the unit, the two ways in, the run state and the
-battery — and draws them last, on top of whatever a page drew there. A page lays out in
-`Size.page()`, the panel less that band.
+battery — and draws them last, on top of whatever a page drew there. A page lays out in the panel
+less that band: `bounds(screen.page_width(), screen.page_height() - overlay_band_height)`, which is
+the box every scene is given.
 
 ## The box
 
-Every component has a box: a `Position` and a `Size`, carried in `pos` and `dim`. `pos.x`, `pos.y`
-is the top-left corner and `dim.w`, `dim.h` the width and height, whole pixels. The box is not a
+Every component has a box: a `point` and a `bounds`, carried in `pos` and `dim`. `pos.x`, `pos.y` is
+the top-left corner and `dim.w`, `dim.h` the width and height, whole pixels. Both are records
+declared in `/system/records.be` — the fields and an `init`, nothing else. The box is not a
 constructor argument: `set_box(pos, dim)` sets both halves together, after the component is built
 and before anything draws it. A layout calls it for every child it places; a caller calls it for a
 component that stands alone, such as a list row's glyph or a settings editor's inline value.
 Nothing a component draws lies outside its box, and a component never draws before it has one.
 
-`Position` and `Size` carry the helpers a page uses to state a box: `Position.top_left()`,
-`Position.top(y)`, `Position.left(x)`, `Size.width(s)`, `Size.height(s)`, `Size.page()` (the area
-above the band) and `Size.screen()`.
+A page states the numbers it means rather than a partial box: the page is the panel less the band,
+`bounds(screen.page_width(), screen.page_height() - overlay_band_height)`, and a whole-panel box is
+`bounds(screen.width(), screen.height())`.
 
 `inverted`, when true, flips the whole box as the last thing a draw does: everything the component
 drew inside the box reads as paper on ink — a selected row, a cursor or a focused readout. Every
@@ -42,18 +44,19 @@ before drawing leaves its box alone, so nothing is highlighted.
 itself that child declares, and draws the children in order. It is the one way a page states where
 its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
 
-A child declares its box as `bounds(w, h)` — a `Bounds` holding the fraction of the parent's width
-and the fraction of its height the child occupies. Each fraction is a number in [0, 1], or nil for
-the whole of the page.
+A child declares its box as `bounds(w, h)` — the fraction of the parent's width and the fraction of
+its height the child occupies. Each fraction is a number in [0, 1], or nil for the whole of the
+page. It is the same record a component's `dim` is, and the one `screen.text_bounds` answers.
 
 - `bounds(nil, nil)` names the page rather than a parent, so the layout holding it is a root and is
-  bound to `Size.page()` at construction; every other layout waits for the parent that places it.
+  bound to the page — the panel less the band — at construction; every other layout waits for the
+  parent that places it.
 - Siblings stack along the axis they divide: a layout whose children are each the full width stacks
   them down a column, and one whose children are each the full height stacks them across a row.
 - A resolved span is clamped to what is left of the parent, so nothing a `bounds` declares can place
   a child outside it.
-- A component carrying no bounds is a leaf and takes the layout's box whole, so a layout that is not
-  a row holds one such component.
+- A component that declares no bounds is a leaf and takes the layout's box whole, so a layout that
+  is not a row holds one such component.
 - The layout is itself a component, so its own draw ends in `super(self).draw()` like any other.
 
 `children` is the list handed to `init`, and `add(child)` appends to it. A layout resolves its

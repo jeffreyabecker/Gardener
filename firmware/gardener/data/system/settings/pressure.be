@@ -71,7 +71,7 @@ class PressureEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + ink[1])
+    return bounds(wide, 20 + ink[1])
   end
 
   # The depth at the largest face the box holds, formatted in the panel's unit — the same string the
@@ -80,7 +80,7 @@ class PressureEditScene : EditScene
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
     var value = Text(self.text())
-    value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20))
+    value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, dim.h - 20))
     value.draw()
     var hint = self.hint()
     var hint_w = screen.text_bounds(hint, 1).w

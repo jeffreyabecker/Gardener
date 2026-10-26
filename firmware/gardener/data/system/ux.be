@@ -15,8 +15,8 @@
 max_frames = 8
 
 # The status band the ux component owns across the bottom of the glass: 12 rows of unit, links, run
-# state and battery. A page lays out in the area above it (Size.page()), and nothing a page draws
-# belongs here.
+# state and battery. A page lays out in the area above it — the panel less those rows — and nothing a
+# page draws belongs here.
 overlay_band_height = 12
 
 # The Bluetooth rune, packed the way screen.draw_bitmap reads it: width, height, then one bit per

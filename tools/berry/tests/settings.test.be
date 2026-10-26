@@ -331,7 +331,7 @@ class RecordingEditor : EditScene
   end
 
   def content_size()
-    return Size(60, 30)
+    return bounds(60, 30)
   end
 
   def draw_editor(pos, dim)

@@ -111,8 +111,11 @@ subfolder. A `.be` file the order does not name does not load, and one found bes
 is reported as an error. **A new system file is an edit to `/system/order`**, at the point its
 dependencies put it.
 
-`/system/records.be` declares `reading`, `unit` and `bounds` — the classes the native calls answer
-with. They are written in Berry because only the parser can declare an instance variable on a class.
+`/system/records.be` declares `reading`, `unit`, `links` and `jingle` — the classes the native calls
+answer with — and `point` and `bounds`, the pair a box is made of. They are written in Berry because
+only the parser can declare an instance variable on a class. `bounds` is the record with three jobs:
+a component's `dim` in pixels, the fraction of a parent that a layout child declares, and the ink box
+`screen.text_bounds` answers.
 The same file defines the
 global `is_nil(a, b, ...)`: the first argument that is not nil, or nil when every one of them is,
 so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` is the scene stack —
@@ -141,10 +144,11 @@ or `RUNNING`, read from the chamber every beat — the clock the page shows besi
 and `stop` commands that move it.
 
 `/system/components/` is the drawing primitives the home scene composes, one class per file:
-`component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is
+`component.be` is `Component` (the `point`/`bounds` box and the `inverted` flip), `icon.be` is
 `Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
-`layout.be` is `AutoLayout` and the `bounds` a child declares (a layout resolves each child's
-fraction of its own box and draws the children in order), `progress_bar.be` is
+`layout.be` is `AutoLayout` (a layout resolves each child's `bounds` fraction of its own box and
+draws the children in order),
+`progress_bar.be` is
 `ProgressBar`, `scrollbar.be` is `Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is
 `PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. A component takes no
 box at construction: `set_box(pos, dim)` sets both, and the layout, or the caller for a component

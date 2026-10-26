@@ -64,7 +64,7 @@ class BoolEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + chip[1])
+    return bounds(wide, 20 + chip[1])
   end
 
   # The entries as chips side by side, the one showing inverted, which is the whole of the switch.
@@ -79,7 +79,7 @@ class BoolEditScene : EditScene
     var i = 0
     while i < items.size()
       var drawn = Text(items[i].title)
-      drawn.set_box(Position(x, y), Size(chip[0], chip[1]))
+      drawn.set_box(point(x, y), bounds(chip[0], chip[1]))
       drawn.inverted = self.ring.index == i
       drawn.draw_face(items[i].title, chip[2])
       x += chip[0] + 1

@@ -255,19 +255,19 @@ def harness_art_component(name, path)
 
   if name == "text"
     var t = Text("12.5")
-    t.set_box(Position(0, 0), Size(64, 16))
+    t.set_box(point(0, 0), bounds(64, 16))
     t.align = "left"
     t.draw()
     drew = true
   elif name == "pressure"
     var p = PressureDisplay()
-    p.set_box(Position(0, 0), Size(64, 52))
+    p.set_box(point(0, 0), bounds(64, 52))
     p.pressure_kpa = 20.0
     p.draw()
     drew = true
   elif name == "pressure-secondary"
     var p = PressureDisplay()
-    p.set_box(Position(0, 0), Size(64, 52))
+    p.set_box(point(0, 0), bounds(64, 52))
     p.pressure_kpa = 20.0
     p.secondary_pressure = 10.0
     p.secondary_position = "br"
@@ -275,12 +275,12 @@ def harness_art_component(name, path)
     drew = true
   elif name == "bar"
     var b = ProgressBar(50)
-    b.set_box(Position(0, 0), Size(96, 8))
+    b.set_box(point(0, 0), bounds(96, 8))
     b.draw()
     drew = true
   elif name == "scrollbar"
     var s = Scrollbar()
-    s.set_box(Position(0, 0), Size(2, 48))
+    s.set_box(point(0, 0), bounds(2, 48))
     s.index = 2
     s.count = 10
     s.visible = 5
@@ -288,13 +288,13 @@ def harness_art_component(name, path)
     drew = true
   elif name == "triangle"
     var t = Triangle()
-    t.set_box(Position(0, 0), Size(12, 12))
+    t.set_box(point(0, 0), bounds(12, 12))
     t.direction = "up"
     t.draw()
     drew = true
   elif name == "duration"
     var d = Duration("minutes")
-    d.set_box(Position(0, 0), Size(64, 16))
+    d.set_box(point(0, 0), bounds(64, 16))
     d.seconds = 150
     d.draw()
     drew = true

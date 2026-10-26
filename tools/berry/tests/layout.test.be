@@ -101,7 +101,7 @@ def a_leaf_fills_its_layout_box()
   assert_eq(t.dim.h, 26, "the leaf does not take the layout's height")
 end
 
-test("a component with no bounds fills its layout's box", a_leaf_fills_its_layout_box)
+test("a component that declares no bounds fills its layout's box", a_leaf_fills_its_layout_box)
 
 def auto_layout_walks_its_children_in_order()
   var log = []
@@ -124,7 +124,7 @@ test("an AutoLayout draws its children in order", auto_layout_walks_its_children
 def component_stores_its_box()
   var t = Text("x")
   assert_nil(t.pos, "a component is given a box before it is built")
-  t.set_box(Position(3, 7), Size(40, 12))
+  t.set_box(point(3, 7), bounds(40, 12))
   assert_eq(t.pos.x, 3, "the box's x is not stored")
   assert_eq(t.pos.y, 7, "the box's y is not stored")
   assert_eq(t.dim.w, 40, "the box's width is not stored")
@@ -135,7 +135,7 @@ test("a component stores the box it was given", component_stores_its_box)
 
 def text_keeps_its_box()
   var t = Text("42")
-  t.set_box(Position(4, 5), Size(60, 20))
+  t.set_box(point(4, 5), bounds(60, 20))
   t.draw()
   t.value = "a much longer string than before"
   t.draw()

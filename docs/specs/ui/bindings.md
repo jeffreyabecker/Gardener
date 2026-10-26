@@ -112,8 +112,8 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 
 `width()` and `height()` answer the panel's size in pixels, and `page_width()` and `page_height()`
 answer the same two numbers: the status band is the `ux` component's own, so the panel surface no
-longer reserves it. A page lays out in `Size.page()`, which is the panel less the band, so a layout
-derives its boxes from the glass it owns rather than subtracting a band it does not.
+longer reserves it. A page lays out in the panel less the band, so a layout derives its boxes from
+the glass it owns rather than subtracting a band it does not.
 
 ### Colours
 

@@ -74,7 +74,7 @@ class RealEditScene : EditScene
     if self.min != nil && self.max != nil
       tall += 2 + 6
     end
-    return Size(wide, 20 + tall)
+    return bounds(wide, 20 + tall)
   end
 
   # The value at the largest face the box holds, over a bar showing where it sits between the bounds
@@ -89,7 +89,7 @@ class RealEditScene : EditScene
       value_h -= 2 + 6
     end
     var value = Text(self.text())
-    value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, value_h))
+    value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, value_h))
     value.draw()
     if bounded
       var percent = 0
@@ -97,7 +97,7 @@ class RealEditScene : EditScene
         percent = int((self.current - self.min) * 100 / (self.max - self.min))
       end
       var bar = ProgressBar(percent)
-      bar.set_box(Position(pos.x, pos.y + 10 + value_h + 2), Size(dim.w, 6))
+      bar.set_box(point(pos.x, pos.y + 10 + value_h + 2), bounds(dim.w, 6))
       bar.draw()
     end
 

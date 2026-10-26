@@ -29,7 +29,7 @@ class BrowserScene : Scene
     super(self).init()
     self.list = List(6)
     self.scrollbar = Scrollbar()
-    self.scrollbar.set_box(Position(self.pos.x + 110, self.pos.y + 2), Size(2, self.dim.h - 4))
+    self.scrollbar.set_box(point(self.pos.x + 110, self.pos.y + 2), bounds(2, self.dim.h - 4))
     self.list.scrollbar = self.scrollbar
   end
 

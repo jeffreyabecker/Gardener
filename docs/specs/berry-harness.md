@@ -80,8 +80,9 @@ image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `bounds` and `jingle` — declared in `/system/records.be`, which the
-image loads before anything else — and the three native modules a routine calls:
+The records `reading`, `unit`, `links`, `jingle`, `point` and `bounds` — declared in
+`/system/records.be`, which the image loads before anything else — and the three native modules a
+routine calls:
 
 | Module | On the host |
 | --- | --- |

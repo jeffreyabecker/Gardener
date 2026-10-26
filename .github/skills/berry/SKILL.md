@@ -75,13 +75,18 @@ already gave.
 
 ## Reading the output
 
-Two things bite before the messages do:
+Three things bite before the messages do:
 
 - A file resolves globals **when it compiles**, method bodies included, so a class a file names has
   to be a global an earlier file defined. A new class belongs in an earlier module, or the call is
   inverted; it never works defined below its first user. `/system` is loaded first and does not
   sort: `/system/order` names its files in the order they compile, so a new system file is an edit
   to that file, and one it does not name does not load.
+- A builtin's name is not a class's to take. `size`, `str`, `int`, `real`, `bool`, `number`, `type`,
+  `classname`, `classof`, `module`, `list`, `map`, `range`, `bytes`, `compile`, `call`, `format`,
+  `print`, `input`, `assert`, `super`, `open`, `isinstance`, `issubclass`, `__iterator__` are the
+  VM's own; a class named `size` fails at load with no message and exit code `0xC0000005`, which
+  reads as a crash rather than an error.
 - A page that never returns hangs the check. There is no instruction budget, on either side.
 
 | Message | What it means |

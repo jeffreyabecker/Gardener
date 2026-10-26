@@ -102,7 +102,7 @@ class ChoiceEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return Size(wide, 20 + self.list.visible * 8)
+    return bounds(wide, 20 + self.list.visible * 8)
   end
 
   # The label row, the entries with the one showing inverted and scrolled into view, and the hint

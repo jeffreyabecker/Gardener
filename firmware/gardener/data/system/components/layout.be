@@ -1,29 +1,14 @@
 # layout.be — the AutoLayout: a component with a box that resolves each child's box from the
 # fraction of itself the child declares, and draws them in order.
 #
-# A child declares its box as `bounds(w, h)`: the fraction of its parent's width and height it
-# takes, each a number in [0, 1], or nil for the whole of the page. `bounds(nil, nil)` names the
-# page rather than a parent, so a layout holding it is a root and is bound to the page at
-# construction; every other layout waits for the parent that places it.
+# A child declares its box as `bounds(w, h)`: the fraction of its parent's width and height it takes,
+# each a number in [0, 1], or nil for the whole of the page. `bounds(nil, nil)` names the page rather
+# than a parent, so a layout holding it is a root and is bound to the page at construction; every
+# other layout waits for the parent that places it.
 #
 # Siblings stack along the axis they divide: a layout whose children are each the full width stacks
 # them down a column, and one whose children are each the full height stacks them across a row. A
-# component that carries no bounds is a leaf, and fills its layout's box.
-
-# The fraction of a parent's box a component occupies: its width and its height, or nil for the
-# page.
-class Bounds
-  var w, h
-
-  def init(w, h)
-    self.w = w
-    self.h = h
-  end
-end
-
-def bounds(w, h)
-  return Bounds(w, h)
-end
+# component that declares no bounds is a leaf, and fills its layout's box.
 
 class AutoLayout : Component
   var children
@@ -34,15 +19,14 @@ class AutoLayout : Component
     self.bounds = bounds
     self.children = children == nil ? [] : children
     if bounds.w == nil && bounds.h == nil
-      var page = Size.page()
-      self.to_box(0, 0, page.w, page.h)
+      self.to_box(0, 0, screen.page_width(), screen.page_height() - overlay_band_height)
     end
   end
 
   # Bound to a box by the parent that placed it, or by the page when it is the root: the box is
   # stamped on the layout, and its children are placed inside that box.
   def to_box(x, y, w, h)
-    self.set_box(Position(x, y), Size(w, h))
+    self.set_box(point(x, y), bounds(w, h))
     self.place()
   end
 
@@ -53,14 +37,14 @@ class AutoLayout : Component
     var cursor = down ? self.pos.y : self.pos.x
     var limit = down ? self.pos.y + self.dim.h : self.pos.x + self.dim.w
     for child : self.children
-      var child_bounds = self.child_bounds(child)
+      var declared = self.child_bounds(child)
       var across = nil
-      if child_bounds != nil
-        across = down ? child_bounds.w : child_bounds.h
+      if declared != nil
+        across = down ? declared.w : declared.h
       end
       var span = limit - cursor
-      if child_bounds != nil
-        span = self.span(down ? self.dim.h : self.dim.w, down ? child_bounds.h : child_bounds.w)
+      if declared != nil
+        span = self.span(down ? self.dim.h : self.dim.w, down ? declared.h : declared.w)
       end
       if cursor + span > limit
         span = limit - cursor
@@ -97,8 +81,8 @@ class AutoLayout : Component
   # the full height. A layout that is neither stacks down.
   def stacks_down()
     for child : self.children
-      var child_bounds = self.child_bounds(child)
-      if child_bounds != nil && child_bounds.w != nil && child_bounds.w < 1
+      var declared = self.child_bounds(child)
+      if declared != nil && declared.w != nil && declared.w < 1
         return false
       end
     end
@@ -118,7 +102,7 @@ class AutoLayout : Component
     if isinstance(child, AutoLayout)
       child.to_box(x, y, w, h)
     else
-      child.set_box(Position(x, y), Size(w, h))
+      child.set_box(point(x, y), bounds(w, h))
     end
   end
 end

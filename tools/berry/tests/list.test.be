@@ -6,7 +6,7 @@ suite = "list"
 
 def rows_are_records()
   var icon = Icon()
-  icon.set_box(Position(0, 0), Size(4, 4))
+  icon.set_box(point(0, 0), bounds(4, 4))
   var list = List(4)
   list.set([ListRow(icon, "Alpha", "a"), [nil, "Beta"], "Gamma"])
 

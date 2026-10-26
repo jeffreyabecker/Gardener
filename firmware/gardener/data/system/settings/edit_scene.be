@@ -67,13 +67,13 @@ class EditScene : Scene
     var x = self.pos.x + (self.dim.w - w) / 2
     var y = self.pos.y + (self.dim.h - h) / 2
     screen.draw_rect(x, y, w, h)
-    self.draw_editor(Position(x + 2, y + 2), Size(w - 4, h - 4))
+    self.draw_editor(point(x + 2, y + 2), bounds(w - 4, h - 4))
   end
 
   # What this editor draws, as the content the frame wraps: the whole of it, its label row and hint
   # row included. A kind answers it; the base draws nothing of its own.
   def content_size()
-    return Size(0, 0)
+    return bounds(0, 0)
   end
 
   # The editor itself, in the box inside the frame. A kind draws the whole of its content here.
