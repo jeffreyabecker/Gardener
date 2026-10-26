@@ -2,7 +2,7 @@
 # the settings declaration it registers, and the way into each routine's scene.
 #
 # A routine file's top level calls routines.register(routine_key, title, icon, factory, settings) and
-# a RoutineRegistration joins this Berry dict, keyed by the routine's key; nothing native holds it.
+# a RoutineRegistration joins one Berry list, in the order the files register; nothing native holds it.
 # The key is the routine's identity: the registration it is found by and the document its values are
 # kept in. The factory is the routine's scene class, and the registry builds the scene when the
 # routine is pushed, so a page starts from its own init() every time and nothing a previous visit
@@ -27,9 +27,10 @@
 import string
 
 # One routine's registration: the key it is known by, the label and icon the browser draws, the
-# class the registry builds its scene from, and the settings instance that declares them.
+# class the registry builds its scene from, the settings instance that declares them, and the
+# alternates its document named, in the order its sections were scanned.
 class RoutineRegistration
-  var routine_key, title, icon, factory, settings
+  var routine_key, title, icon, factory, settings, aliases
 
   def init(routine_key, title, icon, factory, settings)
     self.routine_key = routine_key
@@ -37,12 +38,13 @@ class RoutineRegistration
     self.icon = icon
     self.factory = factory
     self.settings = settings
+    self.aliases = []
   end
 end
 
 # One alternate set a routine's document declares: the alias key the set is found under — the
 # section name — and the title the browser row shows, read from that section's routine_title or the
-# key itself. The parent the alias resolves to is in the registry's aliases dict.
+# key itself. The routine it resolves to is the registration whose aliases list holds it.
 class RoutineAlias
   var routine_key, title
 
@@ -53,16 +55,10 @@ class RoutineAlias
 end
 
 class RoutineRegistry
-  var entries
-  var order
-  var aliases
-  var alias_order
+  var registrations
 
   def init()
-    self.entries = {}
-    self.order = []
-    self.aliases = {}
-    self.alias_order = []
+    self.registrations = []
   end
 
   def register(routine_key, title, icon, factory, settings)
@@ -83,58 +79,38 @@ class RoutineRegistry
       vacuum.log("registry: " + routine_key + " settings must be an instance")
       return false
     end
-    if self.entries.find(routine_key) == nil
-      self.order.push(routine_key)
+    # A key already registered keeps its place, so the browser's order is the order the files
+    # registered in; a re-registration replaces the record it had, and its alternates go with it.
+    var index = self.index_of(routine_key)
+    var registration = RoutineRegistration(routine_key, title, icon, factory, settings)
+    if index < 0
+      self.registrations.push(registration)
     else
-      self.drop_aliases(routine_key)
+      self.registrations[index] = registration
     end
-    self.entries[routine_key] = RoutineRegistration(routine_key, title, icon, factory, settings)
     # Every named section of the routine's document is an alternate set under its own key.
     var document = device.config("routines/" + routine_key + ".ini")
     for name : document.section_keys()
       if name == ""
         continue
       end
-      if self.aliases.find(name) != nil || self.entries.find(name) != nil
+      if self.entry(name) != nil
         vacuum.log("registry: " + routine_key + " alias " + name + " already taken")
         continue
       end
-      self.aliases[name] = routine_key
       var stored_title = document.get(name, "routine_title", "")
-      self.alias_order.push(RoutineAlias(name, stored_title == "" ? name : stored_title))
+      registration.aliases.push(RoutineAlias(name, stored_title == "" ? name : stored_title))
     end
     return true
-  end
-
-  # Every alias this routine already owns, dropped before a re-registration rescans its document, so
-  # a section that no longer exists does not leave an alias behind.
-  def drop_aliases(routine_key)
-    var aliases = {}
-    for name : self.aliases.keys()
-      if self.aliases[name] != routine_key
-        aliases[name] = self.aliases[name]
-      end
-    end
-    self.aliases = aliases
-    var order = []
-    for alias : self.alias_order
-      if self.aliases.find(alias.routine_key) == nil
-        continue
-      end
-      order.push(alias)
-    end
-    self.alias_order = order
   end
 
   # Every registered key, in registration order, each alias following its routine.
   def keys()
     var out = []
-    for routine_key : self.order
-      out.push(routine_key)
-      for alias : self.alias_order
-        if self.aliases.find(alias.routine_key) == routine_key
-          out.push(alias.routine_key)
-        end
+    for e : self.registrations
+      out.push(e.routine_key)
+      for alias : e.aliases
+        out.push(alias.routine_key)
       end
     end
     return out
@@ -205,14 +181,14 @@ class RoutineRegistry
   # The label the browser draws for a routine; the key is the identity. An alias carries its own
   # title, read from its section, so a row shows that rather than the parent's.
   def title(routine_key)
-    for alias : self.alias_order
-      if alias.routine_key == routine_key
-        return alias.title
-      end
-    end
     var e = self.entry(routine_key)
     if e == nil
       return nil
+    end
+    for alias : e.aliases
+      if alias.routine_key == routine_key
+        return alias.title
+      end
     end
     return e.title
   end
@@ -221,13 +197,10 @@ class RoutineRegistry
   # for. An alias row shares its parent's icon and carries the alias key as its value.
   def rows()
     var out = []
-    for routine_key : self.order
-      var e = self.entries[routine_key]
-      out.push(ListRow(e.icon, e.title, routine_key))
-      for alias : self.alias_order
-        if self.aliases.find(alias.routine_key) == routine_key
-          out.push(ListRow(e.icon, alias.title, alias.routine_key))
-        end
+    for e : self.registrations
+      out.push(ListRow(e.icon, e.title, e.routine_key))
+      for alias : e.aliases
+        out.push(ListRow(e.icon, alias.title, alias.routine_key))
       end
     end
     return out
@@ -241,13 +214,8 @@ class RoutineRegistry
   # begins with an empty map. This is the only place the file-or-nothing rule is applied; a scene
   # is handed the answer and never reads a document.
   def load_settings(routine_key)
-    var parent = self.aliases.find(routine_key)
-    var section = ""
-    if parent != nil
-      section = routine_key
-    else
-      parent = routine_key
-    end
+    var parent = self.parent_key(routine_key)
+    var section = parent == routine_key ? "" : routine_key
     var settings_cfgs = self.settings_cfgs(routine_key)
     var settings_values = {}
     if settings_cfgs == nil
@@ -281,13 +249,8 @@ class RoutineRegistry
   # up here, so a caller that never opened a list has none to hand over. False, writing nothing,
   # when the routine declares no settings.
   def save_settings(routine_key, settings_values, settings_cfgs)
-    var parent = self.aliases.find(routine_key)
-    var section = ""
-    if parent != nil
-      section = routine_key
-    else
-      parent = routine_key
-    end
+    var parent = self.parent_key(routine_key)
+    var section = parent == routine_key ? "" : routine_key
     if settings_cfgs == nil
       settings_cfgs = self.settings_cfgs(routine_key)
     end
@@ -314,14 +277,44 @@ class RoutineRegistry
     return ux.push(e.factory(activation), nil, callback)
   end
 
-  # The registration a key names: an alias resolves to its parent, so every lookup goes through
-  # here and serves both.
+  # The registration a key names: an alternate resolves to its parent, so every lookup goes through
+  # here and serves both. An alternate is looked for before a routine's own record, so a key that is
+  # both still answers the alternate's routine.
   def entry(routine_key)
-    var parent = self.aliases.find(routine_key)
-    if parent == nil
-      parent = routine_key
+    for e : self.registrations
+      for alias : e.aliases
+        if alias.routine_key == routine_key
+          return e
+        end
+      end
     end
-    return self.entries.find(parent)
+    return self.registration(routine_key)
+  end
+
+  # The routine a key's set is kept in: the key itself, or the routine whose document named it an
+  # alternate.
+  def parent_key(routine_key)
+    var e = self.entry(routine_key)
+    return e == nil ? routine_key : e.routine_key
+  end
+
+  # The record a routine's own key names, or nil. An alternate is not looked for here, so a key
+  # another routine's document named is not mistaken for one.
+  def registration(routine_key)
+    var i = self.index_of(routine_key)
+    return i < 0 ? nil : self.registrations[i]
+  end
+
+  # Where a routine's own record sits in the list, or -1 when the key is not registered.
+  def index_of(routine_key)
+    var i = 0
+    while i < self.registrations.size()
+      if self.registrations[i].routine_key == routine_key
+        return i
+      end
+      i += 1
+    end
+    return -1
   end
 end
 

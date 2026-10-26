@@ -113,7 +113,8 @@ answers the box of the scene on top, with the firmware calling `reset`, `enter` 
 `/system/scene.be` is `Scene` — the box a scene draws in (`pos` and `dim`), the gesture drain, the
 repaint cadence and the gesture dispatch a routine's scene extends.
 `/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
-builds — routine key, title, icon, factory and settings instance — and `class RoutineRegistry` with the
+builds — routine key, title, icon, factory, settings instance and the alternates its document named —
+held in one list in registration order, and `class RoutineRegistry` with the
 global `routines` instance — the list the browser draws, the `load_settings(routine_key)` that
 builds a routine's clean settings map, and the `push(routine_key, callback, activation)` that opens a
 routine.

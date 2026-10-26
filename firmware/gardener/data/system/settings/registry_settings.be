@@ -1,8 +1,13 @@
 
 
 class RegistrySettings
+  var routine_key, title, icon, factory, settings_cfgs
   var settings_cfgs
-  def init(settings_cfgs)
+  def init(routine_key, title, icon, factory, settings_cfgs)
+    self.routine_key = routine_key
+    self.title = title
+    self.icon = icon
+    self.factory = factory
     self.settings_cfgs = settings_cfgs
   end
 
