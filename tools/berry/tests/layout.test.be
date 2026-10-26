@@ -1,6 +1,6 @@
-# layout.test.be — the relative layout and the box-at-init contract. An AutoLayout resolves each
-# child's bounds against its own box; a component keeps the box it was given, however its value
-# changes.
+# layout.test.be — the relative layout, and the box a component is given. An AutoLayout resolves
+# each child's bounds against its own box; a component takes no box at construction, is given one
+# through set_box(), and keeps it however its value changes.
 
 suite = "layout"
 
@@ -9,8 +9,8 @@ class RecordingChild : Component
   var name
   var log
 
-  def init(pos, dim, name, log)
-    super(self).init(pos, dim)
+  def init(name, log)
+    super(self).init()
     self.name = name
     self.log = log
   end
@@ -92,7 +92,7 @@ end
 test("a child is a fraction of the layout that places it", a_child_is_resolved_against_its_parent)
 
 def a_leaf_fills_its_layout_box()
-  var t = Text(Position(0, 0), Size(0, 0), "x")
+  var t = Text("x")
   AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [t])])
   assert_eq(t.pos.x, 0, "the leaf is not at the left of its layout")
   assert_eq(t.pos.y, 0, "the leaf is not at the top of its layout")
@@ -106,9 +106,9 @@ def auto_layout_walks_its_children_in_order()
   var log = []
   # The layouts place their leaves, so drawing walks both in the order they were added.
   var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [
-    RecordingChild(Position(0, 0), Size(1, 1), "first", log)
+    RecordingChild("first", log)
   ]), AutoLayout(bounds(1, 0.5), [
-    RecordingChild(Position(0, 0), Size(1, 1), "second", log)
+    RecordingChild("second", log)
   ])])
   root.draw()
   assert_eq(log.size(), 2, "the layout did not draw both leaves")
@@ -121,7 +121,9 @@ test("an AutoLayout draws its children in order", auto_layout_walks_its_children
 # --- the box a component keeps ---------------------------------------------
 
 def component_stores_its_box()
-  var t = Text(Position(3, 7), Size(40, 12), "x")
+  var t = Text("x")
+  assert_nil(t.pos, "a component is given a box before it is built")
+  t.set_box(Position(3, 7), Size(40, 12))
   assert_eq(t.pos.x, 3, "the box's x is not stored")
   assert_eq(t.pos.y, 7, "the box's y is not stored")
   assert_eq(t.dim.w, 40, "the box's width is not stored")
@@ -131,7 +133,8 @@ end
 test("a component stores the box it was given", component_stores_its_box)
 
 def text_keeps_its_box()
-  var t = Text(Position(4, 5), Size(60, 20), "42")
+  var t = Text("42")
+  t.set_box(Position(4, 5), Size(60, 20))
   t.draw()
   t.value = "a much longer string than before"
   t.draw()

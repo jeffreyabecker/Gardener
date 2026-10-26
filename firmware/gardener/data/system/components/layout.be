@@ -30,7 +30,7 @@ class AutoLayout : Component
   var bounds
 
   def init(bounds, children)
-    super(self).init(nil, nil)
+    super(self).init()
     self.bounds = bounds
     self.children = children == nil ? [] : children
     if bounds.w == nil && bounds.h == nil
@@ -42,8 +42,7 @@ class AutoLayout : Component
   # Bound to a box by the parent that placed it, or by the page when it is the root: the box is
   # stamped on the layout, and its children are placed inside that box.
   def to_box(x, y, w, h)
-    self.pos = Position(x, y)
-    self.dim = Size(w, h)
+    self.set_box(Position(x, y), Size(w, h))
     self.place()
   end
 
@@ -119,8 +118,7 @@ class AutoLayout : Component
     if isinstance(child, AutoLayout)
       child.to_box(x, y, w, h)
     else
-      child.pos = Position(x, y)
-      child.dim = Size(w, h)
+      child.set_box(Position(x, y), Size(w, h))
     end
   end
 end

@@ -49,8 +49,8 @@ class Text : Component
   var _fitted_text
 
   # --- public methods ------------------------------------------------------
-  def init(pos, dim, value, settings)
-    super(self).init(pos, dim)
+  def init(value, settings)
+    super(self).init()
     var s = settings == nil ? text_settings.default() : settings
     s.apply_to(self)
     self.candidate = nil

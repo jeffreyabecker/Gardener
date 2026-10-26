@@ -4,8 +4,8 @@ class Triangle : Component
   var direction
   var style
 
-  def init(pos, dim)
-    super(self).init(pos, dim)
+  def init()
+    super(self).init()
     self.direction = "up"
     self.style = "filled"
   end
