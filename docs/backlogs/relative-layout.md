@@ -7,7 +7,7 @@ file is deleted with the plan when the last item lands; each epic's summary live
 
 ## Epic 1 — the AutoLayout engine
 
-- [ ] 1.1 — `bounds(w, h)` is a value a layout accepts — a width and a height fraction, each a
+- [x] 1.1 — `bounds(w, h)` is a value a layout accepts — a width and a height fraction, each a
   number in [0, 1] or nil for the page — and an `AutoLayout` is a component with a box, loaded
   before the routines, that resolves each child's `bounds` against its own box, stacking siblings
   along one axis (rows down, a row's children across), stamps the child's `pos` and `dim`, and
