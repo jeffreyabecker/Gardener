@@ -84,7 +84,9 @@ one, the panel shows the device's mark and nothing runs.
 
 A routine's key is also the name of the file its values are kept in (see `device.config` in
 [bindings.md](./bindings.md)), so it has to be a plain word: a key containing `/` or `\` is
-refused at load.
+refused at load. The file's global section is the routine's own set; every named section is an
+alternate set, an alias the registry lists beside the routine and that launches the same page from
+that section's values.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
 `python scripts/arduino.py --task data`.
@@ -430,7 +432,10 @@ back when the list closes, and a page is never initialized with a set the rule r
 
 A page does not read its file at all: the registry's `load_settings(routine_key)` reads every setting
 it registers, holds each to its kind and repairs the set, and the page's `init(activation)` is handed
-the result as `activation.settings_values`, a map keyed by setting key. A page takes what it needs
+the result as `activation.settings_values`, a map keyed by setting key. The root config lives in the
+document's global section; every named section is an alias — a second key that launches the same
+page from that section's set, and whose map also carries its `routine_title` so the page can show
+its own name. A page takes what it needs
 from that map in
 `init_from_settings(settings_values)`, and a value is read from it directly:
 
