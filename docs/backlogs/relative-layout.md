@@ -43,5 +43,5 @@ file is deleted with the plan when the last item lands; each epic's summary live
   every scene's `super(self).init(...)` drops its arguments, and `EditScene` and `SettingsEditScene`
   stop reading `ux.box()`. Verified: `python tools/berry/check.py --tests` passes with an editor
   framed centred in the page rather than in a sub-box.
-- [ ] 4.2 — `ux.box()` is removed from `ux.be` and nothing in the image names it. Verified:
+- [x] 4.2 — `ux.box()` is removed from `ux.be` and nothing in the image names it. Verified:
   `python tools/berry/check.py --tests` passes.
