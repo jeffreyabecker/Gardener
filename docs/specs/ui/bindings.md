@@ -432,7 +432,7 @@ Only the top scene is activated and polled; a scene below the top keeps its stat
 through its callback when the scene above pops. A scene whose `activate()` or `poll()` raises is
 dropped with the whole stack: the panel shows the device's mark.
 
-The root scene is the `__rootScene` global `/modules/ui.be` sets, pushed at boot by the firmware. It
+The root scene is the `__rootScene` global `/system/home.be` sets, pushed at boot by the firmware. It
 is not registered anywhere; it is what the device's go-home gesture returns to.
 
 ## `routines` — the registry (a Berry class)
@@ -457,7 +457,7 @@ draws its list.
 Registering the same key twice is one routine: the later file wins. The title is what the browser
 shows, and a routine without one shows its key; an icon is optional too, and a routine without one,
 or one whose icon is `nil`, is a text-only row. The device's own scenes — the home scene in
-`/modules/ui.be`, the settings rows it opens in `/modules/settings_device.be` and
-`/modules/jingles_edit.be`, the browser in `/modules/browser.be` — are not registered at all; they are
-well-known scenes the system pushes directly. There is no fixed number of routines: the registry is a
-Berry list, so it grows as files register.
+`/system/home.be`, the settings rows it opens in `/system/settings/device.be` and
+`/system/settings/jingle.be`, the browser in `/system/browser.be` — are not registered at all; they
+are well-known scenes the system pushes directly. There is no fixed number of routines: the registry
+is a Berry list, so it grows as files register.

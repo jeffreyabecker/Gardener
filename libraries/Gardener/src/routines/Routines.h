@@ -25,10 +25,10 @@ class Library;
 // the files it loads, the beat that drives the stack, and the gesture queue.
 class Routines {
  public:
-  // Creates the VM, installs the native modules, loads the files `/system/order` names, then every
-  // `/modules/*.be` and then every `/routines/*.be`, and resets the scene stack to the root. The
-  // system and the modules come first so a page can use what one of them defines. False only when
-  // the interpreter cannot be allocated at all.
+  // Creates the VM, installs the native modules, loads the files `/system/order` names and then
+  // every `/routines/*.be`, and resets the scene stack to the root. The system comes first so a page
+  // can use what one of its files defines. False only when the interpreter cannot be allocated at
+  // all.
   bool begin(PanelContext& context);
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after

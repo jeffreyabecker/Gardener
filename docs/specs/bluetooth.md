@@ -31,19 +31,14 @@ read, before it trusts the rest of the table.
 | `max_run_s` | `0015` | read | 2 | uint16 LE, the longest hold a start may ask for |
 | `write_result` | `0016` | read, notify | 3 | uint16 LE suffix, then a uint8 reason |
 | `uptime_ms` | `0017` | read, notify | 4 | uint32 LE, milliseconds since boot |
-| `routine_key` | `0018` | read, notify | 24 | UTF-8, the current routine's key, empty when none |
-| `routine_state` | `0019` | read, notify | 24 | UTF-8, the current routine's state, empty when none |
-| `routine_command` | `001A` | write, notify | 32 | UTF-8 gesture in, one result byte out |
-| `routine_launch` | `001B` | write, notify | 24 | UTF-8 routine key in, one result byte out |
 
 The suffix is the last 16 bits of the characteristic's UUID, and the length is the characteristic's
 own maximum. A read answers at most that many bytes; a write has to be exactly the payload's length,
 and a short or long one is ignored rather than padded or truncated.
 
-`batt`, `unit` and the four `routine_*` characteristics are the panel's: `batt` is the gauge the
-panel carries, `unit` is the preference its pages print in, and the routine characteristics are the
-routine surface the panel runs. A build without a panel has none of them, so a client finds `caps`
-with the panel bit clear and no `batt`, `unit` or `routine_*` to read. Every other characteristic is
+`batt` and `unit` are the panel's: `batt` is the gauge the panel carries and `unit` is the
+preference its pages print in. A build without a panel has neither characteristic, so a client
+finds `caps` with the panel bit clear and no `batt` or `unit` to read. Every other characteristic is
 the machine's and is always present.
 
 The suffixes `0004`, `000F`, `0010`, `0011`, `0012` and `0013` are retired. `0004` carried the pump's
@@ -240,30 +235,6 @@ is never produced.
 `start` refuses for the same two reasons the serial line reports — no valid reading and a latched
 fault — because both transports ask the same check, so the two surfaces cannot disagree about why a
 run will not start. The run's hold is the last `hold_s` written, or the maximum when it was `0`.
-
-## Routines
-
-The radio carries the live half of the routine surface: the routine showing and its state, a launch
-by key, and a command to the routine showing. What a routine, a state and a command are, and what a
-launch means, is [routine links](./routine-links.md). Enumeration — the routine list, a routine's
-states, commands and settings — and a launch from settings a client names are the serial line's
-shape, not the radio's: the table here is fixed fields, and a list whose length a routine chooses
-has no characteristic. A client that wants them reads them on the serial line.
-
-`routine_key` and `routine_state` are the two fields `routine get` reports on the serial line, empty
-when the top scene is not a routine. They notify on change.
-
-`routine_launch` takes a routine key and opens it from its stored set, the launch `routine launch
-<key>` performs on the serial line, vent included. The notification that follows every write carries
-a result byte: `0x00` applied, `0x01` no such key, `0x02` the stack is full, `0xFF` refused.
-
-`routine_command` takes a whole gesture string and routes it into the queue, the same `routine
-command <gesture>` performs. Its result byte is `0x00` accepted into the queue, `0xFF` not a
-gesture.
-
-A write to either is UTF-8 text, at most the characteristic's length; a longer write is ignored.
-The fixed-width rule — a write has to be exactly the payload's length — does not apply to these two:
-the payload is the text, however short.
 
 ## Notifications
 

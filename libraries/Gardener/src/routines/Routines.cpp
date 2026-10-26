@@ -86,22 +86,16 @@ bool Routines::begin(PanelContext& context) {
 
   // The system first, in the order `/system/order` states: a scene may construct a class one of
   // those files defines — or answer with a record one of them declares — so they have to have run
-  // before the module and routine files do.
+  // before the routine files do.
   size_t systemFiles = 0;
   const size_t system = loadSystem(systemFiles);
-  size_t moduleFiles = 0;
-  const size_t modules = loadAll("modules", moduleFiles);
   size_t routineFiles = 0;
   const size_t routines = loadAll("routines", routineFiles);
 
-  const size_t files = systemFiles + moduleFiles + routineFiles;
+  const size_t files = systemFiles + routineFiles;
   String summary = "vm: ";
   summary += String((uint32_t)system);
   summary += " system, ";
-  summary += String((uint32_t)modules);
-  summary += " module";
-  if (modules != 1) summary += 's';
-  summary += ", ";
   summary += String((uint32_t)routines);
   summary += " routine";
   if (routines != 1) summary += 's';

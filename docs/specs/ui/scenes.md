@@ -40,13 +40,13 @@ Every scene, and where it lives:
 
 | Scene | Defined in | Dispatch |
 | --- | --- | --- |
-| `HomeScene` — the root | `modules/ui.be` | `on` |
-| `BrowserScene` | `modules/browser.be` | `on` |
+| `HomeScene` — the root | `system/home.be` | `on` |
+| `BrowserScene` | `system/browser.be` | `on` |
 | `SettingsEditScene` | `system/settings/settings_edit.be` | `handle_page` |
 | `EditScene` — the edit base | `system/settings/edit_scene.be` | `handle_page` |
 | `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` | inherited |
 | `DurationEditScene` | `system/settings/duration.be` | `handle_page` |
-| `JingleEditScene` | `modules/jingles_edit.be` | inherited |
+| `JingleEditScene` | `system/settings/jingle.be` | inherited |
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |

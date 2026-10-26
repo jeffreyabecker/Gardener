@@ -1,4 +1,4 @@
-# ui.be — the home scene: the device's own page and the root scene the firmware pushes at boot.
+# home.be — the home scene: the device's own page and the root scene the firmware pushes at boot.
 #
 # It registers with nothing. The home scene is the well-known scene the system pushes directly, and
 # its gestures are the machine's: OK starts or resumes a run, Cancel stops and vents, Forward on a
@@ -6,9 +6,8 @@
 # list. The settings are the device's own rather than a routine's, so the home scene reads and writes
 # them through `screen` and `device` and declares nothing but the page.
 #
-# It loads after browser.be, whose `browserScene` its gestures name, and after settings_device.be,
-# whose `DeviceSettings` the list it opens is built from; the jingle row that list offers is
-# jingles_edit.be.
+# It is the last file /system/order names: its gestures name browserScene, and the list it opens is
+# built from DeviceSettings.
 
 # --- the page --------------------------------------------------------------
 

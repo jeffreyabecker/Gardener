@@ -1,11 +1,11 @@
-# settings_device.be — the device's own settings as a settings-list declaration.
+# device.be — the device's own settings as a settings-list declaration.
 #
 # The device's own settings are not a routine's: they live behind `device` and `screen` rather than
 # in a routine's document. The rows only declare them — the home scene reads the device to fill the
 # set in and writes it back when the list commits — and the editors are the settings folder's.
 #
-# It loads after jingles_edit.be, which provides the jingle row, and before ui.be, whose HomeScene
-# opens this set and commits it back to the device.
+# It is named in /system/order after the kinds its rows are built from, the jingle row included, and
+# before home.be, whose HomeScene opens this set and commits it back to the device.
 
 # The row names a unit the way the glass prints it, so the row and its editor show the same label the
 # overlay puts after a reading.

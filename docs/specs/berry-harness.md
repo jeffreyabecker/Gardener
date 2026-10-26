@@ -57,10 +57,9 @@ only when every file compiled, every registration looked like a routine, and eve
 
 ## The load order
 
-1. the image, in three parts:
+1. the image, in two parts:
    1. the files `/system/order` names, in the order it names them
-   2. `/modules/*.be`, alphabetical
-   3. `/routines/*.be`, alphabetical
+   2. `/routines/*.be`, alphabetical
 2. `harness.be`
 3. `driver.be`
 
@@ -72,8 +71,8 @@ That is what `/system` is: the records the native calls answer with, the compone
 every page is written against, the settings view, and the registry. Its files do not sort into their
 order, so `/system/order` states it — a path per line relative to `/system`, `#` for a comment, and
 `components/text.be` beside `scene.be` for a file in a subfolder. A `.be` file in one of the folders
-the order names, and not named by it, is reported as an error and not loaded. `/modules` then loads
-alphabetically, which is what the device's own scenes use, and the routines after them.
+the order names, and not named by it, is reported as an error and not loaded. The routines load after
+it, alphabetically.
 
 In `--tests` mode two more load after those three: `tests/suite.be`, then `tests/*.test.be` in
 alphabetical order. A suite can name every routine, module and `harness` drive because the whole

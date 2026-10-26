@@ -53,7 +53,7 @@ SKETCH = SKETCHES["gardener"]
 
 # The builds that ship a data image. The machine-alone build has no settings of its own — its
 # numbers are build symbols — so there is no data folder to write; the full device ships the
-# system, the modules and the routines.
+# system and the routines.
 SKETCHES_WITH_DATA = {"gardener"}
 
 DATA_DIR = SKETCH / "data"

@@ -2,9 +2,8 @@
 # settings list its Forward opens. It registers with nothing; it is the well-known scene the home
 # scene pushes, and browserScene is that instance.
 #
-# It loads first of the modules, before jingles_edit.be, settings_device.be and ui.be — the last of
-# which names browserScene in the home scene's gestures, so the instance exists by the time that
-# page is compiled.
+# It is named in /system/order after the registry its rows come from and the settings list its
+# Forward opens, and before home.be, which names browserScene in its gestures.
 #
 # Choosing a row launches the routine: the browser reads the routine's file into one clean settings
 # map and hands it, with the routine's key, to the registry, which builds the scene from it, so the

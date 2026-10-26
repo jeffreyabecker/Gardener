@@ -26,3 +26,11 @@ settings/int.be
 settings/pressure.be
 settings/duration.be
 settings/settings_edit.be
+# The jingle row extends the choice kind, so it follows it.
+settings/jingle.be
+# The device's own set is built from the kinds above, the jingle row included.
+settings/device.be
+# The browser's Forward opens the settings list, and its rows come from the registry.
+browser.be
+# Last: it names browserScene in its gestures and DeviceSettings in the list it opens.
+home.be

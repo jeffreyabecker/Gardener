@@ -7,7 +7,7 @@ description: 'Checking the Berry data image under firmware/gardener/data without
 
 ## When to use
 
-- Editing anything under `firmware/gardener/data/system/`, `firmware/gardener/data/modules/` or
+- Editing anything under `firmware/gardener/data/system/` or
   `firmware/gardener/data/routines/`
 - Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under `routines/bindings/`
 - A page misbehaves on the panel and you want the answer without a build and a flash
