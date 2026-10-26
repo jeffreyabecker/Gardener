@@ -36,7 +36,7 @@ class HomeScene : Scene
   var mark
 
   def init()
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.chrome = HomeChrome()
     self.settings_values = {}
     self.mark = nil

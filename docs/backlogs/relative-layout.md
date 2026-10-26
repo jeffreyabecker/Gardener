@@ -39,7 +39,7 @@ file is deleted with the plan when the last item lands; each epic's summary live
 
 ## Epic 4 — scenes always take the whole page
 
-- [ ] 4.1 — `Scene.init()` takes no box and always sets `Position.top_left()` and `Size.page()`;
+- [x] 4.1 — `Scene.init()` takes no box and always sets `Position.top_left()` and `Size.page()`;
   every scene's `super(self).init(...)` drops its arguments, and `EditScene` and `SettingsEditScene`
   stop reading `ux.box()`. Verified: `python tools/berry/check.py --tests` passes with an editor
   framed centred in the page rather than in a sub-box.
