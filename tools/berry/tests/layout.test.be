@@ -1,6 +1,6 @@
-# layout.test.be — the flat layout, the relative one, and the box-at-init contract. A flat layout
-# draws its children in order and nothing more; an AutoLayout resolves each child's bounds against
-# its own box; a component keeps the box it was given, however its value changes.
+# layout.test.be — the relative layout and the box-at-init contract. An AutoLayout resolves each
+# child's bounds against its own box; a component keeps the box it was given, however its value
+# changes.
 
 suite = "layout"
 
@@ -118,7 +118,7 @@ end
 
 test("an AutoLayout draws its children in order", auto_layout_walks_its_children_in_order)
 
-# --- the flat layout -------------------------------------------------------
+# --- the box a component keeps ---------------------------------------------
 
 def component_stores_its_box()
   var t = Text(Position(3, 7), Size(40, 12), "x")
@@ -129,33 +129,6 @@ def component_stores_its_box()
 end
 
 test("a component stores the box it was given", component_stores_its_box)
-
-def layout_draws_children_in_order()
-  var log = []
-  var l = Layout([
-    RecordingChild(Position(0, 0), Size(1, 1), "first", log),
-    RecordingChild(Position(0, 0), Size(1, 1), "second", log)
-  ])
-  l.draw()
-  assert_eq(log.size(), 2, "the layout did not draw both children")
-  assert_eq(log[0], "first", "the first child was not drawn first")
-  assert_eq(log[1], "second", "the second child was not drawn second")
-end
-
-test("a layout draws its children in order", layout_draws_children_in_order)
-
-def layout_add_grows_the_list()
-  var log = []
-  var l = Layout([])
-  assert_eq(l.children.size(), 0, "a new layout is not empty")
-  l.add(RecordingChild(Position(0, 0), Size(1, 1), "added", log))
-  assert_eq(l.children.size(), 1, "add did not grow the list")
-  l.draw()
-  assert_eq(log.size(), 1, "the added child was not drawn")
-  assert_eq(log[0], "added", "the added child was not drawn")
-end
-
-test("add grows the flat list", layout_add_grows_the_list)
 
 def text_keeps_its_box()
   var t = Text(Position(4, 5), Size(60, 20), "42")
