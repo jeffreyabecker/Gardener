@@ -14,7 +14,8 @@ each child declares the portion of its parent's box it occupies — vertically a
 fractions — with the children stacked inside their parent, and a root with no parent takes the
 whole page area when declared `bounds(nil, nil)`. The layout resolves those fractions to the
 child's box, and components stop taking `pos` and `dim` in their constructors — the layout is
-what sets both, before the first draw. The pages keep their structure — a glyph-and-title row, a
+what sets both, before the first draw. Scenes stop being windows: a scene always takes the whole
+page, however it is opened. The pages keep their structure — a glyph-and-title row, a
 readings row, a status-and-bar row — but the geometry is redefined as clean proportions: where
 today's box was
 pixel-intrinsic (the 12×8 glyph slot, the 9-row title, the 8-row bar and its insets), the child
@@ -99,16 +100,39 @@ What is wrong now: `Component.init(pos, dim)` accepts the box and stores it, and
 [component.be](../../firmware/gardener/data/system/components/component.be) says so: "a box is
 given at construction and kept; there is no reflow."
 
-What is true instead: a component's constructor takes only the component's own arguments. The
-layout that resolves the component's `bounds` is the sole writer of its `pos` and `dim`, and it
-sets both — a `Position` and a `Size`, never one without the other — after construction and before
-the first `draw()` call. A component is never drawn before its box is set; the layout setting the
-box is the guarantee. Subclasses drop the `pos, dim` parameters and stop forwarding them, and the
-chrome constructors drop them too, as the example above shows.
+What is true instead: a component's constructor takes only the component's own arguments. Its
+`pos` and `dim` are set after construction and before the first `draw()` call — by the layout that
+resolved its `bounds` for a child of a layout, and by the caller for a component that is not in a
+layout, such as a list row's icon, the browser's scrollbar or a settings editor's inline text or
+bar. Both are always set — a `Position` and a `Size`, never one without the other — and a component
+is never drawn before its box is set. Subclasses drop the `pos, dim` parameters and stop forwarding
+them, and the chrome constructors drop them too, as the example above shows.
 
 Checked by: a test builds a component with no box, the layout resolves its `bounds` to a box, and
-the component draws inside that box; the existing suites — `chromes`, `layout`, `components` —
-still pass with every component constructor stripped of its `pos, dim` parameters.
+the component draws inside that box; the existing suites — `chromes`, `layout`, `components`,
+`settings`, `browser` — still pass with every component constructor stripped of its `pos, dim`
+parameters.
+
+## Scenes always take the whole page
+
+**A scene takes the whole page, never a window over the scene below.**
+
+What is wrong now: `Scene.init(pos, dim)` accepts a box and stores it, and a scene is given either
+the page — a root scene — or the box of the scene it is opened over, a window.
+[scene.be](../../firmware/gardener/data/system/scene.be) says so: "a scene opened over another one
+is given that one's box." `ux.box()` returns the top scene's box for a scene being built, and
+`EditScene` and `SettingsEditScene` each read it and pass it to `super(self).init(...)`, so an
+editor opens as a window sized to whatever scene is beneath it.
+
+What is true instead: a scene always takes the whole page. `Scene.init()` takes no box and always
+sets `pos` to `Position.top_left()` and `dim` to `Size.page()`. `ux.box()` is gone, and `EditScene`
+and `SettingsEditScene` call `super(self).init()` with no arguments. A scene pushed over another
+covers the page and clears it when it draws; the scene below keeps whatever it drew and redraws
+when it is back on top, as it does now.
+
+Checked by: `ux.box()` no longer exists anywhere in the image, `EditScene` and `SettingsEditScene`
+call `super(self).init()` with no box, and the settings and browser suites pass with an editor
+framed centred in the page rather than in a sub-box.
 
 ## Consequences
 
@@ -118,8 +142,11 @@ construction and kept, there is no reflow" — and
 [layout.be](../../firmware/gardener/data/system/components/layout.be) — "a flat list, nothing more"
 — and those now say something different: a layout is a component with a box of its own, it resolves
 its children, and there is a new `bounds` vocabulary; a component's constructor no longer takes a
-box, and the layout is what sets `pos` and `dim` before the first draw. There is no layout spec, so
-no spec changes; the contract continues to live in those comments and in
+box, and the layout is what sets `pos` and `dim` before the first draw. The window contract also
+goes: [scene.be](../../firmware/gardener/data/system/scene.be) — "a scene opened over another one
+is given that one's box" — becomes "a scene always takes the whole page", and `ux.box()` disappears
+from [ux.be](../../firmware/gardener/data/system/ux.be). There is no layout spec, so no spec
+changes; the contract continues to live in those comments and in
 [layout.test.be](../../tools/berry/tests/layout.test.be), which pins the new resolution.
 
 The panel's pages change where today's boxes were pixel-intrinsic: the glyph-and-title row becomes
@@ -140,6 +167,7 @@ The `chromes` suite's frames are the record of the change.
 Run `python tools/berry/check.py --tests`: every file compiles, every page runs, and the new cases
 in [layout.test.be](../../tools/berry/tests/layout.test.be) assert the resolved boxes above, that
 each migrated chrome resolves to the boxes its bounds name, and that a component built with no box
-draws inside the box the layout set. Run
+draws inside the box the layout set; the settings and browser suites pass with `EditScene` and
+`SettingsEditScene` opened over the page and no `ux.box()` anywhere in the image. Run
 `python tools/berry/check.py --art static` and `--scene home`; the frames show the redefined
 glyph-and-title and bar rows, and the unchanged readings row and home page.
