@@ -1,5 +1,5 @@
 # layout.be — the AutoLayout: a component with a box that resolves each child's box from the
-# fraction of itself the child declares, and the flat list a caller still places by hand.
+# fraction of itself the child declares, and draws them in order.
 #
 # A child declares its box as `bounds(w, h)`: the fraction of its parent's width and height it
 # takes, each a number in [0, 1], or nil for the whole of the page. `bounds(nil, nil)` names the
@@ -121,28 +121,6 @@ class AutoLayout : Component
     else
       child.pos = Position(x, y)
       child.dim = Size(w, h)
-    end
-  end
-end
-
-# The flat list: children as they were handed over, drawn in order with no box and no placement.
-class Layout
-  var children
-
-  def init(children)
-    self.children = children == nil ? [] : children
-  end
-
-  def add(child)
-    self.children.push(child)
-    return child
-  end
-
-  # Draw the children in the order they were added. A layout has no box of its own, so there is no
-  # flip: each child draws — and flips — inside its own box.
-  def draw()
-    for child : self.children
-      child.draw()
     end
   end
 end

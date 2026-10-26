@@ -38,8 +38,8 @@ end
 
 test("bold built-in text draws and inverts", bold_builtin_draws_and_inverts)
 
-# The flat layout's behaviour — drawing its children in order and keeping their boxes — is pinned in
-# layout.test.be, so the layout cases live there and not here.
+# The layout's behaviour — resolving a child's bounds, stacking the siblings and keeping the box a
+# component was given — is pinned in layout.test.be, so the layout cases live there and not here.
 
 def progress_bar_draws()
   var b = ProgressBar(Position(0, 0), Size(32, 8), 0)

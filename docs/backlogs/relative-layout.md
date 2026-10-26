@@ -26,7 +26,7 @@ file is deleted with the plan when the last item lands; each epic's summary live
   `bounds(0.5, 1)` in the last row — rooted at `bounds(nil, nil)`. Verified: the pinned boxes —
   glyph column (0, 0, 16, 13), title (16, 0, 112, 13), readings at y 13, status and bar each half
   of the last row — are asserted, and the static chrome frame draws.
-- [ ] 2.3 — `RampedIntervalChrome` is the same nested tree, taking `icon` and `title_text` only.
+- [x] 2.3 — `RampedIntervalChrome` is the same nested tree, taking `icon` and `title_text` only.
   Verified: the pinned boxes are asserted, and the interval chrome frame draws.
 
 ## Epic 3 — components stop taking their box at construction
