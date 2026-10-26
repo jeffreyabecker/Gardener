@@ -12,6 +12,8 @@ components/scrollbar.be
 components/triangle.be
 components/pressure_display.be
 components/duration.be
+# The band the ux component draws: a layout of cells, so it loads after the components.
+overlay.be
 scene.be
 list.be
 # The registry registers registrations, and the routines below the system extend the record.

@@ -201,15 +201,17 @@ reading: the band prints the glass's unit itself.
 ### The ux component owns the bottom band
 
 The bottom 12 rows of the glass, `y` 52–63, are the `ux` component's. It clears them and draws them
-last, before each beat's `flush()`, so a routine never has to. Left to right:
+last, before each beat's `flush()`, so a routine never has to. The band is a layout of four cells
+across the panel width, each a fraction of it, and `ux` positions the layout over the bottom rows
+and draws it. On the 128-wide panel the cells land on the fields the band has always shown. Left to
+right:
 
-| Field | `x` |
+| Field | share of the panel width |
 | --- | --- |
-| the unit the glass prints in | 2–25 |
-| the serial link's icon, while it is connected | 50–61 |
-| the Bluetooth link's icon, while it is connected | 66–77 |
-| the run state's icon | 100–111 |
-| the battery, when a pack is fitted | 116–127 |
+| the unit the glass prints in | 53/128, the text at the cell's left |
+| the two links — serial, then Bluetooth — while each is connected | 50/128, the glyphs at the cell's left |
+| the run state's icon | 13/128 |
+| the battery, when a pack is fitted | 12/128, ending at the right edge |
 
 The run state's icon blinks while the pump pulls or the valve vents — lit for 65% of a 1000 ms
 period — so a machine that is working reads differently from one that has stopped; holding, idle
