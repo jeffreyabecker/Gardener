@@ -9,7 +9,6 @@ components/text.be
 components/layout.be
 components/progress_bar.be
 components/scrollbar.be
-components/triangle.be
 components/pressure_display.be
 components/duration.be
 # The band the ux component draws: a layout of cells, so it loads after the components.

@@ -147,14 +147,12 @@ and `stop` commands that move it.
 `component.be` is `Component` (the `point`/`bounds` box and the `inverted` flip), `icon.be` is
 `Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
 `layout.be` is `AutoLayout` (a layout resolves each child's `bounds` fraction of its own box and
-draws the children in order),
-`progress_bar.be` is
-`ProgressBar`, `scrollbar.be` is `Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is
-`PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. A component takes no
-box at construction: `set_box(pos, dim)` sets both, and the layout, or the caller for a component
-that stands alone, calls it before the first draw. Setting `inverted` on a component flips its box
-as the last thing its draw does — paper where its ink was — which is what a selected row, a cursor
-or a focused readout looks like.
+draws the children in order), `progress_bar.be` is `ProgressBar`, `scrollbar.be` is `Scrollbar`,
+`pressure_display.be` is `PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is
+`Duration`. A component takes no box at construction: `set_box(pos, dim)` sets both, and the
+layout, or the caller for a component that stands alone, calls it before the first draw. Setting
+`inverted` on a component flips its box as the last thing its draw does — paper where its ink was —
+which is what a selected row, a cursor or a focused readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
 `ChoiceItem` record a choice's entries are held as, `choice_items()` which normalizes a

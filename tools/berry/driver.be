@@ -286,12 +286,6 @@ def harness_art_component(name, path)
     s.visible = 5
     s.draw()
     drew = true
-  elif name == "triangle"
-    var t = Triangle()
-    t.set_box(point(0, 0), bounds(12, 12))
-    t.direction = "up"
-    t.draw()
-    drew = true
   elif name == "duration"
     var d = Duration("minutes")
     d.set_box(point(0, 0), bounds(64, 16))

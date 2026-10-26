@@ -128,11 +128,6 @@ are set before `draw()`: the thumb's height is `⌊h · visible / count⌋` clam
 across the span `count − visible` and clamped inside the box. `count ≤ 0` draws nothing; `hollow`
 inverts the two ends of the track, otherwise the component draws a frame and a filled thumb.
 
-## Triangle
-
-`Triangle` is an arrow in one of the four directions, filled or empty, drawn to fill its box.
-`direction` — `up` (default), `down`, `left` or `right`; `style` — `filled` (default) or `empty`.
-
 ## Icon
 
 `Icon` is a component that draws a glyph in its box. A glyph subclass draws its own ink inside it.

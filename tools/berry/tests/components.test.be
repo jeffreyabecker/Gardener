@@ -73,20 +73,6 @@ end
 
 test("a scrollbar draws its thumb", scrollbar_draws)
 
-def triangle_draws()
-  var t = Triangle()
-  t.set_box(point(0, 0), bounds(8, 8))
-  for d : ["up", "down", "left", "right"]
-    t.direction = d
-    t.style = "filled"
-    t.draw()
-    t.style = "empty"
-    t.draw()
-  end
-end
-
-test("a triangle draws each direction", triangle_draws)
-
 def pressure_display_draws()
   var p = PressureDisplay()
   p.set_box(point(0, 0), bounds(64, 52))
