@@ -2,7 +2,6 @@
 
 #include <berry.h>
 
-#include <cstring>
 #include <string>
 
 #include "routines/bindings/Module.h"
@@ -50,7 +49,7 @@ int harnessSave(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "harness.save(path)");
   }
-  be_pushbool(vm, session->panel().save(be_tostring(vm, 1)));
+  be_pushbool(vm, session->saveStill(be_tostring(vm, 1)));
   be_return(vm);
 }
 
@@ -98,22 +97,12 @@ int harnessCaptureStem(bvm* vm) {
   be_return(vm);
 }
 
-int harnessIsGif(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "harness.is_gif(path)");
-  }
-  const char* path = be_tostring(vm, 1);
-  const size_t len = std::strlen(path);
-  be_pushbool(vm, len >= 4 && std::strcmp(path + len - 4, ".gif") == 0);
-  be_return(vm);
-}
-
 const bnfuncinfo HarnessLibrary[] = {
     {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
     {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
     {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
     {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},
-    {"capture_stem", harnessCaptureStem},   {"is_gif", harnessIsGif},
+    {"capture_stem", harnessCaptureStem},
     {nullptr, nullptr},
 };
 

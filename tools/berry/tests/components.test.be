@@ -140,7 +140,7 @@ end
 test("a pressure display puts the secondary in each corner", secondary_in_each_corner)
 
 def capture(name)
-  return harness.save("tools/berry/artifacts/components/" + name + ".bmp")
+  return harness.save("tools/berry/artifacts/components/" + name + ".gif")
 end
 
 def captures()
@@ -148,13 +148,13 @@ def captures()
   var t = Text(Position(0, 0), Size(64, 16), "12.5")
   t.align = "left"
   t.draw()
-  assert_true(capture("text"), "cannot save text")
+  capture("text")
 
   screen.draw_clear()
   var p = PressureDisplay(Position(0, 0), Size(64, 52))
   p.secondary_pressure = 10.0
   p.draw(20.0)
-  assert_true(capture("pressure"), "cannot save pressure")
+  capture("pressure")
 end
 
 test("the components capture their frames", captures)

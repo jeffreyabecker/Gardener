@@ -12,7 +12,7 @@
 // GFX closely enough that a page's face choice, its measured box and its pixels are the panel's.
 // Colours are the drivers': 0 is paper, 1 is ink, and 2 flips whatever the pixel already is.
 //
-// save() writes a one-bit BMP, which is how --art shows a page.
+// packFrame() hands the frame to the harness's GIF writer; the panel itself never writes a file.
 
 class BitmapPanel {
  public:
@@ -23,7 +23,7 @@ class BitmapPanel {
 
   // --- the panel -----------------------------------------------------------
   bool begin();
-  // The buffer is already the frame; nothing has to be pushed anywhere. save() is the way out.
+  // The buffer is already the frame; nothing has to be pushed anywhere.
   void display() {}
   void invertDisplay(bool on) { inverted_ = on; }
 
@@ -81,7 +81,6 @@ class BitmapPanel {
   // The classic 5x7 face this panel draws with, for host-side callouts that render into a packed
   // frame themselves.
   static const uint8_t* classicFont();
-  bool save(const char* path) const;
 
  private:
   void writePixel(int16_t x, int16_t y, uint16_t color);

@@ -12,7 +12,7 @@ registration does not look like a routine, or a page does not survive being driv
 | --- | --- |
 | `check.py` | the build and the command line: compiles the VM, links the host app, runs it |
 | `main.c` | loads the files in the device's order and calls the checks |
-| `frame.c` | the panel: a 128 x 64 one-bit frame, the Adafruit GFX drawing verbs and the BMP writer |
+| `frame.c` | the panel: a 128 x 64 one-bit frame and the Adafruit GFX drawing verbs |
 | `frame.h` | the one function `main.c` calls to install the frame as a module |
 | `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
@@ -46,7 +46,7 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--seconds N` | `0` | with `--art` or `--scene`, run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
 | `--ceiling-kpa KPA` | `70` | the deepest depth the model chamber reaches |
-| `--out PATH` | `build/<name>.gif` | where the frame or animation goes; a `.bmp` name saves one still instead |
+| `--out PATH` | `build/<name>.gif` | where the GIF animation goes |
 | `--tests` | off | run the test suites instead of the smoke walk |
 | `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
 | `--verbose` | off | print each compiler command |
@@ -99,12 +99,11 @@ the ceiling `--ceiling-kpa` sets, 70 kPa by default. One beat is 250 ms of virtu
 
 ## The frame and its pictures
 
-`--art` and `--scene` run the real page and save what it drew. The default is an animated GIF, one
-frame per beat at the panel's 128 x 64, paper and ink, each held for a second so the run reads
-slowly; a `.bmp` `--out` saves a single still instead, as before. The GIF is enlarged 2 x to
-256 x 128 by `kRenderScale` in the GIF writer — nearest neighbour, because the picture is one bit —
-while the `.bmp` stays at the panel's native size. The frame delay is `kGifDelayCs`, one line to
-change to slow the whole animation down or speed it up. The drawing is not an approximation of the driver's — the primitives,
+`--art` and `--scene` run the real page and save what it drew as an animated GIF, one frame per
+beat at the panel's 128 x 64, paper and ink, each held for a second so the run reads slowly. The
+GIF is enlarged 2 x to 256 x 128 by `kRenderScale` in the GIF writer — nearest neighbour, because
+the picture is one bit. The frame delay is `kGifDelayCs`, one line to change to slow the whole
+animation down or speed it up. The drawing is not an approximation of the driver's — the primitives,
 `drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and the font data
 is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `ADAFRUIT_GFX`, then
 `arduino-cli`, then the usual sketchbook paths. A missing library stops the run with the

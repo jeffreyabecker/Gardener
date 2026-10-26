@@ -243,6 +243,9 @@ class HarnessSession {
   void beginCapture(const char* path);
   // Writes the captured frames to the armed path; false when there was nothing to write.
   bool endCapture();
+  // Writes the frame on screen now as a single-frame GIF, with no beat in between: the still the
+  // inspection commands and the chrome/component cases save.
+  bool saveStill(const char* path);
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }

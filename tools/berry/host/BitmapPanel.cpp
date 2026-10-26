@@ -678,27 +678,11 @@ void BitmapPanel::getTextBounds(const char* text, int16_t x, int16_t y, int16_t*
   if (outHeight != nullptr) *outHeight = (maxY >= minY) ? (uint16_t)(maxY - minY + 1) : 0;
 }
 
-// --- the BMP ---------------------------------------------------------------
-
-namespace {
-
-void put16(FILE* file, uint16_t value) {
-  fputc(value & 0xFF, file);
-  fputc((value >> 8) & 0xFF, file);
-}
-
-void put32(FILE* file, uint32_t value) {
-  fputc(value & 0xFF, file);
-  fputc((value >> 8) & 0xFF, file);
-  fputc((value >> 16) & 0xFF, file);
-  fputc((value >> 24) & 0xFF, file);
-}
-
-}  // namespace
+// --- the picture -----------------------------------------------------------
 
 const uint8_t* BitmapPanel::classicFont() { return font; }
 
-// The frame one bit per pixel, row-major and top-down (GIF order, unlike save()'s bottom-up BMP).
+// The frame one bit per pixel, row-major and top-down, as the GIF writer wants it.
 void BitmapPanel::packFrame(uint8_t* out) const {
   const int rowBytes = width_ / 8;
   for (int y = 0; y < height_; y++) {
@@ -714,55 +698,3 @@ void BitmapPanel::packFrame(uint8_t* out) const {
   }
 }
 
-// A one-bit BMP, rows bottom up: the panel's own depth, and the format scripts/asset.py reads.
-bool BitmapPanel::save(const char* path) const {
-  const int rowBytes = width_ / 8;
-  const int imageBytes = rowBytes * height_;
-  const int headerBytes = 14 + 40;
-
-  FILE* file = fopen(path, "wb");
-  if (file == nullptr) return false;
-
-  fputc('B', file);
-  fputc('M', file);
-  put32(file, (uint32_t)(headerBytes + 8 + imageBytes));  // file size
-  put16(file, 0);
-  put16(file, 0);
-  put32(file, (uint32_t)(headerBytes + 8));  // where the pixels start
-
-  put32(file, 40);  // this header's size
-  put32(file, (uint32_t)width_);
-  put32(file, (uint32_t)height_);
-  put16(file, 1);  // planes
-  put16(file, 1);  // bits per pixel
-  put32(file, 0);  // no compression
-  put32(file, (uint32_t)imageBytes);
-  put32(file, 2835);  // 72 dpi, in pixels per metre
-  put32(file, 2835);
-  put32(file, 2);  // palette entries used
-  put32(file, 2);
-
-  // Index 0 paper, index 1 ink: BMP calls them B, G, R, reserved.
-  fputc(0xFF, file);
-  fputc(0xFF, file);
-  fputc(0xFF, file);
-  fputc(0x00, file);
-  fputc(0x00, file);
-  fputc(0x00, file);
-  fputc(0x00, file);
-  fputc(0x00, file);
-
-  for (int y = height_ - 1; y >= 0; y--) {
-    for (int byte = 0; byte < rowBytes; byte++) {
-      uint8_t bits = 0;
-      for (int bit = 0; bit < 8; bit++) {
-        bits = (uint8_t)(bits << 1);
-        const uint8_t pixel = (uint8_t)(frame_[y][byte * 8 + bit] & 1);
-        if ((pixel ^ (inverted_ ? 1 : 0)) != 0) bits |= 1;
-      }
-      fputc(bits, file);
-    }
-  }
-
-  return fclose(file) == 0;
-}

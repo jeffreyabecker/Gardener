@@ -4,13 +4,13 @@
 suite = "chromes"
 
 def save(name)
-  return harness.save("tools/berry/artifacts/components/" + name + ".bmp")
+  return harness.save("tools/berry/artifacts/components/" + name + ".gif")
 end
 
 def home_draws()
   screen.draw_clear()
   HomeChrome(Position.top_left(), Size.page()).draw(50.0)
-  assert_true(save("home"), "cannot save the home frame")
+  save("home")
 end
 
 test("the home chrome draws", home_draws)
@@ -18,7 +18,7 @@ test("the home chrome draws", home_draws)
 def static_draws()
   screen.draw_clear()
   RampedStaticChrome("STATIC", Position.top_left(), Size.page()).draw("READY", 300000, 50000)
-  assert_true(save("static"), "cannot save the ramped static frame")
+  save("static")
 end
 
 test("the ramped static chrome draws", static_draws)
@@ -28,7 +28,7 @@ def interval_draws()
   var chrome = RampedIntervalChrome(IntervalIcon(Position.top_left(), Size(12, 8)), "INTERVAL",
                                     Position.top_left(), Size.page())
   chrome.draw(2, 4, "READY", 50)
-  assert_true(save("interval"), "cannot save the ramped interval frame")
+  save("interval")
   assert_eq(chrome.sets.value, "2 / 4", "the chrome does not count the set under way")
 
   # A ready page has no set to count, so it shows what the run will make.

@@ -196,4 +196,13 @@ bool HarnessSession::endCapture() {
   return ok;
 }
 
+bool HarnessSession::saveStill(const char* path) {
+  BitmapPanel& panel = display_.driver();
+  std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
+  panel.packFrame(frame.data());
+  std::vector<std::vector<uint8_t>> frames;
+  frames.push_back(std::move(frame));
+  return writeGif(path, panel.width(), panel.height(), frames);
+}
+
 }  // namespace gardener

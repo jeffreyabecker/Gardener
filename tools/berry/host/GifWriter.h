@@ -6,7 +6,7 @@
 namespace gardener {
 
 // How much a captured GIF is enlarged, by nearest-neighbour: 2 is 256 x 128. Change it and every
-// capture scales; the .bmp still is always written at the panel's native size.
+// capture scales.
 constexpr int RenderScale = 2;
 
 // How long each frame stays on screen, in centiseconds: 100 is one second. Change it to slow the

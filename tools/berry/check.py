@@ -16,8 +16,8 @@ a rig and an in-memory data image. A page therefore runs on the code the device 
 driver walks the image's own routines.
 
 --art runs one routine and saves what it drew, using the Adafruit GFX library the device compiles
-for the fonts: an animated GIF of every beat by default, or a one-bit BMP when --out names a .bmp
-file. --scene does the same for one of the device's own scenes: home or browser.
+for the fonts: an animated GIF of every beat. --scene does the same for one of the device's own
+scenes: home or browser.
 --tests saves a GIF per case that ran.
 """
 
@@ -155,16 +155,16 @@ parser.add_argument("--no-cache", action="store_true", help="rebuild every objec
 parser.add_argument("--verbose", action="store_true", help="show compiler commands and device log")
 parser.add_argument("--data", default=str(DATA), help="the data image to check")
 parser.add_argument("--gfx", help="the Adafruit GFX library folder; default is the installed one")
-parser.add_argument("--art", metavar="NAME", help="draw that routine and save the frame as a BMP")
+parser.add_argument("--art", metavar="NAME", help="draw that routine and save it as a GIF animation")
 parser.add_argument(
     "--scene",
     metavar="NAME",
-    help="draw that device scene — home or browser — and save the frame as a BMP",
+    help="draw that device scene — home or browser — and save it as a GIF animation",
 )
 parser.add_argument(
     "--component",
     metavar="NAME",
-    help="draw that component — from either framework — and save the frame as a BMP",
+    help="draw that component — from either framework — and save the frame as a GIF",
 )
 parser.add_argument(
     "--seconds",
@@ -174,7 +174,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--out",
-    help="where the frame or animation goes (default: build/<name>.gif)",
+    help="where the GIF animation goes (default: build/<name>.gif)",
 )
 parser.add_argument(
     "--sets",
@@ -237,7 +237,7 @@ if args.scene:
         ["--scene", args.scene, "--seconds", str(args.seconds), "--out", str(out.resolve())]
     )
 if args.component:
-    out = Path(args.out) if args.out else TOOL / "artifacts" / "components" / f"{args.component}.bmp"
+    out = Path(args.out) if args.out else TOOL / "artifacts" / "components" / f"{args.component}.gif"
     command.extend(["--component", args.component, "--out", str(out.resolve())])
 if args.tests or args.test:
     tests_dir = TOOL / "tests"
@@ -246,7 +246,7 @@ if args.tests or args.test:
         command.extend(["--test-file", str(file)])
     if args.test:
         command.extend(["--test", args.test])
-    # The stem the runner names a per-case GIF from; a .bmp name is meaningless here.
+    # The stem the runner names a per-case GIF from; a non-GIF --out is meaningless here.
     stem = Path(args.out) if args.out else BUILD / "runs.gif"
     command.extend(["--out", str(stem.resolve())])
 if args.verbose:

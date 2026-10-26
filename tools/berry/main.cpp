@@ -271,14 +271,14 @@ int main(int argc, char** argv) {
   }
   int passed = 0;
   if (artName != nullptr) {
-    passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.bmp", artSets);
+    passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.gif", artSets);
   } else if (sceneName != nullptr) {
     passed = callArtScene(vm, sceneName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
   } else if (componentName != nullptr) {
-    passed = callArtComponent(vm, componentName, artPath != nullptr ? artPath : "frame.bmp");
+    passed = callArtComponent(vm, componentName, artPath != nullptr ? artPath : "frame.gif");
   } else if (suites) {
-    // One GIF per case, named from the stem the runner reads back through the harness. A .bmp
-    // --out is meaningless under --tests, so it falls back to the default stem.
+    // One GIF per case, named from the stem the runner reads back through the harness. A --out
+    // that is not a .gif is meaningless under --tests, so it falls back to the default stem.
     std::string stem = "build/runs";
     if (artPath != nullptr) {
       const size_t len = strlen(artPath);

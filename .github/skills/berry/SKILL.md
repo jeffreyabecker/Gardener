@@ -38,13 +38,13 @@ walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
 `--scene home`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
-The output is an animated GIF by default — one frame per beat, each held a second by `kGifDelayCs`,
-enlarged 2 x by `kRenderScale` — and a `.bmp` `--out` asks for one native-sized still instead. The GIF draws
+The output is an animated GIF — one frame per beat, each held a second by `kGifDelayCs`,
+enlarged 2 x by `kRenderScale`. The GIF draws
 a full-width strip across the top showing each injected press (`OK`, `OK×2`, `CANCEL 5s`) for one
 beat, behind `kGestureCalloutBeats`. Writing a frame out as text loses the thing the render is for.
 
 **The frame belongs to the person who opens it.** Nothing in a run reads a capture back, and
-nothing it prints describes one: a `.gif` or `.bmp` under `tools/berry/build/` or
+nothing it prints describes one: a `.gif` under `tools/berry/build/` or
 `tools/berry/artifacts/` is there for a human to look at. Do not convert one, enlarge it,
 transcribe it or diff two of them to decide whether a change is right. That is a reading the
 harness never made a claim about, of pixels that are the host's rendering rather than the
@@ -92,8 +92,7 @@ Two things bite before the messages do:
 | `value_error: screen.draw_text: unknown font X` | The face is not one of the compiled ones |
 | `art: no routine named X` | `--art` was given a name no file registered |
 | `art: no scene named X` | `--scene` was given a name that is not `home`, `browser` or `system` |
-| `io_error: frame.save: cannot write the file` | The `--out` path is not writable |
-| `art: cannot write PATH` | A `.bmp` still or a GIF capture could not be written, or the run had no frames |
+| `art: cannot write PATH` | A GIF could not be written, or the run had no frames |
 | `attribute_error: the 'reading' object has no attribute 'X'` | The record class has no such field |
 | `settings: X has no settings` | The routine registered no settings, or the name is not registered |
 | `vm: X poll: ...` | A run-time error; the page is dropped, as it would be on the device |

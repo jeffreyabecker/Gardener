@@ -80,11 +80,11 @@ class PressureDisplay : Component
     self._secondary = Text(nil, nil)
   end
 
-  def draw(pressure_kpa, secondary_pressure)
+  def draw(pressure_kpa)
     var main_text = self._format(pressure_kpa)
     var sec_text = nil
-    if self.secondary_position != nil && secondary_pressure != nil
-      sec_text = self._format(secondary_pressure)
+    if self.secondary_position != nil && self.secondary_pressure != nil
+      sec_text = self._format(self.secondary_pressure)
     end
 
     if sec_text != nil && self.size_hint >= 1
@@ -205,10 +205,10 @@ class AutoPressureDisplay : PressureDisplay
   def draw()
     var s = vacuum.state()
     var primary_pressure = self._pressure_order[0] == "pressure" ? s.pressure_kpa : s.target
-    var secondary_pressure = nil
+    self.secondary_pressure = nil
     if self._pressure_order.size() > 1
-      secondary_pressure = self._pressure_order[1] == "pressure" ? s.pressure_kpa : s.target
+      self.secondary_pressure = self._pressure_order[1] == "pressure" ? s.pressure_kpa : s.target
     end
-    super(self).draw(primary_pressure, secondary_pressure)
+    super(self).draw(primary_pressure)
   end
 end

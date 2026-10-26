@@ -9,6 +9,8 @@ def builds_even_ladder()
     "set_count": 3,
     "initial_pressure": 5.0,
     "final_pressure": 15.0,
+    "step_pressure": nil,
+    "rest_pressure": nil,
     "work_duration": 0,
     "rest_duration": 0,
     "resume_behavior": "immediately"
@@ -29,6 +31,8 @@ def completes_and_goes_home()
     "set_count": 2,
     "initial_pressure": 5.0,
     "final_pressure": 10.0,
+    "step_pressure": nil,
+    "rest_pressure": nil,
     "work_duration": 0,
     "rest_duration": 0,
     "resume_behavior": "immediately"
@@ -45,6 +49,8 @@ def cancel_pauses_and_ok_restarts()
     "set_count": 2,
     "initial_pressure": 5.0,
     "final_pressure": 10.0,
+    "step_pressure": nil,
+    "rest_pressure": nil,
     "work_duration": 30,
     "rest_duration": 0,
     "resume_behavior": "immediately"
@@ -67,6 +73,8 @@ def waits_between_sets()
     "set_count": 2,
     "initial_pressure": 5.0,
     "final_pressure": 10.0,
+    "step_pressure": nil,
+    "rest_pressure": nil,
     "work_duration": 0,
     "rest_duration": 0,
     "resume_behavior": "after ok"

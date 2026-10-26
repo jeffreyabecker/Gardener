@@ -7,7 +7,7 @@ class ProgressBar : Component
     self.value = value == nil ? 0 : value
   end
   def draw()
-    var value = self.value
+    var value = self.value == nil ? 0 : self.value
     if value < 0
       value = 0
     end
