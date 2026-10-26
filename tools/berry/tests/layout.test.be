@@ -71,7 +71,8 @@ def a_layout_stacks_its_children_across()
   assert_eq(right.dim.w, 64, "the right half is not a half")
 end
 
-test("a layout whose children are full height stacks them across", a_layout_stacks_its_children_across)
+test("a layout whose children are full height stacks them across",
+     a_layout_stacks_its_children_across)
 
 def a_child_is_resolved_against_its_parent()
   var glyph = AutoLayout(bounds(0.125, 1), [])
