@@ -46,7 +46,7 @@ Every scene, and where it lives:
 | `EditScene` — the edit base | `system/settings/edit_scene.be` | `handle_page` |
 | `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` | inherited |
 | `DurationEditScene` | `system/settings/duration.be` | `handle_page` |
-| `JingleEditScene` | `modules/ui.be` | inherited |
+| `JingleEditScene` | `modules/jingles.be` | inherited |
 | `Interval` | `routines/ramped_interval.be` | `on` |
 | `RampedInterval` | `routines/ramped_interval.be` | `on` |
 | `RampedStatic` | `routines/ramped_static.be` | `on` |

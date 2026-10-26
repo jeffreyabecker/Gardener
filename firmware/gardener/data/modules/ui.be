@@ -1,12 +1,16 @@
-# ui.be — the device's own scenes: the readout and the routine browser.
+# ui.be — the readout: the device's own page and the root scene the firmware pushes at boot.
 #
-# None of these registers with the routines registry; they are the well-known scenes the system
-# pushes directly. The readout is the root scene (__rootScene); its gestures open its own settings
-# list and push the browser. The device's own settings are the readout's, so the readout declares
-# them and reads and writes them through `screen` and `device` rather than through a routine's file;
-# the browser drives `routines` and pushes a routine's scene or, through the same list, its settings.
+# It registers with nothing. The readout is the well-known scene the system pushes directly, and its
+# gestures are the machine's: OK starts or resumes a run, Cancel stops and vents, Forward on a double
+# press pushes the routine browser, and Up on a double press opens the readout's settings list. The
+# settings are the device's own rather than a routine's, so the readout reads and writes them through
+# `screen` and `device` and declares nothing but the page.
+#
+# It loads after browser.be, whose `browserScene` its gestures name, and after readout_settings.be,
+# whose `ReadoutSettings` the list it opens is built from; the jingle row that list offers is
+# jingles.be.
 
-# --- the readout -----------------------------------------------------------
+# --- the page --------------------------------------------------------------
 
 class ReadoutChrome
   var pressure
@@ -23,134 +27,6 @@ class ReadoutChrome
     self.pressure.draw()
     self.timer.seconds = elapsed
     self.timer.draw()
-  end
-end
-
-# --- the device's settings -------------------------------------------------
-
-# The device's own settings are not a routine's: they live behind `device` and `screen` rather than
-# in a routine's document. The rows only declare them — the readout reads the device to fill the set
-# in and writes it back when the list commits — and the editors are the settings folder's.
-
-# The row names a unit the way the glass prints it, so the row and its editor show the same label the
-# overlay puts after a reading.
-def unit_choices()
-  var out = []
-  for unit : device.units()
-    out.push([unit.name, unit.suffix])
-  end
-  return out
-end
-
-# The jingle the device answers, or nil for an identifier the library does not hold: the list is the
-# whole of what a page knows about the library, so every lookup scans it.
-def jingle_notes(id)
-  for j : device.all_jingles()
-    if j.key == id
-      return j.notes
-    end
-  end
-  return nil
-end
-
-# The jingle row plays what it is showing as it opens and steps, so a jingle is chosen by ear.
-class JingleEditScene : ChoiceEditScene
-  def init(current, values)
-    super(self).init("JINGLE", current, values, false)
-  end
-
-  def activate()
-    self.play()
-    self.draw()
-  end
-
-  def nudge(dir)
-    super(self).nudge(dir)
-    self.play()
-  end
-
-  def cancel()
-    # What was auditioning is the value being refused, so it goes quiet on the way out.
-    device.silence()
-    super(self).cancel()
-  end
-
-  def play()
-    var notes = jingle_notes(self.value())
-    if notes != nil
-      device.play_sequence(notes)
-    end
-  end
-end
-
-# The radio row reports what the build was compiled with: there is nothing to write and nothing to
-# edit, so Forward on it leaves the list where it is.
-class BluetoothEditCfg : BoolEditCfg
-  def init()
-    super(self).init("bluetooth", device.bluetooth(), "BT", nil, false)
-  end
-
-  def scene(value)
-    return nil
-  end
-end
-
-# A setting that was never written, a hand-edited value or a jingle this image does not ship all
-# land on the first entry, which is what `device.play_current_jingle()` plays for the same reason.
-def stored_jingle()
-  var all = device.all_jingles()
-  if all.size() == 0
-    return nil
-  end
-  var id = device.jingle()
-  if id == nil || id == "" || jingle_notes(id) == nil
-    return all[0].key
-  end
-  return id
-end
-
-# The identifier the device stores and the label the panel prints, one [key, value] pair per jingle,
-# so the row and the editor name the jingle from the list the device answers.
-def jingle_choices()
-  var out = []
-  for j : device.all_jingles()
-    out.push([j.key, j.short_title])
-  end
-  return out
-end
-
-class JingleEditCfg : ChoiceEditCfg
-  def init()
-    super(self).init("jingle", stored_jingle(), "\x0D \x0E \x0D", nil, jingle_choices(), false)
-  end
-
-  def scene(value)
-    return JingleEditScene(value, self.values)
-  end
-end
-
-class ReadoutSettings
-  # The readout's set, in the order the list shows them: the target it works to, the unit it prints
-  # and the jingle it finishes with, then the radio as a build fact. The rows only declare them.
-  var settings_cfgs
-
-  def init()
-    var out = [
-      PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
-    ]
-    # No library is a fault the boot already reported, and a choice with no values has nothing to
-    # cycle, so the row is left out rather than opened on an empty list.
-    var jingle = JingleEditCfg()
-    if jingle.values.size() > 0
-      out.push(jingle)
-    end
-    out.push(BluetoothEditCfg())
-    self.settings_cfgs = out
-  end
-
-  def problem(values)
-    return nil
   end
 end
 

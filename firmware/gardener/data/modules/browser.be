@@ -2,8 +2,9 @@
 # settings list its Forward opens. It registers with nothing; it is the well-known scene the readout
 # pushes, and browserScene is that instance.
 #
-# It loads before ui.be, which names browserScene in the readout's gestures, so the instance exists
-# by the time the readout is compiled.
+# It loads first of the modules, before jingles.be, readout_settings.be and ui.be — the last of which
+# names browserScene in the readout's gestures, so the instance exists by the time the readout is
+# compiled.
 #
 # Choosing a row launches the routine: the browser reads the routine's file into one clean settings
 # map and hands it, with the routine's key, to the registry, which builds the scene from it, so the

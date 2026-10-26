@@ -76,8 +76,8 @@ A scene's `activate(args)` is the inherited no-op. A page that does its work in 
 shipped routine does — leaves it alone.
 
 Every registration is listed: there is no hidden routine. The device's own scenes — the readout and
-the browser — are not registered at all: they are well-known scenes in `/modules/ui.be` the system
-pushes directly.
+the browser — are not registered at all: they are well-known scenes — `/modules/ui.be` and
+`/modules/browser.be` — the system pushes directly.
 
 The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
@@ -195,10 +195,13 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The device's own scenes ship in `/modules/ui.be` — the readout — and `/modules/browser.be` — the
-routine browser, whose instance `browserScene` that file builds before `ui.be` compiles and names it.
-The browser file also defines `RoutineActivation`, the record a launch hands a routine's class: the
-routine key and the clean settings map.
+The device's own scenes ship in `/modules/`, one concern per file: `/modules/ui.be` is the readout,
+`/modules/readout_settings.be` the settings list it opens, `/modules/jingles.be` the library face the
+jingle row in that list is drawn from, and `/modules/browser.be` the routine browser, whose instance
+`browserScene` that file builds before `ui.be` compiles and names it. Loaded in the alphabetical
+order the folder gives — `browser`, `jingles`, `readout_settings`, `ui` — each is a global by the
+time the file that names it compiles. The browser file also defines `RoutineActivation`, the record a
+launch hands a routine's class: the routine key and the clean settings map.
 None of them registered. The readout holds a set of its own and opens the same list a page does, over
 `ReadoutSettings`: the target it works to, the unit it prints, the jingle it finishes with and the
 radio as a build fact. Every one of those is a device setting rather than a document, so the readout
