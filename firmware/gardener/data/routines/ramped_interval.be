@@ -159,7 +159,7 @@ class RampedInterval : Scene
   var chrome
 
   def init(activation)
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.routine_key = activation.routine_key
     self.phase = IntervalPhase.READY
     self.mark = 0
