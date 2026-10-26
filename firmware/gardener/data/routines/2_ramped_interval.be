@@ -1,6 +1,8 @@
 # 2_ramped_interval.be — the ramp routine: a ladder whose each set is deeper than the last, with its
 # glyph, the values it edits and the page that holds the cycle. It registers `ramped_interval`.
 
+import string
+
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
 # each column standing from the baseline two rows higher than the one before.
 class RampedIntervalIcon : Icon
@@ -55,7 +57,7 @@ class RampedInterval : Scene
   def init(activation)
     super(self).init()
     self.routine_key = activation.routine_key
-    self.machine = RampedIntervalMachine(/ -> self.finish())
+    self.machine = RampedIntervalMachine(/ -> self.begin(), / -> self.edit())
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
@@ -69,20 +71,36 @@ class RampedInterval : Scene
     self.draw()
   end
 
+  # A gesture that names a command outright — cmd:pause — is handed to the machine as it stands,
+  # with the prefix trimmed; anything else is a key, and the page maps it to the command it means.
   # OK begins a ready run or moves the machine on, Cancel pauses it, and either held to a double
   # leaves: Up for the settings, Cancel for the panel.
   def handle(ev)
+    if string.startswith(ev, "cmd:")
+      return self.machine.handle_command(string.split(ev, ":")[1])
+    end
     if ev == "ok:single"
-      return self.ok()
+      # A ready run starts from here, because the ladder the targets come from is the page's; the
+      # machine picks up a run it paused, or one that waited for an OK between sets.
+      if self.machine.phase == IntervalPhase.READY
+        return self.machine.handle_command("begin")
+      end
+      if self.machine.phase == IntervalPhase.WAITING
+        return self.machine.handle_command("continue_routine")
+      end
+      if self.machine.phase == IntervalPhase.PAUSED
+        return self.machine.handle_command("unpause")
+      end
+      return false
     end
     if ev == "cancel:single"
-      return self.machine.pause()
+      return self.machine.handle_command("pause")
     end
     if ev == "up:double"
-      return self.edit()
+      return self.machine.edit()
     end
     if ev == "cancel:double"
-      return self.leave()
+      return self.machine.handle_command("leave")
     end
     return false
   end
@@ -147,23 +165,6 @@ class RampedInterval : Scene
     return self.machine.begin(plan)
   end
 
-  # OK is the page's one action: start a ready ramp, pick a paused one up at the top of the set it
-  # stopped on, or start the next set after a rest that waited for an OK. Either way the work clock
-  # starts again from the hold's arrival.
-  def ok()
-    if self.machine.phase == IntervalPhase.READY
-      return self.begin()
-    end
-    return self.machine.ok()
-  end
-
-  def leave()
-    vacuum.stop()
-    vacuum.log(self.routine_key + ": left")
-    ux.pop(nil)
-    return true
-  end
-
   # The targets for the run, computed once when it starts: the step sets the rise and the last set
   # is pinned to the final pressure, so the ramp always ends where it was asked to.
   def target_list()
@@ -189,17 +190,6 @@ class RampedInterval : Scene
     return out
   end
 
-  # The last set is done and the machine is ready: release the chamber, clear the target so
-  # `default` cannot inherit the run's last depth, sound the device's jingle at the finish, and hand
-  # the panel back. The switch is deferred by the runtime, so it is safe to ask for it from here,
-  # and the jingle outlives it: the machine plays it, not this page.
-  def finish()
-    vacuum.target_off()
-    vacuum.log(self.routine_key + ": complete")
-    device.play_current_jingle()
-    ux.pop_to_root()
-  end
-
   # poll calls tick(now) every beat, after the press drain.
   def tick(now)
     # While the settings scene is on top this scene is not polled, so the cycle does not advance
@@ -207,19 +197,13 @@ class RampedInterval : Scene
     self.machine.advance(now)
   end
 
-  # Settings are entered with the chamber released, like a pause: a run that was under way starts
-  # over at the first set when the settings scene closes, so it must not keep working at the old
-  # values underneath it. The scene below is not polled while the settings are showing. The list opens
-  # on the state this page is running — its own declaration for the rows and serialize_to_settings()
-  # for the values — so nothing is read back from the store and no rule is applied to a set the page
-  # already accepted.
+  # The list opens on the state this page is running — its own declaration for the rows and
+  # serialize_to_settings() for the values — so nothing is read back from the store and no rule is
+  # applied to a set the page already accepted.
   def edit()
     var settings_cfgs = routines.settings_cfgs(self.routine_key)
     ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
-    if self.machine.phase != IntervalPhase.READY
-      vacuum.stop()
-    end
     return true
   end
 

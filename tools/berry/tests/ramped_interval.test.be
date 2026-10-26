@@ -90,3 +90,34 @@ def waits_between_sets()
 end
 
 test("waits between sets and completes after the set count", waits_between_sets)
+
+# A gesture that names a command outright reaches the machine without the page reading a phase: the
+# cmd: prefix is trimmed and the rest is the command.
+def a_cmd_gesture_reaches_the_machine()
+  var settings = {
+    "set_count": 2,
+    "initial_pressure": 5.0,
+    "final_pressure": 10.0,
+    "step_pressure": nil,
+    "rest_pressure": nil,
+    "work_duration": 30,
+    "rest_duration": 0,
+    "resume_behavior": "immediately"
+  }
+  assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
+  var page = ux.top()
+  harness.press("cmd:begin")
+  wait_until("ramped_interval: cmd:begin did not start the run", 200,
+             / -> page.machine.phase == IntervalPhase.WORK)
+  harness.press("cmd:pause")
+  harness.beat(1)
+  assert_eq(page.machine.phase, IntervalPhase.PAUSED, "ramped_interval: cmd:pause did not pause")
+  harness.press("cmd:unpause")
+  wait_until("ramped_interval: cmd:unpause did not resume the run", 200,
+             / -> page.machine.phase == IntervalPhase.WORK)
+  harness.press("cmd:leave")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "ramped_interval: cmd:leave did not leave the page")
+end
+
+test("a cmd: gesture reaches the machine by name", a_cmd_gesture_reaches_the_machine)

@@ -25,9 +25,9 @@ end
 
 # The cycle, held by both pages: a phase machine advanced from tick(now). It knows nothing about a
 # routine key and nothing about where settings come from — the page computes the targets and hands
-# them to begin(), and the timing in configure(). The only thing it calls back into the page for is
-# the finish, through the done_fn it was built with, because clearing the target, sounding the
-# jingle and handing the panel back are the page's world.
+# them to begin(), and the timing in configure(). A run is the whole of its own story, the way out
+# included: the last set clears the target, sounds the jingle and hands the panel back, Cancel held
+# to a double leaves the page, and Up held to a double releases the chamber for the settings.
 class RampedIntervalMachine
   var phase
   var mark
@@ -39,15 +39,17 @@ class RampedIntervalMachine
   var rest_pressure
   var rest
   var resume
-  var done_fn
+  var on_begin
+  var on_edit
 
-  def init(done_fn)
+  def init(on_begin, on_edit)
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
     self.target = 0.0
     self.targets = []
-    self.done_fn = done_fn
+    self.on_begin = on_begin
+    self.on_edit = on_edit
   end
 
   # The timing and the pressure a lost run vents back to, written by the page's init_from_settings.
@@ -59,6 +61,29 @@ class RampedIntervalMachine
     self.reset_target = reset_target
   end
 
+  # What a press means, once the page has read the phase: a command by name, answered here. It is a
+  # command rather than a gesture — which key means which command is the page's, and this never sees
+  # a key. A ready run is the page's to start, because the ladder is where its targets come from, so
+  # begin is handed back the way edit is.
+  def handle_command(cmd)
+    if cmd == "begin"
+      return self.on_begin()
+    end
+    if cmd == "continue_routine"
+      return self.continue_routine()
+    end
+    if cmd == "unpause"
+      return self.unpause()
+    end
+    if cmd == "pause"
+      return self.pause()
+    end
+    if cmd == "leave"
+      return self.leave()
+    end
+    return false
+  end
+
   # Begin the run over the targets the caller computed, at the first one.
   def begin(targets)
     if targets == nil || targets.size() == 0
@@ -66,21 +91,19 @@ class RampedIntervalMachine
     end
     self.targets = targets
     self.set = 0
-    return self.start_set()
+    return self.begin_set()
   end
 
-  # OK is the one action left to the cycle: start the next set after a rest that waited for an OK,
-  # or pick a paused run up at the top of the set it stopped on. Either way the work clock starts
-  # again from the hold's arrival. A ready run starts from the page, which computes the targets.
-  def ok()
-    if self.phase == IntervalPhase.WAITING
-      self.set += 1
-      return self.start_set()
-    end
-    if self.phase == IntervalPhase.PAUSED
-      return self.start_set()
-    end
-    return false
+  # The rest between sets ended and the page was asked to go on: move to the next set and start it.
+  def continue_routine()
+    self.set += 1
+    return self.begin_set()
+  end
+
+  # A paused run picks up at the top of the set it stopped on, so the work clock starts again from
+  # the hold's arrival.
+  def unpause()
+    return self.begin_set()
   end
 
   # Pause: the chamber vents and the cycle holds the set it stopped on, so the pause costs the
@@ -95,7 +118,27 @@ class RampedIntervalMachine
     return true
   end
 
-  def start_set()
+  # Cancel held to a double: release the chamber and give the panel back.
+  def leave()
+    vacuum.stop()
+    ux.pop(nil)
+    return true
+  end
+
+  # Up held to a double: the chamber is released before the settings list opens, like a pause, so a
+  # run that was under way starts over at its first set rather than keep working at the old values
+  # underneath the list. Opening the list is the page's, so it is handed the closure that does it.
+  def edit()
+    if self.phase != IntervalPhase.READY
+      vacuum.stop()
+    end
+    self.on_edit()
+    return true
+  end
+
+  # Start the set the index is on, by giving the chamber that set's target and getting the pump
+  # going.
+  def begin_set()
     self.target = self.targets[self.set]
     vacuum.target(self.target)
     # A run may already be under way: the target change is the start then. Starting again would
@@ -169,8 +212,7 @@ class RampedIntervalMachine
         if self.resume == "after ok"
           self.wait()
         else
-          self.set += 1
-          self.start_set()
+          self.continue_routine()
         end
       end
     end
@@ -184,11 +226,14 @@ class RampedIntervalMachine
     self.phase = IntervalPhase.WAITING
   end
 
-  # The last set is done: go ready and hand the page the finish, which clears the target, sounds
-  # the jingle and gives the panel back.
+  # The last set is done: release the chamber, clear the target so `default` cannot inherit the
+  # run's last depth, sound the device's jingle at the finish, and hand the panel back. The switch is
+  # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it.
   def finish()
+    vacuum.target_off()
     self.phase = IntervalPhase.READY
-    self.done_fn()
+    device.play_current_jingle()
+    ux.pop_to_root()
   end
 
   # The run ended without the page asking: a latched fault, or a release the run's deadline caused.
