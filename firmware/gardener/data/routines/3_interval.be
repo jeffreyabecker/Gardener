@@ -60,7 +60,8 @@ class Interval : RampedInterval
     self.work = settings_values["work_duration"]
     self.rest = settings_values["rest_duration"]
     self.resume = settings_values["resume_behavior"]
-    self.machine.configure(self.work, self.rest_pressure, self.rest, self.resume, self.initial)
+    self.machine.configure(self.work, self.rest_pressure, self.rest, self.resume, self.initial,
+                           self.target_list())
   end
 
   # The interval's own values back out: one target, and none of the ramp's ladder keys, because this

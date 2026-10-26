@@ -106,8 +106,8 @@ def a_cmd_gesture_reaches_the_machine()
   }
   assert_true(harness_activate("ramped_interval", settings), "ramped_interval: activate refused")
   var page = ux.top()
-  harness.press("cmd:begin")
-  wait_until("ramped_interval: cmd:begin did not start the run", 200,
+  harness.press("cmd:start")
+  wait_until("ramped_interval: cmd:start did not start the run", 200,
              / -> page.machine.phase == IntervalPhase.WORK)
   harness.press("cmd:pause")
   harness.beat(1)

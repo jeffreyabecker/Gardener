@@ -57,7 +57,7 @@ class RampedInterval : Scene
   def init(activation)
     super(self).init()
     self.routine_key = activation.routine_key
-    self.machine = RampedIntervalMachine(/ -> self.begin(), / -> self.edit())
+    self.machine = RampedIntervalMachine(/ -> self.edit())
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
@@ -80,13 +80,13 @@ class RampedInterval : Scene
       return self.machine.handle_command(string.split(ev, ":")[1])
     end
     if ev == "ok:single"
-      # A ready run starts from here, because the ladder the targets come from is the page's; the
-      # machine picks up a run it paused, or one that waited for an OK between sets.
+      # OK names the command the phase means: a ready run starts, a paused one resumes, and one that
+      # waited for an OK between sets moves on to the next.
       if self.machine.phase == IntervalPhase.READY
-        return self.machine.handle_command("begin")
+        return self.machine.handle_command("start")
       end
       if self.machine.phase == IntervalPhase.WAITING
-        return self.machine.handle_command("continue_routine")
+        return self.machine.handle_command("continue")
       end
       if self.machine.phase == IntervalPhase.PAUSED
         return self.machine.handle_command("unpause")
@@ -135,7 +135,8 @@ class RampedInterval : Scene
     self.work = settings_values["work_duration"]
     self.rest = settings_values["rest_duration"]
     self.resume = settings_values["resume_behavior"]
-    self.machine.configure(self.work, self.rest_pressure, self.rest, self.resume, self.initial)
+    self.machine.configure(self.work, self.rest_pressure, self.rest, self.resume, self.initial,
+                           self.target_list())
   end
 
   # The values this page is holding, in the same shape init_from_settings takes, so a cycle can be
@@ -157,16 +158,8 @@ class RampedInterval : Scene
 
   # --- the cycle -----------------------------------------------------------
 
-  def begin()
-    var plan = self.target_list()
-    if plan == nil
-      return false
-    end
-    return self.machine.begin(plan)
-  end
-
-  # The targets for the run, computed once when it starts: the step sets the rise and the last set
-  # is pinned to the final pressure, so the ramp always ends where it was asked to.
+  # The targets for the run, computed once when the settings are read: the step sets the rise and
+  # the last set is pinned to the final pressure, so the ramp always ends where it was asked to.
   def target_list()
     if self.count > 1 && self.step <= 0.0
       vacuum.log(self.routine_key + ": no step")
@@ -220,7 +213,7 @@ class RampedInterval : Scene
     end
     # Settings the ladder cannot be built from stop the run rather than resume one they do not
     # describe.
-    if !self.begin()
+    if !self.machine.start_run()
       vacuum.stop()
       self.machine.abandon()
     end

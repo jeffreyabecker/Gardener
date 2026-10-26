@@ -25,9 +25,9 @@ end
 
 # The cycle, held by both pages: a phase machine advanced from tick(now). It knows nothing about a
 # routine key and nothing about where settings come from — the page computes the targets and hands
-# them to begin(), and the timing in configure(). A run is the whole of its own story, the way out
-# included: the last set clears the target, sounds the jingle and hands the panel back, Cancel held
-# to a double leaves the page, and Up held to a double releases the chamber for the settings.
+# them in, with the timing, through configure(). A run is the whole of its own story, the way
+# out included: the last set clears the target, sounds the jingle and hands the panel back, Cancel
+# held to a double leaves the page, and Up held to a double releases the chamber for the settings.
 class RampedIntervalMachine
   var phase
   var mark
@@ -39,37 +39,36 @@ class RampedIntervalMachine
   var rest_pressure
   var rest
   var resume
-  var on_begin
   var on_edit
 
-  def init(on_begin, on_edit)
+  def init(on_edit)
     self.phase = IntervalPhase.READY
     self.mark = 0
     self.set = 0
     self.target = 0.0
-    self.targets = []
-    self.on_begin = on_begin
     self.on_edit = on_edit
   end
 
-  # The timing and the pressure a lost run vents back to, written by the page's init_from_settings.
-  def configure(work, rest_pressure, rest, resume, reset_target)
+  # The timing, the pressure a lost run vents back to, and the ladder a run works through, all
+  # written by the page's init_from_settings: everything a run needs is here before anything starts.
+  def configure(work, rest_pressure, rest, resume, reset_target, plan)
     self.work = work
     self.rest_pressure = rest_pressure
     self.rest = rest
     self.resume = resume
     self.reset_target = reset_target
+    self.targets = plan
   end
 
   # What a press means, once the page has read the phase: a command by name, answered here. It is a
   # command rather than a gesture — which key means which command is the page's, and this never sees
-  # a key. A ready run is the page's to start, because the ladder is where its targets come from, so
-  # begin is handed back the way edit is.
+  # a key. Every one of them is answered here, because the ladder a run works through came in with
+  # the timing.
   def handle_command(cmd)
-    if cmd == "begin"
-      return self.on_begin()
+    if cmd == "start"
+      return self.start_run()
     end
-    if cmd == "continue_routine"
+    if cmd == "continue"
       return self.continue_routine()
     end
     if cmd == "unpause"
@@ -84,12 +83,11 @@ class RampedIntervalMachine
     return false
   end
 
-  # Begin the run over the targets the caller computed, at the first one.
-  def begin(targets)
-    if targets == nil || targets.size() == 0
+  # Start the run over the ladder the page configured, at the first set.
+  def start_run()
+    if self.targets == nil || self.targets.size() == 0
       return false
     end
-    self.targets = targets
     self.set = 0
     return self.begin_set()
   end
