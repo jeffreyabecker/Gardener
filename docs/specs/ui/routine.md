@@ -91,6 +91,18 @@ that section's values.
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
 `python scripts/arduino.py --task data`.
 
+## States and commands
+
+Beside its settings declaration, a routine declares the two lists a link reads and drives: its
+**states** — the plain-word names its scene can be in, in declaration order — and its **commands** —
+the whole gesture strings its scene answers, in declaration order, the vocabulary of
+[gestures.md](../gestures.md). Its scene reports which declared state it is in while it is showing;
+a routine with no declared states or commands declares none.
+
+The declarations are made once, where the file registers, in the way the settings declaration is.
+The readout and the browser are not routines and declare nothing. The link surface that reads the
+lists and sends commands through the gesture queue is [routine links](../routine-links.md).
+
 ## The system in `/system`
 
 `/system` is what the device itself provides before a page exists: the records a native call

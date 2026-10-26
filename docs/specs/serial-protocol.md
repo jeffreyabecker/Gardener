@@ -14,8 +14,9 @@ safety. Every link may command the machine; a write applies on the control task'
 last write wins. A run still ends as a release at its deadline whether or not a controller is
 talking.
 
-The first token is a **domain**. `device`, `vacuum`, `buzzer` and `fs` are the domains. There is no
-`help` domain: this document is the interface.
+The first token is a **domain**. `device`, `vacuum`, `buzzer` and `fs` are the domains, and the
+panel's `routine` domain is in [routine links](./routine-links.md). There is no `help` domain: this
+document is the interface.
 
 ## 1. The port
 
@@ -40,7 +41,7 @@ device looks dead to a cable. The FQBN is pinned in `firmware/gardener/sketch.ya
 1. Open the port. The device sends nothing until it is asked: there is no greeting and no
    handshake to wait for.
 2. Send `device get` and check `proto` and `fw`. `proto=1` is this document.
-3. Ask for what you need: `vacuum get` is the readout, and it is polled (§11). Nothing is pushed.
+3. Ask for what you need: `vacuum get` is the readout, and it is polled (§12). Nothing is pushed.
 
 Connecting has no handshake and grants nothing extra: any link with the port open may read and write,
 and another link may command the machine at the same time. There is no claim, no session and no
@@ -99,8 +100,9 @@ detail = token / items
   (`err unknown_verb frobnicate`); a code with several values uses items
   (`err out_of_range field=target value=101 max=60.0`).
 * A body is announced by a count on the `ok` line. `bytes=N` is followed by exactly N raw bytes;
-  `fs read` is the only reply that uses it, and a zero count sends no body. `fs list` is the one
-  body without a count: its rows follow `ok` and a blank line ends them.
+  `fs read` is the only reply that uses it, and a zero count sends no body. `fs list`, `routine list`
+  and `routine settings` are the bodies without a count: their rows follow `ok` and a blank line ends
+  them.
 * Values never contain a space, so a reply line splits on spaces. The one free-form command
   argument, `buzzer play`'s sequence, is never echoed back.
 * Diagnostics stay `[I]`/`[W]`/`[E]` records, distinct from replies; the `log` switch chooses which
@@ -341,7 +343,71 @@ absent is `err not_found <path>`.
 The transfer blocks the control loop until it completes. Routines and assets are small and moving
 them is a bench operation; do not write a large file while a run is active.
 
-## 9. Errors
+## 9. `routine` — the routines
+
+The routine surface is the panel's, so this domain is served only by a build with a panel, the same
+as `fs` and `buzzer`. The contract that says what a routine, a state and a command are, and what a
+launch means, is [routine links](./routine-links.md); this section is the wire.
+
+| Verb | Reply | Notes |
+| --- | --- | --- |
+| `list` | `ok`, then rows, then a blank line | one `key=<key> kind=<kind> parent=<parent>` per routine and alias, in registration order, each alias after its routine; a root's `parent` is `-` |
+| `states <key>` | `ok states=<s1>,<s2>,…` | the routine's declared states, in order; `-` when it declares none |
+| `commands <key>` | `ok commands=<g1>,<g2>,…` | the routine's declared commands — whole gesture strings — in order; `-` when it declares none |
+| `settings <key>` | `ok`, then rows, then a blank line | one `key=<key> kind=<kind> default=<default>` per setting, in order |
+| `get` | `ok key=<key> state=<state>` | the routine on top and its state; `key=- state=-` when no routine is showing |
+| `launch <key> [<setting>=<value> …]` | `ok key=<key>` | open a routine from its stored set, or with the named values in their place |
+| `command <gesture>` | `ok gesture=<gesture>` | one whole gesture string into the queue the panel feeds |
+
+`states` and `commands` answer a comma-separated list in one value; a routine that declares none
+answers `-`, not an error. `settings` rows are `key=<key> kind=<kind> default=<default>`: `kind` is
+`bool`, `choice`, `real`, `int`, `pressure` or `duration`, and `default` is the setting's default in
+the wire form — a bool is `on` or `off`, a pressure is kPa, a duration is whole seconds, and a
+nullable setting that holds nothing is `-`. What each kind accepts is the routine's declaration,
+the kinds in [bindings.md](./ui/bindings.md). An unknown key is `err not_found <key>`.
+
+`launch` vents the machine before it opens the routine, and a launch from named settings is for
+this visit only: values are held to their kind and the set repaired by the routine's rule exactly
+as a stored set is, and nothing is written to the routine's document. An unknown key is
+`err not_found <key>`; a named setting the routine does not declare, or a value its kind refuses,
+is `err bad_argument <key>`; a stack that cannot take the push is `err not_ready full`.
+
+`command` takes one whole gesture string from [gestures.md](./gestures.md), which enters the same
+queue the panel feeds — reserved gestures first, and a gesture the scene showing does not answer is
+dropped. `ok` is acceptance into the queue, not an act by the scene. A token that is not a gesture
+is `err bad_argument <token>`.
+
+    -> routine list
+    <- ok
+    <- key=ramped_static kind=root parent=-
+    <- key=ramped_interval kind=root parent=-
+    <- key=interval kind=root parent=-
+    <- (blank line)
+    -> routine states ramped_static
+    <- ok states=ready,approach,run,paused
+    -> routine commands ramped_static
+    <- ok commands=up:double,ok:single,cancel:single,cancel:double
+    -> routine settings ramped_interval
+    <- ok
+    <- key=set_count kind=int default=4
+    <- key=initial_pressure kind=pressure default=5.0
+    <- key=final_pressure kind=pressure default=20.0
+    <- key=step_pressure kind=pressure default=-
+    <- key=rest_pressure kind=pressure default=-
+    <- key=work_duration kind=duration default=300
+    <- key=rest_duration kind=duration default=45
+    <- key=resume_behavior kind=choice default=immediately
+    <- (blank line)
+    -> routine get
+    <- ok key=- state=-
+    -> routine launch ramped_static target_pressure=55.0 total_duration=120
+    <- ok key=ramped_static
+    -> routine get
+    <- ok key=ramped_static state=ready
+    -> routine command ok:single
+    <- ok gesture=ok:single
+
+## 10. Errors
 
 Every `err` is one of these codes, so a controller can switch on the code instead of parsing
 prose. The detail is a bare token when the code names one thing, and items when it names several:
@@ -352,8 +418,8 @@ prose. The detail is a bare token when the code names one thing, and items when 
 | `unknown_verb` | bare token | the domain does not accept that verb: `err unknown_verb frobnicate` |
 | `bad_argument` | bare token, or nothing | an argument is missing, does not parse or is left over; or the header was too long. The token is the first one at fault |
 | `out_of_range` | `field=… value=… [min=…] [max=…]` | the value parses but is not acceptable: `err out_of_range field=target value=101 max=60.0` |
-| `not_ready` | bare reason | valid, and cannot be honoured now: `no_reading`, `latch`, or for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io` |
-| `not_found` | bare path | an absent path (`fs` only) |
+| `not_ready` | bare reason | valid, and cannot be honoured now: `no_reading`, `latch`; for `fs`: `is_dir`, `not_dir`, `exists`, `no_parent`, `io`; for `routine`: `full` |
+| `not_found` | bare path, or a routine key | an absent path (`fs`), or a key nothing is registered under (`routine`) |
 | `unsupported` | `path=… reason=…` | the protocol defines it and this build cannot do it (`fs` only) |
 
 ```
@@ -378,13 +444,13 @@ follows: `12abc` is 12, and a token with no digits at all is 0. The range check 
 malformed number arrives as `out_of_range` — or, for `fs write`, as that many declared bytes —
 rather than as `bad_argument`. A missing or leftover argument is still `bad_argument`.
 
-## 10. State model
+## 11. State model
 
 The machine's states, the transition each command causes and the protections behind them are the
 firmware's contract and live in [vacuum control](./vacuum-control.md). `vacuum start`, `vacuum stop`
 and `vacuum get` report the state; the transitions themselves are that document's.
 
-## 11. Rates
+## 12. Rates
 
 Nothing is pushed: a controller that wants a readout polls `vacuum get`. Each poll is a ~90 byte
 reply, so polling at 4–10 Hz is a trivial load at 115200 baud and gives a smoother readout than
@@ -401,7 +467,7 @@ received, in arrival order, with nothing dropped and nothing reordered — so a 
 go is handled in one pass. Replies are still exactly one per command, so a host that counts them
 reads one per line.
 
-## 12. Stability
+## 13. Stability
 
 This is the first revision of the domain-first wire. The number is `1` and stays there until the
 protocol settles; revisions are not numbered yet, and a controller should be prepared to change
