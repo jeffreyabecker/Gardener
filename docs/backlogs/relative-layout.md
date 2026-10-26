@@ -18,10 +18,10 @@ file is deleted with the plan when the last item lands; each epic's summary live
 
 ## Epic 2 — the chromes move to AutoLayout
 
-- [ ] 2.1 — `HomeChrome` is an `AutoLayout` of two `bounds(0.5, 1)` children, the pressure display
+- [x] 2.1 — `HomeChrome` is an `AutoLayout` of two `bounds(0.5, 1)` children, the pressure display
   and the timer, and its constructor drops `pos, dim`. Verified: `home.test.be` and the `chromes`
   suite pass, and the halves resolve to (0, 0, 64, 52) and (64, 0, 64, 52), unchanged.
-- [ ] 2.2 — `RampedStaticChrome` is the nested tree — glyph column `bounds(0.125, 1)`, title
+- [x] 2.2 — `RampedStaticChrome` is the nested tree — glyph column `bounds(0.125, 1)`, title
   `bounds(0.875, 1)`, the two readings `bounds(0.5, 1)` in the middle row, and status and bar each
   `bounds(0.5, 1)` in the last row — rooted at `bounds(nil, nil)`. Verified: the pinned boxes —
   glyph column (0, 0, 16, 13), title (16, 0, 112, 13), readings at y 13, status and bar each half
