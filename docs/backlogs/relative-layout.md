@@ -31,7 +31,7 @@ file is deleted with the plan when the last item lands; each epic's summary live
 
 ## Epic 3 — components stop taking their box at construction
 
-- [ ] 3.1 — `Component.init()` and every subclass drop `pos` and `dim`; a component's box is set
+- [x] 3.1 — `Component.init()` and every subclass drop `pos` and `dim`; a component's box is set
   after construction, before the first draw — by the layout for a child of a layout, and by the
   caller for a list row's icon (which keeps its 12×8 measure), the browser's scrollbar and a
   settings editor's inline text or bar. Verified: `python tools/berry/check.py --tests` passes with

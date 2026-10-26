@@ -1,9 +1,10 @@
 # component.be — the component base: a box and the inverted flip, nothing else.
 #
-# A component draws inside its box, and nothing it draws lies outside it. A box is a `Position`
-# and a `Size`, passed to the component's init and carried in `pos` and `dim`. Every component is
-# given its box at construction and keeps it; there is no reflow. A component that draws internal
-# subcomponents before handing them a box may pass nil and stamp the box on itself before drawing.
+# A component draws inside its box, and nothing it draws lies outside it. A box is a `Position` and
+# a `Size`, carried in `pos` and `dim`; it is not a constructor argument. Whoever places the
+# component sets both through set_box() — a layout, for a child of one, or the caller for a
+# component that stands alone — and a component is never drawn before its box is set. A component
+# that draws internal subcomponents gives them their boxes the same way, before drawing them.
 class Position
   var x, y
   def init(x, y)
@@ -45,10 +46,16 @@ class Component
   var dim
   var inverted
 
-  def init(pos, dim)
-    self.pos = pos == nil ? Position(0, 0) : pos
-    self.dim = dim == nil ? Size(nil, nil) : dim
+  def init()
+    self.pos = nil
+    self.dim = nil
     self.inverted = false
+  end
+
+  # The one way a component is given a box: both halves together, before anything draws it.
+  def set_box(pos, dim)
+    self.pos = pos
+    self.dim = dim
   end
 
   # The base draw is the inverted flip: an inverted component inverts its whole box, so everything

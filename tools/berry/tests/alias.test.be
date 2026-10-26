@@ -43,7 +43,7 @@ def seed_alias_test()
   document.set("warm", "target_pressure", 30.0)
   document.save()
   routines.register(RampedStaticSettings("alias_test", "Alias Test",
-                                         RampedStaticIcon(Position(0, 0), Size(12, 8)),
+                                         RampedStaticIcon(),
                                          RampedStatic))
 end
 

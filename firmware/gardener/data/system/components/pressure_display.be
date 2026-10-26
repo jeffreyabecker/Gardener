@@ -54,8 +54,8 @@ class PressureDisplay : Component
   var _secondary
 
   # --- public methods ------------------------------------------------------
-  def init(pos, dim, settings, settings_secondary, secondary_position, size_hint)
-    super(self).init(pos, dim)
+  def init(settings, settings_secondary, secondary_position, size_hint)
+    super(self).init()
     self.pressure_kpa = nil
     self.family = "sans"
     self.style = "none"
@@ -78,8 +78,8 @@ class PressureDisplay : Component
     if size_hint != nil
       self.size_hint = size_hint
     end
-    self._number = Text(nil, nil)
-    self._secondary = Text(nil, nil)
+    self._number = Text()
+    self._secondary = Text()
   end
 
   def draw()
@@ -114,10 +114,7 @@ class PressureDisplay : Component
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.pos.x = self.pos.x
-    self._number.pos.y = self.pos.y
-    self._number.dim.w = self.dim.w
-    self._number.dim.h = self.dim.h
+    self._number.set_box(Position(self.pos.x, self.pos.y), Size(self.dim.w, self.dim.h))
     self._number.value = text
     self._number.draw()
   end
@@ -144,10 +141,7 @@ class PressureDisplay : Component
       self._secondary.align = "right"
       self._secondary.v_align = "bottom"
     end
-    self._secondary.pos.x = self.pos.x
-    self._secondary.pos.y = self.pos.y
-    self._secondary.dim.w = self.dim.w
-    self._secondary.dim.h = self.dim.h
+    self._secondary.set_box(Position(self.pos.x, self.pos.y), Size(self.dim.w, self.dim.h))
     self._secondary.draw_face(text, face)
   end
 
@@ -161,10 +155,8 @@ class PressureDisplay : Component
     self._number.style = self.style
     self._number.align = self.align
     self._number.v_align = self.v_align
-    self._number.pos.x = on_left ? self.pos.x + half : self.pos.x
-    self._number.pos.y = self.pos.y
-    self._number.dim.w = half
-    self._number.dim.h = self.dim.h
+    self._number.set_box(Position(on_left ? self.pos.x + half : self.pos.x, self.pos.y),
+                         Size(half, self.dim.h))
     self._number.value = main_text
     self._number.draw()
 
@@ -172,10 +164,8 @@ class PressureDisplay : Component
     self._secondary.style = self.secondary_style != nil ? self.secondary_style : self.style
     self._secondary.align = "center"
     self._secondary.v_align = "center"
-    self._secondary.pos.x = on_left ? self.pos.x : self.pos.x + half
-    self._secondary.pos.y = self.pos.y
-    self._secondary.dim.w = half
-    self._secondary.dim.h = self.dim.h
+    self._secondary.set_box(Position(on_left ? self.pos.x : self.pos.x + half, self.pos.y),
+                            Size(half, self.dim.h))
     self._secondary.value = sec_text
     self._secondary.draw()
   end
@@ -186,8 +176,8 @@ end
 class AutoPressureDisplay : PressureDisplay
   var _pressure_order
 
-  def init(pos, dim, pressure_order, secondary_position, size_hint)
-    super(self).init(pos, dim, nil, nil, secondary_position, size_hint)
+  def init(pressure_order, secondary_position, size_hint)
+    super(self).init(nil, nil, secondary_position, size_hint)
     if pressure_order == nil
       pressure_order = "pressure:target"
     end

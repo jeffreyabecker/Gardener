@@ -59,7 +59,7 @@ class RealEditScene : EditScene
   # value, and the content as wide as the widest of the three. A bounded setting carries the bar
   # under the value, six pixels of it with a gap of two above.
   def content_size()
-    var measure = Text(nil, nil, self.text())
+    var measure = Text(self.text())
     var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
     var wide = ink[0]
     var label_w = screen.text_bounds(self.label, 1).w
@@ -88,13 +88,17 @@ class RealEditScene : EditScene
     if bounded
       value_h -= 2 + 6
     end
-    Text(Position(pos.x, pos.y + 10), Size(dim.w, value_h), self.text()).draw()
+    var value = Text(self.text())
+    value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, value_h))
+    value.draw()
     if bounded
       var percent = 0
       if self.current != nil && self.max > self.min
         percent = int((self.current - self.min) * 100 / (self.max - self.min))
       end
-      ProgressBar(Position(pos.x, pos.y + 10 + value_h + 2), Size(dim.w, 6), percent).draw()
+      var bar = ProgressBar(percent)
+      bar.set_box(Position(pos.x, pos.y + 10 + value_h + 2), Size(dim.w, 6))
+      bar.draw()
     end
 
     var hint = self.hint()
