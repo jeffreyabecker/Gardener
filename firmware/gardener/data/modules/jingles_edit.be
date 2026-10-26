@@ -1,9 +1,9 @@
 # jingles_edit.be — the jingle library's row as an editor: the lookups a row makes of
 # `device.all_jingles()` and the choice pair that auditions what it shows.
 #
-# It loads after browser.be and before readout_settings.be, whose ReadoutSettings builds the jingle
-# row into the readout's set. The editor sounds what it is showing as it opens and steps, so a jingle
-# is chosen by ear rather than by identifier: `JingleEditCfg` declares the choice and
+# It loads after browser.be and before settings_device.be, whose DeviceSettings builds the jingle
+# row into the home scene's set. The editor sounds what it is showing as it opens and steps, so a
+# jingle is chosen by ear rather than by identifier: `JingleEditCfg` declares the choice and
 # `JingleEditScene` is the editor that plays it.
 
 # The jingle the device answers, or nil for an identifier the library does not hold: the list is the

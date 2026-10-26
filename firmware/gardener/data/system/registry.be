@@ -21,7 +21,7 @@
 # A launch hands the factory a RoutineActivation: the routine key and one clean settings map, built
 # by load_settings() — every value the routine registers, read from its file, held to its kind and
 # repaired by the routine's own rule. So a scene is built from one clean map and initialization is
-# the only activation. The device's own scenes — the readout, system and browser — are not
+# the only activation. The device's own scenes — the home scene, system and browser — are not
 # registered here: they are well-known scenes the system pushes directly.
 
 import string

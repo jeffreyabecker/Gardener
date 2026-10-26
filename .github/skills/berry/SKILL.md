@@ -37,7 +37,7 @@ sources are in `tools/berry/` — `harness.be` for the driver's bookkeeping, `dr
 walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
-`--scene readout`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
+`--scene home`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
 The output is an animated GIF by default — one frame per beat, each held a second by `kGifDelayCs`,
 enlarged 2 x by `kRenderScale` — and a `.bmp` `--out` asks for one native-sized still instead. The GIF draws
 a full-width strip across the top showing each injected press (`OK`, `OK×2`, `CANCEL 5s`) for one
@@ -91,7 +91,7 @@ Two things bite before the messages do:
 | `X needs activate() and poll()` | The registered class is not a scene, or a method is missing or misspelt |
 | `value_error: screen.draw_text: unknown font X` | The face is not one of the compiled ones |
 | `art: no routine named X` | `--art` was given a name no file registered |
-| `art: no scene named X` | `--scene` was given a name that is not `readout`, `browser` or `system` |
+| `art: no scene named X` | `--scene` was given a name that is not `home`, `browser` or `system` |
 | `io_error: frame.save: cannot write the file` | The `--out` path is not writable |
 | `art: cannot write PATH` | A `.bmp` still or a GIF capture could not be written, or the run had no frames |
 | `attribute_error: the 'reading' object has no attribute 'X'` | The record class has no such field |

@@ -32,7 +32,7 @@ Both surfaces are the panel's. A build without a panel has no routines: the seri
 
 A routine declares its states and its commands beside its settings declaration, made once where the
 file registers, in the way the settings declaration is. A routine with no declared states or
-commands declares none. The readout and the browser are not routines and declare nothing.
+commands declares none. The home scene and the browser are not routines and declare nothing.
 
 ## The surface
 

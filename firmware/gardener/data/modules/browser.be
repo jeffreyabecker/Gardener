@@ -1,10 +1,10 @@
 # browser.be — the routine browser: every registration as a row, the way into one of them, and the
-# settings list its Forward opens. It registers with nothing; it is the well-known scene the readout
-# pushes, and browserScene is that instance.
+# settings list its Forward opens. It registers with nothing; it is the well-known scene the home
+# scene pushes, and browserScene is that instance.
 #
-# It loads first of the modules, before jingles_edit.be, readout_settings.be and ui.be — the last of
-# which names browserScene in the readout's gestures, so the instance exists by the time the readout
-# is compiled.
+# It loads first of the modules, before jingles_edit.be, settings_device.be and ui.be — the last of
+# which names browserScene in the home scene's gestures, so the instance exists by the time that
+# page is compiled.
 #
 # Choosing a row launches the routine: the browser reads the routine's file into one clean settings
 # map and hands it, with the routine's key, to the registry, which builds the scene from it, so the
@@ -43,7 +43,7 @@ class BrowserScene : Scene
 
   def activate()
     # A routine may only start from a released chamber, so opening the browser vents whatever the
-    # readout was running: the launch it leads to is the one place a routine is allowed to begin.
+    # home scene was running: the launch it leads to is the one place a routine is allowed to begin.
     vacuum.stop()
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.

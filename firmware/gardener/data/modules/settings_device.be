@@ -1,10 +1,10 @@
-# readout_settings.be — the device's own settings as a settings-list declaration.
+# settings_device.be — the device's own settings as a settings-list declaration.
 #
 # The device's own settings are not a routine's: they live behind `device` and `screen` rather than
-# in a routine's document. The rows only declare them — the readout reads the device to fill the set
-# in and writes it back when the list commits — and the editors are the settings folder's.
+# in a routine's document. The rows only declare them — the home scene reads the device to fill the
+# set in and writes it back when the list commits — and the editors are the settings folder's.
 #
-# It loads after jingles_edit.be, which provides the jingle row, and before ui.be, whose ReadoutScene
+# It loads after jingles_edit.be, which provides the jingle row, and before ui.be, whose HomeScene
 # opens this set and commits it back to the device.
 
 # The row names a unit the way the glass prints it, so the row and its editor show the same label the
@@ -29,9 +29,10 @@ class BluetoothEditCfg : BoolEditCfg
   end
 end
 
-class ReadoutSettings
-  # The readout's set, in the order the list shows them: the target it works to, the unit it prints
-  # and the jingle it finishes with, then the radio as a build fact. The rows only declare them.
+class DeviceSettings
+  # The home scene's set, in the order the list shows them: the target it works to, the unit it
+  # prints and the jingle it finishes with, then the radio as a build fact. The rows only declare
+  # them.
   var settings_cfgs
 
   def init()

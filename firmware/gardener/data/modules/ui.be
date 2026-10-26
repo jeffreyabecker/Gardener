@@ -1,18 +1,18 @@
-# ui.be — the readout: the device's own page and the root scene the firmware pushes at boot.
+# ui.be — the home scene: the device's own page and the root scene the firmware pushes at boot.
 #
-# It registers with nothing. The readout is the well-known scene the system pushes directly, and its
-# gestures are the machine's: OK starts or resumes a run, Cancel stops and vents, Forward on a double
-# press pushes the routine browser, and Up on a double press opens the readout's settings list. The
-# settings are the device's own rather than a routine's, so the readout reads and writes them through
-# `screen` and `device` and declares nothing but the page.
+# It registers with nothing. The home scene is the well-known scene the system pushes directly, and
+# its gestures are the machine's: OK starts or resumes a run, Cancel stops and vents, Forward on a
+# double press pushes the routine browser, and Up on a double press opens the home scene's settings
+# list. The settings are the device's own rather than a routine's, so the home scene reads and writes
+# them through `screen` and `device` and declares nothing but the page.
 #
-# It loads after browser.be, whose `browserScene` its gestures name, and after readout_settings.be,
-# whose `ReadoutSettings` the list it opens is built from; the jingle row that list offers is
+# It loads after browser.be, whose `browserScene` its gestures name, and after settings_device.be,
+# whose `DeviceSettings` the list it opens is built from; the jingle row that list offers is
 # jingles_edit.be.
 
 # --- the page --------------------------------------------------------------
 
-class ReadoutChrome
+class HomeChrome
   var pressure
   var timer
 
@@ -30,14 +30,14 @@ class ReadoutChrome
   end
 end
 
-class ReadoutScene : Scene
+class HomeScene : Scene
   var chrome
   var settings_values
   var mark
 
   def init()
     super(self).init(Position.top_left(), Size.page())
-    self.chrome = ReadoutChrome(self.pos, self.dim)
+    self.chrome = HomeChrome(self.pos, self.dim)
     self.settings_values = {}
     self.mark = nil
 
@@ -54,7 +54,7 @@ class ReadoutScene : Scene
 
   # --- settings ------------------------------------------------------------
 
-  # The device holds every one of the readout's settings, so the set is read there: the readout is
+  # The device holds every one of the home scene's settings, so the set is read there: the page is
   # not registered and has no document of its own. This is its load, and the only place the set
   # comes from.
   def stored_settings_values()
@@ -66,13 +66,13 @@ class ReadoutScene : Scene
     }
   end
 
-  # The set the readout is holding, in the shape its declaration names, so the list opens on the
+  # The set the home scene is holding, in the shape its declaration names, so the list opens on the
   # state it is running to rather than on values read again.
   def serialize_to_settings()
     return self.settings_values
   end
 
-  # The set applied: the readout's state is the target, and the machine is told where to work.
+  # The set applied: the home scene's state is the target, and the machine is told where to work.
   def init_from_settings(settings_values)
     self.settings_values = settings_values
     var pressure_kpa = settings_values["target_pressure"]
@@ -81,14 +81,14 @@ class ReadoutScene : Scene
     end
   end
 
-  # A double Up opens the readout's own list: its declaration, and the state it is holding.
+  # A double Up opens the home scene's own list: its declaration, and the state it is holding.
   def edit()
-    ux.push(SettingsEditScene(ReadoutSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(DeviceSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     return true
   end
 
-  # Every setting the readout has is a device setting, so it writes them itself. The radio is a
+  # Every setting the home scene has is a device setting, so it writes them itself. The radio is a
   # build fact with nothing to write, a value that did not change is left alone so looking at the
   # list does not wear the settings file, and a row the build left out carries no key at all.
   def settings_closed(settings_values)
@@ -140,4 +140,4 @@ class ReadoutScene : Scene
   end
 end
 
-__rootScene = ReadoutScene()
+__rootScene = HomeScene()

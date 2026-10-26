@@ -26,7 +26,7 @@ paper and then calls `draw_page()`, so a scene leaves whatever the scene below i
 box alone rather than clearing the panel.
 
 A scene the stack is rooted on is the page: `Position.top_left()` and `Size.page()`. That is the box
-`ReadoutScene`, `BrowserScene` and every routine page — `RampedStatic`, `RampedInterval` and
+`HomeScene`, `BrowserScene` and every routine page — `RampedStatic`, `RampedInterval` and
 `Interval` — is constructed with, and their chromes lay their children out from it.
 
 A scene opened on top of another is given that scene's box. `ux.box()` answers the `pos` and `dim` of
@@ -40,7 +40,7 @@ Every scene, and where it lives:
 
 | Scene | Defined in | Dispatch |
 | --- | --- | --- |
-| `ReadoutScene` — the root | `modules/ui.be` | `on` |
+| `HomeScene` — the root | `modules/ui.be` | `on` |
 | `BrowserScene` | `modules/browser.be` | `on` |
 | `SettingsEditScene` | `system/settings/settings_edit.be` | `handle_page` |
 | `EditScene` — the edit base | `system/settings/edit_scene.be` | `handle_page` |
@@ -56,10 +56,10 @@ What each one answers:
 
 | Scene | Gesture | What it does |
 | --- | --- | --- |
-| `ReadoutScene` | `ok:single` | start or resume the run |
-| `ReadoutScene` | `cancel:single` | stop and vent |
-| `ReadoutScene` | `forward:double` | stop and vent, then push the routine browser |
-| `ReadoutScene` | `up:double` | open the readout's settings list — the target, the unit, the jingle and the radio |
+| `HomeScene` | `ok:single` | start or resume the run |
+| `HomeScene` | `cancel:single` | stop and vent |
+| `HomeScene` | `forward:double` | stop and vent, then push the routine browser |
+| `HomeScene` | `up:double` | open the home scene's settings list — the target, the unit, the jingle and the radio |
 
 | `BrowserScene` | `up:single`, `down:single` | move the selection |
 | `BrowserScene` | `forward:single` | open the selected routine's settings, then launch the routine from the set that list settles on |
@@ -119,10 +119,10 @@ it is cancelled.
 1. A scene answers only what the table gives it; everything else is dropped.
 2. The reserved gestures in [gestures.md](../gestures.md) are taken before the scene sees them, so
    no binding here may claim them.
-3. Every settings list is a `SettingsEditScene`: the readout's own set and a routine's are opened and
-   left the same way. A list that fits draws a centered block the size of its rows, with the heading
-   dropped unless it was given a title; a longer list fills the scene's box and scrolls, keeping its
-   heading.
+3. Every settings list is a `SettingsEditScene`: the home scene's own set and a routine's are opened
+   and left the same way. A list that fits draws a centered block the size of its rows, with the
+   heading dropped unless it was given a title; a longer list fills the scene's box and scrolls,
+   keeping its heading.
 4. `EditScene` and everything built on it answer the same gestures; only `DurationEditScene` adds a
    stage. The base frames what the kind measures: `content_size()` is the whole of the editor's
    content — its label row, its body and its hint row — and `draw_page()` draws a border a pixel

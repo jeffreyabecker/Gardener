@@ -58,15 +58,15 @@ These belong to the device. A page must not give them another meaning, and canno
 | Gesture | What happens | Where |
 | --- | --- | --- |
 | **Hold OK+Cancel for 5 s** | safe reset: stop, vent up to 2 s, restart | every page, every link state |
-| **Hold Cancel for 5 s** | force-quit: stop and vent, leave the routine, back to the readout | the panel's pages, while a routine is showing |
+| **Hold Cancel for 5 s** | force-quit: stop and vent, leave the routine, back to the home scene | the panel's pages, while a routine is showing |
 
 **OK+Cancel is the reboot.** It is the same safe reset the wire serves — `device reboot` on serial
 and `command 0x04` on Bluetooth — issued from the panel's side, so it works whatever a controller
 is doing.
 
 **Cancel held 5 s is the force-quit.** It is the device's, not the page's: the panel task stops and
-vents the run and returns the panel to the readout, whatever the routine is doing. It is the way out
-when a routine's own quit (`cancel:double`) does not answer, and no page can give the hold another
+vents the run and returns the panel to the home scene, whatever the routine is doing. It is the way
+out when a routine's own quit (`cancel:double`) does not answer, and no page can give the hold another
 meaning.
 
 A page that runs something usually wants a stop gesture of its own, and that gesture owns the

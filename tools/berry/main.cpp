@@ -124,7 +124,7 @@ int callSuites(bvm* vm, const char* filter) {
   return passed ? 1 : 0;
 }
 
-// Draw one of the device's own scenes — readout, browser or system — and save the frame. The
+// Draw one of the device's own scenes — home, browser or system — and save the frame. The
 // driver reaches them by their globals, because the well-known scenes are not registry entries.
 int callArtScene(bvm* vm, const char* name, int seconds, const char* path) {
   if (!be_getglobal(vm, "harness_art_scene")) {

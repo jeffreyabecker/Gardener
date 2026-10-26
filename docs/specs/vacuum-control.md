@@ -36,7 +36,7 @@ floor after 30 s latches `vent_timeout` instead of reporting `IDLE`.
 | --- | --- | --- |
 | `vacuum start [<s>]` | anything but `FAULT` | closes the valve, then runs the stored target, `0` included, for the hold or the maximum; `err not_ready` with `no_reading` or `latch`. From `VENT` it abandons the release. A start while running is a no-op |
 | `vacuum stop` | anything | opens the valve and stops the pump; from `PULL`, `HOLD` or `VENT` that is `VENT` then `IDLE`, and from `IDLE` or `FAULT` the state does not move. The target is kept |
-| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the readout, whatever else is connected |
+| Cancel held for 5 s (local key) | any | `vacuum stop` with no command and no reply, and the panel returns to the home scene, whatever else is connected |
 | OK+Cancel held for 5 s (local keys) | any | safe reset: stop, vent up to 2 s, restart |
 | `vacuum target <kPa\|->` | anything but `FAULT` | the target changes. `0` (or `-`) is the ambient target and releases the chamber; a target shallower than the reading while `PULL` or `HOLD` stops the pump, opens the valve and is `VENT` until it reaches the chosen landing, then `PULL`/`HOLD`; a deeper one is `PULL` until it is reached. Deeper than `floor` is refused and changes nothing |
 | target reached | `PULL` | `HOLD`, and the run's hold is timed from here by the controller |
@@ -110,8 +110,8 @@ All of these act without consulting the controller:
   latches `no_progress`
 * a depth more than 5 kPa past the target on five consecutive readings latches `overshoot`
 * a run ends as a release at its hold, fifteen minutes at most
-* holding Cancel for 5 s stops the pump, vents and returns the panel to the readout, whatever else
-  is connected
+* holding Cancel for 5 s stops the pump, vents and returns the panel to the home scene, whatever
+  else is connected
 * holding OK and Cancel for 5 s reboots the device: stop, vent up to 2 s, restart
 
 A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cleared. Only
@@ -124,7 +124,7 @@ A latched fault cuts the pump, opens the valve and holds `FAULT` until it is cle
   work out for yourself, because the deadband is the device's loop. A start may carry a shorter
   hold, and the run releases itself at the maximum whatever you do — the device will not hold the
   pump for a controller that has stopped talking.
-* **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the readout,
+* **Holding Cancel for 5 s is the local force-quit** — `vacuum stop` and back to the home scene,
   whatever else is connected — and **OK+Cancel for 5 s is the local reset.** The reset runs whatever
   else is happening.
 * **A run ends at its hold whatever the links do.** A link that stops answering does not keep the

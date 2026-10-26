@@ -75,11 +75,11 @@ that holds nothing reading `nil`.
 A scene's `activate(args)` is the inherited no-op. A page that does its work in `init()` — every
 shipped routine does — leaves it alone.
 
-Every registration is listed: there is no hidden routine. The device's own scenes — the readout and
-the browser — are not registered at all: they are well-known scenes — `/modules/ui.be` and
+Every registration is listed: there is no hidden routine. The device's own scenes — the home scene
+and the browser — are not registered at all: they are well-known scenes — `/modules/ui.be` and
 `/modules/browser.be` — the system pushes directly.
 
-The root scene — the readout — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
+The root scene — the home scene — is the `__rootScene` global `/modules/ui.be` sets. If nothing sets
 one, the panel shows the device's mark and nothing runs.
 
 A routine's key is also the name of the file its values are kept in (see `device.config` in
@@ -100,7 +100,7 @@ the whole gesture strings its scene answers, in declaration order, the vocabular
 a routine with no declared states or commands declares none.
 
 The declarations are made once, where the file registers, in the way the settings declaration is.
-The readout and the browser are not routines and declare nothing. The link surface that reads the
+The home scene and the browser are not routines and declare nothing. The link surface that reads the
 lists and sends commands through the gesture queue is [routine links](../routine-links.md).
 
 ## The system in `/system`
@@ -137,7 +137,7 @@ beside it. `list_rows()` holds a row written as a two-element `[icon, title]` pa
 title, as a `ListRow` with no value. `set(rows)` normalizes whatever it is given and `selected_row()`
 answers the row the index names. The list draws the icon and the title and never reads the value.
 
-`/system/components/` is the drawing primitives a readout composes, one class per file:
+`/system/components/` is the drawing primitives the home scene composes, one class per file:
 `component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is
 `Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
 `layout.be` is `Layout` (a flat list of children drawn in order), `progress_bar.be` is
@@ -207,21 +207,22 @@ reference to a later module's class is refused at load. Keep the dependency poin
 file, or move the class into the file that uses it. Define classes and functions there; leave
 constructing them to the page that uses them.
 
-The device's own scenes ship in `/modules/`, one concern per file: `/modules/ui.be` is the readout,
-`/modules/readout_settings.be` the settings list it opens, `/modules/jingles_edit.be` the library face
-the jingle row in that list is drawn from, and `/modules/browser.be` the routine browser, whose
-instance `browserScene` that file builds before `ui.be` compiles and names it. Loaded in the
-alphabetical order the folder gives — `browser`, `jingles_edit`, `readout_settings`, `ui` — each is a
-global by the time the file that names it compiles. The browser file also defines
+The device's own scenes ship in `/modules/`, one concern per file: `/modules/ui.be` is the home
+scene, `/modules/settings_device.be` the settings list it opens, `/modules/jingles_edit.be` the
+library face the jingle row in that list is drawn from, and `/modules/browser.be` the routine
+browser, whose instance `browserScene` that file builds before `ui.be` compiles and names it. Loaded
+in the alphabetical order the folder gives — `browser`, `jingles_edit`, `settings_device`, `ui` —
+each is a global by the time the file that names it compiles. The browser file also defines
 `RoutineActivation`, the record a launch hands a routine's class: the routine key and the clean
 settings map.
-None of them registered. The readout holds a set of its own and opens the same list a page does, over
-`ReadoutSettings`: the target it works to, the unit it prints, the jingle it finishes with and the
-radio as a build fact. Every one of those is a device setting rather than a document, so the readout
-fills the set in from `device.target()`, `screen.unit()`, `device.jingle()` and `device.bluetooth()`,
-and writes it back through `device.set_target()`, `device.set_unit()` and `device.set_jingle()` when
-the list commits. The rows only declare their kinds — the radio row's `scene()` is `nil`, so Forward
-on it opens nothing — and the readout is what reads and writes them.
+None of them registered. The home scene holds a set of its own and opens the same list a page does,
+over `DeviceSettings`: the target it works to, the unit it prints, the jingle it finishes with and
+the radio as a build fact. Every one of those is a device setting rather than a document, so the
+home scene fills the set in from `device.target()`, `screen.unit()`, `device.jingle()` and
+`device.bluetooth()`, and writes it back through `device.set_target()`, `device.set_unit()` and
+`device.set_jingle()` when the list commits. The rows only declare their kinds — the radio row's
+`scene()` is `nil`, so Forward on it opens nothing — and the home scene is what reads and writes
+them.
 
 ## When the firmware calls into a scene
 

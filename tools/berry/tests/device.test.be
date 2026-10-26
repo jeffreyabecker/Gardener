@@ -15,7 +15,7 @@ def library_resolves()
     assert_true(j.notes != nil && j.notes != "", "device: " + j.key + " has no notes")
   end
 
-  # The readout's row is the same list in the same order, and the page helper finds one entry.
+  # The home scene's row is the same list in the same order, and the page helper finds one entry.
   var choices = jingle_choices()
   assert_eq(choices.size(), all.size(), "device: the row does not carry every jingle")
   var i = 0

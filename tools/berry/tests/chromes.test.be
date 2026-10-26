@@ -7,13 +7,13 @@ def save(name)
   return harness.save("tools/berry/artifacts/components/" + name + ".bmp")
 end
 
-def readout_draws()
+def home_draws()
   screen.draw_clear()
-  ReadoutChrome(Position.top_left(), Size.page()).draw(50.0)
-  assert_true(save("readout"), "cannot save the readout frame")
+  HomeChrome(Position.top_left(), Size.page()).draw(50.0)
+  assert_true(save("home"), "cannot save the home frame")
 end
 
-test("the readout chrome draws", readout_draws)
+test("the home chrome draws", home_draws)
 
 def static_draws()
   screen.draw_clear()

@@ -42,7 +42,7 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--no-cache` | off | rebuild the vendored VM objects |
 | `--gfx DIR` | the installed library | the Adafruit GFX library the fonts come from |
 | `--art NAME` | — | draw that routine and save an animation of it instead of driving |
-| `--scene NAME` | — | draw that device scene — `readout`, `browser` or `system` — and save an animation |
+| `--scene NAME` | — | draw that device scene — `home`, `browser` or `system` — and save an animation |
 | `--seconds N` | `0` | with `--art` or `--scene`, run N seconds of virtual time first |
 | `--sets N` | `12` | with `--art`, activate with N sets; `0` keeps the routine's own count |
 | `--ceiling-kpa KPA` | `70` | the deepest depth the model chamber reaches |

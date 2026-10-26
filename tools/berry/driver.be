@@ -12,7 +12,7 @@
 def harness_activate(routine_key, settings)
   ux.pop_to_root()
   # A routine is launched from the browser, and the browser vents first; a direct push models the
-  # same path, so a test never starts a routine against a chamber the readout left pressurised.
+  # same path, so a test never starts a routine against a chamber the home scene left pressurised.
   vacuum.stop()
   if settings == nil
     settings = routines.load_settings(routine_key)
@@ -218,8 +218,8 @@ def harness_art(routine_key, seconds, path, sets)
 end
 
 # Draw one of the device's own scenes and save the frame as a BMP. The well-known scenes are not
-# registry entries — the readout is the root, and the browser is the global browser.be sets — so they
-# are reached by name here rather than through routines.push.
+# registry entries — the home scene is the root, and the browser is the global browser.be sets — so
+# they are reached by name here rather than through routines.push.
 def harness_art_scene(name, seconds, path)
   harness.reset()
   var gif = harness.is_gif(path)
@@ -227,7 +227,7 @@ def harness_art_scene(name, seconds, path)
     harness.capture_start(path)
   end
 
-  if name != "readout"
+  if name != "home"
     var scene = nil
     if name == "browser"
       scene = browserScene
@@ -252,7 +252,7 @@ def harness_art_scene(name, seconds, path)
       harness.beat(1)
     end
   else
-    # The readout is the root. Give it a run to show: pull toward a target above the current
+    # The home scene is the root. Give it a run to show: pull toward a target above the current
     # pressure, and save the frame mid-pull; with seconds, run that long instead.
     vacuum.target(20.0)
     vacuum.start()
