@@ -14,6 +14,8 @@ components/pressure_display.be
 components/duration.be
 scene.be
 list.be
+# The registry registers registrations, and the routines below the system extend the record.
+registration.be
 registry.be
 settings/settings.be
 settings/view.be

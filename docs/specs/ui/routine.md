@@ -33,7 +33,7 @@ class MyPage : Scene
   end
 end
 
-routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
+routines.register(MySettings("mypage", "My page", MyIcon(), MyPage))
 return MyPage
 ```
 
@@ -42,27 +42,25 @@ activation: the key is its identity, it is what the store file is called, and it
 are read and written under. The registry passes the key the routine was launched under, so a page
 that extends another inherits its `init()` and is still launched under its own key.
 
-The second argument is the routine's **title**: the label the browser draws for its row. It is not
-the identity — the routine key still is — so it may contain spaces and capital letters.
+The **title** is the label the browser draws for its row. It is not the identity — the routine key
+still is — so it may contain spaces and capital letters.
 
-The third argument is the routine's **icon**: an instance of a class extending `Icon` from
-`/system/components/icon.be`, which draws itself with the `screen` primitives and has an intrinsic
-`w`. The browser draws it at the left of the routine's row and shifts the title right by
-`icon.w + 2`. A routine that passes `nil` has a text-only row.
+The **icon** is an instance of a class extending `Icon` from `/system/components/icon.be`, which
+draws itself with the `screen` primitives and has an intrinsic `w`. The browser draws it at the left
+of the routine's row and shifts the title right by `icon.w + 2`. A routine that passes `nil` has a
+text-only row.
 
-The fourth argument is the routine's **class**, not an instance: the registry builds a scene from it
-every time the routine is pushed, so each visit starts from `init()` and nothing a previous visit
-left behind survives. The scene that is showing is `ux.top()`. The class must be a scene:
-`Scene` (`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture
-dispatch; a routine extends `Scene`, carries its own routine key in the `routine_key` field, and
-defines `init(activation)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is
-missing a method the stack calls raises when it is pushed or polled, which drops the stack and shows
-the mark.
+The **factory** is the routine's class, not an instance: the registry builds a scene from it every
+time the routine is pushed, so each visit starts from `init()` and nothing a previous visit left
+behind survives. The scene that is showing is `ux.top()`. The class must be a scene: `Scene`
+(`/system/scene.be`) provides `poll`, a gesture drain, the repaint cadence and the gesture dispatch;
+a routine extends `Scene`, carries its own routine key in the `routine_key` field, and defines
+`init(activation)` plus whatever `draw_page()` and `tick(now)` it needs. A scene that is missing a
+method the stack calls raises when it is pushed or polled, which drops the stack and shows the mark.
 
-The fifth argument is the routine's **settings declaration** — an instance that describes the values
-it edits in its `settings_cfgs` property and any rule that binds them in `problem(values)`, or `nil`
-when it has none. It is built where the file registers, so its declaration is made once, at
-registration time (see below).
+The **settings declaration** is the record's own: the values the routine edits in `settings_cfgs`,
+and any rule that binds them in `problem(values)`. The record is built where the file registers, so
+the declaration is made once, at registration time (see below).
 
 **Initializing the scene is the whole of its activation.** The constructor is handed a
 `RoutineActivation`: the routine key and the map `load_settings` built — every setting the routine
@@ -112,12 +110,15 @@ so a stored-or-default choice reads `is_nil(stored, fallback)`. `/system/ux.be` 
 answers the box of the scene on top, with the firmware calling `reset`, `enter` and `poll` on it.
 `/system/scene.be` is `Scene` — the box a scene draws in (`pos` and `dim`), the gesture drain, the
 repaint cadence and the gesture dispatch a routine's scene extends.
-`/system/registry.be` is the registry: `class RoutineRegistration`, the record a registration
-builds — routine key, title, icon, factory, settings instance and the alternates its document named —
-held in one list in registration order, and `class RoutineRegistry` with the
-global `routines` instance — the list the browser draws, the `load_settings(routine_key)` that
-builds a routine's clean settings map, and the `push(routine_key, callback, activation)` that opens a
-routine.
+`/system/registration.be` is `Registration`, the record a routine registers: its key, title, icon,
+scene class, settings declaration and the alternate sets its document names, with the
+`problem(values)` rule, the `repair(section, values)` that applies it, and the
+`load_settings(section)` and `save_settings(section, values)` that read and write its values.
+`RoutineAlias` is one alternate — the key its section gives it and the title its row shows.
+`/system/registry.be` is the registry: `class RoutineRegistry` with the global `routines` instance —
+the registrations in one list in registration order, the list the browser draws, the
+`load_settings(routine_key)` and `save_settings(routine_key, settings_values)` that hand a routine's
+set to its registration, and the `push(routine_key, callback, activation)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
 wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an optional
 `Scrollbar`. A row is a `ListRow` — the icon drawn at its left, the title drawn beside it, and the
@@ -156,7 +157,8 @@ opening the list; the page opens it itself, from its own declaration and the sta
 
 ```berry
 def edit()
-  ux.push(SettingsEditScene(RampedStaticSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
+  var settings_cfgs = routines.settings_cfgs(self.routine_key)
+  ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
           / settings_values -> self.settings_closed(settings_values))
   return true
 end
@@ -167,11 +169,11 @@ values it was handed and pops them on `back:single`, and the caller writes them.
 state already, so it opens the list on that state and reads no file; a caller with no state of its
 own — the browser — reads the routine's document through `routines.load_settings(routine_key)`,
 which mends it when the routine's rule refuses it, and passes the result in under the routine's
-title. Writing is the registry's `save_settings(routine_key, settings_values[, settings_cfgs])`,
-which applies the rule and writes the whole set to the routine's document in one `save()`, so a set
-that changes nothing costs no write. The browser then launches the routine from the set
-the list settled on, so editing a routine's settings there is the way into the routine rather than a
-return to the browser's rows.
+title. Writing is the registry's `save_settings(routine_key, settings_values)`, which hands the set
+to the routine's registration: the rule is applied and the whole set written to the routine's
+document in one `save()`, so a set that changes nothing costs no write. The browser then launches
+the routine from the set the list settled on, so editing a routine's settings there is the way into
+the routine rather than a return to the browser's rows.
 
 `/cfg/jingles.ini` is data rather than code. It is not compiled or loaded as a `.be` file; the
 device binding takes it at boot and answers its entries as `jingle` records from
@@ -286,22 +288,21 @@ What that costs, stated plainly:
 
 ## The settings a routine registers
 
-A routine's settings are a declaration of its own: an instance registered as the fifth argument,
-holding the values it edits in its `settings_cfgs` property, in the order the list shows them, and,
-when its values constrain one another, the rule that has to hold in `problem(values)`. It is built
-where the file registers, so the declaration is made once, at registration time:
+A routine's settings are part of its registration: the file builds one `Registration` — extending it
+when the routine declares values or a rule — and hands it to `routines.register`. The record holds
+the values it edits in `settings_cfgs`, in the order the list shows them, and, when its values
+constrain one another, the rule that has to hold in `problem(values)`. It is built where the file
+registers, so the declaration is made once, at registration time:
 
 ```berry
-class MySettings
-  var settings_cfgs
-
-  def init()
-    self.settings_cfgs = [
+class MySettings : Registration
+  def init(routine_key, title, icon, factory)
+    super(self).init(routine_key, title, icon, factory, [
       PressureEditCfg("target", 10.0, "Target", nil, 1, false),
       DurationEditCfg("hold", 30, "Hold", nil, 1, 0, 7200, false),
       ChoiceEditCfg("mode", "hold", "Mode", nil, ["hold", "cycle"], false),
       BoolEditCfg("enabled", true, "Enabled", nil, false)
-    ]
+    ])
   end
 
   def problem(values)
@@ -312,11 +313,11 @@ class MySettings
   end
 end
 
-routines.register("mypage", "My page", MyIcon(), MyPage, MySettings())
+routines.register(MySettings("mypage", "My page", MyIcon(), MyPage))
 ```
 
-A routine with nothing to edit registers `nil`. An instance that is registered answers both: a
-routine with no rule of its own returns `nil` from `problem`.
+A routine with nothing to edit registers a bare `Registration` over an empty list. An instance that
+is registered answers both: a routine with no rule of its own returns `nil` from `problem`.
 
 The list itself is `SettingsEditScene(settings_cfgs, settings_values, title)`: the settings
 declaration for the rows, a map of values keyed by setting key, and the title drawn above them, or
@@ -427,18 +428,19 @@ The machine's own `min` … `floor` is the range, so a pressure setting takes no
 ### A rule across settings
 
 `problem(values)` is asked with every value by key when the list opens and again when it closes, and
-when the registry builds the clean map a routine is initialized from. While the rule refuses the set,
-the settings that differ from their default are put back to them in the order the list shows them,
-so what is written is always a set the rule accepts. The reason that was applied is logged, not
+when the registration builds the clean map a routine is initialized from. While the rule refuses the
+set, the settings that differ from their default are put back to them in the order the list shows
+them, so what is written is always a set the rule accepts. The reason that was applied is logged, not
 drawn: the list's heading is the routine's title. So a file edited by hand is mended the moment its
 settings are opened and written mended when the list closes; an edit that would break a rule is put
 back when the list closes, and a page is never initialized with a set the rule refuses.
 
 ### Reading and writing them
 
-A page does not read its file at all: the registry's `load_settings(routine_key)` reads every setting
-it registers, holds each to its kind and repairs the set, and the page's `init(activation)` is handed
-the result as `activation.settings_values`, a map keyed by setting key. The root config lives in the
+A page does not read its file at all: the registry's `load_settings(routine_key)` asks the routine's
+registration for the set, which reads every setting it declares, holds each to its kind and repairs
+it, and the page's `init(activation)` is handed the result as `activation.settings_values`, a map
+keyed by setting key. The root config lives in the
 document's global section; every named section is an alias — a second key that launches the same
 page from that section's set, and whose map also carries its `routine_title` so the page can show
 its own name. A page takes what it needs

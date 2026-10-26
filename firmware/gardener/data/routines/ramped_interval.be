@@ -95,14 +95,12 @@ class RampedIntervalChrome : Layout
 end
 
 # The values the ramp edits, in the order the settings list shows them, and the one rule that binds
-# two of them: a ladder has to climb, so the final pressure is at least where it starts. The instance
-# is the declaration alone: whoever opens the list reads the values, applies the rule and writes what
-# the list settles on.
-class RampedIntervalSettings
-  var settings_cfgs
-
-  def init()
-    self.settings_cfgs = [
+# two of them: a ladder has to climb, so the final pressure is at least where it starts. The
+# registration is the declaration and the rule: whoever opens the list reads the values, applies the
+# rule and writes what the list settles on.
+class RampedIntervalSettings : Registration
+  def init(routine_key, title, icon, factory)
+    super(self).init(routine_key, title, icon, factory, [
       IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureEditCfg("final_pressure", 20.0, "Final", nil, 1, false),
@@ -112,7 +110,7 @@ class RampedIntervalSettings
       DurationEditCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
       ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
                        ["immediately", "after ok"], false)
-    ]
+    ])
   end
 
   def problem(values)
@@ -125,11 +123,9 @@ end
 
 # The values the interval edits, in the order the settings list shows them. Nothing binds one
 # setting to another here, so the rule accepts every set.
-class IntervalSettings
-  var settings_cfgs
-
-  def init()
-    self.settings_cfgs = [
+class IntervalSettings : Registration
+  def init(routine_key, title, icon, factory)
+    super(self).init(routine_key, title, icon, factory, [
       IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
       DurationEditCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
@@ -137,7 +133,7 @@ class IntervalSettings
       DurationEditCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
       ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
                        ["immediately", "after ok"], false)
-    ]
+    ])
   end
 
   def problem(values)
@@ -437,7 +433,8 @@ class RampedInterval : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsEditScene(RampedIntervalSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
+    var settings_cfgs = routines.settings_cfgs(self.routine_key)
+    ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
@@ -519,7 +516,8 @@ class Interval : RampedInterval
   # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
   # ladder, because those are the settings this routine registers.
   def edit()
-    ux.push(SettingsEditScene(IntervalSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
+    var settings_cfgs = routines.settings_cfgs(self.routine_key)
+    ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != IntervalPhase.READY
       vacuum.stop()
@@ -571,5 +569,8 @@ class Interval : RampedInterval
   end
 end
 
-routines.register("ramped_interval", "Ramped Interval", RampedIntervalIcon(Position(0, 0), Size(12, 8)), RampedInterval, RampedIntervalSettings())
-routines.register("interval", "Interval", IntervalIcon(Position(0, 0), Size(12, 8)), Interval, IntervalSettings())
+routines.register(RampedIntervalSettings("ramped_interval", "Ramped Interval",
+                                         RampedIntervalIcon(Position(0, 0), Size(12, 8)),
+                                         RampedInterval))
+routines.register(IntervalSettings("interval", "Interval",
+                                   IntervalIcon(Position(0, 0), Size(12, 8)), Interval))

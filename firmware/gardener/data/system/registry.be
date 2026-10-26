@@ -1,15 +1,15 @@
 # registry.be — the registry of user routines: the list the browser draws, each routine's factory,
 # the settings declaration it registers, and the way into each routine's scene.
 #
-# A routine file's top level calls routines.register(routine_key, title, icon, factory, settings) and
-# a RoutineRegistration joins one Berry list, in the order the files register; nothing native holds it.
-# The key is the routine's identity: the registration it is found by and the document its values are
-# kept in. The factory is the routine's scene class, and the registry builds the scene when the
-# routine is pushed, so a page starts from its own init() every time and nothing a previous visit
-# left behind survives; the scene that is showing is ux.top(). The settings are an instance the
-# routine writes itself, built when the file registers, holding the values it edits in its
-# settings_cfgs property and any rule that binds two of them in its problem() method, so those live
-# with the routine rather than in the page.
+# A routine file's top level builds a Registration and calls routines.register(registration); the
+# registry keeps them in one Berry list, in the order the files register, and nothing native holds
+# it. The key is the routine's identity: what the registration is found by and what the document its
+# values are kept in is named. The factory is the routine's scene class, and the registry builds the
+# scene when the routine is pushed, so a page starts from its own init() every time and nothing a
+# previous visit left behind survives; the scene that is showing is ux.top(). The settings are the
+# registration's own declaration — the values it edits in settings_cfgs and any rule that binds two
+# of them in its problem() — and the registration reads, repairs and writes them, so those live with
+# the routine rather than in the page.
 #
 # Registering a routine also reads its document for alternates: every named [section] is an alias,
 # a second key that shares the routine's factory, settings declaration and icon but carries its own
@@ -19,40 +19,12 @@
 #
 # The browser reads rows() and pushes a routine with push(routine_key, callback, activation).
 # A launch hands the factory a RoutineActivation: the routine key and one clean settings map, built
-# by load_settings() — every value the routine registers, read from its file, held to its kind and
-# repaired by the routine's own rule. So a scene is built from one clean map and initialization is
-# the only activation. The device's own scenes — the home scene, system and browser — are not
+# by load_settings() — every value the registration declares, read from its file, held to its kind
+# and repaired by the routine's own rule. So a scene is built from one clean map and initialization
+# is the only activation. The device's own scenes — the home scene, system and browser — are not
 # registered here: they are well-known scenes the system pushes directly.
 
 import string
-
-# One routine's registration: the key it is known by, the label and icon the browser draws, the
-# class the registry builds its scene from, the settings instance that declares them, and the
-# alternates its document named, in the order its sections were scanned.
-class RoutineRegistration
-  var routine_key, title, icon, factory, settings, aliases
-
-  def init(routine_key, title, icon, factory, settings)
-    self.routine_key = routine_key
-    self.title = title
-    self.icon = icon
-    self.factory = factory
-    self.settings = settings
-    self.aliases = []
-  end
-end
-
-# One alternate set a routine's document declares: the alias key the set is found under — the
-# section name — and the title the browser row shows, read from that section's routine_title or the
-# key itself. The routine it resolves to is the registration whose aliases list holds it.
-class RoutineAlias
-  var routine_key, title
-
-  def init(routine_key, title)
-    self.routine_key = routine_key
-    self.title = title
-  end
-end
 
 class RoutineRegistry
   var registrations
@@ -61,33 +33,34 @@ class RoutineRegistry
     self.registrations = []
   end
 
-  def register(routine_key, title, icon, factory, settings)
+  def register(registration)
+    if !isinstance(registration, Registration)
+      vacuum.log("registry: register takes a Registration")
+      return false
+    end
     # The key is also the name of the document its values live in, so it has to be a plain word.
     # The title is the label the browser draws; a missing one falls back to the key.
+    var routine_key = registration.routine_key
     if routine_key == nil || string.find(routine_key, "/") >= 0 || string.find(routine_key, "\\") >= 0
       vacuum.log("registry: routine key must be a plain word")
       return false
     end
-    if title == nil
-      title = routine_key
+    if registration.title == nil
+      registration.title = routine_key
     end
-    if factory == nil
+    if registration.factory == nil
       vacuum.log("registry: routine must name its scene class")
-      return false
-    end
-    if settings != nil && type(settings) != "instance"
-      vacuum.log("registry: " + routine_key + " settings must be an instance")
       return false
     end
     # A key already registered keeps its place, so the browser's order is the order the files
     # registered in; a re-registration replaces the record it had, and its alternates go with it.
     var index = self.index_of(routine_key)
-    var registration = RoutineRegistration(routine_key, title, icon, factory, settings)
     if index < 0
       self.registrations.push(registration)
     else
       self.registrations[index] = registration
     end
+    registration.aliases = []
     # Every named section of the routine's document is an alternate set under its own key.
     var document = device.config("routines/" + routine_key + ".ini")
     for name : document.section_keys()
@@ -116,58 +89,15 @@ class RoutineRegistry
     return out
   end
 
-  # The settings a routine can edit, as the instance it registered declares them in settings_cfgs,
-  # in the order the list shows them; nil when it has none. A setting whose kind cannot work is left
-  # out, with one line saying why, because no value scene could edit it.
+  # The settings a routine can edit, as its registration declares them, in the order the list shows
+  # them; nil when the key is not registered. A kind that cannot work was left out when the
+  # declaration was made, with one line saying why, because no value scene could edit it.
   def settings_cfgs(routine_key)
     var e = self.entry(routine_key)
-    if e == nil || e.settings == nil
+    if e == nil
       return nil
     end
-    var out = []
-    for item : e.settings.settings_cfgs
-      if item.problem != nil
-        vacuum.log("settings: " + routine_key + " " + item.key + ": " + item.problem)
-      else
-        out.push(item)
-      end
-    end
-    return out
-  end
-
-  # The values the routine's rule accepts: while the rule refuses the set, the settings that differ
-  # from their default are put back to them in the order the list shows them, each replacing the
-  # value under its key. The reason that was applied is returned for the list to draw, or nil when
-  # the set was already valid. Nothing here touches a file: the caller decides what to write.
-  def repair(routine_key, settings_cfgs, settings_values)
-    var reason = self.problem(routine_key, settings_cfgs, settings_values)
-    if reason == nil
-      return nil
-    end
-    vacuum.log("settings: " + routine_key + ": " + reason)
-    for cfg : settings_cfgs
-      if settings_values[cfg.key] != cfg.default_value
-        settings_values[cfg.key] = cfg.default_value
-        if self.problem(routine_key, settings_cfgs, settings_values) == nil
-          return reason
-        end
-      end
-    end
-    vacuum.log("settings: " + routine_key + ": " + reason + " even at the defaults")
-    return reason
-  end
-
-  # The rule's verdict on the values held beside their settings, or nil when it accepts them.
-  def problem(routine_key, settings_cfgs, settings_values)
-    var e = self.entry(routine_key)
-    if e == nil || e.settings == nil
-      return nil
-    end
-    var out = {}
-    for cfg : settings_cfgs
-      out[cfg.key] = settings_values[cfg.key]
-    end
-    return e.settings.problem(out)
+    return e.settings_cfgs
   end
 
   def icon(routine_key)
@@ -206,64 +136,27 @@ class RoutineRegistry
     return out
   end
 
-  # The settings a routine begins with, as one clean map: every setting it registers, read from its
-  # own document and held to its kind, then repaired by the routine's rule so the set is one a run
-  # accepts. The document is opened once, so reading every key costs one file read rather than one
-  # per key. The root set reads the global section; an alias reads its own named section of the
-  # parent's document, and also carries its routine_title on the map. A routine with no settings
-  # begins with an empty map. This is the only place the file-or-nothing rule is applied; a scene
-  # is handed the answer and never reads a document.
+  # The settings a routine begins with, as one clean map: the registration reads its own document,
+  # holds every value to its kind and repairs the set, so a scene is handed a set a run accepts. The
+  # root set reads the global section; an alias reads its own named section of the parent's document
+  # and also carries its routine_title on the map. An unregistered key begins with an empty map.
   def load_settings(routine_key)
-    var parent = self.parent_key(routine_key)
-    var section = parent == routine_key ? "" : routine_key
-    var settings_cfgs = self.settings_cfgs(routine_key)
-    var settings_values = {}
-    if settings_cfgs == nil
-      return settings_values
+    var e = self.entry(routine_key)
+    if e == nil
+      return {}
     end
-    var document = device.config("routines/" + parent + ".ini")
-    for cfg : settings_cfgs
-      var raw = document.get(section, cfg.key, "")
-      if raw == ""
-        settings_values[cfg.key] = cfg.value(nil)
-      else
-        settings_values[cfg.key] = cfg.value(cfg.parse(raw))
-      end
-    end
-    if section != ""
-      var stored_title = document.get(section, "routine_title", "")
-      if stored_title != ""
-        settings_values["routine_title"] = stored_title
-      end
-    end
-    self.repair(routine_key, settings_cfgs, settings_values)
-    return settings_values
+    return e.load_settings(self.section(routine_key, e))
   end
 
-  # A settled set written back to the routine's document: the routine's rule is applied first, so
-  # what lands is a set a run accepts, and a value the map holds nothing for is written as nothing,
-  # which reads back as nil. Every key is put into one document and the document is written once, so
-  # a settled set costs one write and a set that changes nothing costs none. The root set writes the
-  # global section; an alias writes its own named section of the parent's document, leaving the root
-  # config alone. `settings_cfgs` may be nil, and then the settings the routine declares are looked
-  # up here, so a caller that never opened a list has none to hand over. False, writing nothing,
-  # when the routine declares no settings.
-  def save_settings(routine_key, settings_values, settings_cfgs)
-    var parent = self.parent_key(routine_key)
-    var section = parent == routine_key ? "" : routine_key
-    if settings_cfgs == nil
-      settings_cfgs = self.settings_cfgs(routine_key)
-    end
-    if settings_cfgs == nil
+  # A settled set written back through the registration, which applies the routine's rule first so
+  # what lands is a set a run accepts. False, writing nothing, when the key is not registered or the
+  # routine declares no settings.
+  def save_settings(routine_key, settings_values)
+    var e = self.entry(routine_key)
+    if e == nil
       return false
     end
-    self.repair(routine_key, settings_cfgs, settings_values)
-    var document = device.config("routines/" + parent + ".ini")
-    for cfg : settings_cfgs
-      var value = settings_values[cfg.key]
-      document.set(section, cfg.key, value == nil ? "" : value)
-    end
-    return document.save()
+    return e.save_settings(self.section(routine_key, e), settings_values)
   end
 
   # Push a registered routine's scene, built through its factory from the activation the caller
@@ -291,11 +184,10 @@ class RoutineRegistry
     return self.registration(routine_key)
   end
 
-  # The routine a key's set is kept in: the key itself, or the routine whose document named it an
-  # alternate.
-  def parent_key(routine_key)
-    var e = self.entry(routine_key)
-    return e == nil ? routine_key : e.routine_key
+  # The section a key's set lives in: the global section of the routine's own document for the
+  # routine's key, and the key itself for an alternate, whose set is that named section.
+  def section(routine_key, registration)
+    return registration.routine_key == routine_key ? "" : routine_key
   end
 
   # The record a routine's own key names, or nil. An alternate is not looked for here, so a key

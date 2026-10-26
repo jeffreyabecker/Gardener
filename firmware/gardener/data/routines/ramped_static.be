@@ -45,20 +45,18 @@ class RampedStaticChrome : Layout
 end
 
 # The values this page edits, in the order the settings list shows them, and the one rule that binds
-# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The instance
-# is the declaration alone: the page opens the list from its settings_cfgs and writes what the list
-# settles on.
-class RampedStaticSettings
-  var settings_cfgs
-
-  def init()
-    self.settings_cfgs = [
+# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The
+# registration is the declaration and the rule: the page opens the list from its settings_cfgs and
+# writes what the list settles on.
+class RampedStaticSettings : Registration
+  def init(routine_key, title, icon, factory)
+    super(self).init(routine_key, title, icon, factory, [
       PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureEditCfg("target_pressure", 20.0, "Target", nil, 1, false),
       DurationEditCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
       DurationEditCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
       DurationEditCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
-    ]
+    ])
   end
 
   def problem(values)
@@ -321,7 +319,8 @@ class RampedStatic : Scene
   # for the values — so nothing is read back from the store and no rule is applied to a set the page
   # already accepted.
   def edit()
-    ux.push(SettingsEditScene(RampedStaticSettings().settings_cfgs, self.serialize_to_settings(), nil), nil,
+    var settings_cfgs = routines.settings_cfgs(self.routine_key)
+    ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
             / settings_values -> self.settings_closed(settings_values))
     if self.phase != "ready"
       vacuum.stop()
@@ -401,5 +400,6 @@ class RampedStatic : Scene
   end
 end
 
-routines.register("ramped_static", "Ramped Static", RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic, RampedStaticSettings())
+routines.register(RampedStaticSettings("ramped_static", "Ramped Static",
+                                       RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic))
 return RampedStatic

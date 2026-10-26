@@ -4,9 +4,10 @@ The native surface a routine calls: three modules — `vacuum`, `screen` and `de
 those calls answer with, and the `Config` document instance `device.config` hands back. This
 is the reference for what a routine can call; for what a routine must be, see
 [routine.md](./routine.md).
-Two of the names a scene uses are Berry classes rather than native modules: the registry the routine
-browser draws (`/system/registry.be`) and the scene stack it pushes onto (`/system/ux.be`). They are
-documented here too, because a routine calls them the same way.
+Three of the names a scene uses are Berry classes rather than native modules: the registry the
+routine browser draws (`/system/registry.be`), the record it registers (`/system/registration.be`)
+and the scene stack it pushes onto (`/system/ux.be`). They are documented here too, because a
+routine calls them the same way.
 
 ## Values
 
@@ -435,6 +436,26 @@ dropped with the whole stack: the panel shows the device's mark.
 The root scene is the `__rootScene` global `/system/home.be` sets, pushed at boot by the firmware. It
 is not registered anywhere; it is what the device's go-home gesture returns to.
 
+## `Registration` — the record a routine registers (a Berry class)
+
+`/system/registration.be` defines `class Registration`, which a routine file builds and hands to
+`routines.register`, and `class RoutineAlias`, which the registry makes for each alternate the
+routine's document names. A routine that declares settings extends `Registration`, so the record is
+its settings declaration too.
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `Registration(routine_key, title, icon, factory, settings_cfgs)` | an instance | the record: the key the routine is found by and whose document its values live in, the row label, an `Icon` instance or `nil`, the scene class the registry builds on every push, and the list of setting configs it edits, in the order the list shows them. A kind that cannot work is left out here, with one line saying why |
+| `registration.problem(settings_values)` | string, or `nil` | the rule that binds the values to one another, or `nil` when every set is one a run can use; the base class answers `nil` |
+| `registration.repair(section, settings_values)` | string, or `nil` | apply the rule to the map, keyed by setting key, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. Nothing is written |
+| `registration.load_settings(section)` | map | the values the section holds: every setting the record declares, read from the routine's document, held to its kind and repaired by the rule, keyed by setting key. An alternate's section also carries its `routine_title` on the map |
+| `registration.save_settings(section, settings_values)` | `bool` | repair the map and write the whole set to the routine's document in one `save()`; a set that changes nothing writes nothing, and a record that declares no settings answers `false`, writing nothing |
+| `registration.aliases` | list of `RoutineAlias` | the alternates the routine's document named, in the order its sections were scanned; the registry fills it when the routine registers |
+
+A section is `""` for the routine's own set, which lives in the document's global section, and the
+alternate's key for one of its sets, which lives in that named section. A routine file calls none of
+these itself: `routines.register` takes the record, and the registry's settings calls delegate here.
+
 ## `routines` — the registry (a Berry class)
 
 The registry is not a native module. `/system/registry.be` defines `class RoutineRegistry` and the
@@ -443,15 +464,13 @@ draws its list.
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `routines.register(routine_key, title, icon, factory, settings)` | `bool` | bind a routine key to the label the browser draws, the scene class that draws it and the settings instance that declares them. The scene is built from `factory` on every push; `title` is the row label, or `nil` to show the key; `icon` is an `Icon` instance or `nil`; `settings` is an instance whose `settings_cfgs` property is the list of setting configs and that answers `problem(values)`, or `nil` when the routine has nothing to edit. Registering also reads the routine's document: every named section becomes an alias, a second key that shares this routine's factory, settings declaration and icon but carries its own title and settings set |
+| `routines.register(registration)` | `bool` | bind one `Registration` to the routine it names. The key is its identity and the name of the document its values live in, so it has to be a plain word; a missing title shows the key; a record that is not a `Registration`, or one without a scene class, is refused with one log line. The scene is built from `factory` on every push. Registering also reads the routine's document: every named section becomes an alias, a second key that shares this routine's factory, settings declaration and icon but carries its own title and settings set |
 | `routines.keys()` | list of strings | every registered key, in registration order, each alias following its routine |
 | `routines.title(routine_key)` | string, or `nil` | the label the browser draws for the routine; an alias's is its `routine_title`, or the alias key when its section holds none |
-| `routines.settings_cfgs(routine_key)` | list of setting configs, or `nil` | what the routine declares, broken kinds left out; an alias shares its parent's |
-| `routines.repair(routine_key, settings_cfgs, settings_values)` | string, or `nil` | apply the routine's rule to the values, keyed by setting key, putting refused settings back to their defaults in place, and answer the reason it applied or `nil` when the set was valid. It writes nothing |
-| `routines.problem(routine_key, settings_cfgs, settings_values)` | string, or `nil` | the rule's verdict on the same settings and values, applying nothing |
+| `routines.settings_cfgs(routine_key)` | list of setting configs, or `nil` | what the registration declares, in the order the list shows them, a kind that cannot work left out; `nil` when the key is not registered. An alias shares its parent's |
 | `routines.icon(routine_key)` | the icon object, or `nil` | what the file passed as its icon; an alias shares its parent's |
-| `routines.load_settings(routine_key)` | map | the values a routine begins with: every setting it registers, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. The root set reads the global section; an alias reads its own named section of the parent's document and also carries its `routine_title` on the map. A routine with no settings is an empty map |
-| `routines.save_settings(routine_key, settings_values[, settings_cfgs])` | `bool` | write a settled set back to the routine's document, applying the routine's rule first so what lands is a set a run accepts, and writing an empty value for a setting the map holds nothing for. The document is opened once, every key put into it, and written once by `save()`; a set that changes nothing writes nothing. The root set writes the global section; an alias writes its own named section, leaving the root config alone. `settings_cfgs` may be left off, and then the settings the routine declares are looked up by its key. `false`, writing nothing, when the routine declares no settings |
+| `routines.load_settings(routine_key)` | map | the values a routine begins with, as its registration's `load_settings` reads them: every setting it declares, read from its own file, held to its kind and repaired by the routine's rule, keyed by setting key. The root set reads the global section; an alias reads its own named section of the parent's document and also carries its `routine_title` on the map. A registration with no settings is an empty map |
+| `routines.save_settings(routine_key, settings_values)` | `bool` | write a settled set back to the routine's document through its registration, which applies the routine's rule first so what lands is a set a run accepts, and writes an empty value for a setting the map holds nothing for. The document is opened once, every key put into it, and written once by `save()`; a set that changes nothing writes nothing. The root set writes the global section; an alias writes its own named section, leaving the root config alone. `false`, writing nothing, when the key is not registered or the routine declares no settings |
 | `routines.push(routine_key, callback, activation)` | `bool` | build the routine's scene from its class, handing the activation to its `init()`, and push it, handing the returned value to the callback. The activation is a `RoutineActivation(routine_key, settings_values)` — the key the routine is launched under and the map its settings are read from, which is `routines.load_settings(routine_key)` for a launch from the routine's own file |
 
 Registering the same key twice is one routine: the later file wins. The title is what the browser

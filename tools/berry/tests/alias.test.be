@@ -42,9 +42,9 @@ def seed_alias_test()
   document.set("cold", "target_pressure", 15.0)
   document.set("warm", "target_pressure", 30.0)
   document.save()
-  routines.register("alias_test", "Alias Test",
-                    RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic,
-                    RampedStaticSettings())
+  routines.register(RampedStaticSettings("alias_test", "Alias Test",
+                                         RampedStaticIcon(Position(0, 0), Size(12, 8)),
+                                         RampedStatic))
 end
 
 def every_named_section_is_an_alias()
