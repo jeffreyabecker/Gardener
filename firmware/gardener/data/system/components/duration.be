@@ -7,8 +7,8 @@ class Duration : Text
   # The seconds shown, set by the caller before a draw, like a text's value.
   var seconds
 
-  def init(pos, dim, format)
-    super(self).init(pos, dim)
+  def init(format)
+    super(self).init()
     self.format = format == nil ? "minutes" : format
     self.seconds = 0
   end

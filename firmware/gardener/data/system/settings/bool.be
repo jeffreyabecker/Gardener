@@ -44,7 +44,7 @@ class BoolEditScene : EditScene
         widest = item.title
       end
     end
-    var measure = Text(nil, nil, widest)
+    var measure = Text(widest)
     var face = measure.fit(widest, room, 16)
     var ink = measure.bounds(widest, face)
     return [ink[0] + 2, ink[1] + 2, face]
@@ -78,7 +78,8 @@ class BoolEditScene : EditScene
     var y = pos.y + 10 + (dim.h - 20 - chip[1]) / 2
     var i = 0
     while i < items.size()
-      var drawn = Text(Position(x, y), Size(chip[0], chip[1]), items[i].title)
+      var drawn = Text(items[i].title)
+      drawn.set_box(Position(x, y), Size(chip[0], chip[1]))
       drawn.inverted = self.ring.index == i
       drawn.draw_face(items[i].title, chip[2])
       x += chip[0] + 1

@@ -2,8 +2,8 @@
 
 class ProgressBar : Component
   var value
-  def init(pos, dim, value)
-    super(self).init(pos, dim)
+  def init(value)
+    super(self).init()
     self.value = value == nil ? 0 : value
   end
   def draw()

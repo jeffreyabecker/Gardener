@@ -42,7 +42,7 @@ test("the ramped static chrome draws", static_draws)
 
 def interval_draws()
   screen.draw_clear()
-  var chrome = RampedIntervalChrome(IntervalIcon(Position(0, 0), Size(12, 8)), "INTERVAL")
+  var chrome = RampedIntervalChrome(IntervalIcon(), "INTERVAL")
   chrome.draw(2, 4, "READY", 50)
   assert_eq(chrome.icon.pos.x, 0, "the interval glyph is not at the left")
   assert_eq(chrome.icon.dim.w, 16, "the interval glyph column is not an eighth of the page")

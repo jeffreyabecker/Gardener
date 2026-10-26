@@ -21,10 +21,6 @@ end
 # The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
 # 12 by 8 field, drawn with one-pixel lines.
 class IntervalIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_hline(self.pos.x, self.pos.y + 1, 3)
     screen.draw_vline(self.pos.x + 3, self.pos.y + 1, 6)
@@ -40,10 +36,6 @@ end
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
 # each column standing from the baseline two rows higher than the one before.
 class RampedIntervalIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_fillrect(self.pos.x, self.pos.y + 5, 3, 2)
     screen.draw_fillrect(self.pos.x + 4, self.pos.y + 3, 3, 4)
@@ -64,10 +56,10 @@ class RampedIntervalChrome : AutoLayout
 
   def init(icon, title_text)
     self.icon = icon
-    self.title = Text(nil, nil, title_text)
-    self.sets = Text(nil, nil, "")
-    self.status = Text(nil, nil, "", text_settings("sans", "none", "left", "center"))
-    self.bar = ProgressBar(nil, nil, nil)
+    self.title = Text(title_text)
+    self.sets = Text("")
+    self.status = Text("", text_settings("sans", "none", "left", "center"))
+    self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(1, 0.25), [
         AutoLayout(bounds(0.125, 1), [self.icon]),
@@ -75,7 +67,7 @@ class RampedIntervalChrome : AutoLayout
       ]),
       AutoLayout(bounds(1, 0.50), [
         AutoLayout(bounds(0.5, 1),
-                   [AutoPressureDisplay(nil, nil, "pressure:target", "br", 0.25)]),
+                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
         AutoLayout(bounds(0.5, 1), [self.sets])
       ]),
       AutoLayout(bounds(1, 0.25), [
@@ -194,7 +186,7 @@ class RampedInterval : Scene
 
   # The glyph the page draws in its chrome, the same one its registration carries.
   def icon()
-    return RampedIntervalIcon(Position(0, 0), Size(12, 8))
+    return RampedIntervalIcon()
   end
 
   # --- settings ------------------------------------------------------------
@@ -517,7 +509,7 @@ end
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
   def icon()
-    return IntervalIcon(Position(0, 0), Size(12, 8))
+    return IntervalIcon()
   end
 
   # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
@@ -577,7 +569,7 @@ class Interval : RampedInterval
 end
 
 routines.register(RampedIntervalSettings("ramped_interval", "Ramped Interval",
-                                         RampedIntervalIcon(Position(0, 0), Size(12, 8)),
+                                         RampedIntervalIcon(),
                                          RampedInterval))
 routines.register(IntervalSettings("interval", "Interval",
-                                   IntervalIcon(Position(0, 0), Size(12, 8)), Interval))
+                                   IntervalIcon(), Interval))

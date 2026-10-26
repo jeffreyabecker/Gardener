@@ -60,7 +60,7 @@ class PressureEditScene : EditScene
   # The label row, the value and the hint row: eight pixels a row, a gap of two above and below the
   # value, and the content as wide as the widest of the three.
   def content_size()
-    var measure = Text(nil, nil, self.text())
+    var measure = Text(self.text())
     var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
     var wide = ink[0]
     var label_w = screen.text_bounds(self.label, 1).w
@@ -79,7 +79,9 @@ class PressureEditScene : EditScene
   def draw_editor(pos, dim)
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-    Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), self.text()).draw()
+    var value = Text(self.text())
+    value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20))
+    value.draw()
     var hint = self.hint()
     var hint_w = screen.text_bounds(hint, 1).w
     screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)

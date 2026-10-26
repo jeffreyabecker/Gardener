@@ -96,9 +96,9 @@ class DurationEditScene : EditScene
     if screen.text_bounds(seconds, 1).w > screen.text_bounds(minutes, 1).w
       longer = seconds
     end
-    var face = Text(nil, nil, longer).fit(longer, room, 16)
-    var minutes_box = Text(nil, nil, minutes)
-    var seconds_box = Text(nil, nil, seconds)
+    var face = Text(longer).fit(longer, room, 16)
+    var minutes_box = Text(minutes)
+    var seconds_box = Text(seconds)
     var minutes_ink = minutes_box.bounds(minutes, face)
     var seconds_ink = seconds_box.bounds(seconds, face)
     return [minutes_ink[0] + 2, seconds_ink[0] + 2, minutes_ink[1] + 2, face]
@@ -114,7 +114,7 @@ class DurationEditScene : EditScene
       wide = fields[0] + 1 + fields[1]
       tall = fields[2]
     else
-      var measure = Text(nil, nil, "--")
+      var measure = Text("--")
       var ink = measure.bounds("--", measure.fit("--", self.dim.w - 6, 16))
       wide = ink[0]
       tall = ink[1]
@@ -140,15 +140,18 @@ class DurationEditScene : EditScene
       var fields = self.fields()
       var x = pos.x + (dim.w - (fields[0] + 1 + fields[1])) / 2
       var y = pos.y + 10 + (dim.h - 20 - fields[2]) / 2
-      var minutes = Text(Position(x, y), Size(fields[0], fields[2]), self.minutes_text())
+      var minutes = Text(self.minutes_text())
+      minutes.set_box(Position(x, y), Size(fields[0], fields[2]))
       minutes.inverted = self.stage == "min"
       minutes.draw_face(self.minutes_text(), fields[3])
-      var seconds = Text(Position(x + fields[0] + 1, y), Size(fields[1], fields[2]),
-                         self.seconds_text())
+      var seconds = Text(self.seconds_text())
+      seconds.set_box(Position(x + fields[0] + 1, y), Size(fields[1], fields[2]))
       seconds.inverted = self.stage != "min"
       seconds.draw_face(self.seconds_text(), fields[3])
     else
-      Text(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20), "--").draw()
+      var value = Text("--")
+      value.set_box(Position(pos.x, pos.y + 10), Size(dim.w, dim.h - 20))
+      value.draw()
     end
 
     var hint = self.hint()

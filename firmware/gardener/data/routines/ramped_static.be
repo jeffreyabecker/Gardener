@@ -10,10 +10,6 @@
 # The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
 # run rising from the first row to the last, on a 12 by 8 field.
 class RampedStaticIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_filltriangle(self.pos.x, self.pos.y + 6, self.pos.x + 11, self.pos.y + 1, self.pos.x + 11, self.pos.y + 6)
     super(self).draw()
@@ -30,11 +26,11 @@ class RampedStaticChrome : AutoLayout
   var bar
 
   def init(title_text)
-    self.icon = RampedStaticIcon(nil, nil)
-    self.title = Text(nil, nil, title_text)
-    self.timer = Duration(nil, nil, "minutes")
-    self.status = Text(nil, nil, "", text_settings("sans", "none", "left", "center"))
-    self.bar = ProgressBar(nil, nil, nil)
+    self.icon = RampedStaticIcon()
+    self.title = Text(title_text)
+    self.timer = Duration("minutes")
+    self.status = Text("", text_settings("sans", "none", "left", "center"))
+    self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(1, 0.25), [
         AutoLayout(bounds(0.125, 1), [self.icon]),
@@ -42,7 +38,7 @@ class RampedStaticChrome : AutoLayout
       ]),
       AutoLayout(bounds(1, 0.50), [
         AutoLayout(bounds(0.5, 1),
-                   [AutoPressureDisplay(nil, nil, "pressure:target", "br", 0.25)]),
+                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
         AutoLayout(bounds(0.5, 1), [self.timer])
       ]),
       AutoLayout(bounds(1, 0.25), [
@@ -417,5 +413,5 @@ class RampedStatic : Scene
 end
 
 routines.register(RampedStaticSettings("ramped_static", "Ramped Static",
-                                       RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic))
+                                       RampedStaticIcon(), RampedStatic))
 return RampedStatic

@@ -16,8 +16,8 @@ class HomeChrome : AutoLayout
   var timer
 
   def init()
-    self.pressure = AutoPressureDisplay(nil, nil, "pressure:target", "br", 0.25)
-    self.timer = Duration(nil, nil, "minutes")
+    self.pressure = AutoPressureDisplay("pressure:target", "br", 0.25)
+    self.timer = Duration("minutes")
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(0.5, 1), [self.pressure]),
       AutoLayout(bounds(0.5, 1), [self.timer])
