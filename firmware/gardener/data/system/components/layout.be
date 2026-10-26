@@ -2,9 +2,9 @@
 # fraction of itself the child declares, and draws them in order.
 #
 # A child declares its box as `bounds(w, h)`: the fraction of its parent's width and height it takes,
-# each a number in [0, 1], or nil for the whole of the page. `bounds(nil, nil)` names the page rather
-# than a parent, so a layout holding it is a root and is bound to the page at construction; every
-# other layout waits for the parent that places it.
+# each a number in [0, 1], or nil for the whole of the box it is given. A layout places nothing,
+# itself included: it is given its box through to_box(), by the parent that places it or by the
+# scene whose page it is.
 #
 # Siblings stack along the axis they divide: a layout whose children are each the full width stacks
 # them down a column, and one whose children are each the full height stacks them across a row. A
@@ -18,13 +18,10 @@ class AutoLayout : Component
     super(self).init()
     self.bounds = bounds
     self.children = children == nil ? [] : children
-    if bounds.w == nil && bounds.h == nil
-      self.to_box(0, 0, screen.page_width(), screen.page_height() - overlay_band_height)
-    end
   end
 
-  # Bound to a box by the parent that placed it, or by the page when it is the root: the box is
-  # stamped on the layout, and its children are placed inside that box.
+  # Given a box by the parent that placed it, or by the scene whose page it is: the box is stamped on
+  # the layout, and its children are placed inside that box.
   def to_box(x, y, w, h)
     self.set_box(point(x, y), bounds(w, h))
     self.place()

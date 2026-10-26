@@ -7,9 +7,16 @@ def save(name)
   return harness.save("tools/berry/artifacts/components/" + name + ".gif")
 end
 
+# A chrome is the page's layout, so it is given the page before it draws, as ux gives it to the scene
+# that holds it.
+def page(component)
+  component.to_box(0, 0, screen.page_width(), screen.page_height() - overlay_band_height)
+  return component
+end
+
 def home_draws()
   screen.draw_clear()
-  var chrome = HomeChrome()
+  var chrome = page(HomeChrome())
   chrome.draw(50.0)
   assert_eq(chrome.pressure.pos.x, 0, "the home pressure is not in the left half")
   assert_eq(chrome.pressure.dim.w, 64, "the home pressure is not half the page")
@@ -23,7 +30,7 @@ test("the home chrome draws", home_draws)
 
 def static_draws()
   screen.draw_clear()
-  var chrome = RampedStaticChrome("STATIC")
+  var chrome = page(RampedStaticChrome("STATIC"))
   chrome.draw("READY", 300000, 50000)
   assert_eq(chrome.icon.pos.x, 0, "the static glyph is not at the left")
   assert_eq(chrome.icon.dim.w, 16, "the static glyph column is not an eighth of the page")
@@ -42,7 +49,7 @@ test("the ramped static chrome draws", static_draws)
 
 def interval_draws()
   screen.draw_clear()
-  var chrome = RampedIntervalChrome(IntervalIcon(), "INTERVAL")
+  var chrome = page(RampedIntervalChrome(IntervalIcon(), "INTERVAL"))
   chrome.draw(2, 4, "READY", 50)
   assert_eq(chrome.icon.pos.x, 0, "the interval glyph is not at the left")
   assert_eq(chrome.icon.dim.w, 16, "the interval glyph column is not an eighth of the page")

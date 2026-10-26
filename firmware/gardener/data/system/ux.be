@@ -112,6 +112,9 @@ class Ux
       return false
     end
     self.frames.push([scene, callback])
+    # The page is the panel less the band, and the stack is what owns the band: the box is stamped
+    # here, once the scene is on top and before its activate() draws.
+    scene.to_box(0, 0, screen.width(), screen.height() - overlay_band_height)
     self.guard(/ -> scene.activate(args))
     return true
   end

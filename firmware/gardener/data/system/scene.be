@@ -1,30 +1,33 @@
 # scene.be — the lifecycle a scene shares: the box it draws in, the gesture drain, the repaint
 # cadence and the gesture dispatch.
 #
-# A scene extends Scene and overrides only what differs: activate() for work that must wait until
+# A scene extends Scene and overrides only what differs: to_box() to hand the page's box on to the
+# layout the page is composed in, activate() for the first paint and for work that must wait until
 # the scene is on top, draw_page() for its content, handle(ev) for the gestures it answers, and
-# tick(now) for per-beat work. A scene built around its init() — every routine page is — leaves
-# activate() alone: it is the inherited no-op, and initializing the scene is the whole of its
-# activation. A gesture is one whole string — `ok:single`, `cancel:double`, `ok:5+cancel:5` — and a
-# scene matches it in full, so it never matches one dimension of a gesture without the other. A
-# scene pushes a sub-scene with ux.push(scene, callback) and learns what the sub-scene returned
-# through the callback; the callback runs when the sub-scene pops, and the scene below keeps its
-# state.
+# tick(now) for per-beat work. ux stamps the page box on the scene and then calls activate(), in that
+# order, so activate() is where a page draws itself. A gesture is one whole string — `ok:single`,
+# `cancel:double`, `ok:5+cancel:5` — and a scene matches it in full, so it never matches one
+# dimension of a gesture without the other. A scene pushes a sub-scene with ux.push(scene, callback)
+# and learns what the sub-scene returned through the callback; the callback runs when the sub-scene
+# pops, and the scene below keeps its state.
 #
-# Every scene draws in the page: it carries `pos` and `dim` as a component does, and they are the
-# page's box however the scene was pushed.
+# Every scene draws in the page: it carries `pos` and `dim` as a component does, and they are
+# stamped on it by `ux` when it goes on the stack.
 
 class Scene
   var last_draw
   var pos
   var dim
 
-  # A scene always takes the whole page. `pos` and `dim` are what draw_page() lays out in, and a
-  # scene opened over another one covers the page and clears it when it draws.
   def init()
     self.last_draw = 0
-    self.pos = point(0, 0)
-    self.dim = bounds(screen.page_width(), screen.page_height() - overlay_band_height)
+  end
+
+  # The page's box, stamped on the scene as it is pushed and before its activate() runs. A scene is
+  # never a window inside another one, and nothing draws a scene that has no box.
+  def to_box(x, y, w, h)
+    self.pos = point(x, y)
+    self.dim = bounds(w, h)
   end
 
   # The queue is a pull: drain it every poll so a press is never left waiting for the next scene.

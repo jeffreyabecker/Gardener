@@ -45,12 +45,12 @@ itself that child declares, and draws the children in order. It is the one way a
 its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
 
 A child declares its box as `bounds(w, h)` — the fraction of the parent's width and the fraction of
-its height the child occupies. Each fraction is a number in [0, 1], or nil for the whole of the
-page. It is the same record a component's `dim` is, and the one `screen.text_bounds` answers.
+its height the child occupies. Each fraction is a number in [0, 1], or nil for the whole of the box
+it is given. It is the same record a component's `dim` is, and the one `screen.text_bounds` answers.
 
-- `bounds(nil, nil)` names the page rather than a parent, so the layout holding it is a root and is
-  bound to the page — the panel less the band — at construction; every other layout waits for the
-  parent that places it.
+- `to_box(x, y, w, h)` places a layout: the parent that holds it calls it, and the scene a page is
+  composed in calls it with the page — the panel less the band — as the scene is pushed. A layout
+  places nothing, itself included, and nothing draws one that has not been placed.
 - Siblings stack along the axis they divide: a layout whose children are each the full width stacks
   them down a column, and one whose children are each the full height stacks them across a row.
 - A resolved span is clamped to what is left of the parent, so nothing a `bounds` declares can place

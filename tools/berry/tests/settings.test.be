@@ -23,6 +23,13 @@ def write_setting(name, key, value)
   document.save()
 end
 
+# A scene is given the page as it is pushed; a case that builds or draws one on its own hands it the
+# same box, since a list window and a frame are both measured from it.
+def page_box(scene)
+  scene.to_box(0, 0, screen.page_width(), screen.page_height() - overlay_band_height)
+  return scene
+end
+
 def missing_keys_read_their_default()
   var count = IntEditCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
   assert_eq(read_setting(count, "settings_test"), 4, "a missing int is not its default")
@@ -109,7 +116,7 @@ def a_pair_choice_stores_its_value_and_prints_its_title()
   write_setting("settings_test", "mode", "Alpha")
   assert_eq(read_setting(mode, "settings_test"), "b", "a pair choice accepted a title that is not a value")
 
-  var scene = ChoiceEditScene("Mode", "a", mode.values, false)
+  var scene = page_box(ChoiceEditScene("Mode", "a", mode.values, false))
   assert_eq(scene.text(), "Alpha", "a pair choice's editor does not print its title")
   scene.nudge(1)
   assert_eq(scene.value(), "b", "a pair choice's editor does not step to the next value")
@@ -129,7 +136,7 @@ end
 
 def a_choice_answers_its_own_gestures()
   var item = ChoiceItem("a", "Alpha", nil, {"ok:double": choice_extra})
-  var scene = ChoiceEditScene("Mode", "a", [item], false)
+  var scene = page_box(ChoiceEditScene("Mode", "a", [item], false))
 
   choiceExtraRan = nil
   assert_true(scene.handle("ok:double"), "a choice's own gesture was not handled")
@@ -192,7 +199,7 @@ def a_nullable_choice_carries_no_choice_as_an_entry()
   assert_eq(choice_items(["a", "b"], false).size(), 2, "a list was given a no-choice entry")
   assert_eq(choice_items(["a", "b"]).size(), 2, "a list was given a no-choice entry by default")
 
-  var scene = ChoiceEditScene("Mode", nil, entries, true)
+  var scene = page_box(ChoiceEditScene("Mode", nil, entries, true))
   assert_nil(scene.value(), "a nullable choice does not open on no choice")
   assert_eq(scene.text(), "--", "the no-choice entry does not print the editor's dash")
 
@@ -205,7 +212,7 @@ def a_nullable_choice_carries_no_choice_as_an_entry()
   var plain = ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false)
   assert_eq(plain.ring.items.size(), 2, "a choice that holds a value was given a no-choice entry")
 
-  var named = ChoiceEditScene("Mode", nil, own, true)
+  var named = page_box(ChoiceEditScene("Mode", nil, own, true))
   assert_eq(named.ring.items.size(), 2, "a declared no-choice entry was given a second one")
   assert_nil(named.value(), "the editor does not open on the declared no-choice entry")
   assert_eq(named.text(), "None", "the declared no-choice entry lost its own title")
@@ -340,7 +347,7 @@ class RecordingEditor : EditScene
 end
 
 def the_page_frames_the_editor_and_hands_it_the_content_box()
-  var scene = RecordingEditor("Label")
+  var scene = page_box(RecordingEditor("Label"))
   scene.draw_page()
 
   var content = scene.content_size()
@@ -384,7 +391,7 @@ def every_editor_measures_its_own_chrome()
     DurationEditScene("Hold", 90, 1, 0, 7200, false)
   ]
   for scene : editors
-    scene.activate()
+    page_box(scene).activate()
     var content = scene.content_size()
     assert_true(content.h >= 20, "an editor does not measure its own label and hint rows")
     assert_true(content.w > 0, "an editor measures itself as no wider than nothing")
@@ -407,19 +414,23 @@ end
 def a_scene_opened_over_another_takes_the_page()
   assert_true(ux.push(PageScene()), "the page scene would not push")
 
+  # A scene is given the whole page as it is pushed, over whatever was there: its box is the page,
+  # not a window inside the scene below.
   var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
                            {"count": 1}, nil)
+  assert_true(ux.push(list), "the settings list would not push")
   assert_eq(list.pos.x, 0, "the settings list does not start at the left of the page")
   assert_eq(list.pos.y, 0, "the settings list does not start at the top of the page")
   assert_eq(list.dim.w, 128, "the settings list is not the page's width")
   assert_eq(list.dim.h, 52, "the settings list is not the page's height")
 
   var editor = IntEditScene("Count", 2, 1, 0, 10, false)
+  assert_true(ux.push(editor), "the value editor would not push")
   assert_eq(editor.pos.x, 0, "the value editor does not start at the left of the page")
   assert_eq(editor.pos.y, 0, "the value editor does not start at the top of the page")
   assert_eq(editor.dim.w, 128, "the value editor is not the page's width")
 
-  ux.pop(nil)
+  ux.pop_to_root(nil)
 end
 
 test("a scene opened over another takes the page", a_scene_opened_over_another_takes_the_page)

@@ -21,11 +21,12 @@ The stack drains the gesture queue once per beat and hands the top scene one ges
 
 ## The box a scene draws in
 
-Every scene draws in the page. It carries a box — `pos` and `dim`, as a component does — and
-`Scene.init()` sets it to `point(0, 0)` and the page's `bounds`, the panel less the band, every
-time, so a scene is never a window inside another one. `Scene.draw()` fills that box with paper and then calls `draw_page()`,
-and a scene opened on top of another covers the page and clears it; the scene below keeps its state
-and redraws when it is back on top.
+Every scene draws in the page. It carries a box — `pos` and `dim`, as a component does — and `ux`
+stamps it on the scene as it goes on the stack, before its `activate()` runs: `point(0, 0)` and the
+page's `bounds`, the panel less the band, so a scene is never a window inside another one. A page
+composed in an `AutoLayout` hands the same box on to it. `Scene.draw()` fills that box with paper and
+then calls `draw_page()`, and a scene opened on top of another covers the page and clears it; the
+scene below keeps its state and redraws when it is back on top.
 
 That box is the one `HomeScene`, `BrowserScene`, every routine page — `RampedStatic`,
 `RampedInterval` and `Interval` — and every settings list and value editor lays its content out in.

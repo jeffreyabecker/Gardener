@@ -10,9 +10,10 @@
 # alike, and the ring always names one: a choice with no values at all is refused where it is built
 # and its row left out of the list.
 #
-# The entries are drawn by the `List` the scene holds, built once from the ring in `init()`, so the
-# highlighted row and the scroll window are the list component's rather than this file's. A row holds
-# its entry as its value, and the ring's index and the list's selected index are kept equal.
+# The entries are drawn by the `List` the scene holds, built from the ring once the scene has its
+# box, so the highlighted row and the scroll window are the list component's rather than this
+# file's. A row holds its entry as its value, and the ring's index and the list's selected index are
+# kept equal.
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
@@ -23,8 +24,13 @@ class ChoiceEditScene : EditScene
 
   def init(label, current, values, nullable)
     super(self).init(label, current)
-
     self.ring = ChoiceRing(choice_items(values, nullable), current)
+  end
+
+  # The rows the box has room for decide the list window, so the list is built once the scene has its
+  # box — on the push, before activate() draws.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
     var rows = []
     for item : self.ring.items
       rows.push(ListRow(item.icon, item.title, item))

@@ -44,6 +44,12 @@ class HomeScene : Scene
     self.machine = HomeMachine()
   end
 
+  # The page's box, handed on to the chrome, which lays the page out in it.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
+    self.chrome.to_box(x, y, w, h)
+  end
+
   def activate()
     self.init_from_settings(self.stored_settings_values())
     # The scene appears with whatever the chamber is doing, so the phase is read before it is drawn:

@@ -22,6 +22,12 @@ class SettingsEditScene : Scene
     end
     self.settings_values = settings_values
     self.title = title
+  end
+
+  # The page's box decides how many rows the list window holds, so the list is built here rather
+  # than in init, where the scene has no box yet.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
     self.list = List(SettingsView.window_rows(self.dim))
   end
 

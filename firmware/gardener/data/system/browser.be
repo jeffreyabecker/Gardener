@@ -29,8 +29,13 @@ class BrowserScene : Scene
     super(self).init()
     self.list = List(6)
     self.scrollbar = Scrollbar()
-    self.scrollbar.set_box(point(self.pos.x + 110, self.pos.y + 2), bounds(2, self.dim.h - 4))
     self.list.scrollbar = self.scrollbar
+  end
+
+  # The page's box: the scrollbar is placed against it, one page wide less the column the rows have.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
+    self.scrollbar.set_box(point(x + 110, y + 2), bounds(2, h - 4))
   end
 
   def activate()

@@ -68,6 +68,16 @@ class RampedInterval : Scene
     # is visible. Setting one does not start anything.
     self.machine.target = self.initial
     vacuum.target(self.initial)
+  end
+
+  # The page's box, handed on to the chrome, which lays the page out in it.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
+    self.chrome.to_box(x, y, w, h)
+  end
+
+  # The page first draws once it is on the stack and boxed, which is what to_box has just done.
+  def activate()
     self.draw()
   end
 

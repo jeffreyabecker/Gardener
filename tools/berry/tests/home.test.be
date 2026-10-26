@@ -96,6 +96,9 @@ def the_jingle_editor_steps_and_plays()
     return
   end
   var scene = JingleEditCfg().scene(stored_jingle())
+  # A scene is given the page as it is pushed; this one is stepped on its own, so the case hands it the
+  # same box — the list its scene holds is built from it.
+  scene.to_box(0, 0, screen.page_width(), screen.page_height() - overlay_band_height)
   var before = scene.value()
   scene.nudge(1)
   assert_true(scene.value() != before, "home: the jingle editor did not step")

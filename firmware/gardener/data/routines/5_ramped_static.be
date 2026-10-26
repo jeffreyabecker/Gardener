@@ -98,6 +98,16 @@ class RampedStatic : Scene
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.machine.place_start()
+  end
+
+  # The page's box, handed on to the chrome, which lays the page out in it.
+  def to_box(x, y, w, h)
+    super(self).to_box(x, y, w, h)
+    self.chrome.to_box(x, y, w, h)
+  end
+
+  # The page first draws once it is on the stack and boxed, which is what to_box has just done.
+  def activate()
     self.draw()
   end
 
