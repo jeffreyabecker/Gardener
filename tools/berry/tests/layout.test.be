@@ -1,5 +1,6 @@
-# layout.test.be — the flat layout and the box-at-init contract. A layout draws its children in
-# order and nothing more; a component keeps the box it was given, however its value changes.
+# layout.test.be — the flat layout, the relative one, and the box-at-init contract. A flat layout
+# draws its children in order and nothing more; an AutoLayout resolves each child's bounds against
+# its own box; a component keeps the box it was given, however its value changes.
 
 suite = "layout"
 
@@ -19,6 +20,105 @@ class RecordingChild : Component
     super(self).draw()
   end
 end
+
+# --- the relative layout ---------------------------------------------------
+
+def the_page_root_fills_the_page()
+  var root = AutoLayout(bounds(nil, nil), [])
+  assert_eq(root.pos.x, 0, "the root is not at the left of the page")
+  assert_eq(root.pos.y, 0, "the root is not at the top of the page")
+  assert_eq(root.dim.w, 128, "the root is not the page's width")
+  assert_eq(root.dim.h, 52, "the root is not the page's height")
+end
+
+test("bounds(nil, nil) is the whole page", the_page_root_fills_the_page)
+
+def a_layout_stacks_its_rows_down()
+  var glyph_row = AutoLayout(bounds(1, 0.25), [])
+  var readings_row = AutoLayout(bounds(1, 0.50), [])
+  var status_row = AutoLayout(bounds(1, 0.25), [])
+  AutoLayout(bounds(nil, nil), [glyph_row, readings_row, status_row])
+
+  assert_eq(glyph_row.pos.x, 0, "the first row is not at the left")
+  assert_eq(glyph_row.pos.y, 0, "the first row is not at the top")
+  assert_eq(glyph_row.dim.w, 128, "the first row is not the page's width")
+  assert_eq(glyph_row.dim.h, 13, "a quarter of 52 is not 13")
+
+  assert_eq(readings_row.pos.y, 13, "the second row does not follow the first")
+  assert_eq(readings_row.dim.h, 26, "half of 52 is not 26")
+
+  assert_eq(status_row.pos.y, 39, "the third row does not follow the second")
+  assert_eq(status_row.dim.h, 13, "the last row is not a quarter")
+end
+
+test("a layout whose children are full width stacks them down", a_layout_stacks_its_rows_down)
+
+def a_layout_stacks_its_children_across()
+  var left = AutoLayout(bounds(0.5, 1), [])
+  var right = AutoLayout(bounds(0.5, 1), [])
+  AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, 0.25), []),
+    AutoLayout(bounds(1, 0.50), [left, right]),
+    AutoLayout(bounds(1, 0.25), [])
+  ])
+
+  assert_eq(left.pos.x, 0, "the left half is not at the left")
+  assert_eq(left.pos.y, 13, "the left half is not on the readings row")
+  assert_eq(left.dim.w, 64, "half of 128 is not 64")
+  assert_eq(left.dim.h, 26, "the left half is not the row's height")
+
+  assert_eq(right.pos.x, 64, "the right half does not follow the left")
+  assert_eq(right.dim.w, 64, "the right half is not a half")
+end
+
+test("a layout whose children are full height stacks them across", a_layout_stacks_its_children_across)
+
+def a_child_is_resolved_against_its_parent()
+  var glyph = AutoLayout(bounds(0.125, 1), [])
+  var title = AutoLayout(bounds(0.875, 1), [])
+  AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, 0.25), [glyph, title]),
+    AutoLayout(bounds(1, 0.50), []),
+    AutoLayout(bounds(1, 0.25), [])
+  ])
+
+  assert_eq(glyph.pos.x, 0, "the glyph column is not at the left")
+  assert_eq(glyph.dim.w, 16, "an eighth of 128 is not 16")
+  assert_eq(glyph.dim.h, 13, "the glyph column is not its row's height")
+  assert_eq(title.pos.x, 16, "the title does not follow the glyph column")
+  assert_eq(title.dim.w, 112, "the rest of the row is not 112")
+end
+
+test("a child is a fraction of the layout that places it", a_child_is_resolved_against_its_parent)
+
+def a_leaf_fills_its_layout_box()
+  var t = Text(Position(0, 0), Size(0, 0), "x")
+  AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [t])])
+  assert_eq(t.pos.x, 0, "the leaf is not at the left of its layout")
+  assert_eq(t.pos.y, 0, "the leaf is not at the top of its layout")
+  assert_eq(t.dim.w, 128, "the leaf does not take the layout's width")
+  assert_eq(t.dim.h, 26, "the leaf does not take the layout's height")
+end
+
+test("a component with no bounds fills its layout's box", a_leaf_fills_its_layout_box)
+
+def auto_layout_walks_its_children_in_order()
+  var log = []
+  # The layouts place their leaves, so drawing walks both in the order they were added.
+  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [
+    RecordingChild(Position(0, 0), Size(1, 1), "first", log)
+  ]), AutoLayout(bounds(1, 0.5), [
+    RecordingChild(Position(0, 0), Size(1, 1), "second", log)
+  ])])
+  root.draw()
+  assert_eq(log.size(), 2, "the layout did not draw both leaves")
+  assert_eq(log[0], "first", "the first leaf was not drawn first")
+  assert_eq(log[1], "second", "the second leaf was not drawn second")
+end
+
+test("an AutoLayout draws its children in order", auto_layout_walks_its_children_in_order)
+
+# --- the flat layout -------------------------------------------------------
 
 def component_stores_its_box()
   var t = Text(Position(3, 7), Size(40, 12), "x")
