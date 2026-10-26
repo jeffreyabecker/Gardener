@@ -47,8 +47,8 @@ class ChoiceEditScene : EditScene
   # A choice may carry actions of its own: a gesture the editor has nothing of its own for is offered
   # to the choice that is showing, and handled when that choice answers it. The action is given the
   # choice, so it knows which entry it belongs to.
-  def handle_page(ev)
-    if super(self).handle_page(ev)
+  def handle(ev)
+    if super(self).handle(ev)
       return true
     end
     var item = self.ring.current()

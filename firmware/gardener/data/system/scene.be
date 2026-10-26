@@ -1,22 +1,21 @@
 # scene.be — the lifecycle a scene shares: the box it draws in, the gesture drain, the repaint
-# cadence and the declarative gesture dispatch.
+# cadence and the gesture dispatch.
 #
 # A scene extends Scene and overrides only what differs: activate() for work that must wait until
-# the scene is on top, draw_page() for its content, and tick(now) for per-beat work. A scene built
-# around its init() — every routine page is — leaves activate() alone: it is the inherited no-op,
-# and initializing the scene is the whole of its activation. Gestures are registered with
-# on(gesture, fn) in init(), and handle_page() dispatches them. A gesture is one whole string —
-# `ok:single`, `cancel:double`, `ok:5+cancel:5` — and a registration matches it in full; a page never
-# matches one dimension of a gesture without the other. A scene pushes a sub-scene with
-# ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
-# callback runs when the sub-scene pops, and the scene below keeps its state.
+# the scene is on top, draw_page() for its content, handle(ev) for the gestures it answers, and
+# tick(now) for per-beat work. A scene built around its init() — every routine page is — leaves
+# activate() alone: it is the inherited no-op, and initializing the scene is the whole of its
+# activation. A gesture is one whole string — `ok:single`, `cancel:double`, `ok:5+cancel:5` — and a
+# scene matches it in full, so it never matches one dimension of a gesture without the other. A
+# scene pushes a sub-scene with ux.push(scene, callback) and learns what the sub-scene returned
+# through the callback; the callback runs when the sub-scene pops, and the scene below keeps its
+# state.
 #
 # Every scene draws in the page: it carries `pos` and `dim` as a component does, and they are the
 # page's box however the scene was pushed.
 
 class Scene
   var last_draw
-  var gestures
   var pos
   var dim
 
@@ -24,7 +23,6 @@ class Scene
   # scene opened over another one covers the page and clears it when it draws.
   def init()
     self.last_draw = 0
-    self.gestures = []
     self.pos = Position.top_left()
     self.dim = Size.page()
   end
@@ -44,30 +42,15 @@ class Scene
     return acted
   end
 
+  # The gesture the scene answers, or false for one it drops. A scene compares the whole string it
+  # was given and answers what it knows; the base knows nothing.
   def handle(ev)
-    return self.handle_page(ev)
+    return false
   end
 
   # Called when the scene becomes the top one, with whatever the pusher gave it. A scene that did
   # its work in init() has nothing to do here.
   def activate(args)
-  end
-
-  # Declarative gestures: the first registered gesture whose action acts wins. The gesture is one
-  # whole string, compared in full — a page matches a gesture or leaves it alone.
-  def on(gesture, fn)
-    self.gestures.push([gesture, fn])
-  end
-
-  def handle_page(ev)
-    for g : self.gestures
-      if ev == g[0]
-        if g[1]()
-          return true
-        end
-      end
-    end
-    return false
   end
 
   # The scene's own box is cleared rather than the panel: a scene opened over another one leaves what

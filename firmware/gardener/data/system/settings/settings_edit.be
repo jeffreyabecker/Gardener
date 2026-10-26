@@ -29,7 +29,7 @@ class SettingsEditScene : Scene
     self.draw()
   end
 
-  def handle_page(ev)
+  def handle(ev)
     if ev == "up:single"
       self.list.move(-1)
       return true

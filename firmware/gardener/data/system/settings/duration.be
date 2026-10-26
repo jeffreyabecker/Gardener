@@ -58,7 +58,7 @@ class DurationEditScene : EditScene
     return duration_text(self.current)
   end
 
-  def handle_page(ev)
+  def handle(ev)
     if ev == "forward:single"
       if self.stage == "min"
         self.stage = "sec"
@@ -73,7 +73,7 @@ class DurationEditScene : EditScene
       end
       return true
     end
-    return super(self).handle_page(ev)
+    return super(self).handle(ev)
   end
 
   def minutes_text()

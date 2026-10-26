@@ -217,8 +217,8 @@ answer that the fourth page would have to overturn.
 Owning a machine of closures is the version worth building, and dropping the guard is what makes it
 small. The machine holds a current state and, per state, events with an action and a target; the page
 says when each event is true, at the place that knows. The evidence is the copy between `interval`
-and `ramped_interval`, and the mechanism is the one this codebase already uses for gestures: a
-closure that reaches the page, kept in a list, dispatched on an event.
+and `ramped_interval`, and the mechanism is a closure that reaches the page, kept in a table,
+dispatched on an event.
 
 The honest risk is that the conditions do not disappear, they move into `tick()` — so the page still
 has `if`s, and the gain is the transitions rather than the tests. That is still the gain worth

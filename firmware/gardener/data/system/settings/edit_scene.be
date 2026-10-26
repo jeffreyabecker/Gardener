@@ -23,7 +23,7 @@ class EditScene : Scene
     self.draw()
   end
 
-  def handle_page(ev)
+  def handle(ev)
     if ev == "up:single"
       self.nudge(1)
       return true

@@ -31,13 +31,6 @@ class BrowserScene : Scene
     self.scrollbar = Scrollbar()
     self.scrollbar.set_box(Position(self.pos.x + 110, self.pos.y + 2), Size(2, self.dim.h - 4))
     self.list.scrollbar = self.scrollbar
-
-    self.on("up:single", / -> self.step(-1))
-    self.on("down:single", / -> self.step(1))
-    self.on("ok:single", / -> self.choose())
-    self.on("forward:single", / -> self.open_selected())
-    self.on("back:single", / -> self.leave())
-    self.on("cancel:single", / -> self.leave())
   end
 
   def activate()
@@ -48,6 +41,27 @@ class BrowserScene : Scene
     # draws a list should not trust the list it drew last time either.
     self.list.set(self.rows())
     self.draw()
+  end
+
+  # Up and Down move the selection; OK launches the row, Forward edits its settings first, and Back
+  # or Cancel leaves.
+  def handle(ev)
+    if ev == "up:single"
+      return self.step(-1)
+    end
+    if ev == "down:single"
+      return self.step(1)
+    end
+    if ev == "ok:single"
+      return self.choose()
+    end
+    if ev == "forward:single"
+      return self.open_selected()
+    end
+    if ev == "back:single" || ev == "cancel:single"
+      return self.leave()
+    end
+    return false
   end
 
   def rows()

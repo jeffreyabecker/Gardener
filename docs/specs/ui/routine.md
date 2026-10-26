@@ -17,8 +17,8 @@ page model is the `device` module's document call beside the panel's own modules
 
 ## Where a routine lives and what it must look like
 
-Every file under `/routines/` ending in `.be` is loaded at boot. A file's top level runs once; it
-registers an object and is done:
+Every file under `/routines/` ending in `.be` is loaded at boot, in name order. A file's top level
+runs once; it registers an object and is done:
 
 ```berry
 import string
@@ -88,6 +88,14 @@ that section's values.
 
 Routines ship with the data image: put them in `firmware/gardener/data/routines/` and upload with
 `python scripts/arduino.py --task data`.
+
+A routine that needs more than one file states their order with a numeric prefix, because the folder
+loads in name order and Berry resolves a global when it compiles a file: a file may name only what
+an earlier one defined, inside method bodies as well as at the top level. A file that another file
+names registers nothing, so it has no page, no store file and no entry in `routines.keys()`. The
+interval cycle is the worked example: `0_ramped_interval_machine.be` is the phase machine both
+pages hold, `1_ramped_interval_chrome.be` the chrome they draw, and `2_ramped_interval.be` and
+`3_interval.be` the two pages, each with its glyph, its settings declaration and its registration.
 
 ## The system in `/system`
 
@@ -236,21 +244,25 @@ read the file back.
 ## Gestures
 
 The top scene sees one gesture per poll as `ev` in `handle(ev)` — a whole string such as
-`ok:single` or `cancel:double`. A scene registers its gestures declaratively in `init()`:
+`ok:single` or `cancel:double`. A scene answers the ones it knows and drops the rest, comparing the
+whole string:
 
 ```berry
-def init()
-  super(self).init()
-  self.on("ok:single", / -> self.start())
-  self.on("cancel:double", / -> self.leave())
+def handle(ev)
+  if ev == "ok:single"
+    return self.start()
+  end
+  if ev == "cancel:double"
+    return self.leave()
+  end
+  return false
 end
 ```
 
-`on(gesture, fn)` appends the pair; the default `handle(ev)` compares each registered gesture whole
-and runs the first action that returns true. A scene may instead override `handle_page(ev)` and
-compare whole strings itself. Either way the match is whole or not at all: no `*`, no bare key, no
-list of presses, and no splitting on `:` or `+`. The standard gestures are in
-[gestures.md](../gestures.md); the shipped bindings are in [scenes.md](./scenes.md).
+The match is whole or not at all: no `*`, no bare key, no list of presses, and no splitting on `:`
+or `+`. `Scene.handle(ev)` answers nothing, so a scene that knows no keys writes nothing. The
+standard gestures are in [gestures.md](../gestures.md); the shipped bindings are in
+[scenes.md](./scenes.md).
 
 ## The stack
 

@@ -106,11 +106,6 @@ class RampedStatic : Scene
     self.command_target = 0.0
     self.chrome = RampedStaticChrome(routines.title(self.routine_key))
 
-    self.on("up:double", / -> self.edit())
-    self.on("ok:single", / -> self.ok())
-    self.on("cancel:single", / -> self.pause())
-    self.on("cancel:double", / -> self.leave())
-
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
     self.init_from_settings(activation.settings_values)
@@ -119,6 +114,24 @@ class RampedStatic : Scene
     self.target = self.start_pressure
     vacuum.target(self.target)
     self.draw()
+  end
+
+  # OK begins a ready run or resumes a paused one, Cancel pauses it, and either held to a double
+  # leaves: Up for the settings, Cancel for the panel.
+  def handle(ev)
+    if ev == "ok:single"
+      return self.ok()
+    end
+    if ev == "cancel:single"
+      return self.pause()
+    end
+    if ev == "up:double"
+      return self.edit()
+    end
+    if ev == "cancel:double"
+      return self.leave()
+    end
+    return false
   end
 
   # --- settings ------------------------------------------------------------

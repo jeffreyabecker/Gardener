@@ -9,15 +9,15 @@ what it does.
 ## How a gesture reaches a scene
 
 The stack drains the gesture queue once per beat and hands the top scene one gesture string —
-`ok:single`, `back:3`, `up:double` — which is `ev` in `handle(ev)` and `handle_page(ev)`.
+`ok:single`, `back:3`, `up:double` — which is `ev` in `handle(ev)`.
 
-- A scene matches a gesture **whole or not at all**. It compares the string it is given with the
-  gestures it knows, and the first match whose action returns true wins.
-- The declarative form is `on(gesture, fn)`: one whole gesture string per registration. There is no
-  `*`, no bare key and no list of presses — each of those matches one part of a gesture without the
-  other, which no scene may do.
-- A gesture no binding matches is dropped. A scene never sees the device's reserved gestures, which
+- A scene answers in `handle(ev)`: it compares the string it is given with the gestures it knows and
+  returns true for the one it took. The match is **whole or not at all**, so there is no `*`, no
+  bare key and no list of presses — each of those matches one part of a gesture without the other,
+  which no scene may do.
+- A gesture no scene answers is dropped. A scene never sees the device's reserved gestures, which
   are taken before the queue.
+- `Scene.handle(ev)` answers nothing, so a scene that knows no keys overrides nothing.
 
 ## The box a scene draws in
 
@@ -34,19 +34,19 @@ That box is the one `HomeScene`, `BrowserScene`, every routine page — `RampedS
 
 Every scene, and where it lives:
 
-| Scene | Defined in | Dispatch |
-| --- | --- | --- |
-| `HomeScene` — the root | `system/home.be` | `on` |
-| `BrowserScene` | `system/browser.be` | `on` |
-| `SettingsEditScene` | `system/settings/settings_edit.be` | `handle_page` |
-| `EditScene` — the edit base | `system/settings/edit_scene.be` | `handle_page` |
-| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` | inherited |
-| `DurationEditScene` | `system/settings/duration.be` | `handle_page` |
-| `JingleEditScene` | `system/settings/jingle.be` | inherited |
-| `Interval` | `routines/ramped_interval.be` | `on` |
-| `RampedInterval` | `routines/ramped_interval.be` | `on` |
-| `RampedStatic` | `routines/ramped_static.be` | `on` |
-| `Scene` — the base | `system/scene.be` | — |
+| Scene | Defined in |
+| --- | --- |
+| `HomeScene` — the root | `system/home.be` |
+| `BrowserScene` | `system/browser.be` |
+| `SettingsEditScene` | `system/settings/settings_edit.be` |
+| `EditScene` — the edit base | `system/settings/edit_scene.be` |
+| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` |
+| `DurationEditScene` | `system/settings/duration.be` |
+| `JingleEditScene` | `system/settings/jingle.be` |
+| `Interval` | `routines/3_interval.be` |
+| `RampedInterval` | `routines/2_ramped_interval.be` |
+| `RampedStatic` | `routines/ramped_static.be` |
+| `Scene` — the base | `system/scene.be` |
 
 What each one answers:
 

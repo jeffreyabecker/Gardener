@@ -40,16 +40,29 @@ class HomeScene : Scene
     self.chrome = HomeChrome()
     self.settings_values = {}
     self.mark = nil
-
-    self.on("ok:single", / -> self.start())
-    self.on("cancel:single", / -> self.cancel())
-    self.on("forward:double", / -> ux.push(browserScene))
-    self.on("up:double", / -> self.edit())
   end
 
   def activate()
     self.init_from_settings(self.stored_settings_values())
     self.draw()
+  end
+
+  # OK starts or resumes the run, Cancel stops and vents, Forward held to a double opens the browser
+  # and Up held to a double opens the home scene's settings.
+  def handle(ev)
+    if ev == "ok:single"
+      return self.start()
+    end
+    if ev == "cancel:single"
+      return self.cancel()
+    end
+    if ev == "forward:double"
+      return ux.push(browserScene)
+    end
+    if ev == "up:double"
+      return self.edit()
+    end
+    return false
   end
 
   # --- settings ------------------------------------------------------------

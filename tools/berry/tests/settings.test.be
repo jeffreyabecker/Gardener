@@ -132,16 +132,16 @@ def a_choice_answers_its_own_gestures()
   var scene = ChoiceEditScene("Mode", "a", [item], false)
 
   choiceExtraRan = nil
-  assert_true(scene.handle_page("ok:double"), "a choice's own gesture was not handled")
+  assert_true(scene.handle("ok:double"), "a choice's own gesture was not handled")
   assert_eq(choiceExtraRan, item, "a choice's own gesture did not receive the choice it belongs to")
 
   # The editor keeps its own gestures: one of those is answered before any choice is asked.
   choiceExtraRan = nil
-  assert_true(scene.handle_page("up:single"), "the editor did not answer its own gesture")
+  assert_true(scene.handle("up:single"), "the editor did not answer its own gesture")
   assert_nil(choiceExtraRan, "a choice's own gesture ran for one the editor owns")
 
   # A gesture nobody answers is dropped.
-  assert_true(!scene.handle_page("down:double"), "a gesture nobody answers was handled")
+  assert_true(!scene.handle("down:double"), "a gesture nobody answers was handled")
 end
 
 test("a choice answers the gestures it carries", a_choice_answers_its_own_gestures)
