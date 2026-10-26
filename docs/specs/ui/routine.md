@@ -27,7 +27,7 @@ class MyPage : Scene
   var routine_key
 
   def init(activation)
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.routine_key = activation.routine_key
     # activation.settings_values is the map the registry made clean: one value per setting
   end
@@ -130,13 +130,14 @@ answers the row the index names. The list draws the icon and the title and never
 `/system/components/` is the drawing primitives the home scene composes, one class per file:
 `component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is
 `Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
-`layout.be` is `Layout` (a flat list of children drawn in order), `progress_bar.be` is
+`layout.be` is `AutoLayout` and the `bounds` a child declares (a layout resolves each child's
+fraction of its own box and draws the children in order), `progress_bar.be` is
 `ProgressBar`, `scrollbar.be` is `Scrollbar`, `triangle.be` is `Triangle`, `pressure_display.be` is
-`PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. Every component is
-given its box at
-construction (`pos` and `dim`) and keeps it; setting `inverted` on it flips that box as the last
-thing its draw does — paper where its ink was — which is what a selected row, a cursor or a focused
-readout looks like.
+`PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. A component takes no
+box at construction: `set_box(pos, dim)` sets both, and the layout, or the caller for a component
+that stands alone, calls it before the first draw. Setting `inverted` on a component flips its box
+as the last thing its draw does — paper where its ink was — which is what a selected row, a cursor
+or a focused readout looks like.
 
 `/system/settings/` is the settings view. `settings.be` is the pair of duration helpers, the
 `ChoiceItem` record a choice's entries are held as, `choice_items()` which normalizes a
@@ -239,7 +240,7 @@ The top scene sees one gesture per poll as `ev` in `handle(ev)` — a whole stri
 
 ```berry
 def init()
-  super(self).init(Position.top_left(), Size.page())
+  super(self).init()
   self.on("ok:single", / -> self.start())
   self.on("cancel:double", / -> self.leave())
 end

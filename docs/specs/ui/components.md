@@ -2,7 +2,7 @@
 
 This is the contract for the drawing primitives a page composes and the layout that holds them: the
 box every component draws in, the way text and the other primitives size and draw themselves, and
-the flat list a page builds instead of deriving pixel numbers. It is the contract for
+the relative layout a page builds instead of deriving pixel numbers. It is the contract for
 `/system/components/`.
 
 What it does not cover: the pixel calls the components make are [bindings.md](./bindings.md)
@@ -21,9 +21,11 @@ battery — and draws them last, on top of whatever a page drew there. A page la
 ## The box
 
 Every component has a box: a `Position` and a `Size`, carried in `pos` and `dim`. `pos.x`, `pos.y`
-is the top-left corner and `dim.w`, `dim.h` the width and height, whole pixels. The box is passed to
-the component's `init(pos, dim)` and kept; nothing a component draws lies outside it. A component
-that draws internal subcomponents may build them with a nil box and stamp the box before drawing.
+is the top-left corner and `dim.w`, `dim.h` the width and height, whole pixels. The box is not a
+constructor argument: `set_box(pos, dim)` sets both halves together, after the component is built
+and before anything draws it. A layout calls it for every child it places; a caller calls it for a
+component that stands alone, such as a list row's glyph or a settings editor's inline value.
+Nothing a component draws lies outside its box, and a component never draws before it has one.
 
 `Position` and `Size` carry the helpers a page uses to state a box: `Position.top_left()`,
 `Position.top(y)`, `Position.left(x)`, `Size.width(s)`, `Size.height(s)`, `Size.page()` (the area
@@ -36,15 +38,31 @@ before drawing leaves its box alone, so nothing is highlighted.
 
 ## Layout
 
-`Layout` is a flat list of components and nothing more. It holds no box of its own — it has no
-pixels of its own — and its `draw()` walks the children in order, calling each child's `draw()`. The
-caller positions each child itself, once, when it builds the list; a layout does not measure, place
-or reflow. `children` is the list and `add(child)` appends to it.
+`AutoLayout` is a component with a box that resolves the box of each child from the fraction of
+itself that child declares, and draws the children in order. It is the one way a page states where
+its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
+
+A child declares its box as `bounds(w, h)` — a `Bounds` holding the fraction of the parent's width
+and the fraction of its height the child occupies. Each fraction is a number in [0, 1], or nil for
+the whole of the page.
+
+- `bounds(nil, nil)` names the page rather than a parent, so the layout holding it is a root and is
+  bound to `Size.page()` at construction; every other layout waits for the parent that places it.
+- Siblings stack along the axis they divide: a layout whose children are each the full width stacks
+  them down a column, and one whose children are each the full height stacks them across a row.
+- A resolved span is clamped to what is left of the parent, so nothing a `bounds` declares can place
+  a child outside it.
+- A component carrying no bounds is a leaf and takes the layout's box whole, so a layout that is not
+  a row holds one such component.
+- The layout is itself a component, so its own draw ends in `super(self).draw()` like any other.
+
+`children` is the list handed to `init`, and `add(child)` appends to it. A layout resolves its
+children once, from the box it is given; a box that changes afterwards is not re-resolved.
 
 ## Text
 
-`Text` draws a string in its box in the largest face that fits, given a box (`pos`, `dim`) and a
-`value` at `init`.
+`Text` draws a string in its box in the largest face that fits. It takes its `value` at `init`; its
+box is set with `set_box()` like any other component's.
 
 - `family` — `sans` (default), `mono`, `serif` or `lcd`. `serif` falls back to `sans` and `lcd` to
   `mono`, because only the sans and mono families are compiled.
@@ -114,6 +132,6 @@ inverts the two ends of the track, otherwise the component draws a frame and a f
 
 ## Icon
 
-`Icon` is a component that draws a glyph in its box. The caller passes the box at `init`; a glyph
-subclass draws its own ink inside it. The browser puts one at the left of a row and shifts the title
-right by `dim.w`.
+`Icon` is a component that draws a glyph in its box. A glyph subclass draws its own ink inside it.
+An icon carries the 12 by 8 measure every glyph is drawn on until a layout gives it a box of its
+own. The browser puts one at the left of a row and shifts the title right by `dim.w`.

@@ -34,9 +34,11 @@ from the panel into two libraries, made both links pluggable, and shipped a pane
 capability surface; [the six-key panel](./backlogs/completed/six-key-panel/), whose epics read
 six keys through a shift register, added the gesture classifier and bound the six-key map;
 [safety hardening](./backlogs/completed/safety-hardening/), whose epics made the device's safe path
-independent of the controller; and [the component and layout framework](./backlogs/completed/components-layout/),
+independent of the controller; [the component and layout framework](./backlogs/completed/components-layout/),
 whose epics built the box-and-flip component, the compiled-first text and the flat layout the pages
-now draw with.
+drew with in its day; and [relative layout](./backlogs/completed/relative-layout/), whose epics
+replaced that flat list with a layout that resolves each child's declared bounds, moved the three
+chromes onto it, and stopped components and scenes taking their box at construction.
 
 ## Guides
 
