@@ -9,10 +9,16 @@ build time. The chrome classes do that arithmetic by hand — `var half = dim.w 
 split in `HomeChrome`. [component.be](../../firmware/gardener/data/system/components/component.be)
 fixes the box at construction and states there is no reflow.
 
-This plan moves the arithmetic into the layout: a child is added with an extent — the portion of
-its parent's box it occupies, on each axis, vertically and horizontally — and the layout resolves
-that to the child's box. The pages keep drawing the same boxes; only where the numbers come from
-changes.
+This plan moves the arithmetic into the layout: a layout is itself a component with a box, and
+each child declares the portion of its parent's box it occupies — vertically and horizontally, as
+fractions — with the children stacked inside their parent, and a root with no parent takes the
+whole page area when declared `bounds(nil, nil)`. The layout resolves those fractions to the
+child's box, and components stop taking `pos` and `dim` in their constructors — the layout is
+what sets both, before the first draw. The pages keep their structure — a glyph-and-title row, a
+readings row, a status-and-bar row — but the geometry is redefined as clean proportions: where
+today's box was
+pixel-intrinsic (the 12×8 glyph slot, the 9-row title, the 8-row bar and its insets), the child
+now takes a whole fraction of its parent instead.
 
 What it leaves alone: `List` and `SettingsEditScene` place rows by their own pitch, not by
 fractions of a parent, and keep doing so. Live reflow — re-resolving a page when its box changes
@@ -20,62 +26,89 @@ after construction — is deferred.
 
 ## The requirement
 
-**A layout resolves a child's box from the extent the child declares.**
+**A layout resolves each child's box from the fraction of its parent the child declares.**
 
 What is wrong now: a child's box is a pair of pixel values the caller computes by hand from its own
 `pos` and `dim`. `Layout` has no box and does no placement, and `RampedStaticChrome`,
 `RampedIntervalChrome` and `HomeChrome` each repeat the half-width split and the fixed insets.
 
-What is true instead: a layout carries the parent box, and a child is added with a per-axis extent
-— where it starts and how far it spans on that axis — given as a fraction of the parent, with a
-fixed pixel amount allowed where the child's size is intrinsic (a 12×8 glyph, a 9-row title, an
-8-row bar) or where the page uses a fixed inset (the 16-column glyph gutter, the 8-column bar
-inset). The layout turns that extent into the child's `pos` and `dim`; the caller no longer writes
-`pos.x + 16` or `dim.w / 2`. A child resolves to the same box whether it was declared by extent or
-given the pixels directly, and a declared extent never places any part of a child outside the
-parent.
+What is true instead: a layout carries a box, and a child is a component or a nested layout, each
+declared with `bounds(w, h)` — the fractions of its parent's width and height it occupies.
+`bounds(nil, nil)` is the special case that names the page instead of a parent: the component takes
+the whole page area, the box `Size.page()` at the top left. Siblings inside a layout are stacked:
+the outer layout stacks its rows down, and a row stacks its children side by side. The layout
+resolves each `bounds` to the child's `pos` and `dim`; the caller writes no pixel arithmetic. A
+declared `bounds` never places any part of a child outside its parent, a row's children cover its
+width, and a layout's rows cover its height.
 
-The shape of it, for `RampedIntervalChrome`. The arithmetic it repeats today is `var half = dim.w /
-2` and a set of fixed insets; after the change the constructor stops doing that math and declares
-what each child occupies. The syntax below is illustrative — which axis words and record the layout
-takes is the implementer's call — but the boxes it resolves to are the ones the constructor
-produces now:
+The shape of it, for `RampedIntervalChrome`. The constructor stops computing `var half = dim.w / 2`
+and the fixed insets and declares a tree of nested layouts instead; each `bounds(w, h)` is the
+fraction of its parent the child takes, and siblings stack. The syntax below is illustrative —
+which class name and argument order the implementer picks is their call:
 
 ```
-# a bare number is a fraction of the parent on that axis; `px` is a fixed row
-# or column; `fill` takes what the fraction leaves, for the title's right edge
-def init(icon, title_text, pos, dim)
-  self.icon = icon
-  self.title = Text(nil, nil, title_text)
-  self.sets = Text(nil, nil, "")
-  super(self).init([
-    add(self.icon,  x: [0, 12px],  y: [0, 8px]),     # the 12x8 glyph, top left
-    add(self.title, x: [16px, fill], y: [2px, 9px]), # 16-col gutter, the rest of the row
-    add(AutoPressureDisplay(nil, nil, "pressure:target", "br", 0.25),
-                    x: [0, 0.5],  y: [13px, 26px]),  # left half
-    add(self.sets,  x: [0.5, 0.5], y: [13px, 26px]), # right half
-    add(Text(nil, nil, "", text_settings("sans", "none", "left", "center")),
-                    x: [0, 0.5],  y: [39px, 13px]),  # status row, left half
-    add(ProgressBar(nil, nil, nil),
-                    x: [0.5 + 8px, 0.5 - 8px], y: [41px, 8px])   # bar, inset from the half
-  ])
+class RampedIntervalChrome : AutoLayout
+  def init(icon, title_text)
+    super(self).init(bounds(nil, nil), [      # the whole page area
+      AutoLayout(bounds(1, 0.25), [          # the glyph-and-title row, 13 rows
+        AutoLayout(bounds(0.125, 1), [self.icon]),   # 16 columns, the glyph inside it
+        AutoLayout(bounds(0.875, 1), [self.title])   # the rest of the row
+      ]),
+      AutoLayout(bounds(1, 0.50), [          # the readings row, 26 rows
+        AutoLayout(bounds(0.5, 1),
+                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
+        AutoLayout(bounds(0.5, 1), [self.sets])
+      ]),
+      AutoLayout(bounds(1, 0.25), [          # the status-and-bar row, 13 rows
+        AutoLayout(bounds(0.5, 1), [self.status_text]),
+        AutoLayout(bounds(0.5, 1), [self.progress_bar])
+      ])
+    ])
+  end
 end
 ```
 
-`0.5 + 8px` and `0.5 - 8px` on the bar are the only place the two kinds meet: the half split plus
-the 8-column inset the bar keeps away from the status row. Everything else is one kind or the
-other — the halves and the title's fill are fractions, and the glyph, the title row, the two
-display rows, the status row and the bar's own height are fixed rows and columns.
+The glyph row is `0.125 + 0.875`, not the `0.22 + 0.88` it was first sketched as: a row's children
+have to sum to 1, and 1/8 is the 16 columns the title's left edge already sits at. The readings row
+keeps its boxes — the old arithmetic already made it a clean half — and the bar stops being an
+inset 56×8 and becomes a full half-row, which is the geometry this plan redefines.
 
-Numbers: a fraction lies in [0, 1] inclusive, of the parent's width on x and height on y. A fixed
-pixel amount is a whole number of rows or columns, no more than the parent's extent on that axis.
+Numbers: a fraction lies in [0, 1] inclusive, of the parent's width on x and height on y, and a
+nil in place of a fraction means the page: `bounds(nil, nil)` resolves to (0, 0, 128, 52). A row's
+children sum to 1 across, and a layout's rows sum to 1 down. On the 128×52 page the rows are
+0.25 / 0.50 / 0.25 of the height, and the readings and status-and-bar rows are 0.5 / 0.5 of the
+width.
 
-Checked by: on the 128×52 page, a child declared to span the left half fully — x start 0, span 0.5;
-y start 0, span 1 — resolves to (0, 0, 64, 52), and its right-half twin to (64, 0, 64, 52); a fixed
-12×8 glyph at the top left resolves to (0, 0, 12, 8). The three chromes, rewritten to declare
-extents, resolve to exactly the pixel boxes their arithmetic produces today — in
-`RampedStaticChrome`, the glyph at (0, 0, 12, 8), the title at (16, 2, 112, 9), the two half-width
-displays at y 13, the status row at y 39, and the bar at (72, 41, 56, 8) — asserted in a test.
+Checked by: on the 128×52 page, `bounds(nil, nil)` resolves to (0, 0, 128, 52) — the page area — a
+row declared `bounds(1, 0.25)` resolves to (0, 0, 128, 13), the
+readings row `bounds(1, 0.50)` to (0, 13, 128, 26), and the last row to (0, 39, 128, 13); a child
+declared `bounds(0.5, 1)` inside the readings row resolves to (0, 13, 64, 26) or (64, 13, 64, 26).
+The chromes, rewritten as nested layouts, resolve to the boxes their bounds name: in
+`RampedStaticChrome` and `RampedIntervalChrome` the glyph column at (0, 0, 16, 13), the title at
+(16, 0, 112, 13), the two readings at y 13, and the status row and the bar each half of the last
+row — asserted in a test.
+
+## Components stop taking their box at construction
+
+**A component's constructor takes no `pos` and no `dim`; the layout sets both before the first
+draw.**
+
+What is wrong now: `Component.init(pos, dim)` accepts the box and stores it, and every subclass —
+`Text`, `Icon`, `ProgressBar`, `Scrollbar` and the rest — forwards it through
+`super(self).init(pos, dim)`. The box is a thing a component is handed at construction, and
+[component.be](../../firmware/gardener/data/system/components/component.be) says so: "a box is
+given at construction and kept; there is no reflow."
+
+What is true instead: a component's constructor takes only the component's own arguments. The
+layout that resolves the component's `bounds` is the sole writer of its `pos` and `dim`, and it
+sets both — a `Position` and a `Size`, never one without the other — after construction and before
+the first `draw()` call. A component is never drawn before its box is set; the layout setting the
+box is the guarantee. Subclasses drop the `pos, dim` parameters and stop forwarding them, and the
+chrome constructors drop them too, as the example above shows.
+
+Checked by: a test builds a component with no box, the layout resolves its `bounds` to a box, and
+the component draws inside that box; the existing suites — `chromes`, `layout`, `components` —
+still pass with every component constructor stripped of its `pos, dim` parameters.
 
 ## Consequences
 
@@ -83,11 +116,16 @@ The box contract is stated in the header comments of
 [component.be](../../firmware/gardener/data/system/components/component.be) — "a box is given at
 construction and kept, there is no reflow" — and
 [layout.be](../../firmware/gardener/data/system/components/layout.be) — "a flat list, nothing more"
-— and those now say something different: a layout owns the parent box and resolves its children.
-There is no layout spec, so no spec changes; the contract continues to live in those comments and
-in [layout.test.be](../../tools/berry/tests/layout.test.be), which pins the new resolution.
+— and those now say something different: a layout is a component with a box of its own, it resolves
+its children, and there is a new `bounds` vocabulary; a component's constructor no longer takes a
+box, and the layout is what sets `pos` and `dim` before the first draw. There is no layout spec, so
+no spec changes; the contract continues to live in those comments and in
+[layout.test.be](../../tools/berry/tests/layout.test.be), which pins the new resolution.
 
-The page the panel draws does not change. The `chromes` suite's frames are the record of that.
+The panel's pages change where today's boxes were pixel-intrinsic: the glyph-and-title row becomes
+a 16-column glyph slot and a full-height title, and the bar becomes a full half-row. The readings
+row and the home page's `0.5 / 0.5` split were already clean fractions, so those draw as before.
+The `chromes` suite's frames are the record of the change.
 
 ## Deferred
 
@@ -100,7 +138,8 @@ The page the panel draws does not change. The `chromes` suite's frames are the r
 ## How it is known to hold
 
 Run `python tools/berry/check.py --tests`: every file compiles, every page runs, and the new cases
-in [layout.test.be](../../tools/berry/tests/layout.test.be) assert the resolved boxes above and
-that each migrated chrome resolves to the pixel boxes it hard-codes before the change. Run
-`python tools/berry/check.py --art static` and `--scene home`; the frames the person looking at
-them sees are the pages they already know, because the declared extents resolve to the same boxes.
+in [layout.test.be](../../tools/berry/tests/layout.test.be) assert the resolved boxes above, that
+each migrated chrome resolves to the boxes its bounds name, and that a component built with no box
+draws inside the box the layout set. Run
+`python tools/berry/check.py --art static` and `--scene home`; the frames show the redefined
+glyph-and-title and bar rows, and the unchanged readings row and home page.
