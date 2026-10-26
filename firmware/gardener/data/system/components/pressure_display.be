@@ -36,6 +36,7 @@ end
 class PressureDisplay : Component
   # --- public --------------------------------------------------------------
   # Set by the caller before a draw.
+  var pressure_kpa
   var family
   var style
   var align
@@ -55,6 +56,7 @@ class PressureDisplay : Component
   # --- public methods ------------------------------------------------------
   def init(pos, dim, settings, settings_secondary, secondary_position, size_hint)
     super(self).init(pos, dim)
+    self.pressure_kpa = nil
     self.family = "sans"
     self.style = "none"
     self.align = "center"
@@ -80,8 +82,8 @@ class PressureDisplay : Component
     self._secondary = Text(nil, nil)
   end
 
-  def draw(pressure_kpa)
-    var main_text = self._format(pressure_kpa)
+  def draw()
+    var main_text = self._format(self.pressure_kpa)
     var sec_text = nil
     if self.secondary_position != nil && self.secondary_pressure != nil
       sec_text = self._format(self.secondary_pressure)
@@ -204,11 +206,11 @@ class AutoPressureDisplay : PressureDisplay
 
   def draw()
     var s = vacuum.state()
-    var primary_pressure = self._pressure_order[0] == "pressure" ? s.pressure_kpa : s.target
+    self.pressure_kpa = self._pressure_order[0] == "pressure" ? s.pressure_kpa : s.target
     self.secondary_pressure = nil
     if self._pressure_order.size() > 1
       self.secondary_pressure = self._pressure_order[1] == "pressure" ? s.pressure_kpa : s.target
     end
-    super(self).draw(primary_pressure)
+    super(self).draw()
   end
 end

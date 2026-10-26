@@ -260,13 +260,15 @@ def harness_art_component(name, path)
     drew = true
   elif name == "pressure"
     var p = PressureDisplay(Position(0, 0), Size(64, 52))
-    p.draw(20.0)
+    p.pressure_kpa = 20.0
+    p.draw()
     drew = true
   elif name == "pressure-secondary"
     var p = PressureDisplay(Position(0, 0), Size(64, 52))
+    p.pressure_kpa = 20.0
     p.secondary_pressure = 10.0
     p.secondary_position = "br"
-    p.draw(20.0)
+    p.draw()
     drew = true
   elif name == "bar"
     var b = ProgressBar(Position(0, 0), Size(96, 8), 50)

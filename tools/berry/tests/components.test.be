@@ -83,25 +83,28 @@ test("a triangle draws each direction", triangle_draws)
 
 def pressure_display_draws()
   var p = PressureDisplay(Position(0, 0), Size(64, 52))
-  p.draw(nil)
-  p.draw(20.0)
-  p.draw(0.0)
+  p.draw()
+  p.pressure_kpa = 20.0
+  p.draw()
+  p.pressure_kpa = 0.0
+  p.draw()
 end
 
 test("a pressure display draws a reading and dashes", pressure_display_draws)
 
 def pressure_display_secondary()
   var p = PressureDisplay(Position(0, 0), Size(64, 52))
+  p.pressure_kpa = 20.0
   p.secondary_pressure = 10.0
   p.secondary_position = "br"
   p.size_hint = 0.5
-  p.draw(20.0)
+  p.draw()
   assert_eq(p._secondary.align, "right", "a br secondary is not right-aligned")
   assert_eq(p._secondary.v_align, "bottom", "a br secondary is not bottom-aligned")
 
   p.size_hint = 1
   p.secondary_position = "tr"
-  p.draw(20.0)
+  p.draw()
   assert_eq(p._number.pos.x, 0, "the main is not in the left half")
   assert_eq(p._secondary.pos.x, 32, "a right secondary is not in the right half")
 end
@@ -125,11 +128,12 @@ test("a duration formats each unit", duration_formats)
 
 def secondary_in_each_corner()
   var p = PressureDisplay(Position(0, 0), Size(64, 52))
+  p.pressure_kpa = 20.0
   p.secondary_pressure = 10.0
   p.size_hint = 0.5
   for pos : ["tl", "tr", "bl", "br"]
     p.secondary_position = pos
-    p.draw(20.0)
+    p.draw()
     var side = pos == "tl" || pos == "bl" ? "left" : "right"
     var row = pos == "tl" || pos == "tr" ? "top" : "bottom"
     assert_eq(p._secondary.align, side, "the secondary is on the wrong side")
@@ -152,8 +156,9 @@ def captures()
 
   screen.draw_clear()
   var p = PressureDisplay(Position(0, 0), Size(64, 52))
+  p.pressure_kpa = 20.0
   p.secondary_pressure = 10.0
-  p.draw(20.0)
+  p.draw()
   capture("pressure")
 end
 

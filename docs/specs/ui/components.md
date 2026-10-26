@@ -69,9 +69,10 @@ the last draw fitted.
 
 ## PressureDisplay
 
-`PressureDisplay` is the reading formatted in the panel's unit. It takes a pressure in kPa and draws
-the number filling its box, using `Text`'s fit.
+`PressureDisplay` is the reading formatted in the panel's unit, drawing the number filling its box,
+using `Text`'s fit.
 
+- `pressure_kpa` — the main reading in kPa, set before `draw()`; `draw()` takes no arguments.
 - A nil reading draws `--`.
 - The number is the kPa value scaled by the unit's `per_kpa`, with the unit's decimals.
 - The number carries no suffix of its own; the unit is the overlay's, in the bottom band.
@@ -85,7 +86,7 @@ the number filling its box, using `Text`'s fit.
 
 `AutoPressureDisplay` is a `PressureDisplay` that reads its own numbers from the machine: it takes a
 `pressure_order` — `"pressure:target"` (pressure primary, target secondary) or `"target:pressure"`
-— and its `draw()` takes no arguments.
+— and its `draw()` sets `pressure_kpa` and `secondary_pressure` from the machine before drawing.
 
 ## Duration
 

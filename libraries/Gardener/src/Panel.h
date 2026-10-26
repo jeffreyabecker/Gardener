@@ -9,8 +9,8 @@
 #include "MachineCommand.h"
 #include "PanelContext.h"
 #include "panel/GestureClassifier.h"
-#include "panel/Overlay.h"
 #include "routines/Routines.h"
+#include "Tasks.h"
 #include "storage/Config.h"
 #include "storage/Jingles.h"
 #include "hal/Battery.h"
@@ -53,7 +53,7 @@ class Panel : public Machine, public PanelContext {
         battery_(battery),
         config_(&library),
         jingles_(&library),
-        overlay_(new Overlay(display, battery, &vacuum(), &config_)),
+        display_(display),
         routines_(routines),
         fs_(fs),
         library_(library) {}
@@ -73,9 +73,11 @@ class Panel : public Machine, public PanelContext {
   // The machine's own reads, named again so the context's virtuals resolve to one function.
   VacuumSystem& vacuum() override { return Machine::vacuum(); }
   Logger& logger() override { return Machine::logger(); }
-  // The display is the overlay — every drawing verb goes through it — so both are the same object.
-  Display& display() override { return *overlay_; }
-  Overlay& overlay() { return *overlay_; }
+  // The panel's display, every drawing verb going through it.
+  Display& display() override { return *display_; }
+  // The two links, from the interface owner's globals; presence is all the band reports.
+  bool serialConnected() const override { return gardener::serialConnected; }
+  bool bluetoothConnected() const override { return gardener::bleConnected; }
   Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
   Library& library() override { return library_; }
@@ -96,7 +98,7 @@ class Panel : public Machine, public PanelContext {
   // is installed over the jingle library.
   Config config_;
   JinglesConfig jingles_;
-  Overlay* overlay_;
+  Display* display_;
   Routines* routines_;
   FS& fs_;
   Library& library_;
