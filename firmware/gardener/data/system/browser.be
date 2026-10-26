@@ -131,7 +131,10 @@ class BrowserScene : Scene
     if self.list.rows.size() == 0
       return
     end
-    self.list.draw(self.pos.x, self.pos.y + 2)
+    # The rows' band stops two pixels short of the scrollbar's column.
+    self.list.to_box(self.pos.x, self.pos.y + 2, self.scrollbar.pos.x - self.pos.x - 2,
+                     self.list.visible * List.row)
+    self.list.draw()
   end
 end
 

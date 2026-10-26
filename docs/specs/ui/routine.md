@@ -134,12 +134,17 @@ the registrations in one list in registration order, the list the browser draws,
 `load_settings(routine_key)` and `save_settings(routine_key, settings_values)` that hand a routine's
 set to its registration, and the `push(routine_key, callback, activation)` that opens a routine.
 `/system/list.be` is `List`, a selectable menu: a selected index into rows walked with Up/Down and
-wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an optional
-`Scrollbar`. A row is a `ListRow` — the icon drawn at its left, the title drawn beside it, and the
-value the row stands for — so a caller keeps the thing a row means in the row rather than in a list
-beside it. `list_rows()` holds a row written as a two-element `[icon, title]` pair, or as a bare
-title, as a `ListRow` with no value. `set(rows)` normalizes whatever it is given and `selected_row()`
-answers the row the index names. The list draws the icon and the title and never reads the value.
+wrapped at the ends, drawn with one inverted row and a scroll window, feeding an optional
+`Scrollbar`. A row is a `ListRow` component — the icon drawn at its left, the title drawn beside it,
+and the value the row stands for — so a caller keeps the thing a row means in the row rather than
+in a list beside it. `list_rows()` holds a row written as a two-element `[icon, title]` pair, or as a
+bare title, as a `ListRow` with no value. `set(rows)` normalizes whatever it is given and
+`selected_row()` answers the row the index names. The list draws the rows and never reads the value.
+`List` is a component as well, placed with `to_box(x, y, w, h)` — the width is the band a row
+inverts — and drawn with `draw()`, which gives every visible row the list's width by one row pitch,
+sets that row's `inverted` for the one the index names, and draws it, so the selected row is a band
+of paper on ink rather than inverted ink. The pitch is `List.row`, one row of the built-in face,
+which is the row height the settings view measures its list windows with.
 `/system/home_machine.be` is `HomeMachine`, the run the home scene holds: the phase it is in — `IDLE`
 or `RUNNING`, read from the chamber every beat — the clock the page shows beside it, and the `start`
 and `stop` commands that move it.

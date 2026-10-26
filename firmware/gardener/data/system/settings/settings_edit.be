@@ -83,16 +83,9 @@ class SettingsEditScene : Scene
                         cfg.label + "=" + (value == nil ? "--" : cfg.text(value)), cfg))
     end
     self.list.set(rows)
-    if rows.size() > self.list.visible
-      if self.title != nil
-        screen.draw_text(self.pos.x, self.pos.y, 1, false, self.title)
-      else
-        screen.draw_text(self.pos.x, self.pos.y, 1, false, "SETTINGS")
-      end
-      self.list.draw(self.pos.x, self.pos.y + SettingsView.row + SettingsView.gap)
-      return
-    end
 
+    # The widest of the heading and the rows: the width of the band the selected row inverts, and of
+    # the block a short list is centred as.
     var wide = 0
     if self.title != nil
       wide = screen.text_bounds(self.title, 1).w
@@ -107,6 +100,18 @@ class SettingsEditScene : Scene
       end
     end
 
+    if rows.size() > self.list.visible
+      if self.title != nil
+        screen.draw_text(self.pos.x, self.pos.y, 1, false, self.title)
+      else
+        screen.draw_text(self.pos.x, self.pos.y, 1, false, "SETTINGS")
+      end
+      self.list.to_box(self.pos.x, self.pos.y + SettingsView.row + SettingsView.gap, wide,
+                       self.list.visible * SettingsView.row)
+      self.list.draw()
+      return
+    end
+
     var heading_h = 0
     if self.title != nil
       heading_h = SettingsView.row + SettingsView.gap
@@ -119,7 +124,8 @@ class SettingsEditScene : Scene
       screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.title)
       y += heading_h
     end
-    self.list.draw(x, y)
+    self.list.to_box(x, y, wide, rows.size() * SettingsView.row)
+    self.list.draw()
   end
 
   # The value an editor handed back replaces the one in the values the caller gave. The title is not

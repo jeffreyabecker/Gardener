@@ -2,8 +2,8 @@
 # and the window a box holds. The value editors carry their own numbers.
 
 class SettingsView
-  # A row of the built-in face — one row of the list — and the gap the list leaves under a heading.
-  static var row = 8
+  # The list's row pitch — one row of the built-in face — and the gap it leaves under a heading.
+  static var row = List.row
   static var gap = 2
 
   # The rows a full-box list may show: the box less the heading row and the gap under it.

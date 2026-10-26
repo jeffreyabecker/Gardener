@@ -38,7 +38,7 @@ class ChoiceEditScene : EditScene
     # The rows the box has room for — the scene's box less the three pixels of frame either side,
     # the eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no
     # more than there are entries.
-    var fit = (self.dim.h - 26) / 8
+    var fit = (self.dim.h - 26) / List.row
     if fit < 1
       fit = 1
     end
@@ -108,7 +108,7 @@ class ChoiceEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + self.list.visible * 8)
+    return bounds(wide, 20 + self.list.visible * List.row)
   end
 
   # The label row, the entries with the one showing inverted and scrolled into view, and the hint
@@ -118,8 +118,11 @@ class ChoiceEditScene : EditScene
     var label_w = screen.text_bounds(self.label, 1).w
     screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
 
-    self.list.draw(pos.x + (dim.w - self.row_width()) / 2,
-                   pos.y + 10 + (dim.h - 20 - self.list.visible * 8) / 2)
+    var wide = self.row_width()
+    self.list.to_box(pos.x + (dim.w - wide) / 2,
+                     pos.y + 10 + (dim.h - 20 - self.list.visible * List.row) / 2,
+                     wide, self.list.visible * List.row)
+    self.list.draw()
 
     var hint = self.hint()
     var hint_w = screen.text_bounds(hint, 1).w

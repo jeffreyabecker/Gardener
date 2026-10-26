@@ -1,17 +1,36 @@
-# list.be — the selectable menu: a selected index into a list of ListRow records, walked with
-# Up/Down, wrapped at the ends, drawn with one highlighted row and a scroll window, feeding an
-# optional Scrollbar.
+# list.be — the selectable menu: a selected index into a list of ListRow components, walked with
+# Up/Down, wrapped at the ends, drawn with one inverted row and a scroll window, feeding an optional
+# Scrollbar.
 
 # One row of a list: the glyph drawn at its left, the label drawn beside it, and the value the row
-# stands for — a routine key, a setting, whatever the caller keeps. The list draws the icon and the
-# title; the value is the caller's.
-class ListRow
+# stands for — a routine key, a setting, whatever the caller keeps. The row draws its own glyph and
+# title; the value is the caller's and is never drawn. The list sets a row's box before each draw —
+# the list's width by one row pitch tall — so the whole of that box is what the selection inverts.
+class ListRow : Component
   var icon, title, value
 
   def init(icon, title, value)
+    super(self).init()
     self.icon = icon
     self.title = title == nil ? "" : str(title)
     self.value = value
+  end
+
+  def to_box(x, y, w, h)
+    self.set_box(point(x, y), bounds(w, h))
+    if self.icon != nil
+      self.icon.set_box(point(x, y), self.icon.dim)
+    end
+  end
+
+  def draw()
+    if self.icon != nil
+      self.icon.draw()
+      screen.draw_text(self.pos.x + self.icon.dim.w + 2, self.pos.y, 1, false, self.title)
+    else
+      screen.draw_text(self.pos.x, self.pos.y, 1, false, self.title)
+    end
+    super(self).draw()
   end
 end
 
@@ -31,13 +50,20 @@ def list_rows(rows)
   return out
 end
 
-class List
+# The menu itself: the rows it holds, the index showing and the window they are drawn in. It is a
+# component, so it is placed with to_box() by the scene that holds it and drawn with draw() — the
+# box's width is the band a row inverts, and its height only has to hold the visible rows.
+class List : Component
+  # One row of the built-in face: the pitch a row is drawn at, and the height of its band.
+  static var row = 8
+
   var rows
   var selected
   var visible
   var scrollbar
 
   def init(visible)
+    super(self).init()
     self.rows = []
     self.selected = 0
     self.visible = visible
@@ -76,19 +102,20 @@ class List
     return 0
   end
 
-  def draw(x, y)
+  def to_box(x, y, w, h)
+    self.set_box(point(x, y), bounds(w, h))
+  end
+
+  # Every visible row is given its box — the list's width, one row pitch tall — and drawn, the one
+  # the index names inverted so the whole of its band reads as paper on ink.
+  def draw()
     var start = self.first()
     var line = 0
     while line < self.visible && start + line < self.rows.size()
       var entry = self.rows[start + line]
-      if entry.icon != nil
-        entry.icon.set_box(point(x, y + line * 8), entry.icon.dim)
-        entry.icon.draw()
-        screen.draw_text(x + entry.icon.dim.w + 2, y + line * 8, 1, start + line == self.selected,
-                         entry.title)
-      else
-        screen.draw_text(x, y + line * 8, 1, start + line == self.selected, entry.title)
-      end
+      entry.to_box(self.pos.x, self.pos.y + line * List.row, self.dim.w, List.row)
+      entry.inverted = start + line == self.selected
+      entry.draw()
       line += 1
     end
     if self.scrollbar != nil
@@ -97,5 +124,6 @@ class List
       self.scrollbar.visible = self.visible
       self.scrollbar.draw()
     end
+    super(self).draw()
   end
 end

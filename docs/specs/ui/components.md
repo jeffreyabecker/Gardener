@@ -26,7 +26,7 @@ the top-left corner and `dim.w`, `dim.h` the width and height, whole pixels. Bot
 declared in `/system/records.be` — the fields and an `init`, nothing else. The box is not a
 constructor argument: `set_box(pos, dim)` sets both halves together, after the component is built
 and before anything draws it. A layout calls it for every child it places; a caller calls it for a
-component that stands alone, such as a list row's glyph or a settings editor's inline value.
+component that stands alone, such as a settings editor's inline value.
 Nothing a component draws lies outside its box, and a component never draws before it has one.
 
 A page states the numbers it means rather than a partial box: the page is the panel less the band,
