@@ -11,8 +11,7 @@ class EditScene : Scene
   var opened
 
   def init(label, current)
-    var box = ux.box()
-    super(self).init(box[0], box[1])
+    super(self).init()
     self.label = label
     self.opened = current
   end

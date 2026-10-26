@@ -11,8 +11,8 @@
 # ux.push(scene, callback) and learns what the sub-scene returned through the callback; the
 # callback runs when the sub-scene pops, and the scene below keeps its state.
 #
-# Every scene carries the box it draws in, `pos` and `dim`, as a component does; a scene opened over
-# another one is given that one's box.
+# Every scene draws in the page: it carries `pos` and `dim` as a component does, and they are the
+# page's box however the scene was pushed.
 
 class Scene
   var last_draw
@@ -20,13 +20,13 @@ class Scene
   var pos
   var dim
 
-  # A scene draws in a box: the page for one the stack is rooted on, and the box of the scene it is
-  # opened over for anything on top of one. `pos` and `dim` are what draw_page() lays out in.
-  def init(pos, dim)
+  # A scene always takes the whole page. `pos` and `dim` are what draw_page() lays out in, and a
+  # scene opened over another one covers the page and clears it when it draws.
+  def init()
     self.last_draw = 0
     self.gestures = []
-    self.pos = pos == nil ? Position.top_left() : pos
-    self.dim = dim == nil ? Size.page() : dim
+    self.pos = Position.top_left()
+    self.dim = Size.page()
   end
 
   # The queue is a pull: drain it every poll so a press is never left waiting for the next scene.
