@@ -51,6 +51,33 @@ def wait_until(label, beats, pred)
   raise "assert", label + " (not reached in " + str(beats) + " beats)"
 end
 
+# --- driving a machine -----------------------------------------------------
+
+# A beat of the harness and an advance of a machine, which is the whole of what a page's tick() does
+# for one: nothing in a machine moves on its own, so a case that drives it directly has to hand it
+# `now` as well as let the clock run.
+def drive(machine, beats)
+  var i = 0
+  while i < beats
+    harness.beat(1)
+    machine.advance(vacuum.now_ms())
+    i += 1
+  end
+end
+
+def drive_until(machine, label, beats, pred)
+  var i = 0
+  while i < beats
+    harness.beat(1)
+    machine.advance(vacuum.now_ms())
+    if pred()
+      return true
+    end
+    i += 1
+  end
+  raise "assert", label + " (not reached in " + str(beats) + " beats)"
+end
+
 # --- the runner ------------------------------------------------------------
 
 # Run every registered case whose full name contains `filter`, each from a reset page. A failing

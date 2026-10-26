@@ -1,7 +1,7 @@
 # home.test.be — the home scene is the device's own page: it registers nothing, so the shared
 # settings walk does not cover it. What it declares, the device helpers its rows are built from, and
-# the run it holds are checked here; the rows themselves are declaration only, and the home scene
-# writes the device when its list commits.
+# the gestures it maps to its machine are checked here; the rows themselves are declaration only, and
+# the home scene writes the device when its list commits. The run itself is home_machine.test.be's.
 
 suite = "home"
 
@@ -104,25 +104,92 @@ end
 
 test("the jingle editor steps and plays", the_jingle_editor_steps_and_plays)
 
-# The home scene's run is a machine with two phases, and the phase follows the chamber rather than the
-# page: the scene the suite runner leaves on top is driven through a start and a stop, and the clock
-# is there for the run and gone afterwards.
-def the_run_has_phases()
-  var home = __rootScene
-  vacuum.target(10.0)
-  harness.beat(1)
-  assert_eq(home.machine.phase, HomePhase.IDLE, "home: a page with no run is not idle")
-  assert_nil(home.machine.elapsed(), "home: an idle page is showing a run clock")
+# The home scene's run is a machine the page holds. The machine itself — the phase that follows the
+# chamber and the clock that runs with it — is tested in home_machine.test.be; here it is a mock, so
+# what a case sees is exactly the calls the page makes and the clock it draws.
+class MockHomeMachine
+  var commands
+  var advances
+  var clock
 
-  harness.press("ok:single")
-  wait_until("home: OK did not start the run", 200,
-             / -> home.machine.phase == HomePhase.RUNNING)
-  assert_true(home.machine.elapsed() != nil, "home: a running page shows no clock")
+  def init(clock)
+    self.commands = []
+    self.advances = 0
+    self.clock = clock
+  end
 
-  harness.press("cancel:single")
-  wait_until("home: Cancel did not stop the run", 200,
-             / -> home.machine.phase == HomePhase.IDLE)
-  assert_nil(home.machine.elapsed(), "home: a stopped run keeps its clock")
+  def handle_command(cmd)
+    self.commands.push(cmd)
+    return true
+  end
+
+  def advance(now)
+    self.advances += 1
+  end
+
+  def elapsed()
+    return self.clock
+  end
 end
 
-test("a run has an idle and a running phase", the_run_has_phases)
+# The home page is the singleton the firmware pushes at boot, so a case hands it a mock and puts a
+# fresh machine back when it is done.
+def mock_home(machine)
+  __rootScene.machine = machine
+  return __rootScene
+end
+
+def the_keys_map_to_the_machines_commands()
+  var mock = MockHomeMachine(nil)
+  var home = mock_home(mock)
+
+  harness.press("ok:single")
+  harness.beat(1)
+  assert_eq(mock.commands.size(), 1, "OK did not reach the machine")
+  assert_eq(mock.commands[0], "start", "OK is not a start")
+
+  harness.press("cancel:single")
+  harness.beat(1)
+  assert_eq(mock.commands[1], "stop", "Cancel is not a stop")
+
+  harness.press("cmd:stop")
+  harness.beat(1)
+  assert_eq(mock.commands[2], "stop", "a cmd: gesture is not handed over by name")
+
+  harness.press("down:single")
+  harness.beat(1)
+  assert_eq(mock.commands.size(), 3, "a key the page does not use reached the machine")
+  home.machine = HomeMachine()
+end
+
+test("the keys map to the machine's commands", the_keys_map_to_the_machines_commands)
+
+def the_page_draws_the_clock_its_machine_reports()
+  var mock = MockHomeMachine(65)
+  var home = mock_home(mock)
+
+  harness.beat(1)
+  assert_true(mock.advances >= 1, "a beat did not advance the machine")
+  assert_eq(home.chrome.timer.seconds, 65, "the page is not drawing its machine's clock")
+  home.machine = HomeMachine()
+end
+
+test("the page draws the clock its machine reports", the_page_draws_the_clock_its_machine_reports)
+
+def a_double_up_opens_the_device_list()
+  var mock = MockHomeMachine(nil)
+  var home = mock_home(mock)
+
+  harness.press("up:double")
+  harness.beat(1)
+  assert_eq(ux.depth(), 2, "Up held to a double did not open a list")
+  assert_eq(classname(ux.top()), "SettingsEditScene", "the home list is not the settings list")
+
+  # Back closes it on the set it was opened with, which is what hands the page its values back.
+  harness.press("back:single")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "Back did not close the list")
+  home.machine = HomeMachine()
+end
+
+test("Up held to a double opens the device's list", a_double_up_opens_the_device_list)

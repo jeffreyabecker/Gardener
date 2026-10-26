@@ -16,7 +16,7 @@ registration does not look like a routine, or a page does not survive being driv
 | `frame.h` | the one function `main.c` calls to install the frame as a module |
 | `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
-| `tests/suite.be` | the suite framework: `test()`, the assertions, `wait_until`, the runner |
+| `tests/suite.be` | the suite framework: `test()`, the assertions, `wait_until`, `drive`, the runner |
 | `tests/*.test.be` | the suites, one file per concern, each registering named cases |
 
 `check.py` builds `libraries/berry` with the firmware's own `berry_conf.h`, so the host VM has the
@@ -152,6 +152,8 @@ uses the helpers from `tests/suite.be`:
 | `assert_eq(actual, expected, msg)` | raise when the values differ, with both in the message |
 | `assert_nil(x, msg)`, `assert_not_nil(x, msg)` | raise on the wrong nil-ness |
 | `wait_until(label, beats, pred)` | beat the harness until `pred()` is true, or raise naming `label` |
+| `drive(machine, beats)` | beat the harness and advance a machine, which is what a page's `tick()` does for it |
+| `drive_until(machine, label, beats, pred)` | the same, until `pred()` is true, or raise naming `label` |
 
 The runner executes every registered case (or those whose full `suite.case` name contains the
 `--test` filter), each from a reset page, and reports one line per case: `[PASS] suite.case` or
@@ -163,8 +165,16 @@ Every case is also captured as an animation named `<stem>.<suite>.<case>.gif` �
 motion behind. A case that never beats has nothing to animate and writes nothing.
 
 The suites cover what a walk cannot name: the jingle library, the System scene's unit, radio and
-jingle rows, the interval's set count and its "after ok" pause, the ramp's three stages and its
-pause and resume, and the registry's hidden-routine rule.
+jingle rows, the settings model and its editors, the components and the layout, the overlay band, and
+the registry's hidden-routine rule.
+
+The three run machines have a suite each — `home_machine`, `ramped_static_machine` and
+`ramped_interval_machine` — which drive the machine itself: `configure()`, `handle_command()` and
+`advance()` against the chamber, with no page, no gesture and no drawing. The pages that hold one are
+covered by the page suites, which put a mock in place of `page.machine` and assert the calls the page
+makes: the numbers it configures from its settings, the command each key means by phase, what it
+draws, and what the closing settings list does. A page's mock declares the fields and methods that
+page uses, so the page and its machine meet at a contract a case can read.
 
 ## Failing
 
