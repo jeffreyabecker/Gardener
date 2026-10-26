@@ -282,17 +282,4 @@ class RampedStaticMachine
     end
     return 0
   end
-
-  # The share of the whole run still to go. Nil before the arrival starts the clock and after the
-  # run ends, so the bar is only there when there is a run to show.
-  def run_left()
-    if self.phase != RampedStaticPhase.RUN && self.phase != RampedStaticPhase.PAUSED
-      return nil
-    end
-    var left = self.total_ms - self.elapsed()
-    if left < 0
-      left = 0
-    end
-    return left * 100.0 / self.total_ms
-  end
 end
