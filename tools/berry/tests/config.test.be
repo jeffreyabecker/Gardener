@@ -5,7 +5,7 @@
 suite = "config"
 
 def a_missing_document_reads_its_fallbacks()
-  var document = device.config("routines/config_test.cfg")
+  var document = device.config("routines/config_test.ini")
   assert_eq(document.get("", "count", 7), 7, "an absent int is not its default")
   assert_eq(document.get("", "gain", 0.5), 0.5, "an absent real is not its default")
   assert_eq(document.get("", "label", "none"), "none", "an absent string is not its default")
@@ -13,7 +13,7 @@ def a_missing_document_reads_its_fallbacks()
   document.set("", "count", 3)
   assert_true(document.save(), "a document that is not there would not take a save")
 
-  var reopened = device.config("routines/config_test.cfg")
+  var reopened = device.config("routines/config_test.ini")
   assert_eq(reopened.get("", "count", 0), 3, "a saved value is not in the document")
 end
 
@@ -21,7 +21,7 @@ test("a missing document reads its fallbacks and is created by save",
      a_missing_document_reads_its_fallbacks)
 
 def one_save_writes_the_whole_document_once()
-  var document = device.config("routines/config_test.cfg")
+  var document = device.config("routines/config_test.ini")
   document.set("", "count", 4)
   document.set("", "gain", 0.25)
 
@@ -29,7 +29,7 @@ def one_save_writes_the_whole_document_once()
   assert_true(document.save(), "a save of two changed keys is not accepted")
   assert_eq(harness.writes() - before, 1, "a save of two keys is not one write")
 
-  var reopened = device.config("routines/config_test.cfg")
+  var reopened = device.config("routines/config_test.ini")
   assert_eq(reopened.get("", "count", 0), 4, "a save did not write the first key")
   assert_eq(reopened.get("", "gain", 0.0), 0.25, "a save did not write the second key")
 end
@@ -37,7 +37,7 @@ end
 test("one save writes the whole document once", one_save_writes_the_whole_document_once)
 
 def a_save_with_nothing_changed_writes_nothing()
-  var document = device.config("routines/config_test.cfg")
+  var document = device.config("routines/config_test.ini")
   var held = document.get("", "count", 0)
   document.set("", "count", held)
 
@@ -49,11 +49,11 @@ end
 test("a save with nothing changed writes nothing", a_save_with_nothing_changed_writes_nothing)
 
 def section_keys_name_the_sections_holding_keys()
-  var document = device.config("routines/config_test.cfg")
+  var document = device.config("routines/config_test.ini")
   document.set("extra", "note", "kept")
   assert_true(document.save(), "a sectioned write is not accepted")
 
-  var reopened = device.config("routines/config_test.cfg")
+  var reopened = device.config("routines/config_test.ini")
   var found = false
   for name : reopened.section_keys()
     if name == "extra"

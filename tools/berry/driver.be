@@ -171,7 +171,7 @@ def harness_art(routine_key, seconds, path, sets)
   end
   harness.reset()
   if sets > 0
-    var document = device.config("routines/" + routine_key + ".cfg")
+    var document = device.config("routines/" + routine_key + ".ini")
     if document.get("", "set_count", "") != ""
       document.set("", "set_count", sets)
       document.save()

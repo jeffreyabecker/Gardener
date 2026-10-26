@@ -26,9 +26,9 @@ constexpr const char* ConfigPath = "/cfg/settings.ini";
 class Config : public Ini {
  public:
   // `store` is where the documents live, or null when the build has none: then nothing is read or
-  // written and every value is its fallback. `path` is the document's own path, and has to outlive
-  // the Config: a literal, or a constant beside the type that names it.
-  explicit Config(Library* store, const char* path = ConfigPath);
+  // written and every value is its fallback. `path` is the document's own path, copied, so the
+  // caller's name need not outlive the document.
+  explicit Config(Library* store, const String& path = ConfigPath);
 
   virtual ~Config() = default;
 
@@ -101,7 +101,7 @@ class Config : public Ini {
 
  private:
   Library* store_;
-  const char* path_;
+  String path_;
   bool dirty_ = false;
 };
 

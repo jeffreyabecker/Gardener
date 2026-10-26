@@ -36,20 +36,6 @@ Config* configOf(bvm* vm) {
   return config;
 }
 
-// A Config whose document is named at runtime. Config keeps the path as a pointer, so the name is
-// copied into the holder base first — a base class is constructed before Config — and lives and
-// dies with the document.
-struct PathText {
-  explicit PathText(const char* name) : path(name) {}
-  String path;
-};
-
-class DocumentConfig : private PathText, public Config {
- public:
-  DocumentConfig(Library* store, const char* path)
-      : PathText(path), Config(store, this->path.c_str()) {}
-};
-
 // init: a Config over the panel's library, read once. A second init hands over a fresh document,
 // dropping the first to the interpreter, so an instance never wraps two.
 int configInit(bvm* vm) {
@@ -147,8 +133,8 @@ const bnfuncinfo ConfigMembers[] = {
 
 }  // namespace
 
-// Answers an instance of the Config class over `document`, read once, with the document and its
-// name owned by the instance. The device's `config` call builds its document this way.
+// Answers an instance of the Config class over `document`, read once. The device's `config` call
+// builds its document this way.
 void pushConfigDocument(bvm* vm, const char* document) {
   if (context == nullptr) {
     be_raise(vm, "runtime_error", "device.config: no panel context");
@@ -162,7 +148,7 @@ void pushConfigDocument(bvm* vm, const char* document) {
     return;
   }
   be_call(vm, 0);
-  Config* config = new DocumentConfig(&context->library(), document);
+  Config* config = new Config(&context->library(), document);
   config->begin();
   be_newcomobj(vm, config, configRelease);
   be_setmember(vm, -2, ".p");

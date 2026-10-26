@@ -8,7 +8,7 @@ suite = "browser"
 # The document a routine's settings live in, opened fresh so a value a page wrote is seen by the
 # next read, and one key written through it.
 def settings_document(name)
-  return device.config("routines/" + name + ".cfg")
+  return device.config("routines/" + name + ".ini")
 end
 
 def write_setting(name, key, value)

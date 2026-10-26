@@ -8,7 +8,7 @@ suite = "settings"
 # One setting read from a document the way the registry's load_settings() reads every key: the
 # stored text parsed by the kind and held to it, and a key holding nothing reading as nothing.
 def read_setting(cfg, name)
-  var document = device.config("routines/" + name + ".cfg")
+  var document = device.config("routines/" + name + ".ini")
   var raw = document.get("", cfg.key, "")
   if raw == ""
     return cfg.value(nil)
@@ -18,7 +18,7 @@ end
 
 # One key written through the document, opened fresh, so a case seeds the same file a page reads.
 def write_setting(name, key, value)
-  var document = device.config("routines/" + name + ".cfg")
+  var document = device.config("routines/" + name + ".ini")
   document.set("", key, value)
   document.save()
 end
@@ -266,7 +266,7 @@ def load_makes_a_clean_map()
             "load_settings: the total duration is not the file's")
 
   # A value past its bounds arrives held to them, and a nullable key holding nothing arrives nil.
-  # The shipped interval.cfg carries a rest pressure, so the key is emptied first: an empty value is
+  # The shipped interval.ini carries a rest pressure, so the key is emptied first: an empty value is
   # how the store says a setting holds nothing.
   write_setting("interval", "set_count", "99")
   write_setting("interval", "rest_pressure", "")

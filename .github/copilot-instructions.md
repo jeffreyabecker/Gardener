@@ -8,7 +8,7 @@ local libraries. There is no host test suite, and nothing checks the layer rule,
 
 **Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
 `firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under
-`assets/`, or a file in `firmware/gardener/data/` — a `.be` routine, a page, a `.cfg` — cannot change
+`assets/`, or a file in `firmware/gardener/data/` — a `.be` routine, a page, a `.ini` — cannot change
 what the build says, so editing one is not a reason to run it. The data image is checked on the host
 instead: `python tools/berry/check.py` compiles and drives every `.be` file, which is the success a
 routine edit has to prove, and `--art NAME` saves the frame a page actually draws as a BMP when a
@@ -34,8 +34,8 @@ against, and don't build twice to show a delta. A size comparison nobody request
 runs and changes no decision, so report pass or fail and leave the figures out.
 
 **Consider the Berry check before running it.** The check compiles and drives the `.be` files under
-`firmware/gardener/data/`, the `.cfg` seeds and `jingles.ini` in `cfg/` beside them, the harness, and
-the vendored VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
+`firmware/gardener/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
+VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
 `libraries/berry/` cannot change what it says. Ask what a run would catch that the last one did not;
 when the answer is nothing — no Berry edit since the last check, or a check that already passed on
 this tree — don't run it. One check after a change that can break a routine is the verification.

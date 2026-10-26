@@ -90,7 +90,7 @@ class RoutineRegistry
     end
     self.entries[routine_key] = RoutineRegistration(routine_key, title, icon, factory, settings)
     # Every named section of the routine's document is an alternate set under its own key.
-    var document = device.config("routines/" + routine_key + ".cfg")
+    var document = device.config("routines/" + routine_key + ".ini")
     for name : document.section_keys()
       if name == ""
         continue
@@ -253,7 +253,7 @@ class RoutineRegistry
     if settings_cfgs == nil
       return settings_values
     end
-    var document = device.config("routines/" + parent + ".cfg")
+    var document = device.config("routines/" + parent + ".ini")
     for cfg : settings_cfgs
       var raw = document.get(section, cfg.key, "")
       if raw == ""
@@ -295,7 +295,7 @@ class RoutineRegistry
       return false
     end
     self.repair(routine_key, settings_cfgs, settings_values)
-    var document = device.config("routines/" + parent + ".cfg")
+    var document = device.config("routines/" + parent + ".ini")
     for cfg : settings_cfgs
       var value = settings_values[cfg.key]
       document.set(section, cfg.key, value == nil ? "" : value)

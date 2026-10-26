@@ -63,7 +63,7 @@ int harnessWrote(bvm* vm) {
   if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isstring(vm, 2)) {
     be_raise(vm, "type_error", "harness.wrote(routine, key)");
   }
-  const std::string path = std::string("/cfg/routines/") + be_tostring(vm, 1) + ".cfg";
+  const std::string path = std::string("/cfg/routines/") + be_tostring(vm, 1) + ".ini";
   be_pushbool(vm, session->files().wrote(path, be_tostring(vm, 2)));
   be_return(vm);
 }

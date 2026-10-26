@@ -2,7 +2,7 @@
 
 namespace gardener {
 
-Config::Config(Library* store, const char* path) : store_(store), path_(path) {}
+Config::Config(Library* store, const String& path) : store_(store), path_(path) {}
 
 bool Config::save() {
   if (!dirty_) return true;

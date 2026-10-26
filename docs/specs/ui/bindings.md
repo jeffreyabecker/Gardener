@@ -252,7 +252,7 @@ end
 
 `device.config(path)` answers a `Config` over `/cfg/` followed by `path`, read once and held, so a
 page can keep a document and read or write it with the class's own methods rather than a call per
-value. A routine's values live at `/cfg/routines/<name>.cfg`, named after the routine, and a
+value. A routine's values live at `/cfg/routines/<name>.ini`, named after the routine, and a
 data-image upload can ship initial ones beside its `.be`. The path is relative to `/cfg`: an empty
 path, one beginning with `/`, or one holding a `..` segment is refused with `value_error`, and
 anything that is not a string with `type_error`, so a page cannot name a file outside `/cfg`. A
@@ -269,10 +269,10 @@ The instance's methods are the native `Config` class's:
 | `config.section_keys()` | list of strings | the section names holding at least one key, in document order |
 
 ```berry
-var doc = device.config("routines/interval.cfg")
+var doc = device.config("routines/interval.ini")
 var target = doc.get("", "target", 0.0)   # the flat file's key, in the empty section
 doc.set("", "target", 12.5)               # changes the document in memory
-doc.save()                                # writes /cfg/routines/interval.cfg
+doc.save()                                # writes /cfg/routines/interval.ini
 ```
 
 The file is a flat `key=value` document, which is what makes it readable off the device and

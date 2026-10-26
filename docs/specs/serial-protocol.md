@@ -278,7 +278,7 @@ long alert by choosing `ms`, and `ms=0` is the explicit way to say "until I stop
 
 The device's LittleFS tree: `/system`, `/modules` and `/routines` for the files the interpreter
 compiles, and `/cfg` for the documents: `/cfg/settings.ini`, `/cfg/jingles.ini` and one
-`/cfg/routines/<name>.cfg` per routine. `fs` is a bench interface for changing what is on the device
+`/cfg/routines/<name>.ini` per routine. `fs` is a bench interface for changing what is on the device
 without reflashing its data image. Writing under `/system`, `/modules`, `/routines` or `/cfg` does
 not reload anything; the change takes effect at the next boot.
 
@@ -299,14 +299,14 @@ All arguments are positional and unquoted. A path is one token and contains no s
 ```
 -> fs list /cfg/routines
 <- ok
-<- file interval.cfg
-<- file ramped_interval.cfg
-<- file ramped_static.cfg
+<- file interval.ini
+<- file ramped_interval.ini
+<- file ramped_static.ini
 <- (blank line)
--> fs read /cfg/routines/interval.cfg
+-> fs read /cfg/routines/interval.ini
 <- ok bytes=12
 <- [12 raw bytes]
--> fs write /cfg/routines/new.cfg 5
+-> fs write /cfg/routines/new.ini 5
 <- ok
 -> fs mkdir /assets/icons
 <- ok

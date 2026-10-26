@@ -60,7 +60,7 @@ most of it the same lines as last time. Read the code while working, and run the
 change is done, or when a failure needs a diagnosis that reading the code cannot give.
 
 Two things make a run worth nothing. The first is a tree the last run already answered for. The
-second is a change that cannot reach the image: a document, a `.cfg` seed, an `assets/` image, a
+second is a change that cannot reach the image: a document, a `.ini` seed, an `assets/` image, a
 comment, or C++ outside `libraries/berry/`. A refactor that moves code without changing what it
 draws is the same case one step in: a frame captured before the edit and again after it, to diff
 them, is two runs to learn what the diff of the code already said. Write a frame when a human needs

@@ -31,7 +31,7 @@ end
 # The document the alias_test routine reads, seeded with a root set and two aliases: [cold] with a
 # routine_title, and [warm] without, then the routine re-registered so discovery scans it.
 def seed_alias_test()
-  var document = device.config("routines/alias_test.cfg")
+  var document = device.config("routines/alias_test.ini")
   document.set("", "initial_pressure", 5.0)
   document.set("", "target_pressure", 20.0)
   document.set("", "initial_duration", 60)
@@ -106,7 +106,7 @@ test("an alias reads its own section", an_alias_reads_its_own_section)
 
 def an_alias_set_is_repaired()
   seed_alias_test()
-  var document = device.config("routines/alias_test.cfg")
+  var document = device.config("routines/alias_test.ini")
   document.set("cold", "total_duration", 30)
   document.save()
 
@@ -121,13 +121,13 @@ test("an alias set is repaired", an_alias_set_is_repaired)
 
 def an_alias_saves_to_its_own_section()
   seed_alias_test()
-  var before_root = device.config("routines/alias_test.cfg").get("", "initial_pressure", 0.0)
+  var before_root = device.config("routines/alias_test.ini").get("", "initial_pressure", 0.0)
 
   var values = routines.load_settings("cold")
   values["initial_pressure"] = 7.0
   assert_true(routines.save_settings("cold", values), "an alias save was refused")
 
-  var document = device.config("routines/alias_test.cfg")
+  var document = device.config("routines/alias_test.ini")
   assert_eq(document.get("cold", "initial_pressure", 0.0), 7.0,
             "an alias save did not write its section")
   assert_eq(document.get("", "initial_pressure", 0.0), before_root,
