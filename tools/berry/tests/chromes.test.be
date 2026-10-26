@@ -9,7 +9,13 @@ end
 
 def home_draws()
   screen.draw_clear()
-  HomeChrome(Position.top_left(), Size.page()).draw(50.0)
+  var chrome = HomeChrome()
+  chrome.draw(50.0)
+  assert_eq(chrome.pressure.pos.x, 0, "the home pressure is not in the left half")
+  assert_eq(chrome.pressure.dim.w, 64, "the home pressure is not half the page")
+  assert_eq(chrome.pressure.dim.h, 52, "the home pressure is not the page's height")
+  assert_eq(chrome.timer.pos.x, 64, "the home timer is not in the right half")
+  assert_eq(chrome.timer.dim.w, 64, "the home timer is not half the page")
   save("home")
 end
 
