@@ -396,38 +396,33 @@ end
 
 test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
 
-# A scene opened over another draws in that scene's box: the settings list and every value editor
-# ask the stack for the box of the scene they are pushed over.
-class BoxScene : Scene
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
+# Every scene draws in the page: a scene pushed over another one covers the whole page rather than a
+# window inside it, and what the scene below drew comes back when it redraws.
+class PageScene : Scene
   def draw_page()
     screen.draw_fillrect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
   end
 end
 
-def a_scene_opened_over_another_takes_its_box()
-  var parent = BoxScene(Position(4, 6), Size(60, 40))
-  assert_true(ux.push(parent), "the parent scene would not push")
+def a_scene_opened_over_another_takes_the_page()
+  assert_true(ux.push(PageScene()), "the page scene would not push")
 
   var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
                            {"count": 1}, nil)
-  assert_eq(list.pos.x, 4, "the settings list does not take the box's x")
-  assert_eq(list.pos.y, 6, "the settings list does not take the box's y")
-  assert_eq(list.dim.w, 60, "the settings list does not take the box's width")
-  assert_eq(list.dim.h, 40, "the settings list does not take the box's height")
+  assert_eq(list.pos.x, 0, "the settings list does not start at the left of the page")
+  assert_eq(list.pos.y, 0, "the settings list does not start at the top of the page")
+  assert_eq(list.dim.w, 128, "the settings list is not the page's width")
+  assert_eq(list.dim.h, 52, "the settings list is not the page's height")
 
   var editor = IntEditScene("Count", 2, 1, 0, 10, false)
-  assert_eq(editor.pos.x, 4, "the value editor does not take the box's x")
-  assert_eq(editor.pos.y, 6, "the value editor does not take the box's y")
-  assert_eq(editor.dim.w, 60, "the value editor does not take the box's width")
+  assert_eq(editor.pos.x, 0, "the value editor does not start at the left of the page")
+  assert_eq(editor.pos.y, 0, "the value editor does not start at the top of the page")
+  assert_eq(editor.dim.w, 128, "the value editor is not the page's width")
 
   ux.pop(nil)
 end
 
-test("a scene opened over another takes its box", a_scene_opened_over_another_takes_its_box)
+test("a scene opened over another takes the page", a_scene_opened_over_another_takes_the_page)
 
 # A cancel is the row as it stands: the editor hands back the value it was opened on, so a row that
 # was stepped and then refused keeps what it held - including nothing, which a nullable setting can

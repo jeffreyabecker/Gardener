@@ -10,36 +10,48 @@
 # The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
 # run rising from the first row to the last, on a 12 by 8 field.
 class RampedStaticIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_filltriangle(self.pos.x, self.pos.y + 6, self.pos.x + 11, self.pos.y + 1, self.pos.x + 11, self.pos.y + 6)
     super(self).draw()
   end
 end
 
-# The static chrome: a flat list of explicitly placed children — the glyph and title, the pressure
-# and the duration, and a status-plus-bar row.
-class RampedStaticChrome : Layout
-  def init(title, pos, dim)
-    var half = dim.w / 2
-    super(self).init([
-      RampedStaticIcon(Position(pos.x, pos.y), Size(12, 8)),
-      Text(Position(pos.x + 16, pos.y + 2), Size(dim.w - 16, 9), title),
-      AutoPressureDisplay(Position(pos.x, pos.y + 13), Size(half, 26), "pressure:target", "br", 0.25),
-      Duration(Position(pos.x + half, pos.y + 13), Size(half, 26), "minutes"),
-      Text(Position(pos.x, pos.y + 39), Size(half, 13), "",
-           text_settings("sans", "none", "left", "center")),
-      ProgressBar(Position(pos.x + half + 8, pos.y + 41), Size(half - 8, 8), nil)
+# The static chrome: the glyph and title row, the pressure and the duration, and a status-plus-bar
+# row, laid out as fractions of the page.
+class RampedStaticChrome : AutoLayout
+  var icon
+  var title
+  var timer
+  var status
+  var bar
+
+  def init(title_text)
+    self.icon = RampedStaticIcon()
+    self.title = Text(title_text)
+    self.timer = Duration("minutes")
+    self.status = Text("", text_settings("sans", "none", "left", "center"))
+    self.bar = ProgressBar(nil)
+    super(self).init(bounds(nil, nil), [
+      AutoLayout(bounds(1, 0.25), [
+        AutoLayout(bounds(0.125, 1), [self.icon]),
+        AutoLayout(bounds(0.875, 1), [self.title])
+      ]),
+      AutoLayout(bounds(1, 0.50), [
+        AutoLayout(bounds(0.5, 1),
+                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
+        AutoLayout(bounds(0.5, 1), [self.timer])
+      ]),
+      AutoLayout(bounds(1, 0.25), [
+        AutoLayout(bounds(0.5, 1), [self.status]),
+        AutoLayout(bounds(0.5, 1), [self.bar])
+      ])
     ])
   end
 
   def draw(status, duration, elapsed)
-    self.children[4].value = status
-    self.children[3].seconds = elapsed / 1000
-    self.children[5].value = elapsed * 100.0 / duration
+    self.status.value = status
+    self.timer.seconds = elapsed / 1000
+    self.bar.value = elapsed * 100.0 / duration
     super(self).draw()
   end
 end
@@ -84,7 +96,7 @@ class RampedStatic : Scene
   var chrome
 
   def init(activation)
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.routine_key = activation.routine_key
     self.phase = "ready"
     self.mark = 0
@@ -92,7 +104,7 @@ class RampedStatic : Scene
     self.target = 0.0
     self.command_at = 0
     self.command_target = 0.0
-    self.chrome = RampedStaticChrome(routines.title(self.routine_key), self.pos, self.dim)
+    self.chrome = RampedStaticChrome(routines.title(self.routine_key))
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -401,5 +413,5 @@ class RampedStatic : Scene
 end
 
 routines.register(RampedStaticSettings("ramped_static", "Ramped Static",
-                                       RampedStaticIcon(Position(0, 0), Size(12, 8)), RampedStatic))
+                                       RampedStaticIcon(), RampedStatic))
 return RampedStatic

@@ -12,8 +12,7 @@ class SettingsEditScene : Scene
   var list
 
   def init(settings_cfgs, settings_values, title)
-    var box = ux.box()
-    super(self).init(box[0], box[1])
+    super(self).init()
     self.settings_cfgs = settings_cfgs
     # The set as it was handed over, apart from the one being edited, so Back and Cancel can hand it
     # back untouched. A map is a reference, so this has to be a copy of what the list shows.

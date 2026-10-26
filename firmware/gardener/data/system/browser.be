@@ -26,10 +26,10 @@ class BrowserScene : Scene
   var scrollbar
 
   def init()
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.list = List(6)
-    self.scrollbar = Scrollbar(Position(self.pos.x + 110, self.pos.y + 2),
-                               Size(2, self.dim.h - 4))
+    self.scrollbar = Scrollbar()
+    self.scrollbar.set_box(Position(self.pos.x + 110, self.pos.y + 2), Size(2, self.dim.h - 4))
     self.list.scrollbar = self.scrollbar
 
     self.on("up:single", / -> self.step(-1))

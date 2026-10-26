@@ -7,8 +7,8 @@ class Scrollbar : Component
   var count
   var visible
 
-  def init(pos, dim)
-    super(self).init(pos, dim)
+  def init()
+    super(self).init()
     self.hollow = false
     self.index = 0
     self.count = 0

@@ -21,10 +21,6 @@ end
 # The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
 # 12 by 8 field, drawn with one-pixel lines.
 class IntervalIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_hline(self.pos.x, self.pos.y + 1, 3)
     screen.draw_vline(self.pos.x + 3, self.pos.y + 1, 6)
@@ -40,10 +36,6 @@ end
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
 # each column standing from the baseline two rows higher than the one before.
 class RampedIntervalIcon : Icon
-  def init(pos, dim)
-    super(self).init(pos, dim)
-  end
-
   def draw()
     screen.draw_fillrect(self.pos.x, self.pos.y + 5, 3, 2)
     screen.draw_fillrect(self.pos.x + 4, self.pos.y + 3, 3, 4)
@@ -52,28 +44,36 @@ class RampedIntervalIcon : Icon
   end
 end
 
-# The interval chrome: a flat list of explicitly placed children — the glyph and title, the pressure
-# and the set count, and a status-plus-bar row. The glyph and the title are given to it, so a
-# subclass of the page names its own and nothing is swapped after the fact.
-class RampedIntervalChrome : Layout
+# The interval chrome: the glyph and title row, the pressure and the set count, and a
+# status-plus-bar row, laid out as fractions of the page. The glyph and the title are given to it,
+# so a subclass of the page names its own and nothing is swapped after the fact.
+class RampedIntervalChrome : AutoLayout
   var icon
   var title
   var sets
+  var status
+  var bar
 
-  def init(icon, title_text, pos, dim)
-    var half = dim.w / 2
+  def init(icon, title_text)
     self.icon = icon
-    self.icon.pos = Position(pos.x, pos.y)
-    self.title = Text(Position(pos.x + 16, pos.y + 2), Size(dim.w - 16, 9), title_text)
-    self.sets = Text(Position(pos.x + half, pos.y + 13), Size(half, 26), "")
-    super(self).init([
-      self.icon,
-      self.title,
-      AutoPressureDisplay(Position(pos.x, pos.y + 13), Size(half, 26), "pressure:target", "br", 0.25),
-      self.sets,
-      Text(Position(pos.x, pos.y + 39), Size(half, 13), "",
-           text_settings("sans", "none", "left", "center")),
-      ProgressBar(Position(pos.x + half + 8, pos.y + 41), Size(half - 8, 8), nil)
+    self.title = Text(title_text)
+    self.sets = Text("")
+    self.status = Text("", text_settings("sans", "none", "left", "center"))
+    self.bar = ProgressBar(nil)
+    super(self).init(bounds(nil, nil), [
+      AutoLayout(bounds(1, 0.25), [
+        AutoLayout(bounds(0.125, 1), [self.icon]),
+        AutoLayout(bounds(0.875, 1), [self.title])
+      ]),
+      AutoLayout(bounds(1, 0.50), [
+        AutoLayout(bounds(0.5, 1),
+                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
+        AutoLayout(bounds(0.5, 1), [self.sets])
+      ]),
+      AutoLayout(bounds(1, 0.25), [
+        AutoLayout(bounds(0.5, 1), [self.status]),
+        AutoLayout(bounds(0.5, 1), [self.bar])
+      ])
     ])
   end
 
@@ -88,8 +88,8 @@ class RampedIntervalChrome : Layout
     else
       self.sets.value = str(total_sets) + (total_sets == 1 ? " set" : " sets")
     end
-    self.children[4].value = status
-    self.children[5].value = remaining_percent
+    self.status.value = status
+    self.bar.value = remaining_percent
     super(self).draw()
   end
 end
@@ -159,7 +159,7 @@ class RampedInterval : Scene
   var chrome
 
   def init(activation)
-    super(self).init(Position.top_left(), Size.page())
+    super(self).init()
     self.routine_key = activation.routine_key
     self.phase = IntervalPhase.READY
     self.mark = 0
@@ -170,8 +170,7 @@ class RampedInterval : Scene
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
     self.init_from_settings(activation.settings_values)
-    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key), self.pos,
-                                       self.dim)
+    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key))
 
     self.on("up:double", / -> self.edit())
     self.on("ok:single", / -> self.ok())
@@ -187,7 +186,7 @@ class RampedInterval : Scene
 
   # The glyph the page draws in its chrome, the same one its registration carries.
   def icon()
-    return RampedIntervalIcon(Position(0, 0), Size(12, 8))
+    return RampedIntervalIcon()
   end
 
   # --- settings ------------------------------------------------------------
@@ -510,7 +509,7 @@ end
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
   def icon()
-    return IntervalIcon(Position(0, 0), Size(12, 8))
+    return IntervalIcon()
   end
 
   # The interval edits its own declaration, not the ramp's: the list it opens has one target and no
@@ -570,7 +569,7 @@ class Interval : RampedInterval
 end
 
 routines.register(RampedIntervalSettings("ramped_interval", "Ramped Interval",
-                                         RampedIntervalIcon(Position(0, 0), Size(12, 8)),
+                                         RampedIntervalIcon(),
                                          RampedInterval))
 routines.register(IntervalSettings("interval", "Interval",
-                                   IntervalIcon(Position(0, 0), Size(12, 8)), Interval))
+                                   IntervalIcon(), Interval))

@@ -11,21 +11,22 @@
 
 # --- the page --------------------------------------------------------------
 
-class HomeChrome
+class HomeChrome : AutoLayout
   var pressure
   var timer
 
-  def init(pos, dim)
-    var half = dim.w / 2
-    self.pressure = AutoPressureDisplay(Position(pos.x, pos.y), Size(half, dim.h),
-                                        "pressure:target", "br", 0.25)
-    self.timer = Duration(Position(pos.x + half, pos.y), Size(half, dim.h), "minutes")
+  def init()
+    self.pressure = AutoPressureDisplay("pressure:target", "br", 0.25)
+    self.timer = Duration("minutes")
+    super(self).init(bounds(nil, nil), [
+      AutoLayout(bounds(0.5, 1), [self.pressure]),
+      AutoLayout(bounds(0.5, 1), [self.timer])
+    ])
   end
 
   def draw(elapsed)
-    self.pressure.draw()
     self.timer.seconds = elapsed
-    self.timer.draw()
+    super(self).draw()
   end
 end
 
@@ -35,8 +36,8 @@ class HomeScene : Scene
   var mark
 
   def init()
-    super(self).init(Position.top_left(), Size.page())
-    self.chrome = HomeChrome(self.pos, self.dim)
+    super(self).init()
+    self.chrome = HomeChrome()
     self.settings_values = {}
     self.mark = nil
 
