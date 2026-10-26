@@ -45,7 +45,7 @@ Every scene, and where it lives:
 | `JingleEditScene` | `system/settings/jingle.be` |
 | `Interval` | `routines/3_interval.be` |
 | `RampedInterval` | `routines/2_ramped_interval.be` |
-| `RampedStatic` | `routines/ramped_static.be` |
+| `RampedStatic` | `routines/5_ramped_static.be` |
 | `Scene` — the base | `system/scene.be` |
 
 What each one answers:

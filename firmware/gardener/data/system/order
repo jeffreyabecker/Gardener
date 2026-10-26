@@ -34,5 +34,7 @@ settings/jingle.be
 settings/device.be
 # The browser's Forward opens the settings list, and its rows come from the registry.
 browser.be
+# The home scene's run, which home.be holds.
+home_machine.be
 # Last: it names browserScene in its gestures and DeviceSettings in the list it opens.
 home.be

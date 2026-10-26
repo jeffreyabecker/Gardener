@@ -96,6 +96,8 @@ names registers nothing, so it has no page, no store file and no entry in `routi
 interval cycle is the worked example: `0_ramped_interval_machine.be` is the phase machine both
 pages hold, `1_ramped_interval_chrome.be` the chrome they draw, and `2_ramped_interval.be` and
 `3_interval.be` the two pages, each with its glyph, its settings declaration and its registration.
+The static profile follows the same numbering: `4_ramped_static_machine.be` is its phase machine and
+`5_ramped_static.be` the page that holds it.
 
 ## The system in `/system`
 
@@ -134,6 +136,9 @@ value the row stands for — so a caller keeps the thing a row means in the row 
 beside it. `list_rows()` holds a row written as a two-element `[icon, title]` pair, or as a bare
 title, as a `ListRow` with no value. `set(rows)` normalizes whatever it is given and `selected_row()`
 answers the row the index names. The list draws the icon and the title and never reads the value.
+`/system/home_machine.be` is `HomeMachine`, the run the home scene holds: the phase it is in — `IDLE`
+or `RUNNING`, read from the chamber every beat — the clock the page shows beside it, and the `start`
+and `stop` commands that move it.
 
 `/system/components/` is the drawing primitives the home scene composes, one class per file:
 `component.be` is `Component` (the `Position`/`Size` box and the `inverted` flip), `icon.be` is

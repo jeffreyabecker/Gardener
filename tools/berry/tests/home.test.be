@@ -1,7 +1,7 @@
 # home.test.be — the home scene is the device's own page: it registers nothing, so the shared
-# settings walk does not cover it, and its scene cannot be built in the host harness. What it
-# declares, and the device helpers its rows are built from, are checked here; the rows themselves
-# are declaration only, and the home scene writes the device when its list commits.
+# settings walk does not cover it. What it declares, the device helpers its rows are built from, and
+# the run it holds are checked here; the rows themselves are declaration only, and the home scene
+# writes the device when its list commits.
 
 suite = "home"
 
@@ -103,3 +103,26 @@ def the_jingle_editor_steps_and_plays()
 end
 
 test("the jingle editor steps and plays", the_jingle_editor_steps_and_plays)
+
+# The home scene's run is a machine with two phases, and the phase follows the chamber rather than the
+# page: the scene the suite runner leaves on top is driven through a start and a stop, and the clock
+# is there for the run and gone afterwards.
+def the_run_has_phases()
+  var home = __rootScene
+  vacuum.target(10.0)
+  harness.beat(1)
+  assert_eq(home.machine.phase, HomePhase.IDLE, "home: a page with no run is not idle")
+  assert_nil(home.machine.elapsed(), "home: an idle page is showing a run clock")
+
+  harness.press("ok:single")
+  wait_until("home: OK did not start the run", 200,
+             / -> home.machine.phase == HomePhase.RUNNING)
+  assert_true(home.machine.elapsed() != nil, "home: a running page shows no clock")
+
+  harness.press("cancel:single")
+  wait_until("home: Cancel did not stop the run", 200,
+             / -> home.machine.phase == HomePhase.IDLE)
+  assert_nil(home.machine.elapsed(), "home: a stopped run keeps its clock")
+end
+
+test("a run has an idle and a running phase", the_run_has_phases)

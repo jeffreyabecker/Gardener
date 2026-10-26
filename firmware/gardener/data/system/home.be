@@ -9,6 +9,8 @@
 # It is the last file /system/order names: its gestures name browserScene, and the list it opens is
 # built from DeviceSettings.
 
+import string
+
 # --- the page --------------------------------------------------------------
 
 class HomeChrome : AutoLayout
@@ -33,28 +35,36 @@ end
 class HomeScene : Scene
   var chrome
   var settings_values
-  var mark
+  var machine
 
   def init()
     super(self).init()
     self.chrome = HomeChrome()
     self.settings_values = {}
-    self.mark = nil
+    self.machine = HomeMachine()
   end
 
   def activate()
     self.init_from_settings(self.stored_settings_values())
+    # The scene appears with whatever the chamber is doing, so the phase is read before it is drawn:
+    # coming back to a run the device left going shows a run, not an idle page.
+    self.machine.advance(vacuum.now_ms())
     self.draw()
   end
 
-  # OK starts or resumes the run, Cancel stops and vents, Forward held to a double opens the browser
-  # and Up held to a double opens the home scene's settings.
+  # A gesture that names a command outright — cmd:stop — is handed to the machine as it stands, with
+  # the prefix trimmed; anything else is a key, and the page maps it to the command it means. OK
+  # starts or resumes the run, Cancel stops and vents, Forward held to a double opens the browser and
+  # Up held to a double opens the home scene's settings.
   def handle(ev)
+    if string.startswith(ev, "cmd:")
+      return self.machine.handle_command(string.split(ev, ":")[1])
+    end
     if ev == "ok:single"
-      return self.start()
+      return self.machine.handle_command("start")
     end
     if ev == "cancel:single"
-      return self.cancel()
+      return self.machine.handle_command("stop")
     end
     if ev == "forward:double"
       return ux.push(browserScene)
@@ -63,6 +73,12 @@ class HomeScene : Scene
       return self.edit()
     end
     return false
+  end
+
+  # poll calls tick(now) every beat, after the press drain: the phase follows the chamber, and the
+  # clock with it.
+  def tick(now)
+    self.machine.advance(now)
   end
 
   # --- settings ------------------------------------------------------------
@@ -119,37 +135,7 @@ class HomeScene : Scene
   end
 
   def draw_page()
-    var s = vacuum.state()
-    var running = s.state == "PULL" || s.state == "HOLD"
-    if running
-      if self.mark == nil
-        self.mark = vacuum.now_ms()
-      end
-      self.chrome.draw((vacuum.now_ms() - self.mark) / 1000)
-    else
-      self.mark = nil
-      self.chrome.draw(nil)
-    end
-  end
-
-  # Cancel stops and vents the run.
-  def cancel()
-    vacuum.stop()
-    vacuum.log("default: venting")
-    return true
-  end
-
-  # OK resumes the run, unless one is already going. The machine answers for itself: with no
-  # target, no reading or a latched fault, start() refuses and nothing changes.
-  def start()
-    var s = vacuum.state()
-    if s.state == "PULL" || s.state == "HOLD"
-      return true
-    end
-    if !vacuum.start()
-      vacuum.log("default: start refused")
-    end
-    return true
+    self.chrome.draw(self.machine.elapsed())
   end
 end
 
