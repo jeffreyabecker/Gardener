@@ -41,7 +41,6 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # composition roots, the tasks, the links, the device drivers and the vendor display.
 FIRMWARE_SOURCES = [
     GARDENER / "src" / "BuzzerPlayer.cpp",
-    GARDENER / "src" / "panel" / "Overlay.cpp",
     GARDENER / "src" / "panel" / "Fonts.cpp",
     GARDENER / "src" / "routines" / "Bindings.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",

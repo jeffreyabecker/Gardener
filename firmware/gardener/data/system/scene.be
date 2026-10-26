@@ -75,7 +75,6 @@ class Scene
   def draw()
     screen.draw_fillrect(self.pos.x, self.pos.y, self.dim.w, self.dim.h, 0)
     self.draw_page()
-    screen.flush()
     self.last_draw = vacuum.now_ms()
   end
 

@@ -14,6 +14,16 @@
 # the cap is what keeps it a log line instead of a heap exhausted in one beat.
 max_frames = 8
 
+# The status band the ux component owns across the bottom of the glass: 12 rows of unit, links, run
+# state and battery. A page lays out in the area above it (Size.page()), and nothing a page draws
+# belongs here.
+overlay_band_height = 12
+
+# The Bluetooth rune, packed the way screen.draw_bitmap reads it: width, height, then one bit per
+# pixel, most-significant bit first, two bytes a row. Hex rather than a string so the 0x00 rows
+# survive the string form's NUL cut.
+bluetooth_bits = bytes().fromhex("1009010009400510014000800140051009400100")
+
 class Ux
   var frames      # [[scene, callback], ...], root first
   var pending     # the one held request, or nil
@@ -93,6 +103,7 @@ class Ux
     end
     self.guard(/ -> scene.activate(nil))
     self.apply()
+    self.flush()
     return self.depth() > 0
   end
 
@@ -103,6 +114,7 @@ class Ux
     end
     self.guard(/ -> scene.poll(now))
     self.apply()
+    self.flush()
     return self.depth() > 0
   end
 
@@ -179,6 +191,103 @@ class Ux
       raise e, m
     end
     self.polling = held
+  end
+
+  # --- the band ---------------------------------------------------------------
+
+  # The status row across the bottom, drawn after the top scene's page and before the flush, so no
+  # page has to remember it. The band is opaque: it clears its rows and redraws them on every beat.
+  def flush()
+    if self.frames.size() == 0
+      return
+    end
+    var band_y = screen.height() - overlay_band_height
+    screen.draw_fillrect(0, band_y, screen.width(), overlay_band_height, 0)
+    self.draw_unit(band_y)
+    self.draw_links(band_y)
+    self.draw_state(band_y)
+    self.draw_battery(band_y)
+    screen.flush()
+  end
+
+  def draw_unit(band_y)
+    screen.draw_text(2, band_y + 2, 1, false, screen.unit().suffix)
+  end
+
+  # Both cells say what is true now rather than what was true when the page was painted: the band is
+  # cleared on the way to every frame, and an icon is drawn only while its link is up.
+  def draw_links(band_y)
+    var links = device.links()
+    if links.serial
+      screen.draw_glyph(53, band_y + 2, 0x15)
+    end
+    if links.bluetooth
+      screen.draw_bitmap(66, band_y, bluetooth_bits)
+    end
+  end
+
+  # One glyph per state, from the built-in face's symbol range, so the mode reads without the word
+  # beside it. The two states that move the chamber blink — lit for 65% of a 1000 ms period — so the
+  # band says a machine is working rather than stopped.
+  def draw_state(band_y)
+    var s = vacuum.state()
+    var lit = (vacuum.now_ms() % 1000) < 650
+    if s.state == "PULL"
+      if lit
+        screen.draw_glyph(103, band_y + 2, 0x1E)
+      end
+    elif s.state == "VENT"
+      if lit
+        screen.draw_glyph(103, band_y + 2, 0x1F)
+      end
+    elif s.state == "HOLD"
+      screen.draw_glyph(103, band_y + 2, 0x0A)
+    elif s.state == "FAULT"
+      screen.draw_glyph(103, band_y + 2, 0x58)
+    else
+      screen.draw_glyph(103, band_y + 2, 0x08)
+    end
+  end
+
+  # The icon is the whole of it: the number is on the wire, so the panel does not spend characters
+  # on it. No gauge draws the slashed outline; below the low threshold the fill blinks.
+  def draw_battery(band_y)
+    var s = vacuum.state()
+    if s.batt == -1
+      self.empty_battery_icon(screen.width() - 12, band_y + 2)
+      return
+    end
+    var blink_off = s.batt_low && ((vacuum.now_ms() / 500) % 2 == 0)
+    self.battery_icon(screen.width() - 12, band_y + 2, blink_off ? 0 : s.batt)
+  end
+
+  def battery_icon(x, y, percent)
+    # The icon owns its whole footprint, so it erases it first: a page may have drawn anything
+    # under it, and filling over the page without clearing would read as a battery with the page's
+    # pixels still visible inside it.
+    screen.draw_fillrect(x, y, 12, 7, 0)
+    screen.draw_rect(x, y, 10, 7, 1)
+    screen.draw_fillrect(x + 10, y + 2, 2, 3, 1)
+    if percent == 0
+      return
+    end
+    var fill = 6 * percent / 100
+    if fill < 1
+      fill = 1
+    end
+    if fill > 6
+      fill = 6
+    end
+    screen.draw_fillrect(x + 2, y + 2, fill, 3, 1)
+  end
+
+  # No gauge fitted: the battery's outline with a slash through it, so the cell says there is no
+  # battery rather than no charge.
+  def empty_battery_icon(x, y)
+    screen.draw_fillrect(x, y, 12, 7, 0)
+    screen.draw_rect(x, y, 10, 7, 1)
+    screen.draw_fillrect(x + 10, y + 2, 2, 3, 1)
+    screen.draw_line(x + 1, y + 1, x + 8, y + 5, 1)
   end
 end
 

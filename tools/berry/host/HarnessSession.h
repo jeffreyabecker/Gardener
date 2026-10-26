@@ -17,7 +17,6 @@
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
 #include "hal/impl/AdafruitDisplay.h"
-#include "panel/Overlay.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
 #include "storage/Jingles.h"
@@ -195,6 +194,9 @@ class HarnessPanel : public PanelContext {
   BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
+  // The host models a device with both links up, so the band shows both icons.
+  bool serialConnected() const override { return true; }
+  bool bluetoothConnected() const override { return true; }
   // The host has no queue to fill, so the command is always taken.
   bool post(const MachineCommand& command) override { return postMachineCommand(command); }
 
@@ -274,7 +276,6 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;
-  Overlay overlay_;
   Routines routines_;
   HarnessPanel context_;
   bvm* vm_ = nullptr;

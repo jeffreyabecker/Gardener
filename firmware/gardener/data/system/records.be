@@ -10,15 +10,23 @@
 # first of its arguments that is not nil, which turns a stored-or-default choice into one line.
 
 class reading
-  var pressure_kpa, target, duty, floor, min, state, fault, batt, sensor_ok
+  var pressure_kpa, target, duty, floor, min, state, fault, batt, batt_low, sensor_ok
 end
 
 class unit
   var name, suffix, per_kpa, whole_step, decimals
 end
 
+class links
+  var serial, bluetooth
+end
+
 class bounds
   var w, h
+  def init(w, h)
+    self.w = w
+    self.h = h
+  end
 end
 class jingle
   var key, full_title, short_title, notes

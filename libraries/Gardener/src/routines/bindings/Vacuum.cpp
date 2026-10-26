@@ -84,6 +84,7 @@ int vacuumState(bvm* vm) {
   setText(vm, record, "fault", system.faultCode());
   // -1 rather than 0 when no gauge is fitted, so "no battery" is not "flat battery".
   setInt(vm, record, "batt", battery.present() ? (bint)battery.percent() : (bint)-1);
+  setFlag(vm, record, "batt_low", battery.low());
   setFlag(vm, record, "sensor_ok",
           system.sensor().present() && system.sensor().readingValid());
   be_return(vm);

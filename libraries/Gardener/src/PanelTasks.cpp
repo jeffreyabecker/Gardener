@@ -96,9 +96,6 @@ void panelTask(void* arg) {
     state.context.battery().update(now);
     state.context.buzzer().update(now);
 
-    // The overlay reports the ways in; the interface owner publishes the two booleans, and the
-    // page redraws itself on the refresh cadence.
-    state.context.overlay().setConnections(serialConnected, bleConnected);
     if (state.home) state.home->update();
 
     vTaskDelay(pdMS_TO_TICKS(10));

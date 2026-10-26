@@ -94,8 +94,8 @@ class Panel : public Machine, public PanelContext {
   GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;
-  // The device's documents, ahead of the overlay that reads the unit and of the interpreter that
-  // is installed over the jingle library.
+  // The device's documents, ahead of the display and of the interpreter that is installed over the
+  // jingle library.
   Config config_;
   JinglesConfig jingles_;
   Display* display_;

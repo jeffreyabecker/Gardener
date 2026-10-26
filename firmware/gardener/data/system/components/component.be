@@ -34,7 +34,7 @@ class Size
   end
 
   static def page()
-    return Size(screen.page_width(), screen.page_height())
+    return Size(screen.page_width(), screen.page_height() - overlay_band_height)
   end
   static def screen()
     return Size(screen.width(), screen.height())

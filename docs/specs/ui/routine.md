@@ -417,7 +417,7 @@ below zero. A nullable duration cleared from the minutes stage advances to the s
 `nil`, and the second OK keeps the clear.
 
 A `pressure` is stored in kPa, the machine's unit, and shown and stepped in the unit on the glass:
-`12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the overlay's, printed in its
+`12.5` in psi, `0.12` in inHg or `40` in mmHg. The unit itself is the band's, printed in the
 bottom band rather than beside any number, so a page or the value scene draws the value alone.
 Up/Down moves it by `step` whole display steps — one psi, one inHg, ten mmHg — and every value goes
 through `vacuum.clamp()`, whether it was read, stepped or restored, so the scene cannot produce a

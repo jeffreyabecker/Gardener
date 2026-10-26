@@ -33,6 +33,10 @@ class PanelContext {
   // The interpreter's own files: the modules and routines it compiles, and the data it reads.
   virtual Library& library() = 0;
   virtual Logger& logger() = 0;
+  // The two ways a controller can reach the device, as the interface owner last reported them. The
+  // overlay's band reports presence: a connected link that has not acquired control still counts.
+  virtual bool serialConnected() const = 0;
+  virtual bool bluetoothConnected() const = 0;
   // The machine's command queue, through the panel's own outbox, so a command the queue cannot
   // take waits for the panel's next beat rather than being dropped.
   virtual bool post(const MachineCommand& command) = 0;

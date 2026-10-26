@@ -125,6 +125,16 @@ int deviceBluetooth(bvm* vm) {
   be_return(vm);
 }
 
+// The two ways a controller can reach the device, as the interface owner last reported them: the
+// band's serial and Bluetooth icons light while each link is up, whether or not it has control.
+int deviceLinks(bvm* vm) {
+  const int record = beginRecord(vm, "links");
+  if (record < 0) be_return_nil(vm);
+  setFlag(vm, record, "serial", context->serialConnected());
+  setFlag(vm, record, "bluetooth", context->bluetoothConnected());
+  be_return(vm);
+}
+
 // The selected jingle's identifier, or "" when none has been chosen. The list resolves an empty or
 // unknown value to its first entry; the system page writes one of the identifiers it reads there.
 int deviceJingle(bvm* vm) {
@@ -258,6 +268,7 @@ const bnfuncinfo DeviceLibrary[] = {
     {"target", deviceTarget},
     {"set_target", deviceSetTarget},
     {"bluetooth", deviceBluetooth},
+    {"links", deviceLinks},
     {"jingle", deviceJingle},
     {"set_jingle", deviceSetJingle},
     {"all_jingles", deviceAllJingles},

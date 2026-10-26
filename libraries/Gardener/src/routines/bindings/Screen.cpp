@@ -224,6 +224,33 @@ int screenBounds(bvm* vm) {
   be_return(vm);
 }
 
+// One glyph of the built-in 5x7 face by its code, for the control-range symbols a page cannot
+// reach through draw_text: print() reads them as control characters. Size defaults to 1.
+int screenGlyph(bvm* vm) {
+  if (be_top(vm) < 3) {
+    be_raise(vm, "type_error", "screen.draw_glyph(x, y, code[, size])");
+  }
+  const uint8_t size = (be_top(vm) >= 4 && !be_isnil(vm, 4)) ? (uint8_t)argInt(vm, 4) : 1;
+  panel().glyph(argInt(vm, 1), argInt(vm, 2), (uint8_t)argInt(vm, 3), size);
+  be_return_nil(vm);
+}
+
+// A packed one-bit image: bits[0] is the width, bits[1] the height, then the pixels row-major,
+// most-significant bit first, each row padded to a whole byte. Ink bits are drawn; paper bits leave
+// what is under them.
+int screenBitmap(bvm* vm) {
+  if (be_top(vm) < 3 || !be_isbytes(vm, 3)) {
+    be_raise(vm, "type_error", "screen.draw_bitmap(x, y, bytes)");
+  }
+  size_t length = 0;
+  const uint8_t* bits = static_cast<const uint8_t*>(be_tobytes(vm, 3, &length));
+  if (bits == nullptr) {
+    be_raise(vm, "type_error", "screen.draw_bitmap(x, y, bytes)");
+  }
+  panel().bitmap(argInt(vm, 1), argInt(vm, 2), bits);
+  be_return_nil(vm);
+}
+
 // The unit the panel prints, as the same fields panel/Units.h holds: a page formats and steps a
 // target in the unit on the glass without carrying a table of its own.
 int screenUnit(bvm* vm) {
@@ -261,6 +288,8 @@ const bnfuncinfo ScreenLibrary[] = {
     {"draw_fillrotatedrect", screenFillRotatedRect},
     {"draw_text", screenText},
     {"text_bounds", screenBounds},
+    {"draw_glyph", screenGlyph},
+    {"draw_bitmap", screenBitmap},
     {"width", screenWidth},
     {"height", screenHeight},
     {"page_width", screenPageWidth},

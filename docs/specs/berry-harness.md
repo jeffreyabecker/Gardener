@@ -112,15 +112,15 @@ is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `
 A captured GIF also carries the gesture that drove it: each press the driver injects is shown as a
 full-width strip across the top of the frame it lands on — the key and its form, `OK`, `OK×2`,
 `CANCEL 5s` — so a tutorial can show the button as the viewer watches the run. The strip is a
-host-only callout drawn over the captured frame; the page and the overlay never see it. It stays
+host-only callout drawn over the captured frame; the page and the band never see it. It stays
 for one beat, behind `kGestureCalloutBeats` in `tools/berry/host/GestureCallout.h`, which is the
 one line to change to keep the key on screen longer.
 
 `gfx/Adafruit_GFX.h` is a shim that lets those font headers compile without `Arduino.h`.
 
-Saving keeps the band the real `Overlay.cpp` draws: rows 52 to 63 are the device's own status row —
-the unit, the serial and Bluetooth icons, the run-state icon and the battery — over whatever the
-page put there.
+Saving keeps the band the `ux` component draws: rows 52 to 63 are the device's own status row — the
+unit, the serial and Bluetooth icons, the run-state icon and the battery — over whatever the page
+put there.
 
 The frame holds one bit and no display inversion, which is the panel's own depth and face.
 

@@ -14,9 +14,9 @@ it registers is [routine.md](./routine.md).
 The panel is `screen.width()` by `screen.height()`, one bit per pixel, origin top left. Coordinates
 are whole pixels. Nothing reaches the glass until `screen.flush()`.
 
-The overlay owns the bottom 12 rows — the unit, the two ways in, the run state and the battery — and
-is drawn last, on top of whatever a page drew there. A page lays out in the
-`screen.page_width()` × `screen.page_height()` area above it.
+The `ux` component owns the bottom 12 rows — the unit, the two ways in, the run state and the
+battery — and draws them last, on top of whatever a page drew there. A page lays out in
+`Size.page()`, the panel less that band.
 
 ## The box
 
@@ -27,7 +27,7 @@ that draws internal subcomponents may build them with a nil box and stamp the bo
 
 `Position` and `Size` carry the helpers a page uses to state a box: `Position.top_left()`,
 `Position.top(y)`, `Position.left(x)`, `Size.width(s)`, `Size.height(s)`, `Size.page()` (the area
-above the overlay) and `Size.screen()`.
+above the band) and `Size.screen()`.
 
 `inverted`, when true, flips the whole box as the last thing a draw does: everything the component
 drew inside the box reads as paper on ink — a selected row, a cursor or a focused readout. Every
@@ -75,7 +75,7 @@ using `Text`'s fit.
 - `pressure_kpa` — the main reading in kPa, set before `draw()`; `draw()` takes no arguments.
 - A nil reading draws `--`.
 - The number is the kPa value scaled by the unit's `per_kpa`, with the unit's decimals.
-- The number carries no suffix of its own; the unit is the overlay's, in the bottom band.
+- The number carries no suffix of its own; the unit is the band's, in the bottom band.
 - `family`, `style` — the main number's face, as in `Text`.
 - `secondary_pressure` — a second pressure in kPa, or nil (default), drawn per `secondary_position`
   and `size_hint`.

@@ -57,6 +57,7 @@ routine registers in [routine.md](./routine.md).
 | `state` | string | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT`. A `VENT` from `stop()` ends at `IDLE`; a target vent returns to `PULL`/`HOLD` |
 | `fault` | string | the latched code (`sensor`, `vent_timeout`, `no_progress`, `overshoot`), or `""` |
 | `batt` | int | percent, or **-1 when no gauge is fitted** |
+| `batt_low` | bool | the gauge's low-charge threshold is met, so the band's battery blink is on |
 | `sensor_ok` | bool | a valid pressure reading is available |
 
 Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
@@ -101,14 +102,17 @@ Coordinates are panel pixels, origin top left. Nothing reaches the glass until `
 | `screen.draw_fillrotatedrect(cx, cy, w, h, angle [, color])` |
 | `screen.draw_text(x, y, size, inverted, text [, font])` |
 | `screen.text_bounds(text, size [, font])` |
+| `screen.draw_glyph(x, y, code [, size])` |
+| `screen.draw_bitmap(x, y, bytes)` |
 | `screen.width()` |
 | `screen.height()` |
 | `screen.page_width()` |
 | `screen.page_height()` |
 | `screen.flush()` |
 
-`width()` and `height()` answer the panel's size in pixels. `page_width()` and `page_height()`
-answer the area a page lays out within — the panel less the overlay's status band — so a layout
+`width()` and `height()` answer the panel's size in pixels, and `page_width()` and `page_height()`
+answer the same two numbers: the status band is the `ux` component's own, so the panel surface no
+longer reserves it. A page lays out in `Size.page()`, which is the panel less the band, so a layout
 derives its boxes from the glass it owns rather than subtracting a band it does not.
 
 ### Colours
@@ -173,25 +177,31 @@ screen.draw_text(box.w + 4, 41, 1, false, "TGT", "sansbold9")
 | `w` | int | the ink box width, in pixels |
 | `h` | int | the ink box height, in pixels |
 
+`draw_glyph(x, y, code[, size])` draws one glyph of the built-in 5x7 face by its code — the way the
+band reaches the face's control-range symbols, which `draw_text`'s printer reads as control
+characters. `size` is 1 when omitted. `draw_bitmap(x, y, bytes)` draws a packed one-bit image:
+`bytes[0]` is the width, `bytes[1]` the height, then the pixels row-major, most-significant bit
+first, each row padded to a whole byte. Ink bits are drawn; paper bits leave what is under them.
+
 `screen.unit()` answers a `unit` record for the unit in force, and `device.units()` answers one for
 every unit; read with a dot:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
-| `suffix` | string | what the overlay prints as the glass's unit, at the left of the bottom band |
+| `suffix` | string | what the band prints as the glass's unit, at the left of the bottom band |
 | `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
 | `whole_step` | real | one "whole" step in the panel's unit, for an editor |
 | `decimals` | int | digits the unit's fine step can express |
 
 The same numbers live in `panel/Units.h`, so a routine and the panel's own formatting cannot
 disagree about what a psi is. `suffix` is read to name a unit being chosen, not to append to a
-reading: the overlay prints the glass's unit itself.
+reading: the band prints the glass's unit itself.
 
-### The overlay owns the bottom band
+### The ux component owns the bottom band
 
-The bottom 12 rows of the glass, `y` 52–63, are the overlay's. It clears them and draws them last
-on every `flush()`, so a routine never has to. Left to right:
+The bottom 12 rows of the glass, `y` 52–63, are the `ux` component's. It clears them and draws them
+last, before each beat's `flush()`, so a routine never has to. Left to right:
 
 | Field | `x` |
 | --- | --- |
@@ -226,6 +236,7 @@ radio is not a setting: `device.bluetooth()` reports whether the image was built
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(pressure_kpa)` | — | stores a new target in `/cfg/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
 | `device.bluetooth()` | `bool` | whether this build has the radio; `true` unless the image was compiled without it |
+| `device.links()` | a `links` record | the two ways in, `serial` and `bluetooth`, each `true` while its link is up |
 | `device.jingle()` | string | the selected jingle identifier, or `""` when none has been chosen |
 | `device.set_jingle(id)` | — | stores the identifier as `[device] jingle` in `/cfg/settings.ini` |
 | `device.all_jingles()` | list of `jingle` records | every jingle this build can play, in file order |

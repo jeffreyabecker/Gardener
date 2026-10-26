@@ -89,8 +89,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
           [](BitmapPanel& panel) -> bool { return panel.begin(); },
           BitmapPanel::Width, BitmapPanel::Height),
       buzzer_(buzzerPart_),
-      overlay_(&display_, &battery_, &vacuum_, &config_),
-      context_(overlay_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      context_(display_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -104,10 +103,6 @@ bool HarnessSession::begin() {
   battery_.begin();
   buzzerPart_.begin();
   buzzer_.begin();
-  overlay_.begin();
-  // The host models a device with both links up, so the band shows the serial and Bluetooth
-  // icons the panel task would set them for.
-  overlay_.setConnections(true, true);
   // Machine::begin's order: the parts first, then the control law over them.
   sensor_.begin();
   pump_.begin();

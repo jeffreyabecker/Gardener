@@ -5,8 +5,9 @@
 
 // The panel the check draws on: a 128 x 64 one-bit frame behind the Adafruit_GFX verb set that
 // AdafruitDisplay forwards to. The firmware's Display chain is unchanged above it — the real
-// Overlay, the real AdafruitDisplay — so a page that draws here takes the same path it takes on the
-// device, and the only thing that differs is what is behind the last call.
+// AdafruitDisplay — so a page that draws here takes the same path it takes on the device, and the
+// only thing that differs is what is behind the last call. The status band above the page is the
+// ux component's, drawn in Berry like the page itself.
 //
 // The primitives and the text path are the port frame.c held: they follow the installed Adafruit
 // GFX closely enough that a page's face choice, its measured box and its pixels are the panel's.
