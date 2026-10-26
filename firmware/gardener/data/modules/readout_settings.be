@@ -4,7 +4,7 @@
 # in a routine's document. The rows only declare them — the readout reads the device to fill the set
 # in and writes it back when the list commits — and the editors are the settings folder's.
 #
-# It loads after jingles.be, which provides the jingle row, and before ui.be, whose ReadoutScene
+# It loads after jingles_edit.be, which provides the jingle row, and before ui.be, whose ReadoutScene
 # opens this set and commits it back to the device.
 
 # The row names a unit the way the glass prints it, so the row and its editor show the same label the

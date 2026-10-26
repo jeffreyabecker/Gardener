@@ -458,6 +458,6 @@ Registering the same key twice is one routine: the later file wins. The title is
 shows, and a routine without one shows its key; an icon is optional too, and a routine without one,
 or one whose icon is `nil`, is a text-only row. The device's own scenes — the readout in
 `/modules/ui.be`, the settings rows it opens in `/modules/readout_settings.be` and
-`/modules/jingles.be`, the browser in `/modules/browser.be` — are not registered at all; they are
+`/modules/jingles_edit.be`, the browser in `/modules/browser.be` — are not registered at all; they are
 well-known scenes the system pushes directly. There is no fixed number of routines: the registry is a
 Berry list, so it grows as files register.

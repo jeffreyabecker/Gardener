@@ -8,7 +8,7 @@
 #
 # It loads after browser.be, whose `browserScene` its gestures name, and after readout_settings.be,
 # whose `ReadoutSettings` the list it opens is built from; the jingle row that list offers is
-# jingles.be.
+# jingles_edit.be.
 
 # --- the page --------------------------------------------------------------
 

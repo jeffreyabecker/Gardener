@@ -196,12 +196,13 @@ file, or move the class into the file that uses it. Define classes and functions
 constructing them to the page that uses them.
 
 The device's own scenes ship in `/modules/`, one concern per file: `/modules/ui.be` is the readout,
-`/modules/readout_settings.be` the settings list it opens, `/modules/jingles.be` the library face the
-jingle row in that list is drawn from, and `/modules/browser.be` the routine browser, whose instance
-`browserScene` that file builds before `ui.be` compiles and names it. Loaded in the alphabetical
-order the folder gives — `browser`, `jingles`, `readout_settings`, `ui` — each is a global by the
-time the file that names it compiles. The browser file also defines `RoutineActivation`, the record a
-launch hands a routine's class: the routine key and the clean settings map.
+`/modules/readout_settings.be` the settings list it opens, `/modules/jingles_edit.be` the library face
+the jingle row in that list is drawn from, and `/modules/browser.be` the routine browser, whose
+instance `browserScene` that file builds before `ui.be` compiles and names it. Loaded in the
+alphabetical order the folder gives — `browser`, `jingles_edit`, `readout_settings`, `ui` — each is a
+global by the time the file that names it compiles. The browser file also defines
+`RoutineActivation`, the record a launch hands a routine's class: the routine key and the clean
+settings map.
 None of them registered. The readout holds a set of its own and opens the same list a page does, over
 `ReadoutSettings`: the target it works to, the unit it prints, the jingle it finishes with and the
 radio as a build fact. Every one of those is a device setting rather than a document, so the readout

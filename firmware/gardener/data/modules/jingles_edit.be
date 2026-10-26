@@ -1,4 +1,4 @@
-# jingles.be — the jingle library as a page sees it: the lookups a row makes of
+# jingles_edit.be — the jingle library's row as an editor: the lookups a row makes of
 # `device.all_jingles()` and the choice pair that auditions what it shows.
 #
 # It loads after browser.be and before readout_settings.be, whose ReadoutSettings builds the jingle
