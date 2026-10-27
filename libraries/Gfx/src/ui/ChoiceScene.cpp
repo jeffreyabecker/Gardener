@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "gfx/Text.h"
 #include "ui/Drawing.h"
 #include "ui/Layout.h"
 
@@ -17,14 +16,6 @@ constexpr int16_t Row = 8;
 constexpr int16_t BarWidth = 2;
 constexpr int16_t BarGap = 2;
 constexpr int16_t BarInset = 2;
-
-// A string centred across and down the canvas it is drawn on, at the built-in face.
-void drawCentred(Canvas& canvas, const char* value) {
-  const shapes::TextBox ink = shapes::measureText(nullptr, value, 1);
-  const int16_t x = static_cast<int16_t>((canvas.width() - ink.width) / 2);
-  const int16_t y = static_cast<int16_t>((canvas.height() - ink.height) / 2);
-  text(Rect(x, y, ink.width, ink.height), value, nullptr, 1)(canvas);
-}
 
 // One row of the window: the entry's own paint, or its title centred when it has none, inverted
 // across the whole of the row when it is the entry showing.

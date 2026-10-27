@@ -49,6 +49,25 @@ void aTextPastItsCanvasIsCut() {
   expectEq(display.inkCount(6, 0, 6, 8), 0, "the rest is cut at the canvas's edge");
 }
 
+void aStringIsCentredOnItsCanvas() {
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, 100, 20));
+  drawCentred(band, "A");
+  const shapes::TextBox ink = shapes::measureText(nullptr, "A", 1);
+  const int16_t x = static_cast<int16_t>((100 - ink.width) / 2);
+  const int16_t y = static_cast<int16_t>((20 - ink.height) / 2);
+  expect(display.anyInk(x, y, ink.width, ink.height), "the string landed centred");
+  expectEq(display.inkCount(0, 0, 100, y), 0, "and nothing was drawn above it");
+
+  reset();
+  drawCentred(band, "A", nullptr, 2);
+  const shapes::TextBox large = shapes::measureText(nullptr, "A", 2);
+  const int16_t largeX = static_cast<int16_t>((100 - large.width) / 2);
+  const int16_t largeY = static_cast<int16_t>((20 - large.height) / 2);
+  expect(display.anyInk(largeX, largeY, large.width, large.height),
+         "the scale it is given is the scale it centres at");
+}
+
 void anIconDrawsInItsBox() {
   reset();
   icon(Rect(30, 20, 12, 8), fill())(canvas);
@@ -131,6 +150,7 @@ void addDrawingCases(std::vector<Case>& cases) {
   cases.push_back({"a text measures a compiled face", aTextMeasuresACompiledFace});
   cases.push_back({"a text draws at its box", aTextDrawsAtItsBox});
   cases.push_back({"a text past its canvas is cut", aTextPastItsCanvasIsCut});
+  cases.push_back({"a string is centred on its canvas", aStringIsCentredOnItsCanvas});
   cases.push_back({"an icon draws in its box", anIconDrawsInItsBox});
   cases.push_back({"a progress bar draws at its ends", aProgressBarDrawsAtItsEnds});
   cases.push_back(

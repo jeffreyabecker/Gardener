@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "gfx/Shapes.h"
-#include "gfx/Text.h"
 #include "ui/Drawing.h"
 #include "ui/Layout.h"
 
@@ -25,14 +23,6 @@ constexpr int16_t SettingsChrome = 2 * (SettingsRow + SettingsGap);
 constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
-
-// A string centred across and down the canvas it is drawn on, at the built-in face.
-void drawCentred(Canvas& canvas, const char* value) {
-  const shapes::TextBox ink = shapes::measureText(nullptr, value, 1);
-  const int16_t x = static_cast<int16_t>((canvas.width() - ink.width) / 2);
-  const int16_t y = static_cast<int16_t>((canvas.height() - ink.height) / 2);
-  text(Rect(x, y, ink.width, ink.height), value, nullptr, 1)(canvas);
-}
 
 }  // namespace
 

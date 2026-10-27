@@ -35,6 +35,12 @@ const char* durationText(DurationFormat format, int32_t seconds, bool known, cha
 // NUL-terminated run the caller keeps alive for as long as the draw runs.
 Paint text(Rect box, const char* value, const Font* face = nullptr, uint8_t scale = 1);
 
+// A string centred across and down the canvas it is drawn on, at the face and scale it is given —
+// what a band or a row that holds one string wants, where its own extent is the box. nullptr is the
+// built-in 5x7, and the string is a NUL-terminated run the caller keeps alive for as long as the
+// call runs.
+void drawCentred(Canvas& canvas, const char* value, const Font* face = nullptr, uint8_t scale = 1);
+
 // A glyph drawn inside `box` by `glyph`, which draws its ink in its own coordinates.
 Paint icon(Rect box, Paint glyph);
 

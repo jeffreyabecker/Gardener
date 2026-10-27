@@ -68,6 +68,15 @@ Paint text(Rect box, const char* value, const Font* face, uint8_t scale) {
   };
 }
 
+void drawCentred(Canvas& canvas, const char* value, const Font* face, uint8_t scale) {
+  const char* string = value == nullptr ? "" : value;
+  if (scale == 0) scale = 1;
+  const shapes::TextBox ink = shapes::measureText(face, string, scale);
+  const int16_t x = static_cast<int16_t>((canvas.width() - ink.width) / 2);
+  const int16_t y = static_cast<int16_t>((canvas.height() - ink.height) / 2);
+  text(Rect(x, y, ink.width, ink.height), string, face, scale)(canvas);
+}
+
 Paint icon(Rect box, Paint glyph) {
   return [box, glyph](Canvas& canvas) {
     Canvas own = canvas.child(box);

@@ -283,6 +283,84 @@ void aChoiceBarShowsWhereTheWindowIs() {
   expectEq(display.inkCount(126, 2, 2, 4), 0, "a window of every entry carries no scrollbar");
 }
 
+// --- the duration -----------------------------------------------------------
+
+// A duration scene with the hooks it answers opened up, so a case can step, switch stage and draw.
+class DurationProbe : public DurationScene {
+ public:
+  using DurationScene::DurationScene;
+  using EditorScene::nudge;
+  using EditorScene::pageContents;
+
+  bool press(const char* gesture) { return handle(gesture); }
+  const char* caption() { return hint(); }
+};
+
+void aDurationStepsMinutesThenSeconds() {
+  NoGestures gestures;
+  String label("Hold");
+  DurationProbe duration(gestures, label, 90, 5, 0, 3600, false);
+  expectText(duration.text().c_str(), "1m30s", "the seconds print compact");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "2m30s", "the minutes stage steps whole minutes");
+  duration.press("forward:single");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "2m35s", "the seconds stage steps the setting's step");
+  duration.nudge(-1);
+  expectText(duration.text().c_str(), "2m30s", "and down takes it back");
+  duration.press("back:single");
+  duration.nudge(-1);
+  expectText(duration.text().c_str(), "1m30s", "back returns to the minutes stage");
+}
+
+void aDurationHoldsItsBounds() {
+  NoGestures gestures;
+  String label("Hold");
+  DurationProbe duration(gestures, label, 30, 60, 120, 180, false);
+  expectText(duration.text().c_str(), "30s", "the value opens as the setting gave it");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "2m", "a step from below the floor lands on it");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "3m", "and a step inside the bounds lands on its own");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "3m", "a step past the ceiling is held to it");
+  expectText(duration.caption(), "\x1E/\x1F MIN  \x1A=NEXT", "the minutes stage says Forward next");
+  duration.press("forward:single");
+  expectText(duration.caption(), "\x1E/\x1F SEC  OK=SAVE", "the seconds stage says OK saves");
+}
+
+void aNullableDurationHoldsNothing() {
+  NoGestures gestures;
+  String label("Hold");
+  DurationProbe duration(gestures, label, NAN, 5, 10, 3600, true);
+  expectText(duration.text().c_str(), "--", "nothing prints dashes");
+  expectEq(duration.hasValue(), 0, "and holds no value");
+  duration.nudge(-1);
+  expectEq(duration.hasValue(), 0, "down at nothing stays nothing");
+  duration.nudge(1);
+  expectText(duration.text().c_str(), "10s", "up from nothing enters the floor");
+  duration.nudge(-1);
+  expectEq(duration.hasValue(), 0, "down at the floor clears back to nothing");
+}
+
+void aDurationBandInvertsTheStage() {
+  NoGestures gestures;
+  String label("Hold");
+  DurationProbe duration(gestures, label, 90, 5, 0, 3600, false);
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
+  duration.pageContents()(band);
+  expect(display.inkCount(20, 10, 24, 16) > display.inkCount(78, 10, 36, 16),
+         "the minutes field is inverted while it is stepped");
+  expect(display.anyInk(78, 10, 36, 16), "and the seconds field drew its title");
+
+  duration.press("forward:single");
+  reset();
+  duration.pageContents()(band);
+  expect(display.inkCount(78, 10, 36, 16) > display.inkCount(20, 10, 24, 16),
+         "the inversion follows the stage to the seconds");
+}
+
 // --- the editor page --------------------------------------------------------
 
 // The editor page itself, with a kind that draws nothing in the middle band.
@@ -328,6 +406,10 @@ void addEditorCases(std::vector<Case>& cases) {
       {"a choice band prints the title without a paint", aChoiceBandPrintsTheTitleWithoutAPaint});
   cases.push_back({"a choice band prints dashes for nothing", aChoiceBandPrintsDashesForNothing});
   cases.push_back({"a choice bar shows where the window is", aChoiceBarShowsWhereTheWindowIs});
+  cases.push_back({"a duration steps minutes then seconds", aDurationStepsMinutesThenSeconds});
+  cases.push_back({"a duration holds its bounds", aDurationHoldsItsBounds});
+  cases.push_back({"a nullable duration holds nothing", aNullableDurationHoldsNothing});
+  cases.push_back({"a duration band inverts the stage", aDurationBandInvertsTheStage});
   cases.push_back({"a bool toggles and reaches nothing", aBoolTogglesAndReachesNothing});
   cases.push_back({"a bool switch inverts the state showing", aBoolSwitchInvertsTheStateShowing});
   cases.push_back({"a bool switch shows the nothing first", aBoolSwitchShowsTheNothingFirst});

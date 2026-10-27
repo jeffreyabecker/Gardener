@@ -16,6 +16,7 @@
 #include "ui/BoolScene.h"
 #include "ui/ChoiceScene.h"
 #include "ui/Drawing.h"
+#include "ui/DurationScene.h"
 #include "ui/EditorScene.h"
 #include "ui/GestureQueue.h"
 #include "ui/Layout.h"
