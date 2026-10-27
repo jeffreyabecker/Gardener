@@ -1,0 +1,55 @@
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include <functional>
+
+#include "gfx/Canvas.h"
+#include "gfx/Font.h"
+#include "gfx/Rect.h"
+
+namespace gardener::gfx::ui {
+
+// The two colours a component draws in, whichever layout the frame has: a Gray8 frame writes the
+// byte, a Packed1 one sets a bit for anything at or above 128.
+constexpr uint8_t Ink = 255;
+constexpr uint8_t Paper = 0;
+
+// A draw the caller runs on the canvas it is drawing on: the box is closed over, the content is
+// drawn inside it, and a write past its edge is clipped rather than painted over its neighbour. By
+// reference because a Canvas is neither copyable nor movable.
+using Paint = std::function<void(Canvas&)>;
+
+// The largest unit a duration shows.
+enum class DurationFormat : uint8_t { Minutes, Seconds, Hours };
+
+// The text a count of seconds prints in a format, written into `out`, which the caller keeps:
+// `4m30s` for minutes, `30s` for seconds, `1h2m3s` for hours, and `--` for a count that is not
+// known. A count of zero or less is `0s` in every format.
+const char* durationText(DurationFormat format, int32_t seconds, bool known, char* out,
+                         size_t capacity);
+
+// A string at the face the caller named, drawn from the top of `box`. nullptr is the built-in 5x7,
+// and `scale` is the size the face is drawn at, 1 for the face as designed. The string is a
+// NUL-terminated run the caller keeps alive for as long as the draw runs.
+Paint text(Rect box, const char* value, const Font* face = nullptr, uint8_t scale = 1);
+
+// A glyph drawn inside `box` by `glyph`, which draws its ink in its own coordinates.
+Paint icon(Rect box, Paint glyph);
+
+// A framed bar filled to a percentage: the outline is `box` and the fill is its inside. A value
+// outside 0 … 100 is held to the end it passed.
+Paint progressBar(Rect box, float value);
+
+// The thumb that shows where a window sits in a list, sized and placed from the index showing, the
+// count of rows and the rows that fit. `hollow` inverts the track above and below the thumb instead
+// of drawing a frame and a filled thumb. A count of none draws nothing.
+Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool hollow = false);
+
+// Whole seconds formatted in the panel's units of time and drawn as the text they print. A count
+// that is not known draws `--`.
+Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* face = nullptr,
+               bool known = true);
+
+}  // namespace gardener::gfx::ui
