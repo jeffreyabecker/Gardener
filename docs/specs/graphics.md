@@ -94,7 +94,35 @@ passes an extent reaching outside the panel owns the out-of-bounds write that fo
 
 A canvas holds the drawing state: the buffer, the turn it draws at, and the rectangle of the panel
 it has written since the last flush. It is therefore neither copyable nor movable — a copy would be
-a second set of writes to the same buffer, and only one of the two could be flushed.
+a second set of writes to the same buffer, and only one of the two could be flushed. The one way to
+have a second canvas over the same frame is `child`, below, and it shares that rectangle rather
+than keeping one of its own.
+
+### child
+
+```cpp
+Canvas child(Rect area) const
+```
+
+A canvas over part of this one: the same buffer, the same panel, the same layout, clipped to `area`
+and with its origin at `area`'s top-left. `area` is in this canvas's own coordinates, so a point
+given as `(x, y)` on the child is `(area.x + x, area.y + y)` on the parent.
+
+`area` is clamped to this canvas's extent, so a child never reaches a pixel its parent could not,
+and an area that clamps to nothing yields a canvas that draws nothing — not a pointer to check.
+The child is returned by value, and the copy is elided, so a caller writes
+`Canvas plot = canvas.child(rect);`. The result is as uncopyable and unmovable as the canvas it came
+from, and a child of a child resolves against its own extent, so nesting needs nothing extra.
+
+The child keeps this canvas's turn, which is what keeps its axes lined up with the parent's
+coordinate space: the child's extent is the bounding box of `area` in the panel's coordinates, and a
+quarter turn swaps its two sides exactly as it swaps the parent's. A child therefore cannot be
+turned again — turning one would draw outside the rectangle it was given — so `setRotation` does
+nothing on a child and `rotation()` answers the turn it inherited.
+
+The whole tree shares one dirty rectangle: drawing through a child grows the same record the canvas
+that owns the frame reports, so one `flush` on the root sends everything drawn through any canvas
+made from it.
 
 ### setRotation
 
@@ -106,7 +134,7 @@ Turns the canvas in place: 90, 180 or 270 degrees about the extent's centre. The
 and the extent stay as they were, so a turned canvas writes inside the same rectangle of the glass
 with the coordinates of the page turned within it, and its two sides swap for a quarter turn. An
 angle that is not a quarter turn leaves the canvas as it was. `rotation()` reports the angle it is
-turned to.
+turned to. A child of the canvas cannot be turned: a call on one leaves it at the turn it inherited.
 
 ## Drawing
 

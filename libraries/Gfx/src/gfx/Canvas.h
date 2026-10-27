@@ -21,16 +21,28 @@ enum class PixelLayout : uint8_t { Gray8, Packed1 };
 // A canvas is where the drawing state lives: the buffer it writes into, the turn it draws at, and
 // the extent of the panel it has written since the last flush. That is why it is neither copyable
 // nor movable — a copy would be a second set of writes to the same buffer, and only one of the two
-// could be flushed.
+// could be flushed. The one way to have two is child(), which returns a canvas over a rectangle of
+// this one and shares the record of what has been written, so the frame still has one flush.
 class Canvas {
  public:
   Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout = PixelLayout::Gray8)
-      : buffer_(buffer), panel_(panel), extent_(extent), layout_(layout) {}
+      : buffer_(buffer), panel_(panel), extent_(extent), layout_(layout), dirtyTarget_(&dirty_) {}
 
   Canvas(const Canvas&) = delete;
   Canvas& operator=(const Canvas&) = delete;
   Canvas(Canvas&&) = delete;
   Canvas& operator=(Canvas&&) = delete;
+
+  // A canvas over part of this one, clipped to `area` and with its origin at `area`'s top-left:
+  // a point given as (x, y) on the child is (area.x + x, area.y + y) here. The area is in this
+  // canvas's own coordinates and is clamped to this canvas's extent, so a child cannot reach a
+  // pixel its parent could not. The child keeps this canvas's turn, and turning one further would
+  // draw outside the rectangle it was given, so setRotation does nothing on a child.
+  //
+  // The child shares this canvas's dirty rectangle, so one flush on the canvas that owns the frame
+  // sends everything drawn through any canvas made from it. Returned by value: the copy is elided,
+  // and the result is as uncopyable as the canvas it came from.
+  Canvas child(Rect area) const;
 
   // The size of the space this canvas draws in, which is the extent's own size until a quarter turn
   // swaps the two: a 128x64 extent turned 90 degrees is a 64x128 canvas over the same rectangle.
@@ -72,9 +84,24 @@ class Canvas {
   }
 
  private:
+  // The child constructor: `dirtyTarget` is the rectangle the canvas it came from reports through,
+  // so the whole tree writes into one.
+  Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout, uint16_t rotation,
+         Rect* dirtyTarget)
+      : buffer_(buffer),
+        panel_(panel),
+        extent_(extent),
+        layout_(layout),
+        rotation_(rotation),
+        dirtyTarget_(dirtyTarget) {}
+
   // Whether the canvas coordinates are turned across the extent, which is what makes the two sides
   // swap.
   bool turned() const { return rotation_ == 90 || rotation_ == 270; }
+
+  // Whether this canvas owns the frame it draws on, which is what a turn is about: a child's extent
+  // was resolved for the turn it inherited, so it has none of its own to take.
+  bool owner() const { return dirtyTarget_ == &dirty_; }
 
   // Grow the rectangle of panel pixels written since the last flush to take in one more.
   void include(int16_t panelX, int16_t panelY);
@@ -99,6 +126,9 @@ class Canvas {
   PixelLayout layout_;
   uint16_t rotation_ = 0;
   Rect dirty_{0, 0, 0, 0};
+  // Where the pixels written since the last flush are recorded: this canvas's own `dirty_` when it
+  // owns the frame, and the frame's when it is a child of one that does.
+  Rect* dirtyTarget_;
 };
 
 }  // namespace gardener::gfx
