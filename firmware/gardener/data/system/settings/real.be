@@ -109,7 +109,7 @@ class RealEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + self.body_h())
+    return bounds(wide, editor_column_chrome + self.body_h())
   end
 
   # The value at the largest face the box holds, over a bar showing where it sits between the bounds

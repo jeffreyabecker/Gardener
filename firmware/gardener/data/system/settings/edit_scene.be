@@ -8,10 +8,23 @@
 # rows the kinds share: `editor_column()` builds the label row, the body and the hint row that every
 # editor of a value draws in.
 
+# The rows every value editor's column shares, and the chrome they cost down the page: a label row
+# and a hint row at the system size, with two pixels of paper above and below the kind's body. A
+# kind that has to know which rows it has room for, or how tall its content is, adds this to its
+# own body.
+editor_text_row = 8
+editor_paper_row = 2
+editor_column_chrome = editor_text_row * 2 + editor_paper_row * 2
+
 # The frame an editor is drawn in: the content the kind measured and the two pixels the border keeps
-# either side of it, no nearer than a pixel to the page's edge. It draws the border and hands the kind
-# the box inside it.
+# either side of it, no nearer than a pixel to the page's edge. It draws the border and hands the
+# kind the box inside it.
 class EditorFrame : Component
+  # The border the frame draws either side of the content, and the paper it keeps between itself and
+  # the page's edge: the page less twice each of these is the most the frame can take.
+  static var border = 2
+  static var margin = 1
+
   var scene
 
   def init(scene)
@@ -19,27 +32,32 @@ class EditorFrame : Component
     self.scene = scene
   end
 
-  # The content and the border around it, no wider or taller than the page less a pixel each side.
+  # The content and the border around it, no wider or taller than the page less the margin each
+  # side.
   def use(w, h)
     var content = self.scene.content_size()
-    var wide = content.w + 4
-    var tall = content.h + 4
-    if wide > w - 2
-      wide = w - 2
+    var wide = content.w + EditorFrame.border * 2
+    var tall = content.h + EditorFrame.border * 2
+    if wide > w - EditorFrame.margin * 2
+      wide = w - EditorFrame.margin * 2
     end
-    if tall > h - 2
-      tall = h - 2
+    if tall > h - EditorFrame.margin * 2
+      tall = h - EditorFrame.margin * 2
     end
     return bounds(wide, tall)
   end
 
   def draw()
     screen.draw_rect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
-    self.scene.draw_editor(point(self.pos.x + 2, self.pos.y + 2),
-                           bounds(self.dim.w - 4, self.dim.h - 4))
+    var inside = EditorFrame.border
+    self.scene.draw_editor(point(self.pos.x + inside, self.pos.y + inside),
+                           bounds(self.dim.w - inside * 2, self.dim.h - inside * 2))
     super(self).draw()
   end
 end
+
+# What the frame costs down the page: its border and the margin it keeps, either side.
+editor_frame_chrome = EditorFrame.border * 2 + EditorFrame.margin * 2
 
 class EditScene : Scene
   var label
@@ -88,9 +106,9 @@ class EditScene : Scene
   end
 
   # The editor is a framed box no bigger than the content the kind measured: a pixel of paper, a
-  # pixel of ink for the border and a pixel of paper again around it, centred in the scene's box, the
-  # frame no nearer than a pixel to that box's edge. The frame is a leaf of one layout that hands the
-  # kind the box inside the border; the centring is that layout's alignment.
+  # pixel of ink for the border and a pixel of paper again around it, centred in the scene's box,
+  # the frame no nearer than a pixel to that box's edge. The frame is a leaf of one layout that
+  # hands the kind the box inside the border; the centring is that layout's alignment.
   def draw_page()
     if self.frame == nil
       self.frame = AutoLayout(bounds(nil, nil), [EditorFrame(self)], alignment("center", "center"))
@@ -125,11 +143,11 @@ end
 # hint are the built-in face, the one that carries the arrows a hint prints.
 def editor_column(label, hint, body, body_h)
   return AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 8), [Text(label)], alignment("center", "center")),
-    AutoLayout(bounds(1, 2), []),
+    AutoLayout(bounds(1, editor_text_row), [Text(label)], alignment("center", "center")),
+    AutoLayout(bounds(1, editor_paper_row), []),
     AutoLayout(bounds(1, body_h), [body], alignment("center", "center")),
-    AutoLayout(bounds(1, 2), []),
-    AutoLayout(bounds(1, 8), [Text(hint)], alignment("center", "center"))
+    AutoLayout(bounds(1, editor_paper_row), []),
+    AutoLayout(bounds(1, editor_text_row), [Text(hint)], alignment("center", "center"))
   ])
 end
 

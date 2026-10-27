@@ -89,7 +89,7 @@ class PressureEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + self.body_h())
+    return bounds(wide, editor_column_chrome + self.body_h())
   end
 
   # The depth at the largest face the box holds, formatted in the panel's unit.

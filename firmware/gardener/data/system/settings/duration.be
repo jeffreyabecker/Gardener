@@ -138,7 +138,7 @@ class DurationEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + self.body_h())
+    return bounds(wide, editor_column_chrome + self.body_h())
   end
 
   # Minutes and seconds as two fields side by side, each suffixed and at the one face, with the

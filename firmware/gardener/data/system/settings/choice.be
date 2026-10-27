@@ -37,10 +37,9 @@ class ChoiceEditScene : EditScene
     for item : self.ring.items
       rows.push(ListRow(item.icon, item.title, item))
     end
-    # The rows the box has room for — the scene's box less the three pixels of frame either side,
-    # the eight-pixel label row, the eight-pixel hint row and the two gaps between them — and no
-    # more than there are entries.
-    var fit = (self.dim.h - 26) / List.row
+    # The rows the box has room for — the scene's box less the frame and the column's chrome — and
+    # no more than there are entries.
+    var fit = (self.dim.h - editor_frame_chrome - editor_column_chrome) / List.row
     if fit < 1
       fit = 1
     end
@@ -112,7 +111,7 @@ class ChoiceEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + self.list.visible * List.row)
+    return bounds(wide, editor_column_chrome + self.list.visible * List.row)
   end
 
   # The label row, the entries with the one showing inverted and scrolled into view, and the hint
