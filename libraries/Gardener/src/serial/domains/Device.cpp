@@ -12,7 +12,6 @@
 #include "Logger.h"
 #include "serial/SerialLink.h"
 #include "hal/Battery.h"
-#include "hal/Display.h"
 #include "panel/Units.h"
 #include "serial/Domain.h"
 #include "storage/DeviceConfig.h"

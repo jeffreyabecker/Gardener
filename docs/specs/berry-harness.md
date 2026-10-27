@@ -12,7 +12,7 @@ registration does not look like a routine, or a page does not survive being driv
 | --- | --- |
 | `check.py` | the build and the command line: compiles the VM, links the host app, runs it |
 | `main.cpp` | loads the files in the device's order and calls the checks |
-| `host/BitmapPanel.h`, `host/BitmapPanel.cpp` | the panel: a 128 x 64 one-bit frame the device's own `GfxDisplay` draws into |
+| `host/BitmapPanel.h`, `host/BitmapPanel.cpp` | the panel: a 128 x 64 one-bit frame the session's canvas draws into through the same `gfx::DisplayDevice` the firmware uses |
 | `host/HarnessSession.h` | the device composed as the firmware composes it, over that panel instead of the glass |
 | `harness.be` | the driver's bookkeeping: the log, the error count, the routine count the summary prints, and the routine keys the memory report walks |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
@@ -142,10 +142,10 @@ beat at the panel's 128 x 64, paper and ink, each held for a second so the run r
 GIF is enlarged 2 x to 256 x 128 by `kRenderScale` in the GIF writer — nearest neighbour, because
 the picture is one bit. The frame delay is `kGifDelayCs`, one line to change to slow the whole
 animation down or speed it up. The drawing is not an approximation of the driver's: the host draws
-through the same Gfx library and the same `GfxDisplay` the device does, over `BitmapPanel` in place
-of the SH1106, so the shapes, the text metrics and the compiled faces are the ones a page gets on
-the glass. `BitmapPanel::packFrame` is the only difference — it hands the one-bit frame to the GIF
-writer instead of to a bus.
+through the same Gfx library and the same canvas-and-device pair the device does, over
+`BitmapPanel` in place of the SH1106, so the shapes, the text metrics and the compiled faces are
+the ones a page gets on the glass. `BitmapPanel::packFrame` is the only difference — it hands the
+one-bit frame to the GIF writer instead of to a bus.
 
 A captured GIF also carries the gesture that drove it: each press the driver injects is shown as a
 full-width strip across the top of the frame it lands on — the key and its form, `OK`, `OK×2`,

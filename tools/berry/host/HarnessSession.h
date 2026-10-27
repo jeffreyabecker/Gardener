@@ -18,7 +18,7 @@
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
-#include "hal/impl/GfxDisplay.h"
+#include "gfx/Canvas.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
 #include "storage/Jingles.h"
@@ -176,10 +176,11 @@ class BufferLogger : public Logger {
 // the only thing the Berry modules know about their surroundings.
 class HarnessPanel : public PanelContext {
  public:
-  HarnessPanel(Display& display, Config& config, JinglesConfig& jingles,
-                VacuumSystem& vacuum, Battery& battery,
-                BuzzerPlayer& buzzer, Library& library, Logger& logger)
+  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, Config& config,
+               JinglesConfig& jingles, VacuumSystem& vacuum, Battery& battery,
+               BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
+        canvas_(canvas),
         config_(config),
         jingles_(jingles),
         vacuum_(vacuum),
@@ -188,7 +189,8 @@ class HarnessPanel : public PanelContext {
         library_(library),
         logger_(logger) {}
 
-  Display& display() override { return display_; }
+  gfx::DisplayDevice& display() override { return display_; }
+  gfx::Canvas& canvas() override { return canvas_; }
   Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
   VacuumSystem& vacuum() override { return vacuum_; }
@@ -203,7 +205,8 @@ class HarnessPanel : public PanelContext {
   bool post(const MachineCommand& command) override { return postMachineCommand(command); }
 
  private:
-  Display& display_;
+  gfx::DisplayDevice& display_;
+  gfx::Canvas& canvas_;
   Config& config_;
   JinglesConfig& jingles_;
   VacuumSystem& vacuum_;
@@ -229,7 +232,6 @@ class HarnessSession {
 
   bvm* vm() const { return vm_; }
   Routines& routines() { return routines_; }
-  BitmapPanel& panel() { return display_.driver(); }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -303,7 +305,8 @@ class HarnessSession {
   ModelSensor sensor_;
   ModelValve valve_;
   VacuumSystem vacuum_;
-  GfxDisplay<BitmapPanel> display_;
+  BitmapPanel panel_;
+  gfx::Canvas canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;

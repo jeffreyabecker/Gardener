@@ -124,8 +124,6 @@ uint8_t Sh1106Device::pageColumn(int16_t page, int16_t column) const {
   return bits;
 }
 
-void Sh1106Device::invertDisplay(bool on) { command(on ? 0xA7 : 0xA6); }
-
 bool Sh1106Device::command(uint8_t value) { return commands(&value, 1); }
 
 bool Sh1106Device::commands(const uint8_t* values, size_t count) {

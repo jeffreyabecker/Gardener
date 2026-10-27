@@ -4,10 +4,14 @@
 
 namespace gardener {
 
+namespace gfx {
+class Canvas;
+class DisplayDevice;
+}  // namespace gfx
+
 class Battery;
 class BuzzerPlayer;
 class Config;
-class Display;
 class JinglesConfig;
 class Library;
 class Logger;
@@ -21,7 +25,10 @@ class PanelContext {
  public:
   virtual ~PanelContext() = default;
 
-  virtual Display& display() = 0;
+  // The glass, and the one frame everything draws into: a canvas over the device's buffer, shared
+  // by the page, the band and the `screen` module, so one flush sends what any of them wrote.
+  virtual gfx::DisplayDevice& display() = 0;
+  virtual gfx::Canvas& canvas() = 0;
   // The device's own document, /cfg/settings.ini: whoever needs the unit, the target or the jingle
   // under [device] reads and writes that key here.
   virtual Config& config() = 0;

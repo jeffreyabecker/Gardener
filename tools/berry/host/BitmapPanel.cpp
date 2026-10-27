@@ -38,9 +38,4 @@ void BitmapPanel::flush(const gardener::gfx::Rect& dirty) {
   }
 }
 
-void BitmapPanel::packFrame(uint8_t* out) const {
-  memcpy(out, sent_.data(), sent_.size());
-  if (inverted_) {
-    for (size_t i = 0; i < sent_.size(); i++) out[i] ^= 0xFF;
-  }
-}
+void BitmapPanel::packFrame(uint8_t* out) const { memcpy(out, sent_.data(), sent_.size()); }

@@ -28,6 +28,14 @@ class Canvas {
   Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout = PixelLayout::Gray8)
       : buffer_(buffer), panel_(panel), extent_(extent), layout_(layout), dirtyTarget_(&dirty_) {}
 
+  // The canvas a whole panel draws on: the device's own frame, its geometry, and the layout its
+  // depth says — a one-bit glass keeps a Packed1 frame and anything deeper a Gray8 one. Returned by
+  // value like child(), so the copy is elided and the result is as uncopyable as any canvas.
+  static Canvas over(DisplayDevice& device) {
+    return Canvas(device.buffer(), device.size(), device.size(),
+                  device.bitsPerPixel() == 1 ? PixelLayout::Packed1 : PixelLayout::Gray8);
+  }
+
   Canvas(const Canvas&) = delete;
   Canvas& operator=(const Canvas&) = delete;
   Canvas(Canvas&&) = delete;

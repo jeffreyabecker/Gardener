@@ -20,14 +20,12 @@ class Sh1106Device : public gfx::DisplayDevice {
   Sh1106Device(const Sh1106Device&) = delete;
   Sh1106Device& operator=(const Sh1106Device&) = delete;
 
-  bool begin();
+  bool begin() override;
 
   gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
   uint8_t bitsPerPixel() const override { return 1; }
   uint8_t* buffer() override { return frame_; }
   void flush(const gfx::Rect& dirty) override;
-
-  void invertDisplay(bool on);
 
  private:
   bool command(uint8_t value);

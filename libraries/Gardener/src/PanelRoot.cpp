@@ -11,7 +11,6 @@
 #include "routines/Routines.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
-#include "hal/impl/GfxDisplay.h"
 #include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/Sh1106Device.h"
 
@@ -37,10 +36,8 @@ Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins&
   auto* buzzerPart = new PwmBuzzer(pins.buzzerPwm);
   auto* buzzer = new BuzzerPlayer(*buzzerPart);
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
-  // construction; the callback is where it comes up, once App has the bus running.
-  auto* display = new GfxDisplay<Sh1106Device>(
-      [](Sh1106Device& panel) -> bool { return panel.begin(); }, Wire1, PanelAddress, PanelWidth,
-      PanelHeight);
+  // construction and comes up in Panel::boot, once the bus is running.
+  auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
   auto* routines = new Routines();
   auto* panel =
       new Panel(logger, pins, buttons, buzzer, battery, display, fs, library, routines);

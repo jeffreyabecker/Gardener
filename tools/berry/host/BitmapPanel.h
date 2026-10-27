@@ -6,12 +6,12 @@
 
 #include "gfx/DisplayDevice.h"
 
-// The panel the check draws on: a 128 x 64 one-bit Gfx frame over the glass it sends to. GfxDisplay
-// draws into frame_ through the same Canvas the device uses; flush() copies the rectangle the
-// canvas reports into sent_, which is what the glass would hold, and packFrame() hands that to the
-// harness's GIF writer. Modelling the two images apart is what makes a partial redraw visible on
-// the host: a region the canvas failed to report would keep the pixels it had, and the frame would
-// be wrong.
+// The panel the check draws on: a 128 x 64 one-bit Gfx frame over the glass it sends to. The
+// session's canvas draws into frame_ through the same Gfx code the device runs; flush() copies the
+// rectangle the canvas reports into sent_, which is what the glass would hold, and packFrame()
+// hands that to the harness's GIF writer. Modelling the two images apart is what makes a partial
+// redraw visible on the host: a region the canvas failed to report would keep the pixels it had,
+// and the frame would be wrong.
 class BitmapPanel : public gardener::gfx::DisplayDevice {
  public:
   static constexpr int16_t Width = 128;
@@ -19,8 +19,7 @@ class BitmapPanel : public gardener::gfx::DisplayDevice {
 
   explicit BitmapPanel(int16_t width = Width, int16_t height = Height);
 
-  bool begin();
-  void invertDisplay(bool on) { inverted_ = on; }
+  bool begin() override;
 
   int16_t width() const { return width_; }
   int16_t height() const { return height_; }
@@ -38,7 +37,6 @@ class BitmapPanel : public gardener::gfx::DisplayDevice {
  private:
   int16_t width_;
   int16_t height_;
-  bool inverted_ = false;
   std::vector<uint8_t> frame_;
   std::vector<uint8_t> sent_;
 };

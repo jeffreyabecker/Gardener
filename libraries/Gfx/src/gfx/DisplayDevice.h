@@ -7,9 +7,9 @@
 namespace gardener::gfx {
 
 // The interface a concrete panel driver implements. The glass, the bus, the frame a canvas draws
-// into and whatever the part needs before the first flush are the driver's own business: it owns
-// the buffer, says how big and how deep that frame is, and sends it to the glass when asked. A
-// device is one of, so it cannot be copied.
+// into and whatever the part needs to come up are the driver's own business: it owns the buffer,
+// says how big and how deep that frame is, brings itself up and sends the frame to the glass when
+// asked. A device is one of, so it cannot be copied.
 class DisplayDevice {
  public:
   DisplayDevice() = default;
@@ -17,6 +17,11 @@ class DisplayDevice {
 
   DisplayDevice(const DisplayDevice&) = delete;
   DisplayDevice& operator=(const DisplayDevice&) = delete;
+
+  // Bring the part up: power, bus setup, whatever the glass needs before the first flush. Called
+  // once, before anything draws, and false when the part did not answer — which is the caller's to
+  // report, because only it knows whether a panel that stayed dark is a fault or a mode.
+  virtual bool begin() = 0;
 
   // The panel's full-frame geometry, origin at the top left: Rect(0, 0, width, height). Const
   // because the geometry does not change across a call.

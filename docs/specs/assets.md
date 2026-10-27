@@ -50,8 +50,8 @@ padded to a whole byte, so a 128-pixel row is 16 bytes. A set bit is ink; a clea
 
 ## On the device
 
-`Display::bitmap()` is the whole of it: it reads the width and the height from the first two bytes,
-walks the rows and draws each ink pixel, skipping the paper. The panel page calls it on every
+`gfx::shapes::MonoBitmap` is the whole of it: it reads the width and the height from the first two
+bytes, walks the rows and draws each ink pixel, skipping the paper. The panel page calls it on every
 redraw from the array the header defines, so there is no file to read and no loaded copy to keep in
 step.
 

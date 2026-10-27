@@ -48,14 +48,19 @@ or less holds no pixels; a `Canvas` over such an extent draws nothing.
 
 ## DisplayDevice
 
-`DisplayDevice` is the interface a concrete device implements. It has four methods:
+`DisplayDevice` is the interface a concrete device implements. It has five methods:
 
 ```cpp
+virtual bool begin() = 0;
 virtual Rect size() const = 0;
 virtual uint8_t bitsPerPixel() const = 0;
 virtual uint8_t* buffer() = 0;
 virtual void flush(const Rect& dirty) = 0;
 ```
+
+`begin()` brings the part up — power, bus setup, a bring-up handshake — and is called once, before
+anything draws. False means the part did not answer, which is the caller's to judge: only it knows
+whether a dark panel is a fault or a mode. A device with nothing to bring up answers true.
 
 `size()` reports the panel's full-frame geometry as a `Rect` with its origin at the top-left:
 `Rect(0, 0, width, height)`. It is `const`: the geometry does not change across a call.
@@ -73,9 +78,9 @@ device sends a corner it redrew rather than the whole frame. A rectangle holding
 width or height of zero or less — asks for nothing, which is what a canvas nobody has drawn on
 reports. The device reads the frame and writes none of it back.
 
-Anything the part needs before the first flush — power, bus setup, a bring-up handshake — is the
-concrete device's own business, done before `flush` is called. It is not a fifth method on this
-interface.
+Anything the part needs to come up is the concrete device's own business, behind `begin()`: the
+interface says when to do it and not what it is, and every draw after it uses the frame the device
+already owns.
 
 ## Canvas
 
@@ -97,6 +102,18 @@ it has written since the last flush. It is therefore neither copyable nor movabl
 a second set of writes to the same buffer, and only one of the two could be flushed. The one way to
 have a second canvas over the same frame is `child`, below, and it shares that rectangle rather
 than keeping one of its own.
+
+### over
+
+```cpp
+static Canvas over(DisplayDevice& device)
+```
+
+The canvas a whole panel draws on: the device's own buffer, its `size()` as both the panel and the
+extent, and the layout its depth implies — `Packed1` for a one-bit glass, `Gray8` for anything
+deeper. It is the constructor above with the device's own answers filled in, so the mapping from
+depth to layout is written once rather than in every composition. Returned by value like `child`,
+so the copy is elided.
 
 ### child
 

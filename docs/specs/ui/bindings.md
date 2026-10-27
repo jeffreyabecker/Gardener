@@ -162,8 +162,9 @@ face as designed, `3` is three times as tall. A custom face has no background, s
 effect on it; when a line needs a highlight, draw it and then `draw_invert` the box `text_bounds`
 answered, which turns that rectangle's paper to ink and its ink to paper.
 
-The face belongs to the call. The firmware restores the built-in face after drawing or measuring,
-so handing the panel to the shared settings editor does not hand it a face as well.
+The face belongs to the call: it is handed to the shape that draws the string, so no face is left
+set for whatever draws next — handing the panel to the shared settings editor does not hand it a
+face as well.
 
 ```berry
 var box = screen.text_bounds(value, 1, "sansbold18")

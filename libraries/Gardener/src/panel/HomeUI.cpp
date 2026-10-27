@@ -5,8 +5,10 @@
 #include "panel/HomeUI.h"
 
 #include "PanelTasks.h"
+#include "gfx/Shapes.h"
 #include "panel/Mark.h"
 #include "routines/Routines.h"
+#include "ui/Drawing.h"
 
 namespace gardener {
 
@@ -49,10 +51,10 @@ void HomeUI::update() {
 }
 
 void HomeUI::drawFrame() {
-  Display& panel = context_.display();
-  panel.clear(Paper);
-  panel.bitmap(0, 0, MarkBits);
-  panel.display();
+  gfx::Canvas& canvas = context_.canvas();
+  canvas.draw(gfx::shapes::FillRect(0, 0, canvas.width(), canvas.height(), gfx::ui::Paper));
+  canvas.draw(gfx::shapes::MonoBitmap(0, 0, MarkBits, gfx::ui::Ink));
+  canvas.flush(context_.display());
 }
 
 }  // namespace gardener

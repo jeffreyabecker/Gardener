@@ -99,11 +99,9 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       sensor_(chamber_),
       valve_(chamber_),
       vacuum_(&pump_, &sensor_, &valve_),
-      display_(
-          [](BitmapPanel& panel) -> bool { return panel.begin(); },
-          BitmapPanel::Width, BitmapPanel::Height),
+      canvas_(gfx::Canvas::over(panel_)),
       buzzer_(buzzerPart_),
-      context_(display_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      context_(panel_, canvas_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -164,15 +162,14 @@ void HarnessSession::beat(int count) {
     if (held > heapPeakBytes_) heapPeakBytes_ = held;
 
     if (capturing_) {
-      display_.display();
-      BitmapPanel& panel = display_.driver();
-      std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
-      panel.packFrame(frame.data());
+      canvas_.flush(panel_);
+      std::vector<uint8_t> frame((size_t)panel_.width() * panel_.height() / 8);
+      panel_.packFrame(frame.data());
       if (gestureBeats_ > 0 && !gesture_.empty()) {
-        drawGestureStrip(frame.data(), panel.width(), panel.height(), gestureLabel(gesture_));
+        drawGestureStrip(frame.data(), panel_.width(), panel_.height(), gestureLabel(gesture_));
       }
       if (overlayTop_ >= 0) {
-        drawOverlayHash(frame.data(), panel.width(), panel.height(), overlayTop_, overlayRows_);
+        drawOverlayHash(frame.data(), panel_.width(), panel_.height(), overlayTop_, overlayRows_);
       }
       captureFrames_.push_back(std::move(frame));
     }
@@ -242,24 +239,22 @@ bool HarnessSession::endCapture() {
     capturePath_.clear();
     return true;
   }
-  BitmapPanel& panel = display_.driver();
-  const bool ok = writeGif(capturePath_.c_str(), panel.width(), panel.height(), captureFrames_);
+  const bool ok = writeGif(capturePath_.c_str(), panel_.width(), panel_.height(), captureFrames_);
   captureFrames_.clear();
   capturePath_.clear();
   return ok;
 }
 
 bool HarnessSession::saveStill(const char* path) {
-  display_.display();
-  BitmapPanel& panel = display_.driver();
-  std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
-  panel.packFrame(frame.data());
+  canvas_.flush(panel_);
+  std::vector<uint8_t> frame((size_t)panel_.width() * panel_.height() / 8);
+  panel_.packFrame(frame.data());
   if (overlayTop_ >= 0) {
-    drawOverlayHash(frame.data(), panel.width(), panel.height(), overlayTop_, overlayRows_);
+    drawOverlayHash(frame.data(), panel_.width(), panel_.height(), overlayTop_, overlayRows_);
   }
   std::vector<std::vector<uint8_t>> frames;
   frames.push_back(std::move(frame));
-  return writeGif(path, panel.width(), panel.height(), frames);
+  return writeGif(path, panel_.width(), panel_.height(), frames);
 }
 
 }  // namespace gardener

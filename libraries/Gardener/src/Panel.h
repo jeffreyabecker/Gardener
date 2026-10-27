@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <FS.h>
+#include <Gfx.h>
 #include <stdint.h>
 
 #include "BuzzerPlayer.h"
@@ -15,7 +16,6 @@
 #include "storage/Jingles.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
-#include "hal/Display.h"
 
 namespace gardener {
 
@@ -44,7 +44,8 @@ struct PanelPins {
 class Panel : public Machine, public PanelContext {
  public:
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, Display* display, FS& fs, Library& library, Routines* routines)
+        Battery* battery, gfx::DisplayDevice* display, FS& fs, Library& library,
+        Routines* routines)
       : Machine(logger, pins.machine),
         pins_(pins),
         buttons_(buttons),
@@ -54,6 +55,7 @@ class Panel : public Machine, public PanelContext {
         config_(&library),
         jingles_(&library),
         display_(display),
+        canvas_(gfx::Canvas::over(*display)),
         routines_(routines),
         fs_(fs),
         library_(library) {}
@@ -73,8 +75,9 @@ class Panel : public Machine, public PanelContext {
   // The machine's own reads, named again so the context's virtuals resolve to one function.
   VacuumSystem& vacuum() override { return Machine::vacuum(); }
   Logger& logger() override { return Machine::logger(); }
-  // The panel's display, every drawing verb going through it.
-  Display& display() override { return *display_; }
+  // The glass, and the frame every drawing verb lands in.
+  gfx::DisplayDevice& display() override { return *display_; }
+  gfx::Canvas& canvas() override { return canvas_; }
   // The two links, from the interface owner's globals; presence is all the band reports.
   bool serialConnected() const override { return gardener::serialConnected; }
   bool bluetoothConnected() const override { return gardener::bleConnected; }
@@ -98,7 +101,9 @@ class Panel : public Machine, public PanelContext {
   // jingle library.
   Config config_;
   JinglesConfig jingles_;
-  Display* display_;
+  gfx::DisplayDevice* display_;
+  // The one frame a page draws into, over the device's own buffer.
+  gfx::Canvas canvas_;
   Routines* routines_;
   FS& fs_;
   Library& library_;

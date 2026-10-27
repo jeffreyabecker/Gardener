@@ -17,6 +17,8 @@ class StubDisplay : public DisplayDevice {
   StubDisplay(int16_t width, int16_t height)
       : width_(width), height_(height), buffer_(static_cast<size_t>(width) * height, 0) {}
 
+  bool begin() override { return true; }
+
   Rect size() const override { return Rect(0, 0, width_, height_); }
   uint8_t bitsPerPixel() const override { return 8; }
   uint8_t* buffer() override { return buffer_.data(); }

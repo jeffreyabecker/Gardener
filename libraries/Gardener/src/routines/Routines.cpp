@@ -11,8 +11,8 @@
 
 #include "Logger.h"
 #include "PanelContext.h"
+#include "gfx/Canvas.h"
 #include "hal/Battery.h"
-#include "hal/Display.h"
 #include "panel/Band.h"
 #include "panel/Units.h"
 #include "routines/Bindings.h"
@@ -121,8 +121,8 @@ bool Routines::showDefault() {
 bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
   updateBand(nowMs);
-  if (!stack_.poll(panel_->display().canvas(), nowMs)) return false;
-  panel_->display().display();
+  if (!stack_.poll(panel_->canvas(), nowMs)) return false;
+  panel_->canvas().flush(panel_->display());
   return true;
 }
 
@@ -130,8 +130,8 @@ bool Routines::enterPage() {
   if (panel_ == nullptr) return false;
   const uint32_t now = millis();
   updateBand(now);
-  if (!stack_.enter(panel_->display().canvas(), now)) return false;
-  panel_->display().display();
+  if (!stack_.enter(panel_->canvas(), now)) return false;
+  panel_->canvas().flush(panel_->display());
   return true;
 }
 

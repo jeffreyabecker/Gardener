@@ -3,11 +3,11 @@
 #if GARDENER_PANEL
 
 #include <stdio.h>
+#include <string.h>
 
 #include <Gfx.h>
 
 #include "PanelContext.h"
-#include "hal/Display.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 
@@ -15,7 +15,9 @@ namespace gardener {
 namespace berry {
 namespace {
 
-Display& panel() { return context->display(); }
+// The frame every verb writes into: one canvas over the panel's own buffer, shared with the page
+// and the band, so the flush a page asks for sends whatever any of them drew.
+gfx::Canvas& frame() { return context->canvas(); }
 
 // The face named by an optional argument; nil, an empty name and "builtin" all mean the built-in
 // 5x7, which is also what an absent argument means. `function` is the Berry spelling used in the
@@ -42,7 +44,8 @@ const gfx::Font* argFont(bvm* vm, int index, const char* function) {
 // The colour a drawing call asks for: an optional last argument, and the fallback the call names
 // when it is absent or nil. Only 0 — paper — and 1 — ink — are colours, so a call can erase as well
 // as draw; nothing else is a third shade. The message names the call that got it wrong, as the
-// face argument's does.
+// face argument's does. What comes back is the byte the frame holds, so the verbs pass it straight
+// to a shape.
 uint8_t argColor(bvm* vm, int index, const char* function, uint8_t fallback) {
   if (be_top(vm) < index || be_isnil(vm, index)) return fallback;
   const bool integer = be_isint(vm, index);
@@ -52,136 +55,146 @@ uint8_t argColor(bvm* vm, int index, const char* function, uint8_t fallback) {
     snprintf(message, sizeof(message), "screen.%s: colour 0 or 1 expected", function);
     be_raise(vm, integer ? "value_error" : "type_error", message);
   }
-  return static_cast<uint8_t>(value);
+  return value == 0 ? gfx::ui::Paper : gfx::ui::Ink;
 }
 
 int screenClear(bvm* vm) {
-  panel().clear(argColor(vm, 1, "draw_clear", Paper));
+  const uint8_t color = argColor(vm, 1, "draw_clear", gfx::ui::Paper);
+  gfx::Canvas& canvas = frame();
+  canvas.draw(gfx::shapes::FillRect(0, 0, canvas.width(), canvas.height(), color));
   be_return_nil(vm);
 }
 
 int screenInvert(bvm* vm) {
-  panel().invert(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  frame().invert(gfx::Rect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4)));
   be_return_nil(vm);
 }
 
 int screenFlush(bvm* vm) {
-  panel().display();
+  frame().flush(context->display());
   be_return_nil(vm);
 }
 
 int screenWidth(bvm* vm) {
-  be_pushint(vm, panel().width());
+  be_pushint(vm, frame().width());
   be_return(vm);
 }
 
 int screenHeight(bvm* vm) {
-  be_pushint(vm, panel().height());
+  be_pushint(vm, frame().height());
   be_return(vm);
 }
 
 int screenPageWidth(bvm* vm) {
-  be_pushint(vm, panel().pageWidth());
+  be_pushint(vm, frame().width());
   be_return(vm);
 }
 
 int screenPageHeight(bvm* vm) {
-  be_pushint(vm, panel().pageHeight());
+  be_pushint(vm, frame().height());
   be_return(vm);
 }
 
 int screenPixel(bvm* vm) {
-  panel().pixel(argInt(vm, 1), argInt(vm, 2), argColor(vm, 3, "draw_pixel", Ink));
+  frame().setPixel(argInt(vm, 1), argInt(vm, 2), argColor(vm, 3, "draw_pixel", gfx::ui::Ink));
   be_return_nil(vm);
 }
 
 int screenLine(bvm* vm) {
-  panel().line(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-               argColor(vm, 5, "draw_line", Ink));
+  frame().draw(gfx::shapes::Line(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                argColor(vm, 5, "draw_line", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenHLine(bvm* vm) {
-  panel().hLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
-                argColor(vm, 4, "draw_hline", Ink));
+  frame().draw(gfx::shapes::HLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                  argColor(vm, 4, "draw_hline", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenVLine(bvm* vm) {
-  panel().vLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
-                argColor(vm, 4, "draw_vline", Ink));
+  frame().draw(gfx::shapes::VLine(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                  argColor(vm, 4, "draw_vline", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenRect(bvm* vm) {
-  panel().rect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-               argColor(vm, 5, "draw_rect", Ink));
+  frame().draw(gfx::shapes::Rect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                 argColor(vm, 5, "draw_rect", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillRect(bvm* vm) {
-  panel().fillRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                   argColor(vm, 5, "draw_fillrect", Ink));
+  frame().draw(gfx::shapes::FillRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                     argColor(vm, 5, "draw_fillrect", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenRoundRect(bvm* vm) {
-  panel().roundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                    argColor(vm, 6, "draw_roundrect", Ink));
+  frame().draw(gfx::shapes::RoundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                      argInt(vm, 5),
+                                      argColor(vm, 6, "draw_roundrect", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillRoundRect(bvm* vm) {
-  panel().fillRoundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                        argInt(vm, 5), argColor(vm, 6, "draw_fillroundrect", Ink));
+  frame().draw(gfx::shapes::FillRoundRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                          argInt(vm, 4), argInt(vm, 5),
+                                          argColor(vm, 6, "draw_fillroundrect", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenCircle(bvm* vm) {
-  panel().circle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
-                 argColor(vm, 4, "draw_circle", Ink));
+  frame().draw(gfx::shapes::Circle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                   argColor(vm, 4, "draw_circle", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillCircle(bvm* vm) {
-  panel().fillCircle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
-                     argColor(vm, 4, "draw_fillcircle", Ink));
+  frame().draw(gfx::shapes::FillCircle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                       argColor(vm, 4, "draw_fillcircle", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenEllipse(bvm* vm) {
-  panel().ellipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                  argColor(vm, 5, "draw_ellipse", Ink));
+  frame().draw(gfx::shapes::Ellipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                    argColor(vm, 5, "draw_ellipse", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillEllipse(bvm* vm) {
-  panel().fillEllipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                      argColor(vm, 5, "draw_fillellipse", Ink));
+  frame().draw(gfx::shapes::FillEllipse(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                        argInt(vm, 4),
+                                        argColor(vm, 5, "draw_fillellipse", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenTriangle(bvm* vm) {
-  panel().triangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                   argInt(vm, 6), argColor(vm, 7, "draw_triangle", Ink));
+  frame().draw(gfx::shapes::Triangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
+                                     argInt(vm, 5), argInt(vm, 6),
+                                     argColor(vm, 7, "draw_triangle", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillTriangle(bvm* vm) {
-  panel().fillTriangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                       argInt(vm, 6), argColor(vm, 7, "draw_filltriangle", Ink));
+  frame().draw(gfx::shapes::FillTriangle(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                         argInt(vm, 4), argInt(vm, 5), argInt(vm, 6),
+                                         argColor(vm, 7, "draw_filltriangle", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenRotatedRect(bvm* vm) {
-  panel().rotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4), argInt(vm, 5),
-                      argColor(vm, 6, "draw_rotatedrect", Ink));
+  frame().draw(gfx::shapes::RotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                        argInt(vm, 4), argInt(vm, 5),
+                                        argColor(vm, 6, "draw_rotatedrect", gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
 int screenFillRotatedRect(bvm* vm) {
-  panel().fillRotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4),
-                          argInt(vm, 5), argColor(vm, 6, "draw_fillrotatedrect", Ink));
+  frame().draw(gfx::shapes::FillRotatedRect(argInt(vm, 1), argInt(vm, 2), argInt(vm, 3),
+                                            argInt(vm, 4), argInt(vm, 5),
+                                            argColor(vm, 6, "draw_fillrotatedrect",
+                                                     gfx::ui::Ink)));
   be_return_nil(vm);
 }
 
@@ -190,49 +203,54 @@ int screenText(bvm* vm) {
     be_raise(vm, "type_error", "screen.draw_text(x, y, size, inverted, text[, font])");
   }
   // Berry's order is the drawing's: x, y, size, inverted, text, and the face is the call's rather
-  // than the display's. The Display takes the string before the size, so the last two arguments
-  // swap on the way through.
+  // than the panel's, so nothing is left set for the next draw.
   const int16_t x = argInt(vm, 1);
-  int16_t y = argInt(vm, 2);
+  const int16_t y = argInt(vm, 2);
   const uint8_t size = (uint8_t)argInt(vm, 3);
   const bool inverted = be_tobool(vm, 4);
   const char* value = argText(vm, 5);
+  if (value == nullptr) be_return_nil(vm);
   const gfx::Font* face = argFont(vm, 6, "draw_text");
-  panel().setFont(face);
-  // `y` is the top of the glyph box whichever face is set. The built-in face is drawn from its top
-  // already; a compiled face is drawn from its baseline, so the ink box's height is what moves the
-  // corner down to the top — the same height text_bounds answers.
-  if (face != nullptr) {
-    int16_t width = 0;
-    int16_t height = 0;
-    panel().textBounds(value, size, width, height);
-    y += height;
+  gfx::Canvas& canvas = frame();
+
+  // The built-in face is drawn from the top of a five-by-seven cell; Gfx Text draws from the
+  // baseline seven rows below it.
+  if (face == nullptr) {
+    const int16_t baseline = static_cast<int16_t>(y + 7 * size);
+    if (inverted) {
+      const int16_t width = static_cast<int16_t>(6 * size * strlen(value));
+      const int16_t height = static_cast<int16_t>(8 * size);
+      canvas.draw(gfx::shapes::FillRect(x, y, width, height, gfx::ui::Ink));
+      canvas.draw(gfx::shapes::Text(x, baseline, value, nullptr, size, gfx::ui::Paper));
+    } else {
+      canvas.draw(gfx::shapes::Text(x, baseline, value, nullptr, size, gfx::ui::Ink));
+    }
+    be_return_nil(vm);
   }
-  panel().text(x, y, value, size, inverted);
-  // Restoring the built-in face is what lets a page hand the panel to the shared settings editor
-  // without the face it drew in following it there.
-  panel().setFont(nullptr);
+
+  // A compiled face has no background, so inverted draws the same as ink. `y` is the top of the
+  // glyph box either way, which is the ink box's height above the face's baseline.
+  const gfx::shapes::TextBox box = gfx::shapes::measureText(face, value, size);
+  canvas.draw(gfx::shapes::Text(x, static_cast<int16_t>(y + box.height), value, face, size,
+                                gfx::ui::Ink));
   be_return_nil(vm);
 }
 
 // The ink box of a string in the face it will be drawn in, which is what centring a proportional
-// face or placing a suffix after it needs. The record is a `bounds`: the same two numbers
-// Display::textBounds answers.
+// face or placing a suffix after it needs. The record is a `bounds`: the two numbers
+// measureText answers.
 int screenBounds(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "screen.text_bounds(text, size[, font])");
   }
   const gfx::Font* face = argFont(vm, 3, "text_bounds");
-  int16_t width = 0;
-  int16_t height = 0;
-  panel().setFont(face);
-  panel().textBounds(argText(vm, 1), (uint8_t)argInt(vm, 2), width, height);
-  panel().setFont(nullptr);
+  const gfx::shapes::TextBox box =
+      gfx::shapes::measureText(face, argText(vm, 1), (uint8_t)argInt(vm, 2));
 
   const int record = beginRecord(vm, "bounds");
   if (record < 0) be_return_nil(vm);
-  setInt(vm, record, "w", width);
-  setInt(vm, record, "h", height);
+  setInt(vm, record, "w", box.width);
+  setInt(vm, record, "h", box.height);
   be_return(vm);
 }
 
@@ -243,7 +261,8 @@ int screenGlyph(bvm* vm) {
     be_raise(vm, "type_error", "screen.draw_glyph(x, y, code[, size])");
   }
   const uint8_t size = (be_top(vm) >= 4 && !be_isnil(vm, 4)) ? (uint8_t)argInt(vm, 4) : 1;
-  panel().glyph(argInt(vm, 1), argInt(vm, 2), (uint8_t)argInt(vm, 3), size);
+  gfx::shapes::drawGlyph(frame(), argInt(vm, 1), argInt(vm, 2), (uint8_t)argInt(vm, 3), size,
+                         gfx::ui::Ink);
   be_return_nil(vm);
 }
 
@@ -259,7 +278,7 @@ int screenBitmap(bvm* vm) {
   if (bits == nullptr) {
     be_raise(vm, "type_error", "screen.draw_bitmap(x, y, bytes)");
   }
-  panel().bitmap(argInt(vm, 1), argInt(vm, 2), bits);
+  frame().draw(gfx::shapes::MonoBitmap(argInt(vm, 1), argInt(vm, 2), bits, gfx::ui::Ink));
   be_return_nil(vm);
 }
 
