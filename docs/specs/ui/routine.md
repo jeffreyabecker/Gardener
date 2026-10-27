@@ -357,11 +357,9 @@ refused it. The caller applies the rule and writes what it is given, so a refuse
 the values it opened with. The scene never touches the store, and nothing is written until the list
 closes.
 
-The scene's default box is a panel 60% of the page's width, centred, its top on the line where the
-page chrome's title row ends and its bottom on the band, so the page it was opened from keeps its
-title above it. A list that fits in that box draws a centered block the size of its rows; a title,
-when there is one, is the block's first line. A longer list fills the box and scrolls, keeping its
-heading — the title, or `SETTINGS` when it has none.
+A list that fits in the page draws a centered block the size of its rows; a title, when there is one,
+is the block's first line. A longer list fills the page and scrolls, keeping its heading — the title,
+or `SETTINGS` when it has none.
 
 ### A setting
 

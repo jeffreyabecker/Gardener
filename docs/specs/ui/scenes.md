@@ -21,19 +21,16 @@ The stack drains the gesture queue once per beat and hands the top scene one ges
 
 ## The box a scene draws in
 
-A scene's default box is the page. It carries a box — `pos` and `dim`, as a component does — and
-`ux` asks the scene for it with `default_box()` and stamps it on the scene as it goes on the stack,
-before its `activate()` runs. `Scene.default_box()` answers `point(0, 0)` and the page's `bounds`,
-the panel less the band, so a page scene fills the page. `SettingsEditScene` answers a panel instead:
-60% of the page's width, centred, its top on the line where the chrome's title row ends — a quarter
-of the page down — and its bottom on the band. A page composed in a `Layout` hands the same box on to
-it. `Scene.draw()` fills that box with paper and then calls `draw_page()`, so a scene opened on top of
-another covers its own box and clears it; around a settings list the page below keeps its title and
-margins, and it keeps its state and redraws when it is back on top.
+Every scene draws in the page. It carries a box — `pos` and `dim`, as a component does — and `ux`
+asks the scene for it with `default_box()` and stamps it on the scene as it goes on the stack, before
+its `activate()` runs. `Scene.default_box()` answers `point(0, 0)` and the page's `bounds`, the panel
+less the band, and no scene overrides it, so a scene is never a window inside another one. A page
+composed in a `Layout` hands the same box on to it. `Scene.draw()` fills that box with paper and then
+calls `draw_page()`, and a scene opened on top of another covers the page and clears it; the scene
+below keeps its state and redraws when it is back on top.
 
-`HomeScene`, `BrowserScene`, every routine page — `RampedStatic`, `RampedInterval` and `Interval` —
-and every value editor lay their content out in the page; a settings list lays its content out in its
-panel.
+That box is the one `HomeScene`, `BrowserScene`, every routine page — `RampedStatic`,
+`RampedInterval` and `Interval` — and every settings list and value editor lays its content out in.
 
 ## The map
 

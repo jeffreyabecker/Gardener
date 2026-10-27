@@ -522,8 +522,8 @@ end
 
 test("a nullable bool switch carries its nothing", a_nullable_bool_switch_carries_its_nothing)
 
-# A page scene takes the whole page, and what the scene below drew comes back when it redraws. The
-# settings list is the exception: it is the panel its own default_box() declares over that page.
+# Every scene draws in the page: a scene pushed over another one covers the whole page rather than a
+# window inside it, and what the scene below drew comes back when it redraws.
 class PageScene : Scene
   def draw_page()
     screen.draw_fillrect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
@@ -531,20 +531,17 @@ class PageScene : Scene
 end
 
 def a_scene_opened_over_another_takes_the_page()
-  var page = PageScene()
-  assert_true(ux.push(page), "the page scene would not push")
-  assert_eq(page.pos.x, 0, "a page scene does not start at the left of the page")
-  assert_eq(page.dim.w, 128, "a page scene is not the page's width")
+  assert_true(ux.push(PageScene()), "the page scene would not push")
 
-  # The settings list is a panel 60% of the width, centred, starting where the chrome's title row
-  # ends and running down to the band, so the page below keeps its title above it.
+  # A scene is given the whole page as it is pushed, over whatever was there: its box is the page,
+  # not a window inside the scene below.
   var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
                            {"count": 1}, nil)
   assert_true(ux.push(list), "the settings list would not push")
-  assert_eq(list.pos.x, 26, "the settings list does not start a fifth of the page in")
-  assert_eq(list.pos.y, 13, "the settings list does not start below the title row")
-  assert_eq(list.dim.w, 76, "the settings list is not 60% of the page's width")
-  assert_eq(list.dim.h, 39, "the settings list does not run down to the band")
+  assert_eq(list.pos.x, 0, "the settings list does not start at the left of the page")
+  assert_eq(list.pos.y, 0, "the settings list does not start at the top of the page")
+  assert_eq(list.dim.w, 128, "the settings list is not the page's width")
+  assert_eq(list.dim.h, 52, "the settings list is not the page's height")
 
   var editor = IntEditScene("Count", 2, 1, 0, 10, false)
   assert_true(ux.push(editor), "the value editor would not push")
