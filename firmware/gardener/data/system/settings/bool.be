@@ -19,7 +19,7 @@ class BoolEditScene : EditScene
     self.ring = ChoiceRing(choice_items([[false, "OFF"], [true, "ON"]], nullable), current)
     self.chips = []
     for item : self.ring.items
-      self.chips.push(PinnedText(item.title, [nil, 1]))
+      self.chips.push(Text(item.title, nil, SettingsView.scale))
     end
     self.page = nil
   end
@@ -36,22 +36,21 @@ class BoolEditScene : EditScene
     return str(self.ring.current().title)
   end
 
-  # The one face the row draws at and the ink the widest title takes at it: the largest face whose
-  # ink fits the band's sixteen pixels, a pixel of paper above and below, so every cell of the row
+  # The ink the widest title takes at the scale the cells are drawn in, so every cell of the row
   # shares one size and an entry's title sets the width the whole switch needs.
   def measure()
-    var widest = ""
     var wide = 0
+    var tall = 0
     for item : self.ring.items
-      var w = screen.text_bounds(item.title, 1).w
-      if w > wide
-        wide = w
-        widest = item.title
+      var ink = screen.text_bounds(item.title, SettingsView.scale)
+      if ink.w > wide
+        wide = ink.w
+      end
+      if ink.h > tall
+        tall = ink.h
       end
     end
-    var face = Text(widest).fit_height(widest, 16)
-    var ink = Text(widest).bounds(widest, face)
-    return [face, ink[0], ink[1]]
+    return [wide, tall]
   end
 
   # The band the switch draws in: one cell per entry of the ring, each the same share of the width.
@@ -65,11 +64,11 @@ class BoolEditScene : EditScene
   end
 
   def body_h()
-    return self.measure()[2] + 2
+    return self.measure()[1] + 2
   end
 
   def body_w()
-    return self.chips.size() * (self.measure()[1] + 2)
+    return self.chips.size() * (self.measure()[0] + 2)
   end
 
   # The label row, the band of chips and the hint row, as wide as the widest of the three.
@@ -88,10 +87,8 @@ class BoolEditScene : EditScene
 
   # The entries as the cells of one switch, the one showing inverted, which is the whole of it.
   def draw_editor(pos, dim)
-    var face = self.measure()[0]
     var i = 0
     while i < self.chips.size()
-      self.chips[i].face = face
       self.chips[i].inverted = self.ring.index == i
       i += 1
     end

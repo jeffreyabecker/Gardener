@@ -15,7 +15,7 @@ class RampedIntervalChrome : AutoLayout
     self.icon = icon
     self.title = Text(title_text)
     self.sets = Text("")
-    self.status = Text("", text_settings("sans", "none"))
+    self.status = Text("")
     self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(1, 0.25), [

@@ -26,7 +26,7 @@ class RampedStaticChrome : AutoLayout
     self.icon = RampedStaticIcon()
     self.title = Text(title_text)
     self.timer = Duration("minutes")
-    self.status = Text("", text_settings("sans", "none"))
+    self.status = Text("")
     self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(1, 0.25), [

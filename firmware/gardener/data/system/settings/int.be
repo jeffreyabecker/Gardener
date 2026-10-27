@@ -60,17 +60,16 @@ class IntEditScene : EditScene
     return str(self.current)
   end
 
-  # The value's ink at the largest face that fits the band's sixteen pixels.
+  # The value's ink at the scale every kind's band shares.
   def measure()
-    var text = self.text()
-    var face = Text(text).fit_height(text, 16)
-    return Text(text).bounds(text, face)
+    var ink = screen.text_bounds(self.text(), SettingsView.scale)
+    return [ink.w, ink.h]
   end
 
   # The value filling the band, over the bar that shows where it sits between the bounds when the
   # setting has both.
   def body()
-    var value = Text(self.text())
+    var value = Text(self.text(), nil, SettingsView.scale)
     if self.min == nil || self.max == nil
       return value
     end

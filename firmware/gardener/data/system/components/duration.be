@@ -1,14 +1,14 @@
 # duration.be — the Duration: whole seconds formatted in the panel's units of time. It is a
-# Text, so the string is fitted, cached and placed by the same face ladder as any other text. The
-# format property picks the largest unit shown, and `seconds` is the count it draws.
+# Text, drawn in the face it was built with. The format property picks the largest unit shown, and
+# `seconds` is the count it draws.
 
 class Duration : Text
   var format
   # The seconds shown, set by the caller before a draw, like a text's value.
   var seconds
 
-  def init(format)
-    super(self).init()
+  def init(format, font)
+    super(self).init("", font)
     self.format = format == nil ? "minutes" : format
     self.seconds = 0
   end
@@ -52,7 +52,7 @@ class Duration : Text
     return str(total) + "m" + str(secs2) + "s"
   end
 
-  # A duration draws the seconds set on it, formatted and fitted like any text.
+  # A duration draws the seconds set on it, formatted and drawn like any text.
   def draw()
     self.value = self.text(self.seconds)
     super(self).draw()

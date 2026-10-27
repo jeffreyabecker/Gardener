@@ -27,7 +27,9 @@ declared in `/system/records.be` — the fields and an `init`, nothing else. The
 constructor argument: `set_box(pos, dim)` sets both halves together, after the component is built
 and before anything draws it. A layout calls it for every child it places; a caller calls it for a
 component that stands alone, such as a settings editor's inline value.
-Nothing a component draws lies outside its box, and a component never draws before it has one.
+Nothing a component draws lies outside its box, and a component never draws before it has one. The
+one thing that reads past a box is a string whose face the caller named too large for the cell: it is
+drawn whole rather than cut, so a face is the caller's promise that the string fits.
 
 `use(w, h)` answers the room the component takes in a cell of that size: the cell itself for a
 component that draws across the whole of it, and its ink for a string, which is what lets the layout
@@ -86,58 +88,49 @@ resolved again.
 
 ## Text
 
-`Text` draws a string in the largest face that fits the cell it is given. It takes its `value` at
-`init`; its box is set with `set_box()` like any other component's, and it draws at that box — where
-the box sits is the alignment of the layout that holds it, which is why a text has no alignment of
-its own.
+`Text` draws a string at the face it was built with. It takes `value` and `font` at `init`; its box is
+set with `set_box()` like any other component's, and it draws at that box — where the box sits is the
+alignment of the layout that holds it.
 
-- `family` — `sans` (default), `mono`, `serif` or `lcd`. `serif` falls back to `sans` and `lcd` to
-  `mono`, because only the sans and mono families are compiled.
-- `style` — `none` (default) or `bold`. `oblique` falls back to `none` and `bold-oblique` to `bold`.
+- `font` — a face name from the binding's own table: `sans9`, `sans12`, `sans18`, `sans24`,
+  `sansbold18`, `mono12`, `tomthumb` and the rest of [bindings.md](./bindings.md). Nil or an empty
+  string is the built-in 5×7, the face that carries the arrow glyphs a hint prints.
+- `scale` — the size the face is drawn at, 1 (the default) for the face as designed and 3 for three
+  times as tall, whichever face is set.
+- `value` — the string drawn, `""` when it is nil.
 
-The candidate faces, tried largest first: the compiled face at 24, 18, 12 and 9 px, bold when the
-style is bold, and then the built-in 5×7, the last resort.
+There is no fitting and no ladder of faces: the caller named the face, so the string is drawn at it.
+A compiled face is drawn from its baseline, which is the ink box's height below the box's top; the
+built-in face is drawn from its top.
 
-The built-in 5×7 is used only when no compiled face fits. Bold has no built-in face: a bold built-in
-string is drawn and its ink box is inverted, which is what reads as bold. A string whose ink box is
-still wider than the cell at that face is cut short with a trailing ellipsis at the cell's edge.
-Nothing `Text` draws lies outside its box.
+`use(w, h)` answers the room the string takes at its face — the ink box `screen.text_bounds` answers,
+no larger than the cell — which is what a layout places the text by. Nothing cuts or wraps a string:
+a face named too large for the cell is the caller's choice, and the string is drawn whole and reads
+past the box rather than losing letters.
 
-`use(w, h)` fits the face to a cell of that size, cuts the string to its width and answers the ink
-box, so a layout can place a text: the box it stamps is exactly that ink, and `draw()` draws the
-string there without working anything out. The fit is cached, and recomputed only when the string
-changes. `bounds(text, candidate)` answers the ink box, `fit(text, max_w, max_h)` the largest face
-whose ink fits a cell — the choice `use()` makes for the cell it is handed, and the one a caller makes
-when it has to draw several strings at one size, such as a switch's segments — `fit_height(text,
-max_h)` the largest face whose ink height fits a cap, and `candidate` is the face the last draw fitted.
-
-`PinnedText` is a `Text` at a face the caller picked rather than one fitted to its cell: it takes its
-`face` at `init` — a candidate `Text.fit()` answered — cuts its value to the cell and draws it there.
-A row of cells that must read as one size uses it.
-
-`SysText` is a component of its own rather than a `Text`, and there is nothing to fit: it draws its
-`value` in the system face — the built-in 5×7 — at the corner of its box, at the `scale` it was built
-with, 1 by default for the system size itself, and answers the ink that string takes. That is the
-only face carrying the arrow glyphs, and the one an editor's label and hint rows are drawn in.
+The image itself draws every string in the built-in face: the chrome's title and status rows, the
+timers, the set count, the editor's label and hint rows and the list's rows at scale 1, a value in an
+editor and the pressure reading at scale 2. The scale is picked per region from the string each one
+prints — the built-in face is six pixels a character per scale against the eight it is tall, so a
+64-pixel cell holds five characters at 2 and seven at 1.
 
 ## PressureDisplay
 
-`PressureDisplay` is the reading formatted in the panel's unit, drawing the number filling its box,
-using `Text`'s fit. Its readings are placed by layouts of its own: the number filling the box, the
-secondary alone in the box so an alignment can put it in a corner, and two halves when the pair sits
-side by side.
+`PressureDisplay` is the reading formatted in the panel's unit, drawing the number filling its box.
+Its readings are placed by layouts of its own: the number filling the box, the secondary alone in the
+box so an alignment can put it in a corner, and two halves when the pair sits side by side.
 
 - `pressure_kpa` — the main reading in kPa, set before `draw()`; `draw()` takes no arguments.
 - A nil reading draws `--`.
 - The number is the kPa value scaled by the unit's `per_kpa`, with the unit's decimals.
 - The number carries no suffix of its own; the unit is the band's, in the bottom band.
-- `family`, `style` — the main number's face, as in `Text`.
+- `scale`, `secondary_scale` — the size each number is drawn at in the built-in face, `2` and `1`
+  when they are nil.
 - `secondary_pressure` — a second pressure in kPa, or nil (default), drawn per `secondary_position`
   and `size_hint`.
 - `secondary_position` — `tl`, `tr`, `bl` or `br` (default `br`).
-- `size_hint` — a real from 0 to 1 (default 0.5): below 1 a hint for the secondary's size as a
-  fraction of the main number's face height, drawn smaller in the corner; at 1 the two numbers are
-  the same size and sit side by side.
+- `size_hint` — below 1 the secondary is drawn in its corner at `secondary_scale`; at 1 the two
+  numbers sit side by side at `scale`.
 
 `AutoPressureDisplay` is a `PressureDisplay` that reads its own numbers from the machine: it takes a
 `pressure_order` — `"pressure:target"` (pressure primary, target secondary) or `"target:pressure"`
@@ -145,10 +138,11 @@ side by side.
 
 ## Duration
 
-`Duration` is whole seconds formatted in the panel's units of time. `seconds` is the count it draws,
-and `draw()` formats and draws it like `Text`. `format` is `minutes` (default), `seconds` or
-`hours`. `text(seconds)` formats without drawing: `2m30s`, `1m` on a whole minute, `45s` under a
-minute, `1h2m5s`, `0s` for nothing and `--` for nil.
+`Duration` is whole seconds formatted in the panel's units of time. It is a `Text`, so it takes the
+face it is drawn at after its `format`. `seconds` is the count it draws, and `draw()` formats and
+draws it like `Text`. `format` is `minutes` (default), `seconds` or `hours`. `text(seconds)` formats
+without drawing: `2m30s`, `1m` on a whole minute, `45s` under a minute, `1h2m5s`, `0s` for nothing
+and `--` for nil.
 
 ## ProgressBar
 

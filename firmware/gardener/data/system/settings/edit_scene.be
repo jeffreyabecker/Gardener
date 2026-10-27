@@ -121,14 +121,15 @@ end
 # The column every value editor draws its content in: the label row, two pixels of paper, the kind's
 # body, two pixels of paper and the hint row, declared in pixels so the layout resolves them to the
 # rows the content was measured at. The label, the body and the hint are centred in their rows; a
-# paper row is a layout with no children: it takes its pixels and draws nothing.
+# paper row is a layout with no children: it takes its pixels and draws nothing. The label and the
+# hint are the built-in face, the one that carries the arrows a hint prints.
 def editor_column(label, hint, body, body_h)
   return AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 8), [SysText(label)], alignment("center", "center")),
+    AutoLayout(bounds(1, 8), [Text(label)], alignment("center", "center")),
     AutoLayout(bounds(1, 2), []),
     AutoLayout(bounds(1, body_h), [body], alignment("center", "center")),
     AutoLayout(bounds(1, 2), []),
-    AutoLayout(bounds(1, 8), [SysText(hint)], alignment("center", "center"))
+    AutoLayout(bounds(1, 8), [Text(hint)], alignment("center", "center"))
   ])
 end
 

@@ -25,7 +25,7 @@ class DurationEditScene : EditScene
     self.min = min
     self.max = max
     self.nullable = nullable
-    self.cells = [PinnedText("", [nil, 1]), PinnedText("", [nil, 1])]
+    self.cells = [Text("", nil, SettingsView.scale), Text("", nil, SettingsView.scale)]
     self.page = nil
   end
 
@@ -88,27 +88,26 @@ class DurationEditScene : EditScene
     return str(self.current % 60) + "s"
   end
 
-  # The one face the two fields draw at and the ink they take there: the largest face the longer of
-  # them fits the band's sixteen pixels at, a pixel of paper above and below, so the pair reads as
-  # one control. A setting with no value shows the single field `--`.
+  # The ink the longer of the two fields takes at the scale they share, so the pair reads as one
+  # control. A setting with no value shows the single field `--`.
   def measure()
     var longer = "--"
     if self.current != nil
       longer = self.minutes_text()
-      if screen.text_bounds(self.seconds_text(), 1).w > screen.text_bounds(longer, 1).w
+      if screen.text_bounds(self.seconds_text(), SettingsView.scale).w >
+         screen.text_bounds(longer, SettingsView.scale).w
         longer = self.seconds_text()
       end
     end
-    var face = Text(longer).fit_height(longer, 16)
-    var ink = Text(longer).bounds(longer, face)
-    return [face, ink[0], ink[1]]
+    var ink = screen.text_bounds(longer, SettingsView.scale)
+    return [ink.w, ink.h]
   end
 
   # The two fields side by side, each the same share of the width, and the stage the keys are
   # stepping inverted.
   def body()
     if self.current == nil
-      return PinnedText("--", self.measure()[0])
+      return Text("--", nil, SettingsView.scale)
     end
     return AutoLayout(bounds(nil, nil), [
       AutoLayout(bounds(0.5, 1), [self.cells[0]], alignment("center", "center")),
@@ -117,11 +116,11 @@ class DurationEditScene : EditScene
   end
 
   def body_h()
-    return self.measure()[2] + 2
+    return self.measure()[1] + 2
   end
 
   def body_w()
-    var cell = self.measure()[1] + 2
+    var cell = self.measure()[0] + 2
     if self.current == nil
       return cell
     end
@@ -146,12 +145,9 @@ class DurationEditScene : EditScene
   # stage the keys are stepping inverted. A nil value has no stages to show.
   def draw_editor(pos, dim)
     if self.current != nil
-      var face = self.measure()[0]
       self.cells[0].value = self.minutes_text()
-      self.cells[0].face = face
       self.cells[0].inverted = self.stage == "min"
       self.cells[1].value = self.seconds_text()
-      self.cells[1].face = face
       self.cells[1].inverted = self.stage != "min"
     end
 

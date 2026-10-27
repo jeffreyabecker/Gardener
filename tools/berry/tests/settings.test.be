@@ -437,8 +437,9 @@ def the_editor_column_places_its_rows()
     assert_eq(rows[0].dim.w, page.dim.w, "the label row is not the content's width")
     assert_eq(rows[2].dim.w, page.dim.w, "the body row is not the content's width")
     assert_eq(rows[4].dim.w, page.dim.w, "the hint row is not the content's width")
-    assert_eq(classname(rows[0].children[0]), "SysText",
-              "the label row is not drawn in the system face")
+    assert_eq(classname(rows[0].children[0]), "Text",
+              "the label row is not a text")
+    assert_nil(rows[0].children[0].font, "the label row is not drawn in the system face")
   end
 end
 
@@ -499,8 +500,8 @@ def a_bool_switch_divides_its_band_evenly()
             "the cells do not fill the band")
   assert_true(cells[0].dim.w - cells[1].dim.w < 2 && cells[1].dim.w - cells[0].dim.w < 2,
               "the cells are not equal shares of the band")
-  assert_eq(cells[0].children[0].face[1], cells[1].children[0].face[1],
-            "the cells are not drawn at one face")
+  assert_eq(cells[0].children[0].scale, cells[1].children[0].scale,
+            "the cells are not drawn at one size")
   assert_true(cells[1].children[0].inverted, "the entry showing is not the one inverted")
   assert_true(!cells[0].children[0].inverted, "an entry that is not showing is inverted")
 end

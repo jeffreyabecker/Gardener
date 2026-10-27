@@ -59,16 +59,15 @@ class PressureEditScene : EditScene
     return string.format(self.fmt, self.current * self.unit.per_kpa)
   end
 
-  # The value's ink at the largest face that fits the band's sixteen pixels — the same string the
-  # row prints, with the unit's decimals, not a scaled built-in line.
+  # The value's ink at the scale every kind's band shares — the same string the row prints, with the
+  # unit's decimals, not a scaled compiled line.
   def measure()
-    var text = self.text()
-    var face = Text(text).fit_height(text, 16)
-    return Text(text).bounds(text, face)
+    var ink = screen.text_bounds(self.text(), SettingsView.scale)
+    return [ink.w, ink.h]
   end
 
   def body()
-    return Text(self.text())
+    return Text(self.text(), nil, SettingsView.scale)
   end
 
   def body_h()

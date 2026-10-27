@@ -37,7 +37,7 @@ class ListRow : Component
       cells.push(AutoLayout(bounds(Icon.width, Icon.height), [self.icon]))
       cells.push(AutoLayout(bounds(2, 1), []))
     end
-    cells.push(AutoLayout(bounds(nil, 1), [SysText(self.title)], alignment("left", "top")))
+    cells.push(AutoLayout(bounds(nil, 1), [Text(self.title)], alignment("left", "top")))
     return AutoLayout(bounds(nil, nil), cells)
   end
 end

@@ -204,33 +204,34 @@ test("a layout takes the alignment it is given", a_layout_takes_an_alignment)
 # A string is narrower than the row it was given, and the alignment is what places it: the box a text
 # is stamped with is its ink, so the pixel it lands on is the alignment's answer.
 def a_text_sits_where_the_alignment_says()
-  var centred = Text("x")
-  var root = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 12), [centred], alignment("center", "center"))
-  ])
-  root.to_box(0, 0, 128, 12)
-  root.draw()
-  var ink = centred.bounds(centred.value, centred.candidate)
-  assert_eq(centred.dim.w, ink[0], "the text's box is not the ink it draws")
-  assert_eq(centred.dim.h, ink[1], "the text's box is not the ink it draws")
-  assert_eq(centred.pos.x, (128 - ink[0]) / 2, "a centred text is not centred across its cell")
-  assert_eq(centred.pos.y, (12 - ink[1]) / 2, "a centred text is not centred down its cell")
+  var ink = screen.text_bounds("x", 1, "sans12")
 
-  var cornered = Text("x")
-  var plain = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 12), [cornered])])
-  plain.to_box(0, 0, 128, 12)
+  var centred = Text("x", "sans12")
+  var root = AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, 20), [centred], alignment("center", "center"))
+  ])
+  root.to_box(0, 0, 128, 20)
+  root.draw()
+  assert_eq(centred.dim.w, ink.w, "the text's box is not the ink it draws")
+  assert_eq(centred.dim.h, ink.h, "the text's box is not the ink it draws")
+  assert_eq(centred.pos.x, (128 - ink.w) / 2, "a centred text is not centred across its cell")
+  assert_eq(centred.pos.y, (20 - ink.h) / 2, "a centred text is not centred down its cell")
+
+  var cornered = Text("x", "sans12")
+  var plain = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 20), [cornered])])
+  plain.to_box(0, 0, 128, 20)
   plain.draw()
   assert_eq(cornered.pos.x, 0, "a text with no alignment does not start at the left")
   assert_eq(cornered.pos.y, 0, "a text with no alignment does not start at the top")
 
-  var cornered_right = Text("x")
+  var cornered_right = Text("x", "sans12")
   var right = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 12), [cornered_right], alignment("right", "bottom"))
+    AutoLayout(bounds(1, 20), [cornered_right], alignment("right", "bottom"))
   ])
-  right.to_box(0, 0, 128, 12)
+  right.to_box(0, 0, 128, 20)
   right.draw()
-  assert_eq(cornered_right.pos.x, 128 - ink[0], "a right text does not end at the right")
-  assert_eq(cornered_right.pos.y, 12 - ink[1], "a bottom text does not end at the bottom")
+  assert_eq(cornered_right.pos.x, 128 - ink.w, "a right text does not end at the right")
+  assert_eq(cornered_right.pos.y, 20 - ink.h, "a bottom text does not end at the bottom")
 end
 
 test("a text sits where the layout's alignment says", a_text_sits_where_the_alignment_says)

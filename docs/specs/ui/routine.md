@@ -150,13 +150,14 @@ or `RUNNING`, read from the chamber every beat — the clock the page shows besi
 and `stop` commands that move it.
 
 `/system/components/` is the drawing primitives the home scene composes, one class per file:
-`component.be` is `Component` (the `point`/`bounds` box and the `inverted` flip), `icon.be` is
-`Icon` (a glyph drawn in its box), `text.be` is `Text` (the face choice, plus `text_settings`),
-`layout.be` is `AutoLayout` (a layout placed with `to_box` resolves each child's `bounds` fraction of
-its own box and draws the children in order), `progress_bar.be` is `ProgressBar`, `scrollbar.be` is
-`Scrollbar`, `pressure_display.be` is `PressureDisplay` and `AutoPressureDisplay`, and `duration.be`
-is `Duration`. A component takes no box at construction: `set_box(pos, dim)` sets both, and the
-layout, or the caller for a component that stands alone, calls it before the first draw. Setting
+`component.be` is `Component` (the `point`/`bounds` box, the `use` room hook and the `inverted`
+flip), `icon.be` is `Icon` (a glyph drawn in its box), `text.be` is `Text` (a string at the face it
+was built with), `layout.be` is `AutoLayout` (a layout placed with `to_box` resolves each child's
+`bounds` cell, places it by the layout's `alignment` and draws the children in order),
+`progress_bar.be` is `ProgressBar`, `scrollbar.be` is `Scrollbar`, `pressure_display.be` is
+`PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. A component takes no box
+at construction: `set_box(pos, dim)` sets both, and the layout, or the caller for a component that
+stands alone, calls it before the first draw. Setting
 `inverted` on a component flips its box as the last thing its draw does — paper where its ink was —
 which is what a selected row, a cursor or a focused readout looks like.
 

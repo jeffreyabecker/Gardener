@@ -122,7 +122,7 @@ class SettingsEditScene : Scene
     # scene's box by the alignment of the layout that holds it.
     var block = []
     if self.title != nil
-      block.push(AutoLayout(bounds(1, heading_h), [SysText(self.title)],
+      block.push(AutoLayout(bounds(1, heading_h), [Text(self.title)],
                             alignment("center", "top")))
     end
     block.push(AutoLayout(bounds(1, rows_h), [self.list]))

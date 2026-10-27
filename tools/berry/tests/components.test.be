@@ -2,67 +2,73 @@
 
 suite = "components"
 
-def text_fits_compiled_first()
-  var t = Text("")
+# The face is the caller's: what a text draws at is the name it was given, and the room it reports is
+# that face's ink.
+def text_draws_at_the_face_it_was_given()
+  var t = Text("42", "sans12")
+  var room = t.use(64, 52)
+  var ink = screen.text_bounds("42", 1, "sans12")
+  assert_eq(t.font, "sans12", "the text does not keep the face it was given")
+  assert_eq(room.w, ink.w, "the text does not report the ink of its face")
+  assert_eq(room.h, ink.h, "the text does not report the ink of its face")
   t.set_box(point(0, 0), bounds(64, 52))
-  assert_eq(t.fit("42", 64, 52)[0], "sans24", "a short string in a tall box is not the largest face")
-  assert_nil(t.fit("42", 20, 8)[0], "a tiny box does not fall back to the built-in face")
-end
-
-test("text fits the compiled faces first", text_fits_compiled_first)
-
-def text_truncates_with_an_ellipsis()
-  var t = Text("")
-  t.set_box(point(0, 0), bounds(40, 8))
-  t.candidate = t.fit("ABCDEFGH", 40, 8)
-  var cut = t._truncated("ABCDEFGH", 40)
-  var b = screen.text_bounds(cut, 1)
-  assert_true(b.w <= 40, "the truncated string does not fit the box")
-  assert_true(string.endswith(cut, "..."), "the truncated string has no ellipsis")
-
-  t.dim = bounds(64, 8)
-  t.candidate = t.fit("READY", 64, 8)
-  assert_eq(t._truncated("READY", 64), "READY", "a string that fits is truncated")
-end
-
-test("text truncates below the built-in face", text_truncates_with_an_ellipsis)
-
-def bold_builtin_draws_and_inverts()
-  var t = Text("ABC")
-  t.set_box(point(0, 0), bounds(20, 8))
-  t.style = "bold"
   t.draw()
-  assert_nil(t.candidate[0], "a bold tiny box does not use the built-in face")
-  t.style = "none"
-  t.draw()
-  assert_nil(t.candidate[0], "a plain tiny box does not use the built-in face")
 end
 
-test("bold built-in text draws and inverts", bold_builtin_draws_and_inverts)
+test("a text draws at the face it was given", text_draws_at_the_face_it_was_given)
 
-# SysText is the system face whatever the box could hold, and it is not a Text: there is no face to
-# fit and none to cache, which is what a label row and a hint row need. Its scale is the system size
-# unless it is given another.
-def system_text_ignores_the_box()
-  var box = bounds(120, 40)
-  var fitted = Text("SYS")
-  fitted.set_box(point(0, 0), box)
-  fitted.draw()
-  assert_true(fitted.candidate[0] != nil, "a text in a large box did not fit a compiled face")
+# Nil or an empty name is the built-in 5x7, the face that carries the arrow glyphs a hint prints.
+def a_text_with_no_face_is_the_system_face()
+  var system = screen.text_bounds("42", 1)
+  for font : [nil, ""]
+    var t = Text("42", font)
+    var room = t.use(64, 52)
+    assert_eq(room.w, system.w, "a text with no face is not the built-in one")
+    assert_eq(room.h, system.h, "a text with no face is not the built-in one")
+    t.set_box(point(0, 0), bounds(64, 52))
+    t.draw()
+  end
+end
 
-  var system = SysText("SYS")
-  system.set_box(point(0, 0), box)
+test("a text with no face is the system face", a_text_with_no_face_is_the_system_face)
+
+# The scale is the size the face is drawn at, and the room a text reports is the ink at that size.
+def a_text_scales_the_face_it_draws()
+  var plain = Text("42", "sans12")
+  var doubled = Text("42", "sans12", 2)
+  var one = plain.use(128, 128)
+  var two = doubled.use(128, 128)
+  assert_eq(doubled.scale, 2, "the text does not keep the scale it was given")
+  assert_eq(plain.scale, 1, "a text does not default to the designed size")
+  assert_eq(two.h, one.h * 2, "a scale of two is not twice the room")
+  assert_true(two.w > one.w, "a scale of two is not wider")
+  doubled.set_box(point(0, 0), bounds(128, 128))
+  doubled.draw()
+
+  var system = Text("SYS", nil, 2)
+  var alone = screen.text_bounds("SYS", 1)
+  assert_eq(system.use(128, 128).h, alone.h * 2, "a scaled built-in line is not twice as tall")
+  assert_eq(Text("SYS", nil, nil).scale, 1, "a nil scale is not the designed size")
+  system.set_box(point(0, 0), bounds(128, 128))
   system.draw()
-  assert_true(!isinstance(system, Text), "the system text is a Text rather than a component")
-  assert_eq(system.scale, 1, "a system text does not default to the system size")
-  assert_eq(SysText("SYS", 2).scale, 2, "a system text does not keep the scale it was given")
-
-  var large = SysText("SYS", 2)
-  large.set_box(point(0, 0), bounds(128, 32))
-  large.draw()
 end
 
-test("system text keeps the system face", system_text_ignores_the_box)
+test("a text scales the face it draws", a_text_scales_the_face_it_draws)
+
+# Nothing cuts or wraps a string: the room reported is clamped to the cell, and the string is drawn
+# whole, so a caller that names a face too large for its cell sees it spill rather than lose letters.
+def a_text_wider_than_its_cell_is_drawn_whole()
+  var t = Text("ABCDEFGH", "sans24")
+  var whole = t.use(128, 52)
+  var clamped = t.use(10, 52)
+  assert_eq(clamped.w, 10, "the room a text takes is not clamped to its cell")
+  assert_true(whole.w > 10, "the string is not wider than the cell it was clamped to")
+  t.set_box(point(0, 0), bounds(10, 52))
+  t.draw()
+  assert_eq(t.value, "ABCDEFGH", "the string was cut for its cell")
+end
+
+test("a text wider than its cell is drawn whole", a_text_wider_than_its_cell_is_drawn_whole)
 
 # The layout's behaviour — resolving a child's bounds, stacking the siblings and keeping the box a
 # component was given — is pinned in layout.test.be, so the layout cases live there and not here.
