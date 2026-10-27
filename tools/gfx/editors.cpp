@@ -27,8 +27,9 @@ class NumberProbe : public NumberScene {
 
 void aNumberStepsAndHolds() {
   NoGestures gestures;
+  Ux ux;
   String label("Target");
-  NumberProbe number(gestures, label, 5, 1, 0, 10, false);
+  NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false);
   expectText(number.text().c_str(), "5", "the number prints as it is");
   number.nudge(1);
   expectText(number.text().c_str(), "6", "up steps by one");
@@ -41,16 +42,18 @@ void aNumberStepsAndHolds() {
 
 void aRealNumberStepsByItsIncrement() {
   NoGestures gestures;
+  Ux ux;
   String label("Target");
-  NumberProbe number(gestures, label, 0.5f, 0.1f, 0, 1, false);
+  NumberProbe number(gestures, ux, label, 0.5f, 0.1f, 0, 1, false);
   number.nudge(1);
   expectText(number.text().c_str(), "0.6", "a tenth step lands on 0.6");
 }
 
 void aNullableNumberHoldsNothing() {
   NoGestures gestures;
+  Ux ux;
   String label("Target");
-  NumberProbe number(gestures, label, NAN, 0.5f, 2, 8, true);
+  NumberProbe number(gestures, ux, label, NAN, 0.5f, 2, 8, true);
   expectText(number.text().c_str(), "--", "nothing prints dashes");
   expectEq(number.isNull(), 1, "and holds no value");
   number.nudge(-1);
@@ -63,24 +66,26 @@ void aNullableNumberHoldsNothing() {
 
 void aNumberWithNoBoundsStepsFreely() {
   NoGestures gestures;
+  Ux ux;
   String label("Target");
-  NumberProbe number(gestures, label, 1, 1, -INFINITY, INFINITY, false);
+  NumberProbe number(gestures, ux, label, 1, 1, -INFINITY, INFINITY, false);
   for (int i = 0; i < 5; i++) number.nudge(-1);
   expectText(number.text().c_str(), "-4", "an unbounded value steps past zero");
 }
 
 void aNumberBandDrawsTheValueAndTheBar() {
   NoGestures gestures;
+  Ux ux;
   String label("Target");
   Canvas band = canvas.child(Rect(0, 0, 40, 24));
   reset();
-  NumberProbe bounded(gestures, label, 5, 1, 0, 10, false);
+  NumberProbe bounded(gestures, ux, label, 5, 1, 0, 10, false);
   bounded.pageContents()(band);
   expect(display.anyInk(0, 0, 40, 16), "the number is drawn in the top of the band");
   expect(display.anyInk(0, 16, 40, 8), "and the bar under it");
 
   reset();
-  NumberProbe free(gestures, label, 5, 1, -INFINITY, INFINITY, false);
+  NumberProbe free(gestures, ux, label, 5, 1, -INFINITY, INFINITY, false);
   free.pageContents()(band);
   expect(display.anyInk(0, 0, 40, 24), "an unbounded number still draws");
   expectEq(display.inkCount(0, 18, 40, 6), 0, "and carries no bar");
@@ -110,8 +115,9 @@ class ChoiceProbe : public ChoiceScene {
 
 void aChoiceStepsAndWraps() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   expectText(keyOf(choice).c_str(), "b", "the stored key shows");
   expectEq(choice.nullable(), 0, "a setting that must hold a key says so");
   expectEq(choice.isNull(), 0, "and is holding one");
@@ -126,16 +132,18 @@ void aChoiceStepsAndWraps() {
 
 void aKeyNoEntryNamesShowsTheFirst() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "z", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "z", threeEntries(), false);
   choice.nudge(1);
   expectText(keyOf(choice).c_str(), "b", "an unknown key reads as the first entry");
 }
 
 void aNullableChoiceClearsBelowTheFirst() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "", threeEntries(), true);
+  ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
   expectEq(choice.nullable(), 1, "the scene says it may hold nothing");
   expectEq(choice.isNull(), 1, "and starts holding nothing");
   expectText(keyOf(choice).c_str(), "", "nothing holds no key");
@@ -153,16 +161,18 @@ void aNullableChoiceClearsBelowTheFirst() {
 
 void aChoiceWithNoEntriesStepsNowhere() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "", std::vector<ChoiceItem>(), false);
+  ChoiceProbe choice(gestures, ux, label, "", std::vector<ChoiceItem>(), false);
   choice.nudge(1);
   expectText(keyOf(choice).c_str(), "", "an empty choice holds nothing");
 }
 
 void aChoiceClosesOnTheKeyShowing() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   choice.nudge(1);
   expectEq(choice.press("ok:single"), 1, "OK is the scene's");
   expectEq(choice.isClosed(), 1, "OK closed the editor");
@@ -171,8 +181,9 @@ void aChoiceClosesOnTheKeyShowing() {
 
 void aChoiceCancelPutsBackTheKeyItOpenedOn() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   choice.nudge(1);
   expectEq(choice.press("cancel:single"), 1, "Cancel is the scene's");
   expectText(keyOf(choice).c_str(), "b", "Cancel puts back the key it opened on");
@@ -180,8 +191,9 @@ void aChoiceCancelPutsBackTheKeyItOpenedOn() {
 
 void aChoiceBandInvertsTheEntryShowing() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents()(band);
@@ -193,9 +205,10 @@ void aChoiceBandInvertsTheEntryShowing() {
 
 void aChoiceBandPrintsTheTitleWithoutAPaint() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
   std::vector<ChoiceItem> bare = {{"a", "Alpha", nullptr}, {"b", "Beta", nullptr}};
-  ChoiceProbe choice(gestures, label, "a", bare, false);
+  ChoiceProbe choice(gestures, ux, label, "a", bare, false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents()(band);
@@ -204,8 +217,9 @@ void aChoiceBandPrintsTheTitleWithoutAPaint() {
 
 void aChoiceBandPrintsDashesForNothing() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, label, "", threeEntries(), true);
+  ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents()(band);
@@ -227,8 +241,9 @@ class BoolProbe : public BoolScene {
 
 void aBoolTogglesAndReachesNothing() {
   NoGestures gestures;
+  Ux ux;
   String label("Power");
-  BoolProbe toggle(gestures, label, "false", false);
+  BoolProbe toggle(gestures, ux, label, "false", false);
   expectText(toggle.text().c_str(), "OFF", "a false setting prints OFF");
   expectEq(std::any_cast<bool>(toggle.value()), 0, "and is off");
   toggle.nudge(1);
@@ -239,7 +254,7 @@ void aBoolTogglesAndReachesNothing() {
   toggle.nudge(-1);
   expectText(toggle.text().c_str(), "ON", "down turns it on");
 
-  BoolProbe nullable(gestures, label, "", true);
+  BoolProbe nullable(gestures, ux, label, "", true);
   expectText(nullable.text().c_str(), "--", "a nullable setting holding nothing prints dashes");
   expectEq(nullable.isNull(), 1, "and holds no state");
   nullable.nudge(-1);
@@ -252,8 +267,9 @@ void aBoolTogglesAndReachesNothing() {
 
 void aBoolSwitchInvertsTheStateShowing() {
   NoGestures gestures;
+  Ux ux;
   String label("Power");
-  BoolProbe toggle(gestures, label, "false", false);
+  BoolProbe toggle(gestures, ux, label, "false", false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   toggle.pageContents()(band);
@@ -264,8 +280,9 @@ void aBoolSwitchInvertsTheStateShowing() {
 
 void aBoolSwitchShowsTheNothingFirst() {
   NoGestures gestures;
+  Ux ux;
   String label("Power");
-  BoolProbe nullable(gestures, label, "", true);
+  BoolProbe nullable(gestures, ux, label, "", true);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   nullable.pageContents()(band);
@@ -276,17 +293,18 @@ void aBoolSwitchShowsTheNothingFirst() {
 
 void aChoiceBarShowsWhereTheWindowIs() {
   NoGestures gestures;
+  Ux ux;
   String label("Choice");
   std::vector<ChoiceItem> six;
   for (int i = 0; i < 6; i++) six.push_back({String(i), "Row", nullptr});
-  ChoiceProbe many(gestures, label, String(5), six, false);
+  ChoiceProbe many(gestures, ux, label, String(5), six, false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   many.pageContents()(band);
   expect(display.anyInk(126, 2, 2, 8), "the scrollbar inks the track above the thumb");
   expectEq(display.inkCount(126, 15, 2, 6), 0, "and leaves the thumb bare");
 
-  ChoiceProbe few(gestures, label, "b", threeEntries(), false);
+  ChoiceProbe few(gestures, ux, label, "b", threeEntries(), false);
   reset();
   few.pageContents()(band);
   expectEq(display.inkCount(126, 2, 2, 4), 0, "a window of every entry carries no scrollbar");
@@ -307,8 +325,9 @@ class DurationProbe : public DurationScene {
 
 void aDurationStepsMinutesThenSeconds() {
   NoGestures gestures;
+  Ux ux;
   String label("Hold");
-  DurationProbe duration(gestures, label, 90, 5, 0, 3600, false);
+  DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   expectText(duration.text().c_str(), "1m30s", "the seconds print compact");
   duration.nudge(1);
   expectText(duration.text().c_str(), "2m30s", "the minutes stage steps whole minutes");
@@ -324,8 +343,9 @@ void aDurationStepsMinutesThenSeconds() {
 
 void aDurationHoldsItsBounds() {
   NoGestures gestures;
+  Ux ux;
   String label("Hold");
-  DurationProbe duration(gestures, label, 30, 60, 120, 180, false);
+  DurationProbe duration(gestures, ux, label, 30, 60, 120, 180, false);
   expectText(duration.text().c_str(), "30s", "the value opens as the setting gave it");
   duration.nudge(1);
   expectText(duration.text().c_str(), "2m", "a step from below the floor lands on it");
@@ -340,8 +360,9 @@ void aDurationHoldsItsBounds() {
 
 void aNullableDurationHoldsNothing() {
   NoGestures gestures;
+  Ux ux;
   String label("Hold");
-  DurationProbe duration(gestures, label, NAN, 5, 10, 3600, true);
+  DurationProbe duration(gestures, ux, label, NAN, 5, 10, 3600, true);
   expectText(duration.text().c_str(), "--", "nothing prints dashes");
   expectEq(duration.isNull(), 1, "and holds no value");
   duration.nudge(-1);
@@ -354,8 +375,9 @@ void aNullableDurationHoldsNothing() {
 
 void aDurationBandInvertsTheStage() {
   NoGestures gestures;
+  Ux ux;
   String label("Hold");
-  DurationProbe duration(gestures, label, 90, 5, 0, 3600, false);
+  DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   duration.pageContents()(band);
@@ -375,7 +397,7 @@ void aDurationBandInvertsTheStage() {
 // The editor page itself, with a kind that draws nothing in the middle band.
 class PageProbe : public EditorScene {
  public:
-  PageProbe(GestureQueue& gestures, String& label) : EditorScene(gestures, label) {}
+  PageProbe(GestureQueue& gestures, Ux& ux, String& label) : EditorScene(gestures, ux, label) {}
   using EditorScene::pageComponents;
 
  protected:
@@ -385,8 +407,9 @@ class PageProbe : public EditorScene {
 void anEditorPageIsThreeBands() {
   reset();
   NoGestures gestures;
+  Ux ux;
   String label("Number");
-  PageProbe page(gestures, label);
+  PageProbe page(gestures, ux, label);
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 52));
   page.pageComponents()(band);
   expect(display.anyInk(0, 0, PageWidth, 8), "the title is drawn in the top band");

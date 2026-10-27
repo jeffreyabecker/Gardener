@@ -2,8 +2,11 @@
 // that asked for it returns, and the list that walks a row, opens the row's editor and hands the
 // set back.
 
+#include <stdio.h>
+
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "suite.h"
 
@@ -195,8 +198,31 @@ class SettingsProbe : public SettingsScene {
   bool press(const char* gesture) { return handle(gesture); }
 };
 
+// A queue a case fills: the scene on top drains it on its next beat, as the panel's queue does.
+class Pressed : public GestureQueue {
+ public:
+  void press(const char* gesture) { queued_.push_back(gesture); }
+
+  const char* take() override {
+    if (queued_.empty()) return nullptr;
+    const char* gesture = queued_.front();
+    queued_.erase(queued_.begin());
+    return gesture;
+  }
+
+ private:
+  std::vector<const char*> queued_;
+};
+
+// One gesture through the stack: queued, then taken by whatever is on top. A scene that closes
+// itself pops on this call rather than inside its own handle, which is how the stack is driven.
+void press(Ux& ux, Pressed& gestures, const char* gesture, uint32_t nowMs) {
+  gestures.press(gesture);
+  ux.poll(canvas, nowMs);
+}
+
 void aSettingsListMovesAndEdits() {
-  NoGestures gestures;
+  Pressed gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures);
@@ -223,14 +249,14 @@ void aSettingsListMovesAndEdits() {
     handed = static_cast<SettingsScene&>(scene).values();
   });
 
-  settings->press("forward:single");
+  press(ux, gestures, "forward:single", 1000);
   expectEq(ux.depth(), 3, "forward pushes the row's editor");
   auto* editor = static_cast<TestEditor*>(ux.top());
   editor->set(String("psi"));
   ux.pop();
   expectEq(ux.depth(), 2, "the editor pops back to the list");
 
-  settings->press("ok:single");
+  press(ux, gestures, "ok:single", 1010);
   expectEq(ux.depth(), 1, "OK closes the list");
   expectEq(popped == settings, 1, "handing it back");
   const String edited = std::any_cast<String>(handed.at("unit"));
@@ -240,7 +266,7 @@ void aSettingsListMovesAndEdits() {
 }
 
 void aSettingsListCancelPutsTheSetBack() {
-  NoGestures gestures;
+  Pressed gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures);
@@ -258,7 +284,7 @@ void aSettingsListCancelPutsTheSetBack() {
   settings->press("forward:single");
   static_cast<TestEditor*>(ux.top())->set(String("70"));
   ux.pop();
-  settings->press("cancel:single");
+  press(ux, gestures, "cancel:single", 1000);
   const String back = std::any_cast<String>(handed.at("target"));
   expectText(back.c_str(), "50", "Cancel hands back the set as it was opened");
 }
@@ -281,6 +307,121 @@ void aSettingsListDrawsItsRows() {
          "and the row showing is inverted across its width");
 }
 
+// The number a row prints, and the two entries the choice row offers.
+String numberText(float value) {
+  char printed[16];
+  snprintf(printed, sizeof(printed), "%g", static_cast<double>(value));
+  return String(printed);
+}
+
+std::vector<ChoiceItem> choices() {
+  return {{"lo", "Low", nullptr}, {"hi", "High", nullptr}};
+}
+
+// One row per value kind: it prints the kind's text and opens the kind's editor over the value the
+// list holds. A real settings page builds these one class each; the case needs the four together.
+class KindRow : public SettingsRow {
+ public:
+  enum class Kind { Number, Bool, Choice, Duration };
+
+  KindRow(GestureQueue& gestures, Ux& ux, Kind kind, const char* key, const char* label,
+          const std::any& value)
+      : gestures_(gestures), ux_(ux), kind_(kind), key_(key), label_(label), value_(value) {}
+
+  const String& key() const override { return key_; }
+  const String& label() const override { return label_; }
+  std::any currentValue() const override { return value_; }
+
+  String text(const std::any& value) const override {
+    if (!value.has_value()) return "--";
+    if (kind_ == Kind::Number) return numberText(std::any_cast<float>(value));
+    if (kind_ == Kind::Bool) return std::any_cast<bool>(value) ? "ON" : "OFF";
+    if (kind_ == Kind::Choice) return std::any_cast<String>(value);
+    char printed[16];
+    durationText(DurationFormat::Minutes, std::any_cast<int32_t>(value), true, printed,
+                 sizeof(printed));
+    return String(printed);
+  }
+
+  std::unique_ptr<Scene> scene(const std::any& value) override {
+    if (kind_ == Kind::Number) {
+      const auto current = std::any_cast<float>(value);
+      return std::make_unique<NumberScene>(gestures_, ux_, label_, current, 1, 0, 10, false);
+    }
+    if (kind_ == Kind::Bool) {
+      const String current = std::any_cast<bool>(value) ? "true" : "false";
+      return std::make_unique<BoolScene>(gestures_, ux_, label_, current, false);
+    }
+    if (kind_ == Kind::Choice) {
+      return std::make_unique<ChoiceScene>(gestures_, ux_, label_, std::any_cast<String>(value),
+                                           choices(), false);
+    }
+    const auto current = static_cast<float>(std::any_cast<int32_t>(value));
+    return std::make_unique<DurationScene>(gestures_, ux_, label_, current, 5, 0, 3600, false);
+  }
+
+ private:
+  GestureQueue& gestures_;
+  Ux& ux_;
+  Kind kind_;
+  String key_;
+  String label_;
+  std::any value_;
+};
+
+void aSettingsListEditsEveryKind() {
+  Pressed gestures;
+  Ux ux;
+  String title("SETTINGS");
+  KindRow target(gestures, ux, KindRow::Kind::Number, "target", "Target", 5.0f);
+  KindRow power(gestures, ux, KindRow::Kind::Bool, "power", "Power", false);
+  KindRow unit(gestures, ux, KindRow::Kind::Choice, "unit", "Unit", String("lo"));
+  KindRow hold(gestures, ux, KindRow::Kind::Duration, "hold", "Hold", int32_t(90));
+  auto list = std::make_unique<SettingsScene>(gestures, ux, title);
+  list->set({&target, &power, &unit, &hold});
+
+  SettingValues handed;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list), [&handed](Scene& scene) {
+    handed = static_cast<SettingsScene&>(scene).values();
+  });
+
+  uint32_t now = 1000;
+  // The number: two steps of one, from 5 to 7.
+  press(ux, gestures, "forward:single", now += 10);
+  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "ok:single", now += 10);
+
+  // The bool: one step turns it from OFF to ON.
+  press(ux, gestures, "down:single", now += 10);
+  press(ux, gestures, "forward:single", now += 10);
+  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "ok:single", now += 10);
+
+  // The choice: one step moves from the first entry to the second.
+  press(ux, gestures, "down:single", now += 10);
+  press(ux, gestures, "forward:single", now += 10);
+  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "ok:single", now += 10);
+
+  // The duration: one step in the minutes stage takes 1m30s to 2m30s.
+  press(ux, gestures, "down:single", now += 10);
+  press(ux, gestures, "forward:single", now += 10);
+  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "ok:single", now += 10);
+
+  press(ux, gestures, "ok:single", now += 10);
+
+  expectEq(ux.depth(), 1, "the list closed back to the root");
+  expectEq(std::any_cast<float>(handed.at("target")) == 7.0f, 1, "the number took its steps");
+  expectEq(std::any_cast<bool>(handed.at("power")), 1, "the bool turned on");
+  const String chosen = std::any_cast<String>(handed.at("unit"));
+  expectText(chosen.c_str(), "hi", "the choice moved to its second entry");
+  expectEq(std::any_cast<int32_t>(handed.at("hold")), 150, "the duration took a minute");
+}
+
 }  // namespace
 
 void addSceneCases(std::vector<Case>& cases) {
@@ -294,6 +435,7 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a settings list moves and edits", aSettingsListMovesAndEdits});
   cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});
+  cases.push_back({"a settings list edits every kind", aSettingsListEditsEveryKind});
 }
 
 }  // namespace gardener::gfx::test

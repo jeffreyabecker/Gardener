@@ -26,9 +26,9 @@ Paint rowOf(const ChoiceItem* item, bool showing) {
 
 }  // namespace
 
-ChoiceScene::ChoiceScene(GestureQueue& gestures, String& label, const String& current,
+ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
                          const std::vector<ChoiceItem>& items, bool nullable)
-    : EditorScene(gestures, label), items_(items), nullable_(nullable) {
+    : EditorScene(gestures, ux, label), items_(items), nullable_(nullable) {
   value_ = current;
   hasValue_ = !nullable_ || !current.isEmpty();
   opened_ = value_;

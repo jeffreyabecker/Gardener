@@ -31,7 +31,7 @@ class ChoiceScene : public EditorScene {
   // `current` is the key stored now. A nullable setting holding nothing passes an empty one, which
   // is what the band prints `--` for; a key no entry names shows the first, as a setting that no
   // longer offers it reads as its default.
-  ChoiceScene(GestureQueue& gestures, String& label, const String& current,
+  ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
               const std::vector<ChoiceItem>& items, bool nullable);
 
   // What the entry showing prints: its title, or `--` when the setting holds nothing.

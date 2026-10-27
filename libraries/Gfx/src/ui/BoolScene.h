@@ -16,7 +16,7 @@ class BoolScene : public ChoiceScene {
  public:
   // `current` is the state the document keeps: "true" or "false", and an empty one for a nullable
   // setting holding nothing, which the switch shows as `--`.
-  BoolScene(GestureQueue& gestures, String& label, const String& current, bool nullable);
+  BoolScene(GestureQueue& gestures, Ux& ux, String& label, const String& current, bool nullable);
 
   // The state the keys left it on, as the bool the stack hands back; an empty any is a nullable
   // setting holding no state at all.

@@ -17,7 +17,7 @@ namespace gardener::gfx::ui {
 // what was declared without asking whether anything was, and a setting holding nothing is NAN.
 class NumberScene : public EditorScene {
  public:
-  NumberScene(GestureQueue& gestures, String& label, float current, float step, float min,
+  NumberScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step, float min,
               float max, bool nullable);
 
   // What the band prints for the number: `%g` of it, or `--` when it holds nothing.

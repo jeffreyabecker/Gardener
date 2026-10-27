@@ -36,9 +36,9 @@ Paint numberBand(const char* printed, shapes::TextBox ink, bool bar, int16_t per
 
 }  // namespace
 
-NumberScene::NumberScene(GestureQueue& gestures, String& label, float current, float step,
+NumberScene::NumberScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step,
                          float min, float max, bool nullable)
-    : EditorScene(gestures, label),
+    : EditorScene(gestures, ux, label),
       number_(current),
       opened_(current),
       step_(step),

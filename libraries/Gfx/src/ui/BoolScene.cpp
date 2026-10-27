@@ -48,8 +48,9 @@ Paint switchRow(bool nullable, bool hasValue, bool on) {
 
 }  // namespace
 
-BoolScene::BoolScene(GestureQueue& gestures, String& label, const String& current, bool nullable)
-    : ChoiceScene(gestures, label, current,
+BoolScene::BoolScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
+                     bool nullable)
+    : ChoiceScene(gestures, ux, label, current,
                   {{OffKey, "OFF", nullptr}, {OnKey, "ON", nullptr}}, nullable),
       nullable_(nullable) {}
 

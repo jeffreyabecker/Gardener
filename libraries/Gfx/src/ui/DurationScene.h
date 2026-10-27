@@ -18,7 +18,7 @@ namespace gardener::gfx::ui {
 // pins the value there rather than leaving an empty range.
 class DurationScene : public EditorScene {
  public:
-  DurationScene(GestureQueue& gestures, String& label, float current, float step, float min,
+  DurationScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step, float min,
                 float max, bool nullable);
 
   // The seconds the keys left it on, as the whole seconds the stack hands back — `%g`-style text

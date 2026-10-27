@@ -26,10 +26,8 @@ constexpr float HintBandPct = 0.15f;
 
 }  // namespace
 
-EditorScene::EditorScene(GestureQueue& gestures, String& label)
-    : Scene(gestures), label_(label) {}
-
-
+EditorScene::EditorScene(GestureQueue& gestures, Ux& ux, String& label)
+    : Scene(gestures), ux_(ux), label_(label) {}
 
 bool EditorScene::handle(const char* gesture) {
   if (closed_) return false;
@@ -44,27 +42,32 @@ bool EditorScene::handle(const char* gesture) {
   if (strcmp(gesture, "ok:single") == 0) {
     closed_ = true;
     accepted();
+    ux_.pop();
     return true;
   }
   if (strcmp(gesture, "cancel:single") == 0) {
     closed_ = true;
     canceled();
+    ux_.pop();
     return true;
   }
   return false;
 }
 
 void EditorScene::drawPage(Canvas& canvas) {
-   pageComponents()(canvas);
+  pageComponents()(canvas);
 }
-  Paint EditorScene::pageComponents() {
-    return column(1.0f, {
-        Child{Cell(1.0f, TitleBandPct), [this](Canvas& canvas) { drawCentred(canvas, title()); }},
-        Child{Cell(1.0f, ContentsBandPct), pageContents()},
-        Child{Cell(1.0f, HintBandPct), [this](Canvas& canvas) { drawCentred(canvas, hint()); }},
-    });
-  }
-  Paint EditorScene::pageContents(){
-    return Paint();
-  }
+
+Paint EditorScene::pageComponents() {
+  return column(1.0f, {
+      Child{Cell(1.0f, TitleBandPct), [this](Canvas& canvas) { drawCentred(canvas, title()); }},
+      Child{Cell(1.0f, ContentsBandPct), pageContents()},
+      Child{Cell(1.0f, HintBandPct), [this](Canvas& canvas) { drawCentred(canvas, hint()); }},
+  });
+}
+
+Paint EditorScene::pageContents() {
+  return Paint();
 }  // namespace gardener::gfx::ui
+
+}  // namespace gardener::gfx::ui  // namespace gardener::gfx::ui

@@ -6,27 +6,27 @@
 
 #include "ui/Drawing.h"
 #include "ui/Scene.h"
+#include "ui/Ux.h"
 
 namespace gardener::gfx::ui {
 
-// The value editor of a whole-number setting: the label, the number filling the band, a bar showing
-// where it sits between the bounds when the setting has both, and the hint row. Up and Down step
-// the number within its bounds, OK hands it back and Cancel hands back the value it opened on.
+// The page every value editor is drawn in: a title band, the contents band the kind fills, and a
+// hint band. Up and Down go to nudge(), and the keys close the editor.
+//
+// OK and Cancel pop the editor from the stack, which holds the popped scene long enough for the
+// pusher's callback to read what it answered. The kind puts back the value it opened on in
+// canceled(), so a cancel leaves the setting as it was.
 class EditorScene : public Scene {
  public:
-
-  // `value` is what the editor opens on; a nullable setting holding nothing opens with `hasValue`
-  // false and prints `--`. A step below one is held to one, as the declaration is.
-  EditorScene(GestureQueue& gestures, String& label );
-
-
+  EditorScene(GestureQueue& gestures, Ux& ux, String& label);
 
  protected:
   void drawPage(Canvas& canvas) override;
   bool handle(const char* gesture) override;
   virtual Paint pageComponents();
   virtual Paint pageContents();
-  
+
+  Ux& ux_;
   String label_;
 
   bool closed_ = false;
@@ -38,12 +38,8 @@ class EditorScene : public Scene {
   virtual void accepted() {}
   virtual void canceled() {}
 
-  virtual const char* title(){
-    return label_.c_str();
-  }
-  virtual const char* hint(){
-    return "\x1E/\x1F  OK=SAVE";
-  }
+  virtual const char* title() { return label_.c_str(); }
+  virtual const char* hint() { return "\x1E/\x1F  OK=SAVE"; }
 };
 
 }  // namespace gardener::gfx::ui
