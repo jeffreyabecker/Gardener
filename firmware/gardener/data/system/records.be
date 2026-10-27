@@ -1,5 +1,5 @@
 # records.be — the records the image shares: the classes a native call answers with, and the pair a
-# page builds a box from. A routine reads a record with dots — `s.pressure_kpa`, `ev.btn` — and this
+# page builds a box from. A routine reads a record with dots — `u.name`, `l.serial` — and this
 # interpreter allows that only on an instance whose class declares the field; only the parser makes
 # an instance variable, so the field list here is the contract with whoever fills it.
 #
@@ -9,10 +9,6 @@
 #
 # The file loads before any page, so it also holds the one global the pages share: `is_nil`, the
 # first of its arguments that is not nil, which turns a stored-or-default choice into one line.
-
-class reading
-  var pressure_kpa, target, duty, floor, min, state, fault, batt, batt_low, sensor_ok
-end
 
 class unit
   var name, suffix, per_kpa, whole_step, decimals

@@ -2,6 +2,8 @@
 
 #if GARDENER_PANEL
 
+#include <Arduino.h>
+
 #include <vector>
 
 #include "BuzzerPlayer.h"
@@ -237,6 +239,23 @@ int deviceSilence(bvm* vm) {
   be_return_nil(vm);
 }
 
+// `millis()`, the clock a page times against. The device's rather than the machine's: a page that
+// touches no machine call still has one.
+int deviceNowMs(bvm* vm) {
+  be_pushint(vm, (bint)millis());
+  be_return(vm);
+}
+
+// One `[I]` diagnostic record, written when the device's log set includes `I`. What a page reports
+// lands where the firmware's own lines do, which is why the sink is the panel's logger rather than
+// anything of the VM's.
+int deviceLog(bvm* vm) {
+  if (be_top(vm) >= 1 && be_isstring(vm, 1) && logger != nullptr) {
+    logger->info(argText(vm, 1));
+  }
+  be_return_nil(vm);
+}
+
 // A pull, not a callback: the queue is drained by the routine when it is ready, so no Berry code
 // runs while a native call is on the stack.
 int deviceTakeGesture(bvm* vm) {
@@ -293,6 +312,8 @@ const bnfuncinfo DeviceLibrary[] = {
     {"tone", deviceTone},
     {"silence", deviceSilence},
     {"take_gesture", deviceTakeGesture},
+    {"log", deviceLog},
+    {"now_ms", deviceNowMs},
     {"config", deviceConfig},
     {nullptr, nullptr},
 };

@@ -81,15 +81,13 @@ image is already compiled by then.
 
 ## What the harness provides
 
-The records `reading`, `unit`, `links`, `jingle`, `point` and `bounds` — declared in
-`/system/records.be`, which the image loads before anything else — and the three native modules a
-routine calls:
+The records `unit`, `links`, `jingle`, `point` and `bounds` — declared in `/system/records.be`,
+which the image loads before anything else — and the two native modules a routine calls:
 
 | Module | On the host |
 | --- | --- |
-| `vacuum` | a machine model: `state()`, `target()`, `start()`, `stop()`, `log()` |
-| `screen` | every drawing verb forwarded to the panel with its ink-or-paper colour, real `text_bounds`, and the unit |
-| `device` | the unit, the jingle selection and library, the piezo counting sounds rather than playing them, a press queue, the reboot and reset requests, and `device.config` over `/cfg`, with `harness.writes()` counting the writes |
+| `vacuum` | the machine: `state()`, the target and current pressure, the two bounds, `clamp()`, `start()`, `stop()` and `reset()` |
+| `device` | the unit, the jingle selection and library, the piezo counting sounds rather than playing them, a press queue, the clock, the log, the reboot and reset requests, and `device.config` over `/cfg`, with `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`
 defines the global `routines` instance and `/system/ux.be` the global `ux`, which the driver and the

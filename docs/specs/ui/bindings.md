@@ -1,9 +1,12 @@
 # Bindings
 
-The native surface a routine calls: three modules — `vacuum`, `screen` and `device` — the records
-those calls answer with, and the `Config` document instance `device.config` hands back. This
-is the reference for what a routine can call; for what a routine must be, see
-[routine.md](./routine.md).
+The native surface a routine calls: two modules — `vacuum` and `device` — the records those calls
+answer with, and the `Config` document instance `device.config` hands back. This is the reference
+for what a routine can call; for what a routine must be, see [routine.md](./routine.md).
+
+Nothing here draws. A page is a scene the stack paints, so the panel has no verbs of its own and a
+page that needs to draw does it in C++, where the canvas is.
+
 Three of the names a scene uses are Berry classes rather than native modules: the registry the
 routine browser draws (`/system/registry.be`), the record it registers (`/system/registration.be`)
 and the scene stack it pushes onto (`/system/ux.be`). They are documented here too, because a
@@ -17,12 +20,12 @@ Several of the calls answer a **record**: a small object whose fields are read w
 them answer a list of records.
 
 ```berry
-var s = vacuum.state()
-var depth = s.pressure_kpa          # not s["pressure_kpa"]
+var u = device.unit()
+var suffix = u.suffix                # not u["suffix"]
 ```
 
-A record is the machine as it stood when the call returned, not a live view: writing a field
-(`s.pressure_kpa = 1.0`) changes the routine's copy and nothing else. Reading a field the record does not
+A record is a value as it stood when the call returned, not a live view: writing a field
+(`u.suffix = "kPa"`) changes the routine's copy and nothing else. Reading a field the record does not
 have raises `attribute_error`, and the fields are the ones listed under each call. The classes are
 declared in `/system/records.be`, which the image loads before any page.
 
@@ -35,190 +38,43 @@ routine registers in [routine.md](./routine.md).
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `vacuum.target(pressure_kpa)` | — | sets the depth to pull to, in kPa below ambient; `0` is the ambient target and releases the chamber. A value outside `0` … `floor` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
-| `vacuum.target_off()` | — | sets the ambient target, `0`; releases the chamber if it was pulling or holding |
-| `vacuum.clamp(pressure_kpa)` | `real` | the same number held to the machine's bounds, `min` … `floor`. See below |
+| `vacuum.set_target_pressure(pressure_kpa)` | — | sets the depth to pull to, in kPa below ambient; `0` is the ambient target and releases the chamber. A value outside `0` … `get_deepest_pressure()` is ignored by the machine. A shallower target while pulling or holding vents to it; a deeper one pulls. Both return to the run |
+| `vacuum.get_target_pressure()` | `real` | the target the machine holds; `0` is the ambient target, which keeps the chamber released |
+| `vacuum.get_current_pressure()` | `real` | the depth below ambient as the sensor reports it, `0` while there is no valid reading |
+| `vacuum.get_deepest_pressure()` | `real` | the deepest target the machine accepts |
+| `vacuum.get_shallowest_pressure()` | `real` | the shallowest non-zero target the machine accepts |
+| `vacuum.clamp(pressure_kpa)` | `real` | the same number held to those two bounds. See below |
 | `vacuum.start()` | `bool` | false when the machine refuses: no valid reading, or a latched fault. Valid at any target, `0` included |
 | `vacuum.stop()` | — | stops the pump and vents. The target is kept |
 | `vacuum.reset()` | — | clears a latched fault, then vents |
-| `vacuum.state()` | a `reading` record | see below |
-| `vacuum.now_ms()` | `int` | `millis()` |
-| `vacuum.log(text)` | — | one `[I]` diagnostic record, written when the device's `log` set includes `I` |
-
-`vacuum.state()` answers a `reading`, read with a dot:
-
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `pressure_kpa` | real | current depth below ambient |
-| `target` | real | the target; **0 is the ambient target**, which holds the chamber released |
-| `duty` | real | pump duty, percent |
-| `floor` | real | deepest target the machine accepts |
-| `min` | real | shallowest non-zero target the machine accepts |
-| `state` | string | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT`. A `VENT` from `stop()` ends at `IDLE`; a target vent returns to `PULL`/`HOLD` |
-| `fault` | string | the latched code (`sensor`, `vent_timeout`, `no_progress`, `overshoot`), or `""` |
-| `batt` | int | percent, or **-1 when no gauge is fitted** |
-| `batt_low` | bool | the gauge's low-charge threshold is met, so the band's battery blink is on |
-| `sensor_ok` | bool | a valid pressure reading is available |
+| `vacuum.state()` | string | `IDLE`, `PULL`, `HOLD`, `VENT` or `FAULT`. A `VENT` from `stop()` ends at `IDLE`; a target vent returns to `PULL`/`HOLD` |
 
 Every pressure is kPa whatever the panel is printing. `device.unit()` says what the glass shows.
 
-`vacuum.clamp(pressure_kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
-answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
-target is restored through it, and a page that reads a pressure to start from uses it too — so no
-routine carries its own copy of the two constants:
+A command joins the control task's queue and is applied on its next beat, so
+`set_target_pressure()` followed by `get_target_pressure()` answers the target from before the call.
+`start()` is the one that answers a fact about the chamber: its refusal is read before anything is
+queued. A latched fault reads as `FAULT` from `state()` until `reset()` clears it.
+
+`vacuum.clamp(pressure_kpa)` is the bounds rule in one place: below the shallowest it answers the
+shallowest, above the deepest it answers the deepest, otherwise the number it was given. A target
+editor steps through it, a stored target is restored through it, and a page that reads a pressure to
+start from uses it too — so no routine carries its own copy of the two bounds:
 
 ```berry
-var s = vacuum.state()
-var start = vacuum.clamp(s.pressure_kpa)         # a safe starting point for the editor
-vacuum.target(vacuum.clamp(stored))     # and a stored one it cannot trust yet
+var start = vacuum.clamp(vacuum.get_current_pressure())   # a safe starting point for the editor
+vacuum.set_target_pressure(vacuum.clamp(stored))          # and a stored one it cannot trust yet
 ```
 
-`min` is the shallowest non-zero target: `vacuum.target(min)` is taken, anything between 0 and `min`
-is not, and `vacuum.target(0)` is the ambient target — the chamber released — and is always taken.
-
-## `screen` — the panel
-
-Coordinates are panel pixels, origin top left. Nothing reaches the glass until `flush()`.
-
-| Call |
-| --- |
-| `screen.draw_clear([color])` |
-| `screen.draw_pixel(x, y [, color])` |
-| `screen.draw_line(x0, y0, x1, y1 [, color])` |
-| `screen.draw_hline(x, y, w [, color])` |
-| `screen.draw_vline(x, y, h [, color])` |
-| `screen.draw_rect(x, y, w, h [, color])` |
-| `screen.draw_fillrect(x, y, w, h [, color])` |
-| `screen.draw_invert(x, y, w, h)` |
-| `screen.draw_roundrect(x, y, w, h, r [, color])` |
-| `screen.draw_fillroundrect(x, y, w, h, r [, color])` |
-| `screen.draw_circle(x, y, r [, color])` |
-| `screen.draw_fillcircle(x, y, r [, color])` |
-| `screen.draw_ellipse(x, y, rw, rh [, color])` |
-| `screen.draw_fillellipse(x, y, rw, rh [, color])` |
-| `screen.draw_triangle(x0, y0, x1, y1, x2, y2 [, color])` |
-| `screen.draw_filltriangle(x0, y0, x1, y1, x2, y2 [, color])` |
-| `screen.draw_rotatedrect(cx, cy, w, h, angle [, color])` |
-| `screen.draw_fillrotatedrect(cx, cy, w, h, angle [, color])` |
-| `screen.draw_text(x, y, size, inverted, text [, font])` |
-| `screen.text_bounds(text, size [, font])` |
-| `screen.draw_glyph(x, y, code [, size])` |
-| `screen.draw_bitmap(x, y, bytes)` |
-| `screen.width()` |
-| `screen.height()` |
-| `screen.page_width()` |
-| `screen.page_height()` |
-| `screen.flush()` |
-
-`width()` and `height()` answer the panel's size in pixels, and `page_width()` and `page_height()`
-answer the same two numbers: the status band is the `ux` component's own, so the panel surface no
-longer reserves it. A page lays out in the panel less the band, so a layout derives its boxes from
-the glass it owns rather than subtracting a band it does not.
-
-### Colours
-
-The optional last argument is the colour: `1` is ink and `0` is paper. With no argument the shape
-and line calls draw ink, so a call written before colours existed draws what it always drew;
-`draw_clear` with no argument clears the panel to paper, because a page's first call has to leave
-paper behind it.
-
-Paper draws exactly as ink does, one colour instead of the other: `draw_fillrect` with `0` clears a
-box, `draw_line` with `0` rubs a line out, and `draw_circle` with `0` erases a disc. That is how a
-page takes back part of what it drew without clearing the whole panel.
-
-`1` and `0` are the whole vocabulary. A non-integer raises `type_error` and any other integer
-raises `value_error` — `screen.<name>: colour 0 or 1 expected` — and the page is dropped like any
-other mistake, so a third shade cannot quietly read as paper.
-
-A saved frame draws ink black and paper white, which is the opposite of the glass, where a pixel
-is lit for ink and dark for paper; in either it is the same pair of colours.
-
-`draw_invert` takes no colour because it is the one call that does not put ink or paper down: it
-flips what is already inside the rectangle, ink to paper and paper to ink, so it has to come after
-the pixels it is meant to flip. That is also the only way to highlight a line drawn in a
-proportional face, which `draw_text`'s `inverted` cannot do — see Faces below.
-
-### Faces
-
-`draw_text` takes an optional face name as its last argument, and `text_bounds` takes the same name
-as its optional third. Without one, or with `nil`, `""` or `"builtin"`, both use the built-in 5x7. The
-names are the faces the Gfx library compiles:
-
-| Name | Face |
-| --- | --- |
-| `sans9`, `sans12`, `sans18`, `sans24` | `FreeSans` at 9, 12, 18 and 24pt |
-| `sansbold9`, `sansbold12`, `sansbold18`, `sansbold24` | `FreeSansBold` at 9, 12, 18 and 24pt |
-| `mono9`, `mono12`, `mono18`, `mono24` | `FreeMono` at 9, 12, 18 and 24pt |
-| `monobold9`, `monobold12`, `monobold18`, `monobold24` | `FreeMonoBold` at 9, 12, 18 and 24pt |
-| `tomthumb`, `picopixel` | the tiny 3x5 and 3x6 bitmap faces |
-
-A name that is not in the table raises `value_error`, which drops the routine like any other
-mistake.
-
-`y` is the **top** of the line's ink box in whichever face is set. That is the built-in face's own
-rule; a compiled face is drawn from its baseline, so the call measures the line and moves the corner
-down by the ink box's height `text_bounds` answers. `size` scales whichever face is set: `1` is the
-face as designed, `3` is three times as tall. A custom face has no background, so `inverted` has no
-effect on it; when a line needs a highlight, draw it and then `draw_invert` the box `text_bounds`
-answered, which turns that rectangle's paper to ink and its ink to paper.
-
-The face belongs to the call: it is handed to the shape that draws the string, so no face is left
-set for whatever draws next — handing the panel to the shared settings editor does not hand it a
-face as well.
-
-```berry
-var box = screen.text_bounds(value, 1, "sansbold18")
-var tag = screen.text_bounds("TGT", 1, "sansbold9")
-screen.draw_text(0, 41, 1, false, value, "sansbold18")
-screen.draw_text(box.w + 4, 41 + box.h - tag.h, 1, false, "TGT", "sansbold9")
-```
-
-`text_bounds` answers a `bounds` record, read with a dot:
-
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `w` | int | the ink box width, in pixels |
-| `h` | int | the ink box height, in pixels |
-
-`draw_glyph(x, y, code[, size])` draws one glyph of the built-in 5x7 face by its code — the way the
-band reaches the face's control-range symbols, which `draw_text`'s printer reads as control
-characters. `size` is 1 when omitted. `draw_bitmap(x, y, bytes)` draws a packed one-bit image:
-`bytes[0]` is the width, `bytes[1]` the height, then the pixels row-major, most-significant bit
-first, each row padded to a whole byte. Ink bits are drawn; paper bits leave what is under them.
-
-The unit the glass prints is not a drawing call: `screen` carries the primitives, and the unit is a
-device setting, so it is read through `device.unit()` below.
-
-### The ux component owns the bottom band
-
-The bottom 12 rows of the glass, `y` 52–63, are the `ux` component's. It clears them and draws them
-last, before each beat's `flush()`, so a routine never has to. The band is a layout of four cells
-across the panel width, each a fraction of it, and `ux` positions the layout over the bottom rows
-and draws it. On the 128-wide panel the cells land on the fields the band has always shown. Left to
-right:
-
-| Field | share of the panel width |
-| --- | --- |
-| the unit the glass prints in | 53/128, the text at the cell's left |
-| the two links — serial, then Bluetooth — while each is connected | 50/128, the glyphs at the cell's left |
-| the run state's icon | 13/128 |
-| the battery, when a pack is fitted | 12/128, ending at the right edge |
-
-The run state's icon blinks while the pump pulls or the valve vents — lit for 65% of a 1000 ms
-period — so a machine that is working reads differently from one that has stopped; holding, idle
-and fault are steady.
-
-The band is opaque: a page's own text and shapes belong above `y` 52, and anything drawn there is
-painted over before the frame goes to the glass. The unit is one for the whole glass, so a page
-draws the number and never the suffix after it: a readout that says `12.5` is a depth in the unit
-the band names.
+The shallowest is a non-zero target: `vacuum.set_target_pressure(shallowest)` is taken, anything
+between 0 and it is not, and `0` is the ambient target — the chamber released — and is always taken.
 
 ## `device` — the device around the machine
 
-The unit the panel prints, the target the default program restores, the selected jingle, the piezo
-and the presses a page has been given. The first three belong to the device rather than to a
-routine's own document, and all are keys of `/cfg/settings.ini`'s `[device]` section: `unit`,
-`target` and `jingle`. The unit is the same switch the serial `device` domain carries; the
+The unit the panel prints, the target the default program restores, the selected jingle, the piezo,
+the clock, the log and the presses a page has been given. The first three belong to the device rather
+than to a routine's own document, and all are keys of `/cfg/settings.ini`'s `[device]` section:
+`unit`, `target` and `jingle`. The unit is the same switch the serial `device` domain carries; the
 diagnostics switch is not here, because it belongs to the serial link rather than to the glass. The
 radio is not a setting: `device.bluetooth()` reports whether the image was built with it.
 
@@ -239,6 +95,8 @@ radio is not a setting: `device.bluetooth()` reports whether the image was built
 | `device.tone(hz, duration_ms)` | — | a square wave for that many milliseconds; `0` means until `device.silence()`; `hz` is clamped to `BuzzerMinHz` … `BuzzerMaxHz` |
 | `device.silence()` | — | silence and stop any sequence |
 | `device.take_gesture()` | a gesture string, or `nil` when the queue is empty | one whole gesture, from the panel's own queue |
+| `device.log(text)` | — | one `[I]` diagnostic record, written when the device's `log` set includes `I` |
+| `device.now_ms()` | `int` | `millis()` |
 | `device.config(path)` | a `Config` instance | the document at `/cfg/` followed by `path`, read once and held; see below |
 
 `device.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
@@ -250,7 +108,7 @@ hands it to the machine when it becomes visible. A page that edits these values 
 ```berry
 var pressure_kpa = device.target()
 if pressure_kpa > 0.0
-  vacuum.target(vacuum.clamp(pressure_kpa))
+  vacuum.set_target_pressure(vacuum.clamp(pressure_kpa))
 end
 ```
 
@@ -424,7 +282,7 @@ found by scanning it.
 
 ```berry
 for jingle : device.all_jingles()
-  vacuum.log(jingle.key + "=" + jingle.full_title)
+  device.log(jingle.key + "=" + jingle.full_title)
 end
 
 device.play_current_jingle()                          # the jingle chosen on the System page
