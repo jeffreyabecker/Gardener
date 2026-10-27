@@ -1,5 +1,6 @@
-// The scene stack: the frames, the callbacks a pop runs, and the one request a scene may hold until
-// the call that asked for it returns.
+// The scene stack and the settings list: the frames and the request a scene may hold until the call
+// that asked for it returns, and the list that walks a row, opens the row's editor and hands the
+// set back.
 
 #include <functional>
 #include <memory>
@@ -11,19 +12,24 @@ namespace {
 
 using namespace gardener::gfx::ui;
 
+// What a case watches a scene by. The stack owns its scenes, so a scene that pops is gone: a case
+// reads what it did from counts that live outside it.
+struct Watched {
+  int activations = 0;
+  int leaves = 0;
+};
+
 // A scene that counts the calls the stack makes on it, and runs whatever a case asks it to.
 class TestScene : public Scene {
  public:
-  explicit TestScene(GestureQueue& gestures) : Scene(gestures) {}
+  TestScene(GestureQueue& gestures, Watched& watched) : Scene(gestures), watched_(watched) {}
 
   void activate() override {
-    activations++;
+    watched_.activations++;
     if (onActivate) onActivate();
   }
-  void leave() override { leaves++; }
+  void leave() override { watched_.leaves++; }
 
-  int activations = 0;
-  int leaves = 0;
   std::function<void()> onActivate;
   std::function<void()> onTick;
 
@@ -31,101 +37,114 @@ class TestScene : public Scene {
   void tick(uint32_t) override {
     if (onTick) onTick();
   }
+
+ private:
+  Watched& watched_;
 };
+
+std::unique_ptr<TestScene> aScene(GestureQueue& gestures, Watched& watched) {
+  return std::make_unique<TestScene>(gestures, watched);
+}
 
 void theRootSceneIsPlacedAndDropped() {
   NoGestures gestures;
-  TestScene root(gestures);
+  Watched watched;
   Ux ux;
-  expectEq(ux.reset(&root), 1, "a root scene shows");
+  expectEq(ux.reset(aScene(gestures, watched)), 1, "a root scene shows");
   expectEq(ux.depth(), 1, "the root is the whole stack");
-  expectEq(ux.top() == &root, 1, "and is on top");
-  expectEq(root.activations, 1, "the root was activated");
+  expectEq(ux.top() != nullptr, 1, "and is on top");
+  expectEq(watched.activations, 1, "the root was activated");
   expectEq(ux.reset(nullptr), 0, "no root shows nothing");
   expectEq(ux.depth(), 0, "the stack is empty");
-  expectEq(root.leaves, 1, "and the root was told it left");
+  expectEq(watched.leaves, 1, "and the root was told it left");
 }
 
 void aPopHandsTheSceneBack() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene list(gestures);
+  Watched rootWatch;
+  Watched listWatch;
   Ux ux;
-  ux.reset(&root);
+  ux.reset(aScene(gestures, rootWatch));
   Scene* popped = nullptr;
-  expectEq(ux.push(list, [&popped](Scene& scene) { popped = &scene; }), 1, "a push is taken");
-  expectEq(list.activations, 1, "the pushed scene was activated");
+  expectEq(ux.push(aScene(gestures, listWatch),
+                   [&popped](Scene& scene) { popped = &scene; }),
+           1, "a push is taken");
+  Scene* showing = ux.top();
+  expectEq(listWatch.activations, 1, "the pushed scene was activated");
   expectEq(ux.pop(), 1, "a pop is taken");
-  expectEq(popped == &list, 1, "the pusher's callback was handed the scene that popped");
-  expectEq(list.leaves, 1, "and the scene was told it left");
+  expectEq(popped == showing, 1, "the pusher's callback was handed the scene that popped");
+  expectEq(listWatch.leaves, 1, "and the scene was told it left");
 }
 
 void aPopWithNoCallbackReactivatesBelow() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene list(gestures);
+  Watched rootWatch;
+  Watched listWatch;
   Ux ux;
-  ux.reset(&root);
-  ux.push(list);
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(aScene(gestures, listWatch));
   ux.pop();
-  expectEq(root.activations, 2, "the scene below was activated again");
+  expectEq(rootWatch.activations, 2, "the scene below was activated again");
 }
 
 void theRootIsNotPopped() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene list(gestures);
+  Watched rootWatch;
+  Watched listWatch;
   Ux ux;
-  ux.reset(&root);
+  ux.reset(aScene(gestures, rootWatch));
   expectEq(ux.pop(), 0, "a pop at the root is refused");
-  ux.push(list);
+  ux.push(aScene(gestures, listWatch));
   expectEq(ux.popToRoot(), 1, "the stack goes home");
   expectEq(ux.depth(), 1, "only the root is left");
-  expectEq(list.leaves, 1, "and the scene above it was told it left");
+  expectEq(listWatch.leaves, 1, "and the scene above it was told it left");
 }
 
 void aPushFromActivateIsHeld() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene pusher(gestures);
-  TestScene held(gestures);
+  Watched rootWatch;
+  Watched pusherWatch;
+  Watched heldWatch;
   Ux ux;
-  ux.reset(&root);
-  pusher.onActivate = [&ux, &held] { ux.push(held); };
-  ux.push(pusher);
+  ux.reset(aScene(gestures, rootWatch));
+  auto pusher = aScene(gestures, pusherWatch);
+  pusher->onActivate = [&ux, &gestures, &heldWatch] { ux.push(aScene(gestures, heldWatch)); };
+  expectEq(ux.push(std::move(pusher)), 1, "the pusher is placed");
   expectEq(ux.depth(), 2, "the push from inside activate was held");
-  expectEq(held.activations, 0, "so the scene it pushed was not activated yet");
+  expectEq(heldWatch.activations, 0, "so the scene it pushed was not activated yet");
   ux.enter();
   expectEq(ux.depth(), 3, "the held push landed on the next call in");
-  expectEq(held.activations, 1, "and the scene it pushed was activated");
+  expectEq(heldWatch.activations, 1, "and the scene it pushed was activated");
 }
 
 void aPopFromAPollLandsAfterThePoll() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene editor(gestures);
+  Watched rootWatch;
+  Watched editorWatch;
   Ux ux;
-  ux.reset(&root);
-  ux.push(editor);
-  editor.onTick = [&ux] { ux.pop(); };
+  ux.reset(aScene(gestures, rootWatch));
+  auto editor = aScene(gestures, editorWatch);
+  editor->onTick = [&ux] { ux.pop(); };
+  ux.push(std::move(editor));
   expectEq(ux.poll(canvas, 1000), 1, "the beat is taken");
   expectEq(ux.depth(), 1, "the pop landed after the poll");
-  expectEq(ux.top() == &root, 1, "and the scene below is showing again");
+  expectEq(editorWatch.leaves, 1, "and the scene that popped is gone");
 }
 
 void theStackHoldsEightFrames() {
   NoGestures gestures;
-  TestScene root(gestures);
-  TestScene other(gestures);
+  Watched watched;
   Ux ux;
-  ux.reset(&root);
-  while (ux.depth() < Ux::MaxFrames) ux.push(other);
+  ux.reset(aScene(gestures, watched));
+  while (ux.depth() < Ux::MaxFrames) ux.push(aScene(gestures, watched));
   expectEq(ux.depth(), Ux::MaxFrames, "the stack fills");
-  expectEq(ux.push(other), 0, "a push past the cap is refused");
+  expectEq(ux.push(aScene(gestures, watched)), 0, "a push past the cap is refused");
   expectEq(ux.depth(), Ux::MaxFrames, "and changes nothing");
 }
 
-// A value editor a settings case can push: it answers whatever value the case sets on it.
+// --- the settings list ------------------------------------------------------
+
+// A value editor a settings case can open: it answers whatever value the case sets on it.
 class TestEditor : public Scene {
  public:
   TestEditor(GestureQueue& gestures, const std::any& value) : Scene(gestures), value_(value) {}
@@ -156,19 +175,15 @@ class TestRow : public SettingsRow {
     return value.has_value() ? std::any_cast<String>(value) : String("--");
   }
 
-  Scene* scene(const std::any& value) override {
-    editor_ = std::make_unique<TestEditor>(gestures_, value);
-    return editor_.get();
+  std::unique_ptr<Scene> scene(const std::any& value) override {
+    return std::make_unique<TestEditor>(gestures_, value);
   }
-
-  TestEditor* editor() const { return editor_.get(); }
 
  private:
   GestureQueue& gestures_;
   String key_;
   String label_;
   String value_;
-  std::unique_ptr<TestEditor> editor_;
 };
 
 // A settings list with the hooks it answers opened up, so a case can press the keys and draw it.
@@ -184,74 +199,79 @@ void aSettingsListMovesAndEdits() {
   NoGestures gestures;
   Ux ux;
   String title("SETTINGS");
-  SettingsProbe list(gestures, ux, title);
   TestRow target(gestures);
   TestRow unit(gestures);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
-  list.set({&target, &unit});
-  expectEq(list.selected(), 0, "the list starts on its first row");
-  list.press("down:single");
-  expectEq(list.selected(), 1, "down moves to the next row");
-  list.press("down:single");
-  expectEq(list.selected(), 0, "and wraps at the end");
-  list.press("up:single");
-  expectEq(list.selected(), 1, "up wraps the other way");
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title);
+  SettingsProbe* settings = list.get();
+  settings->set({&target, &unit});
+  expectEq(settings->selected(), 0, "the list starts on its first row");
+  settings->press("down:single");
+  expectEq(settings->selected(), 1, "down moves to the next row");
+  settings->press("down:single");
+  expectEq(settings->selected(), 0, "and wraps at the end");
+  settings->press("up:single");
+  expectEq(settings->selected(), 1, "up wraps the other way");
 
-  Scene* handed = nullptr;
-  TestScene root(gestures);
-  ux.reset(&root);
-  ux.push(list, [&handed](Scene& scene) { handed = &scene; });
+  SettingValues handed;
+  Scene* popped = nullptr;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list), [&handed, &popped](Scene& scene) {
+    popped = &scene;
+    handed = static_cast<SettingsScene&>(scene).values();
+  });
 
-  list.press("forward:single");
+  settings->press("forward:single");
   expectEq(ux.depth(), 3, "forward pushes the row's editor");
-  expectEq(target.editor() == nullptr, 1, "only the row showing opens");
-  expectEq(unit.editor() != nullptr, 1, "and it is the selected row's");
-  unit.editor()->set(String("psi"));
+  auto* editor = static_cast<TestEditor*>(ux.top());
+  editor->set(String("psi"));
   ux.pop();
   expectEq(ux.depth(), 2, "the editor pops back to the list");
-  const String edited = std::any_cast<String>(list.values().at("unit"));
-  expectText(edited.c_str(), "psi", "what the editor handed back is kept under the row's key");
 
-  list.press("ok:single");
-  expectEq(handed == &list, 1, "OK hands the list back");
-  const String kept = std::any_cast<String>(list.values().at("unit"));
-  expectText(kept.c_str(), "psi", "with the set it settled on");
+  settings->press("ok:single");
+  expectEq(ux.depth(), 1, "OK closes the list");
+  expectEq(popped == settings, 1, "handing it back");
+  const String edited = std::any_cast<String>(handed.at("unit"));
+  expectText(edited.c_str(), "psi", "with what the editor handed back under the row's key");
+  const String untouched = std::any_cast<String>(handed.at("target"));
+  expectText(untouched.c_str(), "50", "and the rows it did not open as they were");
 }
 
 void aSettingsListCancelPutsTheSetBack() {
   NoGestures gestures;
   Ux ux;
   String title("SETTINGS");
-  SettingsProbe list(gestures, ux, title);
   TestRow target(gestures);
   target.hold("target", "Target", "50");
-  list.set({&target});
-  Scene* handed = nullptr;
-  TestScene root(gestures);
-  ux.reset(&root);
-  ux.push(list, [&handed](Scene& scene) { handed = &scene; });
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title);
+  SettingsProbe* settings = list.get();
+  settings->set({&target});
+  SettingValues handed;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list), [&handed](Scene& scene) {
+    handed = static_cast<SettingsScene&>(scene).values();
+  });
 
-  list.press("forward:single");
-  target.editor()->set(String("70"));
+  settings->press("forward:single");
+  static_cast<TestEditor*>(ux.top())->set(String("70"));
   ux.pop();
-  const String edited = std::any_cast<String>(list.values().at("target"));
-  expectText(edited.c_str(), "70", "the edit landed");
-  list.press("cancel:single");
-  expectEq(handed == &list, 1, "Cancel hands the list back");
-  const String back = std::any_cast<String>(list.values().at("target"));
-  expectText(back.c_str(), "50", "and the set as it was opened");
+  settings->press("cancel:single");
+  const String back = std::any_cast<String>(handed.at("target"));
+  expectText(back.c_str(), "50", "Cancel hands back the set as it was opened");
 }
 
 void aSettingsListDrawsItsRows() {
   NoGestures gestures;
   Ux ux;
   String title("SETTINGS");
-  SettingsProbe list(gestures, ux, title);
   TestRow target(gestures);
   TestRow unit(gestures);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
+  SettingsProbe list(gestures, ux, title);
   list.set({&target, &unit});
   reset();
   list.drawPage(canvas);

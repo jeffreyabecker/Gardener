@@ -73,9 +73,9 @@ void SettingsScene::open() {
   if (row == nullptr) return;
   const auto held = values_.find(row->key());
   const std::any value = held == values_.end() ? std::any() : held->second;
-  Scene* editor = row->scene(value);
-  if (editor == nullptr) return;
-  ux_.push(*editor, [this, row](Scene& popped) { values_[row->key()] = popped.value(); });
+  std::unique_ptr<Scene> editor = row->scene(value);
+  if (!editor) return;
+  ux_.push(std::move(editor), [this, row](Scene& popped) { values_[row->key()] = popped.value(); });
 }
 
 // The heading, when the list has one, and the rows under it one built-in row each: the window

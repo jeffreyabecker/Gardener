@@ -4,6 +4,7 @@
 
 #include <any>
 #include <map>
+#include <memory>
 #include <vector>
 
 #include <Arduino.h>
@@ -36,8 +37,8 @@ class SettingsRow {
   virtual String text(const std::any& value) const = 0;
 
   // The scene that edits `value`, or nullptr for a setting with no editor, where Forward opens
-  // nothing. The scene has to outlive the push, so the row keeps what it builds.
-  virtual Scene* scene(const std::any& value) = 0;
+  // nothing. The stack owns what it is handed, so the row builds one and lets it go.
+  virtual std::unique_ptr<Scene> scene(const std::any& value) = 0;
 };
 
 // The list a routine's settings are edited in, from settings_edit.be: the heading, one row per
