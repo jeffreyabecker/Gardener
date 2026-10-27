@@ -23,15 +23,3 @@ end
 def harness_note(text)
   harnessLog = harnessLog + "[I] " + text + "\n"
 end
-
-# The label names what was being walked, so a raise reads like the page it happened on rather than
-# like a frame in the driver.
-def harness_guarded(label, action)
-  try
-    action()
-  except .. as e, m
-    harness_fail(label + " " + e + ": " + m)
-    return false
-  end
-  return true
-end

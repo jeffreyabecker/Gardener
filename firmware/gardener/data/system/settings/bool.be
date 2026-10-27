@@ -3,7 +3,8 @@
 # is nullable. Its states are a choice like any other — a `ChoiceRing` of entries whose keys are the
 # values — so stepping wraps the same way whichever state it is on and the switch has no state
 # machine of its own. Only the look is a bool's: the entries as the equal cells of a switch rather
-# than as a list.
+# than as a list. That look is built in the constructor — the ring's entries never change — so a draw
+# only says which cell is showing and where the column sits.
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
@@ -12,16 +13,25 @@ class BoolEditScene : EditScene
   var ring
   var chips
   var page
+  var content
 
+  # The entries, their cells and the column they sit in are all known here: the ring is fixed, so the
+  # only thing a draw changes is which cell is inverted.
   def init(label, current, nullable)
     super(self).init(label, current)
-
     self.ring = ChoiceRing(choice_items([[false, "OFF"], [true, "ON"]], nullable), current)
+
+    var share = real(1) / real(self.ring.items.size())
+    var cells = []
     self.chips = []
     for item : self.ring.items
-      self.chips.push(Text(item.title, nil, SettingsView.scale))
+      var chip = Text(item.title, nil, SettingsView.scale)
+      self.chips.push(chip)
+      cells.push(AutoLayout(bounds(share, 1), [chip], alignment("center", "center")))
     end
-    self.page = nil
+    self.page = editor_column(label, self.hint(), AutoLayout(bounds(nil, nil), cells),
+                              self.body_h())
+    self.content = self.column_size()
   end
 
   def nudge(dir)
@@ -53,16 +63,7 @@ class BoolEditScene : EditScene
     return [wide, tall]
   end
 
-  # The band the switch draws in: one cell per entry of the ring, each the same share of the width.
-  def body()
-    var share = real(1) / real(self.chips.size())
-    var cells = []
-    for chip : self.chips
-      cells.push(AutoLayout(bounds(share, 1), [chip], alignment("center", "center")))
-    end
-    return AutoLayout(bounds(nil, nil), cells)
-  end
-
+  # The band's height: the ink the entries are drawn at, a pixel of paper above and below.
   def body_h()
     return self.measure()[1] + 2
   end
@@ -72,7 +73,7 @@ class BoolEditScene : EditScene
   end
 
   # The label row, the band of chips and the hint row, as wide as the widest of the three.
-  def content_size()
+  def column_size()
     var wide = self.body_w()
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
@@ -85,6 +86,11 @@ class BoolEditScene : EditScene
     return bounds(wide, 20 + self.body_h())
   end
 
+  # What the frame wraps: measured in the constructor, because nothing in it moves.
+  def content_size()
+    return self.content
+  end
+
   # The entries as the cells of one switch, the one showing inverted, which is the whole of it.
   def draw_editor(pos, dim)
     var i = 0
@@ -92,8 +98,6 @@ class BoolEditScene : EditScene
       self.chips[i].inverted = self.ring.index == i
       i += 1
     end
-
-    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
     self.page.to_box(pos.x, pos.y, dim.w, dim.h)
     self.page.draw()
   end

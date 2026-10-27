@@ -16,7 +16,7 @@ registration does not look like a routine, or a page does not survive being driv
 | `frame.h` | the one function `main.c` calls to install the frame as a module |
 | `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
-| `tests/suite.be` | the suite framework: `test()`, the assertions, `wait_until`, `drive`, the runner |
+| `tests/suite.be` | the suite framework: `test()`, the assertions, `drive`, the runner |
 | `tests/*.test.be` | the suites, one file per concern, each registering named cases |
 
 `check.py` builds `libraries/berry` with the firmware's own `berry_conf.h`, so the host VM has the
@@ -151,7 +151,6 @@ uses the helpers from `tests/suite.be`:
 | `assert_true(cond, msg)` | raise when `cond` is false |
 | `assert_eq(actual, expected, msg)` | raise when the values differ, with both in the message |
 | `assert_nil(x, msg)`, `assert_not_nil(x, msg)` | raise on the wrong nil-ness |
-| `wait_until(label, beats, pred)` | beat the harness until `pred()` is true, or raise naming `label` |
 | `drive(machine, beats)` | beat the harness and advance a machine, which is what a page's `tick()` does for it |
 | `drive_until(machine, label, beats, pred)` | the same, until `pred()` is true, or raise naming `label` |
 

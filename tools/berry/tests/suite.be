@@ -37,20 +37,6 @@ def assert_not_nil(x, msg)
   end
 end
 
-# Beat the harness until pred() answers truthy, or `beats` beats have passed. The label names what
-# was being waited for, so a timeout reads like the page it happened on.
-def wait_until(label, beats, pred)
-  var i = 0
-  while i < beats
-    if pred()
-      return true
-    end
-    harness.beat(1)
-    i += 1
-  end
-  raise "assert", label + " (not reached in " + str(beats) + " beats)"
-end
-
 # --- driving a machine -----------------------------------------------------
 
 # A beat of the harness and an advance of a machine, which is the whole of what a page's tick() does
