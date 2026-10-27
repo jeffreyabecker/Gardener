@@ -17,14 +17,14 @@ Size Text::use(int16_t width, int16_t height) const {
   return {room.width > width ? width : room.width, room.height > height ? height : room.height};
 }
 
-void Text::draw(Canvas& canvas) {
+void Text::paint(Canvas& own, Canvas& canvas) {
+  (void)canvas;
   // Gfx draws a string from its baseline. The built-in face is drawn from the top of a
-  // five-by-seven cell, so the baseline is seven rows below the box; a compiled face is measured
-  // instead, and its ink height is what moves the corner to the baseline.
-  int16_t baseline = static_cast<int16_t>(box_.y + 7 * scale_);
-  if (face_ != nullptr) baseline = static_cast<int16_t>(box_.y + ink().height);
-  canvas.draw(shapes::Text(box_.x, baseline, value_, face_, scale_, Ink));
-  Component::draw(canvas);
+  // five-by-seven cell, so the baseline is seven rows below the corner; a compiled face is
+  // measured instead, and its ink height is what moves the corner to the baseline.
+  int16_t baseline = static_cast<int16_t>(7 * scale_);
+  if (face_ != nullptr) baseline = ink().height;
+  own.draw(shapes::Text(0, baseline, value_, face_, scale_, Ink));
 }
 
 }  // namespace gardener::gfx::ui

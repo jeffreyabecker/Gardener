@@ -14,9 +14,9 @@ class ProgressBar : public Component {
   void setValue(float value) { value_ = value; }
   float value() const { return value_; }
 
-  void draw(Canvas& canvas) override;
-
  protected:
+  void paint(Canvas& own, Canvas& canvas) override;
+
   float value_;
 };
 

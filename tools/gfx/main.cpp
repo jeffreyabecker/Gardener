@@ -141,12 +141,27 @@ void aTextDrawsInItsBox() {
   expect(!display.anyInk(0, 0, 10, 8), "nothing was drawn left of the box");
 }
 
-void aTextWiderThanItsCellIsDrawnWhole() {
+void aTextWiderThanItsCellIsCutShort() {
   reset();
   Text text("AB");
   text.setBox(0, 0, 6, 8);
   text.draw(canvas);
-  expect(display.anyInk(6, 0, 6, 8), "the second glyph is drawn past the cell it was given");
+  expect(display.anyInk(0, 0, 6, 8), "the first glyph is drawn");
+  expectEq(display.inkCount(6, 0, 6, 8), 0, "the rest is cut at the cell's edge");
+}
+
+void aComponentDrawsOnlyInsideItsBox() {
+  reset();
+  canvas.flush(display);
+  canvas.draw(shapes::FillRect(0, 0, 40, 10, Ink));
+  Component flipper;
+  flipper.setBox(10, 2, 10, 6);
+  flipper.setInverted(true);
+  flipper.draw(canvas);
+  expectEq(display.at(15, 5), 0, "the box was flipped to paper");
+  expectEq(display.at(5, 5), Ink, "the ink to the left of it was left alone");
+  expectEq(display.at(25, 5), Ink, "and the ink to the right");
+  expectEq(display.at(15, 1), Ink, "and the ink above it");
 }
 
 void aTextKeepsItsBoxAcrossAValueChange() {
@@ -167,10 +182,10 @@ void anIconIsTwelveByEight() {
 
 // An icon subclass that inks the whole of its box, which is what a glyph does.
 class BlockIcon : public Icon {
- public:
-  void draw(Canvas& canvas) override {
-    canvas.draw(shapes::FillRect(x(), y(), width(), height(), Ink));
-    Icon::draw(canvas);
+ protected:
+  void paint(Canvas& own, Canvas& canvas) override {
+    (void)canvas;
+    own.draw(shapes::FillRect(0, 0, own.width(), own.height(), Ink));
   }
 };
 
@@ -282,10 +297,10 @@ void aDurationDrawsItsText() {
 
 // A child that takes the whole cell it is given and inks it, so a case can read the box back.
 class Cell0 : public Component {
- public:
-  void draw(Canvas& canvas) override {
-    canvas.draw(shapes::FillRect(x(), y(), width(), height(), Ink));
-    Component::draw(canvas);
+ protected:
+  void paint(Canvas& own, Canvas& canvas) override {
+    (void)canvas;
+    own.draw(shapes::FillRect(0, 0, own.width(), own.height(), Ink));
   }
 };
 
@@ -436,7 +451,9 @@ int orderCount = 0;
 class Recorder : public Component {
  public:
   explicit Recorder(char id) : id_(id) {}
-  void draw(Canvas&) override {
+
+ protected:
+  void paint(Canvas&, Canvas&) override {
     if (orderCount < 8) orderLog[orderCount++] = id_;
   }
 
@@ -471,6 +488,23 @@ void aLayoutHandsItsBoxOnToTheBandItsChildrenDraw() {
   expectEq(inner.width(), 64, "a nested layout hands its own half on to its child");
   expect(display.anyInk(0, 0, 64, 26), "the nested child drew inside its half");
   expectEq(display.inkCount(64, 0, 64, 26), 0, "and nothing was drawn in the other half");
+}
+
+void aGrandchildLandsWhereItsBoxSays() {
+  reset();
+  Cell0 leaf;
+  Layout inner(Cell(1.0f, 0.5f));
+  inner.add(leaf);
+  Layout middle(Cell(0.5f, 1.0f));
+  middle.add(inner);
+  Layout outer;
+  outer.add(middle);
+  outer.setBox(0, 0, 100, 50);
+  outer.draw(canvas);
+  expectEq(leaf.width(), 50, "the grandchild is the width the middle cell gave");
+  expectEq(leaf.height(), 25, "and the height the inner cell gave");
+  expect(display.anyInk(0, 0, 50, 25), "and it drew in that box");
+  expectEq(display.inkCount(51, 0, 49, 50), 0, "with nothing beside it");
 }
 
 // --- child canvases ---------------------------------------------------------
@@ -581,7 +615,8 @@ const Case Cases[] = {
     {"a text measures a compiled face", aTextMeasuresACompiledFace},
     {"a text narrows its room to the cell", aTextNarrowsItsRoomToTheCell},
     {"a text draws in its box", aTextDrawsInItsBox},
-    {"a text wider than its cell is drawn whole", aTextWiderThanItsCellIsDrawnWhole},
+    {"a text wider than its cell is cut short", aTextWiderThanItsCellIsCutShort},
+    {"a component draws only inside its box", aComponentDrawsOnlyInsideItsBox},
     {"a text keeps its box across a value change", aTextKeepsItsBoxAcrossAValueChange},
     {"an icon is twelve by eight", anIconIsTwelveByEight},
     {"an icon draws in its box", anIconDrawsInItsBox},
@@ -605,6 +640,7 @@ const Case Cases[] = {
      aRowStatesTheFullWidthAndAColumnTheFullHeight},
     {"a layout draws its children in order", aLayoutDrawsItsChildrenInOrder},
     {"a layout hands its box on to a nested child", aLayoutHandsItsBoxOnToTheBandItsChildrenDraw},
+    {"a grandchild lands where its box says", aGrandchildLandsWhereItsBoxSays},
     {"a child draws at its parent's offset", aChildDrawsAtItsParentsOffset},
     {"a child is clipped to its rect", aChildIsClippedToItsRect},
     {"siblings do not overlap", siblingsDoNotOverlap},

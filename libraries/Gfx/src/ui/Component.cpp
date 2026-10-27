@@ -9,7 +9,14 @@ void Component::setBox(int16_t x, int16_t y, int16_t width, int16_t height) {
 Size Component::use(int16_t width, int16_t height) const { return {width, height}; }
 
 void Component::draw(Canvas& canvas) {
-  if (inverted_) canvas.invert(box_);
+  Canvas own = canvas.child(box_);
+  paint(own, canvas);
+  if (inverted_) own.invert(Rect(0, 0, own.width(), own.height()));
+}
+
+void Component::paint(Canvas& own, Canvas& canvas) {
+  (void)own;
+  (void)canvas;
 }
 
 }  // namespace gardener::gfx::ui

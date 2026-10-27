@@ -23,12 +23,13 @@ class Scrollbar : public Component {
   int16_t visible() const { return visible_; }
   void setVisible(int16_t visible) { visible_ = visible; }
 
-  // The top and the height of the thumb this bar draws, which is what a caller asserting a scroll
-  // position reads.
+  // The top and the height of the thumb this bar draws, counted from the bar's own top, which is
+  // what a caller asserting a scroll position reads.
   int16_t thumbTop() const;
   int16_t thumbHeight() const;
 
-  void draw(Canvas& canvas) override;
+ protected:
+  void paint(Canvas& own, Canvas& canvas) override;
 
  private:
   bool hollow_ = false;

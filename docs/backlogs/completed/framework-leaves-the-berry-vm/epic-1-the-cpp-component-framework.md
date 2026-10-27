@@ -24,14 +24,26 @@ frame and a gray one both take.
 
 ## What was verified
 
-`python tools/gfx/check.py` builds and runs 31 cases, all passing: the box and the flip, the ink box
+`python tools/gfx/check.py` builds and runs 41 cases, all passing: the box and the flip, the ink box
 at both faces and both scales, the cell the room is clipped to, the bar at its ends and past them,
 the thumb at the top and the bottom, every duration format, the layout's stacking in both
 directions, the equal thirds, the rounded span clamped, a declared size above one, the alignment at
-both levels, the drawing order and the nested box.
+both levels, the drawing order and the nested box, together with the child-canvas cases in the
+section below.
 
 `python scripts/arduino.py --task build` compiles the same sources for the device, so the classes
 are the ones the firmware ships rather than a host-only copy.
+
+## The canvases landed under them
+
+`Canvas::child(Rect)` gives a canvas over part of another, clipped to the rectangle and origin at
+its corner, sharing one dirty rectangle so a single flush sends everything the tree drew.
+`Component` then stopped drawing in page coordinates: `draw` narrows the canvas to the component's
+box, hands it to the new `paint` override point, and runs the flip inside it. A subclass draws from
+`(0, 0)` and
+is clipped to its box, so a string wider than its cell is now cut at the edge instead of drawn over
+its neighbour. `Layout::paint` passes the canvas it was drawn on to its children, whose boxes are in
+that same space, so nesting needs no arithmetic.
 
 ## What is not here yet
 

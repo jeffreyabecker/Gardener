@@ -35,7 +35,8 @@ class Duration : public Text {
   // The text this duration prints for the seconds it was given.
   const char* text() const { return text_; }
 
-  void draw(Canvas& canvas) override;
+ protected:
+  void paint(Canvas& own, Canvas& canvas) override;
 
  private:
   DurationFormat format_;

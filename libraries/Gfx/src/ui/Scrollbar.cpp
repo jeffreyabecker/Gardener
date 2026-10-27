@@ -14,27 +14,30 @@ int16_t Scrollbar::thumbHeight() const {
 
 int16_t Scrollbar::thumbTop() const {
   const int16_t thumb = thumbHeight();
+  const int16_t height = box_.height;
   const int16_t span = count_ - visible_;
-  int16_t top = box_.y;
-  if (span > 0) top = static_cast<int16_t>(box_.y + (box_.height - thumb) * index_ / span);
-  if (top < box_.y) top = box_.y;
-  if (top + thumb > box_.y + box_.height) top = static_cast<int16_t>(box_.y + box_.height - thumb);
+  int16_t top = 0;
+  if (span > 0) top = static_cast<int16_t>((height - thumb) * index_ / span);
+  if (top < 0) top = 0;
+  if (top + thumb > height) top = static_cast<int16_t>(height - thumb);
   return top;
 }
 
-void Scrollbar::draw(Canvas& canvas) {
+void Scrollbar::paint(Canvas& own, Canvas& canvas) {
+  (void)canvas;
   if (count_ <= 0) return;
+  const int16_t width = own.width();
+  const int16_t height = own.height();
   const int16_t top = thumbTop();
   const int16_t thumb = thumbHeight();
   if (hollow_) {
-    canvas.invert(Rect(box_.x, box_.y, box_.width, top - box_.y));
-    canvas.invert(
-        Rect(box_.x, top + thumb, box_.width, (box_.y + box_.height) - (top + thumb)));
+    own.invert(Rect(0, 0, width, top));
+    own.invert(Rect(0, static_cast<int16_t>(top + thumb), width,
+                    static_cast<int16_t>(height - (top + thumb))));
   } else {
-    canvas.draw(shapes::Rect(box_.x, box_.y, box_.width, box_.height, Ink));
-    canvas.draw(shapes::FillRect(box_.x, top, box_.width, thumb, Ink));
+    own.draw(shapes::Rect(0, 0, width, height, Ink));
+    own.draw(shapes::FillRect(0, top, width, thumb, Ink));
   }
-  Component::draw(canvas);
 }
 
 }  // namespace gardener::gfx::ui

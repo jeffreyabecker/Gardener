@@ -62,9 +62,9 @@ void Duration::setUnknown() {
   durationText(format_, seconds_, known_, text_, sizeof(text_));
 }
 
-void Duration::draw(Canvas& canvas) {
+void Duration::paint(Canvas& own, Canvas& canvas) {
   setValue(text_);
-  Text::draw(canvas);
+  Text::paint(own, canvas);
 }
 
 }  // namespace gardener::gfx::ui

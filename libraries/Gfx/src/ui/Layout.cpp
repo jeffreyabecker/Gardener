@@ -85,10 +85,10 @@ void Layout::childBox(Component& child, int16_t x, int16_t y, int16_t w, int16_t
   child.setBox(x, y, wide, tall);
 }
 
-void Layout::draw(Canvas& canvas) {
+void Layout::paint(Canvas& own, Canvas& canvas) {
+  (void)own;
   place();
   for (size_t i = 0; i < count_; i++) children_[i]->draw(canvas);
-  Component::draw(canvas);
 }
 
 }  // namespace gardener::gfx::ui

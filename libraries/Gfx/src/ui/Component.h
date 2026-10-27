@@ -8,9 +8,12 @@ namespace gardener::gfx::ui {
 
 // The base of everything a page composes: a box and the inverted flip, nothing else.
 //
-// A component draws inside its box and nothing it draws lies outside it. The box is not a
-// constructor argument: whoever places the component — a Layout for a child of one, or the caller
-// for a component that stands alone — sets it with setBox before the first draw.
+// A component draws inside its box and nothing it draws lies outside it — the guarantee is the
+// canvas's, not the drawing code's: draw hands paint a canvas narrowed to the box, so a component
+// writes in its own coordinates and a write past its edge is clipped rather than painted over its
+// neighbour. The box is not a constructor argument: whoever places the component — a Layout for a
+// child of one, or the caller for a component that stands alone — sets it with setBox before the
+// first draw, in the coordinates of the canvas the component is drawn on.
 class Component {
  public:
   Component() = default;
@@ -40,11 +43,17 @@ class Component {
   // declares none and so takes the cell it is given.
   virtual const Cell* declaredCell() const { return nullptr; }
 
-  // Draws in the box it was given. A subclass draws its content and then calls this base, which is
-  // the inverted flip — last, so everything drawn there reads as paper on ink.
-  virtual void draw(Canvas& canvas);
+  // Draws the component in the box it was given: paint draws the content in a canvas narrowed to
+  // that box, and the inverted flip runs last, inside the same box, so everything drawn there reads
+  // as paper on ink. A subclass overrides paint, never this.
+  void draw(Canvas& canvas);
 
  protected:
+  // The component's content. `own` is the canvas this component draws in — its (0, 0) is the box's
+  // top-left corner, and it is clipped to the box — while `canvas` is the one draw was given, for a
+  // component that holds children and has to draw them where their own boxes say.
+  virtual void paint(Canvas& own, Canvas& canvas);
+
   Rect box_{0, 0, 0, 0};
   bool inverted_ = false;
 };

@@ -29,12 +29,12 @@ class Text : public Component {
   // The room the string takes at its face, no larger than the cell it was given.
   Size use(int16_t width, int16_t height) const override;
 
-  void draw(Canvas& canvas) override;
-
   // The ink box the string takes at its face and scale.
   Size ink() const;
 
  protected:
+  void paint(Canvas& own, Canvas& canvas) override;
+
   const char* value_;
   const Font* face_;
   uint8_t scale_;

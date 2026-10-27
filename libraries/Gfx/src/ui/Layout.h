@@ -52,9 +52,9 @@ class Layout : public Component {
   // the last draw is resolved again.
   void place();
 
-  void draw(Canvas& canvas) override;
-
  protected:
+  void paint(Canvas& own, Canvas& canvas) override;
+
   // Whether the siblings stack down a column, which they do unless one declares a width that is
   // not the whole of it.
   bool stacksDown() const;
