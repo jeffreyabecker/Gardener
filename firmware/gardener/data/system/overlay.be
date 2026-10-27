@@ -108,9 +108,9 @@ end
 
 # The band is the layout ux draws; it is not bound to the page, so ux positions it over the bottom
 # rows with to_box().
-ux.band = Layout(bounds(1, nil), [
-  Layout(bounds(.25, 1), [UnitText()]),
-  Layout(bounds(.25, 1), [LinksCell()]),
-  Layout(bounds(.25, 1), [StateCell()]),
-  Layout(bounds(.25, 1), [BatteryCell()])
+ux.band = RowLayout(nil, [
+  ColumnLayout(0.25, [UnitText()]),
+  ColumnLayout(0.25, [LinksCell()]),
+  ColumnLayout(0.25, [StateCell()]),
+  ColumnLayout(0.25, [BatteryCell()])
 ])

@@ -29,18 +29,17 @@ class RampedStaticChrome : Layout
     self.status = Text("")
     self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
-      Layout(bounds(1, 0.25), [
-        Layout(bounds(0.125, 1), [self.icon]),
-        Layout(bounds(0.875, 1), [self.title], alignment("center", "center"))
+      RowLayout(0.25, [
+        ColumnLayout(0.125, [self.icon]),
+        ColumnLayout(0.875, [self.title], alignment("center", "center"))
       ]),
-      Layout(bounds(1, 0.50), [
-        Layout(bounds(0.5, 1),
-                   [AutoPressureDisplay("pressure:target", "br", 0.25)]),
-        Layout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
+      RowLayout(0.50, [
+        ColumnLayout(0.5, [AutoPressureDisplay("pressure:target", "br", 0.25)]),
+        ColumnLayout(0.5, [self.timer], alignment("center", "center"))
       ]),
-      Layout(bounds(1, 0.25), [
-        Layout(bounds(0.5, 1), [self.status], alignment("left", "center")),
-        Layout(bounds(0.5, 1), [self.bar])
+      RowLayout(0.25, [
+        ColumnLayout(0.5, [self.status], alignment("left", "center")),
+        ColumnLayout(0.5, [self.bar])
       ])
     ])
   end
