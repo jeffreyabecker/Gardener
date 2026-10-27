@@ -68,7 +68,8 @@ Paint arrange(Rect box, std::initializer_list<Child> children, Alignment alignme
         y = alignedOffset(static_cast<int16_t>(height - h), alignment.vertical);
       }
       Canvas cellCanvas = own.child(Rect(x, y, w, h));
-      items[i].paint(cellCanvas);
+      // A cell with nothing to draw is the paper row of an editor's column.
+      if (items[i].paint) items[i].paint(cellCanvas);
       cursor = static_cast<int16_t>(cursor + spans[i]);
     }
   };
