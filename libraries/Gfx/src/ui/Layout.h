@@ -52,6 +52,10 @@ struct Child {
 // layout is handed the canvas already narrowed to its cell and declares Whole there.
 Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignment = {});
 
+// The same dividing for the children a page works out as it draws, such as the rows of a list whose
+// count depends on the room it has.
+Paint layout(Cell cell, const std::vector<Child>& children, Alignment alignment = {});
+
 // The two directions a page states most often, each spelling the axis it divides and taking the
 // whole of the other: a row takes the height it declares, the cell of `(1, heightPct)`, and stacks
 // its children across; a column takes the width it declares, the cell of `(widthPct, 1)`, and
@@ -59,5 +63,7 @@ Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignme
 // share of the cell the layout was given.
 Paint row(float heightPct, std::initializer_list<Child> children, Alignment alignment = {});
 Paint column(float widthPct, std::initializer_list<Child> children, Alignment alignment = {});
+Paint row(float heightPct, const std::vector<Child>& children, Alignment alignment = {});
+Paint column(float widthPct, const std::vector<Child>& children, Alignment alignment = {});
 
 }  // namespace gardener::gfx::ui

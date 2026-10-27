@@ -27,12 +27,10 @@ bool stacksDown(const std::vector<Child>& children, Direction direction) {
   return true;
 }
 
-Paint arrange(Cell cell, std::initializer_list<Child> children, Alignment alignment,
-              Direction direction) {
-  // The list does not outlive the call and the draw runs on every frame, so the children are copied
+Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Direction direction) {
+  // The list does not outlive the call and the draw runs on every frame, so the children are moved
   // into the draw this answers.
-  const std::vector<Child> items(children);
-  return [cell, items, alignment, direction](Canvas& canvas) {
+  return [cell, items = std::move(items), alignment, direction](Canvas& canvas) {
     const int16_t cellWidth = resolveSpan(canvas.width(), cell.width);
     const int16_t cellHeight = resolveSpan(canvas.height(), cell.height);
     Canvas own = canvas.child(Rect(0, 0, cellWidth, cellHeight));
@@ -100,14 +98,26 @@ int16_t alignedOffset(int16_t leftover, Vertical where) {
 }
 
 Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignment) {
+  return arrange(cell, std::vector<Child>(children), alignment, Direction::Declared);
+}
+
+Paint layout(Cell cell, const std::vector<Child>& children, Alignment alignment) {
   return arrange(cell, children, alignment, Direction::Declared);
 }
 
 Paint row(float heightPct, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(Cell(1.0f, heightPct), children, alignment, Direction::Across);
+  return arrange(Cell(1.0f, heightPct), std::vector<Child>(children), alignment, Direction::Across);
 }
 
 Paint column(float widthPct, std::initializer_list<Child> children, Alignment alignment) {
+  return arrange(Cell(widthPct, 1.0f), std::vector<Child>(children), alignment, Direction::Down);
+}
+
+Paint row(float heightPct, const std::vector<Child>& children, Alignment alignment) {
+  return arrange(Cell(1.0f, heightPct), children, alignment, Direction::Across);
+}
+
+Paint column(float widthPct, const std::vector<Child>& children, Alignment alignment) {
   return arrange(Cell(widthPct, 1.0f), children, alignment, Direction::Down);
 }
 

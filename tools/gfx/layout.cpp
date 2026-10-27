@@ -100,6 +100,14 @@ void aCellCutsWhatPaintsPastIt() {
            "and the other half is its own");
 }
 
+void aLayoutTakesTheChildrenItIsGivenAtDrawTime() {
+  reset();
+  std::vector<Child> rows{Child{Cell(1.0f, 0.5f), fill()}, Child{Cell(1.0f, 0.5f), fill()}};
+  column(1.0f, rows)(canvas);
+  expectEq(display.inkCount(0, 0, 128, 32), 128 * 32, "a vector of children divides like a list");
+  expectEq(display.inkCount(0, 32, 128, 32), 128 * 32, "and each draws in its own cell");
+}
+
 void aRowTakesTheHeightAndAColumnTheWidth() {
   reset();
   Canvas base = canvas.child(Rect(0, 0, PageWidth, 40));
@@ -124,6 +132,8 @@ void addLayoutCases(std::vector<Case>& cases) {
   cases.push_back({"a layout draws its children in order", aLayoutDrawsItsChildrenInOrder});
   cases.push_back({"a nested layout lands in its cell", aNestedLayoutLandsInItsCell});
   cases.push_back({"a cell cuts what paints past it", aCellCutsWhatPaintsPastIt});
+  cases.push_back({"a layout takes the children it is given at draw time",
+                   aLayoutTakesTheChildrenItIsGivenAtDrawTime});
   cases.push_back(
       {"a row takes the height and a column the width", aRowTakesTheHeightAndAColumnTheWidth});
 }

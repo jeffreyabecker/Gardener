@@ -12,8 +12,18 @@ using namespace gardener::gfx::ui;
 
 // --- the number -------------------------------------------------------------
 
+// A number scene with the hooks it answers opened up, so a case can step and draw it.
+class NumberProbe : public NumberScene {
+ public:
+  using NumberScene::NumberScene;
+  using EditorScene::nudge;
+  using EditorScene::pageContents;
+};
+
 void aNumberStepsAndHolds() {
-  NumberEditorComponent number(5, 1, 0, 10, false);
+  NoGestures gestures;
+  String label("Target");
+  NumberProbe number(gestures, label, 5, 1, 0, 10, false);
   expectText(number.text().c_str(), "5", "the number prints as it is");
   number.nudge(1);
   expectText(number.text().c_str(), "6", "up steps by one");
@@ -25,40 +35,48 @@ void aNumberStepsAndHolds() {
 }
 
 void aRealNumberStepsByItsIncrement() {
-  NumberEditorComponent number(0.5f, 0.1f, 0, 1, false);
+  NoGestures gestures;
+  String label("Target");
+  NumberProbe number(gestures, label, 0.5f, 0.1f, 0, 1, false);
   number.nudge(1);
   expectText(number.text().c_str(), "0.6", "a tenth step lands on 0.6");
 }
 
 void aNullableNumberHoldsNothing() {
-  NumberEditorComponent number(NAN, 0.5f, 2, 8, true);
+  NoGestures gestures;
+  String label("Target");
+  NumberProbe number(gestures, label, NAN, 0.5f, 2, 8, true);
   expectText(number.text().c_str(), "--", "nothing prints dashes");
   expectEq(number.hasValue(), 0, "and holds no value");
   number.nudge(-1);
   expectEq(number.hasValue(), 0, "down at nothing stays nothing");
   number.nudge(1);
-  expectEq(number.value() == 2.0f, 1, "up from nothing enters the floor");
+  expectEq(number.number() == 2.0f, 1, "up from nothing enters the floor");
   number.nudge(-1);
   expectEq(number.hasValue(), 0, "down at the floor clears back to nothing");
 }
 
 void aNumberWithNoBoundsStepsFreely() {
-  NumberEditorComponent number(1, 1, -INFINITY, INFINITY, false);
+  NoGestures gestures;
+  String label("Target");
+  NumberProbe number(gestures, label, 1, 1, -INFINITY, INFINITY, false);
   for (int i = 0; i < 5; i++) number.nudge(-1);
   expectText(number.text().c_str(), "-4", "an unbounded value steps past zero");
 }
 
 void aNumberBandDrawsTheValueAndTheBar() {
-  reset();
+  NoGestures gestures;
+  String label("Target");
   Canvas band = canvas.child(Rect(0, 0, 40, 24));
-  NumberEditorComponent bounded(5, 1, 0, 10, false);
-  bounded.draw()(band);
+  reset();
+  NumberProbe bounded(gestures, label, 5, 1, 0, 10, false);
+  bounded.pageContents()(band);
   expect(display.anyInk(0, 0, 40, 16), "the number is drawn in the top of the band");
   expect(display.anyInk(0, 16, 40, 8), "and the bar under it");
 
   reset();
-  NumberEditorComponent free(5, 1, -INFINITY, INFINITY, false);
-  free.draw()(band);
+  NumberProbe free(gestures, label, 5, 1, -INFINITY, INFINITY, false);
+  free.pageContents()(band);
   expect(display.anyInk(0, 0, 40, 24), "an unbounded number still draws");
   expectEq(display.inkCount(0, 18, 40, 6), 0, "and carries no bar");
 }
@@ -186,6 +204,85 @@ void aChoiceBandPrintsDashesForNothing() {
   expectEq(display.inkCount(0, 6, PageWidth, 4), 0, "and no row block is drawn");
 }
 
+// --- the bool ---------------------------------------------------------------
+
+// A bool scene with the hooks it answers opened up, so a case can step and draw it.
+class BoolProbe : public BoolScene {
+ public:
+  using BoolScene::BoolScene;
+  using EditorScene::nudge;
+  using EditorScene::pageContents;
+
+  bool press(const char* gesture) { return handle(gesture); }
+};
+
+void aBoolTogglesAndReachesNothing() {
+  NoGestures gestures;
+  String label("Power");
+  BoolProbe toggle(gestures, label, "false", false);
+  expectText(toggle.text().c_str(), "OFF", "a false setting prints OFF");
+  expectEq(toggle.on(), 0, "and is off");
+  toggle.nudge(1);
+  expectText(toggle.text().c_str(), "ON", "up turns it on");
+  expectEq(toggle.on(), 1, "and it reads on");
+  toggle.nudge(1);
+  expectText(toggle.text().c_str(), "OFF", "up again turns it back off");
+  toggle.nudge(-1);
+  expectText(toggle.text().c_str(), "ON", "down turns it on");
+
+  BoolProbe nullable(gestures, label, "", true);
+  expectText(nullable.text().c_str(), "--", "a nullable setting holding nothing prints dashes");
+  expectEq(nullable.hasValue(), 0, "and holds no state");
+  nullable.nudge(-1);
+  expectEq(nullable.hasValue(), 0, "down at nothing stays nothing");
+  nullable.nudge(1);
+  expectText(nullable.text().c_str(), "OFF", "up from nothing enters OFF");
+  nullable.nudge(-1);
+  expectEq(nullable.hasValue(), 0, "down at OFF clears back to nothing");
+}
+
+void aBoolSwitchInvertsTheStateShowing() {
+  NoGestures gestures;
+  String label("Power");
+  BoolProbe toggle(gestures, label, "false", false);
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
+  toggle.pageContents()(band);
+  expect(display.inkCount(14, 10, 36, 16) > display.inkCount(84, 10, 24, 16),
+         "the label showing is inverted in its cell");
+  expect(display.anyInk(84, 10, 24, 16), "and ON drew its label in the other cell");
+}
+
+void aBoolSwitchShowsTheNothingFirst() {
+  NoGestures gestures;
+  String label("Power");
+  BoolProbe nullable(gestures, label, "", true);
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
+  nullable.pageContents()(band);
+  expect(display.inkCount(9, 10, 24, 16) > display.inkCount(46, 10, 36, 16),
+         "nothing inverts the first of the three cells");
+  expect(display.anyInk(95, 10, 24, 16), "and ON is the third");
+}
+
+void aChoiceBarShowsWhereTheWindowIs() {
+  NoGestures gestures;
+  String label("Choice");
+  std::vector<ChoiceItem> six;
+  for (int i = 0; i < 6; i++) six.push_back({String(i), "Row", nullptr});
+  ChoiceProbe many(gestures, label, String(5), six, false);
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
+  many.pageContents()(band);
+  expect(display.anyInk(126, 2, 2, 8), "the scrollbar inks the track above the thumb");
+  expectEq(display.inkCount(126, 15, 2, 6), 0, "and leaves the thumb bare");
+
+  ChoiceProbe few(gestures, label, "b", threeEntries(), false);
+  reset();
+  few.pageContents()(band);
+  expectEq(display.inkCount(126, 2, 2, 4), 0, "a window of every entry carries no scrollbar");
+}
+
 // --- the editor page --------------------------------------------------------
 
 // The editor page itself, with a kind that draws nothing in the middle band.
@@ -230,6 +327,10 @@ void addEditorCases(std::vector<Case>& cases) {
   cases.push_back(
       {"a choice band prints the title without a paint", aChoiceBandPrintsTheTitleWithoutAPaint});
   cases.push_back({"a choice band prints dashes for nothing", aChoiceBandPrintsDashesForNothing});
+  cases.push_back({"a choice bar shows where the window is", aChoiceBarShowsWhereTheWindowIs});
+  cases.push_back({"a bool toggles and reaches nothing", aBoolTogglesAndReachesNothing});
+  cases.push_back({"a bool switch inverts the state showing", aBoolSwitchInvertsTheStateShowing});
+  cases.push_back({"a bool switch shows the nothing first", aBoolSwitchShowsTheNothingFirst});
   cases.push_back({"an editor page is three bands", anEditorPageIsThreeBands});
 }
 
