@@ -16,7 +16,7 @@
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
 #include "hal/VentValve.h"
-#include "hal/impl/AdafruitDisplay.h"
+#include "hal/impl/GfxDisplay.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
 #include "storage/Jingles.h"
@@ -277,7 +277,7 @@ class HarnessSession {
   ModelSensor sensor_;
   ModelValve valve_;
   VacuumSystem vacuum_;
-  AdafruitDisplay<BitmapPanel> display_;
+  GfxDisplay<BitmapPanel> display_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;

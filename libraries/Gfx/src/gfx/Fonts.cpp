@@ -1,5 +1,7 @@
 #include "gfx/Fonts.h"
 
+#include <string.h>
+
 #include "gfx/fonts/FreeMono12pt7b.h"
 #include "gfx/fonts/FreeMono18pt7b.h"
 #include "gfx/fonts/FreeMono24pt7b.h"
@@ -116,5 +118,42 @@ const Font* const PicopixelFace = &Picopixel;
 const Font* const Symbol12 = &UISymbolSans12pt7b;
 const Font* const Symbol18 = &UISymbolSans18pt7b;
 const Font* const Symbol24 = &UISymbolSans24pt7b;
+
+bool find(const char* name, const Font*& face) {
+  if (name == nullptr || name[0] == '\0' || strcmp(name, "builtin") == 0) {
+    face = nullptr;
+    return true;
+  }
+  static const struct {
+    const char* name;
+    const Font* face;
+  } Faces[] = {
+      {"sans9", Sans9},
+      {"sans12", Sans12},
+      {"sans18", Sans18},
+      {"sans24", Sans24},
+      {"sansbold9", SansBold9},
+      {"sansbold12", SansBold12},
+      {"sansbold18", SansBold18},
+      {"sansbold24", SansBold24},
+      {"mono9", Mono9},
+      {"mono12", Mono12},
+      {"mono18", Mono18},
+      {"mono24", Mono24},
+      {"monobold9", MonoBold9},
+      {"monobold12", MonoBold12},
+      {"monobold18", MonoBold18},
+      {"monobold24", MonoBold24},
+      {"tomthumb", TomThumbFace},
+      {"picopixel", PicopixelFace},
+  };
+  for (const auto& entry : Faces) {
+    if (strcmp(name, entry.name) == 0) {
+      face = entry.face;
+      return true;
+    }
+  }
+  return false;
+}
 
 }  // namespace gardener::gfx::fonts

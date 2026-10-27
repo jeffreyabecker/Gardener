@@ -17,7 +17,7 @@
 #endif
 
 // Nor does it compile the panel: `scripts/arduino.py` builds it with `GARDENER_PANEL=0`, and the
-// panel's sources, the Adafruit display stack and the Berry interpreter stay out of the image.
+// panel's sources and the Berry interpreter stay out of the image.
 #if GARDENER_PANEL
 #error "the headless build has no panel"
 #endif

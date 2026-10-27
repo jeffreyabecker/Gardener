@@ -9,8 +9,8 @@
 
 // The panel is a build fact too. A build defines `GARDENER_PANEL` as 1 or 0, and the panel's
 // sources compile or are skipped with it: a machine-alone build compiles neither the panel nor the
-// Adafruit display stack and the Berry interpreter behind it. The default keeps a build that says
-// nothing the full one, which is what a bare `arduino-cli compile` gets.
+// Berry interpreter behind it. The default keeps a build that says nothing the full one, which is
+// what a bare `arduino-cli compile` gets.
 #ifndef GARDENER_PANEL
 #define GARDENER_PANEL 1
 #endif

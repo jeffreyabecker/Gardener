@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 #include "PanelContext.h"
+#include "gfx/Fonts.h"
 #include "hal/Display.h"
-#include "panel/Fonts.h"
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
@@ -23,17 +23,17 @@ Display& panel() { return context->display(); }
 // 5x7, which is also what an absent argument means. `function` is the Berry spelling used in the
 // error, so a mistake names the call that made it. The messages are stack buffers because be_raise
 // longjmps past any C++ destructor a String would need here.
-const GFXfont* argFont(bvm* vm, int index, const char* function) {
+const gfx::Font* argFont(bvm* vm, int index, const char* function) {
   if (be_top(vm) < index || be_isnil(vm, index)) return nullptr;
   if (!be_isstring(vm, index)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: font name expected", function);
     be_raise(vm, "type_error", message);
   }
-  const GFXfont* face = nullptr;
+  const gfx::Font* face = nullptr;
   const char* name = argText(vm, index);
   if (name[0] == '\0') return nullptr;
-  if (!fonts::find(name, face)) {
+  if (!gfx::fonts::find(name, face)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: unknown font %s", function, name);
     be_raise(vm, "value_error", message);
@@ -199,7 +199,7 @@ int screenText(bvm* vm) {
   const uint8_t size = (uint8_t)argInt(vm, 3);
   const bool inverted = be_tobool(vm, 4);
   const char* value = argText(vm, 5);
-  const GFXfont* face = argFont(vm, 6, "draw_text");
+  const gfx::Font* face = argFont(vm, 6, "draw_text");
   panel().setFont(face);
   // `y` is the top of the glyph box whichever face is set. The built-in face is drawn from its top
   // already; a compiled face is drawn from its baseline, so the ink box's height is what moves the
@@ -224,7 +224,7 @@ int screenBounds(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "screen.text_bounds(text, size[, font])");
   }
-  const GFXfont* face = argFont(vm, 3, "text_bounds");
+  const gfx::Font* face = argFont(vm, 3, "text_bounds");
   int16_t width = 0;
   int16_t height = 0;
   panel().setFont(face);

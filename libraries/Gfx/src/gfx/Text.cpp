@@ -79,4 +79,50 @@ void Text::operator()(Canvas& canvas) const {
   }
 }
 
+TextBox measureText(const Font* font, const char* value, uint8_t size) {
+  if (value == nullptr || size == 0) return {0, 0};
+
+  if (font == nullptr) {
+    // The classic face measures as a run of six-by-eight cells, including the blank column behind
+    // the glyph that the advance leaves.
+    const int16_t cellWidth = static_cast<int16_t>(6 * size);
+    const int16_t cellHeight = static_cast<int16_t>(8 * size);
+    int16_t width = 0;
+    for (const char* character = value; *character != '\0'; character++) {
+      width = static_cast<int16_t>(width + cellWidth);
+    }
+    return {width, width == 0 ? static_cast<int16_t>(0) : cellHeight};
+  }
+
+  int16_t minX = 0x7FFF;
+  int16_t minY = 0x7FFF;
+  int16_t maxX = -1;
+  int16_t maxY = -1;
+  int16_t cursorX = 0;
+  for (const char* character = value; *character != '\0'; character++) {
+    const uint8_t code = static_cast<uint8_t>(*character);
+    if (code < font->first || code > font->last) continue;
+    const Glyph& glyph = font->glyph[code - font->first];
+    if (glyph.width > 0 && glyph.height > 0) {
+      const int16_t x1 = static_cast<int16_t>(cursorX + glyph.xOffset * size);
+      const int16_t y1 = static_cast<int16_t>(glyph.yOffset * size);
+      const int16_t x2 = static_cast<int16_t>(x1 + glyph.width * size - 1);
+      const int16_t y2 = static_cast<int16_t>(y1 + glyph.height * size - 1);
+      if (x1 < minX) minX = x1;
+      if (y1 < minY) minY = y1;
+      if (x2 > maxX) maxX = x2;
+      if (y2 > maxY) maxY = y2;
+    }
+    cursorX = static_cast<int16_t>(cursorX + glyph.xAdvance * size);
+  }
+  if (maxX < minX || maxY < minY) return {0, 0};
+  return {static_cast<int16_t>(maxX - minX + 1), static_cast<int16_t>(maxY - minY + 1)};
+}
+
+void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
+  if (size == 0) return;
+  const int16_t baseline = static_cast<int16_t>(y + 7 * size);
+  drawFontGlyph(canvas, x, baseline, &BuiltinFont, code, size, color);
+}
+
 }  // namespace gardener::gfx::shapes

@@ -231,6 +231,21 @@ struct FillRotatedRect {
   uint8_t color;
 };
 
+// A packed one-bit image the caller keeps: bits[0] is the width, bits[1] the height, then the rows
+// most-significant bit first, each padded to a whole byte. A set bit draws `color`; a clear bit
+// leaves what is under it.
+struct MonoBitmap {
+  MonoBitmap(int16_t x, int16_t y, const uint8_t* bits, uint8_t color)
+      : x(x), y(y), bits(bits), color(color) {}
+
+  void operator()(Canvas& canvas) const;
+
+  int16_t x;
+  int16_t y;
+  const uint8_t* bits;
+  uint8_t color;
+};
+
 // An image the caller keeps: bits[0] is the width, bits[1] the height, then one grayscale byte per
 // pixel, row-major. Every pixel is drawn; there is no transparency.
 struct Bitmap {

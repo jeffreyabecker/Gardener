@@ -15,9 +15,9 @@ and control law are compiled here against the vendored VM, with a bitmap for a g
 a rig and an in-memory data image. A page therefore runs on the code the device runs, and the
 driver walks the image's own routines.
 
---art runs one routine and saves what it drew, using the Adafruit GFX library the device compiles
-for the fonts: an animated GIF of every beat. --scene does the same for one of the device's own
-scenes: home or browser.
+--art runs one routine and saves what it drew, using the Gfx library the device compiles: an
+animated GIF of every beat. --scene does the same for one of the device's own scenes: home or
+browser.
 --tests saves a GIF per case that ran.
 """
 
@@ -32,6 +32,7 @@ TOOL = Path(__file__).resolve().parent
 ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
 GARDENER = ROOT / "libraries" / "Gardener"
+GFX = ROOT / "libraries" / "Gfx"
 DATA = ROOT / "firmware" / "gardener" / "data"
 HOST = TOOL / "host"
 BUILD = TOOL / "build"
@@ -41,7 +42,6 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # composition roots, the tasks, the links, the device drivers and the vendor display.
 FIRMWARE_SOURCES = [
     GARDENER / "src" / "BuzzerPlayer.cpp",
-    GARDENER / "src" / "panel" / "Fonts.cpp",
     GARDENER / "src" / "routines" / "Bindings.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",
     GARDENER / "src" / "routines" / "GestureQueue.cpp",
@@ -54,6 +54,14 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "storage" / "Ini.cpp",
     GARDENER / "src" / "storage" / "Jingles.cpp",
     GARDENER / "src" / "VacuumSystem.cpp",
+]
+
+GFX_SOURCES = [
+    GFX / "src" / "gfx" / "Canvas.cpp",
+    GFX / "src" / "gfx" / "Shapes.cpp",
+    GFX / "src" / "gfx" / "Text.cpp",
+    GFX / "src" / "gfx" / "BuiltinFont.cpp",
+    GFX / "src" / "gfx" / "Fonts.cpp",
 ]
 
 # The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
@@ -89,45 +97,15 @@ def run(command):
         sys.exit(f"{Path(str(command[0])).name} exited with {completed.returncode}")
 
 
-def arduino_libraries():
-    """The sketchbook's libraries folder: what arduino-cli reports, or the usual places."""
-    if shutil.which("arduino-cli"):
-        completed = subprocess.run(
-            ["arduino-cli", "config", "get", "directories.user"],
-            capture_output=True,
-            text=True,
-        )
-        user = completed.stdout.strip()
-        if completed.returncode == 0 and user:
-            return [Path(user) / "libraries"]
-    home = Path.home()
-    return [home / "Documents" / "Arduino" / "libraries", home / "Arduino" / "libraries"]
-
-
-def gfx_library():
-    """The Adafruit GFX library the device compiles: the fonts and the classic 5x7 come from it."""
-    requested = args.gfx or os.environ.get("ADAFRUIT_GFX")
-    candidates = [Path(requested)] if requested else []
-    candidates += [libraries / "Adafruit_GFX_Library" for libraries in arduino_libraries()]
-    for path in candidates:
-        if (path / "Fonts" / "FreeSans18pt7b.h").exists() and (path / "glcdfont.c").exists():
-            return path
-    sys.exit(
-        "the panel renderer needs the Adafruit GFX library's fonts; install it with\n"
-        '  arduino-cli lib install "Adafruit GFX Library"\n'
-        "or point --gfx (or ADAFRUIT_GFX) at the library folder"
-    )
-
-
 def slug(path):
     return "_".join(Path(path).resolve().parts[-4:])
 
 
-def build(cc, cxx, gfx):
+def build(cc, cxx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
-    for path in (HOST, BERRY / "src", BERRY / "generate", TOOL / "gfx", gfx, GARDENER / "src"):
+    for path in (HOST, BERRY / "src", BERRY / "generate", GFX / "src", GARDENER / "src"):
         includes.extend(["-I", str(path)])
 
     built = []
@@ -141,7 +119,7 @@ def build(cc, cxx, gfx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *FIRMWARE_SOURCES):
+    for source in (*MAIN_SOURCES, *FIRMWARE_SOURCES, *GFX_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then
@@ -154,7 +132,6 @@ parser.add_argument("--compile", action="store_true", help="stop after compiling
 parser.add_argument("--no-cache", action="store_true", help="rebuild every object")
 parser.add_argument("--verbose", action="store_true", help="show compiler commands and device log")
 parser.add_argument("--data", default=str(DATA), help="the data image to check")
-parser.add_argument("--gfx", help="the Adafruit GFX library folder; default is the installed one")
 parser.add_argument("--art", metavar="NAME", help="draw that routine and save it as a GIF animation")
 parser.add_argument(
     "--scene",
@@ -200,7 +177,7 @@ args = parser.parse_args()
 for sub in ("components",):
     (TOOL / "artifacts" / sub).mkdir(parents=True, exist_ok=True)
 
-build(compiler("c"), compiler("c++"), gfx_library())
+build(compiler("c"), compiler("c++"))
 
 command = [
     str(EXE),

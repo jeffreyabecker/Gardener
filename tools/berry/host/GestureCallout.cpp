@@ -2,7 +2,10 @@
 
 #include <string.h>
 
-#include "BitmapPanel.h"
+#include "gfx/BuiltinFont.h"
+#include "gfx/Canvas.h"
+#include "gfx/Rect.h"
+#include "gfx/Text.h"
 
 namespace gardener {
 
@@ -53,34 +56,24 @@ std::string partLabel(const std::string& part) {
   return uppercase(key + ":" + form);
 }
 
-// Whether the classic face has no ink for a character, so a callout can fall back rather than
-// print a blank where a glyph is missing in whichever GFX library check.py found.
+// Whether the built-in face has no ink for a code, so a callout can fall back rather than print a
+// blank where a glyph is missing. The classic face's high half is shifted by one, as Adafruit's
+// printer shifts it.
 bool glyphBlank(uint8_t c) {
-  const uint8_t* font = BitmapPanel::classicFont();
-  if (c >= 176) c++;
-  for (int i = 0; i < 5; i++) {
-    if (font[c * 5 + i] != 0) return false;
-  }
-  return true;
-}
-
-void setPacked(uint8_t* packed, int16_t width, int16_t height, int16_t x, int16_t y) {
-  if (x < 0 || y < 0 || x >= width || y >= height) return;
-  packed[y * ((width + 7) / 8) + x / 8] |= (uint8_t)(0x80 >> (x & 7));
-}
-
-// The classic 5x7 face, drawn into a packed frame the same way BitmapPanel draws it onto the
-// panel: five columns of eight rows, least-significant bit the top.
-void drawGlyph(uint8_t* packed, int16_t width, int16_t height, int16_t x, int16_t y, uint8_t c) {
-  if (glyphBlank(c)) c = 'x';
-  const uint8_t* font = BitmapPanel::classicFont();
-  if (c >= 176) c++;
-  for (int i = 0; i < 5; i++) {
-    uint8_t line = font[c * 5 + i];
-    for (int j = 0; j < 8; j++, line >>= 1) {
-      if (line & 1) setPacked(packed, width, height, x + i, y + j);
+  if (c < gfx::BuiltinFont.first || c > gfx::BuiltinFont.last) return true;
+  const gfx::Glyph& glyph = gfx::BuiltinFont.glyph[c - gfx::BuiltinFont.first];
+  const uint8_t* bitmap = gfx::BuiltinFont.bitmap;
+  uint16_t offset = glyph.bitmapOffset;
+  uint8_t bits = 0;
+  uint8_t bit = 0;
+  for (uint8_t row = 0; row < glyph.height; row++) {
+    for (uint8_t column = 0; column < glyph.width; column++) {
+      if ((bit++ & 7) == 0) bits = bitmap[offset++];
+      if ((bits & 0x80) != 0) return false;
+      bits = static_cast<uint8_t>(bits << 1);
     }
   }
+  return true;
 }
 
 }  // namespace
@@ -109,8 +102,13 @@ void drawGestureStrip(uint8_t* packed, int16_t width, int16_t height, const std:
   const int16_t labelWidth = 6 * (int16_t)label.size();  // five columns plus the spacer
   int16_t x = (width - labelWidth) / 2;
   const int16_t y = 1;
+  gfx::Canvas canvas(packed, gfx::Rect(0, 0, width, height), gfx::Rect(0, 0, width, height),
+                     gfx::PixelLayout::Packed1);
   for (char c : label) {
-    drawGlyph(packed, width, height, x, y, (uint8_t)c);
+    uint8_t code = static_cast<uint8_t>(c);
+    if (code >= 176 && code < 255) code++;
+    if (glyphBlank(code)) code = 'x';
+    gfx::shapes::drawGlyph(canvas, x, y, code, 1, 255);
     x += 6;
   }
 }

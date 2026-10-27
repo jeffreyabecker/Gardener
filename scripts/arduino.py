@@ -10,8 +10,8 @@
 
 --sketch picks the build: `gardener` is the full device and the default, `headless` is the machine
 with no panel. Each sketch is its own composition root, so this only says which one to build — and it
-is what sets `GARDENER_PANEL`, which leaves the panel and the Adafruit and Berry code behind it out
-of the machine-alone build.
+is what sets `GARDENER_PANEL`, which leaves the panel and the Berry code behind it out of the
+machine-alone build.
 
 `--no-enable-bluetooth` compiles the full device without the radio: the GATT link, its domains and
 all of NimBLE are left out of the image. The headless build always keeps the radio, because a
@@ -69,9 +69,6 @@ DEFAULT_FQBN = ("esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,"
                 "FlashSize=4M,PartitionScheme=default")
 
 THIRD_PARTY_LIBS = [
-    "Adafruit SH110X",
-    "Adafruit BusIO",
-    "Adafruit GFX Library",
     # The BLE transport's stack. The pin is what makes the NimBLE compile options below meaningful.
     "NimBLE-Arduino@2.5.1",
 ]
@@ -96,7 +93,7 @@ VERBOSE = False
 BLUETOOTH = True
 # Whether the build has a panel. Like the radio it reaches every translation unit, so the panel's
 # own sources compile or are skipped by the `GARDENER_PANEL` define: the machine-alone build
-# carries neither the panel nor the Adafruit display stack and the Berry interpreter behind it.
+# carries neither the panel nor the Berry interpreter behind it.
 PANEL = True
 # The rig's own build symbols, as `NAME=VALUE` from `--define`. Empty leaves Machine.h's defaults.
 DEFINES = []

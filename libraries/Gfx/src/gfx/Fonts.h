@@ -70,4 +70,8 @@ extern const Font* const Symbol12;
 extern const Font* const Symbol18;
 extern const Font* const Symbol24;
 
+// The face for a routine's font name; nullptr is the built-in 5x7. False when the name is not one of
+// the named faces, which is a mistake in the routine rather than a face to fall back to.
+bool find(const char* name, const Font*& face);
+
 }  // namespace gardener::gfx::fonts

@@ -273,6 +273,21 @@ void FillRotatedRect::operator()(Canvas& canvas) const {
   triangleFill(canvas, xs[0], ys[0], xs[2], ys[2], xs[3], ys[3], color);
 }
 
+void MonoBitmap::operator()(Canvas& canvas) const {
+  const int16_t width = bits[0];
+  const int16_t height = bits[1];
+  const int16_t stride = static_cast<int16_t>((width + 7) / 8);
+  const uint8_t* rows = bits + 2;
+  for (int16_t row = 0; row < height; row++) {
+    const uint8_t* line = rows + row * stride;
+    for (int16_t col = 0; col < width; col++) {
+      if ((line[col / 8] & (0x80 >> (col & 7))) != 0) {
+        canvas.setPixel(static_cast<int16_t>(x + col), static_cast<int16_t>(y + row), color);
+      }
+    }
+  }
+}
+
 void Bitmap::operator()(Canvas& canvas) const {
   const int16_t width = bits[0];
   const int16_t height = bits[1];

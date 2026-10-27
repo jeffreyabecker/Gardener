@@ -142,7 +142,7 @@ proportional face, which `draw_text`'s `inverted` cannot do — see Faces below.
 
 `draw_text` takes an optional face name as its last argument, and `text_bounds` takes the same name
 as its optional third. Without one, or with `nil`, `""` or `"builtin"`, both use the built-in 5x7. The
-names are the compiled Adafruit GFX faces:
+names are the faces the Gfx library compiles:
 
 | Name | Face |
 | --- | --- |

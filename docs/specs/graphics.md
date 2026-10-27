@@ -1,9 +1,9 @@
 # Graphics
 
-The contract for a standalone C++ drawing library: a caller-owned frame buffer, the
-`DisplayDevice` that owns the glass and flushes the buffer, and the `Canvas` that draws into an
-extent of it. The library is built from scratch and inherits no Adafruit_GFX code. Its font
-structures and glyph writer are derived from Adafruit_GFX, and that attribution travels with them.
+The contract for a standalone C++ drawing library: the `DisplayDevice` that owns the glass and the
+frame it draws on, and the `Canvas` that draws into an extent of that frame. The library is built
+from scratch and inherits no Adafruit_GFX code. Its font structures and glyph writer are derived
+from Adafruit_GFX, and that attribution travels with them.
 
 This library is its own library, separate from the main application library, and the main
 application depends on it. The dependency runs one way: the application may include this library,
@@ -16,17 +16,22 @@ bus; it is an implementation of `DisplayDevice`, not a fourth contract here.
 
 ## The frame buffer
 
-The library is always buffered. Every drawing call writes into a frame buffer the caller owns;
+The library is always buffered. Every drawing call writes into a frame buffer the device owns;
 nothing reaches the glass until `flush`. There is no call that draws straight to the glass.
 
-A frame is `width × height` bytes: one byte per pixel, row-major, top-left origin, stride equal to
-the width, no padding. A pixel's byte is a grayscale brightness from `0` — black, the panel off —
-through `255` — white, the panel fully on — linear in between. The device maps the byte to its own
-depth when it flushes.
+A frame is `size().width` by `size().height` pixels, row-major, top-left origin, in one of two
+layouts picked by the device's `bitsPerPixel()`:
 
-The buffer is allocated and owned by the caller. The library never allocates or frees it, stores
-the pointer it is given, and relies on the caller to keep that memory alive for as long as any
-`Canvas` over it is used.
+- `Gray8`, one byte per pixel: a grayscale brightness from `0` — black, the panel off — through
+  `255` — white, the panel fully on — linear in between. The stride is the panel's width and there is
+  no padding.
+- `Packed1`, one bit per pixel: eight pixels to a byte, most significant bit leftmost, each row
+  padded out to a whole byte. A colour of `128` or more sets the bit; anything below it clears it.
+  This is the layout a one-bit panel keeps its own buffer in.
+
+The buffer is allocated and owned by the device, which returns it from `buffer()`. The library never
+allocates or frees it, and a `Canvas` stores the pointer it is given and relies on the device
+keeping that memory alive for as long as the canvas is used.
 
 ## Rect
 
@@ -43,38 +48,60 @@ or less holds no pixels; a `Canvas` over such an extent draws nothing.
 
 ## DisplayDevice
 
-`DisplayDevice` is the interface a concrete device implements. It has exactly two methods:
+`DisplayDevice` is the interface a concrete device implements. It has four methods:
 
 ```cpp
 virtual Rect size() const = 0;
-virtual void flush(uint8_t* buffer) = 0;
+virtual uint8_t bitsPerPixel() const = 0;
+virtual uint8_t* buffer() = 0;
+virtual void flush() = 0;
 ```
 
 `size()` reports the panel's full-frame geometry as a `Rect` with its origin at the top-left:
 `Rect(0, 0, width, height)`. It is `const`: the geometry does not change across a call.
 
-`flush()` sends the whole panel buffer to the glass. `buffer` must point to a frame of
-`size().width × size().height` bytes in the layout above; the device reads exactly that many bytes
-and writes none of them back. The buffer is the caller's, not the device's, and one frame may be
-reused for every flush.
+`bitsPerPixel()` reports the depth the glass shows — `1` for a panel that is only on or off, `8` for
+one with levels — and so the layout of the frame above.
+
+`buffer()` returns the frame the device owns and draws into: `size().width` by `size().height`
+pixels in that layout. A canvas draws straight into it, so there is one frame and no copy per
+canvas. The device keeps it for as long as it lives.
+
+`flush()` sends that frame to the glass. The device reads it and writes none of it back.
 
 Anything the part needs before the first flush — power, bus setup, a bring-up handshake — is the
-concrete device's own business, done before `flush` is called. It is not a third method on this
+concrete device's own business, done before `flush` is called. It is not a fifth method on this
 interface.
 
 ## Canvas
 
 ```cpp
-Canvas(uint8_t* buffer, Rect panel, Rect extent)
+Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout = PixelLayout::Gray8)
 ```
 
-- `buffer` is a caller-owned frame of `panel.width × panel.height` bytes in the grayscale layout.
+- `buffer` is the frame the device owns, `panel.width × panel.height` pixels in `layout`.
 - `panel` is the full-frame geometry — the same `Rect` the device's `size()` reports.
 - `extent` is the drawable region, a rectangle inside the panel. The canvas writes nothing outside
   it.
+- `layout` is the frame's layout: `PixelLayout::Gray8` or `PixelLayout::Packed1`.
 
 `extent` must lie within `panel`. The canvas clips to `extent`, not to `panel`, so a caller that
 passes an extent reaching outside the panel owns the out-of-bounds write that follows.
+
+A canvas is a copy: copying one gives a second view of the same buffer, and that is how a turned
+canvas is made. It is not movable, because a canvas that could be moved from would be a view of
+nothing.
+
+### rotate
+
+```cpp
+Canvas rotate(int16_t degrees) const
+```
+
+A copy of the canvas drawn in turned coordinates: 90, 180 or 270 degrees about the extent's centre.
+The buffer, the panel and the extent stay as they were, so a turned canvas writes inside the same
+rectangle of the glass with the coordinates of the page turned within it, and its two sides swap for
+a quarter turn. An angle that is not a quarter turn gives the copy back unturned.
 
 ## Drawing
 
@@ -99,22 +126,20 @@ void setPixel(int16_t x, int16_t y, uint8_t color)
 ```
 
 `x` and `y` are relative to the extent's top-left, and `color` is the grayscale byte `0 .. 255`.
-A call whose point falls outside the extent does nothing. A call inside writes `color` at
-
-```text
-buffer[(extent.y + y) * panel.width + (extent.x + x)]
-```
+On a `Gray8` frame that byte is what lands in the pixel; on a `Packed1` one `128` or more sets the
+bit and anything below it clears it. A call whose point falls outside the extent does nothing.
 
 ### invert
 
 ```cpp
-void invert(int16_t x, int16_t y, int16_t w, int16_t h)
+void invert(Rect area)
 ```
 
-Each pixel in the rectangle becomes `255` minus what was there, so paper written over ink erases and
-a band laid over a border keeps the border visible. This is the one operation that reads the frame,
-which is why it is a canvas member rather than a shape: a shape draws by writing pixels and has no
-way to read one back. The rectangle is extent-relative and clipped like any other write.
+Each pixel in the rectangle becomes `255` minus what was there on a `Gray8` frame, and the bit
+flipped on a `Packed1` one, so paper written over ink erases and a band laid over a border keeps the
+border visible. This is the one operation that reads the frame, which is why it is a canvas member
+rather than a shape: a shape draws by writing pixels and has no way to read one back. The rectangle
+is extent-relative and clipped like any other write.
 
 ### draw
 
@@ -176,7 +201,15 @@ the glyph writer and the built-in face keep Adafruit's attribution.
 
 The compiled FreeSans, FreeMono and FreeSerif families, TomThumb, Picopixel and the UI symbol faces
 ship under `gfx/fonts`, one header per face; `gfx::fonts` names them (`Sans9`, `Mono12`,
-`SerifItalic18`, `Symbol12`, and the rest).
+`SerifItalic18`, `Symbol12`, and the rest) and answers for a name:
+
+```cpp
+bool find(const char* name, const Font*& face)
+```
+
+`find` matches a routine's font name against the named faces, treating `nullptr` as the built-in
+5x7, and returns false for a name that is not one of them — a mistake in the routine rather than a
+face to fall back to.
 
 ### Text
 
@@ -194,6 +227,17 @@ has to be alive for the draw, and naming it needs no allocation.
 The library does no newline handling: it draws each glyph it is given and reads no character as a
 line break, so a caller that wants a second line draws it itself.
 
+Two helpers measure and draw one glyph where text as a shape does not fit:
+
+```cpp
+TextBox measureText(const Font* face, const char* value, uint8_t size)
+void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color)
+```
+
+`measureText` gives the ink box of a string measured with the baseline at zero, and a `face` of
+`nullptr` measures the built-in 5x7, whose bytes take a six-by-eight cell. `drawGlyph` draws one
+byte of that built-in face by code, with `(x, y)` the top-left of its cell.
+
 ### Bitmap
 
 ```cpp
@@ -202,6 +246,10 @@ Bitmap(int16_t x, int16_t y, const uint8_t* bits)
 
 `bits[0]` is the width, `bits[1]` the height, then `width * height` grayscale bytes row-major. Every
 pixel is drawn — there is nothing to skip and no transparency — and the image is clipped to the
-extent. This is the library's own format, not Adafruit's packed 1-bit layout. The data has to be
-alive for the call, because a draw copies nothing.
+extent. The data has to be alive for the call, because a draw copies nothing.
+
+`MonoBitmap(x, y, bits, color)` takes the packed one-bit image a page's own artwork uses: the same
+two leading bytes, then the rows most-significant bit first, each padded to a whole byte. A set bit
+draws `color` and a clear bit leaves what is under it alone, so one image can be drawn in either
+ink.
 

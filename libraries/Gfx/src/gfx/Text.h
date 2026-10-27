@@ -29,4 +29,17 @@ struct Text {
   uint8_t color;
 };
 
+// The ink box of a string in a face, measured with the baseline at zero. `nullptr` measures the
+// built-in 5x7, whose bytes take a six-by-eight cell. A byte the face has no glyph for advances
+// nothing, as in the draw.
+struct TextBox {
+  int16_t width;
+  int16_t height;
+};
+
+TextBox measureText(const Font* font, const char* value, uint8_t size);
+
+// Draws one glyph of the built-in 5x7 face by code, with (x, y) the top-left of its cell.
+void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color);
+
 }  // namespace gardener::gfx::shapes

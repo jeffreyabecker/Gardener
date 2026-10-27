@@ -1,8 +1,9 @@
 #pragma once
 
-#include <Adafruit_GFX.h>
 #include <Arduino.h>
 #include <stdint.h>
+
+#include <Gfx.h>
 
 namespace gardener {
 
@@ -18,11 +19,11 @@ constexpr uint8_t Ink = 1;
 // Colours are a choice per call, so paper on its own is a fill like any other, and `inverted` is
 // how layout code asks for paper on ink in text.
 //
-// Otherwise the list is the library's drawing surface in those terms, so that whatever draws on
-// this later does not have to come back and widen it. Deliberately absent, with reasons:
-// drawGrayscaleBitmap and drawRGBBitmap need a depth this panel does not have. The font face is the
-// one library type named here, because a face is data the drawing picks rather than a part a driver
-// hides: a host or a fake needs the GFX header and nothing else.
+// Otherwise the list is Gfx's drawing surface in those terms, so that whatever draws on this later
+// does not have to come back and widen it. Deliberately absent, with reasons: the grayscale and RGB
+// bitmap shapes need a depth this panel does not have. The font face is the one library type named
+// here, because a face is data the drawing picks rather than a part a driver hides: a host or a
+// fake draws through the same library and takes its faces from the same table.
 //
 // Text is nearly stateless: `text` and `textBounds` take the scale they draw at, so nothing has to
 // park a cursor or a size and remember to undo them. The face is the exception — setFont() picks it
@@ -110,7 +111,7 @@ class Display {
   // Both spellings exist because both callers do: a host message arrives as a `const char*` in a
   // line buffer, and anything the device builds is a `String`. One of them would otherwise be
   // converted on every call for nothing.
-  virtual void setFont(const GFXfont* font) = 0;
+  virtual void setFont(const gfx::Font* font) = 0;
   virtual void text(int16_t x, int16_t y, const String& value, uint8_t size, bool inverted) = 0;
   virtual void text(int16_t x, int16_t y, const char* value, uint8_t size, bool inverted) = 0;
   virtual void textBounds(const String& value, uint8_t size, int16_t& outWidth,
@@ -119,8 +120,8 @@ class Display {
                           int16_t& outHeight) = 0;
 
   // One glyph of the built-in 5x7 face, by its code rather than as text. The band's state icons
-  // live in the face's control range, and 0x0A is a newline to print(), so a raw draw is the only
-  // way to put it down.
+  // live in the face's control range, where a string would have to carry them past the NUL, so a
+  // raw draw is the way to put one down.
   virtual void glyph(int16_t x, int16_t y, uint8_t code, uint8_t size) = 0;
 };
 

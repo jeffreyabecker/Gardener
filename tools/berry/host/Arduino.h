@@ -17,5 +17,8 @@
 #define PROGMEM
 #endif
 
+#define pgm_read_byte(addr) (*reinterpret_cast<const uint8_t*>(addr))
+#define pgm_read_word(addr) (*reinterpret_cast<const uint16_t*>(addr))
+
 typedef uint8_t byte;
 typedef bool boolean;

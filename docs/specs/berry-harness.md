@@ -11,9 +11,9 @@ registration does not look like a routine, or a page does not survive being driv
 | File | What it is |
 | --- | --- |
 | `check.py` | the build and the command line: compiles the VM, links the host app, runs it |
-| `main.c` | loads the files in the device's order and calls the checks |
-| `frame.c` | the panel: a 128 x 64 one-bit frame and the Adafruit GFX drawing verbs |
-| `frame.h` | the one function `main.c` calls to install the frame as a module |
+| `main.cpp` | loads the files in the device's order and calls the checks |
+| `host/BitmapPanel.h`, `host/BitmapPanel.cpp` | the panel: a 128 x 64 one-bit frame the device's own `GfxDisplay` draws into |
+| `host/HarnessSession.h` | the device composed as the firmware composes it, over that panel instead of the glass |
 | `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
 | `tests/suite.be` | the suite framework: `test()`, the assertions, `drive`, the runner |
@@ -40,7 +40,6 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--compile` | off | stop after compiling and loading every file |
 | `--data DIR` | `firmware/gardener/data` | another data image, such as a scratch copy |
 | `--no-cache` | off | rebuild the vendored VM objects |
-| `--gfx DIR` | the installed library | the Adafruit GFX library the fonts come from |
 | `--art NAME` | — | draw that routine and save an animation of it instead of driving |
 | `--scene NAME` | — | draw that device scene — `home`, `browser` or `system` — and save an animation |
 | `--seconds N` | `0` | with `--art` or `--scene`, run N seconds of virtual time first |
@@ -87,7 +86,7 @@ routine calls:
 | Module | On the host |
 | --- | --- |
 | `vacuum` | a machine model: `state()`, `target()`, `start()`, `stop()`, `log()` |
-| `screen` | every drawing verb forwarded to `frame` with its ink-or-paper colour, real `text_bounds`, and the unit |
+| `screen` | every drawing verb forwarded to the panel with its ink-or-paper colour, real `text_bounds`, and the unit |
 | `device` | the unit, the jingle selection and library, the piezo counting sounds rather than playing them, a press queue, the reboot and reset requests, and `device.config` over `/cfg`, with `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`
@@ -104,11 +103,11 @@ the ceiling `--ceiling-kpa` sets, 70 kPa by default. One beat is 250 ms of virtu
 beat at the panel's 128 x 64, paper and ink, each held for a second so the run reads slowly. The
 GIF is enlarged 2 x to 256 x 128 by `kRenderScale` in the GIF writer — nearest neighbour, because
 the picture is one bit. The frame delay is `kGifDelayCs`, one line to change to slow the whole
-animation down or speed it up. The drawing is not an approximation of the driver's — the primitives,
-`drawChar`, `write` and `getTextBounds` are ports of the installed `Adafruit_GFX`, and the font data
-is the library's own `glcdfont.c` and `Fonts/*.h`, found through `--gfx`, then `ADAFRUIT_GFX`, then
-`arduino-cli`, then the usual sketchbook paths. A missing library stops the run with the
-`arduino-cli lib install "Adafruit GFX Library"` hint rather than drawing in a stand-in face.
+animation down or speed it up. The drawing is not an approximation of the driver's: the host draws
+through the same Gfx library and the same `GfxDisplay` the device does, over `BitmapPanel` in place
+of the SH1106, so the shapes, the text metrics and the compiled faces are the ones a page gets on
+the glass. `BitmapPanel::packFrame` is the only difference — it hands the one-bit frame to the GIF
+writer instead of to a bus.
 
 A captured GIF also carries the gesture that drove it: each press the driver injects is shown as a
 full-width strip across the top of the frame it lands on — the key and its form, `OK`, `OK×2`,
@@ -117,7 +116,8 @@ host-only callout drawn over the captured frame; the page and the band never see
 for one beat, behind `kGestureCalloutBeats` in `tools/berry/host/GestureCallout.h`, which is the
 one line to change to keep the key on screen longer.
 
-`gfx/Adafruit_GFX.h` is a shim that lets those font headers compile without `Arduino.h`.
+The host compiles `libraries/Gfx` alongside the firmware's own sources, so the harness draws with
+the library's real code: there is no installed copy of the drawing code to find and no shim.
 
 Saving keeps the band the `ux` component draws: rows 52 to 63 are the device's own status row — the
 unit, the serial and Bluetooth icons, the run-state icon and the battery — over whatever the page
