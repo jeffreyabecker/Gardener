@@ -27,13 +27,15 @@ bool stacksDown(const std::vector<Child>& children, Direction direction) {
   return true;
 }
 
-Paint arrange(Rect box, std::initializer_list<Child> children, Alignment alignment,
+Paint arrange(Cell cell, std::initializer_list<Child> children, Alignment alignment,
               Direction direction) {
   // The list does not outlive the call and the draw runs on every frame, so the children are copied
   // into the draw this answers.
   const std::vector<Child> items(children);
-  return [box, items, alignment, direction](Canvas& canvas) {
-    Canvas own = canvas.child(box);
+  return [cell, items, alignment, direction](Canvas& canvas) {
+    const int16_t cellWidth = resolveSpan(canvas.width(), cell.width);
+    const int16_t cellHeight = resolveSpan(canvas.height(), cell.height);
+    Canvas own = canvas.child(Rect(0, 0, cellWidth, cellHeight));
     const bool down = stacksDown(items, direction);
     const int16_t width = own.width();
     const int16_t height = own.height();
@@ -42,8 +44,8 @@ Paint arrange(Rect box, std::initializer_list<Child> children, Alignment alignme
     std::vector<int16_t> spans(items.size(), 0);
     int16_t consumed = 0;
     for (size_t i = 0; i < items.size(); i++) {
-      const Cell& cell = items[i].cell;
-      int16_t span = resolveSpan(extent, down ? cell.height : cell.width);
+      const Cell& childCell = items[i].cell;
+      int16_t span = resolveSpan(extent, down ? childCell.height : childCell.width);
       if (span > extent - consumed) span = static_cast<int16_t>(extent - consumed);
       if (span < 0) span = 0;
       spans[i] = span;
@@ -55,16 +57,16 @@ Paint arrange(Rect box, std::initializer_list<Child> children, Alignment alignme
                           : alignedOffset(leftover, alignment.horizontal);
 
     for (size_t i = 0; i < items.size(); i++) {
-      const Cell& cell = items[i].cell;
+      const Cell& childCell = items[i].cell;
       int16_t x = cursor;
       int16_t y = cursor;
       int16_t w = spans[i];
       int16_t h = spans[i];
       if (down) {
-        w = resolveSpan(width, cell.width);
+        w = resolveSpan(width, childCell.width);
         x = alignedOffset(static_cast<int16_t>(width - w), alignment.horizontal);
       } else {
-        h = resolveSpan(height, cell.height);
+        h = resolveSpan(height, childCell.height);
         y = alignedOffset(static_cast<int16_t>(height - h), alignment.vertical);
       }
       Canvas cellCanvas = own.child(Rect(x, y, w, h));
@@ -97,16 +99,16 @@ int16_t alignedOffset(int16_t leftover, Vertical where) {
   return 0;
 }
 
-Paint layout(Rect box, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(box, children, alignment, Direction::Declared);
+Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignment) {
+  return arrange(cell, children, alignment, Direction::Declared);
 }
 
-Paint row(Rect box, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(box, children, alignment, Direction::Across);
+Paint row(float heightPct, std::initializer_list<Child> children, Alignment alignment) {
+  return arrange(Cell(1.0f, heightPct), children, alignment, Direction::Across);
 }
 
-Paint column(Rect box, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(box, children, alignment, Direction::Down);
+Paint column(float widthPct, std::initializer_list<Child> children, Alignment alignment) {
+  return arrange(Cell(widthPct, 1.0f), children, alignment, Direction::Down);
 }
 
 }  // namespace gardener::gfx::ui

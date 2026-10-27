@@ -20,4 +20,5 @@ struct Rect {
   int16_t height;
 };
 
+
 }  // namespace gardener::gfx

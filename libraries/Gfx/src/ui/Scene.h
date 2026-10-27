@@ -36,12 +36,16 @@ class Scene {
   // Answers whether it drew.
   bool poll(Canvas& canvas, uint32_t nowMs);
 
-  uint32_t lastDraw() const { return lastDraw_; }
-
- protected:
   // Called when the scene goes on top, before the first draw. The Berry scene takes the pusher's
   // arguments; nothing here has anything to pass yet.
   virtual void activate() {}
+  virtual void leave(){}
+
+
+  uint32_t lastDraw() const { return lastDraw_; }
+
+ protected:
+  
 
   // The gesture the scene answers, or false for one it drops. The whole string is the gesture, so a
   // scene matches it in full or not at all.

@@ -17,4 +17,5 @@
 #include "ui/GestureQueue.h"
 #include "ui/IntEditScene.h"
 #include "ui/Layout.h"
+#include "ui/NumberEditorComponent.h"
 #include "ui/Scene.h"

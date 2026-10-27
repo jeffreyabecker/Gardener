@@ -44,19 +44,20 @@ struct Child {
   Paint paint;
 };
 
-// Divides `box` among its children's declared cells and runs each draw on a canvas narrowed to its
-// cell, in the order they were given. Siblings stack down a column unless one declares a width that
-// is not the whole of it, when they stack across a row, and the alignment places the stack and each
-// child's cell inside the room left over.
-//
-// The box is in the coordinates of the canvas the draw is given, and the cells divide it, so a
-// nested layout is given its cell's box and the child canvases are its own.
-Paint layout(Rect box, std::initializer_list<Child> children, Alignment alignment = {});
+// Takes the cell it occupies of the canvas it is drawn on and divides that among its children's
+// declared cells, running each draw on a canvas narrowed to its cell, in the order they were given.
+// Siblings stack down a column unless one declares a width that is not the whole of it, when they
+// stack across a row, and the alignment places the stack and each child's cell inside the room left
+// over. A cell of Whole is the whole canvas, which is what a page's own layout declares; a nested
+// layout is handed the canvas already narrowed to its cell and declares Whole there.
+Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignment = {});
 
-// The two directions a page states most often: a row stacks its children across the box and a
-// column stacks them down it, whatever their cells say. Both are a layout with the axis named, so
-// the cells still divide each child's share of the box.
-Paint row(Rect box, std::initializer_list<Child> children, Alignment alignment = {});
-Paint column(Rect box, std::initializer_list<Child> children, Alignment alignment = {});
+// The two directions a page states most often, each spelling the axis it divides and taking the
+// whole of the other: a row takes the height it declares, the cell of `(1, heightPct)`, and stacks
+// its children across; a column takes the width it declares, the cell of `(widthPct, 1)`, and
+// stacks them down. Both are a layout with the axis named, so the cells still divide each child's
+// share of the cell the layout was given.
+Paint row(float heightPct, std::initializer_list<Child> children, Alignment alignment = {});
+Paint column(float widthPct, std::initializer_list<Child> children, Alignment alignment = {});
 
 }  // namespace gardener::gfx::ui
