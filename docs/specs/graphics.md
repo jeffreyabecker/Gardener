@@ -2,24 +2,25 @@
 
 The contract for a standalone C++ drawing library: a caller-owned frame buffer, the
 `DisplayDevice` that owns the glass and flushes the buffer, and the `Canvas` that draws into an
-extent of it. The library is built from scratch and inherits nothing from Adafruit_GFX; that name
-appears in this file only to say what the library does not do.
+extent of it. The library is built from scratch and inherits nothing from Adafruit_GFX; the glyph
+code that text is drawn through is the one piece taken from it, and its attribution travels with it.
 
-> **Unimplemented.** This file is the contract the library is being written to; no part of it is
-> backed by code yet.
+> **Unimplemented.** `Rect`, `DisplayDevice` and `Canvas` are written under `libraries/Gfx`; the
+> shapes the library ships are not.
 
 This library is its own library, separate from the main application library, and the main
 application depends on it. The dependency runs one way: the application may include this library,
 and this library never includes, inherits from, or reaches into the application.
 
 The library's three types — `Rect`, `DisplayDevice` and `Canvas` — live in the `gardener::gfx`
-namespace. A concrete device driver is the one place that knows its own glass and bus; it is an
-implementation of `DisplayDevice`, not a fourth contract here.
+namespace, and the shapes it ships in `gardener::gfx::shapes`. A concrete device driver is the one
+place that knows its own glass and bus; it is an implementation of `DisplayDevice`, not a fourth
+contract here.
 
 ## The frame buffer
 
-The library is always buffered. Every drawing verb writes into a frame buffer the caller owns;
-nothing reaches the glass until `flush`. There is no verb that draws straight to the glass.
+The library is always buffered. Every drawing call writes into a frame buffer the caller owns;
+nothing reaches the glass until `flush`. There is no call that draws straight to the glass.
 
 A frame is `width × height` bytes: one byte per pixel, row-major, top-left origin, stride equal to
 the width, no padding. A pixel's byte is a grayscale brightness from `0` — black, the panel off —
@@ -80,13 +81,17 @@ passes an extent reaching outside the panel owns the out-of-bounds write that fo
 
 ## Drawing
 
-`Canvas` is the only place drawing verbs live; `DisplayDevice` and `Rect` have none.
+`Canvas` is the only place drawing lives; `DisplayDevice` and `Rect` have none.
 
-Every verb takes coordinates relative to the extent's top-left. A verb given `(x, y)` addresses the
+The canvas carries three things: `setPixel`, `invert` and the `draw` template. Everything a page
+puts on the frame is a pixel written through `setPixel`, a region the canvas inverts itself, or a
+shape value handed to `draw` that writes pixels of its own.
+
+Every coordinate is relative to the extent's top-left: a point given as `(x, y)` addresses the
 buffer at `(extent.x + x, extent.y + y)`.
 
-Every verb clips to the extent. Pixels outside `[0, extent.width) × [0, extent.height)` are not
-written, and a shape that crosses the extent's edge is cut at the edge. Nothing outside the extent
+Every write clips to the extent. Pixels outside `[0, extent.width) × [0, extent.height)` are not
+written, and something that crosses the extent's edge is cut at the edge. Nothing outside the extent
 is ever changed, and nothing outside the panel is ever touched so long as the caller keeps the
 extent inside it.
 
@@ -103,17 +108,82 @@ A call whose point falls outside the extent does nothing. A call inside writes `
 buffer[(extent.y + y) * panel.width + (extent.x + x)]
 ```
 
-### The rest of the surface
+### invert
 
-The same rule governs every other verb `Canvas` carries: lines (`line`, `hLine`, `vLine`),
-rectangles (`rect`, `fillRect`, `roundRect`, `fillRoundRect`), circles (`circle`, `fillCircle`),
-ellipses (`ellipse`, `fillEllipse`), triangles (`triangle`, `fillTriangle`), turned rectangles
-(`rotatedRect`, `fillRotatedRect`), inversion (`invert`), bitmaps (`bitmap`) and text. Each takes
-extent-relative coordinates, clips to the extent, and writes into the buffer at panel-relative
-offsets.
+```cpp
+void invert(int16_t x, int16_t y, int16_t w, int16_t h)
+```
 
-Text and bitmaps obey that rule like every other verb. The glyph-writing code is cribbed from
-Adafruit_GFX and keeps its attribution, and text reads Adafruit's `GFXfont` format through it. The
-library does no newline handling: it draws each glyph it is given and reads no character as a line
-break, so a caller that wants a second line draws it itself. The bitmap format is the library's
-own, not Adafruit's packed-bitmap layout.
+Each pixel in the rectangle becomes `255` minus what was there, so paper written over ink erases and
+a band laid over a border keeps the border visible. This is the one operation that reads the frame,
+which is why it is a canvas member rather than a shape: a shape draws by writing pixels and has no
+way to read one back. The rectangle is extent-relative and clipped like any other write.
+
+### draw
+
+```cpp
+template <typename TShape>
+void draw(TShape shape)
+```
+
+`TShape` is a callable that accepts a `Canvas&` and is copy-constructible. `draw` takes it by value,
+calls it once with the canvas, and stores nothing: no shape outlives the call, and the library
+allocates nothing to hold one.
+
+A shape draws by calling the canvas it was given — `setPixel`, `invert`, or another `draw` — so it
+clips to the extent exactly as a direct call would, whether or not whoever wrote it knew the extent
+existed. A type that cannot be called with a `Canvas&`, or cannot be copied, does not compile as a
+`TShape`.
+
+## Shapes
+
+The library ships the vocabulary a page draws with, in `gardener::gfx::shapes`. Each is a value with
+its arguments set at construction and
+
+```cpp
+void operator()(Canvas& canvas) const;
+```
+
+so `canvas.draw(shapes::FillCircle(64, 32, 10, 255))` draws a filled circle. A caller that wants
+something the library does not ship passes its own callable to `draw`, and nothing else changes.
+`shapes::Rect` is the outlined rectangle, and is not the `gfx::Rect` geometry value its arguments
+are measured in.
+
+### Geometry
+
+`Line(x0, y0, x1, y1, color)`, `HLine(x, y, w, color)`, `VLine(x, y, h, color)`,
+`Rect(x, y, w, h, color)`, `FillRect(x, y, w, h, color)`, `RoundRect(x, y, w, h, radius, color)`,
+`FillRoundRect(x, y, w, h, radius, color)`, `Circle(x, y, radius, color)`,
+`FillCircle(x, y, radius, color)`, `Ellipse(x, y, radiusX, radiusY, color)`,
+`FillEllipse(x, y, radiusX, radiusY, color)`, `Triangle(x0, y0, x1, y1, x2, y2, color)`,
+`FillTriangle(x0, y0, x1, y1, x2, y2, color)`, `RotatedRect(centerX, centerY, w, h, degrees,
+color)` and `FillRotatedRect(centerX, centerY, w, h, degrees, color)`.
+
+Every one takes its colour as the grayscale byte at the end of the argument list, and draws in
+extent-relative coordinates clipped to the extent.
+
+### Text
+
+```cpp
+Text(int16_t x, int16_t y, const String& value, const GFXfont* face, uint8_t size, uint8_t color)
+```
+
+The face belongs to the shape, so a page mixing faces needs nothing from the canvas; a `face` of
+`nullptr` selects the built-in 5x7 face. `x` and `y` are the baseline of the first glyph, which is
+the font format's own rule, and `size` scales what is drawn. The glyph-writing code is cribbed from
+Adafruit_GFX and keeps its attribution, and text reads Adafruit's `GFXfont` format through it.
+
+The library does no newline handling: it draws each glyph it is given and reads no character as a
+line break, so a caller that wants a second line draws it itself.
+
+### Bitmap
+
+```cpp
+Bitmap(int16_t x, int16_t y, const uint8_t* bits)
+```
+
+`bits[0]` is the width, `bits[1]` the height, then `width * height` grayscale bytes row-major. Every
+pixel is drawn — there is nothing to skip and no transparency — and the image is clipped to the
+extent. This is the library's own format, not Adafruit's packed 1-bit layout. The data has to be
+alive for the call, because a draw copies nothing.
+
