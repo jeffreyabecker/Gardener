@@ -403,6 +403,102 @@ end
 
 test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
 
+# A kind that shows a value draws its content in one column: the label row, two pixels of paper, the
+# body, two pixels of paper and the hint row, each resolved to the pixels the kind measured it at.
+def the_editor_column_places_its_rows()
+  var editors = [
+    BoolEditScene("Flags", true, false),
+    IntEditScene("Count", 7, 1, 1, 20, false),
+    RealEditScene("Gain", 0.5, 0.5, nil, nil, false),
+    PressureEditScene("Rest", 5.0, 1, false),
+    DurationEditScene("Hold", 90, 1, 0, 7200, false)
+  ]
+  for scene : editors
+    page_box(scene).activate()
+
+    var page = scene.page
+    var content = scene.content_size()
+    assert_eq(content.h, 20 + scene.body_h(), "the content is not the body and its two chrome rows")
+    assert_true(content.w + 4 < scene.dim.w, "the frame is not narrower than the page")
+    assert_true(content.h + 4 < scene.dim.h, "the frame is not shorter than the page")
+    assert_eq(page.dim.w, content.w, "the column is not the content's width")
+    assert_eq(page.dim.h, content.h, "the column is not the content's height")
+
+    var rows = page.children
+    assert_eq(rows.size(), 5, "the editor column does not have five rows")
+    assert_eq(rows[0].pos.y, page.pos.y, "the label row is not the content's top")
+    assert_eq(rows[0].dim.h, 8, "the label row is not eight pixels")
+    assert_eq(rows[1].dim.h, 2, "the paper under the label is not two pixels")
+    assert_eq(rows[2].pos.y, page.pos.y + 10, "the body does not start ten pixels down")
+    assert_eq(rows[2].dim.h, scene.body_h(), "the body is not the height the kind measured")
+    assert_eq(rows[3].dim.h, 2, "the paper under the body is not two pixels")
+    assert_eq(rows[4].pos.y, page.pos.y + page.dim.h - 8, "the hint row is not the bottom eight")
+    assert_eq(rows[4].dim.h, 8, "the hint row is not eight pixels")
+    assert_eq(rows[0].dim.w, page.dim.w, "the label row is not the content's width")
+    assert_eq(rows[2].dim.w, page.dim.w, "the body row is not the content's width")
+    assert_eq(rows[4].dim.w, page.dim.w, "the hint row is not the content's width")
+  end
+end
+
+test("the editor column places its rows", the_editor_column_places_its_rows)
+
+# A choice with no entries — the device's jingle row on an image that ships no library — is a row
+# with nothing to pick: it opens on no entry, steps nowhere, and closes on OK without a value to pop.
+def a_choice_with_no_entries_hands_back_nothing()
+  var scene = ChoiceEditScene("Mode", nil, [], false)
+  page_box(scene).activate()
+  assert_nil(scene.value(), "an empty choice names a value")
+  assert_eq(scene.text(), "--", "an empty choice prints a value")
+
+  var depth = ux.depth()
+  ux.push(scene)
+  harness.beat(1)
+  harness.press("up:single")
+  harness.beat(1)
+  harness.press("ok:single")
+  harness.beat(1)
+  assert_eq(ux.depth(), depth, "an empty choice did not close on OK")
+end
+
+test("a choice with no entries hands back nothing", a_choice_with_no_entries_hands_back_nothing)
+
+def a_bool_switch_divides_its_band_evenly()
+  var flags = page_box(BoolEditScene("Flags", true, false))
+  flags.activate()
+
+  var page = flags.page
+  var cells = page.children[2].children[0].children
+  assert_eq(cells.size(), 2, "a two-entry switch does not have two cells")
+  assert_eq(cells[0].pos.x, page.pos.x, "the first cell is not at the content's left")
+  assert_eq(cells[0].dim.h, flags.body_h(), "a cell is not the band's height")
+  assert_eq(cells[1].pos.x, cells[0].pos.x + cells[0].dim.w,
+            "the second cell does not follow the first")
+  assert_eq(cells[1].pos.x + cells[1].dim.w, page.pos.x + page.dim.w,
+            "the cells do not fill the band")
+  assert_true(cells[0].dim.w - cells[1].dim.w < 2 && cells[1].dim.w - cells[0].dim.w < 2,
+              "the cells are not equal shares of the band")
+  assert_eq(cells[0].children[0].face[1], cells[1].children[0].face[1],
+            "the cells are not drawn at one face")
+  assert_true(cells[1].children[0].inverted, "the entry showing is not the one inverted")
+  assert_true(!cells[0].children[0].inverted, "an entry that is not showing is inverted")
+end
+
+test("a bool switch divides its band evenly", a_bool_switch_divides_its_band_evenly)
+
+def a_nullable_bool_switch_carries_its_nothing()
+  var flags = page_box(BoolEditScene("Flags", nil, true))
+  flags.activate()
+
+  var page = flags.page
+  var cells = page.children[2].children[0].children
+  assert_eq(cells.size(), 3, "a nullable switch does not have three cells")
+  assert_eq(cells[2].pos.x + cells[2].dim.w, page.pos.x + page.dim.w,
+            "the three cells do not fill the band")
+  assert_true(cells[0].children[0].inverted, "the entry showing is not the one inverted")
+end
+
+test("a nullable bool switch carries its nothing", a_nullable_bool_switch_carries_its_nothing)
+
 # Every scene draws in the page: a scene pushed over another one covers the whole page rather than a
 # window inside it, and what the scene below drew comes back when it redraws.
 class PageScene : Scene

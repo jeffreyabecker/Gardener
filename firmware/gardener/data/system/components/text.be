@@ -1,5 +1,7 @@
 # text.be — the Text: the largest compiled face that fits the box, with the built-in 5x7 only as
 # the last resort. It fits a string once and caches the face, recomputing when the string changes.
+# PinnedText is the same drawing at a face the caller picked, for a row of cells that must share one
+# size and for a row that must keep the built-in face.
 #
 # Berry has no access modifiers, so privacy here is the name: a leading underscore marks what only
 # this class touches, and everything without one is what a caller sets or calls. The test suite is
@@ -231,5 +233,21 @@ class Text : Component
       i -= 1
     end
     return "..."
+  end
+end
+
+# A string at a face the caller picked rather than one fitted to its own box: a row of cells shares
+# one size whatever its strings are, and a row that has to keep the built-in face keeps it. `face` is
+# what Text.fit() answered, or [nil, 1] for the built-in 5x7.
+class PinnedText : Text
+  var face
+
+  def init(value, face, settings)
+    super(self).init(value, settings)
+    self.face = face
+  end
+
+  def draw()
+    self.draw_face(self.value, self.face)
   end
 end

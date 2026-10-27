@@ -7,25 +7,17 @@ suite = "home"
 
 def the_declaration_is_the_device_rows()
   var settings_cfgs = DeviceSettings().settings_cfgs
-  # The target first, then the unit, the jingle and the radio last.
+  # The target first, then the unit, the jingle and the radio last. The jingle row is one of them
+  # whether or not the build ships a note library, so the list's shape does not change with the
+  # image; a build with no library is a row with nothing to pick.
+  assert_eq(settings_cfgs.size(), 4, "home: the device set is not its four rows")
   assert_eq(settings_cfgs[0].key, "target_pressure", "home: the first row is not the target")
   assert_eq(settings_cfgs[1].key, "unit", "home: the second row is not the unit")
+  assert_eq(settings_cfgs[2].key, "jingle", "home: the third row is not the jingle")
   var last = settings_cfgs[settings_cfgs.size() - 1]
   assert_eq(last.key, "bluetooth", "home: the last row is not the radio")
-
-  # The jingle row joins them only when the build ships a note library, which is the check the
-  # system menu made before it listed the row.
-  var jingle_rows = 0
-  for cfg : settings_cfgs
-    if cfg.key == "jingle"
-      jingle_rows += 1
-    end
-  end
-  if device.all_jingles().size() > 0
-    assert_eq(jingle_rows, 1, "home: the jingle row is missing")
-  else
-    assert_eq(jingle_rows, 0, "home: the jingle row is there without a library")
-  end
+  assert_eq(settings_cfgs[2].values.size(), device.all_jingles().size(),
+            "home: the jingle row does not carry the library")
 end
 
 test("the declaration is the device's rows, target first", the_declaration_is_the_device_rows)

@@ -6,8 +6,8 @@
 # and each kind opens the edit scene of the same name from the file beside this one.
 #
 # A kind that cannot work — a choice with no values, bounds the wrong way round — says so in
-# `problem` and logs one line where it is built. It does not raise: the routine still registers, its
-# settings view leaves that row out, and a read of it answers the setting's default.
+# `problem`. It does not raise: the registration logs it, the routine still registers, its settings
+# view leaves that row out, and a read of it answers the setting's default.
 
 class EditCfg
   var key, default_value, label, icon, nullable, problem

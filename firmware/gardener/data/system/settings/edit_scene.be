@@ -4,7 +4,9 @@
 #
 # The base is the frame and the keys: it measures the content a kind answers for and draws a border
 # round it, and the kind draws the whole of that content — its label row, its value and its hint row
-# — in the box it is handed. Nothing about how a value looks is in this file.
+# — in the box it is handed. Nothing about how a value looks is in this file, beyond the column of
+# rows the kinds share: `editor_column()` builds the label row, the body and the hint row that every
+# editor of a value draws in.
 
 class EditScene : Scene
   var label
@@ -87,5 +89,21 @@ class EditScene : Scene
 
   def nudge(dir)
   end
+end
+
+# The column every value editor draws its content in: the label row, two pixels of paper, the kind's
+# body, two pixels of paper and the hint row, each declared as a fraction of the content so the layout
+# resolves it to the pixels it was measured at. The label and the hint are the built-in 5x7, the one
+# face that carries the arrows a hint prints. A paper row is a layout with no children: it takes its
+# pixels and draws nothing.
+def editor_column(label, hint, body, body_h)
+  var height = real(20 + body_h)
+  return AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, real(8) / height), [PinnedText(label, [nil, 1])]),
+    AutoLayout(bounds(1, real(2) / height), []),
+    AutoLayout(bounds(1, real(body_h) / height), [body]),
+    AutoLayout(bounds(1, real(2) / height), []),
+    AutoLayout(bounds(1, real(8) / height), [PinnedText(hint, [nil, 1])])
+  ])
 end
 

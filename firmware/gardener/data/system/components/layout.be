@@ -86,12 +86,14 @@ class AutoLayout : Component
     return true
   end
 
-  # The pixels a fraction of a whole takes: the whole itself when the fraction is nil.
+  # The pixels a fraction of a whole takes: the whole itself when the fraction is nil, and otherwise
+  # the fraction rounded to the nearest pixel, so a row declared as eight pixels of a measured height
+  # resolves back to eight and equal thirds of a row fill it.
   def span(total, fraction)
     if fraction == nil
       return total
     end
-    return int(total * fraction)
+    return int(total * fraction + 0.5)
   end
 
   # Stamp the box on a child at its offset along the stacking axis.

@@ -11,6 +11,8 @@ class DurationEditScene : EditScene
   var min
   var max
   var nullable
+  var cells
+  var page
 
   def init(label, current, step, min, max, nullable)
     super(self).init(label, current)
@@ -23,6 +25,8 @@ class DurationEditScene : EditScene
     self.min = min
     self.max = max
     self.nullable = nullable
+    self.cells = [PinnedText("", [nil, 1]), PinnedText("", [nil, 1])]
+    self.page = nil
   end
 
   def nudge(dir)
@@ -84,41 +88,49 @@ class DurationEditScene : EditScene
     return str(self.current % 60) + "s"
   end
 
-  # The two fields this draws, as [minutes width, seconds width, height, face]: both drawn at one
-  # face, the largest the longer of the two fits its half of the scene's box at 16 pixels, and a
-  # pixel of paper inside each field. A field's half is the box less the three pixels of frame
-  # either side and the gap between the fields.
-  def fields()
-    var minutes = self.minutes_text()
-    var seconds = self.seconds_text()
-    var room = (self.dim.w - 6 - 1) / 2 - 2
-    var longer = minutes
-    if screen.text_bounds(seconds, 1).w > screen.text_bounds(minutes, 1).w
-      longer = seconds
+  # The one face the two fields draw at and the ink they take there: the largest face the longer of
+  # them fits the band's sixteen pixels at, a pixel of paper above and below, so the pair reads as
+  # one control. A setting with no value shows the single field `--`.
+  def measure()
+    var longer = "--"
+    if self.current != nil
+      longer = self.minutes_text()
+      if screen.text_bounds(self.seconds_text(), 1).w > screen.text_bounds(longer, 1).w
+        longer = self.seconds_text()
+      end
     end
-    var face = Text(longer).fit(longer, room, 16)
-    var minutes_box = Text(minutes)
-    var seconds_box = Text(seconds)
-    var minutes_ink = minutes_box.bounds(minutes, face)
-    var seconds_ink = seconds_box.bounds(seconds, face)
-    return [minutes_ink[0] + 2, seconds_ink[0] + 2, minutes_ink[1] + 2, face]
+    var face = Text(longer).fit_height(longer, 16)
+    var ink = Text(longer).bounds(longer, face)
+    return [face, ink[0], ink[1]]
   end
 
-  # The label row, the fields and the hint row: eight pixels a row, a gap of two above and below the
-  # fields, and the content as wide as the widest of the three.
-  def content_size()
-    var wide = 0
-    var tall = 0
-    if self.current != nil
-      var fields = self.fields()
-      wide = fields[0] + 1 + fields[1]
-      tall = fields[2]
-    else
-      var measure = Text("--")
-      var ink = measure.bounds("--", measure.fit("--", self.dim.w - 6, 16))
-      wide = ink[0]
-      tall = ink[1]
+  # The two fields side by side, each the same share of the width, and the stage the keys are
+  # stepping inverted.
+  def body()
+    if self.current == nil
+      return PinnedText("--", self.measure()[0])
     end
+    return AutoLayout(bounds(nil, nil), [
+      AutoLayout(bounds(0.5, 1), [self.cells[0]]),
+      AutoLayout(bounds(0.5, 1), [self.cells[1]])
+    ])
+  end
+
+  def body_h()
+    return self.measure()[2] + 2
+  end
+
+  def body_w()
+    var cell = self.measure()[1] + 2
+    if self.current == nil
+      return cell
+    end
+    return 2 * cell
+  end
+
+  # The label row, the fields and the hint row, as wide as the widest of the three.
+  def content_size()
+    var wide = self.body_w()
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -127,36 +139,25 @@ class DurationEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + tall)
+    return bounds(wide, 20 + self.body_h())
   end
 
   # Minutes and seconds as two fields side by side, each suffixed and at the one face, with the
   # stage the keys are stepping inverted. A nil value has no stages to show.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-
     if self.current != nil
-      var fields = self.fields()
-      var x = pos.x + (dim.w - (fields[0] + 1 + fields[1])) / 2
-      var y = pos.y + 10 + (dim.h - 20 - fields[2]) / 2
-      var minutes = Text(self.minutes_text())
-      minutes.set_box(point(x, y), bounds(fields[0], fields[2]))
-      minutes.inverted = self.stage == "min"
-      minutes.draw_face(self.minutes_text(), fields[3])
-      var seconds = Text(self.seconds_text())
-      seconds.set_box(point(x + fields[0] + 1, y), bounds(fields[1], fields[2]))
-      seconds.inverted = self.stage != "min"
-      seconds.draw_face(self.seconds_text(), fields[3])
-    else
-      var value = Text("--")
-      value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, dim.h - 20))
-      value.draw()
+      var face = self.measure()[0]
+      self.cells[0].value = self.minutes_text()
+      self.cells[0].face = face
+      self.cells[0].inverted = self.stage == "min"
+      self.cells[1].value = self.seconds_text()
+      self.cells[1].face = face
+      self.cells[1].inverted = self.stage != "min"
     end
 
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
+    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.draw()
   end
 
   def hint()

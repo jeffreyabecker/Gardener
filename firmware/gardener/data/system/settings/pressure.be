@@ -11,6 +11,7 @@ class PressureEditScene : EditScene
   var nullable
   var unit
   var fmt
+  var page
 
   def init(label, current, step, nullable)
     super(self).init(label, current)
@@ -19,6 +20,7 @@ class PressureEditScene : EditScene
     self.nullable = nullable
     self.unit = nil
     self.fmt = "%.1f"
+    self.page = nil
   end
 
   def activate()
@@ -57,12 +59,29 @@ class PressureEditScene : EditScene
     return string.format(self.fmt, self.current * self.unit.per_kpa)
   end
 
-  # The label row, the value and the hint row: eight pixels a row, a gap of two above and below the
-  # value, and the content as wide as the widest of the three.
+  # The value's ink at the largest face that fits the band's sixteen pixels — the same string the
+  # row prints, with the unit's decimals, not a scaled built-in line.
+  def measure()
+    var text = self.text()
+    var face = Text(text).fit_height(text, 16)
+    return Text(text).bounds(text, face)
+  end
+
+  def body()
+    return Text(self.text())
+  end
+
+  def body_h()
+    return self.measure()[1]
+  end
+
+  def body_w()
+    return self.measure()[0]
+  end
+
+  # The label row, the value and the hint row, as wide as the widest of the three.
   def content_size()
-    var measure = Text(self.text())
-    var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
-    var wide = ink[0]
+    var wide = self.body_w()
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -71,20 +90,14 @@ class PressureEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + ink[1])
+    return bounds(wide, 20 + self.body_h())
   end
 
-  # The depth at the largest face the box holds, formatted in the panel's unit — the same string the
-  # row prints, with the unit's decimals, not a scaled built-in line.
+  # The depth at the largest face the box holds, formatted in the panel's unit.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-    var value = Text(self.text())
-    value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, dim.h - 20))
-    value.draw()
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
+    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.draw()
   end
 
   def hint()

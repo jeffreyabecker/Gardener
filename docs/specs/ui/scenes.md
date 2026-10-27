@@ -91,9 +91,12 @@ the entry showing and scrolls the window when the list is longer than the box. A
 carry gestures of its own; the editor answers its four first and offers any other gesture to the
 choice that is showing, handing it that choice, so an entry can do something the editor knows
 nothing about.
+A setting with no values at all — the jingle row on an image that ships no library — is still a row:
+its editor opens on no entry, draws none, steps nowhere, and OK hands back nothing.
 `BoolEditScene` is the same ring with two entries — `OFF` and `ON`, with `--` in front of them when the
-setting is nullable — drawn as a switch of chips rather than as a list, so Up and Down wrap there as
-they do through a choice.
+setting is nullable — drawn as a switch rather than as a list, so Up and Down wrap there as they do
+through a choice. The switch is the editor's body: one chip per entry, an equal share of the body's
+width, every chip at one face so the segments read as one control, and the entry showing inverted.
 `JingleEditScene` auditions the jingle it opens on and each one it steps to, and goes quiet when
 it is cancelled.
 
@@ -127,6 +130,10 @@ it is cancelled.
    frame and the edge of the box, then hands `draw_editor(pos, dim)` the content box inside the
    border. The base measures nothing and draws nothing of its own: every kind answers both, and
    draws the whole of its content in that box, chrome included. No label row, hint row or spacing is
-   inherited, so a kind's look is its own.
+   inherited, so a kind's look is its own. The kinds that show a value share one column —
+   `editor_column()` in the same file — of an eight-pixel label row, two pixels of paper, the body,
+   two pixels of paper and an eight-pixel hint row, each declared as a fraction of the content so
+   the layout resolves it to the pixels it was measured at; a kind that wants another column builds
+   its own.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

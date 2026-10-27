@@ -125,6 +125,56 @@ end
 
 test("an AutoLayout draws its children in order", auto_layout_walks_its_children_in_order)
 
+# A span is the fraction rounded to the nearest pixel, so a row declared as a fraction of the height
+# it was measured from comes back as the pixels it declares, and equal thirds of a row fill it.
+def equal_thirds_fill_a_row()
+  var cells = [
+    AutoLayout(bounds(real(1) / real(3), 1), []),
+    AutoLayout(bounds(real(1) / real(3), 1), []),
+    AutoLayout(bounds(real(1) / real(3), 1), [])
+  ]
+  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), cells)])
+  root.to_box(0, 0, 96, 16)
+
+  assert_eq(cells[0].dim.w, 32, "a third of 96 is not 32")
+  assert_eq(cells[1].pos.x, 32, "the second third does not follow the first")
+  assert_eq(cells[2].pos.x, 64, "the third third does not follow the second")
+  assert_eq(cells[2].dim.w, 32, "the thirds do not fill the row")
+end
+
+test("equal thirds of a row fill it", equal_thirds_fill_a_row)
+
+def a_row_resolves_to_the_pixels_it_declares()
+  var heights = [8, 2, 15, 2, 8]
+  var rows = []
+  for height : heights
+    rows.push(AutoLayout(bounds(1, real(height) / real(35)), []))
+  end
+  var root = AutoLayout(bounds(nil, nil), rows)
+  root.to_box(0, 0, 71, 35)
+
+  assert_eq(rows[0].dim.h, 8, "the label row is not eight pixels")
+  assert_eq(rows[1].dim.h, 2, "the paper row is not two pixels")
+  assert_eq(rows[2].pos.y, 10, "the body does not start ten pixels down")
+  assert_eq(rows[2].dim.h, 15, "the body is not the height it was measured at")
+  assert_eq(rows[4].pos.y, 27, "the hint row is not the content's last eight pixels")
+  assert_eq(rows[4].dim.h, 8, "the hint row is not eight pixels")
+end
+
+test("a row resolves to the pixels it declares", a_row_resolves_to_the_pixels_it_declares)
+
+def a_rounded_span_is_clamped_to_what_is_left()
+  var left = AutoLayout(bounds(0.5, 1), [])
+  var right = AutoLayout(bounds(0.5, 1), [])
+  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), [left, right])])
+  root.to_box(0, 0, 77, 16)
+
+  assert_eq(left.dim.w, 39, "half of 77 does not round up")
+  assert_eq(right.dim.w, 38, "the clamped half is not what is left")
+end
+
+test("a rounded span is clamped to what is left", a_rounded_span_is_clamped_to_what_is_left)
+
 # --- the box a component keeps ---------------------------------------------
 
 def component_stores_its_box()

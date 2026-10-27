@@ -10,6 +10,7 @@ class IntEditScene : EditScene
   var min
   var max
   var nullable
+  var page
 
   def init(label, current, step, min, max, nullable)
     super(self).init(label, current)
@@ -21,6 +22,7 @@ class IntEditScene : EditScene
     self.min = min != nil ? int(min) : nil
     self.max = max != nil ? int(max) : nil
     self.nullable = nullable
+    self.page = nil
   end
 
   def nudge(dir)
@@ -58,13 +60,52 @@ class IntEditScene : EditScene
     return str(self.current)
   end
 
-  # The label row, the value and the hint row: eight pixels a row, a gap of two above and below the
-  # value, and the content as wide as the widest of the three. A bounded setting carries the bar
-  # under the value, six pixels of it with a gap of two above.
+  # The value's ink at the largest face that fits the band's sixteen pixels.
+  def measure()
+    var text = self.text()
+    var face = Text(text).fit_height(text, 16)
+    return Text(text).bounds(text, face)
+  end
+
+  # The value filling the band, over the bar that shows where it sits between the bounds when the
+  # setting has both.
+  def body()
+    var value = Text(self.text())
+    if self.min == nil || self.max == nil
+      return value
+    end
+    var tall = real(self.body_h())
+    return AutoLayout(bounds(nil, nil), [
+      AutoLayout(bounds(1, real(self.measure()[1]) / tall), [value]),
+      AutoLayout(bounds(1, real(2) / tall), []),
+      AutoLayout(bounds(1, real(6) / tall), [ProgressBar(self.percent())])
+    ])
+  end
+
+  # The bar under the value takes six pixels with a gap of two above it.
+  def body_h()
+    var tall = self.measure()[1]
+    if self.min != nil && self.max != nil
+      tall += 2 + 6
+    end
+    return tall
+  end
+
+  def body_w()
+    return self.measure()[0]
+  end
+
+  # Where the value sits between the bounds, in whole percent; a nil value has no place on the bar.
+  def percent()
+    if self.current == nil || self.max == nil || self.max <= self.min
+      return 0
+    end
+    return int((self.current - self.min) * 100 / (self.max - self.min))
+  end
+
+  # The label row, the value and the hint row, as wide as the widest of the three.
   def content_size()
-    var measure = Text(self.text())
-    var ink = measure.bounds(self.text(), measure.fit(self.text(), self.dim.w - 6, 16))
-    var wide = ink[0]
+    var wide = self.body_w()
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -73,40 +114,15 @@ class IntEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    var tall = ink[1]
-    if self.min != nil && self.max != nil
-      tall += 2 + 6
-    end
-    return bounds(wide, 20 + tall)
+    return bounds(wide, 20 + self.body_h())
   end
 
   # The value at the largest face the box holds, over a bar showing where it sits between the bounds
   # when the setting has both, the bar spanning the frame. A nil value has no place on the bar.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-
-    var bounded = self.min != nil && self.max != nil
-    var value_h = dim.h - 20
-    if bounded
-      value_h -= 2 + 6
-    end
-    var value = Text(self.text())
-    value.set_box(point(pos.x, pos.y + 10), bounds(dim.w, value_h))
-    value.draw()
-    if bounded
-      var percent = 0
-      if self.current != nil && self.max > self.min
-        percent = int((self.current - self.min) * 100 / (self.max - self.min))
-      end
-      var bar = ProgressBar(percent)
-      bar.set_box(point(pos.x, pos.y + 10 + value_h + 2), bounds(dim.w, 6))
-      bar.draw()
-    end
-
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
+    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.draw()
   end
 
   def hint()
@@ -124,7 +140,6 @@ class IntEditCfg : EditCfg
     self.max = max
     if min != nil && max != nil && int(min) > int(max)
       self.problem = "int bounds are the wrong way round"
-      vacuum.log("settings: " + self.problem)
     end
   end
 

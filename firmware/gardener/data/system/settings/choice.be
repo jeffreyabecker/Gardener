@@ -7,8 +7,8 @@
 # Which entry is showing is a `ChoiceRing`: the entries the editor offers and the index of the one
 # named. The list arrives complete — a setting normalizes it, and a nullable one's carries the
 # nil-keyed "no choice" entry the editor opens on — so every entry is drawn, stepped and handed back
-# alike, and the ring always names one: a choice with no values at all is refused where it is built
-# and its row left out of the list.
+# alike, and the ring names one whenever there is one: a choice with no values at all is refused
+# where it is built, and an editor opened on one draws no entry and hands back nothing.
 #
 # The entries are drawn by the `List` the scene holds, built from the ring once the scene has its
 # box, so the highlighted row and the scroll window are the list component's rather than this
@@ -75,11 +75,13 @@ class ChoiceEditScene : EditScene
   end
 
   def value()
-    return self.ring.current().key
+    var item = self.ring.current()
+    return item == nil ? nil : item.key
   end
 
   def text()
-    return str(self.ring.current().title)
+    var item = self.ring.current()
+    return item == nil ? "--" : str(item.title)
   end
 
   def row_width()
@@ -137,12 +139,15 @@ end
 class ChoiceEditCfg : EditCfg
   var values
 
+  # A declaration with nothing in it is a choice nothing can be picked from: it says so in `problem`,
+  # which the registration logs for the set it belongs to. It is not worth a line of its own, so a
+  # declaration that is allowed to be empty — the device's jingle row on an image that ships no
+  # library — says nothing.
   def init(key, default_value, label, icon, values, nullable)
     super(self).init(key, default_value, label, icon, nullable)
     self.values = choice_items(values, nullable)
     if self.values.size() == 0
       self.problem = "a choice needs at least one value"
-      vacuum.log("settings: " + self.problem)
     end
   end
 

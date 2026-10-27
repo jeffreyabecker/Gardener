@@ -53,8 +53,10 @@ it is given. It is the same record a component's `dim` is, and the one `screen.t
   places nothing, itself included, and nothing draws one that has not been placed.
 - Siblings stack along the axis they divide: a layout whose children are each the full width stacks
   them down a column, and one whose children are each the full height stacks them across a row.
-- A resolved span is clamped to what is left of the parent, so nothing a `bounds` declares can place
-  a child outside it.
+- A resolved span is the fraction rounded to the nearest pixel, and clamped to what is left of the
+  parent, so nothing a `bounds` declares can place a child outside it. A row declared as a fraction
+  of the height it was measured from resolves back to the pixels it declares, and equal thirds of a
+  row fill it.
 - A component that declares no bounds is a leaf and takes the layout's box whole, so a layout that
   is not a row holds one such component.
 - The layout is itself a component, so its own draw ends in `super(self).draw()` like any other.
@@ -87,6 +89,11 @@ max_h)` the largest face whose ink fits a box — the choice `draw()` makes for 
 one a caller makes when it has to draw several strings at one size, such as a switch's segments —
 `fit_height(text, max_h)` the largest face whose ink height fits a cap, and `candidate` is the face
 the last draw fitted.
+
+`PinnedText` is a `Text` at a face the caller picked rather than one fitted to its box: it takes its
+`face` at `init` — a candidate `Text.fit()` answered, or `[nil, 1]` for the built-in 5×7 — and its
+`draw()` draws `value` at that face. A row of cells that must read as one size uses it, as does a row
+that has to keep the built-in face, which is the only one carrying the arrow glyphs a hint prints.
 
 ## PressureDisplay
 

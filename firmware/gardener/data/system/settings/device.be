@@ -36,18 +36,14 @@ class DeviceSettings
   var settings_cfgs
 
   def init()
-    var out = [
+    self.settings_cfgs = [
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false)
+      ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false),
+      # A build that ships no jingle library still shows the row, so the list's shape does not
+      # change with the image: it opens on no entry and keeps none.
+      JingleEditCfg(),
+      BluetoothEditCfg()
     ]
-    # No library is a fault the boot already reported, and a choice with no values has nothing to
-    # cycle, so the row is left out rather than opened on an empty list.
-    var jingle = JingleEditCfg()
-    if jingle.values.size() > 0
-      out.push(jingle)
-    end
-    out.push(BluetoothEditCfg())
-    self.settings_cfgs = out
   end
 
   def problem(values)

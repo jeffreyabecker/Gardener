@@ -2,18 +2,26 @@
 # read and print it. The scene walks its states with Up/Down, and reaches nothing when the setting
 # is nullable. Its states are a choice like any other — a `ChoiceRing` of entries whose keys are the
 # values — so stepping wraps the same way whichever state it is on and the switch has no state
-# machine of its own. Only the look is a bool's: the entries as chips rather than as a list.
+# machine of its own. Only the look is a bool's: the entries as the equal cells of a switch rather
+# than as a list.
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
 
 class BoolEditScene : EditScene
   var ring
+  var chips
+  var page
 
   def init(label, current, nullable)
     super(self).init(label, current)
 
     self.ring = ChoiceRing(choice_items([[false, "OFF"], [true, "ON"]], nullable), current)
+    self.chips = []
+    for item : self.ring.items
+      self.chips.push(PinnedText(item.title, [nil, 1]))
+    end
+    self.page = nil
   end
 
   def nudge(dir)
@@ -28,34 +36,45 @@ class BoolEditScene : EditScene
     return str(self.ring.current().title)
   end
 
-  # The chips this draws, as [width, height, face]: one face for the row, the largest the widest
-  # label fits a chip of at 16 pixels, every chip as wide as that label so the switch reads as
-  # segments, and a pixel of paper inside each one. A chip's share of the scene's box is that box
-  # less the three pixels of frame either side and the gaps between the chips.
-  def chip()
-    var items = self.ring.items
-    var room = (self.dim.w - 6 - (items.size() - 1)) / items.size() - 2
-    var widest = items[0].title
+  # The one face the row draws at and the ink the widest title takes at it: the largest face whose
+  # ink fits the band's sixteen pixels, a pixel of paper above and below, so every cell of the row
+  # shares one size and an entry's title sets the width the whole switch needs.
+  def measure()
+    var widest = ""
     var wide = 0
-    for item : items
+    for item : self.ring.items
       var w = screen.text_bounds(item.title, 1).w
       if w > wide
         wide = w
         widest = item.title
       end
     end
-    var measure = Text(widest)
-    var face = measure.fit(widest, room, 16)
-    var ink = measure.bounds(widest, face)
-    return [ink[0] + 2, ink[1] + 2, face]
+    var face = Text(widest).fit_height(widest, 16)
+    var ink = Text(widest).bounds(widest, face)
+    return [face, ink[0], ink[1]]
   end
 
-  # The label row, the chips and the hint row: eight pixels a row, a gap of two above and below the
-  # chips, and the content as wide as the widest of the three.
+  # The band the switch draws in: one cell per entry of the ring, each the same share of the width.
+  def body()
+    var share = real(1) / real(self.chips.size())
+    var cells = []
+    for chip : self.chips
+      cells.push(AutoLayout(bounds(share, 1), [chip]))
+    end
+    return AutoLayout(bounds(nil, nil), cells)
+  end
+
+  def body_h()
+    return self.measure()[2] + 2
+  end
+
+  def body_w()
+    return self.chips.size() * (self.measure()[1] + 2)
+  end
+
+  # The label row, the band of chips and the hint row, as wide as the widest of the three.
   def content_size()
-    var chip = self.chip()
-    var count = self.ring.items.size()
-    var wide = count * chip[0] + count - 1
+    var wide = self.body_w()
     var label_w = screen.text_bounds(self.label, 1).w
     if label_w > wide
       wide = label_w
@@ -64,31 +83,22 @@ class BoolEditScene : EditScene
     if hint_w > wide
       wide = hint_w
     end
-    return bounds(wide, 20 + chip[1])
+    return bounds(wide, 20 + self.body_h())
   end
 
-  # The entries as chips side by side, the one showing inverted, which is the whole of the switch.
+  # The entries as the cells of one switch, the one showing inverted, which is the whole of it.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
-
-    var chip = self.chip()
-    var items = self.ring.items
-    var x = pos.x + (dim.w - (items.size() * chip[0] + items.size() - 1)) / 2
-    var y = pos.y + 10 + (dim.h - 20 - chip[1]) / 2
+    var face = self.measure()[0]
     var i = 0
-    while i < items.size()
-      var drawn = Text(items[i].title)
-      drawn.set_box(point(x, y), bounds(chip[0], chip[1]))
-      drawn.inverted = self.ring.index == i
-      drawn.draw_face(items[i].title, chip[2])
-      x += chip[0] + 1
+    while i < self.chips.size()
+      self.chips[i].face = face
+      self.chips[i].inverted = self.ring.index == i
       i += 1
     end
 
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
+    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.draw()
   end
 
   def hint()
