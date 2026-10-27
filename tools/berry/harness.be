@@ -12,8 +12,10 @@ harnessLog = ""
 harnessErrors = 0
 
 # The registry is a Berry class now, so the routine count the summary prints is read here, after
-# the image has loaded.
-harnessRoutineCount = routines.keys().size()
+# the image has loaded. The keys are kept as the image left them: a suite may register a routine of
+# its own, and the memory report is about the image's pages, not whatever a case added.
+harnessImageRoutines = routines.keys()
+harnessRoutineCount = harnessImageRoutines.size()
 
 def harness_fail(text)
   harnessErrors += 1

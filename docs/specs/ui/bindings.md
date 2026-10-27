@@ -60,7 +60,7 @@ routine registers in [routine.md](./routine.md).
 | `batt_low` | bool | the gauge's low-charge threshold is met, so the band's battery blink is on |
 | `sensor_ok` | bool | a valid pressure reading is available |
 
-Every pressure is kPa whatever the panel is printing. `screen.unit()` says what the glass shows.
+Every pressure is kPa whatever the panel is printing. `device.unit()` says what the glass shows.
 
 `vacuum.clamp(pressure_kpa)` is the bounds rule in one place: below `min` it answers `min`, above `floor` it
 answers `floor`, otherwise the number it was given. A target editor steps through it, a stored
@@ -185,20 +185,8 @@ characters. `size` is 1 when omitted. `draw_bitmap(x, y, bytes)` draws a packed 
 `bytes[0]` is the width, `bytes[1]` the height, then the pixels row-major, most-significant bit
 first, each row padded to a whole byte. Ink bits are drawn; paper bits leave what is under them.
 
-`screen.unit()` answers a `unit` record for the unit in force, and `device.units()` answers one for
-every unit; read with a dot:
-
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
-| `suffix` | string | what the band prints as the glass's unit, at the left of the bottom band |
-| `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
-| `whole_step` | real | one "whole" step in the panel's unit, for an editor |
-| `decimals` | int | digits the unit's fine step can express |
-
-The same numbers live in `panel/Units.h`, so a routine and the panel's own formatting cannot
-disagree about what a psi is. `suffix` is read to name a unit being chosen, not to append to a
-reading: the band prints the glass's unit itself.
+The unit the glass prints is not a drawing call: `screen` carries the primitives, and the unit is a
+device setting, so it is read through `device.unit()` below.
 
 ### The ux component owns the bottom band
 
@@ -235,7 +223,8 @@ radio is not a setting: `device.bluetooth()` reports whether the image was built
 
 | Call | Returns | Notes |
 | --- | --- | --- |
-| `device.units()` | list of `unit` records | every unit `device set unit` accepts, in `panel/Units.h` order, each carrying the fields `screen.unit()` answers |
+| `device.unit()` | a `unit` record | the unit in force, out of the same table `units()` lists |
+| `device.units()` | list of `unit` records | every unit `device set unit` accepts, in `panel/Units.h` order, each carrying the fields `device.unit()` answers |
 | `device.set_unit(token)` | `bool` | applies the unit and writes it to `/cfg/settings.ini` under `[device]`; `token` is a unit's `name`, and false for one that is not in `units()` |
 | `device.target()` | `real` | the default program's target in kPa, or **0 when none is set** |
 | `device.set_target(pressure_kpa)` | — | stores a new target in `/cfg/settings.ini` under `[device]`; clamp it with `vacuum.clamp()` first |
@@ -251,7 +240,7 @@ radio is not a setting: `device.bluetooth()` reports whether the image was built
 | `device.take_gesture()` | a gesture string, or `nil` when the queue is empty | one whole gesture, from the panel's own queue |
 | `device.config(path)` | a `Config` instance | the document at `/cfg/` followed by `path`, read once and held; see below |
 
-`screen.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
+`device.unit()` answers the unit in force, so a page does not need `device.units()` to read it —
 only to cycle it, or to label the units it cycles. `device.target()` is the stored setting, not the
 machine's live target: a page
 hands it to the machine when it becomes visible. A page that edits these values writes them through
@@ -263,6 +252,23 @@ if pressure_kpa > 0.0
   vacuum.target(vacuum.clamp(pressure_kpa))
 end
 ```
+
+### The unit record
+
+`device.unit()` answers a `unit` record for the unit in force, and `device.units()` answers one for
+every unit; read with a dot:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `name` | string | `kpa`, `psi`, `inhg` or `mmhg` — the same token `device set unit` takes |
+| `suffix` | string | what the band prints as the glass's unit, at the left of the bottom band |
+| `per_kpa` | real | multiply a depth in kPa by this to get the panel's number |
+| `whole_step` | real | one "whole" step in the panel's unit, for an editor |
+| `decimals` | int | digits the unit's fine step can express |
+
+The same numbers live in `panel/Units.h`, so a routine and the panel's own formatting cannot
+disagree about what a psi is. `suffix` is read to name a unit being chosen, not to append to a
+reading: the band prints the glass's unit itself.
 
 ### The document instance
 

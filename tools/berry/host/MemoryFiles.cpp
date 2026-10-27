@@ -68,6 +68,7 @@ bool MemoryFiles::load(const std::string& root) {
 }
 
 bool MemoryFiles::read(const String& path, String& out) {
+  if (readObserver_) readObserver_(path);
   std::string text;
   if (!textAt(path.c_str(), text)) return false;
   out = text.c_str();

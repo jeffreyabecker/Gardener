@@ -29,7 +29,7 @@ def the_rows_open_their_editors()
       var scene = cfg.scene(5.0)
       assert_eq(classname(scene), "PressureEditScene", "home: the target row does not open a pressure editor")
     elif cfg.key == "unit"
-      var scene = cfg.scene(screen.unit().name)
+      var scene = cfg.scene(device.unit().name)
       assert_eq(classname(scene), "ChoiceEditScene", "home: the unit row does not open a choice editor")
     elif cfg.key == "bluetooth"
       assert_nil(cfg.scene(true), "home: the radio row opens an editor for a build fact")
@@ -56,7 +56,7 @@ def the_helpers_report_the_device()
   end
 
   # The unit in force is in the list, and its record says what the panel prints.
-  var current = screen.unit()
+  var current = device.unit()
   var found = false
   for unit : units
     if unit.name == current.name

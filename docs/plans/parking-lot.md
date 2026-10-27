@@ -27,6 +27,13 @@ the data image has to be uploaded again because the offset moves.
 The image carries 36 KB of exception metadata, about 17 KB of it in objects this build compiles.
 Nothing throws today, but any vendored C++ added later would have to make the same choice.
 
+## The board's own free heap
+
+The Berry check reports the interpreter's heap as the host bills it, which is an upper bound rather
+than the board's figure. What the device actually has free, and how low a run takes it, is a number
+only the board can answer. Blocked by: the serial protocol has no field for it, and nothing has
+decided whether one belongs there.
+
 ## One file to flash
 
 A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/data) into the build's
@@ -83,6 +90,15 @@ chosen for a window — a jumper read at power-up is the only candidate so far.
 The page area above the band reflows to the panel's size, but the band is still a fixed 12 rows.
 Blocked by: nothing decided about whether the band should scale with the panel or stay sized to its
 own contents.
+
+## Berry drawing through a canvas
+
+Every `.be` page draws through the flat `screen` verbs onto the one full-page canvas the panel owns,
+so a component's drawing is only inside its box by discipline and there is nowhere for a window over
+the page to draw. A canvas over an extent, handed to a scene or a window, would clip each one to its
+own box and let a window compose over what is under it. Blocked by: nothing in the scene stack is a
+window — every scene takes the whole page — and `screen` is a published surface, so the extent, the
+buffer and the flush order a canvas would need are all undecided.
 
 # Battery Optional
 

@@ -24,7 +24,7 @@ namespace berry {
 // The registry the browser draws and the scene stack it pushes onto are Berry classes
 // (/system/registry.be and /system/ux.be); there is no native module for either. Some of the
 // answers a routine reads are records rather than plain values: `vacuum.state()` answers a
-// `reading`, `screen.unit()` a `unit`, `screen.text_bounds()` a `bounds`, `device.units()` a list
+// `reading`, `device.unit()` a `unit`, `screen.text_bounds()` a `bounds`, `device.units()` a list
 // of `unit` records and `device.all_jingles()` a list of `jingle` records. They are declared in
 // /system/records.be, which `/system/order` loads first, because only the parser can declare an
 // instance variable on a class. The settings a routine declares are not records: they are

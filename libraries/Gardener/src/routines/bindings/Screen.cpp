@@ -8,11 +8,8 @@
 
 #include "PanelContext.h"
 #include "hal/Display.h"
-#include "panel/Units.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
-#include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace berry {
@@ -266,22 +263,6 @@ int screenBitmap(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The unit the panel prints, as the same fields panel/Units.h holds: a page formats and steps a
-// target in the unit on the glass without carrying a table of its own.
-int screenUnit(bvm* vm) {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-  const DisplayUnitInfo& info = displayUnitInfo(unit);
-  const int record = beginRecord(vm, "unit");
-  if (record < 0) be_return_nil(vm);
-  setText(vm, record, "name", info.name);
-  setText(vm, record, "suffix", info.suffix);
-  setReal(vm, record, "per_kpa", info.perKpa);
-  setReal(vm, record, "whole_step", info.wholeStep);
-  setInt(vm, record, "decimals", (bint)displayDecimals(unit));
-  be_return(vm);
-}
-
 const bnfuncinfo ScreenLibrary[] = {
     {"draw_clear", screenClear},
     {"draw_pixel", screenPixel},
@@ -310,7 +291,6 @@ const bnfuncinfo ScreenLibrary[] = {
     {"page_width", screenPageWidth},
     {"page_height", screenPageHeight},
     {"flush", screenFlush},
-    {"unit", screenUnit},
     {nullptr, nullptr},
 };
 

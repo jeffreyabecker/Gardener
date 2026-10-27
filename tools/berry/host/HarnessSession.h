@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "BitmapPanel.h"
@@ -234,6 +236,21 @@ class HarnessSession {
 
   // One beat: 250 ms of the device's loop, four control ticks and one page poll.
   void beat(int count);
+
+  // The bytes the interpreter holds, read after a collection: everything it has allocated, so what
+  // the image and the page under test keep rather than the garbage they have not dropped yet.
+  size_t heapBytes();
+  // The largest figure sampled at any beat of the run so far, which is the run's high-water mark.
+  size_t heapPeak() const { return heapPeakBytes_; }
+
+  // --- what the boot cost, sampled between the files the loader reads -------------------------
+  // The heap before the image loads, after `/system` and once the root scene is built.
+  size_t vmBytes() const { return vmBytes_; }
+  size_t frameworkBytes() const { return frameworkBytes_; }
+  size_t imageBytes() const { return imageBytes_; }
+  // What each image file added, in the order they loaded, and then what the root scene added.
+  std::vector<std::pair<std::string, size_t>> fileCosts() const;
+  size_t sceneBytes() const { return imageBytes_ >= loadedBytes_ ? imageBytes_ - loadedBytes_ : 0; }
   // The panel's own Back hold: the stop command, as panelTask fires it.
   void backHold();
   // Leaves the page under test and puts the chamber back at rest.
@@ -258,6 +275,8 @@ class HarnessSession {
   void markOverlay(int16_t top, int16_t rows);
 
  private:
+  // One read the loader makes: the heap before it, when the path is one of the image's own files.
+  void sampleRead(const String& path);
   std::string dataDir_;
   std::string capturePath_;
   std::string captureStem_ = "build/runs";
@@ -265,6 +284,13 @@ class HarnessSession {
   bool capturing_ = false;
   std::string gesture_;
   int gestureBeats_ = 0;
+  size_t heapPeakBytes_ = 0;
+  // The boot, as the heap it held before each image file was read, plus where it ended.
+  std::vector<std::pair<std::string, size_t>> readSamples_;
+  size_t vmBytes_ = 0;
+  size_t frameworkBytes_ = 0;
+  size_t loadedBytes_ = 0;
+  size_t imageBytes_ = 0;
   int16_t overlayTop_ = -1;
   int16_t overlayRows_ = 0;
 

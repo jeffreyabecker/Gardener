@@ -1,7 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "storage/Library.h"
@@ -31,11 +33,18 @@ class MemoryFiles : public Library {
   // whatever it names.
   int writes() const { return writes_; }
 
+  // Called before every read, so the harness can sample the interpreter's heap between the files the
+  // loader reads: the file system is the one place the boot crosses into the host.
+  void setReadObserver(std::function<void(const String&)> observer) {
+    readObserver_ = std::move(observer);
+  }
+
  private:
   bool textAt(const std::string& path, std::string& out) const;
 
   std::map<std::string, std::string> files_;
   std::vector<std::string> written_;
+  std::function<void(const String&)> readObserver_;
   int writes_ = 0;
 };
 

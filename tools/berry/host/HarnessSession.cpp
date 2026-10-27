@@ -1,5 +1,6 @@
 #include "HarnessSession.h"
 
+#include <cstring>
 #include <deque>
 
 #include "GestureCallout.h"
@@ -9,6 +10,11 @@
 #include "OverlayCallout.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
+
+// The interpreter's heap count, which the report reads: a C API, so the header goes in as one.
+extern "C" {
+#include "be_gc.h"
+}
 
 namespace gardener {
 
@@ -21,6 +27,13 @@ namespace {
 // drains it before its own tick, so a write is seen on the next beat as it is on the device rather
 // than the instant it is made. A deque has no depth, so a post is always taken.
 std::deque<MachineCommand> pendingCommands;
+
+// The interpreter's heap, read after a collection: the figures the check reports are all this.
+size_t heapOf(bvm* vm) {
+  if (vm == nullptr) return 0;
+  be_gc_collect(vm);
+  return be_gc_memcount(vm);
+}
 
 }  // namespace
 
@@ -95,6 +108,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
 HarnessSession::~HarnessSession() = default;
 
 bool HarnessSession::begin() {
+  files_.setReadObserver([this](const String& path) { sampleRead(path); });
   if (!files_.load(dataDir_)) return false;
 
   // The order Panel::boot brings them up in, minus the bus and the keys. The documents are read
@@ -111,9 +125,13 @@ bool HarnessSession::begin() {
   vacuum_.begin();
 
   if (!routines_.begin(context_)) return false;
+  // The image's own files, before the panel's root scene is built: what the loader itself cost.
+  loadedBytes_ = heapOf(routines_.vm());
+  if (frameworkBytes_ == 0) frameworkBytes_ = loadedBytes_;
   // The panel task's own UI runs the page's activate() when it comes up; the check does the same.
   routines_.enterPage();
   vm_ = routines_.vm();
+  imageBytes_ = heapBytes();
   return true;
 }
 
@@ -141,6 +159,10 @@ void HarnessSession::beat(int count) {
     buzzer_.update(millis());
     routines_.poll(millis());
 
+    // The run's high-water mark, sampled where the page has finished its own work for the beat.
+    const size_t held = heapBytes();
+    if (held > heapPeakBytes_) heapPeakBytes_ = held;
+
     if (capturing_) {
       display_.display();
       BitmapPanel& panel = display_.driver();
@@ -156,6 +178,32 @@ void HarnessSession::beat(int count) {
     }
     if (gestureBeats_ > 0) gestureBeats_--;
   }
+}
+
+size_t HarnessSession::heapBytes() { return heapOf(vm_); }
+
+void HarnessSession::sampleRead(const String& path) {
+  const char* file = path.c_str();
+  if (file == nullptr) return;
+  // The image's own files only: a `/cfg` document read while it loads is not a file it compiles.
+  const bool system = strncmp(file, "/system/", 8) == 0;
+  if (!system && strncmp(file, "/routines/", 10) != 0) return;
+
+  const size_t held = heapOf(routines_.vm());
+  if (readSamples_.empty()) vmBytes_ = held;
+  // The first routine read is where the framework is finished and the pages have yet to start.
+  if (frameworkBytes_ == 0 && !system) frameworkBytes_ = held;
+  readSamples_.emplace_back(file, held);
+}
+
+std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
+  std::vector<std::pair<std::string, size_t>> costs;
+  for (size_t i = 0; i < readSamples_.size(); i++) {
+    const size_t before = readSamples_[i].second;
+    const size_t after = i + 1 < readSamples_.size() ? readSamples_[i + 1].second : loadedBytes_;
+    costs.emplace_back(readSamples_[i].first, after > before ? after - before : 0);
+  }
+  return costs;
 }
 
 void HarnessSession::pressGesture(const char* gesture) {

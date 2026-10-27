@@ -232,7 +232,7 @@ settings map.
 None of them registered. The home scene holds a set of its own and opens the same list a page does,
 over `DeviceSettings`: the target it works to, the unit it prints, the jingle it finishes with and
 the radio as a build fact. Every one of those is a device setting rather than a document, so the
-home scene fills the set in from `device.target()`, `screen.unit()`, `device.jingle()` and
+home scene fills the set in from `device.target()`, `device.unit()`, `device.jingle()` and
 `device.bluetooth()`, and writes it back through `device.set_target()`, `device.set_unit()` and
 `device.set_jingle()` when the list commits. The rows only declare their kinds — the radio row's
 `scene()` is `nil`, so Forward on it opens nothing — and the home scene is what reads and writes

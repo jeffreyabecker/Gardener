@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "HarnessSession.h"
@@ -187,6 +188,22 @@ int callArtComponent(bvm* vm, const char* name, const char* path) {
   return ok ? 1 : 0;
 }
 
+// The boot's own figures: the interpreter before the image loads, the framework once `/system` has,
+// and the image once the root scene is built. Bytes, as the host bills them.
+void printMemorySummary(gardener::HarnessSession& session) {
+  printf("[I] mem: vm %llu B, framework %llu B, image %llu B\n",
+         (unsigned long long)session.vmBytes(), (unsigned long long)session.frameworkBytes(),
+         (unsigned long long)session.imageBytes());
+}
+
+// What each image file added, in the order they loaded, and then what the root scene added.
+void printMemoryTable(gardener::HarnessSession& session) {
+  for (const std::pair<std::string, size_t>& file : session.fileCosts()) {
+    printf("[I] mem: %s %llu B\n", file.first.c_str(), (unsigned long long)file.second);
+  }
+  printf("[I] mem: root scene %llu B\n", (unsigned long long)session.sceneBytes());
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -203,6 +220,7 @@ int main(int argc, char** argv) {
   float ceilingKpa = gardener::ChamberCeilingKpa;
   bool compileOnly = false;
   bool verbose = false;
+  bool memoryOnly = false;
   bool suites = false;
   std::vector<std::string> suiteFiles;
 
@@ -226,6 +244,8 @@ int main(int argc, char** argv) {
       compileOnly = true;
     } else if (strcmp(argv[i], "--verbose") == 0) {
       verbose = true;
+    } else if (strcmp(argv[i], "--memory") == 0) {
+      memoryOnly = true;
     } else if (strcmp(argv[i], "--art") == 0 && i + 1 < argc) {
       artName = argv[++i];
     } else if (strcmp(argv[i], "--scene") == 0 && i + 1 < argc) {
@@ -253,6 +273,15 @@ int main(int argc, char** argv) {
   }
 
   bvm* vm = session.vm();
+
+  // The measurement path: the image alone. No harness module, no driver, no suites, so the figures
+  // are what the panel holds rather than what the check brings with it.
+  if (memoryOnly) {
+    printMemorySummary(session);
+    printMemoryTable(session);
+    return 0;
+  }
+
   installHarnessModule(vm, session);
 
   int failed = 0;
@@ -294,6 +323,9 @@ int main(int argc, char** argv) {
     passed = 1;
   }
 
+  // The boot's own figures, ahead of the driver's log: what the interpreter, the framework and the
+  // image cost, so that a total has something to be read against.
+  if (suites) printMemorySummary(session);
   printDriverLog(vm);
   if (verbose) fputs(session.logger().text().c_str(), stdout);
 

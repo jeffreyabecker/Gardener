@@ -14,7 +14,7 @@ registration does not look like a routine, or a page does not survive being driv
 | `main.cpp` | loads the files in the device's order and calls the checks |
 | `host/BitmapPanel.h`, `host/BitmapPanel.cpp` | the panel: a 128 x 64 one-bit frame the device's own `GfxDisplay` draws into |
 | `host/HarnessSession.h` | the device composed as the firmware composes it, over that panel instead of the glass |
-| `harness.be` | the driver's bookkeeping: the log, the error count, and the routine count the summary prints |
+| `harness.be` | the driver's bookkeeping: the log, the error count, the routine count the summary prints, and the routine keys the memory report walks |
 | `driver.be` | the smoke walk: the drive, the settings walk, and the scene re-entry |
 | `tests/suite.be` | the suite framework: `test()`, the assertions, `drive`, the runner |
 | `tests/*.test.be` | the suites, one file per concern, each registering named cases |
@@ -33,6 +33,7 @@ python tools/berry/check.py --art interval --seconds 60  # animate a page instea
 python tools/berry/check.py --scene browser              # draw one of the device's own scenes
 python tools/berry/check.py --tests                      # run the test suites, a GIF per case
 python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
+python tools/berry/check.py --memory                     # the image's own boot, file by file
 ```
 
 | Flag | Default | Meaning |
@@ -48,6 +49,7 @@ python tools/berry/check.py --test ramped_static         # run one suite (or par
 | `--out PATH` | `build/<name>.gif` | where the GIF animation goes |
 | `--tests` | off | run the test suites instead of the smoke walk |
 | `--test NAME` | — | run only the cases whose full name contains NAME (implies `--tests`) |
+| `--memory` | off | boot the image with no driver and no suites, and report what it holds |
 | `--verbose` | off | print each compiler command |
 
 The last line says how much loaded — `12 of 12 files loaded, check passed` — and the exit code is 0
@@ -96,6 +98,42 @@ suites reach the same way a scene does.
 The machine model is what a preview moves against. It starts at 0 kPa, pulls at 3 kPa/s, settles a
 target when it is within 0.2 kPa of it, vents at 40 kPa/s, refuses a target below 5 kPa and caps at
 the ceiling `--ceiling-kpa` sets, 70 kPa by default. One beat is 250 ms of virtual time.
+
+### What it holds in memory
+
+`harness.mem()` answers the VM's heap in bytes, read after a collection, so the figure is what the
+image and the page under test keep rather than the garbage they have not dropped yet. It counts the
+VM struct and everything the interpreter allocates through `be_realloc`: the value, call and
+exception stacks, the globals, and every GC object, with a block of 32 bytes or less billed at its
+requested size rather than its pool slot. `harness.mem_peak()` answers the largest such figure
+sampled at any beat of the run so far.
+
+The boot is sampled where the loader crosses into the host: the check's file system is read once per
+image file, and the heap is read there, so the figures are the image's own and not the harness's.
+Three of them, printed by a `--tests` run and by `--memory`:
+
+```
+[I] mem: vm <bytes> B, framework <bytes> B, image <bytes> B
+```
+
+`vm` is the interpreter with its native modules before any image file; `framework` is the heap once
+`/system` has loaded; `image` is the heap once `/routines` has loaded and the root scene is built —
+what the panel holds at boot. `/system` is a fixed cost of every page, so the difference between
+`framework` and `image` is what the pages themselves cost.
+
+`--memory` takes the same boot and stops there: no harness module, no driver, no suites, and then one
+line per image file and one for the root scene, which is what each file's compilation added.
+
+```
+[I] mem: /system/home.be <bytes> B
+[I] mem: /routines/5_ramped_static.be <bytes> B
+[I] mem: root scene <bytes> B
+```
+
+The figures are the host's, under the device's `berry_conf.h`. A host pointer is 8 bytes and a
+`bvalue` 16 where the S3's is 8, so the same image bills here roughly twice what it does on the
+board: it is an upper bound on the board, not the board's figure. The board's own free heap is not
+something the check can see, and the firmware's static RAM is the build's figure.
 
 ## The frame and its pictures
 
@@ -171,9 +209,28 @@ Every case is also captured as an animation named `<stem>.<suite>.<case>.gif` �
 motion behind. Each frame has the overlay band hashed out, as above. A case that never beats has
 nothing to animate and writes nothing.
 
+A run also reports memory, and a figure never fails it. The runner records the heap the cases run
+against — the image, the harness and the suites themselves — before the first case, and how far the
+run reached above that after the last; `tests/memory.test.be` pushes each routine the image
+registers, drives it for 400 s of virtual time — the drive's own budget for reaching a cycle's
+phases and its repeat — and appends that page's own cost:
+
+```
+[I] mem: suites <bytes> B
+[I] mem: <routine> +<bytes> B
+[I] mem: peak +<bytes> B
+```
+
+A page is measured from the root scene, so its line is one page's cost rather than the stack's; it
+also carries whatever the cases before it had already built, so a full run's pages read larger than
+a `--test memory` run's. The routines walked are the registry as the image left it, which
+`harness.be` keeps when it loads: a suite may register a routine of its own, and the report is about
+the image's pages. Nothing about the outcome changes — the exit code and the `N passed, M failed`
+line are what they were before the figures existed.
+
 The suites cover what a walk cannot name: the jingle library, the System scene's unit, radio and
-jingle rows, the settings model and its editors, the components and the layout, the overlay band, and
-the registry's hidden-routine rule.
+jingle rows, the settings model and its editors, the components and the layout, the overlay band,
+the registry's hidden-routine rule, and what the interpreter holds once a page has settled.
 
 The three run machines have a suite each — `home_machine`, `ramped_static_machine` and
 `ramped_interval_machine` — which drive the machine itself: `configure()`, `handle_command()` and

@@ -98,7 +98,7 @@ class HomeScene : Scene
   def stored_settings_values()
     return {
       "target_pressure": vacuum.clamp(device.target()),
-      "unit": screen.unit().name,
+      "unit": device.unit().name,
       "jingle": stored_jingle(),
       "bluetooth": device.bluetooth()
     }
@@ -132,7 +132,7 @@ class HomeScene : Scene
   def settings_closed(settings_values)
     device.set_target(vacuum.clamp(settings_values["target_pressure"]))
     var unit = settings_values["unit"]
-    if unit != nil && unit != screen.unit().name
+    if unit != nil && unit != device.unit().name
       device.set_unit(unit)
     end
     var jingle = settings_values["jingle"]

@@ -7,6 +7,10 @@
 tests = []
 suite = ""
 
+# The heap the cases run against, set when the runner starts: a page's figure is read against this,
+# so a memory line is a page's own cost rather than the whole VM's.
+harness_suite_base = 0
+
 def test(name, fn)
   tests.push([suite, name, fn])
 end
@@ -74,6 +78,10 @@ def suite_run(filter)
   # The band across the bottom of the glass is the ux component's, not a case's: every frame a case
   # writes hashes those rows, so a picture of a case is a picture of the page it drove.
   harness.mark_overlay(screen.height() - overlay_band_height, overlay_band_height)
+  # The heap the cases run against: the image, this framework and the suites themselves. A figure a
+  # case reports is read against it, so a per-page line is a page's cost and not the whole VM's.
+  harness_suite_base = harness.mem()
+  harnessLog = harnessLog + "[I] mem: suites " + str(harness_suite_base) + " B\n"
   for t : tests
     var full = t[0] + "." + t[1]
     if filter == nil || filter == "" || string.find(full, filter) >= 0
@@ -95,5 +103,7 @@ def suite_run(filter)
     end
   end
   harnessLog = harnessLog + "[I] " + str(passed) + " passed, " + str(failed) + " failed\n"
+  # How far above the suites' own figure the run reached: what driving the pages cost.
+  harnessLog = harnessLog + "[I] mem: peak +" + str(harness.mem_peak() - harness_suite_base) + " B\n"
   return failed == 0
 end

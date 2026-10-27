@@ -24,7 +24,7 @@ class PressureEditScene : EditScene
   end
 
   def activate()
-    self.unit = screen.unit()
+    self.unit = device.unit()
     self.fmt = "%." + str(self.unit.decimals) + "f"
     self.draw()
   end
@@ -121,7 +121,7 @@ class PressureEditCfg : EditCfg
   end
 
   def text(value)
-    var unit = screen.unit()
+    var unit = device.unit()
     return string.format("%." + str(unit.decimals) + "f", value * unit.per_kpa)
   end
 

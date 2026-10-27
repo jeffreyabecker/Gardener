@@ -38,7 +38,7 @@ class DeviceSettings
   def init()
     self.settings_cfgs = [
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      ChoiceEditCfg("unit", screen.unit().name, "UNIT", nil, unit_choices(), false),
+      ChoiceEditCfg("unit", device.unit().name, "UNIT", nil, unit_choices(), false),
       # A build that ships no jingle library still shows the row, so the list's shape does not
       # change with the image: it opens on no entry and keeps none.
       JingleEditCfg(),

@@ -15,7 +15,7 @@ bluetooth_bits = bytes().fromhex("1009010009400510014000800140051009400100")
 # The unit the glass prints, in the built-in face at the left of its cell, as the band always has.
 class UnitText : Component
   def draw()
-    screen.draw_text(self.pos.x + 2, self.pos.y + 2, 1, false, screen.unit().suffix)
+    screen.draw_text(self.pos.x + 2, self.pos.y + 2, 1, false, device.unit().suffix)
     super(self).draw()
   end
 end

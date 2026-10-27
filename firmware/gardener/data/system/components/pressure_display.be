@@ -69,7 +69,7 @@ class PressureDisplay : Component
     if pressure_kpa == nil
       return "--"
     end
-    var u = screen.unit()
+    var u = device.unit()
     return string.format("%." + str(u.decimals) + "f", pressure_kpa * u.per_kpa)
   end
 

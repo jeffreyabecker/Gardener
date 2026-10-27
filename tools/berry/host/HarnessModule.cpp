@@ -77,6 +77,18 @@ int harnessBuzzerSounds(bvm* vm) {
   be_return(vm);
 }
 
+// The bytes the interpreter holds, read after a collection; and the largest figure this run has
+// sampled at a beat, which is the high-water mark the run reports.
+int harnessMem(bvm* vm) {
+  be_pushint(vm, (bint)session->heapBytes());
+  be_return(vm);
+}
+
+int harnessMemPeak(bvm* vm) {
+  be_pushint(vm, (bint)session->heapPeak());
+  be_return(vm);
+}
+
 // --- the capture -----------------------------------------------------------
 
 int harnessCaptureStart(bvm* vm) {
@@ -110,6 +122,7 @@ const bnfuncinfo HarnessLibrary[] = {
     {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
     {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
     {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
+    {"mem", harnessMem},        {"mem_peak", harnessMemPeak},
     {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},
     {"capture_stem", harnessCaptureStem}, {"mark_overlay", harnessMarkOverlay},
     {nullptr, nullptr},

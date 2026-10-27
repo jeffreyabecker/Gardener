@@ -9,6 +9,7 @@
     python tools/berry/check.py --scene browser
     python tools/berry/check.py --tests      # run the test suites
     python tools/berry/check.py --test interval
+    python tools/berry/check.py --memory     # what the image holds at boot, file by file
 
 The check is the firmware, not a model of it: the panel's own bindings, registry, overlay, settings
 and control law are compiled here against the vendored VM, with a bitmap for a glass, a chamber for
@@ -110,10 +111,20 @@ def build(cc, cxx):
 
     built = []
 
+    # A header edit changes every object that saw it, and an object built against the old one is a
+    # crash rather than an error: one that embeds a class's layout by value corrupts the heap when
+    # the class grows. The cache is keyed on source files, so the newest header is the other half.
+    header_mtime = 0.0
+    if not args.no_cache:
+        for directory in (HOST, BERRY / "src", BERRY / "generate", GFX / "src", GARDENER / "src"):
+            for header in directory.rglob("*.h"):
+                header_mtime = max(header_mtime, header.stat().st_mtime)
+
     def compile(source, std, compiler_path):
         obj = objects / (slug(source) + ".o")
         if (args.no_cache or not obj.exists()
-                or obj.stat().st_mtime < Path(source).stat().st_mtime):
+                or obj.stat().st_mtime < Path(source).stat().st_mtime
+                or obj.stat().st_mtime < header_mtime):
             run([compiler_path, std, "-O0", *includes, "-c", str(source), "-o", str(obj)])
         built.append(obj)
 
@@ -131,6 +142,11 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--compile", action="store_true", help="stop after compiling and loading")
 parser.add_argument("--no-cache", action="store_true", help="rebuild every object")
 parser.add_argument("--verbose", action="store_true", help="show compiler commands and device log")
+parser.add_argument(
+    "--memory",
+    action="store_true",
+    help="measure the image's own boot — the heap at each file — with no driver or suites loaded",
+)
 parser.add_argument("--data", default=str(DATA), help="the data image to check")
 parser.add_argument("--art", metavar="NAME", help="draw that routine and save it as a GIF animation")
 parser.add_argument(
@@ -192,6 +208,8 @@ if args.compile:
     command.append("--compile-only")
 if args.verbose:
     command.append("--verbose")
+if args.memory:
+    command.append("--memory")
 if args.ceiling_kpa is not None:
     command.extend(["--ceiling-kpa", str(args.ceiling_kpa)])
 if args.art:
