@@ -19,10 +19,10 @@ namespace {
 
 Display& panel() { return context->display(); }
 
-// The face named by an optional argument; nil and "builtin" both mean the built-in 5x7, which is
-// also what an absent argument means. `function` is the Berry spelling used in the error, so a
-// mistake names the call that made it. The messages are stack buffers because be_raise longjmps
-// past any C++ destructor a String would need here.
+// The face named by an optional argument; nil, an empty name and "builtin" all mean the built-in
+// 5x7, which is also what an absent argument means. `function` is the Berry spelling used in the
+// error, so a mistake names the call that made it. The messages are stack buffers because be_raise
+// longjmps past any C++ destructor a String would need here.
 const GFXfont* argFont(bvm* vm, int index, const char* function) {
   if (be_top(vm) < index || be_isnil(vm, index)) return nullptr;
   if (!be_isstring(vm, index)) {
@@ -32,6 +32,7 @@ const GFXfont* argFont(bvm* vm, int index, const char* function) {
   }
   const GFXfont* face = nullptr;
   const char* name = argText(vm, index);
+  if (name[0] == '\0') return nullptr;
   if (!fonts::find(name, face)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: unknown font %s", function, name);
@@ -193,10 +194,23 @@ int screenText(bvm* vm) {
   // Berry's order is the drawing's: x, y, size, inverted, text, and the face is the call's rather
   // than the display's. The Display takes the string before the size, so the last two arguments
   // swap on the way through.
+  const int16_t x = argInt(vm, 1);
+  int16_t y = argInt(vm, 2);
+  const uint8_t size = (uint8_t)argInt(vm, 3);
+  const bool inverted = be_tobool(vm, 4);
+  const char* value = argText(vm, 5);
   const GFXfont* face = argFont(vm, 6, "draw_text");
   panel().setFont(face);
-  panel().text(argInt(vm, 1), argInt(vm, 2), argText(vm, 5), (uint8_t)argInt(vm, 3),
-               be_tobool(vm, 4));
+  // `y` is the top of the glyph box whichever face is set. The built-in face is drawn from its top
+  // already; a compiled face is drawn from its baseline, so the ink box's height is what moves the
+  // corner down to the top — the same height text_bounds answers.
+  if (face != nullptr) {
+    int16_t width = 0;
+    int16_t height = 0;
+    panel().textBounds(value, size, width, height);
+    y += height;
+  }
+  panel().text(x, y, value, size, inverted);
   // Restoring the built-in face is what lets a page hand the panel to the shared settings editor
   // without the face it drew in following it there.
   panel().setFont(nullptr);

@@ -141,7 +141,7 @@ proportional face, which `draw_text`'s `inverted` cannot do — see Faces below.
 ### Faces
 
 `draw_text` takes an optional face name as its last argument, and `text_bounds` takes the same name
-as its optional third. Without one, or with `nil` or `"builtin"`, both use the built-in 5x7. The
+as its optional third. Without one, or with `nil`, `""` or `"builtin"`, both use the built-in 5x7. The
 names are the compiled Adafruit GFX faces:
 
 | Name | Face |
@@ -155,19 +155,21 @@ names are the compiled Adafruit GFX faces:
 A name that is not in the table raises `value_error`, which drops the routine like any other
 mistake.
 
-With a custom face, `y` is the **baseline** of the line rather than the top of the glyph box — the
-font format's own rule. With the built-in face, `y` is the top. `size` scales whichever face is set:
-`1` is the face as designed, `3` is three times as tall. A custom face has no background, so
-`inverted` has no effect on it; when a line needs a highlight, draw it and then `draw_invert` the
-box `text_bounds` answered, which turns that rectangle's paper to ink and its ink to paper.
+`y` is the **top** of the line's ink box in whichever face is set. That is the built-in face's own
+rule; a compiled face is drawn from its baseline, so the call measures the line and moves the corner
+down by the ink box's height `text_bounds` answers. `size` scales whichever face is set: `1` is the
+face as designed, `3` is three times as tall. A custom face has no background, so `inverted` has no
+effect on it; when a line needs a highlight, draw it and then `draw_invert` the box `text_bounds`
+answered, which turns that rectangle's paper to ink and its ink to paper.
 
 The face belongs to the call. The firmware restores the built-in face after drawing or measuring,
 so handing the panel to the shared settings editor does not hand it a face as well.
 
 ```berry
-screen.draw_text(0, 41, 1, false, value, "sansbold18")
 var box = screen.text_bounds(value, 1, "sansbold18")
-screen.draw_text(box.w + 4, 41, 1, false, "TGT", "sansbold9")
+var tag = screen.text_bounds("TGT", 1, "sansbold9")
+screen.draw_text(0, 41, 1, false, value, "sansbold18")
+screen.draw_text(box.w + 4, 41 + box.h - tag.h, 1, false, "TGT", "sansbold9")
 ```
 
 `text_bounds` answers a `bounds` record, read with a dot:

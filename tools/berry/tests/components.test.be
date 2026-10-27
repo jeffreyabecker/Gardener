@@ -17,10 +17,11 @@ end
 
 test("a text draws at the face it was given", text_draws_at_the_face_it_was_given)
 
-# Nil or an empty name is the built-in 5x7, the face that carries the arrow glyphs a hint prints.
+# Nil, an empty name and "builtin" are the built-in 5x7, the face that carries the arrow glyphs a
+# hint prints.
 def a_text_with_no_face_is_the_system_face()
   var system = screen.text_bounds("42", 1)
-  for font : [nil, ""]
+  for font : [nil, "", "builtin"]
     var t = Text("42", font)
     var room = t.use(64, 52)
     assert_eq(room.w, system.w, "a text with no face is not the built-in one")

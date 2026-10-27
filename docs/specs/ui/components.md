@@ -93,15 +93,15 @@ set with `set_box()` like any other component's, and it draws at that box — wh
 alignment of the layout that holds it.
 
 - `font` — a face name from the binding's own table: `sans9`, `sans12`, `sans18`, `sans24`,
-  `sansbold18`, `mono12`, `tomthumb` and the rest of [bindings.md](./bindings.md). Nil or an empty
-  string is the built-in 5×7, the face that carries the arrow glyphs a hint prints.
+  `sansbold18`, `mono12`, `tomthumb` and the rest of [bindings.md](./bindings.md). Nil, an empty
+  string or `"builtin"` is the built-in 5×7, the face that carries the arrow glyphs a hint prints.
 - `scale` — the size the face is drawn at, 1 (the default) for the face as designed and 3 for three
   times as tall, whichever face is set.
 - `value` — the string drawn, `""` when it is nil.
 
 There is no fitting and no ladder of faces: the caller named the face, so the string is drawn at it.
-A compiled face is drawn from its baseline, which is the ink box's height below the box's top; the
-built-in face is drawn from its top.
+The box's top is the top of the line in whichever face — where a compiled face's baseline sits is the
+binding's to work out, not the component's.
 
 `use(w, h)` answers the room the string takes at its face — the ink box `screen.text_bounds` answers,
 no larger than the cell — which is what a layout places the text by. Nothing cuts or wraps a string:
