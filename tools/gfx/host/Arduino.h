@@ -40,6 +40,12 @@ class String {
   bool operator!=(const String& other) const { return text_ != other.text_; }
   bool operator<(const String& other) const { return text_ < other.text_; }
 
+  String operator+(const String& other) const { return String((text_ + other.text_).c_str()); }
+  String operator+(const char* other) const {
+    return String((text_ + (other == nullptr ? "" : other)).c_str());
+  }
+  friend String operator+(const char* left, const String& right) { return String(left) + right; }
+
  private:
   std::string text_;
 };

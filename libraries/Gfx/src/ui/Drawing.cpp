@@ -122,6 +122,15 @@ Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool ho
   };
 }
 
+void drawScrollbar(Canvas& canvas, int16_t index, int16_t count, int16_t visible) {
+  if (count <= visible) return;
+  constexpr int16_t Width = 2;
+  constexpr int16_t Inset = 2;
+  const int16_t tall = static_cast<int16_t>(canvas.height() - 2 * Inset);
+  const int16_t left = static_cast<int16_t>(canvas.width() - Width);
+  scrollbar(Rect(left, Inset, Width, tall), index, count, visible, true)(canvas);
+}
+
 Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* face, bool known) {
   char out[16];
   durationText(format, seconds, known, out, sizeof(out));

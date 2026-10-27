@@ -11,12 +11,6 @@ namespace {
 // One row of the built-in face, which is the pitch a choice is drawn at.
 constexpr int16_t Row = 8;
 
-// The scrollbar's column down the right of the band, the gap between it and the rows, and the paper
-// kept above and below it, as the browser places its own.
-constexpr int16_t BarWidth = 2;
-constexpr int16_t BarGap = 2;
-constexpr int16_t BarInset = 2;
-
 // One row of the window: the entry's own paint, or its title centred when it has none, inverted
 // across the whole of the row when it is the entry showing.
 Paint rowOf(const ChoiceItem* item, bool showing) {
@@ -102,7 +96,7 @@ Paint ChoiceScene::pageContents() {
     const int16_t first = selected >= visible ? static_cast<int16_t>(selected - visible + 1) : 0;
     const bool scrolls = count > visible;
     const int16_t rowsWidth =
-        scrolls ? static_cast<int16_t>(canvas.width() - BarWidth - BarGap) : canvas.width();
+        scrolls ? static_cast<int16_t>(canvas.width() - ScrollbarColumn) : canvas.width();
     std::vector<Child> rows;
     for (int16_t line = 0; line < visible; line++) {
       const int16_t at = static_cast<int16_t>(first + line);
@@ -113,11 +107,7 @@ Paint ChoiceScene::pageContents() {
     centred.vertical = Vertical::Center;
     Canvas plot = canvas.child(Rect(0, 0, rowsWidth, canvas.height()));
     column(1.0f, rows, centred)(plot);
-    if (scrolls) {
-      const int16_t tall = static_cast<int16_t>(canvas.height() - 2 * BarInset);
-      const int16_t left = static_cast<int16_t>(canvas.width() - BarWidth);
-      scrollbar(Rect(left, BarInset, BarWidth, tall), first, count, visible, true)(canvas);
-    }
+    if (scrolls) drawScrollbar(canvas, first, count, visible);
   };
 }
 

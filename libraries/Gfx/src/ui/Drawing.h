@@ -53,6 +53,15 @@ Paint progressBar(Rect box, float value);
 // of drawing a frame and a filled thumb. A count of none draws nothing.
 Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool hollow = false);
 
+// The width a scrolling band gives up to its scrollbar: the bar's two pixels and the two pixels of
+// paper between it and the rows.
+constexpr int16_t ScrollbarColumn = 4;
+
+// The scrollbar a scrolling band carries down its right, two pixels wide with two pixels of paper
+// above and below, its thumb the part of an inverted track left bare. Nothing is drawn when every
+// row fits, so a caller may place the rows over the whole width and call this last.
+void drawScrollbar(Canvas& canvas, int16_t index, int16_t count, int16_t visible);
+
 // Whole seconds formatted in the panel's units of time and drawn as the text they print. A count
 // that is not known draws `--`.
 Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* face = nullptr,

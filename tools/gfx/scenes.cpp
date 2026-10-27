@@ -2,6 +2,7 @@
 // the call that asked for it returns.
 
 #include <functional>
+#include <memory>
 
 #include "suite.h"
 
@@ -124,37 +125,140 @@ void theStackHoldsEightFrames() {
   expectEq(ux.depth(), Ux::MaxFrames, "and changes nothing");
 }
 
-// A row a case can hand to the list: a key, a label and a value, with no editor of its own.
+// A value editor a settings case can push: it answers whatever value the case sets on it.
+class TestEditor : public Scene {
+ public:
+  TestEditor(GestureQueue& gestures, const std::any& value) : Scene(gestures), value_(value) {}
+
+  std::any value() const override { return value_; }
+  void set(const std::any& value) { value_ = value; }
+
+ private:
+  std::any value_;
+};
+
+// A settings row that prints a String value and builds one of those editors.
 class TestRow : public SettingsRow {
  public:
-  TestRow(const char* key, const char* label, const std::any& value)
-      : key_(key), label_(label), value_(value) {}
+  explicit TestRow(GestureQueue& gestures) : gestures_(gestures) {}
+
+  void hold(const String& key, const String& label, const String& value) {
+    key_ = key;
+    label_ = label;
+    value_ = value;
+  }
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any currentValue() const override { return value_; }
-  Scene* scene() override { return nullptr; }
+
+  String text(const std::any& value) const override {
+    return value.has_value() ? std::any_cast<String>(value) : String("--");
+  }
+
+  Scene* scene(const std::any& value) override {
+    editor_ = std::make_unique<TestEditor>(gestures_, value);
+    return editor_.get();
+  }
+
+  TestEditor* editor() const { return editor_.get(); }
 
  private:
+  GestureQueue& gestures_;
   String key_;
   String label_;
-  std::any value_;
+  String value_;
+  std::unique_ptr<TestEditor> editor_;
 };
 
-// The settings list is a stub: it holds the rows, the heading and the values it is given, and
-// answers nothing.
-void aSettingsSceneKeepsItsRows() {
+// A settings list with the hooks it answers opened up, so a case can press the keys and draw it.
+class SettingsProbe : public SettingsScene {
+ public:
+  using SettingsScene::SettingsScene;
+  using SettingsScene::drawPage;
+
+  bool press(const char* gesture) { return handle(gesture); }
+};
+
+void aSettingsListMovesAndEdits() {
   NoGestures gestures;
+  Ux ux;
   String title("SETTINGS");
-  SettingsScene list(gestures, title);
-  TestRow target("target", "Target", String("50"));
-  TestRow unit("unit", "Unit", String("kPa"));
+  SettingsProbe list(gestures, ux, title);
+  TestRow target(gestures);
+  TestRow unit(gestures);
+  target.hold("target", "Target", "50");
+  unit.hold("unit", "Unit", "kPa");
   list.set({&target, &unit});
-  expectEq(list.selected(), 0, "a settings list starts on its first row");
-  expectText(list.title().c_str(), "SETTINGS", "and keeps the heading it was given");
-  expectEq(list.values().size(), 2, "and seeds the values from the rows");
-  const String held = std::any_cast<String>(list.values().at("target"));
-  expectText(held.c_str(), "50", "the row's own value is what its key holds");
+  expectEq(list.selected(), 0, "the list starts on its first row");
+  list.press("down:single");
+  expectEq(list.selected(), 1, "down moves to the next row");
+  list.press("down:single");
+  expectEq(list.selected(), 0, "and wraps at the end");
+  list.press("up:single");
+  expectEq(list.selected(), 1, "up wraps the other way");
+
+  Scene* handed = nullptr;
+  TestScene root(gestures);
+  ux.reset(&root);
+  ux.push(list, [&handed](Scene& scene) { handed = &scene; });
+
+  list.press("forward:single");
+  expectEq(ux.depth(), 3, "forward pushes the row's editor");
+  expectEq(target.editor() == nullptr, 1, "only the row showing opens");
+  expectEq(unit.editor() != nullptr, 1, "and it is the selected row's");
+  unit.editor()->set(String("psi"));
+  ux.pop();
+  expectEq(ux.depth(), 2, "the editor pops back to the list");
+  const String edited = std::any_cast<String>(list.values().at("unit"));
+  expectText(edited.c_str(), "psi", "what the editor handed back is kept under the row's key");
+
+  list.press("ok:single");
+  expectEq(handed == &list, 1, "OK hands the list back");
+  const String kept = std::any_cast<String>(list.values().at("unit"));
+  expectText(kept.c_str(), "psi", "with the set it settled on");
+}
+
+void aSettingsListCancelPutsTheSetBack() {
+  NoGestures gestures;
+  Ux ux;
+  String title("SETTINGS");
+  SettingsProbe list(gestures, ux, title);
+  TestRow target(gestures);
+  target.hold("target", "Target", "50");
+  list.set({&target});
+  Scene* handed = nullptr;
+  TestScene root(gestures);
+  ux.reset(&root);
+  ux.push(list, [&handed](Scene& scene) { handed = &scene; });
+
+  list.press("forward:single");
+  target.editor()->set(String("70"));
+  ux.pop();
+  const String edited = std::any_cast<String>(list.values().at("target"));
+  expectText(edited.c_str(), "70", "the edit landed");
+  list.press("cancel:single");
+  expectEq(handed == &list, 1, "Cancel hands the list back");
+  const String back = std::any_cast<String>(list.values().at("target"));
+  expectText(back.c_str(), "50", "and the set as it was opened");
+}
+
+void aSettingsListDrawsItsRows() {
+  NoGestures gestures;
+  Ux ux;
+  String title("SETTINGS");
+  SettingsProbe list(gestures, ux, title);
+  TestRow target(gestures);
+  TestRow unit(gestures);
+  target.hold("target", "Target", "50");
+  unit.hold("unit", "Unit", "kPa");
+  list.set({&target, &unit});
+  reset();
+  list.drawPage(canvas);
+  expect(display.anyInk(0, 0, PageWidth, 8), "the heading is drawn");
+  expect(display.anyInk(0, 8, PageWidth, 8), "the first row is drawn under it");
+  expect(display.inkCount(0, 8, PageWidth, 8) > display.inkCount(0, 16, PageWidth, 8),
+         "and the row showing is inverted across its width");
 }
 
 }  // namespace
@@ -167,7 +271,9 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a push from activate is held", aPushFromActivateIsHeld});
   cases.push_back({"a pop from a poll lands after the poll", aPopFromAPollLandsAfterThePoll});
   cases.push_back({"the stack holds eight frames", theStackHoldsEightFrames});
-  cases.push_back({"a settings scene keeps its rows", aSettingsSceneKeepsItsRows});
+  cases.push_back({"a settings list moves and edits", aSettingsListMovesAndEdits});
+  cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
+  cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});
 }
 
 }  // namespace gardener::gfx::test

@@ -9,6 +9,7 @@
 #include <Arduino.h>
 
 #include "ui/Scene.h"
+#include "ui/Ux.h"
 
 namespace gardener::gfx::ui {
 
@@ -30,26 +31,31 @@ class SettingsRow {
   // The value the row shows now, in whatever type the setting holds — a bool, a number, a key.
   virtual std::any currentValue() const = 0;
 
-  // The scene that edits that value, or nullptr for a setting with no editor, where Forward opens
-  // nothing. The scene has to outlive the push, so whoever builds it keeps it.
-  virtual Scene* scene() = 0;
+  // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
+  // a number its digits, a duration its compact text.
+  virtual String text(const std::any& value) const = 0;
+
+  // The scene that edits `value`, or nullptr for a setting with no editor, where Forward opens
+  // nothing. The scene has to outlive the push, so the row keeps what it builds.
+  virtual Scene* scene(const std::any& value) = 0;
 };
 
-// The list a routine's settings are edited in, from settings_edit.be: a heading and one row per
-// setting, with Up and Down moving the row, Forward opening the row's editor, OK handing back the
-// settings as they were edited and Back or Cancel handing back the set as it was opened.
+// The list a routine's settings are edited in, from settings_edit.be: the heading, one row per
+// setting printed as its label and the value it holds now, and the row the keys are on inverted.
+// Up and Down move the row, wrapping at the ends; Forward opens the row's editor and takes what it
+// hands back; OK keeps the set it settled on and closes; Back and Cancel put the set back as it was
+// opened and close.
 //
-// Stubbed. The rows it holds, the heading it draws, the values and the row the keys are on are
-// here, and the two overrides are named and empty: nothing steps the row yet, nothing opens an
-// editor from it, and nothing draws. The rows are drawn here rather than through a list, since the
-// list is not being ported.
+// The list is what pops itself, so it holds the stack that pushed it. A row's value is written
+// under the row's key when its editor pops, and an editor that was cancelled hands back the value
+// it opened on, so a cancel needs no path of its own.
 class SettingsScene : public Scene {
  public:
-  SettingsScene(GestureQueue& gestures, const String& title);
+  SettingsScene(GestureQueue& gestures, Ux& ux, const String& title);
 
   // The rows the list shows, handed to it before it draws. The list holds them by pointer, as the
-  // stack holds its scenes: whoever built a row keeps it alive. Their current values seed the
-  // values the list carries, so a row's key reads back what the row was set to.
+  // stack holds its scenes: whoever built a row keeps it alive. Their current values seed the set
+  // the list carries and the set it opened on.
   void set(const std::vector<SettingsRow*>& rows);
 
   // The values the settings hold, keyed by setting key: what the rows were set to, what an editor
@@ -64,9 +70,14 @@ class SettingsScene : public Scene {
   void drawPage(Canvas& canvas) override;
 
  private:
+  void move(int8_t direction);
+  void open();
+
   String title_;
+  Ux& ux_;
   std::vector<SettingsRow*> rows_;
   SettingValues values_;
+  SettingValues opened_;
   int16_t selected_ = 0;
 };
 
