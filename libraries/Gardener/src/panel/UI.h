@@ -8,10 +8,8 @@
 
 namespace gardener {
 
-// The panel is repainted on a fixed cadence: often enough that the battery blink is visible, slow
-// enough that a whole frame's I2C write does not crowd the control loop.
-constexpr uint32_t RefreshMs = 250;
-
+// The page loop the panel task holds. What the glass shows is the scene stack's — its repaint
+// cadence, its band and its flush — so a UI here answers one call per pass and nothing else.
 class UserInterface {
  public:
   explicit UserInterface(Panel& context) : context_(context) {}

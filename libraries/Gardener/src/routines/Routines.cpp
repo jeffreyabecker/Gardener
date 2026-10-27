@@ -7,6 +7,7 @@
 #include <berry.h>
 #include <stddef.h>
 
+#include <memory>
 #include <vector>
 
 #include "Logger.h"
@@ -14,6 +15,7 @@
 #include "gfx/Canvas.h"
 #include "hal/Battery.h"
 #include "panel/Band.h"
+#include "panel/MarkScene.h"
 #include "panel/Units.h"
 #include "routines/Bindings.h"
 #include "storage/Config.h"
@@ -135,9 +137,12 @@ bool Routines::enterPage() {
   return true;
 }
 
-// The root scene, at boot and on the go-home gesture. Every scene is native from here, and the first
-// one — the home page — is not written yet, so the stack is emptied and the panel keeps its mark.
-bool Routines::resetToRoot() { return stack_.reset(nullptr); }
+// The root scene, at boot and on the go-home gesture: the device's mark, which is the page until the
+// home page is written. The stack draws it, so the band is drawn under it like any other page.
+bool Routines::resetToRoot() {
+  if (panel_ == nullptr) return stack_.reset(nullptr);
+  return stack_.reset(std::make_unique<MarkScene>(presses_));
+}
 
 void Routines::updateBand(uint32_t nowMs) {
   DisplayUnit unit = DisplayUnit::Kpa;

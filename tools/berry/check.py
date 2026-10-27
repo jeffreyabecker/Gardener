@@ -44,6 +44,7 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 FIRMWARE_SOURCES = [
     GARDENER / "src" / "BuzzerPlayer.cpp",
     GARDENER / "src" / "panel" / "Band.cpp",
+    GARDENER / "src" / "panel" / "MarkScene.cpp",
     GARDENER / "src" / "routines" / "Bindings.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",
     GARDENER / "src" / "routines" / "GestureQueue.cpp",
