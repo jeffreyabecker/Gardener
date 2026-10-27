@@ -7,3 +7,4 @@
 #include "gfx/Canvas.h"
 #include "gfx/DisplayDevice.h"
 #include "gfx/Rect.h"
+#include "gfx/Shapes.h"
