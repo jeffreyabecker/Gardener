@@ -49,6 +49,7 @@ class NoGestures : public ui::GestureQueue {
 void addDrawingCases(std::vector<Case>& cases);
 void addLayoutCases(std::vector<Case>& cases);
 void addEditorCases(std::vector<Case>& cases);
+void addOverlayCases(std::vector<Case>& cases);
 void addSceneCases(std::vector<Case>& cases);
 void addCanvasCases(std::vector<Case>& cases);
 

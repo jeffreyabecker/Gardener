@@ -2,37 +2,9 @@
 # here does not load: Berry resolves a global when it compiles a file, so a class has to be a global
 # by the time a file that names it is compiled.
 records.be
-ux.be
-components/component.be
-components/icon.be
-components/text.be
-components/layout.be
-components/progress_bar.be
-components/scrollbar.be
-components/pressure_display.be
-components/duration.be
-# The band the ux component draws: a layout of cells, so it loads after the components.
-overlay.be
-scene.be
-list.be
 # The registry registers registrations, and the routines below the system extend the record.
 registration.be
 registry.be
-settings/settings.be
-settings/view.be
-settings/edit_scene.be
-settings/edit_cfg.be
-settings/bool.be
-settings/choice.be
-# The one kind with no scene of its own: a number is the base editor.
-settings/number.be
-settings/pressure.be
-settings/duration.be
-settings/settings_edit.be
-# The jingle row extends the choice kind, so it follows it.
-settings/jingle.be
-# The device's own set is built from the kinds above, the jingle row included.
-settings/device.be
 # The browser's Forward opens the settings list, and its rows come from the registry.
 browser.be
 # The home scene's run, which home.be holds.

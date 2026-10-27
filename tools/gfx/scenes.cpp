@@ -115,7 +115,7 @@ void aPushFromActivateIsHeld() {
   expectEq(ux.push(std::move(pusher)), 1, "the pusher is placed");
   expectEq(ux.depth(), 2, "the push from inside activate was held");
   expectEq(heldWatch.activations, 0, "so the scene it pushed was not activated yet");
-  ux.enter();
+  ux.enter(canvas);
   expectEq(ux.depth(), 3, "the held push landed on the next call in");
   expectEq(heldWatch.activations, 1, "and the scene it pushed was activated");
 }
@@ -143,6 +143,56 @@ void theStackHoldsEightFrames() {
   expectEq(ux.depth(), Ux::MaxFrames, "the stack fills");
   expectEq(ux.push(aScene(gestures, watched)), 0, "a push past the cap is refused");
   expectEq(ux.depth(), Ux::MaxFrames, "and changes nothing");
+}
+
+// A page that inks the whole canvas it is given, so a case can see the band drawn over it.
+class InkedScene : public Scene {
+ public:
+  explicit InkedScene(GestureQueue& gestures) : Scene(gestures) {}
+
+ protected:
+  void drawPage(Canvas& own) override {
+    own.draw(gfx::shapes::FillRect(0, 0, own.width(), own.height(), Ink));
+  }
+};
+
+void theStackDrawsTheBandOverThePage() {
+  NoGestures gestures;
+  Ux ux;
+  reset();
+  ux.setBand({Paint()});
+  ux.reset(std::make_unique<InkedScene>(gestures));
+  ux.poll(canvas, 300);
+  expect(display.anyInk(0, 0, PageWidth, PageHeight - BandHeight), "the page inks its own rows");
+  expectEq(display.inkCount(0, PageHeight - BandHeight, PageWidth, BandHeight), 0,
+           "and the band covers the rows it owns");
+}
+
+void theStackDrawsTheBandItWasGiven() {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  ux.setBand({[](Canvas& cell) {
+    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
+  }});
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  expect(display.anyInk(0, PageHeight - BandHeight, PageWidth, BandHeight),
+         "the band's cell is drawn in the bottom rows");
+  expectEq(display.inkCount(0, 0, PageWidth, PageHeight - BandHeight), 0,
+           "and a page that drew nothing leaves the rest bare");
+}
+
+void aStackShowingNothingDrawsNoBand() {
+  NoGestures gestures;
+  Ux ux;
+  reset();
+  ux.setBand({[](Canvas& cell) {
+    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
+  }});
+  expectEq(ux.poll(canvas, 300), 0, "an empty stack shows nothing");
+  expectEq(display.inkCount(0, 0, PageWidth, PageHeight), 0, "so no band is drawn");
 }
 
 // --- the settings list ------------------------------------------------------
@@ -432,6 +482,9 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a push from activate is held", aPushFromActivateIsHeld});
   cases.push_back({"a pop from a poll lands after the poll", aPopFromAPollLandsAfterThePoll});
   cases.push_back({"the stack holds eight frames", theStackHoldsEightFrames});
+  cases.push_back({"the stack draws the band over the page", theStackDrawsTheBandOverThePage});
+  cases.push_back({"the stack draws the band it was given", theStackDrawsTheBandItWasGiven});
+  cases.push_back({"a stack showing nothing draws no band", aStackShowingNothingDrawsNoBand});
   cases.push_back({"a settings list moves and edits", aSettingsListMovesAndEdits});
   cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});

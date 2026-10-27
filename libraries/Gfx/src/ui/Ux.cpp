@@ -48,7 +48,9 @@ Scene* Ux::top() const { return depth_ > 0 ? frames_[depth_ - 1].get() : nullptr
 
 int16_t Ux::depth() const { return depth_; }
 
-bool Ux::enter() {
+void Ux::setBand(const std::vector<Paint>& cells) { band_ = cells; }
+
+bool Ux::enter(Canvas& canvas) {
   Scene* scene = top();
   if (scene == nullptr) return false;
   const bool held = polling_;
@@ -56,7 +58,9 @@ bool Ux::enter() {
   scene->activate();
   polling_ = held;
   apply();
-  return depth_ > 0;
+  if (depth_ <= 0) return false;
+  paintBand(canvas);
+  return true;
 }
 
 bool Ux::poll(Canvas& canvas, uint32_t nowMs) {
@@ -67,7 +71,19 @@ bool Ux::poll(Canvas& canvas, uint32_t nowMs) {
   scene->poll(canvas, nowMs);
   polling_ = held;
   apply();
-  return depth_ > 0;
+  if (depth_ <= 0) return false;
+  paintBand(canvas);
+  return true;
+}
+
+// The band after the page, over the bottom rows of the glass: the page draws in the whole canvas, so
+// what it leaves there is covered rather than left to the page to know about.
+void Ux::paintBand(Canvas& canvas) {
+  if (band_.empty()) return;
+  const int16_t top = static_cast<int16_t>(canvas.height() - BandHeight);
+  if (top < 0) return;
+  Canvas row = canvas.child(Rect(0, top, canvas.width(), BandHeight));
+  drawBand(row, band_);
 }
 
 bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {

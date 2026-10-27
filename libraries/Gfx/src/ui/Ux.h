@@ -4,7 +4,9 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
+#include "ui/Overlay.h"
 #include "ui/Scene.h"
 
 namespace gardener::gfx::ui {
@@ -18,6 +20,10 @@ namespace gardener::gfx::ui {
 // The stack owns its scenes: what is pushed goes away when it pops, after the pusher's callback has
 // read what it answered. A scene therefore reaches the stack by unique_ptr, and top() is only ever
 // a look at one the stack is holding.
+//
+// It also owns the band across the bottom of the glass: the cells the caller sets are drawn over the
+// bottom rows after the page on every beat, so no page has to remember it. A stack with no cells
+// draws none, and a stack showing nothing draws none either — the mark is what shows then.
 class Ux {
  public:
   // The deepest stack the panel accepts. A scene that pushes from its own activate is a bug either
@@ -43,9 +49,12 @@ class Ux {
   Scene* top() const;
   int16_t depth() const;
 
+  // The band's cells, left to right, each in an equal share of the panel's width.
+  void setBand(const std::vector<Paint>& cells);
+
   // One call into the top scene: its activate() when the page becomes visible, and its poll each
-  // beat. Answers whether a scene is showing.
-  bool enter();
+  // beat. Both draw the band after the page has drawn. Answers whether a scene is showing.
+  bool enter(Canvas& canvas);
   bool poll(Canvas& canvas, uint32_t nowMs);
 
  private:
@@ -55,10 +64,12 @@ class Ux {
   bool take();
   bool home();
   void apply();
+  void paintBand(Canvas& canvas);
 
   std::unique_ptr<Scene> frames_[MaxFrames];
   Callback callbacks_[MaxFrames];
   int16_t depth_ = 0;
+  std::vector<Paint> band_;
 
   Request pending_ = Request::None;
   std::unique_ptr<Scene> pendingScene_;

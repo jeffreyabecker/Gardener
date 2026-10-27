@@ -1,7 +1,7 @@
-// The Gfx checks: the drawing functions, the layout, the value editors and the scene stack under
-// libraries/Gfx/src/ui/ driven against a stub display on the host, with no interpreter and no
-// board. A case asserts numbers a function answers and the pixels it leaves in the frame, and the
-// run exits non-zero when one fails. The cases live a file each, named by what they cover.
+// The Gfx checks: the drawing functions, the layout, the value editors, the band and the scene
+// stack under libraries/Gfx/src/ui/ driven against a stub display on the host, with no interpreter
+// and no board. A case asserts numbers a function answers and the pixels it leaves in the frame, and
+// the run exits non-zero when one fails. The cases live a file each, named by what they cover.
 
 #include <stdio.h>
 
@@ -17,6 +17,7 @@ std::vector<Case> allCases() {
   addDrawingCases(cases);
   addLayoutCases(cases);
   addEditorCases(cases);
+  addOverlayCases(cases);
   addSceneCases(cases);
   addCanvasCases(cases);
   return cases;
