@@ -7,11 +7,8 @@
 #include <functional>
 #include <utility>
 
-#include "gfx/Canvas.h"
-#include "gfx/Font.h"
-#include "gfx/Rect.h"
-#include "gfx/Shapes.h"
-#include "gfx/Text.h"
+#include <Gfx.h>
+
 #include "hal/Display.h"
 
 namespace gardener {

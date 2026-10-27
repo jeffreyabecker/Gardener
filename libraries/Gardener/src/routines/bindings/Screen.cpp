@@ -4,8 +4,9 @@
 
 #include <stdio.h>
 
+#include <Gfx.h>
+
 #include "PanelContext.h"
-#include "gfx/Fonts.h"
 #include "hal/Display.h"
 #include "panel/Units.h"
 #include "routines/bindings/Module.h"
