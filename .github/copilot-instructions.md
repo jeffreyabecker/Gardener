@@ -3,8 +3,12 @@
 ## Build
 
 `python scripts/arduino.py --task build` — compiles the sketch with the project
-local libraries. There is no host test suite, and nothing checks the layer rule, so a stray
-`hal/` include that reaches upward is a review catch rather than a build failure.
+local libraries. Nothing checks the layer rule, so a stray `hal/` include that reaches upward is a
+review catch rather than a build failure.
+
+**The Gfx components have a C++ check of their own.** `python tools/gfx/check.py` builds
+`libraries/Gfx/src/ui/` against a stub display and runs its cases, which is what a change to a
+component's drawing or layout has to pass; it needs no board and no interpreter.
 
 **Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
 `firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under
