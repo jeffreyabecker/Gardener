@@ -44,16 +44,11 @@ Sh1106Device::Sh1106Device(TwoWire& wire, uint8_t address, int16_t width, int16_
       address_(address),
       width_(width),
       height_(height),
-      frame_(new uint8_t[static_cast<size_t>(stride()) * static_cast<size_t>(height)]),
-      pageBuffer_(new uint8_t[static_cast<size_t>(width) * static_cast<size_t>(pages())]) {
+      frame_(new uint8_t[static_cast<size_t>(stride()) * static_cast<size_t>(height)]) {
   memset(frame_, 0, static_cast<size_t>(stride()) * static_cast<size_t>(height_));
-  memset(pageBuffer_, 0, static_cast<size_t>(width_) * static_cast<size_t>(pages()));
 }
 
-Sh1106Device::~Sh1106Device() {
-  delete[] frame_;
-  delete[] pageBuffer_;
-}
+Sh1106Device::~Sh1106Device() { delete[] frame_; }
 
 bool Sh1106Device::begin() {
   const uint8_t init[] = {
@@ -79,45 +74,54 @@ bool Sh1106Device::begin() {
   return command(0xAF);  // display on
 }
 
-void Sh1106Device::flush() {
-  const int16_t strideBytes = stride();
-  const int16_t pageCount = pages();
+void Sh1106Device::flush(const gfx::Rect& dirty) {
+  if (dirty.width <= 0 || dirty.height <= 0) return;
 
-  // The Canvas frame is row-major, most-significant bit first; the panel wants each column's eight
-  // rows in one byte, least-significant row first.
-  for (int16_t page = 0; page < pageCount; page++) {
-    for (int16_t x = 0; x < width_; x++) {
-      uint8_t bits = 0;
-      for (uint8_t bit = 0; bit < 8; bit++) {
-        const int16_t y = static_cast<int16_t>(page * 8 + bit);
-        if (y < height_ && (frame_[y * strideBytes + x / 8] & (0x80 >> (x & 7))) != 0) {
-          bits = static_cast<uint8_t>(bits | (1 << bit));
-        }
-      }
-      pageBuffer_[page * width_ + x] = bits;
-    }
-  }
+  const int16_t firstColumn = dirty.x < 0 ? 0 : dirty.x;
+  const int16_t lastColumn =
+      dirty.right() >= width_ ? static_cast<int16_t>(width_ - 1) : dirty.right();
+  const int16_t firstPage = dirty.y < 0 ? 0 : static_cast<int16_t>(dirty.y / 8);
+  const int16_t lastPage = dirty.bottom() >= height_ ? static_cast<int16_t>(pages() - 1)
+                                                     : static_cast<int16_t>(dirty.bottom() / 8);
+  if (firstColumn > lastColumn || firstPage > lastPage) return;
 
-  // One control byte shares the transmission with the pixel data.
-  const size_t chunk = I2C_BUFFER_LENGTH - 1;
-  for (int16_t page = 0; page < pageCount; page++) {
+  // One control byte shares each transmission with the pixel data, so a chunk carries one byte less
+  // than the bus buffer holds.
+  uint8_t chunk[I2C_BUFFER_LENGTH];
+  const int16_t capacity = static_cast<int16_t>(I2C_BUFFER_LENGTH - 1);
+
+  for (int16_t page = firstPage; page <= lastPage; page++) {
+    // The window is opened once and the column address walks from there, across the chunk
+    // transmissions as well as inside one.
     const uint8_t window[] = {
         static_cast<uint8_t>(0xB0 + page),
-        static_cast<uint8_t>(0x10 | (PageColumnOffset >> 4)),
-        static_cast<uint8_t>(PageColumnOffset & 0x0F),
+        static_cast<uint8_t>(0x10 | ((firstColumn + PageColumnOffset) >> 4)),
+        static_cast<uint8_t>((firstColumn + PageColumnOffset) & 0x0F),
     };
     commands(window, sizeof(window));
 
-    const uint8_t* bytes = pageBuffer_ + page * width_;
-    int16_t remaining = width_;
-    while (remaining > 0) {
-      const size_t count = static_cast<size_t>(remaining) < chunk ? static_cast<size_t>(remaining)
-                                                                  : chunk;
-      data(bytes, count);
-      bytes += count;
-      remaining = static_cast<int16_t>(remaining - static_cast<int16_t>(count));
+    int16_t column = firstColumn;
+    while (column <= lastColumn) {
+      int16_t count = 0;
+      while (column <= lastColumn && count < capacity) {
+        chunk[count++] = pageColumn(page, column);
+        column++;
+      }
+      data(chunk, static_cast<size_t>(count));
     }
   }
+}
+
+uint8_t Sh1106Device::pageColumn(int16_t page, int16_t column) const {
+  const int16_t strideBytes = stride();
+  uint8_t bits = 0;
+  for (uint8_t bit = 0; bit < 8; bit++) {
+    const int16_t y = static_cast<int16_t>(page * 8 + bit);
+    if (y < height_ && (frame_[y * strideBytes + (column >> 3)] & (0x80 >> (column & 7))) != 0) {
+      bits = static_cast<uint8_t>(bits | (1 << bit));
+    }
+  }
+  return bits;
 }
 
 void Sh1106Device::invertDisplay(bool on) { command(on ? 0xA7 : 0xA6); }

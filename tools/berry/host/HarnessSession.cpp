@@ -142,6 +142,7 @@ void HarnessSession::beat(int count) {
     routines_.poll(millis());
 
     if (capturing_) {
+      display_.display();
       BitmapPanel& panel = display_.driver();
       std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
       panel.packFrame(frame.data());
@@ -201,6 +202,7 @@ bool HarnessSession::endCapture() {
 }
 
 bool HarnessSession::saveStill(const char* path) {
+  display_.display();
   BitmapPanel& panel = display_.driver();
   std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
   panel.packFrame(frame.data());

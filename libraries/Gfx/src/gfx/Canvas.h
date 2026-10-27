@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <type_traits>
 
+#include "gfx/DisplayDevice.h"
 #include "gfx/Rect.h"
 
 namespace gardener::gfx {
@@ -17,16 +18,17 @@ enum class PixelLayout : uint8_t { Gray8, Packed1 };
 // top-left and every write is clipped to it, so a canvas whose extent sits inside the panel cannot
 // reach a pixel outside the panel.
 //
-// A canvas is a copy: copying one gives a second view of the same buffer, and that is how a turned
-// canvas is made. It is not movable — there is nothing to move, and a canvas that could be moved
-// from would be a view of nothing.
+// A canvas is where the drawing state lives: the buffer it writes into, the turn it draws at, and
+// the extent of the panel it has written since the last flush. That is why it is neither copyable
+// nor movable — a copy would be a second set of writes to the same buffer, and only one of the two
+// could be flushed.
 class Canvas {
  public:
   Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout = PixelLayout::Gray8)
       : buffer_(buffer), panel_(panel), extent_(extent), layout_(layout) {}
 
-  Canvas(const Canvas&) = default;
-  Canvas& operator=(const Canvas&) = default;
+  Canvas(const Canvas&) = delete;
+  Canvas& operator=(const Canvas&) = delete;
   Canvas(Canvas&&) = delete;
   Canvas& operator=(Canvas&&) = delete;
 
@@ -35,11 +37,12 @@ class Canvas {
   int16_t width() const { return turned() ? extent_.height : extent_.width; }
   int16_t height() const { return turned() ? extent_.width : extent_.height; }
 
-  // A copy of this canvas drawn in turned coordinates: 90, 180 or 270 degrees about the extent's
-  // centre. The buffer, the panel and the extent stay as they were, so a turned canvas writes
-  // inside the same rectangle of the glass, with the coordinates of the page turned within it. An
-  // angle that is not a quarter turn gives the copy back unturned.
-  Canvas rotate(int16_t degrees) const;
+  // Turn this canvas about the extent's centre: 0, 90, 180 or 270 degrees, counted from the
+  // extent's own top-left. The buffer, the panel and the extent stay as they were, so a turned
+  // canvas writes inside the same rectangle of the glass, with the coordinates of the page turned
+  // within it. An angle that is not a quarter turn leaves the canvas as it was.
+  void setRotation(int16_t degrees);
+  int16_t rotation() const { return static_cast<int16_t>(rotation_); }
 
   // The pixel at (x, y), counted from the extent's top-left: the byte itself on a Gray8 frame, one
   // bit on a Packed1 one, where a color of 128 or more sets the bit and anything below it clears
@@ -50,6 +53,12 @@ class Canvas {
   // one, across the rectangle it is given. The one drawing call that reads the frame, which is why
   // it is here rather than a shape: a shape draws by writing pixels.
   void invert(Rect area);
+
+  // Hand the device the panel pixels written since the last flush, and forget them. Only the
+  // rectangle that was written is sent, so a canvas that has drawn nothing since flushes nothing.
+  // The rectangle is kept in panel coordinates, which is what makes it right for a canvas that
+  // draws at a turn or inside an extent of the glass.
+  void flush(DisplayDevice& device);
 
   // A shape is a callable that takes this canvas and draws through it. It is taken by value, so it
   // has to be copyable, and it is called once and not kept.
@@ -63,12 +72,12 @@ class Canvas {
   }
 
  private:
-  Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout, uint16_t rotation)
-      : buffer_(buffer), panel_(panel), extent_(extent), layout_(layout), rotation_(rotation) {}
-
   // Whether the canvas coordinates are turned across the extent, which is what makes the two sides
   // swap.
   bool turned() const { return rotation_ == 90 || rotation_ == 270; }
+
+  // Grow the rectangle of panel pixels written since the last flush to take in one more.
+  void include(int16_t panelX, int16_t panelY);
 
   bool contains(int16_t x, int16_t y) const {
     return x >= 0 && y >= 0 && x < width() && y < height();
@@ -89,6 +98,7 @@ class Canvas {
   Rect extent_;
   PixelLayout layout_;
   uint16_t rotation_ = 0;
+  Rect dirty_{0, 0, 0, 0};
 };
 
 }  // namespace gardener::gfx

@@ -54,7 +54,7 @@ or less holds no pixels; a `Canvas` over such an extent draws nothing.
 virtual Rect size() const = 0;
 virtual uint8_t bitsPerPixel() const = 0;
 virtual uint8_t* buffer() = 0;
-virtual void flush() = 0;
+virtual void flush(const Rect& dirty) = 0;
 ```
 
 `size()` reports the panel's full-frame geometry as a `Rect` with its origin at the top-left:
@@ -67,7 +67,11 @@ one with levels — and so the layout of the frame above.
 pixels in that layout. A canvas draws straight into it, so there is one frame and no copy per
 canvas. The device keeps it for as long as it lives.
 
-`flush()` sends that frame to the glass. The device reads it and writes none of it back.
+`flush(const Rect& dirty)` sends the pixels inside `dirty` to the glass, and only those. The
+rectangle is what a canvas has written since it last flushed, in the panel's own coordinates, so a
+device sends a corner it redrew rather than the whole frame. A rectangle holding no pixels — a
+width or height of zero or less — asks for nothing, which is what a canvas nobody has drawn on
+reports. The device reads the frame and writes none of it back.
 
 Anything the part needs before the first flush — power, bus setup, a bring-up handshake — is the
 concrete device's own business, done before `flush` is called. It is not a fifth method on this
@@ -88,28 +92,30 @@ Canvas(uint8_t* buffer, Rect panel, Rect extent, PixelLayout layout = PixelLayou
 `extent` must lie within `panel`. The canvas clips to `extent`, not to `panel`, so a caller that
 passes an extent reaching outside the panel owns the out-of-bounds write that follows.
 
-A canvas is a copy: copying one gives a second view of the same buffer, and that is how a turned
-canvas is made. It is not movable, because a canvas that could be moved from would be a view of
-nothing.
+A canvas holds the drawing state: the buffer, the turn it draws at, and the rectangle of the panel
+it has written since the last flush. It is therefore neither copyable nor movable — a copy would be
+a second set of writes to the same buffer, and only one of the two could be flushed.
 
-### rotate
+### setRotation
 
 ```cpp
-Canvas rotate(int16_t degrees) const
+void setRotation(int16_t degrees)
 ```
 
-A copy of the canvas drawn in turned coordinates: 90, 180 or 270 degrees about the extent's centre.
-The buffer, the panel and the extent stay as they were, so a turned canvas writes inside the same
-rectangle of the glass with the coordinates of the page turned within it, and its two sides swap for
-a quarter turn. An angle that is not a quarter turn gives the copy back unturned.
+Turns the canvas in place: 90, 180 or 270 degrees about the extent's centre. The buffer, the panel
+and the extent stay as they were, so a turned canvas writes inside the same rectangle of the glass
+with the coordinates of the page turned within it, and its two sides swap for a quarter turn. An
+angle that is not a quarter turn leaves the canvas as it was. `rotation()` reports the angle it is
+turned to.
 
 ## Drawing
 
 `Canvas` is the only place drawing lives; `DisplayDevice` and `Rect` have none.
 
-The canvas carries three things: `setPixel`, `invert` and the `draw` template. Everything a page
-puts on the frame is a pixel written through `setPixel`, a region the canvas inverts itself, or a
-shape value handed to `draw` that writes pixels of its own.
+The canvas carries three drawing calls: `setPixel`, `invert` and the `draw` template. Everything a
+page puts on the frame is a pixel written through `setPixel`, a region the canvas inverts itself, or
+a shape value handed to `draw` that writes pixels of its own. `flush` is the fourth call and writes
+nothing: it is how what those three drew reaches the glass.
 
 Every coordinate is relative to the extent's top-left: a point given as `(x, y)` addresses the
 buffer at `(extent.x + x, extent.y + y)`.
@@ -156,6 +162,22 @@ A shape draws by calling the canvas it was given — `setPixel`, `invert`, or an
 clips to the extent exactly as a direct call would, whether or not whoever wrote it knew the extent
 existed. A type that cannot be called with a `Canvas&`, or cannot be copied, does not compile as a
 `TShape`.
+
+### flush
+
+```cpp
+void flush(DisplayDevice& device)
+```
+
+Hands the device the rectangle of the panel that has been written since the last flush, in panel
+coordinates, and forgets it. The canvas is the thing that knows what was drawn, so the rectangle is
+grown by `setPixel` and `invert` as they write rather than worked out afterwards; it stays right for
+a canvas that draws at a turn or inside an extent, because the coordinates it records are the
+panel's own. A canvas nobody has drawn on since the last flush reports a rectangle holding no
+pixels, and the device sends nothing.
+
+The device is an argument rather than something the canvas holds: a canvas over a buffer nobody
+sends anywhere — one a test draws into and reads back — needs no device at all.
 
 ## Shapes
 

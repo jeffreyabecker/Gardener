@@ -2,10 +2,28 @@
 
 namespace gardener::gfx {
 
-Canvas Canvas::rotate(int16_t degrees) const {
+void Canvas::setRotation(int16_t degrees) {
   const int16_t turn = static_cast<int16_t>(((degrees % 360) + 360) % 360);
-  if (turn % 90 != 0) return Canvas(buffer_, panel_, extent_, layout_, rotation_);
-  return Canvas(buffer_, panel_, extent_, layout_, static_cast<uint16_t>((rotation_ + turn) % 360));
+  if (turn % 90 != 0) return;
+  rotation_ = static_cast<uint16_t>(turn);
+}
+
+void Canvas::flush(DisplayDevice& device) {
+  device.flush(dirty_);
+  dirty_ = Rect(0, 0, 0, 0);
+}
+
+void Canvas::include(int16_t panelX, int16_t panelY) {
+  if (dirty_.width <= 0 || dirty_.height <= 0) {
+    dirty_ = Rect(panelX, panelY, 1, 1);
+    return;
+  }
+  const int16_t left = panelX < dirty_.x ? panelX : dirty_.x;
+  const int16_t top = panelY < dirty_.y ? panelY : dirty_.y;
+  const int16_t right = panelX > dirty_.right() ? panelX : dirty_.right();
+  const int16_t bottom = panelY > dirty_.bottom() ? panelY : dirty_.bottom();
+  dirty_ = Rect(left, top, static_cast<int16_t>(right - left + 1),
+                static_cast<int16_t>(bottom - top + 1));
 }
 
 void Canvas::toPanel(int16_t x, int16_t y, int16_t& panelX, int16_t& panelY) const {
@@ -36,6 +54,7 @@ void Canvas::setPixel(int16_t x, int16_t y, uint8_t color) {
   int16_t panelX = 0;
   int16_t panelY = 0;
   toPanel(x, y, panelX, panelY);
+  include(panelX, panelY);
   if (layout_ == PixelLayout::Gray8) {
     buffer_[panelY * stride() + panelX] = color;
     return;
@@ -58,6 +77,7 @@ void Canvas::invert(Rect area) {
       int16_t panelX = 0;
       int16_t panelY = 0;
       toPanel(pixelX, pixelY, panelX, panelY);
+      include(panelX, panelY);
       if (layout_ == PixelLayout::Gray8) {
         uint8_t& pixel = buffer_[panelY * stride() + panelX];
         pixel = 255 - pixel;

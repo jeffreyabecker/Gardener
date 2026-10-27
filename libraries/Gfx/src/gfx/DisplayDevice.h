@@ -32,8 +32,11 @@ class DisplayDevice {
   // a canvas draws straight into it and there is one frame rather than a copy per canvas.
   virtual uint8_t* buffer() = 0;
 
-  // Send that frame to the glass. The device reads it and writes none of it back.
-  virtual void flush() = 0;
+  // Send the panel pixels this device was told about to the glass, and only those: the rectangle is
+  // what a canvas has written since the last flush, in the panel's own coordinates. A rectangle
+  // holding no pixels asks for nothing, which is what a canvas nobody has drawn on reports. The
+  // device reads the frame and writes none of it back.
+  virtual void flush(const Rect& dirty) = 0;
 };
 
 }  // namespace gardener::gfx

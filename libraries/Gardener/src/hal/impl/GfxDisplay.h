@@ -27,13 +27,12 @@ class GfxDisplay : public Display {
   GfxDisplay(std::function<bool(Device&)> onBegin, Args&&... args)
       : onBegin_(onBegin),
         device_(std::forward<Args>(args)...),
-        base_(device_.buffer(), device_.size(), device_.size(), layoutFor(device_)),
-        canvas_(base_) {}
+        canvas_(device_.buffer(), device_.size(), device_.size(), layoutFor(device_)) {}
 
   ~GfxDisplay() override = default;
 
   bool begin() override { return onBegin_(device_); }
-  void display() override { device_.flush(); }
+  void display() override { canvas_.flush(device_); }
 
   // The device behind the verbs, for a caller that has to reach it directly — the host harness
   // saves the frame this panel drew.
@@ -46,8 +45,7 @@ class GfxDisplay : public Display {
   uint8_t rotation() const override { return rotation_; }
   void setRotation(uint8_t rotation) override {
     rotation_ = static_cast<uint8_t>(rotation & 3);
-    const gfx::Canvas turned = base_.rotate(static_cast<int16_t>(rotation_ * 90));
-    canvas_ = turned;
+    canvas_.setRotation(static_cast<int16_t>(rotation_ * 90));
   }
 
   void clear(uint8_t color) override {
@@ -166,7 +164,6 @@ class GfxDisplay : public Display {
 
   std::function<bool(Device&)> onBegin_;
   Device device_;
-  gfx::Canvas base_;
   gfx::Canvas canvas_;
   const gfx::Font* face_ = nullptr;
   uint8_t rotation_ = 0;
