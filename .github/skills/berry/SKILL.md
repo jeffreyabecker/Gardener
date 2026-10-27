@@ -41,7 +41,9 @@ walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
 The output is an animated GIF — one frame per beat, each held a second by `kGifDelayCs`,
 enlarged 2 x by `kRenderScale`. The GIF draws
 a full-width strip across the top showing each injected press (`OK`, `OK×2`, `CANCEL 5s`) for one
-beat, behind `kGestureCalloutBeats`. Writing a frame out as text loses the thing the render is for.
+beat, behind `kGestureCalloutBeats`; a suite's captures hash the overlay band instead of drawing
+the device's status row, so the page the case drove reads as the whole picture. Writing a frame out
+as text loses the thing the render is for.
 
 **The frame belongs to the person who opens it.** Nothing in a run reads a capture back, and
 nothing it prints describes one: a `.gif` under `tools/berry/build/` or

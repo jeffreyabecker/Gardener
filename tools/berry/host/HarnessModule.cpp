@@ -97,12 +97,21 @@ int harnessCaptureStem(bvm* vm) {
   be_return(vm);
 }
 
+// The suite framework's marker: the rows the ux band occupies in a captured frame.
+int harnessMarkOverlay(bvm* vm) {
+  if (be_top(vm) < 2 || !be_isint(vm, 1) || !be_isint(vm, 2)) {
+    be_raise(vm, "type_error", "harness.mark_overlay(top, rows)");
+  }
+  session->markOverlay((int16_t)be_toint(vm, 1), (int16_t)be_toint(vm, 2));
+  be_return_nil(vm);
+}
+
 const bnfuncinfo HarnessLibrary[] = {
     {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
     {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
     {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
     {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},
-    {"capture_stem", harnessCaptureStem},
+    {"capture_stem", harnessCaptureStem}, {"mark_overlay", harnessMarkOverlay},
     {nullptr, nullptr},
 };
 

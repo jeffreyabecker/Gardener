@@ -123,6 +123,13 @@ Saving keeps the band the `ux` component draws: rows 52 to 63 are the device's o
 unit, the serial and Bluetooth icons, the run-state icon and the battery — over whatever the page
 put there.
 
+A suite's frames are the exception. The runner marks the band once for the whole run with
+`harness.mark_overlay(top, rows)`, so every frame a case captures — animation or still — carries a
+hashed box over those rows: cleared to paper, outlined, and hatched diagonally in ink. The band is
+the panel's own and no case draws it, so a test picture is a picture of the page the case drove, and
+the box says where that page ends. `--art`, `--scene` and `--component` leave the band as the device
+draws it.
+
 The frame holds one bit and no display inversion, which is the panel's own depth and face.
 
 ## What the drive does
@@ -161,7 +168,8 @@ rest, and the run ends `suites passed` only when nothing failed.
 
 Every case is also captured as an animation named `<stem>.<suite>.<case>.gif` — the stem is the
 `--out` value with its `.gif` stripped, defaulting to `build/runs` — so a failing case leaves its
-motion behind. A case that never beats has nothing to animate and writes nothing.
+motion behind. Each frame has the overlay band hashed out, as above. A case that never beats has
+nothing to animate and writes nothing.
 
 The suites cover what a walk cannot name: the jingle library, the System scene's unit, radio and
 jingle rows, the settings model and its editors, the components and the layout, the overlay band, and

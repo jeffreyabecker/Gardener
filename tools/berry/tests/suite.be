@@ -71,6 +71,9 @@ end
 def suite_run(filter)
   var passed = 0
   var failed = 0
+  # The band across the bottom of the glass is the ux component's, not a case's: every frame a case
+  # writes hashes those rows, so a picture of a case is a picture of the page it drove.
+  harness.mark_overlay(screen.height() - overlay_band_height, overlay_band_height)
   for t : tests
     var full = t[0] + "." + t[1]
     if filter == nil || filter == "" || string.find(full, filter) >= 0

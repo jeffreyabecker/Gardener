@@ -253,6 +253,9 @@ class HarnessSession {
   const std::string& captureStem() const { return captureStem_; }
   // Records a gesture for the callout strip, shown on the next GestureCalloutBeats captures.
   void pressGesture(const char* gesture);
+  // Marks the overlay band in every frame captured from now on: the suite framework hashes those
+  // rows, because the band is the panel's own and no case draws it.
+  void markOverlay(int16_t top, int16_t rows);
 
  private:
   std::string dataDir_;
@@ -262,6 +265,8 @@ class HarnessSession {
   bool capturing_ = false;
   std::string gesture_;
   int gestureBeats_ = 0;
+  int16_t overlayTop_ = -1;
+  int16_t overlayRows_ = 0;
 
   MemoryFiles files_;
   BufferLogger logger_;

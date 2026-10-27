@@ -6,6 +6,7 @@
 #include "GifWriter.h"
 #include "Machine.h"
 #include "MachineCommand.h"
+#include "OverlayCallout.h"
 #include "PanelTasks.h"
 #include "routines/Bindings.h"
 
@@ -147,6 +148,9 @@ void HarnessSession::beat(int count) {
       if (gestureBeats_ > 0 && !gesture_.empty()) {
         drawGestureStrip(frame.data(), panel.width(), panel.height(), gestureLabel(gesture_));
       }
+      if (overlayTop_ >= 0) {
+        drawOverlayHash(frame.data(), panel.width(), panel.height(), overlayTop_, overlayRows_);
+      }
       captureFrames_.push_back(std::move(frame));
     }
     if (gestureBeats_ > 0) gestureBeats_--;
@@ -156,6 +160,11 @@ void HarnessSession::beat(int count) {
 void HarnessSession::pressGesture(const char* gesture) {
   gesture_ = gesture != nullptr ? gesture : "";
   gestureBeats_ = GestureCalloutBeats;
+}
+
+void HarnessSession::markOverlay(int16_t top, int16_t rows) {
+  overlayTop_ = top;
+  overlayRows_ = rows;
 }
 
 void HarnessSession::backHold() {
@@ -195,6 +204,9 @@ bool HarnessSession::saveStill(const char* path) {
   BitmapPanel& panel = display_.driver();
   std::vector<uint8_t> frame((size_t)panel.width() * panel.height() / 8);
   panel.packFrame(frame.data());
+  if (overlayTop_ >= 0) {
+    drawOverlayHash(frame.data(), panel.width(), panel.height(), overlayTop_, overlayRows_);
+  }
   std::vector<std::vector<uint8_t>> frames;
   frames.push_back(std::move(frame));
   return writeGif(path, panel.width(), panel.height(), frames);

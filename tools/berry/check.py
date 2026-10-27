@@ -66,6 +66,7 @@ HOST_SOURCES = [
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
+    HOST / "OverlayCallout.cpp",
 ]
 
 MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
