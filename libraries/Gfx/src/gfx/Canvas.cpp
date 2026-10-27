@@ -49,11 +49,11 @@ void Canvas::setPixel(int16_t x, int16_t y, uint8_t color) {
   }
 }
 
-void Canvas::invert(int16_t x, int16_t y, int16_t w, int16_t h) {
-  for (int16_t row = 0; row < h; row++) {
-    for (int16_t col = 0; col < w; col++) {
-      const int16_t pixelX = x + col;
-      const int16_t pixelY = y + row;
+void Canvas::invert(Rect area) {
+  for (int16_t row = 0; row < area.height; row++) {
+    for (int16_t col = 0; col < area.width; col++) {
+      const int16_t pixelX = area.x + col;
+      const int16_t pixelY = area.y + row;
       if (!contains(pixelX, pixelY)) continue;
       int16_t panelX = 0;
       int16_t panelY = 0;

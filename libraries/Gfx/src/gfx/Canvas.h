@@ -47,9 +47,9 @@ class Canvas {
   void setPixel(int16_t x, int16_t y, uint8_t color);
 
   // What the pixel had, inverted: 255 minus the byte on a Gray8 frame, the bit flipped on a Packed1
-  // one, across the rectangle. The one drawing call that reads the frame, which is why it is here
-  // rather than a shape: a shape draws by writing pixels.
-  void invert(int16_t x, int16_t y, int16_t w, int16_t h);
+  // one, across the rectangle it is given. The one drawing call that reads the frame, which is why
+  // it is here rather than a shape: a shape draws by writing pixels.
+  void invert(Rect area);
 
   // A shape is a callable that takes this canvas and draws through it. It is taken by value, so it
   // has to be copyable, and it is called once and not kept.
