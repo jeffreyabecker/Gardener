@@ -124,6 +124,39 @@ void theStackHoldsEightFrames() {
   expectEq(ux.depth(), Ux::MaxFrames, "and changes nothing");
 }
 
+// A row a case can hand to the list: a key, a label and a value, with no editor of its own.
+class TestRow : public SettingsRow {
+ public:
+  TestRow(const char* key, const char* label, const std::any& value)
+      : key_(key), label_(label), value_(value) {}
+
+  const String& key() const override { return key_; }
+  const String& label() const override { return label_; }
+  std::any currentValue() const override { return value_; }
+  Scene* scene() override { return nullptr; }
+
+ private:
+  String key_;
+  String label_;
+  std::any value_;
+};
+
+// The settings list is a stub: it holds the rows, the heading and the values it is given, and
+// answers nothing.
+void aSettingsSceneKeepsItsRows() {
+  NoGestures gestures;
+  String title("SETTINGS");
+  SettingsScene list(gestures, title);
+  TestRow target("target", "Target", String("50"));
+  TestRow unit("unit", "Unit", String("kPa"));
+  list.set({&target, &unit});
+  expectEq(list.selected(), 0, "a settings list starts on its first row");
+  expectText(list.title().c_str(), "SETTINGS", "and keeps the heading it was given");
+  expectEq(list.values().size(), 2, "and seeds the values from the rows");
+  const String held = std::any_cast<String>(list.values().at("target"));
+  expectText(held.c_str(), "50", "the row's own value is what its key holds");
+}
+
 }  // namespace
 
 void addSceneCases(std::vector<Case>& cases) {
@@ -134,6 +167,7 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a push from activate is held", aPushFromActivateIsHeld});
   cases.push_back({"a pop from a poll lands after the poll", aPopFromAPollLandsAfterThePoll});
   cases.push_back({"the stack holds eight frames", theStackHoldsEightFrames});
+  cases.push_back({"a settings scene keeps its rows", aSettingsSceneKeepsItsRows});
 }
 
 }  // namespace gardener::gfx::test

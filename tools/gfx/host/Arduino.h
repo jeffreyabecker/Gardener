@@ -38,6 +38,7 @@ class String {
 
   bool operator==(const String& other) const { return text_ == other.text_; }
   bool operator!=(const String& other) const { return text_ != other.text_; }
+  bool operator<(const String& other) const { return text_ < other.text_; }
 
  private:
   std::string text_;

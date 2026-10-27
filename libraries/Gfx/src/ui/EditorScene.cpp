@@ -47,8 +47,6 @@ bool EditorScene::handle(const char* gesture) {
     return true;
   }
   if (strcmp(gesture, "cancel:single") == 0) {
-    value_ = opened_;
-    hasValue_ = hasOpened_;
     closed_ = true;
     canceled();
     return true;

@@ -10,6 +10,11 @@ namespace {
 
 using namespace gardener::gfx::ui;
 
+// The key a choice hands back, as the text a case compares; empty is the nullable nothing.
+String keyOf(const ChoiceScene& scene) {
+  return scene.isNull() ? String("") : std::any_cast<String>(scene.value());
+}
+
 // --- the number -------------------------------------------------------------
 
 // A number scene with the hooks it answers opened up, so a case can step and draw it.
@@ -31,7 +36,7 @@ void aNumberStepsAndHolds() {
   expectText(number.text().c_str(), "10", "the top bound holds");
   for (int i = 0; i < 20; i++) number.nudge(-1);
   expectText(number.text().c_str(), "0", "the bottom bound holds");
-  expectEq(number.hasValue(), 1, "a bounded number always holds a value");
+  expectEq(number.isNull(), 0, "a bounded number always holds a value");
 }
 
 void aRealNumberStepsByItsIncrement() {
@@ -47,13 +52,13 @@ void aNullableNumberHoldsNothing() {
   String label("Target");
   NumberProbe number(gestures, label, NAN, 0.5f, 2, 8, true);
   expectText(number.text().c_str(), "--", "nothing prints dashes");
-  expectEq(number.hasValue(), 0, "and holds no value");
+  expectEq(number.isNull(), 1, "and holds no value");
   number.nudge(-1);
-  expectEq(number.hasValue(), 0, "down at nothing stays nothing");
+  expectEq(number.isNull(), 1, "down at nothing stays nothing");
   number.nudge(1);
-  expectEq(number.number() == 2.0f, 1, "up from nothing enters the floor");
+  expectEq(std::any_cast<float>(number.value()) == 2.0f, 1, "up from nothing enters the floor");
   number.nudge(-1);
-  expectEq(number.hasValue(), 0, "down at the floor clears back to nothing");
+  expectEq(number.isNull(), 1, "down at the floor clears back to nothing");
 }
 
 void aNumberWithNoBoundsStepsFreely() {
@@ -107,14 +112,16 @@ void aChoiceStepsAndWraps() {
   NoGestures gestures;
   String label("Choice");
   ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
-  expectText(choice.value().c_str(), "b", "the stored key shows");
+  expectText(keyOf(choice).c_str(), "b", "the stored key shows");
+  expectEq(choice.nullable(), 0, "a setting that must hold a key says so");
+  expectEq(choice.isNull(), 0, "and is holding one");
   expectText(choice.text().c_str(), "Beta", "and its title");
   choice.nudge(1);
-  expectText(choice.value().c_str(), "c", "up goes to the next entry");
+  expectText(keyOf(choice).c_str(), "c", "up goes to the next entry");
   choice.nudge(1);
-  expectText(choice.value().c_str(), "a", "and wraps to the first");
+  expectText(keyOf(choice).c_str(), "a", "and wraps to the first");
   choice.nudge(-1);
-  expectText(choice.value().c_str(), "c", "down wraps to the last");
+  expectText(keyOf(choice).c_str(), "c", "down wraps to the last");
 }
 
 void aKeyNoEntryNamesShowsTheFirst() {
@@ -122,24 +129,26 @@ void aKeyNoEntryNamesShowsTheFirst() {
   String label("Choice");
   ChoiceProbe choice(gestures, label, "z", threeEntries(), false);
   choice.nudge(1);
-  expectText(choice.value().c_str(), "b", "an unknown key reads as the first entry");
+  expectText(keyOf(choice).c_str(), "b", "an unknown key reads as the first entry");
 }
 
 void aNullableChoiceClearsBelowTheFirst() {
   NoGestures gestures;
   String label("Choice");
   ChoiceProbe choice(gestures, label, "", threeEntries(), true);
-  expectText(choice.value().c_str(), "", "nothing holds no key");
+  expectEq(choice.nullable(), 1, "the scene says it may hold nothing");
+  expectEq(choice.isNull(), 1, "and starts holding nothing");
+  expectText(keyOf(choice).c_str(), "", "nothing holds no key");
   expectText(choice.text().c_str(), "--", "and prints dashes");
   choice.nudge(-1);
-  expectText(choice.value().c_str(), "", "down at nothing stays nothing");
+  expectText(keyOf(choice).c_str(), "", "down at nothing stays nothing");
   choice.nudge(1);
-  expectText(choice.value().c_str(), "a", "up from nothing enters the first");
+  expectText(keyOf(choice).c_str(), "a", "up from nothing enters the first");
   choice.nudge(1);
-  expectText(choice.value().c_str(), "b", "and then steps");
+  expectText(keyOf(choice).c_str(), "b", "and then steps");
   choice.nudge(-1);
   choice.nudge(-1);
-  expectText(choice.value().c_str(), "", "down at the first clears to nothing");
+  expectText(keyOf(choice).c_str(), "", "down at the first clears to nothing");
 }
 
 void aChoiceWithNoEntriesStepsNowhere() {
@@ -147,7 +156,7 @@ void aChoiceWithNoEntriesStepsNowhere() {
   String label("Choice");
   ChoiceProbe choice(gestures, label, "", std::vector<ChoiceItem>(), false);
   choice.nudge(1);
-  expectText(choice.value().c_str(), "", "an empty choice holds nothing");
+  expectText(keyOf(choice).c_str(), "", "an empty choice holds nothing");
 }
 
 void aChoiceClosesOnTheKeyShowing() {
@@ -157,7 +166,7 @@ void aChoiceClosesOnTheKeyShowing() {
   choice.nudge(1);
   expectEq(choice.press("ok:single"), 1, "OK is the scene's");
   expectEq(choice.isClosed(), 1, "OK closed the editor");
-  expectText(choice.value().c_str(), "c", "OK keeps the key showing");
+  expectText(keyOf(choice).c_str(), "c", "OK keeps the key showing");
 }
 
 void aChoiceCancelPutsBackTheKeyItOpenedOn() {
@@ -166,7 +175,7 @@ void aChoiceCancelPutsBackTheKeyItOpenedOn() {
   ChoiceProbe choice(gestures, label, "b", threeEntries(), false);
   choice.nudge(1);
   expectEq(choice.press("cancel:single"), 1, "Cancel is the scene's");
-  expectText(choice.value().c_str(), "b", "Cancel puts back the key it opened on");
+  expectText(keyOf(choice).c_str(), "b", "Cancel puts back the key it opened on");
 }
 
 void aChoiceBandInvertsTheEntryShowing() {
@@ -221,10 +230,10 @@ void aBoolTogglesAndReachesNothing() {
   String label("Power");
   BoolProbe toggle(gestures, label, "false", false);
   expectText(toggle.text().c_str(), "OFF", "a false setting prints OFF");
-  expectEq(toggle.on(), 0, "and is off");
+  expectEq(std::any_cast<bool>(toggle.value()), 0, "and is off");
   toggle.nudge(1);
   expectText(toggle.text().c_str(), "ON", "up turns it on");
-  expectEq(toggle.on(), 1, "and it reads on");
+  expectEq(std::any_cast<bool>(toggle.value()), 1, "and it reads on");
   toggle.nudge(1);
   expectText(toggle.text().c_str(), "OFF", "up again turns it back off");
   toggle.nudge(-1);
@@ -232,13 +241,13 @@ void aBoolTogglesAndReachesNothing() {
 
   BoolProbe nullable(gestures, label, "", true);
   expectText(nullable.text().c_str(), "--", "a nullable setting holding nothing prints dashes");
-  expectEq(nullable.hasValue(), 0, "and holds no state");
+  expectEq(nullable.isNull(), 1, "and holds no state");
   nullable.nudge(-1);
-  expectEq(nullable.hasValue(), 0, "down at nothing stays nothing");
+  expectEq(nullable.isNull(), 1, "down at nothing stays nothing");
   nullable.nudge(1);
   expectText(nullable.text().c_str(), "OFF", "up from nothing enters OFF");
   nullable.nudge(-1);
-  expectEq(nullable.hasValue(), 0, "down at OFF clears back to nothing");
+  expectEq(nullable.isNull(), 1, "down at OFF clears back to nothing");
 }
 
 void aBoolSwitchInvertsTheStateShowing() {
@@ -334,13 +343,13 @@ void aNullableDurationHoldsNothing() {
   String label("Hold");
   DurationProbe duration(gestures, label, NAN, 5, 10, 3600, true);
   expectText(duration.text().c_str(), "--", "nothing prints dashes");
-  expectEq(duration.hasValue(), 0, "and holds no value");
+  expectEq(duration.isNull(), 1, "and holds no value");
   duration.nudge(-1);
-  expectEq(duration.hasValue(), 0, "down at nothing stays nothing");
+  expectEq(duration.isNull(), 1, "down at nothing stays nothing");
   duration.nudge(1);
   expectText(duration.text().c_str(), "10s", "up from nothing enters the floor");
   duration.nudge(-1);
-  expectEq(duration.hasValue(), 0, "down at the floor clears back to nothing");
+  expectEq(duration.isNull(), 1, "down at the floor clears back to nothing");
 }
 
 void aDurationBandInvertsTheStage() {
@@ -371,7 +380,6 @@ class PageProbe : public EditorScene {
 
  protected:
   void nudge(int8_t) override {}
-  String value() override { return ""; }
 };
 
 void anEditorPageIsThreeBands() {

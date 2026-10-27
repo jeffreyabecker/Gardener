@@ -55,7 +55,7 @@ String NumberScene::text() const {
   return String(printed);
 }
 
-String NumberScene::value() { return text(); }
+std::any NumberScene::value() const { return hasValue() ? std::any(number_) : std::any(); }
 
 void NumberScene::nudge(int8_t direction) {
   if (nullable_) {

@@ -37,12 +37,22 @@ class ChoiceScene : public EditorScene {
   // What the entry showing prints: its title, or `--` when the setting holds nothing.
   String text() const;
 
-  // The key the setting stores: what OK keeps and Cancel puts back.
-  String value() override;
+  // The key the setting stores, in the any the stack hands back; an empty one is a nullable
+  // setting with no entry showing.
+  std::any value() const override;
+  bool nullable() const override { return nullable_; }
 
  protected:
   void nudge(int8_t direction) override;
+  void canceled() override;
   Paint pageContents() override;
+
+  // The key the setting holds, and the one it opened on: a kind that shows the same ring another
+  // way — the bool's switch — reads these rather than the items.
+  String value_;
+  String opened_;
+  bool hasValue_ = false;
+  bool hasOpened_ = false;
 
  private:
   int16_t index() const;

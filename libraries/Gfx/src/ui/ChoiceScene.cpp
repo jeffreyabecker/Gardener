@@ -64,11 +64,16 @@ void ChoiceScene::nudge(int8_t direction) {
   hasValue_ = true;
 }
 
-String ChoiceScene::value() { return value_; }
-
 String ChoiceScene::text() const {
   if (!hasValue_ || items_.empty()) return "--";
   return items_[index()].title;
+}
+
+std::any ChoiceScene::value() const { return hasValue_ ? std::any(value_) : std::any(); }
+
+void ChoiceScene::canceled() {
+  value_ = opened_;
+  hasValue_ = hasOpened_;
 }
 
 int16_t ChoiceScene::index() const {

@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <any>
+
 #include "gfx/Canvas.h"
 #include "ui/GestureQueue.h"
 
@@ -40,6 +42,16 @@ class Scene {
   // arguments; nothing here has anything to pass yet.
   virtual void activate() {}
   virtual void leave(){}
+
+  // What the scene hands back when it pops: the value the page reads, in whatever type the setting
+  // holds — a number, a key, a book. An empty any is no value at all, which is what a nullable
+  // setting holding nothing answers; a scene that hands nothing back leaves it empty too.
+  virtual std::any value() const { return std::any(); }
+
+  // Whether the scene may hold nothing at all: an editor over a nullable setting says so, and
+  // isNull() answers whether it is holding nothing now.
+  virtual bool nullable() const { return false; }
+  bool isNull() const { return !value().has_value(); }
 
 
   uint32_t lastDraw() const { return lastDraw_; }

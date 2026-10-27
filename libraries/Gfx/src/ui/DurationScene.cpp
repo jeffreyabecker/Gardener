@@ -89,7 +89,9 @@ String DurationScene::secondsText() const {
   return String(printed);
 }
 
-String DurationScene::value() { return text(); }
+std::any DurationScene::value() const {
+  return hasValue() ? std::any(whole()) : std::any();
+}
 
 const char* DurationScene::hint() {
   return stage_ == Stage::Minutes ? "\x1E/\x1F MIN  \x1A=NEXT" : "\x1E/\x1F SEC  OK=SAVE";

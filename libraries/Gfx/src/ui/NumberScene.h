@@ -20,18 +20,21 @@ class NumberScene : public EditorScene {
   NumberScene(GestureQueue& gestures, String& label, float current, float step, float min,
               float max, bool nullable);
 
-  // The number the keys left it on — NAN when it holds nothing — and what the band prints for it.
-  float number() const { return number_; }
-  bool hasValue() const;
+  // What the band prints for the number: `%g` of it, or `--` when it holds nothing.
   String text() const;
+
+  // The number the keys left it on, as the float the stack hands back; an empty any is a nullable
+  // setting holding nothing.
+  std::any value() const override;
+  bool nullable() const override { return nullable_; }
 
  protected:
   void nudge(int8_t direction) override;
   void canceled() override;
-  String value() override;
   Paint pageContents() override;
 
  private:
+  bool hasValue() const;
   float floor() const;
   float within(float value) const;
 

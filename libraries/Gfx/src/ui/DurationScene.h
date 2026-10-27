@@ -21,23 +21,23 @@ class DurationScene : public EditorScene {
   DurationScene(GestureQueue& gestures, String& label, float current, float step, float min,
                 float max, bool nullable);
 
-  // The seconds the keys left it on — whole ones, and what the band prints for them; `--` is a
-  // setting holding nothing.
-  float current() const { return current_; }
-  bool hasValue() const;
+  // The seconds the keys left it on, as the whole seconds the stack hands back — `%g`-style text
+  // for the band, and `--` when the setting holds nothing.
   String text() const;
+  std::any value() const override;
+  bool nullable() const override { return nullable_; }
 
  protected:
   bool handle(const char* gesture) override;
   void nudge(int8_t direction) override;
   void canceled() override;
-  String value() override;
   Paint pageContents() override;
   const char* hint() override;
 
  private:
   enum class Stage : uint8_t { Minutes, Seconds };
 
+  bool hasValue() const;
   int32_t whole() const;
   int32_t floor() const;
   int32_t held(int32_t seconds) const;

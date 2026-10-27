@@ -22,4 +22,5 @@
 #include "ui/Layout.h"
 #include "ui/NumberScene.h"
 #include "ui/Scene.h"
+#include "ui/SettingsScene.h"
 #include "ui/Ux.h"

@@ -29,18 +29,12 @@ class EditorScene : public Scene {
   
   String label_;
 
-  // What the keys made of the value, and the value the editor opened on. Cancel puts both back;
-  // hasValue_ false is a nullable setting holding nothing, which the band prints as `--`.
-  String value_;
-  String opened_;
-  bool hasValue_ = false;
-  bool hasOpened_ = false;
   bool closed_ = false;
 
   virtual void nudge(int8_t direction) = 0;
 
-  // Hooks a kind overrides for work of its own on the way out: a jingle that was auditioning stops
-  // when canceled() runs. The keys have already put the opened value back by then.
+  // Hooks a kind overrides for work of its own on the way out: the kind puts back the value it
+  // opened on when canceled() runs, and a jingle that was auditioning stops there.
   virtual void accepted() {}
   virtual void canceled() {}
 
@@ -50,7 +44,6 @@ class EditorScene : public Scene {
   virtual const char* hint(){
     return "\x1E/\x1F  OK=SAVE";
   }
-  virtual String value() = 0;
 };
 
 }  // namespace gardener::gfx::ui

@@ -18,14 +18,16 @@ class BoolScene : public ChoiceScene {
   // setting holding nothing, which the switch shows as `--`.
   BoolScene(GestureQueue& gestures, String& label, const String& current, bool nullable);
 
-  // The state the keys left it on, and whether it is a state at all.
-  bool on() const;
-  bool hasValue() const { return hasValue_; }
+  // The state the keys left it on, as the bool the stack hands back; an empty any is a nullable
+  // setting holding no state at all.
+  std::any value() const override;
 
  protected:
   Paint pageContents() override;
 
  private:
+  bool on() const;
+
   bool nullable_;
 };
 

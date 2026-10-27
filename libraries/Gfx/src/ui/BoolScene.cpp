@@ -55,6 +55,8 @@ BoolScene::BoolScene(GestureQueue& gestures, String& label, const String& curren
 
 bool BoolScene::on() const { return value_ == OnKey; }
 
+std::any BoolScene::value() const { return hasValue_ ? std::any(on()) : std::any(); }
+
 Paint BoolScene::pageContents() { return switchRow(nullable_, hasValue_, on()); }
 
 }  // namespace gardener::gfx::ui
