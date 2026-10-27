@@ -29,6 +29,11 @@ and before anything draws it. A layout calls it for every child it places; a cal
 component that stands alone, such as a settings editor's inline value.
 Nothing a component draws lies outside its box, and a component never draws before it has one.
 
+`use(w, h)` answers the room the component takes in a cell of that size: the cell itself for a
+component that draws across the whole of it, and its ink for a string, which is what lets the layout
+holding it put the box where its alignment says. A caller that has to know the room a string takes —
+a pressure display sizing its secondary reading — calls it too.
+
 A page states the numbers it means rather than a partial box: the page is the panel less the band,
 `bounds(screen.page_width(), screen.page_height() - overlay_band_height)`, and a whole-panel box is
 `bounds(screen.width(), screen.height())`.
@@ -40,65 +45,87 @@ before drawing leaves its box alone, so nothing is highlighted.
 
 ## Layout
 
-`AutoLayout` is a component with a box that resolves the box of each child from the fraction of
-itself that child declares, and draws the children in order. It is the one way a page states where
-its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
+`AutoLayout` is a component with a box that resolves the box of each child from the cell that child
+declares, places it where the layout's alignment says, and draws the children in order. It is the one
+way a page states where its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
 
-A child declares its box as `bounds(w, h)` — the fraction of the parent's width and the fraction of
-its height the child occupies. Each fraction is a number in [0, 1], or nil for the whole of the box
-it is given. It is the same record a component's `dim` is, and the one `screen.text_bounds` answers.
+A child declares its cell as `bounds(w, h)` — the share of the parent's width and the share of its
+height the child occupies. Each is a number in [0, 1], a number of pixels when it is above 1, or nil
+for the whole of the box it is given. It is the same record a component's `dim` is, and the one
+`screen.text_bounds` answers — which is why `bounds(12, 8)` is twelve by eight pixels and `bounds(1,
+0.25)` is the full width and a quarter of the height.
+
+`alignment(align, v_align)` is a record in `/system/records.be` holding where a thing sits in the
+space it is given: `align` is `left`, `center` or `right`, `v_align` `top`, `center` or `bottom`, and
+each is `left` and `top` when it is nil. The layout takes one after its children —
+`AutoLayout(bounds, children, alignment)` — and a layout built without one is `alignment("left",
+"top")`, the corner nothing has to be moved from.
 
 - `to_box(x, y, w, h)` places a layout: the parent that holds it calls it, and the scene a page is
   composed in calls it with the page — the panel less the band — as the scene is pushed. A layout
   places nothing, itself included, and nothing draws one that has not been placed.
 - Siblings stack along the axis they divide: a layout whose children are each the full width stacks
-  them down a column, and one whose children are each the full height stacks them across a row.
-- A resolved span is the fraction rounded to the nearest pixel, and clamped to what is left of the
+  them down a column, and one whose children are each not the full width stacks them across a row.
+- A resolved span is the share rounded to the nearest pixel, and clamped to what is left of the
   parent, so nothing a `bounds` declares can place a child outside it. A row declared as a fraction
   of the height it was measured from resolves back to the pixels it declares, and equal thirds of a
-  row fill it.
+  row fill it. A declaration above 1 is that many pixels, clamped to the box the same way.
+- Alignment applies at both levels the box resolves at: the stack of children inside the layout's box
+  when they do not fill it, and a child's own room inside its cell. A child that fills its cell does
+  not move, so a layout that declares neither alignment nor a smaller child resolves to exactly the
+  same pixels with or without one.
 - A component that declares no bounds is a leaf and takes the layout's box whole, so a layout that
-  is not a row holds one such component.
+  is not a row holds one such component. A leaf's room is the whole of its cell; a string's is its
+  ink, so a text is placed by the alignment and its `dim` is the ink it draws.
 - The layout is itself a component, so its own draw ends in `super(self).draw()` like any other.
 
-`children` is the list handed to `init`, and `add(child)` appends to it. A layout resolves its
-children once, from the box it is given; a box that changes afterwards is not re-resolved.
+`children` is the list handed to `init`, and a caller may give a layout a different list before it
+draws — a pressure display swaps the readings its two halves hold. A layout resolves its children on
+every draw, from the box it holds, so a box that changes afterwards — or a value that grows — is
+resolved again.
 
 ## Text
 
-`Text` draws a string in its box in the largest face that fits. It takes its `value` at `init`; its
-box is set with `set_box()` like any other component's.
+`Text` draws a string in the largest face that fits the cell it is given. It takes its `value` at
+`init`; its box is set with `set_box()` like any other component's, and it draws at that box — where
+the box sits is the alignment of the layout that holds it, which is why a text has no alignment of
+its own.
 
 - `family` — `sans` (default), `mono`, `serif` or `lcd`. `serif` falls back to `sans` and `lcd` to
   `mono`, because only the sans and mono families are compiled.
 - `style` — `none` (default) or `bold`. `oblique` falls back to `none` and `bold-oblique` to `bold`.
-- `align` — `left`, `center` (default) or `right`; `v_align` — `top`, `center` (default) or `bottom`.
 
 The candidate faces, tried largest first: the compiled face at 24, 18, 12 and 9 px, bold when the
 style is bold, and then the built-in 5×7, the last resort.
 
 The built-in 5×7 is used only when no compiled face fits. Bold has no built-in face: a bold built-in
 string is drawn and its ink box is inverted, which is what reads as bold. A string whose ink box is
-still wider than the box at that face is cut short with a trailing ellipsis at the box's edge.
+still wider than the cell at that face is cut short with a trailing ellipsis at the cell's edge.
 Nothing `Text` draws lies outside its box.
 
-`draw()` fits the current `value` once and caches the face it chose; the fit is recomputed only when
-the string differs from the one it last fitted. `draw_face(text, candidate)` draws a string at a
-face the caller already chose. `bounds(text, candidate)` answers the ink box, `fit(text, max_w,
-max_h)` the largest face whose ink fits a box — the choice `draw()` makes for its own box, and the
-one a caller makes when it has to draw several strings at one size, such as a switch's segments —
-`fit_height(text, max_h)` the largest face whose ink height fits a cap, and `candidate` is the face
-the last draw fitted.
+`use(w, h)` fits the face to a cell of that size, cuts the string to its width and answers the ink
+box, so a layout can place a text: the box it stamps is exactly that ink, and `draw()` draws the
+string there without working anything out. The fit is cached, and recomputed only when the string
+changes. `bounds(text, candidate)` answers the ink box, `fit(text, max_w, max_h)` the largest face
+whose ink fits a cell — the choice `use()` makes for the cell it is handed, and the one a caller makes
+when it has to draw several strings at one size, such as a switch's segments — `fit_height(text,
+max_h)` the largest face whose ink height fits a cap, and `candidate` is the face the last draw fitted.
 
-`PinnedText` is a `Text` at a face the caller picked rather than one fitted to its box: it takes its
-`face` at `init` — a candidate `Text.fit()` answered, or `[nil, 1]` for the built-in 5×7 — and its
-`draw()` draws `value` at that face. A row of cells that must read as one size uses it, as does a row
-that has to keep the built-in face, which is the only one carrying the arrow glyphs a hint prints.
+`PinnedText` is a `Text` at a face the caller picked rather than one fitted to its cell: it takes its
+`face` at `init` — a candidate `Text.fit()` answered — cuts its value to the cell and draws it there.
+A row of cells that must read as one size uses it.
+
+`SysText` is a component of its own rather than a `Text`, and there is nothing to fit: it draws its
+`value` in the system face — the built-in 5×7 — at the corner of its box, at the `scale` it was built
+with, 1 by default for the system size itself, and answers the ink that string takes. That is the
+only face carrying the arrow glyphs, and the one an editor's label and hint rows are drawn in.
 
 ## PressureDisplay
 
 `PressureDisplay` is the reading formatted in the panel's unit, drawing the number filling its box,
-using `Text`'s fit.
+using `Text`'s fit. Its readings are placed by layouts of its own: the number filling the box, the
+secondary alone in the box so an alignment can put it in a corner, and two halves when the pair sits
+side by side.
 
 - `pressure_kpa` — the main reading in kPa, set before `draw()`; `draw()` takes no arguments.
 - A nil reading draws `--`.
@@ -138,5 +165,6 @@ inverts the two ends of the track, otherwise the component draws a frame and a f
 ## Icon
 
 `Icon` is a component that draws a glyph in its box. A glyph subclass draws its own ink inside it.
-An icon carries the 12 by 8 measure every glyph is drawn on until a layout gives it a box of its
-own. The browser puts one at the left of a row and shifts the title right by `dim.w`.
+An icon carries the 12 by 8 measure every glyph is drawn on — `Icon.width` and `Icon.height` — until
+a layout gives it a box of its own. A list row is that measure, two pixels of paper and the rest of
+the row, and the browser puts one at the left of a row for its title to follow.

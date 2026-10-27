@@ -111,8 +111,8 @@ class DurationEditScene : EditScene
       return PinnedText("--", self.measure()[0])
     end
     return AutoLayout(bounds(nil, nil), [
-      AutoLayout(bounds(0.5, 1), [self.cells[0]]),
-      AutoLayout(bounds(0.5, 1), [self.cells[1]])
+      AutoLayout(bounds(0.5, 1), [self.cells[0]], alignment("center", "center")),
+      AutoLayout(bounds(0.5, 1), [self.cells[1]], alignment("center", "center"))
     ])
   end
 

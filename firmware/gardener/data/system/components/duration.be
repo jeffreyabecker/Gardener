@@ -1,5 +1,5 @@
 # duration.be — the Duration: whole seconds formatted in the panel's units of time. It is a
-# Text, so the string is fitted, cached and aligned by the same face ladder as any other text. The
+# Text, so the string is fitted, cached and placed by the same face ladder as any other text. The
 # format property picks the largest unit shown, and `seconds` is the count it draws.
 
 class Duration : Text

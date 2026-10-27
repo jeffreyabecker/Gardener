@@ -8,14 +8,49 @@
 # rows the kinds share: `editor_column()` builds the label row, the body and the hint row that every
 # editor of a value draws in.
 
+# The frame an editor is drawn in: the content the kind measured and the two pixels the border keeps
+# either side of it, no nearer than a pixel to the page's edge. It draws the border and hands the kind
+# the box inside it.
+class EditorFrame : Component
+  var scene
+
+  def init(scene)
+    super(self).init()
+    self.scene = scene
+  end
+
+  # The content and the border around it, no wider or taller than the page less a pixel each side.
+  def use(w, h)
+    var content = self.scene.content_size()
+    var wide = content.w + 4
+    var tall = content.h + 4
+    if wide > w - 2
+      wide = w - 2
+    end
+    if tall > h - 2
+      tall = h - 2
+    end
+    return bounds(wide, tall)
+  end
+
+  def draw()
+    screen.draw_rect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    self.scene.draw_editor(point(self.pos.x + 2, self.pos.y + 2),
+                           bounds(self.dim.w - 4, self.dim.h - 4))
+    super(self).draw()
+  end
+end
+
 class EditScene : Scene
   var label
   var opened
+  var frame
 
   def init(label, current)
     super(self).init()
     self.label = label
     self.opened = current
+    self.frame = nil
   end
 
   # The scene owns the keys while it is on top: Up/Down changes the value, OK pops with it, Cancel
@@ -53,23 +88,15 @@ class EditScene : Scene
   end
 
   # The editor is a framed box no bigger than the content the kind measured: a pixel of paper, a
-  # pixel of ink for the border and a pixel of paper again around it, centred in the scene's box,
-  # the frame no nearer than a pixel to that box's edge. The box handed to draw_editor is the
-  # content inside the border.
+  # pixel of ink for the border and a pixel of paper again around it, centred in the scene's box, the
+  # frame no nearer than a pixel to that box's edge. The frame is a leaf of one layout that hands the
+  # kind the box inside the border; the centring is that layout's alignment.
   def draw_page()
-    var content = self.content_size()
-    var w = content.w + 4
-    var h = content.h + 4
-    if w > self.dim.w - 2
-      w = self.dim.w - 2
+    if self.frame == nil
+      self.frame = AutoLayout(bounds(nil, nil), [EditorFrame(self)], alignment("center", "center"))
     end
-    if h > self.dim.h - 2
-      h = self.dim.h - 2
-    end
-    var x = self.pos.x + (self.dim.w - w) / 2
-    var y = self.pos.y + (self.dim.h - h) / 2
-    screen.draw_rect(x, y, w, h)
-    self.draw_editor(point(x + 2, y + 2), bounds(w - 4, h - 4))
+    self.frame.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    self.frame.draw()
   end
 
   # What this editor draws, as the content the frame wraps: the whole of it, its label row and hint
@@ -92,18 +119,16 @@ class EditScene : Scene
 end
 
 # The column every value editor draws its content in: the label row, two pixels of paper, the kind's
-# body, two pixels of paper and the hint row, each declared as a fraction of the content so the layout
-# resolves it to the pixels it was measured at. The label and the hint are the built-in 5x7, the one
-# face that carries the arrows a hint prints. A paper row is a layout with no children: it takes its
-# pixels and draws nothing.
+# body, two pixels of paper and the hint row, declared in pixels so the layout resolves them to the
+# rows the content was measured at. The label, the body and the hint are centred in their rows; a
+# paper row is a layout with no children: it takes its pixels and draws nothing.
 def editor_column(label, hint, body, body_h)
-  var height = real(20 + body_h)
   return AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, real(8) / height), [PinnedText(label, [nil, 1])]),
-    AutoLayout(bounds(1, real(2) / height), []),
-    AutoLayout(bounds(1, real(body_h) / height), [body]),
-    AutoLayout(bounds(1, real(2) / height), []),
-    AutoLayout(bounds(1, real(8) / height), [PinnedText(hint, [nil, 1])])
+    AutoLayout(bounds(1, 8), [SysText(label)], alignment("center", "center")),
+    AutoLayout(bounds(1, 2), []),
+    AutoLayout(bounds(1, body_h), [body], alignment("center", "center")),
+    AutoLayout(bounds(1, 2), []),
+    AutoLayout(bounds(1, 8), [SysText(hint)], alignment("center", "center"))
   ])
 end
 

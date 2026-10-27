@@ -56,6 +56,14 @@ def a_drawn_list_fills_the_selected_row()
 
   assert_eq(icon.pos.x, 3, "the icon is not drawn at the row's left")
   assert_eq(icon.pos.y, 5, "the icon is not drawn on its own row")
+
+  # The glyph's own measure, a gap of two and the title's cell: what the row is made of.
+  var cells = list.rows[0].page.children
+  assert_eq(cells.size(), 3, "a row with a glyph is not a glyph, a gap and a title")
+  assert_eq(cells[0].dim.w, Icon.width, "the glyph cell is not the glyph's measure")
+  assert_eq(cells[1].dim.w, 2, "the gap beside the glyph is not two pixels")
+  assert_eq(cells[2].children[0].pos.x, 3 + Icon.width + 2,
+            "the title does not start after the glyph and its gap")
 end
 
 test("a drawn list fills the selected row", a_drawn_list_fills_the_selected_row)

@@ -6,31 +6,39 @@
 # stands for — a routine key, a setting, whatever the caller keeps. The row draws its own glyph and
 # title; the value is the caller's and is never drawn. The list sets a row's box before each draw —
 # the list's width by one row pitch tall — so the whole of that box is what the selection inverts.
+# The glyph, the gap beside it and the title are cells of one layout, so the row works nothing out.
 class ListRow : Component
   var icon, title, value
+  var page
 
   def init(icon, title, value)
     super(self).init()
     self.icon = icon
     self.title = title == nil ? "" : str(title)
     self.value = value
+    self.page = nil
   end
 
   def to_box(x, y, w, h)
     self.set_box(point(x, y), bounds(w, h))
-    if self.icon != nil
-      self.icon.set_box(point(x, y), self.icon.dim)
-    end
+    self.page = self.row()
+    self.page.to_box(x, y, w, h)
   end
 
   def draw()
-    if self.icon != nil
-      self.icon.draw()
-      screen.draw_text(self.pos.x + self.icon.dim.w + 2, self.pos.y, 1, false, self.title)
-    else
-      screen.draw_text(self.pos.x, self.pos.y, 1, false, self.title)
-    end
+    self.page.draw()
     super(self).draw()
+  end
+
+  # The glyph's own measure, two pixels of paper and the rest of the row for the title.
+  def row()
+    var cells = []
+    if self.icon != nil
+      cells.push(AutoLayout(bounds(Icon.width, Icon.height), [self.icon]))
+      cells.push(AutoLayout(bounds(2, 1), []))
+    end
+    cells.push(AutoLayout(bounds(nil, 1), [SysText(self.title)], alignment("left", "top")))
+    return AutoLayout(bounds(nil, nil), cells)
   end
 end
 

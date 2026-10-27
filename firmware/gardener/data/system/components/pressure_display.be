@@ -1,5 +1,6 @@
 # pressure_display.be — the PressureDisplay: the reading formatted in the panel's unit, filling
 # the box with Text's fit, and an optional secondary reading smaller in a corner or side by side.
+# Each reading is placed by a layout of its own rather than by an offset worked out here.
 #
 # Berry has no access modifiers, so privacy here is the name: a leading underscore marks what only
 # this class touches, and everything without one is what a caller sets or calls.
@@ -39,8 +40,6 @@ class PressureDisplay : Component
   var pressure_kpa
   var family
   var style
-  var align
-  var v_align
   var secondary_family
   var secondary_style
   var secondary_pressure
@@ -48,10 +47,15 @@ class PressureDisplay : Component
   var size_hint
 
   # --- private -------------------------------------------------------------
-  # The two faces the readings are drawn with, stamped with this component's box and settings on
-  # every draw.
+  # The two readings, and the layouts that place them: the main one filling the box, the secondary
+  # alone in the box so a corner can place it, and the two halves a side-by-side pair shares.
   var _number
   var _secondary
+  var _main
+  var _corner
+  var _left
+  var _right
+  var _row
 
   # --- public methods ------------------------------------------------------
   def init(settings, settings_secondary, secondary_position, size_hint)
@@ -59,8 +63,6 @@ class PressureDisplay : Component
     self.pressure_kpa = nil
     self.family = "sans"
     self.style = "none"
-    self.align = "center"
-    self.v_align = "center"
     self.secondary_family = nil
     self.secondary_style = nil
     self.secondary_pressure = nil
@@ -79,7 +81,12 @@ class PressureDisplay : Component
       self.size_hint = size_hint
     end
     self._number = Text()
-    self._secondary = Text()
+    self._secondary = PinnedText("", [nil, 1])
+    self._main = AutoLayout(bounds(nil, nil), [self._number], alignment("center", "center"))
+    self._corner = AutoLayout(bounds(nil, nil), [self._secondary])
+    self._left = AutoLayout(bounds(0.5, 1), [], alignment("center", "center"))
+    self._right = AutoLayout(bounds(0.5, 1), [], alignment("center", "center"))
+    self._row = AutoLayout(bounds(nil, nil), [self._left, self._right])
   end
 
   def draw()
@@ -112,37 +119,31 @@ class PressureDisplay : Component
   def _draw_main(text)
     self._number.family = self.family
     self._number.style = self.style
-    self._number.align = self.align
-    self._number.v_align = self.v_align
-    self._number.set_box(point(self.pos.x, self.pos.y), bounds(self.dim.w, self.dim.h))
     self._number.value = text
-    self._number.draw()
+    self._main.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    self._main.draw()
   end
 
   # The secondary smaller in the corner the position names: the fit is capped at size_hint of the
-  # main number's face height.
+  # main number's face height, and the alignment of its layout says which corner it sits in.
   def _draw_corner(text)
-    var main_ink = self._number.bounds(self._number.value, self._number.candidate)
-    var cap = main_ink[1] * self.size_hint
-    var face = self._secondary.fit_height(text, cap)
-
+    var main_ink = self._number.use(self.dim.w, self.dim.h)
+    var cap = main_ink.h * self.size_hint
     self._secondary.family = self.secondary_family != nil ? self.secondary_family : self.family
     self._secondary.style = self.secondary_style != nil ? self.secondary_style : self.style
-    if self.secondary_position == "tl"
-      self._secondary.align = "left"
-      self._secondary.v_align = "top"
-    elif self.secondary_position == "tr"
-      self._secondary.align = "right"
-      self._secondary.v_align = "top"
-    elif self.secondary_position == "bl"
-      self._secondary.align = "left"
-      self._secondary.v_align = "bottom"
-    else
-      self._secondary.align = "right"
-      self._secondary.v_align = "bottom"
-    end
-    self._secondary.set_box(point(self.pos.x, self.pos.y), bounds(self.dim.w, self.dim.h))
-    self._secondary.draw_face(text, face)
+    self._secondary.face = self._secondary.fit_height(text, cap)
+    self._secondary.value = text
+    self._corner.alignment = self.corner_alignment()
+    self._corner.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    self._corner.draw()
+  end
+
+  # The alignment that puts the secondary in the corner its position names: the side comes from the
+  # last character, the row from the first.
+  def corner_alignment()
+    var on_left = string.endswith(self.secondary_position, "l")
+    var at_top = string.startswith(self.secondary_position, "t")
+    return alignment(on_left ? "left" : "right", at_top ? "top" : "bottom")
   end
 
   # At size_hint 1 the two numbers are the same size, side by side; the secondary sits on the side
@@ -153,21 +154,17 @@ class PressureDisplay : Component
 
     self._number.family = self.family
     self._number.style = self.style
-    self._number.align = self.align
-    self._number.v_align = self.v_align
-    self._number.set_box(point(on_left ? self.pos.x + half : self.pos.x, self.pos.y),
-                         bounds(half, self.dim.h))
     self._number.value = main_text
-    self._number.draw()
 
     self._secondary.family = self.secondary_family != nil ? self.secondary_family : self.family
     self._secondary.style = self.secondary_style != nil ? self.secondary_style : self.style
-    self._secondary.align = "center"
-    self._secondary.v_align = "center"
-    self._secondary.set_box(point(on_left ? self.pos.x : self.pos.x + half, self.pos.y),
-                            bounds(half, self.dim.h))
+    self._secondary.face = self._secondary.fit(sec_text, half, self.dim.h)
     self._secondary.value = sec_text
-    self._secondary.draw()
+
+    self._left.children = [on_left ? self._secondary : self._number]
+    self._right.children = [on_left ? self._number : self._secondary]
+    self._row.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    self._row.draw()
   end
 end
 

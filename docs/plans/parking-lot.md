@@ -84,12 +84,6 @@ The page area above the band reflows to the panel's size, but the band is still 
 Blocked by: nothing decided about whether the band should scale with the panel or stay sized to its
 own contents.
 
-## Reflow when a layout's box changes
-
-A layout resolves its children once, from the box it is built with. A page whose box changes after
-construction — a panel of a different size mid-run — would need the resolution run again, and
-nothing today changes a scene's box after it is built.
-
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport

@@ -1,7 +1,9 @@
-# text.be — the Text: the largest compiled face that fits the box, with the built-in 5x7 only as
-# the last resort. It fits a string once and caches the face, recomputing when the string changes.
+# text.be — the Text: the largest compiled face that fits the cell it is given, with the built-in 5x7
+# only as the last resort. It fits a string once and caches the face, recomputing when the string
+# changes. It draws at its own box and answers the room the string takes, so where that box sits is
+# the alignment of the layout that holds it rather than anything the text works out itself.
 # PinnedText is the same drawing at a face the caller picked, for a row of cells that must share one
-# size and for a row that must keep the built-in face.
+# size. SysText is a component of its own: its string in the system face, unscaled.
 #
 # Berry has no access modifiers, so privacy here is the name: a leading underscore marks what only
 # this class touches, and everything without one is what a caller sets or calls. The test suite is
@@ -10,23 +12,17 @@ import string
 class text_settings
   var family
   var style
-  var align
-  var v_align
 
-  def init(family, style, align, v_align)
+  def init(family, style)
     self.family = family == nil ? "sans" : family
     self.style = style == nil ? "none" : style
-    self.align = align == nil ? "center" : align
-    self.v_align = v_align == nil ? "center" : v_align
   end
   static def default()
-    return text_settings("sans", "none", "center", "center")
+    return text_settings("sans", "none")
   end
   def apply_to(text)
     text.family = self.family
     text.style = self.style
-    text.align = self.align
-    text.v_align = self.v_align
   end
 end
 
@@ -35,8 +31,6 @@ class Text : Component
   # Set by the caller before a draw.
   var family
   var style
-  var align
-  var v_align
 
   # The string a draw falls back on when it is passed nil, and the string the last draw fitted.
   var value
@@ -50,6 +44,11 @@ class Text : Component
   # reuses the face.
   var _fitted_text
 
+  # The string drawn, cut to the width it was fitted for, and that width. The pair is the second
+  # cache: a draw at the same width reuses the cut.
+  var _drawn
+  var _drawn_w
+
   # --- public methods ------------------------------------------------------
   def init(value, settings)
     super(self).init()
@@ -57,22 +56,21 @@ class Text : Component
     s.apply_to(self)
     self.candidate = nil
     self._fitted_text = nil
+    self._drawn = nil
+    self._drawn_w = -1
     self.value = value == nil ? "" : value
   end
 
-  def draw()
-    var text = self.value
-    if self.candidate == nil || text != self._fitted_text
-      self.candidate = self._fit(text)
-      self._fitted_text = text
-    end
-    self._draw_fitted(self._truncated(text), self.candidate)
-    super(self).draw()
+  # The room the string takes in a cell of this size: the face is fitted to the cell and the string
+  # cut to its width, and the ink box they draw is the answer, never larger than the cell.
+  def use(w, h)
+    self._prepare(w, h)
+    return self._ink(w, h)
   end
 
-  # Draw a string at a face the caller already chose, without fitting it.
-  def draw_face(text, candidate)
-    self._draw_fitted(text, candidate)
+  def draw()
+    self._prepare(self.dim.w, self.dim.h)
+    self._draw()
     super(self).draw()
   end
 
@@ -91,9 +89,9 @@ class Text : Component
     return cands[cands.size() - 1]
   end
 
-  # The largest face whose ink fits a box, the built-in 5x7 when none does. A caller that has to
-  # choose the face itself — a row of segments drawn at one size — measures with this; draw() fits
-  # the component's own box through it.
+  # The largest face whose ink fits a cell, the built-in 5x7 when none does. A caller that has to
+  # choose the face itself — a row of segments drawn at one size — measures with this; use() fits the
+  # cell a layout hands the text through it.
   def fit(text, max_w, max_h)
     var cands = self._candidates()
     var i = 0
@@ -156,31 +154,25 @@ class Text : Component
     return out
   end
 
-  # The first candidate whose ink box fits the component's own box; the built-in 5x7 otherwise.
-  def _fit(text)
-    return self.fit(text, self.dim.w, self.dim.h)
+  # Fit the face to a cell of this size and cut the string to it, both cached until the string or the
+  # width changes.
+  def _prepare(w, h)
+    var text = self.value
+    if self.candidate == nil || text != self._fitted_text
+      self.candidate = self.fit(text, w, h)
+      self._fitted_text = text
+      self._drawn = nil
+    end
+    if self._drawn == nil || w != self._drawn_w
+      self._drawn = self._truncated(text, w)
+      self._drawn_w = w
+    end
   end
 
-  # The x offset for the ink box: align is left, center or right.
-  def _x_offset(cw, w)
-    if self.align == "left"
-      return 0
-    end
-    if self.align == "right"
-      return cw - w
-    end
-    return (cw - w) / 2
-  end
-
-  # The top offset for the ink box: v_align is top, center or bottom.
-  def _v_offset(ch, h)
-    if self.v_align == "top"
-      return 0
-    end
-    if self.v_align == "bottom"
-      return ch - h
-    end
-    return (ch - h) / 2
+  # The ink box the drawn string takes at its face, no larger than the cell it was fitted for.
+  def _ink(w, h)
+    var b = self.bounds(self._drawn, self.candidate)
+    return bounds(b[0] > w ? w : b[0], b[1] > h ? h : b[1])
   end
 
   # The effective style is bold: the built-in face has no bold, so a bold built-in line is drawn
@@ -189,33 +181,29 @@ class Text : Component
     return self.style == "bold" || self.style == "bold-oblique"
   end
 
-  def _draw_fitted(text, candidate)
-    var cw = self.dim.w
-    var ch = self.dim.h
-    if candidate[0] == nil
-      var b = screen.text_bounds(text, candidate[1])
-      var tx = self.pos.x + self._x_offset(cw, b.w)
-      var ty = self.pos.y + self._v_offset(ch, b.h)
-      screen.draw_text(tx, ty, candidate[1], false, text)
+  # Draw the prepared string at the box's corner. The box is already the room the string takes, so
+  # nothing here is offset: a compiled face starts at the corner and is drawn from its baseline, and
+  # the built-in face starts there too.
+  def _draw()
+    var b = self.bounds(self._drawn, self.candidate)
+    if self.candidate[0] == nil
+      screen.draw_text(self.pos.x, self.pos.y, self.candidate[1], false, self._drawn)
       if self._bold()
-        screen.draw_invert(tx, ty, b.w, b.h)
+        screen.draw_invert(self.pos.x, self.pos.y, b[0], b[1])
       end
     else
-      var b = screen.text_bounds(text, 1, candidate[0])
-      var tx = self.pos.x + self._x_offset(cw, b.w)
-      var ty = self.pos.y + self._v_offset(ch, b.h) + b.h
-      screen.draw_text(tx, ty, 1, false, text, candidate[0])
+      screen.draw_text(self.pos.x, self.pos.y + b[1], 1, false, self._drawn, self.candidate[0])
     end
   end
 
-  # A string wider than the box at the built-in face is cut short with an ellipsis, because the
+  # A string wider than the width it was fitted for is cut short with an ellipsis, because the
   # built-in face is the last resort and nothing a text draws lies outside its box.
-  def _truncated(text)
+  def _truncated(text, max_w)
     if self.candidate[0] != nil
       return text
     end
     var b = screen.text_bounds(text, self.candidate[1])
-    if b.w <= self.dim.w
+    if b.w <= max_w
       return text
     end
     var i = string.count(text)
@@ -227,7 +215,7 @@ class Text : Component
         j += 1
       end
       var c = screen.text_bounds(cut + "...", self.candidate[1])
-      if c.w <= self.dim.w
+      if c.w <= max_w
         return cut + "..."
       end
       i -= 1
@@ -237,8 +225,7 @@ class Text : Component
 end
 
 # A string at a face the caller picked rather than one fitted to its own box: a row of cells shares
-# one size whatever its strings are, and a row that has to keep the built-in face keeps it. `face` is
-# what Text.fit() answered, or [nil, 1] for the built-in 5x7.
+# one size whatever its strings are. `face` is what Text.fit() answered.
 class PinnedText : Text
   var face
 
@@ -247,7 +234,48 @@ class PinnedText : Text
     self.face = face
   end
 
+  # The room the string takes at the pinned face, no larger than the cell.
+  def use(w, h)
+    self._pin(w)
+    return self._ink(w, h)
+  end
+
   def draw()
-    self.draw_face(self.value, self.face)
+    self._pin(self.dim.w)
+    self._draw()
+    super(self).draw()
+  end
+
+  # The pinned face and the string cut to the width it has: there is no fit to cache, and cutting
+  # costs nothing at a compiled face.
+  def _pin(w)
+    self.candidate = self.face
+    self._drawn = self._truncated(self.value, w)
+  end
+end
+
+# A string in the system face — the built-in 5x7 — whatever the box could hold. `scale` is the size
+# the face is drawn at, 1 for the system size itself. It is the face the arrows a hint prints live
+# in, and the one an editor's label and hint rows are drawn in. It is a component of its own rather
+# than a Text: there is no face to fit and nothing to cache.
+class SysText : Component
+  var value
+  var scale
+
+  def init(value, scale)
+    super(self).init()
+    self.value = value == nil ? "" : value
+    self.scale = scale == nil ? 1 : scale
+  end
+
+  # The ink the string takes in the system face, no larger than the cell.
+  def use(w, h)
+    var ink = screen.text_bounds(self.value, self.scale)
+    return bounds(ink.w > w ? w : ink.w, ink.h > h ? h : ink.h)
+  end
+
+  def draw()
+    screen.draw_text(self.pos.x, self.pos.y, self.scale, false, self.value)
+    super(self).draw()
   end
 end

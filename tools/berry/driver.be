@@ -256,7 +256,6 @@ def harness_art_component(name, path)
   if name == "text"
     var t = Text("12.5")
     t.set_box(point(0, 0), bounds(64, 16))
-    t.align = "left"
     t.draw()
     drew = true
   elif name == "pressure"

@@ -40,6 +40,7 @@ def a_layout_stacks_its_rows_down()
   var status_row = AutoLayout(bounds(1, 0.25), [])
   var root = AutoLayout(bounds(nil, nil), [glyph_row, readings_row, status_row])
   root.to_box(0, 0, 128, 52)
+  root.draw()
 
   assert_eq(glyph_row.pos.x, 0, "the first row is not at the left")
   assert_eq(glyph_row.pos.y, 0, "the first row is not at the top")
@@ -64,6 +65,7 @@ def a_layout_stacks_its_children_across()
     AutoLayout(bounds(1, 0.25), [])
   ])
   root.to_box(0, 0, 128, 52)
+  root.draw()
 
   assert_eq(left.pos.x, 0, "the left half is not at the left")
   assert_eq(left.pos.y, 13, "the left half is not on the readings row")
@@ -86,6 +88,7 @@ def a_child_is_resolved_against_its_parent()
     AutoLayout(bounds(1, 0.25), [])
   ])
   root.to_box(0, 0, 128, 52)
+  root.draw()
 
   assert_eq(glyph.pos.x, 0, "the glyph column is not at the left")
   assert_eq(glyph.dim.w, 16, "an eighth of 128 is not 16")
@@ -96,17 +99,19 @@ end
 
 test("a child is a fraction of the layout that places it", a_child_is_resolved_against_its_parent)
 
-def a_leaf_fills_its_layout_box()
-  var t = Text("x")
-  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [t])])
+def a_component_with_no_bounds_takes_its_cells()
+  var fill = ProgressBar(50)
+  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [fill])])
   root.to_box(0, 0, 128, 52)
-  assert_eq(t.pos.x, 0, "the leaf is not at the left of its layout")
-  assert_eq(t.pos.y, 0, "the leaf is not at the top of its layout")
-  assert_eq(t.dim.w, 128, "the leaf does not take the layout's width")
-  assert_eq(t.dim.h, 26, "the leaf does not take the layout's height")
+  root.draw()
+  assert_eq(fill.pos.x, 0, "the leaf is not at the left of its layout")
+  assert_eq(fill.pos.y, 0, "the leaf is not at the top of its layout")
+  assert_eq(fill.dim.w, 128, "the leaf does not take the layout's width")
+  assert_eq(fill.dim.h, 26, "the leaf does not take the layout's height")
 end
 
-test("a component that declares no bounds fills its layout's box", a_leaf_fills_its_layout_box)
+test("a component that declares no bounds takes the cell it is given",
+     a_component_with_no_bounds_takes_its_cells)
 
 def auto_layout_walks_its_children_in_order()
   var log = []
@@ -135,6 +140,7 @@ def equal_thirds_fill_a_row()
   ]
   var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), cells)])
   root.to_box(0, 0, 96, 16)
+  root.draw()
 
   assert_eq(cells[0].dim.w, 32, "a third of 96 is not 32")
   assert_eq(cells[1].pos.x, 32, "the second third does not follow the first")
@@ -152,6 +158,7 @@ def a_row_resolves_to_the_pixels_it_declares()
   end
   var root = AutoLayout(bounds(nil, nil), rows)
   root.to_box(0, 0, 71, 35)
+  root.draw()
 
   assert_eq(rows[0].dim.h, 8, "the label row is not eight pixels")
   assert_eq(rows[1].dim.h, 2, "the paper row is not two pixels")
@@ -168,12 +175,110 @@ def a_rounded_span_is_clamped_to_what_is_left()
   var right = AutoLayout(bounds(0.5, 1), [])
   var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), [left, right])])
   root.to_box(0, 0, 77, 16)
+  root.draw()
 
   assert_eq(left.dim.w, 39, "half of 77 does not round up")
   assert_eq(right.dim.w, 38, "the clamped half is not what is left")
 end
 
 test("a rounded span is clamped to what is left", a_rounded_span_is_clamped_to_what_is_left)
+
+# The alignment is where a thing sits in the space it was given, at both levels the box resolves at:
+# the stack of children inside the layout, and a child's own room inside its cell.
+def a_layout_takes_an_alignment()
+  var plain = AutoLayout(bounds(nil, nil), [])
+  assert_eq(plain.alignment.align, "left", "a layout does not default to the left")
+  assert_eq(plain.alignment.v_align, "top", "a layout does not default to the top")
+
+  var aimed = AutoLayout(bounds(nil, nil), [], alignment("center", "bottom"))
+  assert_eq(aimed.alignment.align, "center", "the layout does not keep the align it was given")
+  assert_eq(aimed.alignment.v_align, "bottom", "the layout does not keep the v_align it was given")
+
+  var bare = alignment(nil, nil)
+  assert_eq(bare.align, "left", "a bare alignment is not left")
+  assert_eq(bare.v_align, "top", "a bare alignment is not top")
+end
+
+test("a layout takes the alignment it is given", a_layout_takes_an_alignment)
+
+# A string is narrower than the row it was given, and the alignment is what places it: the box a text
+# is stamped with is its ink, so the pixel it lands on is the alignment's answer.
+def a_text_sits_where_the_alignment_says()
+  var centred = Text("x")
+  var root = AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, 12), [centred], alignment("center", "center"))
+  ])
+  root.to_box(0, 0, 128, 12)
+  root.draw()
+  var ink = centred.bounds(centred.value, centred.candidate)
+  assert_eq(centred.dim.w, ink[0], "the text's box is not the ink it draws")
+  assert_eq(centred.dim.h, ink[1], "the text's box is not the ink it draws")
+  assert_eq(centred.pos.x, (128 - ink[0]) / 2, "a centred text is not centred across its cell")
+  assert_eq(centred.pos.y, (12 - ink[1]) / 2, "a centred text is not centred down its cell")
+
+  var cornered = Text("x")
+  var plain = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 12), [cornered])])
+  plain.to_box(0, 0, 128, 12)
+  plain.draw()
+  assert_eq(cornered.pos.x, 0, "a text with no alignment does not start at the left")
+  assert_eq(cornered.pos.y, 0, "a text with no alignment does not start at the top")
+
+  var cornered_right = Text("x")
+  var right = AutoLayout(bounds(nil, nil), [
+    AutoLayout(bounds(1, 12), [cornered_right], alignment("right", "bottom"))
+  ])
+  right.to_box(0, 0, 128, 12)
+  right.draw()
+  assert_eq(cornered_right.pos.x, 128 - ink[0], "a right text does not end at the right")
+  assert_eq(cornered_right.pos.y, 12 - ink[1], "a bottom text does not end at the bottom")
+end
+
+test("a text sits where the layout's alignment says", a_text_sits_where_the_alignment_says)
+
+# A declaration above one is pixels, so a cell of a fixed size no longer has to know the parent's.
+def a_declared_size_above_one_is_pixels()
+  var glyph = AutoLayout(bounds(12, 1), [])
+  var title = AutoLayout(bounds(nil, 1), [])
+  var row = AutoLayout(bounds(nil, nil), [glyph, title])
+  row.to_box(0, 0, 128, 8)
+  row.draw()
+  assert_eq(glyph.pos.x, 0, "the glyph cell is not at the left")
+  assert_eq(glyph.dim.w, 12, "a declared 12 is not twelve pixels")
+  assert_eq(title.pos.x, 12, "the title does not follow the glyph cell")
+  assert_eq(title.dim.w, 116, "the rest of the row is not 116")
+
+  var wide = AutoLayout(bounds(200, 1), [])
+  var root = AutoLayout(bounds(nil, nil), [wide])
+  root.to_box(0, 0, 128, 8)
+  root.draw()
+  assert_eq(wide.dim.w, 128, "a declared size is not clamped to the box it resolves against")
+end
+
+test("a declared size above one is pixels", a_declared_size_above_one_is_pixels)
+
+# A layout resolves its children on every draw, so a box that changes is resolved again.
+def a_layout_is_resolved_on_each_draw()
+  var row = AutoLayout(bounds(1, 0.5), [])
+  var root = AutoLayout(bounds(nil, nil), [row])
+  root.to_box(0, 0, 128, 52)
+  root.draw()
+  assert_eq(row.dim.h, 26, "a half of 52 is not 26")
+  root.to_box(0, 0, 128, 100)
+  root.draw()
+  assert_eq(row.dim.h, 50, "the box a layout is given again is not resolved again")
+
+  var t = Text("1")
+  var line = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 12), [t])])
+  line.to_box(0, 0, 128, 12)
+  line.draw()
+  var narrow = t.dim.w
+  t.value = "12345"
+  line.draw()
+  assert_true(t.dim.w > narrow, "the text's box did not follow the value it grew")
+  assert_true(t.dim.w <= 128, "the text's box is wider than the cell it was given")
+end
+
+test("a layout is resolved on each draw", a_layout_is_resolved_on_each_draw)
 
 # --- the box a component keeps ---------------------------------------------
 

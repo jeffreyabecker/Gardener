@@ -22,7 +22,7 @@ class HomeChrome : AutoLayout
     self.timer = Duration("minutes")
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(0.5, 1), [self.pressure]),
-      AutoLayout(bounds(0.5, 1), [self.timer])
+      AutoLayout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
     ])
   end
 

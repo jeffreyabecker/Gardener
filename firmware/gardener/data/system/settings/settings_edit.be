@@ -116,16 +116,21 @@ class SettingsEditScene : Scene
     if self.title != nil
       heading_h = SettingsView.row + SettingsView.gap
     end
-    var block_h = rows.size() * SettingsView.row + heading_h
-    var x = self.pos.x + (self.dim.w - wide) / 2
-    var y = self.pos.y + (self.dim.h - block_h) / 2
+    var rows_h = rows.size() * SettingsView.row
+
+    # The heading and the rows as one block the width the widest of them measures, centred in the
+    # scene's box by the alignment of the layout that holds it.
+    var block = []
     if self.title != nil
-      var mw = screen.text_bounds(self.title, 1).w
-      screen.draw_text(x + (wide - mw) / 2, y, 1, false, self.title)
-      y += heading_h
+      block.push(AutoLayout(bounds(1, heading_h), [SysText(self.title)],
+                            alignment("center", "top")))
     end
-    self.list.to_box(x, y, wide, rows.size() * SettingsView.row)
-    self.list.draw()
+    block.push(AutoLayout(bounds(1, rows_h), [self.list]))
+    var page = AutoLayout(bounds(nil, nil), [
+      AutoLayout(bounds(wide, heading_h + rows_h), block)
+    ], alignment("center", "center"))
+    page.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
+    page.draw()
   end
 
   # The value an editor handed back replaces the one in the values the caller gave. The title is not

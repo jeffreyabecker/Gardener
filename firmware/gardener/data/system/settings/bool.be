@@ -59,7 +59,7 @@ class BoolEditScene : EditScene
     var share = real(1) / real(self.chips.size())
     var cells = []
     for chip : self.chips
-      cells.push(AutoLayout(bounds(share, 1), [chip]))
+      cells.push(AutoLayout(bounds(share, 1), [chip], alignment("center", "center")))
     end
     return AutoLayout(bounds(nil, nil), cells)
   end

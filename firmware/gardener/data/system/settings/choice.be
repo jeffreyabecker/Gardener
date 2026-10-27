@@ -21,10 +21,12 @@
 class ChoiceEditScene : EditScene
   var ring
   var list
+  var page
 
   def init(label, current, values, nullable)
     super(self).init(label, current)
     self.ring = ChoiceRing(choice_items(values, nullable), current)
+    self.page = nil
   end
 
   # The rows the box has room for decide the list window, so the list is built once the scene has its
@@ -114,21 +116,20 @@ class ChoiceEditScene : EditScene
   end
 
   # The label row, the entries with the one showing inverted and scrolled into view, and the hint
-  # row. The list is kept on the entry the ring names; every entry is a row — the nil-keyed "no
-  # choice" one included — so the whole of what the editor draws comes from the ring.
+  # row, in the column every value editor draws in. The list is kept on the entry the ring names;
+  # every entry is a row — the nil-keyed "no choice" one included — so the whole of what the editor
+  # draws comes from the ring. The rows are a block the width they measure, centred in the column.
   def draw_editor(pos, dim)
-    var label_w = screen.text_bounds(self.label, 1).w
-    screen.draw_text(pos.x + (dim.w - label_w) / 2, pos.y, 1, false, self.label)
+    self.page = editor_column(self.label, self.hint(), self.list_body(),
+                              self.list.visible * List.row)
+    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.draw()
+  end
 
-    var wide = self.row_width()
-    self.list.to_box(pos.x + (dim.w - wide) / 2,
-                     pos.y + 10 + (dim.h - 20 - self.list.visible * List.row) / 2,
-                     wide, self.list.visible * List.row)
-    self.list.draw()
-
-    var hint = self.hint()
-    var hint_w = screen.text_bounds(hint, 1).w
-    screen.draw_text(pos.x + (dim.w - hint_w) / 2, pos.y + dim.h - 8, 1, false, hint)
+  def list_body()
+    return AutoLayout(bounds(nil, nil), [
+      AutoLayout(bounds(self.row_width(), self.list.visible * List.row), [self.list])
+    ], alignment("center", "center"))
   end
 
   def hint()

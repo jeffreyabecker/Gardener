@@ -23,6 +23,13 @@ class Component
     self.dim = dim
   end
 
+  # The room the component takes in a cell of this size: the whole of it, for a component that draws
+  # across the whole of its box. A text answers its ink instead, which is what lets the layout that
+  # holds it put the box where its alignment says.
+  def use(w, h)
+    return bounds(w, h)
+  end
+
   # The base draw is the inverted flip: an inverted component inverts its whole box, so everything
   # a subclass drew there reads as paper on ink. Every draw ends with super, so the flip is the last
   # thing that happens.

@@ -31,14 +31,25 @@ class point
   end
 end
 
-# The width and height of a box, in pixels; the share of a parent's box an AutoLayout child declares,
-# each a number in [0, 1] or nil for the whole of the parent; and the ink box `screen.text_bounds`
-# answers.
+# The width and height of a box, in pixels; the cell an AutoLayout child declares, each a share of
+# the parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and
+# the ink box `screen.text_bounds` answers.
 class bounds
   var w, h
   def init(w, h)
     self.w = w
     self.h = h
+  end
+end
+
+# Where a thing sits in the space it is given: `align` is left, center or right and `v_align` top,
+# center or bottom, each nil for the left and the top. A layout takes one after its children, and a
+# nil one is alignment("left", "top").
+class alignment
+  var align, v_align
+  def init(align, v_align)
+    self.align = align == nil ? "left" : align
+    self.v_align = v_align == nil ? "top" : v_align
   end
 end
 

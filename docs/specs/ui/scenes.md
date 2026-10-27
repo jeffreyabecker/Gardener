@@ -132,8 +132,8 @@ it is cancelled.
    draws the whole of its content in that box, chrome included. No label row, hint row or spacing is
    inherited, so a kind's look is its own. The kinds that show a value share one column —
    `editor_column()` in the same file — of an eight-pixel label row, two pixels of paper, the body,
-   two pixels of paper and an eight-pixel hint row, each declared as a fraction of the content so
-   the layout resolves it to the pixels it was measured at; a kind that wants another column builds
-   its own.
+   two pixels of paper and an eight-pixel hint row, each declared in pixels and its label, body and
+   hint centred by the column's alignment; a kind that wants another column builds its own. A choice
+   hands that column the entries as one block the width they measure, centred in the body row.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

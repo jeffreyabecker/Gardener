@@ -437,10 +437,32 @@ def the_editor_column_places_its_rows()
     assert_eq(rows[0].dim.w, page.dim.w, "the label row is not the content's width")
     assert_eq(rows[2].dim.w, page.dim.w, "the body row is not the content's width")
     assert_eq(rows[4].dim.w, page.dim.w, "the hint row is not the content's width")
+    assert_eq(classname(rows[0].children[0]), "SysText",
+              "the label row is not drawn in the system face")
   end
 end
 
 test("the editor column places its rows", the_editor_column_places_its_rows)
+
+# A list that fits is a block the height of its heading and its rows, centred in the scene's box, the
+# heading centred above rows the width of the band a selected row inverts.
+def a_short_list_centres_its_block()
+  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+                               {"count": 3}, "TITLE")
+  page_box(list).activate()
+
+  var block_h = SettingsView.row + SettingsView.gap + SettingsView.row
+  assert_eq(list.list.dim.h, SettingsView.row, "the list is not one row tall")
+  assert_true(list.list.dim.w > 0, "the list has no width to fill")
+  var left = list.list.pos.x - list.pos.x
+  var right = list.pos.x + list.dim.w - (list.list.pos.x + list.list.dim.w)
+  assert_true(left - right < 2 && right - left < 2, "the list is not centred across the scene")
+  assert_eq(list.list.pos.y,
+            list.pos.y + (list.dim.h - block_h) / 2 + SettingsView.row + SettingsView.gap,
+            "the rows do not start under the centred heading")
+end
+
+test("a short list centres its block", a_short_list_centres_its_block)
 
 # A choice with no entries — the device's jingle row on an image that ships no library — is a row
 # with nothing to pick: it opens on no entry, steps nowhere, and closes on OK without a value to pop.

@@ -4,9 +4,12 @@
 class Icon : Component
   # A glyph is drawn on a 12 by 8 field, so that is the measure an icon carries until a layout gives
   # it a box of its own.
+  static var width = 12
+  static var height = 8
+
   def init()
     super(self).init()
-    self.set_box(point(0, 0), bounds(12, 8))
+    self.set_box(point(0, 0), bounds(Icon.width, Icon.height))
   end
 
   # An icon draws its glyph in the box; a subclass overrides this and ends with super, so the base

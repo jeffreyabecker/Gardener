@@ -26,20 +26,20 @@ class RampedStaticChrome : AutoLayout
     self.icon = RampedStaticIcon()
     self.title = Text(title_text)
     self.timer = Duration("minutes")
-    self.status = Text("", text_settings("sans", "none", "left", "center"))
+    self.status = Text("", text_settings("sans", "none"))
     self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
       AutoLayout(bounds(1, 0.25), [
         AutoLayout(bounds(0.125, 1), [self.icon]),
-        AutoLayout(bounds(0.875, 1), [self.title])
+        AutoLayout(bounds(0.875, 1), [self.title], alignment("center", "center"))
       ]),
       AutoLayout(bounds(1, 0.50), [
         AutoLayout(bounds(0.5, 1),
                    [AutoPressureDisplay("pressure:target", "br", 0.25)]),
-        AutoLayout(bounds(0.5, 1), [self.timer])
+        AutoLayout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
       ]),
       AutoLayout(bounds(1, 0.25), [
-        AutoLayout(bounds(0.5, 1), [self.status]),
+        AutoLayout(bounds(0.5, 1), [self.status], alignment("left", "center")),
         AutoLayout(bounds(0.5, 1), [self.bar])
       ])
     ])
