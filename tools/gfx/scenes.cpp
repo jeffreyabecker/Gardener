@@ -115,7 +115,7 @@ void aPushFromActivateIsHeld() {
   expectEq(ux.push(std::move(pusher)), 1, "the pusher is placed");
   expectEq(ux.depth(), 2, "the push from inside activate was held");
   expectEq(heldWatch.activations, 0, "so the scene it pushed was not activated yet");
-  ux.enter(canvas);
+  ux.enter(canvas, 400);
   expectEq(ux.depth(), 3, "the held push landed on the next call in");
   expectEq(heldWatch.activations, 1, "and the scene it pushed was activated");
 }
@@ -193,6 +193,35 @@ void aStackShowingNothingDrawsNoBand() {
   }});
   expectEq(ux.poll(canvas, 300), 0, "an empty stack shows nothing");
   expectEq(display.inkCount(0, 0, PageWidth, PageHeight), 0, "so no band is drawn");
+}
+
+void aScenePaintsAsSoonAsItIsPushed() {
+  NoGestures gestures;
+  Watched rootWatch;
+  Ux ux;
+  reset();
+  auto root = aScene(gestures, rootWatch);
+  root->onTick = [&ux, &gestures] { ux.push(std::make_unique<InkedScene>(gestures)); };
+  ux.reset(std::move(root));
+  ux.poll(canvas, 300);
+  expect(display.anyInk(0, 0, PageWidth, PageHeight),
+         "the scene the beat pushed painted on that beat");
+}
+
+void aPagePaintsAgainWhenTheOneAboveItPops() {
+  NoGestures gestures;
+  Watched childWatch;
+  Ux ux;
+  reset();
+  ux.reset(std::make_unique<InkedScene>(gestures));
+  ux.poll(canvas, 300);
+  expect(display.anyInk(0, 0, PageWidth, PageHeight), "the page is painted");
+  auto child = aScene(gestures, childWatch);
+  child->onTick = [&ux] { ux.pop(); };
+  ux.push(std::move(child));
+  ux.poll(canvas, 320);
+  expect(display.anyInk(0, 0, PageWidth, PageHeight),
+         "the page that came back is painted again, not the one that left");
 }
 
 // --- the settings list ------------------------------------------------------
@@ -485,6 +514,9 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"the stack draws the band over the page", theStackDrawsTheBandOverThePage});
   cases.push_back({"the stack draws the band it was given", theStackDrawsTheBandItWasGiven});
   cases.push_back({"a stack showing nothing draws no band", aStackShowingNothingDrawsNoBand});
+  cases.push_back({"a scene paints as soon as it is pushed", aScenePaintsAsSoonAsItIsPushed});
+  cases.push_back({"a page paints again when the one above it pops",
+                   aPagePaintsAgainWhenTheOneAboveItPops});
   cases.push_back({"a settings list moves and edits", aSettingsListMovesAndEdits});
   cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});

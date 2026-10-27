@@ -21,8 +21,8 @@ namespace gardener::gfx::ui {
 // read what it answered. A scene therefore reaches the stack by unique_ptr, and top() is only ever
 // a look at one the stack is holding.
 //
-// It also owns the band across the bottom of the glass: the cells the caller sets are drawn over the
-// bottom rows after the page on every beat, so no page has to remember it. A stack with no cells
+// It also owns the band across the bottom of the glass: the cells the caller sets are drawn over
+// the bottom rows after the page on every beat, so no page has to remember it. A stack with no cells
 // draws none, and a stack showing nothing draws none either — the mark is what shows then.
 class Ux {
  public:
@@ -52,9 +52,12 @@ class Ux {
   // The band's cells, left to right, each in an equal share of the panel's width.
   void setBand(const std::vector<Paint>& cells);
 
+  // Whether the band takes any rows of the canvas, which is what the page above it gives up.
+  int16_t bandRows() const { return band_.empty() ? 0 : BandHeight; }
+
   // One call into the top scene: its activate() when the page becomes visible, and its poll each
   // beat. Both draw the band after the page has drawn. Answers whether a scene is showing.
-  bool enter(Canvas& canvas);
+  bool enter(Canvas& canvas, uint32_t nowMs);
   bool poll(Canvas& canvas, uint32_t nowMs);
 
  private:
@@ -64,12 +67,22 @@ class Ux {
   bool take();
   bool home();
   void apply();
+
+  // The beat the stack is in. A scene that goes on top outside its own poll — pushed, or
+  // re-activated when the one above it pops — paints at once, so the glass never keeps a page the
+  // stack has already left; that needs the canvas and the time, which the beat holds here.
+  void beginBeat(Canvas& canvas, uint32_t nowMs);
+  void endBeat();
+  Canvas page();
+  void paintScene(Scene* scene);
   void paintBand(Canvas& canvas);
 
   std::unique_ptr<Scene> frames_[MaxFrames];
   Callback callbacks_[MaxFrames];
   int16_t depth_ = 0;
   std::vector<Paint> band_;
+  Canvas* beat_ = nullptr;
+  uint32_t beatMs_ = 0;
 
   Request pending_ = Request::None;
   std::unique_ptr<Scene> pendingScene_;
