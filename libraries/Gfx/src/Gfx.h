@@ -4,7 +4,10 @@
 // owns the frame buffer, a concrete DisplayDevice owns the glass, and a Canvas draws into an extent
 // of that buffer.
 
+#include "gfx/BuiltinFont.h"
 #include "gfx/Canvas.h"
 #include "gfx/DisplayDevice.h"
+#include "gfx/Font.h"
 #include "gfx/Rect.h"
 #include "gfx/Shapes.h"
+#include "gfx/Text.h"

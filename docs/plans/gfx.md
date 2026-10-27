@@ -10,8 +10,7 @@ In scope: the library skeleton, `Rect`, `DisplayDevice`, `Canvas` with `setPixel
 `draw` template, the shape vocabulary the library ships — the geometry shapes, `Bitmap` and `Text` —
 plus a demo example sketch that compiles the library and a spec-banner removal.
 
-The first five items below are in the tree and compile for the board; the shapes, the example and
-the spec banner are not.
+The first eight items below are in the tree and compile for the board; the example is not.
 
 Out of scope this pass: a concrete `DisplayDevice` driver and wiring the main application library
 to depend on `Gfx`. Those follow in later work.
@@ -43,11 +42,13 @@ to depend on `Gfx`. Those follow in later work.
 - `Text(x, y, value, face, size, color)`: the face is the shape's own, `nullptr` meaning the
   built-in 5x7, so there is no `setFont` state on the canvas. It draws each glyph at the baseline
   with no newline handling — no character is read as a line break, so a caller that wants a second
-  line draws it itself. The `GFXfont` struct and the glyph-writing code are cribbed from
-  Adafruit_GFX and keep its license and attribution where they land.
+  line draws it itself. The `Font` and `Glyph` structures are forked from Adafruit's
+  `GFXfont`/`GFXglyph` into `gardener::gfx`, with fixed-metric fields added at the end, and the
+  glyph-writing code and the normalized built-in face keep Adafruit's license and attribution.
 - `Text` holds its string as an Arduino `String`, copied at construction, so drawing a temporary
-  `const char*` or `String` is safe. Only `Text` reaches `<Arduino.h>`; `Rect`, `DisplayDevice`,
-  `Canvas` and the other shapes stay pure C++.
+  `const char*` or `String` is safe. Only the text sources, including the built-in face data,
+  reach `<Arduino.h>`; `Rect`, `DisplayDevice`, `Font`, `Glyph`, `Canvas` and the other shapes stay
+  pure C++.
 - Follow `.github/skills/cpp` naming and formatting and `.github/skills/firmware` (no speculative
   generality; implement exactly the pinned surface).
 
@@ -61,8 +62,10 @@ to depend on `Gfx`. Those follow in later work.
   `static_assert`s
 - `libraries/Gfx/src/gfx/Canvas.cpp` — `setPixel` and `invert`
 - `libraries/Gfx/src/gfx/Shapes.h` — the geometry shapes and `Bitmap`, header-only and `stdint`-only
-- `libraries/Gfx/src/gfx/GFXfont.h` — the Adafruit `GFXfont` struct, with its license and
-  attribution
+- `libraries/Gfx/src/gfx/Font.h` — the `Font` and `Glyph` structures, forked from Adafruit's
+  `GFXfont`/`GFXglyph`, with the fixed-metric fields and their license and attribution
+- `libraries/Gfx/src/gfx/BuiltinFont.h` — the built-in 5x7 face declaration
+- `libraries/Gfx/src/gfx/BuiltinFont.cpp` — the normalized built-in bitmap and glyph table
 - `libraries/Gfx/src/gfx/Text.h` — the `Text` shape with the face it carries
 - `libraries/Gfx/src/gfx/Text.cpp` — the glyph-writing code cribbed from Adafruit_GFX, with
   attribution
@@ -87,8 +90,8 @@ does not touch it.
 5. `add-draw` — the `draw` template and the `static_assert`s that pin the shape contract
 6. `add-geometry-shapes` — the fifteen geometry shapes
 7. `add-bitmap-shape` — the 8-bit grayscale `Bitmap` shape
-8. `add-text-shape` — vendored `GFXfont`, the `Text` shape and the cribbed glyph code with
-   attribution
+8. `add-text-shape` — forked `Font`/`Glyph`, the `Text` shape, the cribbed glyph code with
+   attribution and the normalized built-in face
 9. `add-example` — the demo sketch with a fake device
 10. `build-verify` — compile the demo example with arduino-cli
 11. `update-spec` — remove the unimplemented banner from the spec

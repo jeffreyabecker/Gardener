@@ -2,20 +2,17 @@
 
 The contract for a standalone C++ drawing library: a caller-owned frame buffer, the
 `DisplayDevice` that owns the glass and flushes the buffer, and the `Canvas` that draws into an
-extent of it. The library is built from scratch and inherits nothing from Adafruit_GFX; the glyph
-code that text is drawn through is the one piece taken from it, and its attribution travels with it.
-
-> **Unimplemented.** `Rect`, `DisplayDevice` and `Canvas` are written under `libraries/Gfx`; the
-> shapes the library ships are not.
+extent of it. The library is built from scratch and inherits no Adafruit_GFX code. Its font
+structures and glyph writer are derived from Adafruit_GFX, and that attribution travels with them.
 
 This library is its own library, separate from the main application library, and the main
 application depends on it. The dependency runs one way: the application may include this library,
 and this library never includes, inherits from, or reaches into the application.
 
-The library's three types — `Rect`, `DisplayDevice` and `Canvas` — live in the `gardener::gfx`
-namespace, and the shapes it ships in `gardener::gfx::shapes`. A concrete device driver is the one
-place that knows its own glass and bus; it is an implementation of `DisplayDevice`, not a fourth
-contract here.
+`Rect`, `DisplayDevice` and `Canvas` live in the `gardener::gfx` namespace, as do the `Font` and
+`Glyph` structures text is drawn through; the shapes the library ships are in
+`gardener::gfx::shapes`. A concrete device driver is the one place that knows its own glass and
+bus; it is an implementation of `DisplayDevice`, not a fourth contract here.
 
 ## The frame buffer
 
@@ -162,16 +159,30 @@ color)` and `FillRotatedRect(centerX, centerY, w, h, degrees, color)`.
 Every one takes its colour as the grayscale byte at the end of the argument list, and draws in
 extent-relative coordinates clipped to the extent.
 
+### Fonts
+
+A `Glyph` carries one glyph: `bitmapOffset` into the face's bitmap, `width` and `height` in pixels,
+`xAdvance`, and `xOffset` and `yOffset` from the cursor's baseline to the glyph's top-left. The
+glyph rows are packed most-significant bit first with no padding between rows.
+
+A `Font` carries `bitmap`, `glyph`, `first` and `last` — the character range — `yAdvance`, and three
+fixed metrics: `fixedWidth`, `fixedHeight` and `fixedAdvance`. A zero fixed metric means that
+measure varies from glyph to glyph. A fixed-size face has a non-zero `fixedWidth` and `fixedHeight`;
+a monospace face has a non-zero `fixedAdvance`. `BuiltinFont` is the built-in 5x7 face: all 256 byte
+values, five pixels wide, eight tall, six pixels apart.
+
+The structures are forked from Adafruit_GFX's `GFXfont` and `GFXglyph` into `gardener::gfx`, and
+the glyph writer and the built-in face keep Adafruit's attribution.
+
 ### Text
 
 ```cpp
-Text(int16_t x, int16_t y, const String& value, const GFXfont* face, uint8_t size, uint8_t color)
+Text(int16_t x, int16_t y, const String& value, const Font* face, uint8_t size, uint8_t color)
 ```
 
 The face belongs to the shape, so a page mixing faces needs nothing from the canvas; a `face` of
-`nullptr` selects the built-in 5x7 face. `x` and `y` are the baseline of the first glyph, which is
-the font format's own rule, and `size` scales what is drawn. The glyph-writing code is cribbed from
-Adafruit_GFX and keeps its attribution, and text reads Adafruit's `GFXfont` format through it.
+`nullptr` selects `BuiltinFont`. `x` and `y` are the baseline of the first glyph, which is the font
+format's own rule, and `size` scales what is drawn.
 
 The library does no newline handling: it draws each glyph it is given and reads no character as a
 line break, so a caller that wants a second line draws it itself.
