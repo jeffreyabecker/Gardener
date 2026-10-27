@@ -22,7 +22,7 @@ end
 class IntervalSettings : Registration
   def init(routine_key, title, icon, factory)
     super(self).init(routine_key, title, icon, factory, [
-      IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      NumericEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
       PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
       DurationEditCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
       PressureEditCfg("rest_pressure", nil, "Rest", nil, 1, true),

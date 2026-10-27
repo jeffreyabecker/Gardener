@@ -24,8 +24,8 @@ settings/edit_scene.be
 settings/edit_cfg.be
 settings/bool.be
 settings/choice.be
-settings/real.be
-settings/int.be
+# The one kind with no scene of its own: a number is the base editor.
+settings/number.be
 settings/pressure.be
 settings/duration.be
 settings/settings_edit.be

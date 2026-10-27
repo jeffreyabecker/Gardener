@@ -21,12 +21,11 @@
 class ChoiceEditScene : EditScene
   var ring
   var list
-  var page
 
   def init(label, current, values, nullable)
     super(self).init(label, current)
     self.ring = ChoiceRing(choice_items(values, nullable), current)
-    self.page = nil
+    self.list = nil
   end
 
   # The rows the box has room for decide the list window, so the list is built once the scene has its
@@ -99,40 +98,19 @@ class ChoiceEditScene : EditScene
     return wide
   end
 
-  # The label row, the list and the hint row: eight pixels a row, a gap of two above and below the
-  # list, and the content as wide as the widest of the three.
-  def content_size()
-    var wide = self.row_width()
-    var label_w = screen.text_bounds(self.label, 1).w
-    if label_w > wide
-      wide = label_w
-    end
-    var hint_w = screen.text_bounds(self.hint(), 1).w
-    if hint_w > wide
-      wide = hint_w
-    end
-    return bounds(wide, editor_column_chrome + self.list.visible * List.row)
-  end
-
-  # The label row, the entries with the one showing inverted and scrolled into view, and the hint
-  # row, in the column every value editor draws in. The list is kept on the entry the ring names;
-  # every entry is a row — the nil-keyed "no choice" one included — so the whole of what the editor
-  # draws comes from the ring. The rows are a block the width they measure, centred in the column.
-  def draw_editor(pos, dim)
-    self.page = editor_column(self.label, self.hint(), self.list_body(),
-                              self.list.visible * List.row)
-    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
-    self.page.draw()
-  end
-
-  def list_body()
+  # The entries as rows of the list, a block the width they measure centred in the column.
+  def body()
     return Layout(bounds(nil, nil), [
-      Layout(bounds(self.row_width(), self.list.visible * List.row), [self.list])
+      Layout(bounds(self.row_width(), self.body_h()), [self.list])
     ], alignment("center", "center"))
   end
 
-  def hint()
-    return "\x1E/\x1F  OK=SAVE"
+  def body_h()
+    return self.list.visible * List.row
+  end
+
+  def body_w()
+    return self.row_width()
   end
 end
 
@@ -162,10 +140,6 @@ class ChoiceEditCfg : EditCfg
       end
     end
     return nil
-  end
-
-  def bounded(value)
-    return self.parse(value)
   end
 
   # An entry prints its title, so a row names what the setting is set to rather than the value it

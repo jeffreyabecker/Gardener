@@ -1,7 +1,7 @@
 # settings.test.be — what the settings model promises: a default when nothing has been stored, a
 # value held to its kind on the way in, a set the caller repairs rather than hands on broken, and the
-# one clean map the registry builds from them all. The shipped routines exercise int, pressure,
-# duration and choice; bool, real and every value past a bound are only covered here.
+# one clean map the registry builds from them all. The shipped routines exercise a whole number,
+# pressure, duration and choice; bool, a real and every value past a bound are only covered here.
 
 suite = "settings"
 
@@ -31,7 +31,7 @@ def page_box(scene)
 end
 
 def missing_keys_read_their_default()
-  var count = IntEditCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false)
+  var count = NumericEditCfg("no_such_key", 4, "Count", nil, 1, 1, 20, false, true)
   assert_eq(read_setting(count, "settings_test"), 4, "a missing int is not its default")
 
   var mode = ChoiceEditCfg("no_choice", "b", "Mode", nil, ["a", "b"], false)
@@ -42,7 +42,7 @@ test("a missing key reads as the setting's default", missing_keys_read_their_def
 
 def stored_values_are_held_to_their_kind()
   write_setting("settings_test", "count", "99")
-  var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  var count = NumericEditCfg("count", 4, "Count", nil, 1, 1, 20, false, true)
   assert_eq(read_setting(count, "settings_test"), 20, "a stored int above max is not held to it")
 
   write_setting("settings_test", "mode", "sideways")
@@ -50,7 +50,7 @@ def stored_values_are_held_to_their_kind()
   assert_eq(read_setting(mode, "settings_test"), "off", "a value outside the choices is not defaulted")
 
   write_setting("settings_test", "gain", "7.5")
-  var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = NumericEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false, false)
   assert_eq(read_setting(gain, "settings_test"), 1.0, "a stored real above max is not held to it")
 end
 
@@ -58,14 +58,14 @@ test("a stored value is held to its kind", stored_values_are_held_to_their_kind)
 
 def nothing_reads_as_nil_when_nullable()
   write_setting("settings_test", "empty", "")
-  var empty = IntEditCfg("empty", 5, "Count", nil, 1, 0, 10, true)
+  var empty = NumericEditCfg("empty", 5, "Count", nil, 1, 0, 10, true, true)
   assert_nil(read_setting(empty, "settings_test"), "an empty nullable int is not nil")
 
-  var absent = IntEditCfg("absent", 5, "Count", nil, 1, 0, 10, true)
+  var absent = NumericEditCfg("absent", 5, "Count", nil, 1, 0, 10, true, true)
   assert_nil(read_setting(absent, "settings_test"), "an absent nullable int is not nil")
 
   write_setting("settings_test", "zero", "0")
-  var zero = IntEditCfg("zero", 5, "Count", nil, 1, 0, 10, true)
+  var zero = NumericEditCfg("zero", 5, "Count", nil, 1, 0, 10, true, true)
   assert_eq(read_setting(zero, "settings_test"), 0, "a stored zero is not a value")
 end
 
@@ -76,10 +76,10 @@ def every_kind_builds()
   assert_eq(flags.text(true), "ON", "a bool does not print ON")
   assert_eq(flags.text(false), "OFF", "a bool does not print OFF")
 
-  var count = IntEditCfg("count", 4, "Count", nil, 1, 1, 20, false)
+  var count = NumericEditCfg("count", 4, "Count", nil, 1, 1, 20, false, true)
   assert_eq(count.text(7), "7", "an int does not print its number")
 
-  var gain = RealEditCfg("gain", 0.5, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = NumericEditCfg("gain", 0.5, "Gain", nil, 0.5, 0.0, 1.0, false, false)
   assert_eq(gain.text(0.5), "0.5", "a real does not print its number")
 
   var mode = ChoiceEditCfg("mode", "a", "Mode", nil, ["a", "b"], false)
@@ -257,7 +257,7 @@ def a_stored_value_is_parsed_by_its_kind()
   assert_eq(read_setting(flags, "settings_test"), false, "a stored false does not read as false")
 
   write_setting("settings_test", "gain", "0.25")
-  var gain = RealEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false)
+  var gain = NumericEditCfg("gain", 0.0, "Gain", nil, 0.5, 0.0, 1.0, false, false)
   assert_eq(read_setting(gain, "settings_test"), 0.25, "a stored real is not its number")
 end
 
@@ -379,14 +379,16 @@ end
 test("the page frames the editor and hands it the content box",
      the_page_frames_the_editor_and_hands_it_the_content_box)
 
-# Every kind measures and draws the whole of its own content, chrome included: a label row and a
-# hint row are in every one of them, whatever its body is. The base measures nothing of its own.
+# Every editor measures its own column, chrome included: a label row and a hint row are in every one
+# of them, whatever its body is, and a bare editor - a number with no kind of its own - measures the
+# same column from its value.
 def every_editor_measures_its_own_chrome()
   var editors = [
     BoolEditScene("Flags", true, false),
     ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false),
-    IntEditScene("Count", 7, 1, 1, 20, false),
-    RealEditScene("Gain", 0.5, 0.5, nil, nil, false),
+    EditScene("Count", 7, 1, 1, 20, false, true),
+    EditScene("Gain", 0.5, 0.5, nil, nil, false, false),
+    EditScene("Label"),
     PressureEditScene("Rest", 5.0, 1, false),
     DurationEditScene("Hold", 90, 1, 0, 7200, false)
   ]
@@ -398,7 +400,6 @@ def every_editor_measures_its_own_chrome()
     assert_true(content.w >= screen.text_bounds(scene.label, 1).w,
                 "an editor's content is narrower than its label")
   end
-  assert_eq(EditScene("Label").content_size().w, 0, "the base measures a content of its own")
 end
 
 test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
@@ -408,8 +409,8 @@ test("every editor measures its own chrome", every_editor_measures_its_own_chrom
 def the_editor_column_places_its_rows()
   var editors = [
     BoolEditScene("Flags", true, false),
-    IntEditScene("Count", 7, 1, 1, 20, false),
-    RealEditScene("Gain", 0.5, 0.5, nil, nil, false),
+    EditScene("Count", 7, 1, 1, 20, false, true),
+    EditScene("Gain", 0.5, 0.5, nil, nil, false, false),
     PressureEditScene("Rest", 5.0, 1, false),
     DurationEditScene("Hold", 90, 1, 0, 7200, false)
   ]
@@ -448,7 +449,7 @@ test("the editor column places its rows", the_editor_column_places_its_rows)
 # A list that fits is a block the height of its heading and its rows, centred in the scene's box, the
 # heading centred above rows the width of the band a selected row inverts.
 def a_short_list_centres_its_block()
-  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+  var list = SettingsEditScene([NumericEditCfg("count", 1, "Count", nil, 1, 0, 10, false, true)],
                                {"count": 3}, "TITLE")
   page_box(list).activate()
 
@@ -535,7 +536,7 @@ def a_scene_opened_over_another_takes_the_page()
 
   # A scene is given the whole page as it is pushed, over whatever was there: its box is the page,
   # not a window inside the scene below.
-  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+  var list = SettingsEditScene([NumericEditCfg("count", 1, "Count", nil, 1, 0, 10, false, true)],
                            {"count": 1}, nil)
   assert_true(ux.push(list), "the settings list would not push")
   assert_eq(list.pos.x, 0, "the settings list does not start at the left of the page")
@@ -543,7 +544,7 @@ def a_scene_opened_over_another_takes_the_page()
   assert_eq(list.dim.w, 128, "the settings list is not the page's width")
   assert_eq(list.dim.h, 52, "the settings list is not the page's height")
 
-  var editor = IntEditScene("Count", 2, 1, 0, 10, false)
+  var editor = EditScene("Count", 2, 1, 0, 10, false, true)
   assert_true(ux.push(editor), "the value editor would not push")
   assert_eq(editor.pos.x, 0, "the value editor does not start at the left of the page")
   assert_eq(editor.pos.y, 0, "the value editor does not start at the top of the page")
@@ -583,7 +584,7 @@ test("a cancel leaves its row alone", cancelling_a_value_leaves_its_row_alone)
 
 # The title is the list's heading rather than part of the set, so a value that commits keeps it.
 def committing_a_value_keeps_the_title()
-  var list = SettingsEditScene([IntEditCfg("count", 1, "Count", nil, 1, 0, 10, false)],
+  var list = SettingsEditScene([NumericEditCfg("count", 1, "Count", nil, 1, 0, 10, false, true)],
                            {"count": 1}, "MY ROUTINE")
   var depth = ux.depth()
   assert_true(ux.push(list), "the settings list would not push")
@@ -645,13 +646,13 @@ end
 test("the choice editor draws a nullable nothing", the_choice_editor_draws_nothing)
 
 def the_int_editor_draws_between_its_bounds()
-  show_editor(IntEditScene("Count", 7, 1, 1, 20, false))
+  show_editor(EditScene("Count", 7, 1, 1, 20, false, true))
 end
 
 test("the int editor draws between its bounds", the_int_editor_draws_between_its_bounds)
 
 def the_real_editor_draws_without_a_bar()
-  show_editor(RealEditScene("Gain", 0.5, 0.5, nil, nil, false))
+  show_editor(EditScene("Gain", 0.5, 0.5, nil, nil, false, false))
 end
 
 test("the real editor draws without a bar", the_real_editor_draws_without_a_bar)

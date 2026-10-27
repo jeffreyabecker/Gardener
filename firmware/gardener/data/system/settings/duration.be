@@ -1,58 +1,32 @@
 # duration.be — DurationEditScene and DurationEditCfg: minutes and seconds, compact — `45s`, `1m`,
 # `1m30s` — with the setting rules that hold and print them. Minutes first, then seconds, with OK
-# moving between the stages.
+# moving between the stages. What the keys step and how the seconds are held are the two things the
+# kind adds to the editor; the column, the label and the hint row are the editor's.
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
 class DurationEditScene : EditScene
-  var current
   var stage
-  var step
-  var min
-  var max
-  var nullable
   var cells
-  var page
 
   def init(label, current, step, min, max, nullable)
-    super(self).init(label, current)
-    self.current = current
+    super(self).init(label, current, step == nil ? 1 : int(step), min, max, nullable)
     self.stage = "min"
-    self.step = step == nil ? 1 : int(step)
-    if self.step < 1
-      self.step = 1
-    end
-    self.min = min
-    self.max = max
-    self.nullable = nullable
     self.cells = [Text("", nil, SettingsView.scale), Text("", nil, SettingsView.scale)]
-    self.page = nil
   end
 
-  def nudge(dir)
-    if self.nullable
-      var low = duration_seconds(0, self.min, self.max)
-      if self.current == nil
-        if dir < 0
-          return
-        end
-        self.current = low
-        return
-      end
-      if dir < 0 && self.current == low
-        self.current = nil
-        return
-      end
-    end
-    var amount = 60
-    if self.stage != "min"
-      amount = self.step
-    end
-    self.current = duration_seconds(self.current + dir * amount, self.min, self.max)
+  # The keys step the stage the editor is in: whole minutes, or the declared step of seconds.
+  def step_of(dir)
+    return dir * (self.stage == "min" ? 60 : self.step)
   end
 
-  def value()
-    return self.current
+  # A duration is whole seconds, held to the setting's bounds.
+  def hold(seconds)
+    return duration_seconds(seconds, self.min, self.max)
+  end
+
+  def low()
+    return duration_seconds(0, self.min, self.max)
   end
 
   def text()
@@ -104,11 +78,15 @@ class DurationEditScene : EditScene
   end
 
   # The two fields side by side, each the same share of the width, and the stage the keys are
-  # stepping inverted.
+  # stepping inverted. A nil value has no stages to show.
   def body()
     if self.current == nil
       return Text("--", nil, SettingsView.scale)
     end
+    self.cells[0].value = self.minutes_text()
+    self.cells[0].inverted = self.stage == "min"
+    self.cells[1].value = self.seconds_text()
+    self.cells[1].inverted = self.stage != "min"
     return Layout(bounds(nil, nil), [
       Layout(bounds(0.5, 1), [self.cells[0]], alignment("center", "center")),
       Layout(bounds(0.5, 1), [self.cells[1]], alignment("center", "center"))
@@ -127,35 +105,6 @@ class DurationEditScene : EditScene
     return 2 * cell
   end
 
-  # The label row, the fields and the hint row, as wide as the widest of the three.
-  def content_size()
-    var wide = self.body_w()
-    var label_w = screen.text_bounds(self.label, 1).w
-    if label_w > wide
-      wide = label_w
-    end
-    var hint_w = screen.text_bounds(self.hint(), 1).w
-    if hint_w > wide
-      wide = hint_w
-    end
-    return bounds(wide, editor_column_chrome + self.body_h())
-  end
-
-  # Minutes and seconds as two fields side by side, each suffixed and at the one face, with the
-  # stage the keys are stepping inverted. A nil value has no stages to show.
-  def draw_editor(pos, dim)
-    if self.current != nil
-      self.cells[0].value = self.minutes_text()
-      self.cells[0].inverted = self.stage == "min"
-      self.cells[1].value = self.seconds_text()
-      self.cells[1].inverted = self.stage != "min"
-    end
-
-    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
-    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
-    self.page.draw()
-  end
-
   def hint()
     if self.stage == "min"
       return "\x1E/\x1F MIN  \x1A=NEXT"
@@ -165,13 +114,9 @@ class DurationEditScene : EditScene
 end
 
 class DurationEditCfg : EditCfg
-  var step, min, max
-
   def init(key, default_value, label, icon, step, min, max, nullable)
     super(self).init(key, default_value, label, icon, nullable)
-    self.step = step
-    self.min = min
-    self.max = max
+    self.bounds(step, min, max)
   end
 
   def parse(raw)

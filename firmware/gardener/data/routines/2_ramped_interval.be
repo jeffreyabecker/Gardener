@@ -21,7 +21,7 @@ end
 class RampedIntervalSettings : Registration
   def init(routine_key, title, icon, factory)
     super(self).init(routine_key, title, icon, factory, [
-      IntEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false),
+      NumericEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
       PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
       PressureEditCfg("final_pressure", 20.0, "Final", nil, 1, false),
       PressureEditCfg("step_pressure", nil, "Step", nil, 1, true),

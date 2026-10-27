@@ -42,7 +42,8 @@ lists.
 
 ## A setting says which kind it is
 
-A setting's kind is its class today — `IntEditCfg`, `ChoiceEditCfg`, `PressureEditCfg` and the rest —
+A setting's kind is its class today — `NumericEditCfg`, `ChoiceEditCfg`, `PressureEditCfg` and the
+rest —
 so no link can name it as the wire does.
 
 Every setting answers one of six names: `bool`, `choice`, `real`, `int`, `pressure`, `duration`. The

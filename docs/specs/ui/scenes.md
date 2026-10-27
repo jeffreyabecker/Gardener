@@ -41,8 +41,8 @@ Every scene, and where it lives:
 | `HomeScene` — the root | `system/home.be` |
 | `BrowserScene` | `system/browser.be` |
 | `SettingsEditScene` | `system/settings/settings_edit.be` |
-| `EditScene` — the edit base | `system/settings/edit_scene.be` |
-| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | `system/settings/` |
+| `EditScene` — the value editor every kind extends, and the one a number is edited in | `system/settings/edit_scene.be` |
+| `BoolEditScene`, `ChoiceEditScene`, `PressureEditScene` | `system/settings/` |
 | `DurationEditScene` | `system/settings/duration.be` |
 | `JingleEditScene` | `system/settings/jingle.be` |
 | `Interval` | `routines/3_interval.be` |
@@ -72,7 +72,7 @@ What each one answers:
 | `EditScene` | `up:single`, `down:single` | raise or lower the value |
 | `EditScene` | `ok:single` | close, keeping the value |
 | `EditScene` | `cancel:single` | close, handing back the value it opened with |
-| `BoolEditScene`, `ChoiceEditScene`, `RealEditScene`, `IntEditScene`, `PressureEditScene` | the four `EditScene` gestures | as `EditScene` |
+| `BoolEditScene`, `ChoiceEditScene`, `PressureEditScene` | the four `EditScene` gestures | as `EditScene` |
 | `ChoiceEditScene` | any other gesture | offered to the choice that is showing, which answers it when it carries that gesture |
 | `DurationEditScene` | `forward:single` | advance minutes→seconds|
 | `DurationEditScene` | `back:single` | go back seconds→minutes|
@@ -124,17 +124,22 @@ it is cancelled.
    and left the same way. A list that fits draws a centered block the size of its rows, with the
    heading dropped unless it was given a title; a longer list fills the scene's box and scrolls,
    keeping its heading.
-4. `EditScene` and everything built on it answer the same gestures; only `DurationEditScene` adds a
-   stage. The base frames what the kind measures: `content_size()` is the whole of the editor's
-   content — its label row, its body and its hint row — and `draw_page()` draws a border a pixel
-   outside that content, centred in the scene's own box with at least a pixel of paper between the
-   frame and the edge of the box, then hands `draw_editor(pos, dim)` the content box inside the
-   border. The base measures nothing and draws nothing of its own: every kind answers both, and
-   draws the whole of its content in that box, chrome included. No label row, hint row or spacing is
-   inherited, so a kind's look is its own. The kinds that show a value share one column —
-   `editor_column()` in the same file — of an eight-pixel label row, two pixels of paper, the body,
-   two pixels of paper and an eight-pixel hint row, each declared in pixels and its label, body and
-   hint centred by the column's alignment; a kind that wants another column builds its own. A choice
-   hands that column the entries as one block the width they measure, centred in the body row.
+4. `EditScene` is the whole of a value editor, and everything built on it answers the same
+   gestures; only `DurationEditScene` adds a stage. The scene holds the value it was opened on, the
+   increment a keypress takes, the bounds it is held between and whether the kind holds whole
+   numbers, and Up/Down step it within them; OK keeps what it holds and Cancel hands back what it
+   opened with. A plain number is no kind at all: `NumericEditCfg` builds an `EditScene` with the
+   setting's increment, bounds and `whole` flag, and the editor coerces, steps and prints the number
+   that flag names.
+   The scene measures its own content and frames it: `content_size()` is the whole of it — the label
+   row, its body and the hint row — and `draw_page()` draws a border a pixel outside that content,
+   centred in the scene's own box with at least a pixel of paper between the frame and the edge of
+   the box, then hands `draw_editor(pos, dim)` the content box inside the border. `draw_editor()`
+   draws the column — `editor_column()` in the same file — of an eight-pixel label row, two pixels
+   of paper, the body, two pixels of paper and an eight-pixel hint row, each declared in pixels and
+   its label, body and hint centred by the column's alignment. A kind answers only its own body:
+   `body()`, `body_w()` and `body_h()`, with `measure()` for the value's ink where its look needs it.
+   A choice hands the column the entries as one block the width they measure, centred in the body
+   row.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

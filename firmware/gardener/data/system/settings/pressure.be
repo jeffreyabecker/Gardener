@@ -5,108 +5,50 @@
 #
 # The scene comes first in the file: Berry resolves a global when it compiles, and the cfg's scene()
 # names it.
+
 class PressureEditScene : EditScene
-  var current
-  var step
-  var nullable
   var unit
   var fmt
-  var page
 
+  # A pressure has no bounds of its own — the machine's clamp is the bound — so the step is all it
+  # adds to the editor's.
   def init(label, current, step, nullable)
-    super(self).init(label, current)
-    self.current = current
-    self.step = step == nil ? 1.0 : step
-    self.nullable = nullable
+    super(self).init(label, current, step, nil, nil, nullable)
     self.unit = nil
     self.fmt = "%.1f"
-    self.page = nil
   end
 
+  # The unit is read as the editor opens, so a panel whose unit changed on the way still prints in
+  # the one it is showing.
   def activate()
     self.unit = device.unit()
     self.fmt = "%." + str(self.unit.decimals) + "f"
-    self.draw()
+    super(self).activate()
   end
 
-  def nudge(dir)
-    if self.nullable
-      var low = vacuum.clamp(0.0)
-      if self.current == nil
-        if dir < 0
-          return
-        end
-        self.current = low
-        return
-      end
-      if dir < 0 && self.current == low
-        self.current = nil
-        return
-      end
-    end
-    var pressure_kpa = self.current + dir * self.step * self.unit.whole_step / self.unit.per_kpa
-    self.current = vacuum.clamp(pressure_kpa)
+  # One keypress is one whole step of the unit on the glass, converted to the kPa the store holds.
+  def step_of(dir)
+    return dir * self.step * self.unit.whole_step / self.unit.per_kpa
   end
 
-  def value()
-    return self.current
+  def hold(value)
+    return vacuum.clamp(value)
   end
 
+  def low()
+    return vacuum.clamp(0.0)
+  end
+
+  # The depth formatted in the panel's unit, with the unit's decimals.
   def text()
     if self.current == nil
       return "--"
     end
     return string.format(self.fmt, self.current * self.unit.per_kpa)
   end
-
-  # The value's ink at the scale every kind's band shares — the same string the row prints, with the
-  # unit's decimals, not a scaled compiled line.
-  def measure()
-    var ink = screen.text_bounds(self.text(), SettingsView.scale)
-    return [ink.w, ink.h]
-  end
-
-  def body()
-    return Text(self.text(), nil, SettingsView.scale)
-  end
-
-  def body_h()
-    return self.measure()[1]
-  end
-
-  def body_w()
-    return self.measure()[0]
-  end
-
-  # The label row, the value and the hint row, as wide as the widest of the three.
-  def content_size()
-    var wide = self.body_w()
-    var label_w = screen.text_bounds(self.label, 1).w
-    if label_w > wide
-      wide = label_w
-    end
-    var hint_w = screen.text_bounds(self.hint(), 1).w
-    if hint_w > wide
-      wide = hint_w
-    end
-    return bounds(wide, editor_column_chrome + self.body_h())
-  end
-
-  # The depth at the largest face the box holds, formatted in the panel's unit.
-  def draw_editor(pos, dim)
-    self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
-    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
-    self.page.draw()
-  end
-
-  def hint()
-    return "\x1E/\x1F  OK=SAVE"
-  end
 end
 
 class PressureEditCfg : EditCfg
-  var step
-
   def init(key, default_value, label, icon, step, nullable)
     super(self).init(key, default_value, label, icon, nullable)
     self.step = step
@@ -116,6 +58,7 @@ class PressureEditCfg : EditCfg
     return real(raw)
   end
 
+  # The machine's clamp is the bound a stored pressure is held to.
   def bounded(value)
     return vacuum.clamp(self.parse(value))
   end

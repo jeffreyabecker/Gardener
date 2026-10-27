@@ -168,15 +168,18 @@ the declaration named one — and `ChoiceRing`, the entries a value editor steps
 with the index of the one showing. `view.be` is `SettingsView`, the list's own geometry: the row a
 setting is drawn on, the gap under its heading and the window a box holds.
 
-`edit_scene.be` is `EditScene`, the modal editor: it owns the keys while it is on top, frames the
-content a kind measures, and pops what OK holds or what Cancel was opened on. It draws nothing
-itself, so every kind measures and draws the whole of its own content — label row, value and hint
-row — and nothing about a kind's look is inherited. `edit_cfg.be` is `EditCfg`, the setting: the row
-it draws, its default, and the rules its kind is read, held and printed by. Each kind is one file
-holding both halves, its scene first and its cfg after it — `bool.be`, `choice.be`, `real.be`,
-`int.be`, `pressure.be` and `duration.be` — and `settings_edit.be` is `SettingsEditScene`, the list,
-handed its settings and the values keyed by setting key. **`up:double`** is the standard gesture for
-opening the list; the page opens it itself, from its own declaration and the state it is running:
+`edit_scene.be` is `EditScene`, the modal editor and the whole of what a value editor is: it owns the
+keys while it is on top, holds the value and the bounds it steps within, frames the content it
+measures, draws the column — label row, body and hint row — and pops what OK holds or what Cancel
+was opened on. A kind answers only its own body, its own text and the few step hooks it changes; a
+plain number answers nothing at all, and is an `EditScene` built with the setting's bounds and
+`whole` flag. `edit_cfg.be` is `EditCfg`, the setting: the row it draws, its default, the bounds a
+kind declares and the rules its kind is read, held and printed by. Each kind is one file holding both
+halves — its scene first and its cfg after it, or the cfg alone where the editor is all it needs —
+`bool.be`, `choice.be`, `number.be`, `pressure.be` and `duration.be` — and `settings_edit.be` is
+`SettingsEditScene`, the list, handed its settings and the values keyed by setting key.
+**`up:double`** is the standard gesture for opening the list; the page opens it itself, from its own
+declaration and the state it is running:
 
 ```berry
 def edit()
@@ -363,18 +366,21 @@ or `SETTINGS` when it has none.
 
 ### A setting
 
-One class per kind in `/system/settings/`, its `<Kind>EditCfg` in the same file as its
-`<Kind>EditScene`. Every constructor takes the same four arguments first, then the kind's own, and
-`nullable` last:
+One class per kind in `/system/settings/`. Every constructor takes the same four arguments first,
+then the kind's own, and `nullable` last:
 
 | Setting | Arguments |
 | --- | --- |
 | `BoolEditCfg` | `key`, `default_value`, `label`, `icon`, `nullable` |
-| `IntEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
-| `RealEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
+| `NumericEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable`, `whole` |
 | `PressureEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `nullable` |
 | `DurationEditCfg` | `key`, `default_value`, `label`, `icon`, `step`, `min`, `max`, `nullable` |
 | `ChoiceEditCfg` | `key`, `default_value`, `label`, `icon`, `values`, `nullable` |
+
+`whole` is the only kind argument after `nullable`, and it is the whole of the difference between a
+whole number and a real: a whole setting parses through `int()` and holds and prints whole numbers,
+and a real one parses through `real()`. `min` and `max` are the bounds the value is held between, nil
+for none; `step` is the increment one keypress takes.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -412,24 +418,24 @@ edits it. It answers three questions:
 - `scene(value)` — the edit scene for it.
 
 The store hands a value back as the text the file holds, so the kind parses it — `parse(text)`, one
-per kind: an int or a duration through `int()`, a real or a pressure through `real()`, a bool from
-`true`/`1`, a choice from its own list — and `value` holds the result. The registry does the
+per kind: a number or a duration through `int()` or `real()`, a pressure through `real()`, a bool
+from `true`/`1`, a choice from its own list — and `value` holds the result. The registry does the
 reading: `load_settings` opens the routine's document once with `device.config` and asks it for each
 declared key, so a setting names no file and opens none. Which file a value belongs to is the
 caller's, and the caller writes what the list settles on.
 
-A value the kind cannot accept is brought to what it can: an int or a real past its bounds is
-clamped to the bound, a duration is held between `min` and `max`, a pressure goes through
-`vacuum.clamp()`, and a choice that is not one of its values reads as the default. A kind that
-cannot work at all — a choice with no values, bounds the wrong way round — says so where it is
-built, logs one line, and leaves its row out of the list. Up/Down steps `real`, `int` and
-`pressure`, and cycles `bool` and `choice`; `ok:single` keeps the value the editor holds and
-`cancel:single` hands back the value it opened with, which leaves the row as it stands.
+A value the kind cannot accept is brought to what it can: a number past its bounds is clamped to the
+bound, a duration is held between `min` and `max`, a pressure goes through `vacuum.clamp()`, and a
+choice that is not one of its values reads as the default. A kind that cannot work at all — a choice
+with no values, bounds the wrong way round — says so where it is built, logs one line, and leaves its
+row out of the list. Up/Down steps a number and a `pressure`, and cycles `bool` and `choice`;
+`ok:single` keeps the value the editor holds and `cancel:single` hands back the value it opened
+with, which leaves the row as it stands.
 
 A `nullable` setting whose key is unset — or holds an empty value — reads as `nil` whatever its
 default says, and shows `--` in the list. Opening its row hands the scene the stored value, or the
 setting's default when it holds nothing — so a nullable setting with no default opens at `--`.
-On a kind with a ladder of values — `int`, `real`, `pressure` and a `duration` — `nil` sits one
+On a kind with a ladder of values — a number, a `pressure` and a `duration` — `nil` sits one
 step below the lowest of them: Down at the lowest value clears back to `--`, Up from `--` enters the
 lowest value, and Down at `--` stays. A `bool` and a `choice` are rings instead, and `--` is an
 entry of the ring: Up past the last entry wraps round to `--` and Down at `--` wraps to the last

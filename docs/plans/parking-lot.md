@@ -34,6 +34,12 @@ than the board's figure. What the device actually has free, and how low a run ta
 only the board can answer. Blocked by: the serial protocol has no field for it, and nothing has
 decided whether one belongs there.
 
+## Loading routines on demand
+
+Compile a routine when it is pushed rather than at boot, so only the active page's compiled form
+bills the heap — about 25 KB on the board. Blocked by: the browser lists routines from the registry,
+so an un-loaded routine has no row, and nothing has decided whether that is acceptable.
+
 ## One file to flash
 
 A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/data) into the build's
