@@ -11,22 +11,22 @@
 
 #include "Logger.h"
 #include "PanelContext.h"
+#include "hal/Battery.h"
+#include "hal/Display.h"
+#include "panel/Band.h"
+#include "panel/Units.h"
 #include "routines/Bindings.h"
+#include "storage/Config.h"
+#include "storage/DeviceConfig.h"
 #include "storage/Library.h"
 
 namespace gardener {
 namespace {
 
-// The scene stack every page calls is `/system/ux.be`'s global `ux`: the frames, the callbacks and
-// the one-beat deferral are Berry's, and this side only makes the calls that a beat needs.
-constexpr const char* UxGlobal = "ux";
-constexpr const char* RootScene = "__rootScene";
-
 // The system is the files the interpreter needs before anything else: the records a native call
-// answers with, the components and the scene every page is written against, and the registry. Its
-// order is not the folder's: Berry resolves a global when it compiles a file, so a class has to be
-// a global by the time a file that names it is compiled. `/system/order` states that order, one
-// path per line relative to `/system`.
+// answers with, the registry and the pages the browser opens. Its order is not the folder's: Berry
+// resolves a global when it compiles a file, so a class has to be a global by the time a file that
+// names it is compiled. `/system/order` states that order, one path per line relative to `/system`.
 constexpr const char* SystemFolder = "system";
 constexpr const char* SystemOrder = "/system/order";
 
@@ -75,6 +75,7 @@ void reportUnlisted(Library& library, Logger& logger, const std::vector<String>&
 bool Routines::begin(PanelContext& context) {
   logger_ = &context.logger();
   library_ = &context.library();
+  panel_ = &context;
 
   vm_ = be_vm_new();
   if (vm_ == nullptr) {
@@ -114,68 +115,47 @@ bool Routines::showDefault() {
   return resetToRoot();
 }
 
+// The band is the stack's, so it is set from this beat's reading before the page is polled and drawn
+// with it in the same frame: the values the machine has now, not the ones it had when the page went
+// up.
 bool Routines::poll(uint32_t nowMs) {
-  const int base = be_top(vm_);
-  be_pushint(vm_, (bint)nowMs);
-  const bool showing = callUx("poll", be_absindex(vm_, -1));
-  be_pop(vm_, be_top(vm_) - base);
-  return showing;
+  if (panel_ == nullptr) return false;
+  updateBand(nowMs);
+  if (!stack_.poll(panel_->display().canvas(), nowMs)) return false;
+  panel_->display().display();
+  return true;
 }
 
-bool Routines::enterPage() { return callUx("enter", 0); }
-
-bool Routines::active() const { return callUx("depth", 0); }
-
-// The root scene, as a push of it and a clear of the stack when there is none: the same call at
-// boot and on the go-home gesture.
-bool Routines::resetToRoot() {
-  const int base = be_top(vm_);
-  if (!be_getglobal(vm_, RootScene)) {
-    logger_->warn("vm: no root scene, showing the mark");
-  } else if (!be_isinstance(vm_, -1)) {
-    logger_->warn("vm: root scene is not an instance, showing the mark");
-    be_pop(vm_, 1);
-    be_pushnil(vm_);
-  }
-  const bool showing = callUx("reset", be_absindex(vm_, -1));
-  be_pop(vm_, be_top(vm_) - base);
-  return showing;
+bool Routines::enterPage() {
+  if (panel_ == nullptr) return false;
+  const uint32_t now = millis();
+  updateBand(now);
+  if (!stack_.enter(panel_->display().canvas(), now)) return false;
+  panel_->display().display();
+  return true;
 }
 
-// Calls `method` on the `ux` global and answers its result as a truth value. `argIndex` is a value
-// already on the VM stack to pass as the one argument, or 0 for none. A raise is reported the way a
-// scene's own raise was when the stack was native: `vm: <method>: <message>`.
-bool Routines::callUx(const char* method, int argIndex) const {
-  const int base = be_top(vm_);
-  bool answer = false;
-  if (!be_getglobal(vm_, UxGlobal) || !be_getmethod(vm_, -1, method)) {
-    logger_->error("vm: ux is missing");
-  } else {
-    be_pushvalue(vm_, -2);  // the instance, as self
-    int argc = 1;
-    if (argIndex > 0) {
-      be_pushvalue(vm_, argIndex);
-      argc++;
-    }
-    if (be_pcall(vm_, argc) == BE_OK) {
-      answer = be_tobool(vm_, -1) != 0;
-    } else {
-      String message = "vm: ";
-      message += method;
-      message += ": ";
-      const char* detail = be_tostring(vm_, -1);
-      message += detail != nullptr ? detail : "error";
-      logger_->error(message.c_str());
-    }
-  }
-  be_pop(vm_, be_top(vm_) - base);
-  return answer;
+// The root scene, at boot and on the go-home gesture. Every scene is native from here, and the first
+// one — the home page — is not written yet, so the stack is emptied and the panel keeps its mark.
+bool Routines::resetToRoot() { return stack_.reset(nullptr); }
+
+void Routines::updateBand(uint32_t nowMs) {
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  const Battery& battery = panel_->battery();
+  const int8_t percent = battery.present() ? static_cast<int8_t>(battery.percent()) : -1;
+  stack_.setBand({
+      bandUnit(displayUnitInfo(unit).suffix),
+      bandLinks(panel_->serialConnected(), panel_->bluetoothConnected()),
+      bandState(panel_->vacuum().runState(), nowMs),
+      bandBattery(percent, battery.low(), nowMs),
+  });
 }
 
 // --- loading ---------------------------------------------------------------
 
 // The order file is a plain list: a `#` line and a blank line are skipped, and every other line is
-// a path relative to /system, so `components/text.be` and `scene.be` are the same kind of entry.
+// a path relative to /system, so `records.be` and a file in a subfolder are the same kind of entry.
 size_t Routines::loadSystem(size_t& found) {
   found = 0;
 

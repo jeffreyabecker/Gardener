@@ -176,8 +176,13 @@ def build_defines():
 
 
 def compile_sketch(*extra):
-    arduino_cli("compile", "--fqbn", FQBN, "--build-property", f"build.defines={build_defines()}",
-                "--libraries", str(PROJECT_LIBS), *extra, str(SKETCH))
+    arguments = ["compile", "--fqbn", FQBN, "--build-property", f"build.defines={build_defines()}",
+                 "--libraries", str(PROJECT_LIBS), *extra, str(SKETCH)]
+    # arduino-cli prints nothing while it works, so --verbose is what makes a long build show which
+    # file it is on. The switch rides along with the script's own echoing.
+    if VERBOSE:
+        arguments.append("--verbose")
+    arduino_cli(*arguments)
 
 
 def install_libs():

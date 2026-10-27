@@ -42,6 +42,10 @@ class Display {
   // draw, so the only thing that ever has to run is the flush.
   virtual void display() = 0;  // push the frame buffer to the glass
 
+  // The frame those verbs write, for a page composed with Gfx's own canvas: the same buffer and the
+  // same record of what was written, so a canvas draw and a verb draw are sent by one display().
+  virtual gfx::Canvas& canvas() = 0;
+
   // --- geometry ------------------------------------------------------------
   // Rotation aware: width() and height() swap when the panel is turned.
   virtual int16_t width() const = 0;

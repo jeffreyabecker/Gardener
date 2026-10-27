@@ -33,6 +33,7 @@ class GfxDisplay : public Display {
 
   bool begin() override { return onBegin_(device_); }
   void display() override { canvas_.flush(device_); }
+  gfx::Canvas& canvas() override { return canvas_; }
 
   // The device behind the verbs, for a caller that has to reach it directly — the host harness
   // saves the frame this panel drew.

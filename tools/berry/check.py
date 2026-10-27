@@ -43,6 +43,7 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # composition roots, the tasks, the links, the device drivers and the vendor display.
 FIRMWARE_SOURCES = [
     GARDENER / "src" / "BuzzerPlayer.cpp",
+    GARDENER / "src" / "panel" / "Band.cpp",
     GARDENER / "src" / "routines" / "Bindings.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",
     GARDENER / "src" / "routines" / "GestureQueue.cpp",
@@ -63,6 +64,11 @@ GFX_SOURCES = [
     GFX / "src" / "gfx" / "Text.cpp",
     GFX / "src" / "gfx" / "BuiltinFont.cpp",
     GFX / "src" / "gfx" / "Fonts.cpp",
+    GFX / "src" / "ui" / "Drawing.cpp",
+    GFX / "src" / "ui" / "Layout.cpp",
+    GFX / "src" / "ui" / "Overlay.cpp",
+    GFX / "src" / "ui" / "Scene.cpp",
+    GFX / "src" / "ui" / "Ux.cpp",
 ]
 
 # The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
