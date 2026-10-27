@@ -27,9 +27,9 @@ class BoolEditScene : EditScene
     for item : self.ring.items
       var chip = Text(item.title, nil, SettingsView.scale)
       self.chips.push(chip)
-      cells.push(AutoLayout(bounds(share, 1), [chip], alignment("center", "center")))
+      cells.push(Layout(bounds(share, 1), [chip], alignment("center", "center")))
     end
-    self.page = editor_column(label, self.hint(), AutoLayout(bounds(nil, nil), cells),
+    self.page = editor_column(label, self.hint(), Layout(bounds(nil, nil), cells),
                               self.body_h())
     self.content = self.column_size()
   end

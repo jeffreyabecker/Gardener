@@ -126,8 +126,8 @@ class ChoiceEditScene : EditScene
   end
 
   def list_body()
-    return AutoLayout(bounds(nil, nil), [
-      AutoLayout(bounds(self.row_width(), self.list.visible * List.row), [self.list])
+    return Layout(bounds(nil, nil), [
+      Layout(bounds(self.row_width(), self.list.visible * List.row), [self.list])
     ], alignment("center", "center"))
   end
 

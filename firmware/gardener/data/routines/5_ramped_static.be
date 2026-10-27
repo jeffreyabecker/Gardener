@@ -15,7 +15,7 @@ end
 
 # The static chrome: the glyph and title row, the pressure and the duration, and a status-plus-bar
 # row, laid out as fractions of the page.
-class RampedStaticChrome : AutoLayout
+class RampedStaticChrome : Layout
   var icon
   var title
   var timer
@@ -29,18 +29,18 @@ class RampedStaticChrome : AutoLayout
     self.status = Text("")
     self.bar = ProgressBar(nil)
     super(self).init(bounds(nil, nil), [
-      AutoLayout(bounds(1, 0.25), [
-        AutoLayout(bounds(0.125, 1), [self.icon]),
-        AutoLayout(bounds(0.875, 1), [self.title], alignment("center", "center"))
+      Layout(bounds(1, 0.25), [
+        Layout(bounds(0.125, 1), [self.icon]),
+        Layout(bounds(0.875, 1), [self.title], alignment("center", "center"))
       ]),
-      AutoLayout(bounds(1, 0.50), [
-        AutoLayout(bounds(0.5, 1),
+      Layout(bounds(1, 0.50), [
+        Layout(bounds(0.5, 1),
                    [AutoPressureDisplay("pressure:target", "br", 0.25)]),
-        AutoLayout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
+        Layout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
       ]),
-      AutoLayout(bounds(1, 0.25), [
-        AutoLayout(bounds(0.5, 1), [self.status], alignment("left", "center")),
-        AutoLayout(bounds(0.5, 1), [self.bar])
+      Layout(bounds(1, 0.25), [
+        Layout(bounds(0.5, 1), [self.status], alignment("left", "center")),
+        Layout(bounds(0.5, 1), [self.bar])
       ])
     ])
   end

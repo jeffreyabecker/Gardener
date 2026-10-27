@@ -39,11 +39,11 @@ class PressureDisplay : Component
     self.size_hint = size_hint == nil ? 0.5 : size_hint
     self._number = Text("", nil, self.scale)
     self._secondary = Text("", nil, self.secondary_scale)
-    self._main = AutoLayout(bounds(nil, nil), [self._number], alignment("center", "center"))
-    self._corner = AutoLayout(bounds(nil, nil), [self._secondary])
-    self._left = AutoLayout(bounds(0.5, 1), [], alignment("center", "center"))
-    self._right = AutoLayout(bounds(0.5, 1), [], alignment("center", "center"))
-    self._row = AutoLayout(bounds(nil, nil), [self._left, self._right])
+    self._main = Layout(bounds(nil, nil), [self._number], alignment("center", "center"))
+    self._corner = Layout(bounds(nil, nil), [self._secondary])
+    self._left = Layout(bounds(0.5, 1), [], alignment("center", "center"))
+    self._right = Layout(bounds(0.5, 1), [], alignment("center", "center"))
+    self._row = Layout(bounds(nil, nil), [self._left, self._right])
   end
 
   def draw()

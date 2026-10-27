@@ -152,7 +152,7 @@ and `stop` commands that move it.
 `/system/components/` is the drawing primitives the home scene composes, one class per file:
 `component.be` is `Component` (the `point`/`bounds` box, the `use` room hook and the `inverted`
 flip), `icon.be` is `Icon` (a glyph drawn in its box), `text.be` is `Text` (a string at the face it
-was built with), `layout.be` is `AutoLayout` (a layout placed with `to_box` resolves each child's
+was built with), `layout.be` is `Layout` (a layout placed with `to_box` resolves each child's
 `bounds` cell, places it by the layout's `alignment` and draws the children in order),
 `progress_bar.be` is `ProgressBar`, `scrollbar.be` is `Scrollbar`, `pressure_display.be` is
 `PressureDisplay` and `AutoPressureDisplay`, and `duration.be` is `Duration`. A component takes no box
@@ -283,7 +283,7 @@ standard gestures are in [gestures.md](../gestures.md); the shipped bindings are
 The stack is `/system/ux.be`: `class Ux` and the global instance `ux`, in Berry. `ux.push(scene
 [, args [, callback]])` puts a scene on top and makes it the one that is polled. The scene is given
 the page's box — `point(0, 0)` and the panel less the band — through `to_box()` as it goes on the
-stack, before its `activate()` runs; a page composed in an `AutoLayout` hands the box on to it.
+stack, before its `activate()` runs; a page composed in a `Layout` hands the box on to it.
 `ux.pop([value])` leaves it and hands `value` to the pusher's callback, or re-activates the scene
 below when it was pushed without one. `ux.pop_to_root([value])` pops every scene above the root in
 finished run's way home. The root is the `__rootScene` global `/modules/ui.be` sets; if nothing sets

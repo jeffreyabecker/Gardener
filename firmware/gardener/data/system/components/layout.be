@@ -1,4 +1,4 @@
-# layout.be — the AutoLayout: a component with a box that resolves each child's box from the size the
+# layout.be — the Layout: a component with a box that resolves each child's box from the size the
 # child declares, places it where the layout's alignment says, and draws the children in order.
 #
 # A child declares its box as `bounds(w, h)`: the cell it takes of its parent, each a share of the
@@ -14,8 +14,12 @@
 # resolves at: the stack of children inside the layout's box, and a child's own room inside its cell
 # — a string is narrower than the row it was given, and the alignment is what centres it. The
 # default, left and top, puts both at the start, which is the corner nothing has to be moved from.
+#
+# A page stacks rows down a column and columns across a row, so the two cells it states most often
+# are `bounds(1, h)` and `bounds(w, 1)`: RowLayout(h, children, align) and ColumnLayout(w, children,
+# align) are those, with the whole side spelled for the caller.
 
-class AutoLayout : Component
+class Layout : Component
   var children
   var bounds
   var alignment
@@ -79,7 +83,7 @@ class AutoLayout : Component
 
   # The bounds a child declares, or nil for a leaf.
   def child_bounds(child)
-    if isinstance(child, AutoLayout)
+    if isinstance(child, Layout)
       return child.bounds
     end
     return nil
@@ -157,10 +161,27 @@ class AutoLayout : Component
     var tall = used.h > h ? h : used.h
     x = x + self.aligned(w - wide, self.alignment.align)
     y = y + self.aligned(h - tall, self.alignment.v_align)
-    if isinstance(child, AutoLayout)
+    if isinstance(child, Layout)
       child.to_box(x, y, wide, tall)
     else
       child.set_box(point(x, y), bounds(wide, tall))
     end
+  end
+end
+
+# A row: the full width, and the height it is given as its share of the column that holds it. It is
+# `Layout(bounds(1, h), children, align)` with the width left whole, and the alignment is passed on
+# as the layout takes it.
+class RowLayout : Layout
+  def init(height, children, align)
+    super(self).init(bounds(1, height), children, align)
+  end
+end
+
+# A column: the width it is given as its share of the row that holds it, and the full height. It is
+# `Layout(bounds(w, 1), children, align)` with the height left whole.
+class ColumnLayout : Layout
+  def init(width, children, align)
+    super(self).init(bounds(width, 1), children, align)
   end
 end

@@ -111,7 +111,7 @@ class EditScene : Scene
   # hands the kind the box inside the border; the centring is that layout's alignment.
   def draw_page()
     if self.frame == nil
-      self.frame = AutoLayout(bounds(nil, nil), [EditorFrame(self)], alignment("center", "center"))
+      self.frame = Layout(bounds(nil, nil), [EditorFrame(self)], alignment("center", "center"))
     end
     self.frame.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
     self.frame.draw()
@@ -142,12 +142,12 @@ end
 # paper row is a layout with no children: it takes its pixels and draws nothing. The label and the
 # hint are the built-in face, the one that carries the arrows a hint prints.
 def editor_column(label, hint, body, body_h)
-  return AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, editor_text_row), [Text(label)], alignment("center", "center")),
-    AutoLayout(bounds(1, editor_paper_row), []),
-    AutoLayout(bounds(1, body_h), [body], alignment("center", "center")),
-    AutoLayout(bounds(1, editor_paper_row), []),
-    AutoLayout(bounds(1, editor_text_row), [Text(hint)], alignment("center", "center"))
+  return Layout(bounds(nil, nil), [
+    Layout(bounds(1, editor_text_row), [Text(label)], alignment("center", "center")),
+    Layout(bounds(1, editor_paper_row), []),
+    Layout(bounds(1, body_h), [body], alignment("center", "center")),
+    Layout(bounds(1, editor_paper_row), []),
+    Layout(bounds(1, editor_text_row), [Text(hint)], alignment("center", "center"))
   ])
 end
 

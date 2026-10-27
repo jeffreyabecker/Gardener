@@ -122,12 +122,12 @@ class SettingsEditScene : Scene
     # scene's box by the alignment of the layout that holds it.
     var block = []
     if self.title != nil
-      block.push(AutoLayout(bounds(1, heading_h), [Text(self.title)],
+      block.push(Layout(bounds(1, heading_h), [Text(self.title)],
                             alignment("center", "top")))
     end
-    block.push(AutoLayout(bounds(1, rows_h), [self.list]))
-    var page = AutoLayout(bounds(nil, nil), [
-      AutoLayout(bounds(wide, heading_h + rows_h), block)
+    block.push(Layout(bounds(1, rows_h), [self.list]))
+    var page = Layout(bounds(nil, nil), [
+      Layout(bounds(wide, heading_h + rows_h), block)
     ], alignment("center", "center"))
     page.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
     page.draw()

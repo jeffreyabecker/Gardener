@@ -18,13 +18,15 @@ def home_draws()
   screen.draw_clear()
   var chrome = page(HomeChrome())
   chrome.draw(50.0)
+  # The page is two rows: the title a quarter of it, the two readings the rest of it, side by side.
   assert_eq(chrome.pressure.pos.x, 0, "the home pressure is not in the left half")
+  assert_eq(chrome.pressure.pos.y, 13, "the home pressure does not start under the title row")
   assert_eq(chrome.pressure.dim.w, 64, "the home pressure is not half the page")
-  assert_eq(chrome.pressure.dim.h, 52, "the home pressure is not the page's height")
+  assert_eq(chrome.pressure.dim.h, 39, "the home pressure is not the body row's height")
   assert_eq(chrome.timer.pos.x, 64 + (64 - chrome.timer.dim.w) / 2,
             "the home timer is not centred in the right half")
-  assert_eq(chrome.timer.pos.y, (52 - chrome.timer.dim.h) / 2,
-            "the home timer is not centred down the page")
+  assert_eq(chrome.timer.pos.y, 13 + (39 - chrome.timer.dim.h) / 2,
+            "the home timer is not centred down the body row")
   save("home")
 end
 

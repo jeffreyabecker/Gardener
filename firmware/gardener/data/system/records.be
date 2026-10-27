@@ -31,7 +31,7 @@ class point
   end
 end
 
-# The width and height of a box, in pixels; the cell an AutoLayout child declares, each a share of
+# The width and height of a box, in pixels; the cell a Layout child declares, each a share of
 # the parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and
 # the ink box `screen.text_bounds` answers.
 class bounds

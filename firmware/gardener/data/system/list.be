@@ -34,11 +34,11 @@ class ListRow : Component
   def row()
     var cells = []
     if self.icon != nil
-      cells.push(AutoLayout(bounds(Icon.width, Icon.height), [self.icon]))
-      cells.push(AutoLayout(bounds(2, 1), []))
+      cells.push(Layout(bounds(Icon.width, Icon.height), [self.icon]))
+      cells.push(Layout(bounds(2, 1), []))
     end
-    cells.push(AutoLayout(bounds(nil, 1), [Text(self.title)], alignment("left", "top")))
-    return AutoLayout(bounds(nil, nil), cells)
+    cells.push(Layout(bounds(nil, 1), [Text(self.title)], alignment("left", "top")))
+    return Layout(bounds(nil, nil), cells)
   end
 end
 

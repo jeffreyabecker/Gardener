@@ -13,7 +13,7 @@ import string
 
 # --- the page --------------------------------------------------------------
 
-class HomeChrome : AutoLayout
+class HomeChrome : Layout
   var pressure
   var timer
 
@@ -21,8 +21,11 @@ class HomeChrome : AutoLayout
     self.pressure = AutoPressureDisplay("pressure:target", "br", 0.25)
     self.timer = Duration("minutes")
     super(self).init(bounds(nil, nil), [
-      AutoLayout(bounds(0.5, 1), [self.pressure]),
-      AutoLayout(bounds(0.5, 1), [self.timer], alignment("center", "center"))
+      RowLayout(0.25, [Text("Gardener")]),
+      RowLayout(0.75, [
+        ColumnLayout(0.5, [self.pressure]),
+        ColumnLayout(0.5, [self.timer], alignment("center", "center"))
+      ])
     ])
   end
 

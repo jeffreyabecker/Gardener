@@ -109,9 +109,9 @@ class DurationEditScene : EditScene
     if self.current == nil
       return Text("--", nil, SettingsView.scale)
     end
-    return AutoLayout(bounds(nil, nil), [
-      AutoLayout(bounds(0.5, 1), [self.cells[0]], alignment("center", "center")),
-      AutoLayout(bounds(0.5, 1), [self.cells[1]], alignment("center", "center"))
+    return Layout(bounds(nil, nil), [
+      Layout(bounds(0.5, 1), [self.cells[0]], alignment("center", "center")),
+      Layout(bounds(0.5, 1), [self.cells[1]], alignment("center", "center"))
     ])
   end
 

@@ -70,10 +70,10 @@ class RealEditScene : EditScene
     if self.min == nil || self.max == nil
       return value
     end
-    return AutoLayout(bounds(nil, nil), [
-      AutoLayout(bounds(1, self.measure()[1]), [value], alignment("center", "center")),
-      AutoLayout(bounds(1, 2), []),
-      AutoLayout(bounds(1, 6), [ProgressBar(self.percent())])
+    return Layout(bounds(nil, nil), [
+      Layout(bounds(1, self.measure()[1]), [value], alignment("center", "center")),
+      Layout(bounds(1, 2), []),
+      Layout(bounds(1, 6), [ProgressBar(self.percent())])
     ])
   end
 

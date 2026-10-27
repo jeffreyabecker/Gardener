@@ -47,7 +47,7 @@ before drawing leaves its box alone, so nothing is highlighted.
 
 ## Layout
 
-`AutoLayout` is a component with a box that resolves the box of each child from the cell that child
+`Layout` is a component with a box that resolves the box of each child from the cell that child
 declares, places it where the layout's alignment says, and draws the children in order. It is the one
 way a page states where its parts go; a caller no longer works out `pos.x + 16` or `dim.w / 2`.
 
@@ -60,7 +60,7 @@ for the whole of the box it is given. It is the same record a component's `dim` 
 `alignment(align, v_align)` is a record in `/system/records.be` holding where a thing sits in the
 space it is given: `align` is `left`, `center` or `right`, `v_align` `top`, `center` or `bottom`, and
 each is `left` and `top` when it is nil. The layout takes one after its children —
-`AutoLayout(bounds, children, alignment)` — and a layout built without one is `alignment("left",
+`Layout(bounds, children, alignment)` — and a layout built without one is `alignment("left",
 "top")`, the corner nothing has to be moved from.
 
 - `to_box(x, y, w, h)` places a layout: the parent that holds it calls it, and the scene a page is
@@ -85,6 +85,13 @@ each is `left` and `top` when it is nil. The layout takes one after its children
 draws — a pressure display swaps the readings its two halves hold. A layout resolves its children on
 every draw, from the box it holds, so a box that changes afterwards — or a value that grows — is
 resolved again.
+
+`RowLayout(height, children, alignment)` and `ColumnLayout(width, children, alignment)` are the two
+cells a page states most often, with the whole side spelled for the caller: a row takes the full
+width and divides the height it is given — the `bounds(1, h)` of the column that holds it — and a
+column divides the width and takes the height whole, the `bounds(w, 1)` of the row that holds it.
+Both are layouts, so a parent resolves their cell and each places its own children as `Layout` does;
+neither adds anything to the box the layout resolves.
 
 ## Text
 

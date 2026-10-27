@@ -1,4 +1,4 @@
-# layout.test.be — the relative layout, and the box a component is given. An AutoLayout resolves
+# layout.test.be — the relative layout, and the box a component is given. A Layout resolves
 # each child's bounds against its own box, which it is given through to_box(); a component takes no
 # box at construction, is given one through set_box(), and keeps it however its value changes.
 
@@ -24,7 +24,7 @@ end
 # --- the relative layout ---------------------------------------------------
 
 def a_layout_takes_the_box_it_is_given()
-  var root = AutoLayout(bounds(nil, nil), [])
+  var root = Layout(bounds(nil, nil), [])
   root.to_box(0, 0, 128, 52)
   assert_eq(root.pos.x, 0, "the layout is not at the left of its box")
   assert_eq(root.pos.y, 0, "the layout is not at the top of its box")
@@ -35,10 +35,10 @@ end
 test("a layout takes the box it is given", a_layout_takes_the_box_it_is_given)
 
 def a_layout_stacks_its_rows_down()
-  var glyph_row = AutoLayout(bounds(1, 0.25), [])
-  var readings_row = AutoLayout(bounds(1, 0.50), [])
-  var status_row = AutoLayout(bounds(1, 0.25), [])
-  var root = AutoLayout(bounds(nil, nil), [glyph_row, readings_row, status_row])
+  var glyph_row = Layout(bounds(1, 0.25), [])
+  var readings_row = Layout(bounds(1, 0.50), [])
+  var status_row = Layout(bounds(1, 0.25), [])
+  var root = Layout(bounds(nil, nil), [glyph_row, readings_row, status_row])
   root.to_box(0, 0, 128, 52)
   root.draw()
 
@@ -57,12 +57,12 @@ end
 test("a layout whose children are full width stacks them down", a_layout_stacks_its_rows_down)
 
 def a_layout_stacks_its_children_across()
-  var left = AutoLayout(bounds(0.5, 1), [])
-  var right = AutoLayout(bounds(0.5, 1), [])
-  var root = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 0.25), []),
-    AutoLayout(bounds(1, 0.50), [left, right]),
-    AutoLayout(bounds(1, 0.25), [])
+  var left = Layout(bounds(0.5, 1), [])
+  var right = Layout(bounds(0.5, 1), [])
+  var root = Layout(bounds(nil, nil), [
+    Layout(bounds(1, 0.25), []),
+    Layout(bounds(1, 0.50), [left, right]),
+    Layout(bounds(1, 0.25), [])
   ])
   root.to_box(0, 0, 128, 52)
   root.draw()
@@ -80,12 +80,12 @@ test("a layout whose children are full height stacks them across",
      a_layout_stacks_its_children_across)
 
 def a_child_is_resolved_against_its_parent()
-  var glyph = AutoLayout(bounds(0.125, 1), [])
-  var title = AutoLayout(bounds(0.875, 1), [])
-  var root = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 0.25), [glyph, title]),
-    AutoLayout(bounds(1, 0.50), []),
-    AutoLayout(bounds(1, 0.25), [])
+  var glyph = Layout(bounds(0.125, 1), [])
+  var title = Layout(bounds(0.875, 1), [])
+  var root = Layout(bounds(nil, nil), [
+    Layout(bounds(1, 0.25), [glyph, title]),
+    Layout(bounds(1, 0.50), []),
+    Layout(bounds(1, 0.25), [])
   ])
   root.to_box(0, 0, 128, 52)
   root.draw()
@@ -101,7 +101,7 @@ test("a child is a fraction of the layout that places it", a_child_is_resolved_a
 
 def a_component_with_no_bounds_takes_its_cells()
   var fill = ProgressBar(50)
-  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [fill])])
+  var root = Layout(bounds(nil, nil), [Layout(bounds(1, 0.5), [fill])])
   root.to_box(0, 0, 128, 52)
   root.draw()
   assert_eq(fill.pos.x, 0, "the leaf is not at the left of its layout")
@@ -113,12 +113,12 @@ end
 test("a component that declares no bounds takes the cell it is given",
      a_component_with_no_bounds_takes_its_cells)
 
-def auto_layout_walks_its_children_in_order()
+def a_layout_walks_its_children_in_order()
   var log = []
   # The layouts place their leaves, so drawing walks both in the order they were added.
-  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 0.5), [
+  var root = Layout(bounds(nil, nil), [Layout(bounds(1, 0.5), [
     RecordingChild("first", log)
-  ]), AutoLayout(bounds(1, 0.5), [
+  ]), Layout(bounds(1, 0.5), [
     RecordingChild("second", log)
   ])])
   root.to_box(0, 0, 128, 52)
@@ -128,17 +128,17 @@ def auto_layout_walks_its_children_in_order()
   assert_eq(log[1], "second", "the second leaf was not drawn second")
 end
 
-test("an AutoLayout draws its children in order", auto_layout_walks_its_children_in_order)
+test("a layout draws its children in order", a_layout_walks_its_children_in_order)
 
 # A span is the fraction rounded to the nearest pixel, so a row declared as a fraction of the height
 # it was measured from comes back as the pixels it declares, and equal thirds of a row fill it.
 def equal_thirds_fill_a_row()
   var cells = [
-    AutoLayout(bounds(real(1) / real(3), 1), []),
-    AutoLayout(bounds(real(1) / real(3), 1), []),
-    AutoLayout(bounds(real(1) / real(3), 1), [])
+    Layout(bounds(real(1) / real(3), 1), []),
+    Layout(bounds(real(1) / real(3), 1), []),
+    Layout(bounds(real(1) / real(3), 1), [])
   ]
-  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), cells)])
+  var root = Layout(bounds(nil, nil), [Layout(bounds(1, 1), cells)])
   root.to_box(0, 0, 96, 16)
   root.draw()
 
@@ -154,9 +154,9 @@ def a_row_resolves_to_the_pixels_it_declares()
   var heights = [8, 2, 15, 2, 8]
   var rows = []
   for height : heights
-    rows.push(AutoLayout(bounds(1, real(height) / real(35)), []))
+    rows.push(Layout(bounds(1, real(height) / real(35)), []))
   end
-  var root = AutoLayout(bounds(nil, nil), rows)
+  var root = Layout(bounds(nil, nil), rows)
   root.to_box(0, 0, 71, 35)
   root.draw()
 
@@ -171,9 +171,9 @@ end
 test("a row resolves to the pixels it declares", a_row_resolves_to_the_pixels_it_declares)
 
 def a_rounded_span_is_clamped_to_what_is_left()
-  var left = AutoLayout(bounds(0.5, 1), [])
-  var right = AutoLayout(bounds(0.5, 1), [])
-  var root = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 1), [left, right])])
+  var left = Layout(bounds(0.5, 1), [])
+  var right = Layout(bounds(0.5, 1), [])
+  var root = Layout(bounds(nil, nil), [Layout(bounds(1, 1), [left, right])])
   root.to_box(0, 0, 77, 16)
   root.draw()
 
@@ -186,11 +186,11 @@ test("a rounded span is clamped to what is left", a_rounded_span_is_clamped_to_w
 # The alignment is where a thing sits in the space it was given, at both levels the box resolves at:
 # the stack of children inside the layout, and a child's own room inside its cell.
 def a_layout_takes_an_alignment()
-  var plain = AutoLayout(bounds(nil, nil), [])
+  var plain = Layout(bounds(nil, nil), [])
   assert_eq(plain.alignment.align, "left", "a layout does not default to the left")
   assert_eq(plain.alignment.v_align, "top", "a layout does not default to the top")
 
-  var aimed = AutoLayout(bounds(nil, nil), [], alignment("center", "bottom"))
+  var aimed = Layout(bounds(nil, nil), [], alignment("center", "bottom"))
   assert_eq(aimed.alignment.align, "center", "the layout does not keep the align it was given")
   assert_eq(aimed.alignment.v_align, "bottom", "the layout does not keep the v_align it was given")
 
@@ -207,8 +207,8 @@ def a_text_sits_where_the_alignment_says()
   var ink = screen.text_bounds("x", 1, "sans12")
 
   var centred = Text("x", "sans12")
-  var root = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 20), [centred], alignment("center", "center"))
+  var root = Layout(bounds(nil, nil), [
+    Layout(bounds(1, 20), [centred], alignment("center", "center"))
   ])
   root.to_box(0, 0, 128, 20)
   root.draw()
@@ -218,15 +218,15 @@ def a_text_sits_where_the_alignment_says()
   assert_eq(centred.pos.y, (20 - ink.h) / 2, "a centred text is not centred down its cell")
 
   var cornered = Text("x", "sans12")
-  var plain = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 20), [cornered])])
+  var plain = Layout(bounds(nil, nil), [Layout(bounds(1, 20), [cornered])])
   plain.to_box(0, 0, 128, 20)
   plain.draw()
   assert_eq(cornered.pos.x, 0, "a text with no alignment does not start at the left")
   assert_eq(cornered.pos.y, 0, "a text with no alignment does not start at the top")
 
   var cornered_right = Text("x", "sans12")
-  var right = AutoLayout(bounds(nil, nil), [
-    AutoLayout(bounds(1, 20), [cornered_right], alignment("right", "bottom"))
+  var right = Layout(bounds(nil, nil), [
+    Layout(bounds(1, 20), [cornered_right], alignment("right", "bottom"))
   ])
   right.to_box(0, 0, 128, 20)
   right.draw()
@@ -238,9 +238,9 @@ test("a text sits where the layout's alignment says", a_text_sits_where_the_alig
 
 # A declaration above one is pixels, so a cell of a fixed size no longer has to know the parent's.
 def a_declared_size_above_one_is_pixels()
-  var glyph = AutoLayout(bounds(12, 1), [])
-  var title = AutoLayout(bounds(nil, 1), [])
-  var row = AutoLayout(bounds(nil, nil), [glyph, title])
+  var glyph = Layout(bounds(12, 1), [])
+  var title = Layout(bounds(nil, 1), [])
+  var row = Layout(bounds(nil, nil), [glyph, title])
   row.to_box(0, 0, 128, 8)
   row.draw()
   assert_eq(glyph.pos.x, 0, "the glyph cell is not at the left")
@@ -248,8 +248,8 @@ def a_declared_size_above_one_is_pixels()
   assert_eq(title.pos.x, 12, "the title does not follow the glyph cell")
   assert_eq(title.dim.w, 116, "the rest of the row is not 116")
 
-  var wide = AutoLayout(bounds(200, 1), [])
-  var root = AutoLayout(bounds(nil, nil), [wide])
+  var wide = Layout(bounds(200, 1), [])
+  var root = Layout(bounds(nil, nil), [wide])
   root.to_box(0, 0, 128, 8)
   root.draw()
   assert_eq(wide.dim.w, 128, "a declared size is not clamped to the box it resolves against")
@@ -259,8 +259,8 @@ test("a declared size above one is pixels", a_declared_size_above_one_is_pixels)
 
 # A layout resolves its children on every draw, so a box that changes is resolved again.
 def a_layout_is_resolved_on_each_draw()
-  var row = AutoLayout(bounds(1, 0.5), [])
-  var root = AutoLayout(bounds(nil, nil), [row])
+  var row = Layout(bounds(1, 0.5), [])
+  var root = Layout(bounds(nil, nil), [row])
   root.to_box(0, 0, 128, 52)
   root.draw()
   assert_eq(row.dim.h, 26, "a half of 52 is not 26")
@@ -269,7 +269,7 @@ def a_layout_is_resolved_on_each_draw()
   assert_eq(row.dim.h, 50, "the box a layout is given again is not resolved again")
 
   var t = Text("1")
-  var line = AutoLayout(bounds(nil, nil), [AutoLayout(bounds(1, 12), [t])])
+  var line = Layout(bounds(nil, nil), [Layout(bounds(1, 12), [t])])
   line.to_box(0, 0, 128, 12)
   line.draw()
   var narrow = t.dim.w
@@ -280,6 +280,61 @@ def a_layout_is_resolved_on_each_draw()
 end
 
 test("a layout is resolved on each draw", a_layout_is_resolved_on_each_draw)
+
+# --- the row and column shorthands -----------------------------------------
+
+# A row divides the height it is given and takes the width whole, so it is the cell of the column
+# that holds it; a column is the same the other way about.
+def a_row_and_a_column_state_one_share()
+  var row = RowLayout(0.25, [])
+  assert_eq(row.bounds.w, 1, "a row is not the full width")
+  assert_eq(row.bounds.h, 0.25, "a row does not divide the height it is given")
+
+  var column = ColumnLayout(0.25, [])
+  assert_eq(column.bounds.w, 0.25, "a column does not divide the width it is given")
+  assert_eq(column.bounds.h, 1, "a column is not the full height")
+end
+
+test("a row states the full width and a column the full height", a_row_and_a_column_state_one_share)
+
+def rows_stack_down_a_page()
+  var top = RowLayout(0.5, [])
+  var bottom = RowLayout(0.5, [])
+  var page = Layout(bounds(nil, nil), [top, bottom])
+  page.to_box(0, 0, 128, 52)
+  page.draw()
+  assert_eq(top.dim.w, 128, "a row is not the page's width")
+  assert_eq(top.dim.h, 26, "a half row is not half the page")
+  assert_eq(bottom.pos.y, 26, "the second row does not follow the first")
+  assert_eq(bottom.dim.h, 26, "the second row is not half the page")
+end
+
+test("rows stack down a page", rows_stack_down_a_page)
+
+def columns_stack_across_a_row()
+  var left = ColumnLayout(0.5, [])
+  var right = ColumnLayout(0.5, [])
+  var row = RowLayout(1, [left, right])
+  row.to_box(0, 0, 128, 52)
+  row.draw()
+  assert_eq(left.dim.w, 64, "a half column is not half the row")
+  assert_eq(left.dim.h, 52, "a column is not the row's height")
+  assert_eq(right.pos.x, 64, "the second column does not follow the first")
+end
+
+test("columns stack across a row", columns_stack_across_a_row)
+
+# The alignment is passed on as the layout takes it, so a shorthand centres the way Layout() does.
+def a_row_hands_on_the_alignment_it_is_given()
+  var ink = Text("1")
+  var row = RowLayout(1, [ink], alignment("center", "center"))
+  row.to_box(0, 0, 128, 52)
+  row.draw()
+  assert_eq(ink.pos.x, (128 - ink.dim.w) / 2, "the row did not centre its child along the width")
+  assert_eq(ink.pos.y, (52 - ink.dim.h) / 2, "the row did not centre its child down the height")
+end
+
+test("a row hands on the alignment it is given", a_row_hands_on_the_alignment_it_is_given)
 
 # --- the box a component keeps ---------------------------------------------
 
