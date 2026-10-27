@@ -21,6 +21,12 @@ class DisplayDevice {
   // because the geometry does not change across a call.
   virtual Rect size() const = 0;
 
+  // The depth the glass shows, in bits per pixel: 1 for a panel that is only on or off, more for a
+  // panel with levels. The frame is one byte per pixel whatever this reports; the device maps that
+  // byte down to this depth when it flushes, so a caller that wants a colour the panel can show
+  // picks one this depth allows.
+  virtual uint8_t bitsPerPixel() const = 0;
+
   // Send one whole frame to the glass: a caller-owned buffer of size().width by size().height
   // grayscale bytes, one per pixel, row-major. The device reads it and writes none of it back.
   virtual void flush(uint8_t* buffer) = 0;
