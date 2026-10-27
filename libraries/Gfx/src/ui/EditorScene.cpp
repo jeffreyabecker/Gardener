@@ -53,12 +53,14 @@ bool EditorScene::handle(const char* gesture) {
   }
   if (strcmp(gesture, "ok:single") == 0) {
     closed_ = true;
+    accepted();
     return true;
   }
   if (strcmp(gesture, "cancel:single") == 0) {
     value_ = opened_;
     hasValue_ = hasOpened_;
     closed_ = true;
+    canceled();
     return true;
   }
   return false;

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Compile and run the Gfx component checks on the host.
+"""Compile and run the Gfx drawing checks on the host.
 
     python tools/gfx/check.py              # build and run every case
     python tools/gfx/check.py --no-cache   # rebuild every object
     python tools/gfx/check.py --verbose    # print each compiler command
 
-The components in libraries/Gfx/src/ui/ are plain C++: they draw through a Canvas over a
-DisplayDevice and never touch the interpreter. This check is therefore the firmware's own drawing
+The drawing code under libraries/Gfx/src/ is plain C++: it draws through a Canvas over a
+DisplayDevice and never touches the interpreter. This check is therefore the firmware's own drawing
 code compiled against a stub display, with no Berry, no VM and no board: a case asserts the numbers
-a component answers and the pixels it leaves in the frame, and the exit code is 0 only when every
-case passes.
+a function answers and the pixels it leaves in the frame, and the exit code is 0 only when every
+case passes. The cases live a file each beside this script.
 """
 
 import argparse
@@ -66,7 +66,7 @@ def build(cxx):
     sources = [
         *(GFX / "src" / "gfx").glob("*.cpp"),
         *(GFX / "src" / "ui").glob("*.cpp"),
-        TOOL / "main.cpp",
+        *(TOOL.glob("*.cpp")),
     ]
 
     built = []

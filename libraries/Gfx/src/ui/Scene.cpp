@@ -9,7 +9,7 @@ Scene::Scene(GestureQueue& gestures) : gestures_(gestures) {}
 
 void Scene::draw(Canvas& canvas, uint32_t nowMs) {
   canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Paper));
-  drawPage()(canvas);
+  drawPage(canvas);
   lastDraw_ = nowMs;
 }
 

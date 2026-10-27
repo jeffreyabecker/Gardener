@@ -29,9 +29,20 @@ class EditorScene : public Scene {
   
   String label_;
 
+  // What the keys made of the value, and the value the editor opened on. Cancel puts both back;
+  // hasValue_ false is a nullable setting holding nothing, which the band prints as `--`.
+  String value_;
+  String opened_;
+  bool hasValue_ = false;
+  bool hasOpened_ = false;
+  bool closed_ = false;
+
   virtual void nudge(int8_t direction) = 0;
-  virtual void canceled() = 0;
-  virtual void accepted() = 0;
+
+  // Hooks a kind overrides for work of its own on the way out: a jingle that was auditioning stops
+  // when canceled() runs. The keys have already put the opened value back by then.
+  virtual void accepted() {}
+  virtual void canceled() {}
 
   virtual const char* title(){
     return label_.c_str();
@@ -39,7 +50,6 @@ class EditorScene : public Scene {
   virtual const char* hint(){
     return "\x1E/\x1F  OK=SAVE";
   }
-  virtual Paint value_component();
   virtual String value() = 0;
 };
 
