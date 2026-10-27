@@ -1,5 +1,7 @@
 #include "gfx/Text.h"
 
+#include <Arduino.h>
+
 #include "gfx/BuiltinFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
@@ -70,10 +72,10 @@ void Text::operator()(Canvas& canvas) const {
   if (size == 0) return;
   const Font* font = face != nullptr ? face : &BuiltinFont;
   int16_t cursorX = x;
-  for (unsigned int i = 0; i < value.length(); i++) {
-    const uint8_t character = static_cast<uint8_t>(value[i]);
+  for (const char* character = value; *character != '\0'; character++) {
     cursorX = static_cast<int16_t>(
-        cursorX + drawFontGlyph(canvas, cursorX, y, font, character, size, color));
+        cursorX + drawFontGlyph(canvas, cursorX, y, font, static_cast<uint8_t>(*character), size,
+                                color));
   }
 }
 

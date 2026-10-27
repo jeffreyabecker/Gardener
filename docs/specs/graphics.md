@@ -174,15 +174,22 @@ values, five pixels wide, eight tall, six pixels apart.
 The structures are forked from Adafruit_GFX's `GFXfont` and `GFXglyph` into `gardener::gfx`, and
 the glyph writer and the built-in face keep Adafruit's attribution.
 
+The compiled FreeSans, FreeMono and FreeSerif families, TomThumb, Picopixel and the UI symbol faces
+ship under `gfx/fonts`, one header per face; `gfx::fonts` names them (`Sans9`, `Mono12`,
+`SerifItalic18`, `Symbol12`, and the rest).
+
 ### Text
 
 ```cpp
-Text(int16_t x, int16_t y, const String& value, const Font* face, uint8_t size, uint8_t color)
+Text(int16_t x, int16_t y, const char* value, const Font* face, uint8_t size, uint8_t color)
 ```
 
 The face belongs to the shape, so a page mixing faces needs nothing from the canvas; a `face` of
 `nullptr` selects `BuiltinFont`. `x` and `y` are the baseline of the first glyph, which is the font
 format's own rule, and `size` scales what is drawn.
+
+The string is a NUL-terminated run of bytes the caller keeps: a draw copies nothing, so the text
+has to be alive for the draw, and naming it needs no allocation.
 
 The library does no newline handling: it draws each glyph it is given and reads no character as a
 line break, so a caller that wants a second line draws it itself.

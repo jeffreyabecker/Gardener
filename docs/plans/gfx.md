@@ -45,10 +45,12 @@ to depend on `Gfx`. Those follow in later work.
   line draws it itself. The `Font` and `Glyph` structures are forked from Adafruit's
   `GFXfont`/`GFXglyph` into `gardener::gfx`, with fixed-metric fields added at the end, and the
   glyph-writing code and the normalized built-in face keep Adafruit's license and attribution.
-- `Text` holds its string as an Arduino `String`, copied at construction, so drawing a temporary
-  `const char*` or `String` is safe. Only the text sources, including the built-in face data,
-  reach `<Arduino.h>`; `Rect`, `DisplayDevice`, `Font`, `Glyph`, `Canvas` and the other shapes stay
-  pure C++.
+- `Text` takes its string as a `const char*` the caller keeps, because a draw copies nothing; the
+  text has to be alive for the draw. `Text` is therefore not tied to the Arduino `String`, and
+  `Rect`, `DisplayDevice`, `Font`, `Glyph`, `Canvas` and the other shapes stay pure C++.
+- The compiled FreeSans, FreeMono and FreeSerif families, TomThumb, Picopixel and the UI symbol
+  faces ship as converted headers under `gfx/fonts`, named by `gfx::fonts`. The app's own
+  `gardener::fonts` table and the Adafruit panel driver stay as they are.
 - Follow `.github/skills/cpp` naming and formatting and `.github/skills/firmware` (no speculative
   generality; implement exactly the pinned surface).
 
@@ -69,6 +71,10 @@ to depend on `Gfx`. Those follow in later work.
 - `libraries/Gfx/src/gfx/Text.h` — the `Text` shape with the face it carries
 - `libraries/Gfx/src/gfx/Text.cpp` — the glyph-writing code cribbed from Adafruit_GFX, with
   attribution
+- `libraries/Gfx/src/gfx/Fonts.h` — the compiled face aliases
+- `libraries/Gfx/src/gfx/Fonts.cpp` — the alias definitions and the compiled face data
+- `libraries/Gfx/src/gfx/fonts/` — one converted header per compiled face, with the licenses and
+  provenance
 - `libraries/Gfx/examples/demo/demo.ino` — draws shapes, a bitmap and text through a fake device
 - `docs/specs/graphics.md` — remove the unimplemented banner
 
