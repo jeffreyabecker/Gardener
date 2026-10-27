@@ -379,6 +379,17 @@ end
 test("the page frames the editor and hands it the content box",
      the_page_frames_the_editor_and_hands_it_the_content_box)
 
+# A whole number's setting and a real one, and the editor a row of each opens. The numeric kind is
+# the one whose editor is the base scene, told what the value is, what a keypress steps by, the
+# bounds it is held to and whether it holds whole numbers.
+def count_setting()
+  return NumericEditCfg("count", 7, "Count", nil, 1, 1, 20, false, true)
+end
+
+def gain_setting()
+  return NumericEditCfg("gain", 0.5, "Gain", nil, 0.5, nil, nil, false, false)
+end
+
 # Every editor measures its own column, chrome included: a label row and a hint row are in every one
 # of them, whatever its body is, and a bare editor - a number with no kind of its own - measures the
 # same column from its value.
@@ -386,8 +397,8 @@ def every_editor_measures_its_own_chrome()
   var editors = [
     BoolEditScene("Flags", true, false),
     ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false),
-    EditScene("Count", 7, 1, 1, 20, false, true),
-    EditScene("Gain", 0.5, 0.5, nil, nil, false, false),
+    count_setting().scene(7),
+    gain_setting().scene(0.5),
     EditScene("Label"),
     PressureEditScene("Rest", 5.0, 1, false),
     DurationEditScene("Hold", 90, 1, 0, 7200, false)
@@ -409,8 +420,8 @@ test("every editor measures its own chrome", every_editor_measures_its_own_chrom
 def the_editor_column_places_its_rows()
   var editors = [
     BoolEditScene("Flags", true, false),
-    EditScene("Count", 7, 1, 1, 20, false, true),
-    EditScene("Gain", 0.5, 0.5, nil, nil, false, false),
+    count_setting().scene(7),
+    gain_setting().scene(0.5),
     PressureEditScene("Rest", 5.0, 1, false),
     DurationEditScene("Hold", 90, 1, 0, 7200, false)
   ]
@@ -544,7 +555,7 @@ def a_scene_opened_over_another_takes_the_page()
   assert_eq(list.dim.w, 128, "the settings list is not the page's width")
   assert_eq(list.dim.h, 52, "the settings list is not the page's height")
 
-  var editor = EditScene("Count", 2, 1, 0, 10, false, true)
+  var editor = count_setting().scene(2)
   assert_true(ux.push(editor), "the value editor would not push")
   assert_eq(editor.pos.x, 0, "the value editor does not start at the left of the page")
   assert_eq(editor.pos.y, 0, "the value editor does not start at the top of the page")
@@ -645,14 +656,17 @@ end
 
 test("the choice editor draws a nullable nothing", the_choice_editor_draws_nothing)
 
-def the_int_editor_draws_between_its_bounds()
-  show_editor(EditScene("Count", 7, 1, 1, 20, false, true))
+# A whole number's editor draws the value over the bar that shows where it sits between the bounds a
+# real's editor, having none, does without.
+def the_whole_number_editor_draws_between_its_bounds()
+  show_editor(count_setting().scene(7))
 end
 
-test("the int editor draws between its bounds", the_int_editor_draws_between_its_bounds)
+test("the whole number editor draws between its bounds",
+     the_whole_number_editor_draws_between_its_bounds)
 
 def the_real_editor_draws_without_a_bar()
-  show_editor(EditScene("Gain", 0.5, 0.5, nil, nil, false, false))
+  show_editor(gain_setting().scene(0.5))
 end
 
 test("the real editor draws without a bar", the_real_editor_draws_without_a_bar)
