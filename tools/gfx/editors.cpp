@@ -2,6 +2,7 @@
 // draws, and the page every kind is drawn in.
 
 #include <math.h>
+#include <stdio.h>
 
 #include "suite.h"
 
@@ -47,6 +48,20 @@ void aRealNumberStepsByItsIncrement() {
   NumberProbe number(gestures, ux, label, 0.5f, 0.1f, 0, 1, false);
   number.nudge(1);
   expectText(number.text().c_str(), "0.6", "a tenth step lands on 0.6");
+}
+
+void aNumberPrintsThroughItsFormatter() {
+  NoGestures gestures;
+  Ux ux;
+  String label("Target");
+  NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false, [](float value) {
+    char printed[16];
+    snprintf(printed, sizeof(printed), "%.1f kPa", static_cast<double>(value));
+    return String(printed);
+  });
+  expectText(number.text().c_str(), "5.0 kPa", "the setting's formatter prints the number");
+  number.nudge(1);
+  expectText(number.text().c_str(), "6.0 kPa", "and what it prints follows the steps");
 }
 
 void aNullableNumberHoldsNothing() {
@@ -422,6 +437,7 @@ void anEditorPageIsThreeBands() {
 void addEditorCases(std::vector<Case>& cases) {
   cases.push_back({"a number steps and holds", aNumberStepsAndHolds});
   cases.push_back({"a real number steps by its increment", aRealNumberStepsByItsIncrement});
+  cases.push_back({"a number prints through its formatter", aNumberPrintsThroughItsFormatter});
   cases.push_back({"a nullable number holds nothing", aNullableNumberHoldsNothing});
   cases.push_back({"a number with no bounds steps freely", aNumberWithNoBoundsStepsFreely});
   cases.push_back({"a number band draws the value and the bar", aNumberBandDrawsTheValueAndTheBar});

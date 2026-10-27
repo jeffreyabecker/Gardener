@@ -4,9 +4,15 @@
 
 #include <Arduino.h>
 
+#include <functional>
+
 #include "ui/EditorScene.h"
 
 namespace gardener::gfx::ui {
+
+// What the band prints for a number: a setting that reads in its own units passes one and the
+// scene draws what it returns instead of `%g` of the value.
+using NumberFormatter = std::function<String(float)>;
 
 // The value editor of a number: the number at the value face, over a bar showing where it sits
 // between the bounds when the setting has both. Up and Down step it within those bounds, OK keeps
@@ -18,9 +24,10 @@ namespace gardener::gfx::ui {
 class NumberScene : public EditorScene {
  public:
   NumberScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step, float min,
-              float max, bool nullable);
+              float max, bool nullable, NumberFormatter format = nullptr);
 
-  // What the band prints for the number: `%g` of it, or `--` when it holds nothing.
+  // What the band prints for the number: the formatter's text, `%g` of the number when the setting
+  // passed none, or `--` when it holds nothing.
   String text() const;
 
   // The number the keys left it on, as the float the stack hands back; an empty any is a nullable
@@ -44,6 +51,7 @@ class NumberScene : public EditorScene {
   float min_;
   float max_;
   bool nullable_;
+  NumberFormatter format_;
 
   // What the band prints. The paint closes over a pointer into it, so the scene keeps the string
   // rather than a local pageContents() returns without.
