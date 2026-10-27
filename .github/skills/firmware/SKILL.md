@@ -91,5 +91,32 @@ a queue or a watchdog is a question to ask, not a thing to build.
 of it: one `pressureKpa()` reading, with the ambient reference and the values derived from it left to the
 driver that can actually know them.
 
+## The Berry boundary
+
+The panel's pages are written against models the interpreter compiles. Each of those models — the
+scene, the stack, the registry, the settings kinds, the components — is a C++ class in the library,
+and the Berry side is a wrapper that presents it to a page. The wrapper is a `be_pushclass` table in
+a file under `routines/bindings/`, beside the modules, whose callbacks unpack their arguments, call
+the class and push its answer; the C++ object belongs to the instance the way `Config`'s does, a
+comobj in the instance's own member, freed with it.
+
+The wrapper is thin, and the boundary runs one way:
+
+- Nothing in the C++ class knows about `bvm`. Box arithmetic, text formatting, the settings rules
+  and the stack's state are the class's; unpacking arguments and pushing an answer is the
+  wrapper's. A callback that computes a layout or formats a value has put the model in the wrong
+  place.
+- A page still extends the wrapped class and overrides what differs. Where the class has to call
+  back into the page — a scene's `draw_page`, `handle` and `tick`, a layout drawing its children —
+  the wrapper is what turns that call into a call on the page's own method by name. It is the only
+  place that knows both sides of the boundary, which is why it stays small.
+- A value the page hands over stays Berry's: the instance's own member, or a value the wrapper
+  keeps where the collector can see it. Copying it into a C type and back loses what the page meant
+  by it.
+
+A model is never written twice. Keeping the C++ class and the behaviour it replaces in a `.be` file
+is the one thing this rule forbids: the two drift apart, and the image pays the compile cost of
+both.
+
 This is guidance for new code, and for code you are already changing. Existing structure is not a
 rewrite-on-sight target, and an unrequested refactor is its own decision with its own measurement.

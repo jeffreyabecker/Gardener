@@ -110,6 +110,15 @@ The pump, the sensor and Bluetooth are models or counters and the clock is virtu
 the actual vacuum stay the device's. `print` writes nowhere, here as on the device: `vacuum.log()`
 lands in the output as `[I]`. LittleFS is a map, so a write that would fill a filesystem succeeds.
 
+## A binding is a wrapper
+
+A class a page is written against is a C++ class in the library, and the file under
+`routines/bindings/` is what presents it: the `be_pushclass` table, the callbacks that unpack their
+arguments and push the class's answer, and the hook that reaches a page's override back through the
+interpreter. What belongs on each side of that line is the Berry boundary rule in
+[the firmware skill](../firmware/SKILL.md). A model kept in a `.be` file beside its wrapper is a
+second implementation: the two drift, and the image pays for both at every boot.
+
 ## Still the device's job
 
 The check is the compile-and-contract loop. A change to the panel's look, the pump's behaviour or the
