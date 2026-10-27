@@ -22,9 +22,12 @@ class Scene
   def init()
     self.last_draw = 0
   end
-
-  # The page's box, stamped on the scene as it is pushed and before its activate() runs. A scene is
-  # never a window inside another one, and nothing draws a scene that has no box.
+  def default_box()
+    return [0, 0, screen.width(), screen.height() - overlay_band_height]
+  end
+  # The page's box, stamped on the scene as it is pushed and before its activate() runs. The base
+  # takes the whole page; a scene that draws a panel of its own overrides default_box(). Nothing
+  # draws a scene that has no box.
   def to_box(x, y, w, h)
     self.pos = point(x, y)
     self.dim = bounds(w, h)

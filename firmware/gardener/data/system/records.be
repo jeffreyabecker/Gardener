@@ -68,3 +68,8 @@ def is_nil(*values)
   end
   return nil
 end
+
+# The status band the ux component owns across the bottom of the glass: 12 rows of unit, links, run
+# state and battery. A page lays out in the area above it — the panel less those rows — and nothing a
+# page draws belongs here.
+overlay_band_height = 12

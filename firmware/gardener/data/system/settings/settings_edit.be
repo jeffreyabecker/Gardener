@@ -24,6 +24,20 @@ class SettingsEditScene : Scene
     self.title = title
   end
 
+  # The list is a panel over the page it was opened from rather than the page: 60% of the width,
+  # centred, starting where the chrome's title row ends and running down to the band. The page
+  # behind keeps its title above and its margins beside, and the scene's own draw() clears only
+  # # this box.
+  # we need to fix clipping first, so the list can draw its own scroll bar and the rows can draw their own icons and text
+  # def default_box()
+  #   # The page is the panel less the band, and the chrome's title row is its top quarter.
+  #   var page_h = screen.height() - overlay_band_height
+  #   var window_w = screen.width() * 3 / 5
+  #   var window_x = (screen.width() - window_w) / 2
+  #   var window_y = page_h / 4
+  #   return [window_x, window_y, window_w, page_h - window_y]
+  # end
+
   # The page's box decides how many rows the list window holds, so the list is built here rather
   # than in init, where the scene has no box yet.
   def to_box(x, y, w, h)

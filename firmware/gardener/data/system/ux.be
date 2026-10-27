@@ -14,10 +14,7 @@
 # the cap is what keeps it a log line instead of a heap exhausted in one beat.
 max_frames = 8
 
-# The status band the ux component owns across the bottom of the glass: 12 rows of unit, links, run
-# state and battery. A page lays out in the area above it — the panel less those rows — and nothing a
-# page draws belongs here.
-overlay_band_height = 12
+
 
 class Ux
   var frames      # [[scene, callback], ...], root first
@@ -112,9 +109,10 @@ class Ux
       return false
     end
     self.frames.push([scene, callback])
+    var default_box = scene.default_box()
     # The page is the panel less the band, and the stack is what owns the band: the box is stamped
     # here, once the scene is on top and before its activate() draws.
-    scene.to_box(0, 0, screen.width(), screen.height() - overlay_band_height)
+    scene.to_box(default_box[0], default_box[1], default_box[2], default_box[3])
     self.guard(/ -> scene.activate(args))
     return true
   end
