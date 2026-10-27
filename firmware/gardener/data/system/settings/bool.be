@@ -72,10 +72,6 @@ class BoolEditScene : EditScene
   def body_h()
     return self.measure()[1] + 2
   end
-
-  def body_w()
-    return self.chips.size() * (self.measure()[0] + 2)
-  end
 end
 
 class BoolEditCfg : EditCfg

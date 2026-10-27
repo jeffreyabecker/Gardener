@@ -97,14 +97,6 @@ class DurationEditScene : EditScene
     return self.measure()[1] + 2
   end
 
-  def body_w()
-    var cell = self.measure()[0] + 2
-    if self.current == nil
-      return cell
-    end
-    return 2 * cell
-  end
-
   def hint()
     if self.stage == "min"
       return "\x1E/\x1F MIN  \x1A=NEXT"

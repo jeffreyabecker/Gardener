@@ -131,15 +131,12 @@ it is cancelled.
    opened with. A plain number is no kind at all: `NumericEditCfg` builds an `EditScene` with the
    setting's increment, bounds and `whole` flag, and the editor coerces, steps and prints the number
    that flag names.
-   The scene measures its own content and frames it: `content_size()` is the whole of it — the label
-   row, its body and the hint row — and `draw_page()` draws a border a pixel outside that content,
-   centred in the scene's own box with at least a pixel of paper between the frame and the edge of
-   the box, then hands `draw_editor(pos, dim)` the content box inside the border. `draw_editor()`
-   draws the column — `editor_column()` in the same file — of an eight-pixel label row, two pixels
-   of paper, the body, two pixels of paper and an eight-pixel hint row, each declared in pixels and
-   its label, body and hint centred by the column's alignment. A kind answers only its own body:
-   `body()`, `body_w()` and `body_h()`, with `measure()` for the value's ink where its look needs it.
-   A choice hands the column the entries as one block the width they measure, centred in the body
-   row.
+   The scene draws its column on the page it was given: `draw_page()` builds `editor_column()` — an
+   eight-pixel label row, two pixels of paper, the body, two pixels of paper and an eight-pixel hint
+   row, each declared in pixels and its label, body and hint centred by the column's alignment — and
+   places it from the page's own top left, the page's whole width and as tall as those rows. A kind
+   answers only its own body: `body()` and `body_h()`, with `measure()` for the value's ink where its
+   look needs it. A choice hands the column the entries as one block the width they measure, centred
+   in the body row.
 5. A routine page's `ok` is its primary action, `cancel:single` pauses a run under way, and
    `cancel:double` leaves the page.

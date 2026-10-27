@@ -1,8 +1,8 @@
 # edit_scene.be — EditScene: the modal scene a setting is edited in, and the whole of what every
 # value editor shares. It owns the keys while it is on top: Up/Down step the value it holds within
-# the bounds it was handed, OK pops it, and Cancel hands back the value it was opened on. It frames
-# the content a kind measures and draws the column every value editor draws its content in — the
-# label row, the body the kind answers for, and the hint row.
+# the bounds it was handed, OK pops it, and Cancel hands back the value it was opened on. It draws
+# the column every value editor draws its content in — the label row, the body the kind answers for,
+# and the hint row — across the page it was given.
 #
 # A kind answers only what is its own: body() for its look, text() for its store, and the step hooks
 # — step_of(), within(), hold() and low() — where a keypress, a bound or a clamp is the kind's. A
@@ -18,49 +18,6 @@ editor_column_chrome = editor_text_row * 2 + editor_paper_row * 2
 # The hint row a value editor opens with: the two arrows and OK, which keeps the value and closes. A
 # kind with another key to offer appends it.
 editor_hint = "\x1E/\x1F  OK=SAVE"
-
-# The frame an editor is drawn in: the content the kind measured and the two pixels the border keeps
-# either side of it, no nearer than a pixel to the page's edge. It draws the border and hands the
-# kind the box inside it.
-class EditorFrame : Component
-  # The border the frame draws either side of the content, and the paper it keeps between itself and
-  # the page's edge: the page less twice each of these is the most the frame can take.
-  static var border = 2
-  static var margin = 1
-
-  var scene
-
-  def init(scene)
-    super(self).init()
-    self.scene = scene
-  end
-
-  # The content and the border around it, no wider or taller than the page less the margin each
-  # side.
-  def use(w, h)
-    var content = self.scene.content_size()
-    var wide = content.w + EditorFrame.border * 2
-    var tall = content.h + EditorFrame.border * 2
-    if wide > w - EditorFrame.margin * 2
-      wide = w - EditorFrame.margin * 2
-    end
-    if tall > h - EditorFrame.margin * 2
-      tall = h - EditorFrame.margin * 2
-    end
-    return bounds(wide, tall)
-  end
-
-  def draw()
-    screen.draw_rect(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
-    var inside = EditorFrame.border
-    self.scene.draw_editor(point(self.pos.x + inside, self.pos.y + inside),
-                           bounds(self.dim.w - inside * 2, self.dim.h - inside * 2))
-    super(self).draw()
-  end
-end
-
-# What the frame costs down the page: its border and the margin it keeps, either side.
-editor_frame_chrome = EditorFrame.border * 2 + EditorFrame.margin * 2
 
 # The column every value editor draws its content in: the label row, two pixels of paper, the kind's
 # body, two pixels of paper and the hint row, declared in pixels so the layout resolves them to the
@@ -80,7 +37,6 @@ end
 class EditScene : Scene
   var label
   var opened
-  var frame
   var page
   var current
   var step
@@ -102,7 +58,6 @@ class EditScene : Scene
     self.min = self.number(min)
     self.max = self.number(max)
     self.nullable = nullable
-    self.frame = nil
     self.page = nil
   end
 
@@ -140,39 +95,14 @@ class EditScene : Scene
     ux.pop(self.opened)
   end
 
-  # The editor is a framed box no bigger than the content the kind measured: a pixel of paper, a
-  # pixel of ink for the border and a pixel of paper again around it, centred in the scene's box,
-  # the frame no nearer than a pixel to that box's edge. The frame is a leaf of one layout that
-  # hands the kind the box inside the border; the centring is that layout's alignment.
+  # The column, drawn on the page the scene was given: the label row at its top, the body under it
+  # and the hint row under that, the whole width of the page and only as tall as the rows it holds.
+  # It is built on every draw, so a kind whose body changes - a value, a stage, a row showing - has
+  # nothing to keep in step.
   def draw_page()
-    if self.frame == nil
-      self.frame = Layout(bounds(nil, nil), [EditorFrame(self)], alignment("center", "center"))
-    end
-    self.frame.to_box(self.pos.x, self.pos.y, self.dim.w, self.dim.h)
-    self.frame.draw()
-  end
-
-  # The column: the label row, the body the kind answered for and the hint row, in the box inside
-  # the frame. It is built on every draw, so a kind whose body changes - a value, a stage, a row
-  # showing - has nothing to keep in step.
-  def draw_editor(pos, dim)
     self.page = editor_column(self.label, self.hint(), self.body(), self.body_h())
-    self.page.to_box(pos.x, pos.y, dim.w, dim.h)
+    self.page.to_box(self.pos.x, self.pos.y, self.dim.w, editor_column_chrome + self.body_h())
     self.page.draw()
-  end
-
-  # The label row, the body and the hint row, as wide as the widest of the three.
-  def content_size()
-    var wide = self.body_w()
-    var label_w = screen.text_bounds(self.label, 1).w
-    if label_w > wide
-      wide = label_w
-    end
-    var hint_w = screen.text_bounds(self.hint(), 1).w
-    if hint_w > wide
-      wide = hint_w
-    end
-    return bounds(wide, editor_column_chrome + self.body_h())
   end
 
   # The value at the one face every kind's band shares, over the bar that shows where it sits
@@ -197,10 +127,6 @@ class EditScene : Scene
       tall += 2 + 6
     end
     return tall
-  end
-
-  def body_w()
-    return self.measure()[0]
   end
 
   # The value's ink at the scale every kind's band shares.

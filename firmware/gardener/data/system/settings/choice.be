@@ -36,9 +36,9 @@ class ChoiceEditScene : EditScene
     for item : self.ring.items
       rows.push(ListRow(item.icon, item.title, item))
     end
-    # The rows the box has room for — the scene's box less the frame and the column's chrome — and
-    # no more than there are entries.
-    var fit = (self.dim.h - editor_frame_chrome - editor_column_chrome) / List.row
+    # The rows the box has room for — the scene's box less the column's chrome — and no more than
+    # there are entries.
+    var fit = (self.dim.h - editor_column_chrome) / List.row
     if fit < 1
       fit = 1
     end
@@ -107,10 +107,6 @@ class ChoiceEditScene : EditScene
 
   def body_h()
     return self.list.visible * List.row
-  end
-
-  def body_w()
-    return self.row_width()
   end
 end
 

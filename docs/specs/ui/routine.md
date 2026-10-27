@@ -169,11 +169,10 @@ with the index of the one showing. `view.be` is `SettingsView`, the list's own g
 setting is drawn on, the gap under its heading and the window a box holds.
 
 `edit_scene.be` is `EditScene`, the modal editor and the whole of what a value editor is: it owns the
-keys while it is on top, holds the value and the bounds it steps within, frames the content it
-measures, draws the column — label row, body and hint row — and pops what OK holds or what Cancel
-was opened on. A kind answers only its own body, its own text and the few step hooks it changes; a
-plain number answers nothing at all, and is an `EditScene` built with the setting's bounds and
-`whole` flag. `edit_cfg.be` is `EditCfg`, the setting: the row it draws, its default, the bounds a
+keys while it is on top, holds the value and the bounds it steps within, draws the column — label
+row, body and hint row — across the page, and pops what OK holds or what Cancel was opened on. A
+kind answers only its own body, its own text and the few step hooks it changes; a plain number
+answers nothing at all, and is an `EditScene` built with the setting's bounds and `whole` flag. `edit_cfg.be` is `EditCfg`, the setting: the row it draws, its default, the bounds a
 kind declares and the rules its kind is read, held and printed by. Each kind is one file holding both
 halves — its scene first and its cfg after it, or the cfg alone where the editor is all it needs —
 `bool.be`, `choice.be`, `number.be`, `pressure.be` and `duration.be` — and `settings_edit.be` is

@@ -325,60 +325,6 @@ end
 
 test("a repair puts a refused set back to its defaults", a_repair_puts_a_set_back)
 
-# The editor contract: draw_page() frames the content a kind measures and hands draw_editor the box
-# inside the border, so a kind draws in a box no bigger than what it holds and nothing it draws
-# leaves the frame. The frame is centred in the scene's own box, which is the box of the scene it
-# was opened over.
-class RecordingEditor : EditScene
-  var window
-
-  def init(label)
-    super(self).init(label, nil)
-    self.window = nil
-  end
-
-  def content_size()
-    return bounds(60, 30)
-  end
-
-  def draw_editor(pos, dim)
-    self.window = [pos.x, pos.y, dim.w, dim.h]
-  end
-end
-
-def the_page_frames_the_editor_and_hands_it_the_content_box()
-  var scene = page_box(RecordingEditor("Label"))
-  scene.draw_page()
-
-  var content = scene.content_size()
-  assert_eq(scene.window[2], content.w, "the editor's box is not the content's width")
-  assert_eq(scene.window[3], content.h, "the editor's box is not the content's height")
-
-  # The frame is the content and the two pixels the border keeps either side of it: one of paper, one
-  # of ink.
-  var frame_x = scene.window[0] - 2
-  var frame_y = scene.window[1] - 2
-  var frame_w = scene.window[2] + 4
-  var frame_h = scene.window[3] + 4
-  assert_true(frame_w < scene.dim.w, "the frame is as wide as the scene's box")
-  assert_true(frame_h < scene.dim.h, "the frame is as tall as the scene's box")
-
-  var left = frame_x - scene.pos.x
-  var right = scene.pos.x + scene.dim.w - (frame_x + frame_w)
-  assert_true(left >= 1, "the frame keeps no margin from the box's left")
-  assert_true(right >= 1, "the frame keeps no margin from the box's right")
-  assert_true(left - right < 2 && right - left < 2, "the frame is not centered across the box")
-
-  var top = frame_y - scene.pos.y
-  var bottom = scene.pos.y + scene.dim.h - (frame_y + frame_h)
-  assert_true(top >= 1, "the frame keeps no margin from the box's top")
-  assert_true(bottom >= 1, "the frame keeps no margin from the box's bottom")
-  assert_true(top - bottom < 2 && bottom - top < 2, "the frame is not centered down the box")
-end
-
-test("the page frames the editor and hands it the content box",
-     the_page_frames_the_editor_and_hands_it_the_content_box)
-
 # A whole number's setting and a real one, and the editor a row of each opens. The numeric kind is
 # the one whose editor is the base scene, told what the value is, what a keypress steps by, the
 # bounds it is held to and whether it holds whole numbers.
@@ -390,10 +336,10 @@ def gain_setting()
   return NumericEditCfg("gain", 0.5, "Gain", nil, 0.5, nil, nil, false, false)
 end
 
-# Every editor measures its own column, chrome included: a label row and a hint row are in every one
-# of them, whatever its body is, and a bare editor - a number with no kind of its own - measures the
-# same column from its value.
-def every_editor_measures_its_own_chrome()
+# An editor draws its column on the page it was given: from the page's own top left, the page's whole
+# width, and as tall as the label row, the body and the hint row it holds. A bare editor - a number
+# with no kind of its own - draws the same column from its value.
+def every_editor_draws_its_column_on_the_page()
   var editors = [
     BoolEditScene("Flags", true, false),
     ChoiceEditScene("Mode", "a", choice_items(["a", "b"]), false),
@@ -405,15 +351,15 @@ def every_editor_measures_its_own_chrome()
   ]
   for scene : editors
     page_box(scene).activate()
-    var content = scene.content_size()
-    assert_true(content.h >= 20, "an editor does not measure its own label and hint rows")
-    assert_true(content.w > 0, "an editor measures itself as no wider than nothing")
-    assert_true(content.w >= screen.text_bounds(scene.label, 1).w,
-                "an editor's content is narrower than its label")
+    var page = scene.page
+    assert_eq(page.pos.x, scene.pos.x, "the column does not start at the page's left")
+    assert_eq(page.pos.y, scene.pos.y, "the column does not start at the page's top")
+    assert_eq(page.dim.w, scene.dim.w, "the column is not the page's width")
+    assert_eq(page.dim.h, 20 + scene.body_h(), "the column is not the body and its two chrome rows")
   end
 end
 
-test("every editor measures its own chrome", every_editor_measures_its_own_chrome)
+test("every editor draws its column on the page", every_editor_draws_its_column_on_the_page)
 
 # A kind that shows a value draws its content in one column: the label row, two pixels of paper, the
 # body, two pixels of paper and the hint row, each resolved to the pixels the kind measured it at.
@@ -429,12 +375,8 @@ def the_editor_column_places_its_rows()
     page_box(scene).activate()
 
     var page = scene.page
-    var content = scene.content_size()
-    assert_eq(content.h, 20 + scene.body_h(), "the content is not the body and its two chrome rows")
-    assert_true(content.w + 4 < scene.dim.w, "the frame is not narrower than the page")
-    assert_true(content.h + 4 < scene.dim.h, "the frame is not shorter than the page")
-    assert_eq(page.dim.w, content.w, "the column is not the content's width")
-    assert_eq(page.dim.h, content.h, "the column is not the content's height")
+    assert_eq(page.dim.w, scene.dim.w, "the column is not the page's width")
+    assert_eq(page.dim.h, 20 + scene.body_h(), "the column is not the body and its two chrome rows")
 
     var rows = page.children
     assert_eq(rows.size(), 5, "the editor column does not have five rows")
