@@ -1,8 +1,9 @@
 #pragma once
 
-// Umbrella header for the Gardener firmware. A build includes this and nothing else: it names the
-// machine's parts, the two links and the tasks that drive them, and — when the build has a panel —
-// the display, keys, buzzer, gauge, interpreter and files arranged around the machine.
+// Umbrella header for the Gardener firmware. A build includes this, and the Runtime library's
+// Runtime.h for the tasks that drive it: it names the machine's parts and the two links, and — when
+// the build has a panel — the display, keys, buzzer, gauge, interpreter and files arranged around
+// the machine.
 
 #include "Build.h"
 
@@ -10,8 +11,6 @@
 #include "core/SerialLogger.h"
 #include "machine/Machine.h"
 #include "storage/FileLibrary.h"
-#include "tasks/MachineTasks.h"
-#include "tasks/RtosCommandQueue.h"
 #if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
 #include "ble/Domains.h"
@@ -23,7 +22,6 @@
 #include "panel/HomeUI.h"
 #include "panel/Panel.h"
 #include "panel/PanelRoot.h"
-#include "tasks/PanelTasks.h"
 #if GARDENER_BLUETOOTH
 #include "ble/PanelDomains.h"
 #endif

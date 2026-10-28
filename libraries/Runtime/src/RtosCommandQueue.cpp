@@ -1,4 +1,4 @@
-#include "tasks/RtosCommandQueue.h"
+#include "RtosCommandQueue.h"
 
 namespace gardener {
 

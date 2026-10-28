@@ -2,7 +2,7 @@
 
 #if GARDENER_PANEL
 
-#include "tasks/PanelTasks.h"
+#include "PanelTasks.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -11,7 +11,7 @@
 #include "machine/MachineCommand.h"
 #include "panel/Panel.h"
 #include "machine/SafeReboot.h"
-#include "tasks/MachineTasks.h"
+#include "MachineTasks.h"
 #include "panel/HomeUI.h"
 
 namespace gardener {

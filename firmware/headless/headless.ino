@@ -8,6 +8,7 @@
 
 #include <LittleFS.h>
 #include <Gardener.h>
+#include <Runtime.h>
 
 // The machine-alone build has no panel, so the radio is one of its two ways in and is not optional.
 // `scripts/arduino.py` always enables it for this sketch; a build that tries to remove it stops
