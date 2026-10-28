@@ -19,7 +19,7 @@
 
 namespace {
 
-const char* DefaultData = "firmware/gardener/data";
+const char* DefaultData = "firmware/data";
 
 // A file the check loads by name: the fallback is the driver's, next to this program's sources.
 char* readFile(const char* path, size_t* length) {

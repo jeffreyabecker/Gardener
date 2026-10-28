@@ -34,7 +34,7 @@ ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
 GARDENER = ROOT / "libraries" / "Gardener"
 GFX = ROOT / "libraries" / "Gfx"
-DATA = ROOT / "firmware" / "gardener" / "data"
+DATA = ROOT / "firmware" / "data"
 HOST = TOOL / "host"
 BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")

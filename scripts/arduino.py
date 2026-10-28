@@ -3,7 +3,7 @@
 
 --task build    compile the sketch (uses the project local libraries folder)
 --task upload   compile and upload, auto-detecting the serial port
---task data     pack the sketch's data folder and write it to the LittleFS partition
+--task data     pack the device's data image and write it to the LittleFS partition
 --task monitor  open the serial monitor at 115200 baud
 --task libs     install the third party libraries the firmware needs
 --task clean    remove the build output
@@ -52,11 +52,14 @@ SKETCHES = {
 SKETCH = SKETCHES["gardener"]
 
 # The builds that ship a data image. The machine-alone build has no settings of its own — its
-# numbers are build symbols — so there is no data folder to write; the full device ships the
+# numbers are build symbols — so there is no data image to write; the full device ships the
 # system and the routines.
 SKETCHES_WITH_DATA = {"gardener"}
 
-DATA_DIR = SKETCH / "data"
+# The image itself: the files the device holds on LittleFS, beside the sketches rather than inside
+# the one sketch that ships them, because it is the device's contents and not a part of the sketch
+# that compiles.
+DATA_DIR = ROOT / "firmware" / "data"
 BUILD_DIR = SKETCH / "build"
 
 # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial to it,
@@ -261,7 +264,7 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, SKETCH, DATA_DIR, BUILD_DIR, BLUETOOTH, PANEL, DEFINES
+    global FQBN, PORT, VERBOSE, SKETCH, BUILD_DIR, BLUETOOTH, PANEL, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
@@ -284,7 +287,6 @@ def main():
     VERBOSE = args.verbose
     DEFINES = args.define
     SKETCH = SKETCHES[args.sketch]
-    DATA_DIR = SKETCH / "data"
     BUILD_DIR = SKETCH / "build"
     # The machine-alone build has no panel, so its radio is not optional.
     if SKETCH.name == "headless" and not args.enable_bluetooth:

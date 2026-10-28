@@ -42,7 +42,7 @@ so an un-loaded routine has no row, and nothing has decided whether that is acce
 
 ## One file to flash
 
-A `--task release` that packs [firmware/gardener/data](../firmware/gardener/data) into the build's
+A `--task release` that packs [firmware/data](../firmware/data) into the build's
 `gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
 `--task upload` and then `--task data`. What holds it back is that the image would ship whatever
 `settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.

@@ -27,7 +27,7 @@ python scripts/arduino.py --task monitor --port COM5
 ```
 
 `--sketch` picks the build: `gardener` is the full device and the default, `headless` is the machine
-alone. `--task data` writes [firmware/gardener/data/](./firmware/gardener/data) to the device's
+alone. `--task data` writes [firmware/data/](./firmware/data) to the device's
 filesystem, and the headless build has none to write. VS Code has the same commands as tasks.
 
 ```powershell

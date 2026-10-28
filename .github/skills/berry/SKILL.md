@@ -1,14 +1,14 @@
 ---
 name: berry
-description: 'Checking the Berry data image under firmware/gardener/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: the host app in tools/berry/ compiles, drives and draws the whole image, so a typo costs a second rather than an upload. Covers the commands, the message each failure prints, and where the contract lives.'
+description: 'Checking the Berry data image under firmware/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: the host app in tools/berry/ compiles, drives and draws the whole image, so a typo costs a second rather than an upload. Covers the commands, the message each failure prints, and where the contract lives.'
 ---
 
 # Berry
 
 ## When to use
 
-- Editing anything under `firmware/gardener/data/system/` or
-  `firmware/gardener/data/routines/`
+- Editing anything under `firmware/data/system/` or
+  `firmware/data/routines/`
 - Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under `routines/bindings/`
 - A page misbehaves on the panel and you want the answer without a build and a flash
 
