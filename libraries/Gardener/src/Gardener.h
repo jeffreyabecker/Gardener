@@ -11,6 +11,7 @@
 #include "machine/Machine.h"
 #include "storage/FileLibrary.h"
 #include "tasks/MachineTasks.h"
+#include "tasks/RtosCommandQueue.h"
 #if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
 #include "ble/Domains.h"

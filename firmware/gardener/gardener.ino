@@ -65,19 +65,25 @@ void setup() {
     logger->warn("fs: littlefs mount failed, settings will not persist");
   }
 
+  // One queue into the machine: the panel, either link and the control tick all reach it, so the
+  // composition builds it before any of them.
+  auto* commands = new gardener::RtosCommandQueue();
+
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, LittleFS, *files, Board);
+  gardener::Panel& context =
+      gardener::buildPanelRoot(*logger, LittleFS, *files, Board, *commands);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both
   // halves.
-  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
+  gardener::SerialLink* serial =
+      new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(context, serial->outbox()));
   serial->registerDomain(gardener::createDeviceDomain(context, serial->outbox()));
   serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
   serial->registerDomain(gardener::createFsDomain(context, serial->outbox()));
 #if GARDENER_BLUETOOTH
-  gardener::BleLink* ble = new gardener::BleLink();
+  gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(context));
   ble->registerDomain(gardener::createPanelBleDomain(context));
 #endif
@@ -102,9 +108,9 @@ void setup() {
 
   auto* home = new gardener::HomeUI(context);
 #if GARDENER_BLUETOOTH
-  gardener::spawnMachineTasks(context, serial, ble);
+  gardener::spawnMachineTasks(context, *commands, serial, ble);
 #else
-  gardener::spawnMachineTasks(context, serial);
+  gardener::spawnMachineTasks(context, *commands, serial);
 #endif
   gardener::spawnPanelTask(context, home);
 

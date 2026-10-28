@@ -1,3 +1,4 @@
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 
 #include "machine/Machine.h"
@@ -28,7 +29,7 @@ bool applyMachineCommand(VacuumSystem& vacuum, const MachineCommand& command) {
 }
 
 bool CommandOutbox::post(const MachineCommand& command) {
-  if (count_ == 0 && postMachineCommand(command)) return true;
+  if (count_ == 0 && queue_.post(command)) return true;
   if (count_ == Capacity) return false;  // the newest is what a link cannot hold
   held_[(head_ + count_) % Capacity] = command;
   count_++;
@@ -37,7 +38,7 @@ bool CommandOutbox::post(const MachineCommand& command) {
 
 void CommandOutbox::flush() {
   while (count_ > 0) {
-    if (!postMachineCommand(held_[head_])) return;
+    if (!queue_.post(held_[head_])) return;
     head_ = (head_ + 1) % Capacity;
     count_--;
   }
