@@ -6,6 +6,7 @@
 
 #include <berry.h>
 
+
 #include "Logger.h"
 #include "routines/DrawTree.h"
 #include "routines/bindings/Module.h"
@@ -82,7 +83,9 @@ void BerryScene::tick(uint32_t nowMs) {
 void BerryScene::drawPage(gfx::Canvas& canvas) {
   const int base = be_top(vm_);
   if (beginCall("draw_page")) {
-    if (endCall("draw_page", 1)) drawTree(vm_, be_absindex(vm_, -1), panel_, canvas);
+    if (endCall("draw_page", 1)) {
+      drawTree(vm_, be_absindex(vm_, -1), panel_, canvas);
+    }
   }
   be_pop(vm_, be_top(vm_) - base);
 }
@@ -105,20 +108,28 @@ bool BerryScene::beginCall(const char* method) {
 }
 
 bool BerryScene::endCall(const char* method, int argc) {
-  if (be_pcall(vm_, argc) == BE_OK) return true;
-  // A failed call leaves the exception and its argument, the argument being the message. A page
-  // that raised is not called again: the beat is 250 ms, so it would raise every beat.
-  broken_ = true;
-  if (berry::logger != nullptr) {
-    String message = "vm: ";
-    message += method;
-    message += ": ";
-    const char* detail = be_tostring(vm_, -1);
-    message += detail != nullptr ? detail : "error";
-    berry::logger->error(message.c_str());
+  const int rc = be_pcall(vm_, argc);
+  if (rc != BE_OK) {
+    // A failed call leaves the exception and its argument, the argument being the message. A page
+    // that raised is not called again: the beat is 250 ms, so it would raise every beat.
+    broken_ = true;
+    if (berry::logger != nullptr) {
+      String message = "vm: ";
+      message += method;
+      message += ": ";
+      const char* detail = be_tostring(vm_, -1);
+      message += detail != nullptr ? detail : "error";
+      berry::logger->error(message.c_str());
+    }
+    be_pop(vm_, 2);
+    return false;
   }
-  be_pop(vm_, 2);
-  return false;
+  // A protected call leaves its answer *under* the arguments it was handed — the harness reads its
+  // own results the same way — so the answer is lifted over them and they are dropped, leaving what
+  // a caller reads on top.
+  be_pushvalue(vm_, -(argc + 1));
+  for (int i = 0; i < argc + 1; i++) be_remove(vm_, -2);
+  return true;
 }
 
 }  // namespace gardener
