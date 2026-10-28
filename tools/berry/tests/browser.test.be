@@ -1,7 +1,6 @@
-# browser.test.be — the browser's rows are the registry's, so there is a row for every registration
-# and each carries what its registration gave: the routine's key as its value, its title, and its
-# icon when it has one. The browser is also a caller that opens a routine's settings, so its Forward
-# is driven here.
+# browser.test.be — the browser's way into a routine: Forward opens the selected routine's settings
+# and writes what the list settles on, and OK launches it with the values in its file. The rows the
+# browser lists belong to the registry and are tested with it.
 
 suite = "browser"
 
@@ -16,37 +15,6 @@ def write_setting(name, key, value)
   document.set("", key, value)
   document.save()
 end
-
-def every_registration_is_listed()
-  var routine_keys = routines.keys()
-  var rows = routines.rows()
-  assert_eq(rows.size(), routine_keys.size(), "the browser has a row for every routine")
-  var i = 0
-  while i < routine_keys.size()
-    assert_eq(rows[i].title, routines.title(routine_keys[i]), "the browser's row " + str(i) + " does not carry the routine's title")
-    assert_eq(rows[i].value, routine_keys[i], "the row does not carry the routine's key")
-    if routines.icon(routine_keys[i]) != nil
-      assert_eq(rows[i].icon, routines.icon(routine_keys[i]), "the row does not carry the routine's icon")
-    end
-    i += 1
-  end
-end
-
-test("every registration is listed with its icon", every_registration_is_listed)
-
-def shipped_routines_are_listed()
-  for routine_key : ["interval", "ramped_interval", "ramped_static"]
-    var found = false
-    for listed : routines.keys()
-      if listed == routine_key
-        found = true
-      end
-    end
-    assert_true(found, "routines.keys() is missing " + routine_key)
-  end
-end
-
-test("the shipped routines are listed", shipped_routines_are_listed)
 
 # Forward is the browser's way into a routine's settings. The browser reads the values and writes
 # what the list settles on, so a value stepped in the list lands in the routine's file.

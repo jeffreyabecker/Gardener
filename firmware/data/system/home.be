@@ -2,14 +2,30 @@
 #
 # It registers with nothing. The home scene is the device's well-known page, so its gestures are the
 # machine's: OK starts or resumes a run and Cancel stops and vents. It reads the machine through
-# `vacuum` and the clock through `device`, and it draws by answering a tree from draw_page() — a
-# title over the readout and the run's timer — which the stack paints in the page.
+# `vacuum` and the clock through `device`, and it draws by answering a tree from draw_page() — the
+# chrome `home_chrome()` builds from the run's clock — which the stack paints in the page.
 #
 # It is a Berry scene, not a class of the old component model: the four hooks are its own methods and
 # the page clears itself, and no node carries a pixel of the panel's geometry because a node that
 # names no size fills the cell the layout above it gave it.
 
 import string
+
+# The page's chrome from the run's clock: the title over the readout and the timer, a quarter and
+# three quarters of the page. `elapsed` is the run's elapsed time in milliseconds, or nil while
+# nothing is running, so the drawing is reached by a case that holds a clock rather than a machine.
+def home_chrome(elapsed)
+  var timer = screen.centred(nil, nil, nil, nil,
+                             screen.duration_text("minutes", elapsed == nil ? 0 : elapsed,
+                                                  elapsed != nil))
+  return screen.column(nil, [
+    [bounds(1, 0.25), screen.centred(nil, nil, nil, nil, "Gardener")],
+    [bounds(1, 0.75), screen.row(nil, [
+      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), timer]
+    ])]
+  ])
+end
 
 class HomeScene
   var machine
@@ -51,21 +67,9 @@ class HomeScene
     self.machine.advance(now)
   end
 
-  # The drawing: the title over the readout and the run's clock, a quarter and three quarters of the
-  # page. The readout reads the machine when it is drawn, and the timer prints the run's elapsed time
-  # or `--` while nothing is running.
+  # The drawing: the chrome from the run's clock, which is nil while nothing is running.
   def draw_page()
-    var elapsed = self.machine.elapsed()
-    var timer = screen.centred(nil, nil, nil, nil,
-                               screen.duration_text("minutes", elapsed == nil ? 0 : elapsed,
-                                                    elapsed != nil))
-    return screen.column(nil, [
-      [bounds(1, 0.25), screen.centred(nil, nil, nil, nil, "Gardener")],
-      [bounds(1, 0.75), screen.row(nil, [
-        [bounds(0.5, 1), screen.pressure_readout()],
-        [bounds(0.5, 1), timer]
-      ])]
-    ])
+    return home_chrome(self.machine.elapsed())
   end
 end
 
