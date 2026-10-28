@@ -4,56 +4,92 @@
 domains, the documents and the keys. Nothing answers whether any of it is right short of a board or
 a whole firmware run. No host command compiles one of its sources and drives it, no case is named,
 selected or timed, and so a change to the control loop, the wire, the documents or the keys lands
-unproved. `python tools/gfx/check.py` is a host suite, but its source list is `libraries/Gfx` and
-its own files, so it names no Gardener source; the only host compile that does is the interpreter's
-tool, `python tools/berry/check.py`, which builds the whole VM, needs `firmware/data` beside it and
-is itself in a known broken state.
+unproved. One host check does exist — `python tools/gfx/check.py` — and it answers for
+`libraries/Gfx` alone: its source list is that library and its own files, so a case exists for the
+drawing and for nothing the core library does. The only other host compile naming a Gardener source
+is the interpreter's tool, `python tools/berry/check.py`, which builds the whole VM, needs
+`firmware/data` beside it and is itself in a known broken state; it is neither a unit test suite nor
+runnable, and what it does is not this plan's subject.
 
-This plan gives the core library a host unit test suite: a command that compiles the sources naming
-no interpreter, no filesystem, no radio and no RTOS, drives them through fakes, runs one case by
-name in seconds, and exits non-zero when a case fails. A unit test is only as good as the surface it
-compiles against, so the plan pins the host's Arduino surface to Arduino's published API instead of
-a hand-written copy of `String`. Cases then cover the behaviour that exists today: the link's
-framing, the machine's wire surface, the control law on a virtual clock, a note sequence, the
-documents, and the frame a panel case drew.
+This plan makes the tree's host suite one command that compiles both libraries that need no
+interpreter — `libraries/Gfx` and `libraries/Gardener` — drives them through fakes and cases, runs
+one case by name in seconds, and exits non-zero when a case fails. The Gfx check is absorbed rather
+than left beside it: one command, one test framework, one host `Arduino.h`, one stub display, one
+way to run a case. A unit test is only as good as the surface it compiles against, so the plan pins
+the host's Arduino surface to Arduino's published API instead of a hand-written copy of `String`; it
+is only as good as the runner behind it, so a case is a `TEST_CASE` in a maintained framework rather
+than a call appended to a list the tree keeps. Cases then cover the behaviour that exists today: the
+link's framing, the machine's wire surface, the control law on a virtual clock, a note sequence, the
+documents, the drawing and layout Gfx's cases already assert, and the frame a case drew, saved by a
+writer the suite and the interpreter's tool share.
 
-The sketches, the `.be` image, the panel's Berry-facing code, the hardware parts under
-`libraries/Runtime` and the interpreter's tool are left alone. What that tool runs once the core has
-a suite of its own is not this plan's subject.
+The sketches, the `.be` image, the panel's Berry-facing code and the hardware parts under
+`libraries/Runtime` are left alone. No file the firmware build compiles changes, so no firmware
+build is part of proving this plan.
 
 ## A case is run on the host, one at a time
 
-There is no such command today. `tools/berry/check.py`'s source list holds every Gardener source
-beside the vendored VM, the interpreter host sources under `libraries/BerryHost/src/` and its
-harness, so compiling the core library and building the interpreter are one act, and the two case
-files it does have run only after the image has loaded. A failure therefore does not say whether the
-C++ or the image was wrong; the cases cannot run at all while the interpreter does not build; and
-nothing outside those two files is covered. `tools/gfx/check.py` shows the shape a host suite has —
-named cases, an expectation that records the first miss, a count and an exit code — but it compiles
-no Gardener source, has no way to run one case, and its host `Arduino.h` is a copy.
+There is no such command today. The Gfx tool answers for one library and does it with a runner of
+the tree's own: `tools/gfx/suite.h` declares `Case`, `expect`, `expectEq` and `runCase`,
+`tools/gfx/main.cpp` counts what they return, and each case file appends its cases through an
+`addDrawingCases`-style function. A case there cannot be listed or run on its own, an assertion
+reports a sentence rather than a file and line, and nothing stops a case at its first failed
+assumption. It keeps a frame that nothing saves either. The interpreter's tool is not a unit test
+suite either: its source list holds every Gardener source beside the vendored VM, the interpreter
+host sources under `libraries/BerryHost/src/` and its harness, so compiling the core library and
+building the interpreter are one act, and the two case files it does have run only after the image
+has loaded. A failure there does not say whether the C++ or the image was wrong, and the cases
+cannot run at all while the interpreter does not build.
 
-A command in `tools/` compiles the core library's sources and runs its cases with no interpreter
-behind it: no source, header or link input under `libraries/berry`, `libraries/BerryHost`,
-`tools/berry` or `firmware/data` is among its inputs, and a source that names `<berry.h>`, `<FS.h>`,
-`<Wire.h>`, `<NimBLE*>`, `freertos/*` or `<SD.h>` is not among the sources it compiles. It needs a
-C++ compiler and Python and nothing else — no ESP32 core, no `arduino-cli`, no data image. A case is
-named for the behaviour it asserts, a failing case prints its name and the expectation it missed,
-and the run's last line is the counts; the exit code is 0 only when the failure count is 0.
+A command in `tools/` compiles both interpreter-free libraries — `libraries/Gfx` and
+`libraries/Gardener` — and their cases, and `python tools/gfx/check.py` goes with its own source
+list, its host `Arduino.h`, its runner and its own idea of how a case is run. Nothing the command
+builds names an interpreter, a filesystem, a radio or an RTOS: no source, header or link input under
+`libraries/berry`, `libraries/BerryHost`, `tools/berry` or `firmware/data` is among its inputs, and
+a source that names `<berry.h>`, `<FS.h>`, `<Wire.h>`, `<NimBLE*>`, `freertos/*` or `<SD.h>` is not
+among the sources it compiles. It needs a C++ compiler, Python and a test framework and nothing
+else — no ESP32 core, no `arduino-cli`, no data image — and it passes its arguments through to the
+framework, so the framework's own filter, listing and reporting are what the suite has.
 
-A case is also something to run alone while a change is being made. One case is selected by name on
-the same command, the run then reports that case's name and counts, and a rebuild after an edit to a
-single source or case takes seconds rather than the minutes a firmware build takes.
+The fakes are the suite's: a stub display the drawing cases draw into, a pump, a pressure sensor, a
+vent valve and a buzzer implementing the `libraries/Gardener/src/hal/` interfaces, a logger sink
+recording the lines a domain logs, an in-memory `Library`, and a clock the case advances. No case
+constructs a hardware part, and each fake's state is readable, so a case asserts what the domain did
+to the part and not only what it printed.
 
-The fakes are the suite's: a pump, a pressure sensor, a vent valve and a buzzer implementing the
-`libraries/Gardener/src/hal/` interfaces, a logger sink recording the lines a domain logs, an
-in-memory `Library`, and a clock the case advances. No case constructs a hardware part, and each
-fake's state is readable, so a case asserts what the domain did to the part and not only what it
-printed.
+Checked: the command passes and its counts cover both libraries' cases; `python tools/gfx/check.py`
+and its runner are gone and the cases it held run under the one command; and no compiler command
+the run prints carries a `-I` or a source path under `libraries/berry`, `libraries/BerryHost`,
+`tools/berry` or `firmware/data`.
 
-Checked: the command passes with `libraries/berry`, `libraries/BerryHost`, `tools/berry` and
-`firmware/data` moved aside; a case whose expectation is deliberately made false fails the run and
-prints its own name; the command naming one case runs that case and reports it by name; and no
-compiler command the run prints carries a `-I` or a source path under the four directories.
+## The framework is doctest, not the tree's own
+
+A unit test suite is worth the framework under it, and the tree is currently its own. `suite.h`'s
+`expect`, `expectEq` and `expectText` take a sentence as the message and record the first miss;
+`runCase` prints a line per case; `main` counts. What a maintained framework gives for free is
+absent: a case listed and filtered by name, a failure reported at its file and line with the
+expression that failed, and assertions that either stop the case or let it go on. The six Gfx case
+files also reach the runner through hand-written `addDrawingCases`, `addLayoutCases` and their
+siblings, which every new case file has to extend.
+
+The suite is built on doctest, vendored at a pinned release, 2.4.11 or newer, under `tools/` with
+its MIT licence beside it, as the Arduino API and the capture library are. One source defines
+`DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN` and the run's `main` is the framework's; every case file
+includes the header and holds `TEST_CASE` blocks named for the behaviour they assert, with
+`CHECK(…)` for a failure the case can carry on past and `REQUIRE(…)` for one it cannot. Nothing in
+the tree is a test framework: no `expect`, `expectEq`, `expectText`, `runCase`, case struct, counts
+or `main` of its own, and no per-file `addXxxCases` list for a new file to extend.
+
+Selecting a case is the framework's `--test-case=` with the pattern the user types, listing them is
+`--list-test-cases`, and the Python script hands both through and takes the framework's exit code as
+its own. A case still runs alone in the seconds a single-file rebuild takes rather than the minutes
+a firmware build takes, because the command compiles only what changed.
+
+Checked: `--list-test-cases` names every case, including the ones moved from the Gfx tool and from
+`tools/berry/host/`; `--test-case=` with one name runs that case and reports only it; a case whose
+`CHECK` is deliberately made false fails the run with the framework's own failure line, its file and
+line included, and a `REQUIRE` in the same case stops it there; and a search of the suite's own
+sources finds no `expect(`, `runCase`, case struct or `main`.
 
 ## The host Arduino surface is Arduino's API
 
@@ -67,15 +103,17 @@ against the small text type while the device's `String` answers differently. Nei
 berry tool's (`tools/berry/host/Clock.h`, advanced by `host::advance`).
 
 The host surface is Arduino's `ArduinoCore-API`, vendored at release 1.5.2 (`ARDUINO_API_VERSION`
-10502) with its licence beside it, and nothing in the tree writes `String`, `Print`, `Stream` or an
-`Arduino.h` of its own. From the API come `String`, `Print`, `Stream`, `Printable`, the declarations
-`Common.h` makes (`millis`, `delay` and the pin calls nothing on the host uses), and the `using`
-declaration that puts `String` in the global namespace the firmware sources write; the `itoa`,
-`ltoa`, `utoa`, `ultoa` and `dtostrf` implementations a board's C library would provide are taken
-from the same repository's host test sources. From the tree come only the three things a core would
-supply: a `Stream` subclass a case fills with the text it typed and reads back what a domain
-printed, the `millis()` and `delay()` a case advances, and the `ESP` object `device get` reads for
-`chip` and `heap`.
+10502) with its licence beside it, under `tools/` where no sketch build looks: `scripts/arduino.py`
+offers `libraries/` as the sketch's local-library path, and a second `Arduino.h`, `WString.h`,
+`Print.h` or `Stream.h` there would be resolved instead of the core's. No copy in the tree writes
+those classes: the two host folders lose the ones they have. From the API come `String`, `Print`,
+`Stream`, `Printable`, the declarations `Common.h` makes (`millis`, `delay` and the pin calls
+nothing on the host uses), and the `using` declaration that puts `String` in the global namespace
+the firmware sources write; the `itoa`, `ltoa`, `utoa`, `ultoa` and `dtostrf` implementations a
+board's C library would provide are taken from the same repository's host test sources. From the
+tree come only the three things a core would supply: a `Stream` subclass a case fills with the text
+it typed and reads back what a domain printed, the `millis()` and `delay()` a case advances, and the
+`ESP` object `device get` reads for `chip` and `heap`.
 
 The calls the firmware makes are the API's: construction from `const char*`, `String`, `char`, the
 integers, and a float with a decimals argument; `c_str`, `length`, `isEmpty`, `charAt`,
@@ -92,10 +130,10 @@ surface — the names, arguments and answers the firmware uses — and it is tha
 written against; swapping in the core's copy is deferred.
 
 Checked: no `Arduino.h`, `WString.h`, `Print.h` or `Stream.h` in the tree is a hand-written copy of
-the API's classes, and both host suites build against the vendored API. The Gfx suite's cases pass
-unchanged against the API's `String`, and a core case asserts a float formatted with
-`String(1.5f, 1)` and a text grown past its first allocation, so the surface is exercised where the
-firmware uses it.
+the API's classes, and the one suite builds both libraries against the vendored API. The cases that
+moved from the Gfx tool keep their expectations and pass against the API's `String`, and a core case
+asserts a float formatted with `String(1.5f, 1)` and a text grown past its first allocation, so the
+surface is exercised where the firmware uses it.
 
 ## The link's framing is a case
 
@@ -216,7 +254,7 @@ Checked: one case per rule above; the fixture document's alternate section and i
 read back through the registry; the store still writes a settled set back; and the fake store's
 write count is asserted at 1 after a multi-key save and at 0 after a repeat.
 
-## A drawn frame is a case's to save
+## A drawn frame is saved by a host library the tools share
 
 `MarkScene`, `PressureReadout` and `Band` draw through Gfx and are in the core library, but a case
 over them can only assert the pixels a stub display holds. The only host code in the tree that turns
@@ -224,42 +262,58 @@ a drawn frame into a file is the interpreter's harness: `tools/berry/host/GifWri
 of the interpreter's check, its enlargement and its per-frame delay are constants in its own header,
 its frames arrive as `BitmapPanel::packFrame` copies, and what it writes is decided by
 `HarnessSession` — `beginCapture`, `endCapture`, `saveStill` and the stem a per-case file is named
-from. `tools/gfx/check.py`'s stub display keeps a frame that no command saves.
+from. `tools/gfx/check.py`'s stub display keeps a frame that no command saves. So a host check that
+wants to look at a frame can only do what the interpreter's tool did — copy the writer, its LZW
+stage and its constants — and the tree would carry two of them, drifting apart.
 
-A capture facility in the host tree belongs to no check and links none of the interpreter, the data
-image or the harness; the core suite and the Gfx suite both link it, and the interpreter's tool may
-adopt it when it runs again. It draws nothing and knows no page, gesture, overlay band or routine:
-it takes a width, a height and frames packed one bit per pixel, row-major and top-down, which is how
-a display buffer already holds them, and writes a GIF89a with a two-entry palette of white and
-black, a NETSCAPE loop, and one frame per entry held `GifDelayCs` 100 centiseconds, each enlarged by
-nearest neighbour at `RenderScale` 2 — a 128 x 64 frame is a 256 x 128 file. A still is one frame;
-an armed capture takes a frame per beat and writes it when asked, so a case that advances a fake
-clock can save the sequence it drove. The path is the caller's, and one that cannot be opened
-answers false without ending the run, as `writeGif` does now.
+The writer is a host library of its own under `tools/`, beside the suite rather than inside it, and
+the suite and the interpreter's tool both link it: one copy of the LZW stage and one pair of
+constants for every host tool that saves a frame. It sits outside `libraries/`, so no sketch build
+sees it and nothing about the two builds' image changes. It draws nothing and knows no panel, page,
+gesture, overlay band, routine, harness or interpreter: its only inputs are a width, a height,
+frames packed one bit per pixel, row-major and top-down — which is how a display buffer already
+holds them — and a path. It names no Arduino header either, so any host compile links it with no
+board behind it. It writes a GIF89a with a two-entry palette of white and black, a NETSCAPE loop,
+and one frame per entry held `GifDelayCs` 100 centiseconds, each enlarged by nearest neighbour at
+`RenderScale` 2, so a 128 x 64 frame is a 256 x 128 file. Those two values move with the writer and
+keep their numbers, so the files the interpreter's tool writes do not change. A still is one frame;
+an armed capture takes frames as they arrive and writes them when asked, so a case that advances a
+fake clock can save the sequence it drove. A path that cannot be opened answers false without ending
+the run, as `writeGif` does now, and the naming policy — where a case's file goes and what its stem
+is — stays with the tool that names it.
 
-Checked: a case in the core suite saves a still it drew, and the file begins `GIF89a`, measures
-256 x 128, carries the two-entry palette and the 100 cs delay, and holds ink at the column and row
-the case drew, at twice the coordinate; a case in `tools/gfx/check.py` saves a still the same way;
-and no source or header under `tools/berry/` is among either suite's inputs, so neither needs the
-harness to save a frame.
+Checked: two cases in the suite — one over a core panel scene, one over a Gfx component — each save
+a still they drew, and each file begins `GIF89a`, measures 256 x 128, carries the two-entry palette
+and the 100 cs delay, and holds ink at the column and row the case drew, at twice the coordinate; an
+armed capture of three frames writes three image blocks; the writer's name appears under its one
+home in `tools/` and nowhere else in the tree; and no source or header under `tools/berry/` is among
+the suite's inputs, so it needs no harness to save a frame.
 
 ## Consequences
 
-- The Build section of `.github/copilot-instructions.md` and `README.md` name the core suite's
-  command beside `tools/gfx/check.py`, and send a change to the machine, the wire, the documents or
-  the keys to it.
-- The tree carries `ArduinoCore-API` 1.5.2 with its LGPL-2.1-or-later notice beside it; no `String`,
-  `Print` or `Stream` is the tree's own, and moving to a newer release is a deliberate change that
-  the checks hold.
-- `tools/gfx/check.py`'s host folder changes with the shared surface; Gfx's own behaviour does not,
-  and its cases are what holds that.
-- The berry skill says the interpreter's check is for the image, the pages and the bindings, names
-  the core suite for anything under `libraries/Gardener`, and keeps its statement that the
-  interpreter's check is broken and not to be run. The core suite becomes the only host check that
-  names the firmware's own C++.
-- The registry's and the store's case files leave `tools/berry/host/` for the core suite, so one
-  copy of each exists; the interpreter's tool keeps its harness, its image work and its `.be`
-  suites.
+- The Build section of `.github/copilot-instructions.md` and `README.md` name the suite's command as
+  the check for a C++ change, and say what it covers — both `libraries/Gfx` and
+  `libraries/Gardener` — because `python tools/gfx/check.py` no longer exists.
+- The tree carries `ArduinoCore-API` 1.5.2 under `tools/` with its LGPL-2.1-or-later notice beside
+  it; no `String`, `Print` or `Stream` is the tree's own, and moving to a newer release is a
+  deliberate change that the checks hold.
+- `tools/gfx/check.py` and its host folder go: its per-area case files become `TEST_CASE`s under the
+  new suite, its stub display moves with them, and its `suite.h` assertions and `main` do not
+  survive. Gfx's behaviour does not change, and the cases it had are what holds that.
+- The tree carries doctest at a pinned release, 2.4.11 or newer, under `tools/` with its MIT licence
+  beside it; the suite's `main`, its filter, its listing and its failure report are the framework's,
+  and replacing it is a deliberate change that the cases hold.
+- The berry skill says the interpreter's check is for the image, the pages and the bindings, keeps
+  its statement that the check is broken and not to be run, and sends anything under
+  `libraries/Gardener` or `libraries/Gfx` to the suite instead.
+- The registry's and the store's case files leave `tools/berry/host/` for the suite, so one copy of
+  each exists; the interpreter's tool keeps its harness, its image work and its `.be` suites, and
+  nothing in this plan requires it to be run.
+- `tools/berry/host/GifWriter.h` and its `.cpp` leave for the host library under `tools/`, and the
+  harness includes its header instead. The captures that tool writes keep their frames, palette,
+  delay, scale and paths.
+- `README.md` and the berry skill name that host library as what saves a frame, so a host tool that
+  draws links it rather than the harness.
 - The wire's field list and refusals become cases rather than a description: the archived serial
   spec is out of date and read by nothing, and it stays that way.
 - `MemoryFiles` stays with the harness, which loads the image with it; the suite's store is its own.
@@ -280,13 +334,13 @@ harness to save a frame.
 
 ## How it is known to hold
 
-1. The core suite's command exits 0 and prints its counts with `libraries/berry`,
-   `libraries/BerryHost`, `tools/berry` and `firmware/data` moved aside, and one case selected by
-   name runs alone and reports its own name.
-2. A case whose expectation is deliberately made false fails that run.
-3. `python tools/gfx/check.py` exits 0 against the API's `String` and the tree's one `Stream`.
-4. A still saved by the core suite and one saved by `tools/gfx/check.py` are GIF89a and 256 x 128,
-   with ink where the case drew it.
-5. `python scripts/arduino.py --task build` compiles both sketches: the suite adds no build symbol,
-   and the seams it needs — the `hal/` interfaces and `hal/Library.h` — are the composition the
-   sketch already calls.
+1. The suite's command exits 0 and prints the framework's summary, covering both `libraries/Gfx`'s
+   cases and the core library's.
+2. `--list-test-cases` names every case, and `--test-case=` with one name runs that case alone.
+3. A case whose `CHECK` is deliberately made false fails that run, reporting the framework's own
+   failure line with the file and line, and a `REQUIRE` stops its case there.
+4. Two stills the suite saves begin `GIF89a`, measure 256 x 128 and hold ink where their cases drew
+   it, one over a core panel scene and one over a Gfx component.
+5. `git diff --stat` over `libraries/Gardener/src` and `libraries/Gfx/src` is empty. Nothing the
+   firmware build compiles changes, so no firmware build is part of proving this, and the suite is
+   the only host check over the tree's C++ that runs at all.
