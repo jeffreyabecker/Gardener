@@ -145,8 +145,8 @@ std::unique_ptr<gfx::ui::SettingsRow> takeRow(bvm* vm, int index) {
   return std::move(*owner);
 }
 
-// The unit the panel prints pressure in, out of the device's own document, as `device.unit()` reads
-// it: a declaration is made while the panel runs, so a row is built in the unit showing then.
+// The unit the panel prints pressure in, out of the device's own document: a declaration is made while
+// the panel runs, so a row is built in the unit showing then.
 DisplayUnit displayUnit() {
   DisplayUnit unit = DisplayUnit::Kpa;
   parseDisplayUnit(context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);

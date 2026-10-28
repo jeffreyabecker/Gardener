@@ -139,6 +139,11 @@ through the interpreter. What belongs on each side of that line is the Berry bou
 [the firmware skill](../firmware/SKILL.md). A model kept in a `.be` file beside its wrapper is a
 second implementation: the two drift, and the image pays for both at every boot.
 
+A record — a value a page reads with dots, like the node `screen.text()` answers — is declared in the
+same table, as an entry with no function, which binds it as an instance variable: the class the
+parser's `var` would have made. Its fields then sit in the file whose callbacks set them, so a name is
+renamed in one place, and no record is written in a `.be` file the image has to compile.
+
 ## Still the device's job
 
 A change to the panel's look, the pump's behaviour or the sensor is checked with

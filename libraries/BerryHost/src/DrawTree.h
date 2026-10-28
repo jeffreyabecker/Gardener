@@ -12,8 +12,8 @@ namespace gardener {
 class PanelContext;
 
 // A page's drawing, walked: the node at `node` of the interpreter's stack turned into the paint it
-// describes and drawn on `canvas`. The tree is what `/system/records.be`'s `draw` class describes
-// and what the `screen` module builds one node at a time; a node that is not one of those, or a
+// describes and drawn on `canvas`. The tree is what the `draw` record the screen module declares
+// describes, and what that module builds one node at a time; a node that is not one of those, or a
 // kind the drawing does not know, draws nothing.
 //
 // The strings a node carries belong to the interpreter and the paints capture them, so a tree is

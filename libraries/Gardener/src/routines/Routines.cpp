@@ -23,10 +23,10 @@
 namespace gardener {
 namespace {
 
-// The system is the files the interpreter needs before anything else: the records a native call
-// answers with, the registry and the pages the browser opens. Its order is not the folder's: Berry
-// resolves a global when it compiles a file, so a class has to be a global by the time a file that
-// names it is compiled. `/system/order` states that order, one path per line relative to `/system`.
+// The system is the files the interpreter needs before anything else: the registry and the pages the
+// browser opens. Its order is not the folder's: Berry resolves a global when it compiles a file, so a
+// class has to be a global by the time a file that names it is compiled. `/system/order` states that
+// order, one path per line relative to `/system`.
 constexpr const char* SystemFolder = "system";
 constexpr const char* SystemOrder = "/system/order";
 
@@ -162,7 +162,7 @@ void Routines::updateBand(uint32_t nowMs) {
 // --- loading ---------------------------------------------------------------
 
 // The order file is a plain list: a `#` line and a blank line are skipped, and every other line is
-// a path relative to /system, so `records.be` and a file in a subfolder are the same kind of entry.
+// a path relative to /system, so `home.be` and a file in a subfolder are the same kind of entry.
 size_t Routines::loadSystem(size_t& found) {
   found = 0;
 

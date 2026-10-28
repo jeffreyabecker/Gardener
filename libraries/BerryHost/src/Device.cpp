@@ -18,44 +18,8 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The five fields a `unit` record carries, left on the stack as the record itself so a caller can
-// answer one or push it onto a list.
-int pushUnitRecord(bvm* vm, DisplayUnit unit) {
-  const DisplayUnitInfo& info = displayUnitInfo(unit);
-  const int record = beginRecord(vm, "unit");
-  if (record < 0) return record;
-  setText(vm, record, "name", info.name);
-  setText(vm, record, "suffix", info.suffix);
-  setReal(vm, record, "per_kpa", info.perKpa);
-  setReal(vm, record, "whole_step", info.wholeStep);
-  setInt(vm, record, "decimals", (bint)displayDecimals(unit));
-  return record;
-}
-
-// The settings the device keeps as itself rather than as a routine's own values. `units()` is the
-// table `panel/Units.h` holds, one `unit` record per entry, so a page cycles exactly what
-// `device set unit` accepts and reads a unit's label and scale without carrying a second list.
-// `unit()` is the one in force, out of that same table, which is what a page formats and steps a
-// target with.
-int deviceUnits(bvm* vm) {
-  be_newobject(vm, "list");
-  const int list = be_absindex(vm, -1);
-  for (uint8_t i = 0; i < DisplayUnitCount; i++) {
-    if (pushUnitRecord(vm, static_cast<DisplayUnit>(i)) < 0) be_return_nil(vm);
-    be_data_push(vm, list);
-    be_pop(vm, 1);
-  }
-  be_pop(vm, 1);
-  be_return(vm);
-}
-
-int deviceUnit(bvm* vm) {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-  if (pushUnitRecord(vm, unit) < 0) be_return_nil(vm);
-  be_return(vm);
-}
-
+// The unit the panel prints pressure in: a name `panel/Units.h` holds, written to the device's own
+// document, and a name it does not hold is answered false rather than defaulted.
 int deviceSetUnit(bvm* vm) {
   DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
@@ -80,23 +44,6 @@ int deviceSetTarget(bvm* vm) {
   context->config().set(DeviceSection, TargetKey, (float)argReal(vm, 1));
   context->config().save();
   be_return_nil(vm);
-}
-
-// The radio is a build fact, not a preference: the row reports whether this image has one, and
-// nothing a page can call changes that.
-int deviceBluetooth(bvm* vm) {
-  be_pushbool(vm, GARDENER_BLUETOOTH != 0);
-  be_return(vm);
-}
-
-// The two ways a controller can reach the device, as the interface owner last reported them: the
-// band's serial and Bluetooth icons light while each link is up, whether or not it has control.
-int deviceLinks(bvm* vm) {
-  const int record = beginRecord(vm, "links");
-  if (record < 0) be_return_nil(vm);
-  setFlag(vm, record, "serial", context->serialConnected());
-  setFlag(vm, record, "bluetooth", context->bluetoothConnected());
-  be_return(vm);
 }
 
 // The sequence a routine plays at its finish, in the same notation the device's own documents use.
@@ -163,13 +110,9 @@ int deviceTakeGesture(bvm* vm) {
 }
 
 const bnfuncinfo DeviceLibrary[] = {
-    {"unit", deviceUnit},
-    {"units", deviceUnits},
     {"set_unit", deviceSetUnit},
     {"target", deviceTarget},
     {"set_target", deviceSetTarget},
-    {"bluetooth", deviceBluetooth},
-    {"links", deviceLinks},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},
     {"silence", deviceSilence},

@@ -15,9 +15,79 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The class a page's drawing is made of, declared in /system/records.be. Every call below fills one
-// in and hands it back: what is drawn, not the drawing. Nothing here reaches a canvas.
+// The record a page's drawing is made of, installed by this module. Every call below fills one in and
+// hands it back: what is drawn, not the drawing. Nothing here reaches a canvas.
 constexpr const char* DrawClass = "draw";
+
+// The fields one node of a page's drawing carries. `kind` names what the node is — text, centred,
+// icon, inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields
+// that kind uses are set, the rest nil. A leaf names its box in pixels; a layout, a row and a column
+// name the cell they declare as a share of what holds them, nil for the whole side, so a row sets `h`
+// and a column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child
+// declares and the child — and `alignment` is where it puts them, the record below. An `inverted` node
+// holds the draw it flips in `child`, and an `icon` node holds its fixed bitmap in `glyph` as the hex
+// digits that name it: two per byte, the width, the height, then one row per byte-run, most
+// significant bit first and each row padded to a whole byte. The panel reads them when it draws the
+// node.
+const bnfuncinfo DrawFields[] = {
+    {"kind", nullptr},
+    {"x", nullptr},
+    {"y", nullptr},
+    {"w", nullptr},
+    {"h", nullptr},
+    {"value", nullptr},
+    {"font", nullptr},
+    {"scale", nullptr},
+    {"secondary_scale", nullptr},
+    {"size_hint", nullptr},
+    {"format", nullptr},
+    {"seconds", nullptr},
+    {"known", nullptr},
+    {"percent", nullptr},
+    {"index", nullptr},
+    {"count", nullptr},
+    {"visible", nullptr},
+    {"hollow", nullptr},
+    {"children", nullptr},
+    {"child", nullptr},
+    {"glyph", nullptr},
+    {"alignment", nullptr},
+    {nullptr, nullptr},
+};
+
+// The width and height of a box, in pixels; the cell a Layout child declares, each a share of the
+// parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and the
+// ink box `screen.measure` answers.
+const bnfuncinfo BoundsFields[] = {
+    {"w", nullptr},
+    {"h", nullptr},
+    {nullptr, nullptr},
+};
+
+// `bounds(w, h)`, and `bounds()` for the record `screen.measure` fills: a side left out stays nil,
+// which the drawing reads as the whole of the canvas the node sits in.
+int boundsInit(bvm* vm) {
+  if (be_top(vm) >= 2 && !be_isnil(vm, 2)) setValue(vm, 1, "w", 2);
+  if (be_top(vm) >= 3 && !be_isnil(vm, 3)) setValue(vm, 1, "h", 3);
+  be_return_nil(vm);
+}
+
+// Where a thing sits in the space it is given: `align` is left, center or right and `v_align` top,
+// center or bottom, each nil for the left and the top. A layout, a row and a column take one after
+// their children, and the default is the left and the top.
+const bnfuncinfo AlignmentFields[] = {
+    {"align", nullptr},
+    {"v_align", nullptr},
+    {nullptr, nullptr},
+};
+
+// `alignment(align, v_align)`: a side left out is the left across and the top down, which is what a
+// layout, a row and a column draw by when the node carries no record.
+int alignmentInit(bvm* vm) {
+  setText(vm, 1, "align", be_top(vm) >= 2 && be_isstring(vm, 2) ? argText(vm, 2) : "left");
+  setText(vm, 1, "v_align", be_top(vm) >= 3 && be_isstring(vm, 3) ? argText(vm, 3) : "top");
+  be_return_nil(vm);
+}
 
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need.
@@ -87,11 +157,10 @@ gfx::ui::DurationFormat formatOf(const char* name) {
   return gfx::ui::DurationFormat::Minutes;
 }
 
-// The node of the named kind, or -1 when the image declares no `draw` class: the class belongs to the
-// parser, so a file that is not loaded leaves nothing to build a tree from.
+// The node of the named kind: the record this module installed, with the one field every kind has set.
 int beginDraw(bvm* vm, const char* kind) {
   const int draw = beginRecord(vm, DrawClass);
-  if (draw >= 0) setText(vm, draw, "kind", kind);
+  setText(vm, draw, "kind", kind);
   return draw;
 }
 
@@ -179,7 +248,6 @@ int screenText(bvm* vm) {
   }
   const gfx::Font* face = argFace(vm, 6, "text");
   const int draw = beginDraw(vm, "text");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
@@ -194,7 +262,6 @@ int screenCentred(bvm* vm) {
   }
   const gfx::Font* face = argFace(vm, 6, "centred");
   const int draw = beginDraw(vm, "centred");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
@@ -216,7 +283,6 @@ int screenIcon(bvm* vm) {
              "screen.icon: the glyph is hex digits, the width, the height and the rows");
   }
   const int draw = beginDraw(vm, "icon");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setValue(vm, draw, "glyph", 5);
   be_return(vm);
@@ -229,7 +295,6 @@ int screenInverted(bvm* vm) {
     be_raise(vm, "type_error", "screen.inverted(draw)");
   }
   const int draw = beginDraw(vm, "inverted");
-  if (draw < 0) be_return_nil(vm);
   setValue(vm, draw, "child", 1);
   be_return(vm);
 }
@@ -240,7 +305,6 @@ int screenBar(bvm* vm) {
     be_raise(vm, "type_error", "screen.bar(x, y, w, h, percent)");
   }
   const int draw = beginDraw(vm, "bar");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setReal(vm, draw, "percent", (float)argReal(vm, 5));
   be_return(vm);
@@ -252,7 +316,6 @@ int screenScrollbar(bvm* vm) {
              "screen.scrollbar(x, y, w, h, index, count, visible[, hollow])");
   }
   const int draw = beginDraw(vm, "scrollbar");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setInt(vm, draw, "index", argInt(vm, 5));
   setInt(vm, draw, "count", argInt(vm, 6));
@@ -272,7 +335,6 @@ int screenDuration(bvm* vm) {
   const gfx::Font* face = argFace(vm, 7, "duration");
   const bool known = be_top(vm) < 8 || be_isnil(vm, 8) || be_tobool(vm, 8);
   const int draw = beginDraw(vm, "duration");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setText(vm, draw, "format", format);
   setInt(vm, draw, "seconds", argInt(vm, 6));
@@ -289,7 +351,6 @@ int screenDuration(bvm* vm) {
 int screenPressureReadout(bvm* vm) {
   const gfx::Font* face = argFace(vm, 6, "pressure_readout");
   const int draw = beginDraw(vm, "pressure_readout");
-  if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setReal(vm, draw, "size_hint", argNumber(vm, 5, "pressure_readout", 0.5f));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
@@ -308,7 +369,6 @@ int screenLayout(bvm* vm) {
   }
   requireChildren(vm, 3, "layout");
   const int draw = beginDraw(vm, "layout");
-  if (draw < 0) be_return_nil(vm);
   setCellSide(vm, draw, "w", 1);
   setCellSide(vm, draw, "h", 2);
   setValue(vm, draw, "children", 3);
@@ -322,7 +382,6 @@ int screenRow(bvm* vm) {
   }
   requireChildren(vm, 2, "row");
   const int draw = beginDraw(vm, "row");
-  if (draw < 0) be_return_nil(vm);
   setCellSide(vm, draw, "h", 1);
   setValue(vm, draw, "children", 2);
   setAlignment(vm, draw, 3);
@@ -335,7 +394,6 @@ int screenColumn(bvm* vm) {
   }
   requireChildren(vm, 2, "column");
   const int draw = beginDraw(vm, "column");
-  if (draw < 0) be_return_nil(vm);
   setCellSide(vm, draw, "w", 1);
   setValue(vm, draw, "children", 2);
   setAlignment(vm, draw, 3);
@@ -367,7 +425,6 @@ int screenMeasure(bvm* vm) {
   const gfx::shapes::TextBox box = gfx::shapes::measureText(face, argText(vm, 1), scale);
 
   const int record = beginRecord(vm, "bounds");
-  if (record < 0) be_return_nil(vm);
   setInt(vm, record, "w", box.width);
   setInt(vm, record, "h", box.height);
   be_return(vm);
@@ -443,7 +500,14 @@ const bnfuncinfo ScreenLibrary[] = {
 
 }  // namespace
 
-void installScreenModule(bvm* vm) { installModule(vm, "screen", ScreenLibrary); }
+// The module a page describes its drawing through, and the three records it answers with: the node
+// every call builds, the ink box `measure` answers, and where a layout puts what it holds.
+void installScreenModule(bvm* vm) {
+  installRecord(vm, DrawClass, DrawFields);
+  installRecord(vm, "bounds", BoundsFields);
+  installRecord(vm, "alignment", AlignmentFields);
+  installModule(vm, "screen", ScreenLibrary);
+}
 
 }  // namespace berry
 }  // namespace gardener

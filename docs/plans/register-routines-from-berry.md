@@ -1,8 +1,9 @@
 # Register a routine from Berry
 
-`routines` registers a routine, reads and writes its set, and answers the browser's rows and a
-routine's title. What is left is the way from a listed row to a launched, editable routine, and the
-gesture that shows the list; the device's own settings list is another plan.
+`/system/browser.be` names `List`, `ux` and `SettingsEditScene`, and none of the three exists, so the
+file does not compile and no browser appears; `routines.settings_cfgs` and `routines.push`, which its
+Forward and OK call, are unanswered too. What is left is the path from a row to a launched, editable
+routine, and the gesture that shows the list; the device's own settings list is another plan.
 
 ## What is left
 
@@ -94,9 +95,8 @@ loads before the browser names it.
 
 1. `python scripts/arduino.py --task build` compiles the calls the module gains and the settings list a
    declaration list builds.
-2. `python tools/unit/check.py` holds the scene-stack and settings-list cases on the host: a push and a
-   pop, a list's rows in declaration order, a default where the map holds nothing, and the set a list
-   hands back.
-3. `python tools/berry/check.py` is broken and is not run. On the device the check is `--task upload`
-   and the `[E]` lines: the browser and home load, the three rows draw, a row launches, and no line
-   names a call nothing answers.
+2. On the device, `python scripts/arduino.py --task upload` and the `[E]` lines: the browser loads and
+   its three rows draw, a row launches, Forward opens the settings list and hands its set back, Up
+   twice on home shows the rows, and no line names a call nothing answers.
+3. `python tools/berry/check.py` is broken and is not run. `python tools/unit/check.py` builds only
+   `libraries/Gfx` and `libraries/Gardener`, so it holds this plan only where a change reaches them.

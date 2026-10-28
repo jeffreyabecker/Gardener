@@ -33,13 +33,24 @@ inline void installModule(bvm* vm, const char* name, const bnfuncinfo* library) 
   be_pop(vm, 1);
 }
 
-// --- filling a record ------------------------------------------------------
+// --- declaring a record ----------------------------------------------------
 //
-// A record is an instance of one of the classes Bindings.cpp compiles at boot: only the parser can
-// declare an instance variable, so the classes are written in Berry and these fill what they make.
+// A record is a class whose fields are all it has, and the module whose callbacks fill it declares it:
+// an entry of the table with no function is an instance variable rather than a method, which is the
+// same class the parser's `var` makes. The names a page reads sit beside the code that sets them, and
+// the record is a global because that code reaches it by name.
+
+inline void installRecord(bvm* vm, const char* name, const bnfuncinfo* fields) {
+  be_pushclass(vm, name, fields);
+  be_setglobal(vm, name);
+  // be_setglobal leaves the value it stored on the stack; the record is done with here.
+  be_pop(vm, 1);
+}
+
+// --- filling a record ------------------------------------------------------
 
 inline int beginRecord(bvm* vm, const char* className) {
-  if (!be_getglobal(vm, className)) return -1;
+  be_getglobal(vm, className);
   // The class the call is made on is replaced by the instance it makes, so the record is on top of
   // the stack for the set calls below and for be_return().
   be_call(vm, 0);

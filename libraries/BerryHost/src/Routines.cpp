@@ -30,11 +30,36 @@ namespace {
 // The list the registrations' classes are held in, installed empty and appended to as they register.
 constexpr const char* PageClasses = "__routineClasses";
 
-// The record a launch hands a page's init, declared in /system/records.be.
+// The record a launch hands a page's init, installed by this module.
 constexpr const char* ActivationRecord = "RoutineActivation";
 
-// The record one of the browser's rows is, also declared there: the glyph, the title and the key.
+// The record one of the browser's rows is, installed here too: the glyph, the title and the key.
 constexpr const char* RowRecord = "RoutineRow";
+
+// The two fields a launch carries: the key the routine was launched under, which the page takes as its
+// own, and the clean settings map its init_from_settings() reads. A page's init reads those two and
+// keeps no record of its own.
+const bnfuncinfo ActivationFields[] = {
+    {"routine_key", nullptr},
+    {"settings_values", nullptr},
+    {nullptr, nullptr},
+};
+
+// `RoutineActivation(routine_key, settings_values)`: the record `routines.push` hands a page's class,
+// and the one a page builds for its own launch.
+int activationInit(bvm* vm) {
+  if (be_top(vm) >= 2) setValue(vm, 1, "routine_key", 2);
+  if (be_top(vm) >= 3) setValue(vm, 1, "settings_values", 3);
+  be_return_nil(vm);
+}
+
+// The three fields one row of the browser's list carries.
+const bnfuncinfo RowFields[] = {
+    {"icon", nullptr},
+    {"title", nullptr},
+    {"value", nullptr},
+    {nullptr, nullptr},
+};
 
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need, and every check runs before the first String is built.
@@ -165,9 +190,8 @@ void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
 // One row of the browser's list, left on the stack as the record itself so the caller can push it
 // onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
 // shows and the key a launch is made from.
-int pushRow(bvm* vm, const RoutineRow& row) {
+void pushRow(bvm* vm, const RoutineRow& row) {
   const int record = beginRecord(vm, RowRecord);
-  if (record < 0) return record;
   if (row.glyph.isEmpty()) {
     be_pushnil(vm);
     be_setmember(vm, record, "icon");
@@ -177,19 +201,15 @@ int pushRow(bvm* vm, const RoutineRow& row) {
   }
   setText(vm, record, "title", row.title.c_str());
   setText(vm, record, "value", row.routineKey.c_str());
-  return record;
 }
 
-// The activation a page's init reads, built from the record /system/records.be declares. False when
-// that file did not load, which is the one way a launch has nothing to hand the class.
-bool pushActivation(bvm* vm, const RoutineActivation& activation) {
-  if (!be_getglobal(vm, ActivationRecord)) return false;
+// The activation a page's init reads, built from the record this module installed. Its init assigns the
+// two fields and cannot raise, so nothing here needs a protected call.
+void pushActivation(bvm* vm, const RoutineActivation& activation) {
+  be_getglobal(vm, ActivationRecord);
   be_pushstring(vm, activation.routineKey.c_str());
   pushSettingsMap(vm, activation.values);
-  // The record's own init assigns the two fields and cannot raise, so nothing here needs a protected
-  // call.
   be_call(vm, 2);
-  return true;
 }
 
 // The page a registration names: an instance of the class the file gave, built from the activation and
@@ -206,7 +226,8 @@ std::unique_ptr<gfx::ui::Scene> buildPage(bvm* vm, int slot, const RoutineActiva
     be_getindex(vm, list);
     be_remove(vm, -2);  // the list the read left under the class
 
-    if (be_isclass(vm, -1) && pushActivation(vm, activation)) {
+    if (be_isclass(vm, -1)) {
+      pushActivation(vm, activation);
       // The class is the callable and the activation its argument; a page that raised leaves the
       // exception and its message where the pop below clears them.
       if (be_pcall(vm, 1) != BE_OK) {
@@ -313,18 +334,17 @@ int routinesSaveSettings(bvm* vm) {
 }
 
 // routines.rows(): the browser's list, one row per record and per alternate in the order they
-// registered. Nil when the image declares no row record, which is the one way there is nothing to
-// put a row in.
+// registered.
 int routinesRows(bvm* vm) {
   if (routines == nullptr) {
     be_raise(vm, "runtime_error", "routines.rows: no panel");
   }
-  // The list class's instance with the raw list it appends to on top of it, the shape device.units
-  // answers with: the pop below leaves the instance as the answer.
+  // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
+  // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
   for (const RoutineRow& row : routines->registry().rows()) {
-    if (pushRow(vm, row) < 0) be_return_nil(vm);
+    pushRow(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
   }
@@ -363,6 +383,8 @@ const bnfuncinfo RoutinesLibrary[] = {
 // it names, the two the page reads and writes its set through, and the two the browser lists them
 // with.
 void installRoutinesModule(bvm* vm) {
+  installRecord(vm, ActivationRecord, ActivationFields);
+  installRecord(vm, RowRecord, RowFields);
   installModule(vm, "routines", RoutinesLibrary);
   // The classes a registration names, in a list the interpreter owns for the life of the VM: the
   // registrations outlive the call that made them, the pages are built later, and a value a C++ object
