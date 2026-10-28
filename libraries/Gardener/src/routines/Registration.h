@@ -17,8 +17,8 @@ namespace gardener {
 class Library;
 class Logger;
 
-// What a launch hands a routine's page: the key the routine was launched under, and one clean
-// settings map read through the declaration and repaired by the rule.
+// What a launch hands a routine's page: the key the routine was launched under, and the settings map
+// read through the declaration.
 struct RoutineActivation {
   String routineKey;
   gfx::ui::SettingValues values;
@@ -58,30 +58,20 @@ class Registration {
   const Factory& factory() const { return factory_; }
   const gfx::ui::Glyph& glyph() const { return glyph_; }
 
-  // The values the rule accepts. While the rule refuses the set, the settings are put back to their
-  // defaults in the order the list shows them, each one tried in turn, and the reason that was
-  // applied is answered for the caller to draw. The label the reason is logged under is the
-  // routine's key for the global section and the section name for an alternate. Nothing here touches
-  // a file: the caller decides what to write.
-  const char* repair(const String& section, gfx::ui::SettingValues& values, Logger& logger) const;
-
-  // One clean map: every setting the record declares, read from the section it names of the
-  // routine's document, held to its kind, then repaired by the rule so the set is one a run accepts.
-  // The document is opened once. An alternate also carries its section's `routine_title` on the map.
-  // A record that declares nothing begins with an empty map, without opening a file.
+  // Every setting the record declares, read from the section it names of the routine's document and
+  // held to its kind. The document is opened once. An alternate also carries its section's
+  // `routine_title` on the map. A record that declares nothing begins with an empty map, without
+  // opening a file.
   gfx::ui::SettingValues loadSettings(Library& library, Logger& logger,
                                       const String& section) const;
 
-  // A settled set written back: the rule is applied first, so what lands is a set a run accepts, and
-  // a setting the map says nothing about is written as nothing, which reads back as the default.
-  // Every key goes into one document and the document is written once. False, writing nothing, when
-  // the record declares no settings.
+  // A settled set written back: a setting the map says nothing about is written as nothing, which
+  // reads back as the default. Every key goes into one document and the document is written once.
+  // False, writing nothing, when the record declares no settings.
   bool saveSettings(Library& library, Logger& logger, const String& section,
                     gfx::ui::SettingValues& values) const;
 
  private:
-  const char* problem(const gfx::ui::SettingValues& values) const;
-
   String routineKey_;
   String title_;
   std::vector<std::unique_ptr<gfx::ui::SettingsRow>> owned_;

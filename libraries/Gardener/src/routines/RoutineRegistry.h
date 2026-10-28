@@ -26,7 +26,7 @@ struct RoutineRow {
 // each one's document named.
 //
 // The key is the routine's identity — what the record is found by and what its document is called —
-// and an alternate is a second key that shares its record's declaration, rule, glyph and page but
+// and an alternate is a second key that shares its record's declaration, glyph and page but
 // carries its own title and its own settings set, which lives in the section the key names of the
 // record's document. The alternates are the registry's because a record is declared before its
 // document is scanned, and nothing outside the registry reads them.
@@ -77,12 +77,12 @@ class RoutineRegistry {
   // nullptr when the key is not registered.
   const std::vector<gfx::ui::SettingsRow*>* settingsRows(const String& routineKey) const;
 
-  // The set a routine begins with, read through its record in the key's section and repaired by its
-  // rule. An unregistered key begins with an empty map.
+  // The set a routine begins with, read through its record in the key's section. An unregistered key
+  // begins with an empty map.
   gfx::ui::SettingValues loadSettings(const String& routineKey) const;
 
-  // A settled set written back through the record, which applies the rule first. False when the key
-  // is not registered or the record declares nothing.
+  // A settled set written back through the record. False when the key is not registered or the
+  // record declares nothing.
   bool saveSettings(const String& routineKey, gfx::ui::SettingValues& values) const;
 
   // Push a routine's page, built through its factory from the activation the registry reads: the
