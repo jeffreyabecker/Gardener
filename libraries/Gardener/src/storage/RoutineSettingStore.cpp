@@ -33,6 +33,10 @@ gfx::ui::SettingValues RoutineSettingStore::load(
     const String stored = document.get<String>(section.c_str(), row->key().c_str(), "");
     values[row->key()] = stored.isEmpty() ? row->defaultValue() : row->parse(stored);
   }
+  if (!section.isEmpty()) {
+    const String title = document.get<String>(section.c_str(), "routine_title", "");
+    if (!title.isEmpty()) values["routine_title"] = title;
+  }
   return values;
 }
 

@@ -14,8 +14,8 @@ namespace gardener {
 // of it.
 constexpr const char* RoutinesConfigFolder = "/cfg/routines/";
 
-// A routine's settings, as its document keeps them: the values for the keys a list's rows declare, and
-// the settled set written back.
+// A routine's settings, as its document keeps them: the values for the keys a list's rows declare, an
+// alternate's `routine_title` beside them, and the settled set written back.
 //
 // The document is the parent routine's — /cfg/routines/<parentRoutineKey>.ini — because an alias is a
 // named section of the routine it shares a factory with. The routine's own set is the global section;
@@ -31,7 +31,8 @@ class RoutineSettingStore {
   explicit RoutineSettingStore(Library& library);
 
   // One value per key the rows declare: the document's text read as the row's kind, and the row's
-  // default where the section does not carry the key or carries it empty.
+  // default where the section does not carry the key or carries it empty. An alias's set also
+  // carries its section's `routine_title`, which no row declares but which the browser shows.
   gfx::ui::SettingValues load(const String& parentRoutineKey, const String& routineKey,
                               const std::vector<gfx::ui::SettingsRow*>& rows) const;
 

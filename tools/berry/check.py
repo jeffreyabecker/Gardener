@@ -59,6 +59,8 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "storage" / "Config.cpp",
     GARDENER / "src" / "storage" / "Ini.cpp",
     GARDENER / "src" / "storage" / "Jingles.cpp",
+    GARDENER / "src" / "routines" / "Registration.cpp",
+    GARDENER / "src" / "routines" / "RoutineRegistry.cpp",
     GARDENER / "src" / "storage" / "RoutineSettingStore.cpp",
     GARDENER / "src" / "VacuumSystem.cpp",
 ]
@@ -94,6 +96,7 @@ HOST_SOURCES = [
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
     HOST / "OverlayCallout.cpp",
+    HOST / "RoutineRegistryCheck.cpp",
     HOST / "RoutineSettingStoreCheck.cpp",
 ]
 
