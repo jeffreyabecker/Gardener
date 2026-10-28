@@ -19,10 +19,9 @@ namespace berry {
 //               and the presses waiting for a page
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
 //
-// A routine can also instantiate the native `Config` class, which reads and writes one INI
-// document through the panel's library, and a routine's file subclasses the native `Registration`
-// class: the instance holds the record it declares — the key, the title, the glyph and the settings
-// list it passes up — and the settings module's declarations are consumed into it.
+// A routine's file subclasses the native `Registration` class: the instance holds the record it
+// declares — the key, the title, the glyph and the settings list it passes up — and the settings
+// module's declarations are consumed into it.
 //
 // A page describes its drawing rather than making it: every `screen` call answers a `draw` record,
 // which is a node of the tree the panel is handed. Some of the other answers a routine reads are

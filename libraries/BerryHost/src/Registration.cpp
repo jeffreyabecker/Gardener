@@ -21,8 +21,8 @@ namespace berry {
 namespace {
 
 // The record a routine's file declares, held by the instance the file made: the comobj owns it and
-// the interpreter frees it with the instance, as an instance of the Config class holds its
-// document. Nothing reads it yet — `register` is what moves it into the registry.
+// the interpreter frees it with the instance. Nothing reads it yet — `register` is what moves it
+// into the registry.
 using RecordOwner = std::unique_ptr<gardener::Registration>;
 
 int recordRelease(bvm* vm) {
@@ -109,8 +109,8 @@ const bnfuncinfo RegistrationMembers[] = {
 
 }  // namespace
 
-// The class a routine file subclasses, installed beside Config: the record lives in the instance,
-// so a file declares a routine without reaching the C++ object the registry will take.
+// The class a routine file subclasses, installed beside the settings module: the record lives in
+// the instance, so a file declares a routine without reaching the C++ object the registry will take.
 void installRegistrationClass(bvm* vm) {
   be_pushclass(vm, "Registration", RegistrationMembers);
   be_setglobal(vm, "Registration");

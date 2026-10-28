@@ -147,7 +147,7 @@ int callArtScene(bvm* vm, const char* name, int seconds, const char* path) {
   return ok ? 1 : 0;
 }
 
-int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) {
+int callArt(bvm* vm, const char* name, int seconds, const char* path) {
   if (!be_getglobal(vm, "harness_art")) {
     be_pop(vm, 1);
     printf("[E] vm: harness_art is missing\n");
@@ -156,15 +156,14 @@ int callArt(bvm* vm, const char* name, int seconds, const char* path, int sets) 
   be_pushstring(vm, name);
   be_pushint(vm, seconds);
   be_pushstring(vm, path);
-  be_pushint(vm, sets);
-  const int rc = be_pcall(vm, 4);
+  const int rc = be_pcall(vm, 3);
   if (rc != BE_OK) {
     report(vm, "harness_art", name);
     return 0;
   }
-  const int result = be_absindex(vm, -(4 + 1));
+  const int result = be_absindex(vm, -(3 + 1));
   const bool ok = be_isbool(vm, result) && be_tobool(vm, result);
-  be_pop(vm, 5);
+  be_pop(vm, 4);
   return ok ? 1 : 0;
 }
 
@@ -216,7 +215,6 @@ int main(int argc, char** argv) {
   const char* componentName = nullptr;
   const char* testFilter = nullptr;
   int artSeconds = 0;
-  int artSets = 0;
   float ceilingKpa = gardener::ChamberCeilingKpa;
   bool compileOnly = false;
   bool verbose = false;
@@ -256,8 +254,6 @@ int main(int argc, char** argv) {
       artPath = argv[++i];
     } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
       artSeconds = atoi(argv[++i]);
-    } else if (strcmp(argv[i], "--sets") == 0 && i + 1 < argc) {
-      artSets = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--ceiling-kpa") == 0 && i + 1 < argc) {
       ceilingKpa = (float)atof(argv[++i]);
     } else {
@@ -300,7 +296,7 @@ int main(int argc, char** argv) {
   }
   int passed = 0;
   if (artName != nullptr) {
-    passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.gif", artSets);
+    passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
   } else if (sceneName != nullptr) {
     passed = callArtScene(vm, sceneName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
   } else if (componentName != nullptr) {

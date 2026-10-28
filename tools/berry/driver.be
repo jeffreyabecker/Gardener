@@ -3,7 +3,7 @@
 # It names the scenes and the device, so it loads after the image — /system and /routines: a Berry
 # file cannot compile a name that is not declared yet. Everything it calls is the firmware's own: the
 # drive is the `harness` module, the routines are reached through the Berry `routines` registry and
-# pushed through `ux`, and a value is read or written through a document the device opens.
+# pushed through `ux`, and a value is read or written through the registry's settings calls.
 
 # A switch onto a routine: home, then push the routine. Its scene is built from the class it
 # registered, so each switch starts a fresh page; the settings map, when the caller has one, is the
@@ -160,21 +160,13 @@ end
 
 # Draw one routine and save what it drew as a GIF animation: one frame per beat. No seconds is the
 # page as it appears; seconds presses OK and runs that much virtual time first, so a cycle can be
-# caught mid-phase. A set count overrides the routine's own before it is activated, which is how a
-# preview shows a run with the sets it needs; zero leaves the file's value alone.
-def harness_art(routine_key, seconds, path, sets)
+# caught mid-phase.
+def harness_art(routine_key, seconds, path)
   if !harness_registered(routine_key)
     harness_fail("art: no routine " + routine_key)
     return false
   end
   harness.reset()
-  if sets > 0
-    var document = device.config("routines/" + routine_key + ".ini")
-    if document.get("", "set_count", "") != ""
-      document.set("", "set_count", sets)
-      document.save()
-    end
-  end
 
   harness.capture_start(path)
 

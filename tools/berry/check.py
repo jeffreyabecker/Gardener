@@ -47,7 +47,6 @@ BERRYHOST_SOURCES = [
     BERRYHOST / "src" / "BerryInterpreter.cpp",
     BERRYHOST / "src" / "BerryScene.cpp",
     BERRYHOST / "src" / "DrawTree.cpp",
-    BERRYHOST / "src" / "Config.cpp",
     BERRYHOST / "src" / "Device.cpp",
     BERRYHOST / "src" / "Screen.cpp",
     BERRYHOST / "src" / "Vacuum.cpp",
@@ -208,12 +207,6 @@ parser.add_argument(
     help="where the GIF animation goes (default: build/<name>.gif)",
 )
 parser.add_argument(
-    "--sets",
-    type=int,
-    default=12,
-    help="with --art, the set count to activate with (default 12; 0 keeps the file's)",
-)
-parser.add_argument(
     "--ceiling-kpa",
     type=float,
     help="the deepest depth the model chamber reaches, in kPa (default 70)",
@@ -258,8 +251,6 @@ if args.art:
             args.art,
             "--seconds",
             str(args.seconds),
-            "--sets",
-            str(args.sets),
             "--out",
             str(out.resolve()),
         ]

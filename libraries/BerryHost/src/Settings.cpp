@@ -37,7 +37,7 @@ constexpr const char* DurationName = "duration";
 constexpr const char* ChoiceName = "choice";
 
 // The row belongs to the instance: the comobj owns it and the interpreter frees it with the
-// instance, the same way an instance of the Config class holds its document.
+// instance.
 using RowOwner = std::unique_ptr<gfx::ui::SettingsRow>;
 
 int rowRelease(bvm* vm) {

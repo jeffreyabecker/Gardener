@@ -28,7 +28,6 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installScreenModule(vm);
   installDeviceModule(vm);
   installSettingsModule(vm);
-  installConfigClass(vm);
   installRegistrationClass(vm);
 }
 
