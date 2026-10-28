@@ -40,16 +40,12 @@ class Registration {
   // Builds the routine's page from the activation a launch hands it.
   using Factory = std::function<std::unique_ptr<gfx::ui::Scene>(const RoutineActivation&)>;
 
-  // The routine's glyph, built the way the drawing components are: the box it is drawn in, answered
-  // as a paint that draws its ink inside it.
-  using Glyph = std::function<gfx::ui::Paint(gfx::Rect box)>;
-
   // `settings` is the declaration, in the order the settings list shows it, and the record owns it
   // from here, so the list and the store reach the rows by pointer. The title is the label the
   // browser draws; a record given none is known by its key.
   Registration(const String& routineKey, const String& title,
                std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings,
-               Rule rule = nullptr, Factory factory = nullptr, Glyph glyph = nullptr);
+               Rule rule = nullptr, Factory factory = nullptr, gfx::ui::Glyph glyph = nullptr);
 
   Registration(const Registration&) = delete;
   Registration& operator=(const Registration&) = delete;
@@ -60,7 +56,7 @@ class Registration {
   const String& title() const { return title_; }
   const std::vector<gfx::ui::SettingsRow*>& settings() const { return settings_; }
   const Factory& factory() const { return factory_; }
-  const Glyph& glyph() const { return glyph_; }
+  const gfx::ui::Glyph& glyph() const { return glyph_; }
 
   // The values the rule accepts. While the rule refuses the set, the settings are put back to their
   // defaults in the order the list shows them, each one tried in turn, and the reason that was
@@ -93,7 +89,7 @@ class Registration {
   std::vector<gfx::ui::SettingsRow*> settings_;
   Rule rule_;
   Factory factory_;
-  Glyph glyph_;
+  gfx::ui::Glyph glyph_;
 };
 
 }  // namespace gardener

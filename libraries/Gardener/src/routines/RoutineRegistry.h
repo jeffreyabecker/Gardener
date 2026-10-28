@@ -17,7 +17,7 @@ class Logger;
 // One row the browser draws: the routine's glyph, the title the row shows and the key the row stands
 // for. An alternate carries its own title and its own key, and its record's glyph.
 struct RoutineRow {
-  Registration::Glyph glyph;
+  gfx::ui::Glyph glyph;
   String title;
   String routineKey;
 };
@@ -71,7 +71,7 @@ class RoutineRegistry {
   String title(const String& routineKey) const;
 
   // The routine's glyph, or nullptr for a key that is not registered or a record that names none.
-  const Registration::Glyph* icon(const String& routineKey) const;
+  const gfx::ui::Glyph* icon(const String& routineKey) const;
 
   // The settings a routine can edit, as its record declares them, in the order the list shows them;
   // nullptr when the key is not registered.

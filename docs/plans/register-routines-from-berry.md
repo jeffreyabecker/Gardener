@@ -10,23 +10,64 @@ It is the first of the models the panel's pages are written against, and it is d
 narrowest: a record is registered and read back, and its page and its glyph are still C++-only
 values. What is deferred is named at the end.
 
-## The rule is a declaration, not a call
+## The rule is a function over the set
 
-Today a record's rule is a `std::function` over the settings map, which is what replaced the Berry
-`problem` override: `repair` runs it, and registration keeps it. A Berry file cannot supply one
-without the registry calling back into the interpreter on every load, every save and every repair,
-and a reason answered that way has to survive in memory the caller owns.
+Today a record's rule is split in two: `problem` answers a reason for a set, `repair` asks it again
+after every setting it puts back, and the answer is a `const char*` that a Berry file could only
+produce out of VM memory — a pointer the native side would have to copy before its next call, and a
+sentence travelling back across the boundary so a page can draw it. `repair` takes a section and a
+logger for nothing but the wording of that line. The split also leaves a rule reading the record's
+settings rather than being handed them, so a routine cannot say what it accepts without
+reimplementing the recovery as well.
 
-A record declares the rule instead: the setting that must be at least the sum of the settings it
-names, and the reason it refuses a set that is not. The two rules in the tree are one such
-comparison each — `final_pressure` covering `initial_pressure`, and `total_duration` covering
-`initial_duration` plus `target_duration` — and a record that declares no rule accepts every set.
-The comparison is between numbers whatever the setting holds, a count of whole seconds or a pressure
-in kPa, so a member of `std::any` is read by its type rather than by a cast the rule names.
+A record holds one rule instead: a function of its settings, in the order the list shows them, and
+of the set to hold. It writes the settings it does not accept and answers nothing. Nothing describes
+the rule to the native side — a routine file supplies the function itself, and no structure standing
+for the comparison crosses the boundary in either direction. The two names leave with it: there is
+no `problem` to ask, and no separate repair for the registry to run.
 
-Checked: a set whose `total_duration` is 30 against holds of 60 and 60 answers `TOTAL < HOLDS` and
-reads back repaired to 300; the same with `final_pressure` below `initial_pressure` answers
-`FINAL < START`; a record with no rule answers nil for any set.
+The two rules in the tree are one such function each: `2_ramped_interval.be` puts `final_pressure`
+back when it is under `initial_pressure`, and `5_ramped_static.be` puts `total_duration` back when
+it is under the two holds. Each walks its settings in the order the list shows and puts back the
+ones it rejects, which is the walk `repair` makes today, and `3_interval.be` holds no rule, which
+accepts every set.
+
+The values are the only thing that crosses. The set the store read becomes a Berry map for the call
+and is read back from it afterwards, so a rule reads and writes by key; a number arrives in its
+kind's type, a duration as whole seconds and a pressure in kPa, at the bounds the kinds carry — a
+duration to 7200 s and a pressure to 100 kPa — so a comparison is between figures the rows already
+hold. A key the routine writes that the record does not declare is dropped, and a value of the wrong
+kind is written as nothing, which reads back as the default. A value inside its kind but outside the
+row's bounds is held to them — a pressure written at 400 kPa reads back at 100 — because a set the
+editors could never have produced is not one the routine asked for, and no rule sees the set again
+after it has written it.
+
+The call is protected, and nothing comes back from it but the set. A raise never unwinds through
+the frames holding the values, and nothing is read back from a failed call, so a rule that raises
+changes nothing: the load answers the set the store read. The raise is the caller's — a load or save
+asked for from Berry answers that error, so a routine's own message reaches whoever made the call,
+and a launch that meets one is refused rather than pushed — and the rule is called again on the next
+load rather than struck off for raising once.
+
+A repair is not logged. The section and the logger reach `repair` today for nothing but the wording
+of `settings: <label>: <reason>`, and both go with that line: a set the rule changes is changed, and
+the values read back are what says so.
+
+A record whose rule is neither nothing nor a function is refused when the record registers, with one
+line naming the routine, and the registry answers false with what it held unchanged.
+
+Checked: a `ramped_static` document whose `initial_duration` and `target_duration` are 60 and whose
+`total_duration` is 30 reads back through `loadSettings` with `total_duration` at its default of
+300, and the same document read through the `cold` alternate reads back the same way. The same
+document with a total that covers the holds reads back unchanged, value for value. A ladder set
+whose `final_pressure` is 3.0 under an `initial_pressure` of 5.0 reads back with `final_pressure` at
+its default of 20.0. A rule that writes 400 kPa into a pressure reads back at 100, and one that
+writes a key the record does not declare is answered without it. A rule that raises on every call
+leaves the document's values in the map it answers, and a `pcall` around a load made from Berry
+answers the rule's own message. The interval's record, which holds none, answers every value as the
+document gave it. A record whose rule is a
+number rather than a function is refused by `routines.register` with one line, and `routines.keys()`
+answers what it did before.
 
 ## The registry is reachable from the interpreter
 
@@ -47,13 +88,14 @@ registered answers an empty map and an empty title rather than raising.
 
 Today `Registration` in `registration.be` is a Berry class the routine files extend, and
 `routines.register` takes an instance of it. The native record replaces it: a class installed at
-boot whose `init` takes the routine key, the title and the declaration, and `routines.register`
-moves it into the registry.
+boot whose `init` takes the routine key, the title, the settings list and the rule, and
+`routines.register` moves it into the registry.
 
-The registry's own refusals do not move: a key that is not a plain word — empty, or carrying `/` or
-`\` — is refused with one line and answers false, the title falls back to the key, and a key already
-registered keeps its place while its record and its alternates are replaced. The document scan that
-gives a record its alternates stays where it is, because the alternates are the registry's.
+The refusals the registry already makes do not move: a key that is not a plain word — empty, or
+carrying `/` or `\` — is refused with one line and answers false, the title falls back to the key,
+and a key already registered keeps its place while its record and its alternates are replaced. The
+document scan that gives a record its alternates stays where it is, because the alternates are the
+registry's.
 
 Checked: a suite registers a record and reads its key back from `keys()` with its title from
 `title()`; a key with a slash answers false and leaves the registry as it was; registering the same
@@ -109,8 +151,12 @@ registry's host cases pass and the new suite passes.
 - `harness.be`'s routine count works again, and `--tests` becomes a check that can pass; the GIF
   capture behind `--art`, `--scene` and `--component` has no page to draw until a scene binding
   returns.
-- The registry's host cases move to the declared rule: the fixture that answered a `std::function`
-  answers a comparison, and the case for a rule that no set satisfies goes with the callback.
+- The registry's host cases move to the rule as a function: they assert the values it writes rather
+  than a sentence, and the case that reached ` even at the defaults` goes. Nothing reports a repair
+  any more — a rule that fixes nothing leaves the set alone, at runtime indistinguishable from one
+  that accepted it, and a launch a raising rule refuses answers no page and no line — so the check
+  is where a wrong rule shows up. The rule case in `tools/berry/tests/settings.test.be` goes with
+  that suite.
 - The three routine files still do not load, because their chrome, icon and page classes are for the
   page work; what this plan makes work is their registration.
 - The routine spec in `docs/archive/specs-and-plans.zip` describes a registry that no longer exists;

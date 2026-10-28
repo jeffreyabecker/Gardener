@@ -123,7 +123,7 @@ String RoutineRegistry::title(const String& routineKey) const {
   return record == nullptr ? String() : record->title();
 }
 
-const Registration::Glyph* RoutineRegistry::icon(const String& routineKey) const {
+const gfx::ui::Glyph* RoutineRegistry::icon(const String& routineKey) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr || !record->glyph()) return nullptr;
   return &record->glyph();

@@ -144,7 +144,7 @@ bool rampedImage(MemoryFiles& files, const char* dataDir) {
 
 bool aDeclarationKeepsItsOrder(const char*) {
   Rows rows;
-  const Registration::Glyph glyph = [](gfx::Rect) -> gfx::ui::Paint {
+  const gfx::ui::Glyph glyph = [](gfx::Rect) -> gfx::ui::Paint {
     return [](gfx::Canvas&) {};
   };
   Registration registration("key", "", rows.declaration(), nullptr, nullptr, glyph);
@@ -286,7 +286,7 @@ bool everyAliasIsListedAfterItsRecord(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  const Registration::Glyph glyph = [](gfx::Rect) -> gfx::ui::Paint {
+  const gfx::ui::Glyph glyph = [](gfx::Rect) -> gfx::ui::Paint {
     return [](gfx::Canvas&) {};
   };
   registry.add(

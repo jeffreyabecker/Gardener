@@ -21,6 +21,10 @@ constexpr uint8_t Paper = 0;
 // reference because a Canvas is neither copyable nor movable.
 using Paint = std::function<void(Canvas&)>;
 
+// A component drawn in the box the caller gives it: the box answered as the paint that draws the
+// component's ink inside it, so a caller holds the component itself rather than one draw of it.
+using Glyph = std::function<Paint(Rect box)>;
+
 // The largest unit a duration shows.
 enum class DurationFormat : uint8_t { Minutes, Seconds, Hours };
 

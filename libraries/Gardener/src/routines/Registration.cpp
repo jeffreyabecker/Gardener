@@ -13,7 +13,7 @@ namespace gardener {
 
 Registration::Registration(const String& routineKey, const String& title,
                            std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings, Rule rule,
-                           Factory factory, Glyph glyph)
+                           Factory factory, gfx::ui::Glyph glyph)
     : routineKey_(routineKey),
       title_(title.isEmpty() ? routineKey : title),
       owned_(std::move(settings)),
