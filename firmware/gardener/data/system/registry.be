@@ -35,21 +35,21 @@ class RoutineRegistry
 
   def register(registration)
     if !isinstance(registration, Registration)
-      vacuum.log("registry: register takes a Registration")
+      device.log("registry: register takes a Registration")
       return false
     end
     # The key is also the name of the document its values live in, so it has to be a plain word.
     # The title is the label the browser draws; a missing one falls back to the key.
     var routine_key = registration.routine_key
     if routine_key == nil || string.find(routine_key, "/") >= 0 || string.find(routine_key, "\\") >= 0
-      vacuum.log("registry: routine key must be a plain word")
+      device.log("registry: routine key must be a plain word")
       return false
     end
     if registration.title == nil
       registration.title = routine_key
     end
     if registration.factory == nil
-      vacuum.log("registry: routine must name its scene class")
+      device.log("registry: routine must name its scene class")
       return false
     end
     # A key already registered keeps its place, so the browser's order is the order the files
@@ -68,7 +68,7 @@ class RoutineRegistry
         continue
       end
       if self.entry(name) != nil
-        vacuum.log("registry: " + routine_key + " alias " + name + " already taken")
+        device.log("registry: " + routine_key + " alias " + name + " already taken")
         continue
       end
       var stored_title = document.get(name, "routine_title", "")

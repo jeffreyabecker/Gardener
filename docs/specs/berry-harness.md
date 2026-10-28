@@ -87,6 +87,7 @@ which the image loads before anything else — and the two native modules a rout
 | Module | On the host |
 | --- | --- |
 | `vacuum` | the machine: `state()`, the target and current pressure, the two bounds, `clamp()`, `start()`, `stop()` and `reset()` |
+| `screen` | the drawing a page describes: every call answers a `draw` record, and a face name is held to the library's own table |
 | `device` | the unit, the jingle selection and library, the piezo counting sounds rather than playing them, a press queue, the clock, the log, the reboot and reset requests, and `device.config` over `/cfg`, with `harness.writes()` counting the writes |
 
 The registry the browser draws and the scene stack it pushes onto are not native: `/system/registry.be`

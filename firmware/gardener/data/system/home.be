@@ -57,7 +57,7 @@ class HomeScene : Scene
     self.init_from_settings(self.stored_settings_values())
     # The scene appears with whatever the chamber is doing, so the phase is read before it is drawn:
     # coming back to a run the device left going shows a run, not an idle page.
-    self.machine.advance(vacuum.now_ms())
+    self.machine.advance(device.now_ms())
     self.draw()
   end
 
@@ -115,7 +115,7 @@ class HomeScene : Scene
     self.settings_values = settings_values
     var pressure_kpa = settings_values["target_pressure"]
     if pressure_kpa > 0.0
-      vacuum.target(vacuum.clamp(pressure_kpa))
+      vacuum.set_target_pressure(vacuum.clamp(pressure_kpa))
     end
   end
 

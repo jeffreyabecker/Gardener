@@ -69,6 +69,66 @@ vacuum.set_target_pressure(vacuum.clamp(stored))          # and a stored one it 
 The shallowest is a non-zero target: `vacuum.set_target_pressure(shallowest)` is taken, anything
 between 0 and it is not, and `0` is the ambient target — the chamber released — and is always taken.
 
+## `screen` — the drawing a page describes
+
+A call does not draw. It answers a `draw` record — one node of a tree that says what the page looks
+like — and nothing reaches the glass until something walks that tree. Every node carries `kind` and
+the fields its kind uses; the rest are nil.
+
+| Call | Node |
+| --- | --- |
+| `screen.text(x, y, w, h, value[, font[, scale]])` | `text`: the box, `value`, `font`, `scale` |
+| `screen.centred(x, y, w, h, value[, font[, scale]])` | `centred`: the same fields, drawn across and down the box |
+| `screen.icon(x, y, w, h, glyph)` | `icon`: the box, and the `glyph` node drawn inside it |
+| `screen.bar(x, y, w, h, percent)` | `bar`: the box and `percent` |
+| `screen.scrollbar(x, y, w, h, index, count, visible[, hollow])` | `scrollbar`: the box and the four numbers |
+| `screen.duration(x, y, w, h, format, seconds[, font[, known]])` | `duration`: the box, `format`, `seconds`, `font` and `known` |
+| `screen.pressure_readout(x, y, w, h[, size_hint[, font[, scale[, secondary_scale]]]])` | `pressure_readout`: the box, `size_hint`, `font`, `scale` and `secondary_scale` |
+| `screen.layout(w, h, children[, alignment])` | `layout`: the cell it takes and the children it divides |
+| `screen.row(h, children[, alignment])` | `row`: the height it takes, children stacked across |
+| `screen.column(w, children[, alignment])` | `column`: the width it takes, children stacked down |
+
+A leaf's `x`, `y`, `w` and `h` are panel pixels. A layout's, a row's and a column's are the cell they
+declare as a share of what holds them: nil for the whole side, so a row declares `h` and a column
+`w`. `children` is a list of `[bounds, draw]` pairs — the cell a child declares and the child itself
+— and `alignment` is the record above, `alignment("center", "center")`, or nil for the left and the
+top.
+
+`font` is a face name, or nil for the built-in 5x7, and `scale` is 1 unless it is given. `format` is
+`minutes`, `seconds` or `hours`, `seconds` a count of them, and `known` is true unless it is given —
+a count that is not known draws `--`. A face, a format or a scale the drawing does not know raises at
+the call that made it, so a tree built wrong fails where it was written rather than where it is
+drawn.
+
+The readout is the machine's own: it prints the depth in force as the reading and the target as a
+second one, both in the panel's unit, so the node says where the readout goes rather than what it
+shows. `scale` is 2 and `secondary_scale` 1 unless they are given, and `size_hint` is 0.5: below 1
+the second reading sits small in the bottom right of the box, and at 1 or more the two sit side by
+side at the main scale, the second on the right.
+
+The calls that answer a value rather than a node are the arithmetic and the text:
+
+| Call | Returns | Notes |
+| --- | --- | --- |
+| `screen.duration_text(format, seconds[, known])` | string | the text a `duration` node would draw |
+| `screen.measure(value[, font[, scale]])` | a `bounds` record | the ink the string takes, which is what a page places a second string by |
+| `screen.cell(total, declared)` | int | the pixels a declared share takes of a total: nil for the whole, a share rounded to the nearest pixel, or a count clamped to the total |
+| `screen.align(leftover, where)` | int | the offset an alignment takes of the room left over; `where` is `left`, `center`, `right`, `top` or `bottom` |
+| `screen.width()`, `screen.height()` | int | the panel's size in pixels |
+
+The faces a `font` may name:
+
+| Name | Face |
+| --- | --- |
+| `sans9`, `sans12`, `sans18`, `sans24` | FreeSans at 9, 12, 18 and 24pt |
+| `sansbold9`, `sansbold12`, `sansbold18`, `sansbold24` | FreeSansBold at the same sizes |
+| `mono9`, `mono12`, `mono18`, `mono24` | FreeMono at the same sizes |
+| `monobold9`, `monobold12`, `monobold18`, `monobold24` | FreeMonoBold at the same sizes |
+| `tomthumb`, `picopixel` | the 3x5 and 3x6 bitmap faces |
+
+`nil`, `""` and `"builtin"` are the built-in 5x7, the face that carries the arrow glyphs a hint row
+prints.
+
 ## `device` — the device around the machine
 
 The unit the panel prints, the target the default program restores, the selected jingle, the piezo,

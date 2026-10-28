@@ -37,12 +37,12 @@ class HomeMachine
   # OK resumes the run, unless one is already going. The machine answers for itself: with no target,
   # no reading or a latched fault, start() refuses and nothing changes.
   def start()
-    var s = vacuum.state()
-    if s.state == "PULL" || s.state == "HOLD"
+    var state = vacuum.state()
+    if state == "PULL" || state == "HOLD"
       return true
     end
     if !vacuum.start()
-      vacuum.log("start refused")
+      device.log("start refused")
     end
     return true
   end
@@ -50,15 +50,15 @@ class HomeMachine
   # Cancel stops and vents the run.
   def stop()
     vacuum.stop()
-    vacuum.log("venting")
+    device.log("venting")
     return true
   end
 
   # The phase follows the chamber, which is the only thing that knows whether a run is going: the
   # device can stop it, and a fault or a deadline can end it, without the page being told.
   def advance(now)
-    var s = vacuum.state()
-    if s.state == "PULL" || s.state == "HOLD"
+    var state = vacuum.state()
+    if state == "PULL" || state == "HOLD"
       if self.mark == nil
         self.mark = now
       end
@@ -75,6 +75,6 @@ class HomeMachine
     if self.phase != HomePhase.RUNNING
       return nil
     end
-    return (vacuum.now_ms() - self.mark) / 1000
+    return (device.now_ms() - self.mark) / 1000
   end
 end

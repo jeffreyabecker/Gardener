@@ -10,21 +10,23 @@ class Logger;
 
 namespace berry {
 
-// The two native modules a routine sees, installed into a fresh VM:
+// The three native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*   the machine, read and commanded
+//   screen.*   the drawing a page describes: a node per call, aggregated into records the panel
+//              can draw later
 //   device.*   the device: its settings, the units it prints in, the jingle library, the piezo,
 //              the clock, the log and the presses waiting for a page
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI
 // document through the panel's library.
 //
-// Nothing here draws: a page is a scene the stack paints, and the drawing verbs a page used to
-// call are C++ now. Some of the answers a routine reads are records rather than plain values:
-// `device.unit()` a `unit`, `device.links()` a `links` and `device.all_jingles()` a list of
-// `jingle` records. They are declared in /system/records.be, which `/system/order` loads first,
-// because only the parser can declare an instance variable on a class. The settings a routine
-// declares are not records: they are `SettingCfg` objects its own settings class builds.
+// A page describes its drawing rather than making it: every `screen` call answers a `draw` record,
+// which is a node of the tree the panel is handed. Some of the other answers a routine reads are
+// records too: `device.unit()` a `unit`, `device.links()` a `links` and `device.all_jingles()` a
+// list of `jingle` records. They are declared in /system/records.be, which `/system/order` loads
+// first, because only the parser can declare an instance variable on a class. The settings a
+// routine declares are not records: they are `SettingCfg` objects its own settings class builds.
 //
 // The reference a routine author reads is docs/specs/ui/bindings.md (what a routine can call) and
 // docs/specs/ui/routine.md (what a routine must be). The tables in `bindings/` are the same

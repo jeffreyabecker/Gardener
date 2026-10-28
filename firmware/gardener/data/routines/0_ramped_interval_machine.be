@@ -112,7 +112,7 @@ class RampedIntervalMachine
     end
     vacuum.stop()
     self.phase = IntervalPhase.PAUSED
-    vacuum.log("paused")
+    device.log("paused")
     return true
   end
 
@@ -138,32 +138,32 @@ class RampedIntervalMachine
   # going.
   def begin_set()
     self.target = self.targets[self.set]
-    vacuum.target(self.target)
+    vacuum.set_target_pressure(self.target)
     # A run may already be under way: the target change is the start then. Starting again would
     # close the valve and abandon a vent to a shallower target.
-    var s = vacuum.state()
-    if s.state == "PULL" || s.state == "HOLD"
-      self.mark = vacuum.now_ms()
+    var state = vacuum.state()
+    if state == "PULL" || state == "HOLD"
+      self.mark = device.now_ms()
       self.phase = IntervalPhase.APPROACH
       return true
     end
     if !vacuum.start()
-      vacuum.log("start refused")
+      device.log("start refused")
       self.phase = IntervalPhase.READY
       return false
     end
-    self.mark = vacuum.now_ms()
+    self.mark = device.now_ms()
     self.phase = IntervalPhase.APPROACH
     return true
   end
 
   # A run that ended under the cycle: a latched fault, or a machine left IDLE after a queued start
   # has had its moment.
-  def lost(s, now)
-    if s.fault != ""
+  def lost(state, now)
+    if state == "FAULT"
       return true
     end
-    return s.state == "IDLE" && (self.phase != IntervalPhase.APPROACH || now - self.mark >= 1000)
+    return state == "IDLE" && (self.phase != IntervalPhase.APPROACH || now - self.mark >= 1000)
   end
 
   def advance(now)
@@ -171,14 +171,14 @@ class RampedIntervalMachine
       return
     end
 
-    var s = vacuum.state()
-    if self.lost(s, now)
+    var state = vacuum.state()
+    if self.lost(state, now)
       self.abandon()
       return
     end
 
     if self.phase == IntervalPhase.APPROACH
-      if s.state == "HOLD" && s.target == self.target
+      if state == "HOLD" && vacuum.get_target_pressure() == self.target
         self.phase = IntervalPhase.WORK
         self.mark = now
       end
@@ -190,7 +190,7 @@ class RampedIntervalMachine
         if self.set + 1 >= self.targets.size()
           self.finish()
         else
-          vacuum.target(self.rest_pressure)
+          vacuum.set_target_pressure(self.rest_pressure)
           self.phase = IntervalPhase.REST_APPROACH
         end
       end
@@ -198,7 +198,7 @@ class RampedIntervalMachine
     end
 
     if self.phase == IntervalPhase.REST_APPROACH
-      if s.state == "HOLD" && s.target == self.rest_pressure
+      if state == "HOLD" && vacuum.get_target_pressure() == self.rest_pressure
         self.phase = IntervalPhase.REST
         self.mark = now
       end
@@ -220,7 +220,7 @@ class RampedIntervalMachine
   # count, so OK starts the next set rather than a new run.
   def wait()
     vacuum.stop()
-    vacuum.target(self.target)
+    vacuum.set_target_pressure(self.target)
     self.phase = IntervalPhase.WAITING
   end
 
@@ -228,7 +228,7 @@ class RampedIntervalMachine
   # run's last depth, sound the device's jingle at the finish, and hand the panel back. The switch is
   # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it.
   def finish()
-    vacuum.target_off()
+    vacuum.set_target_pressure(0)
     self.phase = IntervalPhase.READY
     device.play_current_jingle()
     ux.pop_to_root()
@@ -240,8 +240,8 @@ class RampedIntervalMachine
     self.phase = IntervalPhase.READY
     self.set = 0
     self.target = self.reset_target
-    vacuum.target(self.reset_target)
-    vacuum.log("cycle stopped")
+    vacuum.set_target_pressure(self.reset_target)
+    device.log("cycle stopped")
   end
 
   # One word per thing the chamber is doing, and the target and rest phases read as the hold they
@@ -269,7 +269,7 @@ class RampedIntervalMachine
     if length <= 0
       return 0.0
     end
-    var left = length * 1000 - (vacuum.now_ms() - self.mark)
+    var left = length * 1000 - (device.now_ms() - self.mark)
     if left < 0
       left = 0
     end

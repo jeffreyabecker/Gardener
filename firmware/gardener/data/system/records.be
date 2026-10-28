@@ -29,7 +29,7 @@ end
 
 # The width and height of a box, in pixels; the cell a Layout child declares, each a share of
 # the parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and
-# the ink box `screen.text_bounds` answers.
+# the ink box `screen.measure` answers.
 class bounds
   var w, h
   def init(w, h)
@@ -47,6 +47,22 @@ class alignment
     self.align = align == nil ? "left" : align
     self.v_align = v_align == nil ? "top" : v_align
   end
+end
+
+# One node of a page's drawing, as `screen` builds it: `kind` names what the node is — text, centred,
+# icon, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields that kind
+# uses are set, the rest nil. A leaf names its box in pixels; a layout, a row and a column name the
+# cell they declare as a share of what holds them, nil for the whole side, so a row sets `h` and a
+# column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child declares and
+# the child — and `alignment` is where it puts them, the record above.
+class draw
+  var kind
+  var x, y, w, h
+  var value, font, scale, secondary_scale, size_hint
+  var format, seconds, known
+  var percent
+  var index, count, visible, hollow
+  var children, glyph, alignment
 end
 
 class jingle

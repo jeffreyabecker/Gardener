@@ -83,7 +83,7 @@ class RampedStaticMachine
   # Put the starting pressure back on the chamber, which is where a page that is not running aims.
   def place_start()
     self.target = self.start_pressure
-    vacuum.target(self.start_pressure)
+    vacuum.set_target_pressure(self.start_pressure)
   end
 
   # The profile is built once, when the run starts. A total that is exactly the two holds is a
@@ -91,12 +91,12 @@ class RampedStaticMachine
   # the page stays ready.
   def start()
     if self.ramp_ms < 0
-      vacuum.log("durations overlap")
+      device.log("durations overlap")
       return false
     end
     self.held = 0
     self.target = self.start_pressure
-    vacuum.target(self.target)
+    vacuum.set_target_pressure(self.target)
     return self.approach()
   end
 
@@ -104,7 +104,7 @@ class RampedStaticMachine
   # there, so the chamber is back on the profile before the clock is.
   def unpause()
     self.target = self.schedule(self.held)
-    vacuum.target(self.target)
+    vacuum.set_target_pressure(self.target)
     return self.approach()
   end
 
@@ -112,17 +112,17 @@ class RampedStaticMachine
   # target change is the start then, and starting again would close the valve and abandon a vent to
   # a shallower target.
   def approach()
-    var s = vacuum.state()
-    if s.state != "PULL" && s.state != "HOLD"
+    var state = vacuum.state()
+    if state != "PULL" && state != "HOLD"
       if !vacuum.start()
-        vacuum.log("start refused")
+        device.log("start refused")
         self.phase = RampedStaticPhase.READY
         return false
       end
     end
     # The start is queued, so the first approach may still see IDLE. This is when that stops being
     # a reason to give up.
-    self.mark = vacuum.now_ms()
+    self.mark = device.now_ms()
     self.phase = RampedStaticPhase.APPROACH
     return true
   end
@@ -136,7 +136,7 @@ class RampedStaticMachine
     self.held = self.elapsed()
     vacuum.stop()
     self.phase = RampedStaticPhase.PAUSED
-    vacuum.log("paused")
+    device.log("paused")
     return true
   end
 
@@ -170,7 +170,7 @@ class RampedStaticMachine
     return self.start_pressure + (self.target_pressure - self.start_pressure) * into / self.ramp_ms
   end
 
-  # The schedule is followed at most once a second and only when the value moved. vacuum.target()
+  # The schedule is followed at most once a second and only when the value moved. vacuum.set_target_pressure()
   # is queued, and the machine resets its integral on every one of them, so a retarget on every
   # beat would clear the loop four times a second for a change it has not had time to act on. A
   # second is the coarsest cadence that still follows the fastest profile the editor allows.
@@ -185,16 +185,16 @@ class RampedStaticMachine
     self.command_at = now
     self.command_target = wanted
     self.target = wanted
-    vacuum.target(wanted)
+    vacuum.set_target_pressure(wanted)
   end
 
   # A run that ended under the page: a latched fault, or a machine left IDLE after a queued start
   # has had its moment.
-  def lost(s, now)
-    if s.fault != ""
+  def lost(state, now)
+    if state == "FAULT"
       return true
     end
-    return s.state == "IDLE" && (self.phase != RampedStaticPhase.APPROACH || now - self.mark >= 1000)
+    return state == "IDLE" && (self.phase != RampedStaticPhase.APPROACH || now - self.mark >= 1000)
   end
 
   def advance(now)
@@ -202,8 +202,8 @@ class RampedStaticMachine
       return
     end
 
-    var s = vacuum.state()
-    if self.lost(s, now)
+    var state = vacuum.state()
+    if self.lost(state, now)
       self.abandon()
       return
     end
@@ -211,7 +211,7 @@ class RampedStaticMachine
     # The arrival at the start pressure is t = 0: the schedule describes what the chamber does once
     # it is there, so the approach before it is not part of the run's clock.
     if self.phase == RampedStaticPhase.APPROACH
-      if s.state == "HOLD" && s.target == self.target
+      if state == "HOLD" && vacuum.get_target_pressure() == self.target
         self.mark = now - self.held
         self.command_at = now
         self.command_target = self.target
@@ -232,10 +232,10 @@ class RampedStaticMachine
   # profile's depth, sound the device's jingle at the finish, and hand the panel back. The switch is
   # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it.
   def finish()
-    vacuum.target_off()
+    vacuum.set_target_pressure(0)
     self.phase = RampedStaticPhase.READY
     self.held = 0
-    vacuum.log("complete")
+    device.log("complete")
     device.play_current_jingle()
     ux.pop_to_root()
   end
@@ -246,8 +246,8 @@ class RampedStaticMachine
     self.phase = RampedStaticPhase.READY
     self.held = 0
     self.target = self.start_pressure
-    vacuum.target(self.start_pressure)
-    vacuum.log("run stopped")
+    vacuum.set_target_pressure(self.start_pressure)
+    device.log("run stopped")
   end
 
   # The stage is read off the clock rather than stored, so there is no second clock to keep in step.
@@ -275,7 +275,7 @@ class RampedStaticMachine
   # The run's own clock, frozen while paused: zero until the arrival starts it.
   def elapsed()
     if self.phase == RampedStaticPhase.RUN
-      return vacuum.now_ms() - self.mark
+      return device.now_ms() - self.mark
     end
     if self.phase == RampedStaticPhase.PAUSED
       return self.held

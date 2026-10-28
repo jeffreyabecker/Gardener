@@ -39,7 +39,7 @@ class Registration
     self.settings_cfgs = []
     for cfg : settings_cfgs
       if cfg.problem != nil
-        vacuum.log("settings: " + routine_key + " " + cfg.key + ": " + cfg.problem)
+        device.log("settings: " + routine_key + " " + cfg.key + ": " + cfg.problem)
       else
         self.settings_cfgs.push(cfg)
       end
@@ -61,7 +61,7 @@ class Registration
     if reason == nil
       return nil
     end
-    vacuum.log("settings: " + label + ": " + reason)
+    device.log("settings: " + label + ": " + reason)
     for cfg : self.settings_cfgs
       if settings_values[cfg.key] != cfg.default_value
         settings_values[cfg.key] = cfg.default_value
@@ -70,7 +70,7 @@ class Registration
         end
       end
     end
-    vacuum.log("settings: " + label + ": " + reason + " even at the defaults")
+    device.log("settings: " + label + ": " + reason + " even at the defaults")
     return reason
   end
 

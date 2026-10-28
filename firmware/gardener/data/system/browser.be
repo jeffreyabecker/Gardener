@@ -87,7 +87,7 @@ class BrowserScene : Scene
     var routine_key = row.value
     var settings_cfgs = routines.settings_cfgs(routine_key)
     if settings_cfgs == nil || settings_cfgs.size() == 0
-      vacuum.log("settings: " + routine_key + " has none")
+      device.log("settings: " + routine_key + " has none")
       return false
     end
     var settings_values = routines.load_settings(routine_key)
@@ -105,7 +105,7 @@ class BrowserScene : Scene
     var routine_key = row.value
     var settings_cfgs = routines.settings_cfgs(routine_key)
     if settings_cfgs == nil || settings_cfgs.size() == 0
-      vacuum.log("settings: " + routine_key + " has none")
+      device.log("settings: " + routine_key + " has none")
       return false
     end
     var settings_values = routines.load_settings(routine_key)

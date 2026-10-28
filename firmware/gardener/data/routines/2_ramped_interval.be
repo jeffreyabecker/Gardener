@@ -67,7 +67,7 @@ class RampedInterval : Scene
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.machine.target = self.initial
-    vacuum.target(self.initial)
+    vacuum.set_target_pressure(self.initial)
   end
 
   # The page's box, handed on to the chrome, which lays the page out in it.
@@ -172,11 +172,11 @@ class RampedInterval : Scene
   # the last set is pinned to the final pressure, so the ramp always ends where it was asked to.
   def target_list()
     if self.count > 1 && self.step <= 0.0
-      vacuum.log(self.routine_key + ": no step")
+      device.log(self.routine_key + ": no step")
       return nil
     end
     if self.count > 1 && self.final < self.initial
-      vacuum.log(self.routine_key + ": final below start")
+      device.log(self.routine_key + ": final below start")
       return nil
     end
     var out = []
@@ -218,7 +218,7 @@ class RampedInterval : Scene
     self.init_from_settings(settings_values)
     if self.machine.phase == IntervalPhase.READY
       self.machine.target = self.initial
-      vacuum.target(self.initial)
+      vacuum.set_target_pressure(self.initial)
       return
     end
     # Settings the ladder cannot be built from stop the run rather than resume one they do not

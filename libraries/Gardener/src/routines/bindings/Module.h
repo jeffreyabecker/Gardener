@@ -70,6 +70,14 @@ inline void setFlag(bvm* vm, int record, const char* field, bool value) {
   be_pop(vm, 1);
 }
 
+// The value at `index` as the record's field, for one that is not a plain number or string: a list
+// of children, or a record the caller passed in.
+inline void setValue(bvm* vm, int record, const char* field, int index) {
+  be_pushvalue(vm, index);
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
+
 // --- argument helpers ------------------------------------------------------
 
 inline breal argReal(bvm* vm, int index) { return be_toreal(vm, index); }
