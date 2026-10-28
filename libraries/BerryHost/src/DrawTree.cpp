@@ -2,7 +2,7 @@
 
 #if GARDENER_PANEL
 
-#include "routines/DrawTree.h"
+#include "DrawTree.h"
 
 #include <berry.h>
 #include <string.h>

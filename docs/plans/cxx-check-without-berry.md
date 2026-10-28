@@ -4,7 +4,8 @@ Two host checks exist and only one of them tests the firmware's own C++. `python
 compiles `libraries/Gfx` against a stub display and runs cases over the drawing, the layout, the
 value editors and the scene stack; it names no Gardener source. Everything else runs through
 `python tools/berry/check.py`, which compiles `libraries/Gardener`'s sources beside
-`libraries/berry/src/*.c`, the bindings and the harness, links them into `berrycheck.exe`, and calls
+`libraries/berry/src/*.c`, the interpreter's host library and the harness, links them into
+`berrycheck.exe`, and calls
 the registry's and the setting store's C++ cases from `tools/berry/main.cpp` once the image and
 `harness.be` have loaded.
 
@@ -20,8 +21,8 @@ alone.
 ## The check runs with no interpreter behind it
 
 Today the only host compile that names a Gardener source is `tools/berry/check.py`'s, whose source
-list holds every vendored VM file, `routines/Bindings.cpp` and the four modules under
-`routines/bindings/`, and whose includes carry `libraries/berry/src`. `tools/gfx/check.py`'s list
+list holds every vendored VM file, the seven interpreter host sources under
+`libraries/BerryHost/src/`, and whose includes carry `libraries/berry/src`. `tools/gfx/check.py`'s list
 holds `libraries/Gfx/src/gfx`, `libraries/Gfx/src/ui` and its own `*.cpp`, so a machine, wire,
 storage or panel source is outside it. There is no command that answers whether the firmware's C++
 compiles and behaves on its own.
@@ -102,9 +103,9 @@ logger and drop a half-read token, so a reconnect never joins two commands.
 
 The machine's two domains are shaped around `Machine&` (`serial/Domains.h`), and `Machine` news
 `PwmPump`, `XgzpSensor` and a solenoid in its constructor (`machine/Machine.cpp`), so a host case
-cannot build the surface at all; `serial/domains/Vacuum.cpp` and `serial/domains/MachineDevice.cpp`
+cannot build the surface at all; `serial/domains/Vacuum.cpp` and `serial/domains/Device.cpp`
 are compiled by no host check. What the wire promises — the `get` field list, the bounds and the
-refusals — is asserted nowhere. `MachineDevice.cpp` also reads `ESP.getChipModel()` and
+refusals — is asserted nowhere. `Device.cpp` also reads `ESP.getChipModel()` and
 `ESP.getFreeHeap()`, which the ESP32 core supplies and no host header does.
 
 A case builds the machine's wire surface from a fake pump, sensor and valve — the same parts the

@@ -47,9 +47,12 @@ python scripts/arduino.py --task build --no-enable-bluetooth
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
 without which `Serial` is UART0 and a USB cable sees nothing. The build uses
-`--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the panel and
-everything either of them runs — is the firmware rather than a sketchbook copy, with
-[libraries/Runtime](./libraries/Runtime) the tasks that drive it.
+`--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine and the panel
+— is the firmware rather than a sketchbook copy. Beside it a build finds
+[libraries/Runtime](./libraries/Runtime), the tasks that drive it;
+[libraries/BerryHost](./libraries/BerryHost), the interpreter's host side — the install, the native
+modules a page is written against and the page scene; [libraries/Gfx](./libraries/Gfx), the canvas
+those pages draw on; and [libraries/berry](./libraries/berry), the vendored VM itself.
 
 A build keeps its object files in `firmware/<sketch>/build/compile`, so the next one compiles only
 what changed since, header dependents included. Changing a build option starts over on its own:

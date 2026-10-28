@@ -11,8 +11,8 @@
 #include "machine/MachineCommand.h"
 #include "panel/Panel.h"
 #include "machine/SafeReboot.h"
+#include "routines/Routines.h"
 #include "MachineTasks.h"
-#include "panel/HomeUI.h"
 
 namespace gardener {
 
@@ -28,11 +28,11 @@ constexpr UBaseType_t PanelCore = 0;
 // Cancel together past it restart the device, and Cancel alone past it force-quits the routine.
 constexpr uint32_t ResetHoldSeconds = 5;
 
-// The panel task's own state: the machine it drives and the one page it shows.
+// The panel task's own state: the machine it drives and the home request it last acted on.
 struct PanelState {
   Panel& context;
   Logger* logger;
-  HomeUI* home;
+  uint32_t lastHomeRequests;
 };
 
 // The gesture goes to the active routine on the panel page, or to the press log. The classifier is
@@ -82,7 +82,10 @@ void deliverGesture(PanelState& state, const String& gesture) {
 void panelTask(void* arg) {
   PanelState& state = *static_cast<PanelState*>(arg);
 
-  if (state.home) state.home->begin();
+  // The root scene goes on with the first page, so a scene re-reads the unit and draws rather than
+  // trusting what a previous boot left on the glass.
+  state.lastHomeRequests = state.context.homeRequests();
+  state.context.routines().enterPage();
 
   for (;;) {
     // A command the panel could not hand to the control task on its last beat is retried first.
@@ -94,14 +97,22 @@ void panelTask(void* arg) {
     state.context.battery().update(now);
     state.context.buzzer().update(now);
 
-    if (state.home) state.home->update();
+    // The device's force-quit stops and vents from the panel task and asks the panel for its root
+    // page; the page goes back to `default` then. The stack's own beat is skipped for that pass, so
+    // the page that just left is not drawn again on the way out.
+    if (state.context.homeRequests() != state.lastHomeRequests) {
+      state.lastHomeRequests = state.context.homeRequests();
+      state.context.routines().showDefault();
+    } else {
+      state.context.routines().poll(now);
+    }
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 
-void spawnPanelTask(Panel& context, HomeUI* home) {
-  static PanelState panel{context, &context.logger(), home};
+void spawnPanelTask(Panel& context) {
+  static PanelState panel{context, &context.logger(), context.homeRequests()};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,
                           PanelCore);

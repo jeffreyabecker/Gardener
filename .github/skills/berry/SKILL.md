@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ is broken and is not to be run.'
+description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ is broken and is not to be run.'
 ---
 
 # Berry
@@ -9,7 +9,8 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
-- Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under `routines/bindings/`
+- Editing `libraries/BerryHost/src/` — the install, the four native modules, the page scene and the
+  draw tree — or `routines/Routines.cpp`, which owns the VM and the beat
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
 only packs it. It is checked on the device: `--task upload`, then a look at the panel.
@@ -127,10 +128,10 @@ lands in the output as `[I]`. LittleFS is a map, so a write that would fill a fi
 
 ## A binding is a wrapper
 
-A class a page is written against is a C++ class in the library, and the file under
-`routines/bindings/` is what presents it: the `be_pushclass` table, the callbacks that unpack their
-arguments and push the class's answer, and the hook that reaches a page's override back through the
-interpreter. What belongs on each side of that line is the Berry boundary rule in
+A class a page is written against is a C++ class in the library, and the file in
+`libraries/BerryHost/src/` is what presents it: the `be_pushclass` table, the callbacks that unpack
+their arguments and push the class's answer, and the hook that reaches a page's override back
+through the interpreter. What belongs on each side of that line is the Berry boundary rule in
 [the firmware skill](../firmware/SKILL.md). A model kept in a `.be` file beside its wrapper is a
 second implementation: the two drift, and the image pays for both at every boot.
 

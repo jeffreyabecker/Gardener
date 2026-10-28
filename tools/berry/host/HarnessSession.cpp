@@ -3,12 +3,12 @@
 #include <cstring>
 #include <deque>
 
+#include "BerryHost.h"
 #include "GestureCallout.h"
 #include "GifWriter.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "OverlayCallout.h"
-#include "routines/Bindings.h"
 
 // The interpreter's heap count, which the report reads: a C API, so the header goes in as one.
 extern "C" {

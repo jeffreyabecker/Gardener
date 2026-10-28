@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "routines/GestureQueue.h"
-#include "routines/PressQueue.h"
 #include <Gfx.h>
 
 // The vendored interpreter's VM type, forward declared so its header stops here.
@@ -54,7 +53,7 @@ class Routines {
 
   // What the scenes take their gestures from. The queue `device.take_gesture()` drains is the same
   // one, so a press goes to whichever of the two is reading.
-  gfx::ui::GestureQueue& presses() { return presses_; }
+  gfx::ui::GestureQueue& presses() { return gestures_; }
 
   // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { gestures_.push(gesture); }
@@ -81,7 +80,6 @@ class Routines {
   PanelContext* panel_ = nullptr;
   gfx::ui::Ux stack_;
   GestureQueue gestures_;
-  PressQueue presses_{gestures_};
 };
 
 }  // namespace gardener

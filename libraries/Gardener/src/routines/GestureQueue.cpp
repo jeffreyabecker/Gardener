@@ -34,6 +34,11 @@ bool GestureQueue::take(String& gesture) {
   return true;
 }
 
+const char* GestureQueue::take() {
+  if (!take(press_)) return nullptr;
+  return press_.c_str();
+}
+
 void GestureQueue::clear() {
   for (String& press : presses_) press = "";
   head_ = 0;

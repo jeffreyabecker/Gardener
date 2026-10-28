@@ -11,10 +11,10 @@
     python tools/berry/check.py --test interval
     python tools/berry/check.py --memory     # what the image holds at boot, file by file
 
-The check is the firmware, not a model of it: the panel's own bindings, registry, overlay, settings
-and control law are compiled here against the vendored VM, with a bitmap for a glass, a chamber for
-a rig and an in-memory data image. A page therefore runs on the code the device runs, and the
-driver walks the image's own routines.
+The check is the firmware, not a model of it: the interpreter's host library, the panel's registry,
+overlay, settings and control law are compiled here against the vendored VM, with a bitmap for a
+glass, a chamber for a rig and an in-memory data image. A page therefore runs on the code the
+device runs, and the driver walks the image's own routines.
 
 --art runs one routine and saves what it drew, using the Gfx library the device compiles: an
 animated GIF of every beat. --scene does the same for one of the device's own scenes: home or
@@ -32,12 +32,25 @@ from pathlib import Path
 TOOL = Path(__file__).resolve().parent
 ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
+BERRYHOST = ROOT / "libraries" / "BerryHost"
 GARDENER = ROOT / "libraries" / "Gardener"
 GFX = ROOT / "libraries" / "Gfx"
 DATA = ROOT / "firmware" / "data"
 HOST = TOOL / "host"
 BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
+
+# The interpreter's host side, compiled on the host: the install, the four native modules, the page
+# scene and the tree it draws.
+BERRYHOST_SOURCES = [
+    BERRYHOST / "src" / "Bindings.cpp",
+    BERRYHOST / "src" / "BerryScene.cpp",
+    BERRYHOST / "src" / "DrawTree.cpp",
+    BERRYHOST / "src" / "Config.cpp",
+    BERRYHOST / "src" / "Device.cpp",
+    BERRYHOST / "src" / "Screen.cpp",
+    BERRYHOST / "src" / "Vacuum.cpp",
+]
 
 # The firmware's own sources, compiled on the host. What is not here is what needs a board: the
 # composition roots, the tasks, the links, the device drivers and the vendor display.
@@ -46,15 +59,8 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "panel" / "Band.cpp",
     GARDENER / "src" / "panel" / "MarkScene.cpp",
     GARDENER / "src" / "panel" / "PressureReadout.cpp",
-    GARDENER / "src" / "routines" / "Bindings.cpp",
-    GARDENER / "src" / "routines" / "BerryScene.cpp",
-    GARDENER / "src" / "routines" / "DrawTree.cpp",
     GARDENER / "src" / "routines" / "Routines.cpp",
     GARDENER / "src" / "routines" / "GestureQueue.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Config.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Device.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Screen.cpp",
-    GARDENER / "src" / "routines" / "bindings" / "Vacuum.cpp",
     GARDENER / "src" / "machine" / "MachineCommand.cpp",
     GARDENER / "src" / "storage" / "Config.cpp",
     GARDENER / "src" / "storage" / "Ini.cpp",
@@ -128,7 +134,8 @@ def build(cc, cxx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
-    for path in (HOST, BERRY / "src", BERRY / "generate", GFX / "src", GARDENER / "src"):
+    for path in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src", GFX / "src",
+                 GARDENER / "src"):
         includes.extend(["-I", str(path)])
 
     built = []
@@ -138,7 +145,8 @@ def build(cc, cxx):
     # the class grows. The cache is keyed on source files, so the newest header is the other half.
     header_mtime = 0.0
     if not args.no_cache:
-        for directory in (HOST, BERRY / "src", BERRY / "generate", GFX / "src", GARDENER / "src"):
+        for directory in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src",
+                          GFX / "src", GARDENER / "src"):
             for header in directory.rglob("*.h"):
                 header_mtime = max(header_mtime, header.stat().st_mtime)
 
@@ -152,7 +160,7 @@ def build(cc, cxx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *FIRMWARE_SOURCES, *GFX_SOURCES):
+    for source in (*MAIN_SOURCES, *BERRYHOST_SOURCES, *FIRMWARE_SOURCES, *GFX_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then

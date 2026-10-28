@@ -19,7 +19,6 @@
 #include "serial/SerialLink.h"
 
 #if GARDENER_PANEL
-#include "panel/HomeUI.h"
 #include "panel/Panel.h"
 #include "panel/PanelRoot.h"
 #if GARDENER_BLUETOOTH

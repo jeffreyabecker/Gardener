@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "panel/PanelContext.h"
-#include "routines/bindings/Module.h"
-#include "routines/bindings/Modules.h"
+#include "Module.h"
+#include "Modules.h"
 #include "storage/Config.h"
 
 namespace gardener {

@@ -6,8 +6,8 @@
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "routines/bindings/Module.h"
-#include "routines/bindings/Modules.h"
+#include "Module.h"
+#include "Modules.h"
 
 namespace gardener {
 namespace berry {

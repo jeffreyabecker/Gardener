@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "routines/bindings/Module.h"
+#include "BerryHost.h"
 
 namespace {
 

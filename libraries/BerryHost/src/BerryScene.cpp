@@ -2,14 +2,14 @@
 
 #if GARDENER_PANEL
 
-#include "routines/BerryScene.h"
+#include "BerryScene.h"
 
 #include <berry.h>
 
 
 #include "core/Logger.h"
-#include "routines/DrawTree.h"
-#include "routines/bindings/Module.h"
+#include "DrawTree.h"
+#include "Module.h"
 
 namespace gardener {
 namespace {

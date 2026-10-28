@@ -1,20 +1,23 @@
 #include "Build.h"
 
-#if GARDENER_PANEL
-
-#include "serial/PanelDomains.h"
+#include "serial/Domains.h"
 
 #include <Arduino.h>
 
-#include "panel/Panel.h"
+#include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "firmwareversion.h"
 #include "core/Logger.h"
-#include "serial/SerialLink.h"
 #include "hal/Battery.h"
-#include "panel/Units.h"
 #include "serial/Domain.h"
+#include "serial/SerialLink.h"
+#include "storage/Config.h"
+#if GARDENER_PANEL
+#include "panel/Panel.h"
+#include "panel/Units.h"
+#include "serial/PanelDomains.h"
 #include "storage/DeviceConfig.h"
+#endif
 
 namespace gardener {
 namespace {
@@ -24,9 +27,17 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
+// The `device` domain: what the firmware is and which assemblies are fitted. One class serves both
+// builds, because the wire surface is one surface — a build with a panel answers the gauge and unit
+// fields beside the machine's, and a machine-alone build answers the machine's alone. The two are
+// never registered on the same link, because a link holds one domain per name.
 class DeviceDomain : public Domain {
  public:
-  DeviceDomain(Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
+  // The panel's build passes its gauge and document; a machine-alone build has neither, and the
+  // fields that would read them are not compiled.
+  DeviceDomain(Machine& app, CommandOutbox& outbox, const Battery* battery = nullptr,
+               Config* config = nullptr)
+      : Domain(outbox), app_(app), battery_(battery), config_(config) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -36,7 +47,9 @@ class DeviceDomain : public Domain {
   void set(Stream& io, const String& args);
   void reboot(Stream& io, const String& args);
 
-  Panel& app_;
+  Machine& app_;
+  const Battery* battery_;
+  Config* config_;
 };
 
 void DeviceDomain::execute(Stream& io) {
@@ -95,27 +108,33 @@ void DeviceDomain::get(Stream& io) {
   io.print(" heap=");
   io.print((uint32_t)ESP.getFreeHeap());
 
+#if GARDENER_PANEL
   // Both battery fields report `-` together, and only the gauge knows whether there is one.
   io.print(" batt_v=");
-  if (app_.battery().present()) {
-    io.print(app_.battery().volts(), 2u);
+  if (battery_->present()) {
+    io.print(battery_->volts(), 2u);
   } else {
     io.print('-');
   }
   io.print(" batt_pct=");
-  if (app_.battery().present()) {
-    io.print(app_.battery().percent());
+  if (battery_->present()) {
+    io.print(battery_->percent());
   } else {
     io.print('-');
   }
+#endif
 
   io.print(" log=");
   io.print(app_.logger().levels());
+
+#if GARDENER_PANEL
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
   DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(app_.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   io.print(" unit=");
   io.print(displayUnitInfo(unit).name);
+#endif
+
   // One byte, the same mask the BLE `caps` characteristic reports.
   io.print(" caps=");
   io.print(app_.capabilities());
@@ -170,8 +189,9 @@ void DeviceDomain::set(Stream& io, const String& args) {
     return;
   }
 
+#if GARDENER_PANEL
   // The machine's settings are build symbols now, so `unit` is the only preference this domain
-  // takes.
+  // takes; a machine-alone build has no panel to print in one.
   if (field.equalsIgnoreCase("unit")) {
     DisplayUnit unit = DisplayUnit::Kpa;
     if (!parseDisplayUnit(value.c_str(), unit)) {
@@ -186,14 +206,15 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    app_.config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
-    app_.config().save();
+    config_->set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    config_->save();
 
     io.print("ok unit=");
     io.print(displayUnitInfo(unit).name);
     io.print('\n');
     return;
   }
+#endif
 
   io.print("err bad_argument ");
   io.print(field);
@@ -217,9 +238,16 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox) {
+// The machine-alone build's `device`: the machine's own fields. A build with a panel registers the
+// panel's instead, which answers these and the gauge and unit beside them.
+Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox) {
   return new DeviceDomain(app, outbox);
 }
 
-}  // namespace gardener
+#if GARDENER_PANEL
+Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox) {
+  return new DeviceDomain(app, outbox, &app.battery(), &app.config());
+}
 #endif
+
+}  // namespace gardener

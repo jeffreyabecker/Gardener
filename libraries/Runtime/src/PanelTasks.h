@@ -5,11 +5,10 @@
 namespace gardener {
 
 class Panel;
-class HomeUI;
 
 void panelTask(void* arg);
 
-// The panel's boot spawns the panel task, with the one page it shows.
-void spawnPanelTask(Panel& context, HomeUI* home);
+// The panel's boot spawns the panel task, which drives the one page loop the panel shows.
+void spawnPanelTask(Panel& context);
 
 }  // namespace gardener

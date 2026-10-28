@@ -107,13 +107,12 @@ void setup() {
   // The parts, then the tasks that drive them.
   context.boot();
 
-  auto* home = new gardener::HomeUI(context);
 #if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(context, *commands, serial, ble);
 #else
   gardener::spawnMachineTasks(context, *commands, serial);
 #endif
-  gardener::spawnPanelTask(context, home);
+  gardener::spawnPanelTask(context);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

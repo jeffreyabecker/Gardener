@@ -8,8 +8,8 @@
 #include <Gfx.h>
 
 #include "panel/PanelContext.h"
-#include "routines/bindings/Module.h"
-#include "routines/bindings/Modules.h"
+#include "Module.h"
+#include "Modules.h"
 
 namespace gardener {
 namespace berry {

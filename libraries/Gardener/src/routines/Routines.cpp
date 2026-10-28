@@ -7,6 +7,8 @@
 #include <berry.h>
 #include <stddef.h>
 
+#include <BerryHost.h>
+
 #include <memory>
 #include <vector>
 
@@ -17,8 +19,6 @@
 #include "panel/Band.h"
 #include "panel/MarkScene.h"
 #include "panel/Units.h"
-#include "routines/BerryScene.h"
-#include "routines/Bindings.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
 #include "storage/Library.h"
@@ -161,10 +161,10 @@ bool Routines::enterPage() {
 // under it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return stack_.reset(nullptr);
-  if (std::unique_ptr<gfx::ui::Scene> page = rootPage(vm_, presses_, *panel_)) {
+  if (std::unique_ptr<gfx::ui::Scene> page = rootPage(vm_, gestures_, *panel_)) {
     if (stack_.reset(std::move(page))) return true;
   }
-  return stack_.reset(std::make_unique<MarkScene>(presses_));
+  return stack_.reset(std::make_unique<MarkScene>(gestures_));
 }
 
 void Routines::updateBand(uint32_t nowMs) {
