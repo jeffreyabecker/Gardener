@@ -24,7 +24,7 @@ would run in: this list is the split that makes them possible, and the tests are
 
 ## Epic 2 — the tick a caller steps
 
-- [ ] 2.1 — The tick becomes a unit with a way in and one call: a post of a command; a call with a
+- [x] 2.1 — The tick becomes a unit with a way in and one call: a post of a command; a call with a
   millisecond that applies what is queued, updates the sensor, updates the pump, services the
   machine and writes the run log in that order; and a Reboot handed back rather than performed. The
   collapse of a burst and the run log's own state — the last state logged and the vent's start —
