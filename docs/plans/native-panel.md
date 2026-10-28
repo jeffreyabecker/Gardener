@@ -15,12 +15,12 @@ double presses went with the pages they opened. The three keys the device's docu
 
 Instead: Up held to a double on the home page pushes the native settings list, one row per key, in
 the order the panel shows them: the unit a choice over the units the panel prints, the target a
-pressure row over the machine's bounds, and the jingle a choice over the jingle library whose
-Forward sounds the entry it is showing. A value `/cfg/settings.ini` carries is the value its row
-opens on, a key it does not carry starts at that kind's default, and OK writes the settled set back
-through the storage layer, leaving a key this revision does not name as it found it. Cancel leaves
-the document as it was read. The keys keep their names and their section: `unit`, `target` and
-`jingle` under `[device]`.
+pressure row over the machine's bounds, and the jingle a choice over the entries
+`/cfg/jingles.ini` carries, whose Forward sounds the entry it is showing. A value
+`/cfg/settings.ini` carries is the value its row opens on, a key it does not carry starts at that
+kind's default, and OK writes the settled set back through the storage layer, leaving a key this
+revision does not name as it found it. Cancel leaves the document as it was read. The keys keep
+their names and their section: `unit`, `target` and `jingle` under `[device]`.
 
 Checked: a host case over a fixture document answers the three rows and opens a key the fixture
 omits at its default; on the device, a double-Up, an edit and OK leave the new value in

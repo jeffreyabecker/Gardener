@@ -12,7 +12,6 @@ class DisplayDevice;
 class Battery;
 class BuzzerPlayer;
 class Config;
-class JinglesConfig;
 class Library;
 class Logger;
 class VacuumSystem;
@@ -29,11 +28,9 @@ class PanelContext {
   // by the page, the band and the `screen` module, so one flush sends what any of them wrote.
   virtual gfx::DisplayDevice& display() = 0;
   virtual gfx::Canvas& canvas() = 0;
-  // The device's own document, /cfg/settings.ini: whoever needs the unit, the target or the jingle
-  // under [device] reads and writes that key here.
+  // The device's own document, /cfg/settings.ini: whoever needs the unit or the target under
+  // [device] reads and writes that key here.
   virtual Config& config() = 0;
-  // The jingle library: the note sequences a routine can play.
-  virtual JinglesConfig& jingles() = 0;
   virtual VacuumSystem& vacuum() = 0;
   virtual Battery& battery() = 0;
   virtual BuzzerPlayer& buzzer() = 0;

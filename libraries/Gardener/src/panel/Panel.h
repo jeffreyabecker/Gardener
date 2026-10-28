@@ -13,7 +13,6 @@
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
-#include "storage/Jingles.h"
 
 namespace gardener {
 
@@ -51,7 +50,6 @@ class Panel : public Machine, public PanelContext {
         buzzer_(buzzer),
         battery_(battery),
         config_(&library),
-        jingles_(&library),
         display_(display),
         canvas_(gfx::Canvas::over(*display)),
         routines_(routines),
@@ -87,7 +85,6 @@ class Panel : public Machine, public PanelContext {
   bool serialConnected() const override { return Machine::serialConnected(); }
   bool bluetoothConnected() const override { return Machine::bluetoothConnected(); }
   Config& config() override { return config_; }
-  JinglesConfig& jingles() override { return jingles_; }
   Library& library() override { return library_; }
   Routines& routines() { return *routines_; }
 
@@ -99,10 +96,8 @@ class Panel : public Machine, public PanelContext {
   GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
   Battery* battery_;
-  // The device's documents, ahead of the display and of the interpreter that is installed over the
-  // jingle library.
+  // The device's document, ahead of the display and of the interpreter that reads it.
   Config config_;
-  JinglesConfig jingles_;
   gfx::DisplayDevice* display_;
   // The one frame a page draws into, over the device's own buffer.
   gfx::Canvas canvas_;

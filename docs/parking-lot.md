@@ -106,11 +106,11 @@ buffer and the flush order a canvas would need are all undecided.
 
 The library holding the interpreter's install, its four native modules, the page scene and the draw
 tree compiles against [libraries/Gardener](../libraries/Gardener) for the machine's bounds and its
-run state, the device's and a routine's documents, the jingle library and the buzzer — more than
-`PanelContext` carries. A surface declared in that library and implemented by the firmware would let
-it build with only the vendored VM and Gfx beside it. Blocked by: four modules reach past
-`PanelContext` into `machine/Machine.h`, `storage/Config.h`, `storage/Jingles.h` and
-`panel/BuzzerPlayer.h`, and nothing has chosen a shape for one seam that covers all four.
+run state, the device's and a routine's documents and the buzzer — more than `PanelContext` carries.
+A surface declared in that library and implemented by the firmware would let it build with only the
+vendored VM and Gfx beside it. Blocked by: four modules reach past `PanelContext` into
+`machine/Machine.h`, `storage/Config.h`, `storage/DeviceConfig.h` and `panel/BuzzerPlayer.h`, and
+nothing has chosen a shape for one seam that covers all four.
 
 ## A spec for the image's check
 
@@ -122,8 +122,8 @@ a spec written today would describe a tool that does not run.
 
 A task in [scripts/arduino.py](../scripts/arduino.py) that keeps a verbose build's compile command
 and replays it with `-fsyntax-only` for one file, so a library change is checked in seconds rather
-than by a whole build. Blocked by: nothing has decided whether the host check that compiles the
-firmware's C++ without the interpreter answers the same question, which would leave the task unused.
+than by a whole build. Blocked by: nothing has decided whether the core library's host test suite
+answers the same question for the source it compiles, which would leave the task unused.
 
 # Battery Optional
 

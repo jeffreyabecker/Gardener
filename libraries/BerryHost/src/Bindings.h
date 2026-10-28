@@ -15,18 +15,18 @@ namespace berry {
 //   vacuum.*   the machine, read and commanded
 //   screen.*   the drawing a page describes: a node per call, aggregated into records the panel
 //              can draw later
-//   device.*   the device: its settings, the units it prints in, the jingle library, the piezo,
-//              the clock, the log and the presses waiting for a page
+//   device.*   the device: its settings, the units it prints in, the piezo, the clock, the log and
+//              the presses waiting for a page
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI
 // document through the panel's library.
 //
 // A page describes its drawing rather than making it: every `screen` call answers a `draw` record,
 // which is a node of the tree the panel is handed. Some of the other answers a routine reads are
-// records too: `device.unit()` a `unit`, `device.links()` a `links` and `device.all_jingles()` a
-// list of `jingle` records. They are declared in /system/records.be, which `/system/order` loads
-// first, because only the parser can declare an instance variable on a class. The settings a
-// routine declares are not records: they are `SettingCfg` objects its own settings class builds.
+// records too: `device.unit()` a `unit` and `device.links()` a `links`. They are declared in
+// /system/records.be, which `/system/order` loads first, because only the parser can declare an
+// instance variable on a class. The settings a routine declares are not records: they are
+// `SettingCfg` objects its own settings class builds.
 //
 // The reference a routine author reads is the tables in this folder: what a routine can call and
 // what it must be, as the same surface in code. One file here is one of the modules, and this

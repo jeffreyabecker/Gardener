@@ -89,7 +89,6 @@ void ModelPump::update(uint32_t nowMs) {
 HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
     : dataDir_(std::move(dataDir)),
       config_(&files_),
-      jingles_(&files_),
       chamber_(ceilingKpa),
       pump_(chamber_),
       sensor_(chamber_),
@@ -97,7 +96,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       vacuum_(&pump_, &sensor_, &valve_),
       canvas_(gfx::Canvas::over(panel_)),
       buzzer_(buzzerPart_),
-      context_(panel_, canvas_, config_, jingles_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      context_(panel_, canvas_, config_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -105,10 +104,9 @@ bool HarnessSession::begin() {
   files_.setReadObserver([this](const String& path) { sampleRead(path); });
   if (!files_.load(dataDir_)) return false;
 
-  // The order Panel::boot brings them up in, minus the bus and the keys. The documents are read
-  // before the interpreter, which takes the jingle library when its modules are installed.
+  // The order Panel::boot brings them up in, minus the bus and the keys. The document is read before
+  // the interpreter, which reads it when its modules are installed.
   config_.begin();
-  jingles_.begin();
   battery_.begin();
   buzzerPart_.begin();
   buzzer_.begin();

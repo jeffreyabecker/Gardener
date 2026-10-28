@@ -26,8 +26,8 @@ end
 # The cycle, held by both pages: a phase machine advanced from tick(now). It knows nothing about a
 # routine key and nothing about where settings come from — the page computes the targets and hands
 # them in, with the timing, through configure(). A run is the whole of its own story, the way
-# out included: the last set clears the target, sounds the jingle and hands the panel back, Cancel
-# held to a double leaves the page, and Up held to a double releases the chamber for the settings.
+# out included: the last set clears the target and hands the panel back, Cancel held to a double
+# leaves the page, and Up held to a double releases the chamber for the settings.
 class RampedIntervalMachine
   var phase
   var mark
@@ -225,12 +225,11 @@ class RampedIntervalMachine
   end
 
   # The last set is done: release the chamber, clear the target so `default` cannot inherit the
-  # run's last depth, sound the device's jingle at the finish, and hand the panel back. The switch is
-  # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it.
+  # run's last depth, and hand the panel back. The switch is deferred by the runtime, so it is safe
+  # to ask for it from here.
   def finish()
     vacuum.set_target_pressure(0)
     self.phase = IntervalPhase.READY
-    device.play_current_jingle()
     ux.pop_to_root()
   end
 

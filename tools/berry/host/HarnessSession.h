@@ -21,7 +21,6 @@
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
-#include "storage/Jingles.h"
 
 struct bvm;
 
@@ -182,12 +181,11 @@ bool postMachineCommand(const MachineCommand& command);
 class HarnessPanel : public PanelContext {
  public:
   HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, Config& config,
-               JinglesConfig& jingles, VacuumSystem& vacuum, Battery& battery,
-               BuzzerPlayer& buzzer, Library& library, Logger& logger)
+               VacuumSystem& vacuum, Battery& battery, BuzzerPlayer& buzzer, Library& library,
+               Logger& logger)
       : display_(display),
         canvas_(canvas),
         config_(config),
-        jingles_(jingles),
         vacuum_(vacuum),
         battery_(battery),
         buzzer_(buzzer),
@@ -197,7 +195,6 @@ class HarnessPanel : public PanelContext {
   gfx::DisplayDevice& display() override { return display_; }
   gfx::Canvas& canvas() override { return canvas_; }
   Config& config() override { return config_; }
-  JinglesConfig& jingles() override { return jingles_; }
   VacuumSystem& vacuum() override { return vacuum_; }
   Battery& battery() override { return battery_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
@@ -213,7 +210,6 @@ class HarnessPanel : public PanelContext {
   gfx::DisplayDevice& display_;
   gfx::Canvas& canvas_;
   Config& config_;
-  JinglesConfig& jingles_;
   VacuumSystem& vacuum_;
   Battery& battery_;
   BuzzerPlayer& buzzer_;
@@ -304,7 +300,6 @@ class HarnessSession {
   MemoryFiles files_;
   BufferLogger logger_;
   Config config_;
-  JinglesConfig jingles_;
   Chamber chamber_;
   ModelPump pump_;
   ModelSensor sensor_;

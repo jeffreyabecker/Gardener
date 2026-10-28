@@ -229,14 +229,13 @@ class RampedStaticMachine
   end
 
   # The profile is done: release the chamber, clear the target so `default` cannot inherit the
-  # profile's depth, sound the device's jingle at the finish, and hand the panel back. The switch is
-  # deferred by the runtime, so it is safe to ask for it from here, and the jingle outlives it.
+  # profile's depth, and hand the panel back. The switch is deferred by the runtime, so it is safe to
+  # ask for it from here.
   def finish()
     vacuum.set_target_pressure(0)
     self.phase = RampedStaticPhase.READY
     self.held = 0
     device.log("complete")
-    device.play_current_jingle()
     ux.pop_to_root()
   end
 

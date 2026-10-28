@@ -5,9 +5,9 @@
 // instance like any other entry in the panel's stack. A build includes this and nothing else.
 //
 // The VM is the vendored Berry beside this library, and a page's canvas is Gfx. It also compiles
-// against `libraries/Gardener` for the machine's bounds and run state, the two documents, the
-// jingle library and the buzzer, which is why the manifest states that in prose rather than in
-// `depends`: a `depends` there would close a cycle with the one that names this library.
+// against `libraries/Gardener` for the machine's bounds and run state, the two documents and the
+// buzzer, which is why the manifest states that in prose rather than in `depends`: a `depends` there
+// would close a cycle with the one that names this library.
 //
 // What is declared here forward-declares `bvm`, `Routines`, `PanelContext` and `Logger`, so a
 // translation unit that only wants the install does not drag a Gardener header in with it.

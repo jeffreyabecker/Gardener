@@ -18,14 +18,14 @@ project's own code.
 
 | What | Case | Example |
 | --- | --- | --- |
-| Types — `class`, `struct`, `enum`, alias | PascalCase | `VacuumSystem`, `RunState`, `JinglesConfig` |
+| Types — `class`, `struct`, `enum`, alias | PascalCase | `VacuumSystem`, `RunState`, `RoutineSettingStore` |
 | Functions and methods | camelCase | `service()`, `startRefusal()`, `buildPanelRoot()` |
 | Local variables and parameters | camelCase | `targetPressureKpa`, `nowMs` |
 | Data members | camelCase, trailing underscore | `pump_`, `logger_`, `pidIntegral_` |
 | Constants — `constexpr`, `const`, `static constexpr` | PascalCase | `PanelPriority`, `BackStopMs`, `MarkAsset` |
 | Globals | camelCase | `machineCommandQueue`, `serialConnected` |
 | Enum values | PascalCase | `Button::Back`, `RunState::Pulling` |
-| Files | PascalCase, one type or one topic per file | `VacuumSystem.h`, `JinglesConfig.cpp` |
+| Files | PascalCase, one type or one topic per file | `VacuumSystem.h`, `RoutineSettingStore.cpp` |
 | Namespaces | lowercase | `gardener`, `fonts` |
 
 **Constants are PascalCase, and never carry a `k` prefix.** `PanelWidth`, `DefaultHoldMs`,

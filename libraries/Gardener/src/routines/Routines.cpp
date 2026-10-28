@@ -21,7 +21,7 @@
 #include "panel/Units.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
-#include "storage/Library.h"
+#include "hal/Library.h"
 
 namespace gardener {
 namespace {

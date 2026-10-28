@@ -16,10 +16,9 @@ namespace gardener {
 bool Panel::boot() {
   Machine::boot();
 
-  // The device's own documents come up before the interpreter, which reads the jingle library when
-  // its modules are installed.
+  // The device's own document comes up before the interpreter, which reads it when its modules are
+  // installed.
   config_.begin();
-  jingles_.begin();
 
   Logger& log = logger();
 
