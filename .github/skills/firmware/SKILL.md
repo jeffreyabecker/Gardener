@@ -58,22 +58,23 @@ boundary described next is a decision already made, not a precedent for the next
 `libraries/Gardener/src/machine/VacuumSystem.h` is the vacuum system *and* the machine, because the
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
-a part is an abstract class in `hal/` with its implementation in `hal/impl/`, and the vacuum system
-takes it by reference even though the vacuum system is its only caller. Don't fold
-a driver into the class that drives it: the register writes and the control law are the two things
-here least likely to change together.
+a part is an abstract class in `libraries/Gardener/src/hal/` with its implementation in
+`libraries/Runtime/src/hal/impl/`, and the vacuum system takes it by reference even though the vacuum
+system is its only caller. Don't fold a driver into the class that drives it: the register writes
+and the control law are the two things here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because a vendor
-header is allowed only where a part is named — `<NimBLEDevice.h>` in `ble/BleLink.h`, where
-the radio is the part — and because the vacuum system reads the same whether the part behind it is a
-sensor or nothing at all. An interface with one implementation earns its place exactly when it is a
-foreign boundary like that; anywhere else it is a second implementation that does not exist yet.
+header is allowed only where a part is named — `<NimBLEDevice.h>` in `libraries/Runtime/src/ble/`'s
+`BleLink.h`, where the radio is the part — and because the vacuum system reads the same whether the
+part behind it is a sensor or nothing at all. An interface with one implementation earns its place
+exactly when it is a foreign boundary like that; anywhere else it is a second implementation that
+does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
-accessor; `Machine` and `buildPanelRoot()` build and own the parts and hand out the contexts, and
-the serial domains read them when they format a reply, so there is no snapshot or second copy to
-keep in step. The panel is a machine with its parts arranged around it, so it needs no second name
-for the machine.
+accessor; `buildMachineParts()` and `buildPanelRoot()` build the parts, the contexts they hand out
+expose what they own, and the serial domains read the owner when they format a reply, so there is no
+snapshot or second copy to keep in step. The panel is a machine with its parts arranged around it,
+so it needs no second name for the machine.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no compile-time flag, no `mode` field for a behaviour nothing uses. Add the second case when the

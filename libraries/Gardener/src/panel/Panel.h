@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <FS.h>
 #include <Gfx.h>
 #include <stdint.h>
 
@@ -19,8 +18,8 @@
 namespace gardener {
 
 // The panel's half of the rig. The machine's three pins come first, then the display bus, the
-// piezo, the gauge, and the three lines the key register needs. The sketch names them, so this
-// library carries no board.
+// piezo, the gauge, and the three lines the key register needs. The sketch names them and the
+// composition builds the parts from them, so this library carries no board.
 struct PanelPins {
   MachinePins machine;
   uint8_t i2cSda;
@@ -42,12 +41,11 @@ struct PanelPins {
 // serial command are two writers to one machine rather than two paths.
 class Panel : public Machine, public PanelContext {
  public:
-  Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
-        Battery* battery, gfx::DisplayDevice* display, FS& fs, Library& library,
-        Routines* routines, CommandQueue& queue)
-      : Machine(logger, pins.machine),
+  Panel(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve,
+        ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
+        gfx::DisplayDevice* display, Library& library, Routines* routines, CommandQueue& queue)
+      : Machine(logger, pump, sensor, valve),
         outbox_(queue),
-        pins_(pins),
         buttons_(buttons),
         gestures_(*buttons),
         buzzer_(buzzer),
@@ -57,7 +55,6 @@ class Panel : public Machine, public PanelContext {
         display_(display),
         canvas_(gfx::Canvas::over(*display)),
         routines_(routines),
-        fs_(fs),
         library_(library) {}
 
   // The panel's own route to the machine's command queue.
@@ -71,8 +68,9 @@ class Panel : public Machine, public PanelContext {
   uint32_t homeRequests() const { return homeRequests_; }
 
   // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
-  // interpreter.
-  void boot();
+  // interpreter. True when the glass answered: the panel is the one part with no fallback, so the
+  // composition makes a false fatal.
+  bool boot();
 
   ButtonPanel& buttons() { return *buttons_; }
   GestureClassifier& gestures() { return gestures_; }
@@ -91,17 +89,12 @@ class Panel : public Machine, public PanelContext {
   Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
   Library& library() override { return library_; }
-  // The filesystem is the panel's own, for the mark it draws and the `fs` wire domain. It is not
-  // part of the context: no routine reaches a file.
-  FS& fs() { return fs_; }
   Routines& routines() { return *routines_; }
 
  private:
   CommandOutbox outbox_;
   // Raised by the panel task's force-quit, taken by the page loop.
   uint32_t homeRequests_ = 0;
-  // Kept for boot(), which brings the display bus up on the two pins it names.
-  const PanelPins pins_;
   ButtonPanel* buttons_;
   GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
@@ -114,7 +107,6 @@ class Panel : public Machine, public PanelContext {
   // The one frame a page draws into, over the device's own buffer.
   gfx::Canvas canvas_;
   Routines* routines_;
-  FS& fs_;
   Library& library_;
 };
 

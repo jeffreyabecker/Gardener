@@ -2,7 +2,7 @@
 
 #if GARDENER_PANEL
 
-#include "serial/PanelDomains.h"
+#include "serial/FsDomain.h"
 
 #include <Arduino.h>
 #include <FS.h>
@@ -10,7 +10,6 @@
 
 #include <vector>
 
-#include "panel/Panel.h"
 #include "serial/Domain.h"
 #include "storage/Config.h"
 
@@ -144,7 +143,7 @@ bool oneArg(const String& args, String& token, String& bad) {
 
 class FsDomain : public Domain {
  public:
-  FsDomain(Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
+  FsDomain(CommandOutbox& outbox, FS& fs) : Domain(outbox), fs_(fs) {}
 
   const char* name() const override { return "fs"; }
   void execute(Stream& io) override;
@@ -164,7 +163,7 @@ class FsDomain : public Domain {
   // Consumes a body a refused header still declared. False means the reply has already been sent.
   bool discardPayload(Stream& io, uint32_t bytes);
 
-  Panel& app_;
+  FS& fs_;
 };
 
 void FsDomain::execute(Stream& io) {
@@ -212,12 +211,12 @@ void FsDomain::list(Stream& io, const String& args) {
     return;
   }
 
-  if (!app_.fs().exists(path.c_str())) {
+  if (!fs_.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
 
-  File directory = app_.fs().open(path.c_str());
+  File directory = fs_.open(path.c_str());
   if (!directory) {
     replyNotReady(io, "io");
     return;
@@ -254,12 +253,12 @@ void FsDomain::read(Stream& io, const String& args) {
     return;
   }
 
-  if (!app_.fs().exists(path.c_str())) {
+  if (!fs_.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
 
-  File file = app_.fs().open(path.c_str(), "r");
+  File file = fs_.open(path.c_str(), "r");
   if (!file) {
     replyNotReady(io, "io");
     return;
@@ -324,12 +323,12 @@ void FsDomain::write(Stream& io, const String& args) {
     return;
   }
 
-  if (isDirectory(app_.fs(), path.c_str())) {
+  if (isDirectory(fs_, path.c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "is_dir");
     return;
   }
-  if (!isDirectory(app_.fs(), parentOf(path).c_str())) {
+  if (!isDirectory(fs_, parentOf(path).c_str())) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "no_parent");
     return;
@@ -339,7 +338,7 @@ void FsDomain::write(Stream& io, const String& args) {
   // interface has no capacity to ask about — only a concrete implementation knows its partition —
   // so the size is answered by the write rather than by a pre-check here.
 
-  File file = app_.fs().open(path.c_str(), "w");
+  File file = fs_.open(path.c_str(), "w");
   if (!file) {
     if (!discardPayload(io, bytes)) return;
     replyNotReady(io, "io");
@@ -350,7 +349,7 @@ void FsDomain::write(Stream& io, const String& args) {
   if (result != Payload::Complete) {
     // A short or abandoned body leaves nothing behind: the partial file is removed.
     file.close();
-    app_.fs().remove(path.c_str());
+    fs_.remove(path.c_str());
     if (result == Payload::Idle) {
       replyBadArgument(io, "");
     } else {
@@ -374,15 +373,15 @@ void FsDomain::makeDirectory(Stream& io, const String& args) {
     return;
   }
 
-  if (app_.fs().exists(path.c_str())) {
+  if (fs_.exists(path.c_str())) {
     replyNotReady(io, "exists");
     return;
   }
-  if (!isDirectory(app_.fs(), parentOf(path).c_str())) {
+  if (!isDirectory(fs_, parentOf(path).c_str())) {
     replyNotReady(io, "no_parent");
     return;
   }
-  if (!app_.fs().mkdir(path.c_str())) {
+  if (!fs_.mkdir(path.c_str())) {
     replyNotReady(io, "io");
     return;
   }
@@ -405,11 +404,11 @@ void FsDomain::remove(Stream& io, const String& args) {
     return;
   }
 
-  if (!app_.fs().exists(path.c_str())) {
+  if (!fs_.exists(path.c_str())) {
     replyNotFound(io, path);
     return;
   }
-  if (!removePath(app_.fs(), path.c_str())) {
+  if (!removePath(fs_, path.c_str())) {
     replyNotReady(io, "io");
     return;
   }
@@ -469,8 +468,8 @@ bool FsDomain::discardPayload(Stream& io, uint32_t bytes) {
 
 }  // namespace
 
-Domain* createFsDomain(Panel& app, CommandOutbox& outbox) {
-  return new FsDomain(app, outbox);
+Domain* createFsDomain(CommandOutbox& outbox, FS& fs) {
+  return new FsDomain(outbox, fs);
 }
 
 }  // namespace gardener

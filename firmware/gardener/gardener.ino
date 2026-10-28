@@ -31,6 +31,13 @@ constexpr gardener::PanelPins Board{
 // UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
 
+// The board's own facts, which the `device` reply reports. The heap is read when a controller asks,
+// so a host sees the firmware's figure rather than the one it booted with.
+const gardener::BoardFacts BoardInfo{
+    [] { return ESP.getChipModel(); },
+    [] { return (uint32_t)ESP.getFreeHeap(); },
+};
+
 }  // namespace
 
 void setup() {
@@ -71,8 +78,7 @@ void setup() {
   auto* commands = new gardener::RtosCommandQueue();
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context =
-      gardener::buildPanelRoot(*logger, LittleFS, *files, Board, *commands);
+  gardener::Panel& context = gardener::buildPanelRoot(*logger, *files, Board, *commands);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both
@@ -80,9 +86,9 @@ void setup() {
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(context, serial->outbox()));
-  serial->registerDomain(gardener::createDeviceDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createDeviceDomain(context, serial->outbox(), BoardInfo));
   serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
-  serial->registerDomain(gardener::createFsDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createFsDomain(serial->outbox(), LittleFS));
 #if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(context));
@@ -105,7 +111,7 @@ void setup() {
 #endif
 
   // The parts, then the tasks that drive them.
-  context.boot();
+  gardener::bootPanel(context, Board);
 
 #if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(context, *commands, serial, ble);

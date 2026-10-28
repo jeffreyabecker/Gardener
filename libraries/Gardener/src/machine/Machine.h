@@ -123,8 +123,8 @@ constexpr float CONTROL_PROGRESS_DUTY_FRACTION = 0.5f;  // of the duty cap
 constexpr float CONTROL_OVERSHOOT_KPA = 5.0f;     // deeper than the target, and so past it
 constexpr uint8_t CONTROL_OVERSHOOT_READINGS = 5;
 
-// The pins the machine's parts are wired to. The sketch names them, so this library carries no
-// board: a different rig is a different set of numbers in the sketch.
+// The pins the machine's parts are wired to. The sketch names them and the composition builds the
+// parts from them, so this library carries no board: a different rig is a different set of numbers.
 struct MachinePins {
   uint8_t sensorAdc;
   uint8_t pumpPwm;
@@ -144,14 +144,15 @@ enum Capability : uint8_t {
 
 class Logger;
 
-// The machine: the pressure loop and the policy around it, with no panel part named. It owns the
-// parts and the capability byte, and it reports through the logger it was built with. boot() brings
-// the parts up; the links and the tasks stay the composition's.
+// The machine: the pressure loop and the policy around it, with no panel part named. It commands
+// the three parts it is handed and holds the capability byte, and it reports through the logger it
+// was built with. boot() brings the parts up; the parts themselves, the links and the tasks stay the
+// composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
  public:
-  Machine(Logger& logger, const MachinePins& pins);
+  Machine(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve);
 
   Machine(const Machine&) = delete;
   Machine& operator=(const Machine&) = delete;

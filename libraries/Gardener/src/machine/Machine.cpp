@@ -2,31 +2,13 @@
 
 #include "core/Logger.h"
 #include "firmwareversion.h"
-#include "hal/impl/PwmPump.h"
-#include "hal/impl/SolenoidValve.h"
-#include "hal/impl/XgzpSensor.h"
 
 namespace gardener {
-namespace {
 
-// The fitted valve is one of two parts, chosen from the build's VALVE_NORMALLY_OPEN: normally open
-// keeps the fail-safe (de-energised vents), normally closed inverts it. The pin is the board's, the
-// direction is the build's.
-VentValve* makeValve(uint8_t pin, bool normallyOpen) {
-  if (normallyOpen) return new NormallyOpenValve(pin);
-  return new NormallyClosedValve(pin);
-}
-
-}  // namespace
-
-// The parts are new'd once, at construction, and never deleted: the device's destructor never runs,
-// so nothing owns them. The pins come from the sketch, so a board variant edits its sketch and
-// nothing under hal/impl/.
-Machine::Machine(Logger& logger, const MachinePins& pins)
-    : logger_(logger),
-      vacuum_(new PwmPump(pins.pumpPwm, PUMP_DUTY_MAX_PERCENT, PUMP_RAMP_PERCENT_PER_SEC),
-              new XgzpSensor(pins.sensorAdc),
-              makeValve(pins.ventValve, VALVE_NORMALLY_OPEN)) {}
+// The parts are the composition's: it builds them from the board's pins and hands them here, so
+// this class is the control law and the boot report rather than the wiring.
+Machine::Machine(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve)
+    : logger_(logger), vacuum_(pump, sensor, valve) {}
 
 void Machine::boot() {
   String boot = "gardener ";

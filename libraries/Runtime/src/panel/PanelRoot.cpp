@@ -6,6 +6,7 @@
 
 #include <Wire.h>
 
+#include "MachineRoot.h"
 #include "panel/BuzzerPlayer.h"
 #include "panel/Panel.h"
 #include "routines/Routines.h"
@@ -26,11 +27,12 @@ constexpr uint8_t PanelAddress = 0x3C;
 
 }  // namespace
 
-// The full device's composition: the panel parts on top of the machine. The panel's bus is the
-// composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
-// is called.
-Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins& pins,
+// The full device's composition: the machine's parts, then the panel's. The parts are new'd once and
+// never deleted — the device's destructor never runs — so the composition owns them by the graph it
+// hands out and nothing frees them.
+Panel& buildPanelRoot(Logger& logger, Library& library, const PanelPins& pins,
                       CommandQueue& queue) {
+  const MachineParts machine = buildMachineParts(pins.machine);
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -40,12 +42,24 @@ Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins&
   // construction and comes up in Panel::boot, once the bus is running.
   auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
   auto* routines = new Routines();
-  auto* panel =
-      new Panel(logger, pins, buttons, buzzer, battery, display, fs, library, routines, queue);
+  auto* panel = new Panel(logger, machine.pump, machine.sensor, machine.valve, buttons, buzzer,
+                          battery, display, library, routines, queue);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);
   return *panel;
+}
+
+void bootPanel(Panel& panel, const PanelPins& pins) {
+  // The driver takes a TwoWire it does not own, so the bus is up before the panel brings it up.
+  Wire1.begin(pins.i2cSda, pins.i2cScl, pins.i2cHz);
+
+  if (panel.boot()) return;
+
+  // abort() panics and the ESP32 resets on a panic, so the device keeps trying rather than coming
+  // up blind and silent.
+  delay(50);
+  abort();
 }
 
 }  // namespace gardener

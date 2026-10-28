@@ -32,6 +32,13 @@ constexpr gardener::MachinePins Board{.sensorAdc = 7, .pumpPwm = 6, .ventValve =
 // UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
 
+// The board's own facts, which the `device` reply reports. The heap is read when a controller asks,
+// so a host sees the firmware's figure rather than the one it booted with.
+const gardener::BoardFacts BoardInfo{
+    [] { return ESP.getChipModel(); },
+    [] { return (uint32_t)ESP.getFreeHeap(); },
+};
+
 }  // namespace
 
 void setup() {
@@ -49,7 +56,7 @@ void setup() {
   if (!mounted) {
     logger->warn("fs: littlefs mount failed");
   }
-  gardener::Machine& machine = *new gardener::Machine(*logger, Board);
+  gardener::Machine& machine = gardener::buildMachineRoot(*logger, Board);
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
 
@@ -61,7 +68,7 @@ void setup() {
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(machine, serial->outbox()));
-  serial->registerDomain(gardener::createMachineDeviceDomain(machine, serial->outbox()));
+  serial->registerDomain(gardener::createMachineDeviceDomain(machine, serial->outbox(), BoardInfo));
   gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(machine));
 

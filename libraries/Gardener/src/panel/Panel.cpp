@@ -4,19 +4,16 @@
 
 #include "panel/Panel.h"
 
-#include <Wire.h>
-#include <stdlib.h>
-
 #include "core/Logger.h"
 #include "panel/Units.h"
 #include "storage/DeviceConfig.h"
 
 namespace gardener {
 
-// The panel's side of bring-up: the machine's parts first, then the panel's — the display, which is
-// fatal when it does not answer, the gauge and buzzer, and the interpreter. The links, the screens
-// and the panel task belong to the composition that calls this.
-void Panel::boot() {
+// The panel's side of bring-up: the machine's parts first, then the panel's — the display, the gauge
+// and buzzer, and the interpreter. The bus the display sits on, the links, the screens and the panel
+// task belong to the composition that calls this, which is also what makes a missing display fatal.
+bool Panel::boot() {
   Machine::boot();
 
   // The device's own documents come up before the interpreter, which reads the jingle library when
@@ -26,18 +23,8 @@ void Panel::boot() {
 
   Logger& log = logger();
 
-  // The panel is the one part with no fallback: nothing on the device can draw
-  // without it, so a panel that does not answer is fatal rather than a degraded
-  // mode.
-  Wire1.begin(pins_.i2cSda, pins_.i2cScl, pins_.i2cHz);
   const bool displayOk = display().begin();
-  log.info(displayOk ? "oled: online" : "oled: not found, aborting");
-  if (!displayOk) {
-    // abort() panics and the ESP32 resets on a panic, so the device keeps
-    // trying rather than coming up blind and silent.
-    delay(50);
-    abort();
-  }
+  log.info(displayOk ? "oled: online" : "oled: not found");
 
   const bool batteryOk = battery().begin();
   const bool buzzerOk = buzzer().begin();
@@ -58,9 +45,9 @@ void Panel::boot() {
   stored += displayUnitInfo(unit).name;
   log.info(stored.c_str());
 
-  String vm = vmOk ? "vm: ready, heap " : "vm: no memory, routines off, heap ";
-  vm += String((uint32_t)ESP.getFreeHeap());
-  log.info(vm.c_str());
+  log.info(vmOk ? "vm: ready" : "vm: no memory, routines off");
+
+  return displayOk;
 }
 
 }  // namespace gardener

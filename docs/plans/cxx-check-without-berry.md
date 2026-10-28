@@ -101,12 +101,10 @@ logger and drop a half-read token, so a reconnect never joins two commands.
 
 ## The machine's wire surface is built from fakes
 
-The machine's two domains are shaped around `Machine&` (`serial/Domains.h`), and `Machine` news
-`PwmPump`, `XgzpSensor` and a solenoid in its constructor (`machine/Machine.cpp`), so a host case
-cannot build the surface at all; `serial/domains/Vacuum.cpp` and `serial/domains/Device.cpp`
-are compiled by no host check. What the wire promises — the `get` field list, the bounds and the
-refusals — is asserted nowhere. `Device.cpp` also reads `ESP.getChipModel()` and
-`ESP.getFreeHeap()`, which the ESP32 core supplies and no host header does.
+The machine's two domains are shaped around `Machine&` (`serial/Domains.h`) and read the board's
+chip and heap from the `BoardFacts` they are handed, so nothing in them needs a board — and still
+`serial/domains/Vacuum.cpp` and `serial/domains/Device.cpp` are compiled by no host check. What the
+wire promises — the `get` field list, the bounds and the refusals — is asserted nowhere.
 
 A case builds the machine's wire surface from a fake pump, sensor and valve — the same parts the
 control law's cases use — and the concrete parts stay in the composition the sketch calls. Then
@@ -280,7 +278,7 @@ host check outside the berry tool names a source or a header under `tools/berry/
   a log call on the allocation-failure path, so it is more than a header swap.
 - `Machine::boot`'s device probes beyond the capability byte, `SafeReboot` and the two sketches.
 - `BleLink`, the two BLE domains and NimBLE.
-- `Panel`, `tasks/PanelTasks.cpp`, `Routines` and the bindings, which name the interpreter.
+- `Panel`, `PanelTasks.cpp`, `Routines` and the bindings, which name the interpreter.
 
 ## How it is known to hold
 

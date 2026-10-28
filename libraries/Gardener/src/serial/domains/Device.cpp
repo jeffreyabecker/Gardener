@@ -35,9 +35,9 @@ class DeviceDomain : public Domain {
  public:
   // The panel's build passes its gauge and document; a machine-alone build has neither, and the
   // fields that would read them are not compiled.
-  DeviceDomain(Machine& app, CommandOutbox& outbox, const Battery* battery = nullptr,
-               Config* config = nullptr)
-      : Domain(outbox), app_(app), battery_(battery), config_(config) {}
+  DeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board,
+               const Battery* battery = nullptr, Config* config = nullptr)
+      : Domain(outbox), app_(app), board_(board), battery_(battery), config_(config) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -48,6 +48,7 @@ class DeviceDomain : public Domain {
   void reboot(Stream& io, const String& args);
 
   Machine& app_;
+  BoardFacts board_;
   const Battery* battery_;
   Config* config_;
 };
@@ -104,9 +105,9 @@ void DeviceDomain::get(Stream& io) {
   io.print(" fw=");
   io.print(FirmwareVersion);
   io.print(" chip=");
-  io.print(ESP.getChipModel());
+  io.print(board_.chip());
   io.print(" heap=");
-  io.print((uint32_t)ESP.getFreeHeap());
+  io.print(board_.heap());
 
 #if GARDENER_PANEL
   // Both battery fields report `-` together, and only the gauge knows whether there is one.
@@ -240,13 +241,13 @@ void DeviceDomain::reboot(Stream& io, const String& args) {
 
 // The machine-alone build's `device`: the machine's own fields. A build with a panel registers the
 // panel's instead, which answers these and the gauge and unit beside them.
-Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox) {
-  return new DeviceDomain(app, outbox);
+Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board) {
+  return new DeviceDomain(app, outbox, board);
 }
 
 #if GARDENER_PANEL
-Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox) {
-  return new DeviceDomain(app, outbox, &app.battery(), &app.config());
+Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox, const BoardFacts& board) {
+  return new DeviceDomain(app, outbox, board, &app.battery(), &app.config());
 }
 #endif
 
