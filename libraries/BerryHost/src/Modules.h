@@ -28,8 +28,8 @@ void installSettingsModule(bvm* vm);
 // else.
 std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int index);
 // The module a routine file registers itself through: register(key, title, icon, settings,
-// scene_class) hands the registry a record with the page it names, and load_settings and
-// save_settings read and write the routine's set.
+// scene_class) hands the registry a record with the page it names, load_settings and
+// save_settings read and write the routine's set, and rows and title answer the browser's list.
 void installRoutinesModule(bvm* vm);
 
 }  // namespace berry

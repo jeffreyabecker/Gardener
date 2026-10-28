@@ -1,6 +1,7 @@
 # records.be — the records the image shares: `unit` and `links`, which device answers with, `draw`,
-# which every screen call answers with, `RoutineActivation`, which the routines module builds for a
-# launch, and the two a page builds itself, `bounds` and `alignment`.
+# which every screen call answers with, `RoutineActivation` and `RoutineRow`, which the routines
+# module builds for a launch and for a row of the browser's list, and the two a page builds itself,
+# `bounds` and `alignment`.
 # A routine reads a record with dots — `u.name`, `b.w` — and this interpreter allows that only on an
 # instance whose class declares the field; only the parser makes an instance variable, so the field
 # list here is the contract with whoever fills it.
@@ -25,6 +26,13 @@ class RoutineActivation
     self.routine_key = routine_key
     self.settings_values = settings_values
   end
+end
+
+# One row of the browser's list, as `routines.rows` answers it: the glyph the routine's file gave,
+# as the hex digits `screen.icon` reads, or nil for a routine that gave none; the title the row
+# shows; and the key the row stands for, which is the value a launch is made from.
+class RoutineRow
+  var icon, title, value
 end
 
 # The width and height of a box, in pixels; the cell a Layout child declares, each a share of

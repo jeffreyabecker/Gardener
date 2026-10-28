@@ -33,6 +33,9 @@ constexpr const char* PageClasses = "__routineClasses";
 // The record a launch hands a page's init, declared in /system/records.be.
 constexpr const char* ActivationRecord = "RoutineActivation";
 
+// The record one of the browser's rows is, also declared there: the glyph, the title and the key.
+constexpr const char* RowRecord = "RoutineRow";
+
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need, and every check runs before the first String is built.
 
@@ -157,6 +160,24 @@ void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
     be_setindex(vm, map);
     be_pop(vm, 2);
   }
+}
+
+// One row of the browser's list, left on the stack as the record itself so the caller can push it
+// onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
+// shows and the key a launch is made from.
+int pushRow(bvm* vm, const RoutineRow& row) {
+  const int record = beginRecord(vm, RowRecord);
+  if (record < 0) return record;
+  if (row.glyph.isEmpty()) {
+    be_pushnil(vm);
+    be_setmember(vm, record, "icon");
+    be_pop(vm, 1);
+  } else {
+    setText(vm, record, "icon", row.glyph.c_str());
+  }
+  setText(vm, record, "title", row.title.c_str());
+  setText(vm, record, "value", row.routineKey.c_str());
+  return record;
 }
 
 // The activation a page's init reads, built from the record /system/records.be declares. False when
@@ -291,17 +312,56 @@ int routinesSaveSettings(bvm* vm) {
   be_return(vm);
 }
 
+// routines.rows(): the browser's list, one row per record and per alternate in the order they
+// registered. Nil when the image declares no row record, which is the one way there is nothing to
+// put a row in.
+int routinesRows(bvm* vm) {
+  if (routines == nullptr) {
+    be_raise(vm, "runtime_error", "routines.rows: no panel");
+  }
+  // The list class's instance with the raw list it appends to on top of it, the shape device.units
+  // answers with: the pop below leaves the instance as the answer.
+  be_newobject(vm, "list");
+  const int list = be_absindex(vm, -1);
+  for (const RoutineRow& row : routines->registry().rows()) {
+    if (pushRow(vm, row) < 0) be_return_nil(vm);
+    be_data_push(vm, list);
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);
+  be_return(vm);
+}
+
+// routines.title(routine_key): the label a page draws for a record or an alternate, and nil for a
+// key nobody registered, which is what a page tests before it draws a heading.
+int routinesTitle(bvm* vm) {
+  if (routines == nullptr) {
+    be_raise(vm, "runtime_error", "routines.title: no panel");
+  }
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "routines.title: title(routine_key)");
+  }
+  const RoutineRegistry& registry = routines->registry();
+  const String routineKey(argText(vm, 1));
+  if (registry.entry(routineKey) == nullptr) be_return_nil(vm);
+  be_pushstring(vm, registry.title(routineKey).c_str());
+  be_return(vm);
+}
+
 const bnfuncinfo RoutinesLibrary[] = {
     {"register", routinesRegister},
     {"load_settings", routinesLoadSettings},
     {"save_settings", routinesSaveSettings},
+    {"rows", routinesRows},
+    {"title", routinesTitle},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
-// The module the image registers its routines through: one call to declare a record with the page it
-// names, and the two the page reads and writes its set through.
+// The module the image registers its routines through: one call to declare a record with the page
+// it names, the two the page reads and writes its set through, and the two the browser lists them
+// with.
 void installRoutinesModule(bvm* vm) {
   installModule(vm, "routines", RoutinesLibrary);
   // The classes a registration names, in a list the interpreter owns for the life of the VM: the
