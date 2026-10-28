@@ -62,6 +62,12 @@ SKETCHES_WITH_DATA = {"gardener"}
 DATA_DIR = ROOT / "firmware" / "data"
 BUILD_DIR = SKETCH / "build"
 
+# arduino-cli's own build path, kept between runs so its object files survive: a file whose object
+# and dependencies are newer than its sources is not compiled again. It is a subdirectory because
+# arduino-cli deletes its build path when the build options change — a different panel or radio
+# switch, a rig number, the FQBN — and the data image task keeps littlefs.bin beside it.
+COMPILE_DIR = BUILD_DIR / "compile"
+
 # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial to it,
 # which is what puts the interface on the USB-C socket while leaving the ROM downloader on the same
 # port. Without CDCOnBoot Serial is UART0 on GPIO43/44 and the interface is invisible to a USB cable.
@@ -180,7 +186,8 @@ def build_defines():
 
 def compile_sketch(*extra):
     arguments = ["compile", "--fqbn", FQBN, "--build-property", f"build.defines={build_defines()}",
-                 "--libraries", str(PROJECT_LIBS), *extra, str(SKETCH)]
+                 "--build-path", str(COMPILE_DIR), "--libraries", str(PROJECT_LIBS), *extra,
+                 str(SKETCH)]
     # arduino-cli prints nothing while it works, so --verbose is what makes a long build show which
     # file it is on. The switch rides along with the script's own echoing.
     if VERBOSE:
@@ -264,7 +271,7 @@ def monitor():
 
 
 def main():
-    global FQBN, PORT, VERBOSE, SKETCH, BUILD_DIR, BLUETOOTH, PANEL, DEFINES
+    global FQBN, PORT, VERBOSE, SKETCH, BUILD_DIR, COMPILE_DIR, BLUETOOTH, PANEL, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task", choices=["build", "upload", "data", "monitor", "libs", "clean"],
@@ -288,6 +295,7 @@ def main():
     DEFINES = args.define
     SKETCH = SKETCHES[args.sketch]
     BUILD_DIR = SKETCH / "build"
+    COMPILE_DIR = BUILD_DIR / "compile"
     # The machine-alone build has no panel, so its radio is not optional.
     if SKETCH.name == "headless" and not args.enable_bluetooth:
         print("headless always compiles the radio in; --no-enable-bluetooth ignored")

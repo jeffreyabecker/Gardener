@@ -9,7 +9,7 @@ the registry's and the setting store's C++ cases from `tools/berry/main.cpp` onc
 `harness.be` have loaded.
 
 So a change to the control loop, the wire, the documents or the keys is proved by a run that also
-compiles every `.be` file, builds the VM and needs `firmware/gardener/data` to be there: a failure
+compiles every `.be` file, builds the VM and needs `firmware/data` to be there: a failure
 does not say whether the C++ or the image was wrong, and the cases cannot run at all when the
 interpreter will not build. This plan makes the firmware's C++ a check of its own — a host tool that
 compiles the sources that name no interpreter, no filesystem, no radio and no RTOS, drives them with
@@ -27,14 +27,14 @@ storage or panel source is outside it. There is no command that answers whether 
 compiles and behaves on its own.
 
 A host check exists that compiles and runs the firmware's own C++ with no interpreter: the VM's
-sources and headers are on neither its include path nor its link line, and `firmware/gardener/data`
+sources and headers are on neither its include path nor its link line, and `firmware/data`
 is not one of its inputs. It needs a C++ compiler and Python and nothing else — no ESP32 core, no
 `arduino-cli`, no data image. A case is named for the behaviour it asserts, a failing case prints
 its name and the expectation it missed, and the run's last line is the counts; the exit code is 0
 only when the failure count is 0. A source that names `<berry.h>`, `<FS.h>`, `<Wire.h>`,
 `<NimBLE*>`, `freertos/*` or `<SD.h>` is not among the sources it compiles.
 
-Checked: the command passes with `libraries/berry` and `firmware/gardener/data` moved aside, and a
+Checked: the command passes with `libraries/berry` and `firmware/data` moved aside, and a
 case whose expectation is deliberately made false fails the run and prints its own name.
 
 ## The host Arduino surface is the official API
@@ -101,9 +101,9 @@ logger and drop a half-read token, so a reconnect never joins two commands.
 ## The machine's wire surface is built from fakes
 
 The machine's two domains are shaped around `Machine&` (`serial/Domains.h`), and `Machine` news
-`PwmPump`, `XgzpSensor` and a solenoid in its constructor (`Machine.cpp`), so a host case cannot
-build the surface at all; `serial/domains/Vacuum.cpp` and `serial/domains/MachineDevice.cpp` are
-compiled by no host check. What the wire promises — the `get` field list, the bounds and the
+`PwmPump`, `XgzpSensor` and a solenoid in its constructor (`machine/Machine.cpp`), so a host case
+cannot build the surface at all; `serial/domains/Vacuum.cpp` and `serial/domains/MachineDevice.cpp`
+are compiled by no host check. What the wire promises — the `get` field list, the bounds and the
 refusals — is asserted nowhere. `MachineDevice.cpp` also reads `ESP.getChipModel()` and
 `ESP.getFreeHeap()`, which the ESP32 core supplies and no host header does.
 
@@ -124,38 +124,6 @@ applies.
 Checked: the cases above, each reply asserted byte for byte, a refused `start` leaving the fake sink
 empty while a queued one fills it, and the capability byte — a fake valve that vents when
 de-energised puts `FailSafeValve` (0x04) in `caps`, one that holds without power does not.
-
-## The control tick runs without FreeRTOS
-
-`Tasks.cpp` holds both the scheduling and the policy of a control tick. The scheduling is the
-queue's creation, the two pinned tasks, their priorities and stacks, and the 50 ms beat; the policy
-is `drainMachineCommands` above it (the last stop owns everything before it, only the last target
-survives), the part updates and `vacuum.service` in that order, and `logRunChanges` — one line per
-state change, the vent's elapsed time, the deadline and the fault code. `postMachineCommand` at the
-foot of the file is over `xQueueSend`, and `CommandOutbox::post` and `flush` call it, so a host case
-has no queue behind them, and neither the collapse nor a tick's order and log can be seen except by
-a running task on a board.
-
-The tick's policy is a unit a case steps, and the RTOS file keeps only the transport and the beat:
-the queue, the tasks, the cores and the `vTaskDelayUntil` that asks for the next tick. A case fills
-the queue, hands the tick the fakes the control law already uses and a recording logger, and
-advances the clock a tick at a time. The same tick code runs on the board and under the case, and
-only the scheduling differs.
-
-The numbers: a tick every `CONTROL_PERIOD_MS` 50; a queue of 8; `[start, stop]` applies only `stop`
-and logs the start `before a stop`; `[start, target 10, stop]` applies only `stop` and logs both
-dropped ones; `[target 10, target 20]` applies only `20` and logs `10` `for a later target`;
-`[stop, target 5]` applies both in that order; an empty drain applies nothing. The outbox holds 8
-commands and refuses the ninth — the newest — while the link has already answered `ok`; `flush`
-retries oldest first and stops at the first that still does not fit.
-
-Checked: one case per burst, asserting the ops applied in order and the exact line
-(`queue: dropped target 10.0 for a later target`); the outbox boundary — the 8th accepted, the 9th
-refused, `flush` delivering 1 to 8 in order; one tick that applies its command before
-`sensor().update`, `pump().update` and `service()` run, and that a latched fault still sees the part
-updates; and the run log, each line once: `IDLE -> PULL`, `PULL -> HOLD`, `HOLD -> VENT`,
-`VENT -> IDLE after 1200 ms`, `PULL -> FAULT (fault no_progress)` and
-`run: hold deadline reached after 900 s`.
 
 ## The control law runs on a virtual clock
 
@@ -189,14 +157,13 @@ Checked: one case per sentence above, on an advanced clock, so the whole set run
 ## A note sequence is a case
 
 `BuzzerPlayer` is a parser and a schedule over `Buzzer&`, which is pure virtual, and nothing checks
-it: `BuzzerPlayer.cpp` is in the interpreter's compile list and has no case there, and its callers
-are the panel's `buzzer` domain and the `device` binding, neither of which has a case. The grammar
-and the bounds are real behaviour:
-`note:duration` pairs separated by spaces or tabs, note names `a` to `g` with an optional `#` or `b`
-and one octave digit, `r` for a rest, equal temperament with A4 at 440 Hz, a frequency outside
-`BuzzerMinHz` 100 to `BuzzerMaxHz` 10000 refused rather than clamped, a duration of zero refused,
-and a sequence that is empty or has a non-space after a duration refused, with `badToken` left at
-the first token that did not parse.
+it: `panel/BuzzerPlayer.cpp` is in the interpreter's compile list and has no case there, and its
+callers are the panel's `buzzer` domain and the `device` binding, neither of which has a case. The
+grammar and the bounds are real behaviour: `note:duration` pairs separated by spaces or tabs, note
+names `a` to `g` with an optional `#` or `b` and one octave digit, `r` for a rest, equal temperament
+with A4 at 440 Hz, a frequency outside `BuzzerMinHz` 100 to `BuzzerMaxHz` 10000 refused rather than
+clamped, a duration of zero refused, and a sequence that is empty or has a non-space after a
+duration refused, with `badToken` left at the first token that did not parse.
 
 A fake `Buzzer` records the level it is driven at, so the schedule is assertable too: `validate`
 answers without starting anything, `play` starts the first note at the current millisecond, `update`
@@ -213,7 +180,7 @@ fake at 440 Hz, then at 1047 Hz, then silent.
 
 `Ini`, `Config`, `Jingles` and `RoutineSettingStore` take their files through `Library`, which is
 the seam a host case needs, but the only in-memory `Library` is `tools/berry/host/MemoryFiles.h` —
-it copies `firmware/gardener/data` and exists for the harness — and the two case files that use it,
+it copies `firmware/data` and exists for the harness — and the two case files that use it,
 `RoutineRegistryCheck.cpp` and `RoutineSettingStoreCheck.cpp`, are compiled into `berrycheck.exe`
 and called from `tools/berry/main.cpp` once the image loads. The document's shape, the typed reads
 and the one-write-per-save rule are therefore checked only in a run that has loaded the interpreter.
@@ -273,14 +240,12 @@ whose subject the firmware's check compiles.
   a log call on the allocation-failure path, so it is more than a header swap.
 - `Machine::boot`'s device probes beyond the capability byte, `SafeReboot` and the two sketches.
 - `BleLink`, the two BLE domains and NimBLE.
-- The scheduling: the tasks' priorities, stacks and cores, `vTaskDelayUntil`, the interface task's
-  5 ms beat and any watchdog — the tick's policy moves, the schedule cannot.
-- `Panel`, `PanelTasks`, `Routines` and the bindings, which name the interpreter.
+- `Panel`, `tasks/PanelTasks.cpp`, `Routines` and the bindings, which name the interpreter.
 
 ## How it is known to hold
 
 1. The firmware's check exits 0 and prints its counts with `libraries/berry` and
-   `firmware/gardener/data` moved aside.
+   `firmware/data` moved aside.
 2. `python tools/gfx/check.py` exits 0 against the API's `String` and the tree's one `Stream`.
 3. `python tools/berry/check.py --tests` exits 0 and runs the image's suites only.
 4. `python scripts/arduino.py --task build` compiles both sketches: the suite adds no build symbol,

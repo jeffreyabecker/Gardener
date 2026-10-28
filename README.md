@@ -50,6 +50,12 @@ without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 `--libraries libraries`, so [libraries/Gardener](./libraries/Gardener) — the machine, the panel and
 everything either of them runs — is the firmware rather than a sketchbook copy.
 
+A build keeps its object files in `firmware/<sketch>/build/compile`, so the next one compiles only
+what changed since, header dependents included. Changing a build option starts over on its own:
+`arduino-cli` treats the panel and radio switches, the rig's numbers and the FQBN as part of the
+build and throws the objects away when one of them differs. `--task clean` removes them, and the
+data image beside them, by hand.
+
 ## Documentation
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs
