@@ -4,6 +4,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <memory>
 #include <utility>
@@ -116,6 +117,32 @@ bool pushItems(bvm* vm, int index) {
   if (be_islist(vm, -1)) return true;
   be_pop(vm, 1);
   return false;
+}
+
+// Whether the value at `index` is one of the declarations this module makes: an instance of one of
+// the four classes, carrying the comobj its row lives in. The class name is what tells a
+// declaration apart from any other object a file could hand a record.
+bool isDeclaration(bvm* vm, int index) {
+  if (!be_isinstance(vm, index)) return false;
+  const char* name = be_classname(vm, index);
+  if (name == nullptr) return false;
+  if (strcmp(name, NumberName) != 0 && strcmp(name, PressureName) != 0 &&
+      strcmp(name, DurationName) != 0 && strcmp(name, ChoiceName) != 0) {
+    return false;
+  }
+  if (!be_getmember(vm, index, ".p")) return false;
+  const bool row = be_iscomobj(vm, -1);
+  be_pop(vm, 1);
+  return row;
+}
+
+// The row a declaration holds, moved out of it: a declaration that has been taken holds nothing, so
+// one setting is one row on one record.
+std::unique_ptr<gfx::ui::SettingsRow> takeRow(bvm* vm, int index) {
+  be_getmember(vm, index, ".p");
+  RowOwner* owner = static_cast<RowOwner*>(be_tocomptr(vm, -1));
+  be_pop(vm, 1);
+  return std::move(*owner);
 }
 
 // The unit the panel prints pressure in, out of the device's own document, as `device.unit()` reads
@@ -272,6 +299,41 @@ const bnfuncinfo ChoiceMembers[] = {
 };
 
 }  // namespace
+
+// The rows a settings list declares, in the order the list gave them: every entry is a declaration
+// of one of this module's kinds, and each is consumed, since a row belongs to the record that takes
+// it. The checks run before any row is taken, so a list holding anything else raises and leaves
+// every declaration as it was.
+std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int index) {
+  if (!pushItems(vm, index)) {
+    be_raise(vm, "type_error", "Registration: settings is a list of declarations");
+  }
+  const int list = be_absindex(vm, -1);
+  const int count = be_data_size(vm, list);
+
+  for (int i = 0; i < count; i++) {
+    be_pushint(vm, i);
+    be_getindex(vm, list);
+    be_remove(vm, -2);  // the index the read left under the entry
+    const bool declaration = isDeclaration(vm, -1);
+    be_pop(vm, 1);
+    if (!declaration) {
+      be_raise(vm, "type_error", "Registration: settings is a list of declarations");
+    }
+  }
+
+  std::vector<std::unique_ptr<gfx::ui::SettingsRow>> rows;
+  rows.reserve((size_t)count);
+  for (int i = 0; i < count; i++) {
+    be_pushint(vm, i);
+    be_getindex(vm, list);
+    be_remove(vm, -2);
+    rows.push_back(takeRow(vm, -1));
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);  // the list
+  return rows;
+}
 
 // The `settings` module: the four declaration classes, installed as members so a file reaches a
 // kind through the module rather than through a global of its own.

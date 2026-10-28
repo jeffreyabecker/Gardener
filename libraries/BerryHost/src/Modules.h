@@ -1,8 +1,17 @@
 #pragma once
 
+#include <memory>
+#include <vector>
+
 struct bvm;
 
 namespace gardener {
+
+namespace gfx {
+namespace ui {
+class SettingsRow;
+}  // namespace ui
+}  // namespace gfx
 
 namespace berry {
 
@@ -11,14 +20,21 @@ namespace berry {
 void installVacuumModule(bvm* vm);
 void installScreenModule(bvm* vm);
 void installDeviceModule(bvm* vm);
-// The declarations a routine's settings list is made of: a class per kind, each call holding the row
-// it built in the instance, so nothing about a setting is read back off a field.
+// The declarations a routine's settings list is made of: a class per kind, each call holding the
+// row it built in the instance, so nothing about a setting is read back off a field.
 void installSettingsModule(bvm* vm);
 // The native Config class a routine can instantiate for its own INI document.
 void installConfigClass(bvm* vm);
+// The native Registration class a routine subclasses: the instance holds the record it declares,
+// and init builds that record from the values the file hands up.
+void installRegistrationClass(bvm* vm);
 // Answers an instance of that class over `document`, read once: the document and the name it was
 // opened with belong to the instance. The device's `config` call answers this.
 void pushConfigDocument(bvm* vm, const char* document);
+// The rows a settings list declares, in order, each declaration consumed: a row belongs to the one
+// record that takes it. Raises, leaving every declaration as it was, for a list holding anything
+// else.
+std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int index);
 
 }  // namespace berry
 }  // namespace gardener

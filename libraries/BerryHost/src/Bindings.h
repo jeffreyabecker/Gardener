@@ -20,14 +20,16 @@ namespace berry {
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
 //
 // A routine can also instantiate the native `Config` class, which reads and writes one INI
-// document through the panel's library.
+// document through the panel's library, and a routine's file subclasses the native `Registration`
+// class: the instance holds the record it declares — the key, the title, the glyph and the settings
+// list it passes up — and the settings module's declarations are consumed into it.
 //
 // A page describes its drawing rather than making it: every `screen` call answers a `draw` record,
 // which is a node of the tree the panel is handed. Some of the other answers a routine reads are
 // records too: `device.unit()` a `unit` and `device.links()` a `links`. They are declared in
 // /system/records.be, which `/system/order` loads first, because only the parser can declare an
-// instance variable on a class. The settings a routine declares are not records: they are objects the
-// `settings` module's classes build, and each holds the row it was declared with.
+// instance variable on a class. The settings a routine declares are not records: they are objects
+// the `settings` module's classes build, and each holds the row it was declared with.
 //
 // The reference a routine author reads is the tables in this folder: what a routine can call and
 // what it must be, as the same surface in code. One file here is one of the modules, and this
