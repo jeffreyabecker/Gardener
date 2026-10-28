@@ -2,9 +2,6 @@
 # here does not load: Berry resolves a global when it compiles a file, so a class has to be a global
 # by the time a file that names it is compiled.
 records.be
-# The registry registers registrations, and the routines below the system extend the record.
-registration.be
-registry.be
 # The browser's Forward opens the settings list, and its rows come from the registry.
 browser.be
 # The home scene's run, which home.be holds.
