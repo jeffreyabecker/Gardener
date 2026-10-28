@@ -5,7 +5,6 @@
 #include "panel/PressureReadout.h"
 
 #include <stdio.h>
-#include <string.h>
 
 #include <string>
 
@@ -24,27 +23,15 @@ std::string readingText(float pressureKpa, DisplayUnit unit) {
 }  // namespace
 
 gfx::ui::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
-                               ReadoutOrder order, const char* position, float sizeHint,
-                               const gfx::Font* face, uint8_t scale, uint8_t secondaryScale) {
-  // The side comes from the last character of the position and the row from the first, so `tr` is
-  // the top right and anything unrecognised the bottom right.
-  const char* corner = position == nullptr ? "br" : position;
-  const size_t length = strlen(corner);
-  const bool secondaryLeft = length > 0 && corner[length - 1] == 'l';
-  const bool secondaryTop = length > 0 && corner[0] == 't';
-
-  return [box, &vacuum, unit, order, secondaryLeft, secondaryTop, sizeHint, face, scale,
+                               float sizeHint, const gfx::Font* face, uint8_t scale,
+                               uint8_t secondaryScale) {
+  return [box, &vacuum, unit, sizeHint, face, scale,
           secondaryScale](gfx::Canvas& canvas) {
-    const float pressure = vacuum.currentPressureKpa();
-    const float target = vacuum.targetPressureKpa();
-    const bool targetFirst = order == ReadoutOrder::TargetPressure;
-    // A stopped machine has no chamber reading to show, so the pressure number is dashes; the
-    // target is known either way.
-    const std::string pressureText =
-        vacuum.running() ? readingText(pressure, unit) : std::string("--");
-    const std::string targetText = readingText(target, unit);
-    const std::string main = targetFirst ? targetText : pressureText;
-    const std::string second = targetFirst ? pressureText : targetText;
+    // A stopped machine has no chamber reading to show, so the reading is dashes; the target is
+    // known either way.
+    const std::string reading =
+        vacuum.running() ? readingText(vacuum.currentPressureKpa(), unit) : std::string("--");
+    const std::string target = readingText(vacuum.targetPressureKpa(), unit);
 
     gfx::Canvas own = canvas.child(box);
     const int16_t width = own.width();
@@ -55,17 +42,15 @@ gfx::ui::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit 
     if (sizeHint >= 1.0f) {
       gfx::Canvas left = own.child(gfx::Rect(0, 0, halfWidth, height));
       gfx::Canvas right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
-      gfx::ui::drawCentred(left, secondaryLeft ? second.c_str() : main.c_str(), face, scale);
-      gfx::ui::drawCentred(right, secondaryLeft ? main.c_str() : second.c_str(), face, scale);
+      gfx::ui::drawCentred(left, reading.c_str(), face, scale);
+      gfx::ui::drawCentred(right, target.c_str(), face, scale);
       return;
     }
 
-    gfx::ui::drawCentred(own, main.c_str(), face, scale);
-    gfx::Canvas cell =
-        own.child(gfx::Rect(secondaryLeft ? 0 : halfWidth, secondaryTop ? 0 : halfHeight,
-                            secondaryLeft ? halfWidth : width - halfWidth,
-                            secondaryTop ? halfHeight : height - halfHeight));
-    gfx::ui::drawCentred(cell, second.c_str(), face, secondaryScale);
+    gfx::ui::drawCentred(own, reading.c_str(), face, scale);
+    gfx::Canvas corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
+                                             height - halfHeight));
+    gfx::ui::drawCentred(corner, target.c_str(), face, secondaryScale);
   };
 }
 
