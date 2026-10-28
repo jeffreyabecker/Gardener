@@ -4,12 +4,15 @@
 // for and keeps the state a case reads back, so a case can assert what was done to the part and not
 // only what was printed.
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <string>
 #include <vector>
 
 #include "core/Logger.h"
+#include "hal/Battery.h"
+#include "hal/ButtonPanel.h"
 #include "hal/Buzzer.h"
 #include "hal/PressureSensor.h"
 #include "hal/Pump.h"
@@ -149,6 +152,60 @@ class FakeBuzzer : public Buzzer {
  private:
   uint16_t hz_ = 0;
   bool sounding_ = false;
+};
+
+// The pack gauge: the reading a case sets and the beat it was last updated on.
+class FakeBattery : public Battery {
+ public:
+  bool begin() override { return true; }
+  void update(uint32_t nowMs) override {
+    lastUpdateMs_ = nowMs;
+    updates_++;
+  }
+  bool present() const override { return present_; }
+  bool low() const override { return low_; }
+  float volts() const override { return volts_; }
+  uint8_t percent() const override { return percent_; }
+
+  void setPresent(bool present) { present_ = present; }
+  void setLow(bool low) { low_ = low; }
+  void setPercent(uint8_t percent) { percent_ = percent; }
+  uint32_t lastUpdateMs() const { return lastUpdateMs_; }
+  int updates() const { return updates_; }
+
+ private:
+  bool present_ = true;
+  bool low_ = false;
+  float volts_ = 3.7f;
+  uint8_t percent_ = 50;
+  uint32_t lastUpdateMs_ = 0;
+  int updates_ = 0;
+};
+
+// The panel keys: the level, the press and the hold a case sets, keyed by the hal enum.
+class FakeButtonPanel : public ButtonPanel {
+ public:
+  bool pressed(Button button) override { return pressed_[index(button)]; }
+  Press consumePress(Button button) override {
+    const Press press = press_[index(button)];
+    press_[index(button)] = Press::None;
+    return press;
+  }
+  void dropPress(Button button) override { press_[index(button)] = Press::None; }
+  uint32_t heldMs(Button button) override { return heldMs_[index(button)]; }
+
+  // A key coming down and going up, as the classifier sees it across two beats.
+  void press(Button button) { pressed_[index(button)] = true; }
+  void release(Button button) { pressed_[index(button)] = false; }
+  void classify(Button button, Press press) { press_[index(button)] = press; }
+  void hold(Button button, uint32_t ms) { heldMs_[index(button)] = ms; }
+
+ private:
+  static size_t index(Button button) { return static_cast<size_t>((uint8_t)button); }
+
+  bool pressed_[ButtonCount] = {};
+  Press press_[ButtonCount] = {};
+  uint32_t heldMs_[ButtonCount] = {};
 };
 
 // The one sink: every line a domain logs, in order, with the level it came in at.

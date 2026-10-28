@@ -55,15 +55,11 @@ class Panel : public Machine, public PanelContext {
         routines_(routines),
         library_(library) {}
 
-  // The panel's own route to the machine's command queue.
+  // The panel's own route to the machine's command queue: the beat flushes what a full queue
+  // refused and the buttons tick posts the force-quit's stop, the same queue the links write.
   bool post(const MachineCommand& command) override { return outbox_.post(command); }
   void flushCommands() { outbox_.flush(); }
-
-  // The force-quit: Cancel held five seconds stops and vents, then asks the panel for its root page.
-  // The panel task raises it and the page loop takes it, so one request is one switch home and
-  // neither side needs the other's header.
-  void requestHome() { homeRequests_++; }
-  uint32_t homeRequests() const { return homeRequests_; }
+  CommandOutbox& outbox() { return outbox_; }
 
   // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
   // interpreter. True when the glass answered: the panel is the one part with no fallback, so the
@@ -90,8 +86,6 @@ class Panel : public Machine, public PanelContext {
 
  private:
   CommandOutbox outbox_;
-  // Raised by the panel task's force-quit, taken by the page loop.
-  uint32_t homeRequests_ = 0;
   ButtonPanel* buttons_;
   GestureClassifier gestures_;
   BuzzerPlayer* buzzer_;
