@@ -12,7 +12,7 @@ const char* failureText = "";
 }  // namespace
 
 StubDisplay display(PageWidth, PageHeight);
-Canvas canvas(display.buffer(), display.size(), display.size());
+Canvas canvas = display.rootCanvas();
 
 void reset() {
   display.clearFrame();

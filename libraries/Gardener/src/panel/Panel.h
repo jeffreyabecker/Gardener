@@ -51,7 +51,7 @@ class Panel : public Machine, public PanelContext {
         battery_(battery),
         config_(&library),
         display_(display),
-        canvas_(gfx::Canvas::over(*display)),
+        canvas_(display->rootCanvas()),
         routines_(routines),
         library_(library) {}
 

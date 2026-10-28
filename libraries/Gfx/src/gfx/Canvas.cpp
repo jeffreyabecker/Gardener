@@ -1,5 +1,7 @@
 #include "gfx/Canvas.h"
 
+#include "gfx/DisplayDevice.h"
+
 namespace gardener::gfx {
 
 Canvas Canvas::child(Rect area) const {

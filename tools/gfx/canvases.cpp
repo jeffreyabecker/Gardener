@@ -57,7 +57,7 @@ void aChildOfAChildNests() {
 
 void aChildOfATurnedParentFollowsTheTurn() {
   reset();
-  Canvas turned(display.buffer(), display.size(), display.size());
+  Canvas turned = display.rootCanvas();
   turned.setRotation(90);
   Canvas quarter = turned.child(Rect(10, 5, 30, 20));
   expectEq(quarter.width(), 30, "the child is the area's own width, as the parent counts it");

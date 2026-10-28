@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "gfx/Canvas.h"
 #include "gfx/Rect.h"
 
 namespace gardener::gfx {
@@ -36,6 +37,15 @@ class DisplayDevice {
   // bitsPerPixel() says. The device allocates it, owns it and keeps it for as long as it lives, so
   // a canvas draws straight into it and there is one frame rather than a copy per canvas.
   virtual uint8_t* buffer() = 0;
+
+  // The root canvas: a canvas over the whole frame, at the panel's own geometry and in the layout its
+  // depth says — a one-bit glass a Packed1 frame and anything deeper a Gray8 one. Asking the device is
+  // how a caller gets one without naming a layout, and every canvas inside it is child() of it, so the
+  // whole tree reports through its one dirty rectangle.
+  Canvas rootCanvas() {
+    return Canvas(buffer(), size(), size(),
+                  bitsPerPixel() == 1 ? PixelLayout::Packed1 : PixelLayout::Gray8);
+  }
 
   // Send the panel pixels this device was told about to the glass, and only those: the rectangle is
   // what a canvas has written since the last flush, in the panel's own coordinates. A rectangle
