@@ -34,7 +34,7 @@ class EditorScene : public Scene {
   virtual void nudge(int8_t direction) = 0;
 
   // Hooks a kind overrides for work of its own on the way out: the kind puts back the value it
-  // opened on when canceled() runs, and a jingle that was auditioning stops there.
+  // opened on when canceled() runs.
   virtual void accepted() {}
   virtual void canceled() {}
 

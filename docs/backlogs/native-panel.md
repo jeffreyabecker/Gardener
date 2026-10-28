@@ -15,10 +15,11 @@ touches the image passes `python tools/berry/check.py`.
 
 - [ ] 1.1 — A `SettingsRow` per setting kind, each building the scene that edits it: a number row a
   `NumberScene`, a bool row a `BoolScene`, a choice row a `ChoiceScene` over the entries it is handed,
-  a duration row a `DurationScene`, a jingle row a `JingleScene` over the jingle library, and a
-  pressure row a `PressureScene`. Verified: `tools/gfx/check.py` drives a list holding one row of
-  each kind, opens each row's scene on Forward and reads back the value it answered; a jingle row
-  that is cancelled leaves the key it opened on and sounds nothing.
+  a duration row a `DurationScene`, a jingle row a `ChoiceScene` over the jingle library whose
+  Forward sounds the entry showing, and a pressure row a `PressureScene`. Verified:
+  `tools/gfx/check.py` drives a list holding one row of each kind, opens each row's scene on Forward
+  and reads back the value it answered; a jingle row sounds the entry showing when Forward is
+  pressed, and Cancel keeps the key it opened on.
 - [ ] 1.2 — The rows a page builds from the device's document: `/cfg/settings.ini` read through the
   storage layer, one row per key it declares in document order, carrying the key, the label its kind
   gives it and the value in force, and no row for a key the document does not declare. Verified: a
