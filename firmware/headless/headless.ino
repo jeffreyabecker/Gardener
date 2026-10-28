@@ -52,11 +52,16 @@ void setup() {
 
   // Nothing beyond the machine is fitted, so the capability byte stays 0: no panel, no gauge.
 
+  // One queue into the machine: either link posts into it and the control tick drains it, so the
+  // composition builds it before the links that fill it.
+  auto* commands = new gardener::RtosCommandQueue();
+
   // The wire surface is this build's: the machine's domains and nothing else.
-  gardener::SerialLink* serial = new gardener::SerialLink(Serial, serialAttached, *logger);
+  gardener::SerialLink* serial =
+      new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(machine, serial->outbox()));
   serial->registerDomain(gardener::createMachineDeviceDomain(machine, serial->outbox()));
-  gardener::BleLink* ble = new gardener::BleLink();
+  gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(machine));
 
 
@@ -74,7 +79,7 @@ void setup() {
 
   // The parts, then the two tasks that drive them.
   machine.boot();
-  gardener::spawnMachineTasks(machine, serial, ble);
+  gardener::spawnMachineTasks(machine, *commands, serial, ble);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

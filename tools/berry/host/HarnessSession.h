@@ -172,6 +172,11 @@ class BufferLogger : public Logger {
   std::string text_;
 };
 
+// The harness's queue, as a list: everything that writes the machine posts here and the beat drains
+// it before its own tick, so a write is seen on the next beat as it is on the device rather than the
+// instant it is made. A deque has no depth, so a post is always taken.
+bool postMachineCommand(const MachineCommand& command);
+
 // The parts a Panel is on the device, composed without one: the interpreter reads this, and it is
 // the only thing the Berry modules know about their surroundings.
 class HarnessPanel : public PanelContext {

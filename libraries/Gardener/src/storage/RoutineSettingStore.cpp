@@ -1,3 +1,7 @@
+#include "Build.h"
+
+#if GARDENER_PANEL
+
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
@@ -56,3 +60,5 @@ bool RoutineSettingStore::save(const String& parentRoutineKey, const String& rou
 }
 
 }  // namespace gardener
+
+#endif

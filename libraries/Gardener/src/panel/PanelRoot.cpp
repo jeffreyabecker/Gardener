@@ -29,7 +29,8 @@ constexpr uint8_t PanelAddress = 0x3C;
 // The full device's composition: the panel parts on top of the machine. The panel's bus is the
 // composition's to bring up: the driver takes a TwoWire it does not own, so it is up before begin()
 // is called.
-Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins& pins) {
+Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins& pins,
+                      CommandQueue& queue) {
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -40,7 +41,7 @@ Panel& buildPanelRoot(Logger& logger, FS& fs, Library& library, const PanelPins&
   auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
   auto* routines = new Routines();
   auto* panel =
-      new Panel(logger, pins, buttons, buzzer, battery, display, fs, library, routines);
+      new Panel(logger, pins, buttons, buzzer, battery, display, fs, library, routines, queue);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);

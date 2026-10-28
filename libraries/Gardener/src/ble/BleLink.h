@@ -7,6 +7,7 @@
 #include <NimBLEDevice.h>
 #include <vector>
 
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "ble/BleDomain.h"
 
@@ -31,7 +32,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   // not come up is a line in the boot log rather than a boot failure.
   enum class Start : uint8_t { Advertising, Failed };
 
-  BleLink() {
+  explicit BleLink(CommandQueue& queue) : outbox_(queue) {
     domains_.reserve(MaxDomains);
     fields_.reserve(MaxFields);
   }

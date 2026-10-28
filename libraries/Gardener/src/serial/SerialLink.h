@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <vector>
 
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "serial/Domain.h"
 
@@ -26,7 +27,7 @@ class SerialLink {
   // case a lost link is simply never reported.
   using PresenceFn = bool (*)();
 
-  SerialLink(Stream& stream, PresenceFn present, Logger& logger);
+  SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue);
 
   // The surface is whatever the build registers: the machine adds its domains, and a panel build
   // adds its own, so the link itself names none of them.
