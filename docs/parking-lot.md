@@ -112,6 +112,14 @@ own box and let a window compose over what is under it. Blocked by: nothing in t
 window — every scene takes the whole page — and `screen` is a published surface, so the extent, the
 buffer and the flush order a canvas would need are all undecided.
 
+## The browser's page surface from Berry
+
+The browser names `List`, `ux` and `SettingsEditScene`, and asks the registry for `settings_cfgs` and
+`push`; the scene stack has no Berry surface, the list model and the settings list it names are C++
+under other names, and a record names no page to launch. Blocked by: a page class can only be built
+once a record has somewhere to keep it, and what a settings cfg is on the Berry side is the same
+undecided shape.
+
 ## The Berry host library's dependency
 
 The library holding the interpreter's install, its four native modules, the page scene and the draw
