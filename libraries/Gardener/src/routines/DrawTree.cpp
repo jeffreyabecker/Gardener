@@ -159,46 +159,66 @@ Alignment alignmentOf(bvm* vm, int node) {
 
 Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit);
 
+// The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
+// interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
+// the value is not a list, and then nothing is pushed.
+bool pushItems(bvm* vm, int index) {
+  if (be_islist(vm, index)) {
+    be_pushvalue(vm, index);
+    return true;
+  }
+  if (!be_islistinstance(vm, index)) return false;
+  be_getmember(vm, index, ".p");
+  if (be_islist(vm, -1)) return true;
+  be_pop(vm, 1);
+  return false;
+}
+
 // The [bounds, draw] pairs a layout holds, as the layout's own children: the cell each declares and
 // the paint each answers. A child that is not a pair is skipped rather than raised on.
 std::vector<Child> childrenOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
   std::vector<Child> children;
 
   be_getmember(vm, node, "children");
+  if (!pushItems(vm, -1)) {
+    be_pop(vm, 1);
+    return children;
+  }
   const int list = be_absindex(vm, -1);
-  const int count = be_islist(vm, list) ? be_data_size(vm, list) : 0;
+  const int count = be_data_size(vm, list);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
     be_getindex(vm, list);
-    be_remove(vm, -2);  // the index the read left under the pair
-    if (!be_islist(vm, -1) || be_data_size(vm, -1) != 2) {
-      be_pop(vm, 1);
-      continue;
+    be_remove(vm, -2);  // the index the read left under the child
+    if (pushItems(vm, -1)) {
+      if (be_data_size(vm, -1) == 2) {
+        const int pair = be_absindex(vm, -1);
+
+        be_pushint(vm, 0);
+        be_getindex(vm, pair);
+        be_remove(vm, -2);
+        float width = Cell::Whole;
+        float height = Cell::Whole;
+        if (be_isinstance(vm, -1)) {
+          const int cell = be_absindex(vm, -1);
+          width = cellSide(vm, cell, "w");
+          height = cellSide(vm, cell, "h");
+        }
+        be_pop(vm, 1);
+
+        be_pushint(vm, 1);
+        be_getindex(vm, pair);
+        be_remove(vm, -2);
+        const Paint paint = paintOf(vm, be_absindex(vm, -1), panel, unit);
+        be_pop(vm, 1);
+
+        children.push_back(Child{Cell(width, height), paint});
+      }
+      be_pop(vm, 1);  // the pair's items
     }
-
-    const int pair = be_absindex(vm, -1);
-    be_pushint(vm, 0);
-    be_getindex(vm, pair);
-    be_remove(vm, -2);
-    float width = Cell::Whole;
-    float height = Cell::Whole;
-    if (be_isinstance(vm, -1)) {
-      const int cell = be_absindex(vm, -1);
-      width = cellSide(vm, cell, "w");
-      height = cellSide(vm, cell, "h");
-    }
-    be_pop(vm, 1);
-
-    be_pushint(vm, 1);
-    be_getindex(vm, pair);
-    be_remove(vm, -2);
-    const Paint paint = paintOf(vm, be_absindex(vm, -1), panel, unit);
-    be_pop(vm, 1);
-
-    children.push_back(Child{Cell(width, height), paint});
-    be_pop(vm, 1);  // the pair
+    be_pop(vm, 1);  // the child
   }
-  be_pop(vm, 1);  // the list
+  be_pop(vm, 2);  // the items, and the field they came from
 
   return children;
 }

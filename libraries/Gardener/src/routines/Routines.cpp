@@ -17,6 +17,7 @@
 #include "panel/Band.h"
 #include "panel/MarkScene.h"
 #include "panel/Units.h"
+#include "routines/BerryScene.h"
 #include "routines/Bindings.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
@@ -31,6 +32,24 @@ namespace {
 // names it is compiled. `/system/order` states that order, one path per line relative to `/system`.
 constexpr const char* SystemFolder = "system";
 constexpr const char* SystemOrder = "/system/order";
+
+// The root page the image answers: the Berry instance the system sets here is what the panel shows
+// when nothing else is up. An image that sets none leaves the mark.
+constexpr const char* RootPage = "__rootScene";
+
+// The image's root page as a scene, or nothing when the image sets none. The global is read when it
+// is wanted rather than cached, so whatever a later load sets is the page the go-home gesture goes
+// to.
+std::unique_ptr<gfx::ui::Scene> rootPage(bvm* vm, gfx::ui::GestureQueue& gestures,
+                                         PanelContext& panel) {
+  const int base = be_top(vm);
+  std::unique_ptr<gfx::ui::Scene> scene;
+  if (be_getglobal(vm, RootPage) && be_isinstance(vm, -1)) {
+    scene = std::make_unique<BerryScene>(gestures, vm, be_absindex(vm, -1), panel);
+  }
+  be_pop(vm, be_top(vm) - base);
+  return scene;
+}
 
 // A file dropped into a system folder and forgotten in the order would otherwise be a class that
 // quietly never exists, so every `.be` beside the ones the order names is reported. The folders are
@@ -137,10 +156,14 @@ bool Routines::enterPage() {
   return true;
 }
 
-// The root scene, at boot and on the go-home gesture: the device's mark, which is the page until the
-// home page is written. The stack draws it, so the band is drawn under it like any other page.
+// The root scene, at boot and on the go-home gesture: the image's own root page, which is the home
+// page, and the device's mark when the image sets none. The stack draws it, so the band is drawn
+// under it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return stack_.reset(nullptr);
+  if (std::unique_ptr<gfx::ui::Scene> page = rootPage(vm_, presses_, *panel_)) {
+    if (stack_.reset(std::move(page))) return true;
+  }
   return stack_.reset(std::make_unique<MarkScene>(presses_));
 }
 

@@ -118,21 +118,50 @@ void setCellSide(bvm* vm, int draw, const char* field, int index) {
   setReal(vm, draw, field, (float)argReal(vm, index));
 }
 
+// Whether the value at `index` is a list a page can build: an instance of the list class, which is
+// what `[...]` makes, or the interpreter's own list.
+bool isListValue(bvm* vm, int index) {
+  return be_islist(vm, index) || be_islistinstance(vm, index);
+}
+
+// The items of a list value, pushed on top: the interpreter keeps a list instance's items in its
+// `.p`, which is where the data calls read. False when the value is not a list, and then nothing is
+// pushed.
+bool pushItems(bvm* vm, int index) {
+  if (be_islist(vm, index)) {
+    be_pushvalue(vm, index);
+    return true;
+  }
+  if (!be_islistinstance(vm, index)) return false;
+  be_getmember(vm, index, ".p");
+  if (be_islist(vm, -1)) return true;
+  be_pop(vm, 1);
+  return false;
+}
+
 // The children a layout is given: a list of [bounds, draw] pairs. What the node inside is belongs to
 // whoever walks the tree, but a list that is not pairs is the mistake of the call that made it, so it
 // is answered here rather than where the tree is drawn.
 void requireChildren(bvm* vm, int index, const char* function) {
-  const int count = be_data_size(vm, index);
+  if (!pushItems(vm, index)) return;
+  const int list = be_absindex(vm, -1);
+  const int count = be_data_size(vm, list);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
-    be_getindex(vm, index);
-    const bool pair = be_islist(vm, -1) && be_data_size(vm, -1) == 2;
-    be_pop(vm, 2);  // the value, and the index be_getindex left under it
+    be_getindex(vm, list);
+    be_remove(vm, -2);  // the index be_getindex left under the child
+    bool pair = false;
+    if (pushItems(vm, -1)) {
+      pair = be_data_size(vm, -1) == 2;
+      be_pop(vm, 1);
+    }
+    be_pop(vm, 1);  // the child itself
     if (pair) continue;
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: a child is [bounds, draw]", function);
     be_raise(vm, "type_error", message);
   }
+  be_pop(vm, 1);  // the items
 }
 
 // The alignment a layout is given, passed through as the record it is, or left nil for the left and
@@ -254,7 +283,7 @@ int screenPressureReadout(bvm* vm) {
 // The children it holds, divided by the cell it declares. `w` and `h` are the share of the parent a
 // layout takes; a row states the height it takes and a column the width.
 int screenLayout(bvm* vm) {
-  if (be_top(vm) < 3 || !be_islist(vm, 3)) {
+  if (be_top(vm) < 3 || !isListValue(vm, 3)) {
     be_raise(vm, "type_error", "screen.layout(w, h, children[, alignment])");
   }
   requireChildren(vm, 3, "layout");
@@ -268,7 +297,7 @@ int screenLayout(bvm* vm) {
 }
 
 int screenRow(bvm* vm) {
-  if (be_top(vm) < 2 || !be_islist(vm, 2)) {
+  if (be_top(vm) < 2 || !isListValue(vm, 2)) {
     be_raise(vm, "type_error", "screen.row(h, children[, alignment])");
   }
   requireChildren(vm, 2, "row");
@@ -281,7 +310,7 @@ int screenRow(bvm* vm) {
 }
 
 int screenColumn(bvm* vm) {
-  if (be_top(vm) < 2 || !be_islist(vm, 2)) {
+  if (be_top(vm) < 2 || !isListValue(vm, 2)) {
     be_raise(vm, "type_error", "screen.column(w, children[, alignment])");
   }
   requireChildren(vm, 2, "column");

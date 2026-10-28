@@ -7,10 +7,11 @@ This is the checklist of what stands between here and a panel whose every page i
 
 ## Pages
 
-- [ ] The home page as the stack's root: it is a Berry scene now — `home.be` answers a tree from
-      `draw_page()` and reads `vacuum.state()` through `home_machine.be` — but nothing pushes it, so
-      what is left is the way in. Its Forward and Up doubles opened the browser and the settings
-      list, and both come back with those pages.
+- [x] The home page as the stack's root: `home.be` is a Berry scene that answers its tree from
+      `draw_page()`, and `Routines::resetToRoot` pushes the instance in `__rootScene` as a
+      `BerryScene` — the mark stays as the fallback for an image that sets none. The page draws on
+      the host at boot, so what is left of it is the two gestures that opened other pages: Forward
+      held to a double for the browser and Up for the settings list, and both come back with theirs.
 - [ ] The settings list page: `ui::SettingsScene` over a `SettingsRow` per kind, reading and writing
       the device's document, `/cfg/settings.ini`.
 - [ ] The browser page: the registry's routines as a list, its rows built from the registry.
@@ -63,7 +64,5 @@ This is the checklist of what stands between here and a panel whose every page i
 
 ## From the port so far
 
-- The mark as root clips its own art: the band takes rows 52–63 and the mark's art reaches row 53.
-  It goes away when a home page takes the root.
 - `Routines` has two readers of one gesture queue — `presses()` for scenes and `takePress()` for the
   `device` module — which is deliberate: a press goes to whichever is reading.
