@@ -7,10 +7,10 @@ This is the checklist of what stands between here and a panel whose every page i
 
 ## Pages
 
-- [ ] The home page as the stack's root: the title row, the pressure readout in the unit the device
-      stores, the run's timer, and the gestures — OK starts or resumes, Cancel stops and vents,
-      Forward held to a double opens the browser, Up held to a double opens the settings. It reads
-      `vacuum().runState()`; the run's own state machine is `home_machine.be` and is still Berry.
+- [ ] The home page as the stack's root: it is a Berry scene now — `home.be` answers a tree from
+      `draw_page()` and reads `vacuum.state()` through `home_machine.be` — but nothing pushes it, so
+      what is left is the way in. Its Forward and Up doubles opened the browser and the settings
+      list, and both come back with those pages.
 - [ ] The settings list page: `ui::SettingsScene` over a `SettingsRow` per kind, reading and writing
       the device's document, `/cfg/settings.ini`.
 - [ ] The browser page: the registry's routines as a list, its rows built from the registry.

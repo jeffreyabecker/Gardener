@@ -71,9 +71,50 @@ float cellSide(bvm* vm, int record, const char* field) {
   return value;
 }
 
-gfx::Rect boxOf(bvm* vm, int node) {
-  return gfx::Rect((int16_t)intField(vm, node, "x"), (int16_t)intField(vm, node, "y"),
-                   (int16_t)intField(vm, node, "w"), (int16_t)intField(vm, node, "h"));
+bool numberField(bvm* vm, int node, const char* field) {
+  if (!be_getmember(vm, node, field)) return false;
+  const bool present = be_isnumber(vm, -1);
+  be_pop(vm, 1);
+  return present;
+}
+
+// The box a leaf declares: x and y in pixels from the corner of the canvas it is drawn in, and a
+// side the page left out is the whole of that canvas — which is how a node fills the cell a layout
+// gave it without the page computing a number.
+struct NodeBox {
+  int16_t x = 0;
+  int16_t y = 0;
+  int16_t w = 0;
+  int16_t h = 0;
+  bool wholeWidth = false;
+  bool wholeHeight = false;
+
+  gfx::Rect in(const gfx::Canvas& canvas) const {
+    const int16_t width = wholeWidth ? static_cast<int16_t>(canvas.width() - x) : w;
+    const int16_t height = wholeHeight ? static_cast<int16_t>(canvas.height() - y) : h;
+    return gfx::Rect(x, y, width, height);
+  }
+};
+
+NodeBox boxOf(bvm* vm, int node) {
+  NodeBox box;
+  box.x = (int16_t)intField(vm, node, "x");
+  box.y = (int16_t)intField(vm, node, "y");
+  box.w = (int16_t)intField(vm, node, "w");
+  box.h = (int16_t)intField(vm, node, "h");
+  box.wholeWidth = !numberField(vm, node, "w");
+  box.wholeHeight = !numberField(vm, node, "h");
+  return box;
+}
+
+// A leaf's paint: the ui/ draw the node describes, made when the paint runs, because the box it
+// leaves open is only known once the canvas it sits in is.
+template <typename Make>
+Paint leaf(NodeBox box, Make make) {
+  return [box, make](gfx::Canvas& canvas) {
+    const Paint paint = make(box.in(canvas));
+    if (paint) paint(canvas);
+  };
 }
 
 // The face a node names. A name the library does not hold is drawn in the built-in one: the binding
@@ -170,65 +211,82 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
   if (kind == nullptr) return Paint();
 
   if (strcmp(kind, "text") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
-    const char* value = textField(vm, node, "value");
-    const gfx::Font* face = faceOf(vm, node);
-    return gfx::ui::text(box, value, face, (uint8_t)intField(vm, node, "scale"));
-  }
-
-  if (strcmp(kind, "centred") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
+    const NodeBox box = boxOf(vm, node);
     const char* value = textField(vm, node, "value");
     const gfx::Font* face = faceOf(vm, node);
     const uint8_t scale = (uint8_t)intField(vm, node, "scale");
-    return [box, value, face, scale](gfx::Canvas& canvas) {
-      gfx::Canvas own = canvas.child(box);
-      gfx::ui::drawCentred(own, value, face, scale);
-    };
+    return leaf(box, [value, face, scale](const gfx::Rect& rect) {
+      return gfx::ui::text(rect, value, face, scale);
+    });
+  }
+
+  if (strcmp(kind, "centred") == 0) {
+    const NodeBox box = boxOf(vm, node);
+    const char* value = textField(vm, node, "value");
+    const gfx::Font* face = faceOf(vm, node);
+    const uint8_t scale = (uint8_t)intField(vm, node, "scale");
+    return leaf(box, [value, face, scale](const gfx::Rect& rect) {
+      return Paint([rect, value, face, scale](gfx::Canvas& canvas) {
+        gfx::Canvas own = canvas.child(rect);
+        gfx::ui::drawCentred(own, value, face, scale);
+      });
+    });
   }
 
   if (strcmp(kind, "icon") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
+    const NodeBox box = boxOf(vm, node);
     be_getmember(vm, node, "glyph");
     const Paint glyph =
         be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), panel, unit) : Paint();
     be_pop(vm, 1);
     // An icon of nothing is nothing: ui::icon runs the glyph it is given and has no empty case.
     if (!glyph) return Paint();
-    return gfx::ui::icon(box, glyph);
+    return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::ui::icon(rect, glyph); });
   }
 
   if (strcmp(kind, "bar") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
-    return gfx::ui::progressBar(box, realField(vm, node, "percent"));
+    const NodeBox box = boxOf(vm, node);
+    const float percent = realField(vm, node, "percent");
+    return leaf(box, [percent](const gfx::Rect& rect) {
+      return gfx::ui::progressBar(rect, percent);
+    });
   }
 
   if (strcmp(kind, "scrollbar") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
-    return gfx::ui::scrollbar(box, (int16_t)intField(vm, node, "index"),
-                              (int16_t)intField(vm, node, "count"),
-                              (int16_t)intField(vm, node, "visible"),
-                              flagField(vm, node, "hollow", false));
+    const NodeBox box = boxOf(vm, node);
+    const int16_t index = (int16_t)intField(vm, node, "index");
+    const int16_t count = (int16_t)intField(vm, node, "count");
+    const int16_t visible = (int16_t)intField(vm, node, "visible");
+    const bool hollow = flagField(vm, node, "hollow", false);
+    return leaf(box, [index, count, visible, hollow](const gfx::Rect& rect) {
+      return gfx::ui::scrollbar(rect, index, count, visible, hollow);
+    });
   }
 
   if (strcmp(kind, "duration") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
+    const NodeBox box = boxOf(vm, node);
     const gfx::ui::DurationFormat format = formatOf(textField(vm, node, "format"));
     const gfx::Font* face = faceOf(vm, node);
     const int seconds = intField(vm, node, "seconds");
-    return gfx::ui::duration(box, format, seconds, face, flagField(vm, node, "known", true));
+    const bool known = flagField(vm, node, "known", true);
+    return leaf(box, [format, seconds, face, known](const gfx::Rect& rect) {
+      return gfx::ui::duration(rect, format, seconds, face, known);
+    });
   }
 
   // The readout takes the machine and the unit rather than a number, so it prints what is true when
   // it is drawn — which is why one node serves every beat.
   if (strcmp(kind, "pressure_readout") == 0) {
-    const gfx::Rect box = boxOf(vm, node);
+    const NodeBox box = boxOf(vm, node);
     float sizeHint = realField(vm, node, "size_hint");
     if (sizeHint <= 0.0f) sizeHint = 0.5f;
     const gfx::Font* face = faceOf(vm, node);
-    return pressureReadout(box, panel.vacuum(), unit, sizeHint, face,
-                           (uint8_t)intField(vm, node, "scale"),
-                           (uint8_t)intField(vm, node, "secondary_scale"));
+    const uint8_t scale = (uint8_t)intField(vm, node, "scale");
+    const uint8_t secondary = (uint8_t)intField(vm, node, "secondary_scale");
+    VacuumSystem& vacuum = panel.vacuum();
+    return leaf(box, [&vacuum, unit, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
+      return pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
+    });
   }
 
   if (strcmp(kind, "layout") == 0) {

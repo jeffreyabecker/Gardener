@@ -89,10 +89,13 @@ its kind uses; the rest are nil, and a node the drawing does not know draws noth
 | `screen.row(h, children[, alignment])` | `row`: the height it takes, children stacked across |
 | `screen.column(w, children[, alignment])` | `column`: the width it takes, children stacked down |
 
-A leaf's `x`, `y`, `w` and `h` are panel pixels. A layout's, a row's and a column's are the cell they
-declare as a share of what holds them: nil for the whole side, so a row declares `h` and a column
-`w`. `children` is a list of `[bounds, draw]` pairs — the cell a child declares and the child itself
-— and `alignment` is the record above, `alignment("center", "center")`, or nil for the left and the
+A leaf's `x` and `y` are pixels from the corner of the canvas it is drawn in, and a side it leaves
+nil is the whole of that canvas — so a node inside a layout fills the cell it was given without the
+page computing a number, and `screen.centred(nil, nil, nil, nil, "Gardener")` is a string centred in
+whatever box it finds itself in. A layout's, a row's and a column's `w` and `h` are the share they
+declare of what holds them, nil for the whole side, so a row declares `h` and a column `w`.
+`children` is a list of `[bounds, draw]` pairs — the cell a child declares and the child itself —
+and `alignment` is the record above, `alignment("center", "center")`, or nil for the left and the
 top.
 
 `font` is a face name, or nil for the built-in 5x7, and `scale` is 1 unless it is given. `format` is

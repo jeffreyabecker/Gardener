@@ -95,12 +95,27 @@ int beginDraw(bvm* vm, const char* kind) {
   return draw;
 }
 
-// The four numbers of a leaf's box, in panel pixels.
-void setBox(bvm* vm, int draw, int16_t x, int16_t y, int16_t w, int16_t h) {
-  setInt(vm, draw, "x", x);
-  setInt(vm, draw, "y", y);
-  setInt(vm, draw, "w", w);
-  setInt(vm, draw, "h", h);
+// One side of a leaf's box. A side the page leaves out, or passes nil, stays nil — and the drawing
+// reads that as the whole of the canvas the node is drawn in, which is how a node fills the cell a
+// layout gave it without the page computing a number.
+void setBoxSide(bvm* vm, int draw, const char* field, int index) {
+  if (be_top(vm) < index || be_isnil(vm, index)) return;
+  setInt(vm, draw, field, argInt(vm, index));
+}
+
+// The four sides of a leaf's box, in pixels from the corner of the canvas it is drawn in.
+void setBox(bvm* vm, int draw) {
+  setBoxSide(vm, draw, "x", 1);
+  setBoxSide(vm, draw, "y", 2);
+  setBoxSide(vm, draw, "w", 3);
+  setBoxSide(vm, draw, "h", 4);
+}
+
+// The share of what holds it a layout, a row or a column declares. A side the page leaves out is the
+// whole of it, which is the nil the drawing reads as the whole side.
+void setCellSide(bvm* vm, int draw, const char* field, int index) {
+  if (be_top(vm) < index || be_isnil(vm, index)) return;
+  setReal(vm, draw, field, (float)argReal(vm, index));
 }
 
 // The children a layout is given: a list of [bounds, draw] pairs. What the node inside is belongs to
@@ -136,7 +151,7 @@ int screenText(bvm* vm) {
   const gfx::Font* face = argFace(vm, 6, "text");
   const int draw = beginDraw(vm, "text");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
   setInt(vm, draw, "scale", argScale(vm, 7, "text", 1));
@@ -151,7 +166,7 @@ int screenCentred(bvm* vm) {
   const gfx::Font* face = argFace(vm, 6, "centred");
   const int draw = beginDraw(vm, "centred");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
   setInt(vm, draw, "scale", argScale(vm, 7, "centred", 1));
@@ -165,7 +180,7 @@ int screenIcon(bvm* vm) {
   }
   const int draw = beginDraw(vm, "icon");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setValue(vm, draw, "glyph", 5);
   be_return(vm);
 }
@@ -177,7 +192,7 @@ int screenBar(bvm* vm) {
   }
   const int draw = beginDraw(vm, "bar");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setReal(vm, draw, "percent", (float)argReal(vm, 5));
   be_return(vm);
 }
@@ -189,7 +204,7 @@ int screenScrollbar(bvm* vm) {
   }
   const int draw = beginDraw(vm, "scrollbar");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setInt(vm, draw, "index", argInt(vm, 5));
   setInt(vm, draw, "count", argInt(vm, 6));
   setInt(vm, draw, "visible", argInt(vm, 7));
@@ -209,7 +224,7 @@ int screenDuration(bvm* vm) {
   const bool known = be_top(vm) < 8 || be_isnil(vm, 8) || be_tobool(vm, 8);
   const int draw = beginDraw(vm, "duration");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setText(vm, draw, "format", format);
   setInt(vm, draw, "seconds", argInt(vm, 6));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 7));
@@ -223,14 +238,10 @@ int screenDuration(bvm* vm) {
 // second reading sits small in the bottom right of the box; at 1 or more the two sit side by side at
 // the main scale, the second on the right.
 int screenPressureReadout(bvm* vm) {
-  if (be_top(vm) < 4) {
-    be_raise(vm, "type_error",
-             "screen.pressure_readout(x, y, w, h[, size_hint[, font[, scale[, secondary_scale]]]])");
-  }
   const gfx::Font* face = argFace(vm, 6, "pressure_readout");
   const int draw = beginDraw(vm, "pressure_readout");
   if (draw < 0) be_return_nil(vm);
-  setBox(vm, draw, argInt(vm, 1), argInt(vm, 2), argInt(vm, 3), argInt(vm, 4));
+  setBox(vm, draw);
   setReal(vm, draw, "size_hint", argNumber(vm, 5, "pressure_readout", 0.5f));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
   setInt(vm, draw, "scale", argScale(vm, 7, "pressure_readout", 2));
@@ -249,8 +260,8 @@ int screenLayout(bvm* vm) {
   requireChildren(vm, 3, "layout");
   const int draw = beginDraw(vm, "layout");
   if (draw < 0) be_return_nil(vm);
-  setReal(vm, draw, "w", (float)argReal(vm, 1));
-  setReal(vm, draw, "h", (float)argReal(vm, 2));
+  setCellSide(vm, draw, "w", 1);
+  setCellSide(vm, draw, "h", 2);
   setValue(vm, draw, "children", 3);
   setAlignment(vm, draw, 4);
   be_return(vm);
@@ -263,7 +274,7 @@ int screenRow(bvm* vm) {
   requireChildren(vm, 2, "row");
   const int draw = beginDraw(vm, "row");
   if (draw < 0) be_return_nil(vm);
-  setReal(vm, draw, "h", (float)argReal(vm, 1));
+  setCellSide(vm, draw, "h", 1);
   setValue(vm, draw, "children", 2);
   setAlignment(vm, draw, 3);
   be_return(vm);
@@ -276,7 +287,7 @@ int screenColumn(bvm* vm) {
   requireChildren(vm, 2, "column");
   const int draw = beginDraw(vm, "column");
   if (draw < 0) be_return_nil(vm);
-  setReal(vm, draw, "w", (float)argReal(vm, 1));
+  setCellSide(vm, draw, "w", 1);
   setValue(vm, draw, "children", 2);
   setAlignment(vm, draw, 3);
   be_return(vm);
