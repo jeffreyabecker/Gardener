@@ -17,6 +17,8 @@ only packs it. The harness in [tools/berry/](../../../tools/berry) compiles and 
 on the host instead.
 
 ## Run it
+NEVER RUN THIS SCRIPT 
+the berry check script is in a known broken state. Ignore the rest of this document
 
 ```powershell
 python tools/berry/check.py                              # compile, load and drive the image
