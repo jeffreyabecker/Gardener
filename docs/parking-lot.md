@@ -93,6 +93,16 @@ The page area above the band reflows to the panel's size, but the band is still 
 Blocked by: nothing decided about whether the band should scale with the panel or stay sized to its
 own contents.
 
+## The band as cells the panel hands out
+
+`Routines::updateBand` reads the unit, the links, the run state and the gauge itself and builds the
+band's four paints in a fixed order, so what the band shows is decided at one call site and a device
+with no gauge or no radio still contributes a cell that draws only the absence. Each cell could be
+an object the panel context returns — the unit, the links, the run state, the gauge — drawn in the
+order it is given them, so a fitted part adds its cell and a missing one is not there at all.
+Blocked by: nothing owns the band, so the container, the order and which side re-reads the machine
+each beat are all undecided.
+
 ## Berry drawing through a canvas
 
 Every `.be` page draws through the flat `screen` verbs onto the one full-page canvas the panel owns,
@@ -125,6 +135,7 @@ and replays it with `-fsyntax-only` for one file, so a library change is checked
 than by a whole build. Blocked by: nothing has decided whether the core library's host test suite
 answers the same question for the source it compiles, which would leave the task unused.
 
-# Battery Optional
+## A battery that is not fitted
 
-We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
+The panel build sets BatteryFitted whatever the assembled board carries, so a machine with no gauge
+still reports one. Blocked by: nothing has decided whether that is a build option or a run-time flag.
