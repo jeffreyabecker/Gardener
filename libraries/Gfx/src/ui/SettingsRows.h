@@ -37,6 +37,7 @@ class BoolRow : public SettingsRow {
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
+  bool accept(std::any& value) const override;
 
  private:
   GestureQueue& gestures_;
@@ -67,6 +68,7 @@ class ChoiceRow : public SettingsRow {
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
+  bool accept(std::any& value) const override;
 
  private:
   GestureQueue& gestures_;
@@ -96,6 +98,7 @@ class DurationRow : public SettingsRow {
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
+  bool accept(std::any& value) const override;
 
  private:
   GestureQueue& gestures_;
@@ -130,6 +133,7 @@ class NumberRow : public SettingsRow {
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
+  bool accept(std::any& value) const override;
 
  protected:
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware

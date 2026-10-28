@@ -10,7 +10,7 @@ class Logger;
 
 namespace berry {
 
-// The four native modules a routine sees, installed into a fresh VM:
+// The five native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*    the machine, read and commanded
 //   screen.*    the drawing a page describes: a node per call, aggregated into records the panel
@@ -18,17 +18,19 @@ namespace berry {
 //   device.*    the device: its settings, the units it prints in, the piezo, the clock, the log
 //               and the presses waiting for a page
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
+//   routines.*  the registry: register() a record with the class its launch builds, and the set it
+//               reads and writes
 //
-// A routine's file subclasses the native `Registration` class: the instance holds the record it
-// declares — the key, the title, the glyph and the settings list it passes up — and the settings
-// module's declarations are consumed into it.
+// A routine file declares its settings with the settings module's kinds and hands them, with the
+// page class, to `routines.register`; every declaration is consumed into the record.
 //
 // A page describes its drawing rather than making it: every `screen` call answers a `draw` record,
 // which is a node of the tree the panel is handed. Some of the other answers a routine reads are
-// records too: `device.unit()` a `unit` and `device.links()` a `links`. They are declared in
-// /system/records.be, which `/system/order` loads first, because only the parser can declare an
-// instance variable on a class. The settings a routine declares are not records: they are objects
-// the `settings` module's classes build, and each holds the row it was declared with.
+// records too: `device.unit()` a `unit`, `device.links()` a `links`, and the value a launched page's
+// init is given a `RoutineActivation`. They are declared in /system/records.be, which
+// `/system/order` loads first, because only the parser can declare an instance variable on a class.
+// The settings a routine declares are not records: they are objects the `settings` module's classes
+// build, and each holds the row it was declared with.
 //
 // The reference a routine author reads is the tables in this folder: what a routine can call and
 // what it must be, as the same surface in code. One file here is one of the modules, and this

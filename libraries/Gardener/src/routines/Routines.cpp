@@ -76,6 +76,8 @@ bool Routines::begin(PanelContext& context) {
   logger_ = &context.logger();
   library_ = &context.library();
   panel_ = &context;
+  // Before a file loads: a routine file registers itself as the interpreter runs it.
+  registry_ = std::make_unique<RoutineRegistry>(context.library(), context.logger());
 
   if (!interpreter_.begin(context, *this)) {
     logger_->error("vm: no memory, routines off");

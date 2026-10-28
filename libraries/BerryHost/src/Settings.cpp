@@ -306,7 +306,7 @@ const bnfuncinfo ChoiceMembers[] = {
 // every declaration as it was.
 std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int index) {
   if (!pushItems(vm, index)) {
-    be_raise(vm, "type_error", "Registration: settings is a list of declarations");
+    be_raise(vm, "type_error", "routines.register: settings is a list of declarations");
   }
   const int list = be_absindex(vm, -1);
   const int count = be_data_size(vm, list);
@@ -318,7 +318,7 @@ std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int
     const bool declaration = isDeclaration(vm, -1);
     be_pop(vm, 1);
     if (!declaration) {
-      be_raise(vm, "type_error", "Registration: settings is a list of declarations");
+      be_raise(vm, "type_error", "routines.register: settings is a list of declarations");
     }
   }
 

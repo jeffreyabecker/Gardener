@@ -69,6 +69,13 @@ class SettingsRow {
   // default, and so does a bool's word this kind cannot read.
   virtual std::any parse(const String& stored) const = 0;
 
+  // The value held as this kind holds it, from a caller outside the list: a number is taken as the
+  // kind's own numeric type, so a whole literal written for a pressure reads as the pressure, and
+  // nothing is every kind's nothing. False, leaving the value as it was, for a value of a kind this
+  // setting cannot hold — which is what a caller handing a set to the store is refused on rather
+  // than cast to.
+  virtual bool accept(std::any& value) const = 0;
+
   // The row's check closed over the declaration and the set in force, which is the form the editor
   // it builds holds; nothing for a row whose declaration gave it no check. The check borrows the
   // row, the declaration and the set, so whoever holds it keeps all three alive.

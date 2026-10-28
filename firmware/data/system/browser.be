@@ -36,17 +36,6 @@ def browser_chrome(rows, selected, first, visible, width)
   ])
 end
 
-# What a launch hands a routine's class: the key the routine was launched under, which the scene
-# takes as its own, and the clean settings map its init_from_settings() reads.
-class RoutineActivation
-  var routine_key, settings_values
-
-  def init(routine_key, settings_values)
-    self.routine_key = routine_key
-    self.settings_values = settings_values
-  end
-end
-
 class BrowserScene
   var list
 

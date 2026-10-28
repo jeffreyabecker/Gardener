@@ -7,26 +7,6 @@
 # significant bit first, each padded to a whole byte.
 interval_glyph = "0c080000f3c012401240124012401e700000"
 
-# The values the interval edits, in the order the settings list shows them. Nothing binds one
-# setting to another here, so the rule accepts every set.
-class IntervalSettings : Registration
-  def init(routine_key, title, icon, factory)
-    super(self).init(routine_key, title, icon, factory, [
-      NumericEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
-      PressureEditCfg("target_pressure", 0.0, "Target", nil, 1, false),
-      DurationEditCfg("work_duration", 30, "Work", nil, 30, 0, 3600, false),
-      PressureEditCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationEditCfg("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
-                       ["immediately", "after ok"], false)
-    ])
-  end
-
-  def problem(values)
-    return nil
-  end
-end
-
 # The interval cycle: the same machine at one target, repeated for the set count. Its settings name
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
@@ -80,5 +60,14 @@ class Interval : RampedInterval
   end
 end
 
-routines.register(IntervalSettings("interval", "Interval",
-                                   interval_glyph, Interval))
+# The values the interval edits, in the order the settings list shows them: one target rather than a
+# ladder, and none of the ramp's ladder keys, because the interval registers none of them.
+routines.register("interval", "Interval", interval_glyph, [
+  settings.number("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
+  settings.pressure("target_pressure", 0.0, "Target", nil, 1, false),
+  settings.duration("work_duration", 30, "Work", nil, 30, 0, 3600, false),
+  settings.pressure("rest_pressure", nil, "Rest", nil, 1, true),
+  settings.duration("rest_duration", 1, "Rest time", nil, 1, 0, 1200, false),
+  settings.choice("resume_behavior", "immediately", "Resume", nil,
+                  ["immediately", "after ok"], false)
+], Interval)

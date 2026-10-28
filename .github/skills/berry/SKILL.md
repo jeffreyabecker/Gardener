@@ -9,7 +9,7 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
-- Editing `libraries/BerryHost/src/` — the install, the four native modules, the page scene, the
+- Editing `libraries/BerryHost/src/` — the install, the five native modules, the page scene, the
   draw tree and the VM behind `routines/Interpreter.h` — or `routines/Routines.cpp`, which loads
   the image and drives the beat
 

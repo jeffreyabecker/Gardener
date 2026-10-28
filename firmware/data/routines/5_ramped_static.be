@@ -34,29 +34,6 @@ end
 # byte.
 ramped_static_glyph = "0c0800000010007001f007f01ff0fff00000"
 
-# The values this page edits, in the order the settings list shows them, and the one rule that binds
-# them: the profile is the two holds plus a ramp, so the total has to cover the holds. The
-# registration is the declaration and the rule: the page opens the list from its settings_cfgs and
-# writes what the list settles on.
-class RampedStaticSettings : Registration
-  def init(routine_key, title, icon, factory)
-    super(self).init(routine_key, title, icon, factory, [
-      PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureEditCfg("target_pressure", 20.0, "Target", nil, 1, false),
-      DurationEditCfg("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
-      DurationEditCfg("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
-      DurationEditCfg("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
-    ])
-  end
-
-  def problem(values)
-    if values["total_duration"] < values["initial_duration"] + values["target_duration"]
-      return "TOTAL < HOLDS"
-    end
-    return nil
-  end
-end
-
 class RampedStatic
   var routine_key
   var machine
@@ -183,6 +160,13 @@ class RampedStatic
   end
 end
 
-routines.register(RampedStaticSettings("ramped_static", "Ramped Static",
-                                       ramped_static_glyph, RampedStatic))
+# The values this page edits, in the order the settings list shows them, and the page that holds the
+# profile.
+routines.register("ramped_static", "Ramped Static", ramped_static_glyph, [
+  settings.pressure("initial_pressure", 5.0, "Start", nil, 1, false),
+  settings.pressure("target_pressure", 20.0, "Target", nil, 1, false),
+  settings.duration("initial_duration", 60, "Start time", nil, 1, 0, 7200, false),
+  settings.duration("target_duration", 60, "Target time", nil, 1, 0, 7200, false),
+  settings.duration("total_duration", 300, "Total time", nil, 1, 1, 7200, false)
+], RampedStatic)
 return RampedStatic

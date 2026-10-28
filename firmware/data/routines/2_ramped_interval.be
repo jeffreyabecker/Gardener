@@ -9,33 +9,6 @@ import string
 # to a whole byte. The panel reads them when it draws the icon.
 ramped_interval_glyph = "0c08000000e000e00ee00ee0eee0eee00000"
 
-# The values the ramp edits, in the order the settings list shows them, and the one rule that binds
-# two of them: a ladder has to climb, so the final pressure is at least where it starts. The
-# registration is the declaration and the rule: whoever opens the list reads the values, applies the
-# rule and writes what the list settles on.
-class RampedIntervalSettings : Registration
-  def init(routine_key, title, icon, factory)
-    super(self).init(routine_key, title, icon, factory, [
-      NumericEditCfg("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
-      PressureEditCfg("initial_pressure", 5.0, "Start", nil, 1, false),
-      PressureEditCfg("final_pressure", 20.0, "Final", nil, 1, false),
-      PressureEditCfg("step_pressure", nil, "Step", nil, 1, true),
-      PressureEditCfg("rest_pressure", nil, "Rest", nil, 1, true),
-      DurationEditCfg("work_duration", 300, "Work", nil, 30, 0, 3600, false),
-      DurationEditCfg("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
-      ChoiceEditCfg("resume_behavior", "immediately", "Resume", nil,
-                       ["immediately", "after ok"], false)
-    ])
-  end
-
-  def problem(values)
-    if values["final_pressure"] < values["initial_pressure"]
-      return "FINAL < START"
-    end
-    return nil
-  end
-end
-
 class RampedInterval
   var routine_key
   var machine
@@ -220,6 +193,17 @@ class RampedInterval
   end
 end
 
-routines.register(RampedIntervalSettings("ramped_interval", "Ramped Interval",
-                                         ramped_interval_glyph,
-                                         RampedInterval))
+# The values the ramp edits, in the order the settings list shows them: the two ends of the ladder and
+# the step between them, the rest the cycle vents to, the two durations and the resume rule. Nothing
+# binds one value to another — a set a ladder cannot be built from stops the run when it is started.
+routines.register("ramped_interval", "Ramped Interval", ramped_interval_glyph, [
+  settings.number("set_count", 4, "Sets", nil, 1, 1, 20, false, true),
+  settings.pressure("initial_pressure", 5.0, "Start", nil, 1, false),
+  settings.pressure("final_pressure", 20.0, "Final", nil, 1, false),
+  settings.pressure("step_pressure", nil, "Step", nil, 1, true),
+  settings.pressure("rest_pressure", nil, "Rest", nil, 1, true),
+  settings.duration("work_duration", 300, "Work", nil, 30, 0, 3600, false),
+  settings.duration("rest_duration", 45, "Rest time", nil, 1, 0, 1200, false),
+  settings.choice("resume_behavior", "immediately", "Resume", nil,
+                  ["immediately", "after ok"], false)
+], RampedInterval)

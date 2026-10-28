@@ -1,5 +1,6 @@
 # records.be — the records the image shares: `unit` and `links`, which device answers with, `draw`,
-# which every screen call answers with, and the two a page builds itself, `bounds` and `alignment`.
+# which every screen call answers with, `RoutineActivation`, which the routines module builds for a
+# launch, and the two a page builds itself, `bounds` and `alignment`.
 # A routine reads a record with dots — `u.name`, `b.w` — and this interpreter allows that only on an
 # instance whose class declares the field; only the parser makes an instance variable, so the field
 # list here is the contract with whoever fills it.
@@ -13,6 +14,17 @@ end
 
 class links
   var serial, bluetooth
+end
+
+# What a launch hands a routine's class: the key the routine was launched under, which the page takes
+# as its own, and the clean settings map its init_from_settings() reads. The routines module builds it
+# from the record it launches, so a page's init reads those two fields and keeps no record of its own.
+class RoutineActivation
+  var routine_key, settings_values
+  def init(routine_key, settings_values)
+    self.routine_key = routine_key
+    self.settings_values = settings_values
+  end
 end
 
 # The width and height of a box, in pixels; the cell a Layout child declares, each a share of

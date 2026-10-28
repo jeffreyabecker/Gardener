@@ -1,138 +1,140 @@
 # Register a routine from Berry
 
-`RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, the
-`settings` module and the native `Registration` class are installed, and there is no `routines`
-module. The image calls eight names on one — `register`, `keys`, `title`, `rows`, `settings_cfgs`,
-`load_settings`, `save_settings` and `push` — and declares its settings under names the module does
-not answer, so the image does not load. This plan makes the registry reachable from Berry: the
-module, `register` taking the record an instance holds, the rows the browser lists, and a set read
-back as a map. It leaves the browser and the settings list alone: `settings_cfgs` and `push` wait
-for them, and so do the `List`, `ux` and `SettingsEditScene` globals the browser is written against
-and nothing declares.
+`routines` already registers a routine, reads its set back as a map and writes one back: a file
+declares itself with one flat call, names the page its launch builds, and the record it made holds
+the settings rows the file declared. Nothing around that is reachable. `/system/browser.be` names
+`List`, `ux` and `SettingsEditScene`, none of which exists, so the file does not load and no browser
+appears; home carries no gesture that would open one; and `routines.title` and
+`routines.settings_cfgs`, the two names a page reads for its heading and its settings, are not
+answered. This plan carries what is left between a registered routine and one a finger can launch:
+the records reach Berry, a key launches its page, and that page's settings list opens, edits, and
+hands its set back. The device's own settings list is not this plan's.
 
-## The registry is reachable from the interpreter
+## `rows` and `title` answer the registry's records
 
-`routines` is installed by `Bindings.cpp` beside `vacuum`, `screen`, `device` and `settings`, and
-answers `register`, `keys`, `title`, `rows`, `load_settings` and `save_settings` with the names and
-the answers the Berry global had. The registry is built once, before the image loads, with the
-library and logger it already has; every later call arrives through the module. Nothing in the tree
-constructs a `RoutineRegistry` today, so the panel's owner gains one and the install is handed it —
-the interpreter's page names four native modules and is about to name five.
+`/system/browser.be` builds its list from `routines.rows()` and heads a page from
+`routines.title(routine_key)`; the module answers neither name, so neither call can be made and a
+page has no heading to draw.
 
-The module is those six calls. `settings_cfgs`, `push`, `entry` and `icon` wait for the browser, the
-settings list and the page, because a call nothing can make is a surface with no check behind it.
+`rows()` answers one value per record and per alternate, in the order they registered, each carrying
+the glyph string its file gave or nothing when it gave none, its title, and its key — the value a
+launch is made from. `title(routine_key)` answers the same title, for a key or an alternate, and nil
+for a key nobody registered. A title a file left out is the key, the fallback `register` already
+makes, and neither call disturbs a record's set.
 
-Checked: a Berry file calls each of the six and gets an answer; `keys()` answers every registered key
-in registration order, each alternate after its record; and a key that is not registered answers an
-empty map from `load_settings`, false from `save_settings` and an empty title from `title`, raising
-nothing.
+Checked: with the three routine files loaded, `rows()` answers three values carrying their glyphs in
+`/routines` order, and `title` answers for a key, for an alternate, and nil for an unknown key.
 
-## `register` takes the record out of the instance
+## A key launches its page
 
-The routine files hand `routines.register(...)` an instance of the native `Registration` class that
-is installed now, and nothing reads the record it holds. The declaration is four names —
-`Registration(routine_key, title, glyph, settings)`: the key, the label, the glyph — the hex digits
-that name its packed bitmap — and the list of `settings` declarations, in that order. The files hand
-the init five, passing the class they registered as the page fourth, so the init reads that class as
-the glyph and the declaration list as a fifth argument it has no name for. A page is not one of the
-four, so the three files stop passing it until the page work lands.
+`RoutineRegistry::push` builds a page through the record's factory and hands it to the stack, but
+nothing calls it: the module answers no `push`, so no registration can be launched and `push` is dead
+code.
 
-`register(record)` takes the `gardener::Registration` out of the instance's `.p` and hands it to the
-registry, answering what the registry answers, and false with one line naming the routine for a
-value that is not one of these instances or one whose record has already been taken: the registry
-owns a record from the first call. The glyph, the title and the settings rows travel with it, so
-nothing is rebuilt here.
+`routines.push(routine_key, callback, activation)` puts the record's page on the stack and answers
+whether a page is showing. The page is an instance of the class its file registered, built with the
+activation as its one argument — the key, and the record's clean set, which is the map
+`load_settings` answers. The browser passes nil for the callback. A key nobody registered
+answers false with the stack as it was, and so does a page whose `init` raises, which logs one `[E]`
+line naming the routine and the message.
 
-The refusals the registry already makes do not move: a key that is not a plain word is refused with
-one line and answers false, the title falls back to the key, a key already registered keeps its
-place while its record and alternates are replaced, and the document scan that gives a record its
-alternates stays with the registry.
+Checked: OK on a row shows that routine's page, built from the set the record holds; Back from the
+page returns to the rows; a page whose `init` raises logs one line and leaves the rows showing.
 
-The three routine files change with it: each declares its settings with the module's kinds,
-subclasses the record, drops the page class it was handing the init, and registers the instance, so
-the declaration lines the image carries are the ones the surface answers.
+## A record's declarations are readable for the list
 
-Checked: a record reads its key back from `keys()` and its title from `title()`, a key with a slash
-answers false and leaves the registry as it was, registering a key twice leaves one entry in the
-place it first took, and registering one instance twice answers false the second time.
+`register` consumes the declaration list it is handed, one row per declaration, and the record keeps
+the rows; both pages and the browser then ask `routines.settings_cfgs(routine_key)` for that same
+set, so a list can be built from it, and the module answers no such name. What a record holds are
+rows the store reads, not the declarations a file wrote, so the declarations are not readable again
+as they were given.
 
-## A row is the glyph, the title and the key
+`settings_cfgs(routine_key)` answers the record's declarations in the order its file gave them, with
+the key, label, kind, bounds, step and entries each was declared with, for a key or an alternate; nil
+for a key nobody registered and for a record that declared none. Reading them leaves the record's own
+rows as they were, so a list opened twice edits the same declarations twice.
 
-`Registration` keeps the glyph as the string the file wrote — the hex digits that name the packed
-bitmap — and nothing on this side decodes it: a row is drawn by `screen.icon`, which takes that
-string and reads its bits when it paints the icon, so the record hands the browser a glyph it can
-draw unchanged. The row the registry answers carries the same string, and `/system/records.be`
-declares no row at all — a record reads with dots only on a class the parser declared, so there is a
-field list missing as well.
+Checked: the browser's Forward shows a list whose rows are the routine's declarations in declaration
+order with their labels, and OK there launches the routine with the set it settled on.
 
-`rows()` answers a list of `row` instances: one per record and one per alternate, in `keys()` order,
-each carrying `icon` — the hex digits exactly as the file declared them, or nil when it named no
-glyph — `title`, the label the browser draws, and `value`, the key the row launches. `records.be`
-declares `row` from those three fields before the module answers one, so a row's `icon` is the value
-`screen.icon` accepts unchanged.
+## The stack is moved from Berry
 
-Checked: a row for a record declared with a glyph reads back the digits the file declared, `rows()`
-for two records and one alternate answers three rows in that order, and a record that named no glyph
-answers a nil `icon`.
+`/system/browser.be` pushes its settings list with `ux.push(...)`, closes itself with `ux.pop(nil)`,
+and a routine page leaves through the same pop. `Ux` is the stack in C++ and no file can reach it, so
+no page can put another on top or take itself off, and the browser's file does not compile.
 
-## A set is read back as a map and written from one
+`ux.push(page, callback)` shows a page over the one showing and runs the callback when it pops, handed
+what the page answered; `ux.pop(value)` closes the top page. Both answer whether a page is showing. A
+pop at the root answers false and leaves it, and the stack's cap of eight frames stays.
 
-`load_settings(key)` answers a Berry map of the key's settings, each in its kind's type and held to
-its row, with an alias's `routine_title` beside them. `save_settings(key, values)` takes such a map
-and writes the declared keys once. A key the map leaves out is written as nothing.
+Checked: Forward from the browser shows the settings list over it, OK closes the list, and the
+browser is showing again having read the set it handed back.
 
-Checked: a set loads with the document's values and its defaults, one value changes and is handed
-back, and a fresh load answers the new value.
+## A settings list is a page Berry builds
 
-## The suites that drive what is gone leave
+`SettingsEditScene(settings_cfgs, settings_values, title)` is the list the browser's Forward and both
+pages' edit open: the heading, one row per declaration with its label and the value in force, Up and
+Down moving the selection, Forward opening the row's editor, OK keeping the set, and Back or Cancel
+putting it back as it was opened. `SettingsScene` draws and drives exactly that, and is built only by
+whoever holds the stack and the gesture queue; nothing makes one from a Berry declaration list and a
+map.
 
-`tools/berry/tests/` still names `Scene`, `List`, `SettingsEditScene`, `ux`, `Icon`, the component
-model, the routine pages and the device's chrome, and every one fails before it can run. They go
-with the driver's art, scene and component entry points and the routines those draw; the suite
-runner and one new suite stay, and the driver keeps what a plain check calls.
+A list built that way shows the declarations it was handed under the title it was handed — no heading
+for nil — starts each setting from the map in force, or from the declaration's default where the map
+holds nothing, and hands the set it settled on back to the callback it was pushed with, in the shape
+`save_settings` takes.
 
-Checked: the files that name the gone classes are gone, and the runner and the new suite are the
-only suite sources left.
+Checked: Forward on a row edits that value, OK closes the list, and the routine's document holds the
+new value after the launch that follows; Back leaves the document as it was.
+
+## The browser's rows move through a window
+
+`/system/browser.be` builds `List(6)` and calls `set`, `move` and `selected_row` on it, reading
+`rows`, `selected`, `first()` and `visible`; no such value exists in the image or in C++, so the
+browser's file cannot compile. The chrome draws a row eight pixels high under a scrollbar showing how
+far through the list the window is.
+
+The browser shows six rows at a time. Up and Down move the selection by one and carry the window with
+it, the selected row is drawn inverted, and the scrollbar marks the window's place in the list. Three
+registrations fill less than the window, so it never moves and the scrollbar is full.
+
+Checked: with three routines the rows show with their glyphs and titles and the scrollbar is full;
+with more than six registered, Down past the sixth moves the window on by one.
+
+## Home opens the browser
+
+`/system/home.be` answers OK and Cancel and nothing else: the doubles the old page carried went with
+its gestures, and its comment says both pages wait for their ports. `/system/order` says home names
+`browserScene`, which it does not, so the browser is a scene nothing reaches.
+
+Home's Up double press shows the browser, and Back or Cancel in the browser returns to home's own
+page. Nothing in the browser starts a run: its `activate` stops the chamber, and only a launch begins
+one.
+
+Checked: Up twice on home shows the rows; Back returns to home's readout with the device's target
+still set; a run under way is stopped before the rows are drawn.
 
 ## Consequences
 
-The interpreter's page names four native modules and one class; it names five modules and the same
-class. `/system/records.be` gains a record, and a record's field list is the contract with the call
-that fills it, so the browser and whatever answers a row read the same three names. The browser, the
-settings list and the routine pages are untouched by this plan: their `[E]` lines stay, and none of
-them is a `routines` call this module refuses.
+`/system/order`'s note that home names `browserScene` and `DeviceSettings` states what is not true
+until this lands, and a file compiled against a name nothing answers does not load: the browser is
+pushed from home, and the device's settings list is not part of this plan.
+
+The parking lot's entry for the browser's page surface is gone, because this plan is that work now.
 
 ## Deferred
 
-- The page and `push`: a record names no page yet, so nothing can be launched. Every call site in
-  the image hands push three values — the key, a nil and an activation — while the registry's own
-  push takes the stack and a callback and reads the settings again itself, so which of the two a
-  Berry caller gets, and what the activation is for, is part of the page work. A factory has to build
-  the Berry class from the activation and wrap it in a scene, which waits on `ux` and `Scene` and on
-  a record gaining somewhere to keep the class it names.
-- `settings_cfgs` and `entry`: `settings_cfgs` answers the settings declaration by pointer in C++,
-  and the browser sizes that answer and hands it to the settings list, so what a cfg is on the Berry
-  side — the list of declarations or a handle — is decided with the list that edits them. `entry`
-  has no caller in the image.
-- `icon`: nothing in the image calls it, and a row's glyph is the string above rather than a paint.
-- The `List`, `ux` and `SettingsEditScene` globals browser.be names: `Ux` has no Berry surface,
-  `List` does not exist, and the settings list is `SettingsScene` under another name. Berry resolves
-  globals when it compiles, so no file that opens the browser or a routine's settings loads until
-  all three exist.
-- The per-set rule a file declares beside its settings (`problem`): nothing reads it, and a refusal
-  belongs to the row that settles a value, which arrives with the settings list.
-
-The browser's page surface — `List`, `ux`, `SettingsEditScene`, `settings_cfgs` and `push` — is
-parked in [the parking lot](../parking-lot.md#the-browsers-page-surface-from-berry).
+- `keys`, `entry` and `icon`: no file calls any of the three.
+- The device's own settings list: `DeviceSettings` in `/system/order`'s comment and the rows
+  `cfg/settings.ini` holds are their own plan.
 
 ## How it is known to hold
 
-1. `python scripts/arduino.py --task build` compiles the `routines` module, the `row` record it
-   fills and what its register reaches.
-2. `python tools/berry/check.py --tests` holds the new suite's cases — the rows, `register`'s two
-   refusals and the map round trip — once the interpreter's check runs again. It is broken and is
-   not run today, so the build is the whole of what is checked now.
-3. Nothing on the device reaches the module yet: every `/routines` file and `/system/browser.be`
-   still names `ux`, `SettingsEditScene` or `List`, so none of them loads. The `[E]` lines that stay
-   are those names, and each goes with the page work rather than with this plan.
-
+1. `python scripts/arduino.py --task build` compiles the names the module gains and the settings list
+   built from a Berry declaration list.
+2. `python tools/unit/check.py` holds the scene-stack and settings-list cases on the host: a push and
+   a pop, a list's rows in declaration order, a default where the map holds nothing, and the set a
+   list hands back.
+3. `python tools/berry/check.py` is broken and is not run. On the device the check is `--task upload`
+   and the `[E]` lines: the browser and home load, the three rows draw, a row launches, and no line
+   names a call nothing answers.

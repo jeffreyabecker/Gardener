@@ -266,3 +266,36 @@ TEST_CASE("a key registered twice keeps its place") {
   REQUIRE(first != nullptr);
   CHECK_EQ(std::string(first->title().c_str()), std::string("Replaced"));
 }
+
+TEST_CASE("a row holds a value of its own kind and refuses another") {
+  NoPresses gestures;
+  Ux ux;
+  NumberRow pressure{gestures, ux, "target_pressure", "Target", 5.0f, 1, 0, 100, true};
+  DurationRow total{gestures, ux, "total_duration", "Total", 300, 1, 0, 7200, false};
+  ChoiceRow resume{gestures, ux, "resume_behavior", "Resume", "hold", resumeChoices(), false};
+  BoolRow enabled{gestures, ux, "enabled", "Enabled", false};
+
+  std::any nothing;
+  CHECK(pressure.accept(nothing));
+  CHECK(total.accept(nothing));
+
+  // A whole literal a page wrote for a pressure reads as the pressure.
+  std::any whole = int32_t(15);
+  REQUIRE(pressure.accept(whole));
+  CHECK_EQ(std::any_cast<float>(whole), 15.0f);
+
+  // A real written for a duration is whole seconds, which is the unit the kind holds.
+  std::any real = 4.75f;
+  REQUIRE(total.accept(real));
+  CHECK_EQ(std::any_cast<int32_t>(real), 4);
+
+  std::any key = String("hold");
+  CHECK(resume.accept(key));
+  std::any flag = true;
+  CHECK(enabled.accept(flag));
+
+  // A value of another kind is refused rather than cast to.
+  CHECK_FALSE(pressure.accept(key));
+  CHECK_FALSE(total.accept(flag));
+  CHECK_FALSE(resume.accept(whole));
+}

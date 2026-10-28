@@ -28,7 +28,7 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installScreenModule(vm);
   installDeviceModule(vm);
   installSettingsModule(vm);
-  installRegistrationClass(vm);
+  installRoutinesModule(vm);
 }
 
 }  // namespace berry

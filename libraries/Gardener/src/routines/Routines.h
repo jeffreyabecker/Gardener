@@ -4,8 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
+
 #include "routines/GestureQueue.h"
 #include "routines/Interpreter.h"
+#include "routines/RoutineRegistry.h"
 #include <Gfx.h>
 
 namespace gardener {
@@ -56,6 +59,10 @@ class Routines {
   // page is pushed over it rather than into a second one.
   gfx::ui::Ux& scenes() { return stack_; }
 
+  // The routines the image registered, in the order the files registered them: what the `routines`
+  // module puts a record into and reads a set back through, and what a row launches.
+  RoutineRegistry& registry() { return *registry_; }
+
   // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { gestures_.push(gesture); }
   bool takePress(String& gesture) { return gestures_.take(gesture); }
@@ -76,6 +83,9 @@ class Routines {
   // The files the interpreter loads and the routine documents it reads and writes, from the context
   // at begin(), so nothing here names a filesystem or a path.
   Library* library_ = nullptr;
+  // Where the image's routine files put their records, built at begin() because the library and the
+  // logger it reads documents through are the context's.
+  std::unique_ptr<RoutineRegistry> registry_;
   // The panel's parts the beat reaches: the display it draws in and flushes, and the readings the
   // band shows.
   PanelContext* panel_ = nullptr;

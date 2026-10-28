@@ -20,6 +20,31 @@ String printedNumber(float number) {
   return String(printed);
 }
 
+// A value handed in from outside the list is asked for by the type the row holds rather than asked
+// what type it is: the cast to a pointer answers nothing for the wrong one instead of throwing.
+template <typename T>
+bool isHeldAs(const std::any& value) {
+  return !value.has_value() || std::any_cast<T>(&value) != nullptr;
+}
+
+// A number of either numeric type as the one the row holds, so a whole literal the file wrote for a
+// pressure is the pressure. False, leaving the value alone, for anything that is not a number.
+bool takeNumber(std::any& value, bool whole) {
+  if (!value.has_value()) return true;
+  if (whole) {
+    if (isHeldAs<int32_t>(value)) return true;
+    const float* real = std::any_cast<float>(&value);
+    if (real == nullptr) return false;
+    value = std::any(static_cast<int32_t>(*real));
+    return true;
+  }
+  if (isHeldAs<float>(value)) return true;
+  const int32_t* seconds = std::any_cast<int32_t>(&value);
+  if (seconds == nullptr) return false;
+  value = std::any(static_cast<float>(*seconds));
+  return true;
+}
+
 }  // namespace
 
 // --- the bool ---------------------------------------------------------------
@@ -62,6 +87,8 @@ std::any BoolRow::parse(const String& stored) const {
   }
   return defaultValue();
 }
+
+bool BoolRow::accept(std::any& value) const { return isHeldAs<bool>(value); }
 
 // --- the choice -------------------------------------------------------------
 
@@ -111,6 +138,8 @@ std::any ChoiceRow::parse(const String& stored) const {
   return defaultValue();
 }
 
+bool ChoiceRow::accept(std::any& value) const { return isHeldAs<String>(value); }
+
 // --- the duration -----------------------------------------------------------
 
 DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -156,6 +185,8 @@ std::any DurationRow::parse(const String& stored) const {
   if (seconds > max_) return max_;
   return seconds;
 }
+
+bool DurationRow::accept(std::any& value) const { return takeNumber(value, true); }
 
 // --- the number -------------------------------------------------------------
 
@@ -215,5 +246,7 @@ std::any NumberRow::parse(const String& stored) const {
   if (number > max_) number = max_;
   return std::any(number);
 }
+
+bool NumberRow::accept(std::any& value) const { return takeNumber(value, false); }
 
 }  // namespace gardener::gfx::ui

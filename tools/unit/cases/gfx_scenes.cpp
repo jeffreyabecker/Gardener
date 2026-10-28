@@ -266,6 +266,10 @@ class TestRow : public SettingsRow {
     return stored.isEmpty() ? defaultValue() : std::any(stored);
   }
 
+  bool accept(std::any& value) const override {
+    return !value.has_value() || std::any_cast<String>(&value) != nullptr;
+  }
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override {
     return std::make_unique<TestEditor>(gestures_, ux_, label_, value);
   }
