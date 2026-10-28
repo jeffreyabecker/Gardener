@@ -78,6 +78,20 @@ TEST_CASE("an icon draws in its box") {
   CHECK(!display.anyInk(0, 0, 30, 20));
 }
 
+TEST_CASE("an icon from hex digits draws the bitmap they name") {
+  reset();
+  // Three pixels of ink on the first row of a three-by-two bitmap, and none on the second.
+  icon(Rect(10, 10, 3, 2), "0302e000")(canvas);
+  CHECK_EQ(display.inkCount(10, 10, 3, 1), 3);
+  CHECK_EQ(display.inkCount(10, 11, 3, 1), 0);
+}
+
+TEST_CASE("an icon from a string that names no bitmap draws nothing") {
+  reset();
+  icon(Rect(10, 10, 12, 8), "not a glyph")(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
 TEST_CASE("a progress bar draws at its ends") {
   reset();
   progressBar(Rect(0, 0, 20, 8), 0.0f)(canvas);

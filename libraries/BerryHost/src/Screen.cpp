@@ -7,7 +7,6 @@
 
 #include <Gfx.h>
 
-#include "Glyph.h"
 #include "panel/PanelContext.h"
 #include "Module.h"
 #include "Modules.h"
@@ -212,7 +211,7 @@ int screenIcon(bvm* vm) {
   if (be_top(vm) < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.icon(x, y, w, h, glyph)");
   }
-  if (!isGlyph(argText(vm, 5))) {
+  if (!gfx::shapes::isMonoBitmap(argText(vm, 5))) {
     be_raise(vm, "value_error",
              "screen.icon: the glyph is hex digits, the width, the height and the rows");
   }

@@ -11,7 +11,6 @@
 
 #include <Gfx.h>
 
-#include "Glyph.h"
 #include "panel/PanelContext.h"
 #include "panel/PressureReadout.h"
 #include "panel/Units.h"
@@ -257,16 +256,10 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
   if (strcmp(kind, "icon") == 0) {
     const NodeBox box = boxOf(vm, node);
     // The hex digits point into the node's own string, which lives as long as the node the walk is
-    // holding — the same lifetime a text field's string has. The bitmap is read when the paint runs,
-    // so the bytes live exactly as long as the MonoBitmap that points at them.
+    // holding — the same lifetime a text field's string has. The bitmap is read when the paint runs.
     const char* glyph = textField(vm, node, "glyph");
     if (glyph == nullptr) return Paint();
-    const Paint bitmap = [glyph](gfx::Canvas& own) {
-      const std::vector<uint8_t> bits = berry::glyphBits(glyph);
-      if (bits.empty()) return;
-      own.draw(gfx::shapes::MonoBitmap(0, 0, bits.data(), gfx::ui::Ink));
-    };
-    return leaf(box, [bitmap](const gfx::Rect& rect) { return gfx::ui::icon(rect, bitmap); });
+    return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::ui::icon(rect, glyph); });
   }
 
   if (strcmp(kind, "bar") == 0) {

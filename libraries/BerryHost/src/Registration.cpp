@@ -13,7 +13,6 @@
 #include <Gfx.h>
 
 #include "routines/Registration.h"
-#include "Glyph.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -53,7 +52,7 @@ void requireGlyph(bvm* vm, int index) {
   if (!be_isstring(vm, index)) {
     be_raise(vm, "type_error", "Registration: the glyph is a string of hex digits");
   }
-  if (!isGlyph(argText(vm, index))) {
+  if (!gfx::shapes::isMonoBitmap(argText(vm, index))) {
     be_raise(vm, "value_error", "Registration: the glyph is the width, the height and the rows");
   }
 }

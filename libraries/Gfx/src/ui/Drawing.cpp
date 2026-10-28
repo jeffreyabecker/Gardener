@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <string>
+#include <vector>
 
 #include "gfx/Shapes.h"
 #include "gfx/Text.h"
@@ -81,6 +82,15 @@ Paint icon(Rect box, Paint glyph) {
   return [box, glyph](Canvas& canvas) {
     Canvas own = canvas.child(box);
     glyph(own);
+  };
+}
+
+Paint icon(Rect box, const char* glyph) {
+  return [box, glyph](Canvas& canvas) {
+    const std::vector<uint8_t> bits = shapes::monoBitmapBits(glyph);
+    if (bits.empty()) return;
+    Canvas own = canvas.child(box);
+    own.draw(shapes::MonoBitmap(0, 0, bits.data(), Ink));
   };
 }
 

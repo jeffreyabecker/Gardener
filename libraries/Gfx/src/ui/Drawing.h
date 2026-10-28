@@ -44,6 +44,12 @@ void drawCentred(Canvas& canvas, const char* value, const Font* face = nullptr, 
 // A glyph drawn inside `box` by `glyph`, which draws its ink in its own coordinates.
 Paint icon(Rect box, Paint glyph);
 
+// The same from the hex digits that name a packed bitmap — two per byte, the width, the height, then
+// one row per byte-run, most significant bit first and each row padded to a whole byte, which is how
+// the image carries a glyph. The string is a NUL-terminated run the caller keeps alive for as long
+// as the draw runs, and a string that names no bitmap draws nothing.
+Paint icon(Rect box, const char* glyph);
+
 // A paint that draws `content` and then inverts the whole canvas it was given, so a selected row
 // reads as paper on ink. An empty content stays empty and inverts nothing.
 Paint inverted(Paint content);
