@@ -256,11 +256,17 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
   if (strcmp(kind, "icon") == 0) {
     const NodeBox box = boxOf(vm, node);
     be_getmember(vm, node, "glyph");
-    const Paint glyph =
-        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), panel, unit) : Paint();
+    // The bits point into the node's own bytes, which live as long as the node the walk is
+    // holding — the same lifetime a text field's string has.
+    size_t length = 0;
+    const uint8_t* bits =
+        be_isbytes(vm, -1) ? (const uint8_t*)be_tobytes(vm, -1, &length) : nullptr;
     be_pop(vm, 1);
-    // An icon of nothing is nothing: ui::icon runs the glyph it is given and has no empty case.
-    if (!glyph) return Paint();
+    // A glyph of nothing is nothing: the binding refused a bitmap that cannot supply its rows.
+    if (bits == nullptr || length < 2) return Paint();
+    const Paint glyph = [bits](gfx::Canvas& own) {
+      own.draw(gfx::shapes::MonoBitmap(0, 0, bits, gfx::ui::Ink));
+    };
     return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::ui::icon(rect, glyph); });
   }
 
@@ -322,6 +328,16 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
   if (strcmp(kind, "column") == 0) {
     const float width = cellSide(vm, node, "w");
     return gfx::ui::column(width, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+  }
+
+  // The draw the node holds, run and then inverted in the cell the node was given: the step that
+  // makes a row read as paper on ink after it has been painted.
+  if (strcmp(kind, "inverted") == 0) {
+    be_getmember(vm, node, "child");
+    const Paint child =
+        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), panel, unit) : Paint();
+    be_pop(vm, 1);
+    return gfx::ui::inverted(child);
   }
 
   return Paint();

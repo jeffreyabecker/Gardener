@@ -84,6 +84,14 @@ Paint icon(Rect box, Paint glyph) {
   };
 }
 
+Paint inverted(Paint content) {
+  if (!content) return Paint();
+  return [content](Canvas& canvas) {
+    content(canvas);
+    canvas.invert(Rect(0, 0, canvas.width(), canvas.height()));
+  };
+}
+
 Paint progressBar(Rect box, float value) {
   if (value < 0.0f) value = 0.0f;
   if (value > 100.0f) value = 100.0f;

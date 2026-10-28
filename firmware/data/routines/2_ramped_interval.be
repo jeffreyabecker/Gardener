@@ -4,15 +4,9 @@
 import string
 
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
-# each column standing from the baseline two rows higher than the one before.
-class RampedIntervalIcon : Icon
-  def draw()
-    screen.draw_fillrect(self.pos.x, self.pos.y + 5, 3, 2)
-    screen.draw_fillrect(self.pos.x + 4, self.pos.y + 3, 3, 4)
-    screen.draw_fillrect(self.pos.x + 8, self.pos.y + 1, 3, 6)
-    super(self).draw()
-  end
-end
+# each column standing from the baseline two rows higher than the one before, as packed bits — the
+# width, the height, then the rows most significant bit first, each padded to a whole byte.
+ramped_interval_glyph = bytes("0c08000000e000e00ee00ee0eee0eee00000")
 
 # The values the ramp edits, in the order the settings list shows them, and the one rule that binds
 # two of them: a ladder has to climb, so the final pressure is at least where it starts. The
@@ -41,7 +35,7 @@ class RampedIntervalSettings : Registration
   end
 end
 
-class RampedInterval : Scene
+class RampedInterval
   var routine_key
   var machine
   var count
@@ -52,33 +46,19 @@ class RampedInterval : Scene
   var rest_pressure
   var rest
   var resume
-  var chrome
 
   def init(activation)
-    super(self).init()
     self.routine_key = activation.routine_key
     self.machine = RampedIntervalMachine(/ -> self.edit())
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
     self.init_from_settings(activation.settings_values)
-    self.chrome = RampedIntervalChrome(self.icon(), routines.title(self.routine_key))
 
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.machine.target = self.initial
     vacuum.set_target_pressure(self.initial)
-  end
-
-  # The page's box, handed on to the chrome, which lays the page out in it.
-  def to_box(x, y, w, h)
-    super(self).to_box(x, y, w, h)
-    self.chrome.to_box(x, y, w, h)
-  end
-
-  # The page first draws once it is on the stack and boxed, which is what to_box has just done.
-  def activate()
-    self.draw()
   end
 
   # A gesture that names a command outright — cmd:pause — is handed to the machine as it stands,
@@ -117,7 +97,7 @@ class RampedInterval : Scene
 
   # The glyph the page draws in its chrome, the same one its registration carries.
   def icon()
-    return RampedIntervalIcon()
+    return ramped_interval_glyph
   end
 
   # --- settings ------------------------------------------------------------
@@ -231,14 +211,14 @@ class RampedInterval : Scene
 
   # --- drawing -------------------------------------------------------------
 
+  # The drawing: the chrome from the cycle's values as they stand now.
   def draw_page()
-    # The set being worked is the count the chrome shows; a ready page has none under way, so it
-    # shows how many the run will make.
-    self.chrome.draw(self.machine.filled(), self.count,
-                     self.machine.status_text(), self.machine.hold_left())
+    return ramped_interval_chrome(self.icon(), routines.title(self.routine_key),
+                                  self.machine.filled(), self.count,
+                                  self.machine.status_text(), self.machine.hold_left())
   end
 end
 
 routines.register(RampedIntervalSettings("ramped_interval", "Ramped Interval",
-                                         RampedIntervalIcon(),
+                                         ramped_interval_glyph,
                                          RampedInterval))

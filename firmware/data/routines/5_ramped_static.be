@@ -4,53 +4,34 @@
 
 import string
 
-# The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
-# run rising from the first row to the last, on a 12 by 8 field.
-class RampedStaticIcon : Icon
-  def draw()
-    screen.draw_filltriangle(self.pos.x, self.pos.y + 6, self.pos.x + 11, self.pos.y + 1, self.pos.x + 11, self.pos.y + 6)
-    super(self).draw()
-  end
-end
-
 # The static chrome: the glyph and title row, the pressure and the duration, and a status-plus-bar
-# row, laid out as fractions of the page.
-class RampedStaticChrome : Layout
-  var icon
-  var title
-  var timer
-  var status
-  var bar
-
-  def init(title_text)
-    self.icon = RampedStaticIcon()
-    self.title = Text(title_text)
-    self.timer = Duration("minutes")
-    self.status = Text("")
-    self.bar = ProgressBar(nil)
-    super(self).init(bounds(nil, nil), [
-      RowLayout(0.25, [
-        ColumnLayout(0.125, [self.icon]),
-        ColumnLayout(0.875, [self.title], alignment("center", "center"))
-      ]),
-      RowLayout(0.50, [
-        ColumnLayout(0.5, [AutoPressureDisplay("pressure:target", "br", 0.25)]),
-        ColumnLayout(0.5, [self.timer], alignment("center", "center"))
-      ]),
-      RowLayout(0.25, [
-        ColumnLayout(0.5, [self.status], alignment("left", "center")),
-        ColumnLayout(0.5, [self.bar])
-      ])
-    ])
-  end
-
-  def draw(status, duration, elapsed)
-    self.status.value = status
-    self.timer.seconds = elapsed / 1000
-    self.bar.value = elapsed * 100.0 / duration
-    super(self).draw()
-  end
+# row, laid out as fractions of the page. Every value is handed in, so a case draws the chrome from
+# numbers rather than from a page or a machine.
+def ramped_static_chrome(icon, title, status, duration, elapsed)
+  var spent = elapsed == nil ? 0 : elapsed
+  var timer = screen.centred(nil, nil, nil, nil,
+                             screen.duration_text("minutes", spent / 1000, elapsed != nil))
+  var percent = duration > 0 ? spent * 100.0 / duration : 0.0
+  return screen.column(nil, [
+    [bounds(1, 0.25), screen.row(nil, [
+      [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, icon)],
+      [bounds(0.875, 1), screen.centred(nil, nil, nil, nil, title)]
+    ])],
+    [bounds(1, 0.5), screen.row(nil, [
+      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), timer]
+    ])],
+    [bounds(1, 0.25), screen.row(nil, [
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status)],
+      [bounds(0.5, 1), screen.bar(nil, nil, nil, nil, percent)]
+    ])]
+  ])
 end
+
+# The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
+# run rising from the first row to the last, on a 12 by 8 field, as packed bits — the width, the
+# height, then the rows most significant bit first, each padded to a whole byte.
+ramped_static_glyph = bytes("0c0800000010007001f007f01ff0fff00000")
 
 # The values this page edits, in the order the settings list shows them, and the one rule that binds
 # them: the profile is the two holds plus a ramp, so the total has to cover the holds. The
@@ -75,7 +56,7 @@ class RampedStaticSettings : Registration
   end
 end
 
-class RampedStatic : Scene
+class RampedStatic
   var routine_key
   var machine
   var start_pressure
@@ -83,13 +64,10 @@ class RampedStatic : Scene
   var initial_ms
   var target_ms
   var total_ms
-  var chrome
 
   def init(activation)
-    super(self).init()
     self.routine_key = activation.routine_key
     self.machine = RampedStaticMachine(/ -> self.edit())
-    self.chrome = RampedStaticChrome(routines.title(self.routine_key))
 
     # The scene is built from the map the registry made clean, so building it is the whole of its
     # activation.
@@ -97,17 +75,6 @@ class RampedStatic : Scene
     # Like default's restore: the page's starting target is the machine's target as soon as the page
     # is visible. Setting one does not start anything.
     self.machine.place_start()
-  end
-
-  # The page's box, handed on to the chrome, which lays the page out in it.
-  def to_box(x, y, w, h)
-    super(self).to_box(x, y, w, h)
-    self.chrome.to_box(x, y, w, h)
-  end
-
-  # The page first draws once it is on the stack and boxed, which is what to_box has just done.
-  def activate()
-    self.draw()
   end
 
   # A gesture that names a command outright — cmd:pause — is handed to the machine as it stands,
@@ -207,11 +174,14 @@ class RampedStatic : Scene
 
   # --- drawing -------------------------------------------------------------
 
+  # The drawing: the chrome from the run's values as they stand now.
   def draw_page()
-    self.chrome.draw(self.machine.status_text(), self.total_ms, self.machine.elapsed())
+    return ramped_static_chrome(ramped_static_glyph, routines.title(self.routine_key),
+                                self.machine.status_text(), self.total_ms,
+                                self.machine.elapsed())
   end
 end
 
 routines.register(RampedStaticSettings("ramped_static", "Ramped Static",
-                                       RampedStaticIcon(), RampedStatic))
+                                       ramped_static_glyph, RampedStatic))
 return RampedStatic

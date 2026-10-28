@@ -137,6 +137,21 @@ TEST_CASE("a duration draws its text") {
   CHECK(display.anyInk(0, 0, 40, 8));
 }
 
+TEST_CASE("an inverted paint flips the whole cell it was given") {
+  reset();
+  Canvas band = canvas.child(Rect(0, 0, 20, 8));
+  inverted([](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); })(band);
+  CHECK_EQ(display.inkCount(0, 0, 10, 8), 0);
+  CHECK_EQ(display.inkCount(10, 0, 10, 8), 10 * 8);
+}
+
+TEST_CASE("an inverted paint with nothing to draw draws nothing") {
+  reset();
+  const Paint nothing = inverted(Paint());
+  CHECK(!nothing);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
 }  // namespace
 
 }  // namespace gardener::gfx::test

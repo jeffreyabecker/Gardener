@@ -3,9 +3,9 @@
 `RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, and
 nothing reaches them from a `.be` file. `Bindings.cpp` installs `vacuum`, `screen`, `device` and
 `config`; there is no `routines` module. The image's files still call `routines.register(...)`,
-`routines.rows()` and `routines.load_settings(...)`, and build `Registration`, `Icon` and `*EditCfg`
-classes that are not there, so the image does not load. This plan makes the registration surface
-native and leaves the page, the glyph, the browser and the settings list alone.
+`routines.rows()` and `routines.load_settings(...)`, and build `Registration` and `*EditCfg` classes
+that are not there, so the image does not load. This plan makes the registration surface native and
+leaves the page, the browser and the settings list alone.
 
 ## The registry is reachable from the interpreter
 
@@ -25,8 +25,10 @@ answers an empty map and an empty title rather than raising.
 
 The routine files build a `Registration` subclass and call `routines.register(...)` with it; no
 `Registration` class exists in the image or as a native binding. A class installed at boot whose
-`init` takes the routine key, the title and the settings list replaces it, and `register` moves the
-record into the registry.
+`init` takes the routine key, the title, the glyph and the settings list replaces it, and `register`
+moves the record into the registry. The glyph is the packed bitmap the routine's file carries — the
+width, the height, then the rows — the same value `screen.icon` draws, so it travels through the
+registration unchanged.
 
 The refusals the registry already makes do not move: a key that is not a plain word is refused with
 one line and answers false, the title falls back to the key, a key already registered keeps its
@@ -73,13 +75,11 @@ only suite sources left.
 
 ## Deferred
 
-- The glyph: a Berry icon draws through `screen` at absolute coordinates, so it needs the canvas a
-  component is given — the parking-lot entry on Berry drawing through a canvas.
 - The page and `push`: a factory has to build the Berry class from the activation and wrap it in a
   scene, which waits on `ux` and `Scene`.
 - `rows`, `icon`, `settings_cfgs` and `entry`, which arrive with the browser and the settings list.
-- The image's files keep their chrome, icon and page classes, so the image stays unloadable until
-  that page work lands.
+- The image's files keep their chrome and page classes, so the image stays unloadable until that
+  page work lands.
 
 ## How it is known to hold
 

@@ -48,6 +48,10 @@ void drawCentred(Canvas& canvas, const char* value, const Font* face = nullptr, 
 // A glyph drawn inside `box` by `glyph`, which draws its ink in its own coordinates.
 Paint icon(Rect box, Paint glyph);
 
+// A paint that draws `content` and then inverts the whole canvas it was given, so a selected row
+// reads as paper on ink. An empty content stays empty and inverts nothing.
+Paint inverted(Paint content);
+
 // A framed bar filled to a percentage: the outline is `box` and the fill is its inside. A value
 // outside 0 … 100 is held to the end it passed.
 Paint progressBar(Rect box, float value);

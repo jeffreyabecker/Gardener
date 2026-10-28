@@ -3,7 +3,7 @@
 `RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, and
 no `.be` file can reach them: `Bindings.cpp` installs `vacuum`, `screen`, `device` and `Config`, and
 there is no `routines` module and no `Registration` or `*EditCfg` class. The image's files still
-call `routines.register(...)`, `routines.load_settings(...)` and build `Registration`, `Icon` and
+call `routines.register(...)`, `routines.load_settings(...)` and build `Registration` and
 `*EditCfg`, so the image does not load. The requirement is in
 [register-routines-from-berry.md](../plans/register-routines-from-berry.md).
 
@@ -16,7 +16,7 @@ The two sides of the boundary, as they are named on each:
 | `routines.title(key)` | `RoutineRegistry::title()` |
 | `routines.load_settings(key)` | `RoutineRegistry::loadSettings()` → `Registration::loadSettings()` |
 | `routines.save_settings(key, map)` | `RoutineRegistry::saveSettings()` → `Registration::saveSettings()` |
-| `Registration(routine_key, title, list)` | `gardener::Registration` (`routines/Registration.h`) |
+| `Registration(routine_key, title, glyph, factory, list)` | `gardener::Registration` (`routines/Registration.h`) |
 | `NumericEditCfg` | `gfx::ui::NumberRow` → `gfx::ui::NumberScene` |
 | `PressureEditCfg` | `gardener::PressureRow` (`routines/PressureRow.h`) → `PressureScene` |
 | `DurationEditCfg` | `gfx::ui::DurationRow` → `gfx::ui::DurationScene` |
@@ -27,7 +27,7 @@ Every item leaves the tree working: `python scripts/arduino.py --task build` com
 side of an item is not reached by that build — `tools/berry/check.py` is broken and is not run, and
 a file under `firmware/data/` cannot change what the build says — so a Berry answer is checked by
 the suite in item 4.4 when the check runs again, and on the device by the `[E]` lines once the page
-work lands. Nothing here touches a page, a glyph, the browser or the settings list; those are the
+work lands. Nothing here touches a page, the browser or the settings list; those are the
 plan's deferred list, and `rows`, `icon`, `settings_cfgs`, `entry` and `push` stay off the module
 until they land.
 

@@ -50,11 +50,14 @@ class alignment
 end
 
 # One node of a page's drawing, as `screen` builds it: `kind` names what the node is — text, centred,
-# icon, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields that kind
-# uses are set, the rest nil. A leaf names its box in pixels; a layout, a row and a column name the
-# cell they declare as a share of what holds them, nil for the whole side, so a row sets `h` and a
-# column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child declares and
-# the child — and `alignment` is where it puts them, the record above.
+# icon, inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields
+# that kind uses are set, the rest nil. A leaf names its box in pixels; a layout, a row and a column
+# name the cell they declare as a share of what holds them, nil for the whole side, so a row sets `h`
+# and a column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child
+# declares and the child — and `alignment` is where it puts them, the record above. An `inverted`
+# node holds the draw it flips in `child`, and an `icon` node holds its fixed bitmap in `glyph`: the
+# width, the height, then one row per byte-run, most significant bit first and each row padded to a
+# whole byte, as a `bytes`.
 class draw
   var kind
   var x, y, w, h
@@ -62,7 +65,7 @@ class draw
   var format, seconds, known
   var percent
   var index, count, visible, hollow
-  var children, glyph, alignment
+  var children, child, glyph, alignment
 end
 
 class jingle

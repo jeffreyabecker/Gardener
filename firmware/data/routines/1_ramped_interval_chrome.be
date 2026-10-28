@@ -1,51 +1,33 @@
-# 1_ramped_interval_chrome.be — the chrome both interval pages draw. It loads after the machine and
-# before either page, because the pages name it and it names nothing of theirs.
+# 1_ramped_interval_chrome.be — the chrome both interval pages draw, as a tree from the values it is
+# given. It loads after the machine and before either page, because the pages name it and it names
+# nothing of theirs.
 
 # The interval chrome: the glyph and title row, the pressure and the set count, and a
-# status-plus-bar row, laid out as fractions of the page. The glyph and the title are given to it,
-# so a subclass of the page names its own and nothing is swapped after the fact.
-class RampedIntervalChrome : Layout
-  var icon
-  var title
+# status-plus-bar row, laid out as fractions of the page. Every value is handed in, so a case draws
+# the chrome from numbers rather than from a page or a machine.
+def ramped_interval_chrome(icon, title, current_set, total_sets, status, remaining_percent)
   var sets
-  var status
-  var bar
-
-  def init(icon, title_text)
-    self.icon = icon
-    self.title = Text(title_text)
-    self.sets = Text("")
-    self.status = Text("")
-    self.bar = ProgressBar(nil)
-    super(self).init(bounds(nil, nil), [
-      RowLayout(0.25, [
-        ColumnLayout(0.125, [self.icon]),
-        ColumnLayout(0.875, [self.title], alignment("center", "center"))
-      ]),
-      RowLayout(0.50, [
-        ColumnLayout(0.5, [AutoPressureDisplay("pressure:target", "br", 0.25)]),
-        ColumnLayout(0.5, [self.sets], alignment("center", "center"))
-      ]),
-      RowLayout(0.25, [
-        ColumnLayout(0.5, [self.status], alignment("left", "center")),
-        ColumnLayout(0.5, [self.bar])
-      ])
-    ])
-  end
-
-  # A page with a set under way shows where it has got to, `2 / 12`; a ready page has no set to count
-  # and shows how many the run will make, `12 sets`.
-  def draw(current_set, total_sets, status, remaining_percent)
-    if current_set > 0
-      if current_set > total_sets
-        current_set = total_sets
-      end
-      self.sets.value = str(current_set) + " / " + str(total_sets)
-    else
-      self.sets.value = str(total_sets) + (total_sets == 1 ? " set" : " sets")
+  if current_set > 0
+    if current_set > total_sets
+      current_set = total_sets
     end
-    self.status.value = status
-    self.bar.value = remaining_percent
-    super(self).draw()
+    sets = str(current_set) + " / " + str(total_sets)
+  else
+    sets = str(total_sets) + (total_sets == 1 ? " set" : " sets")
   end
+  var percent = remaining_percent == nil ? 0.0 : remaining_percent
+  return screen.column(nil, [
+    [bounds(1, 0.25), screen.row(nil, [
+      [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, icon)],
+      [bounds(0.875, 1), screen.centred(nil, nil, nil, nil, title)]
+    ])],
+    [bounds(1, 0.5), screen.row(nil, [
+      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), screen.centred(nil, nil, nil, nil, sets)]
+    ])],
+    [bounds(1, 0.25), screen.row(nil, [
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status)],
+      [bounds(0.5, 1), screen.bar(nil, nil, nil, nil, percent)]
+    ])]
+  ])
 end

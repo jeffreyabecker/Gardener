@@ -202,15 +202,36 @@ int screenCentred(bvm* vm) {
   be_return(vm);
 }
 
-// A node drawn inside the box: how a page puts a tree of its own at a corner of another one.
+// A fixed glyph in the box: the argument is the bitmap itself, in MonoBitmap's format — the width,
+// the height, then one row per byte-run, most significant bit first and each row padded to a whole
+// byte. A glyph that cannot supply the rows it declares is refused here rather than read past its
+// end when the page is drawn.
 int screenIcon(bvm* vm) {
-  if (be_top(vm) < 5 || !be_isinstance(vm, 5)) {
-    be_raise(vm, "type_error", "screen.icon(x, y, w, h, glyph)");
+  if (be_top(vm) < 5 || !be_isbytes(vm, 5)) {
+    be_raise(vm, "type_error", "screen.icon(x, y, w, h, bits)");
+  }
+  size_t length = 0;
+  const uint8_t* bits = (const uint8_t*)be_tobytes(vm, 5, &length);
+  if (bits == nullptr || length < 2 || bits[0] == 0 || bits[1] == 0 ||
+      length < 2 + (size_t)((bits[0] + 7) / 8) * bits[1]) {
+    be_raise(vm, "value_error", "screen.icon: bits are the width, the height and the padded rows");
   }
   const int draw = beginDraw(vm, "icon");
   if (draw < 0) be_return_nil(vm);
   setBox(vm, draw);
   setValue(vm, draw, "glyph", 5);
+  be_return(vm);
+}
+
+// A node that draws the tree it is given and then inverts the whole cell it lands in: how a page
+// makes a selected row read as paper on ink.
+int screenInverted(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isinstance(vm, 1)) {
+    be_raise(vm, "type_error", "screen.inverted(draw)");
+  }
+  const int draw = beginDraw(vm, "inverted");
+  if (draw < 0) be_return_nil(vm);
+  setValue(vm, draw, "child", 1);
   be_return(vm);
 }
 
@@ -404,6 +425,7 @@ const bnfuncinfo ScreenLibrary[] = {
     {"text", screenText},
     {"centred", screenCentred},
     {"icon", screenIcon},
+    {"inverted", screenInverted},
     {"bar", screenBar},
     {"scrollbar", screenScrollbar},
     {"duration", screenDuration},

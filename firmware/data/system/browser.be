@@ -10,6 +10,32 @@
 # launch is the whole of the routine's initialization. A row carries its routine's key as its value,
 # so the list is the only structure the browser keeps.
 
+# The browser's chrome from the rows and the window they are drawn through: one row per visible
+# routine, the selected one inverted, and the scrollbar beside them. The rows, the window and the
+# page width are handed in, so a case draws the chrome from values rather than from a page.
+def browser_chrome(rows, selected, first, visible, width)
+  var lines = []
+  var line_height = 8
+  var line = 0
+  while line < visible && first + line < rows.size()
+    var at = first + line
+    var row = rows[at]
+    var line_draw = screen.row(nil, [
+      [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, row.icon)],
+      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, row.title)]
+    ])
+    if at == selected
+      line_draw = screen.inverted(line_draw)
+    end
+    lines.push([bounds(1, line_height), line_draw])
+    line += 1
+  end
+  return screen.row(nil, [
+    [bounds(width - 2, 1), screen.column(nil, lines)],
+    [bounds(2, 1), screen.scrollbar(nil, nil, nil, nil, first, rows.size(), visible)]
+  ])
+end
+
 # What a launch hands a routine's class: the key the routine was launched under, which the scene
 # takes as its own, and the clean settings map its init_from_settings() reads.
 class RoutineActivation
@@ -21,21 +47,11 @@ class RoutineActivation
   end
 end
 
-class BrowserScene : Scene
+class BrowserScene
   var list
-  var scrollbar
 
   def init()
-    super(self).init()
     self.list = List(6)
-    self.scrollbar = Scrollbar()
-    self.list.scrollbar = self.scrollbar
-  end
-
-  # The page's box: the scrollbar is placed against it, one page wide less the column the rows have.
-  def to_box(x, y, w, h)
-    super(self).to_box(x, y, w, h)
-    self.scrollbar.set_box(point(x + 110, y + 2), bounds(2, h - 4))
   end
 
   def activate()
@@ -45,7 +61,6 @@ class BrowserScene : Scene
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.
     self.list.set(self.rows())
-    self.draw()
   end
 
   # Up and Down move the selection; OK launches the row, Forward edits its settings first, and Back
@@ -119,7 +134,6 @@ class BrowserScene : Scene
   def settings_closed(routine_key, settings_values)
     routines.save_settings(routine_key, settings_values)
     routines.push(routine_key, nil, RoutineActivation(routine_key, settings_values))
-    self.draw()
   end
 
   def leave()
@@ -127,14 +141,10 @@ class BrowserScene : Scene
     return true
   end
 
+  # The drawing: the chrome from the rows and the window the list holds.
   def draw_page()
-    if self.list.rows.size() == 0
-      return
-    end
-    # The rows' band stops two pixels short of the scrollbar's column.
-    self.list.to_box(self.pos.x, self.pos.y + 2, self.scrollbar.pos.x - self.pos.x - 2,
-                     self.list.visible * List.row)
-    self.list.draw()
+    return browser_chrome(self.list.rows, self.list.selected, self.list.first(),
+                          self.list.visible, screen.width())
   end
 end
 

@@ -3,19 +3,9 @@
 # because its page extends the ramp's.
 
 # The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
-# 12 by 8 field, drawn with one-pixel lines.
-class IntervalIcon : Icon
-  def draw()
-    screen.draw_hline(self.pos.x, self.pos.y + 1, 3)
-    screen.draw_vline(self.pos.x + 3, self.pos.y + 1, 6)
-    screen.draw_hline(self.pos.x + 3, self.pos.y + 6, 3)
-    screen.draw_vline(self.pos.x + 6, self.pos.y + 1, 6)
-    screen.draw_hline(self.pos.x + 6, self.pos.y + 1, 3)
-    screen.draw_vline(self.pos.x + 9, self.pos.y + 1, 6)
-    screen.draw_hline(self.pos.x + 9, self.pos.y + 6, 3)
-    super(self).draw()
-  end
-end
+# 12 by 8 field, as packed bits — the width, the height, then the rows most significant bit first,
+# each padded to a whole byte.
+interval_glyph = bytes("0c080000f3c012401240124012401e700000")
 
 # The values the interval edits, in the order the settings list shows them. Nothing binds one
 # setting to another here, so the rule accepts every set.
@@ -41,7 +31,7 @@ end
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.
 class Interval : RampedInterval
   def icon()
-    return IntervalIcon()
+    return interval_glyph
   end
 
   # The interval's own values, out of the same clean map: the single target is the ladder's start
@@ -91,4 +81,4 @@ class Interval : RampedInterval
 end
 
 routines.register(IntervalSettings("interval", "Interval",
-                                   IntervalIcon(), Interval))
+                                   interval_glyph, Interval))
