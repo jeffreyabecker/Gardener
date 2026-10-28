@@ -331,7 +331,7 @@ the suite's inputs, so it needs no harness to save a frame.
   a log call on the allocation-failure path, so it is more than a header swap.
 - `Machine::boot`'s device probes beyond the capability byte, `SafeReboot` and the two sketches.
 - `BleLink`, the two BLE domains and NimBLE.
-- `Panel`, `PanelTasks.cpp`, `Routines` and the bindings, which name the interpreter.
+- `PanelTasks.cpp` and the bindings, which name the interpreter.
 - Reviving `tools/berry/check.py`, and the spec for what it loads and writes, which the parking lot
   holds until the tool runs again.
 

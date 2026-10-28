@@ -119,11 +119,10 @@ bool HarnessSession::begin() {
 
   if (!routines_.begin(context_)) return false;
   // The image's own files, before the panel's root scene is built: what the loader itself cost.
-  loadedBytes_ = heapOf(routines_.vm());
+  loadedBytes_ = heapOf(interpreter_.vm());
   if (frameworkBytes_ == 0) frameworkBytes_ = loadedBytes_;
   // The panel task's own UI runs the page's activate() when it comes up; the check does the same.
   routines_.enterPage();
-  vm_ = routines_.vm();
   imageBytes_ = heapBytes();
   return true;
 }
@@ -172,7 +171,7 @@ void HarnessSession::beat(int count) {
   }
 }
 
-size_t HarnessSession::heapBytes() { return heapOf(vm_); }
+size_t HarnessSession::heapBytes() { return heapOf(interpreter_.vm()); }
 
 void HarnessSession::sampleRead(const String& path) {
   const char* file = path.c_str();
@@ -181,7 +180,7 @@ void HarnessSession::sampleRead(const String& path) {
   const bool system = strncmp(file, "/system/", 8) == 0;
   if (!system && strncmp(file, "/routines/", 10) != 0) return;
 
-  const size_t held = heapOf(routines_.vm());
+  const size_t held = heapOf(interpreter_.vm());
   if (readSamples_.empty()) vmBytes_ = held;
   // The first routine read is where the framework is finished and the pages have yet to start.
   if (frameworkBytes_ == 0 && !system) frameworkBytes_ = held;

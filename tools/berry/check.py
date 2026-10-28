@@ -44,6 +44,7 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # scene and the tree it draws.
 BERRYHOST_SOURCES = [
     BERRYHOST / "src" / "Bindings.cpp",
+    BERRYHOST / "src" / "BerryInterpreter.cpp",
     BERRYHOST / "src" / "BerryScene.cpp",
     BERRYHOST / "src" / "DrawTree.cpp",
     BERRYHOST / "src" / "Config.cpp",

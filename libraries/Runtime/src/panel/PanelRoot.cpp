@@ -4,6 +4,7 @@
 
 #include "panel/PanelRoot.h"
 
+#include <BerryHost.h>
 #include <Wire.h>
 
 #include "MachineRoot.h"
@@ -41,7 +42,10 @@ Panel& buildPanelRoot(Logger& logger, Library& library, const PanelPins& pins,
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction and comes up in Panel::boot, once the bus is running.
   auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
-  auto* routines = new Routines();
+  // The interpreter is the host library's part; the routines above it are the core's, so the panel
+  // owns the VM and the page beat separately.
+  auto* interpreter = new BerryInterpreter();
+  auto* routines = new Routines(*interpreter);
   auto* panel = new Panel(logger, machine.pump, machine.sensor, machine.valve, buttons, buzzer,
                           battery, display, library, routines, queue);
 

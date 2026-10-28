@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "BerryInterpreter.h"
 #include "BitmapPanel.h"
 #include "core/Logger.h"
 #include "gfx/Canvas.h"
@@ -231,7 +232,7 @@ class HarnessSession {
   // Panel::boot does. False when the data directory is not there or the VM cannot be made.
   bool begin();
 
-  bvm* vm() const { return vm_; }
+  bvm* vm() const { return interpreter_.vm(); }
   Routines& routines() { return routines_; }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
@@ -310,9 +311,9 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;
-  Routines routines_;
+  BerryInterpreter interpreter_;
+  Routines routines_{interpreter_};
   HarnessPanel context_;
-  bvm* vm_ = nullptr;
 };
 
 void installHarnessModule(bvm* vm, HarnessSession& appSession);

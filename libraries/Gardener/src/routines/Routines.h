@@ -5,10 +5,8 @@
 #include <stdint.h>
 
 #include "routines/GestureQueue.h"
+#include "routines/Interpreter.h"
 #include <Gfx.h>
-
-// The vendored interpreter's VM type, forward declared so its header stops here.
-struct bvm;
 
 namespace gardener {
 
@@ -16,23 +14,22 @@ class PanelContext;
 class Logger;
 class Library;
 
-// The Berry runtime behind the routines: the VM, the modules and the files it compiles, and the beat
-// that drives the native scene stack over them. The stack itself is `gfx::ui::Ux` and this side owns
-// it: one entry per beat, the band the panel shows drawn over the page, and the flush the panel task
-// leaves here because the stack draws in the frame the display holds.
+// The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
+// the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
+// implementation is the host side's; the stack is `gfx::ui::Ux` and this side owns it: one entry per
+// beat, the band the panel shows drawn over the page, and the flush the panel task leaves here
+// because the stack draws in the frame the display holds.
 //
 // The beat is called from the panel task's own frame — never from inside a Berry call — so there is
 // nothing suspended, no second core and no lock.
 class Routines {
  public:
-  // Creates the VM, installs the native modules, loads the files `/system/order` names and then
-  // every `/routines/*.be`, and resets the scene stack. The system comes first so a page can use
-  // what one of its files defines. False only when the interpreter cannot be allocated at all.
-  bool begin(PanelContext& context);
+  explicit Routines(Interpreter& interpreter) : interpreter_(interpreter) {}
 
-  // The interpreter itself, for the host harness, which loads its own driver into the same VM after
-  // the image has loaded.
-  bvm* vm() const { return vm_; }
+  // Starts the interpreter and loads the files `/system/order` names and then every
+  // `/routines/*.be`, and resets the scene stack. The system comes first so a page can use what one
+  // of its files defines. False only when the interpreter cannot be allocated at all.
+  bool begin(PanelContext& context);
 
   // The page's way out: leave whichever scenes are showing and give the panel back to the root.
   // False when no scene is left showing, which leaves the mark.
@@ -63,14 +60,14 @@ class Routines {
   size_t loadSystem(size_t& found);
   size_t loadAll(const char* folder, size_t& found);
   bool loadFile(const String& path);
-  void reportError(const char* file, const char* what);
   bool resetToRoot();
 
   // The band's cells from one reading: the unit's suffix, the two links, the run state and the
   // gauge, as they stood on this beat.
   void updateBand(uint32_t nowMs);
 
-  bvm* vm_ = nullptr;
+  // The VM the files are loaded into and the root page read from.
+  Interpreter& interpreter_;
   Logger* logger_ = nullptr;
   // The files the interpreter loads and the routine documents it reads and writes, from the context
   // at begin(), so nothing here names a filesystem or a path.

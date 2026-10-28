@@ -39,17 +39,12 @@ EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 # part of what the suite compiles.
 PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "<NimBLE", "freertos/", "<SD.h>")
 
-# The two sources that reach the interpreter through Routines without naming it themselves. Both are
-# deferred: the panel's composition and the routine launcher belong to a suite that loads a VM.
-SUITE_EXCLUDES = ("panel/Panel.cpp", "routines/Routines.cpp")
-
 # The API's own sources, and the two a board's C library would provide.
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")
 API_EXTRAS = ("itoa.cpp", "dtostrf.cpp")
 
 # A source that needs a build symbol of its own. Device.cpp is the machine-alone build's `device`
-# domain: its panel branch builds createDeviceDomain over Panel, which names the interpreter and is
-# not part of the suite, so it compiles as the machine-alone build does.
+# domain: its panel branch is the panel composition's, so the suite keeps to the machine-alone one.
 SOURCE_DEFINES = {"serial/domains/Device.cpp": ("-DGARDENER_PANEL=0",)}
 
 
@@ -74,8 +69,6 @@ def slug(path):
 
 
 def interpreter_free(source):
-    if any(source.as_posix().endswith(name) for name in SUITE_EXCLUDES):
-        return False
     text = source.read_text(encoding="utf-8", errors="replace")
     return not any(name in text for name in PLATFORM_INCLUDES)
 

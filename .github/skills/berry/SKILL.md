@@ -9,8 +9,9 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
-- Editing `libraries/BerryHost/src/` — the install, the four native modules, the page scene and the
-  draw tree — or `routines/Routines.cpp`, which owns the VM and the beat
+- Editing `libraries/BerryHost/src/` — the install, the four native modules, the page scene, the
+  draw tree and the VM behind `routines/Interpreter.h` — or `routines/Routines.cpp`, which loads
+  the image and drives the beat
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
 only packs it. It is checked on the device: `--task upload`, then a look at the panel.

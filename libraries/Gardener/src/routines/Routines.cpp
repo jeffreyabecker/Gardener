@@ -4,10 +4,7 @@
 
 #include "routines/Routines.h"
 
-#include <berry.h>
 #include <stddef.h>
-
-#include <BerryHost.h>
 
 #include <memory>
 #include <vector>
@@ -32,24 +29,6 @@ namespace {
 // names it is compiled. `/system/order` states that order, one path per line relative to `/system`.
 constexpr const char* SystemFolder = "system";
 constexpr const char* SystemOrder = "/system/order";
-
-// The root page the image answers: the Berry instance the system sets here is what the panel shows
-// when nothing else is up. An image that sets none leaves the mark.
-constexpr const char* RootPage = "__rootScene";
-
-// The image's root page as a scene, or nothing when the image sets none. The global is read when it
-// is wanted rather than cached, so whatever a later load sets is the page the go-home gesture goes
-// to.
-std::unique_ptr<gfx::ui::Scene> rootPage(bvm* vm, gfx::ui::GestureQueue& gestures,
-                                         PanelContext& panel) {
-  const int base = be_top(vm);
-  std::unique_ptr<gfx::ui::Scene> scene;
-  if (be_getglobal(vm, RootPage) && be_isinstance(vm, -1)) {
-    scene = std::make_unique<BerryScene>(gestures, vm, be_absindex(vm, -1), panel);
-  }
-  be_pop(vm, be_top(vm) - base);
-  return scene;
-}
 
 // A file dropped into a system folder and forgotten in the order would otherwise be a class that
 // quietly never exists, so every `.be` beside the ones the order names is reported. The folders are
@@ -98,12 +77,10 @@ bool Routines::begin(PanelContext& context) {
   library_ = &context.library();
   panel_ = &context;
 
-  vm_ = be_vm_new();
-  if (vm_ == nullptr) {
+  if (!interpreter_.begin(context, *this)) {
     logger_->error("vm: no memory, routines off");
     return false;
   }
-  berry::install(vm_, context, *this, context.logger());
   gestures_.begin(*logger_);
 
   // The system first, in the order `/system/order` states: a scene may construct a class one of
@@ -161,7 +138,7 @@ bool Routines::enterPage() {
 // under it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return stack_.reset(nullptr);
-  if (std::unique_ptr<gfx::ui::Scene> page = rootPage(vm_, gestures_, *panel_)) {
+  if (std::unique_ptr<gfx::ui::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
     if (stack_.reset(std::move(page))) return true;
   }
   return stack_.reset(std::make_unique<MarkScene>(gestures_));
@@ -243,42 +220,7 @@ bool Routines::loadFile(const String& path) {
     return false;
   }
 
-  // Every entry records the stack depth it started at: a failure leaves whatever the interpreter
-  // put there, and the VM is restored rather than trusted to be balanced.
-  const int base = be_top(vm_);
-  int rc = be_loadbuffer(vm_, path.c_str(), source.c_str(), source.length());
-  if (rc != BE_OK) {
-    reportError(path.c_str(), "compile");
-    be_pop(vm_, be_top(vm_) - base);
-    return false;
-  }
-  rc = be_pcall(vm_, 0);
-  if (rc != BE_OK) {
-    reportError(path.c_str(), "load");
-    be_pop(vm_, be_top(vm_) - base);
-    return false;
-  }
-  // The top level may leave a class or a global it set; nothing needs it back here.
-  be_pop(vm_, be_top(vm_) - base);
-  return true;
-}
-
-// A failed call leaves two values: the exception and its argument. The argument is the message, and
-// both are dropped so a broken file leaves the VM as it found it.
-void Routines::reportError(const char* file, const char* what) {
-  String message = "vm: ";
-  message += file;
-  message += ' ';
-  message += what;
-  message += ": ";
-  if (be_isstring(vm_, -2)) {
-    message += be_tostring(vm_, -2);
-    message += ": ";
-  }
-  const char* detail = be_tostring(vm_, -1);
-  message += detail != nullptr ? detail : "error";
-  logger_->error(message.c_str());
-  be_pop(vm_, 2);
+  return interpreter_.load(path, source);
 }
 
 }  // namespace gardener
