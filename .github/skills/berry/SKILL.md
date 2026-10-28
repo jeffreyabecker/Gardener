@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Checking the Berry data image under firmware/data without flashing. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: the host app in tools/berry/ compiles, drives and draws the whole image, so a typo costs a second rather than an upload. Covers the commands, the message each failure prints, and where the contract lives.'
+description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under routines/bindings/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ is broken and is not to be run.'
 ---
 
 # Berry
@@ -10,15 +10,22 @@ description: 'Checking the Berry data image under firmware/data without flashing
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
 - Editing `routines/Bindings.cpp`, `routines/Routines.cpp` or a file under `routines/bindings/`
-- A page misbehaves on the panel and you want the answer without a build and a flash
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
-only packs it. The harness in [tools/berry/](../../../tools/berry) compiles and runs the whole image
-on the host instead.
+only packs it. It is checked on the device: `--task upload`, then a look at the panel.
+
+> **NEVER RUN THIS SCRIPT — the berry check in `tools/berry/` is in a known broken state.** Ignore
+> the rest of the harness documentation; it is commented out below, ready for when the check works
+> again.
+
+<!-- Harness notes, commented out while `tools/berry/check.py` is broken.
+
+- A page misbehaves on the panel and you want the answer without a build and a flash
+
+The harness in [tools/berry/](../../../tools/berry) compiles and runs the whole image on the host
+instead.
 
 ## Run it
-NEVER RUN THIS SCRIPT 
-the berry check script is in a known broken state. Ignore the rest of this document
 
 ```powershell
 python tools/berry/check.py                              # compile, load and drive the image
@@ -77,9 +84,11 @@ that the next edit invalidates. When the user asks for one, run it. Otherwise on
 of a change that can break a routine is the verification, and a second is waiting for an answer it
 already gave.
 
+-->
+
 ## Reading the output
 
-Three things bite before the messages do:
+Two things bite when the image loads:
 
 - A file resolves globals **when it compiles**, method bodies included, so a class a file names has
   to be a global an earlier file defined. A new class belongs in an earlier module, or the call is
@@ -91,6 +100,9 @@ Three things bite before the messages do:
   `print`, `input`, `assert`, `super`, `open`, `isinstance`, `issubclass`, `__iterator__` are the
   VM's own; a class named `size` fails at load with no message and exit code `0xC0000005`, which
   reads as a crash rather than an error.
+
+<!-- Harness output, commented out while `tools/berry/check.py` is broken.
+
 - A page that never returns hangs the check. There is no instruction budget, on either side.
 
 | Message | What it means |
@@ -111,6 +123,7 @@ Three things bite before the messages do:
 The pump, the sensor and Bluetooth are models or counters and the clock is virtual, so timing and
 the actual vacuum stay the device's. `print` writes nowhere, here as on the device: `vacuum.log()`
 lands in the output as `[I]`. LittleFS is a map, so a write that would fill a filesystem succeeds.
+-->
 
 ## A binding is a wrapper
 
@@ -123,6 +136,6 @@ second implementation: the two drift, and the image pays for both at every boot.
 
 ## Still the device's job
 
-The check is the compile-and-contract loop. A change to the panel's look, the pump's behaviour or the
-sensor still needs `python scripts/arduino.py --task upload` and `--task data`, then a glance at the
-panel and the `[E]` lines on the serial console.
+A change to the panel's look, the pump's behaviour or the sensor is checked with
+`python scripts/arduino.py --task upload` and `--task data`, then a glance at the panel and the `[E]`
+lines on the serial console.

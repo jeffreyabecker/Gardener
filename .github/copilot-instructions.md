@@ -13,10 +13,8 @@ component's drawing or layout has to pass; it needs no board and no interpreter.
 **Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
 `firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under
 `assets/`, or a file in `firmware/data/` — a `.be` routine, a page, an `.ini` — cannot change
-what the build says, so editing one is not a reason to run it. The data image is checked on the host
-instead: `python tools/berry/check.py` compiles and drives every `.be` file, which is the success a
-routine edit has to prove, and `--art NAME` saves the frame a page actually draws as a BMP when a
-layout is the question.
+what the build says, so editing one is not a reason to run it. The data image is checked on the
+device instead: `--task upload`, then the panel and the `[E]` lines on the serial console.
 
 **Consider the build before running it.** Ask what this run would catch that the last one did not: what
 changed in the tree since then, and whether that change can reach the compiler. When the answer is
@@ -37,12 +35,16 @@ the report unless someone asks how much room the firmware has. Don't build a bas
 against, and don't build twice to show a delta. A size comparison nobody requested costs two slow
 runs and changes no decision, so report pass or fail and leave the figures out.
 
+<!-- The Berry check is in a known broken state: `tools/berry/check.py` must not be run, and the
+paragraph below is not a step. Restore it when the check works again.
+
 **Consider the Berry check before running it.** The check compiles and drives the `.be` files under
 `firmware/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
 VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
 `libraries/berry/` cannot change what it says. Ask what a run would catch that the last one did not;
 when the answer is nothing — no Berry edit since the last check, or a check that already passed on
 this tree — don't run it. One check after a change that can break a routine is the verification.
+-->
 
 A commit runs nothing: when told to commit, read `git status --short`, stage the tree and write the
 message, and don't build, test or review the diff on the way.
@@ -52,9 +54,9 @@ message, and don't build, test or review the diff on the way.
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
 `.github/skills/cpp/`; Git practice and which document work belongs in are in
 `.github/skills/project/`, with a skill per document — `.github/skills/specs/`,
-`.github/skills/plans/`, `.github/skills/ideation/` and `.github/skills/backlog/`; checking the
-Berry data image without flashing is in `.github/skills/berry/`, and the tool it drives is
-`tools/berry/`.
+`.github/skills/plans/`, `.github/skills/ideation/` and `.github/skills/backlog/`; writing the
+Berry data image is in `.github/skills/berry/`, whose host check under `tools/berry/` is broken and
+is not to be run.
 
 ## Where to look
 
