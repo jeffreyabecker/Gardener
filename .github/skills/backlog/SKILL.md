@@ -82,7 +82,7 @@ commit belongs to and any piece can be set aside or dropped on its own:
 - `backlog/<topic>/epic-<n>/task-<m>` — one per item, cut from the epic branch.
 
 Work on the task branch, commit the item, and merge it back into the epic branch once it is ticked
-off, then delete it. Merge the epic branch into the backlog branch once its summary is committed,
+off, then delete it. Merge the epic branch into the backlog branch,
 and the backlog branch into its target once the backlog and its plan are deleted. Merge with
 `--no-ff` so every task and epic keeps its own point in the history.
 
@@ -94,14 +94,11 @@ without unpicking the ones around it. Do not implement a whole epic in a single 
 of the list hides which step broke the tree and turns a review into one large diff. If an item turns
 out to be epic-sized once you are in it, stop and split it before the commit, not after.
 
-After the last item of an epic lands, write a summary at
-`docs/backlogs/completed/<topic>/epic-<n>-<title>.md`: what changed and what was verified, task by
-task. Commit it on its own, merge the epic branch, and leave the summary in place — the summaries
-stay after the backlog is deleted.
+
 
 ## Leaving
 
-When the last item lands, write the final epic's summary, then delete the backlog and the plan it
+When the last item lands, delete the backlog and the plan it
 breaks down. Commit the deletion on the backlog branch and merge it into the target; the branches
 have done their job once they are merged, so delete them rather than leaving them behind. The
 checked list is not the record — git is, and the commit messages say what the items did; the epic
