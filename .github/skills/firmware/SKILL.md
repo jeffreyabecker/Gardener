@@ -83,9 +83,9 @@ second case arrives.
 folder, not behind a flag defaulted off. The Berry runtime and the host client were both deleted
 outright and left to the history; do the same.
 
-**Answer a plan with the smallest mechanism.** Read `docs/plans/` for what has to be true, then
-answer it with the smallest mechanism the current single loop allows. Reaching for a task, a lock,
-a queue or a watchdog is a question to ask, not a thing to build.
+**Answer a requirement with the smallest mechanism.** Take what has to be true from the item that
+states it, then answer it with the smallest mechanism the current single loop allows. Reaching for a
+task, a lock, a queue or a watchdog is a question to ask, not a thing to build.
 
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
 of it: one `pressureKpa()` reading, with the ambient reference and the values derived from it left to the

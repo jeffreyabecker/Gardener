@@ -53,8 +53,13 @@ is.
 | Idea | `docs/ideas/` | options being weighed before anything is required | deletion, carried by a plan or a spec |
 | Backlog | `docs/backlogs/` | the tasklist breakdown of a plan, in order | deletion, with its plan, when the last item lands |
 
-A parking-lot line in `docs/plans/parking-lot.md` is the fifth thing and the smallest: a sentence
+A parking-lot line in `docs/parking-lot.md` is the fifth thing and the smallest: a sentence
 naming a deferred idea and what is blocking it, for work too small to earn any of the four.
+
+The specs and plans written before the panel port are archived in
+`docs/archive/specs-and-plans.zip` — out of date, and read by nothing. `docs/specs/` and
+`docs/plans/` are where a new one goes; one that comes back is rewritten against the tree rather
+than unzipped.
 
 The skill for each has the detail: `.github/skills/specs/`, `.github/skills/plans/`,
 `.github/skills/ideation/`, `.github/skills/backlog/`. This table is the whole of where a note

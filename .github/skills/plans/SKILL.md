@@ -1,6 +1,6 @@
 ---
 name: plans
-description: 'Plans in docs/plans/: a proposal that states an actionable requirement — what is wrong now, what has to be true instead and how that is checked — rather than a design, and is deleted once implemented or dropped, together with any backlog that breaks it down. Also covers the parking lot in docs/plans/parking-lot.md. Use when writing, reviewing or retiring a plan, adding a parking-lot entry, or naming a plan anywhere.'
+description: 'Plans in docs/plans/: a proposal that states an actionable requirement — what is wrong now, what has to be true instead and how that is checked — rather than a design, and is deleted once implemented or dropped, together with any backlog that breaks it down. Also covers the parking lot in docs/parking-lot.md. Use when writing, reviewing or retiring a plan, adding a parking-lot entry, or naming a plan anywhere.'
 ---
 
 # Plans
@@ -18,6 +18,10 @@ description: 'Plans in docs/plans/: a proposal that states an actionable require
 true when it is done. The behaviour, the constraint, the trade being accepted — that is the plan.
 Which file, which class, which mechanism does it is the implementer's call, and this project answers
 a plan with the smallest mechanism the current code allows.
+
+The folder is empty for now: the plans written before the panel port are in
+`docs/archive/specs-and-plans.zip`, out of date and read by nothing. A plan written today lands in
+`docs/plans/` as usual.
 
 A plan that dictates a task, a lock, a queue or a watchdog has answered a question that belongs to
 the code. A plan that lists the steps in order has become a backlog. State the requirement and let
@@ -120,7 +124,7 @@ requirement where it will live and let the plan go.
 
 ## The parking lot
 
-`docs/plans/parking-lot.md` holds unrealized "what if" ideas: work that has been considered and
+`docs/parking-lot.md` holds unrealized "what if" ideas: work that has been considered and
 deliberately deferred. An entry is a note, not a plan — one or two sentences saying what the idea is
 and what is blocking it. The design waits for whoever picks it up, because detail added today is
 detail the idea has not earned.

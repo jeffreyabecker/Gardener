@@ -54,8 +54,8 @@ everything either of them runs — is the firmware rather than a sketchbook copy
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs
 - [docs/guides/poc-parts.md](./docs/guides/poc-parts.md) — the parts, the wiring and a build
-- [docs/specs/serial-protocol.md](./docs/specs/serial-protocol.md) — the line the device serves
-- [docs/specs/vacuum-control.md](./docs/specs/vacuum-control.md) — the machine and its protections
+- [docs/archive/specs-and-plans.zip](./docs/archive/specs-and-plans.zip) — every spec and plan as it
+  stood before the panel port, kept for reference and read by nothing
 
 ## Safety
 

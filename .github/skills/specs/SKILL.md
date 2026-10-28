@@ -17,6 +17,10 @@ description: 'Specifications in docs/specs/: the contract for what the firmware 
 it, or testing against it, needs nothing else: the states, the transitions, the wire format, the
 limits and the errors are all in the file.
 
+The folder is empty for now: the specs written before the panel port are in
+`docs/archive/specs-and-plans.zip`, out of date and read by nothing. A spec written today is the
+contract from the moment it lands in `docs/specs/`.
+
 A spec is not a proposal and not a design. It says what is true, not what was considered, what will
 change, or which file to edit.
 

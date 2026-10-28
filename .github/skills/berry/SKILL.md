@@ -32,9 +32,9 @@ only when every file compiled, every registration looked like a routine, and eve
 build lands in `tools/berry/build/`, which is ignored, so a `.be` edit only recompiles and loads.
 
 The flags, the load order, the six modules and records a routine compiles against, the frame and
-what the drive does are the contract: [Berry harness](../../../docs/specs/berry-harness.md). Its
-sources are in `tools/berry/` — `harness.be` for the driver's bookkeeping, `driver.be` for the smoke
-walk, and `tests/suite.be` plus `tests/*.test.be` for the named suites.
+what the drive does are held by `tools/berry/` itself, and that is the whole statement of them:
+`harness.be` for the driver's bookkeeping, `driver.be` for the smoke walk, and `tests/suite.be`
+plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
 `--scene home`, `--scene browser` and `--scene system` draw the device's own well-known scenes.

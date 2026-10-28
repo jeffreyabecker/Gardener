@@ -44,7 +44,7 @@ ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const St
 // Forward on an entry showing is the page's work; with nothing showing there is no entry to hand
 // it, and a page that gave none drops the key as the editor always has.
 bool ChoiceScene::handle(const char* gesture) {
-  if (forward_ && hasValue_ && strcmp(gesture, "forward:single") == 0) {
+  if (!closed_ && forward_ && hasValue_ && strcmp(gesture, "forward:single") == 0) {
     forward_(value_);
     return true;
   }

@@ -18,7 +18,7 @@ empty sketch with the same FQBN is 298,069 bytes (22%). Two levers were identifi
 
 ### Revisit the partition scheme
 
-Pin `huge_app` instead of `default` in [scripts/arduino.py](../../scripts/arduino.py): one 3 MB
+Pin `huge_app` instead of `default` in [scripts/arduino.py](../scripts/arduino.py): one 3 MB
 app slot and 896 KB of LittleFS reports ~18% instead of 43%. The OTA slot it drops is unused, and
 the data image has to be uploaded again because the offset moves.
 
@@ -42,16 +42,12 @@ so an un-loaded routine has no row, and nothing has decided whether that is acce
 
 ## One file to flash
 
-A `--task release` that packs [firmware/gardener/data](../../firmware/gardener/data) into the build's
+A `--task release` that packs [firmware/gardener/data](../firmware/gardener/data) into the build's
 `gardener.ino.merged.bin`, so a device is flashed at `0x0` in one esptool command instead of
 `--task upload` and then `--task data`. What holds it back is that the image would ship whatever
 `settings.ini` and routines are in the tree and clear NVS on the way, which nobody has decided on.
 
-## Nudges inside a routine
 
-A gesture that adjusts the run while it is going instead of ending or restarting it: deeper by a step,
-one more set, or straight to rest and done. A routine page's free keys — Forward and Down — could
-carry one, but no run has a mid-run adjustment in its phase machine yet.
 
 ## Verify the two builds on hardware
 

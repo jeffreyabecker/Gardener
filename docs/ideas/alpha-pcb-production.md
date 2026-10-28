@@ -21,8 +21,8 @@ budget; everything is AliExpress except the XGZP6847A sensor; the panel stays th
 SH1106; and the custom PCBs are a carrier board that everything plugs into — bulk capacitors
 included — plus button modules. The enclosure is an off-the-shelf box with a PCB faceplate.
 
-The parts and wiring are in [the POC build guide](../guides/poc-parts.md), and the
-valve's role in the machine is in [the vacuum-control spec](../specs/vacuum-control.md).
+The parts and wiring are in [the POC build guide](../guides/poc-parts.md); the valve's role in the
+machine is that a normally open one vents the chamber on any fault.
 
 ## The build
 
@@ -132,10 +132,10 @@ labels are silkscreen. Fabrication is the whole cost — about $0.20-0.50 at a f
 
 ## The valve: normally open or normally closed
 
-The POC and the machine spec assume a normally open valve: de-energised is open, so the chamber
+The POC and the machine assume a normally open valve: de-energised is open, so the chamber
 vents on any fault, and running a vacuum means energising the coil for the whole pull and the whole
-hold. The firmware already covers both — [the machine spec](../specs/vacuum-control.md) names the
-fitted direction in the `valve` setting, and `NormallyClosedValve` in the machine library inverts
+hold. The firmware already covers both — the `valve` setting names the
+fitted direction, and `NormallyClosedValve` in the machine library inverts
 the pin — so the choice is a parts and product decision, not a firmware one.
 
 | | Normally open | Normally closed |

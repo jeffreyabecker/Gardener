@@ -3,9 +3,9 @@
 The panel's scene stack, value editors and settings list are C++, and `/system` still loads six
 Berry files, five of which name classes the tree no longer has — the component model, the scene
 lifecycle and the settings kinds — so the pages they build cannot load. This is the work between
-that image and a panel whose every page is native. The registry epic breaks down
-[link-the-routines.md](../plans/link-the-routines.md); the rest is the port the native scenes
-already made possible, and the requirement for it is what the page does today.
+that image and a panel whose every page is native. The registry epic is what `link-the-routines.md`
+asked for, in `docs/archive/specs-and-plans.zip`; the rest is the port the native scenes already
+made possible, and the requirement for it is what the page does today.
 
 Every item leaves the tree working: `python scripts/arduino.py --task build` passes, and what
 touches `libraries/Gfx` or `libraries/Gardener` passes `python tools/gfx/check.py`, while what
@@ -79,10 +79,11 @@ touches the image passes `python tools/berry/check.py`.
 
 ## Epic 5 — the record
 
-- [ ] 5.1 — `docs/specs/ui/components.md` becomes the drawing verb list: the box a call takes, the
-  composed verbs and the distribution functions. Verified: the file names no component class.
+- [ ] 5.1 — The drawing verbs get a spec: a file in `docs/specs/` listing the box a call takes, the
+  composed verbs and the distribution functions, in place of the archived component spec its
+  predecessor wrote. Verified: the file names no component class.
 - [ ] 5.2 — `routine.md`, `scenes.md` and `bindings.md` state the page box, the drawing a page does
   and the modules a routine can call as the tree has them. Verified: none of the three names a class
   or a file the tree no longer has.
-- [ ] 5.3 — `docs/specs/berry-harness.md` describes the check as it is: the image it loads, the
-  scenes it drives and the captures it writes. Verified: every command in the file runs as written.
+- [ ] 5.3 — The check gets a spec: a file in `docs/specs/` stating the image it loads, the scenes it
+  drives and the captures it writes. Verified: every command in the file runs as written.

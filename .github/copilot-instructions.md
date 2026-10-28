@@ -59,6 +59,7 @@ Berry data image without flashing is in `.github/skills/berry/`, and the tool it
 ## Where to look
 
 - [README.md](../README.md) — build and upload flow, the documentation index and safety notes.
-- [docs/specs/vacuum-control.md](../docs/specs/vacuum-control.md) — the machine: states, transitions and protections.
-- [docs/specs/serial-protocol.md](../docs/specs/serial-protocol.md) — the interface the firmware serves.
 - [docs/guides/poc-parts.md](../docs/guides/poc-parts.md) — the parts a build is assembled from, with prices.
+- [docs/archive/specs-and-plans.zip](../docs/archive/specs-and-plans.zip) — every spec and plan
+  written before the panel port. Nothing in it is read when implementing and no work is checked
+  against it: what is true is the code and the backlog.
