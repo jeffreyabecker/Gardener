@@ -368,20 +368,49 @@ int routinesTitle(bvm* vm) {
   be_return(vm);
 }
 
+// routines.settings_cfgs(routine_key): the declarations a record holds, in the order its settings
+// list shows them, each as the record a page reads it back through. Nil for a key nobody registered
+// and for a record that declares nothing, which is what a page tests before it opens a list; reading
+// leaves the record's rows where they were, so a list opened twice edits the same declarations.
+int routinesSettingsCfgs(bvm* vm) {
+  if (routines == nullptr) {
+    be_raise(vm, "runtime_error", "routines.settings_cfgs: no panel");
+  }
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
+  }
+  const std::vector<gfx::ui::SettingsRow*>* rows =
+      routines->registry().settingsRows(String(argText(vm, 1)));
+  if (rows == nullptr || rows->empty()) be_return_nil(vm);
+
+  // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
+  // instance as the answer.
+  be_newobject(vm, "list");
+  const int list = be_absindex(vm, -1);
+  for (gfx::ui::SettingsRow* row : *rows) {
+    pushSettingDeclaration(vm, row);
+    be_data_push(vm, list);
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);
+  be_return(vm);
+}
+
 const bnfuncinfo RoutinesLibrary[] = {
     {"register", routinesRegister},
     {"load_settings", routinesLoadSettings},
     {"save_settings", routinesSaveSettings},
     {"rows", routinesRows},
     {"title", routinesTitle},
+    {"settings_cfgs", routinesSettingsCfgs},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
 // The module the image registers its routines through: one call to declare a record with the page
-// it names, the two the page reads and writes its set through, and the two the browser lists them
-// with.
+// it names, the two the page reads and writes its set through, and the three the browser lists them
+// and edits them with.
 void installRoutinesModule(bvm* vm) {
   installRecord(vm, ActivationRecord, ActivationFields);
   installRecord(vm, RowRecord, RowFields);

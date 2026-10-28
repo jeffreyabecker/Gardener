@@ -23,6 +23,15 @@ PressureRow::PressureRow(gfx::ui::GestureQueue& gestures, gfx::ui::Ux& ux, const
       unit_(unit),
       wholeSteps_(wholeSteps) {}
 
+// The pressure's number row, under the kind its declaration named. The step and bounds are the
+// number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
+// and ceiling — because those are what the editor it builds moves within.
+gfx::ui::SettingDeclaration PressureRow::declaration() const {
+  gfx::ui::SettingDeclaration out = NumberRow::declaration();
+  out.kind = "pressure";
+  return out;
+}
+
 std::unique_ptr<gfx::ui::EditorScene> PressureRow::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, unit_, wholeSteps_,

@@ -59,6 +59,9 @@ BoolRow::BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String
       default_(defaultValue),
       nullable_(nullable) {}
 
+// The switch declares its kind and nothing else: it has no step, no bound and no entries.
+SettingDeclaration BoolRow::declaration() const { return {"bool"}; }
+
 String BoolRow::text(const std::any& value) const {
   if (!value.has_value()) return "--";
   return std::any_cast<bool>(value) ? "ON" : "OFF";
@@ -105,6 +108,15 @@ ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const St
       items_(items),
       nullable_(nullable),
       forward_(std::move(forward)) {}
+
+// A choice declares its entries — the keys it offers, which are the titles it prints — and no step
+// or bound, because the keys are the only thing it moves between.
+SettingDeclaration ChoiceRow::declaration() const {
+  SettingDeclaration out;
+  out.kind = "choice";
+  out.entries = items_;
+  return out;
+}
 
 // The title the entry showing prints, which is what the list has room for: a key no entry names
 // reads as the first entry, the way the scene shows it.
@@ -155,6 +167,17 @@ DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, cons
       min_(min),
       max_(max),
       nullable_(nullable) {}
+
+// The bounds a duration was declared with are whole seconds; a caller reading the declaration back
+// takes them as the numbers they are.
+SettingDeclaration DurationRow::declaration() const {
+  SettingDeclaration out;
+  out.kind = "duration";
+  out.step = static_cast<float>(step_);
+  out.min = static_cast<float>(min_);
+  out.max = static_cast<float>(max_);
+  return out;
+}
 
 String DurationRow::text(const std::any& value) const {
   char printed[16];
@@ -210,6 +233,17 @@ NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const St
 // NAN where it means `--`.
 std::any NumberRow::defaultValue() const {
   return isnan(default_) ? std::any() : std::any(default_);
+}
+
+// The step and bounds the number was declared with, as the number's own units. A kind that edits a
+// number its own way — a pressure — states its kind over these.
+SettingDeclaration NumberRow::declaration() const {
+  SettingDeclaration out;
+  out.kind = "number";
+  out.step = step_;
+  out.min = min_;
+  out.max = max_;
+  return out;
 }
 
 String NumberRow::text(const std::any& value) const {

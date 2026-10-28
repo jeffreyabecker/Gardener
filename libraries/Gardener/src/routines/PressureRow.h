@@ -21,6 +21,7 @@ class PressureRow : public gfx::ui::NumberRow {
               const String& label, float currentKpa, DisplayUnit unit, float wholeSteps,
               bool nullable = false, gfx::ui::Validator validator = nullptr);
 
+  gfx::ui::SettingDeclaration declaration() const override;
   std::unique_ptr<gfx::ui::EditorScene> scene(const std::any& value) override;
 
  private:

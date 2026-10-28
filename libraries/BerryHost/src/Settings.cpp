@@ -45,6 +45,37 @@ int rowRelease(bvm* vm) {
   be_return_nil(vm);
 }
 
+// --- the declaration read back ---------------------------------------------
+
+// The record a routine's declarations are read back through: a page reads one off
+// `routines.settings_cfgs` and `SettingsEditScene` takes the row it holds. The row is borrowed
+// rather than owned, because reading a record's declarations leaves them where they were — the same
+// list opened twice edits the same declarations.
+constexpr const char* SettingRecord = "RoutineSetting";
+
+const bnfuncinfo SettingFields[] = {
+    {".p", nullptr},
+    {"key", nullptr},
+    {"label", nullptr},
+    {"kind", nullptr},
+    {"step", nullptr},
+    {"min", nullptr},
+    {"max", nullptr},
+    {"entries", nullptr},
+    {nullptr, nullptr},
+};
+
+// The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
+// box is what the interpreter frees, never the row in it.
+struct RowRef {
+  gfx::ui::SettingsRow* row;
+};
+
+int rowRefRelease(bvm* vm) {
+  delete static_cast<RowRef*>(be_tocomptr(vm, 1));
+  be_return_nil(vm);
+}
+
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need. Every check runs before the first String is built, so a refused declaration leaves
 // nothing behind.
@@ -157,6 +188,31 @@ void holdRow(bvm* vm, std::unique_ptr<gfx::ui::SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
+}
+
+// A declaration's number, and nil for the one its kind does not have: a switch has no step, a choice
+// no bound.
+void setNumberOrNil(bvm* vm, int record, const char* field, float value) {
+  if (isnan(value)) {
+    be_pushnil(vm);
+  } else {
+    be_pushreal(vm, value);
+  }
+  be_setmember(vm, record, field);
+  be_pop(vm, 1);
+}
+
+// The keys a choice offers, as the list class's instance the image iterates over, and an empty one
+// for a kind that offers none. Left on the stack for the caller to set on a record.
+void pushEntries(bvm* vm, const std::vector<gfx::ui::ChoiceItem>& entries) {
+  be_newobject(vm, "list");
+  const int list = be_absindex(vm, -1);
+  for (const gfx::ui::ChoiceItem& entry : entries) {
+    be_pushstring(vm, entry.key.c_str());
+    be_data_push(vm, list);
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);  // the raw list, leaving the instance as the answer
 }
 
 // --- the kinds -------------------------------------------------------------
@@ -335,8 +391,31 @@ std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int
   return rows;
 }
 
+// The declaration a record holds, as the record a page reads it back through: the row it names,
+// borrowed, with the key, label, kind and the step, bounds and entries that kind was declared with.
+// Left on the stack for the caller to push onto a list.
+void pushSettingDeclaration(bvm* vm, gfx::ui::SettingsRow* row) {
+  const gfx::ui::SettingDeclaration declaration = row->declaration();
+  const int record = beginRecord(vm, SettingRecord);
+
+  be_newcomobj(vm, new RowRef{row}, rowRefRelease);
+  be_setmember(vm, record, ".p");
+  be_pop(vm, 1);
+
+  setText(vm, record, "key", row->key().c_str());
+  setText(vm, record, "label", row->label().c_str());
+  setText(vm, record, "kind", declaration.kind);
+  setNumberOrNil(vm, record, "step", declaration.step);
+  setNumberOrNil(vm, record, "min", declaration.min);
+  setNumberOrNil(vm, record, "max", declaration.max);
+  pushEntries(vm, declaration.entries);
+  setValue(vm, record, "entries", -1);
+  be_pop(vm, 1);
+}
+
 // The `settings` module: the four declaration classes, installed as members so a file reaches a
-// kind through the module rather than through a global of its own.
+// kind through the module rather than through a global of its own, and the record a routine's
+// declarations are read back through.
 void installSettingsModule(bvm* vm) {
   struct Kind {
     const char* name;
@@ -361,6 +440,8 @@ void installSettingsModule(bvm* vm) {
   be_setglobal(vm, "settings");
   // be_setglobal leaves the value it stored on the stack; the module is done with here.
   be_pop(vm, 1);
+
+  installRecord(vm, SettingRecord, SettingFields);
 }
 
 }  // namespace berry

@@ -33,6 +33,7 @@ class BoolRow : public SettingsRow {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
+  SettingDeclaration declaration() const override;
   String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
@@ -64,6 +65,7 @@ class ChoiceRow : public SettingsRow {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
+  SettingDeclaration declaration() const override;
   String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
@@ -94,6 +96,7 @@ class DurationRow : public SettingsRow {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
+  SettingDeclaration declaration() const override;
   String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
@@ -129,6 +132,7 @@ class NumberRow : public SettingsRow {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
+  SettingDeclaration declaration() const override;
   String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;

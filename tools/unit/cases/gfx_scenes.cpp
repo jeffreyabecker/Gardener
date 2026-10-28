@@ -270,6 +270,8 @@ class TestRow : public SettingsRow {
     return !value.has_value() || std::any_cast<String>(&value) != nullptr;
   }
 
+  SettingDeclaration declaration() const override { return {"text"}; }
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override {
     return std::make_unique<TestEditor>(gestures_, ux_, label_, value);
   }
@@ -481,6 +483,46 @@ TEST_CASE("a row prints its value and opens its editor") {
   CHECK_EQ(unset.defaultValue().has_value(), 0);
   CHECK_EQ(std::string(unset.text(unset.defaultValue()).c_str()), std::string("--"));
   CHECK_EQ(unset.scene(unset.defaultValue())->isNull(), 1);
+}
+
+// The declaration each row was built from, which is what a routine's record answers a page: the kind
+// its call named, the step and bounds that call gave, and the entries a choice offers. A kind with
+// none of them answers nothing rather than a stand-in, so a record can carry them as nil.
+TEST_CASE("a row answers the declaration it was built from") {
+  NoGestures gestures;
+  Ux ux;
+  NumberRow target(gestures, ux, "target", "Target", 5.0f, 2, 1, 9, false);
+  BoolRow power(gestures, ux, "power", "Power", true);
+  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 30, 3600, false);
+
+  const SettingDeclaration number = target.declaration();
+  CHECK_EQ(std::string(number.kind), std::string("number"));
+  CHECK_EQ(number.step == 2.0f, 1);
+  CHECK_EQ(number.min == 1.0f, 1);
+  CHECK_EQ(number.max == 9.0f, 1);
+  CHECK_EQ(number.entries.size(), 0u);
+
+  const SettingDeclaration shut = power.declaration();
+  CHECK_EQ(std::string(shut.kind), std::string("bool"));
+  CHECK_EQ(isnan(shut.step), 1);
+  CHECK_EQ(isnan(shut.min), 1);
+  CHECK_EQ(isnan(shut.max), 1);
+  CHECK_EQ(shut.entries.size(), 0u);
+
+  const SettingDeclaration chosen = unit.declaration();
+  CHECK_EQ(std::string(chosen.kind), std::string("choice"));
+  CHECK_EQ(isnan(chosen.step), 1);
+  CHECK_EQ(chosen.entries.size(), choices().size());
+  CHECK_EQ(std::string(chosen.entries.front().key.c_str()), std::string("lo"));
+  CHECK_EQ(std::string(chosen.entries.front().title.c_str()), std::string("Low"));
+
+  const SettingDeclaration timed = hold.declaration();
+  CHECK_EQ(std::string(timed.kind), std::string("duration"));
+  CHECK_EQ(timed.step == 5.0f, 1);
+  CHECK_EQ(timed.min == 30.0f, 1);
+  CHECK_EQ(timed.max == 3600.0f, 1);
+  CHECK_EQ(timed.entries.size(), 0u);
 }
 
 // The list is seeded from the set the document holds: what the set says for a key it carries, the

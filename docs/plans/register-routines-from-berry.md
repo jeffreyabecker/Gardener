@@ -1,31 +1,19 @@
 # Register a routine from Berry
 
 `/system/browser.be` names `List`, `ux` and `SettingsEditScene`, and none of the three exists, so the
-file does not compile and no browser appears; `routines.settings_cfgs` and `routines.push`, which its
-Forward and OK call, are unanswered too. What is left is the path from a row to a launched, editable
-routine, and the gesture that shows the list; the device's own settings list is another plan.
+file does not compile and no browser appears; `routines.push`, which its OK and Forward call, is
+unanswered too. What is left is the path from a row to a launched, editable routine, and the gesture
+that shows the list; the device's own settings list is another plan.
 
 ## What is left
 
 | Call | Used by | What is missing |
 | --- | --- | --- |
-| `routines.settings_cfgs(key)` | the browser's Forward, both pages' edit | a record's declarations |
-| `SettingsEditScene(cfgs, values, title)` | the same three Forward paths | the settings list as a page |
+| `SettingsEditScene(cfgs, values, title)` | the browser's Forward and both pages' edit | the settings list as a page |
 | `routines.push(key, nil, activation)` | the browser's OK and Forward | a record's page on the stack |
 | `ux.push`, `ux.pop`, `ux.pop_to_root` | the browser's Forward and Back, the routines' `leave()` and `finish()` | the stack from Berry |
 | `List(6)`, `set`, `move`, `selected_row`, `rows`, `selected`, `first()`, `visible` | the browser's rows | a window over the rows |
 | Home's Up double press | home's gestures | the browser's way in |
-
-## `settings_cfgs` answers the declarations
-
-`register` consumes its declarations into rows the store reads, so they cannot be read back as given:
-`settings_cfgs(key)` answers them in declaration order, each with the key, label, kind, bounds, step
-and entries it was declared with, for a key or an alternate, and nil for an unregistered key or a
-record that declared none. Reading leaves the record's rows as they were, so a list opened twice edits
-the same declarations.
-
-Checked: each routine answers its declarations in declaration order with their kinds and bounds, and a
-routine that declares none answers nil.
 
 ## A key launches its page
 

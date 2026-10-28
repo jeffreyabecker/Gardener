@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math.h>
 #include <stdint.h>
 
 #include <any>
@@ -11,6 +12,7 @@
 
 #include <Arduino.h>
 
+#include "ui/ChoiceScene.h"
 #include "ui/EditorScene.h"
 #include "ui/Scene.h"
 #include "ui/Ux.h"
@@ -22,6 +24,18 @@ namespace gardener::gfx::ui {
 using SettingValues = std::map<String, std::any>;
 
 class SettingsRow;
+
+// The declaration a row was built from, as a page reads it back off a routine's record: the kind the
+// file named, the step and bounds that kind was given and the entries a choice offers. A kind with
+// none of them answers NAN and no entries, which a record carries as nil. A row answers this from the
+// fields it holds rather than from a copy kept beside it, so the two cannot come apart.
+struct SettingDeclaration {
+  const char* kind = "";
+  float step = NAN;
+  float min = NAN;
+  float max = NAN;
+  std::vector<ChoiceItem> entries;
+};
 
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
@@ -50,6 +64,11 @@ class SettingsRow {
   // a key. The list starts a key its set does not carry from this, and nothing at all is an empty
   // any, which the list prints as `--`.
   virtual std::any defaultValue() const = 0;
+
+  // The declaration this row was built from: the kind, and the step, bounds and entries that kind
+  // was given. A caller outside the list reads it back — the registry's record through the module —
+  // so what a page sees is the declaration the record holds.
+  virtual SettingDeclaration declaration() const = 0;
 
   // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
   // a number its digits, a duration its compact text.
