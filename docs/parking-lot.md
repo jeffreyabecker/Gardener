@@ -112,6 +112,19 @@ it build with only the vendored VM and Gfx beside it. Blocked by: four modules r
 `PanelContext` into `machine/Machine.h`, `storage/Config.h`, `storage/Jingles.h` and
 `panel/BuzzerPlayer.h`, and nothing has chosen a shape for one seam that covers all four.
 
+## A spec for the image's check
+
+The host check compiles the image, drives its scenes and writes its captures, and nothing states
+what it loads, what it drives or what it writes. Blocked by: the check is in a known broken state, so
+a spec written today would describe a tool that does not run.
+
+## One file to compile
+
+A task in [scripts/arduino.py](../scripts/arduino.py) that keeps a verbose build's compile command
+and replays it with `-fsyntax-only` for one file, so a library change is checked in seconds rather
+than by a whole build. Blocked by: nothing has decided whether the host check that compiles the
+firmware's C++ without the interpreter answers the same question, which would leave the task unused.
+
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
