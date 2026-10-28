@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 
+#include <utility>
+
 #include "suite.h"
 
 namespace gardener::gfx::test {
@@ -22,6 +24,8 @@ String keyOf(const ChoiceScene& scene) {
 class NumberProbe : public NumberScene {
  public:
   using NumberScene::NumberScene;
+  using EditorScene::handle;
+  using EditorScene::hint;
   using EditorScene::nudge;
   using EditorScene::pageContents;
 };
@@ -104,6 +108,34 @@ void aNumberBandDrawsTheValueAndTheBar() {
   free.pageContents()(band);
   expect(display.anyInk(0, 0, 40, 24), "an unbounded number still draws");
   expectEq(display.inkCount(0, 18, 40, 6), 0, "and carries no bar");
+}
+
+// The check a row's declaration gave is asked on OK: a value it refuses keeps the editor open with
+// the text it answered printed in the hint band, and a step clears that text.
+void aRefusedValueKeepsTheEditorOpen() {
+  NoGestures gestures;
+  Ux ux;
+  String label("Total time");
+  NumberProbe number(gestures, ux, label, 30, 10, 0, 100, false);
+  number.setValidator([](const std::any& proposed) {
+    const bool holds = std::any_cast<float>(proposed) >= 60;
+    return holds ? std::make_pair(true, String())
+                 : std::make_pair(false, String("TOTAL < HOLDS"));
+  });
+
+  expectEq(number.handle("ok:single"), 1, "OK is answered");
+  expectText(number.hint(), "TOTAL < HOLDS", "a refused value prints the text it answered");
+  expectText(number.text().c_str(), "30", "and the editor stays on the value it was refused");
+
+  expectEq(number.handle("up:single"), 1, "a step is answered");
+  expectText(number.hint(), "\x1E/\x1F  OK=SAVE", "and clears the refusal");
+  expectText(number.text().c_str(), "40", "the value stepped as it always does");
+  number.handle("up:single");
+  number.handle("up:single");
+  expectText(number.text().c_str(), "60", "up to the value the check accepts");
+
+  expectEq(number.handle("ok:single"), 1, "OK is answered again");
+  expectEq(number.handle("up:single"), 0, "and an editor that closed answers nothing more");
 }
 
 // --- the choice -------------------------------------------------------------
@@ -393,6 +425,10 @@ void aDurationHoldsItsBounds() {
   expectText(duration.caption(), "\x1E/\x1F MIN  \x1A=NEXT", "the minutes stage says Forward next");
   duration.press("forward:single");
   expectText(duration.caption(), "\x1E/\x1F SEC  OK=SAVE", "the seconds stage says OK saves");
+  duration.setValidator(
+      [](const std::any&) { return std::make_pair(false, String("TOTAL < HOLDS")); });
+  duration.press("ok:single");
+  expectText(duration.caption(), "TOTAL < HOLDS", "a refusal prints over the stage's hint");
 }
 
 void aNullableDurationHoldsNothing() {
@@ -463,6 +499,7 @@ void addEditorCases(std::vector<Case>& cases) {
   cases.push_back({"a nullable number holds nothing", aNullableNumberHoldsNothing});
   cases.push_back({"a number with no bounds steps freely", aNumberWithNoBoundsStepsFreely});
   cases.push_back({"a number band draws the value and the bar", aNumberBandDrawsTheValueAndTheBar});
+  cases.push_back({"a refused value keeps the editor open", aRefusedValueKeepsTheEditorOpen});
   cases.push_back({"a choice steps and wraps", aChoiceStepsAndWraps});
   cases.push_back({"a key no entry names shows the first", aKeyNoEntryNamesShowsTheFirst});
   cases.push_back({"a nullable choice clears below the first", aNullableChoiceClearsBelowTheFirst});

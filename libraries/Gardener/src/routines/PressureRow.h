@@ -19,9 +19,9 @@ class PressureRow : public gfx::ui::NumberRow {
  public:
   PressureRow(gfx::ui::GestureQueue& gestures, gfx::ui::Ux& ux, const String& key,
               const String& label, float currentKpa, DisplayUnit unit, float wholeSteps,
-              bool nullable = false);
+              bool nullable = false, gfx::ui::Validator validator = nullptr);
 
-  std::unique_ptr<gfx::ui::Scene> scene(const std::any& value) override;
+  std::unique_ptr<gfx::ui::EditorScene> scene(const std::any& value) override;
 
  private:
   DisplayUnit unit_;

@@ -5,6 +5,7 @@
 #include <functional>
 #include <math.h>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "suite.h"
@@ -226,12 +227,16 @@ void aPagePaintsAgainWhenTheOneAboveItPops() {
 // --- the settings list ------------------------------------------------------
 
 // A value editor a settings case can open: it answers whatever value the case sets on it.
-class TestEditor : public Scene {
+class TestEditor : public EditorScene {
  public:
-  TestEditor(GestureQueue& gestures, const std::any& value) : Scene(gestures), value_(value) {}
+  TestEditor(GestureQueue& gestures, Ux& ux, String& label, const std::any& value)
+      : EditorScene(gestures, ux, label), value_(value) {}
 
   std::any value() const override { return value_; }
   void set(const std::any& value) { value_ = value; }
+
+ protected:
+  void nudge(int8_t) override {}
 
  private:
   std::any value_;
@@ -240,7 +245,7 @@ class TestEditor : public Scene {
 // A settings row that prints a String value and builds one of those editors.
 class TestRow : public SettingsRow {
  public:
-  explicit TestRow(GestureQueue& gestures) : gestures_(gestures) {}
+  TestRow(GestureQueue& gestures, Ux& ux) : gestures_(gestures), ux_(ux) {}
 
   void hold(const String& key, const String& label, const String& value) {
     key_ = key;
@@ -264,12 +269,13 @@ class TestRow : public SettingsRow {
     return stored.isEmpty() ? defaultValue() : std::any(stored);
   }
 
-  std::unique_ptr<Scene> scene(const std::any& value) override {
-    return std::make_unique<TestEditor>(gestures_, value);
+  std::unique_ptr<EditorScene> scene(const std::any& value) override {
+    return std::make_unique<TestEditor>(gestures_, ux_, label_, value);
   }
 
  private:
   GestureQueue& gestures_;
+  Ux& ux_;
   String key_;
   String label_;
   String value_;
@@ -311,8 +317,8 @@ void aSettingsListMovesAndEdits() {
   Pressed gestures;
   Ux ux;
   String title("SETTINGS");
-  TestRow target(gestures);
-  TestRow unit(gestures);
+  TestRow target(gestures, ux);
+  TestRow unit(gestures, ux);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
   std::vector<SettingsRow*> rows{&target, &unit};
@@ -355,7 +361,7 @@ void aSettingsListCancelPutsTheSetBack() {
   Pressed gestures;
   Ux ux;
   String title("SETTINGS");
-  TestRow target(gestures);
+  TestRow target(gestures, ux);
   target.hold("target", "Target", "50");
   std::vector<SettingsRow*> rows{&target};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
@@ -379,8 +385,8 @@ void aSettingsListDrawsItsRows() {
   NoGestures gestures;
   Ux ux;
   String title("SETTINGS");
-  TestRow target(gestures);
-  TestRow unit(gestures);
+  TestRow target(gestures, ux);
+  TestRow unit(gestures, ux);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
   SettingsProbe list(gestures, ux, title, {&target, &unit}, {});
@@ -557,6 +563,130 @@ void aRowStoresItsDocumentForm() {
            "a word the kind cannot read answers the default");
 }
 
+// The check 5_ramped_static's declaration gives its total: the profile is the two holds plus a
+// ramp, so the total covers the holds. This is the declaration's form of a check — the declaration,
+// the set in force and the value proposed — which is what a row's constructor is handed.
+std::pair<bool, String> totalCoversHolds(const std::vector<SettingsRow*>&,
+                                         const SettingValues& values,
+                                         const std::any& proposed) {
+  const auto initial = values.find("initial_duration");
+  const auto target = values.find("target_duration");
+  const int32_t holds =
+      (initial == values.end() ? 0 : std::any_cast<int32_t>(initial->second)) +
+      (target == values.end() ? 0 : std::any_cast<int32_t>(target->second));
+  const int32_t total = std::any_cast<int32_t>(proposed);
+  return total < holds ? std::make_pair(false, String("TOTAL < HOLDS"))
+                       : std::make_pair(true, String());
+}
+
+// The check 2_ramped_interval's declaration gives its final pressure: a ramp ends no lower than it
+// starts.
+std::pair<bool, String> finalUnderStart(const std::vector<SettingsRow*>&,
+                                        const SettingValues& values, const std::any& proposed) {
+  const auto initial = values.find("initial_pressure");
+  const float start = initial == values.end() ? 0.0f : std::any_cast<float>(initial->second);
+  const float end = std::any_cast<float>(proposed);
+  return end < start ? std::make_pair(false, String("FINAL < START"))
+                     : std::make_pair(true, String());
+}
+
+// A row's check curried over the declaration and the set the list holds refuses the values a
+// routine cannot run and accepts the ones it can, and a row the declaration gave none answers none.
+void aRowsCheckRefusesWhatTheSetCannotUse() {
+  NoGestures gestures;
+  Ux ux;
+  DurationRow initial(gestures, ux, "initial_duration", "Start time", 60, 1, 0, 7200, false);
+  DurationRow target(gestures, ux, "target_duration", "Target time", 60, 1, 0, 7200, false);
+  DurationRow total(gestures, ux, "total_duration", "Total time", 300, 1, 1, 7200, false,
+                    totalCoversHolds);
+  NumberRow start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  NumberRow last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr, 2,
+                 finalUnderStart);
+  std::vector<SettingsRow*> rows{&initial, &target, &total, &start, &last};
+
+  SettingValues values;
+  values["initial_duration"] = static_cast<int32_t>(60);
+  values["target_duration"] = static_cast<int32_t>(60);
+  values["total_duration"] = static_cast<int32_t>(300);
+  values["initial_pressure"] = 5.0f;
+  values["final_pressure"] = 5.0f;
+
+  const CurriedValidator holds = total.check(rows, values);
+  expectEq(holds != nullptr, 1, "a row the declaration gave a check carries it");
+  if (!holds) return;
+  std::pair<bool, String> refused = holds(std::any(static_cast<int32_t>(30)));
+  expectEq(refused.first, 0, "a total of 30 under holds of 60 and 60 is refused");
+  expectText(refused.second.c_str(), "TOTAL < HOLDS", "with the text that refuses it");
+  expectEq(holds(std::any(static_cast<int32_t>(400))).first, 1, "a total of 400 is accepted");
+
+  const CurriedValidator pressure = last.check(rows, values);
+  expectEq(pressure != nullptr, 1, "the final pressure row carries its check too");
+  if (!pressure) return;
+  refused = pressure(std::any(3.0f));
+  expectEq(refused.first, 0, "a final pressure of 3.0 under a start of 5.0 is refused");
+  expectText(refused.second.c_str(), "FINAL < START", "with the text that refuses it");
+  expectEq(pressure(std::any(5.0f)).first, 1, "a final pressure at the start is accepted");
+
+  expectEq(initial.check(rows, values) == nullptr, 1, "a row given no check carries none");
+}
+
+// The list hands a row's check to the editor it opens, so a refused value keeps that editor on the
+// stack and never reaches the set: the list closes on the value it was opened with.
+void aSettingsListKeepsARefusedValueOut() {
+  Pressed gestures;
+  Ux ux;
+  String title("SETTINGS");
+  NumberRow start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  NumberRow last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr, 2,
+                 finalUnderStart);
+  std::vector<SettingsRow*> rows{&start, &last};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
+  SettingsProbe* settings = list.get();
+
+  SettingValues handed;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list), [&handed](Scene& scene) {
+    handed = static_cast<SettingsScene&>(scene).values();
+  });
+
+  settings->press("down:single");
+  settings->press("forward:single");
+  expectEq(ux.depth(), 3, "the row's editor is open");
+  press(ux, gestures, "down:single", 1000);
+  press(ux, gestures, "down:single", 1010);
+  press(ux, gestures, "ok:single", 1020);
+  expectEq(ux.depth(), 3, "a refused value keeps the editor open");
+  auto* editor = static_cast<NumberScene*>(ux.top());
+  expectEq(std::any_cast<float>(editor->value()) == 3.0f, 1, "on the value it was refused");
+
+  press(ux, gestures, "cancel:single", 1030);
+  expectEq(ux.depth(), 2, "cancel still closes it");
+  settings->press("ok:single");
+  expectEq(ux.depth(), 1, "OK closes the list");
+  expectEq(std::any_cast<float>(handed.at("final_pressure")) == 5.0f, 1,
+           "and the refused value was never written");
+}
+
+// What a document holds is held to its row on the way in: a duration or a number outside its bounds
+// answers the bound, and a choice naming no entry answers its default.
+void aParsedValueIsHeldToItsRow() {
+  NoGestures gestures;
+  Ux ux;
+  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 7200, false);
+  NumberRow target(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+
+  expectEq(std::any_cast<int32_t>(hold.parse(String("99999"))), 7200,
+           "a duration past its top bound answers the bound");
+  expectEq(std::any_cast<int32_t>(hold.parse(String("-5"))), 0,
+           "and one under its floor answers that");
+  expectEq(std::any_cast<float>(target.parse(String("400"))) == 100.0f, 1,
+           "a number past its top bound answers the bound");
+  expectText(std::any_cast<String>(unit.parse(String("middle"))).c_str(), "hi",
+             "a choice naming no entry answers its default");
+}
+
 }  // namespace
 
 void addSceneCases(std::vector<Case>& cases) {
@@ -580,6 +710,11 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a settings list is seeded from the document", aSettingsListSeedsFromTheDocument});
   cases.push_back({"a row prints its value and opens its editor", aRowPrintsItsValueAndOpensItsEditor});
   cases.push_back({"a row stores the document's form", aRowStoresItsDocumentForm});
+  cases.push_back(
+      {"a row's check refuses what the set cannot use", aRowsCheckRefusesWhatTheSetCannotUse});
+  cases.push_back(
+      {"a settings list keeps a refused value out", aSettingsListKeepsARefusedValueOut});
+  cases.push_back({"a parsed value is held to its row", aParsedValueIsHeldToItsRow});
 }
 
 }  // namespace gardener::gfx::test

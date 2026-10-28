@@ -20,6 +20,14 @@ Paint rowText(const SettingsRow& setting, const std::any& value) {
 
 }  // namespace
 
+CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
+                                    const SettingValues& values) const {
+  if (!validator_) return nullptr;
+  return [this, &settings, &values](const std::any& proposed) {
+    return validator_(settings, values, proposed);
+  };
+}
+
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
                              const std::vector<SettingsRow*>& rows,
                              const SettingValues& values)
@@ -65,15 +73,17 @@ void SettingsScene::move(int8_t direction) {
 
 // Forward opens the row's editor with the value the list holds for the row's key, and what that
 // editor hands back is written under it. A scene that was cancelled hands back the value it opened
-// on, so the write is the same either way.
+// on, and one whose row's check refused a value stays open rather than hand it back, so the write
+// is always a value the row's declaration accepts.
 void SettingsScene::open() {
   if (selected_ < 0 || selected_ >= static_cast<int16_t>(rows_.size())) return;
   SettingsRow* row = rows_[selected_];
   if (row == nullptr) return;
   const auto held = values_.find(row->key());
   const std::any value = held == values_.end() ? std::any() : held->second;
-  std::unique_ptr<Scene> editor = row->scene(value);
+  std::unique_ptr<EditorScene> editor = row->scene(value);
   if (!editor) return;
+  editor->setValidator(row->check(rows_, values_));
   ux_.push(std::move(editor), [this, row](Scene& popped) { values_[row->key()] = popped.value(); });
 }
 

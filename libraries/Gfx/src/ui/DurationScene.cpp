@@ -94,7 +94,8 @@ std::any DurationScene::value() const {
 }
 
 const char* DurationScene::hint() {
-  return stage_ == Stage::Minutes ? "\x1E/\x1F MIN  \x1A=NEXT" : "\x1E/\x1F SEC  OK=SAVE";
+  return hintOr(stage_ == Stage::Minutes ? "\x1E/\x1F MIN  \x1A=NEXT"
+                                         : "\x1E/\x1F SEC  OK=SAVE");
 }
 
 bool DurationScene::handle(const char* gesture) {

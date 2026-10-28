@@ -10,32 +10,6 @@ It is the first of the models the panel's pages are written against, and deliber
 a record is registered and read back, while its page and its glyph stay C++-only. What is deferred
 is named at the end.
 
-## Each row carries the validator its editor asks
-
-Each registration row carries one validator in two forms, because a row is declared before any set
-exists and a scene holds the set it edits. Both answer whether the value is accepted and the text
-that refuses it, and a refused value is never written: the editor stays open with that text beside
-it, so a set is never settled on a row's refusal. `5_ramped_static.be` refuses a `total_duration`
-under the two holds with `TOTAL < HOLDS`, `2_ramped_interval.be` refuses a `final_pressure` under
-its `initial_pressure` with `FINAL < START`, and `3_interval.be` validates nothing. Nothing rewrites
-a set; the old repair and the callback it drove are gone.
-
-```cpp
-// The whole check: the declaration, the set in force, and the value an editor is about to keep. It
-// answers whether the value is accepted and, when it is not, the text the scene shows.
-using Validator = std::function<std::pair<bool, String>(
-    const std::vector<SettingsRow*>& settings, const SettingValues& values,
-    const std::any& proposed)>;
-
-// The same check closed over the settings and the set, which is the form a scene holds.
-using CurriedValidator = std::function<std::pair<bool, String>(const std::any& proposed)>;
-```
-
-Checked: the `total_duration` row refuses 30 with `TOTAL < HOLDS` against a set whose holds are 60
-and 60 and accepts 400, the `final_pressure` row refuses 3.0 under 5.0 with `FINAL < START`, the
-interval's rows accept anything, a document holding `total_duration=99999` reads 7200, and an entry
-no row offers reads its default.
-
 ## The registry is reachable from the interpreter
 
 `routines` is installed by `Bindings.cpp` beside `vacuum`, `screen` and `device`, and answers
@@ -116,8 +90,7 @@ registry's host cases and the new suite pass.
 - `harness.be`'s routine count works again and `--tests` becomes a check that can pass; the GIF
   capture behind `--art`, `--scene` and `--component` has no page to draw until a scene binding
   returns.
-- The registry's host cases assert what a load and a save answer, rather than a repaired set and a
-  log line; the ` even at the defaults` case and the rule case in `settings.test.be` go.
+- The registry's host cases assert what a load and a save answer, rather than a log line.
 - The three routine files still do not load, their chrome, icon and page classes being page work;
   what this plan makes work is their registration.
 - The routine spec in `docs/archive/specs-and-plans.zip` describes a registry that no longer exists,

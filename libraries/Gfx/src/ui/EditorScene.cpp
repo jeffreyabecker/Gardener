@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <utility>
+
 #include "ui/Drawing.h"
 #include "ui/Layout.h"
 
@@ -29,17 +31,33 @@ constexpr float HintBandPct = 0.15f;
 EditorScene::EditorScene(GestureQueue& gestures, Ux& ux, String& label)
     : Scene(gestures), ux_(ux), label_(label) {}
 
+void EditorScene::setValidator(CurriedValidator validator) { validator_ = std::move(validator); }
+
+const char* EditorScene::hintOr(const char* text) const {
+  return refusal_.isEmpty() ? text : refusal_.c_str();
+}
+
 bool EditorScene::handle(const char* gesture) {
   if (closed_) return false;
   if (strcmp(gesture, "up:single") == 0) {
+    refusal_ = String();
     nudge(1);
     return true;
   }
   if (strcmp(gesture, "down:single") == 0) {
+    refusal_ = String();
     nudge(-1);
     return true;
   }
   if (strcmp(gesture, "ok:single") == 0) {
+    if (validator_) {
+      const std::pair<bool, String> answer = validator_(value());
+      if (!answer.first) {
+        refusal_ = answer.second;
+        return true;
+      }
+      refusal_ = String();
+    }
     closed_ = true;
     accepted();
     ux_.pop();

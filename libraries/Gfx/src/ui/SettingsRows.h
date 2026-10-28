@@ -17,9 +17,9 @@ namespace gardener::gfx::ui {
 
 // The rows a settings list is built from, one class per value kind: each prints the kind's value
 // the way the list prints a row and builds the scene that edits it. A row carries the rules of its
-// kind — a number's step and bounds, a choice's entries — and the default it was handed, which the
-// list falls back to for a key the set it is given does not carry. The key is the setting's: what
-// an editor hands back is written under it.
+// kind — a number's step and bounds, a choice's entries — the default it was handed, which the list
+// falls back to for a key the set it is given does not carry, and the check its declaration gave.
+// The key is the setting's: what an editor hands back is written under it.
 
 // --- the bool ---------------------------------------------------------------
 
@@ -28,13 +28,13 @@ namespace gardener::gfx::ui {
 class BoolRow : public SettingsRow {
  public:
   BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-          bool defaultValue, bool nullable = false);
+          bool defaultValue, bool nullable = false, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
-  std::unique_ptr<Scene> scene(const std::any& value) override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
 
@@ -57,13 +57,14 @@ class ChoiceRow : public SettingsRow {
  public:
   ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
             const String& defaultValue, const std::vector<ChoiceItem>& items,
-            bool nullable = false, std::function<void(String& current)> forward = nullptr);
+            bool nullable = false, std::function<void(String& current)> forward = nullptr,
+            Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
-  std::unique_ptr<Scene> scene(const std::any& value) override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
 
@@ -86,13 +87,13 @@ class DurationRow : public SettingsRow {
  public:
   DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
               int32_t defaultValue, int32_t step, int32_t min, int32_t max,
-              bool nullable = false);
+              bool nullable = false, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
-  std::unique_ptr<Scene> scene(const std::any& value) override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
 
@@ -119,13 +120,14 @@ class NumberRow : public SettingsRow {
  public:
   NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
             float defaultValue, float step, float min, float max, bool nullable,
-            NumberFormatter format = nullptr, uint8_t decimals = 2);
+            NumberFormatter format = nullptr, uint8_t decimals = 2,
+            Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
   String text(const std::any& value) const override;
-  std::unique_ptr<Scene> scene(const std::any& value) override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
 

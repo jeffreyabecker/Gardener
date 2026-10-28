@@ -25,8 +25,9 @@ String printedNumber(float number) {
 // --- the bool ---------------------------------------------------------------
 
 BoolRow::BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                 bool defaultValue, bool nullable)
-    : gestures_(gestures),
+                 bool defaultValue, bool nullable, Validator validator)
+    : SettingsRow(std::move(validator)),
+      gestures_(gestures),
       ux_(ux),
       key_(key),
       label_(label),
@@ -38,7 +39,7 @@ String BoolRow::text(const std::any& value) const {
   return std::any_cast<bool>(value) ? "ON" : "OFF";
 }
 
-std::unique_ptr<Scene> BoolRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> BoolRow::scene(const std::any& value) {
   String current;
   if (value.has_value()) current = std::any_cast<bool>(value) ? "true" : "false";
   return std::make_unique<BoolScene>(gestures_, ux_, label_, current, nullable_);
@@ -66,8 +67,10 @@ std::any BoolRow::parse(const String& stored) const {
 
 ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                      const String& defaultValue, const std::vector<ChoiceItem>& items,
-                     bool nullable, std::function<void(String& current)> forward)
-    : gestures_(gestures),
+                     bool nullable, std::function<void(String& current)> forward,
+                     Validator validator)
+    : SettingsRow(std::move(validator)),
+      gestures_(gestures),
       ux_(ux),
       key_(key),
       label_(label),
@@ -87,7 +90,7 @@ String ChoiceRow::text(const std::any& value) const {
   return items_.front().title;
 }
 
-std::unique_ptr<Scene> ChoiceRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> ChoiceRow::scene(const std::any& value) {
   const String current = value.has_value() ? std::any_cast<String>(value) : String();
   return std::make_unique<ChoiceScene>(gestures_, ux_, label_, current, items_, nullable_,
                                        forward_);
@@ -98,16 +101,23 @@ String ChoiceRow::stored(const std::any& value) const {
   return value.has_value() ? std::any_cast<String>(value) : String();
 }
 
+// A key the document names that no entry offers is one the row cannot hold, so it answers the row's
+// default instead, as an entry-less row answers it for every key.
 std::any ChoiceRow::parse(const String& stored) const {
-  return stored.isEmpty() ? defaultValue() : std::any(stored);
+  if (stored.isEmpty()) return defaultValue();
+  for (const ChoiceItem& item : items_) {
+    if (item.key == stored) return std::any(stored);
+  }
+  return defaultValue();
 }
 
 // --- the duration -----------------------------------------------------------
 
 DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                          int32_t defaultValue, int32_t step, int32_t min, int32_t max,
-                         bool nullable)
-    : gestures_(gestures),
+                         bool nullable, Validator validator)
+    : SettingsRow(std::move(validator)),
+      gestures_(gestures),
       ux_(ux),
       key_(key),
       label_(label),
@@ -124,7 +134,7 @@ String DurationRow::text(const std::any& value) const {
   return String(printed);
 }
 
-std::unique_ptr<Scene> DurationRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> DurationRow::scene(const std::any& value) {
   const float current = value.has_value() ? static_cast<float>(std::any_cast<int32_t>(value)) : NAN;
   return std::make_unique<DurationScene>(gestures_, ux_, label_, current, static_cast<float>(step_),
                                          static_cast<float>(min_), static_cast<float>(max_),
@@ -137,17 +147,23 @@ String DurationRow::stored(const std::any& value) const {
   return String(static_cast<long>(std::any_cast<int32_t>(value)));
 }
 
+// Seconds outside the declared bounds answer the bound: a document cannot put a value in the set
+// that the row's own editor could not reach.
 std::any DurationRow::parse(const String& stored) const {
   if (stored.isEmpty()) return defaultValue();
-  return static_cast<int32_t>(stored.toInt());
+  const int32_t seconds = static_cast<int32_t>(stored.toInt());
+  if (seconds < min_) return min_;
+  if (seconds > max_) return max_;
+  return seconds;
 }
 
 // --- the number -------------------------------------------------------------
 
 NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                      float defaultValue, float step, float min, float max, bool nullable,
-                     NumberFormatter format, uint8_t decimals)
-    : gestures_(gestures),
+                     NumberFormatter format, uint8_t decimals, Validator validator)
+    : SettingsRow(std::move(validator)),
+      gestures_(gestures),
       ux_(ux),
       label_(label),
       step_(step),
@@ -172,7 +188,7 @@ String NumberRow::text(const std::any& value) const {
   return format_ ? format_(number) : printedNumber(number);
 }
 
-std::unique_ptr<Scene> NumberRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> NumberRow::scene(const std::any& value) {
   const float current = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<NumberScene>(gestures_, ux_, label_, current, step_, min_, max_,
                                        nullable_, format_);
@@ -190,8 +206,14 @@ String NumberRow::stored(const std::any& value) const {
   return String(printed);
 }
 
+// A number outside the declared bounds answers the bound, as a duration does: the row holds what it
+// is given to the same rules the editor steps within.
 std::any NumberRow::parse(const String& stored) const {
-  return stored.isEmpty() ? defaultValue() : std::any(stored.toFloat());
+  if (stored.isEmpty()) return defaultValue();
+  float number = stored.toFloat();
+  if (number < min_) number = min_;
+  if (number > max_) number = max_;
+  return std::any(number);
 }
 
 }  // namespace gardener::gfx::ui
