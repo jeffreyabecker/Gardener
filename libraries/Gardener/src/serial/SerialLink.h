@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <vector>
 
-#include "MachineCommand.h"
+#include "machine/MachineCommand.h"
 #include "serial/Domain.h"
 
 namespace gardener {

@@ -2,7 +2,7 @@
 
 #if GARDENER_PANEL
 
-#include "BuzzerPlayer.h"
+#include "panel/BuzzerPlayer.h"
 
 #include <math.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Panel.h"
+#include "panel/Panel.h"
 
 // What the device puts on its own panel, and the seam between the loop and the glass: the panel task
 // holds one of these and drives it, and it knows only the panel, so which parts are fitted stays the

@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "BuzzerPlayer.h"
-#include "Logger.h"
-#include "PanelContext.h"
+#include "panel/BuzzerPlayer.h"
+#include "core/Logger.h"
+#include "panel/PanelContext.h"
 #include "panel/Units.h"
 #include "routines/Routines.h"
 #include "routines/bindings/Module.h"

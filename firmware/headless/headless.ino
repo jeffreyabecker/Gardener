@@ -57,7 +57,7 @@ void setup() {
   serial->registerDomain(gardener::createVacuumDomain(machine, serial->outbox()));
   serial->registerDomain(gardener::createMachineDeviceDomain(machine, serial->outbox()));
   gardener::BleLink* ble = new gardener::BleLink();
-  ble->registerDomain(new gardener::MachineBleDomain(&machine));
+  ble->registerDomain(gardener::createMachineBleDomain(machine));
 
 
   serial->begin();

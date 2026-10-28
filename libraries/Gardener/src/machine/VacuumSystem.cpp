@@ -1,9 +1,9 @@
-#include "VacuumSystem.h"
+#include "machine/VacuumSystem.h"
 
 #include <Arduino.h>
 #include <math.h>
 
-#include "Machine.h"
+#include "machine/Machine.h"
 #include "core/Math.h"
 
 namespace gardener {

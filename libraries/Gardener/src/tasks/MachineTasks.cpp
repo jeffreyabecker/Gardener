@@ -1,22 +1,19 @@
-#include "Tasks.h"
+#include "tasks/MachineTasks.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
-#include "Logger.h"
-#include "Machine.h"
-#include "SafeReboot.h"
-#include "VacuumSystem.h"
+#include "core/Logger.h"
+#include "machine/Machine.h"
+#include "machine/SafeReboot.h"
+#include "machine/VacuumSystem.h"
 #if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
 #endif
 #include "serial/SerialLink.h"
 
 namespace gardener {
-
-volatile bool serialConnected = false;
-volatile bool bleConnected = false;
 
 namespace {
 
@@ -189,10 +186,12 @@ void interfaceTask(void* arg) {
     state.ble->poll(now);
 #endif
 
-    // Connection presence, published for the panel's overlay.
-    serialConnected = state.link->controllerAttached();
+    // Connection presence, published for the panel's band: a connected link that has not acquired
+    // control still counts, and a build without the radio reports none.
 #if GARDENER_BLUETOOTH
-    bleConnected = state.ble->connected();
+    state.machine.setPresence(state.link->controllerAttached(), state.ble->connected());
+#else
+    state.machine.setPresence(state.link->controllerAttached(), false);
 #endif
 
     vTaskDelay(pdMS_TO_TICKS(5));

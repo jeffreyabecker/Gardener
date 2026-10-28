@@ -2,21 +2,19 @@
 
 #if GARDENER_PANEL
 
-#include "PanelTasks.h"
+#include "tasks/PanelTasks.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "Logger.h"
-#include "MachineCommand.h"
-#include "Panel.h"
-#include "SafeReboot.h"
-#include "Tasks.h"
+#include "core/Logger.h"
+#include "machine/MachineCommand.h"
+#include "panel/Panel.h"
+#include "machine/SafeReboot.h"
+#include "tasks/MachineTasks.h"
 #include "panel/HomeUI.h"
 
 namespace gardener {
-
-volatile uint32_t goHomeSeq = 0;
 
 namespace {
 
@@ -57,12 +55,12 @@ void buttonsTick(PanelState& state) {
   static const String QuitGesture = String("cancel:") + ResetHoldSeconds;
   // The quit is the panel's own safety gesture, so it does not wait for anything: Cancel held for
   // five seconds stops and vents. The stop is the device's, not the routine's — the routine is
-  // being taken off the stack, so nothing of it runs to stop itself. goHomeSeq tells the page to
+  // being taken off the stack, so nothing of it runs to stop itself. The request tells the page to
   // show the root.
   if (gesture == QuitGesture) {
     state.logger->warn("panel: cancel held, force-quitting");
     state.context.post(MachineCommand{MachineCommand::Op::Stop});
-    goHomeSeq++;
+    state.context.requestHome();
     return;
   }
 

@@ -42,7 +42,7 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # The firmware's own sources, compiled on the host. What is not here is what needs a board: the
 # composition roots, the tasks, the links, the device drivers and the vendor display.
 FIRMWARE_SOURCES = [
-    GARDENER / "src" / "BuzzerPlayer.cpp",
+    GARDENER / "src" / "panel" / "BuzzerPlayer.cpp",
     GARDENER / "src" / "panel" / "Band.cpp",
     GARDENER / "src" / "panel" / "MarkScene.cpp",
     GARDENER / "src" / "panel" / "PressureReadout.cpp",
@@ -55,14 +55,14 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "routines" / "bindings" / "Device.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Screen.cpp",
     GARDENER / "src" / "routines" / "bindings" / "Vacuum.cpp",
-    GARDENER / "src" / "MachineCommand.cpp",
+    GARDENER / "src" / "machine" / "MachineCommand.cpp",
     GARDENER / "src" / "storage" / "Config.cpp",
     GARDENER / "src" / "storage" / "Ini.cpp",
     GARDENER / "src" / "storage" / "Jingles.cpp",
     GARDENER / "src" / "routines" / "Registration.cpp",
     GARDENER / "src" / "routines" / "RoutineRegistry.cpp",
     GARDENER / "src" / "storage" / "RoutineSettingStore.cpp",
-    GARDENER / "src" / "VacuumSystem.cpp",
+    GARDENER / "src" / "machine" / "VacuumSystem.cpp",
 ]
 
 GFX_SOURCES = [

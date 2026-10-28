@@ -10,11 +10,12 @@ namespace gardener {
 //
 // This is where the pin is driven and where the two pieces of hardware policy live — the duty cap,
 // and the slew rate limit, because a diaphragm pump dislikes a step from 0 to full. The channel's
-// frequency and resolution are here too; a board variant edits this file for how the pump is
-// driven and Build.cpp for which pin drives it, and nothing above it has to know.
+// frequency and resolution are here too. The pin and the two numbers are the rig's rather than the
+// part's, so the composition root passes them in, and this file names nothing above the part.
 class PwmPump : public Pump {
  public:
-  explicit PwmPump(uint8_t pin) : pin_(pin) {}
+  PwmPump(uint8_t pin, float dutyMaxPercent, float rampPercentPerSec)
+      : pin_(pin), dutyMax_(dutyMaxPercent), rampPerSec_(rampPercentPerSec) {}
 
   bool begin() override;
   void update(uint32_t nowMs) override;
@@ -29,6 +30,8 @@ class PwmPump : public Pump {
   void write(float percent);
 
   const uint8_t pin_;
+  const float dutyMax_;
+  const float rampPerSec_;
   float duty_ = 0.0f;
   float target_ = 0.0f;
   uint32_t lastUpdateMs_ = 0;

@@ -7,7 +7,7 @@
 #include <NimBLEDevice.h>
 #include <vector>
 
-#include "MachineCommand.h"
+#include "machine/MachineCommand.h"
 #include "ble/BleDomain.h"
 
 namespace gardener {

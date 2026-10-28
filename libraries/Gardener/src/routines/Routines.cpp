@@ -10,8 +10,8 @@
 #include <memory>
 #include <vector>
 
-#include "Logger.h"
-#include "PanelContext.h"
+#include "core/Logger.h"
+#include "panel/PanelContext.h"
 #include "gfx/Canvas.h"
 #include "hal/Battery.h"
 #include "panel/Band.h"

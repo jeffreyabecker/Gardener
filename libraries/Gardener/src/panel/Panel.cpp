@@ -2,12 +2,12 @@
 
 #if GARDENER_PANEL
 
-#include "Panel.h"
+#include "panel/Panel.h"
 
 #include <Wire.h>
 #include <stdlib.h>
 
-#include "Logger.h"
+#include "core/Logger.h"
 #include "panel/Units.h"
 #include "storage/DeviceConfig.h"
 

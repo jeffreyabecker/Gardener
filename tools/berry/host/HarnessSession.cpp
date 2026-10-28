@@ -5,10 +5,9 @@
 
 #include "GestureCallout.h"
 #include "GifWriter.h"
-#include "Machine.h"
-#include "MachineCommand.h"
+#include "machine/Machine.h"
+#include "machine/MachineCommand.h"
 #include "OverlayCallout.h"
-#include "PanelTasks.h"
 #include "routines/Bindings.h"
 
 // The interpreter's heap count, which the report reads: a C API, so the header goes in as one.
@@ -17,9 +16,6 @@ extern "C" {
 }
 
 namespace gardener {
-
-// The panel task's go-home counter, defined here because the panel task is not.
-volatile uint32_t goHomeSeq = 0;
 
 namespace {
 

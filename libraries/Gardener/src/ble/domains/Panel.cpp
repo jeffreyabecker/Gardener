@@ -2,16 +2,45 @@
 
 #if GARDENER_PANEL
 
-#include "ble/PanelBleDomain.h"
+#include "ble/PanelDomains.h"
 
 #if GARDENER_BLUETOOTH
 
-#include "Panel.h"
+#include "ble/BleDomain.h"
 #include "ble/BleLink.h"
+#include "panel/Panel.h"
 #include "panel/Units.h"
 #include "storage/DeviceConfig.h"
 
 namespace gardener {
+
+// The panel's slice of the GATT table, private to the factory at the bottom of this file.
+class PanelBleDomain : public BleDomain {
+ public:
+  explicit PanelBleDomain(Panel& panel) : app_(&panel) {}
+
+  uint8_t specCount() const override;
+  Spec specAt(uint8_t index) const override;
+  void bind(uint8_t index, NimBLECharacteristic* characteristic) override;
+  void describe(uint8_t index) override;
+  void write(uint8_t index, const NimBLEAttValue& value) override;
+  void poll(uint32_t nowMs, BleLink& link, bool baseline) override;
+
+ private:
+  enum : uint8_t { Unit, Batt, Count };
+
+  static const Spec Specs[Count];
+
+  Panel* app_;
+  NimBLECharacteristic* characteristics_[Count] = {};
+  struct PendingByte {
+    volatile bool has = false;
+    volatile uint8_t value = 0;
+  };
+  PendingByte unitWrite_;
+  uint32_t lastBattMs_ = 0;
+};
+
 namespace {
 
 constexpr uint32_t BattRateMs = 10000;
@@ -22,8 +51,6 @@ const BleDomain::Spec PanelBleDomain::Specs[] = {
     {0x000A, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},  // unit
     {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},    // batt
 };
-
-PanelBleDomain::PanelBleDomain(Panel* app) : app_(app) {}
 
 uint8_t PanelBleDomain::specCount() const { return Count; }
 
@@ -77,6 +104,8 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     link.notify(characteristics_[Batt]);
   }
 }
+
+BleDomain* createPanelBleDomain(Panel& panel) { return new PanelBleDomain(panel); }
 
 }  // namespace gardener
 

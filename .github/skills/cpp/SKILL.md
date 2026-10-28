@@ -38,7 +38,7 @@ already says which one it is, and nobody has to decode a letter to read the line
 name that needs a letter in front of it to be understood is working against the language.
 
 Existing prefixed names are not a rewrite-on-sight target. The `SCREAMING_SNAKE_CASE` constants in
-`libraries/Gardener/src/Machine.h` are an earlier decision. Rename them where you are already
+`libraries/Gardener/src/machine/Machine.h` are an earlier decision. Rename them where you are already
 changing those lines for another reason; a sweep of the codebase for its own sake is its own
 decision with its own measurement.
 

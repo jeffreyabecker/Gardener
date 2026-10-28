@@ -2,12 +2,12 @@
 
 #if GARDENER_PANEL
 
-#include "PanelRoot.h"
+#include "panel/PanelRoot.h"
 
 #include <Wire.h>
 
-#include "BuzzerPlayer.h"
-#include "Panel.h"
+#include "panel/BuzzerPlayer.h"
+#include "panel/Panel.h"
 #include "routines/Routines.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"

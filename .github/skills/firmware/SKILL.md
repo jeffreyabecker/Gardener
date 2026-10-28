@@ -55,7 +55,7 @@ Work out what the code has to do and write that — don't dither about the desig
 boundary described next is a decision already made, not a precedent for the next abstraction.
 
 **One class where one class works, and one file per device.**
-`libraries/Gardener/src/VacuumSystem.h` is the vacuum system *and* the machine, because the
+`libraries/Gardener/src/machine/VacuumSystem.h` is the vacuum system *and* the machine, because the
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
 a part is an abstract class in `hal/` with its implementation in `hal/impl/`, and the vacuum system
@@ -64,7 +64,7 @@ a driver into the class that drives it: the register writes and the control law 
 here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because a vendor
-header is allowed only where a part is named — `<NimBLEDevice.h>` in `hal/impl/BleLink.cpp`, where
+header is allowed only where a part is named — `<NimBLEDevice.h>` in `ble/BleLink.h`, where
 the radio is the part — and because the vacuum system reads the same whether the part behind it is a
 sensor or nothing at all. An interface with one implementation earns its place exactly when it is a
 foreign boundary like that; anywhere else it is a second implementation that does not exist yet.

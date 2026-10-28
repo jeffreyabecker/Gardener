@@ -1,6 +1,6 @@
-#include "Machine.h"
+#include "machine/Machine.h"
 
-#include "Logger.h"
+#include "core/Logger.h"
 #include "firmwareversion.h"
 #include "hal/impl/PwmPump.h"
 #include "hal/impl/SolenoidValve.h"
@@ -24,7 +24,8 @@ VentValve* makeValve(uint8_t pin, bool normallyOpen) {
 // nothing under hal/impl/.
 Machine::Machine(Logger& logger, const MachinePins& pins)
     : logger_(logger),
-      vacuum_(new PwmPump(pins.pumpPwm), new XgzpSensor(pins.sensorAdc),
+      vacuum_(new PwmPump(pins.pumpPwm, PUMP_DUTY_MAX_PERCENT, PUMP_RAMP_PERCENT_PER_SEC),
+              new XgzpSensor(pins.sensorAdc),
               makeValve(pins.ventValve, VALVE_NORMALLY_OPEN)) {}
 
 void Machine::boot() {

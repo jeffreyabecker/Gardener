@@ -1,7 +1,7 @@
-#include "MachineCommand.h"
+#include "machine/MachineCommand.h"
 
-#include "Machine.h"
-#include "VacuumSystem.h"
+#include "machine/Machine.h"
+#include "machine/VacuumSystem.h"
 
 namespace gardener {
 

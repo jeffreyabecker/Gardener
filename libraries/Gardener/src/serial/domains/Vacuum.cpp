@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "Machine.h"
-#include "MachineCommand.h"
-#include "VacuumSystem.h"
+#include "machine/Machine.h"
+#include "machine/MachineCommand.h"
+#include "machine/VacuumSystem.h"
 #include "serial/Domain.h"
 #include "serial/Domains.h"
 

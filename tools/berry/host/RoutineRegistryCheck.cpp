@@ -14,7 +14,7 @@
 
 #include <Gfx.h>
 
-#include "Logger.h"
+#include "core/Logger.h"
 #include "MemoryFiles.h"
 #include "routines/Registration.h"
 #include "routines/RoutineRegistry.h"

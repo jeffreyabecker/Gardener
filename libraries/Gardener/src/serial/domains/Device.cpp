@@ -6,10 +6,10 @@
 
 #include <Arduino.h>
 
-#include "Panel.h"
-#include "MachineCommand.h"
+#include "panel/Panel.h"
+#include "machine/MachineCommand.h"
 #include "firmwareversion.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include "serial/SerialLink.h"
 #include "hal/Battery.h"
 #include "panel/Units.h"

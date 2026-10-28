@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "VacuumSystem.h"
+#include "machine/VacuumSystem.h"
 
 namespace gardener {
 
@@ -166,10 +166,22 @@ class Machine {
   Logger& logger() { return logger_; }
   uint32_t uptimeMs() const { return millis(); }
 
+  // Which of the two links a controller is on: the interface task reports it once per beat from the
+  // link it polls, and the panel shows it. A build without the radio reports none, so the panel
+  // draws no Bluetooth rune rather than asking which build it is in.
+  void setPresence(bool serial, bool bluetooth) {
+    serialConnected_ = serial;
+    bluetoothConnected_ = bluetooth;
+  }
+  bool serialConnected() const { return serialConnected_; }
+  bool bluetoothConnected() const { return bluetoothConnected_; }
+
  private:
   Logger& logger_;
   VacuumSystem vacuum_;
   uint8_t capabilities_ = 0;
+  volatile bool serialConnected_ = false;
+  volatile bool bluetoothConnected_ = false;
 };
 
 }  // namespace gardener

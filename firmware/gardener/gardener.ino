@@ -78,8 +78,8 @@ void setup() {
   serial->registerDomain(gardener::createFsDomain(context, serial->outbox()));
 #if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink();
-  ble->registerDomain(new gardener::MachineBleDomain(&context));
-  ble->registerDomain(new gardener::PanelBleDomain(&context));
+  ble->registerDomain(gardener::createMachineBleDomain(context));
+  ble->registerDomain(gardener::createPanelBleDomain(context));
 #endif
 
   serial->begin();

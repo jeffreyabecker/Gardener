@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "VacuumSystem.h"
+#include "machine/VacuumSystem.h"
 #include "panel/Units.h"
 #include "ui/Drawing.h"
 

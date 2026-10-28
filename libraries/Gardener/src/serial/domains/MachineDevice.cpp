@@ -2,10 +2,10 @@
 
 #include <Arduino.h>
 
-#include "Machine.h"
-#include "MachineCommand.h"
+#include "machine/Machine.h"
+#include "machine/MachineCommand.h"
 #include "firmwareversion.h"
-#include "Logger.h"
+#include "core/Logger.h"
 #include "serial/Domain.h"
 #include "serial/SerialLink.h"
 

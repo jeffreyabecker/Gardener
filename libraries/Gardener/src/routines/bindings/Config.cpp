@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "PanelContext.h"
+#include "panel/PanelContext.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 #include "storage/Config.h"

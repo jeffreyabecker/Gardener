@@ -5,17 +5,16 @@
 #include <Gfx.h>
 #include <stdint.h>
 
-#include "BuzzerPlayer.h"
-#include "Machine.h"
-#include "MachineCommand.h"
-#include "PanelContext.h"
-#include "panel/GestureClassifier.h"
-#include "routines/Routines.h"
-#include "Tasks.h"
-#include "storage/Config.h"
-#include "storage/Jingles.h"
 #include "hal/Battery.h"
 #include "hal/ButtonPanel.h"
+#include "machine/Machine.h"
+#include "machine/MachineCommand.h"
+#include "panel/BuzzerPlayer.h"
+#include "panel/GestureClassifier.h"
+#include "panel/PanelContext.h"
+#include "routines/Routines.h"
+#include "storage/Config.h"
+#include "storage/Jingles.h"
 
 namespace gardener {
 
@@ -64,6 +63,12 @@ class Panel : public Machine, public PanelContext {
   bool post(const MachineCommand& command) override { return outbox_.post(command); }
   void flushCommands() { outbox_.flush(); }
 
+  // The force-quit: Cancel held five seconds stops and vents, then asks the panel for its root page.
+  // The panel task raises it and the page loop takes it, so one request is one switch home and
+  // neither side needs the other's header.
+  void requestHome() { homeRequests_++; }
+  uint32_t homeRequests() const { return homeRequests_; }
+
   // The machine's parts come up first, then the panel's: the display, the gauge and buzzer, and the
   // interpreter.
   void boot();
@@ -78,9 +83,10 @@ class Panel : public Machine, public PanelContext {
   // The glass, and the frame every drawing verb lands in.
   gfx::DisplayDevice& display() override { return *display_; }
   gfx::Canvas& canvas() override { return canvas_; }
-  // The two links, from the interface owner's globals; presence is all the band reports.
-  bool serialConnected() const override { return gardener::serialConnected; }
-  bool bluetoothConnected() const override { return gardener::bleConnected; }
+  // The two links, as the interface task last reported them to the machine; presence is all the
+  // band reports.
+  bool serialConnected() const override { return Machine::serialConnected(); }
+  bool bluetoothConnected() const override { return Machine::bluetoothConnected(); }
   Config& config() override { return config_; }
   JinglesConfig& jingles() override { return jingles_; }
   Library& library() override { return library_; }
@@ -91,6 +97,8 @@ class Panel : public Machine, public PanelContext {
 
  private:
   CommandOutbox outbox_;
+  // Raised by the panel task's force-quit, taken by the page loop.
+  uint32_t homeRequests_ = 0;
   // Kept for boot(), which brings the display bus up on the two pins it names.
   const PanelPins pins_;
   ButtonPanel* buttons_;

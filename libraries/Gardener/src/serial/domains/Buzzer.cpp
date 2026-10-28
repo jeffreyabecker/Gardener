@@ -7,8 +7,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "Panel.h"
-#include "BuzzerPlayer.h"
+#include "panel/Panel.h"
+#include "panel/BuzzerPlayer.h"
 #include "serial/Domain.h"
 
 namespace gardener {

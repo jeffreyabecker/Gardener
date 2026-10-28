@@ -20,7 +20,7 @@ machine with no panel has only the two links to drive it, so the switch is ignor
 `--define NAME=VALUE` passes a build symbol through to every translation unit, and repeats. The
 rig's own numbers are the reason: `PUMP_FLOW_LPM`, `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`,
 `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and `VALVE_NORMALLY_OPEN` default to the reference
-rig in `libraries/Gardener/src/Machine.h`, and a build for a different pump, chamber or valve
+rig in `libraries/Gardener/src/machine/Machine.h`, and a build for a different pump, chamber or valve
 overrides them here.
 
     python scripts/arduino.py --task upload --port COM5

@@ -4,7 +4,6 @@
 #include <math.h>
 #include <type_traits>
 
-#include "Machine.h"
 #include "core/Math.h"
 
 namespace gardener {
@@ -33,13 +32,13 @@ bool PwmPump::begin() {
 
 void PwmPump::write(float percent) {
   const uint32_t maxDuty = (1u << PwmResolution) - 1u;
-  float limited = clampf(percent, 0.0f, PUMP_DUTY_MAX_PERCENT);
+  float limited = clampf(percent, 0.0f, dutyMax_);
   uint32_t duty = (uint32_t)((limited / 100.0f) * (float)maxDuty + 0.5f);
   ledcWrite(pin_, duty);
 }
 
 void PwmPump::setDuty(float percent) {
-  target_ = clampf(percent, 0.0f, PUMP_DUTY_MAX_PERCENT);
+  target_ = clampf(percent, 0.0f, dutyMax_);
 }
 
 void PwmPump::halt() {
@@ -56,7 +55,7 @@ void PwmPump::update(uint32_t nowMs) {
 
   // Slew rate limited approach to the requested duty.
   if (duty_ != target_) {
-    float maxStep = PUMP_RAMP_PERCENT_PER_SEC * ((float)dt / 1000.0f);
+    float maxStep = rampPerSec_ * ((float)dt / 1000.0f);
     if (maxStep < 0.5f) maxStep = 0.5f;
     duty_ += clampf(target_ - duty_, -maxStep, maxStep);
     if (fabsf(duty_ - target_) < 0.05f) duty_ = target_;

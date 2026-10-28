@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "Panel.h"
+#include "panel/Panel.h"
 #include "serial/Domain.h"
 #include "storage/Config.h"
 

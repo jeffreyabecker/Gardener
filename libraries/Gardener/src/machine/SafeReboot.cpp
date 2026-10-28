@@ -1,9 +1,9 @@
-#include "SafeReboot.h"
+#include "machine/SafeReboot.h"
 
 #include <Arduino.h>
 
-#include "Machine.h"
-#include "VacuumSystem.h"
+#include "machine/Machine.h"
+#include "machine/VacuumSystem.h"
 
 namespace gardener {
 

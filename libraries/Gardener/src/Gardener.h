@@ -6,25 +6,25 @@
 
 #include "Build.h"
 
-#include "Logger.h"
-#include "Machine.h"
-#include "SerialLogger.h"
+#include "core/Logger.h"
+#include "core/SerialLogger.h"
+#include "machine/Machine.h"
 #include "storage/FileLibrary.h"
-#include "Tasks.h"
+#include "tasks/MachineTasks.h"
 #if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
-#include "ble/MachineBleDomain.h"
+#include "ble/Domains.h"
 #endif
 #include "serial/Domains.h"
 #include "serial/SerialLink.h"
 
 #if GARDENER_PANEL
-#include "Panel.h"
-#include "PanelRoot.h"
-#include "PanelTasks.h"
-#if GARDENER_BLUETOOTH
-#include "ble/PanelBleDomain.h"
-#endif
 #include "panel/HomeUI.h"
+#include "panel/Panel.h"
+#include "panel/PanelRoot.h"
+#include "tasks/PanelTasks.h"
+#if GARDENER_BLUETOOTH
+#include "ble/PanelDomains.h"
+#endif
 #include "serial/PanelDomains.h"
 #endif

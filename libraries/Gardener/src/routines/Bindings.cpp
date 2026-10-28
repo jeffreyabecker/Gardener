@@ -6,8 +6,8 @@
 
 #include <berry.h>
 
-#include "Logger.h"
-#include "PanelContext.h"
+#include "core/Logger.h"
+#include "panel/PanelContext.h"
 #include "routines/bindings/Module.h"
 #include "routines/bindings/Modules.h"
 

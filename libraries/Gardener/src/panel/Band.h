@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-#include "VacuumSystem.h"
+#include "machine/VacuumSystem.h"
 #include "ui/Drawing.h"
 
 namespace gardener {

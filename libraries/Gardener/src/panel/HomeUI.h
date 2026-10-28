@@ -17,8 +17,8 @@ class HomeUI : public UserInterface {
   void update() override;
 
  private:
-  // The last goHomeSeq this page acted on, so one force-quit is one switch home.
-  uint32_t lastGoHomeSeq_ = 0;
+  // The last home request this page acted on, so one force-quit is one switch home.
+  uint32_t lastHomeRequests_ = 0;
 };
 
 }  // namespace gardener
