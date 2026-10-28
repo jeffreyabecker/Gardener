@@ -1,7 +1,6 @@
 #include "tasks/MachineTasks.h"
 
 #include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
 #include <freertos/task.h>
 
 #include "core/Logger.h"
@@ -26,20 +25,14 @@ constexpr uint32_t InterfaceStackWords = 4096;
 constexpr UBaseType_t ControlCore = 1;
 constexpr UBaseType_t InterfaceCore = 0;
 
-// Queue depth. A command the queue cannot take is held by the link that posted it and retried on
-// its next poll, so a full queue is a beat of delay rather than a lost stop.
-constexpr UBaseType_t MachineCommandQueueDepth = 8;
-
-// The control task's queue, created before either task starts. It is written through
-// postMachineCommand and drained at the top of every control tick; no header names the handle, so
-// nothing above this file can post past that call.
-QueueHandle_t machineCommandQueue = nullptr;
-
-// The control task's own state: the machine it commands, the logger it reports through, and the
-// latch/timing fields the run log needs.
+// The control task's own state: the machine it commands, the logger it reports through, the queue
+// it drains, and the latch/timing fields the run log needs. The queue is the composition's object —
+// the links post into the same one — so this file is only where it is drained and the schedule is
+// kept.
 struct ControlState {
   Machine& machine;
   Logger* logger;
+  CommandQueue& queue;
   RunState lastState = RunState::Idle;
   uint32_t ventStartMs = 0;
 };
@@ -78,34 +71,33 @@ void logCollapsed(ControlState& state, const MachineCommand& command, const char
 // one. A burst therefore cannot walk the valve back and forth, and a start queued before a stop
 // never runs after it.
 void drainMachineCommands(ControlState& state) {
-  MachineCommand batch[MachineCommandQueueDepth];
-  UBaseType_t count = 0;
-  while (count < MachineCommandQueueDepth &&
-         xQueueReceive(machineCommandQueue, &batch[count], 0) == pdTRUE) {
+  MachineCommand batch[CommandQueueDepth];
+  uint8_t count = 0;
+  while (count < CommandQueueDepth && state.queue.take(batch[count])) {
     count++;
   }
   if (count == 0) return;
 
   // The last stop owns everything before it.
-  UBaseType_t first = 0;
-  for (UBaseType_t i = count; i > 0; i--) {
+  uint8_t first = 0;
+  for (uint8_t i = count; i > 0; i--) {
     if (batch[i - 1].op == MachineCommand::Op::Stop) {
       first = i - 1;
       break;
     }
   }
-  for (UBaseType_t i = 0; i < first; i++) logCollapsed(state, batch[i], "before a stop");
+  for (uint8_t i = 0; i < first; i++) logCollapsed(state, batch[i], "before a stop");
 
   // Of what is left, only the last target is worth applying: the depths before it are setpoints
   // the machine never has to stand still at.
-  UBaseType_t lastTarget = count;
-  for (UBaseType_t i = count; i > first; i--) {
+  uint8_t lastTarget = count;
+  for (uint8_t i = count; i > first; i--) {
     if (batch[i - 1].op == MachineCommand::Op::SetTarget) {
       lastTarget = i - 1;
       break;
     }
   }
-  for (UBaseType_t i = first; i < count; i++) {
+  for (uint8_t i = first; i < count; i++) {
     if (i != lastTarget && batch[i].op == MachineCommand::Op::SetTarget) {
       logCollapsed(state, batch[i], "for a later target");
       continue;
@@ -147,11 +139,6 @@ void logRunChanges(ControlState& state, uint32_t nowMs) {
 }
 
 }  // namespace
-
-bool postMachineCommand(const MachineCommand& command) {
-  if (machineCommandQueue == nullptr) return false;
-  return xQueueSend(machineCommandQueue, &command, 0) == pdTRUE;
-}
 
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
@@ -199,13 +186,11 @@ void interfaceTask(void* arg) {
 }
 
 #if GARDENER_BLUETOOTH
-void spawnMachineTasks(Machine& machine, SerialLink* link, BleLink* ble) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble) {
 #else
-void spawnMachineTasks(Machine& machine, SerialLink* link) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link) {
 #endif
-  machineCommandQueue = xQueueCreate(MachineCommandQueueDepth, sizeof(MachineCommand));
-
-  static ControlState control{machine, &machine.logger()};
+  static ControlState control{machine, &machine.logger(), queue};
 #if GARDENER_BLUETOOTH
   static InterfaceState interface{machine, link, ble};
 #else

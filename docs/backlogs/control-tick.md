@@ -16,9 +16,9 @@ first case needs it.
 
 ## Epic 1 — the tick a caller steps
 
-- [ ] 1.1 — The queue the tick drains becomes a thing the control side is built with rather than a
+- [x] 1.1 — The queue the tick drains becomes a thing the control side is built with rather than a
   handle in the task file: a link posts into it, a case can fill it, and on the device it is the
-  FreeRTOS queue the control task creates before either task runs. The links' outbox posts into that
+  FreeRTOS queue the composition builds before either task runs. The links' outbox posts into that
   queue instead of calling a function the task file defines, so its post and flush are reached
   through the queue they are given. Verified: both sketches compile, and the outbox's source names
   no function of the task file.

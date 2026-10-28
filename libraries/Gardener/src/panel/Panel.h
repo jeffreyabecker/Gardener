@@ -44,8 +44,9 @@ class Panel : public Machine, public PanelContext {
  public:
   Panel(Logger& logger, const PanelPins& pins, ButtonPanel* buttons, BuzzerPlayer* buzzer,
         Battery* battery, gfx::DisplayDevice* display, FS& fs, Library& library,
-        Routines* routines)
+        Routines* routines, CommandQueue& queue)
       : Machine(logger, pins.machine),
+        outbox_(queue),
         pins_(pins),
         buttons_(buttons),
         gestures_(*buttons),

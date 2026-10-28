@@ -6,8 +6,8 @@
 
 namespace gardener {
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger)
-    : stream_(stream), present_(present), logger_(logger) {
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue)
+    : outbox_(queue), stream_(stream), present_(present), logger_(logger) {
   domains_.reserve(MaxDomains);
 }
 
