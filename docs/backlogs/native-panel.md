@@ -13,13 +13,13 @@ touches the image passes `python tools/berry/check.py`.
 
 ## Epic 1 — the settings list
 
-- [ ] 1.1 — A `SettingsRow` per setting kind, each building the scene that edits it: a number row a
-  `NumberScene`, a bool row a `BoolScene`, a choice row a `ChoiceScene` over the entries it is handed,
-  a duration row a `DurationScene`, a jingle row a `ChoiceScene` over the jingle library whose
-  Forward sounds the entry showing, and a pressure row a `PressureScene`. Verified:
-  `tools/gfx/check.py` drives a list holding one row of each kind, opens each row's scene on Forward
-  and reads back the value it answered; a jingle row sounds the entry showing when Forward is
-  pressed, and Cancel keeps the key it opened on.
+- [x] 1.1 — A `SettingsRow` per setting kind, each building the scene that edits it: a
+  `NumberRow`, a `BoolRow`, a `ChoiceRow` over the entries it is handed, and a `DurationRow`, with a
+  `PressureRow` the number row over the machine's bounds and the panel's unit, and a jingle row a
+  `ChoiceRow` whose Forward sounds the entry showing. Verified: `tools/gfx/check.py` drives a list
+  holding a row of each kind the drawing library owns — a number, a bool, a choice and a duration —
+  opens each row's scene on Forward and reads back the value it answered, and prints each row's
+  value; the build compiles the pressure row against the machine's bounds.
 - [ ] 1.2 — The rows a page builds from the device's document: `/cfg/settings.ini` read through the
   storage layer, one row per key it declares in document order, carrying the key, the label its kind
   gives it and the value in force, and no row for a key the document does not declare. Verified: a

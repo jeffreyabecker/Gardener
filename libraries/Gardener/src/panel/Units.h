@@ -1,7 +1,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdio.h>
 #include <strings.h>
+
+#include <Arduino.h>
 
 namespace gardener {
 
@@ -61,6 +64,15 @@ inline uint8_t displayDecimals(DisplayUnit unit) {
 // The same depth, in the unit the glass prints.
 inline float displayValue(float pressureKpa, DisplayUnit unit) {
   return pressureKpa * displayUnitInfo(unit).perKpa;
+}
+
+// The same depth as the panel prints it: the unit's scale, at the decimals its fine step can
+// express.
+inline String displayText(float pressureKpa, DisplayUnit unit) {
+  char printed[16];
+  snprintf(printed, sizeof(printed), "%.*f", static_cast<int>(displayDecimals(unit)),
+           displayValue(pressureKpa, unit));
+  return String(printed);
 }
 
 }  // namespace gardener

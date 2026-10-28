@@ -4,23 +4,9 @@
 
 #include "routines/PressureScene.h"
 
-#include <stdio.h>
-
 #include "Machine.h"
 
 namespace gardener {
-namespace {
-
-// A target as the panel prints it: the unit's scale, and the decimals the unit's fine step can
-// express.
-String displayText(float pressureKpa, DisplayUnit unit) {
-  char printed[16];
-  snprintf(printed, sizeof(printed), "%.*f", static_cast<int>(displayDecimals(unit)),
-           displayValue(pressureKpa, unit));
-  return String(printed);
-}
-
-}  // namespace
 
 // The step is the unit's whole step converted to the kPa the value is held in, so the editor moves
 // by what the glass reads rather than by a kilopascal.

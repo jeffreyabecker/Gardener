@@ -2,8 +2,6 @@
 // that asked for it returns, and the list that walks a row, opens the row's editor and hands the
 // set back.
 
-#include <stdio.h>
-
 #include <functional>
 #include <memory>
 #include <vector>
@@ -386,76 +384,19 @@ void aSettingsListDrawsItsRows() {
          "and the row showing is inverted across its width");
 }
 
-// The number a row prints, and the two entries the choice row offers.
-String numberText(float value) {
-  char printed[16];
-  snprintf(printed, sizeof(printed), "%g", static_cast<double>(value));
-  return String(printed);
-}
-
+// The two entries the choice row offers, and the keys they store.
 std::vector<ChoiceItem> choices() {
   return {{"lo", "Low", nullptr}, {"hi", "High", nullptr}};
 }
-
-// One row per value kind: it prints the kind's text and opens the kind's editor over the value the
-// list holds. A real settings page builds these one class each; the case needs the four together.
-class KindRow : public SettingsRow {
- public:
-  enum class Kind { Number, Bool, Choice, Duration };
-
-  KindRow(GestureQueue& gestures, Ux& ux, Kind kind, const char* key, const char* label,
-          const std::any& value)
-      : gestures_(gestures), ux_(ux), kind_(kind), key_(key), label_(label), value_(value) {}
-
-  const String& key() const override { return key_; }
-  const String& label() const override { return label_; }
-  std::any currentValue() const override { return value_; }
-
-  String text(const std::any& value) const override {
-    if (!value.has_value()) return "--";
-    if (kind_ == Kind::Number) return numberText(std::any_cast<float>(value));
-    if (kind_ == Kind::Bool) return std::any_cast<bool>(value) ? "ON" : "OFF";
-    if (kind_ == Kind::Choice) return std::any_cast<String>(value);
-    char printed[16];
-    durationText(DurationFormat::Minutes, std::any_cast<int32_t>(value), true, printed,
-                 sizeof(printed));
-    return String(printed);
-  }
-
-  std::unique_ptr<Scene> scene(const std::any& value) override {
-    if (kind_ == Kind::Number) {
-      const auto current = std::any_cast<float>(value);
-      return std::make_unique<NumberScene>(gestures_, ux_, label_, current, 1, 0, 10, false);
-    }
-    if (kind_ == Kind::Bool) {
-      const String current = std::any_cast<bool>(value) ? "true" : "false";
-      return std::make_unique<BoolScene>(gestures_, ux_, label_, current, false);
-    }
-    if (kind_ == Kind::Choice) {
-      return std::make_unique<ChoiceScene>(gestures_, ux_, label_, std::any_cast<String>(value),
-                                           choices(), false);
-    }
-    const auto current = static_cast<float>(std::any_cast<int32_t>(value));
-    return std::make_unique<DurationScene>(gestures_, ux_, label_, current, 5, 0, 3600, false);
-  }
-
- private:
-  GestureQueue& gestures_;
-  Ux& ux_;
-  Kind kind_;
-  String key_;
-  String label_;
-  std::any value_;
-};
 
 void aSettingsListEditsEveryKind() {
   Pressed gestures;
   Ux ux;
   String title("SETTINGS");
-  KindRow target(gestures, ux, KindRow::Kind::Number, "target", "Target", 5.0f);
-  KindRow power(gestures, ux, KindRow::Kind::Bool, "power", "Power", false);
-  KindRow unit(gestures, ux, KindRow::Kind::Choice, "unit", "Unit", String("lo"));
-  KindRow hold(gestures, ux, KindRow::Kind::Duration, "hold", "Hold", int32_t(90));
+  NumberRow target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolRow power(gestures, ux, "power", "Power", false);
+  ChoiceRow unit(gestures, ux, "unit", "Unit", "lo", choices(), false);
+  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
   auto list = std::make_unique<SettingsScene>(gestures, ux, title);
   list->set({&target, &power, &unit, &hold});
 
@@ -501,6 +442,32 @@ void aSettingsListEditsEveryKind() {
   expectEq(std::any_cast<int32_t>(handed.at("hold")), 150, "the duration took a minute");
 }
 
+// Each kind's row prints the value the list shows and opens an editor over it, which hands the same
+// kind of value back: the row and its scene agree about what the setting holds.
+void aRowPrintsItsValueAndOpensItsEditor() {
+  NoGestures gestures;
+  Ux ux;
+  NumberRow number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolRow power(gestures, ux, "power", "Power", true);
+  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+
+  expectText(number.text(number.currentValue()).c_str(), "5", "a number prints its digits");
+  expectText(power.text(power.currentValue()).c_str(), "ON", "a bool prints its state");
+  expectText(unit.text(unit.currentValue()).c_str(), "High", "a choice prints the title it names");
+  expectText(hold.text(hold.currentValue()).c_str(), "1m30s", "a duration prints compact");
+  expectText(hold.text(std::any()).c_str(), "--", "a value holding nothing prints dashes");
+
+  expectEq(std::any_cast<float>(number.scene(number.currentValue())->value()) == 5.0f, 1,
+           "the number editor opens on the value the row holds");
+  expectEq(std::any_cast<bool>(power.scene(power.currentValue())->value()), 1,
+           "the bool editor opens on the state the row holds");
+  expectText(std::any_cast<String>(unit.scene(unit.currentValue())->value()).c_str(), "hi",
+             "the choice editor opens on the key the row holds");
+  expectEq(std::any_cast<int32_t>(hold.scene(hold.currentValue())->value()), 90,
+           "the duration editor opens on the seconds the row holds");
+}
+
 }  // namespace
 
 void addSceneCases(std::vector<Case>& cases) {
@@ -521,6 +488,8 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});
   cases.push_back({"a settings list edits every kind", aSettingsListEditsEveryKind});
+  cases.push_back(
+      {"a row prints its value and opens its editor", aRowPrintsItsValueAndOpensItsEditor});
 }
 
 }  // namespace gardener::gfx::test
