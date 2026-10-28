@@ -102,6 +102,16 @@ own box and let a window compose over what is under it. Blocked by: nothing in t
 window — every scene takes the whole page — and `screen` is a published surface, so the extent, the
 buffer and the flush order a canvas would need are all undecided.
 
+## The Berry host library's dependency
+
+The library holding the interpreter's install, its four native modules, the page scene and the draw
+tree compiles against [libraries/Gardener](../libraries/Gardener) for the machine's bounds and its
+run state, the device's and a routine's documents, the jingle library and the buzzer — more than
+`PanelContext` carries. A surface declared in that library and implemented by the firmware would let
+it build with only the vendored VM and Gfx beside it. Blocked by: four modules reach past
+`PanelContext` into `machine/Machine.h`, `storage/Config.h`, `storage/Jingles.h` and
+`panel/BuzzerPlayer.h`, and nothing has chosen a shape for one seam that covers all four.
+
 # Battery Optional
 
 We should stop assuming that the system has a battery. idk if this is a build time option or a flag of some sport
