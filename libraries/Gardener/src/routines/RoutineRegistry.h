@@ -14,10 +14,11 @@ namespace gardener {
 class Library;
 class Logger;
 
-// One row the browser draws: the routine's glyph, the title the row shows and the key the row stands
-// for. An alternate carries its own title and its own key, and its record's glyph.
+// One row the browser draws: the routine's glyph as the image wrote it, the title the row shows and
+// the key the row stands for. An alternate carries its own title and its own key, and its record's
+// glyph.
 struct RoutineRow {
-  gfx::ui::Glyph glyph;
+  String glyph;
   String title;
   String routineKey;
 };
@@ -70,8 +71,9 @@ class RoutineRegistry {
   // not registered.
   String title(const String& routineKey) const;
 
-  // The routine's glyph, or nullptr for a key that is not registered or a record that names none.
-  const gfx::ui::Glyph* icon(const String& routineKey) const;
+  // The routine's glyph, as the image wrote it, or nullptr for a key that is not registered or a
+  // record that names none.
+  const String* icon(const String& routineKey) const;
 
   // The settings a routine can edit, as its record declares them, in the order the list shows them;
   // nullptr when the key is not registered.

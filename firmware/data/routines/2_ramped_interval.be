@@ -4,9 +4,10 @@
 import string
 
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
-# each column standing from the baseline two rows higher than the one before, as packed bits — the
-# width, the height, then the rows most significant bit first, each padded to a whole byte.
-ramped_interval_glyph = bytes("0c08000000e000e00ee00ee0eee0eee00000")
+# each column standing from the baseline two rows higher than the one before, as the hex digits of
+# its packed bitmap — the width, the height, then the rows most significant bit first, each padded
+# to a whole byte. The panel reads them when it draws the icon.
+ramped_interval_glyph = "0c08000000e000e00ee00ee0eee0eee00000"
 
 # The values the ramp edits, in the order the settings list shows them, and the one rule that binds
 # two of them: a ladder has to climb, so the final pressure is at least where it starts. The

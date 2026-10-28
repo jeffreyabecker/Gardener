@@ -31,7 +31,7 @@ test("the home chrome draws the title, the readout and the clock",
      home_chrome_draws_the_title_the_readout_and_the_clock)
 
 def ramped_static_chrome_draws_the_status_the_clock_and_the_bar()
-  var glyph = bytes("0c080000f3c012401240124012401e700000")
+  var glyph = "0c080000f3c012401240124012401e700000"
   var tree = ramped_static_chrome(glyph, "STATIC", "READY", 300000, 50000)
   assert_eq(tree.kind, "column", "the static chrome is not a column")
   assert_eq(tree.children.size(), 3, "the static chrome is not three rows")
@@ -56,7 +56,7 @@ test("the static chrome draws the status, the clock and the bar",
      ramped_static_chrome_draws_the_status_the_clock_and_the_bar)
 
 def ramped_interval_chrome_counts_the_sets()
-  var glyph = bytes("0c080000f3c012401240124012401e700000")
+  var glyph = "0c080000f3c012401240124012401e700000"
   var running = ramped_interval_chrome(glyph, "INTERVAL", 2, 4, "WORK", 50.0)
   assert_eq(child_at(child_at(running, 1), 1).value, "2 / 4",
             "a running set is not counted out of the total")
@@ -89,7 +89,7 @@ class ChromeRow
 end
 
 def browser_chrome_draws_the_window_and_the_marker()
-  var glyph = bytes("0c080000f3c012401240124012401e700000")
+  var glyph = "0c080000f3c012401240124012401e700000"
   var rows = [ChromeRow(glyph, "Alpha"), ChromeRow(glyph, "Beta"), ChromeRow(glyph, "Gamma")]
   var tree = browser_chrome(rows, 1, 0, 2, 128)
   assert_eq(tree.kind, "row", "the browser chrome is not a row")

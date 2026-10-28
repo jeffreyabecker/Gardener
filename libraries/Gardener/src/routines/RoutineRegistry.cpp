@@ -123,9 +123,9 @@ String RoutineRegistry::title(const String& routineKey) const {
   return record == nullptr ? String() : record->title();
 }
 
-const gfx::ui::Glyph* RoutineRegistry::icon(const String& routineKey) const {
+const String* RoutineRegistry::icon(const String& routineKey) const {
   const Registration* record = entry(routineKey);
-  if (record == nullptr || !record->glyph()) return nullptr;
+  if (record == nullptr || record->glyph().isEmpty()) return nullptr;
   return &record->glyph();
 }
 

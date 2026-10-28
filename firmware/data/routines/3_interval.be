@@ -3,9 +3,9 @@
 # because its page extends the ramp's.
 
 # The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
-# 12 by 8 field, as packed bits — the width, the height, then the rows most significant bit first,
-# each padded to a whole byte.
-interval_glyph = bytes("0c080000f3c012401240124012401e700000")
+# 12 by 8 field, as the hex digits of its packed bitmap — the width, the height, then the rows most
+# significant bit first, each padded to a whole byte.
+interval_glyph = "0c080000f3c012401240124012401e700000"
 
 # The values the interval edits, in the order the settings list shows them. Nothing binds one
 # setting to another here, so the rule accepts every set.

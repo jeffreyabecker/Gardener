@@ -9,7 +9,6 @@
 
 #include <Arduino.h>
 
-#include "ui/Drawing.h"
 #include "ui/SettingsRows.h"
 
 namespace gardener {
@@ -37,10 +36,12 @@ class Registration {
 
   // `settings` is the declaration, in the order the settings list shows it, and the record owns it
   // from here, so the list and the store reach the rows by pointer. The title is the label the
-  // browser draws; a record given none is known by its key.
+  // browser draws; a record given none is known by its key. The glyph is the hex digits that name
+  // the packed bitmap, empty for a record that names none — the browser hands it to `screen.icon`,
+  // which reads it when it draws the icon.
   Registration(const String& routineKey, const String& title,
                std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings,
-               Factory factory = nullptr, gfx::ui::Glyph glyph = nullptr);
+               Factory factory = nullptr, String glyph = String());
 
   Registration(const Registration&) = delete;
   Registration& operator=(const Registration&) = delete;
@@ -51,7 +52,7 @@ class Registration {
   const String& title() const { return title_; }
   const std::vector<gfx::ui::SettingsRow*>& settings() const { return settings_; }
   const Factory& factory() const { return factory_; }
-  const gfx::ui::Glyph& glyph() const { return glyph_; }
+  const String& glyph() const { return glyph_; }
 
   // Every setting the record declares, read from the section it names of the routine's document and
   // held to its kind. The document is opened once. An alternate also carries its section's
@@ -72,7 +73,7 @@ class Registration {
   // The declaration as the list and the store take it, over the rows this record owns.
   std::vector<gfx::ui::SettingsRow*> settings_;
   Factory factory_;
-  gfx::ui::Glyph glyph_;
+  String glyph_;
 };
 
 }  // namespace gardener

@@ -13,6 +13,7 @@
 #include <Gfx.h>
 
 #include "routines/Registration.h"
+#include "Glyph.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -43,36 +44,23 @@ void requireText(bvm* vm, int index, const char* what) {
   }
 }
 
-// The packed bitmap a record carries: the width, the height, then one row per byte-run, most
-// significant bit first and each row padded to a whole byte, which is the value screen.icon draws.
-// Nil is a record that names no glyph; a bitmap that cannot supply the rows it declares is refused
-// here rather than read past its end when a browser row is drawn. Nothing is copied yet, so a
-// refused record leaves nothing behind.
-const uint8_t* checkGlyph(bvm* vm, int index, size_t& length) {
-  length = 0;
-  if (be_isnil(vm, index)) return nullptr;
-  if (!be_isbytes(vm, index)) {
-    be_raise(vm, "type_error", "Registration: the glyph is the width, the height and the rows");
+// The glyph a record declares, as the image wrote it: the hex digits that name its packed bitmap,
+// which is the value `screen.icon` takes. Nil is a record that names no glyph and is let through; a
+// value that is not a glyph string is refused here rather than drawn as nothing when a browser row
+// is drawn.
+void requireGlyph(bvm* vm, int index) {
+  if (be_top(vm) < index || be_isnil(vm, index)) return;
+  if (!be_isstring(vm, index)) {
+    be_raise(vm, "type_error", "Registration: the glyph is a string of hex digits");
   }
-  const uint8_t* bits = (const uint8_t*)be_tobytes(vm, index, &length);
-  if (bits == nullptr || length < 2 || bits[0] == 0 || bits[1] == 0 ||
-      length < 2 + (size_t)((bits[0] + 7) / 8) * bits[1]) {
+  if (!isGlyph(argText(vm, index))) {
     be_raise(vm, "value_error", "Registration: the glyph is the width, the height and the rows");
   }
-  return bits;
 }
 
-// The glyph a record keeps, from a bitmap checkGlyph has passed. A glyph outlives the call that
-// declared it and the interpreter frees the file's bytes with its values, so the bitmap is copied
-// out and the paint closes over the copy.
-gfx::ui::Glyph copyGlyph(const uint8_t* bits, size_t length) {
-  if (bits == nullptr) return nullptr;
-  auto kept = std::make_shared<std::vector<uint8_t>>(bits, bits + length);
-  return [kept](gfx::Rect box) {
-    return gfx::ui::icon(box, [kept](gfx::Canvas& canvas) {
-      canvas.draw(gfx::shapes::MonoBitmap(0, 0, kept->data(), gfx::ui::Ink));
-    });
-  };
+// The glyph the file declared, or an empty string for the nil requireGlyph has already let through.
+String glyphOf(bvm* vm, int index) {
+  return be_top(vm) < index || be_isnil(vm, index) ? String() : String(argText(vm, index));
 }
 
 // Registration(routine_key, title, glyph, settings): the record a routine file declares, built from
@@ -86,15 +74,14 @@ int registrationInit(bvm* vm) {
   }
   requireText(vm, 2, "the routine key");
   requireText(vm, 3, "the title");
-  // Both are checked before a row is taken or a byte copied, so a refused record changes nothing.
-  size_t length = 0;
-  const uint8_t* bits = checkGlyph(vm, 4, length);
+  // Both are checked before a row is taken, so a refused record changes nothing.
+  requireGlyph(vm, 4);
   std::vector<std::unique_ptr<gfx::ui::SettingsRow>> rows;
   if (be_top(vm) >= 5) rows = takeSettingsRows(vm, 5);
 
   be_newcomobj(vm, new RecordOwner(std::make_unique<gardener::Registration>(
                             String(argText(vm, 2)), String(argText(vm, 3)), std::move(rows),
-                            nullptr, copyGlyph(bits, length))),
+                            nullptr, glyphOf(vm, 4))),
                recordRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);

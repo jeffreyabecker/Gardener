@@ -31,11 +31,11 @@ nothing.
 
 The routine files hand `routines.register(...)` an instance of the native `Registration` class that
 is installed now, and nothing reads the record it holds. The declaration is four names —
-`Registration(routine_key, title, glyph, settings)`: the key, the label, the packed bitmap and the
-list of `settings` declarations, in that order. The files hand the init five, passing the class they
-registered as the page fourth, so the init reads that class as the bitmap and the declaration list
-as a fifth argument it has no name for. A page is not one of the four, so the three files stop
-passing it until the page work lands.
+`Registration(routine_key, title, glyph, settings)`: the key, the label, the glyph — the hex digits
+that name its packed bitmap — and the list of `settings` declarations, in that order. The files hand
+the init five, passing the class they registered as the page fourth, so the init reads that class as
+the glyph and the declaration list as a fifth argument it has no name for. A page is not one of the
+four, so the three files stop passing it until the page work lands.
 
 `register(record)` takes the `gardener::Registration` out of the instance's `.p` and hands it to the
 registry, answering what the registry answers, and false with one line naming the routine for a
@@ -56,22 +56,22 @@ Checked: a record reads its key back from `keys()` and its title from `title()`,
 answers false and leaves the registry as it was, registering a key twice leaves one entry in the
 place it first took, and registering one instance twice answers false the second time.
 
-## A row is the bytes, the title and the key
+## A row is the glyph, the title and the key
 
-`Registration` keeps the glyph as a paint: the bitmap it was declared with is copied into a closure
-and the bytes are dropped, while a row is drawn by `screen.icon`, which takes `bytes`. The row the
-registry answers carries that paint, so a row gives the browser nothing it can draw, and
-`/system/records.be` declares no row at all — a record reads with dots only on a class the parser
-declared, so there is a field list missing as well.
+`Registration` keeps the glyph as the string the file wrote — the hex digits that name the packed
+bitmap — and nothing on this side decodes it: a row is drawn by `screen.icon`, which takes that
+string and reads its bits when it paints the icon, so the record hands the browser a glyph it can
+draw unchanged. The row the registry answers carries the same string, and `/system/records.be`
+declares no row at all — a record reads with dots only on a class the parser declared, so there is a
+field list missing as well.
 
-A record keeps the packed bitmap beside the paint it builds from it, and `rows()` answers a list of
-`row` instances: one per record and one per alternate, in `keys()` order, each carrying `icon` — the
-width, the height and the padded rows exactly as the file declared, or nil when it named no glyph —
-`title`, the label the browser draws, and `value`, the key the row launches. `records.be` declares
-`row` from those three fields before the module answers one, so a row's `icon` is the bitmap
+`rows()` answers a list of `row` instances: one per record and one per alternate, in `keys()` order,
+each carrying `icon` — the hex digits exactly as the file declared them, or nil when it named no
+glyph — `title`, the label the browser draws, and `value`, the key the row launches. `records.be`
+declares `row` from those three fields before the module answers one, so a row's `icon` is the value
 `screen.icon` accepts unchanged.
 
-Checked: a row for a record declared with a bitmap reads back the bytes the file declared, `rows()`
+Checked: a row for a record declared with a glyph reads back the digits the file declared, `rows()`
 for two records and one alternate answers three rows in that order, and a record that named no glyph
 answers a nil `icon`.
 
@@ -114,8 +114,7 @@ them is a `routines` call this module refuses.
   and the browser sizes that answer and hands it to the settings list, so what a cfg is on the Berry
   side — the list of declarations or a handle — is decided with the list that edits them. `entry`
   has no caller in the image.
-- `icon`: nothing in the image calls it, and a row's glyph is the bytes above rather than the paint
-  the registry answers today.
+- `icon`: nothing in the image calls it, and a row's glyph is the string above rather than a paint.
 - The `List`, `ux` and `SettingsEditScene` globals browser.be names: `Ux` has no Berry surface,
   `List` does not exist, and the settings list is `SettingsScene` under another name. Berry resolves
   globals when it compiles, so no file that opens the browser or a routine's settings loads until

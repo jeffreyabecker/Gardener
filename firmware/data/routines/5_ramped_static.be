@@ -29,9 +29,10 @@ def ramped_static_chrome(icon, title, status, duration, elapsed)
 end
 
 # The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
-# run rising from the first row to the last, on a 12 by 8 field, as packed bits — the width, the
-# height, then the rows most significant bit first, each padded to a whole byte.
-ramped_static_glyph = bytes("0c0800000010007001f007f01ff0fff00000")
+# run rising from the first row to the last, on a 12 by 8 field, as the hex digits of its packed
+# bitmap — the width, the height, then the rows most significant bit first, each padded to a whole
+# byte.
+ramped_static_glyph = "0c0800000010007001f007f01ff0fff00000"
 
 # The values this page edits, in the order the settings list shows them, and the one rule that binds
 # them: the profile is the two holds plus a ramp, so the total has to cover the holds. The
