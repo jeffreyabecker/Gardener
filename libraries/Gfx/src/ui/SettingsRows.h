@@ -35,6 +35,8 @@ class BoolRow : public SettingsRow {
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
   std::unique_ptr<Scene> scene(const std::any& value) override;
+  String stored(const std::any& value) const override;
+  std::any parse(const String& stored) const override;
 
  private:
   GestureQueue& gestures_;
@@ -62,6 +64,8 @@ class ChoiceRow : public SettingsRow {
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
   std::unique_ptr<Scene> scene(const std::any& value) override;
+  String stored(const std::any& value) const override;
+  std::any parse(const String& stored) const override;
 
  private:
   GestureQueue& gestures_;
@@ -89,6 +93,8 @@ class DurationRow : public SettingsRow {
   std::any defaultValue() const override { return default_; }
   String text(const std::any& value) const override;
   std::unique_ptr<Scene> scene(const std::any& value) override;
+  String stored(const std::any& value) const override;
+  std::any parse(const String& stored) const override;
 
  private:
   GestureQueue& gestures_;
@@ -113,13 +119,15 @@ class NumberRow : public SettingsRow {
  public:
   NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
             float defaultValue, float step, float min, float max, bool nullable,
-            NumberFormatter format = nullptr);
+            NumberFormatter format = nullptr, uint8_t decimals = 2);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
   String text(const std::any& value) const override;
   std::unique_ptr<Scene> scene(const std::any& value) override;
+  String stored(const std::any& value) const override;
+  std::any parse(const String& stored) const override;
 
  protected:
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
@@ -136,6 +144,7 @@ class NumberRow : public SettingsRow {
  private:
   String key_;
   float default_;
+  uint8_t decimals_;
 };
 
 }  // namespace gardener::gfx::ui

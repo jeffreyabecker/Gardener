@@ -56,8 +56,10 @@ touches the image passes `python tools/berry/check.py`.
   Verified: `tools/gfx/check.py` drives the list and a launch, and the launched page opens on the
   settled settings.
 - [ ] 3.2 — The browser's settings list is a `SettingsScene` over rows built from the routine's
-  declaration, not from a Berry record, and OK hands the set to the launch. Verified: a case opens a
-  routine's list, edits one setting and reads the value the launch started on.
+  declaration, its set read from and written to the parent routine's `/cfg/routines/<key>.ini` by
+  `RoutineSettingStore` — the routine's own set in the global section, an alias's in the section its
+  key names — and OK hands the set to the launch. Verified: a case opens a routine's list, edits one
+  setting and reads the value the launch started on.
 - [ ] 3.3 — `browser.be`, `registry.be`, `registration.be` and `records.be` leave the image and
   `/system/order`, and routines register through the C++ record instead. Verified:
   `python tools/berry/check.py --memory` lists neither the files nor the objects they made, and the

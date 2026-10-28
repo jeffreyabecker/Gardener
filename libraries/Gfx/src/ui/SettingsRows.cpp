@@ -44,6 +44,24 @@ std::unique_ptr<Scene> BoolRow::scene(const std::any& value) {
   return std::make_unique<BoolScene>(gestures_, ux_, label_, current, nullable_);
 }
 
+// The document's word for a switch, and the words a config reads as the same thing.
+String BoolRow::stored(const std::any& value) const {
+  if (!value.has_value()) return String();
+  return std::any_cast<bool>(value) ? "on" : "off";
+}
+
+std::any BoolRow::parse(const String& stored) const {
+  if (stored.equalsIgnoreCase("on") || stored.equalsIgnoreCase("true") ||
+      stored.equalsIgnoreCase("1") || stored.equalsIgnoreCase("yes")) {
+    return true;
+  }
+  if (stored.equalsIgnoreCase("off") || stored.equalsIgnoreCase("false") ||
+      stored.equalsIgnoreCase("0") || stored.equalsIgnoreCase("no")) {
+    return false;
+  }
+  return defaultValue();
+}
+
 // --- the choice -------------------------------------------------------------
 
 ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -75,6 +93,15 @@ std::unique_ptr<Scene> ChoiceRow::scene(const std::any& value) {
                                        forward_);
 }
 
+// The document keeps the key, not the title the list prints.
+String ChoiceRow::stored(const std::any& value) const {
+  return value.has_value() ? std::any_cast<String>(value) : String();
+}
+
+std::any ChoiceRow::parse(const String& stored) const {
+  return stored.isEmpty() ? defaultValue() : std::any(stored);
+}
+
 // --- the duration -----------------------------------------------------------
 
 DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -104,11 +131,22 @@ std::unique_ptr<Scene> DurationRow::scene(const std::any& value) {
                                          nullable_);
 }
 
+// The document keeps whole seconds, which is the unit the kind already holds.
+String DurationRow::stored(const std::any& value) const {
+  if (!value.has_value()) return String();
+  return String(static_cast<long>(std::any_cast<int32_t>(value)));
+}
+
+std::any DurationRow::parse(const String& stored) const {
+  if (stored.isEmpty()) return defaultValue();
+  return static_cast<int32_t>(stored.toInt());
+}
+
 // --- the number -------------------------------------------------------------
 
 NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                      float defaultValue, float step, float min, float max, bool nullable,
-                     NumberFormatter format)
+                     NumberFormatter format, uint8_t decimals)
     : gestures_(gestures),
       ux_(ux),
       label_(label),
@@ -118,7 +156,8 @@ NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const St
       nullable_(nullable),
       format_(std::move(format)),
       key_(key),
-      default_(defaultValue) {}
+      default_(defaultValue),
+      decimals_(decimals) {}
 
 // Nothing is NAN, which is what the number kind holds its nothing as, so the list never carries a
 // NAN where it means `--`.
@@ -137,6 +176,22 @@ std::unique_ptr<Scene> NumberRow::scene(const std::any& value) {
   const float current = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<NumberScene>(gestures_, ux_, label_, current, step_, min_, max_,
                                        nullable_, format_);
+}
+
+// The document keeps the number at the row's decimals, which is the precision the setting writes with
+// rather than the units the glass prints it in.
+String NumberRow::stored(const std::any& value) const {
+  if (!value.has_value()) return String();
+  const float number = std::any_cast<float>(value);
+  if (isnan(number)) return String();
+  char printed[16];
+  snprintf(printed, sizeof(printed), "%.*f", static_cast<int>(decimals_),
+           static_cast<double>(number));
+  return String(printed);
+}
+
+std::any NumberRow::parse(const String& stored) const {
+  return stored.isEmpty() ? defaultValue() : std::any(stored.toFloat());
 }
 
 }  // namespace gardener::gfx::ui

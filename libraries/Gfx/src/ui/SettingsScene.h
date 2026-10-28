@@ -44,6 +44,14 @@ class SettingsRow {
   // The scene that edits `value`, or nullptr for a setting with no editor, where Forward opens
   // nothing. The stack owns what it is handed, so the row builds one and lets it go.
   virtual std::unique_ptr<Scene> scene(const std::any& value) = 0;
+
+  // The text the document keeps for a value of this kind, which is not the form the list prints — a
+  // bool is on or off, a duration its whole seconds — and empty for nothing at all.
+  virtual String stored(const std::any& value) const = 0;
+
+  // A value of this kind from the text a document held. Text written as nothing answers the row's
+  // default, and so does a bool's word this kind cannot read.
+  virtual std::any parse(const String& stored) const = 0;
 };
 
 // The list a routine's settings are edited in, from settings_edit.be: the heading, one row per

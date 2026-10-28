@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 #include <string>
 
@@ -30,6 +32,20 @@ class String {
 
   const char* c_str() const { return text_.c_str(); }
   bool isEmpty() const { return text_.empty(); }
+
+  // The reads the settings rows make of a document's text, as the Arduino string answers them.
+  float toFloat() const { return static_cast<float>(atof(text_.c_str())); }
+  long toInt() const { return atol(text_.c_str()); }
+  bool equalsIgnoreCase(const String& other) const {
+    if (text_.size() != other.text_.size()) return false;
+    for (size_t i = 0; i < text_.size(); i++) {
+      if (tolower(static_cast<unsigned char>(text_[i])) !=
+          tolower(static_cast<unsigned char>(other.text_[i]))) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   String& operator=(const char* text) {
     text_ = text == nullptr ? "" : text;

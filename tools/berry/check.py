@@ -59,6 +59,7 @@ FIRMWARE_SOURCES = [
     GARDENER / "src" / "storage" / "Config.cpp",
     GARDENER / "src" / "storage" / "Ini.cpp",
     GARDENER / "src" / "storage" / "Jingles.cpp",
+    GARDENER / "src" / "storage" / "RoutineSettingStore.cpp",
     GARDENER / "src" / "VacuumSystem.cpp",
 ]
 
@@ -73,6 +74,13 @@ GFX_SOURCES = [
     GFX / "src" / "ui" / "Overlay.cpp",
     GFX / "src" / "ui" / "Scene.cpp",
     GFX / "src" / "ui" / "Ux.cpp",
+    GFX / "src" / "ui" / "SettingsRows.cpp",
+    GFX / "src" / "ui" / "SettingsScene.cpp",
+    GFX / "src" / "ui" / "EditorScene.cpp",
+    GFX / "src" / "ui" / "ChoiceScene.cpp",
+    GFX / "src" / "ui" / "BoolScene.cpp",
+    GFX / "src" / "ui" / "NumberScene.cpp",
+    GFX / "src" / "ui" / "DurationScene.cpp",
 ]
 
 # The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
@@ -86,6 +94,7 @@ HOST_SOURCES = [
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
     HOST / "OverlayCallout.cpp",
+    HOST / "RoutineSettingStoreCheck.cpp",
 ]
 
 MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]

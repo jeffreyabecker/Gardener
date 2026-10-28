@@ -97,6 +97,7 @@ class String {
 
   bool operator==(const String& other) const { return text_ == other.text_; }
   bool operator!=(const String& other) const { return text_ != other.text_; }
+  bool operator<(const String& other) const { return text_ < other.text_; }
   bool operator==(const char* other) const { return other != nullptr && text_ == other; }
   bool operator!=(const char* other) const { return !(*this == other); }
 

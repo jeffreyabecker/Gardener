@@ -256,6 +256,14 @@ class TestRow : public SettingsRow {
     return value.has_value() ? std::any_cast<String>(value) : String("--");
   }
 
+  String stored(const std::any& value) const override {
+    return value.has_value() ? std::any_cast<String>(value) : String();
+  }
+
+  std::any parse(const String& stored) const override {
+    return stored.isEmpty() ? defaultValue() : std::any(stored);
+  }
+
   std::unique_ptr<Scene> scene(const std::any& value) override {
     return std::make_unique<TestEditor>(gestures_, value);
   }
@@ -514,6 +522,41 @@ void aSettingsListSeedsFromTheDocument() {
            "the editor hands the set back as it opened");
 }
 
+// Each kind's row writes the document's form of a value, which is not the form the list prints, and
+// reads that text back as the value it wrote.
+void aRowStoresItsDocumentForm() {
+  NoGestures gestures;
+  Ux ux;
+  NumberRow number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolRow power(gestures, ux, "power", "Power", true);
+  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+  NumberRow unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
+
+  expectText(number.stored(std::any(7.5f)).c_str(), "7.50", "a number stores at its decimals");
+  expectText(power.stored(std::any(true)).c_str(), "on", "a bool stores a word, not its state");
+  expectText(unit.stored(std::any(String("lo"))).c_str(), "lo", "a choice stores its key");
+  expectText(hold.stored(std::any(static_cast<int32_t>(150))).c_str(), "150",
+             "a duration stores whole seconds");
+
+  expectEq(std::any_cast<float>(number.parse(String("7.50"))) == 7.5f, 1,
+           "a number reads back the value it stored");
+  expectEq(std::any_cast<bool>(power.parse(String("off"))), 0, "a bool reads the word it stores");
+  expectEq(std::any_cast<bool>(power.parse(String("YES"))), 1, "and the words a config reads too");
+  expectText(std::any_cast<String>(unit.parse(String("lo"))).c_str(), "lo",
+             "a choice reads back the key it stored");
+  expectEq(std::any_cast<int32_t>(hold.parse(String("150"))), 150,
+           "a duration reads back the seconds it stored");
+
+  expectText(number.stored(std::any()).c_str(), "", "nothing stores as nothing");
+  expectText(unset.stored(std::any(NAN)).c_str(), "", "and so does a number holding none");
+  expectEq(std::any_cast<float>(number.parse(String())) == 5.0f, 1,
+           "empty text answers the row's default");
+  expectEq(unset.parse(String()).has_value(), 0, "which for a nullable row is nothing");
+  expectEq(std::any_cast<bool>(power.parse(String("maybe"))), 1,
+           "a word the kind cannot read answers the default");
+}
+
 }  // namespace
 
 void addSceneCases(std::vector<Case>& cases) {
@@ -535,8 +578,8 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});
   cases.push_back({"a settings list edits every kind", aSettingsListEditsEveryKind});
   cases.push_back({"a settings list is seeded from the document", aSettingsListSeedsFromTheDocument});
-  cases.push_back(
-      {"a row prints its value and opens its editor", aRowPrintsItsValueAndOpensItsEditor});
+  cases.push_back({"a row prints its value and opens its editor", aRowPrintsItsValueAndOpensItsEditor});
+  cases.push_back({"a row stores the document's form", aRowStoresItsDocumentForm});
 }
 
 }  // namespace gardener::gfx::test
