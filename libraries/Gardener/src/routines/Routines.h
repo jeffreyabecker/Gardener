@@ -52,6 +52,10 @@ class Routines {
   // one, so a press goes to whichever of the two is reading.
   gfx::ui::GestureQueue& presses() { return gestures_; }
 
+  // What a settings row builds its editor on: the stack the beat polls, so a list opened from a
+  // page is pushed over it rather than into a second one.
+  gfx::ui::Ux& scenes() { return stack_; }
+
   // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { gestures_.push(gesture); }
   bool takePress(String& gesture) { return gestures_.take(gesture); }

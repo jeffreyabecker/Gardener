@@ -11,6 +11,9 @@ namespace berry {
 void installVacuumModule(bvm* vm);
 void installScreenModule(bvm* vm);
 void installDeviceModule(bvm* vm);
+// The declarations a routine's settings list is made of: a class per kind, each call holding the row
+// it built in the instance, so nothing about a setting is read back off a field.
+void installSettingsModule(bvm* vm);
 // The native Config class a routine can instantiate for its own INI document.
 void installConfigClass(bvm* vm);
 // Answers an instance of that class over `document`, read once: the document and the name it was
