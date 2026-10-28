@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, INVEST-sized items that each leave the tree working, with a branch per backlog, epic and task, a commit per item, and a summary written after each epic. Use when breaking decided work into steps, working through a tasklist, or deciding whether something is a task, a plan or a parking-lot line.'
+description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of the plan it implements — ordered, INVEST-sized items that each leave the tree working, with a branch per backlog, epic and task, a commit per item, and a summary written after each epic. Use when breaking decided work into steps or working through a tasklist.'
 ---
 
 # Backlog
@@ -9,7 +9,6 @@ description: 'Backlogs in docs/backlogs/: the fine-grained tasklist breakdown of
 
 - Breaking work into steps before starting it
 - Working through, adding to or finishing a document in `docs/backlogs/`
-- Deciding whether a piece of work is a task, a plan or a parking-lot line
 
 ## A backlog is a tasklist
 
@@ -20,10 +19,10 @@ the effort can be worked from the top down.
 A backlog is usually the detailed breakdown of a plan, and it may name the plan it implements. That
 is the one reference a plan accepts, because the two leave together.
 
-A backlog breaks work down; it does not choose the work or design it. If an item needs a decision
-that has not been made, that decision belongs in a plan — or in an idea document if it is still
-being weighed — and the item states the outcome. A backlog full of "decide how to…" lines is a plan
-that has not been written yet.
+A backlog breaks work down; it does not choose the work or design it. An item states an outcome
+somebody has already settled. If writing it needs a decision nobody has made, the line is not an
+item yet, and adding it does not make the decision: a backlog full of "decide how to…" lines is
+work that was never decided.
 
 ## An item is the unit of work
 

@@ -204,6 +204,28 @@ void aChoiceCancelPutsBackTheKeyItOpenedOn() {
   expectText(keyOf(choice).c_str(), "b", "Cancel puts back the key it opened on");
 }
 
+void aChoiceForwardIsThePagesWork() {
+  NoGestures gestures;
+  Ux ux;
+  String label("Choice");
+  String heard;
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false,
+                     [&heard](String& current) { heard = current; });
+  expectEq(choice.press("forward:single"), 1, "a choice handed the work takes Forward");
+  expectText(heard.c_str(), "b", "and runs it on the key showing");
+  choice.nudge(1);
+  choice.press("forward:single");
+  expectText(heard.c_str(), "c", "the work follows the entry showing");
+
+  ChoiceProbe none(gestures, ux, label, "b", threeEntries(), false);
+  expectEq(none.press("forward:single"), 0, "a choice handed none drops Forward");
+
+  bool ran = false;
+  ChoiceProbe empty(gestures, ux, label, "", threeEntries(), true, [&ran](String&) { ran = true; });
+  expectEq(empty.press("forward:single"), 0, "nothing showing leaves Forward unanswered");
+  expectEq(ran, 0, "and runs no work");
+}
+
 void aChoiceBandInvertsTheEntryShowing() {
   NoGestures gestures;
   Ux ux;
@@ -448,6 +470,7 @@ void addEditorCases(std::vector<Case>& cases) {
   cases.push_back({"a choice closes on the key showing", aChoiceClosesOnTheKeyShowing});
   cases.push_back(
       {"a choice cancel puts back the key it opened on", aChoiceCancelPutsBackTheKeyItOpenedOn});
+  cases.push_back({"a choice forward is the page's work", aChoiceForwardIsThePagesWork});
   cases.push_back({"a choice band inverts the entry showing", aChoiceBandInvertsTheEntryShowing});
   cases.push_back(
       {"a choice band prints the title without a paint", aChoiceBandPrintsTheTitleWithoutAPaint});

@@ -29,6 +29,9 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written under `docs/backlogs/completed/` after each epic; when the last item
 lands the backlog and its plan are deleted together.
 
+- [The native panel](./backlogs/native-panel.md) — every page native: the settings list, the
+  registry, the browser page, the harness and the specs the port left behind
+
 Summaries of the finished ones are in
 [docs/backlogs/completed/](./backlogs/completed/) —
 [the machine without the panel](./backlogs/completed/headless-build/), whose epics split the machine

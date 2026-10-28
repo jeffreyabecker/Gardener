@@ -263,6 +263,17 @@ measure varies from glyph to glyph. A fixed-size face has a non-zero `fixedWidth
 a monospace face has a non-zero `fixedAdvance`. `BuiltinFont` is the built-in 5x7 face: all 256 byte
 values, five pixels wide, eight tall, six pixels apart.
 
+The built-in face follows Adafruit's control page, so a page prints an arrow or a triangle by
+writing the byte where the glyph goes, as the editor's hint does with `"\x1E/\x1F  OK=SAVE"`.
+
+| Byte | Glyph | Byte | Glyph |
+| --- | --- | --- | --- |
+| `0x0D` | note | `0x19` | down arrow |
+| `0x0E` | double note | `0x1A` | right arrow |
+| `0x10` | left triangle | `0x1B` | left arrow |
+| `0x11` | right triangle | `0x1E` | up triangle |
+| `0x18` | up arrow | `0x1F` | down triangle |
+
 The structures are forked from Adafruit_GFX's `GFXfont` and `GFXglyph` into `gardener::gfx`, and
 the glyph writer and the built-in face keep Adafruit's attribution.
 

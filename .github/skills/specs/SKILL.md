@@ -1,6 +1,6 @@
 ---
 name: specs
-description: 'Specifications in docs/specs/: the contract for what the firmware and its tools do now — states, transitions, wire formats, limits — written to stand on its own. Use when writing or changing a spec, deciding whether a requirement belongs in a spec or somewhere else, or checking that a spec does not point at a plan, an idea or a backlog.'
+description: 'Specifications in docs/specs/: the contract for what the firmware and its tools do now — states, transitions, wire formats, limits — written to stand on its own. Use when writing, changing or reviewing a spec, or when a settled requirement needs a home.'
 ---
 
 # Specs

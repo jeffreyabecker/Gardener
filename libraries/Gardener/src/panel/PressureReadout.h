@@ -8,6 +8,7 @@
 
 namespace gardener {
 
+
 // The AutoPressureDisplay the pages drew, composed from the drawing styles: the machine's reading
 // and its target in the panel's unit, both taken when the paint runs, so one paint serves every
 // beat. The reading is the primary number, centred across and down `box` at `scale`; the target is

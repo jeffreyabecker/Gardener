@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include <functional>
 #include <vector>
 
 #include <Arduino.h>
@@ -26,13 +27,19 @@ struct ChoiceItem {
 //
 // An entry's paint is the page's own — the scene places the rows, inverts the one showing and
 // scrolls the window to keep it in view, and knows nothing of what an entry draws.
+//
+// Forward is the page's own too: a scene handed a forward function runs it on the key showing, for
+// a page whose entries do something beyond being picked — an audition, a preview. A scene handed
+// none drops the key, which is what every page that only reads the answer does.
 class ChoiceScene : public EditorScene {
  public:
   // `current` is the key stored now. A nullable setting holding nothing passes an empty one, which
   // is what the band prints `--` for; a key no entry names shows the first, as a setting that no
-  // longer offers it reads as its default.
+  // longer offers it reads as its default. `forward` is what Forward runs on the key showing, or
+  // nothing for a page that has no work of its own there.
   ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
-              const std::vector<ChoiceItem>& items, bool nullable);
+              const std::vector<ChoiceItem>& items, bool nullable,
+              std::function<void(String& current)> forward = nullptr);
 
   // What the entry showing prints: its title, or `--` when the setting holds nothing.
   String text() const;
@@ -43,6 +50,7 @@ class ChoiceScene : public EditorScene {
   bool nullable() const override { return nullable_; }
 
  protected:
+  bool handle(const char* gesture) override;
   void nudge(int8_t direction) override;
   void canceled() override;
   Paint pageContents() override;
@@ -58,6 +66,7 @@ class ChoiceScene : public EditorScene {
   int16_t index() const;
 
   std::vector<ChoiceItem> items_;
+  std::function<void(String& current)> forward_;
   bool nullable_;
 };
 

@@ -57,7 +57,9 @@ A parking-lot line in `docs/plans/parking-lot.md` is the fifth thing and the sma
 naming a deferred idea and what is blocking it, for work too small to earn any of the four.
 
 The skill for each has the detail: `.github/skills/specs/`, `.github/skills/plans/`,
-`.github/skills/ideation/`, `.github/skills/backlog/`.
+`.github/skills/ideation/`, `.github/skills/backlog/`. This table is the whole of where a note
+goes; those skills say what their document contains, so a note's destination is answered here
+without opening them.
 
 `docs/README.md` indexes specs, guides and backlogs; plans and ideas have no entry, so they are
 found by name in their folder. Everything else — specs, guides, code comments,
