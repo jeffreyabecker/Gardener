@@ -1,13 +1,12 @@
 # Register a routine from Berry
 
-`RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, and
-nothing reaches them from a `.be` file. `Bindings.cpp` installs `vacuum`, `screen`, `device` and
-`settings`; there is no `routines` module and no `Registration` class. The image's files still call
-`routines.register(...)`, `routines.rows()` and `routines.load_settings(...)`, subclass a record
-that is not there, and declare their settings under names the `settings` module does not answer, so
-the image does not load. This plan makes the record and the registry native — a registration a
-binding object, taken apart once by `register` — and leaves the page, the browser and the settings
-list alone.
+`RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, the
+`settings` module and the native `Registration` class are installed, and there is no `routines`
+module. The image's files still call `routines.register(...)`, `routines.rows()` and
+`routines.load_settings(...)` and declare their settings under names the module does not answer, so
+the image does not load. This plan makes the registry reachable from Berry — a `routines` module
+whose `register` takes the record an instance holds — and leaves the page, the browser and the
+settings list alone.
 
 ## The registry is reachable from the interpreter
 
@@ -23,25 +22,19 @@ behind it.
 Checked: a Berry file calls each of the five and gets an answer, and a key that is not registered
 answers an empty map and an empty title rather than raising.
 
-## A registration is a binding object and `register` takes it
+## `register` takes the record out of the instance
 
-The routine files build a `Registration` subclass and call `routines.register(...)` with an instance
-of it, so a registration is a class the image has to have, and no `Registration` class exists in the
-image or as a native binding. A native class installed at boot beside `Config` replaces it:
-`init(routine_key, title, glyph, settings)` builds a `gardener::Registration` from those arguments
-and the instance holds it, so a file subclasses it, keeps the page's own value for the page work,
-and passes the rest up. `register(record)` takes that registration out of the instance and hands it
-to the registry, and answers false with one line, changing nothing, for a value that is not one of
-these instances. The glyph is the packed bitmap the routine's file carries — the width, the height,
-then the rows — the same value `screen.icon` draws, so it travels through the registration
-unchanged.
+The routine files hand `routines.register(...)` an instance of the native `Registration` class that
+is installed now, and nothing reads the record it holds. `register(record)` takes the
+`gardener::Registration` out of the instance's `.p` and hands it to the registry, answering what the
+registry answers, and false with one line naming the routine for a value that is not one of these
+instances or one whose record has already been taken: the registry owns a record from the first
+call. The glyph, the title and the settings rows travel with it, so nothing is rebuilt here.
 
 The refusals the registry already makes do not move: a key that is not a plain word is refused with
 one line and answers false, the title falls back to the key, a key already registered keeps its
 place while its record and alternates are replaced, and the document scan that gives a record its
-alternates stays with the registry. A list holding anything that is not one of the `settings`
-module's objects is refused the same way — one line naming the routine, false, and the registry as
-it was.
+alternates stays with the registry.
 
 The three routine files change with it: each declares its settings with the module's kinds,
 subclasses the record, and registers the instance, so the declaration lines the image carries are
@@ -49,7 +42,7 @@ the ones the surface answers.
 
 Checked: a record reads its key back from `keys()` and its title from `title()`, a key with a slash
 answers false and leaves the registry as it was, registering a key twice leaves one entry in the
-place it first took, and a list holding nil answers false and registers nothing.
+place it first took, and registering one instance twice answers false the second time.
 
 ## A set is read back as a map and written from one
 
@@ -82,7 +75,8 @@ only suite sources left.
 
 ## How it is known to hold
 
-1. `python scripts/arduino.py --task build` compiles the `routines` module and the record class.
+1. `python scripts/arduino.py --task build` compiles the `routines` module and what its register
+   reaches.
 2. The image's `[E]` lines on the device name no missing `routines` call once the page classes
    follow.
 3. `python tools/berry/check.py --tests` and `--memory` hold once the interpreter's check runs
