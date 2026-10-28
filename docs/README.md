@@ -17,8 +17,9 @@ down rather than choosing or designing it, and it may name its plan. The work is
 time, with a summary written after each epic and committed on its own; when the last item lands the
 backlog and its plan are deleted together, and the commits are what is left of them.
 
-- [The native panel](./backlogs/native-panel.md) — every page native: the settings list, the
-  registry, the browser page, the harness and the specs the port left behind
+<< DO NOT EVER LIST BACKLOG OR PLAN FILES IN THIS DOCUMENT >>
+Backlogs and plans are transient documents which will be updated and deleted constantly 
+listing them anywhere is forbidden
 
 ## Guides
 
