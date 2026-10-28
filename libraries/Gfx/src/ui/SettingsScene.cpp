@@ -20,17 +20,16 @@ Paint rowText(const SettingsRow& setting, const std::any& value) {
 
 }  // namespace
 
-SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title)
-    : Scene(gestures), title_(title), ux_(ux) {}
-
-void SettingsScene::set(const std::vector<SettingsRow*>& rows) {
-  rows_ = rows;
-  values_.clear();
+SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
+                             const std::vector<SettingsRow*>& rows,
+                             const SettingValues& values)
+    : Scene(gestures), title_(title), ux_(ux), rows_(rows) {
   for (const SettingsRow* row : rows_) {
-    if (row != nullptr) values_[row->key()] = row->currentValue();
+    if (row == nullptr) continue;
+    const auto held = values.find(row->key());
+    values_[row->key()] = held == values.end() ? row->defaultValue() : held->second;
   }
   opened_ = values_;
-  if (selected_ >= static_cast<int16_t>(rows_.size())) selected_ = 0;
 }
 
 bool SettingsScene::handle(const char* gesture) {
@@ -64,9 +63,9 @@ void SettingsScene::move(int8_t direction) {
   selected_ = static_cast<int16_t>((selected_ + direction + count) % count);
 }
 
-// Forward opens the row's editor with the value the row holds now, and what that editor hands back
-// is written under the row's key. A scene that was cancelled hands back the value it opened on, so
-// the write is the same either way.
+// Forward opens the row's editor with the value the list holds for the row's key, and what that
+// editor hands back is written under it. A scene that was cancelled hands back the value it opened
+// on, so the write is the same either way.
 void SettingsScene::open() {
   if (selected_ < 0 || selected_ >= static_cast<int16_t>(rows_.size())) return;
   SettingsRow* row = rows_[selected_];

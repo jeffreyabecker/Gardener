@@ -18,10 +18,13 @@ namespace gardener::gfx::ui {
 // hands on.
 using SettingValues = std::map<String, std::any>;
 
-// One row of a settings list: the key its value is stored under, the label it prints, the value it
-// shows now and the scene that edits it. A row is a class of its own per setting kind — a number
-// row builds a NumberScene, a bool row a BoolScene — so a kind states its rules once and the list
-// knows none of them.
+// One row of a settings list: the key its value is stored under, the label it prints, the default
+// its declaration gives and the scene that edits it. A row is a class of its own per setting kind —
+// a number row builds a NumberScene, a bool row a BoolScene — so a kind states its rules once and
+// the list knows none of them.
+//
+// The value in force is the list's, not the row's: the row answers only what a setting starts as
+// where the set the list is handed carries nothing for it.
 class SettingsRow {
  public:
   virtual ~SettingsRow() = default;
@@ -29,8 +32,10 @@ class SettingsRow {
   virtual const String& key() const = 0;
   virtual const String& label() const = 0;
 
-  // The value the row shows now, in whatever type the setting holds — a bool, a number, a key.
-  virtual std::any currentValue() const = 0;
+  // The default the row's declaration gives, in whatever type the setting holds — a bool, a number,
+  // a key. The list starts a key its set does not carry from this, and nothing at all is an empty
+  // any, which the list prints as `--`.
+  virtual std::any defaultValue() const = 0;
 
   // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
   // a number its digits, a duration its compact text.
@@ -52,14 +57,15 @@ class SettingsRow {
 // it opened on, so a cancel needs no path of its own.
 class SettingsScene : public Scene {
  public:
-  SettingsScene(GestureQueue& gestures, Ux& ux, const String& title);
+  // The rows the list shows and the set the document holds. The list holds the rows by pointer, as
+  // the stack holds its scenes: whoever built a row keeps it alive. A key the set carries takes its
+  // value from it, an empty any included — a setting the document holds nothing for reads `--` —
+  // and a key it does not falls back to the row's default. The set that goes in is the set the list
+  // opened on, which is what Back and Cancel put back.
+  SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
+                const std::vector<SettingsRow*>& rows, const SettingValues& values);
 
-  // The rows the list shows, handed to it before it draws. The list holds them by pointer, as the
-  // stack holds its scenes: whoever built a row keeps it alive. Their current values seed the set
-  // the list carries and the set it opened on.
-  void set(const std::vector<SettingsRow*>& rows);
-
-  // The values the settings hold, keyed by setting key: what the rows were set to, what an editor
+  // The values the settings hold, keyed by setting key: what the set was handed, what an editor
   // wrote back and what OK hands on.
   SettingValues& values() { return values_; }
 

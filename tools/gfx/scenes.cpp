@@ -3,6 +3,7 @@
 // set back.
 
 #include <functional>
+#include <math.h>
 #include <memory>
 #include <vector>
 
@@ -249,7 +250,7 @@ class TestRow : public SettingsRow {
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
-  std::any currentValue() const override { return value_; }
+  std::any defaultValue() const override { return value_; }
 
   String text(const std::any& value) const override {
     return value.has_value() ? std::any_cast<String>(value) : String("--");
@@ -306,9 +307,9 @@ void aSettingsListMovesAndEdits() {
   TestRow unit(gestures);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
-  auto list = std::make_unique<SettingsProbe>(gestures, ux, title);
+  std::vector<SettingsRow*> rows{&target, &unit};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
-  settings->set({&target, &unit});
   expectEq(settings->selected(), 0, "the list starts on its first row");
   settings->press("down:single");
   expectEq(settings->selected(), 1, "down moves to the next row");
@@ -348,9 +349,9 @@ void aSettingsListCancelPutsTheSetBack() {
   String title("SETTINGS");
   TestRow target(gestures);
   target.hold("target", "Target", "50");
-  auto list = std::make_unique<SettingsProbe>(gestures, ux, title);
+  std::vector<SettingsRow*> rows{&target};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
-  settings->set({&target});
   SettingValues handed;
   Watched rootWatch;
   ux.reset(aScene(gestures, rootWatch));
@@ -374,8 +375,7 @@ void aSettingsListDrawsItsRows() {
   TestRow unit(gestures);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
-  SettingsProbe list(gestures, ux, title);
-  list.set({&target, &unit});
+  SettingsProbe list(gestures, ux, title, {&target, &unit}, {});
   reset();
   list.drawPage(canvas);
   expect(display.anyInk(0, 0, PageWidth, 8), "the heading is drawn");
@@ -397,8 +397,8 @@ void aSettingsListEditsEveryKind() {
   BoolRow power(gestures, ux, "power", "Power", false);
   ChoiceRow unit(gestures, ux, "unit", "Unit", "lo", choices(), false);
   DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
-  auto list = std::make_unique<SettingsScene>(gestures, ux, title);
-  list->set({&target, &power, &unit, &hold});
+  std::vector<SettingsRow*> rows{&target, &power, &unit, &hold};
+  auto list = std::make_unique<SettingsScene>(gestures, ux, title, rows, SettingValues());
 
   SettingValues handed;
   Watched rootWatch;
@@ -451,21 +451,67 @@ void aRowPrintsItsValueAndOpensItsEditor() {
   BoolRow power(gestures, ux, "power", "Power", true);
   ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
   DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+  NumberRow unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
 
-  expectText(number.text(number.currentValue()).c_str(), "5", "a number prints its digits");
-  expectText(power.text(power.currentValue()).c_str(), "ON", "a bool prints its state");
-  expectText(unit.text(unit.currentValue()).c_str(), "High", "a choice prints the title it names");
-  expectText(hold.text(hold.currentValue()).c_str(), "1m30s", "a duration prints compact");
+  expectText(number.text(number.defaultValue()).c_str(), "5", "a number prints its digits");
+  expectText(power.text(power.defaultValue()).c_str(), "ON", "a bool prints its state");
+  expectText(unit.text(unit.defaultValue()).c_str(), "High", "a choice prints the title it names");
+  expectText(hold.text(hold.defaultValue()).c_str(), "1m30s", "a duration prints compact");
   expectText(hold.text(std::any()).c_str(), "--", "a value holding nothing prints dashes");
 
-  expectEq(std::any_cast<float>(number.scene(number.currentValue())->value()) == 5.0f, 1,
+  expectEq(std::any_cast<float>(number.scene(number.defaultValue())->value()) == 5.0f, 1,
            "the number editor opens on the value the row holds");
-  expectEq(std::any_cast<bool>(power.scene(power.currentValue())->value()), 1,
+  expectEq(std::any_cast<bool>(power.scene(power.defaultValue())->value()), 1,
            "the bool editor opens on the state the row holds");
-  expectText(std::any_cast<String>(unit.scene(unit.currentValue())->value()).c_str(), "hi",
+  expectText(std::any_cast<String>(unit.scene(unit.defaultValue())->value()).c_str(), "hi",
              "the choice editor opens on the key the row holds");
-  expectEq(std::any_cast<int32_t>(hold.scene(hold.currentValue())->value()), 90,
+  expectEq(std::any_cast<int32_t>(hold.scene(hold.defaultValue())->value()), 90,
            "the duration editor opens on the seconds the row holds");
+
+  expectEq(unset.defaultValue().has_value(), 0, "a number whose default is nothing answers none");
+  expectText(unset.text(unset.defaultValue()).c_str(), "--", "and prints dashes, as its editor");
+  expectEq(unset.scene(unset.defaultValue())->isNull(), 1, "opens on nothing");
+}
+
+// The list is seeded from the set the document holds: what the set says for a key it carries, the
+// row's own default for a key it does not, and nothing for a key the set holds nothing for. What
+// goes in is what Back and Cancel put back, so the list opened on it.
+void aSettingsListSeedsFromTheDocument() {
+  Pressed gestures;
+  Ux ux;
+  String title("SETTINGS");
+  BoolRow power(gestures, ux, "power", "Power", true);
+  NumberRow target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  NumberRow ceiling(gestures, ux, "ceiling", "Ceiling", 9.0f, 1, 0, 10, true);
+  SettingValues held;
+  held["power"] = false;
+  held["ceiling"] = std::any();
+  std::vector<SettingsRow*> rows{&power, &target, &ceiling};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, held);
+  SettingsProbe* settings = list.get();
+
+  expectEq(std::any_cast<bool>(settings->values().at("power")), 0,
+           "the set's value wins over the row's default");
+  expectEq(std::any_cast<float>(settings->values().at("target")) == 5.0f, 1,
+           "a key the set does not carry starts from the row's default");
+  expectEq(settings->values().at("ceiling").has_value(), 0,
+           "a key the set holds nothing for starts as nothing");
+
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list), nullptr);
+
+  settings->press("forward:single");
+  expectText(static_cast<BoolScene*>(ux.top())->text().c_str(), "OFF",
+             "the row's editor opens on the set's value");
+  ux.pop();
+  settings->press("down:single");
+  settings->press("down:single");
+  settings->press("forward:single");
+  expectEq(ux.top()->isNull(), 1, "a setting the set holds nothing for opens on nothing");
+  ux.pop();
+  expectEq(std::any_cast<bool>(settings->values().at("power")), 0,
+           "the editor hands the set back as it opened");
 }
 
 }  // namespace
@@ -488,6 +534,7 @@ void addSceneCases(std::vector<Case>& cases) {
   cases.push_back({"a settings list cancel puts the set back", aSettingsListCancelPutsTheSetBack});
   cases.push_back({"a settings list draws its rows", aSettingsListDrawsItsRows});
   cases.push_back({"a settings list edits every kind", aSettingsListEditsEveryKind});
+  cases.push_back({"a settings list is seeded from the document", aSettingsListSeedsFromTheDocument});
   cases.push_back(
       {"a row prints its value and opens its editor", aRowPrintsItsValueAndOpensItsEditor});
 }

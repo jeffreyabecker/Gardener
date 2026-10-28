@@ -16,15 +16,18 @@ touches the image passes `python tools/berry/check.py`.
 - [x] 1.1 — A `SettingsRow` per setting kind, each building the scene that edits it: a
   `NumberRow`, a `BoolRow`, a `ChoiceRow` over the entries it is handed, and a `DurationRow`, with a
   `PressureRow` the number row over the machine's bounds and the panel's unit, and a jingle row a
-  `ChoiceRow` whose Forward sounds the entry showing. Verified: `tools/gfx/check.py` drives a list
-  holding a row of each kind the drawing library owns — a number, a bool, a choice and a duration —
-  opens each row's scene on Forward and reads back the value it answered, and prints each row's
-  value; the build compiles the pressure row against the machine's bounds.
+  `ChoiceRow` whose Forward sounds the entry showing. A row carries the default its declaration
+  gives and the list holds the value in force, seeded from the set it is handed and falling back to
+  that default for a key the set does not carry, nothing included. Verified: `tools/gfx/check.py`
+  drives a list holding a row of each kind the drawing library owns — a number, a bool, a choice and
+  a duration — opens each row's scene on Forward and reads back the value it answered, prints each
+  row's value, and seeds a list from a set that overrides one row's default, leaves one key to it
+  and holds nothing for a third; the build compiles the pressure row against the machine's bounds.
 - [ ] 1.2 — The rows a page builds from the device's document: `/cfg/settings.ini` read through the
-  storage layer, one row per key it declares in document order, carrying the key, the label its kind
-  gives it and the value in force, and no row for a key the document does not declare. Verified: a
-  case over a fixture document answers the rows the fixture declares and none for the key it leaves
-  out.
+  storage layer, one row per key it declares in document order, carrying the key and the label its
+  kind gives it, and the set the file holds handed to the list beside them, with no row for a key
+  the document does not declare. Verified: a case over a fixture document answers the rows the
+  fixture declares and none for the key it leaves out.
 - [ ] 1.3 — The settings list reached from the panel: Up held to a double on the home page pushes
   `SettingsScene` over those rows, Forward opens the selected row's editor, and OK hands the settled
   set back to the document. Verified: the panel drives Up, an edit and OK, and `/cfg/settings.ini`
