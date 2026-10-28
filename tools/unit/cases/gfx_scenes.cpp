@@ -396,7 +396,7 @@ TEST_CASE("a settings list draws its rows") {
 
 // The two entries the choice row offers, and the keys they store.
 std::vector<ChoiceItem> choices() {
-  return {{"lo", "Low", nullptr}, {"hi", "High", nullptr}};
+  return {{"lo", "Low"}, {"hi", "High"}};
 }
 
 TEST_CASE("a settings list edits every kind") {

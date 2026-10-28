@@ -13,15 +13,11 @@ namespace {
 // One row of the built-in face, which is the pitch a choice is drawn at.
 constexpr int16_t Row = 8;
 
-// One row of the window: the entry's own paint, or its title centred when it has none, inverted
-// across the whole of the row when it is the entry showing.
+// One row of the window: the entry's title centred, inverted across the whole of the row when it is
+// the entry showing.
 Paint rowOf(const ChoiceItem* item, bool showing) {
   return [item, showing](Canvas& own) {
-    if (item->paint) {
-      item->paint(own);
-    } else {
-      drawCentred(own, item->title.c_str());
-    }
+    drawCentred(own, item->title.c_str());
     if (showing) own.invert(Rect(0, 0, own.width(), own.height()));
   };
 }

@@ -11,13 +11,10 @@
 
 namespace gardener::gfx::ui {
 
-// One entry a choice offers: the key the setting stores, the title it prints and, when the page
-// wants a row of its own, the paint the band runs instead of the title. The paint is given the row
-// the scene narrows for it, which is the width of the value band.
+// One entry a choice offers: the key the setting stores and the title it prints.
 struct ChoiceItem {
   String key;
   String title;
-  Paint paint;
 };
 
 // The value editor of a fixed list of choices, from choice_scene.be: Up and Down step through the
@@ -25,8 +22,8 @@ struct ChoiceItem {
 // A nullable setting's nothing sits one entry below the first: Down at the first clears back to
 // nothing, Up from nothing enters the first, and Down at nothing stays.
 //
-// An entry's paint is the page's own — the scene places the rows, inverts the one showing and
-// scrolls the window to keep it in view, and knows nothing of what an entry draws.
+// An entry prints its title, centred in the row: the scene places the rows, inverts the one showing
+// and scrolls the window to keep it in view.
 //
 // Forward is the page's own too: a scene handed a forward function runs it on the key showing, for
 // a page whose entries do something beyond being picked — an audition, a preview. A scene handed

@@ -2,24 +2,23 @@
 
 `RoutineRegistry`, `Registration`, the settings rows and the routine document store are C++ now, and
 nothing reaches them from a `.be` file. `Bindings.cpp` installs `vacuum`, `screen`, `device` and
-`config`; there is no `routines` module and no `settings` one. The image's files still call
-`routines.register(...)`, `routines.rows()` and `routines.load_settings(...)`, and declare their
-settings with `NumericEditCfg`, `PressureEditCfg`, `DurationEditCfg` and `ChoiceEditCfg`, so the
-image does not load. This plan makes the registration surface native — every declaration a binding
-object that holds the C++ thing it names, taken apart once by `register` — and leaves the page, the
-browser and the settings list alone.
+`settings`; there is no `routines` module and no `Registration` class. The image's files still call
+`routines.register(...)`, `routines.rows()` and `routines.load_settings(...)`, subclass a record
+that is not there, and declare their settings under names the `settings` module does not answer, so
+the image does not load. This plan makes the record and the registry native — a registration a
+binding object, taken apart once by `register` — and leaves the page, the browser and the settings
+list alone.
 
 ## The registry is reachable from the interpreter
 
-`routines` is installed by `Bindings.cpp` beside `vacuum`, `screen` and `device`, and answers
-`register`, `keys`, `title`, `load_settings` and `save_settings` with the names and the answers the
-Berry global had. The registry is built once by the panel's owner, before the image loads, with the
-library and logger it already has; every later call arrives through the module.
+`routines` is installed by `Bindings.cpp` beside `vacuum`, `screen`, `device` and `settings`, and
+answers `register`, `keys`, `title`, `load_settings` and `save_settings` with the names and the
+answers the Berry global had. The registry is built once by the panel's owner, before the image
+loads, with the library and logger it already has; every later call arrives through the module.
 
 The module is those five calls. `rows`, `icon`, `settings_cfgs`, `entry` and `push` wait for the
 browser, the settings list and the page, because a call nothing can make is a surface with no check
-behind it. The setting kinds are classes in a module of their own, `settings`, installed beside
-`routines` by the same `Bindings.cpp` call.
+behind it.
 
 Checked: a Berry file calls each of the five and gets an answer, and a key that is not registered
 answers an empty map and an empty title rather than raising.
@@ -44,41 +43,13 @@ alternates stays with the registry. A list holding anything that is not one of t
 module's objects is refused the same way — one line naming the routine, false, and the registry as
 it was.
 
+The three routine files change with it: each declares its settings with the module's kinds,
+subclasses the record, and registers the instance, so the declaration lines the image carries are
+the ones the surface answers.
+
 Checked: a record reads its key back from `keys()` and its title from `title()`, a key with a slash
 answers false and leaves the registry as it was, registering a key twice leaves one entry in the
 place it first took, and a list holding nil answers false and registers nothing.
-
-## The setting kinds are binding objects in `settings`
-
-The routine files declare their settings with `NumericEditCfg`, `PressureEditCfg`,
-`DurationEditCfg` and `ChoiceEditCfg`, objects written to build a row where the declaration stands;
-none of the four exists. `settings` holds one class per kind — `settings.number`,
-`settings.pressure`, `settings.duration`, `settings.choice` — and a call on one constructs a binding
-object: the class builds the row the kind describes and the instance holds it. The arguments are the
-ones the files already pass, and an argument of the wrong type, or one the kind needs and the call
-left out, raises at the call with the module and the kind in the line, because the file that wrote
-it is the file to fix.
-
-The row is built where it can be. A row needs the gesture queue and the scene stack to make its
-editor, so the declaration is made while the panel runs, which is where the image and the check both
-are, and `register` takes the row out of each object and puts it on the record in the position the
-list gave it. A registration's settings are the order of the objects it was handed, and nothing is
-read back off a field.
-
-A number takes the key, the default, the label, the formatter, the step, the bounds, the nullable
-flag and whether it is whole; a whole one is a whole number wherever the setting's type shows,
-loading and saving as an int at no decimals where a real one is a float. A pressure takes the same
-without the whole flag, prints in the unit the panel prints in, its step being that many whole
-display steps and the machine's clamp its bound, and a nullable declaration's nothing loads as nil.
-A duration takes whole seconds over its step and its bounds and prints compact, `1m30s`. A choice
-takes one entry per declared string, key and title alike, and a nullable declaration's nothing loads
-as nil and prints `--`; a declaration with no entries answers a row with nothing to offer rather
-than raising at boot.
-
-Checked: a call on each class answers an object carrying a row of that kind and the default it was
-given, and a registration declared with one of each answers four rows of those kinds, in the order
-they were listed. A call passing a bound that is not a number raises and leaves the registry as it
-was.
 
 ## A set is read back as a map and written from one
 
@@ -111,8 +82,7 @@ only suite sources left.
 
 ## How it is known to hold
 
-1. `python scripts/arduino.py --task build` compiles the two modules and the rows a declaration
-   builds.
+1. `python scripts/arduino.py --task build` compiles the `routines` module and the record class.
 2. The image's `[E]` lines on the device name no missing `routines` call once the page classes
    follow.
 3. `python tools/berry/check.py --tests` and `--memory` hold once the interpreter's check runs

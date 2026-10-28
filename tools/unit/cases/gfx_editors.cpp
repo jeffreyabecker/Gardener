@@ -144,13 +144,8 @@ TEST_CASE("a refused value keeps the editor open") {
 
 // --- the choice -------------------------------------------------------------
 
-// A choice entry that inks a bar across the left of the row it is given.
-Paint entry() {
-  return [](Canvas& row) { row.draw(shapes::FillRect(0, 2, 10, 4, Ink)); };
-}
-
 std::vector<ChoiceItem> threeEntries() {
-  return {{"a", "Alpha", entry()}, {"b", "Beta", entry()}, {"c", "Gamma", entry()}};
+  return {{"a", "Alpha"}, {"b", "Beta"}, {"c", "Gamma"}};
 }
 
 // A choice scene with the hooks it answers opened up, so a case can step and draw it.
@@ -270,20 +265,21 @@ TEST_CASE("a choice band inverts the entry showing") {
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents()(band);
-  CHECK_EQ(display.inkCount(0, 14, PageWidth, 8), PageWidth * 8 - 10 * 4);
-  CHECK_EQ(display.inkCount(0, 6, PageWidth, 8), 10 * 4);
+  CHECK(display.inkCount(0, 14, PageWidth, 8) > PageWidth * 8 / 2);
+  CHECK(display.inkCount(0, 6, PageWidth, 8) < PageWidth * 8 / 2);
 }
 
-TEST_CASE("a choice band prints the title without a paint") {
+TEST_CASE("a choice band prints every title") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  std::vector<ChoiceItem> bare = {{"a", "Alpha", nullptr}, {"b", "Beta", nullptr}};
-  ChoiceProbe choice(gestures, ux, label, "a", bare, false);
+  ChoiceProbe choice(gestures, ux, label, "a", threeEntries(), false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents()(band);
   CHECK(display.anyInk(0, 6, PageWidth, 8));
+  CHECK(display.anyInk(0, 14, PageWidth, 8));
+  CHECK(display.anyInk(0, 22, PageWidth, 8));
 }
 
 TEST_CASE("a choice band prints dashes for nothing") {
@@ -365,7 +361,7 @@ TEST_CASE("a choice bar shows where the window is") {
   Ux ux;
   String label("Choice");
   std::vector<ChoiceItem> six;
-  for (int i = 0; i < 6; i++) six.push_back({String(i), "Row", nullptr});
+  for (int i = 0; i < 6; i++) six.push_back({String(i), "Row"});
   ChoiceProbe many(gestures, ux, label, String(5), six, false);
   reset();
   Canvas band = canvas.child(Rect(0, 0, PageWidth, 36));

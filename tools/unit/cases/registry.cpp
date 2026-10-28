@@ -72,7 +72,7 @@ constexpr const char* RampedFixture =
     "target_pressure=30.0\n";
 
 std::vector<ChoiceItem> resumeChoices() {
-  return {{"hold", "Hold", nullptr}, {"immediately", "Immediately", nullptr}};
+  return {{"hold", "Hold"}, {"immediately", "Immediately"}};
 }
 
 // The rows the store cases declare: one of every kind, a key written as nothing and a key the
