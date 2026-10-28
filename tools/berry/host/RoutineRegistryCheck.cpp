@@ -1,7 +1,7 @@
 // RoutineRegistry's cases: the records a routine's declaration registers, the alternates its
-// document names, the rule that repairs a set, the document it is read from and written to, and the
-// page a launch builds. They run over the in-memory image the check loads, with fixture documents
-// written into it, and reach no interpreter.
+// document names, the document a set is read from and written to, and the page a launch builds.
+// They run over the in-memory image the check loads, with fixture documents written into it, and
+// reach no interpreter.
 
 #include "RoutineRegistryCheck.h"
 
@@ -68,9 +68,6 @@ class RecordingLog : public Logger {
     }
     return false;
   }
-  bool endsWith(const char* text) const {
-    return !lines_.empty() && lines_.back().endsWith(text);
-  }
   size_t count() const { return lines_.size(); }
   void clear() { lines_.clear(); }
 
@@ -123,15 +120,6 @@ String titleOf(const SettingValues& values) {
   return held == values.end() ? String() : std::any_cast<String>(held->second);
 }
 
-// `ramped_static`'s rule: the profile is the two holds plus a ramp, so the total covers the holds.
-const char* totalCoversHolds(const SettingValues& values) {
-  const int32_t holds = secondsOf(values, "initial_duration") + secondsOf(values, "target_duration");
-  return secondsOf(values, "total_duration") < holds ? "TOTAL < HOLDS" : nullptr;
-}
-
-// A rule no set satisfies, so a repair runs out of settings to put back.
-const char* nothingHolds(const SettingValues&) { return "NEVER FINE"; }
-
 bool image(MemoryFiles& files, const char* dataDir) {
   if (files.load(dataDir)) return true;
   printf("[E] registry: the image is not there\n");
@@ -147,7 +135,7 @@ bool aDeclarationKeepsItsOrder(const char*) {
   const gfx::ui::Glyph glyph = [](gfx::Rect) -> gfx::ui::Paint {
     return [](gfx::Canvas&) {};
   };
-  Registration registration("key", "", rows.declaration(), nullptr, nullptr, glyph);
+  Registration registration("key", "", rows.declaration(), nullptr, glyph);
 
   bool passed = expect(registration.settings().size() == 5, "the declaration lost a setting");
   passed = expect(registration.settings().front()->key() == "initial_pressure",
@@ -160,7 +148,7 @@ bool aDeclarationKeepsItsOrder(const char*) {
   return passed;
 }
 
-bool aRefusedSetIsRepaired(const char* dataDir) {
+bool aSetIsReadAsTheDocumentHoldsIt(const char* dataDir) {
   MemoryFiles files;
   if (!rampedImage(files, dataDir)) return false;
   if (!files.write(Ramped,
@@ -173,54 +161,20 @@ bool aRefusedSetIsRepaired(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  if (!expect(registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(),
-                                        totalCoversHolds)),
+  if (!expect(registry.add(Registration("ramped_static", "Ramped Static", rows.declaration())),
               "the record was refused")) {
     return false;
   }
 
-  const SettingValues refused = registry.loadSettings("ramped_static");
-  bool passed = expect(secondsOf(refused, "total_duration") == 300,
-                       "a refused set was not put back to its default");
-  passed = expect(log.holds("settings: ramped_static: TOTAL < HOLDS"),
-                  "the repair did not log its reason") &&
-           passed;
-
-  // A repair in an alias's section is logged under the section, so the line names the set it is
-  // about rather than the record it belongs to.
-  log.clear();
-  registry.loadSettings("cold");
-  passed = expect(log.holds("settings: cold: TOTAL < HOLDS"),
-                  "a repair in an alias's section is not logged under the section") &&
-           passed;
-
-  // The same document with a total that covers the holds is left alone, and says so by silence.
-  if (!files.write(Ramped, RampedText)) return false;
-  log.clear();
-  const SettingValues accepted = registry.loadSettings("ramped_static");
-  passed = expect(secondsOf(accepted, "total_duration") == 400,
-                  "a set a run accepts was repaired") &&
-           passed;
-  passed = expect(log.count() == 0, "a set a run accepts logged a repair") && passed;
-  return passed;
-}
-
-bool theDefaultsAreReportedWhenTheyDoNotHelp(const char* dataDir) {
-  MemoryFiles files;
-  if (!rampedImage(files, dataDir)) return false;
-
-  Rows rows;
-  RecordingLog log;
-  RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), nothingHolds));
-
-  const SettingValues values = registry.loadSettings("ramped_static");
+  const SettingValues root = registry.loadSettings("ramped_static");
   bool passed =
-      expect(secondsOf(values, "total_duration") == 300, "the defaults were not put back");
-  passed = expect(log.count() == 2, "a repair that ran out of settings did not log twice") && passed;
-  passed = expect(log.endsWith("even at the defaults"),
-                  "the repair that ran out of settings did not say so") &&
+      expect(secondsOf(root, "total_duration") == 30, "a loaded set was changed on the way in");
+
+  const SettingValues cold = registry.loadSettings("cold");
+  passed = expect(secondsOf(cold, "total_duration") == 30,
+                  "an alias's set was changed on the way in") &&
            passed;
+  passed = expect(log.count() == 0, "a load logged a line") && passed;
   return passed;
 }
 
@@ -231,7 +185,7 @@ bool anAliasReadsItsOwnSection(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration()));
 
   const SettingValues root = registry.loadSettings("ramped_static");
   const SettingValues cold = registry.loadSettings("cold");
@@ -255,7 +209,7 @@ bool aSaveWritesOnceAndLeavesTheRest(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration()));
 
   const int before = files.writes();
   SettingValues values = registry.loadSettings("cold");
@@ -290,8 +244,7 @@ bool everyAliasIsListedAfterItsRecord(const char* dataDir) {
     return [](gfx::Canvas&) {};
   };
   registry.add(
-      Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds, nullptr,
-                   glyph));
+      Registration("ramped_static", "Ramped Static", rows.declaration(), nullptr, glyph));
   registry.add(Registration("interval", "Interval", rows.declaration()));
 
   const std::vector<String> keys = registry.keys();
@@ -351,14 +304,14 @@ bool reRegisteringKeepsThePlaceAndDropsAnAlias(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration()));
   registry.add(Registration("interval", "Interval", rows.declaration()));
 
   if (!files.write(Ramped,
                    "initial_pressure=9.0\n[cold]\nroutine_title=Cold\n")) {
     return false;
   }
-  registry.add(Registration("ramped_static", "Ramped Again", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Again", rows.declaration()));
 
   const std::vector<String> keys = registry.keys();
   bool passed = expect(keys.size() == 3, "a re-registration left an alias behind");
@@ -383,7 +336,7 @@ bool aTakenAliasNameIsSkipped(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration()));
   registry.add(Registration("interval", "Interval", rows.declaration()));
 
   const std::vector<String> keys = registry.keys();
@@ -434,8 +387,7 @@ bool aLaunchBuildsTheRecordFromItsDocument(const char* dataDir) {
   const Registration::Factory factory = [&rows](const RoutineActivation& activation) {
     return std::make_unique<Probe>(rows.gestures, activation);
   };
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds,
-                            factory));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), factory));
   registry.add(Registration("interval", "Interval", rows.declaration()));
 
   Ux ux;
@@ -462,7 +414,7 @@ bool aKeyItDoesNotHoldAnswersNothing(const char* dataDir) {
   Rows rows;
   RecordingLog log;
   RoutineRegistry registry(files, log);
-  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration(), totalCoversHolds));
+  registry.add(Registration("ramped_static", "Ramped Static", rows.declaration()));
 
   SettingValues values;
   bool passed = expect(registry.entry("nope") == nullptr, "an unregistered key has a record");
@@ -490,9 +442,7 @@ void run(const char* name, Case item, const char* dataDir, bool& passed) {
 bool runRoutineRegistryCases(const char* dataDir) {
   bool passed = true;
   run("a declaration keeps its order", aDeclarationKeepsItsOrder, dataDir, passed);
-  run("a refused set is repaired", aRefusedSetIsRepaired, dataDir, passed);
-  run("the defaults are reported when they do not help", theDefaultsAreReportedWhenTheyDoNotHelp,
-      dataDir, passed);
+  run("a set is read as the document holds it", aSetIsReadAsTheDocumentHoldsIt, dataDir, passed);
   run("an alias reads its own section", anAliasReadsItsOwnSection, dataDir, passed);
   run("a save writes once and leaves the rest", aSaveWritesOnceAndLeavesTheRest, dataDir, passed);
   run("every alias is listed after its record", everyAliasIsListedAfterItsRecord, dataDir, passed);

@@ -138,14 +138,14 @@ const std::vector<gfx::ui::SettingsRow*>* RoutineRegistry::settingsRows(
 gfx::ui::SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr) return gfx::ui::SettingValues();
-  return record->loadSettings(library_, logger_, section(routineKey));
+  return record->loadSettings(library_, section(routineKey));
 }
 
 bool RoutineRegistry::saveSettings(const String& routineKey,
                                    gfx::ui::SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr) return false;
-  return record->saveSettings(library_, logger_, section(routineKey), values);
+  return record->saveSettings(library_, section(routineKey), values);
 }
 
 bool RoutineRegistry::push(const String& routineKey, gfx::ui::Ux& ux,
@@ -155,7 +155,7 @@ bool RoutineRegistry::push(const String& routineKey, gfx::ui::Ux& ux,
 
   RoutineActivation activation;
   activation.routineKey = routineKey;
-  activation.values = record->loadSettings(library_, logger_, section(routineKey));
+  activation.values = record->loadSettings(library_, section(routineKey));
   return ux.push(record->factory()(activation), callback);
 }
 

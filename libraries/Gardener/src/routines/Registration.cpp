@@ -6,18 +6,16 @@
 
 #include <any>
 
-#include "core/Logger.h"
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
 
 Registration::Registration(const String& routineKey, const String& title,
-                           std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings, Rule rule,
+                           std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings,
                            Factory factory, gfx::ui::Glyph glyph)
     : routineKey_(routineKey),
       title_(title.isEmpty() ? routineKey : title),
       owned_(std::move(settings)),
-      rule_(std::move(rule)),
       factory_(std::move(factory)),
       glyph_(std::move(glyph)) {
   settings_.reserve(owned_.size());
@@ -26,7 +24,7 @@ Registration::Registration(const String& routineKey, const String& title,
   }
 }
 
-gfx::ui::SettingValues Registration::loadSettings(Library& library, Logger& logger,
+gfx::ui::SettingValues Registration::loadSettings(Library& library,
                                                   const String& section) const {
   gfx::ui::SettingValues values;
   if (settings_.empty()) return values;
@@ -36,7 +34,7 @@ gfx::ui::SettingValues Registration::loadSettings(Library& library, Logger& logg
   return values;
 }
 
-bool Registration::saveSettings(Library& library, Logger& logger, const String& section,
+bool Registration::saveSettings(Library& library, const String& section,
                                 gfx::ui::SettingValues& values) const {
   if (settings_.empty()) return false;
 

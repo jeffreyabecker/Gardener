@@ -10,41 +10,31 @@ It is the first of the models the panel's pages are written against, and deliber
 a record is registered and read back, while its page and its glyph stay C++-only. What is deferred
 is named at the end.
 
-## The rule is a check the set has to pass
+## Each row carries the validator its editor asks
 
-A record's rule used to repair the set: settings went back to their defaults in the order the list
-shows them and a reason was answered to nobody, at the far end of a load or a save — after the list
-had closed, on a row the user had left. The repair is gone, and what is left is worse than nothing.
-The `Rule` callback still sits in the record with nothing reading it, `parse` takes a document's
-text as it comes, and the two relations the routines have — a total under its holds, a final
-pressure under its start — are enforced by nothing at all.
+Each registration row carries one validator in two forms, because a row is declared before any set
+exists and a scene holds the set it edits. Both answer whether the value is accepted and the text
+that refuses it, and a refused value is never written: the editor stays open with that text beside
+it, so a set is never settled on a row's refusal. `5_ramped_static.be` refuses a `total_duration`
+under the two holds with `TOTAL < HOLDS`, `2_ramped_interval.be` refuses a `final_pressure` under
+its `initial_pressure` with `FINAL < START`, and `3_interval.be` validates nothing. Nothing rewrites
+a set; the old repair and the callback it drove are gone.
 
-Two things take its place, and neither is a callback that rewrites a set. A value is its row's to
-hold: a number or a duration outside its declared bounds answers the bound, and a choice naming an
-entry the row does not offer or a value of another type answers the default, so nothing a row cannot
-hold reaches the set, the text a document gives included. The relations between settings are the
-record's: one check over the whole set, answering the text that refuses it, or nothing when a run
-can use it. `2_ramped_interval.be` answers `FINAL < START` for a `final_pressure` under its
-`initial_pressure`, `5_ramped_static.be` answers `TOTAL < HOLDS` for a `total_duration` under the
-two holds, and `3_interval.be` answers nothing. The set crosses to the check as a Berry map and the
-text comes back as one copied string. The `Rule` alias, its constructor argument and its member go.
+```cpp
+// The whole check: the declaration, the set in force, and the value an editor is about to keep. It
+// answers whether the value is accepted and, when it is not, the text the scene shows.
+using Validator = std::function<std::pair<bool, String>(
+    const std::vector<SettingsRow*>& settings, const SettingValues& values,
+    const std::any& proposed)>;
 
-The check runs where a set is settled and changes nothing. A save it refuses writes nothing and a
-launch it refuses pushes no page, so nothing runs on a set its routine would not accept; a set it
-accepts is written once and launched as read. The text is what the list shows beside the row it
-settled on, and the list's own surface arrives with the settings list. Nothing logs a repair.
+// The same check closed over the settings and the set, which is the form a scene holds.
+using CurriedValidator = std::function<std::pair<bool, String>(const std::any& proposed)>;
+```
 
-The call is protected. A check that raises changes nothing, is answered to whoever made the call — a
-Berry caller's `pcall`, or a refused launch — and is called again next time rather than struck off
-for raising once. A record whose check is neither nothing nor a function is refused at registration,
-with one line naming the routine, and the registry keeps what it held.
-
-Checked: a document with a total of 30 under holds of 60 and 60 reads back 30 and saves false, and
-the same document with a total covering the holds saves; a `final_pressure` of 3.0 under 5.0 answers
-`FINAL < START`, and a launch on it is refused; `total_duration=99999` reads 7200,
-`initial_pressure=400` reads 100, and a choice no row offers reads its default; the interval accepts
-every set and launches on it; a check that is a number is refused with one line, and `keys()`
-answers what it did before.
+Checked: the `total_duration` row refuses 30 with `TOTAL < HOLDS` against a set whose holds are 60
+and 60 and accepts 400, the `final_pressure` row refuses 3.0 under 5.0 with `FINAL < START`, the
+interval's rows accept anything, a document holding `total_duration=99999` reads 7200, and an entry
+no row offers reads its default.
 
 ## The registry is reachable from the interpreter
 
@@ -64,8 +54,8 @@ answers an empty map and an empty title rather than raising.
 
 Today `Registration` in `registration.be` is a Berry class the routine files extend, and
 `routines.register` takes an instance of it. The native record replaces it: a class installed at
-boot whose `init` takes the routine key, the title, the settings list and the check, which
-`register` moves into the registry.
+boot whose `init` takes the routine key, the title and the settings list, which `register` moves
+into the registry.
 
 The refusals the registry already makes do not move. A key that is not a plain word — empty, or
 carrying `/` or `\` — is refused with one line and answers false; the title falls back to the key; a
@@ -96,9 +86,8 @@ declared with one of each answers its settings in the order they were listed.
 ## A set is read back as a map and written from one
 
 `load_settings(key)` answers a Berry map of the key's settings, each in its kind's type and held to
-its row, with an alias's `routine_title` beside them. `save_settings(key, values)` takes such a map,
-refuses it when the record's check does, and otherwise writes the declared keys once. A key the map
-leaves out is written as nothing.
+its row, with an alias's `routine_title` beside them. `save_settings(key, values)` takes such a map
+and writes the declared keys once. A key the map leaves out is written as nothing.
 
 Checked: a set loads with the document's values and its defaults, one value changes and is handed
 back, and a fresh load answers the new value.
@@ -127,9 +116,8 @@ registry's host cases and the new suite pass.
 - `harness.be`'s routine count works again and `--tests` becomes a check that can pass; the GIF
   capture behind `--art`, `--scene` and `--component` has no page to draw until a scene binding
   returns.
-- The registry's host cases assert what the rows held and what a save answers, rather than a
-  repaired set and a log line; the ` even at the defaults` case and the rule case in
-  `settings.test.be` go.
+- The registry's host cases assert what a load and a save answer, rather than a repaired set and a
+  log line; the ` even at the defaults` case and the rule case in `settings.test.be` go.
 - The three routine files still do not load, their chrome, icon and page classes being page work;
   what this plan makes work is their registration.
 - The routine spec in `docs/archive/specs-and-plans.zip` describes a registry that no longer exists,

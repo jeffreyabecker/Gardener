@@ -15,7 +15,6 @@
 namespace gardener {
 
 class Library;
-class Logger;
 
 // What a launch hands a routine's page: the key the routine was launched under, and the settings map
 // read through the declaration.
@@ -33,10 +32,6 @@ struct RoutineActivation {
 // that carried its alternates could not be built; the registry keeps them.
 class Registration {
  public:
-  // The rule that binds two settings to one another, answering the reason it refuses a set or
-  // nullptr when every set is one a run can use.
-  using Rule = std::function<const char*(const gfx::ui::SettingValues&)>;
-
   // Builds the routine's page from the activation a launch hands it.
   using Factory = std::function<std::unique_ptr<gfx::ui::Scene>(const RoutineActivation&)>;
 
@@ -45,7 +40,7 @@ class Registration {
   // browser draws; a record given none is known by its key.
   Registration(const String& routineKey, const String& title,
                std::vector<std::unique_ptr<gfx::ui::SettingsRow>> settings,
-               Rule rule = nullptr, Factory factory = nullptr, gfx::ui::Glyph glyph = nullptr);
+               Factory factory = nullptr, gfx::ui::Glyph glyph = nullptr);
 
   Registration(const Registration&) = delete;
   Registration& operator=(const Registration&) = delete;
@@ -62,13 +57,12 @@ class Registration {
   // held to its kind. The document is opened once. An alternate also carries its section's
   // `routine_title` on the map. A record that declares nothing begins with an empty map, without
   // opening a file.
-  gfx::ui::SettingValues loadSettings(Library& library, Logger& logger,
-                                      const String& section) const;
+  gfx::ui::SettingValues loadSettings(Library& library, const String& section) const;
 
   // A settled set written back: a setting the map says nothing about is written as nothing, which
   // reads back as the default. Every key goes into one document and the document is written once.
   // False, writing nothing, when the record declares no settings.
-  bool saveSettings(Library& library, Logger& logger, const String& section,
+  bool saveSettings(Library& library, const String& section,
                     gfx::ui::SettingValues& values) const;
 
  private:
@@ -77,7 +71,6 @@ class Registration {
   std::vector<std::unique_ptr<gfx::ui::SettingsRow>> owned_;
   // The declaration as the list and the store take it, over the rows this record owns.
   std::vector<gfx::ui::SettingsRow*> settings_;
-  Rule rule_;
   Factory factory_;
   gfx::ui::Glyph glyph_;
 };
