@@ -21,9 +21,9 @@ This is the checklist of what stands between here and a panel whose every page i
       harness case that drives one.
 - [x] `screen`, the drawing a page describes: each call answers a `draw` record — one node of the
       tree that says what the page looks like — and `cell`, `align`, `measure` and `duration_text`
-      answer the numbers a page divides its boxes with. Nothing walks the tree yet, so a page can
-      build its drawing and nothing shows it: rendering the tree is the change that makes the pages
-      below drawable.
+      answer the numbers a page divides its boxes with. `drawTree` walks it: a page answers the root
+      from `draw_page()` and `BerryScene` renders it on the page's canvas, so the pages below are
+      drawable as soon as one can be pushed.
 - [ ] Delete `home.be`, `browser.be`, `registry.be`, `registration.be` and `records.be` as their
       classes land, with their lines in `/system/order`. `home_machine.be` stands alone and can stay
       until the run's machine is native.
@@ -35,10 +35,10 @@ This is the checklist of what stands between here and a panel whose every page i
       them.
 - [ ] The registry: `Registration` and `RoutineAlias` in C++, with `problem`, `repair`,
       `load_settings`, `save_settings` and the `settings_cfgs` a routine declares.
-- [ ] `AutoPressureDisplay`: a reading printed in the panel's unit, which the home page needs.
-      `screen.pressure_readout` describes it — the box, the size hint and the two scales — so what is
-      left is the drawing: the depth and the target in the unit in force, and the second reading in a
-      corner or beside the first.
+- [x] `AutoPressureDisplay`: a reading printed in the panel's unit, which the home page needs.
+      `panel/pressureReadout` draws it — the depth and the target in the unit in force, the second
+      reading in a corner or beside the first — and `screen.pressure_readout` describes it for a
+      page, with `drawTree` handing the node to that paint.
 
 ## The harness
 

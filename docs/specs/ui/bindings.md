@@ -72,8 +72,9 @@ between 0 and it is not, and `0` is the ambient target — the chamber released 
 ## `screen` — the drawing a page describes
 
 A call does not draw. It answers a `draw` record — one node of a tree that says what the page looks
-like — and nothing reaches the glass until something walks that tree. Every node carries `kind` and
-the fields its kind uses; the rest are nil.
+like — and the scene renders that tree: a page answers its root from `draw_page()`, and the node is
+drawn on the page's canvas, the panel less the band's rows. Every node carries `kind` and the fields
+its kind uses; the rest are nil, and a node the drawing does not know draws nothing.
 
 | Call | Node |
 | --- | --- |
@@ -128,6 +129,11 @@ The faces a `font` may name:
 
 `nil`, `""` and `"builtin"` are the built-in 5x7, the face that carries the arrow glyphs a hint row
 prints.
+
+`draw_page()` answers the root of the tree and the scene draws it in the page, so a page that draws
+nothing answers `nil` — the base's empty return is already that. Everything in the tree is drawn in
+the one call, which is why a string is safe to hand over: the record holds it for as long as the
+drawing runs.
 
 ## `device` — the device around the machine
 

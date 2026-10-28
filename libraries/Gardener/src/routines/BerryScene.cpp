@@ -7,6 +7,7 @@
 #include <berry.h>
 
 #include "Logger.h"
+#include "routines/DrawTree.h"
 #include "routines/bindings/Module.h"
 
 namespace gardener {
@@ -19,8 +20,8 @@ constexpr const char* PageList = "__pages";
 
 }  // namespace
 
-BerryScene::BerryScene(gfx::ui::GestureQueue& gestures, bvm* vm, int page)
-    : Scene(gestures), vm_(vm) {
+BerryScene::BerryScene(gfx::ui::GestureQueue& gestures, bvm* vm, int page, PanelContext& panel)
+    : Scene(gestures), vm_(vm), panel_(panel) {
   const int base = be_top(vm_);
   if (!be_getglobal(vm_, PageList) || !be_islist(vm_, -1)) {
     // The lookup leaves a nil whether it found a global or not, and the list replaces it.
@@ -76,9 +77,13 @@ void BerryScene::tick(uint32_t nowMs) {
   be_pop(vm_, be_top(vm_) - base);
 }
 
-void BerryScene::drawPage(gfx::Canvas&) {
+// The page answers the tree it wants drawn, and the scene draws it here rather than inside the call:
+// a raise the walk met would otherwise unwind through C++ frames.
+void BerryScene::drawPage(gfx::Canvas& canvas) {
   const int base = be_top(vm_);
-  if (beginCall("draw_page")) endCall("draw_page", 1);
+  if (beginCall("draw_page")) {
+    if (endCall("draw_page", 1)) drawTree(vm_, be_absindex(vm_, -1), panel_, canvas);
+  }
   be_pop(vm_, be_top(vm_) - base);
 }
 
