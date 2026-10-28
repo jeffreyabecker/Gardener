@@ -213,11 +213,50 @@ Checked: `python tools/berry/check.py --tests` exits 0 and its output names suit
 than C++ cases; the firmware's check names those cases; and `tools/berry/host/` holds no case file
 whose subject the firmware's check compiles.
 
+## A captured frame is one writer's job, not the harness's
+
+The only host code that turns a drawn frame into a file is the interpreter's harness.
+`tools/berry/host/GifWriter.cpp` is a source of `tools/berry/check.py`'s, its enlargement and its
+per-frame delay are constants in its own header, its frames arrive as `BitmapPanel::packFrame`
+copies, and what it writes is decided by `HarnessSession` — `beginCapture`, `endCapture`,
+`saveStill` and the stem a per-case file is named from. `tools/gfx/check.py`'s stub display keeps a
+frame that no command saves, and the firmware's check, which compiles the panel pieces that draw
+through Gfx — `MarkScene`, `PressureReadout`, `Band` — would have to compile the harness or copy the
+writer to show what a case left on the glass. Nothing outside `tools/berry` can produce a picture of
+what it drew.
+
+A capture facility in the host tree is shared by the three checks — the firmware's, the Gfx one and
+the interpreter's — and links none of the interpreter, the data image or the harness. It draws
+nothing and knows no page, gesture, overlay band or routine: it takes a width, a height and frames
+packed one bit per pixel, row-major and top-down, which is how a display buffer already holds them,
+and writes a GIF89a with a two-entry palette of white and black, a NETSCAPE loop, and one frame per
+entry held `GifDelayCs` 100 centiseconds, each enlarged by nearest neighbour at `RenderScale` 2 — a
+128 x 64 frame is a 256 x 128 file. A still is one frame; an armed capture takes a frame per beat
+and writes it when asked, so a case that advances a fake clock can save the sequence it drove. The
+path is the caller's, and one that cannot be opened answers false without ending the run, as
+`writeGif` does now.
+
+The captures the interpreter's check makes do not change with the move: the same frames, palette,
+delay and scale, and the same files at the same paths, whether a run saves a still, an armed
+sequence or one GIF per case. The naming policy — where a case's file goes and what its stem is —
+stays with the tool that names it, and a host tool that draws later links the facility and none of
+the three checks.
+
+Checked: `python tools/berry/check.py --scene home`, `--art interval --seconds 30` and a `--tests`
+run write files byte for byte identical to the ones the tree wrote before the writer moved; a case
+in the firmware's check saves a still it drew, and the file begins `GIF89a`, measures 256 x 128,
+carries the two-entry palette and the 100 cs delay, and holds ink at the column and row the case
+drew, at twice the coordinate; a case in `tools/gfx/check.py` saves a still the same way; and no
+host check outside the berry tool names a source or a header under `tools/berry/`.
+
 ## Consequences
 
 - The Build section of `.github/copilot-instructions.md` and `README.md` name the command that
   proves a C++ change, beside `tools/gfx/check.py` and `tools/berry/check.py`; the statement that
   the tree has no host test suite goes.
+- The berry skill and `README.md`'s note on saving a page's frame say which tools save one and where
+  it goes; `--art`, `--scene`, `--component` and `--tests` keep their arguments, their file names
+  and their stems.
 - The tree carries `ArduinoCore-API` 1.5.2 with its LGPL-2.1-or-later notice beside it; no `String`,
   `Print` or `Stream` is the tree's own, and moving to a newer release is a deliberate change that
   the checks hold.
@@ -248,5 +287,8 @@ whose subject the firmware's check compiles.
    `firmware/data` moved aside.
 2. `python tools/gfx/check.py` exits 0 against the API's `String` and the tree's one `Stream`.
 3. `python tools/berry/check.py --tests` exits 0 and runs the image's suites only.
-4. `python scripts/arduino.py --task build` compiles both sketches: the suite adds no build symbol,
+4. A still saved by the firmware's check and one saved by `tools/gfx/check.py` are GIF89a and
+   256 x 128, and the interpreter's `--scene`, `--art` and `--tests` captures are byte for byte what
+   they were before the writer moved.
+5. `python scripts/arduino.py --task build` compiles both sketches: the suite adds no build symbol,
    and the seam it needs is a composition the sketch already calls.
