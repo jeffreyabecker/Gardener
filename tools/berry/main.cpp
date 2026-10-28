@@ -13,8 +13,6 @@
 #include <vector>
 
 #include "HarnessSession.h"
-#include "RoutineRegistryCheck.h"
-#include "RoutineSettingStoreCheck.h"
 #include "berry.h"
 
 namespace {
@@ -318,12 +316,8 @@ int main(int argc, char** argv) {
       }
     }
     session.setCaptureStem(stem);
-    // The store's and the registry's own cases first: they read and write documents over the image
-    // the check loaded, and they answer for themselves rather than through the interpreter.
-    const bool storePassed = gardener::runRoutineSettingStoreCases(data);
-    const bool registryPassed = gardener::runRoutineRegistryCases(data);
     const bool suitesPassed = callSuites(vm, testFilter) != 0;
-    passed = storePassed && registryPassed && suitesPassed ? 1 : 0;
+    passed = suitesPassed ? 1 : 0;
   } else if (!compileOnly) {
     passed = callCheck(vm);
   } else {

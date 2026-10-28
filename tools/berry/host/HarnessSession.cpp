@@ -4,6 +4,7 @@
 #include <deque>
 
 #include "BerryHost.h"
+#include "Clock.h"
 #include "GestureCallout.h"
 #include "GifWriter.h"
 #include "machine/Machine.h"
@@ -130,7 +131,7 @@ bool HarnessSession::begin() {
 void HarnessSession::beat(int count) {
   for (int beat = 0; beat < count; beat++) {
     for (uint32_t tick = 0; tick < BeatMs / TickMs; tick++) {
-      host::advance(TickMs);
+      gardener::host::advance(TickMs);
       const uint32_t now = millis();
 
       chamber_.advance(TickMs);

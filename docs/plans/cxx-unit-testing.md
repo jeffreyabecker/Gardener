@@ -100,7 +100,7 @@ today. `tools/gfx/host/Arduino.h` gives a `String` with `c_str`, `isEmpty`, `toF
 more. A source compiled for one tool is not a source compiled for the other, and a case can pass
 against the small text type while the device's `String` answers differently. Neither defines
 `Stream`, so nothing under `serial/` compiles on the host at all, and the fake clock is only the
-berry tool's (`tools/berry/host/Clock.h`, advanced by `host::advance`).
+berry tool's (`tools/berry/host/Clock.h` until it moved, advanced by `host::advance`).
 
 The host surface is Arduino's `ArduinoCore-API`, vendored at release 1.5.2 (`ARDUINO_API_VERSION`
 10502) with its licence beside it, under `tools/` where no sketch build looks: `scripts/arduino.py`
@@ -111,9 +111,11 @@ those classes: the two host folders lose the ones they have. From the API come `
 nothing on the host uses), and the `using` declaration that puts `String` in the global namespace
 the firmware sources write; the `itoa`, `ltoa`, `utoa`, `ultoa` and `dtostrf` implementations a
 board's C library would provide are taken from the same repository's host test sources. From the
-tree come only the three things a core would supply: a `Stream` subclass a case fills with the text
-it typed and reads back what a domain printed, the `millis()` and `delay()` a case advances, and the
-`ESP` object `device get` reads for `chip` and `heap`.
+tree come only what a core supplies beside the API: the `Arduino.h` entry header a source includes,
+which includes the vendored API and declares nothing of its own; a `Stream` subclass a case fills
+with the text it typed and reads back what a domain printed; and the `millis()` and `delay()` a case
+advances. Nothing else is needed: `device get` reads the board's chip and heap from the
+`BoardFacts` function pointers it is handed, so there is no `ESP` object to supply.
 
 The calls the firmware makes are the API's: construction from `const char*`, `String`, `char`, the
 integers, and a float with a decimals argument; `c_str`, `length`, `isEmpty`, `charAt`,
@@ -130,10 +132,11 @@ surface — the names, arguments and answers the firmware uses — and it is tha
 written against; swapping in the core's copy is deferred.
 
 Checked: no `Arduino.h`, `WString.h`, `Print.h` or `Stream.h` in the tree is a hand-written copy of
-the API's classes, and the one suite builds both libraries against the vendored API. The cases that
-moved from the Gfx tool keep their expectations and pass against the API's `String`, and a core case
-asserts a float formatted with `String(1.5f, 1)` and a text grown past its first allocation, so the
-surface is exercised where the firmware uses it.
+the API's classes — the host's `Arduino.h` is the entry header, a handful of includes — and the one
+suite builds both libraries against the vendored API. The cases that moved from the Gfx tool keep
+their expectations and pass against the API's `String`, and a core case asserts a float formatted
+with `String(1.5f, 1)` and a text grown past its first allocation, so the surface is exercised where
+the firmware uses it.
 
 ## The link's framing is a case
 

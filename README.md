@@ -61,6 +61,21 @@ what changed since, header dependents included. Changing a build option starts o
 build and throws the objects away when one of them differs. `--task clean` removes them, and the
 data image beside them, by hand.
 
+## Unit tests
+
+The tree's own C++ runs on the host, with no board, no interpreter and no data image:
+
+```powershell
+python tools/unit/check.py                        # build and run every case
+python tools/unit/check.py --list-test-cases      # what the suite holds
+python tools/unit/check.py --test-case="a name"   # one case, while a change is being made
+```
+
+The suite compiles [libraries/Gfx](./libraries/Gfx) and [libraries/Gardener](./libraries/Gardener)
+beside its own cases under [doctest](./tools/doctest), with [tools/host](./tools/host) supplying the
+Arduino API it is built against, a clock a case advances and the frame writer the tools share. It
+needs a C++ compiler (`g++` or `clang++`) and Python, and nothing else.
+
 ## Documentation
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs

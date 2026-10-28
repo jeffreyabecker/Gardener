@@ -15,6 +15,9 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
 only packs it. It is checked on the device: `--task upload`, then a look at the panel.
 
+A change to the C++ under `libraries/Gardener` or `libraries/Gfx` is not this skill's business and
+does not need the interpreter: `python tools/unit/check.py` compiles and runs it on the host.
+
 > **NEVER RUN THIS SCRIPT — the berry check in `tools/berry/` is in a known broken state.** Ignore
 > the rest of the harness documentation; it is commented out below, ready for when the check works
 > again.

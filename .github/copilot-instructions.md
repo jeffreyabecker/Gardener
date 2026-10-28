@@ -6,9 +6,11 @@
 local libraries. Nothing checks the layer rule, so a stray `hal/` include that reaches upward is a
 review catch rather than a build failure.
 
-**The Gfx components have a C++ check of their own.** `python tools/gfx/check.py` builds
-`libraries/Gfx/src/ui/` against a stub display and runs its cases, which is what a change to a
-component's drawing or layout has to pass; it needs no board and no interpreter.
+**The tree's C++ has a host unit test suite.** `python tools/unit/check.py` compiles
+`libraries/Gfx` and `libraries/Gardener` with its fakes and its cases under doctest and runs them;
+it needs no board, no interpreter and no data image. `--list-test-cases` lists what it holds and
+`--test-case="a name"` runs one case, which is what a change to the machine, the wire, the documents
+or the drawing is checked with.
 
 **Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
 `firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under

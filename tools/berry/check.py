@@ -95,18 +95,21 @@ GFX_SOURCES = [
 # parts, a counted piezo, a full battery, the data image in memory and a log buffer.
 HOST_SOURCES = [
     HOST / "BitmapPanel.cpp",
-    HOST / "Clock.cpp",
     HOST / "GestureCallout.cpp",
-    HOST / "GifWriter.cpp",
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
     HOST / "OverlayCallout.cpp",
-    HOST / "RoutineRegistryCheck.cpp",
-    HOST / "RoutineSettingStoreCheck.cpp",
 ]
 
 MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
+
+# What a host tool shares with the others: the Arduino API, the clock and the frame writer.
+SHARED = ROOT / "tools" / "host"
+SHARED_SOURCES = [
+    SHARED / "arduino" / "Clock.cpp",
+    SHARED / "capture" / "GifWriter.cpp",
+]
 
 
 def compiler(kind):
@@ -135,8 +138,11 @@ def build(cc, cxx):
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
     for path in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src", GFX / "src",
-                 GARDENER / "src"):
+                 GARDENER / "src", SHARED / "arduino", SHARED / "capture"):
         includes.extend(["-I", str(path)])
+    # The API's folder holds String.h, which a case-insensitive filesystem would otherwise hand to
+    # #include <string.h> in place of the C library's.
+    includes.extend(["-idirafter", str(SHARED / "arduino-core-api" / "api")])
 
     built = []
 
@@ -160,7 +166,8 @@ def build(cc, cxx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *BERRYHOST_SOURCES, *FIRMWARE_SOURCES, *GFX_SOURCES):
+    for source in (*MAIN_SOURCES, *SHARED_SOURCES, *BERRYHOST_SOURCES, *FIRMWARE_SOURCES,
+                   *GFX_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then
