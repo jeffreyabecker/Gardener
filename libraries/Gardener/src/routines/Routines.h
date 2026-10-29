@@ -55,8 +55,8 @@ class Routines {
   // one, so a press goes to whichever of the two is reading.
   gfx::ui::GestureQueue& presses() { return gestures_; }
 
-  // What a settings row builds its editor on: the stack the beat polls, so a list opened from a
-  // page is pushed over it rather than into a second one.
+  // What a settings row builds its editor on, and where a launch puts a page: the stack the beat
+  // polls, so a page opened from a page is pushed over it rather than into a second one.
   gfx::ui::Ux& scenes() { return stack_; }
 
   // The routines the image registered, in the order the files registered them: what the `routines`

@@ -1,30 +1,18 @@
 # Register a routine from Berry
 
 `/system/browser.be` names `List`, `ux` and `SettingsEditScene`, and none of the three exists, so the
-file does not compile and no browser appears; `routines.push`, which its OK and Forward call, is
-unanswered too. What is left is the path from a row to a launched, editable routine, and the gesture
-that shows the list; the device's own settings list is another plan.
+file does not compile and no browser appears. What is left is the path from a row to a launched,
+editable routine, and the gesture that shows the list; the device's own settings list is another
+plan.
 
 ## What is left
 
 | Call | Used by | What is missing |
 | --- | --- | --- |
 | `SettingsEditScene(cfgs, values, title)` | the browser's Forward and both pages' edit | the settings list as a page |
-| `routines.push(key, nil, activation)` | the browser's OK and Forward | a record's page on the stack |
 | `ux.push`, `ux.pop`, `ux.pop_to_root` | the browser's Forward and Back, the routines' `leave()` and `finish()` | the stack from Berry |
 | `List(6)`, `set`, `move`, `selected_row`, `rows`, `selected`, `first()`, `visible` | the browser's rows | a window over the rows |
 | Home's Up double press | home's gestures | the browser's way in |
-
-## A key launches its page
-
-The registry's `push` builds a page through the record's class and hands it to the stack, and nothing
-calls it. `routines.push(key, callback, activation)` does, and answers whether a page is showing: an
-instance of the class the record holds, the activation its one argument — the key and the clean set
-`load_settings` answers. An unregistered key answers false with the stack as it was; so does a page
-whose `init` raises, which logs one `[E]` line naming the routine and the message.
-
-Checked: OK on a row shows that routine's page, built from the set the record holds; Back returns to
-the rows; a page whose `init` raises logs one line and leaves the rows showing.
 
 ## The stack is moved from Berry
 

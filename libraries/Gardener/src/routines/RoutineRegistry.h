@@ -87,10 +87,11 @@ class RoutineRegistry {
   // record declares nothing.
   bool saveSettings(const String& routineKey, gfx::ui::SettingValues& values) const;
 
-  // Push a routine's page, built through its factory from the activation the registry reads: the
-  // routine key and its clean settings map. False for a key that is not registered or a record that
-  // names no page.
-  bool push(const String& routineKey, gfx::ui::Ux& ux,
+  // Push a routine's page, built through its factory from the activation a launch carries: the key
+  // the push names and the set the caller states, held to the record's declaration so a setting the
+  // set leaves out begins at its default. False for a key that is not registered, a record that
+  // names no page, or a page that refused the activation it was handed.
+  bool push(const String& routineKey, const gfx::ui::SettingValues& values, gfx::ui::Ux& ux,
             gfx::ui::Ux::Callback callback = nullptr) const;
 
  private:

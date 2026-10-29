@@ -4,6 +4,7 @@
 
 #include "routines/RoutineRegistry.h"
 
+#include <any>
 #include <utility>
 
 #include "core/Logger.h"
@@ -148,14 +149,24 @@ bool RoutineRegistry::saveSettings(const String& routineKey,
   return record->saveSettings(library_, section(routineKey), values);
 }
 
-bool RoutineRegistry::push(const String& routineKey, gfx::ui::Ux& ux,
-                           gfx::ui::Ux::Callback callback) const {
+bool RoutineRegistry::push(const String& routineKey, const gfx::ui::SettingValues& values,
+                           gfx::ui::Ux& ux, gfx::ui::Ux::Callback callback) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr || !record->factory()) return false;
 
   RoutineActivation activation;
   activation.routineKey = routineKey;
-  activation.values = record->loadSettings(library_, section(routineKey));
+  // The caller states what it launches with; the declaration is what holds a setting to its kind,
+  // and one the set leaves out begins at its default, as one its document lacks does.
+  for (gfx::ui::SettingsRow* row : record->settings()) {
+    std::any value = row->defaultValue();
+    const gfx::ui::SettingValues::const_iterator held = values.find(row->key());
+    if (held != values.end()) {
+      std::any given = held->second;
+      if (row->accept(given)) value = std::move(given);
+    }
+    activation.values[row->key()] = std::move(value);
+  }
   return ux.push(record->factory()(activation), callback);
 }
 

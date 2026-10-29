@@ -18,8 +18,8 @@ namespace berry {
 //   device.*    the device: its settings, the unit it prints in, the piezo, the clock, the log
 //               and the presses waiting for a page
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
-//   routines.*  the registry: register() a record with the class its launch builds, and the set it
-//               reads and writes
+//   routines.*  the registry: register() a record with the class its launch builds, push() the page
+//               that launch builds, and the set it reads and writes
 //
 // A routine file declares its settings with the settings module's kinds and hands them, with the
 // page class, to `routines.register`; every declaration is consumed into the record.

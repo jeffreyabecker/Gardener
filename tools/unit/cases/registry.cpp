@@ -35,6 +35,7 @@ using gardener::gfx::ui::ChoiceRow;
 using gardener::gfx::ui::DurationRow;
 using gardener::gfx::ui::GestureQueue;
 using gardener::gfx::ui::NumberRow;
+using gardener::gfx::ui::Scene;
 using gardener::gfx::ui::SettingValues;
 using gardener::gfx::ui::SettingsRow;
 using gardener::gfx::ui::Ux;
@@ -43,6 +44,13 @@ using gardener::gfx::ui::Ux;
 class NoPresses : public GestureQueue {
  public:
   const char* take() override { return nullptr; }
+};
+
+// The page a launch builds: what a case reads a push through is the activation the factory was
+// handed, so the page itself draws nothing.
+class StubPage : public Scene {
+ public:
+  explicit StubPage(GestureQueue& gestures) : Scene(gestures) {}
 };
 
 constexpr const char* StoreDocument = "/cfg/routines/store_test.ini";
@@ -265,6 +273,46 @@ TEST_CASE("a key registered twice keeps its place") {
   const Registration* first = registry.registration("first");
   REQUIRE(first != nullptr);
   CHECK_EQ(std::string(first->title().c_str()), std::string("Replaced"));
+}
+
+TEST_CASE("a launch carries the set the caller stated, held to the record's declaration") {
+  MemoryLibrary library;
+  library.put(RampedDocument, RampedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+
+  gardener::RoutineActivation launched;
+  REQUIRE(registry.add(Registration(
+      "ramped_static", "Ramped", rampedDeclaration(gestures, ux),
+      [&launched, &gestures](const gardener::RoutineActivation& activation) {
+        launched = activation;
+        return std::make_unique<StubPage>(gestures);
+      })));
+
+  // The caller states the set it launches with; a whole number written for a pressure is the
+  // pressure, and a setting the set leaves out begins at the declaration's default.
+  SettingValues values;
+  values["initial_pressure"] = int32_t(12);
+  values["undeclared"] = String("x");
+  REQUIRE(registry.push("ramped_static", values, ux));
+
+  CHECK_EQ(std::string(launched.routineKey.c_str()), std::string("ramped_static"));
+  CHECK_EQ(kpaOf(launched.values, "initial_pressure"), 12.0f);
+  CHECK_EQ(kpaOf(launched.values, "target_pressure"), 20.0f);
+  CHECK_EQ(secondsOf(launched.values, "total_duration"), 300);
+  CHECK(launched.values.find("undeclared") == launched.values.end());
+}
+
+TEST_CASE("a key nobody registered launches nothing") {
+  MemoryLibrary library;
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+
+  CHECK_FALSE(registry.push("nobody", SettingValues(), ux));
 }
 
 TEST_CASE("a row holds a value of its own kind and refuses another") {

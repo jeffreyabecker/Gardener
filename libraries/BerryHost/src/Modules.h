@@ -32,9 +32,10 @@ std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int
 // Left on the stack for the caller to push onto a list.
 void pushSettingDeclaration(bvm* vm, gfx::ui::SettingsRow* row);
 // The module a routine file registers itself through: register(key, title, icon, settings,
-// scene_class) hands the registry a record with the page it names, load_settings and
-// save_settings read and write the routine's set, rows and title answer the browser's list, and
-// settings_cfgs the declarations its settings list is built from.
+// scene_class) hands the registry a record with the page it names, push(key, callback, activation)
+// builds that page from the activation and puts it on the stack, load_settings and save_settings
+// read and write the routine's set, rows and title answer the browser's list, and settings_cfgs the
+// declarations its settings list is built from.
 void installRoutinesModule(bvm* vm);
 
 }  // namespace berry

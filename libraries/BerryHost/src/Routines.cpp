@@ -187,6 +187,27 @@ void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
   }
 }
 
+// The set an activation carries, read back into the values a page is handed: each key it holds that
+// a setting can hold, as the type it was written as. A value no setting holds is left out, and the
+// record's declaration answers that setting's default.
+void takeSettingsSet(bvm* vm, int activation, gfx::ui::SettingValues& values) {
+  const int base = be_top(vm);
+  if (be_getmember(vm, activation, "settings_values") && pushMap(vm, -1)) {
+    const int map = be_absindex(vm, -1);
+    be_pushiter(vm, map);
+    const int iterator = be_absindex(vm, -1);
+    while (be_iter_hasnext(vm, iterator)) {
+      be_iter_next(vm, iterator);
+      std::any value;
+      if (be_isstring(vm, -2) && settingValue(vm, -1, value)) {
+        values[String(argText(vm, -2))] = std::move(value);
+      }
+      be_pop(vm, 2);  // the key and the value, now that the entry is taken
+    }
+  }
+  be_pop(vm, be_top(vm) - base);
+}
+
 // One row of the browser's list, left on the stack as the record itself so the caller can push it
 // onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
 // shows and the key a launch is made from.
@@ -232,7 +253,9 @@ std::unique_ptr<gfx::ui::Scene> buildPage(bvm* vm, int slot, const RoutineActiva
       // exception and its message where the pop below clears them.
       if (be_pcall(vm, 1) != BE_OK) {
         if (logger != nullptr) {
-          String message("vm: routine page: ");
+          String message("vm: routine ");
+          message += activation.routineKey;
+          message += ": ";
           message += be_isstring(vm, -2) ? be_tostring(vm, -2) : "error";
           message += ": ";
           const char* detail = be_tostring(vm, -1);
@@ -396,6 +419,30 @@ int routinesSettingsCfgs(bvm* vm) {
   be_return(vm);
 }
 
+// routines.push(routine_key, callback, activation): a record's page on the stack, an instance of
+// the class its file registered, built from the activation the caller states — the key this push
+// names and the set the record it was handed carries. Answers whether a page is showing: an
+// unregistered key, a record that names no page and a page whose init raised all answer false with
+// the stack as it was. Nothing answers a callback yet, so the second argument is taken and the
+// stack is handed none.
+int routinesPush(bvm* vm) {
+  if (routines == nullptr) {
+    be_raise(vm, "runtime_error", "routines.push: no panel");
+  }
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "routines.push: push(routine_key, callback, activation)");
+  }
+  if (be_top(vm) >= 3 && !be_isnil(vm, 3) && !be_isinstance(vm, 3)) {
+    be_raise(vm, "type_error", "routines.push: the activation is a RoutineActivation");
+  }
+  // The checks are above: a raise below would longjmp past the key's String.
+  const String routineKey(argText(vm, 1));
+  gfx::ui::SettingValues values;
+  if (be_top(vm) >= 3 && be_isinstance(vm, 3)) takeSettingsSet(vm, 3, values);
+  be_pushbool(vm, routines->registry().push(routineKey, values, routines->scenes()));
+  be_return(vm);
+}
+
 const bnfuncinfo RoutinesLibrary[] = {
     {"register", routinesRegister},
     {"load_settings", routinesLoadSettings},
@@ -403,14 +450,15 @@ const bnfuncinfo RoutinesLibrary[] = {
     {"rows", routinesRows},
     {"title", routinesTitle},
     {"settings_cfgs", routinesSettingsCfgs},
+    {"push", routinesPush},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
 // The module the image registers its routines through: one call to declare a record with the page
-// it names, the two the page reads and writes its set through, and the three the browser lists them
-// and edits them with.
+// it names, one to launch that page, the two the page reads and writes its set through, and the
+// three the browser lists them and edits them with.
 void installRoutinesModule(bvm* vm) {
   installRecord(vm, ActivationRecord, ActivationFields);
   installRecord(vm, RowRecord, RowFields);
