@@ -52,7 +52,7 @@ what is left is the activation bug and the suites that say the check holds the i
 
 ## The tool is documented as it is
 
-- [ ] Restore the harness notes in `.github/skills/berry/SKILL.md`, drop "the Berry check is in a
+- [x] Restore the harness notes in `.github/skills/berry/SKILL.md`, drop "the Berry check is in a
       known broken state" from the skill and the project instructions, and correct the last line to
       the counts a run prints.
 - [ ] Run the commands the plan names — `--compile`, a plain run, `--tests`, `--art` and `--scene` —
