@@ -124,6 +124,15 @@ once the driver is up, so a base-class member cannot be built in the constructor
 neither copyable nor movable, so a getter cannot hand one out by value or keep one without an
 `optional` or a member the driver owns.
 
+## The stored default target
+
+`device.target()` reads `[device] target` and the home page uses it as the depth a run works to,
+but nothing in the firmware writes the key any more: `device.set_target` went with the panel's other
+dead write, the shipped `settings.ini` does not carry it, and the wire's `device set` takes only the
+unit. So it is a value a hand-edited or reflashed document sets and nothing else can. Blocked by:
+nothing has decided whether that is the shape it should have, or whether the key, the getter and the
+three lines in `home.be` should go with the writer.
+
 ## The Berry host library's dependency
 
 The library holding the interpreter's install, its six native modules, the page scene and the draw
