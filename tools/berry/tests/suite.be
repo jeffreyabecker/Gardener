@@ -41,6 +41,13 @@ def assert_not_nil(x, msg)
   end
 end
 
+# The node a layout's [bounds, draw] pair holds: a row, a column and a layout are lists of pairs, and
+# the node a case asserts on is the second half of one. A page's drawing is read through this, which
+# is why it is here rather than in the suite that first needed it.
+def child_at(tree, index)
+  return tree.children[index][1]
+end
+
 # --- driving a machine -----------------------------------------------------
 
 # A beat of the harness and an advance of a machine, which is the whole of what a page's tick() does

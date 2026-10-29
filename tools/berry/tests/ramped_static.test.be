@@ -175,8 +175,11 @@ def the_page_draws_what_its_machine_reports()
 
   harness.beat(1)
   assert_true(mock.advances >= 1, "a beat did not advance the machine")
-  assert_eq(page.chrome.status.value, "RAMP", "the page is not drawing its machine's stage")
-  assert_eq(page.chrome.timer.seconds, 20, "the page is not drawing the run's clock")
+  var tree = page.draw_page()
+  assert_eq(child_at(child_at(tree, 2), 0).value, "RAMP",
+            "the page is not drawing its machine's stage")
+  assert_eq(child_at(child_at(tree, 1), 1).value, screen.duration_text("minutes", 20),
+            "the page is not drawing the run's clock")
 end
 
 test("the page draws the stage and the clock its machine reports",
