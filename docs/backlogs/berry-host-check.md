@@ -41,7 +41,7 @@ what is left is the activation bug and the suites that say the check holds the i
 - [x] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
       with, a declaration consumed once so a second record taking the same row fails, and a raise
       that leaves the first record's rows untouched.
-- [ ] Hold a `routines` suite: keys, rows, a nil title for an unknown key, nil `settings_cfgs` for a
+- [x] Hold a `routines` suite: keys, rows, a nil title for an unknown key, nil `settings_cfgs` for a
       record that declares nothing, an activation that fills a missing setting with its default, and
       a save that writes each key once.
 - [ ] Hold a `ux` suite: the three calls' answers, `depth` from 1 at boot to the stack's cap, `top`
