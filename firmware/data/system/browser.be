@@ -37,10 +37,13 @@ def browser_chrome(rows, selected, first, visible, width)
 end
 
 class BrowserScene
-  var list
+  static var VISIBLE = 6
+  var rows
+  var selected
 
   def init()
-    self.list = List(6)
+    self.rows = []
+    self.selected = 0
   end
 
   def activate()
@@ -49,7 +52,21 @@ class BrowserScene
     vacuum.stop()
     # Read again every time the scene appears: the registry is fixed after boot, but a scene that
     # draws a list should not trust the list it drew last time either.
-    self.list.set(self.rows())
+    self.set(routines.rows())
+  end
+
+  def set(rows)
+    self.rows = rows
+    if self.selected >= self.rows.size()
+      self.selected = 0
+    end
+  end
+
+  def selected_row()
+    if self.selected >= self.rows.size()
+      return nil
+    end
+    return self.rows[self.selected]
   end
 
   # Up and Down move the selection; OK launches the row, Forward edits its settings first, and Back
@@ -73,18 +90,27 @@ class BrowserScene
     return false
   end
 
-  def rows()
-    return routines.rows()
+  def step(delta)
+    var count = self.rows.size()
+    if count == 0
+      return false
+    end
+    self.selected = (self.selected + delta + count) % count
+    return true
   end
 
-  def step(delta)
-    return self.list.move(delta)
+  # The first row the window shows, carried along once the selection would fall off its bottom edge.
+  def first()
+    if self.selected >= BrowserScene.VISIBLE
+      return self.selected - BrowserScene.VISIBLE + 1
+    end
+    return 0
   end
 
   # The row's routine built from its own file: the registry reads the declaration into one clean
   # settings map, and the page it answers goes on the stack.
   def choose()
-    var row = self.list.selected_row()
+    var row = self.selected_row()
     if row == nil
       return false
     end
@@ -102,7 +128,7 @@ class BrowserScene
   # are the routine's document: read through the declaration, mended when the routine's rule refuses
   # them, and written back as the list settles. The list itself only edits them.
   def open_selected()
-    var row = self.list.selected_row()
+    var row = self.selected_row()
     if row == nil
       return false
     end
@@ -129,10 +155,10 @@ class BrowserScene
     return ux.pop()
   end
 
-  # The drawing: the chrome from the rows and the window the list holds.
+  # The drawing: the chrome from the rows and the window they move through.
   def draw_page()
-    return browser_chrome(self.list.rows, self.list.selected, self.list.first(),
-                          self.list.visible, screen.width())
+    return browser_chrome(self.rows, self.selected, self.first(),
+                          BrowserScene.VISIBLE, screen.width())
   end
 end
 
