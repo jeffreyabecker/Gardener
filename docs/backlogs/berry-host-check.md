@@ -14,7 +14,7 @@ what is left is the activation bug and the suites that say the check holds the i
 
 ## The suites name what the image has
 
-- [ ] Declare the blank page the machine suites push above the root once, in `tests/suite.be`, so
+- [x] Declare the blank page the machine suites push above the root once, in `tests/suite.be`, so
       `Scene()` is a page the framework declares and not a name five cases share.
 - [ ] Read the machine suites' clock through `device.now_ms()` and set their pressure through
       `vacuum.set_target_pressure()`, so no suite names a call the image does not have.

@@ -68,6 +68,18 @@ def drive_until(machine, label, beats, pred)
   raise "assert", label + " (not reached in " + str(beats) + " beats)"
 end
 
+# --- the framework's own page ---------------------------------------------
+
+# The blank page the machine suites push above the root, so a finished run has a page to hand back and
+# the depth a case reads is about the stack rather than about a scene. It is declared here, once,
+# rather than in each suite that needs a frame: no hook but draw_page's, because a page that draws
+# nothing is all a machine case wants above the root.
+class Scene
+  def draw_page()
+    return screen.column([])
+  end
+end
+
 # --- the runner ------------------------------------------------------------
 
 # Run every registered case whose full name contains `filter`, each from a reset page. A failing
