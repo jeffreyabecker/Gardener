@@ -1,41 +1,36 @@
 # Project Guidelines
 
-## Build
+## Checks
 
-`python scripts/arduino.py --task build` — compiles the sketch with the project
-local libraries. Nothing checks the layer rule, so a stray `core/` include that reaches upward is a
-review catch rather than a build failure.
+`python tools/unit/check.py` is how the tree's C++ is validated. It compiles `libraries/Gfx` and
+`libraries/Gardener` with the host tools and the cases under doctest and runs them, in seconds and
+with no board, no interpreter and no data image. `--list-test-cases` lists what it holds and
+`--test-case="a name"` runs one case while a change is being made. A change to the machine, the
+wire, the documents or the drawing is checked with it, and that is the check to run.
 
-**The tree's C++ has a host unit test suite.** `python tools/unit/check.py` compiles
-`libraries/Gfx` and `libraries/Gardener` with its fakes and its cases under doctest and runs them;
-it needs no board, no interpreter and no data image. `--list-test-cases` lists what it holds and
-`--test-case="a name"` runs one case, which is what a change to the machine, the wire, the documents
-or the drawing is checked with.
+**The sketch build is not the validation.** `python scripts/arduino.py --task build` cross-compiles
+the sketch for the board, and it is the slower path by minutes. For the C++ the suite compiles it
+says nothing the suite does not already say; it is asked for only what the suite cannot reach —
+`libraries/BerryHost`, `libraries/Runtime`, the sketch itself, and an edit to the build files
+the script reads. Nothing checks the layer rule either way, so a stray `core/` include that
+reaches upward is a review catch rather than a failure of one.
 
-**Build when the compiler is the question.** The build compiles the C++ under `libraries/` and
-`firmware/` and the build files themselves; nothing else reaches it. A document, a `.bmp` under
-`assets/`, or a file in `firmware/data/` — a `.be` routine, a page, an `.ini` — cannot change
-what the build says, so editing one is not a reason to run it. The data image is checked on the
-device instead: `--task upload`, then the panel and the `[E]` lines on the serial console.
+**Run a check when the compiler is the question.** Both compile C++ and nothing else: a document, a
+`.bmp` under `assets/`, or a file in `firmware/data/` — a `.be` routine, a page, an `.ini` — cannot
+change what either says, so editing one is not a reason to run them. The data image is checked on
+the device instead: `--task upload`, then the panel and the `[E]` lines on the serial console.
 
-**Consider the build before running it.** Ask what this run would catch that the last one did not: what
-changed in the tree since then, and whether that change can reach the compiler. When the answer is
-nothing — the same tree, a tree changed only in prose or data, a build before a commit after a build
-that already passed — don't run it. One build after a change that can break the compile is the
-verification; a second one is only waiting for the answer it already gave.
+**Make the change whole before the compiler sees any of it.** A fix-one-error-and-recompile loop is
+the likeliest way a task spends its budget without moving: finish every file of a refactor, every
+caller of a renamed function, then run the check once. When it fails, read the whole output and fix
+everything it named in that same pass; when a change spans several files, don't verify them one at a
+time. One run after a change that can break the compile is the verification — a second run on the
+same tree is only waiting for the answer it already gave, and that holds whether the run took
+seconds or minutes.
 
-**A build is minutes, so the spinning is the expensive part.** Every rebuild waits minutes for an
-answer, and a fix-one-error-and-rebuild loop is the likeliest way a task spends its whole budget
-without moving. Make the change whole before the compiler sees any of it — every file of a refactor,
-every caller of a renamed function — then build once. When a build fails, read the whole output and
-fix everything it named in that same pass; when a change spans several files, don't verify them one
-at a time.
-
-**The build's answer is whether it compiles.** `arduino-cli` ends every run with the program-storage
-and global-variables figures, and they move a little with every edit; that is a number to keep out of
-the report unless someone asks how much room the firmware has. Don't build a baseline to compare
-against, and don't build twice to show a delta. A size comparison nobody requested costs two slow
-runs and changes no decision, so report pass or fail and leave the figures out.
+**Answer pass or fail.** `arduino-cli` ends every build with the program-storage and
+global-variables figures, and they move a little with every edit; keep them out of the report unless
+someone asks how much room the firmware has, and don't build a baseline or a delta nobody requested.
 
 **Consider the Berry check before running it.** The check compiles and drives the `.be` files under
 `firmware/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
