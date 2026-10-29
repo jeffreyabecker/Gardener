@@ -46,6 +46,29 @@ class SerialLink {
   // What a build registers: the machine's domains and a panel's, with room to spare.
   static constexpr uint8_t MaxDomains = 8;
 
+  // The port as a domain sees it: the bytes the link reads, with a CR the LF follows taken off. The
+  // port's terminator is LF alone, so "\r\n" ends a line the way "\n" does and no domain has to
+  // know which one the host wrote.
+  class Port : public Stream {
+   public:
+    explicit Port(Stream& port) : port_(port) {}
+
+    int available() override { return port_.available(); }
+    // One byte of lookahead, so the CR is dropped only when the LF is already behind it.
+    int read() override {
+      int value = port_.read();
+      if (value == '\r' && port_.peek() == '\n') value = port_.read();
+      return value;
+    }
+    int peek() override { return port_.peek(); }
+    void flush() override { port_.flush(); }
+    size_t write(uint8_t byte) override { return port_.write(byte); }
+    size_t write(const uint8_t* buffer, size_t size) override { return port_.write(buffer, size); }
+
+   private:
+    Stream& port_;
+  };
+
   // Hands the stream to the domain named by `token`. False when there is no such domain, in which
   // case the caller discards the rest of the line.
   bool dispatchDomain(const String& token);
@@ -56,6 +79,8 @@ class SerialLink {
 
   CommandOutbox outbox_;
   Stream& stream_;
+  // The stream the domains read and answer on: `stream_` with the line ending's CR taken off.
+  Port port_;
   PresenceFn present_;
   Logger& logger_;
   std::vector<Domain*> domains_;

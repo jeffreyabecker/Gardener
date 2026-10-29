@@ -197,10 +197,10 @@ void VacuumSystem::service(uint32_t nowMs) {
     return;
   }
 
-  // A run has a deadline. Expiry is a release, not a fault: the machine did what it was told for
-  // as long as it was allowed to, and the run log names it.
-  if ((state_ == RunState::Pulling || state_ == RunState::Holding) && holdMs_ != 0 &&
-      nowMs - runStartMs_ >= holdMs_) {
+  // A run has a deadline, and running() is what a run is: pulling, holding, or venting to a target
+  // it was given. Expiry is a release, not a fault: the machine did what it was told for as long as
+  // it was allowed to, and the run log names it.
+  if (running() && holdMs_ != 0 && nowMs - runStartMs_ >= holdMs_) {
     deadlineExpired_ = true;
     release();
   }
@@ -229,16 +229,18 @@ void VacuumSystem::service(uint32_t nowMs) {
 
   // The two transitions that are facts about the chamber rather than orders: the target has
   // been reached, and the release is over. A latched fault owns the state, so neither can
-  // fire while one is held.
+  // fire while one is held. Reached is the reading inside the deadband around the target rather
+  // than merely past its near edge: a vent lands a lead deeper than the target, and until the leak
+  // brings that back inside the band the run is still travelling rather than holding.
   if (state_ == RunState::Pulling &&
-      currentPressureKpa() >= targetPressureKpa_ - CONTROL_DEADBAND_KPA) {
+      fabsf(currentPressureKpa() - targetPressureKpa_) <= CONTROL_DEADBAND_KPA) {
     setState(RunState::Holding);
   }
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
-    // Five readings more than the overshoot margin past the target is the loop not holding what it
-    // was asked to, so the chamber is released rather than pulled further out of range.
+    // A reading the overshoot margin past the target is the loop not holding what it was asked to,
+    // so the chamber is released rather than pulled further out of range.
     const float measured = currentPressureKpa();
-    if (measured <= targetPressureKpa_ + CONTROL_OVERSHOOT_KPA) {
+    if (measured < targetPressureKpa_ + CONTROL_OVERSHOOT_KPA) {
       overshootReadings_ = 0;
     } else if (++overshootReadings_ >= CONTROL_OVERSHOOT_READINGS) {
       fail("overshoot");

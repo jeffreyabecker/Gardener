@@ -7,7 +7,7 @@
 namespace gardener {
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue)
-    : outbox_(queue), stream_(stream), present_(present), logger_(logger) {
+    : outbox_(queue), stream_(stream), port_(stream), present_(present), logger_(logger) {
   domains_.reserve(MaxDomains);
 }
 
@@ -117,7 +117,7 @@ bool SerialLink::dispatchDomain(const String& token) {
     return false;
   }
 
-  domain->execute(stream_);
+  domain->execute(port_);
   return true;
 }
 
