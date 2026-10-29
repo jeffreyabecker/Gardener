@@ -5,7 +5,7 @@
 #include <string>
 
 #include "CaptureDisplay.h"
-#include "gfx/Rect.h"
+#include "Rect.h"
 
 namespace gardener {
 

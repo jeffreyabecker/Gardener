@@ -1,7 +1,7 @@
 #include "panel/page/Scene.h"
 
-#include "gfx/Shapes.h"
-#include "gfx/Drawing.h"
+#include "Shapes.h"
+#include "Drawing.h"
 
 namespace gardener::gfx::ui {
 

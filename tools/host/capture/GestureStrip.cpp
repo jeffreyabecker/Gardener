@@ -1,8 +1,8 @@
 #include "GestureStrip.h"
 
-#include "gfx/BuiltinFont.h"
-#include "gfx/Canvas.h"
-#include "gfx/Text.h"
+#include "BuiltinFont.h"
+#include "Canvas.h"
+#include "Text.h"
 
 namespace gardener {
 

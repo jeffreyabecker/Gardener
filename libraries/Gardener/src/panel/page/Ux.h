@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "gfx/Drawing.h"
+#include "Drawing.h"
 #include "panel/page/Scene.h"
 
 namespace gardener::gfx::ui {

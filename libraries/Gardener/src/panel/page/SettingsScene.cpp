@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "gfx/Drawing.h"
+#include "Drawing.h"
 
 namespace gardener::gfx::ui {
 namespace {

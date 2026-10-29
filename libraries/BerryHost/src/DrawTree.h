@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "gfx/Canvas.h"
+#include "Canvas.h"
 
 // The interpreter's VM, forward declared so its header stops here.
 struct bvm;

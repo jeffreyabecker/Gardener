@@ -76,7 +76,7 @@ def interpreter_free(source):
 
 def sources():
     found = [
-        *(GFX / "src" / "gfx").glob("*.cpp"),
+        *(GFX / "src").glob("*.cpp"),
         *(HOST / "arduino").glob("*.cpp"),
         *(HOST / "capture").glob("*.cpp"),
         *((API / "api") / name for name in API_SOURCES),

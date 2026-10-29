@@ -6,13 +6,13 @@
 // functions and the layout that divides a box. The scene lifecycle, the gestures a page takes and
 // the band across the bottom of the glass are the firmware's panel, in libraries/Gardener.
 
-#include "gfx/BuiltinFont.h"
-#include "gfx/Canvas.h"
-#include "gfx/DisplayDevice.h"
-#include "gfx/Drawing.h"
-#include "gfx/Font.h"
-#include "gfx/Fonts.h"
-#include "gfx/Layout.h"
-#include "gfx/Rect.h"
-#include "gfx/Shapes.h"
-#include "gfx/Text.h"
+#include "BuiltinFont.h"
+#include "Canvas.h"
+#include "DisplayDevice.h"
+#include "Drawing.h"
+#include "Font.h"
+#include "Fonts.h"
+#include "Layout.h"
+#include "Rect.h"
+#include "Shapes.h"
+#include "Text.h"

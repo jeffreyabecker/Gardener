@@ -4,8 +4,8 @@
 
 #include "panel/glass/Band.h"
 
-#include "gfx/Shapes.h"
-#include "gfx/Text.h"
+#include "Shapes.h"
+#include "Text.h"
 
 namespace gardener {
 namespace {

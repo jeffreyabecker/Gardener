@@ -56,7 +56,7 @@ def board_free(source):
 
 BERRYHOST_SOURCES = sorted((BERRYHOST / "src").glob("*.cpp"))
 
-GFX_SOURCES = sorted((GFX / "src" / "gfx").glob("*.cpp"))
+GFX_SOURCES = sorted((GFX / "src").glob("*.cpp"))
 
 FIRMWARE_SOURCES = [path for path in sorted((GARDENER / "src").rglob("*.cpp")) if board_free(path)]
 

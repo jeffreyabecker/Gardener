@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "GifWriter.h"
-#include "gfx/DisplayDevice.h"
-#include "gfx/Rect.h"
-#include "gfx/Drawing.h"
+#include "DisplayDevice.h"
+#include "Rect.h"
+#include "Drawing.h"
 #include "panel/page/GestureQueue.h"
 
 namespace gardener {

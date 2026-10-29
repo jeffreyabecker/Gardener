@@ -10,7 +10,7 @@
 #include "CaptureDisplay.h"
 #include "GestureStrip.h"
 #include "core/Logger.h"
-#include "gfx/Canvas.h"
+#include "Canvas.h"
 #include "hal/Battery.h"
 #include "hal/Buzzer.h"
 #include "hal/PressureSensor.h"

@@ -5,9 +5,9 @@
 
 #include <utility>
 
-#include "gfx/Text.h"
-#include "gfx/Drawing.h"
-#include "gfx/Layout.h"
+#include "Text.h"
+#include "Drawing.h"
+#include "Layout.h"
 
 namespace gardener::gfx::ui {
 namespace {

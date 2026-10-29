@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string.h>
 
-#include "gfx/Canvas.h"
+#include "Canvas.h"
 
 namespace gardener {
 

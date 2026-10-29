@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "panel/page/BoolScene.h"
-#include "gfx/Drawing.h"
+#include "Drawing.h"
 #include "panel/page/DurationScene.h"
 
 namespace gardener::gfx::ui {

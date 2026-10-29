@@ -11,7 +11,7 @@
 
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "gfx/Canvas.h"
+#include "Canvas.h"
 #include "hal/Battery.h"
 #include "panel/glass/Band.h"
 #include "panel/glass/MarkScene.h"

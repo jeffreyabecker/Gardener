@@ -4,7 +4,7 @@
 
 #include <any>
 
-#include "gfx/Canvas.h"
+#include "Canvas.h"
 #include "panel/page/GestureQueue.h"
 
 namespace gardener::gfx::ui {
