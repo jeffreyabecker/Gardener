@@ -27,3 +27,5 @@ Thumbs.db
 
 # Generated harness captures (component frames, baseline and v2 suites)
 tools/berry/artifacts/
+
+.vscode
