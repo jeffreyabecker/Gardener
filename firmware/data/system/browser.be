@@ -20,10 +20,16 @@ def browser_chrome(rows, selected, first, visible, width)
   while line < visible && first + line < rows.size()
     var at = first + line
     var row = rows[at]
-    var line_draw = screen.row(nil, [
-      [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, row.icon)],
-      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, row.title)]
-    ])
+    # A routine that registered no glyph has no cell to draw it in: the row keeps the title's share for
+    # itself rather than asking for an icon it does not hold.
+    var cells = []
+    if row.icon != nil
+      cells.push([bounds(0.125, 1), screen.icon(nil, nil, nil, nil, row.icon)])
+      cells.push([bounds(0.875, 1), screen.text(nil, nil, nil, nil, row.title)])
+    else
+      cells.push([bounds(1, 1), screen.text(nil, nil, nil, nil, row.title)])
+    end
+    var line_draw = screen.row(nil, cells)
     if at == selected
       line_draw = screen.inverted(line_draw)
     end
