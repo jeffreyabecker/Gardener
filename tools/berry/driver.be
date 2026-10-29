@@ -17,7 +17,17 @@ def harness_activate(routine_key, settings)
   if settings == nil
     settings = routines.load_settings(routine_key)
   end
-  return ux.push(routines.activate(routine_key, settings))
+  var page = routines.activate(routine_key, settings)
+  if page == nil
+    harness_fail("activate: " + routine_key + " answered no page")
+    return false
+  end
+  if !ux.push(page)
+    harness_fail("activate: " + routine_key + " page would not push")
+    return false
+  end
+  harness_drove(routine_key)
+  return true
 end
 
 def harness_registered(routine_key)
@@ -58,7 +68,7 @@ def harness_editor(routine_key)
     return
   end
   for item : settings_cfgs
-    if !isinstance(item, EditCfg)
+    if !isinstance(item, RoutineSetting)
       harness_fail(label + " settings returned a non-setting")
       return
     end
@@ -222,7 +232,7 @@ def harness_art_scene(name, seconds, path)
   else
     # The home scene is the root. Give it a run to show: pull toward a target above the current
     # pressure, and save the frame mid-pull; with seconds, run that long instead.
-    vacuum.target(20.0)
+    vacuum.set_target_pressure(20.0)
     vacuum.start()
     if seconds > 0
       harness.beat(seconds * 4)
@@ -239,79 +249,17 @@ def harness_art_scene(name, seconds, path)
   return harnessErrors == 0
 end
 
-# Draw one component by name and save the frame as a GIF. The names are the drawing primitives,
-# both frameworks, so a component can be seen without driving a whole scene.
-def harness_art_component(name, path)
-  harness.reset()
-  screen.draw_clear()
-  var drew = false
-
-  if name == "text"
-    var t = Text("12.5")
-    t.set_box(point(0, 0), bounds(64, 16))
-    t.draw()
-    drew = true
-  elif name == "pressure"
-    var p = PressureDisplay()
-    p.set_box(point(0, 0), bounds(64, 52))
-    p.pressure_kpa = 20.0
-    p.draw()
-    drew = true
-  elif name == "pressure-secondary"
-    var p = PressureDisplay()
-    p.set_box(point(0, 0), bounds(64, 52))
-    p.pressure_kpa = 20.0
-    p.secondary_pressure = 10.0
-    p.secondary_position = "br"
-    p.draw()
-    drew = true
-  elif name == "bar"
-    var b = ProgressBar(50)
-    b.set_box(point(0, 0), bounds(96, 8))
-    b.draw()
-    drew = true
-  elif name == "scrollbar"
-    var s = Scrollbar()
-    s.set_box(point(0, 0), bounds(2, 48))
-    s.index = 2
-    s.count = 10
-    s.visible = 5
-    s.draw()
-    drew = true
-  elif name == "duration"
-    var d = Duration("minutes")
-    d.set_box(point(0, 0), bounds(64, 16))
-    d.seconds = 150
-    d.draw()
-    drew = true
-  end
-
-  if !drew
-    harness_fail("component: no component named " + name)
-    return false
-  end
-
-  if !harness.save(path)
-    harness_fail("component: cannot write " + path)
-    return false
-  end
-  harness_note("component: " + name + " saved to " + path)
-  return harnessErrors == 0
-end
-
+# The whole image, driven: every registered key's page activated, a started run, every gesture the
+# panel sends, and the settings list where the record declares one. The counts the last line reports
+# are this harness's, so a key that answered no page is a failed run rather than a quiet gap in a
+# log that says the check passed.
 def harness_check()
-  if ux.depth() == 0
-    harness_fail("vm: no root scene showing")
+  var keys = routines.keys()
+  for routine_key : keys
+    harness_run_page(routine_key)
+    harness_editor(routine_key)
+    ux.pop_to_root()
   end
-
-  for routine_key : routines.keys()
-    try
-      harness_editor(routine_key)
-      harness_run_page(routine_key)
-    except .. as e, m
-      harness_fail("vm: " + routine_key + " check: " + e + ": " + m)
-    end
-  end
-  harness_note("checked " + str(routines.keys().size()) + " routines")
-  return harnessErrors == 0
+  harness_note("checked " + str(harnessDrivenCount) + " of " + str(keys.size()) + " routines")
+  return harnessErrors == 0 && harnessDrivenCount == keys.size()
 end

@@ -50,7 +50,7 @@ def drive(machine, beats)
   var i = 0
   while i < beats
     harness.beat(1)
-    machine.advance(vacuum.now_ms())
+    machine.advance(device.now_ms())
     i += 1
   end
 end
@@ -59,7 +59,7 @@ def drive_until(machine, label, beats, pred)
   var i = 0
   while i < beats
     harness.beat(1)
-    machine.advance(vacuum.now_ms())
+    machine.advance(device.now_ms())
     if pred()
       return true
     end
@@ -77,7 +77,8 @@ def suite_run(filter)
   var failed = 0
   # The band across the bottom of the glass is the ux component's, not a case's: every frame a case
   # writes hashes those rows, so a picture of a case is a picture of the page it drove.
-  harness.mark_overlay(screen.height() - overlay_band_height, overlay_band_height)
+  var band = ux.band_rows()
+  harness.mark_overlay(screen.height() - band, band)
   # The heap the cases run against: the image, this framework and the suites themselves. A figure a
   # case reports is read against it, so a per-page line is a page's cost and not the whole VM's.
   harness_suite_base = harness.mem()

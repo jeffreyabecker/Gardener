@@ -40,6 +40,15 @@ inline void installModule(bvm* vm, const char* name, const bnfuncinfo* library) 
 // same class the parser's `var` makes. The names a page reads sit beside the code that sets them, and
 // the record is a global because that code reaches it by name.
 
+// The constructor a record needs before it can be built by name. A class with no `init` cannot be
+// constructed at all — the VM finds no constructor and the call leaves the stack as it found it — so a
+// table whose callbacks set every field starts with this one, which answers the instance the call
+// made. A record with fields to take from the call has an init of its own.
+inline int recordInit(bvm* vm) {
+  be_pushvalue(vm, 1);
+  be_return(vm);
+}
+
 inline void installRecord(bvm* vm, const char* name, const bnfuncinfo* fields) {
   be_pushclass(vm, name, fields);
   be_setglobal(vm, name);

@@ -51,6 +51,20 @@ BerryScene::~BerryScene() {
   be_pop(vm_, be_top(vm_) - base);
 }
 
+bool BerryScene::pushPage(bvm* vm) const {
+  if (vm_ == nullptr || slot_ < 0) return false;
+  if (!be_getglobal(vm, PageList) || !be_islist(vm, -1)) return false;
+  const int list = be_absindex(vm, -1);
+  be_pushint(vm, slot_);
+  be_getindex(vm, list);
+  // be_getindex pushes the value it read and leaves the list under it; the value is the page.
+  be_remove(vm, -2);
+  if (be_isinstance(vm, -1)) return true;
+  // A slot the scene already emptied: there is no page to answer with.
+  be_pop(vm, 1);
+  return false;
+}
+
 void BerryScene::activate() {
   const int base = be_top(vm_);
   if (beginCall("activate")) endCall("activate", 1);

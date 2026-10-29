@@ -36,15 +36,6 @@ constexpr const char* ActivationRecord = "RoutineActivation";
 // The record one of the browser's rows is, installed here too: the glyph, the title and the key.
 constexpr const char* RowRecord = "RoutineRow";
 
-// The two fields a launch carries: the key the routine was launched under, which the page takes as its
-// own, and the clean settings map its init_from_settings() reads. A page's init reads those two and
-// keeps no record of its own.
-const bnfuncinfo ActivationFields[] = {
-    {"routine_key", nullptr},
-    {"settings_values", nullptr},
-    {nullptr, nullptr},
-};
-
 // `RoutineActivation(routine_key, settings_values)`: the record `routines.activate` builds for the
 // page it answers, and the one an image builds for a page it launches itself.
 int activationInit(bvm* vm) {
@@ -53,8 +44,19 @@ int activationInit(bvm* vm) {
   be_return_nil(vm);
 }
 
+// The two fields a launch carries: the key the routine was launched under, which the page takes as its
+// own, and the clean settings map its init_from_settings() reads. A page's init reads those two and
+// keeps no record of its own.
+const bnfuncinfo ActivationFields[] = {
+    {"init", activationInit},
+    {"routine_key", nullptr},
+    {"settings_values", nullptr},
+    {nullptr, nullptr},
+};
+
 // The three fields one row of the browser's list carries.
 const bnfuncinfo RowFields[] = {
+    {"init", recordInit},
     {"icon", nullptr},
     {"title", nullptr},
     {"value", nullptr},
@@ -450,8 +452,29 @@ int routinesActivate(bvm* vm) {
   be_return(vm);
 }
 
+// routines.keys(): every registered key in registration order, each alternate after its record, as
+// the list a driver walks and a summary counts the image by. An empty list, never nil, for an image
+// that registered nothing.
+int routinesKeys(bvm* vm) {
+  if (routines == nullptr) {
+    be_raise(vm, "runtime_error", "routines.keys: no panel");
+  }
+  // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
+  // instance as the answer.
+  be_newobject(vm, "list");
+  const int list = be_absindex(vm, -1);
+  for (const String& key : routines->registry().keys()) {
+    be_pushstring(vm, key.c_str());
+    be_data_push(vm, list);
+    be_pop(vm, 1);
+  }
+  be_pop(vm, 1);
+  be_return(vm);
+}
+
 const bnfuncinfo RoutinesLibrary[] = {
     {"register", routinesRegister},
+    {"keys", routinesKeys},
     {"load_settings", routinesLoadSettings},
     {"save_settings", routinesSaveSettings},
     {"rows", routinesRows},

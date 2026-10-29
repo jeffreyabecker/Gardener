@@ -157,9 +157,15 @@ class BufferLogger : public Logger {
 
   void info(const char* text) override { append("[I] ", text); }
   void warn(const char* text) override { append("[W] ", text); }
-  void error(const char* text) override { append("[E] ", text); }
+  void error(const char* text) override {
+    errors_++;
+    append("[E] ", text);
+  }
 
   std::string text() const { return text_; }
+  // How many error lines the firmware wrote: a run that loaded nothing still prints a summary, and
+  // this is the count that says the summary is about nothing.
+  int errors() const { return errors_; }
 
  private:
   void append(const char* level, const char* text) {
@@ -170,6 +176,7 @@ class BufferLogger : public Logger {
 
   String levels_ = "IWE";
   std::string text_;
+  int errors_ = 0;
 };
 
 // The harness's queue, as a list: everything that writes the machine posts here and the beat drains
@@ -261,14 +268,23 @@ class HarnessSession {
   void reset();
   bool active() const { return routines_.active(); }
 
+  // What the image's load cost: the files that loaded of the files that were found. The difference is
+  // a file that did not compile and a `.be` file `/system/order` does not name.
+  size_t filesLoaded() const { return routines_.filesLoaded(); }
+  size_t filesFound() const { return routines_.filesFound(); }
+  // The error lines the firmware wrote, which is what it said was wrong rather than what a case
+  // asserted: a page that raised on a poll, a compile that failed, a file the order left out.
+  int errorLines() const;
+
   // --- capture -------------------------------------------------------------
   // Arms capture: every flush from now keeps the frame, and endCapture() writes them as a GIF.
   void beginCapture(const char* path);
   // Writes the captured frames to the armed path; false when there was nothing to write.
   bool endCapture();
-  // Writes the frame on screen now as a single-frame GIF, with no beat in between: the still the
-  // inspection commands and the chrome/component cases save.
-  bool saveStill(const char* path);
+  // The ink a rectangle of the frame holds now, as a count of set pixels: what a node drew in the box
+  // the layout gave it, which is the one thing only the draw walk decides. Nothing is read from
+  // outside the frame.
+  int ink(int16_t x, int16_t y, int16_t w, int16_t h) const { return display_.inkCount(x, y, w, h); }
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }

@@ -51,6 +51,13 @@ class Routines {
   // which asks once per press.
   bool active() const { return stack_.depth() > 0; }
 
+  // What the load cost: the files that loaded of the files that were found. The difference is a file
+  // that did not compile and a `.be` file `/system/order` does not name, and nothing else reads them:
+  // the panel loads the image whatever it holds, so the device reports a page that is missing rather
+  // than refusing to boot.
+  size_t filesLoaded() const { return filesLoaded_; }
+  size_t filesFound() const { return filesFound_; }
+
   // What the scenes take their gestures from. The queue `device.take_gesture()` drains is the same
   // one, so a press goes to whichever of the two is reading.
   gfx::ui::GestureQueue& presses() { return gestures_; }
@@ -95,6 +102,9 @@ class Routines {
   PanelContext* panel_ = nullptr;
   gfx::ui::Ux stack_;
   GestureQueue gestures_;
+  // What begin() loaded of what it found, for the run that reports whether the image is all there.
+  size_t filesLoaded_ = 0;
+  size_t filesFound_ = 0;
 };
 
 }  // namespace gardener

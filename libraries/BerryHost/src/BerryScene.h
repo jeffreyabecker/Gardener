@@ -43,6 +43,10 @@ class BerryScene : public gfx::ui::Scene {
   // The page went on top: its own chance to read what it shows, before the stack paints it.
   void activate() override;
 
+  // The page this scene holds, on the interpreter's stack: the instance the image built, so the stack
+  // can answer which page is showing. False, pushing nothing, when the scene holds no page.
+  bool pushPage(bvm* vm) const;
+
  protected:
   bool handle(const char* gesture) override;
   void tick(uint32_t nowMs) override;

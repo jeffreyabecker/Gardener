@@ -54,6 +54,7 @@ int rowRelease(bvm* vm) {
 constexpr const char* SettingRecord = "RoutineSetting";
 
 const bnfuncinfo SettingFields[] = {
+    {"init", recordInit},
     {".p", nullptr},
     {"key", nullptr},
     {"label", nullptr},

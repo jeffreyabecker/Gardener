@@ -35,6 +35,7 @@ constexpr const char* CallbackList = "__uxCallbacks";
 constexpr const char* SceneRecord = "SceneHandle";
 
 const bnfuncinfo SceneFields[] = {
+    {"init", recordInit},
     {".p", nullptr},
     {nullptr, nullptr},
 };
@@ -213,10 +214,39 @@ int uxPopToRoot(bvm* vm) {
   be_return(vm);
 }
 
+// ux.depth(): how many frames are showing, the root included — 1 at boot and after every reset, and
+// 0 with nothing showing. The stack's own count, never more than its cap.
+int uxDepth(bvm* vm) {
+  requirePanel(vm, "ux.depth: no panel");
+  be_pushint(vm, routines->scenes().depth());
+  be_return(vm);
+}
+
+// ux.top(): the page the top frame shows, as the instance the image built for it, so a case can set a
+// field on it and call its methods. Nil for a scene a native factory answered, which no page wrote,
+// and nil with nothing showing.
+int uxTop(bvm* vm) {
+  requirePanel(vm, "ux.top: no panel");
+  BerryScene* page = dynamic_cast<BerryScene*>(routines->scenes().top());
+  if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
+  be_return(vm);
+}
+
+// ux.band_rows(): the rows the band across the bottom of the glass takes from the page above it — 0
+// when the stack has no cells to draw. A case marks those rows rather than assuming a height.
+int uxBandRows(bvm* vm) {
+  requirePanel(vm, "ux.band_rows: no panel");
+  be_pushint(vm, routines->scenes().bandRows());
+  be_return(vm);
+}
+
 const bnfuncinfo UxLibrary[] = {
     {"push", uxPush},
     {"pop", uxPop},
     {"pop_to_root", uxPopToRoot},
+    {"depth", uxDepth},
+    {"top", uxTop},
+    {"band_rows", uxBandRows},
     {nullptr, nullptr},
 };
 

@@ -40,56 +40,26 @@ HOST = TOOL / "host"
 BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 
-# The interpreter's host side, compiled on the host: the install, the four native modules, the page
-# scene and the tree it draws.
-BERRYHOST_SOURCES = [
-    BERRYHOST / "src" / "Bindings.cpp",
-    BERRYHOST / "src" / "BerryInterpreter.cpp",
-    BERRYHOST / "src" / "BerryScene.cpp",
-    BERRYHOST / "src" / "DrawTree.cpp",
-    BERRYHOST / "src" / "Device.cpp",
-    BERRYHOST / "src" / "Screen.cpp",
-    BERRYHOST / "src" / "Vacuum.cpp",
-]
+# What the check compiles is discovered, not listed, so a source that moves and a file a library
+# gains or loses is not an edit here. Both library folders are the whole library: BerryHost is the
+# interpreter's host side and Gfx is what the pages draw with, and the check is that code. Gardener
+# is the part of it a panel build compiles on a host — the sources that name no board header — which
+# is the selection tools/unit/check.py makes in the other direction.
+PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "<NimBLE", "freertos/",
+                     "<TFT_eSPI", "<WiFi", "<Preferences.h>")
 
-# The firmware's own sources, compiled on the host. What is not here is what needs a board: the
-# composition roots, the tasks, the links, the device drivers and the vendor display.
-FIRMWARE_SOURCES = [
-    GARDENER / "src" / "panel" / "BuzzerPlayer.cpp",
-    GARDENER / "src" / "panel" / "Band.cpp",
-    GARDENER / "src" / "panel" / "MarkScene.cpp",
-    GARDENER / "src" / "panel" / "PressureReadout.cpp",
-    GARDENER / "src" / "routines" / "Routines.cpp",
-    GARDENER / "src" / "routines" / "GestureQueue.cpp",
-    GARDENER / "src" / "machine" / "MachineCommand.cpp",
-    GARDENER / "src" / "storage" / "Config.cpp",
-    GARDENER / "src" / "storage" / "Ini.cpp",
-    GARDENER / "src" / "storage" / "Jingles.cpp",
-    GARDENER / "src" / "routines" / "Registration.cpp",
-    GARDENER / "src" / "routines" / "RoutineRegistry.cpp",
-    GARDENER / "src" / "storage" / "RoutineSettingStore.cpp",
-    GARDENER / "src" / "machine" / "VacuumSystem.cpp",
-]
 
-GFX_SOURCES = [
-    GFX / "src" / "gfx" / "Canvas.cpp",
-    GFX / "src" / "gfx" / "Shapes.cpp",
-    GFX / "src" / "gfx" / "Text.cpp",
-    GFX / "src" / "gfx" / "BuiltinFont.cpp",
-    GFX / "src" / "gfx" / "Fonts.cpp",
-    GFX / "src" / "ui" / "Drawing.cpp",
-    GFX / "src" / "ui" / "Layout.cpp",
-    GFX / "src" / "ui" / "Overlay.cpp",
-    GFX / "src" / "ui" / "Scene.cpp",
-    GFX / "src" / "ui" / "Ux.cpp",
-    GFX / "src" / "ui" / "SettingsRows.cpp",
-    GFX / "src" / "ui" / "SettingsScene.cpp",
-    GFX / "src" / "ui" / "EditorScene.cpp",
-    GFX / "src" / "ui" / "ChoiceScene.cpp",
-    GFX / "src" / "ui" / "BoolScene.cpp",
-    GFX / "src" / "ui" / "NumberScene.cpp",
-    GFX / "src" / "ui" / "DurationScene.cpp",
-]
+def board_free(source):
+    text = source.read_text(encoding="utf-8", errors="replace")
+    return not any(name in text for name in PLATFORM_INCLUDES)
+
+
+BERRYHOST_SOURCES = sorted((BERRYHOST / "src").glob("*.cpp"))
+
+GFX_SOURCES = sorted((GFX / "src" / "gfx").glob("*.cpp"))
+GFX_SOURCES += sorted((GFX / "src" / "ui").glob("*.cpp"))
+
+FIRMWARE_SOURCES = [path for path in sorted((GARDENER / "src").rglob("*.cpp")) if board_free(path)]
 
 # The parts the panel's pieces are made of here: a chamber and its three parts, a counted piezo, a
 # full battery, the data image in memory and a log buffer. The glass is the shared recording
@@ -100,7 +70,7 @@ HOST_SOURCES = [
     HOST / "MemoryFiles.cpp",
 ]
 
-MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
+MAIN_SOURCES = [TOOL / "main.cpp", TOOL / "entry.cpp", *HOST_SOURCES]
 
 # What a host tool shares with the others: the Arduino API, the clock, the recording display and the
 # frame writer.
@@ -110,6 +80,12 @@ SHARED_SOURCES = [
     SHARED / "capture" / "CaptureDisplay.cpp",
     SHARED / "capture" / "GifWriter.cpp",
 ]
+
+# The API's own sources, and the two a board's C library would provide: a device's core library links
+# them, so a host tool that compiles the API's headers has to compile these as well.
+API = SHARED / "arduino-core-api"
+API_SOURCES = [API / "api" / name for name in ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")]
+API_SOURCES += [API / "extras" / name for name in ("itoa.cpp", "dtostrf.cpp")]
 
 
 def compiler(kind):
@@ -138,7 +114,7 @@ def build(cc, cxx):
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
     for path in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src", GFX / "src",
-                 GARDENER / "src", SHARED / "arduino", SHARED / "capture"):
+                 GARDENER / "src", SHARED / "arduino", SHARED / "capture", API):
         includes.extend(["-I", str(path)])
     # The API's folder holds String.h, which a case-insensitive filesystem would otherwise hand to
     # #include <string.h> in place of the C library's.
@@ -166,13 +142,16 @@ def build(cc, cxx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *SHARED_SOURCES, *BERRYHOST_SOURCES, *FIRMWARE_SOURCES,
-                   *GFX_SOURCES):
+    for source in (*MAIN_SOURCES, *SHARED_SOURCES, *API_SOURCES, *BERRYHOST_SOURCES,
+                   *FIRMWARE_SOURCES, *GFX_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then
-    # refuses to start with a missing entry point rather than a diagnostic.
-    run([cxx, "-static", *(str(obj) for obj in built), "-o", str(EXE), "-lm"])
+    # refuses to start with a missing entry point rather than a diagnostic. The objects go in a
+    # response file: the whole of three libraries is more than one command line takes.
+    response = BUILD / "objects.rsp"
+    response.write_text("\n".join(f'"{obj}"' for obj in built), encoding="utf-8")
+    run([cxx, "-static", f"@{response}", "-o", str(EXE), "-lm"])
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -190,11 +169,6 @@ parser.add_argument(
     "--scene",
     metavar="NAME",
     help="draw that device scene — home or browser — and save it as a GIF animation",
-)
-parser.add_argument(
-    "--component",
-    metavar="NAME",
-    help="draw that component — from either framework — and save the frame as a GIF",
 )
 parser.add_argument(
     "--seconds",
@@ -218,11 +192,6 @@ parser.add_argument(
     help="run only the tests whose full name contains NAME (implies --tests)",
 )
 args = parser.parse_args()
-
-# The capture folders the harness writes into. Generated frames live here rather than in build/,
-# so a component's frame is easy to find and the build output stays machine-only.
-for sub in ("components",):
-    (TOOL / "artifacts" / sub).mkdir(parents=True, exist_ok=True)
 
 build(compiler("c"), compiler("c++"))
 
@@ -260,9 +229,6 @@ if args.scene:
     command.extend(
         ["--scene", args.scene, "--seconds", str(args.seconds), "--out", str(out.resolve())]
     )
-if args.component:
-    out = Path(args.out) if args.out else TOOL / "artifacts" / "components" / f"{args.component}.gif"
-    command.extend(["--component", args.component, "--out", str(out.resolve())])
 if args.tests or args.test:
     tests_dir = TOOL / "tests"
     command.extend(["--suite", str(tests_dir / "suite.be")])

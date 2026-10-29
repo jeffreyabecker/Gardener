@@ -94,6 +94,8 @@ bool Routines::begin(PanelContext& context) {
   const size_t routines = loadAll("routines", routineFiles);
 
   const size_t files = systemFiles + routineFiles;
+  filesLoaded_ = system + routines;
+  filesFound_ = files;
   String summary = "vm: ";
   summary += String((uint32_t)system);
   summary += " system, ";

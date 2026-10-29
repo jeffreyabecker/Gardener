@@ -45,11 +45,14 @@ int harnessReset(bvm* vm) {
 
 // --- what the driver asks about -------------------------------------------
 
-int harnessSave(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "harness.save(path)");
+// The ink a rectangle of the frame holds, as a count of set pixels: what the draw walk placed in the
+// box the layout gave a node, which is the one thing a page's own tree cannot say.
+int harnessInk(bvm* vm) {
+  if (be_top(vm) < 4) {
+    be_raise(vm, "type_error", "harness.ink(x, y, w, h)");
   }
-  be_pushbool(vm, session->saveStill(be_tostring(vm, 1)));
+  be_pushint(vm, session->ink((int16_t)be_toint(vm, 1), (int16_t)be_toint(vm, 2),
+                             (int16_t)be_toint(vm, 3), (int16_t)be_toint(vm, 4)));
   be_return(vm);
 }
 
@@ -120,7 +123,7 @@ int harnessMarkOverlay(bvm* vm) {
 
 const bnfuncinfo HarnessLibrary[] = {
     {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
-    {"reset", harnessReset},    {"save", harnessSave},       {"log", harnessLog},
+    {"reset", harnessReset},    {"ink", harnessInk},         {"log", harnessLog},
     {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
     {"mem", harnessMem},        {"mem_peak", harnessMemPeak},
     {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},

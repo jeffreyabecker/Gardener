@@ -1,4 +1,5 @@
-// The host entry point for the Berry check.
+// The host entry point for the Berry check, as hostMain: entry.cpp holds the `main` the runtime
+// calls, because the API header declares a core's `int main()` beside it.
 //
 // It builds the panel the device would have — the real interpreter, bindings, overlay and control
 // law, with a bitmap for a glass and a chamber for a rig — loads the image through the routines'
@@ -167,26 +168,6 @@ int callArt(bvm* vm, const char* name, int seconds, const char* path) {
   return ok ? 1 : 0;
 }
 
-// Draw one component by name — a drawing primitive from either framework — and save the frame.
-int callArtComponent(bvm* vm, const char* name, const char* path) {
-  if (!be_getglobal(vm, "harness_art_component")) {
-    be_pop(vm, 1);
-    printf("[E] vm: harness_art_component is missing\n");
-    return 0;
-  }
-  be_pushstring(vm, name);
-  be_pushstring(vm, path);
-  const int rc = be_pcall(vm, 2);
-  if (rc != BE_OK) {
-    report(vm, "harness_art_component", name);
-    return 0;
-  }
-  const int result = be_absindex(vm, -(2 + 1));
-  const bool ok = be_isbool(vm, result) && be_tobool(vm, result);
-  be_pop(vm, 3);
-  return ok ? 1 : 0;
-}
-
 // The boot's own figures: the interpreter before the image loads, the framework once `/system` has,
 // and the image once the root scene is built. Bytes, as the host bills them.
 void printMemorySummary(gardener::HarnessSession& session) {
@@ -205,14 +186,13 @@ void printMemoryTable(gardener::HarnessSession& session) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int hostMain(int argc, char** argv) {
   const char* data = DefaultData;
   const char* harnessPath = "harness.be";
   const char* driverPath = "driver.be";
   const char* artName = nullptr;
   const char* artPath = nullptr;
   const char* sceneName = nullptr;
-  const char* componentName = nullptr;
   const char* testFilter = nullptr;
   int artSeconds = 0;
   float ceilingKpa = gardener::ChamberCeilingKpa;
@@ -248,8 +228,6 @@ int main(int argc, char** argv) {
       artName = argv[++i];
     } else if (strcmp(argv[i], "--scene") == 0 && i + 1 < argc) {
       sceneName = argv[++i];
-    } else if (strcmp(argv[i], "--component") == 0 && i + 1 < argc) {
-      componentName = argv[++i];
     } else if (strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
       artPath = argv[++i];
     } else if (strcmp(argv[i], "--seconds") == 0 && i + 1 < argc) {
@@ -287,8 +265,8 @@ int main(int argc, char** argv) {
     if (!loadFile(vm, file.c_str())) failed++;
   }
 
-  // The registry is Berry, so the count of registered routines is read back from a global the
-  // driver sets after the image has loaded.
+  // The registry is Berry, so the two counts the summary prints are read back from globals the
+  // harness sets once the image has loaded: the keys it registered, and the keys a run drove.
   bint routineCount = 0;
   if (be_getglobal(vm, "harnessRoutineCount")) {
     routineCount = be_toint(vm, -1);
@@ -299,8 +277,6 @@ int main(int argc, char** argv) {
     passed = callArt(vm, artName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
   } else if (sceneName != nullptr) {
     passed = callArtScene(vm, sceneName, artSeconds, artPath != nullptr ? artPath : "frame.gif");
-  } else if (componentName != nullptr) {
-    passed = callArtComponent(vm, componentName, artPath != nullptr ? artPath : "frame.gif");
   } else if (suites) {
     // One GIF per case, named from the stem the runner reads back through the harness. A --out
     // that is not a .gif is meaningless under --tests, so it falls back to the default stem.
@@ -326,18 +302,39 @@ int main(int argc, char** argv) {
   printDriverLog(vm);
   if (verbose) fputs(session.logger().text().c_str(), stdout);
 
-  printf("%lld routine%s", (long long)routineCount, routineCount == 1 ? "" : "s");
+  // The keys a run drove: the harness appends each routine whose page it pushed, so a key that
+  // answered no page is visible in the count rather than a quiet gap in the log.
+  bint drivenCount = 0;
+  if (be_getglobal(vm, "harnessDrivenCount")) {
+    drivenCount = be_toint(vm, -1);
+    be_pop(vm, 1);
+  }
+
+  // What a run is a statement about: the image's files loaded of the files found, and the routines
+  // driven of the routines registered. A file that did not compile, a `.be` file `/system/order`
+  // does not name, a page that raised on a beat and a key that answered no page each leave these
+  // counts apart, or the log holding an error line.
+  const long long loaded = (long long)session.filesLoaded();
+  const long long found = (long long)session.filesFound();
+  const long long registered = (long long)routineCount;
+  const long long driven = (long long)drivenCount;
+  // A --tests, --art or --compile run drives the pages its cases, its name or nothing reach, not
+  // every registration, so only a full check holds the two counts to each other.
+  const bool whole = loaded == found && session.errorLines() == 0;
+  const bool drove = artName != nullptr || sceneName != nullptr || suites || compileOnly ||
+                     driven == registered;
+  const bool ok = failed == 0 && passed != 0 && whole && drove;
+
+  printf("%lld of %lld files loaded, %lld of %lld routines driven", loaded, found, driven, registered);
   if (artName != nullptr) {
-    printf(", art %s %s", artName, passed && failed == 0 ? "saved" : "failed");
+    printf(", art %s %s", artName, ok ? "saved" : "failed");
   } else if (sceneName != nullptr) {
-    printf(", scene %s %s", sceneName, passed && failed == 0 ? "saved" : "failed");
-  } else if (componentName != nullptr) {
-    printf(", component %s %s", componentName, passed && failed == 0 ? "saved" : "failed");
+    printf(", scene %s %s", sceneName, ok ? "saved" : "failed");
   } else if (suites) {
-    printf(", suites %s", passed && failed == 0 ? "passed" : "failed");
+    printf(", suites %s", ok ? "passed" : "failed");
   } else if (!compileOnly) {
-    printf(", check %s", passed && failed == 0 ? "passed" : "failed");
+    printf(", check %s", ok ? "passed" : "failed");
   }
   printf("\n");
-  return (failed == 0 && passed != 0) ? 0 : 1;
+  return ok ? 0 : 1;
 }

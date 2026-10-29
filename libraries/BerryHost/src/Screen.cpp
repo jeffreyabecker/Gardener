@@ -30,6 +30,7 @@ constexpr const char* DrawClass = "draw";
 // significant bit first and each row padded to a whole byte. The panel reads them when it draws the
 // node.
 const bnfuncinfo DrawFields[] = {
+    {"init", recordInit},
     {"kind", nullptr},
     {"x", nullptr},
     {"y", nullptr},
@@ -55,15 +56,6 @@ const bnfuncinfo DrawFields[] = {
     {nullptr, nullptr},
 };
 
-// The width and height of a box, in pixels; the cell a Layout child declares, each a share of the
-// parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and the
-// ink box `screen.measure` answers.
-const bnfuncinfo BoundsFields[] = {
-    {"w", nullptr},
-    {"h", nullptr},
-    {nullptr, nullptr},
-};
-
 // `bounds(w, h)`, and `bounds()` for the record `screen.measure` fills: a side left out stays nil,
 // which the drawing reads as the whole of the canvas the node sits in.
 int boundsInit(bvm* vm) {
@@ -72,12 +64,13 @@ int boundsInit(bvm* vm) {
   be_return_nil(vm);
 }
 
-// Where a thing sits in the space it is given: `align` is left, center or right and `v_align` top,
-// center or bottom, each nil for the left and the top. A layout, a row and a column take one after
-// their children, and the default is the left and the top.
-const bnfuncinfo AlignmentFields[] = {
-    {"align", nullptr},
-    {"v_align", nullptr},
+// The width and height of a box, in pixels; the cell a Layout child declares, each a share of the
+// parent in [0, 1], a number of pixels when it is above 1, or nil for the whole of the parent; and the
+// ink box `screen.measure` answers.
+const bnfuncinfo BoundsFields[] = {
+    {"init", boundsInit},
+    {"w", nullptr},
+    {"h", nullptr},
     {nullptr, nullptr},
 };
 
@@ -88,6 +81,16 @@ int alignmentInit(bvm* vm) {
   setText(vm, 1, "v_align", be_top(vm) >= 3 && be_isstring(vm, 3) ? argText(vm, 3) : "top");
   be_return_nil(vm);
 }
+
+// Where a thing sits in the space it is given: `align` is left, center or right and `v_align` top,
+// center or bottom, each nil for the left and the top. A layout, a row and a column take one after
+// their children, and the default is the left and the top.
+const bnfuncinfo AlignmentFields[] = {
+    {"init", alignmentInit},
+    {"align", nullptr},
+    {"v_align", nullptr},
+    {nullptr, nullptr},
+};
 
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need.

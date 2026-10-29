@@ -184,6 +184,8 @@ std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
 
 void HarnessSession::pressGesture(const char* gesture) { display_.showGesture(gesture); }
 
+int HarnessSession::errorLines() const { return logger_.errors(); }
+
 void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
 
 void HarnessSession::backHold() {
@@ -209,15 +211,6 @@ bool HarnessSession::endCapture() {
   const bool ok = display_.frameCount() == 0 || display_.save(capturePath_.c_str());
   display_.endCapture();
   capturePath_.clear();
-  return ok;
-}
-
-bool HarnessSession::saveStill(const char* path) {
-  canvas_.flush(display_);
-  display_.beginCapture();
-  display_.record();
-  const bool ok = display_.save(path);
-  display_.endCapture();
   return ok;
 }
 
