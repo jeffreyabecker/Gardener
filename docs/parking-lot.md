@@ -112,6 +112,18 @@ own box and let a window compose over what is under it. Blocked by: nothing in t
 window — every scene takes the whole page — and `screen` is a published surface, so the extent, the
 buffer and the flush order a canvas would need are all undecided.
 
+## The canvas as a property of the display
+
+`PanelContext::canvas()` has to be there because a `Canvas` owns the rectangle of pixels written
+since the last flush and `DisplayDevice::rootCanvas()` builds a fresh one on every call: the panel
+holds the one root and hands out a reference to it. If the device held its root canvas and answered
+with a reference, `canvas()` could leave the context and both headers would describe what actually
+happens.
+Blocked by: a canvas needs the buffer, the geometry and the depth, which are virtual and exist only
+once the driver is up, so a base-class member cannot be built in the constructor; and `Canvas` is
+neither copyable nor movable, so a getter cannot hand one out by value or keep one without an
+`optional` or a member the driver owns.
+
 ## The Berry host library's dependency
 
 The library holding the interpreter's install, its six native modules, the page scene and the draw
