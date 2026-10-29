@@ -47,7 +47,7 @@ what is left is the activation bug and the suites that say the check holds the i
 - [x] Hold a `ux` suite: the three calls' answers, `depth` from 1 at boot to the stack's cap, `top`
       as the page instance the image built, a handle pushed twice refused, the callback handed the
       popped page's value, and no callback from `pop_to_root`.
-- [ ] Hold the frame-ink cases on `harness.ink`: an inverted leaf over a full cell, a child that
+- [x] Hold the frame-ink cases on `harness.ink`: an inverted leaf over a full cell, a child that
       names no size filling its cell, and a text node whose ink is the width `measure` answers.
 
 ## The tool is documented as it is
