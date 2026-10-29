@@ -50,10 +50,9 @@ message, and don't build, test or review the diff on the way.
 ## Skills
 
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
-`.github/skills/cpp/`; Git practice and which document work belongs in are in
-`.github/skills/project/`, with a skill per document — `.github/skills/specs/`,
-`.github/skills/plans/`, `.github/skills/ideation/` and `.github/skills/backlog/`; writing the
-Berry data image is in `.github/skills/berry/`, with its host check under `tools/berry/`.
+`.github/skills/cpp/`; Git practice, and every place work is written down — spec, plan, idea document,
+backlog and parking-lot line — is in `.github/skills/project/`; writing the Berry data image is in
+`.github/skills/berry/`, with its host check under `tools/berry/`.
 
 ## Where to look
 

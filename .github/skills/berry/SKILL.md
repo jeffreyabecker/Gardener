@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ runs the image on the host.'
+description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, which side of the Berry boundary a piece belongs on, and the host harness in tools/berry/.'
 ---
 
 # Berry
@@ -14,7 +14,7 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
   the image and drives the beat
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
-only packs it. It is checked on the device: `--task upload`, then a look at the panel.
+only packs it.
 
 A change to the C++ under `libraries/Gardener` or `libraries/Gfx` is not this skill's business and
 does not need the interpreter: `python tools/unit/check.py` compiles and runs it on the host.
@@ -44,44 +44,32 @@ what the drive does are held by `tools/berry/` itself, and that is the whole sta
 `harness.be` for the driver's bookkeeping, `driver.be` for the smoke walk, and `tests/suite.be`
 plus `tests/*.test.be` for the named suites.
 
-**Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
-`--scene home`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
-The output is an animated GIF — one frame per flushed beat, each held a second by `GifDelayCs`,
-enlarged 2 x by `RenderScale`. The GIF draws a full-width strip across the top showing each
-injected press (`OK`, `OK×2`, `CANCEL 5s`) for one captured frame, as many as
-`CaptureDisplay::CalloutFrames` says; a suite's captures hash the overlay band instead of drawing
-the device's status row, so the page the case drove reads as the whole picture. Writing a frame out
-as text loses the thing the render is for.
+## Look at the picture
 
-**The frame belongs to the person who opens it.** Nothing in a run reads a capture back, and
-nothing it prints describes one: a `.gif` under `tools/berry/build/` or
-`tools/berry/artifacts/` is there for a human to look at. Do not convert one, enlarge it,
-transcribe it or diff two of them to decide whether a change is right. That is a reading the
-harness never made a claim about, of pixels that are the host's rendering rather than the
-panel's, and an approval it cannot support. Say what the code draws and where; leave the file for
-the human, and let a layout question be answered by the numbers a case asserts — the ink a `Text`
-measures, the box a component places.
+`--art` draws the page the panel would, in the face the panel would pick; `--scene home`,
+`--scene browser` and `--scene system` draw the device's own well-known scenes. The output is an
+animated GIF — one frame per flushed beat, each held a second by `GifDelayCs`, enlarged 2 x by
+`RenderScale` — with a strip across the top naming the presses that frame carried, as many as
+`CaptureDisplay::CalloutFrames` says. A suite's captures hash the overlay band instead of drawing
+the device's status row, so the page the case drove reads as the whole picture.
+
+Nothing in a run reads a capture back, and nothing it prints describes one: a `.gif` under
+`tools/berry/build/` or `tools/berry/artifacts/` is there for a human to look at. Do not convert
+one, enlarge it, transcribe it or diff two of them to decide whether a change is right: that is a
+reading the harness never made a claim about, of pixels that are the host's rendering rather than
+the panel's, and an approval it cannot support. Say what the code draws and where, and let a layout
+question be answered by the numbers a case asserts — the ink a `Text` measures, the box a component
+places.
 
 ## When to run it
 
-The check proves a change; it is not a step in making one. A run compiles the image, loads it and
-drives a page for every registered routine, then prints a line per page and per case — long output,
-most of it the same lines as last time. Read the code while working, and run the check when the
-change is done, or when a failure needs a diagnosis that reading the code cannot give.
+The check proves a change; it is not a step in making one. A run prints a line per page and per
+case, most of them the same lines as last time, so read the code while working and run the check
+when the change is done, or when a failure needs a diagnosis that reading the code cannot give.
 
-Two things make a run worth nothing. The first is a tree the last run already answered for. The
-second is a change that cannot reach the image: a document, a `.ini` seed, an `assets/` image, a
-comment, or C++ outside `libraries/berry/`. A refactor that moves code without changing what it
-draws is the same case one step in: a frame captured before the edit and again after it, to diff
-them, is two runs to learn what the diff of the code already said. Write a frame when a human needs
-to see a layout, a face or a glyph, and leave it alone when the picture is not in doubt. And a suite
-already red for a reason that has been diagnosed stays red: that failure is the baseline, not an
-invitation to run it again.
-
-When several edits are ahead, hold the check until the last of them; a run between them is a run
-that the next edit invalidates. When the user asks for one, run it. Otherwise one check at the end
-of a change that can break a routine is the verification, and a second is waiting for an answer it
-already gave.
+When several edits are ahead, hold the check until the last of them: a run between them is a run the
+next edit invalidates. A suite that is red for a reason already diagnosed stays red — that failure
+is the baseline, not an invitation to run it again.
 
 ## Reading the output
 
@@ -118,19 +106,17 @@ The pump, the sensor and Bluetooth are models or counters and the clock is virtu
 the actual vacuum stay the device's. `print` writes nowhere, here as on the device: `vacuum.log()`
 lands in the output as `[I]`. LittleFS is a map, so a write that would fill a filesystem succeeds.
 
-## A binding is a wrapper
-
-A class a page is written against is a C++ class in the library, and the file in
-`libraries/BerryHost/src/` is what presents it: the `be_pushclass` table, the callbacks that unpack
-their arguments and push the class's answer, and the hook that reaches a page's override back
-through the interpreter. What belongs on each side of that line is the Berry boundary rule in
-[the firmware skill](../firmware/SKILL.md). A model kept in a `.be` file beside its wrapper is a
-second implementation: the two drift, and the image pays for both at every boot.
+## A record is a table entry
 
 A record — a value a page reads with dots, like the node `screen.text()` answers — is declared in the
-same table, as an entry with no function, which binds it as an instance variable: the class the
-parser's `var` would have made. Its fields then sit in the file whose callbacks set them, so a name is
-renamed in one place, and no record is written in a `.be` file the image has to compile.
+`be_pushclass` table of the file that presents the class, as an entry with no function, which binds
+it as an instance variable: the class the parser's `var` would have made. Its fields then sit in the
+file whose callbacks set them, so a name is renamed in one place, and no record is written in a `.be`
+file the image has to compile. The table's class needs an `init` like any other, even one that
+answers nothing but self: without it the class builds and no page can construct one.
+
+What belongs on each side of the boundary, and why a model is never written twice, is the Berry
+boundary rule in [the firmware skill](../firmware/SKILL.md).
 
 ## Still the device's job
 

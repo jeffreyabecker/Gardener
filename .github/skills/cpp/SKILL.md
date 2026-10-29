@@ -14,6 +14,9 @@ description: 'C++ naming and formatting standards for the Gardener firmware. Use
 `libraries/berry/` is vendored third-party C and keeps its own naming. The rules here are for the
 project's own code.
 
+What the code should be — where a type, a driver or an interface belongs, and which facilities to
+reach for instead of hand-rolling — is the [firmware skill](../firmware/SKILL.md)'s.
+
 ## Naming
 
 | What | Case | Example |
@@ -80,9 +83,3 @@ decision with its own measurement.
 A comment earns its line by saying why the code is what it is — the constraint, the failure it
 avoids, the reason the obvious version is wrong. Don't restate the code in a sentence. Short prose
 on the line above the thing it explains, or trailing a field when the reason is about that field.
-
-## Core utilities
-
-Reach for the platform's own facility before a hand-rolled one — Arduino `String` for text, the
-core's helpers for the rest — and hand-roll only with a reason you can point at. That rule, and the
-design rules that go with it, are in `.github/skills/firmware/`.

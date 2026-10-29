@@ -11,6 +11,9 @@ description: 'Design conventions for the Gardener ESP32 firmware. Use when writi
 - Deciding where a new type, a driver or an interface belongs
 - Reviewing a firmware change
 
+How the code is written — naming, formatting and the type rules — is the
+[cpp skill](../cpp/SKILL.md)'s, and is not repeated here.
+
 ## Don't reinvent the wheel
 
 This is an Arduino/ESP32 project, and the core already provides the utilities this firmware needs.
@@ -32,18 +35,11 @@ earlier decision that this guidance supersedes for new work, not a task to sched
 hand-rolled text builder that used to sit beside it (`core/Text.h`) is gone, so `String` is now
 the only way text is formatted in this firmware.
 
-## C++ style
-
-Naming, formatting and the type rules are in `.github/skills/cpp/`. The two that surprise a reader
-coming from another codebase: constants are PascalCase with no `k` prefix, and globals are camelCase
-with no `g` prefix. Types PascalCase, functions and variables camelCase, members with a trailing
-underscore (`count_`, `context_`), enum values PascalCase.
-
 ## Keep it simple
 
 Simplicity here is not a taste, it is what the firmware is already built to: an Arduino/ESP32-S3
-sketch of a handful of files, a couple of thousand lines, one loop. It stays that way only if new
-work extends that shape instead of building beside it. When a design is larger than the thing it
+sketch that hands its parts to a few tasks and lets `loop()` delete itself. It stays that way only if
+new work extends that shape instead of building beside it. When a design is larger than the thing it
 does, the extra is the bug, and every part of it should have a reason a reviewer can point at.
 
 **KISS, and write it for an Arduino programmer.** The reader knows `setup()` and `loop()`, not a
@@ -85,8 +81,8 @@ folder, not behind a flag defaulted off. The Berry runtime and the host client w
 outright and left to the history; do the same.
 
 **Answer a requirement with the smallest mechanism.** Take what has to be true from the item that
-states it, then answer it with the smallest mechanism the current single loop allows. Reaching for a
-task, a lock, a queue or a watchdog is a question to ask, not a thing to build.
+states it, then answer it with the smallest mechanism the tasks already running allow. A second task,
+a lock, another queue or a watchdog is a question to ask before it is a thing to build.
 
 **Same behaviour, less surface** is the trade to look for. `PressureSensor` is the current shape
 of it: one `pressureKpa()` reading, with the ambient reference and the values derived from it left to the
