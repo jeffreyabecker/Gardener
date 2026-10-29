@@ -12,13 +12,13 @@
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
 #include "Canvas.h"
-#include "hal/Battery.h"
+#include "core/Battery.h"
 #include "panel/glass/Band.h"
-#include "panel/glass/MarkScene.h"
-#include "panel/glass/Units.h"
+#include "panel/page/MarkScene.h"
+#include "core/Units.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
-#include "hal/Library.h"
+#include "core/Library.h"
 
 namespace gardener {
 namespace {
@@ -150,17 +150,17 @@ bool Routines::resetToRoot() {
   if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
     if (stack_.reset(std::move(page))) return true;
   }
-  return stack_.reset(std::make_unique<panel::glass::MarkScene>(gestures_));
+  return stack_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
 }
 
 void Routines::updateBand(uint32_t nowMs) {
-  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
-  panel::glass::parseDisplayUnit(
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(
       panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   const Battery& battery = panel_->battery();
   const int8_t percent = battery.present() ? static_cast<int8_t>(battery.percent()) : -1;
   stack_.setBand({
-      panel::glass::bandUnit(panel::glass::displayUnitInfo(unit).suffix),
+      panel::glass::bandUnit(displayUnitInfo(unit).suffix),
       panel::glass::bandLinks(panel_->serialConnected(), panel_->bluetoothConnected()),
       panel::glass::bandState(panel_->vacuum().runState(), nowMs),
       panel::glass::bandBattery(percent, battery.low(), nowMs),

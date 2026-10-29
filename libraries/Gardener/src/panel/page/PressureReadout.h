@@ -3,10 +3,10 @@
 #include <stdint.h>
 
 #include "machine/VacuumSystem.h"
-#include "panel/glass/Units.h"
+#include "core/Units.h"
 #include "Drawing.h"
 
-namespace gardener::panel::glass {
+namespace gardener::panel::page {
 
 
 // The AutoPressureDisplay the pages drew, composed from the drawing styles: the machine's reading
@@ -20,4 +20,4 @@ gfx::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit
                                float sizeHint = 0.5f, const gfx::Font* face = nullptr,
                                uint8_t scale = 2, uint8_t secondaryScale = 1);
 
-}  // namespace gardener::panel::glass
+}  // namespace gardener::panel::page

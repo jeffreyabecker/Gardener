@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "core/Units.h"
 #include "panel/page/ChoiceScene.h"
 #include "panel/page/NumberScene.h"
 #include "panel/page/SettingsScene.h"
@@ -155,6 +156,26 @@ class NumberRow : public SettingsRow {
   String key_;
   float default_;
   uint8_t decimals_;
+};
+
+// --- the pressure -----------------------------------------------------------
+
+// The row of the target pressure: a number row over the depth in the kPa the machine stores, whose
+// editor is the pressure scene — a keypress is one step of the unit the glass shows — and which
+// prints the depth with that unit's decimals. The bounds are the machine's, so a keypress cannot
+// leave the editor on a target the loop would refuse.
+class PressureRow : public NumberRow {
+ public:
+  PressureRow(GestureQueue& gestures, Ux& ux, const String& key,
+              const String& label, float currentKpa, DisplayUnit unit, float wholeSteps,
+              bool nullable = false, Validator validator = nullptr);
+
+  SettingDeclaration declaration() const override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
+
+ private:
+  DisplayUnit unit_;
+  float wholeSteps_;
 };
 
 }  // namespace gardener::panel::page

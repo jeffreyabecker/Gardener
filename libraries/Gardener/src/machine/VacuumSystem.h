@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-#include "hal/PressureSensor.h"
-#include "hal/Pump.h"
-#include "hal/VentValve.h"
+#include "core/PressureSensor.h"
+#include "core/Pump.h"
+#include "core/VentValve.h"
 
 namespace gardener {
 
@@ -29,7 +29,7 @@ inline const char* runStateName(RunState state) {
 
 // The vacuum system: the pressure loop, the release path and the run state, between the devices and
 // the wire. The devices are not its own — it is handed the three it commands, so the pins and the
-// bus stay in hal/ and this file stays the control law.
+// bus stay in the parts and this file stays the control law.
 //
 // It is told what to do — regulate to this target, start, stop, rest — and it reports what is
 // true: the pressure, the duty, the state. The state is the vacuum system's own, because both of the

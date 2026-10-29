@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "hal/VentValve.h"
+#include "core/VentValve.h"
 
 namespace gardener {
 

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "storage/Config.h"
-#include "hal/Library.h"
+#include "core/Library.h"
 #include "panel/page/SettingsRows.h"
 
 namespace gardener {

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "panel/page/Ux.h"
-#include "routines/GestureQueue.h"
+#include "panel/LocklessGestureQueue.h"
 #include "routines/Interpreter.h"
 #include "routines/RoutineRegistry.h"
 #include <Gfx.h>
@@ -64,7 +64,7 @@ class Routines {
 
   // What the scenes take their gestures from. The queue `device.take_gesture()` drains is the same
   // one, so a press goes to whichever of the two is reading.
-  panel::page::GestureQueue& presses() { return gestures_; }
+  panel::GestureQueue& presses() { return gestures_; }
 
   // What a settings row builds its editor on, and where a launch puts a page: the stack the beat
   // polls, so a page opened from a page is pushed over it rather than into a second one.
@@ -105,7 +105,7 @@ class Routines {
   // band shows.
   panel::PanelContext* panel_ = nullptr;
   panel::page::Ux stack_;
-  GestureQueue gestures_;
+  panel::LocklessGestureQueue gestures_;
   // What begin() loaded of what it found, for the run that reports whether the image is all there.
   size_t filesLoaded_ = 0;
   size_t filesFound_ = 0;

@@ -8,13 +8,13 @@
 #include "machine/MachineCommand.h"
 #include "firmwareversion.h"
 #include "core/Logger.h"
-#include "hal/Battery.h"
+#include "core/Battery.h"
 #include "serial/Domain.h"
 #include "serial/SerialLink.h"
 #include "storage/Config.h"
 #if GARDENER_PANEL
 #include "panel/Panel.h"
-#include "panel/glass/Units.h"
+#include "core/Units.h"
 #include "serial/PanelDomains.h"
 #include "storage/DeviceConfig.h"
 #endif
@@ -130,10 +130,10 @@ void DeviceDomain::get(Stream& io) {
 
 #if GARDENER_PANEL
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
-  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
-  panel::glass::parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   io.print(" unit=");
-  io.print(panel::glass::displayUnitInfo(unit).name);
+  io.print(displayUnitInfo(unit).name);
 #endif
 
   // One byte, the same mask the BLE `caps` characteristic reports.
@@ -194,8 +194,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
   // The machine's settings are build symbols now, so `unit` is the only preference this domain
   // takes; a machine-alone build has no panel to print in one.
   if (field.equalsIgnoreCase("unit")) {
-    panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
-    if (!panel::glass::parseDisplayUnit(value.c_str(), unit)) {
+    DisplayUnit unit = DisplayUnit::Kpa;
+    if (!parseDisplayUnit(value.c_str(), unit)) {
       io.print("err bad_argument ");
       io.print(value);
       io.print('\n');
@@ -207,11 +207,11 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    config_->set(DeviceSection, UnitKey, panel::glass::displayUnitInfo(unit).name);
+    config_->set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
     config_->save();
 
     io.print("ok unit=");
-    io.print(panel::glass::displayUnitInfo(unit).name);
+    io.print(displayUnitInfo(unit).name);
     io.print('\n');
     return;
   }

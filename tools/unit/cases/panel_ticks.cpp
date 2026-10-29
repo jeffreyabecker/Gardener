@@ -15,9 +15,9 @@
 #include "fakes/Parts.h"
 #include "Canvas.h"
 #include "DisplayDevice.h"
-#include "hal/Battery.h"
-#include "hal/Button.h"
-#include "hal/Library.h"
+#include "core/Battery.h"
+#include "core/Button.h"
+#include "core/Library.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
@@ -53,7 +53,7 @@ using gardener::Routines;
 using gardener::VacuumSystem;
 using gardener::gfx::Canvas;
 using gardener::gfx::DisplayDevice;
-using gardener::panel::page::GestureQueue;
+using gardener::panel::GestureQueue;
 using gardener::panel::page::Scene;
 using gardener::CaptureDisplay;
 using gardener::test::FakeBattery;

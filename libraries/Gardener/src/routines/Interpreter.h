@@ -6,10 +6,10 @@
 namespace gardener {
 
 namespace panel {
+class GestureQueue;
 class PanelContext;
 
 namespace page {
-class GestureQueue;
 class Scene;
 }  // namespace page
 }  // namespace panel
@@ -37,7 +37,7 @@ class Interpreter {
   // The image's root page as a scene, or nothing when it sets none. The global is read when it is
   // wanted rather than cached, so whatever a later load sets is the page the go-home gesture goes
   // to.
-  virtual std::unique_ptr<panel::page::Scene> rootScene(panel::page::GestureQueue& gestures,
+  virtual std::unique_ptr<panel::page::Scene> rootScene(panel::GestureQueue& gestures,
                                                         panel::PanelContext& panel) = 0;
 };
 

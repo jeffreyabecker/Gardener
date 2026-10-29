@@ -22,6 +22,7 @@ namespace gardener::gfx::test {
 namespace {
 
 using namespace gardener::panel::page;
+using gardener::panel::GestureQueue;
 
 // The key a choice hands back, as the text a case compares; empty is the nullable nothing.
 String keyOf(const ChoiceScene& scene) {

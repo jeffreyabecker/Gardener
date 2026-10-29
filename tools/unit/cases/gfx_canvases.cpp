@@ -10,8 +10,6 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::panel::page;
-
 TEST_CASE("a child draws at its parents offset") {
   reset();
   canvas.flush(display);

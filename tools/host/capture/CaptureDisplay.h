@@ -10,7 +10,7 @@
 #include "DisplayDevice.h"
 #include "Rect.h"
 #include "Drawing.h"
-#include "panel/page/GestureQueue.h"
+#include "panel/GestureQueue.h"
 
 namespace gardener {
 
@@ -25,7 +25,7 @@ namespace gardener {
 // rectangle the canvas failed to report keeps the pixels it had, which is what makes a missed
 // partial redraw show on the capture. The overlay hash and the components are drawn into that copy
 // only, so nothing a case asserts on the display itself carries them.
-class CaptureDisplay : public gfx::DisplayDevice, public panel::page::GestureQueue {
+class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
  public:
   // The glass the firmware drives, which is the size a recording display has unless it is told
   // otherwise.

@@ -5,7 +5,7 @@
 #include <any>
 
 #include "Canvas.h"
-#include "panel/page/GestureQueue.h"
+#include "panel/GestureQueue.h"
 
 namespace gardener::panel::page {
 

@@ -28,7 +28,7 @@ using gardener::GifDelayCs;
 using gardener::RenderScale;
 using gardener::gfx::Canvas;
 using gardener::gfx::Rect;
-using gardener::panel::page::GestureQueue;
+using gardener::panel::GestureQueue;
 using gardener::panel::page::Scene;
 using gardener::panel::page::Ux;
 using gardener::gfx::test::display;

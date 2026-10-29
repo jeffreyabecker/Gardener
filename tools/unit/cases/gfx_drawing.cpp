@@ -12,8 +12,6 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::panel::page;
-
 // A paint that inks the whole canvas it is given, which is what a glyph does and what a case reads
 // back as a filled box.
 Paint fill() {

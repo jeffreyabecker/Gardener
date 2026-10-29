@@ -14,8 +14,7 @@
 #include <berry.h>
 
 #include "panel/PanelContext.h"
-#include "panel/glass/PressureRow.h"
-#include "panel/glass/Units.h"
+#include "core/Units.h"
 #include "panel/page/SettingsRows.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
@@ -179,9 +178,9 @@ std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
 
 // The unit the panel prints pressure in, out of the device's own document: a declaration is made while
 // the panel runs, so a row is built in the unit showing then.
-panel::glass::DisplayUnit displayUnit() {
-  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
-  panel::glass::parseDisplayUnit(
+DisplayUnit displayUnit() {
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(
       context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   return unit;
 }
@@ -257,7 +256,7 @@ int pressureInit(bvm* vm) {
   requireNumber(vm, 6, PressureName, "the step");
   requireBool(vm, 7, PressureName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<panel::glass::PressureRow>(
+  holdRow(vm, std::make_unique<panel::page::PressureRow>(
                   routines->presses(), routines->scenes(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   displayUnit(), (float)be_toreal(vm, 6), be_tobool(vm, 7)));

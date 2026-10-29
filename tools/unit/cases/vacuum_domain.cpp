@@ -1,6 +1,6 @@
 // The machine's `vacuum` domain: the field list `get` publishes, the bounds `target` and `start`
 // hold their arguments to, and the refusals `start` answers. It runs over the machine's real
-// VacuumSystem with the hal/ parts faked, because the domain's answers are the loop's state.
+// VacuumSystem with the parts faked, because the domain's answers are the loop's state.
 
 #include <doctest.h>
 

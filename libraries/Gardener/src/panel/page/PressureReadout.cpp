@@ -2,13 +2,13 @@
 
 #if GARDENER_PANEL
 
-#include "panel/glass/PressureReadout.h"
+#include "panel/page/PressureReadout.h"
 
 #include <stdio.h>
 
 #include <string>
 
-namespace gardener::panel::glass {
+namespace gardener::panel::page {
 namespace {
 
 // A reading as the panel prints it: the unit's scale, and the decimals the unit's fine step can
@@ -54,5 +54,5 @@ gfx::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit
   };
 }
 
-}  // namespace gardener::panel::glass
+}  // namespace gardener::panel::page
 #endif

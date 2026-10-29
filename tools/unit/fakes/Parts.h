@@ -1,6 +1,6 @@
 #pragma once
 
-// The parts a case hands a domain or the control law: each implements the hal/ interface it stands
+// The parts a case hands a domain or the control law: each implements the part interface it stands
 // for and keeps the state a case reads back, so a case can assert what was done to the part and not
 // only what was printed.
 
@@ -11,12 +11,12 @@
 #include <vector>
 
 #include "core/Logger.h"
-#include "hal/Battery.h"
-#include "hal/ButtonPanel.h"
-#include "hal/Buzzer.h"
-#include "hal/PressureSensor.h"
-#include "hal/Pump.h"
-#include "hal/VentValve.h"
+#include "core/Battery.h"
+#include "core/ButtonPanel.h"
+#include "core/Buzzer.h"
+#include "core/PressureSensor.h"
+#include "core/Pump.h"
+#include "core/VentValve.h"
 
 namespace gardener::test {
 

@@ -12,8 +12,8 @@
 #include <Gfx.h>
 
 #include "panel/PanelContext.h"
-#include "panel/glass/PressureReadout.h"
-#include "panel/glass/Units.h"
+#include "panel/page/PressureReadout.h"
+#include "core/Units.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
 
@@ -157,7 +157,7 @@ Alignment alignmentOf(bvm* vm, int node) {
   return alignment;
 }
 
-Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::DisplayUnit unit);
+Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit);
 
 // The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
 // interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
@@ -177,7 +177,7 @@ bool pushItems(bvm* vm, int index) {
 // The [bounds, draw] pairs a layout holds, as the layout's own children: the cell each declares and
 // the paint each answers. A child that is not a pair is skipped rather than raised on.
 std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
-                              panel::glass::DisplayUnit unit) {
+                              DisplayUnit unit) {
   std::vector<Child> children;
 
   be_getmember(vm, node, "children");
@@ -226,7 +226,7 @@ std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
 
 // The node as the paint it describes. A kind the drawing has no case for answers an empty paint,
 // which is a node that draws nothing.
-Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::DisplayUnit unit) {
+Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
   if (!be_isinstance(vm, node)) return Paint();
   const char* kind = textField(vm, node, "kind");
   if (kind == nullptr) return Paint();
@@ -304,7 +304,7 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::Displ
     const uint8_t secondary = (uint8_t)intField(vm, node, "secondary_scale");
     VacuumSystem& vacuum = panel.vacuum();
     return leaf(box, [&vacuum, unit, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
-      return panel::glass::pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
+      return panel::page::pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
     });
   }
 
@@ -341,8 +341,8 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::Displ
 void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas) {
   // The unit the readout prints in belongs to the device, resolved once for the whole tree rather
   // than once per node: one drawing shows one glass.
-  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
-  panel::glass::parseDisplayUnit(
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(
       panel.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
 
   const Paint paint = paintOf(vm, be_absindex(vm, node), panel, unit);

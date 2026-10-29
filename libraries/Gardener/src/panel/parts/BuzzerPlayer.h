@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "hal/Buzzer.h"
+#include "core/Buzzer.h"
 
 namespace gardener::panel::parts {
 

@@ -33,7 +33,7 @@ using gardener::panel::page::BoolRow;
 using gardener::panel::page::ChoiceItem;
 using gardener::panel::page::ChoiceRow;
 using gardener::panel::page::DurationRow;
-using gardener::panel::page::GestureQueue;
+using gardener::panel::GestureQueue;
 using gardener::panel::page::NumberRow;
 using gardener::panel::page::Scene;
 using gardener::panel::page::SettingValues;

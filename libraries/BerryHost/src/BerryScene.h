@@ -36,7 +36,7 @@ class BerryScene : public panel::page::Scene {
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps
   // it; the caller's stack is left as it was found. The context is the device the page draws about,
   // which is what a pressure readout in its tree needs.
-  BerryScene(panel::page::GestureQueue& gestures, bvm* vm, int page, panel::PanelContext& panel);
+  BerryScene(panel::GestureQueue& gestures, bvm* vm, int page, panel::PanelContext& panel);
   ~BerryScene() override;
 
   BerryScene(const BerryScene&) = delete;

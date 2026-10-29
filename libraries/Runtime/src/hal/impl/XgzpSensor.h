@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "hal/PressureSensor.h"
+#include "core/PressureSensor.h"
 
 namespace gardener {
 

@@ -10,8 +10,6 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::panel::page;
-
 // A paint that inks the whole canvas it is given, so a case reads back the cell it landed in.
 Paint fill() {
   return [](Canvas& own) { own.draw(shapes::FillRect(0, 0, own.width(), own.height(), Ink)); };

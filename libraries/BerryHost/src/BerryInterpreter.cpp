@@ -53,7 +53,7 @@ bool BerryInterpreter::load(const String& path, const String& source) {
   return true;
 }
 
-std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene(panel::page::GestureQueue& gestures,
+std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene(panel::GestureQueue& gestures,
                                                             panel::PanelContext& panel) {
   if (vm_ == nullptr) return nullptr;
   const int base = be_top(vm_);

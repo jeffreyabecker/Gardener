@@ -1,6 +1,6 @@
 ---
 name: firmware
-description: 'Design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, the hal/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating. Naming and formatting are in the cpp skill.'
+description: 'Design conventions for the Gardener ESP32 firmware. Use when writing, changing, refactoring or reviewing code under libraries/ or firmware/: Arduino String and core utilities, the core/ layer rule, one class where one class works, one file per device, no speculative generality, and deleting rather than deprecating. Naming and formatting are in the cpp skill.'
 ---
 
 # Firmware
@@ -47,14 +47,14 @@ pattern catalogue. Write the straight-line version they can follow from the top 
 the bottom. Don't add a helper function, wrapper, callback or layer of indirection unless you were
 told to: each one is another name to chase before the code says what it does. Two repeated lines
 are cheaper than a function nobody asked for, and a longer file is fine when it reads plainly.
-Work out what the code has to do and write that — don't dither about the design. The `hal/`
-boundary described next is a decision already made, not a precedent for the next abstraction.
+Work out what the code has to do and write that — don't dither about the design. The part boundary
+described next is a decision already made, not a precedent for the next abstraction.
 
 **One class where one class works, and one file per device.**
 `libraries/Gardener/src/machine/VacuumSystem.h` is the vacuum system *and* the machine, because the
 chamber's state and the run's state turned out to be one state: don't split it into a vacuum system
 and a controller. A device is a different thing — a pin, a bus and a PWM channel are a boundary — so
-a part is an abstract class in `libraries/Gardener/src/hal/` with its implementation in
+a part is an abstract class in `libraries/Gardener/src/core/` with its implementation in
 `libraries/Runtime/src/hal/impl/`, and the vacuum system takes it by reference even though the vacuum
 system is its only caller. Don't fold a driver into the class that drives it: the register writes
 and the control law are the two things here least likely to change together.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "hal/Button.h"
+#include "core/Button.h"
 
 namespace gardener {
 

@@ -15,7 +15,7 @@ class BerryInterpreter : public Interpreter {
  public:
   bool begin(panel::PanelContext& context, Routines& routines) override;
   bool load(const String& path, const String& source) override;
-  std::unique_ptr<panel::page::Scene> rootScene(panel::page::GestureQueue& gestures,
+  std::unique_ptr<panel::page::Scene> rootScene(panel::GestureQueue& gestures,
                                             panel::PanelContext& panel) override;
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after

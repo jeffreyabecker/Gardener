@@ -21,7 +21,7 @@ constexpr const char* PageList = "__pages";
 
 }  // namespace
 
-BerryScene::BerryScene(panel::page::GestureQueue& gestures, bvm* vm, int page,
+BerryScene::BerryScene(panel::GestureQueue& gestures, bvm* vm, int page,
                        panel::PanelContext& panel)
     : Scene(gestures), vm_(vm), panel_(panel) {
   const int base = be_top(vm_);

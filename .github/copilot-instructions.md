@@ -3,7 +3,7 @@
 ## Build
 
 `python scripts/arduino.py --task build` — compiles the sketch with the project
-local libraries. Nothing checks the layer rule, so a stray `hal/` include that reaches upward is a
+local libraries. Nothing checks the layer rule, so a stray `core/` include that reaches upward is a
 review catch rather than a build failure.
 
 **The tree's C++ has a host unit test suite.** `python tools/unit/check.py` compiles

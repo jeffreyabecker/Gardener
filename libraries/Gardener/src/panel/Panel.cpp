@@ -5,7 +5,7 @@
 #include "panel/Panel.h"
 
 #include "core/Logger.h"
-#include "panel/glass/Units.h"
+#include "core/Units.h"
 #include "storage/DeviceConfig.h"
 
 namespace gardener::panel {
@@ -38,10 +38,10 @@ bool Panel::boot() {
   log.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   log.info("buttons: four keys on interrupt");
 
-  glass::DisplayUnit unit = glass::DisplayUnit::Kpa;
-  glass::parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  DisplayUnit unit = DisplayUnit::Kpa;
+  parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   String stored = "settings: unit=";
-  stored += glass::displayUnitInfo(unit).name;
+  stored += displayUnitInfo(unit).name;
   log.info(stored.c_str());
 
   log.info(vmOk ? "vm: ready" : "vm: no memory, routines off");

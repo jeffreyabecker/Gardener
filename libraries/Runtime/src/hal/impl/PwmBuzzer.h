@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "hal/Buzzer.h"
+#include "core/Buzzer.h"
 
 namespace gardener {
 

@@ -3,8 +3,8 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "hal/Button.h"
-#include "hal/ButtonPanel.h"
+#include "core/Button.h"
+#include "core/ButtonPanel.h"
 
 namespace gardener {
 

@@ -4,8 +4,8 @@
 #include <Gfx.h>
 #include <stdint.h>
 
-#include "hal/Battery.h"
-#include "hal/ButtonPanel.h"
+#include "core/Battery.h"
+#include "core/ButtonPanel.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "panel/parts/BuzzerPlayer.h"

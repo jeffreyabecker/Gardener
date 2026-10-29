@@ -7,7 +7,7 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "panel/glass/Units.h"
+#include "core/Units.h"
 #include "routines/Routines.h"
 #include "Module.h"
 #include "Modules.h"
@@ -18,14 +18,14 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The unit the panel prints pressure in: a name `panel/glass/Units.h` holds, written to the
+// The unit the panel prints pressure in: a name `core/Units.h` holds, written to the
 // device's own document, and a name it does not hold is answered false rather than defaulted.
 int deviceSetUnit(bvm* vm) {
-  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+  DisplayUnit unit = DisplayUnit::Kpa;
   const bool accepted =
-      be_isstring(vm, 1) && panel::glass::parseDisplayUnit(argText(vm, 1), unit);
+      be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
   if (accepted) {
-    context->config().set(DeviceSection, UnitKey, panel::glass::displayUnitInfo(unit).name);
+    context->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
     context->config().save();
   }
   be_pushbool(vm, accepted);

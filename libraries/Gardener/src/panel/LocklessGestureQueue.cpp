@@ -2,13 +2,13 @@
 
 #if GARDENER_PANEL
 
-#include "routines/GestureQueue.h"
+#include "panel/LocklessGestureQueue.h"
 
 #include "core/Logger.h"
 
-namespace gardener {
+namespace gardener::panel {
 
-void GestureQueue::push(const String& gesture) {
+void LocklessGestureQueue::push(const String& gesture) {
   if (gesture.isEmpty()) return;
 
   if (count_ == Capacity) {
@@ -25,7 +25,7 @@ void GestureQueue::push(const String& gesture) {
   count_++;
 }
 
-bool GestureQueue::take(String& gesture) {
+bool LocklessGestureQueue::take(String& gesture) {
   if (count_ == 0) return false;
   gesture = presses_[head_];
   presses_[head_] = "";
@@ -34,17 +34,17 @@ bool GestureQueue::take(String& gesture) {
   return true;
 }
 
-const char* GestureQueue::take() {
+const char* LocklessGestureQueue::take() {
   if (!take(press_)) return nullptr;
   return press_.c_str();
 }
 
-void GestureQueue::clear() {
+void LocklessGestureQueue::clear() {
   for (String& press : presses_) press = "";
   head_ = 0;
   count_ = 0;
   overflowed_ = false;
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel
 #endif

@@ -4,7 +4,7 @@
 
 #include "panel/parts/PartsTick.h"
 
-#include "hal/Battery.h"
+#include "core/Battery.h"
 #include "panel/parts/BuzzerPlayer.h"
 
 namespace gardener::panel::parts {

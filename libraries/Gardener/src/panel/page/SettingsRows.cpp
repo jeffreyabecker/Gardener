@@ -6,8 +6,11 @@
 #include <utility>
 
 #include "panel/page/BoolScene.h"
+#include "core/Units.h"
 #include "Drawing.h"
 #include "panel/page/DurationScene.h"
+#include "machine/Machine.h"
+#include "panel/page/PressureScene.h"
 
 namespace gardener::panel::page {
 namespace {
@@ -283,5 +286,34 @@ std::any NumberRow::parse(const String& stored) const {
 }
 
 bool NumberRow::accept(std::any& value) const { return takeNumber(value, false); }
+
+// --- the pressure -----------------------------------------------------------
+
+PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key,
+                         const String& label, float currentKpa,
+                         DisplayUnit unit, float wholeSteps, bool nullable,
+                         Validator validator)
+    : NumberRow(gestures, ux, key, label, currentKpa,
+                wholeSteps * displayUnitInfo(unit).wholeStep / displayUnitInfo(unit).perKpa,
+                CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable,
+                [unit](float pressureKpa) { return displayText(pressureKpa, unit); }, 2,
+                std::move(validator)),
+      unit_(unit),
+      wholeSteps_(wholeSteps) {}
+
+// The pressure's number row, under the kind its declaration named. The step and bounds are the
+// number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
+// and ceiling — because those are what the editor it builds moves within.
+SettingDeclaration PressureRow::declaration() const {
+  SettingDeclaration out = NumberRow::declaration();
+  out.kind = "pressure";
+  return out;
+}
+
+std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
+  const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
+  return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, unit_, wholeSteps_,
+                                         nullable_);
+}
 
 }  // namespace gardener::panel::page

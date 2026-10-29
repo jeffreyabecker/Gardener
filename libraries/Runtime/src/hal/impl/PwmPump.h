@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "hal/Pump.h"
+#include "core/Pump.h"
 
 namespace gardener {
 

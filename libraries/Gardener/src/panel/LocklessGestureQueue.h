@@ -4,11 +4,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "panel/page/GestureQueue.h"
+#include "panel/GestureQueue.h"
 
 namespace gardener {
 
 class Logger;
+
+}  // namespace gardener
+
+namespace gardener::panel {
 
 // The gestures the panel task has accepted and the page has not taken yet. Its writer is the panel
 // task; its readers are the device binding's pull and the scene stack, so the two are never the same
@@ -17,7 +21,7 @@ class Logger;
 //
 // It is the drawing side's queue as well, so a page and the device binding drain one list and no
 // press is delivered twice.
-class GestureQueue : public panel::page::GestureQueue {
+class LocklessGestureQueue : public GestureQueue {
  public:
   static constexpr uint8_t Capacity = 8;
 
@@ -41,4 +45,4 @@ class GestureQueue : public panel::page::GestureQueue {
   bool overflowed_ = false;
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel

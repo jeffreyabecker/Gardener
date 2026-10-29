@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "hal/Battery.h"
+#include "core/Battery.h"
 
 namespace gardener {
 
