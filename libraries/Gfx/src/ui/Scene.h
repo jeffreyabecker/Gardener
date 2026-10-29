@@ -48,6 +48,12 @@ class Scene {
   // setting holding nothing answers; a scene that hands nothing back leaves it empty too.
   virtual std::any value() const { return std::any(); }
 
+  // The scene itself when its body is a page an interpreter holds rather than C++ in this library,
+  // which is how the interpreter reaches the page a frame shows — ux.top() is what asks, and it
+  // casts the answer back to the class that gave it. Nothing for a scene written here. A pointer
+  // rather than a type test, because the firmware build has RTTI off.
+  virtual const void* scripted() const { return nullptr; }
+
   // Whether the scene may hold nothing at all: an editor over a nullable setting says so, and
   // isNull() answers whether it is holding nothing now.
   virtual bool nullable() const { return false; }
