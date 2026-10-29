@@ -16,7 +16,7 @@ end
 # a run started straight from whatever the last case released would be relying on that state rather
 # than on its own.
 def place(machine, pressure_kpa)
-  vacuum.target(pressure_kpa)
+  vacuum.set_target_pressure(pressure_kpa)
   drive(machine, 1)
 end
 
@@ -114,7 +114,7 @@ def a_lost_run_abandons_to_its_reset_target()
               / -> machine.phase == IntervalPhase.READY)
   drive(machine, 1)
   assert_eq(machine.set, 0, "the abandoned run kept its set")
-  assert_eq(vacuum.state().target, 5.0, "the run did not put its reset target back")
+  assert_eq(vacuum.get_target_pressure(), 5.0, "the run did not put its reset target back")
 end
 
 test("a run the device stops goes back to the reset target", a_lost_run_abandons_to_its_reset_target)
