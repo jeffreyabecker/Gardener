@@ -30,24 +30,24 @@ what is left is the activation bug and the suites that say the check holds the i
 
 ## The suites the image has to answer for
 
-- [ ] Hold a browser suite: the rows the registry answers, the selected row inverted and no other,
+- [x] Hold a browser suite: the rows the registry answers, the selected row inverted and no other,
       the first row the window shows once the selection passes the bottom edge, OK launching the
       record's page, Forward opening the settings list and launching on its answer, and Back leaving.
-- [ ] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
+- [x] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
       and the flat ladder the ramp refuses and it does not.
-- [ ] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
+- [x] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
       answers, `duration_text`'s string and `--` for a clock that is not running, and `icon` refusing
       a string that is not a bitmap.
-- [ ] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
+- [x] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
       with, a declaration consumed once so a second record taking the same row fails, and a raise
       that leaves the first record's rows untouched.
-- [ ] Hold a `routines` suite: keys, rows, a nil title for an unknown key, nil `settings_cfgs` for a
+- [x] Hold a `routines` suite: keys, rows, a nil title for an unknown key, nil `settings_cfgs` for a
       record that declares nothing, an activation that fills a missing setting with its default, and
       a save that writes each key once.
-- [ ] Hold a `ux` suite: the three calls' answers, `depth` from 1 at boot to the stack's cap, `top`
+- [x] Hold a `ux` suite: the three calls' answers, `depth` from 1 at boot to the stack's cap, `top`
       as the page instance the image built, a handle pushed twice refused, the callback handed the
       popped page's value, and no callback from `pop_to_root`.
-- [ ] Hold the frame-ink cases on `harness.ink`: an inverted leaf over a full cell, a child that
+- [x] Hold the frame-ink cases on `harness.ink`: an inverted leaf over a full cell, a child that
       names no size filling its cell, and a text node whose ink is the width `measure` answers.
 
 ## The tool is documented as it is
