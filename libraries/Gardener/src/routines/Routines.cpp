@@ -13,7 +13,7 @@
 #include "panel/PanelContext.h"
 #include "Canvas.h"
 #include "core/Battery.h"
-#include "panel/glass/Band.h"
+#include "panel/glass/Overlay.h"
 #include "panel/page/MarkScene.h"
 #include "core/Units.h"
 #include "storage/Config.h"
@@ -117,12 +117,12 @@ bool Routines::showDefault() {
   return resetToRoot();
 }
 
-// The band is the stack's, so it is set from this beat's reading before the page is polled and drawn
-// with it in the same frame: the values the machine has now, not the ones it had when the page went
-// up.
+// The overlay is the stack's, so it is set from this beat's reading before the page is polled and
+// drawn with it in the same frame: the values the machine has now, not the ones it had when the
+// page went up.
 bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
-  updateBand(nowMs);
+  updateOverlay(nowMs);
   if (!stack_.poll(panel_->canvas(), nowMs)) return false;
   show();
   return true;
@@ -131,20 +131,20 @@ bool Routines::poll(uint32_t nowMs) {
 bool Routines::enterPage() {
   if (panel_ == nullptr) return false;
   const uint32_t now = millis();
-  updateBand(now);
+  updateOverlay(now);
   if (!stack_.enter(panel_->canvas(), now)) return false;
   show();
   return true;
 }
 
-// The beat's one send: whatever the page and the band drew goes to the glass from the panel's own
-// canvas. A scene draws into the canvas and never sends it, and no caller sends it after the beat,
-// so a beat is exactly one flush however many draws went into it.
+// The beat's one send: whatever the page and the overlay drew goes to the glass from the panel's
+// own canvas. A scene draws into the canvas and never sends it, and no caller sends it after the
+// beat, so a beat is exactly one flush however many draws went into it.
 void Routines::show() { panel_->canvas().flush(panel_->display()); }
 
 // The root scene, at boot and on the go-home gesture: the image's own root page, which is the home
-// page, and the device's mark when the image sets none. The stack draws it, so the band is drawn
-// under it like any other page.
+// page, and the device's mark when the image sets none. The stack draws it, so the overlay is drawn
+// over it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return stack_.reset(nullptr);
   if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
@@ -153,18 +153,29 @@ bool Routines::resetToRoot() {
   return stack_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
 }
 
-void Routines::updateBand(uint32_t nowMs) {
+void Routines::updateOverlay(uint32_t nowMs) {
   DisplayUnit unit = DisplayUnit::Kpa;
   parseDisplayUnit(
       panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   const Battery& battery = panel_->battery();
   const int8_t percent = battery.present() ? static_cast<int8_t>(battery.percent()) : -1;
-  stack_.setBand({
-      panel::glass::bandUnit(displayUnitInfo(unit).suffix),
-      panel::glass::bandLinks(panel_->serialConnected(), panel_->bluetoothConnected()),
-      panel::glass::bandState(panel_->vacuum().runState(), nowMs),
-      panel::glass::bandBattery(percent, battery.low(), nowMs),
-  });
+
+  // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
+  // else touches them and they keep whatever the last frame left.
+  const int16_t start =
+      static_cast<int16_t>(panel_->canvas().height() - panel::glass::OverlayHeight);
+  stack_.setOverlay(start,
+                    gfx::underlay(gfx::row(1.0f, {
+                        gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                   panel::glass::overlayUnit(displayUnitInfo(unit).suffix)},
+                        gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                   panel::glass::overlayLinks(panel_->serialConnected(),
+                                                              panel_->bluetoothConnected())},
+                        gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                   panel::glass::overlayState(panel_->vacuum().runState(), nowMs)},
+                        gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                   panel::glass::overlayBattery(percent, battery.low(), nowMs)},
+                    })));
 }
 
 // --- loading ---------------------------------------------------------------

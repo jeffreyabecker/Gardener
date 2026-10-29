@@ -52,7 +52,7 @@ animated GIF — one frame per flushed beat, each held a second by `GifDelayCs`,
 `RenderScale` — with a strip under the picture naming the presses that frame carried, for as many
 frames as `GestureStrip::Frames` says. The frame is the glass with the strip's rows below it: the
 strip is a component the harness hands the capture, so what a host draws beside the picture never
-covers what the page drew. A suite's captures hash the overlay band instead of drawing the device's
+covers what the page drew. A suite's captures hash the overlay instead of drawing the device's
 status row, so the page the case drove reads as the whole picture.
 
 Nothing in a run reads a capture back, and nothing it prints describes one: a `.gif` under

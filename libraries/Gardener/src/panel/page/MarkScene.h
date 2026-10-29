@@ -6,8 +6,9 @@
 
 namespace gardener::panel::page {
 
-// The panel's own page, and the stack's root until the home page is written: the device's mark on the
-// page, with the band drawn under it by the stack. It answers no gesture and holds no state.
+// The panel's own page, and the stack's root until the home page is written: the device's mark on
+// the page, with the overlay drawn over its bottom rows by the stack. It answers no gesture and
+// holds no state.
 class MarkScene : public Scene {
  public:
   explicit MarkScene(GestureQueue& gestures) : Scene(gestures) {}

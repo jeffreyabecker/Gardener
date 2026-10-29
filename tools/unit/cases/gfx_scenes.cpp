@@ -158,7 +158,8 @@ TEST_CASE("the stack holds eight frames") {
   CHECK_EQ(ux.depth(), Ux::MaxFrames);
 }
 
-// A page that inks the whole canvas it is given, so a case can see the band drawn over it.
+// A page that inks the whole canvas it is given, so a case can see the overlay drawn over its
+// bottom rows.
 class InkedScene : public Scene {
  public:
   explicit InkedScene(GestureQueue& gestures) : Scene(gestures) {}
@@ -169,98 +170,59 @@ class InkedScene : public Scene {
   }
 };
 
-// A cell that fills the share it is handed, so a case reads the share from the ink it leaves.
+// Where the overlay starts in these cases, and what it covers: the panel's own strip across the
+// bottom of the glass.
+constexpr int16_t OverlayTop = PageHeight - 12;
+constexpr int16_t OverlayRows = PageHeight - OverlayTop;
+
+// A paint that fills the canvas it is handed, so a case reads the overlay from the ink it leaves.
 Paint filledCell() {
   return [](Canvas& cell) {
     cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
   };
 }
 
-TEST_CASE("the stack draws the band over the page") {
+TEST_CASE("the overlay is handed the rows from where it starts") {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  ux.setOverlay(OverlayTop, filledCell());
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, OverlayTop), 0);
+  CHECK_EQ(display.inkCount(0, OverlayTop, PageWidth, OverlayRows), PageWidth * OverlayRows);
+}
+
+TEST_CASE("the page stops where the overlay starts") {
   NoGestures gestures;
   Ux ux;
   reset();
-  ux.setBand({Paint()});
+  ux.setOverlay(OverlayTop, [](Canvas&) {});
   ux.reset(std::make_unique<InkedScene>(gestures));
   ux.poll(canvas, 300);
-  CHECK(display.anyInk(0, 0, PageWidth, PageHeight - Ux::BandHeight));
-  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight), 0);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, OverlayTop), PageWidth * OverlayTop);
+  CHECK_EQ(display.inkCount(0, OverlayTop, PageWidth, OverlayRows), 0);
 }
 
-TEST_CASE("the stack draws the band it was given") {
+TEST_CASE("an empty paint is no overlay") {
   NoGestures gestures;
-  Watched watched;
   Ux ux;
   reset();
-  ux.setBand({filledCell()});
-  ux.reset(aScene(gestures, watched));
+  ux.setOverlay(OverlayTop, Paint());
+  CHECK_EQ(ux.overlayStart(), 0);
+  ux.reset(std::make_unique<InkedScene>(gestures));
   ux.poll(canvas, 300);
-  CHECK(display.anyInk(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight));
-  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight - Ux::BandHeight), 0);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), PageWidth * PageHeight);
 }
 
-TEST_CASE("a stack showing nothing draws no band") {
+TEST_CASE("a stack showing nothing draws no overlay") {
   NoGestures gestures;
   Ux ux;
   reset();
-  ux.setBand({filledCell()});
+  ux.setOverlay(OverlayTop, filledCell());
   CHECK_EQ(ux.poll(canvas, 300), 0);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
-}
-
-TEST_CASE("the band draws its cells in equal shares") {
-  NoGestures gestures;
-  Watched watched;
-  Ux ux;
-  reset();
-  ux.setBand({filledCell(), filledCell(), filledCell(), filledCell()});
-  ux.reset(aScene(gestures, watched));
-  ux.poll(canvas, 300);
-  const int16_t top = PageHeight - Ux::BandHeight;
-  const int quarter = (PageWidth / 4) * Ux::BandHeight;
-  CHECK_EQ(display.inkCount(0, top, PageWidth / 4, Ux::BandHeight), quarter);
-  CHECK_EQ(display.inkCount(PageWidth / 4, top, PageWidth / 4, Ux::BandHeight), quarter);
-  CHECK_EQ(display.inkCount(PageWidth / 2, top, PageWidth / 4, Ux::BandHeight), quarter);
-  CHECK_EQ(display.inkCount(PageWidth * 3 / 4, top, PageWidth / 4, Ux::BandHeight), quarter);
-}
-
-TEST_CASE("the band gives the last cell what is left") {
-  NoGestures gestures;
-  Watched watched;
-  Ux ux;
-  reset();
-  ux.setBand({filledCell(), filledCell(), filledCell()});
-  ux.reset(aScene(gestures, watched));
-  ux.poll(canvas, 300);
-  // A width three does not divide leaves no gap: the shares still cover the whole band.
-  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight),
-           PageWidth * Ux::BandHeight);
-}
-
-TEST_CASE("the band leaves a cell given nothing alone") {
-  NoGestures gestures;
-  Watched watched;
-  Ux ux;
-  reset();
-  ux.setBand({Paint(), filledCell()});
-  ux.reset(aScene(gestures, watched));
-  ux.poll(canvas, 300);
-  const int16_t top = PageHeight - Ux::BandHeight;
-  CHECK_EQ(display.inkCount(0, top, PageWidth / 2, Ux::BandHeight), 0);
-  CHECK_EQ(display.inkCount(PageWidth / 2, top, PageWidth / 2, Ux::BandHeight),
-           (PageWidth / 2) * Ux::BandHeight);
-}
-
-TEST_CASE("the band clears what was under it") {
-  NoGestures gestures;
-  Watched watched;
-  Ux ux;
-  reset();
-  canvas.draw(gfx::shapes::FillRect(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight, Ink));
-  ux.setBand({Paint()});
-  ux.reset(aScene(gestures, watched));
-  ux.poll(canvas, 300);
-  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight), 0);
 }
 
 TEST_CASE("a scene paints as soon as it is pushed") {

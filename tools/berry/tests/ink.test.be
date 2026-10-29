@@ -5,9 +5,9 @@
 
 suite = "ink"
 
-# The page area the band does not take, and the ink the frame holds of it.
+# The page area the overlay does not take, and the ink the frame holds of it.
 def page_rows()
-  return screen.height() - ux.band_rows()
+  return ux.overlay_start()
 end
 
 def page_area()

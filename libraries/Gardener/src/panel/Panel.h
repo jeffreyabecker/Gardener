@@ -77,7 +77,7 @@ class Panel : public Machine, public PanelContext {
   gfx::DisplayDevice& display() override { return *display_; }
   gfx::Canvas& canvas() override { return canvas_; }
   // The two links, as the interface task last reported them to the machine; presence is all the
-  // band reports.
+  // overlay reports.
   bool serialConnected() const override { return Machine::serialConnected(); }
   bool bluetoothConnected() const override { return Machine::bluetoothConnected(); }
   Config& config() override { return config_; }

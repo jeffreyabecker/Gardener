@@ -24,7 +24,7 @@ class Library;
 // The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
 // the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
 // implementation is the host side's; the stack is `panel::page::Ux` and this side owns it: one
-// entry per beat, the band the panel shows drawn over the page, and the beat's one flush — left
+// entry per beat, the overlay the panel shows drawn over the page, and the beat's one flush — left
 // here because the stack draws in the frame the display holds, and nothing else sends that frame.
 //
 // The beat is called from the panel task's own frame — never from inside a Berry call — so there is
@@ -42,9 +42,9 @@ class Routines {
   // False when no scene is left showing, which leaves the mark.
   bool showDefault();
 
-  // One beat: the band's reading from this beat's values, the top scene's poll, the band drawn over
-  // it, and the frame sent. True while a page is showing, so the caller knows whether to draw its
-  // own frame.
+  // One beat: the overlay built from this beat's values, the top scene's poll, the overlay drawn
+  // over it, and the frame sent. True while a page is showing, so the caller knows whether to draw
+  // its own frame.
   bool poll(uint32_t nowMs);
 
   // The page became visible: the top scene's activate and the frame with it, so a scene re-reads the
@@ -84,13 +84,13 @@ class Routines {
   bool loadFile(const String& path);
   bool resetToRoot();
 
-  // The beat's one send, and the only place the frame is flushed: the page and the band have drawn
-  // into the panel's canvas, and this hands it to the glass once.
+  // The beat's one send, and the only place the frame is flushed: the page and the overlay have
+  // drawn into the panel's canvas, and this hands it to the glass once.
   void show();
 
-  // The band's cells from one reading: the unit's suffix, the two links, the run state and the
-  // gauge, as they stood on this beat.
-  void updateBand(uint32_t nowMs);
+  // The overlay from one reading: the unit's suffix, the two links, the run state and the gauge, as
+  // they stood on this beat, in four equal cells over the bottom rows of the glass.
+  void updateOverlay(uint32_t nowMs);
 
   // The VM the files are loaded into and the root page read from.
   Interpreter& interpreter_;
@@ -102,7 +102,7 @@ class Routines {
   // logger it reads documents through are the context's.
   std::unique_ptr<RoutineRegistry> registry_;
   // The panel's parts the beat reaches: the display it draws in and flushes, and the readings the
-  // band shows.
+  // overlay shows.
   panel::PanelContext* panel_ = nullptr;
   panel::page::Ux stack_;
   panel::LocklessGestureQueue gestures_;

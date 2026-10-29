@@ -30,7 +30,7 @@ class PanelContext;
 //
 // The page answers its drawing rather than making it: draw_page returns the tree the screen module
 // built node by node, and the scene renders it on the canvas it was handed — the page, which is the
-// panel less the band's rows. A page that answers nothing draws nothing.
+// panel less the overlay's rows. A page that answers nothing draws nothing.
 class BerryScene : public panel::page::Scene {
  public:
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps

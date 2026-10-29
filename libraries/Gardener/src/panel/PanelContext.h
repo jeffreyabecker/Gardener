@@ -32,7 +32,7 @@ class PanelContext {
   virtual ~PanelContext() = default;
 
   // The glass, and the one frame everything draws into: a canvas over the device's buffer, shared
-  // by the page, the band and the `screen` module, so one flush sends what any of them wrote.
+  // by the page, the overlay and the `screen` module, so one flush sends what any of them wrote.
   virtual gfx::DisplayDevice& display() = 0;
   virtual gfx::Canvas& canvas() = 0;
   // The device's own document, /cfg/settings.ini: whoever needs the unit or the target under
@@ -45,7 +45,7 @@ class PanelContext {
   virtual Library& library() = 0;
   virtual Logger& logger() = 0;
   // The two ways a controller can reach the device, as the interface owner last reported them. The
-  // overlay's band reports presence: a connected link that has not acquired control still counts.
+  // overlay reports presence: a connected link that has not acquired control still counts.
   virtual bool serialConnected() const = 0;
   virtual bool bluetoothConnected() const = 0;
   // The machine's command queue, through the panel's own outbox, so a command the queue cannot

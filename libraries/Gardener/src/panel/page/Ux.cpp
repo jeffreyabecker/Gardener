@@ -1,7 +1,6 @@
 #include "panel/page/Ux.h"
 
-#include "Layout.h"
-#include "Shapes.h"
+#include <utility>
 
 namespace gardener::panel::page {
 
@@ -51,7 +50,10 @@ Scene* Ux::top() const { return depth_ > 0 ? frames_[depth_ - 1].get() : nullptr
 
 int16_t Ux::depth() const { return depth_; }
 
-void Ux::setBand(const std::vector<gfx::Paint>& cells) { band_ = cells; }
+void Ux::setOverlay(int16_t startY, gfx::Paint overlay) {
+  overlayStart_ = startY < 0 ? 0 : startY;
+  overlay_ = std::move(overlay);
+}
 
 bool Ux::enter(gfx::Canvas& canvas, uint32_t nowMs) {
   Scene* scene = top();
@@ -90,14 +92,16 @@ void Ux::endBeat() {
   gfx::Canvas* canvas = beat_;
   beat_ = nullptr;
   if (canvas == nullptr) return;
-  if (depth_ > 0) paintBand(*canvas);
+  if (depth_ > 0) paintOverlay(*canvas);
 }
 
-// The canvas the scenes draw in: the beat's own less the rows the band takes, so a page never draws
-// under the band and never has to know how many rows it gives up.
+// The canvas the scenes draw in: the beat's own less the rows the overlay takes, so a page never
+// draws under the overlay and never has to know where it starts.
 gfx::Canvas Ux::page() {
-  const int16_t height = static_cast<int16_t>(beat_->height() - bandRows());
-  return beat_->child(gfx::Rect(0, 0, beat_->width(), height < 0 ? 0 : height));
+  const int16_t bottom = overlay_ ? overlayStart_ : beat_->height();
+  const int16_t height =
+      bottom > beat_->height() ? beat_->height() : static_cast<int16_t>(bottom < 0 ? 0 : bottom);
+  return beat_->child(gfx::Rect(0, 0, beat_->width(), height));
 }
 
 // A scene that went on top paints at once rather than on its own repaint cadence, which is what
@@ -108,25 +112,16 @@ void Ux::paintScene(Scene* scene) {
   scene->draw(own, beatMs_);
 }
 
-// The band after the page, over the bottom rows of the glass: the cells are laid out in equal shares
-// of the width, left to right, each in a canvas of its own so what it paints is clipped to its cell.
-// The band is opaque — it clears its rows first — because it lies over the bottom of whatever page
-// is showing, and a cell given nothing draws nothing.
-void Ux::paintBand(gfx::Canvas& canvas) {
-  const int16_t rows = bandRows();
+// The overlay after the page, over the rows from where it starts to the bottom of the glass. What
+// it draws is the caller's business: it is handed a canvas over those rows and nothing narrower.
+void Ux::paintOverlay(gfx::Canvas& canvas) {
+  if (!overlay_) return;
+  int16_t top = overlayStart_;
+  if (top > canvas.height()) top = canvas.height();
+  const int16_t rows = static_cast<int16_t>(canvas.height() - top);
   if (rows <= 0) return;
-  const int16_t top = static_cast<int16_t>(canvas.height() - rows);
-  if (top < 0) return;
-  gfx::Canvas band = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
-  band.draw(gfx::shapes::FillRect(0, 0, band.width(), band.height(), gfx::Paper));
-
-  const float share = 1.0f / static_cast<float>(band_.size());
-  std::vector<gfx::Child> cells;
-  cells.reserve(band_.size());
-  for (const gfx::Paint& cell : band_) {
-    cells.push_back(gfx::Child{gfx::Cell(share, gfx::Cell::Whole), cell});
-  }
-  gfx::row(1.0f, cells)(band);
+  gfx::Canvas own = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
+  overlay_(own);
 }
 
 bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {

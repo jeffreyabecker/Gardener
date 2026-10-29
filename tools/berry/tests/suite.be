@@ -94,10 +94,10 @@ end
 def suite_run(filter)
   var passed = 0
   var failed = 0
-  # The band across the bottom of the glass is the ux component's, not a case's: every frame a case
-  # writes hashes those rows, so a picture of a case is a picture of the page it drove.
-  var band = ux.band_rows()
-  harness.mark_overlay(screen.height() - band, band)
+  # The overlay across the bottom of the glass is the ux component's, not a case's: every frame a
+  # case writes hashes its rows, so a picture of a case is a picture of the page it drove.
+  var overlay = ux.overlay_start()
+  harness.mark_overlay(overlay, screen.height() - overlay)
   # The heap the cases run against: the image, this framework and the suites themselves. A figure a
   # case reports is read against it, so a per-page line is a page's cost and not the whole VM's.
   harness_suite_base = harness.mem()

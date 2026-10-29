@@ -48,8 +48,8 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   Start begin();
   void poll(uint32_t nowMs);
 
-  // Whether a central is connected. Presence only: the panel's status band
-  // shows this.
+  // Whether a central is connected. Presence only: the panel's overlay shows
+  // this.
   bool connected() const;
 
   // The domain's notifier: send this characteristic if a subscriber is

@@ -79,7 +79,7 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   const std::vector<std::string>& gestures() const { return gestures_; }
 
   // --- what the suite framework marks ---------------------------------------
-  // The rows the suite framework hashes because the band belongs to the panel rather than to any
+  // The rows the suite framework hashes because the overlay belongs to the panel rather than to any
   // page: a capture of a case says which rows it did not draw. The rows are the glass's own, and
   // they are hashed where the frame places the glass.
   void markOverlay(int16_t top, int16_t rows);

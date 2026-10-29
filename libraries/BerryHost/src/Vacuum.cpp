@@ -82,8 +82,8 @@ int vacuumReset(bvm* vm) {
   be_return_nil(vm);
 }
 
-// The state as the one word the wire and the band print. A vent stops reading here when it ends: a
-// release settles at IDLE and a target vent returns to PULL or HOLD.
+// The state as the one word the wire and the overlay print. A vent stops reading here when it
+// ends: a release settles at IDLE and a target vent returns to PULL or HOLD.
 int vacuumState(bvm* vm) {
   be_pushstring(vm, runStateName(context->vacuum().runState()));
   be_return(vm);

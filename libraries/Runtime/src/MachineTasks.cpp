@@ -69,8 +69,8 @@ void interfaceTask(void* arg) {
     state.ble->poll(now);
 #endif
 
-    // Connection presence, published for the panel's band: a connected link that has not acquired
-    // control still counts, and a build without the radio reports none.
+    // Connection presence, published for the panel's overlay: a connected link that has not
+    // acquired control still counts, and a build without the radio reports none.
 #if GARDENER_BLUETOOTH
     state.machine.setPresence(state.link->controllerAttached(), state.ble->connected());
 #else

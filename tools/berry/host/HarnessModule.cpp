@@ -112,7 +112,7 @@ int harnessCaptureStem(bvm* vm) {
   be_return(vm);
 }
 
-// The suite framework's marker: the rows the ux band occupies in a captured frame.
+// The suite framework's marker: the rows the ux overlay occupies in a captured frame.
 int harnessMarkOverlay(bvm* vm) {
   if (be_top(vm) < 2 || !be_isint(vm, 1) || !be_isint(vm, 2)) {
     be_raise(vm, "type_error", "harness.mark_overlay(top, rows)");

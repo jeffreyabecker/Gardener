@@ -238,11 +238,11 @@ int uxTop(bvm* vm) {
   be_return(vm);
 }
 
-// ux.band_rows(): the rows the band across the bottom of the glass takes from the page above it — 0
-// when the stack has no cells to draw. A case marks those rows rather than assuming a height.
-int uxBandRows(bvm* vm) {
-  requirePanel(vm, "ux.band_rows: no panel");
-  be_pushint(vm, routines->scenes().bandRows());
+// ux.overlay_start(): the row the overlay begins at, which is where the page above it stops — 0
+// when the stack has no overlay. A case marks from there rather than assuming a height.
+int uxOverlayStart(bvm* vm) {
+  requirePanel(vm, "ux.overlay_start: no panel");
+  be_pushint(vm, routines->scenes().overlayStart());
   be_return(vm);
 }
 
@@ -252,7 +252,7 @@ const bnfuncinfo UxLibrary[] = {
     {"pop_to_root", uxPopToRoot},
     {"depth", uxDepth},
     {"top", uxTop},
-    {"band_rows", uxBandRows},
+    {"overlay_start", uxOverlayStart},
     {nullptr, nullptr},
 };
 

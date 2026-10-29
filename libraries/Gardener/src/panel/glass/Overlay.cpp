@@ -2,7 +2,7 @@
 
 #if GARDENER_PANEL
 
-#include "panel/glass/Band.h"
+#include "panel/glass/Overlay.h"
 
 #include "Shapes.h"
 #include "Text.h"
@@ -10,8 +10,8 @@
 namespace gardener::panel::glass {
 namespace {
 
-// The glyphs the band draws, from the built-in face's symbol range: the serial link, the two states
-// that move the chamber, and the three that stand still.
+// The glyphs the overlay draws, from the built-in face's symbol range: the serial link, the two
+// states that move the chamber, and the three that stand still.
 constexpr uint8_t SerialGlyph = 0x15;
 constexpr uint8_t PullGlyph = 0x1E;
 constexpr uint8_t VentGlyph = 0x1F;
@@ -43,20 +43,20 @@ bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 
 }  // namespace
 
-gfx::Paint bandUnit(const String& suffix) {
+gfx::Paint overlayUnit(const String& suffix) {
   return [suffix](gfx::Canvas& cell) {
     gfx::text(gfx::Rect(2, GlyphTop, cell.width(), cell.height()), suffix.c_str())(cell);
   };
 }
 
-gfx::Paint bandLinks(bool serial, bool bluetooth) {
+gfx::Paint overlayLinks(bool serial, bool bluetooth) {
   return [serial, bluetooth](gfx::Canvas& cell) {
     if (serial) gfx::shapes::drawGlyph(cell, 0, GlyphTop, SerialGlyph, 1, gfx::Ink);
     if (bluetooth) cell.draw(gfx::shapes::MonoBitmap(RuneLeft, 0, BluetoothBits, gfx::Ink));
   };
 }
 
-gfx::Paint bandState(RunState state, uint32_t nowMs) {
+gfx::Paint overlayState(RunState state, uint32_t nowMs) {
   uint8_t glyph = IdleGlyph;
   bool blinks = false;
   switch (state) {
@@ -78,10 +78,10 @@ gfx::Paint bandState(RunState state, uint32_t nowMs) {
   };
 }
 
-// The icon owns its whole footprint, so it erases it first: a page may have drawn anything under the
-// band, and filling over it without clearing would read as a battery with the page's pixels still
+// The icon owns its whole footprint, so it erases it first: the overlay lies over whatever the last
+// frame left, and filling over it without clearing would read as a battery with those pixels still
 // inside it.
-gfx::Paint bandBattery(int8_t percent, bool low, uint32_t nowMs) {
+gfx::Paint overlayBattery(int8_t percent, bool low, uint32_t nowMs) {
   return [percent, low, nowMs](gfx::Canvas& cell) {
     cell.draw(gfx::shapes::FillRect(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::Paper));
     cell.draw(gfx::shapes::Rect(0, GlyphTop, BatteryOutline, BatteryHeight, gfx::Ink));

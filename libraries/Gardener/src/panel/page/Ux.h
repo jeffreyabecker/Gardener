@@ -4,7 +4,6 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
 
 #include "Drawing.h"
 #include "panel/page/Scene.h"
@@ -21,17 +20,15 @@ namespace gardener::panel::page {
 // read what it answered. A scene therefore reaches the stack by unique_ptr, and top() is only ever
 // a look at one the stack is holding.
 //
-// It also owns the band across the bottom of the glass: the cells the caller sets are drawn over
-// the bottom rows after the page on every beat, so no page has to remember it. A stack with no cells
-// draws none, and a stack showing nothing draws none either — the mark is what shows then.
+// It also owns the overlay: one paint the caller sets, run over the canvas after the page has
+// drawn, in the rows from the one it starts at to the bottom of the glass, so no page has to
+// remember it. A stack with no overlay draws none, and a stack showing nothing draws none either —
+// the mark is what shows then.
 class Ux {
  public:
   // The deepest stack the panel accepts. A scene that pushes from its own activate is a bug either
   // way; the cap is what keeps it a false answer instead of a stack exhausted in one beat.
   static constexpr int16_t MaxFrames = 8;
-
-  // The rows the band occupies across the bottom of the glass.
-  static constexpr int16_t BandHeight = 12;
 
   // What the pusher runs when its scene pops, handed that scene: it reads the value the scene
   // answers before the stack lets it go.
@@ -52,14 +49,17 @@ class Ux {
   Scene* top() const;
   int16_t depth() const;
 
-  // The band's cells, left to right, each in an equal share of the panel's width.
-  void setBand(const std::vector<gfx::Paint>& cells);
+  // The overlay: one paint run over the canvas after the page has drawn, handed a canvas from
+  // `startY` down to the bottom of the glass. The page above it gives up those rows, so a page
+  // never draws under the overlay. An empty paint is no overlay and the page keeps the whole
+  // canvas.
+  void setOverlay(int16_t startY, gfx::Paint overlay);
 
-  // Whether the band takes any rows of the canvas, which is what the page above it gives up.
-  int16_t bandRows() const { return band_.empty() ? 0 : BandHeight; }
+  // The row the overlay starts at, which is where the page stops; 0 when there is no overlay.
+  int16_t overlayStart() const { return overlay_ ? overlayStart_ : 0; }
 
   // One call into the top scene: its activate() when the page becomes visible, and its poll each
-  // beat. Both draw the band after the page has drawn. Answers whether a scene is showing.
+  // beat. Both draw the overlay after the page has drawn. Answers whether a scene is showing.
   bool enter(gfx::Canvas& canvas, uint32_t nowMs);
   bool poll(gfx::Canvas& canvas, uint32_t nowMs);
 
@@ -78,12 +78,13 @@ class Ux {
   void endBeat();
   gfx::Canvas page();
   void paintScene(Scene* scene);
-  void paintBand(gfx::Canvas& canvas);
+  void paintOverlay(gfx::Canvas& canvas);
 
   std::unique_ptr<Scene> frames_[MaxFrames];
   Callback callbacks_[MaxFrames];
   int16_t depth_ = 0;
-  std::vector<gfx::Paint> band_;
+  gfx::Paint overlay_;
+  int16_t overlayStart_ = 0;
   gfx::Canvas* beat_ = nullptr;
   uint32_t beatMs_ = 0;
 

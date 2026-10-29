@@ -209,7 +209,7 @@ class HarnessPanel : public panel::PanelContext {
   panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
-  // The host models a device with both links up, so the band shows both icons.
+  // The host models a device with both links up, so the overlay shows both icons.
   bool serialConnected() const override { return true; }
   bool bluetoothConnected() const override { return true; }
   // The host has no queue to fill, so the command is always taken.
@@ -292,8 +292,8 @@ class HarnessSession {
   // Records a gesture for the strip under the glass, shown on the next captured frame. The page
   // takes its presses from routines, so only the strip is told.
   void pressGesture(const char* gesture);
-  // Marks the overlay band in every frame captured from now on: the suite framework hashes those
-  // rows, because the band is the panel's own and no case draws it.
+  // Marks the overlay in every frame captured from now on: the suite framework hashes those rows,
+  // because the overlay is the panel's own and no case draws it.
   void markOverlay(int16_t top, int16_t rows);
 
  private:
