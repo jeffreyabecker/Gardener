@@ -65,7 +65,7 @@ end
 test("the keys map to the machine's commands", the_keys_map_to_the_machines_commands)
 
 def the_page_draws_the_clock_its_machine_reports()
-  var mock = MockHomeMachine(65)
+  var mock = MockHomeMachine(65000)
   var home = mock_home(mock)
 
   harness.beat(1)

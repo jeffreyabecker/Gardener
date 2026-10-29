@@ -13,11 +13,13 @@
 import string
 
 # The page's chrome from the run's clock: the title over the readout and the timer, a quarter and
-# three quarters of the page. `elapsed` is the run's elapsed time in milliseconds, or nil while
-# nothing is running, so the drawing is reached by a case that holds a clock rather than a machine.
+# three quarters of the page. `elapsed` is the run's elapsed time in milliseconds, as the device's clock
+# keeps it and as the static page's chrome takes it, or nil while nothing is running, so the drawing is
+# reached by a case that holds a clock rather than a machine.
 def home_chrome(elapsed)
   var timer = screen.centred(nil, nil, nil, nil,
-                             screen.duration_text("minutes", elapsed == nil ? 0 : elapsed,
+                             screen.duration_text("minutes",
+                                                  (elapsed == nil ? 0 : elapsed) / 1000,
                                                   elapsed != nil))
   return screen.column(nil, [
     [bounds(1, 0.25), screen.centred(nil, nil, nil, nil, "Gardener")],
