@@ -20,7 +20,7 @@
 #include "routines/Registration.h"
 #include "routines/RoutineRegistry.h"
 #include "storage/RoutineSettingStore.h"
-#include "ui/SettingsRows.h"
+#include "panel/page/SettingsRows.h"
 
 namespace {
 

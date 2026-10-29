@@ -8,7 +8,7 @@
 #include <Wire.h>
 
 #include "MachineRoot.h"
-#include "panel/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 #include "panel/Panel.h"
 #include "routines/Routines.h"
 #include "hal/impl/AdcBattery.h"

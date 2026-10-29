@@ -16,6 +16,7 @@
 #include "BerryScene.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
+#include "panel/page/Ux.h"
 #include "routines/Routines.h"
 #include "Module.h"
 #include "Modules.h"

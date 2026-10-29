@@ -9,7 +9,7 @@
 
 #include <Arduino.h>
 
-#include "ui/SettingsRows.h"
+#include "panel/page/SettingsRows.h"
 
 namespace gardener {
 

@@ -14,12 +14,12 @@
 #include <berry.h>
 
 #include "panel/PanelContext.h"
-#include "panel/Units.h"
-#include "routines/PressureRow.h"
+#include "panel/glass/PressureRow.h"
+#include "panel/glass/Units.h"
+#include "panel/page/SettingsRows.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
-#include "ui/SettingsRows.h"
 #include "Module.h"
 #include "Modules.h"
 

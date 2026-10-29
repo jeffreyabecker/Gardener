@@ -9,7 +9,7 @@
 #include "ble/BleDomain.h"
 #include "ble/BleLink.h"
 #include "panel/Panel.h"
-#include "panel/Units.h"
+#include "panel/glass/Units.h"
 #include "storage/DeviceConfig.h"
 
 namespace gardener {

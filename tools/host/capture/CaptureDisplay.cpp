@@ -3,145 +3,49 @@
 #include <algorithm>
 #include <string.h>
 
-#include "gfx/BuiltinFont.h"
 #include "gfx/Canvas.h"
-#include "gfx/Text.h"
 
 namespace gardener {
 
 namespace {
 
-std::string uppercase(std::string text) {
-  for (char& c : text) {
-    if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
-  }
-  return text;
-}
-
-bool isDigits(const std::string& text) {
-  if (text.empty()) return false;
-  for (char c : text) {
-    if (c < '0' || c > '9') return false;
-  }
-  return true;
-}
-
-std::string keyLabel(const std::string& key) {
-  if (key == "ok") return "OK";
-  if (key == "cancel") return "CANCEL";
-  if (key == "up") return "UP";
-  if (key == "down") return "DOWN";
-  if (key == "forward") return "FORWARD";
-  if (key == "back") return "BACK";
-  return uppercase(key);
-}
-
-// One part of a gesture, key:form: single keys name themselves, a double appends the times sign, a
-// hold its seconds, and anything else falls back to the raw token uppercased.
-std::string partLabel(const std::string& part) {
-  const size_t colon = part.find(':');
-  const std::string key = part.substr(0, colon);
-  const std::string form = colon == std::string::npos ? "" : part.substr(colon + 1);
-
-  std::string label = keyLabel(key);
-  if (form.empty() || form == "single") {
-    return label;
-  }
-  if (form == "double") {
-    return label + "\xD7" "2";  // OK×2
-  }
-  if (isDigits(form)) {
-    return label + " " + form + "s";  // CANCEL 5s
-  }
-  return uppercase(key + ":" + form);
-}
-
-// Whether the built-in face has no ink for a code, so a callout can fall back rather than print a
-// blank where a glyph is missing. The classic face's high half is shifted by one, as Adafruit's
-// printer shifts it.
-bool glyphBlank(uint8_t c) {
-  if (c < gfx::BuiltinFont.first || c > gfx::BuiltinFont.last) return true;
-  const gfx::Glyph& glyph = gfx::BuiltinFont.glyph[c - gfx::BuiltinFont.first];
-  const uint8_t* bitmap = gfx::BuiltinFont.bitmap;
-  uint16_t offset = glyph.bitmapOffset;
-  uint8_t bits = 0;
-  uint8_t bit = 0;
-  for (uint8_t row = 0; row < glyph.height; row++) {
-    for (uint8_t column = 0; column < glyph.width; column++) {
-      if ((bit++ & 7) == 0) bits = bitmap[offset++];
-      if ((bits & 0x80) != 0) return false;
-      bits = static_cast<uint8_t>(bits << 1);
-    }
-  }
-  return true;
-}
-
-// What a gesture token renders as: ok:single -> OK, up:double -> OK×2, cancel:5 -> CANCEL 5s, and
-// a sum joins its parts with " + ". Anything unrecognised comes back as the token uppercased.
-std::string gestureLabel(const std::string& gesture) {
-  std::string out;
-  size_t start = 0;
-  while (start <= gesture.size()) {
-    size_t end = gesture.find('+', start);
-    if (end == std::string::npos) end = gesture.size();
-    if (!out.empty()) out += " + ";
-    out += partLabel(gesture.substr(start, end - start));
-    start = end + 1;
-  }
-  return out;
-}
-
-// Clears a full-width strip at the top of a packed frame, then centres the label in ink in the
-// panel's own 5x7 face.
-void drawGestureStrip(uint8_t* packed, int16_t width, int16_t height, const std::string& label) {
-  const int16_t rowBytes = (int16_t)((width + 7) / 8);
-  constexpr int16_t StripHeight = 10;  // one pad, the 8-row face, one pad
-  const int16_t stripRows = StripHeight < height ? StripHeight : height;
-  for (int16_t y = 0; y < stripRows; y++) {
-    memset(packed + y * rowBytes, 0, (size_t)rowBytes);
-  }
-
-  const int16_t labelWidth = 6 * (int16_t)label.size();  // five columns plus the spacer
-  int16_t x = (width - labelWidth) / 2;
-  const int16_t y = 1;
-  gfx::Canvas canvas(packed, gfx::Rect(0, 0, width, height), gfx::Rect(0, 0, width, height),
-                     gfx::PixelLayout::Packed1);
-  for (char c : label) {
-    uint8_t code = static_cast<uint8_t>(c);
-    if (code >= 176 && code < 255) code++;
-    if (glyphBlank(code)) code = 'x';
-    gfx::shapes::drawGlyph(canvas, x, y, code, 1, 255);
-    x += 6;
-  }
-}
-
 // Pixels between diagonal strokes: wide enough to read as a hash at the panel's size, dense enough
 // that it cannot be mistaken for a drawn line.
 constexpr int HashSpacing = 4;
 
-void setPacked(uint8_t* packed, int16_t width, int16_t x, int16_t y) {
-  packed[y * ((width + 7) / 8) + x / 8] |= (uint8_t)(0x80 >> (x & 7));
+// The pixel a buffer holds at a point, in the layout the depth says: the byte itself on a Gray8
+// one, 255 or 0 on a Packed1 one.
+uint8_t pixelAt(const std::vector<uint8_t>& buffer, int16_t stride, uint8_t depth, int16_t x,
+                int16_t y) {
+  const size_t index = static_cast<size_t>(y) * stride + (depth == 8 ? x : (x >> 3));
+  if (depth == 8) return buffer[index];
+  return (buffer[index] & (0x80 >> (x & 7))) != 0 ? 255 : 0;
 }
 
-// Clears the marked rows, outlines them, and fills them with a diagonal ink hash.
-void drawOverlayHash(uint8_t* packed, int16_t width, int16_t height, int16_t top, int16_t rows) {
-  if (top < 0 || rows <= 0 || top >= height) return;
-  const int16_t bottom = top + rows < height ? (int16_t)(top + rows) : height;
-  const int16_t rowBytes = (int16_t)((width + 7) / 8);
+// Clears the marked rows of the glass, outlines them, and fills them with a diagonal ink hash. The
+// rows are the glass's own; the frame only says where the glass is drawn.
+void drawOverlayHash(gfx::Canvas& canvas, const gfx::Rect& glass, int16_t top, int16_t rows) {
+  if (top < 0 || rows <= 0 || top >= glass.height) return;
+  const int16_t bottom =
+      top + rows < glass.height ? static_cast<int16_t>(top + rows) : glass.height;
+  const int16_t left = glass.x;
+  const int16_t right = static_cast<int16_t>(glass.x + glass.width - 1);
+  const int16_t first = static_cast<int16_t>(glass.y + top);
+  const int16_t last = static_cast<int16_t>(glass.y + bottom - 1);
 
-  for (int16_t y = top; y < bottom; y++) {
-    memset(packed + y * rowBytes, 0, (size_t)rowBytes);
+  for (int16_t y = first; y <= last; y++) {
+    for (int16_t x = left; x <= right; x++) canvas.setPixel(x, y, gfx::ui::Paper);
   }
-
-  for (int16_t x = 0; x < width; x++) {
-    setPacked(packed, width, x, top);
-    setPacked(packed, width, x, (int16_t)(bottom - 1));
+  for (int16_t x = left; x <= right; x++) {
+    canvas.setPixel(x, first, gfx::ui::Ink);
+    canvas.setPixel(x, last, gfx::ui::Ink);
   }
-  for (int16_t y = top; y < bottom; y++) {
-    setPacked(packed, width, 0, y);
-    setPacked(packed, width, (int16_t)(width - 1), y);
-    for (int16_t x = (int16_t)((y - top) % HashSpacing); x < width; x += HashSpacing) {
-      setPacked(packed, width, x, y);
+  for (int16_t y = first; y <= last; y++) {
+    canvas.setPixel(left, y, gfx::ui::Ink);
+    canvas.setPixel(right, y, gfx::ui::Ink);
+    for (int16_t x = static_cast<int16_t>(left + (y - first) % HashSpacing); x <= right;
+         x = static_cast<int16_t>(x + HashSpacing)) {
+      canvas.setPixel(x, y, gfx::ui::Ink);
     }
   }
 }
@@ -153,8 +57,8 @@ CaptureDisplay::CaptureDisplay(int16_t width, int16_t height, uint8_t bitsPerPix
       height_(height),
       depth_(bitsPerPixel == 1 ? 1 : 8),
       stride_(bitsPerPixel == 1 ? (int16_t)((width + 7) / 8) : width),
-      frame_(static_cast<size_t>(stride_) * static_cast<size_t>(height), 0),
-      sent_(frame_.size(), 0) {}
+      drawn_(static_cast<size_t>(stride_) * static_cast<size_t>(height), 0),
+      sent_(drawn_.size(), 0) {}
 
 bool CaptureDisplay::begin() {
   clear();
@@ -175,14 +79,14 @@ void CaptureDisplay::flush(const gfx::Rect& dirty) {
     const size_t columns = static_cast<size_t>(lastColumn - firstColumn + 1);
     for (int16_t row = firstRow; row <= lastRow; row++) {
       const size_t at = static_cast<size_t>(row) * stride_ + firstColumn;
-      memcpy(sent_.data() + at, frame_.data() + at, columns);
+      memcpy(sent_.data() + at, drawn_.data() + at, columns);
     }
   } else {
     for (int16_t row = firstRow; row <= lastRow; row++) {
       for (int16_t column = firstColumn; column <= lastColumn; column++) {
         const size_t index = static_cast<size_t>(row) * stride_ + (column >> 3);
         const uint8_t mask = static_cast<uint8_t>(0x80 >> (column & 7));
-        if ((frame_[index] & mask) != 0) {
+        if ((drawn_[index] & mask) != 0) {
           sent_[index] |= mask;
         } else {
           sent_[index] &= static_cast<uint8_t>(~mask);
@@ -196,16 +100,28 @@ void CaptureDisplay::flush(const gfx::Rect& dirty) {
 }
 
 void CaptureDisplay::keepFrame() {
-  std::vector<uint8_t> packed(Capture::frameBytes(width_, height_));
-  pack(packed.data());
-  if (calloutFrames_ > 0 && !callout_.empty()) {
-    drawGestureStrip(packed.data(), width_, height_, gestureLabel(callout_));
+  std::vector<uint8_t> pixels(Capture::frameBytes(frame_.width, frame_.height), 0);
+  const gfx::Rect area(0, 0, frame_.width, frame_.height);
+  gfx::Canvas canvas(pixels.data(), area, area, gfx::PixelLayout::Packed1);
+
+  // The glass as it was sent, at the place the frame gives it.
+  for (int16_t y = 0; y < height_; y++) {
+    for (int16_t x = 0; x < width_; x++) {
+      if (pixelAt(sent_, stride_, depth_, x, y) == 0) continue;
+      canvas.setPixel(static_cast<int16_t>(frame_.glass.x + x),
+                      static_cast<int16_t>(frame_.glass.y + y), gfx::ui::Ink);
+    }
   }
-  if (overlayTop_ >= 0) {
-    drawOverlayHash(packed.data(), width_, height_, overlayTop_, overlayRows_);
+
+  if (overlayTop_ >= 0) drawOverlayHash(canvas, frame_.glass, overlayTop_, overlayRows_);
+
+  for (const Component& component : components_) {
+    if (!component.draw) continue;
+    gfx::Canvas box = canvas.child(component.box);
+    component.draw(box);
   }
-  capture_.add(packed.data());
-  if (calloutFrames_ > 0) calloutFrames_--;
+
+  capture_.add(pixels.data());
 }
 
 void CaptureDisplay::press(const char* gesture) {
@@ -218,13 +134,7 @@ const char* CaptureDisplay::take() {
   if (queue_.empty()) return nullptr;
   taken_ = queue_.front();
   queue_.pop_front();
-  showGesture(taken_.c_str());
   return taken_.c_str();
-}
-
-void CaptureDisplay::showGesture(const char* gesture) {
-  callout_ = gesture != nullptr ? gesture : "";
-  calloutFrames_ = callout_.empty() ? 0 : CalloutFrames;
 }
 
 void CaptureDisplay::markOverlay(int16_t top, int16_t rows) {
@@ -233,7 +143,13 @@ void CaptureDisplay::markOverlay(int16_t top, int16_t rows) {
 }
 
 void CaptureDisplay::beginCapture() {
-  capture_.arm(width_, height_);
+  beginCapture(Frame{width_, height_, gfx::Rect(0, 0, width_, height_)}, {});
+}
+
+void CaptureDisplay::beginCapture(const Frame& frame, const std::vector<Component>& components) {
+  frame_ = frame;
+  components_ = components;
+  capture_.arm(frame_.width, frame_.height);
   capturing_ = true;
 }
 
@@ -254,25 +170,23 @@ int CaptureDisplay::frameCount() const { return capture_.frameCount(); }
 const std::vector<uint8_t>* CaptureDisplay::frame(int index) const { return capture_.frame(index); }
 
 void CaptureDisplay::clear() {
-  std::fill(frame_.begin(), frame_.end(), 0);
+  std::fill(drawn_.begin(), drawn_.end(), 0);
   std::fill(sent_.begin(), sent_.end(), 0);
   flushes_ = 0;
   lastDirty_ = gfx::Rect(0, 0, 0, 0);
   endCapture();
+  frame_ = Frame{};
+  components_.clear();
   queue_.clear();
   gestures_.clear();
   taken_.clear();
-  callout_.clear();
-  calloutFrames_ = 0;
   overlayTop_ = -1;
   overlayRows_ = 0;
 }
 
 uint8_t CaptureDisplay::at(int16_t x, int16_t y) const {
   if (x < 0 || y < 0 || x >= width_ || y >= height_) return 0;
-  const size_t index = static_cast<size_t>(y) * stride_ + (depth_ == 8 ? x : (x >> 3));
-  if (depth_ == 8) return frame_[index];
-  return (frame_[index] & (0x80 >> (x & 7))) != 0 ? 255 : 0;
+  return pixelAt(drawn_, stride_, depth_, x, y);
 }
 
 bool CaptureDisplay::anyInk(int16_t x, int16_t y, int16_t w, int16_t h) const {
@@ -294,22 +208,6 @@ int CaptureDisplay::inkCount(int16_t x, int16_t y, int16_t w, int16_t h) const {
     }
   }
   return count;
-}
-
-void CaptureDisplay::pack(uint8_t* out) const {
-  if (out == nullptr) return;
-  if (depth_ == 1) {
-    memcpy(out, sent_.data(), sent_.size());
-    return;
-  }
-  const int16_t rowBytes = (int16_t)((width_ + 7) / 8);
-  memset(out, 0, static_cast<size_t>(rowBytes) * height_);
-  for (int16_t y = 0; y < height_; y++) {
-    for (int16_t x = 0; x < width_; x++) {
-      if (sent_[static_cast<size_t>(y) * stride_ + x] == 0) continue;
-      out[static_cast<size_t>(y) * rowBytes + (x >> 3)] |= static_cast<uint8_t>(0x80 >> (x & 7));
-    }
-  }
 }
 
 }  // namespace gardener

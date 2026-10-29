@@ -9,20 +9,21 @@
 #include "GifWriter.h"
 #include "gfx/DisplayDevice.h"
 #include "gfx/Rect.h"
-#include "ui/GestureQueue.h"
+#include "gfx/Drawing.h"
+#include "panel/page/GestureQueue.h"
 
 namespace gardener {
 
 // A panel a case hands a page, a scene or a scene stack: the glass a canvas sends to, the frame it
 // draws into, the frames a capture keeps and the gestures the page is handed. It is one object
 // because the three are read together — a captured frame is the glass as it stood when a flush
-// reported pixels, with the gesture the page had just taken drawn across the top, so a reader of
-// the GIF sees what was pressed as well as what was drawn.
+// reported pixels, placed in the picture the host asked for, so a reader of the GIF sees what the
+// host framed rather than the panel alone.
 //
 // A capture keeps every flush that reports pixels and no flush that does not, so a beat a case
 // drives is one frame per send. The frames are taken from the glass rather than the frame buffer: a
 // rectangle the canvas failed to report keeps the pixels it had, which is what makes a missed
-// partial redraw show on the capture. The callout and the overlay hash are drawn into that copy
+// partial redraw show on the capture. The overlay hash and the components are drawn into that copy
 // only, so nothing a case asserts on the display itself carries them.
 class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
  public:
@@ -31,9 +32,24 @@ class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
   static constexpr int16_t Width = 128;
   static constexpr int16_t Height = 64;
 
-  // How many captured frames the callout of a taken gesture stays on; 1 is the frame it lands on.
-  // Raise it to keep the callout readable in a tutorial.
-  static constexpr int CalloutFrames = 1;
+  // The picture a capture writes: its own size, and where the glass sits in it. The frame is what a
+  // reader of the GIF sees, so a host with something to show outside the picture gives it room
+  // there rather than over the glass. A frame the glass does not fit is clipped to what it holds.
+  struct Frame {
+    int16_t width = 0;
+    int16_t height = 0;
+    gfx::Rect glass{0, 0, 0, 0};
+  };
+
+  // One thing a capture draws outside the glass: the box it draws in, in frame coordinates, and
+  // what it draws there. It is handed a canvas over that box, so its coordinates are the box's own
+  // and a write past the edge is clipped rather than painted over its neighbour. By value because
+  // the capture keeps the list for the whole sequence: whatever a component closes over has to
+  // outlive it.
+  struct Component {
+    gfx::Rect box;
+    gfx::ui::Paint draw;
+  };
 
   // A display at one of the two depths a device may report: 8 is a byte per pixel, the layout the
   // Gfx pages draw in, and 1 is the packed one a one-bit glass keeps. Anything else is 8.
@@ -44,7 +60,7 @@ class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
 
   gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
   uint8_t bitsPerPixel() const override { return depth_; }
-  uint8_t* buffer() override { return frame_.data(); }
+  uint8_t* buffer() override { return drawn_.data(); }
 
   // Sends the rectangle the canvas reports to the glass, and keeps it when a capture is armed. A
   // rectangle holding no pixels sends nothing and keeps nothing, but is still a flush.
@@ -62,21 +78,25 @@ class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
   // Every token pressed, in the order it was pressed, which is what the queue was handed.
   const std::vector<std::string>& gestures() const { return gestures_; }
 
-  // --- what a capture shows -------------------------------------------------
-  // The callout without a page seeing it, for a harness whose page takes its presses from
-  // somewhere else. An empty token clears the callout.
-  void showGesture(const char* gesture);
-
+  // --- what the suite framework marks ---------------------------------------
   // The rows the suite framework hashes because the band belongs to the panel rather than to any
-  // page: a capture of a case says which rows it did not draw.
+  // page: a capture of a case says which rows it did not draw. The rows are the glass's own, and
+  // they are hashed where the frame places the glass.
   void markOverlay(int16_t top, int16_t rows);
 
   // --- the capture ----------------------------------------------------------
-  // Starts a sequence at this display's size, discarding anything collected before: every flush
-  // that reports pixels is one frame until endCapture().
+  // Starts a sequence whose frames are the glass alone, discarding anything collected before: every
+  // flush that reports pixels is one frame until endCapture().
   void beginCapture();
 
-  // Keeps the glass as one frame now, without a send: a still of what the panel already holds.
+  // Starts a sequence of frames of `frame`'s size, discarding anything collected before: every
+  // flush that reports pixels is one frame until endCapture(), the glass placed where the frame
+  // says and `components` drawn over it in the order given. The size and the components are kept
+  // for the whole sequence, so every frame of a GIF is one size and a component with nothing to
+  // show leaves its box blank rather than making that frame shorter.
+  void beginCapture(const Frame& frame, const std::vector<Component>& components = {});
+
+  // Keeps the picture as one frame now, without a send: a still of what the panel already holds.
   void record();
 
   // Stops recording and discards what was collected.
@@ -104,11 +124,9 @@ class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
   int flushCount() const { return flushes_; }
   gfx::Rect lastDirty() const { return lastDirty_; }
 
-  // The glass, packed one bit per pixel, row-major and top-down, as the GIF writer wants it.
-  void pack(uint8_t* out) const;
-
  private:
-  // Packs the glass with the callouts and hands it to the capture as one frame.
+  // Packs the glass into the frame it captured, with the overlay hash on its rows and the
+  // components over it, and hands the result to the capture as one frame.
   void keepFrame();
 
   int16_t width_;
@@ -117,21 +135,23 @@ class CaptureDisplay : public gfx::DisplayDevice, public gfx::ui::GestureQueue {
   // The bytes one row of the frame takes: the width when a pixel is a byte, a byte per eight pixels
   // once it is a bit.
   int16_t stride_;
-  std::vector<uint8_t> frame_;
-  // What the flush has sent, which is the glass a capture keeps.
+  // What the canvas has drawn, and the part of it the flush has sent, which is the glass a capture
+  // keeps.
+  std::vector<uint8_t> drawn_;
   std::vector<uint8_t> sent_;
   int flushes_ = 0;
   gfx::Rect lastDirty_{0, 0, 0, 0};
 
   Capture capture_;
   bool capturing_ = false;
+  // The picture the sequence is written in, as beginCapture() was told.
+  Frame frame_;
+  std::vector<Component> components_;
 
   std::deque<std::string> queue_;
   std::vector<std::string> gestures_;
   // What the last take() answered, which is what the pointer it returned points at.
   std::string taken_;
-  std::string callout_;
-  int calloutFrames_ = 0;
 
   int16_t overlayTop_ = -1;
   int16_t overlayRows_ = 0;

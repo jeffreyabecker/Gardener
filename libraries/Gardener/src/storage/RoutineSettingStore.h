@@ -6,7 +6,7 @@
 
 #include "storage/Config.h"
 #include "hal/Library.h"
-#include "ui/SettingsRows.h"
+#include "panel/page/SettingsRows.h"
 
 namespace gardener {
 

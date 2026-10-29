@@ -1,7 +1,8 @@
 // A frame a case drew, saved through the writer the tools share: the still and the sequence, and
 // the bytes a GIF89a starts with. The frame is packed by hand where the writer is what is under
-// test; a page driven through the suite's own display leaves the packing to it, and a capture of
-// that page carries the gesture it took and the overlay rows a case did not draw.
+// test; a page driven through the suite's own display leaves the packing, the frame it is placed in
+// and the components drawn over it to the capture. A capture of a page carries the gesture the case
+// named as a strip under the glass, and the overlay rows a case did not draw.
 
 #include <doctest.h>
 
@@ -12,16 +13,21 @@
 #include <string>
 #include <vector>
 
+#include "GestureStrip.h"
 #include "GifWriter.h"
+#include "panel/page/Scene.h"
+#include "panel/page/Ux.h"
 #include "suite.h"
 
 namespace {
 
 using gardener::Capture;
 using gardener::CaptureDisplay;
+using gardener::GestureStrip;
 using gardener::GifDelayCs;
 using gardener::RenderScale;
 using gardener::gfx::Canvas;
+using gardener::gfx::Rect;
 using gardener::gfx::ui::GestureQueue;
 using gardener::gfx::ui::Scene;
 using gardener::gfx::ui::Ux;
@@ -83,6 +89,16 @@ int countFrameBlocks(const std::vector<uint8_t>& bytes) {
 
 uint16_t littleEndian(const std::vector<uint8_t>& bytes, size_t at) {
   return static_cast<uint16_t>(bytes[at] | (bytes[at + 1] << 8));
+}
+
+// Arms the shared display with the picture a harness capture writes: the glass at the top, a
+// strip's rows under it, and the strip in them.
+void beginStripCapture(GestureStrip& strip) {
+  const Rect stripBox(0, PageHeight, PageWidth, GestureStrip::Rows);
+  display.beginCapture(CaptureDisplay::Frame{PageWidth,
+                                             static_cast<int16_t>(PageHeight + GestureStrip::Rows),
+                                             Rect(0, 0, PageWidth, PageHeight)},
+                       {strip.component(stripBox)});
 }
 
 }  // namespace
@@ -212,34 +228,82 @@ TEST_CASE("a beat saved through the display is one GIF frame per send") {
   std::remove("tools/unit/build/capture_display_beat.gif");
 }
 
-TEST_CASE("the gesture a page takes is drawn on the frame it drew") {
+TEST_CASE("the gesture a page takes is named under the glass on the frame it drew") {
   reset();
-  display.beginCapture();
+  GestureStrip strip;
+  beginStripCapture(strip);
   display.press("ok:double");
-  CHECK_EQ(std::string(display.take()), std::string("ok:double"));
+  strip.show(display.take());
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
   gardener::gfx::test::canvas.flush(display);
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
-  CHECK(packedInk(*frame, PageWidth, 0, 0, PageWidth, 10));  // the callout strip
-  CHECK(packedAt(*frame, PageWidth, 4, 20));                 // and what the page drew
+  CHECK(packedInk(*frame, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));  // the strip
+  CHECK_FALSE(packedInk(*frame, PageWidth, 0, 0, PageWidth, GestureStrip::Rows));  // not the glass
+  CHECK(packedAt(*frame, PageWidth, 4, 20));  // and what the page drew
   CHECK_EQ(display.gestures().size(), 1);
   display.endCapture();
 }
 
-TEST_CASE("the callout is on the frame the gesture landed on and not the next") {
+TEST_CASE("the gesture is on the frame it landed on and not the next") {
   reset();
-  display.beginCapture();
+  GestureStrip strip;
+  beginStripCapture(strip);
   display.press("ok:single");
-  display.take();
+  strip.show(display.take());
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
   gardener::gfx::test::canvas.flush(display);
   gardener::gfx::test::canvas.setPixel(6, 20, 255);
   gardener::gfx::test::canvas.flush(display);
   REQUIRE_EQ(display.frameCount(), 2);
-  CHECK(packedInk(*display.frame(0), PageWidth, 0, 0, PageWidth, 10));
-  CHECK_FALSE(packedInk(*display.frame(1), PageWidth, 0, 0, PageWidth, 10));
+  const std::vector<uint8_t>* first = display.frame(0);
+  const std::vector<uint8_t>* second = display.frame(1);
+  REQUIRE(first != nullptr);
+  REQUIRE(second != nullptr);
+  CHECK(packedInk(*first, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
+  CHECK_FALSE(packedInk(*second, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
+  display.endCapture();
+}
+
+TEST_CASE("a gesture token renders as the label a reader sees") {
+  CHECK_EQ(GestureStrip::label("ok:single"), std::string("OK"));
+  CHECK_EQ(GestureStrip::label("up:double"), std::string("UP\xD7" "2"));
+  CHECK_EQ(GestureStrip::label("cancel:5"), std::string("CANCEL 5s"));
+  CHECK_EQ(GestureStrip::label("ok:single+up:double"), std::string("OK + UP\xD7" "2"));
+  CHECK_EQ(GestureStrip::label("cmd:stop"), std::string("CMD:STOP"));
+}
+
+TEST_CASE("a component draws in the box the frame gives it") {
+  reset();
+  const Rect glass(6, 8, PageWidth, PageHeight);
+  const int16_t frameWidth = static_cast<int16_t>(glass.x + glass.width + 20);
+  const int16_t frameHeight = static_cast<int16_t>(glass.y + glass.height + 3);
+  display.beginCapture(
+      CaptureDisplay::Frame{frameWidth, frameHeight, glass},
+      {
+          // Beside the glass on the left: a write past its box's edge is clipped, not painted over
+          // its neighbour.
+          {Rect(0, 0, 6, PageHeight),
+           [](Canvas& canvas) {
+             canvas.setPixel(5, 3, 255);
+             canvas.setPixel(6, 3, 255);
+           }},
+          // And one on the right, which knows nothing of where the other is.
+          {Rect(static_cast<int16_t>(glass.x + glass.width), 0, 20, 20),
+           [](Canvas& canvas) { canvas.setPixel(1, 1, 255); }},
+      });
+  gardener::gfx::test::canvas.setPixel(10, 10, 255);
+  gardener::gfx::test::canvas.flush(display);
+  REQUIRE_EQ(display.frameCount(), 1);
+  const std::vector<uint8_t>* frame = display.frame(0);
+  REQUIRE(frame != nullptr);
+  CHECK_EQ(frame->size(), Capture::frameBytes(frameWidth, frameHeight));
+  CHECK(packedAt(*frame, frameWidth, 16, 18));  // the page's (10, 10) where the glass sits
+  CHECK_FALSE(packedAt(*frame, frameWidth, 10, 10));
+  CHECK(packedAt(*frame, frameWidth, 5, 3));        // the left component's own origin
+  CHECK_FALSE(packedAt(*frame, frameWidth, 6, 3));  // and its box's edge
+  CHECK(packedAt(*frame, frameWidth, 135, 1));      // the right one's
   display.endCapture();
 }
 
@@ -268,10 +332,11 @@ TEST_CASE("a one-bit display records the bits the canvas drew") {
   canvas.flush(screen);
   REQUIRE_EQ(screen.frameCount(), 1);
 
-  std::vector<uint8_t> packed(Capture::frameBytes(64, 32), 0);
-  screen.pack(packed.data());
-  CHECK_EQ(packed[0], 0x00);
-  CHECK_EQ(packed[3 * 8], 0x10);  // row 3, eighth byte, top bit
+  const std::vector<uint8_t>* frame = screen.frame(0);
+  REQUIRE(frame != nullptr);
+  CHECK_EQ(frame->size(), Capture::frameBytes(64, 32));
+  CHECK_EQ((*frame)[0], 0x00);
+  CHECK_EQ((*frame)[3 * 8], 0x10);  // row 3, eighth byte, top bit
   CHECK_EQ(screen.at(3, 3), 255);
   CHECK_EQ(screen.at(4, 3), 0);
   screen.endCapture();
@@ -312,10 +377,12 @@ class OkScene : public Scene {
 TEST_CASE("a scene driven through the display takes its press from it") {
   reset();
   int handled = 0;
+  GestureStrip strip;
   Ux ux;
   ux.reset(std::make_unique<OkScene>(display, handled));
-  display.beginCapture();
+  beginStripCapture(strip);
   display.press("ok:single");
+  strip.show("ok:single");
   CHECK(ux.poll(gardener::gfx::test::canvas, 1));
   gardener::gfx::test::canvas.flush(display);
   CHECK_EQ(handled, 1);
@@ -323,6 +390,6 @@ TEST_CASE("a scene driven through the display takes its press from it") {
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
   CHECK(packedAt(*frame, PageWidth, 4, 20));
-  CHECK(packedInk(*frame, PageWidth, 0, 0, PageWidth, 10));
+  CHECK(packedInk(*frame, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
   display.endCapture();
 }

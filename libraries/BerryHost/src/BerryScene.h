@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "ui/Scene.h"
+#include "panel/page/Scene.h"
 
 // The interpreter's VM, forward declared so its header stops here.
 struct bvm;

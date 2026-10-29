@@ -4,10 +4,10 @@
 
 #include <Arduino.h>
 
-#include "panel/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "panel/Units.h"
+#include "panel/glass/Units.h"
 #include "routines/Routines.h"
 #include "Module.h"
 #include "Modules.h"

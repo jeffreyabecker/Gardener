@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "panel/Panel.h"
-#include "panel/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 #include "serial/Domain.h"
 
 namespace gardener {

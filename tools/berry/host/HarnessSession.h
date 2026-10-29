@@ -8,6 +8,7 @@
 
 #include "BerryInterpreter.h"
 #include "CaptureDisplay.h"
+#include "GestureStrip.h"
 #include "core/Logger.h"
 #include "gfx/Canvas.h"
 #include "hal/Battery.h"
@@ -18,7 +19,7 @@
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 #include "MemoryFiles.h"
-#include "panel/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
 #include "storage/Config.h"
@@ -288,8 +289,8 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
-  // Records a gesture for the callout strip, shown on the next captured frame. The page takes its
-  // presses from routines, so only the callout is told.
+  // Records a gesture for the strip under the glass, shown on the next captured frame. The page
+  // takes its presses from routines, so only the strip is told.
   void pressGesture(const char* gesture);
   // Marks the overlay band in every frame captured from now on: the suite framework hashes those
   // rows, because the band is the panel's own and no case draws it.
@@ -318,6 +319,7 @@ class HarnessSession {
   ModelValve valve_;
   VacuumSystem vacuum_;
   CaptureDisplay display_{CaptureDisplay::Width, CaptureDisplay::Height, 1};
+  GestureStrip gestureStrip_;
   gfx::Canvas canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;

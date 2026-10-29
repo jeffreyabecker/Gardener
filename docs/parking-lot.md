@@ -119,7 +119,7 @@ tree compiles against [libraries/Gardener](../libraries/Gardener) for the machin
 run state, the device's and a routine's documents and the buzzer — more than `PanelContext` carries.
 A surface declared in that library and implemented by the firmware would let it build with only the
 vendored VM and Gfx beside it. Blocked by: four modules reach past `PanelContext` into
-`machine/Machine.h`, `storage/Config.h`, `storage/DeviceConfig.h` and `panel/BuzzerPlayer.h`, and
+`machine/Machine.h`, `storage/Config.h`, `storage/DeviceConfig.h` and `panel/parts/BuzzerPlayer.h`, and
 nothing has chosen a shape for one seam that covers all four.
 
 ## A spec for the image's check

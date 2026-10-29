@@ -8,10 +8,10 @@
 #include <freertos/task.h>
 
 #include "machine/SafeReboot.h"
-#include "panel/ButtonsTick.h"
-#include "panel/PageTick.h"
+#include "panel/parts/ButtonsTick.h"
+#include "panel/parts/PageTick.h"
 #include "panel/Panel.h"
-#include "panel/PartsTick.h"
+#include "panel/parts/PartsTick.h"
 
 namespace gardener {
 

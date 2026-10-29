@@ -6,7 +6,7 @@
 
 #include <berry.h>
 
-#include "ui/SettingsScene.h"
+#include "panel/page/SettingsScene.h"
 
 namespace gardener {
 

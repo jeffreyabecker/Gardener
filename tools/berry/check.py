@@ -57,7 +57,6 @@ def board_free(source):
 BERRYHOST_SOURCES = sorted((BERRYHOST / "src").glob("*.cpp"))
 
 GFX_SOURCES = sorted((GFX / "src" / "gfx").glob("*.cpp"))
-GFX_SOURCES += sorted((GFX / "src" / "ui").glob("*.cpp"))
 
 FIRMWARE_SOURCES = [path for path in sorted((GARDENER / "src").rglob("*.cpp")) if board_free(path)]
 
@@ -72,12 +71,13 @@ HOST_SOURCES = [
 
 MAIN_SOURCES = [TOOL / "main.cpp", TOOL / "entry.cpp", *HOST_SOURCES]
 
-# What a host tool shares with the others: the Arduino API, the clock, the recording display and the
-# frame writer.
+# What a host tool shares with the others: the Arduino API, the clock, the recording display, the
+# gesture strip and the frame writer.
 SHARED = ROOT / "tools" / "host"
 SHARED_SOURCES = [
     SHARED / "arduino" / "Clock.cpp",
     SHARED / "capture" / "CaptureDisplay.cpp",
+    SHARED / "capture" / "GestureStrip.cpp",
     SHARED / "capture" / "GifWriter.cpp",
 ]
 

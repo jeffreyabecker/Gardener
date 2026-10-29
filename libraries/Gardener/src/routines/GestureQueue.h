@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <Gfx.h>
+#include "panel/page/GestureQueue.h"
 
 namespace gardener {
 

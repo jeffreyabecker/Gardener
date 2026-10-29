@@ -8,7 +8,7 @@
 #include <Arduino.h>
 
 #include "routines/Registration.h"
-#include "ui/Scene.h"
+#include "panel/page/Scene.h"
 
 namespace gardener {
 

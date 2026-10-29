@@ -182,7 +182,7 @@ std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
   return costs;
 }
 
-void HarnessSession::pressGesture(const char* gesture) { display_.showGesture(gesture); }
+void HarnessSession::pressGesture(const char* gesture) { gestureStrip_.show(gesture); }
 
 int HarnessSession::errorLines() const { return logger_.errors(); }
 
@@ -203,7 +203,15 @@ void HarnessSession::reset() {
 
 void HarnessSession::beginCapture(const char* path) {
   capturePath_ = path != nullptr ? path : "";
-  display_.beginCapture();
+  // The picture a harness capture writes: the glass, with the gesture strip's rows under it, so the
+  // press a frame carried reads below it rather than over it.
+  const int16_t glassWidth = CaptureDisplay::Width;
+  const int16_t glassHeight = CaptureDisplay::Height;
+  const int16_t stripTop = glassHeight;
+  display_.beginCapture(
+      CaptureDisplay::Frame{glassWidth, static_cast<int16_t>(stripTop + GestureStrip::Rows),
+                            gfx::Rect(0, 0, glassWidth, glassHeight)},
+      {gestureStrip_.component(gfx::Rect(0, stripTop, glassWidth, GestureStrip::Rows))});
 }
 
 bool HarnessSession::endCapture() {

@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "panel/page/Ux.h"
 #include "routines/GestureQueue.h"
 #include "routines/Interpreter.h"
 #include "routines/RoutineRegistry.h"

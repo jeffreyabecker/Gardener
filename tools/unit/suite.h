@@ -10,6 +10,7 @@
 #include <Gfx.h>
 
 #include "CaptureDisplay.h"
+#include "panel/page/GestureQueue.h"
 
 namespace gardener::gfx::test {
 

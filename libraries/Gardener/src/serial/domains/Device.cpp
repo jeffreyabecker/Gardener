@@ -14,7 +14,7 @@
 #include "storage/Config.h"
 #if GARDENER_PANEL
 #include "panel/Panel.h"
-#include "panel/Units.h"
+#include "panel/glass/Units.h"
 #include "serial/PanelDomains.h"
 #include "storage/DeviceConfig.h"
 #endif

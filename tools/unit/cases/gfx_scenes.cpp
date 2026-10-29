@@ -12,6 +12,11 @@
 
 #include <string>
 
+#include "panel/page/BoolScene.h"
+#include "panel/page/DurationScene.h"
+#include "panel/page/Scene.h"
+#include "panel/page/SettingsRows.h"
+#include "panel/page/Ux.h"
 #include "suite.h"
 
 namespace gardener::gfx::test {
@@ -163,6 +168,13 @@ class InkedScene : public Scene {
   }
 };
 
+// A cell that fills the share it is handed, so a case reads the share from the ink it leaves.
+Paint filledCell() {
+  return [](Canvas& cell) {
+    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
+  };
+}
+
 TEST_CASE("the stack draws the band over the page") {
   NoGestures gestures;
   Ux ux;
@@ -170,8 +182,8 @@ TEST_CASE("the stack draws the band over the page") {
   ux.setBand({Paint()});
   ux.reset(std::make_unique<InkedScene>(gestures));
   ux.poll(canvas, 300);
-  CHECK(display.anyInk(0, 0, PageWidth, PageHeight - BandHeight));
-  CHECK_EQ(display.inkCount(0, PageHeight - BandHeight, PageWidth, BandHeight), 0);
+  CHECK(display.anyInk(0, 0, PageWidth, PageHeight - Ux::BandHeight));
+  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight), 0);
 }
 
 TEST_CASE("the stack draws the band it was given") {
@@ -179,24 +191,75 @@ TEST_CASE("the stack draws the band it was given") {
   Watched watched;
   Ux ux;
   reset();
-  ux.setBand({[](Canvas& cell) {
-    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
-  }});
+  ux.setBand({filledCell()});
   ux.reset(aScene(gestures, watched));
   ux.poll(canvas, 300);
-  CHECK(display.anyInk(0, PageHeight - BandHeight, PageWidth, BandHeight));
-  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight - BandHeight), 0);
+  CHECK(display.anyInk(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight));
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight - Ux::BandHeight), 0);
 }
 
 TEST_CASE("a stack showing nothing draws no band") {
   NoGestures gestures;
   Ux ux;
   reset();
-  ux.setBand({[](Canvas& cell) {
-    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
-  }});
+  ux.setBand({filledCell()});
   CHECK_EQ(ux.poll(canvas, 300), 0);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
+TEST_CASE("the band draws its cells in equal shares") {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  ux.setBand({filledCell(), filledCell(), filledCell(), filledCell()});
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  const int16_t top = PageHeight - Ux::BandHeight;
+  const int quarter = (PageWidth / 4) * Ux::BandHeight;
+  CHECK_EQ(display.inkCount(0, top, PageWidth / 4, Ux::BandHeight), quarter);
+  CHECK_EQ(display.inkCount(PageWidth / 4, top, PageWidth / 4, Ux::BandHeight), quarter);
+  CHECK_EQ(display.inkCount(PageWidth / 2, top, PageWidth / 4, Ux::BandHeight), quarter);
+  CHECK_EQ(display.inkCount(PageWidth * 3 / 4, top, PageWidth / 4, Ux::BandHeight), quarter);
+}
+
+TEST_CASE("the band gives the last cell what is left") {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  ux.setBand({filledCell(), filledCell(), filledCell()});
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  // A width three does not divide leaves no gap: the shares still cover the whole band.
+  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight),
+           PageWidth * Ux::BandHeight);
+}
+
+TEST_CASE("the band leaves a cell given nothing alone") {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  ux.setBand({Paint(), filledCell()});
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  const int16_t top = PageHeight - Ux::BandHeight;
+  CHECK_EQ(display.inkCount(0, top, PageWidth / 2, Ux::BandHeight), 0);
+  CHECK_EQ(display.inkCount(PageWidth / 2, top, PageWidth / 2, Ux::BandHeight),
+           (PageWidth / 2) * Ux::BandHeight);
+}
+
+TEST_CASE("the band clears what was under it") {
+  NoGestures gestures;
+  Watched watched;
+  Ux ux;
+  reset();
+  canvas.draw(gfx::shapes::FillRect(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight, Ink));
+  ux.setBand({Paint()});
+  ux.reset(aScene(gestures, watched));
+  ux.poll(canvas, 300);
+  CHECK_EQ(display.inkCount(0, PageHeight - Ux::BandHeight, PageWidth, Ux::BandHeight), 0);
 }
 
 TEST_CASE("a scene paints as soon as it is pushed") {

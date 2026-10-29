@@ -12,8 +12,8 @@
 #include <Gfx.h>
 
 #include "panel/PanelContext.h"
-#include "panel/PressureReadout.h"
-#include "panel/Units.h"
+#include "panel/glass/PressureReadout.h"
+#include "panel/glass/Units.h"
 #include "storage/Config.h"
 #include "storage/DeviceConfig.h"
 

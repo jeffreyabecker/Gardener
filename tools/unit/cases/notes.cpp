@@ -7,7 +7,7 @@
 
 #include "Clock.h"
 #include "fakes/Parts.h"
-#include "panel/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 
 namespace {
 
