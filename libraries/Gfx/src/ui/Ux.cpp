@@ -152,7 +152,9 @@ bool Ux::take() {
 }
 
 bool Ux::home() {
-  if (depth_ <= 1) return true;
+  // Nothing showing is nothing to go home to, which is the false a caller reads as no page.
+  if (depth_ <= 0) return false;
+  if (depth_ == 1) return true;
   while (depth_ > 1) {
     depth_--;
     if (frames_[depth_]) frames_[depth_]->leave();

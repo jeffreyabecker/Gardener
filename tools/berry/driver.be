@@ -5,9 +5,10 @@
 # drive is the `harness` module, the routines are reached through the Berry `routines` registry and
 # pushed through `ux`, and a value is read or written through the registry's settings calls.
 
-# A switch onto a routine: home, then push the routine. Its scene is built from the class it
-# registered, so each switch starts a fresh page; the settings map, when the caller has one, is the
-# map the activation carries, and nil means the map the routine's own file makes.
+# A switch onto a routine: home, then that routine's page. The page is built through
+# routines.activate from the class it registered, so each switch starts a fresh one; the settings
+# map, when the caller has one, is what the page is built from, and nil means the map the routine's
+# own file makes.
 def harness_activate(routine_key, settings)
   ux.pop_to_root()
   # A routine is launched from the browser, and the browser vents first; a direct push models the
@@ -16,7 +17,7 @@ def harness_activate(routine_key, settings)
   if settings == nil
     settings = routines.load_settings(routine_key)
   end
-  return routines.push(routine_key, nil, RoutineActivation(routine_key, settings))
+  return ux.push(routines.activate(routine_key, settings))
 end
 
 def harness_registered(routine_key)
@@ -64,7 +65,7 @@ def harness_editor(routine_key)
   end
 
   harness_activate(routine_key, nil)
-  ux.push(SettingsEditScene(settings_cfgs, routines.load_settings(routine_key), nil), nil,
+  ux.push(SettingsEditScene(settings_cfgs, routines.load_settings(routine_key), nil),
           / v -> harness_editor_settled(routine_key, v))
 
   var i = 0
@@ -193,7 +194,7 @@ end
 
 # Draw one of the device's own scenes and save it as a GIF animation. The well-known scenes are not
 # registry entries — the home scene is the root, and the browser is the global browser.be sets — so
-# they are reached by name here rather than through routines.push.
+# they are reached by name here rather than through routines.activate.
 def harness_art_scene(name, seconds, path)
   harness.reset()
   harness.capture_start(path)

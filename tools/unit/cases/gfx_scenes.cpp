@@ -105,6 +105,11 @@ TEST_CASE("the root is not popped") {
   CHECK_EQ(listWatch.leaves, 1);
 }
 
+TEST_CASE("pop to root with nothing showing answers false") {
+  Ux ux;
+  CHECK_EQ(ux.popToRoot(), 0);
+}
+
 TEST_CASE("a push from activate is held") {
   NoGestures gestures;
   Watched rootWatch;

@@ -10,7 +10,7 @@ class Logger;
 
 namespace berry {
 
-// The five native modules a routine sees, installed into a fresh VM:
+// The six native modules a routine sees, installed into a fresh VM:
 //
 //   vacuum.*    the machine, read and commanded
 //   screen.*    the drawing a page describes: a node per call, aggregated into records the panel
@@ -18,8 +18,9 @@ namespace berry {
 //   device.*    the device: its settings, the unit it prints in, the piezo, the clock, the log
 //               and the presses waiting for a page
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
-//   routines.*  the registry: register() a record with the class its launch builds, push() the page
-//               that launch builds, and the set it reads and writes
+//   routines.*  the registry: register() a record with the class its page is built from, activate()
+//               the page a launch builds, and the set it reads and writes
+//   ux.*        the stack: push() a page over the one showing, pop() it, pop_to_root() to the root
 //
 // A routine file declares its settings with the settings module's kinds and hands them, with the
 // page class, to `routines.register`; every declaration is consumed into the record.

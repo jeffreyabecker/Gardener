@@ -114,7 +114,7 @@ buffer and the flush order a canvas would need are all undecided.
 
 ## The Berry host library's dependency
 
-The library holding the interpreter's install, its five native modules, the page scene and the draw
+The library holding the interpreter's install, its six native modules, the page scene and the draw
 tree compiles against [libraries/Gardener](../libraries/Gardener) for the machine's bounds and its
 run state, the device's and a routine's documents and the buzzer — more than `PanelContext` carries.
 A surface declared in that library and implemented by the firmware would let it build with only the

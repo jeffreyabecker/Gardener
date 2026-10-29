@@ -159,7 +159,7 @@ class RampedInterval
   # applied to a set the page already accepted.
   def edit()
     var settings_cfgs = routines.settings_cfgs(self.routine_key)
-    ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil), nil,
+    ux.push(SettingsEditScene(settings_cfgs, self.serialize_to_settings(), nil),
             / settings_values -> self.settings_closed(settings_values))
     return true
   end

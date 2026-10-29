@@ -149,10 +149,10 @@ bool RoutineRegistry::saveSettings(const String& routineKey,
   return record->saveSettings(library_, section(routineKey), values);
 }
 
-bool RoutineRegistry::push(const String& routineKey, const gfx::ui::SettingValues& values,
-                           gfx::ui::Ux& ux, gfx::ui::Ux::Callback callback) const {
+std::unique_ptr<gfx::ui::Scene> RoutineRegistry::activate(
+    const String& routineKey, const gfx::ui::SettingValues& values) const {
   const Registration* record = entry(routineKey);
-  if (record == nullptr || !record->factory()) return false;
+  if (record == nullptr || !record->factory()) return nullptr;
 
   RoutineActivation activation;
   activation.routineKey = routineKey;
@@ -167,7 +167,7 @@ bool RoutineRegistry::push(const String& routineKey, const gfx::ui::SettingValue
     }
     activation.values[row->key()] = std::move(value);
   }
-  return ux.push(record->factory()(activation), callback);
+  return record->factory()(activation);
 }
 
 }  // namespace gardener

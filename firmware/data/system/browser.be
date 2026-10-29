@@ -5,10 +5,10 @@
 # It is named in /system/order after the registry its rows come from and the settings list its
 # Forward opens, and before home.be, which names browserScene in its gestures.
 #
-# Choosing a row launches the routine: the browser reads the routine's file into one clean settings
-# map and hands it, with the routine's key, to the registry, which builds the scene from it, so the
-# launch is the whole of the routine's initialization. A row carries its routine's key as its value,
-# so the list is the only structure the browser keeps.
+# Choosing a row builds the routine: the browser reads the routine's file into one clean settings map
+# and hands it, with the routine's key, to the registry, which answers the page that map describes;
+# the page goes on the stack, and the browser stays under it. A row carries its routine's key as its
+# value, so the list is the only structure the browser keeps.
 
 # The browser's chrome from the rows and the window they are drawn through: one row per visible
 # routine, the selected one inverted, and the scrollbar beside them. The rows, the window and the
@@ -81,8 +81,8 @@ class BrowserScene
     return self.list.move(delta)
   end
 
-  # The row's routine launched as its file describes it: the registry reads the file into one clean
-  # settings map and builds the scene from it.
+  # The row's routine built from its own file: the registry reads the declaration into one clean
+  # settings map, and the page it answers goes on the stack.
   def choose()
     var row = self.list.selected_row()
     if row == nil
@@ -95,7 +95,7 @@ class BrowserScene
       return false
     end
     var settings_values = routines.load_settings(routine_key)
-    return routines.push(routine_key, nil, RoutineActivation(routine_key, settings_values))
+    return ux.push(routines.activate(routine_key, settings_values))
   end
 
   # Open the selected routine's settings. The browser has no state of its own to show, so the values
@@ -113,7 +113,7 @@ class BrowserScene
       return false
     end
     var settings_values = routines.load_settings(routine_key)
-    ux.push(SettingsEditScene(settings_cfgs, settings_values, routines.title(routine_key)), nil,
+    ux.push(SettingsEditScene(settings_cfgs, settings_values, routines.title(routine_key)),
             / v -> self.settings_closed(routine_key, v))
     return true
   end
@@ -122,12 +122,11 @@ class BrowserScene
   # leads into the routine rather than back to the browser's rows.
   def settings_closed(routine_key, settings_values)
     routines.save_settings(routine_key, settings_values)
-    routines.push(routine_key, nil, RoutineActivation(routine_key, settings_values))
+    ux.push(routines.activate(routine_key, settings_values))
   end
 
   def leave()
-    ux.pop(nil)
-    return true
+    return ux.pop()
   end
 
   # The drawing: the chrome from the rows and the window the list holds.

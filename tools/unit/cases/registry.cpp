@@ -296,7 +296,7 @@ TEST_CASE("a launch carries the set the caller stated, held to the record's decl
   SettingValues values;
   values["initial_pressure"] = int32_t(12);
   values["undeclared"] = String("x");
-  REQUIRE(registry.push("ramped_static", values, ux));
+  REQUIRE(registry.activate("ramped_static", values) != nullptr);
 
   CHECK_EQ(std::string(launched.routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(kpaOf(launched.values, "initial_pressure"), 12.0f);
@@ -309,10 +309,8 @@ TEST_CASE("a key nobody registered launches nothing") {
   MemoryLibrary library;
   RecordingLogger logger;
   RoutineRegistry registry(library, logger);
-  NoPresses gestures;
-  Ux ux;
 
-  CHECK_FALSE(registry.push("nobody", SettingValues(), ux));
+  CHECK(registry.activate("nobody", SettingValues()) == nullptr);
 }
 
 TEST_CASE("a row holds a value of its own kind and refuses another") {

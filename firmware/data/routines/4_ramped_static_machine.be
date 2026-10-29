@@ -143,7 +143,7 @@ class RampedStaticMachine
   # Cancel held to a double: release the chamber and give the panel back.
   def leave()
     vacuum.stop()
-    ux.pop(nil)
+    ux.pop()
     return true
   end
 

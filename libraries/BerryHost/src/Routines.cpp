@@ -45,8 +45,8 @@ const bnfuncinfo ActivationFields[] = {
     {nullptr, nullptr},
 };
 
-// `RoutineActivation(routine_key, settings_values)`: the record `routines.push` hands a page's class,
-// and the one a page builds for its own launch.
+// `RoutineActivation(routine_key, settings_values)`: the record `routines.activate` builds for the
+// page it answers, and the one an image builds for a page it launches itself.
 int activationInit(bvm* vm) {
   if (be_top(vm) >= 2) setValue(vm, 1, "routine_key", 2);
   if (be_top(vm) >= 3) setValue(vm, 1, "settings_values", 3);
@@ -148,6 +148,8 @@ bool settingValue(bvm* vm, int index, std::any& value) {
   return false;
 }
 
+}  // namespace
+
 // A setting's value as a map answers it: the type its row holds it in, and nil for nothing.
 void pushSettingValue(bvm* vm, const std::any& value) {
   if (!value.has_value()) {
@@ -187,14 +189,15 @@ void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
   }
 }
 
-// The set an activation carries, read back into the values a page is handed: each key it holds that
-// a setting can hold, as the type it was written as. A value no setting holds is left out, and the
-// record's declaration answers that setting's default.
-void takeSettingsSet(bvm* vm, int activation, gfx::ui::SettingValues& values) {
+// A map as a set: every key that holds a value a setting can hold, as the type it was written as. A
+// value no setting holds is left out, which is how a refused value falls back to the row's default.
+bool takeSettingMap(bvm* vm, int index, gfx::ui::SettingValues& values) {
+  const int at = be_absindex(vm, index);
   const int base = be_top(vm);
-  if (be_getmember(vm, activation, "settings_values") && pushMap(vm, -1)) {
-    const int map = be_absindex(vm, -1);
-    be_pushiter(vm, map);
+  const bool map = pushMap(vm, at);
+  if (map) {
+    const int source = be_absindex(vm, -1);
+    be_pushiter(vm, source);
     const int iterator = be_absindex(vm, -1);
     while (be_iter_hasnext(vm, iterator)) {
       be_iter_next(vm, iterator);
@@ -206,7 +209,10 @@ void takeSettingsSet(bvm* vm, int activation, gfx::ui::SettingValues& values) {
     }
   }
   be_pop(vm, be_top(vm) - base);
+  return map;
 }
+
+namespace {
 
 // One row of the browser's list, left on the stack as the record itself so the caller can push it
 // onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
@@ -419,27 +425,28 @@ int routinesSettingsCfgs(bvm* vm) {
   be_return(vm);
 }
 
-// routines.push(routine_key, callback, activation): a record's page on the stack, an instance of
-// the class its file registered, built from the activation the caller states — the key this push
-// names and the set the record it was handed carries. Answers whether a page is showing: an
-// unregistered key, a record that names no page and a page whose init raised all answer false with
-// the stack as it was. Nothing answers a callback yet, so the second argument is taken and the
-// stack is handed none.
-int routinesPush(bvm* vm) {
+// routines.activate(routine_key, settings_values): the page a launch builds, an instance of the
+// class its file registered, held in the handle a factory answers so ux.push can take it. The set
+// the caller states is held to the record's declaration, so a setting it leaves out or a row
+// refuses begins at the default. Nil, with the stack untouched, for a key nobody registered, a
+// record that names no page and a page whose init raised.
+int routinesActivate(bvm* vm) {
   if (routines == nullptr) {
-    be_raise(vm, "runtime_error", "routines.push: no panel");
+    be_raise(vm, "runtime_error", "routines.activate: no panel");
   }
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "routines.push: push(routine_key, callback, activation)");
+    be_raise(vm, "type_error", "routines.activate: activate(routine_key, settings_values)");
   }
-  if (be_top(vm) >= 3 && !be_isnil(vm, 3) && !be_isinstance(vm, 3)) {
-    be_raise(vm, "type_error", "routines.push: the activation is a RoutineActivation");
+  if (be_top(vm) >= 2 && !be_isnil(vm, 2) && !be_ismap(vm, 2) && !be_ismapinstance(vm, 2)) {
+    be_raise(vm, "type_error", "routines.activate: settings_values is a map");
   }
-  // The checks are above: a raise below would longjmp past the key's String.
+  // The checks are above: a raise below would longjmp past the key's String and the set.
   const String routineKey(argText(vm, 1));
   gfx::ui::SettingValues values;
-  if (be_top(vm) >= 3 && be_isinstance(vm, 3)) takeSettingsSet(vm, 3, values);
-  be_pushbool(vm, routines->registry().push(routineKey, values, routines->scenes()));
+  if (be_top(vm) >= 2 && !be_isnil(vm, 2)) takeSettingMap(vm, 2, values);
+  std::unique_ptr<gfx::ui::Scene> page = routines->registry().activate(routineKey, values);
+  if (!page) be_return_nil(vm);
+  pushSceneHandle(vm, std::move(page));
   be_return(vm);
 }
 
@@ -450,15 +457,15 @@ const bnfuncinfo RoutinesLibrary[] = {
     {"rows", routinesRows},
     {"title", routinesTitle},
     {"settings_cfgs", routinesSettingsCfgs},
-    {"push", routinesPush},
+    {"activate", routinesActivate},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
 // The module the image registers its routines through: one call to declare a record with the page
-// it names, one to launch that page, the two the page reads and writes its set through, and the
-// three the browser lists them and edits them with.
+// it names, one to build that page for a launch, the two the page reads and writes its set through,
+// and the three the browser lists them and edits them with.
 void installRoutinesModule(bvm* vm) {
   installRecord(vm, ActivationRecord, ActivationFields);
   installRecord(vm, RowRecord, RowFields);

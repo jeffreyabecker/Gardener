@@ -29,6 +29,7 @@ void install(bvm* vm, PanelContext& appContext, Routines& appRoutines, Logger& a
   installDeviceModule(vm);
   installSettingsModule(vm);
   installRoutinesModule(vm);
+  installUxModule(vm);
 }
 
 }  // namespace berry

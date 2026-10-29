@@ -413,9 +413,90 @@ void pushSettingDeclaration(bvm* vm, gfx::ui::SettingsRow* row) {
   be_pop(vm, 1);
 }
 
+namespace {
+
+// Whether the value at `index` is one of the records `routines.settings_cfgs` answers: the class is
+// what tells a declaration a routine's record made from any other object a file could hand the list.
+bool isDeclarationRecord(bvm* vm, int index) {
+  if (!be_isinstance(vm, index)) return false;
+  const char* name = be_classname(vm, index);
+  return name != nullptr && strcmp(name, SettingRecord) == 0;
+}
+
+// The row a declaration record borrows: it is in the comobj the record's `.p` field carries, and the
+// list is read rather than consumed, so the same declarations open a list again.
+gfx::ui::SettingsRow* borrowedRow(bvm* vm, int index) {
+  const int base = be_top(vm);
+  gfx::ui::SettingsRow* row = nullptr;
+  if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
+    RowRef* held = static_cast<RowRef*>(be_tocomptr(vm, -1));
+    if (held != nullptr) row = held->row;
+  }
+  be_pop(vm, be_top(vm) - base);
+  return row;
+}
+
+}  // namespace
+
+// SettingsEditScene(cfgs, values, title): the list a routine's declaration list opens, built from
+// the records `routines.settings_cfgs` answers — the rows they borrow, so nothing is read back from
+// a document — the map the list starts from, and the heading over it; a nil title draws none, and
+// nil declarations draw an empty list. The list answers the set it settled on, which is what a page
+// pushed with it is handed back.
+int settingsEditScene(bvm* vm) {
+  if (context == nullptr || routines == nullptr) {
+    be_raise(vm, "runtime_error", "SettingsEditScene: no panel");
+  }
+  if (be_top(vm) < 2) {
+    be_raise(vm, "type_error", "SettingsEditScene: SettingsEditScene(cfgs, values, title)");
+  }
+  const bool values = !be_isnil(vm, 2);
+  if (values && !be_ismap(vm, 2) && !be_ismapinstance(vm, 2)) {
+    be_raise(vm, "type_error", "SettingsEditScene: values is a map");
+  }
+  const bool titled = be_top(vm) >= 3 && !be_isnil(vm, 3);
+  if (titled && !be_isstring(vm, 3)) {
+    be_raise(vm, "type_error", "SettingsEditScene: the title is a string");
+  }
+  // Every check runs before the first row is read, so a refused call changes nothing.
+  const int base = be_top(vm);
+  const bool listed = !be_isnil(vm, 1);
+  if (listed && !pushItems(vm, 1)) {
+    be_raise(vm, "type_error", "SettingsEditScene: cfgs is a list of declarations");
+  }
+  const int list = listed ? be_absindex(vm, -1) : -1;
+  const int count = listed ? be_data_size(vm, list) : 0;
+  for (int i = 0; i < count; i++) {
+    be_pushint(vm, i);
+    be_getindex(vm, list);
+    const bool declaration = isDeclarationRecord(vm, -1);
+    be_pop(vm, 2);  // the entry and the index the read left under it
+    if (!declaration) {
+      be_raise(vm, "type_error", "SettingsEditScene: cfgs is a list of declarations");
+    }
+  }
+
+  std::vector<gfx::ui::SettingsRow*> rows;
+  rows.reserve((size_t)count);
+  for (int i = 0; i < count; i++) {
+    be_pushint(vm, i);
+    be_getindex(vm, list);
+    rows.push_back(borrowedRow(vm, -1));
+    be_pop(vm, 2);
+  }
+  gfx::ui::SettingValues held;
+  if (values) takeSettingMap(vm, 2, held);
+  const String title = titled ? String(argText(vm, 3)) : String();
+  std::unique_ptr<gfx::ui::SettingsScene> scene = std::make_unique<gfx::ui::SettingsScene>(
+      routines->presses(), routines->scenes(), title, rows, held);
+  be_pop(vm, be_top(vm) - base);
+  pushSceneHandle(vm, std::move(scene));
+  be_return(vm);
+}
+
 // The `settings` module: the four declaration classes, installed as members so a file reaches a
-// kind through the module rather than through a global of its own, and the record a routine's
-// declarations are read back through.
+// kind through the module rather than through a global of its own, the record a routine's
+// declarations are read back through, and the list a declaration list opens.
 void installSettingsModule(bvm* vm) {
   struct Kind {
     const char* name;
@@ -442,6 +523,12 @@ void installSettingsModule(bvm* vm) {
   be_pop(vm, 1);
 
   installRecord(vm, SettingRecord, SettingFields);
+
+  // The list a declaration list opens, a global because a page names it as one.
+  be_pushntvfunction(vm, settingsEditScene);
+  be_setglobal(vm, "SettingsEditScene");
+  // be_setglobal leaves the value it stored on the stack; the function is done with here.
+  be_pop(vm, 1);
 }
 
 }  // namespace berry

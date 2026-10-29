@@ -134,6 +134,10 @@ class SettingsScene : public Scene {
   // wrote back and what OK hands on.
   SettingValues& values() { return values_; }
 
+  // What the list answers when it pops: the set it settled on. Back and Cancel put the opened set
+  // back before closing, so this is never a set the list abandoned.
+  std::any value() const override { return std::any(values_); }
+
   const String& title() const { return title_; }
   int16_t selected() const { return selected_; }
 

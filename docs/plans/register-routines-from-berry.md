@@ -1,40 +1,15 @@
 # Register a routine from Berry
 
-`/system/browser.be` names `List`, `ux` and `SettingsEditScene`, and none of the three exists, so the
-file does not compile and no browser appears. What is left is the path from a row to a launched,
-editable routine, and the gesture that shows the list; the device's own settings list is another
-plan.
+`/system/browser.be` names `List`, and it does not exist, so the file does not compile and no browser
+appears. What is left is the window its rows move through and the gesture that shows the list; the
+device's own settings list is another plan.
 
 ## What is left
 
 | Call | Used by | What is missing |
 | --- | --- | --- |
-| `SettingsEditScene(cfgs, values, title)` | the browser's Forward and both pages' edit | the settings list as a page |
-| `ux.push`, `ux.pop`, `ux.pop_to_root` | the browser's Forward and Back, the routines' `leave()` and `finish()` | the stack from Berry |
 | `List(6)`, `set`, `move`, `selected_row`, `rows`, `selected`, `first()`, `visible` | the browser's rows | a window over the rows |
 | Home's Up double press | home's gestures | the browser's way in |
-
-## The stack is moved from Berry
-
-`ux.push(page, callback)` shows a page over the one showing, running the callback when it pops and
-handing it what the page answered. `ux.pop()` closes the top page and `ux.pop_to_root()` every page
-above the root, running no callback. Each answers whether a page is showing, a pop at the root answers
-false and leaves it, and the eight-frame cap stays. The nils the image passes these calls are not part
-of the shape, so its call sites come to it.
-
-Checked: Forward shows the settings list over the browser, OK closes it and the browser is showing
-again having read the set it handed back; a run that ends puts home back with no page above it.
-
-## `SettingsEditScene` builds a settings list
-
-`SettingsScene` draws and drives the list the three Forward paths want, with the gestures it already
-has, and nothing in the image can build one. `SettingsEditScene(cfgs, values, title)` builds it from a
-declaration list and a map: each setting starts from the map, or from the declaration's default where
-the map holds nothing, a nil title draws no heading, and the set it settled on answers in the shape
-`save_settings` takes. `ux.push` puts it on the stack.
-
-Checked: Forward on a row edits that value, OK closes the list, and the routine's document holds the
-new value after the launch that follows; Back leaves the document as it was.
 
 ## The browser's rows move through a window
 
@@ -59,8 +34,7 @@ still set; a run under way is stopped before the rows are drawn.
 
 `/system/order`'s comment has home naming `browserScene` in its gestures and `DeviceSettings` in its
 list, and home names neither: the browser is pushed from home, and the device's settings list is
-another plan. A `.be` file resolves a name when it compiles, so whatever answers `SettingsEditScene`
-loads before the browser names it.
+another plan.
 
 ## Deferred
 
@@ -69,10 +43,10 @@ loads before the browser names it.
 
 ## How it is known to hold
 
-1. `python scripts/arduino.py --task build` compiles the calls the module gains and the settings list a
-   declaration list builds.
+1. `python scripts/arduino.py --task build` compiles the window's calls and the gesture it is reached
+   by.
 2. On the device, `python scripts/arduino.py --task upload` and the `[E]` lines: the browser loads and
-   its three rows draw, a row launches, Forward opens the settings list and hands its set back, Up
-   twice on home shows the rows, and no line names a call nothing answers.
+   its three rows draw, Up twice on home shows the rows, a row launches, Forward opens the settings
+   list and hands its set back, and no line names a call nothing answers.
 3. `python tools/berry/check.py` is broken and is not run. `python tools/unit/check.py` builds only
    `libraries/Gfx` and `libraries/Gardener`, so it holds this plan only where a change reaches them.

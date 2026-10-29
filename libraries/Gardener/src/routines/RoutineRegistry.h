@@ -2,12 +2,13 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <vector>
 
 #include <Arduino.h>
 
 #include "routines/Registration.h"
-#include "ui/Ux.h"
+#include "ui/Scene.h"
 
 namespace gardener {
 
@@ -87,12 +88,13 @@ class RoutineRegistry {
   // record declares nothing.
   bool saveSettings(const String& routineKey, gfx::ui::SettingValues& values) const;
 
-  // Push a routine's page, built through its factory from the activation a launch carries: the key
-  // the push names and the set the caller states, held to the record's declaration so a setting the
-  // set leaves out begins at its default. False for a key that is not registered, a record that
-  // names no page, or a page that refused the activation it was handed.
-  bool push(const String& routineKey, const gfx::ui::SettingValues& values, gfx::ui::Ux& ux,
-            gfx::ui::Ux::Callback callback = nullptr) const;
+  // The page a key launches: the record the key names, and the activation its factory is handed —
+  // the key as the caller named it and the caller's set held to the record's declaration, so a
+  // setting the set leaves out or one a row refuses begins at its default. Nothing for a key nobody
+  // registered, a record that names no page, or a page whose init refused the activation. The page
+  // is not put on a stack here: the caller decides where it goes.
+  std::unique_ptr<gfx::ui::Scene> activate(const String& routineKey,
+                                           const gfx::ui::SettingValues& values) const;
 
  private:
   struct Alias {
