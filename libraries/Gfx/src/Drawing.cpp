@@ -102,6 +102,14 @@ Paint inverted(Paint content) {
   };
 }
 
+Paint underlay(Paint child) {
+  if (!child) return Paint();
+  return [child](Canvas& canvas) {
+    canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Paper));
+    child(canvas);
+  };
+}
+
 Paint progressBar(Rect box, float value) {
   if (value < 0.0f) value = 0.0f;
   if (value > 100.0f) value = 100.0f;

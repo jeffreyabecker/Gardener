@@ -164,6 +164,24 @@ TEST_CASE("an inverted paint with nothing to draw draws nothing") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
 }
 
+TEST_CASE("an underlay clears the cell the child draws in") {
+  reset();
+  canvas.draw(shapes::FillRect(0, 0, 20, 8, Ink));
+  const Paint child = [](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); };
+  Canvas band = canvas.child(Rect(0, 0, 20, 8));
+  underlay(child)(band);
+  CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8);
+  CHECK_EQ(display.inkCount(10, 0, 10, 8), 0);
+}
+
+TEST_CASE("an underlay with nothing to draw clears nothing") {
+  reset();
+  canvas.draw(shapes::FillRect(0, 0, 20, 8, Ink));
+  const Paint nothing = underlay(Paint());
+  CHECK(!nothing);
+  CHECK_EQ(display.inkCount(0, 0, 20, 8), 20 * 8);
+}
+
 }  // namespace
 
 }  // namespace gardener::gfx::test

@@ -54,6 +54,11 @@ Paint icon(Rect box, const char* glyph);
 // reads as paper on ink. An empty content stays empty and inverts nothing.
 Paint inverted(Paint content);
 
+// A paint that clears the whole canvas it was given to paper and then runs the child on it, so a
+// component that inks only some of its cell sits on paper rather than over what was already there.
+// An empty child stays empty and clears nothing.
+Paint underlay(Paint child);
+
 // A framed bar filled to a percentage: the outline is `box` and the fill is its inside. A value
 // outside 0 … 100 is held to the end it passed.
 Paint progressBar(Rect box, float value);
