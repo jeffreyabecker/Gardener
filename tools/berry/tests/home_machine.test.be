@@ -15,7 +15,7 @@ end
 
 def an_idle_machine_has_no_clock()
   var machine = HomeMachine()
-  machine.advance(vacuum.now_ms())
+  machine.advance(device.now_ms())
   assert_eq(machine.phase, HomePhase.IDLE, "a fresh machine is not idle")
   assert_nil(machine.elapsed(), "an idle machine is showing a run clock")
 end

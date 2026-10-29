@@ -203,11 +203,12 @@ bool takeSettingMap(bvm* vm, int index, gfx::ui::SettingValues& values) {
   const int base = be_top(vm);
   const bool map = pushMap(vm, at);
   if (map) {
+    // The map the entries are read from; the iterator the API walks it with is the value on top of the
+    // stack, which is why it is the map, not that value, that is handed to the two calls below.
     const int source = be_absindex(vm, -1);
     be_pushiter(vm, source);
-    const int iterator = be_absindex(vm, -1);
-    while (be_iter_hasnext(vm, iterator)) {
-      be_iter_next(vm, iterator);
+    while (be_iter_hasnext(vm, source)) {
+      be_iter_next(vm, source);
       std::any value;
       if (be_isstring(vm, -2) && settingValue(vm, -1, value)) {
         values[String(argText(vm, -2))] = std::move(value);

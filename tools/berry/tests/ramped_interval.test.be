@@ -168,8 +168,8 @@ def activating_places_the_target_without_starting()
   var under = cycle_page("interval", settings)
   harness.beat(1)
 
-  assert_eq(vacuum.state().target, 15.0, "activate did not place the target")
-  assert_eq(vacuum.state().state, "IDLE", "activate started the machine")
+  assert_eq(vacuum.get_target_pressure(), 15.0, "activate did not place the target")
+  assert_eq(vacuum.state(), "IDLE", "activate started the machine")
   assert_eq(under[1].started, 0, "activate told the machine to start")
 end
 
