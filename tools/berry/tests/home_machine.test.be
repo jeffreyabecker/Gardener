@@ -6,8 +6,10 @@ suite = "home_machine"
 
 # A start on the beat after whatever the case before left queued: the runner stops the chamber before
 # every case, and a start asked for in the same beat as that stop is a no-op against a release that
-# has not finished yet.
+# has not finished yet. The target is the one a page places when it activates: the seed stores none, so
+# a start against the ambient target would be a release rather than a pull.
 def start_machine(machine)
+  vacuum.set_target_pressure(20.0)
   harness.beat(1)
   machine.handle_command("start")
   return machine
@@ -28,7 +30,7 @@ def a_start_runs_the_chamber_and_the_clock()
               / -> machine.phase == HomePhase.RUNNING)
   assert_true(machine.elapsed() != nil, "a running machine shows no clock")
   var s = vacuum.state()
-  assert_true(s.state == "PULL" || s.state == "HOLD", "a running machine is not on the pump")
+  assert_true(s == "PULL" || s == "HOLD", "a running machine is not on the pump")
 end
 
 test("OK runs the chamber and the clock with it", a_start_runs_the_chamber_and_the_clock)
