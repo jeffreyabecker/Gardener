@@ -44,15 +44,33 @@ VM. That is the whole of what reaches it, so a document, an `assets/` image, or 
 when the answer is nothing — no Berry edit since the last check, or a check that already passed on
 this tree — don't run it. One check after a change that can break a routine is the verification.
 
-A commit runs nothing: when told to commit, read `git status --short`, stage the tree and write the
-message, and don't build, test or review the diff on the way.
+## Committing
+
+**Committing means commit.** When you are told to commit, it is `git status --short`, `git add -A`
+and one `git commit`: the whole tree as it stands, in the message style below, and it should take the
+time three commands take. A commit runs nothing — no build, no test, no lint, and no read of the diff
+to satisfy yourself the tree is good. If the tree holds work you did not write, that is still the
+tree. Don't split one request into a tidier series of commits, don't revert files to make a commit
+look smaller, and don't amend a commit that already landed.
+
+**Read the tree before you describe it.** `git status --short` comes first because it answers what
+the commit is: what is staged, what is not, and whether the work you meant to describe is still
+there. The tree moves between calls — work lands from another terminal, a commit from another session
+— so open a diff only when the message needs it to name the change, and stop at what names it.
+
+**The message has a shape.** The subject is one imperative sentence, capitalised, with no scope,
+ticket or type prefix and no trailing full stop, and it stays under about 65 characters. Then a blank
+line and a body of plain paragraphs wrapped at 100 columns: what was there before, what replaces it
+and why, naming the files, types and behaviours it touches. No bullets, no headings, no backticks,
+and no summary, test-plan or checklist sections. End with the history's trailer,
+`Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
 
 ## Skills
 
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
-`.github/skills/cpp/`; Git practice, and every place work is written down — spec, plan, idea document,
-backlog and parking-lot line — is in `.github/skills/project/`; writing the Berry data image is in
-`.github/skills/berry/`, with its host check under `tools/berry/`.
+`.github/skills/cpp/`; documentation practice — spec, plan, idea document, backlog and parking-lot
+line — is in `.github/skills/project/`; writing the Berry data image is in `.github/skills/berry/`,
+with its host check under `tools/berry/`.
 
 ## Where to look
 

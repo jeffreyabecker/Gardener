@@ -1,45 +1,14 @@
 ---
 name: project
-description: 'Gardener documentation and Git practice: how to commit, and what the spec, the idea document, the plan, the backlog and the parking-lot line are each for — where each lives and when it goes. A spec describes the present, an idea a possible future, a plan the design that gets there, and a backlog the steps of that plan. Use when asked to commit, when editing the README or anything under docs/, or when deciding where a note about work belongs.'
+description: 'Gardener documentation practice: what the spec, the idea document, the plan, the backlog and the parking-lot line are each for — where each lives and when it goes. A spec describes the present, an idea a possible future, a plan the design that gets there, and a backlog the steps of that plan. Use when editing the README or anything under docs/, or when deciding where a note about work belongs.'
 ---
 
 # Project
 
 ## When to use
 
-- Asked to commit
 - Writing, changing or deleting anything under `docs/`, or editing `README.md`
 - Deciding where a piece of work belongs before writing anything down
-
-## Committing
-
-**Committing means commit.** When you are told to commit, it is `git status --short`, `git add -A`
-and one `git commit`: the whole tree as it stands, in the message style below. That is the task, and
-it should take the time three commands take.
-
-**Look at the tree before you describe it.** `git status --short` comes first because it answers
-what the commit is: what is staged, what is not, and whether the work you meant to describe is still
-there. The tree moves between calls — work lands from another terminal, a commit from another
-session — so the index you saw a minute ago is no evidence of the one in front of you. Open a diff
-only when the message needs it to name the change, and stop at what names it. When a diff comes back
-empty where you expected files, `status` is the question to ask; repeating the same query, quoted or
-narrowed, only says nothing twice.
-
-**A commit runs nothing.** No build, no test, no lint, no file-by-file read of the diff to satisfy
-yourself the tree is good, and no check of whether someone else's unstaged work compiles. Whatever
-is in the tree was verified when it was made; verifying it again belongs to the change, not to the
-commit. If the tree holds work you did not write, that is still the tree — stage it and describe it
-in the message.
-
-Don't split one request into a tidier series of commits, and never revert files to rebuild an
-intermediate state so that a commit looks smaller. Don't amend a commit that already landed.
-
-**The message has a shape.** The subject is one imperative sentence, capitalised, with no scope,
-ticket or type prefix and no trailing full stop, and it stays under about 65 characters. Then a
-blank line and a body of plain paragraphs wrapped at 100 columns: what was there before, what
-replaces it and why, naming the files, types and behaviours it touches. No bullets, no headings, no
-backticks, and no summary, test-plan or checklist sections. End with the history's trailer,
-`Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
 
 ## The documents
 
