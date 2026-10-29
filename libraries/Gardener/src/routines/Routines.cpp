@@ -12,12 +12,9 @@
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
 #include "Canvas.h"
-#include "core/Battery.h"
 #include "panel/glass/Overlay.h"
 #include "panel/page/MarkScene.h"
 #include "core/Units.h"
-#include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 #include "core/Library.h"
 
 namespace gardener {
@@ -154,11 +151,8 @@ bool Routines::resetToRoot() {
 }
 
 void Routines::updateOverlay(uint32_t nowMs) {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(
-      panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-  const Battery& battery = panel_->battery();
-  const int8_t percent = battery.present() ? static_cast<int8_t>(battery.percent()) : -1;
+  const SystemState state = panel_->systemState();
+  const int8_t percent = state.batteryPresent ? static_cast<int8_t>(state.batteryPercent) : -1;
 
   // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
   // else touches them and they keep whatever the last frame left.
@@ -167,14 +161,14 @@ void Routines::updateOverlay(uint32_t nowMs) {
   ux_.setOverlay(start,
                     gfx::underlay(gfx::row(1.0f, {
                         gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayUnit(displayUnitInfo(unit).suffix)},
+                                   panel::glass::overlayUnit(displayUnitInfo(state.unit).suffix)},
                         gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayLinks(panel_->serialConnected(),
-                                                              panel_->bluetoothConnected())},
+                                   panel::glass::overlayLinks(state.serialConnected,
+                                                              state.bluetoothConnected)},
                         gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayState(panel_->vacuum().runState(), nowMs)},
+                                   panel::glass::overlayState(state.runState, nowMs)},
                         gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayBattery(percent, battery.low(), nowMs)},
+                                   panel::glass::overlayBattery(percent, state.batteryLow, nowMs)},
                     })));
 }
 

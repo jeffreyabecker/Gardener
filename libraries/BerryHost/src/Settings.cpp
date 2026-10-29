@@ -17,8 +17,6 @@
 #include "core/Units.h"
 #include "panel/page/SettingsRows.h"
 #include "routines/Routines.h"
-#include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -176,14 +174,9 @@ std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
   return std::move(*owner);
 }
 
-// The unit the panel prints pressure in, out of the device's own document: a declaration is made while
-// the panel runs, so a row is built in the unit showing then.
-DisplayUnit displayUnit() {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(
-      context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-  return unit;
-}
+// The unit the panel prints pressure in: a declaration is made while the panel runs, so a row is
+// built in the unit showing then.
+DisplayUnit displayUnit() { return context->systemState().unit; }
 
 void holdRow(bvm* vm, std::unique_ptr<panel::page::SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);

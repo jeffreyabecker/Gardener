@@ -6,7 +6,6 @@
 
 #include "core/Logger.h"
 #include "core/Units.h"
-#include "storage/DeviceConfig.h"
 
 namespace gardener::panel {
 
@@ -18,7 +17,7 @@ bool Panel::boot() {
 
   // The device's own document comes up before the interpreter, which reads it when its modules are
   // installed.
-  config_.begin();
+  settings_.begin();
 
   Logger& log = logger();
 
@@ -38,10 +37,8 @@ bool Panel::boot() {
   log.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   log.info("buttons: four keys on interrupt");
 
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   String stored = "settings: unit=";
-  stored += displayUnitInfo(unit).name;
+  stored += displayUnitInfo(settings_.unit()).name;
   log.info(stored.c_str());
 
   log.info(vmOk ? "vm: ready" : "vm: no memory, routines off");

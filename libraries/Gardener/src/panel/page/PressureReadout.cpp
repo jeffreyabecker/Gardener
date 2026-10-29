@@ -22,16 +22,15 @@ std::string readingText(float pressureKpa, DisplayUnit unit) {
 
 }  // namespace
 
-gfx::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
-                               float sizeHint, const gfx::Font* face, uint8_t scale,
-                               uint8_t secondaryScale) {
-  return [box, &vacuum, unit, sizeHint, face, scale,
-          secondaryScale](gfx::Canvas& canvas) {
+gfx::Paint pressureReadout(gfx::Rect box, const SystemState& state, float sizeHint,
+                               const gfx::Font* face, uint8_t scale, uint8_t secondaryScale) {
+  return [box, state, sizeHint, face, scale, secondaryScale](gfx::Canvas& canvas) {
     // A stopped machine has no chamber reading to show, so the reading is dashes; the target is
     // known either way.
-    const std::string reading =
-        vacuum.running() ? readingText(vacuum.currentPressureKpa(), unit) : std::string("--");
-    const std::string target = readingText(vacuum.targetPressureKpa(), unit);
+    const std::string reading = state.running
+                                    ? readingText(state.currentPressureKpa, state.unit)
+                                    : std::string("--");
+    const std::string target = readingText(state.targetPressureKpa, state.unit);
 
     gfx::Canvas own = canvas.child(box);
     const int16_t width = own.width();
