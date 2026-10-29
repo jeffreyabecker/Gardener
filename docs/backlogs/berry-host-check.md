@@ -25,7 +25,7 @@ what is left is the activation bug and the suites that say the check holds the i
       seconds whichever page shows it.
 - [x] Start the home machine's runs from a target the case places, the way the interval's machine
       suite does, so a home run does not lean on a stored target the seed does not carry.
-- [ ] Assert that the home page's Up-double pushes the browser the image opens from home, in place of
+- [x] Assert that the home page's Up-double pushes the browser the image opens from home, in place of
       the settings list the case still expects.
 
 ## The suites the image has to answer for
