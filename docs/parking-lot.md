@@ -139,3 +139,11 @@ answers the same question for the source it compiles, which would leave the task
 
 The panel build sets BatteryFitted whatever the assembled board carries, so a machine with no gauge
 still reports one. Blocked by: nothing has decided whether that is a build option or a run-time flag.
+
+## An allocator that fails on demand
+
+`be_newcomobj` stores the object it is handed only if its own allocation succeeds, and frees nothing
+when it does not, so an owner or a scene is dropped silently at the moment memory is already short. A
+host build whose allocator fails a chosen allocation would show that and every other path that hands
+ownership over in an argument list. Blocked by: nothing builds one, and the interpreter's check that
+would host it is in a known broken state.
