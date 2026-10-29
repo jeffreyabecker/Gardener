@@ -20,7 +20,7 @@ what is left is the activation bug and the suites that say the check holds the i
       `vacuum.set_target_pressure()`, so no suite names a call the image does not have.
 - [x] Assert the three page suites' drawing through `draw_page()` and the nodes it answers, in place
       of the `chrome` fields no page keeps.
-- [ ] Give the two chrome builders one clock unit and correct the home case that hands 65 000 to a
+- [x] Give the two chrome builders one clock unit and correct the home case that hands 65 000 to a
       builder taking seconds, so a 65-second run draws the string `duration_text` answers for 65
       seconds whichever page shows it.
 - [ ] Start the home machine's runs from a target the case places, the way the interval's machine
