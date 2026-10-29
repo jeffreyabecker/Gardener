@@ -33,7 +33,7 @@ what is left is the activation bug and the suites that say the check holds the i
 - [x] Hold a browser suite: the rows the registry answers, the selected row inverted and no other,
       the first row the window shows once the selection passes the bottom edge, OK launching the
       record's page, Forward opening the settings list and launching on its answer, and Back leaving.
-- [ ] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
+- [x] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
       and the flat ladder the ramp refuses and it does not.
 - [ ] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
       answers, `duration_text`'s string and `--` for a clock that is not running, and `icon` refusing
