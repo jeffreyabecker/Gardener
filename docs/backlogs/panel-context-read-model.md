@@ -11,16 +11,16 @@ order they land. Each one leaves the tree building and the checks the plan named
 
 ## The panel reads one value
 
-- [ ] `PanelContext` replaces `config()`, `vacuum()`, `battery()` and the two connection flags with
+- [x] `PanelContext` replaces `config()`, `vacuum()`, `battery()` and the two connection flags with
       `systemState()`, and `Panel`, `Routines`, `PressureReadout` and the two fakes fold through
       `readSystemState`.
-- [ ] The four `BerryHost` modules read the state, and `device.set_unit` and `device.set_target` are
+- [x] The four `BerryHost` modules read the state, and `device.set_unit` and `device.set_target` are
       deleted with their registration lines.
-- [ ] `Panel` holds the settings object, the serial and BLE domains call its named members, and
+- [x] `Panel` holds the settings object, the serial and BLE domains call its named members, and
       `storage/DeviceConfig.h` is deleted.
-- [ ] A case drives two states through the overlay and compares the frame it sent.
+- [x] A case drives two states through the overlay and compares the frame it sent.
 
 ## Afterwards
 
-- [ ] The parking lot's Berry host dependency line counts two modules rather than four.
+- [x] The parking lot's Berry host dependency line counts two modules rather than four.
 - [ ] This backlog and its plan are deleted.
