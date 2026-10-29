@@ -4,7 +4,7 @@
 
 #include "panel/parts/GestureClassifier.h"
 
-namespace gardener {
+namespace gardener::panel::parts {
 
 GestureClassifier::GestureClassifier(ButtonPanel& buttons) : buttons_(buttons) {
   // A key held at boot is not a press and never joins a gesture: it was down before the first
@@ -116,5 +116,5 @@ String GestureClassifier::update() {
   return gesture;
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts
 #endif

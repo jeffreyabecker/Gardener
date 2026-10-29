@@ -9,7 +9,7 @@
 #include "Drawing.h"
 #include "panel/page/Scene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The scene stack: what is showing, and the request a scene makes of it. A push or a pop asked for
 // from inside a scene's own activate or poll is held and applied once that call returns, because a
@@ -53,15 +53,15 @@ class Ux {
   int16_t depth() const;
 
   // The band's cells, left to right, each in an equal share of the panel's width.
-  void setBand(const std::vector<Paint>& cells);
+  void setBand(const std::vector<gfx::Paint>& cells);
 
   // Whether the band takes any rows of the canvas, which is what the page above it gives up.
   int16_t bandRows() const { return band_.empty() ? 0 : BandHeight; }
 
   // One call into the top scene: its activate() when the page becomes visible, and its poll each
   // beat. Both draw the band after the page has drawn. Answers whether a scene is showing.
-  bool enter(Canvas& canvas, uint32_t nowMs);
-  bool poll(Canvas& canvas, uint32_t nowMs);
+  bool enter(gfx::Canvas& canvas, uint32_t nowMs);
+  bool poll(gfx::Canvas& canvas, uint32_t nowMs);
 
  private:
   enum class Request : uint8_t { None, Push, Pop, ToRoot };
@@ -74,17 +74,17 @@ class Ux {
   // The beat the stack is in. A scene that goes on top outside its own poll — pushed, or
   // re-activated when the one above it pops — paints at once, so the glass never keeps a page the
   // stack has already left; that needs the canvas and the time, which the beat holds here.
-  void beginBeat(Canvas& canvas, uint32_t nowMs);
+  void beginBeat(gfx::Canvas& canvas, uint32_t nowMs);
   void endBeat();
-  Canvas page();
+  gfx::Canvas page();
   void paintScene(Scene* scene);
-  void paintBand(Canvas& canvas);
+  void paintBand(gfx::Canvas& canvas);
 
   std::unique_ptr<Scene> frames_[MaxFrames];
   Callback callbacks_[MaxFrames];
   int16_t depth_ = 0;
-  std::vector<Paint> band_;
-  Canvas* beat_ = nullptr;
+  std::vector<gfx::Paint> band_;
+  gfx::Canvas* beat_ = nullptr;
   uint32_t beatMs_ = 0;
 
   Request pending_ = Request::None;
@@ -94,4 +94,4 @@ class Ux {
   bool polling_ = false;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

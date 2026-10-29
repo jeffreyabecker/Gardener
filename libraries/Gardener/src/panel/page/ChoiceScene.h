@@ -9,7 +9,7 @@
 
 #include "panel/page/EditorScene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // One entry a choice offers: the key the setting stores and the title it prints.
 struct ChoiceItem {
@@ -50,7 +50,7 @@ class ChoiceScene : public EditorScene {
   bool handle(const char* gesture) override;
   void nudge(int8_t direction) override;
   void canceled() override;
-  Paint pageContents() override;
+  gfx::Paint pageContents() override;
 
   // The key the setting holds, and the one it opened on: a kind that shows the same ring another
   // way — the bool's switch — reads these rather than the items.
@@ -67,4 +67,4 @@ class ChoiceScene : public EditorScene {
   bool nullable_;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

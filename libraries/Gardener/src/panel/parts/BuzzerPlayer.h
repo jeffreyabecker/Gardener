@@ -8,7 +8,7 @@
 
 #include "hal/Buzzer.h"
 
-namespace gardener {
+namespace gardener::panel::parts {
 
 // The timed face of the piezo: one tone with a duration, or a sequence of note/duration pairs. It
 // owns the schedule and drives Buzzer, which knows only a frequency and silence. Nothing here
@@ -56,4 +56,4 @@ class BuzzerPlayer {
   bool timed_ = false;
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts

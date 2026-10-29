@@ -3,7 +3,7 @@
 #include "Layout.h"
 #include "Shapes.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 bool Ux::reset(std::unique_ptr<Scene> root) {
   while (depth_ > 0) {
@@ -51,9 +51,9 @@ Scene* Ux::top() const { return depth_ > 0 ? frames_[depth_ - 1].get() : nullptr
 
 int16_t Ux::depth() const { return depth_; }
 
-void Ux::setBand(const std::vector<Paint>& cells) { band_ = cells; }
+void Ux::setBand(const std::vector<gfx::Paint>& cells) { band_ = cells; }
 
-bool Ux::enter(Canvas& canvas, uint32_t nowMs) {
+bool Ux::enter(gfx::Canvas& canvas, uint32_t nowMs) {
   Scene* scene = top();
   if (scene == nullptr) return false;
   beginBeat(canvas, nowMs);
@@ -67,13 +67,13 @@ bool Ux::enter(Canvas& canvas, uint32_t nowMs) {
   return depth_ > 0;
 }
 
-bool Ux::poll(Canvas& canvas, uint32_t nowMs) {
+bool Ux::poll(gfx::Canvas& canvas, uint32_t nowMs) {
   Scene* scene = top();
   if (scene == nullptr) return false;
   beginBeat(canvas, nowMs);
   const bool held = polling_;
   polling_ = true;
-  Canvas own = page();
+  gfx::Canvas own = page();
   scene->poll(own, nowMs);
   polling_ = held;
   apply();
@@ -81,13 +81,13 @@ bool Ux::poll(Canvas& canvas, uint32_t nowMs) {
   return depth_ > 0;
 }
 
-void Ux::beginBeat(Canvas& canvas, uint32_t nowMs) {
+void Ux::beginBeat(gfx::Canvas& canvas, uint32_t nowMs) {
   beat_ = &canvas;
   beatMs_ = nowMs;
 }
 
 void Ux::endBeat() {
-  Canvas* canvas = beat_;
+  gfx::Canvas* canvas = beat_;
   beat_ = nullptr;
   if (canvas == nullptr) return;
   if (depth_ > 0) paintBand(*canvas);
@@ -95,16 +95,16 @@ void Ux::endBeat() {
 
 // The canvas the scenes draw in: the beat's own less the rows the band takes, so a page never draws
 // under the band and never has to know how many rows it gives up.
-Canvas Ux::page() {
+gfx::Canvas Ux::page() {
   const int16_t height = static_cast<int16_t>(beat_->height() - bandRows());
-  return beat_->child(Rect(0, 0, beat_->width(), height < 0 ? 0 : height));
+  return beat_->child(gfx::Rect(0, 0, beat_->width(), height < 0 ? 0 : height));
 }
 
 // A scene that went on top paints at once rather than on its own repaint cadence, which is what
 // keeps the page that popped over from keeping the pixels of the page that left.
 void Ux::paintScene(Scene* scene) {
   if (scene == nullptr || beat_ == nullptr) return;
-  Canvas own = page();
+  gfx::Canvas own = page();
   scene->draw(own, beatMs_);
 }
 
@@ -112,21 +112,21 @@ void Ux::paintScene(Scene* scene) {
 // of the width, left to right, each in a canvas of its own so what it paints is clipped to its cell.
 // The band is opaque — it clears its rows first — because it lies over the bottom of whatever page
 // is showing, and a cell given nothing draws nothing.
-void Ux::paintBand(Canvas& canvas) {
+void Ux::paintBand(gfx::Canvas& canvas) {
   const int16_t rows = bandRows();
   if (rows <= 0) return;
   const int16_t top = static_cast<int16_t>(canvas.height() - rows);
   if (top < 0) return;
-  Canvas band = canvas.child(Rect(0, top, canvas.width(), rows));
-  band.draw(shapes::FillRect(0, 0, band.width(), band.height(), Paper));
+  gfx::Canvas band = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
+  band.draw(gfx::shapes::FillRect(0, 0, band.width(), band.height(), gfx::Paper));
 
   const float share = 1.0f / static_cast<float>(band_.size());
-  std::vector<Child> cells;
+  std::vector<gfx::Child> cells;
   cells.reserve(band_.size());
-  for (const Paint& cell : band_) {
-    cells.push_back(Child{Cell(share, Cell::Whole), cell});
+  for (const gfx::Paint& cell : band_) {
+    cells.push_back(gfx::Child{gfx::Cell(share, gfx::Cell::Whole), cell});
   }
-  row(1.0f, cells)(band);
+  gfx::row(1.0f, cells)(band);
 }
 
 bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {
@@ -205,4 +205,4 @@ void Ux::apply() {
   polling_ = held;
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

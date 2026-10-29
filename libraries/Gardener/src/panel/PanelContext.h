@@ -4,18 +4,25 @@
 
 namespace gardener {
 
-namespace gfx {
-class Canvas;
-class DisplayDevice;
-}  // namespace gfx
-
 class Battery;
-class BuzzerPlayer;
 class Config;
 class Library;
 class Logger;
 class VacuumSystem;
 struct MachineCommand;
+
+}  // namespace gardener
+
+namespace gardener::gfx {
+class Canvas;
+class DisplayDevice;
+}  // namespace gardener::gfx
+
+namespace gardener::panel::parts {
+class BuzzerPlayer;
+}  // namespace gardener::panel::parts
+
+namespace gardener::panel {
 
 // What a routine's native modules reach: the panel's own parts, without the machine's wiring or the
 // links. A Panel is one, and so is the host harness, which composes the same parts with the
@@ -33,7 +40,7 @@ class PanelContext {
   virtual Config& config() = 0;
   virtual VacuumSystem& vacuum() = 0;
   virtual Battery& battery() = 0;
-  virtual BuzzerPlayer& buzzer() = 0;
+  virtual parts::BuzzerPlayer& buzzer() = 0;
   // The interpreter's own files: the modules and routines it compiles, and the data it reads.
   virtual Library& library() = 0;
   virtual Logger& logger() = 0;
@@ -46,4 +53,4 @@ class PanelContext {
   virtual bool post(const MachineCommand& command) = 0;
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel

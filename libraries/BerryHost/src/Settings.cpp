@@ -38,7 +38,7 @@ constexpr const char* ChoiceName = "choice";
 
 // The row belongs to the instance: the comobj owns it and the interpreter frees it with the
 // instance.
-using RowOwner = std::unique_ptr<gfx::ui::SettingsRow>;
+using RowOwner = std::unique_ptr<panel::page::SettingsRow>;
 
 int rowRelease(bvm* vm) {
   delete static_cast<RowOwner*>(be_tocomptr(vm, 1));
@@ -69,7 +69,7 @@ const bnfuncinfo SettingFields[] = {
 // The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
 // box is what the interpreter frees, never the row in it.
 struct RowRef {
-  gfx::ui::SettingsRow* row;
+  panel::page::SettingsRow* row;
 };
 
 int rowRefRelease(bvm* vm) {
@@ -170,7 +170,7 @@ bool isDeclaration(bvm* vm, int index) {
 
 // The row a declaration holds, moved out of it: a declaration that has been taken holds nothing, so
 // one setting is one row on one record.
-std::unique_ptr<gfx::ui::SettingsRow> takeRow(bvm* vm, int index) {
+std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
   be_getmember(vm, index, ".p");
   RowOwner* owner = static_cast<RowOwner*>(be_tocomptr(vm, -1));
   be_pop(vm, 1);
@@ -179,13 +179,14 @@ std::unique_ptr<gfx::ui::SettingsRow> takeRow(bvm* vm, int index) {
 
 // The unit the panel prints pressure in, out of the device's own document: a declaration is made while
 // the panel runs, so a row is built in the unit showing then.
-DisplayUnit displayUnit() {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+panel::glass::DisplayUnit displayUnit() {
+  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+  panel::glass::parseDisplayUnit(
+      context->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   return unit;
 }
 
-void holdRow(bvm* vm, std::unique_ptr<gfx::ui::SettingsRow> row) {
+void holdRow(bvm* vm, std::unique_ptr<panel::page::SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
@@ -205,10 +206,10 @@ void setNumberOrNil(bvm* vm, int record, const char* field, float value) {
 
 // The keys a choice offers, as the list class's instance the image iterates over, and an empty one
 // for a kind that offers none. Left on the stack for the caller to set on a record.
-void pushEntries(bvm* vm, const std::vector<gfx::ui::ChoiceItem>& entries) {
+void pushEntries(bvm* vm, const std::vector<panel::page::ChoiceItem>& entries) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const gfx::ui::ChoiceItem& entry : entries) {
+  for (const panel::page::ChoiceItem& entry : entries) {
     be_pushstring(vm, entry.key.c_str());
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -235,7 +236,7 @@ int numberInit(bvm* vm) {
   requireBool(vm, 10, NumberName, "the whole flag");
 
   const uint8_t decimals = be_tobool(vm, 10) ? 0 : 2;
-  holdRow(vm, std::make_unique<gfx::ui::NumberRow>(
+  holdRow(vm, std::make_unique<panel::page::NumberRow>(
                   routines->presses(), routines->scenes(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   (float)be_toreal(vm, 6), (float)be_toreal(vm, 7), (float)be_toreal(vm, 8),
@@ -256,7 +257,7 @@ int pressureInit(bvm* vm) {
   requireNumber(vm, 6, PressureName, "the step");
   requireBool(vm, 7, PressureName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<PressureRow>(
+  holdRow(vm, std::make_unique<panel::glass::PressureRow>(
                   routines->presses(), routines->scenes(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   displayUnit(), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
@@ -277,7 +278,7 @@ int durationInit(bvm* vm) {
   requireNumber(vm, 8, DurationName, "the upper bound");
   requireBool(vm, 9, DurationName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<gfx::ui::DurationRow>(
+  holdRow(vm, std::make_unique<panel::page::DurationRow>(
                   routines->presses(), routines->scenes(), String(argText(vm, 2)),
                   String(argText(vm, 4)), (int32_t)be_toint(vm, 3), (int32_t)be_toint(vm, 6),
                   (int32_t)be_toint(vm, 7), (int32_t)be_toint(vm, 8), be_tobool(vm, 9)));
@@ -311,13 +312,13 @@ int choiceInit(bvm* vm) {
     }
   }
 
-  std::vector<gfx::ui::ChoiceItem> items;
+  std::vector<panel::page::ChoiceItem> items;
   items.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
     be_getindex(vm, entries);
     be_remove(vm, -2);
-    gfx::ui::ChoiceItem item;
+    panel::page::ChoiceItem item;
     item.key = argText(vm, -1);
     item.title = item.key;
     be_pop(vm, 1);
@@ -325,7 +326,7 @@ int choiceInit(bvm* vm) {
   }
   be_pop(vm, 1);  // the entries
 
-  holdRow(vm, std::make_unique<gfx::ui::ChoiceRow>(
+  holdRow(vm, std::make_unique<panel::page::ChoiceRow>(
                   routines->presses(), routines->scenes(), String(argText(vm, 2)),
                   String(argText(vm, 4)), String(argText(vm, 3)), items, be_tobool(vm, 7)));
   be_return_nil(vm);
@@ -361,7 +362,7 @@ const bnfuncinfo ChoiceMembers[] = {
 // of one of this module's kinds, and each is consumed, since a row belongs to the record that takes
 // it. The checks run before any row is taken, so a list holding anything else raises and leaves
 // every declaration as it was.
-std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int index) {
+std::vector<std::unique_ptr<panel::page::SettingsRow>> takeSettingsRows(bvm* vm, int index) {
   if (!pushItems(vm, index)) {
     be_raise(vm, "type_error", "routines.register: settings is a list of declarations");
   }
@@ -379,7 +380,7 @@ std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int
     }
   }
 
-  std::vector<std::unique_ptr<gfx::ui::SettingsRow>> rows;
+  std::vector<std::unique_ptr<panel::page::SettingsRow>> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
@@ -395,8 +396,8 @@ std::vector<std::unique_ptr<gfx::ui::SettingsRow>> takeSettingsRows(bvm* vm, int
 // The declaration a record holds, as the record a page reads it back through: the row it names,
 // borrowed, with the key, label, kind and the step, bounds and entries that kind was declared with.
 // Left on the stack for the caller to push onto a list.
-void pushSettingDeclaration(bvm* vm, gfx::ui::SettingsRow* row) {
-  const gfx::ui::SettingDeclaration declaration = row->declaration();
+void pushSettingDeclaration(bvm* vm, panel::page::SettingsRow* row) {
+  const panel::page::SettingDeclaration declaration = row->declaration();
   const int record = beginRecord(vm, SettingRecord);
 
   be_newcomobj(vm, new RowRef{row}, rowRefRelease);
@@ -426,9 +427,9 @@ bool isDeclarationRecord(bvm* vm, int index) {
 
 // The row a declaration record borrows: it is in the comobj the record's `.p` field carries, and the
 // list is read rather than consumed, so the same declarations open a list again.
-gfx::ui::SettingsRow* borrowedRow(bvm* vm, int index) {
+panel::page::SettingsRow* borrowedRow(bvm* vm, int index) {
   const int base = be_top(vm);
-  gfx::ui::SettingsRow* row = nullptr;
+  panel::page::SettingsRow* row = nullptr;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
     RowRef* held = static_cast<RowRef*>(be_tocomptr(vm, -1));
     if (held != nullptr) row = held->row;
@@ -477,7 +478,7 @@ int settingsEditScene(bvm* vm) {
     }
   }
 
-  std::vector<gfx::ui::SettingsRow*> rows;
+  std::vector<panel::page::SettingsRow*> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
@@ -485,10 +486,10 @@ int settingsEditScene(bvm* vm) {
     rows.push_back(borrowedRow(vm, -1));
     be_pop(vm, 2);
   }
-  gfx::ui::SettingValues held;
+  panel::page::SettingValues held;
   if (values) takeSettingMap(vm, 2, held);
   const String title = titled ? String(argText(vm, 3)) : String();
-  std::unique_ptr<gfx::ui::SettingsScene> scene = std::make_unique<gfx::ui::SettingsScene>(
+  std::unique_ptr<panel::page::SettingsScene> scene = std::make_unique<panel::page::SettingsScene>(
       routines->presses(), routines->scenes(), title, rows, held);
   be_pop(vm, be_top(vm) - base);
   pushSceneHandle(vm, std::move(scene));

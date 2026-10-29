@@ -9,7 +9,9 @@ struct bvm;
 
 namespace gardener {
 
+namespace panel {
 class PanelContext;
+}  // namespace panel
 
 // A page whose body is Berry: a scene whose activate, handle, tick and draw_page are methods of an
 // instance the interpreter holds. The stack drives it like any other scene, so a page can move to
@@ -29,12 +31,12 @@ class PanelContext;
 // The page answers its drawing rather than making it: draw_page returns the tree the screen module
 // built node by node, and the scene renders it on the canvas it was handed — the page, which is the
 // panel less the band's rows. A page that answers nothing draws nothing.
-class BerryScene : public gfx::ui::Scene {
+class BerryScene : public panel::page::Scene {
  public:
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps
   // it; the caller's stack is left as it was found. The context is the device the page draws about,
   // which is what a pressure readout in its tree needs.
-  BerryScene(gfx::ui::GestureQueue& gestures, bvm* vm, int page, PanelContext& panel);
+  BerryScene(panel::page::GestureQueue& gestures, bvm* vm, int page, panel::PanelContext& panel);
   ~BerryScene() override;
 
   BerryScene(const BerryScene&) = delete;
@@ -67,7 +69,7 @@ class BerryScene : public gfx::ui::Scene {
 
   bvm* vm_ = nullptr;
   // The device the page draws about, held for a pressure readout in the tree it answers.
-  PanelContext& panel_;
+  panel::PanelContext& panel_;
   // Where the page sits in the interpreter's list, or -1 when the scene is holding nothing.
   int slot_ = -1;
   bool broken_ = false;

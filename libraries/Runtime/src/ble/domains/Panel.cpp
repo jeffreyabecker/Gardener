@@ -17,7 +17,7 @@ namespace gardener {
 // The panel's slice of the GATT table, private to the factory at the bottom of this file.
 class PanelBleDomain : public BleDomain {
  public:
-  explicit PanelBleDomain(Panel& panel) : app_(&panel) {}
+  explicit PanelBleDomain(panel::Panel& panel) : app_(&panel) {}
 
   uint8_t specCount() const override;
   Spec specAt(uint8_t index) const override;
@@ -31,7 +31,7 @@ class PanelBleDomain : public BleDomain {
 
   static const Spec Specs[Count];
 
-  Panel* app_;
+  panel::Panel* app_;
   NimBLECharacteristic* characteristics_[Count] = {};
   struct PendingByte {
     volatile bool has = false;
@@ -63,8 +63,9 @@ void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
 void PanelBleDomain::describe(uint8_t index) {
   switch (index) {
     case Unit: {
-      DisplayUnit unit = DisplayUnit::Kpa;
-      parseDisplayUnit(app_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+      panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+      panel::glass::parseDisplayUnit(
+          app_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
       setByte(characteristics_[Unit], static_cast<uint8_t>(unit));
       break;
     }
@@ -90,9 +91,10 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     unitWrite_.has = false;
     // Not notified: one central at a time means the client that wrote it
     // already knows. The read-back is the answer.
-    if (unitWrite_.value < DisplayUnitCount) {
-      const DisplayUnit unit = static_cast<DisplayUnit>(unitWrite_.value);
-      app_->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    if (unitWrite_.value < panel::glass::DisplayUnitCount) {
+      const panel::glass::DisplayUnit unit =
+          static_cast<panel::glass::DisplayUnit>(unitWrite_.value);
+      app_->config().set(DeviceSection, UnitKey, panel::glass::displayUnitInfo(unit).name);
       app_->config().save();
     }
     describe(Unit);
@@ -105,7 +107,7 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
   }
 }
 
-BleDomain* createPanelBleDomain(Panel& panel) { return new PanelBleDomain(panel); }
+BleDomain* createPanelBleDomain(panel::Panel& panel) { return new PanelBleDomain(panel); }
 
 }  // namespace gardener
 

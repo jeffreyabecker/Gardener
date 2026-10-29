@@ -1,6 +1,6 @@
 #pragma once
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // What a page takes its gestures from: the panel's queue behind an interface, so the drawing side
 // names nothing of the machine that fills it. A page takes one gesture at a time, oldest first.
@@ -20,4 +20,4 @@ class GestureQueue {
   GestureQueue() = default;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

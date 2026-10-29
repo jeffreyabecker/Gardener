@@ -73,9 +73,9 @@ release is a double free rather than a reading.
 `be_pcall` that catches it. The modules answer this with a rule — messages in stack buffers, every
 argument check finished before the first `String` is built — and the rule is enforced by review
 alone. One site breaks it today: `routines.save_settings` holds `const String routineKey` and
-`gfx::ui::SettingValues values` when it raises for a value a row refuses, so the string and every
-entry the loop has already put in the map are dropped. It is the one site a read of the boundary
-finds, not the only one there can be, and nothing has ever looked.
+`panel::page::SettingValues values` when it raises for a value a row refuses, so the string and
+every entry the loop has already put in the map are dropped. It is the one site a read of the
+boundary finds, not the only one there can be, and nothing has ever looked.
 
 What is true instead: no native call raises while a `String`, `std::any`, `std::vector` or
 `std::unique_ptr` of its own is alive. Where a call needs one, every check that can raise has

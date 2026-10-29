@@ -34,18 +34,18 @@ void drawOverlayHash(gfx::Canvas& canvas, const gfx::Rect& glass, int16_t top, i
   const int16_t last = static_cast<int16_t>(glass.y + bottom - 1);
 
   for (int16_t y = first; y <= last; y++) {
-    for (int16_t x = left; x <= right; x++) canvas.setPixel(x, y, gfx::ui::Paper);
+    for (int16_t x = left; x <= right; x++) canvas.setPixel(x, y, gfx::Paper);
   }
   for (int16_t x = left; x <= right; x++) {
-    canvas.setPixel(x, first, gfx::ui::Ink);
-    canvas.setPixel(x, last, gfx::ui::Ink);
+    canvas.setPixel(x, first, gfx::Ink);
+    canvas.setPixel(x, last, gfx::Ink);
   }
   for (int16_t y = first; y <= last; y++) {
-    canvas.setPixel(left, y, gfx::ui::Ink);
-    canvas.setPixel(right, y, gfx::ui::Ink);
+    canvas.setPixel(left, y, gfx::Ink);
+    canvas.setPixel(right, y, gfx::Ink);
     for (int16_t x = static_cast<int16_t>(left + (y - first) % HashSpacing); x <= right;
          x = static_cast<int16_t>(x + HashSpacing)) {
-      canvas.setPixel(x, y, gfx::ui::Ink);
+      canvas.setPixel(x, y, gfx::Ink);
     }
   }
 }
@@ -109,7 +109,7 @@ void CaptureDisplay::keepFrame() {
     for (int16_t x = 0; x < width_; x++) {
       if (pixelAt(sent_, stride_, depth_, x, y) == 0) continue;
       canvas.setPixel(static_cast<int16_t>(frame_.glass.x + x),
-                      static_cast<int16_t>(frame_.glass.y + y), gfx::ui::Ink);
+                      static_cast<int16_t>(frame_.glass.y + y), gfx::Ink);
     }
   }
 

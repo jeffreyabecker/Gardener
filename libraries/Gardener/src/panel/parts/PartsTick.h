@@ -5,6 +5,11 @@
 namespace gardener {
 
 class Battery;
+
+}  // namespace gardener
+
+namespace gardener::panel::parts {
+
 class BuzzerPlayer;
 
 // The panel's own parts' beat: the pack gauge and the piezo, updated on the one millisecond the
@@ -21,4 +26,4 @@ class PartsTick {
   BuzzerPlayer& buzzer_;
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts

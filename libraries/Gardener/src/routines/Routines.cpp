@@ -72,7 +72,7 @@ void reportUnlisted(Library& library, Logger& logger, const std::vector<String>&
 
 }  // namespace
 
-bool Routines::begin(PanelContext& context) {
+bool Routines::begin(panel::PanelContext& context) {
   logger_ = &context.logger();
   library_ = &context.library();
   panel_ = &context;
@@ -147,22 +147,23 @@ void Routines::show() { panel_->canvas().flush(panel_->display()); }
 // under it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return stack_.reset(nullptr);
-  if (std::unique_ptr<gfx::ui::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
+  if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
     if (stack_.reset(std::move(page))) return true;
   }
-  return stack_.reset(std::make_unique<MarkScene>(gestures_));
+  return stack_.reset(std::make_unique<panel::glass::MarkScene>(gestures_));
 }
 
 void Routines::updateBand(uint32_t nowMs) {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+  panel::glass::parseDisplayUnit(
+      panel_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   const Battery& battery = panel_->battery();
   const int8_t percent = battery.present() ? static_cast<int8_t>(battery.percent()) : -1;
   stack_.setBand({
-      bandUnit(displayUnitInfo(unit).suffix),
-      bandLinks(panel_->serialConnected(), panel_->bluetoothConnected()),
-      bandState(panel_->vacuum().runState(), nowMs),
-      bandBattery(percent, battery.low(), nowMs),
+      panel::glass::bandUnit(panel::glass::displayUnitInfo(unit).suffix),
+      panel::glass::bandLinks(panel_->serialConnected(), panel_->bluetoothConnected()),
+      panel::glass::bandState(panel_->vacuum().runState(), nowMs),
+      panel::glass::bandBattery(percent, battery.low(), nowMs),
   });
 }
 

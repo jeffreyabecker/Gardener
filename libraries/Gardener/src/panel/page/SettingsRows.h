@@ -13,7 +13,7 @@
 #include "panel/page/NumberScene.h"
 #include "panel/page/SettingsScene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The rows a settings list is built from, one class per value kind: each prints the kind's value
 // the way the list prints a row and builds the scene that edits it. A row carries the rules of its
@@ -157,4 +157,4 @@ class NumberRow : public SettingsRow {
   uint8_t decimals_;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

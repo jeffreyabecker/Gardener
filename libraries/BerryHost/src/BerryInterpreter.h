@@ -13,10 +13,10 @@ class Logger;
 // through.
 class BerryInterpreter : public Interpreter {
  public:
-  bool begin(PanelContext& context, Routines& routines) override;
+  bool begin(panel::PanelContext& context, Routines& routines) override;
   bool load(const String& path, const String& source) override;
-  std::unique_ptr<gfx::ui::Scene> rootScene(gfx::ui::GestureQueue& gestures,
-                                            PanelContext& panel) override;
+  std::unique_ptr<panel::page::Scene> rootScene(panel::page::GestureQueue& gestures,
+                                            panel::PanelContext& panel) override;
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after
   // the image has loaded and reads the heap it holds.

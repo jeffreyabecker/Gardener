@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace gardener {
+namespace gardener::panel::glass {
 namespace {
 
 // A reading as the panel prints it: the unit's scale, and the decimals the unit's fine step can
@@ -22,7 +22,7 @@ std::string readingText(float pressureKpa, DisplayUnit unit) {
 
 }  // namespace
 
-gfx::ui::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
+gfx::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
                                float sizeHint, const gfx::Font* face, uint8_t scale,
                                uint8_t secondaryScale) {
   return [box, &vacuum, unit, sizeHint, face, scale,
@@ -42,17 +42,17 @@ gfx::ui::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit 
     if (sizeHint >= 1.0f) {
       gfx::Canvas left = own.child(gfx::Rect(0, 0, halfWidth, height));
       gfx::Canvas right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
-      gfx::ui::drawCentred(left, reading.c_str(), face, scale);
-      gfx::ui::drawCentred(right, target.c_str(), face, scale);
+      gfx::drawCentred(left, reading.c_str(), face, scale);
+      gfx::drawCentred(right, target.c_str(), face, scale);
       return;
     }
 
-    gfx::ui::drawCentred(own, reading.c_str(), face, scale);
+    gfx::drawCentred(own, reading.c_str(), face, scale);
     gfx::Canvas corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
                                              height - halfHeight));
-    gfx::ui::drawCentred(corner, target.c_str(), face, secondaryScale);
+    gfx::drawCentred(corner, target.c_str(), face, secondaryScale);
   };
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass
 #endif

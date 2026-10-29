@@ -4,17 +4,17 @@
 
 #include "Drawing.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // One row of the built-in face, which is the pitch the rows and the heading are drawn at.
 constexpr int16_t Row = 8;
 
 // The row as the list prints it: the setting's label, an equals sign and the value it holds now.
-Paint rowText(const SettingsRow& setting, const std::any& value) {
+gfx::Paint rowText(const SettingsRow& setting, const std::any& value) {
   const String printed = setting.label() + "=" + setting.text(value);
-  return [printed](Canvas& row) {
-    text(Rect(0, 0, row.width(), Row), printed.c_str(), nullptr, 1)(row);
+  return [printed](gfx::Canvas& row) {
+    gfx::text(gfx::Rect(0, 0, row.width(), Row), printed.c_str(), nullptr, 1)(row);
   };
 }
 
@@ -90,13 +90,13 @@ void SettingsScene::open() {
 // The heading, when the list has one, and the rows under it one built-in row each: the window
 // scrolled to keep the row the keys are on in view, that row inverted across the width, and the
 // scrollbar down the right of the rows when they do not all fit.
-void SettingsScene::drawPage(Canvas& canvas) {
+void SettingsScene::drawPage(gfx::Canvas& canvas) {
   const int16_t heading = title_.isEmpty() ? 0 : Row;
   if (heading > 0) {
-    text(Rect(0, 0, canvas.width(), Row), title_.c_str(), nullptr, 1)(canvas);
+    gfx::text(gfx::Rect(0, 0, canvas.width(), Row), title_.c_str(), nullptr, 1)(canvas);
   }
   if (rows_.empty()) return;
-  Canvas band = canvas.child(Rect(0, heading, canvas.width(), canvas.height() - heading));
+  gfx::Canvas band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
   const int16_t count = static_cast<int16_t>(rows_.size());
   int16_t visible = static_cast<int16_t>(band.height() / Row);
   if (visible < 1) visible = 1;
@@ -104,18 +104,18 @@ void SettingsScene::drawPage(Canvas& canvas) {
   const int16_t first = selected_ >= visible ? static_cast<int16_t>(selected_ - visible + 1) : 0;
   const bool scrolls = count > visible;
   const int16_t rowsWidth =
-      scrolls ? static_cast<int16_t>(band.width() - ScrollbarColumn) : band.width();
+      scrolls ? static_cast<int16_t>(band.width() - gfx::ScrollbarColumn) : band.width();
   for (int16_t line = 0; line < visible; line++) {
     const int16_t at = static_cast<int16_t>(first + line);
     SettingsRow* row = rows_[at];
     if (row == nullptr) continue;
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
-    Canvas cell = band.child(Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
+    gfx::Canvas cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
     rowText(*row, value)(cell);
-    if (at == selected_) cell.invert(Rect(0, 0, cell.width(), Row));
+    if (at == selected_) cell.invert(gfx::Rect(0, 0, cell.width(), Row));
   }
-  if (scrolls) drawScrollbar(band, first, count, visible);
+  if (scrolls) gfx::drawScrollbar(band, first, count, visible);
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

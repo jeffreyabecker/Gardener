@@ -6,16 +6,17 @@
 
 #include "machine/Machine.h"
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 // The step is the unit's whole step converted to the kPa the value is held in, so the editor moves
 // by what the glass reads rather than by a kilopascal.
-PressureScene::PressureScene(gfx::ui::GestureQueue& gestures, gfx::ui::Ux& ux, String& label,
-                             float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable)
+PressureScene::PressureScene(panel::page::GestureQueue& gestures, panel::page::Ux& ux,
+                             String& label, float currentKpa, DisplayUnit unit, float wholeSteps,
+                             bool nullable)
     : NumberScene(gestures, ux, label, currentKpa,
                   wholeSteps * displayUnitInfo(unit).wholeStep / displayUnitInfo(unit).perKpa,
                   CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable,
                   [unit](float pressureKpa) { return displayText(pressureKpa, unit); }) {}
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass
 #endif

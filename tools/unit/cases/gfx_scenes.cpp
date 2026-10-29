@@ -22,7 +22,7 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::gfx::ui;
+using namespace gardener::panel::page;
 
 // What a case watches a scene by. The stack owns its scenes, so a scene that pops is gone: a case
 // reads what it did from counts that live outside it.

@@ -14,7 +14,7 @@
 #include "routines/Routines.h"
 #include "storage/Config.h"
 
-namespace gardener {
+namespace gardener::panel {
 
 // The panel's half of the rig. The machine's three pins come first, then the display bus, the
 // piezo, the gauge, and the three lines the key register needs. The sketch names them and the
@@ -41,7 +41,7 @@ struct PanelPins {
 class Panel : public Machine, public PanelContext {
  public:
   Panel(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve,
-        ButtonPanel* buttons, BuzzerPlayer* buzzer, Battery* battery,
+        ButtonPanel* buttons, parts::BuzzerPlayer* buzzer, Battery* battery,
         gfx::DisplayDevice* display, Library& library, Routines* routines, CommandQueue& queue)
       : Machine(logger, pump, sensor, valve),
         outbox_(queue),
@@ -67,8 +67,8 @@ class Panel : public Machine, public PanelContext {
   bool boot();
 
   ButtonPanel& buttons() { return *buttons_; }
-  GestureClassifier& gestures() { return gestures_; }
-  BuzzerPlayer& buzzer() override { return *buzzer_; }
+  parts::GestureClassifier& gestures() { return gestures_; }
+  parts::BuzzerPlayer& buzzer() override { return *buzzer_; }
   Battery& battery() override { return *battery_; }
   // The machine's own reads, named again so the context's virtuals resolve to one function.
   VacuumSystem& vacuum() override { return Machine::vacuum(); }
@@ -87,8 +87,8 @@ class Panel : public Machine, public PanelContext {
  private:
   CommandOutbox outbox_;
   ButtonPanel* buttons_;
-  GestureClassifier gestures_;
-  BuzzerPlayer* buzzer_;
+  parts::GestureClassifier gestures_;
+  parts::BuzzerPlayer* buzzer_;
   Battery* battery_;
   // The device's document, ahead of the display and of the interpreter that reads it.
   Config config_;
@@ -99,4 +99,4 @@ class Panel : public Machine, public PanelContext {
   Library& library_;
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel

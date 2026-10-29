@@ -17,7 +17,7 @@
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The values a settings list holds, keyed by setting key: what an editor wrote back and what OK
 // hands on.
@@ -143,7 +143,7 @@ class SettingsScene : public Scene {
 
  protected:
   bool handle(const char* gesture) override;
-  void drawPage(Canvas& canvas) override;
+  void drawPage(gfx::Canvas& canvas) override;
 
  private:
   void move(int8_t direction);
@@ -157,4 +157,4 @@ class SettingsScene : public Scene {
   int16_t selected_ = 0;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

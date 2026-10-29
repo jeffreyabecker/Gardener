@@ -26,10 +26,10 @@ constexpr uint32_t PanelBeatMs = 10;
 
 // The panel task's own state: the machine it drives and the three beats it steps.
 struct PanelState {
-  Panel& context;
-  ButtonsTick& buttons;
-  PartsTick& parts;
-  PageTick& page;
+  panel::Panel& context;
+  panel::parts::ButtonsTick& buttons;
+  panel::parts::PartsTick& parts;
+  panel::parts::PageTick& page;
 };
 
 }  // namespace
@@ -64,11 +64,11 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(Panel& context) {
-  static ButtonsTick buttons{context.gestures(), context.routines(), context.outbox(),
+void spawnPanelTask(panel::Panel& context) {
+  static panel::parts::ButtonsTick buttons{context.gestures(), context.routines(), context.outbox(),
                              context.logger()};
-  static PartsTick parts{context.battery(), context.buzzer()};
-  static PageTick page{context.routines()};
+  static panel::parts::PartsTick parts{context.battery(), context.buzzer()};
+  static panel::parts::PageTick page{context.routines()};
   static PanelState panel{context, buttons, parts, page};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,

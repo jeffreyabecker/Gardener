@@ -8,36 +8,37 @@
 #include "Drawing.h"
 #include "Layout.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // The face the two fields are drawn at.
 constexpr uint8_t FieldScale = 2;
 
-Alignment centred() {
-  Alignment alignment;
-  alignment.horizontal = Horizontal::Center;
-  alignment.vertical = Vertical::Center;
+gfx::Alignment centred() {
+  gfx::Alignment alignment;
+  alignment.horizontal = gfx::Horizontal::Center;
+  alignment.vertical = gfx::Vertical::Center;
   return alignment;
 }
 
 // A string centred across and down the canvas it is drawn on, at the face and scale it is given.
-Paint centredText(const char* value) {
-  return [value](Canvas& canvas) { drawCentred(canvas, value, nullptr, FieldScale); };
+gfx::Paint centredText(const char* value) {
+  return [value](gfx::Canvas& canvas) { gfx::drawCentred(canvas, value, nullptr, FieldScale); };
 }
 
 // One field of the pair: its title centred in an equal share of the row, and that title inverted
 // when it is the field the keys are stepping. The inner column is what centres the title's own ink
 // inside the share, so the inverted box is the field rather than the whole cell.
-Child field(const char* title, bool showing) {
-  const shapes::TextBox ink = shapes::measureText(nullptr, title, FieldScale);
-  const Paint label = [title, showing, ink](Canvas& own) {
-    text(Rect(0, 0, ink.width, ink.height), title, nullptr, FieldScale)(own);
-    if (showing) own.invert(Rect(0, 0, ink.width, ink.height));
+gfx::Child field(const char* title, bool showing) {
+  const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, title, FieldScale);
+  const gfx::Paint label = [title, showing, ink](gfx::Canvas& own) {
+    gfx::text(gfx::Rect(0, 0, ink.width, ink.height), title, nullptr, FieldScale)(own);
+    if (showing) own.invert(gfx::Rect(0, 0, ink.width, ink.height));
   };
-  const Child centredLabel{Cell(static_cast<float>(ink.width), static_cast<float>(ink.height)),
-                           label};
-  return Child{Cell(0.5f, 1.0f), column(1.0f, {centredLabel}, centred())};
+  const gfx::Child centredLabel{gfx::Cell(static_cast<float>(ink.width),
+                                          static_cast<float>(ink.height)),
+                                label};
+  return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::column(1.0f, {centredLabel}, centred())};
 }
 
 }  // namespace
@@ -73,7 +74,7 @@ int32_t DurationScene::held(int32_t seconds) const {
 String DurationScene::text() const {
   if (!hasValue()) return "--";
   char printed[16];
-  durationText(DurationFormat::Minutes, whole(), true, printed, sizeof(printed));
+  gfx::durationText(gfx::DurationFormat::Minutes, whole(), true, printed, sizeof(printed));
   return String(printed);
 }
 
@@ -130,14 +131,14 @@ void DurationScene::canceled() { current_ = opened_; }
 
 // The two fields side by side, each an equal share of the band, with the one the keys are stepping
 // inverted. A setting holding nothing has no fields to show, so the band prints `--`.
-Paint DurationScene::pageContents() {
+gfx::Paint DurationScene::pageContents() {
   if (!hasValue()) {
     return centredText("--");
   }
   minutes_ = minutesText();
   seconds_ = secondsText();
   const bool minutes = stage_ == Stage::Minutes;
-  return row(1.0f, {field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes)});
+  return gfx::row(1.0f, {field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes)});
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

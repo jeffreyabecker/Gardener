@@ -8,7 +8,7 @@
 #include "panel/glass/Units.h"
 #include "storage/DeviceConfig.h"
 
-namespace gardener {
+namespace gardener::panel {
 
 // The panel's side of bring-up: the machine's parts first, then the panel's — the display, the gauge
 // and buzzer, and the interpreter. The bus the display sits on, the links, the screens and the panel
@@ -38,10 +38,10 @@ bool Panel::boot() {
   log.info(batteryOk ? "batt: gauge ready" : "batt: no sense pin, gauge off");
   log.info("buttons: four keys on interrupt");
 
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  glass::DisplayUnit unit = glass::DisplayUnit::Kpa;
+  glass::parseDisplayUnit(config_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   String stored = "settings: unit=";
-  stored += displayUnitInfo(unit).name;
+  stored += glass::displayUnitInfo(unit).name;
   log.info(stored.c_str());
 
   log.info(vmOk ? "vm: ready" : "vm: no memory, routines off");
@@ -49,5 +49,5 @@ bool Panel::boot() {
   return displayOk;
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel
 #endif

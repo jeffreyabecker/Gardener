@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace gardener::gfx::ui {
+namespace gardener::gfx {
 namespace {
 
 // A share of one or less is multiplied out; above that the number is a pixel count.
@@ -121,4 +121,4 @@ Paint column(float widthPct, const std::vector<Child>& children, Alignment align
   return arrange(Cell(widthPct, 1.0f), children, alignment, Direction::Down);
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::gfx

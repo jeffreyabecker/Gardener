@@ -20,12 +20,12 @@
 namespace gardener {
 namespace {
 
-using gfx::ui::Alignment;
-using gfx::ui::Cell;
-using gfx::ui::Child;
-using gfx::ui::Horizontal;
-using gfx::ui::Paint;
-using gfx::ui::Vertical;
+using gfx::Alignment;
+using gfx::Cell;
+using gfx::Child;
+using gfx::Horizontal;
+using gfx::Paint;
+using gfx::Vertical;
 
 // --- reading a node --------------------------------------------------------
 //
@@ -127,10 +127,10 @@ const gfx::Font* faceOf(bvm* vm, int node) {
   return face;
 }
 
-gfx::ui::DurationFormat formatOf(const char* name) {
-  if (name != nullptr && strcmp(name, "seconds") == 0) return gfx::ui::DurationFormat::Seconds;
-  if (name != nullptr && strcmp(name, "hours") == 0) return gfx::ui::DurationFormat::Hours;
-  return gfx::ui::DurationFormat::Minutes;
+gfx::DurationFormat formatOf(const char* name) {
+  if (name != nullptr && strcmp(name, "seconds") == 0) return gfx::DurationFormat::Seconds;
+  if (name != nullptr && strcmp(name, "hours") == 0) return gfx::DurationFormat::Hours;
+  return gfx::DurationFormat::Minutes;
 }
 
 // Where a layout puts what it holds: the two names of the alignment record, the left and the top
@@ -157,7 +157,7 @@ Alignment alignmentOf(bvm* vm, int node) {
   return alignment;
 }
 
-Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit);
+Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::DisplayUnit unit);
 
 // The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
 // interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
@@ -176,7 +176,8 @@ bool pushItems(bvm* vm, int index) {
 
 // The [bounds, draw] pairs a layout holds, as the layout's own children: the cell each declares and
 // the paint each answers. A child that is not a pair is skipped rather than raised on.
-std::vector<Child> childrenOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
+std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
+                              panel::glass::DisplayUnit unit) {
   std::vector<Child> children;
 
   be_getmember(vm, node, "children");
@@ -225,7 +226,7 @@ std::vector<Child> childrenOf(bvm* vm, int node, PanelContext& panel, DisplayUni
 
 // The node as the paint it describes. A kind the drawing has no case for answers an empty paint,
 // which is a node that draws nothing.
-Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
+Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, panel::glass::DisplayUnit unit) {
   if (!be_isinstance(vm, node)) return Paint();
   const char* kind = textField(vm, node, "kind");
   if (kind == nullptr) return Paint();
@@ -236,7 +237,7 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     const gfx::Font* face = faceOf(vm, node);
     const uint8_t scale = (uint8_t)intField(vm, node, "scale");
     return leaf(box, [value, face, scale](const gfx::Rect& rect) {
-      return gfx::ui::text(rect, value, face, scale);
+      return gfx::text(rect, value, face, scale);
     });
   }
 
@@ -248,7 +249,7 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     return leaf(box, [value, face, scale](const gfx::Rect& rect) {
       return Paint([rect, value, face, scale](gfx::Canvas& canvas) {
         gfx::Canvas own = canvas.child(rect);
-        gfx::ui::drawCentred(own, value, face, scale);
+        gfx::drawCentred(own, value, face, scale);
       });
     });
   }
@@ -259,14 +260,14 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     // holding — the same lifetime a text field's string has. The bitmap is read when the paint runs.
     const char* glyph = textField(vm, node, "glyph");
     if (glyph == nullptr) return Paint();
-    return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::ui::icon(rect, glyph); });
+    return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::icon(rect, glyph); });
   }
 
   if (strcmp(kind, "bar") == 0) {
     const NodeBox box = boxOf(vm, node);
     const float percent = realField(vm, node, "percent");
     return leaf(box, [percent](const gfx::Rect& rect) {
-      return gfx::ui::progressBar(rect, percent);
+      return gfx::progressBar(rect, percent);
     });
   }
 
@@ -277,18 +278,18 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     const int16_t visible = (int16_t)intField(vm, node, "visible");
     const bool hollow = flagField(vm, node, "hollow", false);
     return leaf(box, [index, count, visible, hollow](const gfx::Rect& rect) {
-      return gfx::ui::scrollbar(rect, index, count, visible, hollow);
+      return gfx::scrollbar(rect, index, count, visible, hollow);
     });
   }
 
   if (strcmp(kind, "duration") == 0) {
     const NodeBox box = boxOf(vm, node);
-    const gfx::ui::DurationFormat format = formatOf(textField(vm, node, "format"));
+    const gfx::DurationFormat format = formatOf(textField(vm, node, "format"));
     const gfx::Font* face = faceOf(vm, node);
     const int seconds = intField(vm, node, "seconds");
     const bool known = flagField(vm, node, "known", true);
     return leaf(box, [format, seconds, face, known](const gfx::Rect& rect) {
-      return gfx::ui::duration(rect, format, seconds, face, known);
+      return gfx::duration(rect, format, seconds, face, known);
     });
   }
 
@@ -303,23 +304,23 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     const uint8_t secondary = (uint8_t)intField(vm, node, "secondary_scale");
     VacuumSystem& vacuum = panel.vacuum();
     return leaf(box, [&vacuum, unit, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
-      return pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
+      return panel::glass::pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
     });
   }
 
   if (strcmp(kind, "layout") == 0) {
     const Cell cell(cellSide(vm, node, "w"), cellSide(vm, node, "h"));
-    return gfx::ui::layout(cell, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::layout(cell, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
   }
 
   if (strcmp(kind, "row") == 0) {
     const float height = cellSide(vm, node, "h");
-    return gfx::ui::row(height, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::row(height, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
   }
 
   if (strcmp(kind, "column") == 0) {
     const float width = cellSide(vm, node, "w");
-    return gfx::ui::column(width, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::column(width, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
   }
 
   // The draw the node holds, run and then inverted in the cell the node was given: the step that
@@ -329,7 +330,7 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
     const Paint child =
         be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), panel, unit) : Paint();
     be_pop(vm, 1);
-    return gfx::ui::inverted(child);
+    return gfx::inverted(child);
   }
 
   return Paint();
@@ -337,11 +338,12 @@ Paint paintOf(bvm* vm, int node, PanelContext& panel, DisplayUnit unit) {
 
 }  // namespace
 
-void drawTree(bvm* vm, int node, PanelContext& panel, gfx::Canvas& canvas) {
+void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas) {
   // The unit the readout prints in belongs to the device, resolved once for the whole tree rather
   // than once per node: one drawing shows one glass.
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(panel.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+  panel::glass::parseDisplayUnit(
+      panel.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
 
   const Paint paint = paintOf(vm, be_absindex(vm, node), panel, unit);
   if (paint) paint(canvas);

@@ -78,23 +78,23 @@ class RoutineRegistry {
 
   // The settings a routine can edit, as its record declares them, in the order the list shows them;
   // nullptr when the key is not registered.
-  const std::vector<gfx::ui::SettingsRow*>* settingsRows(const String& routineKey) const;
+  const std::vector<panel::page::SettingsRow*>* settingsRows(const String& routineKey) const;
 
   // The set a routine begins with, read through its record in the key's section. An unregistered key
   // begins with an empty map.
-  gfx::ui::SettingValues loadSettings(const String& routineKey) const;
+  panel::page::SettingValues loadSettings(const String& routineKey) const;
 
   // A settled set written back through the record. False when the key is not registered or the
   // record declares nothing.
-  bool saveSettings(const String& routineKey, gfx::ui::SettingValues& values) const;
+  bool saveSettings(const String& routineKey, panel::page::SettingValues& values) const;
 
   // The page a key launches: the record the key names, and the activation its factory is handed —
   // the key as the caller named it and the caller's set held to the record's declaration, so a
   // setting the set leaves out or one a row refuses begins at its default. Nothing for a key nobody
   // registered, a record that names no page, or a page whose init refused the activation. The page
   // is not put on a stack here: the caller decides where it goes.
-  std::unique_ptr<gfx::ui::Scene> activate(const String& routineKey,
-                                           const gfx::ui::SettingValues& values) const;
+  std::unique_ptr<panel::page::Scene> activate(const String& routineKey,
+                                           const panel::page::SettingValues& values) const;
 
  private:
   struct Alias {

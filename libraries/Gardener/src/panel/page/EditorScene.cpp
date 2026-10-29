@@ -8,7 +8,7 @@
 #include "Drawing.h"
 #include "Layout.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // The settings view's geometry, from view.be: the paper outside the border, the border, the paper
@@ -72,20 +72,22 @@ bool EditorScene::handle(const char* gesture) {
   return false;
 }
 
-void EditorScene::drawPage(Canvas& canvas) {
+void EditorScene::drawPage(gfx::Canvas& canvas) {
   pageComponents()(canvas);
 }
 
-Paint EditorScene::pageComponents() {
-  return column(1.0f, {
-      Child{Cell(1.0f, TitleBandPct), [this](Canvas& canvas) { drawCentred(canvas, title()); }},
-      Child{Cell(1.0f, ContentsBandPct), pageContents()},
-      Child{Cell(1.0f, HintBandPct), [this](Canvas& canvas) { drawCentred(canvas, hint()); }},
+gfx::Paint EditorScene::pageComponents() {
+  return gfx::column(1.0f, {
+      gfx::Child{gfx::Cell(1.0f, TitleBandPct),
+                 [this](gfx::Canvas& canvas) { gfx::drawCentred(canvas, title()); }},
+      gfx::Child{gfx::Cell(1.0f, ContentsBandPct), pageContents()},
+      gfx::Child{gfx::Cell(1.0f, HintBandPct),
+                 [this](gfx::Canvas& canvas) { gfx::drawCentred(canvas, hint()); }},
   });
 }
 
-Paint EditorScene::pageContents() {
-  return Paint();
-}  // namespace gardener::gfx::ui
+gfx::Paint EditorScene::pageContents() {
+  return gfx::Paint();
+}
 
-}  // namespace gardener::gfx::ui  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

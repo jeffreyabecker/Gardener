@@ -29,16 +29,16 @@ using gardener::RoutineRegistry;
 using gardener::RoutineSettingStore;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
-using gardener::gfx::ui::BoolRow;
-using gardener::gfx::ui::ChoiceItem;
-using gardener::gfx::ui::ChoiceRow;
-using gardener::gfx::ui::DurationRow;
-using gardener::gfx::ui::GestureQueue;
-using gardener::gfx::ui::NumberRow;
-using gardener::gfx::ui::Scene;
-using gardener::gfx::ui::SettingValues;
-using gardener::gfx::ui::SettingsRow;
-using gardener::gfx::ui::Ux;
+using gardener::panel::page::BoolRow;
+using gardener::panel::page::ChoiceItem;
+using gardener::panel::page::ChoiceRow;
+using gardener::panel::page::DurationRow;
+using gardener::panel::page::GestureQueue;
+using gardener::panel::page::NumberRow;
+using gardener::panel::page::Scene;
+using gardener::panel::page::SettingValues;
+using gardener::panel::page::SettingsRow;
+using gardener::panel::page::Ux;
 
 // The queue no case presses: nothing here is drawn, so nothing reads it.
 class NoPresses : public GestureQueue {

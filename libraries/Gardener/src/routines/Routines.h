@@ -14,15 +14,18 @@
 
 namespace gardener {
 
+namespace panel {
 class PanelContext;
+}  // namespace panel
+
 class Logger;
 class Library;
 
 // The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
 // the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
-// implementation is the host side's; the stack is `gfx::ui::Ux` and this side owns it: one entry per
-// beat, the band the panel shows drawn over the page, and the beat's one flush — left here because
-// the stack draws in the frame the display holds, and nothing else sends that frame.
+// implementation is the host side's; the stack is `panel::page::Ux` and this side owns it: one
+// entry per beat, the band the panel shows drawn over the page, and the beat's one flush — left
+// here because the stack draws in the frame the display holds, and nothing else sends that frame.
 //
 // The beat is called from the panel task's own frame — never from inside a Berry call — so there is
 // nothing suspended, no second core and no lock.
@@ -33,7 +36,7 @@ class Routines {
   // Starts the interpreter and loads the files `/system/order` names and then every
   // `/routines/*.be`, and resets the scene stack. The system comes first so a page can use what one
   // of its files defines. False only when the interpreter cannot be allocated at all.
-  bool begin(PanelContext& context);
+  bool begin(panel::PanelContext& context);
 
   // The page's way out: leave whichever scenes are showing and give the panel back to the root.
   // False when no scene is left showing, which leaves the mark.
@@ -61,11 +64,11 @@ class Routines {
 
   // What the scenes take their gestures from. The queue `device.take_gesture()` drains is the same
   // one, so a press goes to whichever of the two is reading.
-  gfx::ui::GestureQueue& presses() { return gestures_; }
+  panel::page::GestureQueue& presses() { return gestures_; }
 
   // What a settings row builds its editor on, and where a launch puts a page: the stack the beat
   // polls, so a page opened from a page is pushed over it rather than into a second one.
-  gfx::ui::Ux& scenes() { return stack_; }
+  panel::page::Ux& scenes() { return stack_; }
 
   // The routines the image registered, in the order the files registered them: what the `routines`
   // module puts a record into and reads a set back through, and what a row launches.
@@ -100,8 +103,8 @@ class Routines {
   std::unique_ptr<RoutineRegistry> registry_;
   // The panel's parts the beat reaches: the display it draws in and flushes, and the readings the
   // band shows.
-  PanelContext* panel_ = nullptr;
-  gfx::ui::Ux stack_;
+  panel::PanelContext* panel_ = nullptr;
+  panel::page::Ux stack_;
   GestureQueue gestures_;
   // What begin() loaded of what it found, for the run that reports whether the image is all there.
   size_t filesLoaded_ = 0;

@@ -154,10 +154,10 @@ const char* argFormat(bvm* vm, int index, const char* function) {
   return "minutes";
 }
 
-gfx::ui::DurationFormat formatOf(const char* name) {
-  if (strcmp(name, "seconds") == 0) return gfx::ui::DurationFormat::Seconds;
-  if (strcmp(name, "hours") == 0) return gfx::ui::DurationFormat::Hours;
-  return gfx::ui::DurationFormat::Minutes;
+gfx::DurationFormat formatOf(const char* name) {
+  if (strcmp(name, "seconds") == 0) return gfx::DurationFormat::Seconds;
+  if (strcmp(name, "hours") == 0) return gfx::DurationFormat::Hours;
+  return gfx::DurationFormat::Minutes;
 }
 
 // The node of the named kind: the record this module installed, with the one field every kind has set.
@@ -413,7 +413,7 @@ int screenDurationText(bvm* vm) {
   const char* format = argFormat(vm, 1, "duration_text");
   const bool known = be_top(vm) < 3 || be_isnil(vm, 3) || be_tobool(vm, 3);
   char out[16];
-  be_pushstring(vm, gfx::ui::durationText(formatOf(format), (int32_t)argInt(vm, 2), known, out,
+  be_pushstring(vm, gfx::durationText(formatOf(format), (int32_t)argInt(vm, 2), known, out,
                                           sizeof(out)));
   be_return(vm);
 }
@@ -439,7 +439,7 @@ int screenCell(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "screen.cell(total, declared)");
   }
-  be_pushint(vm, gfx::ui::resolveSpan((int16_t)argInt(vm, 1), (float)argReal(vm, 2)));
+  be_pushint(vm, gfx::resolveSpan((int16_t)argInt(vm, 1), (float)argReal(vm, 2)));
   be_return(vm);
 }
 
@@ -453,15 +453,15 @@ int screenAlign(bvm* vm) {
   const char* where = be_isstring(vm, 2) ? argText(vm, 2) : nullptr;
   int16_t offset = 0;
   if (where != nullptr && strcmp(where, "left") == 0) {
-    offset = gfx::ui::alignedOffset(leftover, gfx::ui::Horizontal::Left);
+    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Left);
   } else if (where != nullptr && strcmp(where, "center") == 0) {
-    offset = gfx::ui::alignedOffset(leftover, gfx::ui::Horizontal::Center);
+    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Center);
   } else if (where != nullptr && strcmp(where, "right") == 0) {
-    offset = gfx::ui::alignedOffset(leftover, gfx::ui::Horizontal::Right);
+    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Right);
   } else if (where != nullptr && strcmp(where, "top") == 0) {
-    offset = gfx::ui::alignedOffset(leftover, gfx::ui::Vertical::Top);
+    offset = gfx::alignedOffset(leftover, gfx::Vertical::Top);
   } else if (where != nullptr && strcmp(where, "bottom") == 0) {
-    offset = gfx::ui::alignedOffset(leftover, gfx::ui::Vertical::Bottom);
+    offset = gfx::alignedOffset(leftover, gfx::Vertical::Bottom);
   } else {
     be_raise(vm, "value_error", "screen.align: left, center, right, top or bottom expected");
   }

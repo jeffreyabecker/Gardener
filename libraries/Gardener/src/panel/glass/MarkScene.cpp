@@ -6,11 +6,11 @@
 
 #include "panel/glass/Mark.h"
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 void MarkScene::drawPage(gfx::Canvas& canvas) {
-  canvas.draw(gfx::shapes::MonoBitmap(0, 0, MarkBits, gfx::ui::Ink));
+  canvas.draw(gfx::shapes::MonoBitmap(0, 0, MarkBits, gfx::Ink));
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass
 #endif

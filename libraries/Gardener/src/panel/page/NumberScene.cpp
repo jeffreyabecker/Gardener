@@ -9,7 +9,7 @@
 #include "Drawing.h"
 #include "Layout.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // The face the number is drawn at, the bar under it and the paper between the two.
@@ -22,18 +22,20 @@ constexpr int16_t BarGap = 2;
 // between them. The column is centred in the band and the number centred in the column, so the
 // band reads as one thing rather than as a number with a bar under it. `printed` is the scene's
 // own string, which outlives the paint.
-Paint numberBand(const char* printed, shapes::TextBox ink, bool bar, int16_t percent) {
-  const Child number{Cell(static_cast<float>(ink.width), static_cast<float>(ink.height)),
-                     text(Rect(0, 0, ink.width, ink.height), printed, nullptr, ValueScale)};
-  Alignment centred;
-  centred.horizontal = Horizontal::Center;
-  centred.vertical = Vertical::Center;
-  if (!bar) return column(1.0f, {number}, centred);
-  const Child gap{Cell(1.0f, BarGap), Paint()};
-  const Child filled{Cell(1.0f, BarHeight), [percent](Canvas& own) {
-                       progressBar(Rect(0, 0, own.width(), own.height()), percent)(own);
-                     }};
-  return column(1.0f, {number, gap, filled}, centred);
+gfx::Paint numberBand(const char* printed, gfx::shapes::TextBox ink, bool bar, int16_t percent) {
+  const gfx::Child number{gfx::Cell(static_cast<float>(ink.width),
+                                    static_cast<float>(ink.height)),
+                          gfx::text(gfx::Rect(0, 0, ink.width, ink.height), printed, nullptr,
+                                    ValueScale)};
+  gfx::Alignment centred;
+  centred.horizontal = gfx::Horizontal::Center;
+  centred.vertical = gfx::Vertical::Center;
+  if (!bar) return gfx::column(1.0f, {number}, centred);
+  const gfx::Child gap{gfx::Cell(1.0f, BarGap), gfx::Paint()};
+  const gfx::Child filled{gfx::Cell(1.0f, BarHeight), [percent](gfx::Canvas& own) {
+    gfx::progressBar(gfx::Rect(0, 0, own.width(), own.height()), percent)(own);
+  }};
+  return gfx::column(1.0f, {number, gap, filled}, centred);
 }
 
 }  // namespace
@@ -85,9 +87,9 @@ float NumberScene::within(float value) const {
   return value;
 }
 
-Paint NumberScene::pageContents() {
+gfx::Paint NumberScene::pageContents() {
   printed_ = text();
-  const shapes::TextBox ink = shapes::measureText(nullptr, printed_.c_str(), ValueScale);
+  const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, printed_.c_str(), ValueScale);
   const bool bar = isfinite(min_) && isfinite(max_) && max_ > min_;
   int16_t percent = 0;
   if (bar && hasValue()) {
@@ -96,4 +98,4 @@ Paint NumberScene::pageContents() {
   return numberBand(printed_.c_str(), ink, bar, percent);
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

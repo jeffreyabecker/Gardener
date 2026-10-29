@@ -28,7 +28,7 @@ void reset();
 
 // The queue a scene drains when nothing is pressed: a case drives a scene through the hooks it
 // answers rather than through the keys.
-class NoGestures : public ui::GestureQueue {
+class NoGestures : public panel::page::GestureQueue {
  public:
   const char* take() override { return nullptr; }
 };

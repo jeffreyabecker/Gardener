@@ -21,7 +21,7 @@ String firstToken(const String& args) {
 
 class BuzzerDomain : public Domain {
  public:
-  BuzzerDomain(Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
+  BuzzerDomain(panel::Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
 
   const char* name() const override { return "buzzer"; }
   void execute(Stream& io) override;
@@ -32,7 +32,7 @@ class BuzzerDomain : public Domain {
   void play(Stream& io, const String& args);
   void stop(Stream& io, const String& args);
 
-  Panel& app_;
+  panel::Panel& app_;
 };
 
 void BuzzerDomain::execute(Stream& io) {
@@ -74,7 +74,7 @@ void BuzzerDomain::get(Stream& io, const String& args) {
     return;
   }
 
-  BuzzerPlayer& buzzer = app_.buzzer();
+  panel::parts::BuzzerPlayer& buzzer = app_.buzzer();
   io.print("ok tone=");
   if (!buzzer.sounding()) {
     io.print('-');
@@ -156,7 +156,7 @@ void BuzzerDomain::play(Stream& io, const String& args) {
   // The sequence is the rest of the line: no quotes, no escapes. It is checked here for the
   // reply, then sent raw — the control task parses it again inside play().
   const char* badToken = nullptr;
-  if (!BuzzerPlayer::validate(args.c_str(), &badToken)) {
+  if (!panel::parts::BuzzerPlayer::validate(args.c_str(), &badToken)) {
     io.print("err bad_argument");
     if (badToken && *badToken) {
       io.print(' ');
@@ -184,7 +184,7 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
 
 }  // namespace
 
-Domain* createBuzzerDomain(Panel& app, CommandOutbox& outbox) {
+Domain* createBuzzerDomain(panel::Panel& app, CommandOutbox& outbox) {
   return new BuzzerDomain(app, outbox);
 }
 

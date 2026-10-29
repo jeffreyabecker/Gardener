@@ -6,7 +6,7 @@
 
 #include "panel/page/EditorScene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The value editor of a duration, from duration_scene.be: whole seconds drawn as two fields, the
 // minutes and the seconds, with Up and Down stepping the one the editor is in — whole minutes, or
@@ -31,7 +31,7 @@ class DurationScene : public EditorScene {
   bool handle(const char* gesture) override;
   void nudge(int8_t direction) override;
   void canceled() override;
-  Paint pageContents() override;
+  gfx::Paint pageContents() override;
   const char* hint() override;
 
  private:
@@ -58,4 +58,4 @@ class DurationScene : public EditorScene {
   String seconds_;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

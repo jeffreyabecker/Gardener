@@ -31,14 +31,14 @@ constexpr uint8_t PanelAddress = 0x3C;
 // The full device's composition: the machine's parts, then the panel's. The parts are new'd once and
 // never deleted — the device's destructor never runs — so the composition owns them by the graph it
 // hands out and nothing frees them.
-Panel& buildPanelRoot(Logger& logger, Library& library, const PanelPins& pins,
-                      CommandQueue& queue) {
+panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::PanelPins& pins,
+                             CommandQueue& queue) {
   const MachineParts machine = buildMachineParts(pins.machine);
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
   auto* buzzerPart = new PwmBuzzer(pins.buzzerPwm);
-  auto* buzzer = new BuzzerPlayer(*buzzerPart);
+  auto* buzzer = new panel::parts::BuzzerPlayer(*buzzerPart);
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction and comes up in Panel::boot, once the bus is running.
   auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
@@ -46,15 +46,15 @@ Panel& buildPanelRoot(Logger& logger, Library& library, const PanelPins& pins,
   // owns the VM and the page beat separately.
   auto* interpreter = new BerryInterpreter();
   auto* routines = new Routines(*interpreter);
-  auto* panel = new Panel(logger, machine.pump, machine.sensor, machine.valve, buttons, buzzer,
-                          battery, display, library, routines, queue);
+  auto* panel = new panel::Panel(logger, machine.pump, machine.sensor, machine.valve, buttons,
+                                 buzzer, battery, display, library, routines, queue);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);
   return *panel;
 }
 
-void bootPanel(Panel& panel, const PanelPins& pins) {
+void bootPanel(panel::Panel& panel, const panel::PanelPins& pins) {
   // The driver takes a TwoWire it does not own, so the bus is up before the panel brings it up.
   Wire1.begin(pins.i2cSda, pins.i2cScl, pins.i2cHz);
 

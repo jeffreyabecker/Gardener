@@ -25,14 +25,14 @@ String sectionOf(const String& parentRoutineKey, const String& routineKey) {
 
 RoutineSettingStore::RoutineSettingStore(Library& library) : library_(library) {}
 
-gfx::ui::SettingValues RoutineSettingStore::load(
+panel::page::SettingValues RoutineSettingStore::load(
     const String& parentRoutineKey, const String& routineKey,
-    const std::vector<gfx::ui::SettingsRow*>& rows) const {
+    const std::vector<panel::page::SettingsRow*>& rows) const {
   Config document(&library_, documentPath(parentRoutineKey));
   document.begin();
   const String section = sectionOf(parentRoutineKey, routineKey);
-  gfx::ui::SettingValues values;
-  for (const gfx::ui::SettingsRow* row : rows) {
+  panel::page::SettingValues values;
+  for (const panel::page::SettingsRow* row : rows) {
     if (row == nullptr) continue;
     const String stored = document.get<String>(section.c_str(), row->key().c_str(), "");
     values[row->key()] = stored.isEmpty() ? row->defaultValue() : row->parse(stored);
@@ -45,12 +45,12 @@ gfx::ui::SettingValues RoutineSettingStore::load(
 }
 
 bool RoutineSettingStore::save(const String& parentRoutineKey, const String& routineKey,
-                               const std::vector<gfx::ui::SettingsRow*>& rows,
-                               const gfx::ui::SettingValues& values) {
+                               const std::vector<panel::page::SettingsRow*>& rows,
+                               const panel::page::SettingValues& values) {
   Config document(&library_, documentPath(parentRoutineKey));
   document.begin();
   const String section = sectionOf(parentRoutineKey, routineKey);
-  for (const gfx::ui::SettingsRow* row : rows) {
+  for (const panel::page::SettingsRow* row : rows) {
     if (row == nullptr) continue;
     const auto held = values.find(row->key());
     if (held == values.end()) continue;

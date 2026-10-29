@@ -7,7 +7,7 @@
 #include "hal/Battery.h"
 #include "panel/parts/BuzzerPlayer.h"
 
-namespace gardener {
+namespace gardener::panel::parts {
 
 PartsTick::PartsTick(Battery& battery, BuzzerPlayer& buzzer) : battery_(battery), buzzer_(buzzer) {}
 
@@ -16,5 +16,5 @@ void PartsTick::tick(uint32_t nowMs) {
   buzzer_.update(nowMs);
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts
 #endif

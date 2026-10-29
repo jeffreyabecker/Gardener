@@ -112,7 +112,7 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
     uint8_t code = static_cast<uint8_t>(c);
     if (code >= 176 && code < 255) code++;
     if (glyphBlank(code)) code = 'x';
-    gfx::shapes::drawGlyph(canvas, x, y, code, 1, gfx::ui::Ink);
+    gfx::shapes::drawGlyph(canvas, x, y, code, 1, gfx::Ink);
     x = static_cast<int16_t>(x + CellWidth);
   }
   frames_--;

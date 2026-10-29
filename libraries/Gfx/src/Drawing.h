@@ -9,7 +9,7 @@
 #include "Font.h"
 #include "Rect.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::gfx {
 
 // The two colours a component draws in, whichever layout the frame has: a Gray8 frame writes the
 // byte, a Packed1 one sets a bit for anything at or above 128.
@@ -77,4 +77,4 @@ void drawScrollbar(Canvas& canvas, int16_t index, int16_t count, int16_t visible
 Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* face = nullptr,
                bool known = true);
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::gfx

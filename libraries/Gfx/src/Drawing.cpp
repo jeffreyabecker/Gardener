@@ -8,7 +8,7 @@
 #include "Shapes.h"
 #include "Text.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::gfx {
 namespace {
 
 // Gfx draws a string from its baseline. The built-in face is drawn from the top of a five-by-seven
@@ -160,4 +160,4 @@ Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* fac
   };
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::gfx

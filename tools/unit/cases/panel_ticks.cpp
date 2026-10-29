@@ -35,26 +35,26 @@ namespace {
 
 using gardener::Battery;
 using gardener::Button;
-using gardener::ButtonsTick;
-using gardener::BuzzerPlayer;
+using gardener::panel::parts::ButtonsTick;
+using gardener::panel::parts::BuzzerPlayer;
 using gardener::CommandOutbox;
 using gardener::CommandQueue;
 using gardener::Config;
-using gardener::GestureClassifier;
+using gardener::panel::parts::GestureClassifier;
 using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
 using gardener::MachineCommand;
-using gardener::PageTick;
-using gardener::PanelContext;
-using gardener::PartsTick;
+using gardener::panel::parts::PageTick;
+using gardener::panel::PanelContext;
+using gardener::panel::parts::PartsTick;
 using gardener::Press;
 using gardener::Routines;
 using gardener::VacuumSystem;
 using gardener::gfx::Canvas;
 using gardener::gfx::DisplayDevice;
-using gardener::gfx::ui::GestureQueue;
-using gardener::gfx::ui::Scene;
+using gardener::panel::page::GestureQueue;
+using gardener::panel::page::Scene;
 using gardener::CaptureDisplay;
 using gardener::test::FakeBattery;
 using gardener::test::FakeButtonPanel;
@@ -114,7 +114,7 @@ class CountingScene : public Scene {
 // figures the cases read.
 class FakeInterpreter : public Interpreter {
  public:
-  bool begin(PanelContext&, Routines&) override { return true; }
+  bool begin(gardener::panel::PanelContext&, Routines&) override { return true; }
   bool load(const String&, const String&) override { return true; }
 
   std::unique_ptr<Scene> rootScene(GestureQueue& gestures, PanelContext&) override {

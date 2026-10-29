@@ -6,7 +6,7 @@
 
 #include "Drawing.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::gfx {
 
 // A child's declared share of its layout's box. Each side is a share in (0, 1], a pixel count above
 // 1, or Whole — the parent's own size, which is what a component that declares nothing gets.
@@ -66,4 +66,4 @@ Paint column(float widthPct, std::initializer_list<Child> children, Alignment al
 Paint row(float heightPct, const std::vector<Child>& children, Alignment alignment = {});
 Paint column(float widthPct, const std::vector<Child>& children, Alignment alignment = {});
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::gfx

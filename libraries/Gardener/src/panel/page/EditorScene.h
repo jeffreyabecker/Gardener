@@ -12,7 +12,7 @@
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The check a row's declaration gave, closed over the declaration and the set in force: whether the
 // value an editor is about to keep is accepted and, when it is not, the text that refuses it. This
@@ -38,10 +38,10 @@ class EditorScene : public Scene {
   void setValidator(CurriedValidator validator);
 
  protected:
-  void drawPage(Canvas& canvas) override;
+  void drawPage(gfx::Canvas& canvas) override;
   bool handle(const char* gesture) override;
-  virtual Paint pageComponents();
-  virtual Paint pageContents();
+  virtual gfx::Paint pageComponents();
+  virtual gfx::Paint pageContents();
 
   // The hint band's text: the text a refused value answered where there is one, or the kind's own
   // hint.
@@ -67,4 +67,4 @@ class EditorScene : public Scene {
   String refusal_;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

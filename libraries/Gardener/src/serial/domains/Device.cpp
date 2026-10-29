@@ -130,10 +130,10 @@ void DeviceDomain::get(Stream& io) {
 
 #if GARDENER_PANEL
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
+  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+  panel::glass::parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   io.print(" unit=");
-  io.print(displayUnitInfo(unit).name);
+  io.print(panel::glass::displayUnitInfo(unit).name);
 #endif
 
   // One byte, the same mask the BLE `caps` characteristic reports.
@@ -194,8 +194,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
   // The machine's settings are build symbols now, so `unit` is the only preference this domain
   // takes; a machine-alone build has no panel to print in one.
   if (field.equalsIgnoreCase("unit")) {
-    DisplayUnit unit = DisplayUnit::Kpa;
-    if (!parseDisplayUnit(value.c_str(), unit)) {
+    panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
+    if (!panel::glass::parseDisplayUnit(value.c_str(), unit)) {
       io.print("err bad_argument ");
       io.print(value);
       io.print('\n');
@@ -207,11 +207,11 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    config_->set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    config_->set(DeviceSection, UnitKey, panel::glass::displayUnitInfo(unit).name);
     config_->save();
 
     io.print("ok unit=");
-    io.print(displayUnitInfo(unit).name);
+    io.print(panel::glass::displayUnitInfo(unit).name);
     io.print('\n');
     return;
   }
@@ -246,7 +246,7 @@ Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox, const Boa
 }
 
 #if GARDENER_PANEL
-Domain* createDeviceDomain(Panel& app, CommandOutbox& outbox, const BoardFacts& board) {
+Domain* createDeviceDomain(panel::Panel& app, CommandOutbox& outbox, const BoardFacts& board) {
   return new DeviceDomain(app, outbox, board, &app.battery(), &app.config());
 }
 #endif

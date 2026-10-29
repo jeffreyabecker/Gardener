@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 constexpr uint8_t MarkBits[] = {
   0x80, 0x40,  // width, height
@@ -98,4 +98,4 @@ constexpr uint8_t MarkBits[] = {
   0x00, 0x00, 0x00, 0x00,
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass

@@ -7,7 +7,7 @@
 #include "panel/glass/Units.h"
 #include "panel/page/NumberScene.h"
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 // The target pressure's editor: a pressure is kPa in the machine and the panel's unit on the glass,
 // so a keypress is a whole step of the unit showing — one psi, one inHg, ten mmHg — and the value is
@@ -18,12 +18,12 @@ namespace gardener {
 // the editor on a target `vacuum target` would refuse, and the bar under the value is where the
 // target sits between the shallowest depth the loop regulates and the deepest the pump reaches. A
 // nullable setting's nothing sits one step below the shallowest target, where a depth begins.
-class PressureScene : public gfx::ui::NumberScene {
+class PressureScene : public panel::page::NumberScene {
  public:
   // `currentKpa` is the target stored now and `wholeSteps` how many whole steps of the panel's unit
   // one keypress takes.
-  PressureScene(gfx::ui::GestureQueue& gestures, gfx::ui::Ux& ux, String& label, float currentKpa,
-                DisplayUnit unit, float wholeSteps, bool nullable);
+  PressureScene(panel::page::GestureQueue& gestures, panel::page::Ux& ux, String& label,
+                float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable);
 };
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass

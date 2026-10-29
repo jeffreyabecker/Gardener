@@ -21,7 +21,7 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::gfx::ui;
+using namespace gardener::panel::page;
 
 // The key a choice hands back, as the text a case compares; empty is the nullable nothing.
 String keyOf(const ChoiceScene& scene) {

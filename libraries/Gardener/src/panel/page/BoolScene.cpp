@@ -4,7 +4,7 @@
 #include "Drawing.h"
 #include "Layout.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // The keys the document keeps for the two states.
@@ -14,36 +14,37 @@ constexpr const char* OffKey = "false";
 // The face a state prints at.
 constexpr uint8_t ChipScale = 2;
 
-Alignment centred() {
-  Alignment alignment;
-  alignment.horizontal = Horizontal::Center;
-  alignment.vertical = Vertical::Center;
+gfx::Alignment centred() {
+  gfx::Alignment alignment;
+  alignment.horizontal = gfx::Horizontal::Center;
+  alignment.vertical = gfx::Vertical::Center;
   return alignment;
 }
 
 // One state of the switch: its label centred in an equal share of the row, and that label inverted
 // when it is the state showing. The inner column is what centres the label's own ink inside the
 // share, so the inverted box is the label rather than the whole cell.
-Child chip(const char* title, bool showing, float share) {
-  const shapes::TextBox ink = shapes::measureText(nullptr, title, ChipScale);
-  const Paint label = [title, showing, ink](Canvas& own) {
-    text(Rect(0, 0, ink.width, ink.height), title, nullptr, ChipScale)(own);
-    if (showing) own.invert(Rect(0, 0, ink.width, ink.height));
+gfx::Child chip(const char* title, bool showing, float share) {
+  const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, title, ChipScale);
+  const gfx::Paint label = [title, showing, ink](gfx::Canvas& own) {
+    gfx::text(gfx::Rect(0, 0, ink.width, ink.height), title, nullptr, ChipScale)(own);
+    if (showing) own.invert(gfx::Rect(0, 0, ink.width, ink.height));
   };
-  const Child centredLabel{Cell(static_cast<float>(ink.width), static_cast<float>(ink.height)),
-                           label};
-  return Child{Cell(share, 1.0f), column(1.0f, {centredLabel}, centred())};
+  const gfx::Child centredLabel{gfx::Cell(static_cast<float>(ink.width),
+                                          static_cast<float>(ink.height)),
+                                label};
+  return gfx::Child{gfx::Cell(share, 1.0f), gfx::column(1.0f, {centredLabel}, centred())};
 }
 
 // The states as one row of equal cells: `--`, OFF and ON when the setting is nullable and OFF and
 // ON when it is not, the state the value is on inverted.
-Paint switchRow(bool nullable, bool hasValue, bool on) {
+gfx::Paint switchRow(bool nullable, bool hasValue, bool on) {
   const float share = nullable ? 1.0f / 3.0f : 0.5f;
   if (nullable) {
-    return row(1.0f, {chip("--", !hasValue, share), chip("OFF", hasValue && !on, share),
-                      chip("ON", hasValue && on, share)});
+    return gfx::row(1.0f, {chip("--", !hasValue, share), chip("OFF", hasValue && !on, share),
+                           chip("ON", hasValue && on, share)});
   }
-  return row(1.0f, {chip("OFF", !on, share), chip("ON", on, share)});
+  return gfx::row(1.0f, {chip("OFF", !on, share), chip("ON", on, share)});
 }
 
 }  // namespace
@@ -58,6 +59,6 @@ bool BoolScene::on() const { return value_ == OnKey; }
 
 std::any BoolScene::value() const { return hasValue_ ? std::any(on()) : std::any(); }
 
-Paint BoolScene::pageContents() { return switchRow(nullable_, hasValue_, on()); }
+gfx::Paint BoolScene::pageContents() { return switchRow(nullable_, hasValue_, on()); }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

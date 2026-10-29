@@ -18,14 +18,14 @@ namespace gardener {
 namespace berry {
 namespace {
 
-// The unit the panel prints pressure in: a name `panel/Units.h` holds, written to the device's own
-// document, and a name it does not hold is answered false rather than defaulted.
+// The unit the panel prints pressure in: a name `panel/glass/Units.h` holds, written to the
+// device's own document, and a name it does not hold is answered false rather than defaulted.
 int deviceSetUnit(bvm* vm) {
-  DisplayUnit unit = DisplayUnit::Kpa;
+  panel::glass::DisplayUnit unit = panel::glass::DisplayUnit::Kpa;
   const bool accepted =
-      be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
+      be_isstring(vm, 1) && panel::glass::parseDisplayUnit(argText(vm, 1), unit);
   if (accepted) {
-    context->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
+    context->config().set(DeviceSection, UnitKey, panel::glass::displayUnitInfo(unit).name);
     context->config().save();
   }
   be_pushbool(vm, accepted);
@@ -52,7 +52,7 @@ int devicePlaySequence(bvm* vm) {
     be_raise(vm, "type_error", "device.play_sequence(notes)");
   }
   const char* sequence = argText(vm, 1);
-  const bool ok = BuzzerPlayer::validate(sequence);
+  const bool ok = panel::parts::BuzzerPlayer::validate(sequence);
   if (ok) context->buzzer().play(sequence);
   be_pushbool(vm, ok);
   be_return(vm);

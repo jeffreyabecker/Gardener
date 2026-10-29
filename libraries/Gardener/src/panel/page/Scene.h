@@ -7,7 +7,7 @@
 #include "Canvas.h"
 #include "panel/page/GestureQueue.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // The lifecycle a page shares: the gesture drain, the repaint cadence and the hooks a page
 // overrides. A page extends it and draws in drawPage; poll is what the host calls on each beat.
@@ -32,11 +32,11 @@ class Scene {
   // Clears the canvas to paper, draws the page on it, and stamps the beat so the cadence counts
   // from here. Only the scene's own canvas is cleared: a scene opened over another leaves what is
   // around it on the glass.
-  void draw(Canvas& canvas, uint32_t nowMs);
+  void draw(gfx::Canvas& canvas, uint32_t nowMs);
 
   // One beat: drain the queue, tick, then draw when a gesture was taken or RepaintMs has passed.
   // Answers whether it drew.
-  bool poll(Canvas& canvas, uint32_t nowMs);
+  bool poll(gfx::Canvas& canvas, uint32_t nowMs);
 
   // Called when the scene goes on top, before the first draw. The Berry scene takes the pusher's
   // arguments; nothing here has anything to pass yet.
@@ -69,7 +69,7 @@ class Scene {
   // scene matches it in full or not at all.
   virtual bool handle(const char*) { return false; }
 
-  virtual void drawPage(Canvas& canvas) { (void)canvas; }
+  virtual void drawPage(gfx::Canvas& canvas) { (void)canvas; }
 
   virtual void tick(uint32_t nowMs) { (void)nowMs; }
 
@@ -80,4 +80,4 @@ class Scene {
   uint32_t lastDraw_ = 0;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

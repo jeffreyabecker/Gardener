@@ -9,7 +9,7 @@
 #include "panel/parts/GestureClassifier.h"
 #include "routines/Routines.h"
 
-namespace gardener {
+namespace gardener::panel::parts {
 namespace {
 
 // The holds the panel acts on, as the marks the gesture carries in whole seconds: Okay and Cancel
@@ -70,5 +70,5 @@ void ButtonsTick::deliver(const String& gesture) {
   logger_.info(message.c_str());
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts
 #endif

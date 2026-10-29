@@ -187,11 +187,11 @@ bool postMachineCommand(const MachineCommand& command);
 
 // The parts a Panel is on the device, composed without one: the interpreter reads this, and it is
 // the only thing the Berry modules know about their surroundings.
-class HarnessPanel : public PanelContext {
+class HarnessPanel : public panel::PanelContext {
  public:
   HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, Config& config,
-               VacuumSystem& vacuum, Battery& battery, BuzzerPlayer& buzzer, Library& library,
-               Logger& logger)
+               VacuumSystem& vacuum, Battery& battery,
+               panel::parts::BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
         canvas_(canvas),
         config_(config),
@@ -206,7 +206,7 @@ class HarnessPanel : public PanelContext {
   Config& config() override { return config_; }
   VacuumSystem& vacuum() override { return vacuum_; }
   Battery& battery() override { return battery_; }
-  BuzzerPlayer& buzzer() override { return buzzer_; }
+  panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
   // The host models a device with both links up, so the band shows both icons.
@@ -221,7 +221,7 @@ class HarnessPanel : public PanelContext {
   Config& config_;
   VacuumSystem& vacuum_;
   Battery& battery_;
-  BuzzerPlayer& buzzer_;
+  panel::parts::BuzzerPlayer& buzzer_;
   Library& library_;
   Logger& logger_;
 };
@@ -323,7 +323,7 @@ class HarnessSession {
   gfx::Canvas canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
-  BuzzerPlayer buzzer_;
+  panel::parts::BuzzerPlayer buzzer_;
   BerryInterpreter interpreter_;
   Routines routines_{interpreter_};
   HarnessPanel context_;

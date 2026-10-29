@@ -7,7 +7,7 @@
 #include "Shapes.h"
 #include "Text.h"
 
-namespace gardener {
+namespace gardener::panel::glass {
 namespace {
 
 // The glyphs the band draws, from the built-in face's symbol range: the serial link, the two states
@@ -43,20 +43,20 @@ bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 
 }  // namespace
 
-gfx::ui::Paint bandUnit(const String& suffix) {
+gfx::Paint bandUnit(const String& suffix) {
   return [suffix](gfx::Canvas& cell) {
-    gfx::ui::text(gfx::Rect(2, GlyphTop, cell.width(), cell.height()), suffix.c_str())(cell);
+    gfx::text(gfx::Rect(2, GlyphTop, cell.width(), cell.height()), suffix.c_str())(cell);
   };
 }
 
-gfx::ui::Paint bandLinks(bool serial, bool bluetooth) {
+gfx::Paint bandLinks(bool serial, bool bluetooth) {
   return [serial, bluetooth](gfx::Canvas& cell) {
-    if (serial) gfx::shapes::drawGlyph(cell, 0, GlyphTop, SerialGlyph, 1, gfx::ui::Ink);
-    if (bluetooth) cell.draw(gfx::shapes::MonoBitmap(RuneLeft, 0, BluetoothBits, gfx::ui::Ink));
+    if (serial) gfx::shapes::drawGlyph(cell, 0, GlyphTop, SerialGlyph, 1, gfx::Ink);
+    if (bluetooth) cell.draw(gfx::shapes::MonoBitmap(RuneLeft, 0, BluetoothBits, gfx::Ink));
   };
 }
 
-gfx::ui::Paint bandState(RunState state, uint32_t nowMs) {
+gfx::Paint bandState(RunState state, uint32_t nowMs) {
   uint8_t glyph = IdleGlyph;
   bool blinks = false;
   switch (state) {
@@ -74,20 +74,20 @@ gfx::ui::Paint bandState(RunState state, uint32_t nowMs) {
   }
   return [glyph, blinks, nowMs](gfx::Canvas& cell) {
     if (blinks && !movingLit(nowMs)) return;
-    gfx::shapes::drawGlyph(cell, 0, GlyphTop, glyph, 1, gfx::ui::Ink);
+    gfx::shapes::drawGlyph(cell, 0, GlyphTop, glyph, 1, gfx::Ink);
   };
 }
 
 // The icon owns its whole footprint, so it erases it first: a page may have drawn anything under the
 // band, and filling over it without clearing would read as a battery with the page's pixels still
 // inside it.
-gfx::ui::Paint bandBattery(int8_t percent, bool low, uint32_t nowMs) {
+gfx::Paint bandBattery(int8_t percent, bool low, uint32_t nowMs) {
   return [percent, low, nowMs](gfx::Canvas& cell) {
-    cell.draw(gfx::shapes::FillRect(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::ui::Paper));
-    cell.draw(gfx::shapes::Rect(0, GlyphTop, BatteryOutline, BatteryHeight, gfx::ui::Ink));
-    cell.draw(gfx::shapes::FillRect(BatteryOutline, GlyphTop + 2, BatteryNub, 3, gfx::ui::Ink));
+    cell.draw(gfx::shapes::FillRect(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::Paper));
+    cell.draw(gfx::shapes::Rect(0, GlyphTop, BatteryOutline, BatteryHeight, gfx::Ink));
+    cell.draw(gfx::shapes::FillRect(BatteryOutline, GlyphTop + 2, BatteryNub, 3, gfx::Ink));
     if (percent < 0) {
-      cell.draw(gfx::shapes::Line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::ui::Ink));
+      cell.draw(gfx::shapes::Line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::Ink));
       return;
     }
     if (low && !batteryLit(nowMs)) return;
@@ -95,9 +95,9 @@ gfx::ui::Paint bandBattery(int8_t percent, bool low, uint32_t nowMs) {
     int16_t fill = static_cast<int16_t>(BatteryFill * percent / 100);
     if (fill < 1) fill = 1;
     if (fill > BatteryFill) fill = BatteryFill;
-    cell.draw(gfx::shapes::FillRect(2, GlyphTop + 2, fill, 3, gfx::ui::Ink));
+    cell.draw(gfx::shapes::FillRect(2, GlyphTop + 2, fill, 3, gfx::Ink));
   };
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass
 #endif

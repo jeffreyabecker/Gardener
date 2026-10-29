@@ -6,7 +6,7 @@
 
 #include "routines/Routines.h"
 
-namespace gardener {
+namespace gardener::panel::parts {
 
 void PageTick::begin() { routines_.enterPage(); }
 
@@ -14,5 +14,5 @@ void PageTick::tick(uint32_t nowMs) { routines_.poll(nowMs); }
 
 void PageTick::home() { routines_.showDefault(); }
 
-}  // namespace gardener
+}  // namespace gardener::panel::parts
 #endif

@@ -3,17 +3,17 @@
 #include "Shapes.h"
 #include "Drawing.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 Scene::Scene(GestureQueue& gestures) : gestures_(gestures) {}
 
-void Scene::draw(Canvas& canvas, uint32_t nowMs) {
-  canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Paper));
+void Scene::draw(gfx::Canvas& canvas, uint32_t nowMs) {
+  canvas.draw(gfx::shapes::FillRect(0, 0, canvas.width(), canvas.height(), gfx::Paper));
   drawPage(canvas);
   lastDraw_ = nowMs;
 }
 
-bool Scene::poll(Canvas& canvas, uint32_t nowMs) {
+bool Scene::poll(gfx::Canvas& canvas, uint32_t nowMs) {
   const bool acted = takeEvents();
   tick(nowMs);
   if (!acted && static_cast<uint32_t>(nowMs - lastDraw_) < RepaintMs) return false;
@@ -29,4 +29,4 @@ bool Scene::takeEvents() {
   return acted;
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

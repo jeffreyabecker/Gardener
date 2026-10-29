@@ -6,7 +6,7 @@
 
 #include <Arduino.h>
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 // What the panel prints pressure in. The machine and the wire stay in kPa — a target is a depth
 // below ambient in kPa and `vacuum get` reports it that way — so this only decides how the same
@@ -75,4 +75,4 @@ inline String displayText(float pressureKpa, DisplayUnit unit) {
   return String(printed);
 }
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass

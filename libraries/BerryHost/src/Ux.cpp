@@ -41,7 +41,7 @@ const bnfuncinfo SceneFields[] = {
     {nullptr, nullptr},
 };
 
-using SceneOwner = std::unique_ptr<gfx::ui::Scene>;
+using SceneOwner = std::unique_ptr<panel::page::Scene>;
 
 int sceneRelease(bvm* vm) {
   delete static_cast<SceneOwner*>(be_tocomptr(vm, 1));
@@ -70,7 +70,8 @@ struct CallbackSlot {
 // A value a scene answered, as the image reads it: the settled set a settings list hands back as a
 // map, and the single value an editor hands back in the type its row holds it in.
 void pushAnswer(bvm* vm, const std::any& value) {
-  if (const gfx::ui::SettingValues* values = std::any_cast<gfx::ui::SettingValues>(&value)) {
+  if (const panel::page::SettingValues* values =
+          std::any_cast<panel::page::SettingValues>(&value)) {
     pushSettingsMap(vm, *values);
     return;
   }
@@ -145,10 +146,10 @@ bool isSceneHandle(bvm* vm, int index) {
 }
 
 // The scene a handle holds, moved out: a handle pushed twice answers nothing the second time.
-std::unique_ptr<gfx::ui::Scene> takeSceneHandle(bvm* vm, int index) {
+std::unique_ptr<panel::page::Scene> takeSceneHandle(bvm* vm, int index) {
   if (!isSceneHandle(vm, index)) return nullptr;
   const int base = be_top(vm);
-  std::unique_ptr<gfx::ui::Scene> scene;
+  std::unique_ptr<panel::page::Scene> scene;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
     SceneOwner* owner = static_cast<SceneOwner*>(be_tocomptr(vm, -1));
     if (owner != nullptr) scene = std::move(*owner);
@@ -184,16 +185,18 @@ int uxPush(bvm* vm) {
     be_raise(vm, "type_error", "ux.push: the callback is a function");
   }
   // The checks are above: a raise below would longjmp past the scene and the callback it holds.
-  std::unique_ptr<gfx::ui::Scene> scene;
+  std::unique_ptr<panel::page::Scene> scene;
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
     scene = std::make_unique<BerryScene>(routines->presses(), vm, 1, *context);
   }
-  gfx::ui::Ux::Callback held;
+  panel::page::Ux::Callback held;
   if (callback) {
     const std::shared_ptr<CallbackSlot> slot = holdCallback(vm, 2);
-    held = [slot](gfx::ui::Scene& popped) { runCallback(slot->vm, slot->slot, popped.value()); };
+    held = [slot](panel::page::Scene& popped) {
+      runCallback(slot->vm, slot->slot, popped.value());
+    };
   }
   be_pushbool(vm, routines->scenes().push(std::move(scene), std::move(held)));
   be_return(vm);
@@ -228,7 +231,7 @@ int uxDepth(bvm* vm) {
 // and nil with nothing showing.
 int uxTop(bvm* vm) {
   requirePanel(vm, "ux.top: no panel");
-  const gfx::ui::Scene* showing = routines->scenes().top();
+  const panel::page::Scene* showing = routines->scenes().top();
   const BerryScene* page =
       showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
@@ -256,7 +259,7 @@ const bnfuncinfo UxLibrary[] = {
 }  // namespace
 
 // The scene a native factory built, carried into the image as an instance the one field holds.
-void pushSceneHandle(bvm* vm, std::unique_ptr<gfx::ui::Scene> scene) {
+void pushSceneHandle(bvm* vm, std::unique_ptr<panel::page::Scene> scene) {
   const int record = beginRecord(vm, SceneRecord);
   be_newcomobj(vm, new SceneOwner(std::move(scene)), sceneRelease);
   be_setmember(vm, record, ".p");

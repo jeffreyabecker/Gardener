@@ -17,7 +17,7 @@ class Logger;
 //
 // It is the drawing side's queue as well, so a page and the device binding drain one list and no
 // press is delivered twice.
-class GestureQueue : public gfx::ui::GestureQueue {
+class GestureQueue : public panel::page::GestureQueue {
  public:
   static constexpr uint8_t Capacity = 8;
 

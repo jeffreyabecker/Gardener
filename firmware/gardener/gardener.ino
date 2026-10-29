@@ -14,7 +14,7 @@ namespace {
 
 // The rig this build is wired to. The libraries take the pins, so a board variant is this block and
 // nothing else.
-constexpr gardener::PanelPins Board{
+constexpr gardener::panel::PanelPins Board{
     .machine = {.sensorAdc = 7, .pumpPwm = 6, .ventValve = 5},
     .i2cSda = 17,
     .i2cScl = 18,
@@ -78,7 +78,7 @@ void setup() {
   auto* commands = new gardener::RtosCommandQueue();
 
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::Panel& context = gardener::buildPanelRoot(*logger, *files, Board, *commands);
+  gardener::panel::Panel& context = gardener::buildPanelRoot(*logger, *files, Board, *commands);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both

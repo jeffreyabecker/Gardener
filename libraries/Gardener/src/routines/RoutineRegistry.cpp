@@ -130,27 +130,27 @@ const String* RoutineRegistry::icon(const String& routineKey) const {
   return &record->glyph();
 }
 
-const std::vector<gfx::ui::SettingsRow*>* RoutineRegistry::settingsRows(
+const std::vector<panel::page::SettingsRow*>* RoutineRegistry::settingsRows(
     const String& routineKey) const {
   const Registration* record = entry(routineKey);
   return record == nullptr ? nullptr : &record->settings();
 }
 
-gfx::ui::SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
+panel::page::SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
   const Registration* record = entry(routineKey);
-  if (record == nullptr) return gfx::ui::SettingValues();
+  if (record == nullptr) return panel::page::SettingValues();
   return record->loadSettings(library_, section(routineKey));
 }
 
 bool RoutineRegistry::saveSettings(const String& routineKey,
-                                   gfx::ui::SettingValues& values) const {
+                                   panel::page::SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr) return false;
   return record->saveSettings(library_, section(routineKey), values);
 }
 
-std::unique_ptr<gfx::ui::Scene> RoutineRegistry::activate(
-    const String& routineKey, const gfx::ui::SettingValues& values) const {
+std::unique_ptr<panel::page::Scene> RoutineRegistry::activate(
+    const String& routineKey, const panel::page::SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr || !record->factory()) return nullptr;
 
@@ -158,9 +158,9 @@ std::unique_ptr<gfx::ui::Scene> RoutineRegistry::activate(
   activation.routineKey = routineKey;
   // The caller states what it launches with; the declaration is what holds a setting to its kind,
   // and one the set leaves out begins at its default, as one its document lacks does.
-  for (gfx::ui::SettingsRow* row : record->settings()) {
+  for (panel::page::SettingsRow* row : record->settings()) {
     std::any value = row->defaultValue();
-    const gfx::ui::SettingValues::const_iterator held = values.find(row->key());
+    const panel::page::SettingValues::const_iterator held = values.find(row->key());
     if (held != values.end()) {
       std::any given = held->second;
       if (row->accept(given)) value = std::move(given);

@@ -8,7 +8,7 @@
 
 #include "panel/page/EditorScene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 
 // What the band prints for a number: a setting that reads in its own units passes one and the
 // scene draws what it returns instead of `%g` of the value.
@@ -38,7 +38,7 @@ class NumberScene : public EditorScene {
  protected:
   void nudge(int8_t direction) override;
   void canceled() override;
-  Paint pageContents() override;
+  gfx::Paint pageContents() override;
 
  private:
   bool hasValue() const;
@@ -58,4 +58,4 @@ class NumberScene : public EditorScene {
   String printed_;
 };
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

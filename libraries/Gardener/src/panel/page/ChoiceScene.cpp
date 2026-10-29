@@ -7,7 +7,7 @@
 #include "Drawing.h"
 #include "Layout.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // One row of the built-in face, which is the pitch a choice is drawn at.
@@ -15,10 +15,10 @@ constexpr int16_t Row = 8;
 
 // One row of the window: the entry's title centred, inverted across the whole of the row when it is
 // the entry showing.
-Paint rowOf(const ChoiceItem* item, bool showing) {
-  return [item, showing](Canvas& own) {
-    drawCentred(own, item->title.c_str());
-    if (showing) own.invert(Rect(0, 0, own.width(), own.height()));
+gfx::Paint rowOf(const ChoiceItem* item, bool showing) {
+  return [item, showing](gfx::Canvas& own) {
+    gfx::drawCentred(own, item->title.c_str());
+    if (showing) own.invert(gfx::Rect(0, 0, own.width(), own.height()));
   };
 }
 
@@ -94,10 +94,10 @@ int16_t ChoiceScene::index() const {
 // inverted. The rows are the ones the band has room for, which is why the column is built as the
 // paint runs rather than before. A window shorter than the entries carries a scrollbar down the
 // right of the band, the rows stopping the width of it and its gap short.
-Paint ChoiceScene::pageContents() {
-  return [this](Canvas& canvas) {
+gfx::Paint ChoiceScene::pageContents() {
+  return [this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      drawCentred(canvas, "--");
+      gfx::drawCentred(canvas, "--");
       return;
     }
     const int16_t selected = index();
@@ -108,19 +108,20 @@ Paint ChoiceScene::pageContents() {
     const int16_t first = selected >= visible ? static_cast<int16_t>(selected - visible + 1) : 0;
     const bool scrolls = count > visible;
     const int16_t rowsWidth =
-        scrolls ? static_cast<int16_t>(canvas.width() - ScrollbarColumn) : canvas.width();
-    std::vector<Child> rows;
+        scrolls ? static_cast<int16_t>(canvas.width() - gfx::ScrollbarColumn) : canvas.width();
+    std::vector<gfx::Child> rows;
     for (int16_t line = 0; line < visible; line++) {
       const int16_t at = static_cast<int16_t>(first + line);
-      const Child row{Cell(1.0f, static_cast<float>(Row)), rowOf(&items_[at], at == selected)};
+      const gfx::Child row{gfx::Cell(1.0f, static_cast<float>(Row)),
+                           rowOf(&items_[at], at == selected)};
       rows.push_back(row);
     }
-    Alignment centred;
-    centred.vertical = Vertical::Center;
-    Canvas plot = canvas.child(Rect(0, 0, rowsWidth, canvas.height()));
-    column(1.0f, rows, centred)(plot);
-    if (scrolls) drawScrollbar(canvas, first, count, visible);
+    gfx::Alignment centred;
+    centred.vertical = gfx::Vertical::Center;
+    gfx::Canvas plot = canvas.child(gfx::Rect(0, 0, rowsWidth, canvas.height()));
+    gfx::column(1.0f, rows, centred)(plot);
+    if (scrolls) gfx::drawScrollbar(canvas, first, count, visible);
   };
 }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

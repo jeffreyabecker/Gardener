@@ -5,14 +5,15 @@
 
 namespace gardener {
 
-namespace gfx {
-namespace ui {
+namespace panel {
+class PanelContext;
+
+namespace page {
 class GestureQueue;
 class Scene;
-}  // namespace ui
-}  // namespace gfx
+}  // namespace page
+}  // namespace panel
 
-class PanelContext;
 class Routines;
 
 // The interpreter the routines are compiled and run in, and the image's root page as a scene. It is
@@ -27,7 +28,7 @@ class Interpreter {
 
   // Creates the VM and installs the native modules a page is written against. False only when the
   // interpreter cannot be allocated at all.
-  virtual bool begin(PanelContext& context, Routines& routines) = 0;
+  virtual bool begin(panel::PanelContext& context, Routines& routines) = 0;
 
   // Compiles and runs one of the image's files, logging a compile or run failure. False when the
   // file did not load; reading it is the loader's.
@@ -36,8 +37,8 @@ class Interpreter {
   // The image's root page as a scene, or nothing when it sets none. The global is read when it is
   // wanted rather than cached, so whatever a later load sets is the page the go-home gesture goes
   // to.
-  virtual std::unique_ptr<gfx::ui::Scene> rootScene(gfx::ui::GestureQueue& gestures,
-                                                    PanelContext& panel) = 0;
+  virtual std::unique_ptr<panel::page::Scene> rootScene(panel::page::GestureQueue& gestures,
+                                                        panel::PanelContext& panel) = 0;
 };
 
 }  // namespace gardener

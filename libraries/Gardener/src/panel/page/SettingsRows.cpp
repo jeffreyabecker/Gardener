@@ -9,7 +9,7 @@
 #include "Drawing.h"
 #include "panel/page/DurationScene.h"
 
-namespace gardener::gfx::ui {
+namespace gardener::panel::page {
 namespace {
 
 // A number as the list prints it: `%g` of it, which is what a number scene prints when the setting
@@ -181,8 +181,9 @@ SettingDeclaration DurationRow::declaration() const {
 
 String DurationRow::text(const std::any& value) const {
   char printed[16];
-  durationText(DurationFormat::Minutes, value.has_value() ? std::any_cast<int32_t>(value) : 0,
-               value.has_value(), printed, sizeof(printed));
+  gfx::durationText(gfx::DurationFormat::Minutes,
+                    value.has_value() ? std::any_cast<int32_t>(value) : 0, value.has_value(),
+                    printed, sizeof(printed));
   return String(printed);
 }
 
@@ -283,4 +284,4 @@ std::any NumberRow::parse(const String& stored) const {
 
 bool NumberRow::accept(std::any& value) const { return takeNumber(value, false); }
 
-}  // namespace gardener::gfx::ui
+}  // namespace gardener::panel::page

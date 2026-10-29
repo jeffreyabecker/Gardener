@@ -22,7 +22,7 @@ constexpr const char* RootPage = "__rootScene";
 
 }  // namespace
 
-bool BerryInterpreter::begin(PanelContext& context, Routines& routines) {
+bool BerryInterpreter::begin(panel::PanelContext& context, Routines& routines) {
   logger_ = &context.logger();
   vm_ = be_vm_new();
   if (vm_ == nullptr) return false;
@@ -53,11 +53,11 @@ bool BerryInterpreter::load(const String& path, const String& source) {
   return true;
 }
 
-std::unique_ptr<gfx::ui::Scene> BerryInterpreter::rootScene(gfx::ui::GestureQueue& gestures,
-                                                            PanelContext& panel) {
+std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene(panel::page::GestureQueue& gestures,
+                                                            panel::PanelContext& panel) {
   if (vm_ == nullptr) return nullptr;
   const int base = be_top(vm_);
-  std::unique_ptr<gfx::ui::Scene> scene;
+  std::unique_ptr<panel::page::Scene> scene;
   if (be_getglobal(vm_, RootPage) && be_isinstance(vm_, -1)) {
     scene = std::make_unique<BerryScene>(gestures, vm_, be_absindex(vm_, -1), panel);
   }

@@ -6,7 +6,7 @@
 #include "panel/glass/Units.h"
 #include "Drawing.h"
 
-namespace gardener {
+namespace gardener::panel::glass {
 
 
 // The AutoPressureDisplay the pages drew, composed from the drawing styles: the machine's reading
@@ -16,8 +16,8 @@ namespace gardener {
 // side at `scale`, the reading on the left. A number carries no suffix: the unit is the band's. The
 // reading is `--` while the machine is not running, which is when there is no chamber reading to
 // print.
-gfx::ui::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
+gfx::Paint pressureReadout(gfx::Rect box, VacuumSystem& vacuum, DisplayUnit unit,
                                float sizeHint = 0.5f, const gfx::Font* face = nullptr,
                                uint8_t scale = 2, uint8_t secondaryScale = 1);
 
-}  // namespace gardener
+}  // namespace gardener::panel::glass

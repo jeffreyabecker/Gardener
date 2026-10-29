@@ -180,7 +180,7 @@ void pushSettingValue(bvm* vm, const std::any& value) {
 // A set as a map the page reads: one entry per key, in the order the store answered them. The map is an
 // instance of the map class — the braced literal a routine file writes, which indexes through the
 // class's item — rather than the interpreter's raw container, which no page can subscript.
-void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
+void pushSettingsMap(bvm* vm, const panel::page::SettingValues& values) {
   // The map class's instance with the raw container it wraps on top of it, as be_newobject leaves an
   // instance: the entries go into the container and the pop below leaves the instance as the answer.
   be_newobject(vm, "map");
@@ -198,7 +198,7 @@ void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
 
 // A map as a set: every key that holds a value a setting can hold, as the type it was written as. A
 // value no setting holds is left out, which is how a refused value falls back to the row's default.
-bool takeSettingMap(bvm* vm, int index, gfx::ui::SettingValues& values) {
+bool takeSettingMap(bvm* vm, int index, panel::page::SettingValues& values) {
   const int at = be_absindex(vm, index);
   const int base = be_top(vm);
   const bool map = pushMap(vm, at);
@@ -251,11 +251,12 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
 // The page a registration names: an instance of the class the file gave, built from the activation and
 // wrapped as the scene the stack drives. Nothing, with one line, for a page whose init raised — the
 // class is the file's and may refuse the set it is handed.
-std::unique_ptr<gfx::ui::Scene> buildPage(bvm* vm, int slot, const RoutineActivation& activation) {
+std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
+                                              const RoutineActivation& activation) {
   if (vm == nullptr || context == nullptr || routines == nullptr || slot < 0) return nullptr;
 
   const int base = be_top(vm);
-  std::unique_ptr<gfx::ui::Scene> page;
+  std::unique_ptr<panel::page::Scene> page;
   if (be_getglobal(vm, PageClasses) && be_islist(vm, -1)) {
     const int list = be_absindex(vm, -1);
     be_pushint(vm, slot);
@@ -303,7 +304,7 @@ int routinesRegister(bvm* vm) {
   requireGlyph(vm, 3);
   requireClass(vm, 5);
   // Every check runs before a row is taken, so a refused registration changes nothing.
-  std::vector<std::unique_ptr<gfx::ui::SettingsRow>> rows;
+  std::vector<std::unique_ptr<panel::page::SettingsRow>> rows;
   if (!be_isnil(vm, 4)) rows = takeSettingsRows(vm, 4);
 
   const String routineKey(argText(vm, 1));
@@ -349,10 +350,10 @@ int routinesSaveSettings(bvm* vm) {
   const int map = be_absindex(vm, -1);
 
   const RoutineRegistry& registry = routines->registry();
-  const std::vector<gfx::ui::SettingsRow*>* rows = registry.settingsRows(routineKey);
-  gfx::ui::SettingValues values;
+  const std::vector<panel::page::SettingsRow*>* rows = registry.settingsRows(routineKey);
+  panel::page::SettingValues values;
   if (rows != nullptr) {
-    for (const gfx::ui::SettingsRow* row : *rows) {
+    for (const panel::page::SettingsRow* row : *rows) {
       be_pushstring(vm, row->key().c_str());
       be_getindex(vm, map);
       be_remove(vm, -2);  // the key the read left under the value
@@ -417,7 +418,7 @@ int routinesSettingsCfgs(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
   }
-  const std::vector<gfx::ui::SettingsRow*>* rows =
+  const std::vector<panel::page::SettingsRow*>* rows =
       routines->registry().settingsRows(String(argText(vm, 1)));
   if (rows == nullptr || rows->empty()) be_return_nil(vm);
 
@@ -425,7 +426,7 @@ int routinesSettingsCfgs(bvm* vm) {
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (gfx::ui::SettingsRow* row : *rows) {
+  for (panel::page::SettingsRow* row : *rows) {
     pushSettingDeclaration(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -451,9 +452,9 @@ int routinesActivate(bvm* vm) {
   }
   // The checks are above: a raise below would longjmp past the key's String and the set.
   const String routineKey(argText(vm, 1));
-  gfx::ui::SettingValues values;
+  panel::page::SettingValues values;
   if (be_top(vm) >= 2 && !be_isnil(vm, 2)) takeSettingMap(vm, 2, values);
-  std::unique_ptr<gfx::ui::Scene> page = routines->registry().activate(routineKey, values);
+  std::unique_ptr<panel::page::Scene> page = routines->registry().activate(routineKey, values);
   if (!page) be_return_nil(vm);
   pushSceneHandle(vm, std::move(page));
   be_return(vm);
