@@ -1,23 +1,46 @@
 #pragma once
 
+#include <Arduino.h>
+#include <stddef.h>
+#include <stdint.h>
+
+namespace gardener {
+
+class Logger;
+
+}  // namespace gardener
+
 namespace gardener::panel {
 
-// What a page takes its gestures from: the panel's queue behind an interface, so the drawing side
-// names nothing of the machine that fills it. A page takes one gesture at a time, oldest first.
+// The gestures the panel task has accepted and the page has not taken yet. Its writer is the panel
+// task; its readers are the device binding's pull and the scene stack, so the two are never the
+// same caller, and nothing here takes a lock. A full queue drops the oldest, so the newest gesture
+// still arrives, and the log says so once rather than on every drop.
+//
+// It is the page's input as well, so a page and the device binding drain one list and no press is
+// delivered twice.
 class GestureQueue {
  public:
-  virtual ~GestureQueue() = default;
+  static constexpr uint8_t Capacity = 8;
 
-  GestureQueue(const GestureQueue&) = delete;
-  GestureQueue& operator=(const GestureQueue&) = delete;
+  void begin(Logger& logger) { logger_ = &logger; }
 
-  // The oldest gesture the page has not taken, or nullptr when there is none. The pointer is the
-  // queue's own and stays valid until the next call, so a caller compares or copies it and does not
-  // keep it.
-  virtual const char* take() = 0;
+  void push(const String& gesture);
+  bool take(String& gesture);
+  void clear();
 
- protected:
-  GestureQueue() = default;
+  // The oldest gesture a page has not taken, or nullptr when there is none. The pointer is this
+  // queue's own and stays valid until the next take.
+  const char* take();
+
+ private:
+  Logger* logger_ = nullptr;
+  String presses_[Capacity];
+  // What the last take() handed a page, which is what the pointer it answered points at.
+  String press_;
+  uint8_t head_ = 0;
+  uint8_t count_ = 0;
+  bool overflowed_ = false;
 };
 
 }  // namespace gardener::panel

@@ -2,19 +2,19 @@
 
 #if GARDENER_PANEL
 
-#include "panel/LocklessGestureQueue.h"
+#include "panel/GestureQueue.h"
 
 #include "core/Logger.h"
 
 namespace gardener::panel {
 
-void LocklessGestureQueue::push(const String& gesture) {
+void GestureQueue::push(const String& gesture) {
   if (gesture.isEmpty()) return;
 
   if (count_ == Capacity) {
     if (!overflowed_) {
       overflowed_ = true;
-      logger_->warn("vm: button queue full, dropping the oldest");
+      if (logger_ != nullptr) logger_->warn("vm: button queue full, dropping the oldest");
     }
     head_ = (uint8_t)((head_ + 1) % Capacity);
     count_--;
@@ -25,7 +25,7 @@ void LocklessGestureQueue::push(const String& gesture) {
   count_++;
 }
 
-bool LocklessGestureQueue::take(String& gesture) {
+bool GestureQueue::take(String& gesture) {
   if (count_ == 0) return false;
   gesture = presses_[head_];
   presses_[head_] = "";
@@ -34,12 +34,12 @@ bool LocklessGestureQueue::take(String& gesture) {
   return true;
 }
 
-const char* LocklessGestureQueue::take() {
+const char* GestureQueue::take() {
   if (!take(press_)) return nullptr;
   return press_.c_str();
 }
 
-void LocklessGestureQueue::clear() {
+void GestureQueue::clear() {
   for (String& press : presses_) press = "";
   head_ = 0;
   count_ = 0;

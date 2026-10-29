@@ -126,15 +126,8 @@ void CaptureDisplay::keepFrame() {
 
 void CaptureDisplay::press(const char* gesture) {
   if (gesture == nullptr || gesture[0] == '\0') return;
-  queue_.push_back(gesture);
+  push(String(gesture));
   gestures_.push_back(gesture);
-}
-
-const char* CaptureDisplay::take() {
-  if (queue_.empty()) return nullptr;
-  taken_ = queue_.front();
-  queue_.pop_front();
-  return taken_.c_str();
 }
 
 void CaptureDisplay::markOverlay(int16_t top, int16_t rows) {
@@ -177,9 +170,8 @@ void CaptureDisplay::clear() {
   endCapture();
   frame_ = Frame{};
   components_.clear();
-  queue_.clear();
+  GestureQueue::clear();
   gestures_.clear();
-  taken_.clear();
   overlayTop_ = -1;
   overlayRows_ = 0;
 }

@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#include <deque>
 #include <string>
 #include <vector>
 
@@ -68,12 +67,9 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
 
   // --- the page's input -----------------------------------------------------
   // The token a page will take. The queue is this display's own, so a case hands the same object
-  // to a page as its glass and as its input.
+  // to a page as its glass and as its input; take() is the panel's queue's, and the token it hands
+  // back is the gesture state the frames that follow show.
   void press(const char* gesture);
-
-  // The oldest token a page has not taken, or nullptr. The token taken is the gesture state the
-  // frames that follow show.
-  const char* take() override;
 
   // Every token pressed, in the order it was pressed, which is what the queue was handed.
   const std::vector<std::string>& gestures() const { return gestures_; }
@@ -148,10 +144,7 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   Frame frame_;
   std::vector<Component> components_;
 
-  std::deque<std::string> queue_;
   std::vector<std::string> gestures_;
-  // What the last take() answered, which is what the pointer it returned points at.
-  std::string taken_;
 
   int16_t overlayTop_ = -1;
   int16_t overlayRows_ = 0;

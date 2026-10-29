@@ -41,10 +41,7 @@ using gardener::panel::page::SettingsRow;
 using gardener::panel::page::Ux;
 
 // The queue no case presses: nothing here is drawn, so nothing reads it.
-class NoPresses : public GestureQueue {
- public:
-  const char* take() override { return nullptr; }
-};
+using NoPresses = GestureQueue;
 
 // The page a launch builds: what a case reads a push through is the activation the factory was
 // handed, so the page itself draws nothing.

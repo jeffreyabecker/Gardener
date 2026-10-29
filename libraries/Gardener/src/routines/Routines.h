@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "panel/page/Ux.h"
-#include "panel/LocklessGestureQueue.h"
+#include "panel/GestureQueue.h"
 #include "routines/Interpreter.h"
 #include "routines/RoutineRegistry.h"
 #include <Gfx.h>
@@ -105,7 +105,7 @@ class Routines {
   // overlay shows.
   panel::PanelContext* panel_ = nullptr;
   panel::page::Ux stack_;
-  panel::LocklessGestureQueue gestures_;
+  panel::GestureQueue gestures_;
   // What begin() loaded of what it found, for the run that reports whether the image is all there.
   size_t filesLoaded_ = 0;
   size_t filesFound_ = 0;

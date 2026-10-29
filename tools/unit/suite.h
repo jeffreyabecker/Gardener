@@ -27,10 +27,7 @@ extern Canvas canvas;
 void reset();
 
 // The queue a scene drains when nothing is pressed: a case drives a scene through the hooks it
-// answers rather than through the keys.
-class NoGestures : public panel::GestureQueue {
- public:
-  const char* take() override { return nullptr; }
-};
+// answers rather than through the keys, so nothing is ever pushed at this one.
+using NoGestures = panel::GestureQueue;
 
 }  // namespace gardener::gfx::test

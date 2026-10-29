@@ -324,31 +324,16 @@ class SettingsProbe : public SettingsScene {
   bool press(const char* gesture) { return handle(gesture); }
 };
 
-// A queue a case fills: the scene on top drains it on its next beat, as the panel's queue does.
-class Pressed : public GestureQueue {
- public:
-  void press(const char* gesture) { queued_.push_back(gesture); }
-
-  const char* take() override {
-    if (queued_.empty()) return nullptr;
-    const char* gesture = queued_.front();
-    queued_.erase(queued_.begin());
-    return gesture;
-  }
-
- private:
-  std::vector<const char*> queued_;
-};
-
-// One gesture through the stack: queued, then taken by whatever is on top. A scene that closes
-// itself pops on this call rather than inside its own handle, which is how the stack is driven.
-void press(Ux& ux, Pressed& gestures, const char* gesture, uint32_t nowMs) {
-  gestures.press(gesture);
+// One gesture through the stack: pushed, then taken by whatever is on top on this beat. A scene
+// that closes itself pops on this call rather than inside its own handle, which is how the stack is
+// driven.
+void press(Ux& ux, GestureQueue& gestures, const char* gesture, uint32_t nowMs) {
+  gestures.push(gesture);
   ux.poll(canvas, nowMs);
 }
 
 TEST_CASE("a settings list moves and edits") {
-  Pressed gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures, ux);
@@ -392,7 +377,7 @@ TEST_CASE("a settings list moves and edits") {
 }
 
 TEST_CASE("a settings list cancel puts the set back") {
-  Pressed gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures, ux);
@@ -437,7 +422,7 @@ std::vector<ChoiceItem> choices() {
 }
 
 TEST_CASE("a settings list edits every kind") {
-  Pressed gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   NumberRow target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
@@ -560,7 +545,7 @@ TEST_CASE("a row answers the declaration it was built from") {
 // row's own default for a key it does not, and nothing for a key the set holds nothing for. What
 // goes in is what Back and Cancel put back, so the list opened on it.
 TEST_CASE("a settings list seeds from the document") {
-  Pressed gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   BoolRow power(gestures, ux, "power", "Power", true);
@@ -691,7 +676,7 @@ TEST_CASE("a rows check refuses what the set cannot use") {
 // The list hands a row's check to the editor it opens, so a refused value keeps that editor on the
 // stack and never reaches the set: the list closes on the value it was opened with.
 TEST_CASE("a settings list keeps a refused value out") {
-  Pressed gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   NumberRow start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
