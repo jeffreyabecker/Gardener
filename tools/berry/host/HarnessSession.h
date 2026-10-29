@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "BerryInterpreter.h"
-#include "BitmapPanel.h"
+#include "CaptureDisplay.h"
 #include "core/Logger.h"
 #include "gfx/Canvas.h"
 #include "hal/Battery.h"
@@ -262,7 +262,7 @@ class HarnessSession {
   bool active() const { return routines_.active(); }
 
   // --- capture -------------------------------------------------------------
-  // Arms capture: every beat from now snapshots the frame, and endCapture() writes them as a GIF.
+  // Arms capture: every flush from now keeps the frame, and endCapture() writes them as a GIF.
   void beginCapture(const char* path);
   // Writes the captured frames to the armed path; false when there was nothing to write.
   bool endCapture();
@@ -272,7 +272,8 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
-  // Records a gesture for the callout strip, shown on the next GestureCalloutBeats captures.
+  // Records a gesture for the callout strip, shown on the next captured frame. The page takes its
+  // presses from routines, so only the callout is told.
   void pressGesture(const char* gesture);
   // Marks the overlay band in every frame captured from now on: the suite framework hashes those
   // rows, because the band is the panel's own and no case draws it.
@@ -284,10 +285,6 @@ class HarnessSession {
   std::string dataDir_;
   std::string capturePath_;
   std::string captureStem_ = "build/runs";
-  std::vector<std::vector<uint8_t>> captureFrames_;
-  bool capturing_ = false;
-  std::string gesture_;
-  int gestureBeats_ = 0;
   size_t heapPeakBytes_ = 0;
   // The boot, as the heap it held before each image file was read, plus where it ended.
   std::vector<std::pair<std::string, size_t>> readSamples_;
@@ -295,8 +292,6 @@ class HarnessSession {
   size_t frameworkBytes_ = 0;
   size_t loadedBytes_ = 0;
   size_t imageBytes_ = 0;
-  int16_t overlayTop_ = -1;
-  int16_t overlayRows_ = 0;
 
   MemoryFiles files_;
   BufferLogger logger_;
@@ -306,7 +301,7 @@ class HarnessSession {
   ModelSensor sensor_;
   ModelValve valve_;
   VacuumSystem vacuum_;
-  BitmapPanel panel_;
+  CaptureDisplay display_{CaptureDisplay::Width, CaptureDisplay::Height, 1};
   gfx::Canvas canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;

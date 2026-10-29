@@ -52,10 +52,10 @@ plus `tests/*.test.be` for the named suites.
 
 **Look at the picture.** `--art` draws the page the panel would, in the face the panel would pick;
 `--scene home`, `--scene browser` and `--scene system` draw the device's own well-known scenes.
-The output is an animated GIF — one frame per beat, each held a second by `kGifDelayCs`,
-enlarged 2 x by `kRenderScale`. The GIF draws
-a full-width strip across the top showing each injected press (`OK`, `OK×2`, `CANCEL 5s`) for one
-beat, behind `kGestureCalloutBeats`; a suite's captures hash the overlay band instead of drawing
+The output is an animated GIF — one frame per flushed beat, each held a second by `GifDelayCs`,
+enlarged 2 x by `RenderScale`. The GIF draws a full-width strip across the top showing each
+injected press (`OK`, `OK×2`, `CANCEL 5s`) for one captured frame, as many as
+`CaptureDisplay::CalloutFrames` says; a suite's captures hash the overlay band instead of drawing
 the device's status row, so the page the case drove reads as the whole picture. Writing a frame out
 as text loses the thing the render is for.
 

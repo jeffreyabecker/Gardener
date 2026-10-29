@@ -8,10 +8,10 @@
     python tools/unit/check.py --verbose             # print each compiler command
 
 The suite is the firmware's own C++ compiled for the host: libraries/Gfx and libraries/Gardener,
-their cases under this folder, the fakes the cases drive, the capture writer the tools share, and
-doctest. It needs a C++ compiler and Python and nothing else -- no interpreter, no data image and no
-board. A source that names one of those things is not one of its inputs, and neither is anything
-under libraries/berry, libraries/BerryHost, tools/berry or firmware/data.
+their cases under this folder, the fakes the cases drive, the recording display and frame writer the
+tools share, and doctest. It needs a C++ compiler and Python and nothing else -- no interpreter, no
+data image and no board. A source that names one of those things is not one of its inputs, and
+neither is anything under libraries/berry, libraries/BerryHost, tools/berry or firmware/data.
 
 Every argument the script does not recognise is passed to the test binary, so doctest's own filter,
 listing and reporting are the suite's.

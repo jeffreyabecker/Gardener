@@ -183,6 +183,11 @@ bool Capture::save(const char* path) const {
   return writeGif(path, width_, height_, frames_);
 }
 
+const std::vector<uint8_t>* Capture::frame(int index) const {
+  if (index < 0 || index >= frameCount()) return nullptr;
+  return &frames_[static_cast<size_t>(index)];
+}
+
 void Capture::disarm() {
   width_ = 0;
   height_ = 0;

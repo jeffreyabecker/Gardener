@@ -1,11 +1,14 @@
 // A frame a case drew, saved through the writer the tools share: the still and the sequence, and
-// the bytes a GIF89a starts with. The frame is packed here the way a display buffer holds it, which
-// is the writer's only input.
+// the bytes a GIF89a starts with. The frame is packed by hand where the writer is what is under
+// test; a page driven through the suite's own display leaves the packing to it, and a capture of
+// that page carries the gesture it took and the overlay rows a case did not draw.
 
 #include <doctest.h>
 
 #include <cstdio>
+#include <cstring>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -15,14 +18,34 @@
 namespace {
 
 using gardener::Capture;
+using gardener::CaptureDisplay;
 using gardener::GifDelayCs;
 using gardener::RenderScale;
+using gardener::gfx::Canvas;
+using gardener::gfx::ui::GestureQueue;
+using gardener::gfx::ui::Scene;
+using gardener::gfx::ui::Ux;
 using gardener::gfx::test::display;
 using gardener::gfx::test::PageHeight;
 using gardener::gfx::test::PageWidth;
 using gardener::gfx::test::reset;
 
-// The frame the stub display holds, packed one bit per pixel, row-major and top-down.
+// Whether one bit of a frame packed one bit per pixel, row-major and top-down, is ink.
+bool packedAt(const std::vector<uint8_t>& frame, int16_t width, int x, int y) {
+  const int rowBytes = (width + 7) / 8;
+  return (frame[static_cast<size_t>(y) * rowBytes + x / 8] & (0x80 >> (x & 7))) != 0;
+}
+
+bool packedInk(const std::vector<uint8_t>& frame, int16_t width, int x, int y, int w, int h) {
+  for (int row = y; row < y + h; row++) {
+    for (int column = x; column < x + w; column++) {
+      if (packedAt(frame, width, column, row)) return true;
+    }
+  }
+  return false;
+}
+
+// The frame the display holds, packed one bit per pixel, row-major and top-down.
 std::vector<uint8_t> packedFrame() {
   const int rowBytes = (PageWidth + 7) / 8;
   std::vector<uint8_t> packed(static_cast<size_t>(rowBytes) * PageHeight, 0);
@@ -158,4 +181,148 @@ TEST_CASE("a still a Gfx component drew is saved the same way") {
   REQUIRE(bytes.size() > 20);
   CHECK_EQ(std::string(reinterpret_cast<const char*>(bytes.data()), 6), std::string("GIF89a"));
   std::remove("tools/unit/build/capture_gfx_still.gif");
+}
+
+TEST_CASE("a recording display keeps one frame per flush that drew") {
+  reset();
+  display.beginCapture();
+  gardener::gfx::test::canvas.setPixel(4, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  // Nothing drawn since: still a flush, but nothing sent and so nothing kept.
+  gardener::gfx::test::canvas.flush(display);
+  CHECK_EQ(display.flushCount(), 2);
+  CHECK_EQ(display.frameCount(), 1);
+  display.endCapture();
+}
+
+TEST_CASE("a beat saved through the display is one GIF frame per send") {
+  reset();
+  display.beginCapture();
+  gardener::gfx::test::canvas.setPixel(4, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::canvas.setPixel(6, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  REQUIRE(display.save("tools/unit/build/capture_display_beat.gif"));
+  display.endCapture();
+
+  const std::vector<uint8_t> bytes = readFile("tools/unit/build/capture_display_beat.gif");
+  REQUIRE(bytes.size() > 20);
+  CHECK_EQ(std::string(reinterpret_cast<const char*>(bytes.data()), 6), std::string("GIF89a"));
+  CHECK_EQ(countFrameBlocks(bytes), 2);
+  std::remove("tools/unit/build/capture_display_beat.gif");
+}
+
+TEST_CASE("the gesture a page takes is drawn on the frame it drew") {
+  reset();
+  display.beginCapture();
+  display.press("ok:double");
+  CHECK_EQ(std::string(display.take()), std::string("ok:double"));
+  gardener::gfx::test::canvas.setPixel(4, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  REQUIRE_EQ(display.frameCount(), 1);
+  const std::vector<uint8_t>* frame = display.frame(0);
+  REQUIRE(frame != nullptr);
+  CHECK(packedInk(*frame, PageWidth, 0, 0, PageWidth, 10));  // the callout strip
+  CHECK(packedAt(*frame, PageWidth, 4, 20));                 // and what the page drew
+  CHECK_EQ(display.gestures().size(), 1);
+  display.endCapture();
+}
+
+TEST_CASE("the callout is on the frame the gesture landed on and not the next") {
+  reset();
+  display.beginCapture();
+  display.press("ok:single");
+  display.take();
+  gardener::gfx::test::canvas.setPixel(4, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::canvas.setPixel(6, 20, 255);
+  gardener::gfx::test::canvas.flush(display);
+  REQUIRE_EQ(display.frameCount(), 2);
+  CHECK(packedInk(*display.frame(0), PageWidth, 0, 0, PageWidth, 10));
+  CHECK_FALSE(packedInk(*display.frame(1), PageWidth, 0, 0, PageWidth, 10));
+  display.endCapture();
+}
+
+TEST_CASE("the overlay mark is hashed on every captured frame") {
+  reset();
+  display.beginCapture();
+  display.markOverlay(40, 8);
+  gardener::gfx::test::canvas.setPixel(4, 44, 255);
+  gardener::gfx::test::canvas.flush(display);
+  REQUIRE_EQ(display.frameCount(), 1);
+  const std::vector<uint8_t>* frame = display.frame(0);
+  REQUIRE(frame != nullptr);
+  CHECK(packedAt(*frame, PageWidth, 0, 40));      // the outline
+  CHECK(packedAt(*frame, PageWidth, 0, 44));      // the left edge
+  CHECK_FALSE(packedAt(*frame, PageWidth, 1, 44));  // the spacing leaves this clear
+  CHECK(packedAt(*frame, PageWidth, 4, 44));
+  display.endCapture();
+}
+
+TEST_CASE("a one-bit display records the bits the canvas drew") {
+  CaptureDisplay screen(64, 32, 1);
+  CHECK_EQ(screen.bitsPerPixel(), 1);
+  Canvas canvas = screen.rootCanvas();
+  screen.beginCapture();
+  canvas.setPixel(3, 3, 255);
+  canvas.flush(screen);
+  REQUIRE_EQ(screen.frameCount(), 1);
+
+  std::vector<uint8_t> packed(Capture::frameBytes(64, 32), 0);
+  screen.pack(packed.data());
+  CHECK_EQ(packed[0], 0x00);
+  CHECK_EQ(packed[3 * 8], 0x10);  // row 3, eighth byte, top bit
+  CHECK_EQ(screen.at(3, 3), 255);
+  CHECK_EQ(screen.at(4, 3), 0);
+  screen.endCapture();
+}
+
+TEST_CASE("the display hands the page its presses in order") {
+  reset();
+  display.press("ok:single");
+  display.press("up:double");
+  CHECK_EQ(std::string(display.take()), std::string("ok:single"));
+  CHECK_EQ(std::string(display.take()), std::string("up:double"));
+  CHECK(display.take() == nullptr);
+  CHECK_EQ(display.gestures().size(), 2);
+}
+
+namespace {
+
+// A scene that answers one gesture and marks the pixel it drew it at, with the count kept outside
+// because the stack owns the scene.
+class OkScene : public Scene {
+ public:
+  OkScene(GestureQueue& gestures, int& handled) : Scene(gestures), handled_(handled) {}
+
+ protected:
+  bool handle(const char* gesture) override {
+    if (strcmp(gesture, "ok:single") != 0) return false;
+    handled_++;
+    return true;
+  }
+  void drawPage(Canvas& canvas) override { canvas.setPixel(4, 20, 255); }
+
+ private:
+  int& handled_;
+};
+
+}  // namespace
+
+TEST_CASE("a scene driven through the display takes its press from it") {
+  reset();
+  int handled = 0;
+  Ux ux;
+  ux.reset(std::make_unique<OkScene>(display, handled));
+  display.beginCapture();
+  display.press("ok:single");
+  CHECK(ux.poll(gardener::gfx::test::canvas, 1));
+  gardener::gfx::test::canvas.flush(display);
+  CHECK_EQ(handled, 1);
+  REQUIRE_EQ(display.frameCount(), 1);
+  const std::vector<uint8_t>* frame = display.frame(0);
+  REQUIRE(frame != nullptr);
+  CHECK(packedAt(*frame, PageWidth, 4, 20));
+  CHECK(packedInk(*frame, PageWidth, 0, 0, PageWidth, 10));
+  display.endCapture();
 }

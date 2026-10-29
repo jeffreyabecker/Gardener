@@ -91,23 +91,23 @@ GFX_SOURCES = [
     GFX / "src" / "ui" / "DurationScene.cpp",
 ]
 
-# The parts the panel's pieces are made of here: a bitmap for the glass, a chamber and its three
-# parts, a counted piezo, a full battery, the data image in memory and a log buffer.
+# The parts the panel's pieces are made of here: a chamber and its three parts, a counted piezo, a
+# full battery, the data image in memory and a log buffer. The glass is the shared recording
+# display.
 HOST_SOURCES = [
-    HOST / "BitmapPanel.cpp",
-    HOST / "GestureCallout.cpp",
     HOST / "HarnessModule.cpp",
     HOST / "HarnessSession.cpp",
     HOST / "MemoryFiles.cpp",
-    HOST / "OverlayCallout.cpp",
 ]
 
 MAIN_SOURCES = [TOOL / "main.cpp", *HOST_SOURCES]
 
-# What a host tool shares with the others: the Arduino API, the clock and the frame writer.
+# What a host tool shares with the others: the Arduino API, the clock, the recording display and the
+# frame writer.
 SHARED = ROOT / "tools" / "host"
 SHARED_SOURCES = [
     SHARED / "arduino" / "Clock.cpp",
+    SHARED / "capture" / "CaptureDisplay.cpp",
     SHARED / "capture" / "GifWriter.cpp",
 ]
 

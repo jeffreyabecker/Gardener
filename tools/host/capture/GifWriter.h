@@ -41,6 +41,10 @@ class Capture {
   // file cannot be opened.
   bool save(const char* path) const;
 
+  // One frame the sequence holds, packed as it was added, for a caller that reads back what it
+  // captured. Null when the index is not one of them.
+  const std::vector<uint8_t>* frame(int index) const;
+
   void disarm();
   int frameCount() const { return static_cast<int>(frames_.size()); }
   int16_t width() const { return width_; }

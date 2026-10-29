@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
+#include "CaptureDisplay.h"
 #include "Clock.h"
 #include "core/Logger.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "fakes/StubDisplay.h"
 #include "gfx/Canvas.h"
 #include "gfx/DisplayDevice.h"
 #include "hal/Battery.h"
@@ -55,7 +55,7 @@ using gardener::gfx::Canvas;
 using gardener::gfx::DisplayDevice;
 using gardener::gfx::ui::GestureQueue;
 using gardener::gfx::ui::Scene;
-using gardener::gfx::test::StubDisplay;
+using gardener::CaptureDisplay;
 using gardener::test::FakeBattery;
 using gardener::test::FakeButtonPanel;
 using gardener::test::FakeBuzzer;
@@ -182,7 +182,7 @@ struct PageRig {
   MemoryLibrary library;
   RecordingLogger logger;
   Config config;
-  StubDisplay display{128, 64};
+  CaptureDisplay display{128, 64};
   Canvas canvas;
   FakeBuzzer buzzerPart;
   BuzzerPlayer buzzer;

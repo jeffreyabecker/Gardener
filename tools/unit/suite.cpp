@@ -2,12 +2,14 @@
 
 namespace gardener::gfx::test {
 
-StubDisplay display(PageWidth, PageHeight);
+CaptureDisplay display(PageWidth, PageHeight);
 Canvas canvas = display.rootCanvas();
 
 void reset() {
-  display.clearFrame();
-  display.resetFlushes();
+  // A case starts with the canvas reporting nothing, so a rectangle left dirty by the case before
+  // it cannot land in the first frame this one captures.
+  canvas.flush(display);
+  display.clear();
 }
 
 }  // namespace gardener::gfx::test

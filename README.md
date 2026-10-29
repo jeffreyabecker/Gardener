@@ -73,8 +73,9 @@ python tools/unit/check.py --test-case="a name"   # one case, while a change is 
 
 The suite compiles [libraries/Gfx](./libraries/Gfx) and [libraries/Gardener](./libraries/Gardener)
 beside its own cases under [doctest](./tools/doctest), with [tools/host](./tools/host) supplying the
-Arduino API it is built against, a clock a case advances and the frame writer the tools share. It
-needs a C++ compiler (`g++` or `clang++`) and Python, and nothing else.
+Arduino API it is built against, a clock a case advances and the display a case hands a page — a
+recording display that keeps the beats it drove and writes them as a GIF. It needs a C++ compiler
+(`g++` or `clang++`) and Python, and nothing else.
 
 ## Documentation
 

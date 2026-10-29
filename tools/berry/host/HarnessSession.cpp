@@ -5,11 +5,8 @@
 
 #include "BerryHost.h"
 #include "Clock.h"
-#include "GestureCallout.h"
-#include "GifWriter.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
-#include "OverlayCallout.h"
 
 // The interpreter's heap count, which the report reads: a C API, so the header goes in as one.
 extern "C" {
@@ -95,9 +92,9 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       sensor_(chamber_),
       valve_(chamber_),
       vacuum_(&pump_, &sensor_, &valve_),
-      canvas_(panel_.rootCanvas()),
+      canvas_(display_.rootCanvas()),
       buzzer_(buzzerPart_),
-      context_(panel_, canvas_, config_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      context_(display_, canvas_, config_, vacuum_, battery_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -155,19 +152,8 @@ void HarnessSession::beat(int count) {
     const size_t held = heapBytes();
     if (held > heapPeakBytes_) heapPeakBytes_ = held;
 
-    if (capturing_) {
-      canvas_.flush(panel_);
-      std::vector<uint8_t> frame((size_t)panel_.width() * panel_.height() / 8);
-      panel_.packFrame(frame.data());
-      if (gestureBeats_ > 0 && !gesture_.empty()) {
-        drawGestureStrip(frame.data(), panel_.width(), panel_.height(), gestureLabel(gesture_));
-      }
-      if (overlayTop_ >= 0) {
-        drawOverlayHash(frame.data(), panel_.width(), panel_.height(), overlayTop_, overlayRows_);
-      }
-      captureFrames_.push_back(std::move(frame));
-    }
-    if (gestureBeats_ > 0) gestureBeats_--;
+    // The display keeps the beat as one frame while a capture is armed, callouts and all.
+    canvas_.flush(display_);
   }
 }
 
@@ -197,15 +183,9 @@ std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
   return costs;
 }
 
-void HarnessSession::pressGesture(const char* gesture) {
-  gesture_ = gesture != nullptr ? gesture : "";
-  gestureBeats_ = GestureCalloutBeats;
-}
+void HarnessSession::pressGesture(const char* gesture) { display_.showGesture(gesture); }
 
-void HarnessSession::markOverlay(int16_t top, int16_t rows) {
-  overlayTop_ = top;
-  overlayRows_ = rows;
-}
+void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
 
 void HarnessSession::backHold() {
   postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
@@ -222,33 +202,24 @@ void HarnessSession::reset() {
 
 void HarnessSession::beginCapture(const char* path) {
   capturePath_ = path != nullptr ? path : "";
-  captureFrames_.clear();
-  capturing_ = true;
+  display_.beginCapture();
 }
 
 bool HarnessSession::endCapture() {
-  capturing_ = false;
   // Nothing to write is not a write failure: a case that never beats has no motion to show.
-  if (captureFrames_.empty()) {
-    capturePath_.clear();
-    return true;
-  }
-  const bool ok = writeGif(capturePath_.c_str(), panel_.width(), panel_.height(), captureFrames_);
-  captureFrames_.clear();
+  const bool ok = display_.frameCount() == 0 || display_.save(capturePath_.c_str());
+  display_.endCapture();
   capturePath_.clear();
   return ok;
 }
 
 bool HarnessSession::saveStill(const char* path) {
-  canvas_.flush(panel_);
-  std::vector<uint8_t> frame((size_t)panel_.width() * panel_.height() / 8);
-  panel_.packFrame(frame.data());
-  if (overlayTop_ >= 0) {
-    drawOverlayHash(frame.data(), panel_.width(), panel_.height(), overlayTop_, overlayRows_);
-  }
-  std::vector<std::vector<uint8_t>> frames;
-  frames.push_back(std::move(frame));
-  return writeGif(path, panel_.width(), panel_.height(), frames);
+  canvas_.flush(display_);
+  display_.beginCapture();
+  display_.record();
+  const bool ok = display_.save(path);
+  display_.endCapture();
+  return ok;
 }
 
 }  // namespace gardener
