@@ -249,9 +249,13 @@ def the_page_draws_what_its_machine_reports()
 
   harness.beat(1)
   assert_true(mock.advances >= 1, "a beat did not advance the machine")
-  assert_eq(page.chrome.sets.value, "2 / 3", "the page is not drawing the set it is on")
-  assert_eq(page.chrome.status.value, "REST", "the page is not drawing its machine's stage")
-  assert_eq(page.chrome.bar.value, 40.0, "the page is not drawing the hold's share left")
+  var tree = page.draw_page()
+  assert_eq(child_at(child_at(tree, 1), 1).value, "2 / 3",
+            "the page is not drawing the set it is on")
+  assert_eq(child_at(child_at(tree, 2), 0).value, "REST",
+            "the page is not drawing its machine's stage")
+  assert_eq(child_at(child_at(tree, 2), 1).percent, 40.0,
+            "the page is not drawing the hold's share left")
 end
 
 test("the page draws the set, stage and hold its machine reports",

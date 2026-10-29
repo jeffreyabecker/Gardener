@@ -70,7 +70,11 @@ def the_page_draws_the_clock_its_machine_reports()
 
   harness.beat(1)
   assert_true(mock.advances >= 1, "a beat did not advance the machine")
-  assert_eq(home.chrome.timer.seconds, 65, "the page is not drawing its machine's clock")
+  # The drawing the page answers, read the way the chrome suite reads it: the clock is the body's second
+  # node, and a page that kept no tree of its own has nothing else to be asked.
+  var tree = home.draw_page()
+  assert_eq(child_at(child_at(tree, 1), 1).value, screen.duration_text("minutes", 65),
+            "the page is not drawing its machine's clock")
   home.machine = HomeMachine()
 end
 
