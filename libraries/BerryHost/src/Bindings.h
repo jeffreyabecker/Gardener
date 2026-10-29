@@ -18,8 +18,8 @@ namespace berry {
 //   vacuum.*    the machine, read and commanded
 //   screen.*    the drawing a page describes: a node per call, aggregated into records the panel
 //               can draw later
-//   device.*    the device: its settings, the unit it prints in, the piezo, the clock, the log
-//               and the presses waiting for a page
+//   device.*    the device: the target it stores, the piezo, the clock, the log and the presses
+//               waiting for a page
 //   settings.*  the declaration of a setting: a class per kind, each call holding the row it built
 //   routines.*  the registry: register() a record with the class its page is built from, activate()
 //               the page a launch builds, and the set it reads and writes

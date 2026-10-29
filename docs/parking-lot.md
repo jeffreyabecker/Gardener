@@ -128,11 +128,12 @@ neither copyable nor movable, so a getter cannot hand one out by value or keep o
 
 The library holding the interpreter's install, its six native modules, the page scene and the draw
 tree compiles against [libraries/Gardener](../libraries/Gardener) for the machine's bounds and its
-run state, the device's and a routine's documents and the buzzer — more than `PanelContext` carries.
-A surface declared in that library and implemented by the firmware would let it build with only the
-vendored VM and Gfx beside it. Blocked by: four modules reach past `PanelContext` into
-`machine/Machine.h`, `storage/Config.h`, `storage/DeviceConfig.h` and `panel/parts/BuzzerPlayer.h`, and
-nothing has chosen a shape for one seam that covers all four.
+run state, and for the buzzer — more than `PanelContext` carries. A surface declared in that library
+and implemented by the firmware would let it build with only the vendored VM and Gfx beside it.
+Blocked by: the `vacuum` module reaches past the context into `machine/Machine.h` for the two target
+bounds and `machine/VacuumSystem.h` for the run state's name, and `device` into
+`panel/parts/BuzzerPlayer.h` for the piezo's actions, and nothing has chosen one shape for a reading
+and an action.
 
 ## A spec for the image's check
 

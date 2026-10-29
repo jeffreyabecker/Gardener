@@ -7,43 +7,18 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "core/Units.h"
 #include "routines/Routines.h"
 #include "Module.h"
 #include "Modules.h"
-#include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace berry {
 namespace {
 
-// The unit the panel prints pressure in: a name `core/Units.h` holds, written to the
-// device's own document, and a name it does not hold is answered false rather than defaulted.
-int deviceSetUnit(bvm* vm) {
-  DisplayUnit unit = DisplayUnit::Kpa;
-  const bool accepted =
-      be_isstring(vm, 1) && parseDisplayUnit(argText(vm, 1), unit);
-  if (accepted) {
-    context->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
-    context->config().save();
-  }
-  be_pushbool(vm, accepted);
-  be_return(vm);
-}
-
-// The target the default program pulls to; 0 when none has been set. The page clamps a new value to
-// the machine's bounds before it writes it, and the default page clamps again when it restores one.
+// The target the default program pulls to; 0 when none has been set.
 int deviceTarget(bvm* vm) {
-  const float target = context->config().get<float>(DeviceSection, TargetKey, 0.0f);
-  be_pushreal(vm, target > 0.0f ? target : 0.0f);
+  be_pushreal(vm, context->systemState().deviceTargetKpa);
   be_return(vm);
-}
-
-int deviceSetTarget(bvm* vm) {
-  context->config().set(DeviceSection, TargetKey, (float)argReal(vm, 1));
-  context->config().save();
-  be_return_nil(vm);
 }
 
 // The sequence a routine plays at its finish, in the same notation the device's own documents use.
@@ -110,9 +85,7 @@ int deviceTakeGesture(bvm* vm) {
 }
 
 const bnfuncinfo DeviceLibrary[] = {
-    {"set_unit", deviceSetUnit},
     {"target", deviceTarget},
-    {"set_target", deviceSetTarget},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},
     {"silence", deviceSilence},

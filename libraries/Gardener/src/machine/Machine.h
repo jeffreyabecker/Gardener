@@ -162,6 +162,7 @@ class Machine {
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }
+  const VacuumSystem& vacuum() const { return vacuum_; }
   uint8_t capabilities() const { return capabilities_; }
   void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }

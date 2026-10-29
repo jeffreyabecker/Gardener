@@ -2,13 +2,12 @@
 
 #include <stdint.h>
 
+#include "panel/SystemState.h"
+
 namespace gardener {
 
-class Battery;
-class Config;
 class Library;
 class Logger;
-class VacuumSystem;
 struct MachineCommand;
 
 }  // namespace gardener
@@ -35,19 +34,14 @@ class PanelContext {
   // by the page, the overlay and the `screen` module, so one flush sends what any of them wrote.
   virtual gfx::DisplayDevice& display() = 0;
   virtual gfx::Canvas& canvas() = 0;
-  // The device's own document, /cfg/settings.ini: whoever needs the unit or the target under
-  // [device] reads and writes that key here.
-  virtual Config& config() = 0;
-  virtual VacuumSystem& vacuum() = 0;
-  virtual Battery& battery() = 0;
+  // What the machine is doing, as one value folded out of the panel's own parts when it is asked
+  // for: the run and the chamber, the pack, the two links and the unit the device prints in. A
+  // routine reads the machine here and nowhere else, and there is nothing on it to command.
+  virtual SystemState systemState() = 0;
   virtual parts::BuzzerPlayer& buzzer() = 0;
   // The interpreter's own files: the modules and routines it compiles, and the data it reads.
   virtual Library& library() = 0;
   virtual Logger& logger() = 0;
-  // The two ways a controller can reach the device, as the interface owner last reported them. The
-  // overlay reports presence: a connected link that has not acquired control still counts.
-  virtual bool serialConnected() const = 0;
-  virtual bool bluetoothConnected() const = 0;
   // The machine's command queue, through the panel's own outbox, so a command the queue cannot
   // take waits for the panel's next beat rather than being dropped.
   virtual bool post(const MachineCommand& command) = 0;

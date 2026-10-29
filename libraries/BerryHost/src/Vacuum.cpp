@@ -22,14 +22,14 @@ int vacuumSetTargetPressure(bvm* vm) {
 }
 
 int vacuumGetTargetPressure(bvm* vm) {
-  be_pushreal(vm, context->vacuum().targetPressureKpa());
+  be_pushreal(vm, context->systemState().targetPressureKpa);
   be_return(vm);
 }
 
 // Depth below ambient as the sensor reports it: zero while there is no reading, because the part is
 // not answering or no sample has been filtered yet.
 int vacuumGetCurrentPressure(bvm* vm) {
-  be_pushreal(vm, context->vacuum().currentPressureKpa());
+  be_pushreal(vm, context->systemState().currentPressureKpa);
   be_return(vm);
 }
 
@@ -60,7 +60,7 @@ int vacuumClamp(bvm* vm) {
 // False when the machine would refuse: no valid reading, or a latched fault. A start while a run is
 // already going is a no-op that answers true.
 int vacuumStart(bvm* vm) {
-  if (context->vacuum().startRefusal() != nullptr) {
+  if (!context->systemState().canStart) {
     be_pushbool(vm, false);
     be_return(vm);
   }
@@ -85,7 +85,7 @@ int vacuumReset(bvm* vm) {
 // The state as the one word the wire and the overlay print. A vent stops reading here when it
 // ends: a release settles at IDLE and a target vent returns to PULL or HOLD.
 int vacuumState(bvm* vm) {
-  be_pushstring(vm, runStateName(context->vacuum().runState()));
+  be_pushstring(vm, runStateName(context->systemState().runState));
   be_return(vm);
 }
 

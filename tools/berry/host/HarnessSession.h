@@ -22,7 +22,7 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
-#include "storage/Config.h"
+#include "storage/DeviceSettings.h"
 
 struct bvm;
 
@@ -189,12 +189,12 @@ bool postMachineCommand(const MachineCommand& command);
 // the only thing the Berry modules know about their surroundings.
 class HarnessPanel : public panel::PanelContext {
  public:
-  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, Config& config,
+  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, DeviceSettings& settings,
                VacuumSystem& vacuum, Battery& battery,
                panel::parts::BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
         canvas_(canvas),
-        config_(config),
+        settings_(settings),
         vacuum_(vacuum),
         battery_(battery),
         buzzer_(buzzer),
@@ -203,22 +203,20 @@ class HarnessPanel : public panel::PanelContext {
 
   gfx::DisplayDevice& display() override { return display_; }
   gfx::Canvas& canvas() override { return canvas_; }
-  Config& config() override { return config_; }
-  VacuumSystem& vacuum() override { return vacuum_; }
-  Battery& battery() override { return battery_; }
+  // The host models a device with both links up, so the overlay shows both icons.
+  SystemState systemState() override {
+    return readSystemState(vacuum_, battery_, settings_, true, true);
+  }
   panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
-  // The host models a device with both links up, so the overlay shows both icons.
-  bool serialConnected() const override { return true; }
-  bool bluetoothConnected() const override { return true; }
   // The host has no queue to fill, so the command is always taken.
   bool post(const MachineCommand& command) override { return postMachineCommand(command); }
 
  private:
   gfx::DisplayDevice& display_;
   gfx::Canvas& canvas_;
-  Config& config_;
+  DeviceSettings& settings_;
   VacuumSystem& vacuum_;
   Battery& battery_;
   panel::parts::BuzzerPlayer& buzzer_;
@@ -312,7 +310,7 @@ class HarnessSession {
 
   MemoryFiles files_;
   BufferLogger logger_;
-  Config config_;
+  DeviceSettings settings_;
   Chamber chamber_;
   ModelPump pump_;
   ModelSensor sensor_;

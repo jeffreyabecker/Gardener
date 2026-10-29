@@ -12,7 +12,7 @@
 #include "panel/parts/GestureClassifier.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
-#include "storage/Config.h"
+#include "storage/DeviceSettings.h"
 
 namespace gardener::panel {
 
@@ -49,7 +49,7 @@ class Panel : public Machine, public PanelContext {
         gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
-        config_(&library),
+        settings_(&library),
         display_(display),
         canvas_(display->rootCanvas()),
         routines_(routines),
@@ -69,18 +69,20 @@ class Panel : public Machine, public PanelContext {
   ButtonPanel& buttons() { return *buttons_; }
   parts::GestureClassifier& gestures() { return gestures_; }
   parts::BuzzerPlayer& buzzer() override { return *buzzer_; }
-  Battery& battery() override { return *battery_; }
-  // The machine's own reads, named again so the context's virtuals resolve to one function.
-  VacuumSystem& vacuum() override { return Machine::vacuum(); }
+  // The gauge, for the panel task's own beat and the wire's `device get`, which hold a Panel.
+  Battery& battery() { return *battery_; }
   Logger& logger() override { return Machine::logger(); }
   // The glass, and the frame every drawing verb lands in.
   gfx::DisplayDevice& display() override { return *display_; }
   gfx::Canvas& canvas() override { return canvas_; }
-  // The two links, as the interface task last reported them to the machine; presence is all the
-  // overlay reports.
-  bool serialConnected() const override { return Machine::serialConnected(); }
-  bool bluetoothConnected() const override { return Machine::bluetoothConnected(); }
-  Config& config() override { return config_; }
+  // The device's own document, for the two places that write it: the serial `device set` and the
+  // BLE unit characteristic.
+  DeviceSettings& settings() { return settings_; }
+  // What the panel reads of the machine, folded from its own parts each time it is asked.
+  SystemState systemState() override {
+    return readSystemState(Machine::vacuum(), *battery_, settings_, Machine::serialConnected(),
+                           Machine::bluetoothConnected());
+  }
   Library& library() override { return library_; }
   Routines& routines() { return *routines_; }
 
@@ -91,7 +93,7 @@ class Panel : public Machine, public PanelContext {
   parts::BuzzerPlayer* buzzer_;
   Battery* battery_;
   // The device's document, ahead of the display and of the interpreter that reads it.
-  Config config_;
+  DeviceSettings settings_;
   gfx::DisplayDevice* display_;
   // The one frame a page draws into, over the device's own buffer.
   gfx::Canvas canvas_;

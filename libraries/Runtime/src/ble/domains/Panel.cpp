@@ -10,7 +10,6 @@
 #include "ble/BleLink.h"
 #include "panel/Panel.h"
 #include "core/Units.h"
-#include "storage/DeviceConfig.h"
 
 namespace gardener {
 
@@ -63,10 +62,7 @@ void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
 void PanelBleDomain::describe(uint8_t index) {
   switch (index) {
     case Unit: {
-      DisplayUnit unit = DisplayUnit::Kpa;
-      parseDisplayUnit(
-          app_->config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-      setByte(characteristics_[Unit], static_cast<uint8_t>(unit));
+      setByte(characteristics_[Unit], static_cast<uint8_t>(app_->settings().unit()));
       break;
     }
     case Batt:
@@ -94,8 +90,8 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     if (unitWrite_.value < DisplayUnitCount) {
       const DisplayUnit unit =
           static_cast<DisplayUnit>(unitWrite_.value);
-      app_->config().set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
-      app_->config().save();
+      app_->settings().setUnit(unit);
+      app_->settings().save();
     }
     describe(Unit);
   }

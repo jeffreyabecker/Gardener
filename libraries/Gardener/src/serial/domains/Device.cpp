@@ -11,12 +11,12 @@
 #include "core/Battery.h"
 #include "serial/Domain.h"
 #include "serial/SerialLink.h"
-#include "storage/Config.h"
+#include "storage/DeviceSettings.h"
 #if GARDENER_PANEL
 #include "panel/Panel.h"
 #include "core/Units.h"
 #include "serial/PanelDomains.h"
-#include "storage/DeviceConfig.h"
+#include "storage/DeviceSettings.h"
 #endif
 
 namespace gardener {
@@ -36,8 +36,8 @@ class DeviceDomain : public Domain {
   // The panel's build passes its gauge and document; a machine-alone build has neither, and the
   // fields that would read them are not compiled.
   DeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board,
-               const Battery* battery = nullptr, Config* config = nullptr)
-      : Domain(outbox), app_(app), board_(board), battery_(battery), config_(config) {}
+               const Battery* battery = nullptr, DeviceSettings* settings = nullptr)
+      : Domain(outbox), app_(app), board_(board), battery_(battery), settings_(settings) {}
 
   const char* name() const override { return "device"; }
   void execute(Stream& io) override;
@@ -50,7 +50,7 @@ class DeviceDomain : public Domain {
   Machine& app_;
   BoardFacts board_;
   const Battery* battery_;
-  Config* config_;
+  DeviceSettings* settings_;
 };
 
 void DeviceDomain::execute(Stream& io) {
@@ -130,10 +130,8 @@ void DeviceDomain::get(Stream& io) {
 
 #if GARDENER_PANEL
   // The token, not the suffix: a host reads `kpa`, and the panel prints `kPa`.
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(config_->get<String>(DeviceSection, UnitKey, "").c_str(), unit);
   io.print(" unit=");
-  io.print(displayUnitInfo(unit).name);
+  io.print(displayUnitInfo(settings_->unit()).name);
 #endif
 
   // One byte, the same mask the BLE `caps` characteristic reports.
@@ -207,8 +205,8 @@ void DeviceDomain::set(Stream& io, const String& args) {
       io.print('\n');
       return;
     }
-    config_->set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
-    config_->save();
+    settings_->setUnit(unit);
+    settings_->save();
 
     io.print("ok unit=");
     io.print(displayUnitInfo(unit).name);
@@ -247,7 +245,7 @@ Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox, const Boa
 
 #if GARDENER_PANEL
 Domain* createDeviceDomain(panel::Panel& app, CommandOutbox& outbox, const BoardFacts& board) {
-  return new DeviceDomain(app, outbox, board, &app.battery(), &app.config());
+  return new DeviceDomain(app, outbox, board, &app.battery(), &app.settings());
 }
 #endif
 

@@ -13,9 +13,6 @@
 
 #include "panel/PanelContext.h"
 #include "panel/page/PressureReadout.h"
-#include "core/Units.h"
-#include "storage/Config.h"
-#include "storage/DeviceConfig.h"
 
 namespace gardener {
 namespace {
@@ -157,7 +154,7 @@ Alignment alignmentOf(bvm* vm, int node) {
   return alignment;
 }
 
-Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit);
+Paint paintOf(bvm* vm, int node, const SystemState& state);
 
 // The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
 // interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
@@ -176,8 +173,7 @@ bool pushItems(bvm* vm, int index) {
 
 // The [bounds, draw] pairs a layout holds, as the layout's own children: the cell each declares and
 // the paint each answers. A child that is not a pair is skipped rather than raised on.
-std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
-                              DisplayUnit unit) {
+std::vector<Child> childrenOf(bvm* vm, int node, const SystemState& state) {
   std::vector<Child> children;
 
   be_getmember(vm, node, "children");
@@ -210,7 +206,7 @@ std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
         be_pushint(vm, 1);
         be_getindex(vm, pair);
         be_remove(vm, -2);
-        const Paint paint = paintOf(vm, be_absindex(vm, -1), panel, unit);
+        const Paint paint = paintOf(vm, be_absindex(vm, -1), state);
         be_pop(vm, 1);
 
         children.push_back(Child{Cell(width, height), paint});
@@ -226,7 +222,7 @@ std::vector<Child> childrenOf(bvm* vm, int node, panel::PanelContext& panel,
 
 // The node as the paint it describes. A kind the drawing has no case for answers an empty paint,
 // which is a node that draws nothing.
-Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
+Paint paintOf(bvm* vm, int node, const SystemState& state) {
   if (!be_isinstance(vm, node)) return Paint();
   const char* kind = textField(vm, node, "kind");
   if (kind == nullptr) return Paint();
@@ -293,8 +289,8 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
     });
   }
 
-  // The readout takes the machine and the unit rather than a number, so it prints what is true when
-  // it is drawn — which is why one node serves every beat.
+  // The readout takes the state the tree was built with rather than a number, so one node serves
+  // every beat: the tree is built again for each draw.
   if (strcmp(kind, "pressure_readout") == 0) {
     const NodeBox box = boxOf(vm, node);
     float sizeHint = realField(vm, node, "size_hint");
@@ -302,25 +298,24 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
     const gfx::Font* face = faceOf(vm, node);
     const uint8_t scale = (uint8_t)intField(vm, node, "scale");
     const uint8_t secondary = (uint8_t)intField(vm, node, "secondary_scale");
-    VacuumSystem& vacuum = panel.vacuum();
-    return leaf(box, [&vacuum, unit, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
-      return panel::page::pressureReadout(rect, vacuum, unit, sizeHint, face, scale, secondary);
+    return leaf(box, [state, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
+      return panel::page::pressureReadout(rect, state, sizeHint, face, scale, secondary);
     });
   }
 
   if (strcmp(kind, "layout") == 0) {
     const Cell cell(cellSide(vm, node, "w"), cellSide(vm, node, "h"));
-    return gfx::layout(cell, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::layout(cell, childrenOf(vm, node, state), alignmentOf(vm, node));
   }
 
   if (strcmp(kind, "row") == 0) {
     const float height = cellSide(vm, node, "h");
-    return gfx::row(height, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::row(height, childrenOf(vm, node, state), alignmentOf(vm, node));
   }
 
   if (strcmp(kind, "column") == 0) {
     const float width = cellSide(vm, node, "w");
-    return gfx::column(width, childrenOf(vm, node, panel, unit), alignmentOf(vm, node));
+    return gfx::column(width, childrenOf(vm, node, state), alignmentOf(vm, node));
   }
 
   // The draw the node holds, run and then inverted in the cell the node was given: the step that
@@ -328,7 +323,7 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
   if (strcmp(kind, "inverted") == 0) {
     be_getmember(vm, node, "child");
     const Paint child =
-        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), panel, unit) : Paint();
+        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), state) : Paint();
     be_pop(vm, 1);
     return gfx::inverted(child);
   }
@@ -339,13 +334,10 @@ Paint paintOf(bvm* vm, int node, panel::PanelContext& panel, DisplayUnit unit) {
 }  // namespace
 
 void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas) {
-  // The unit the readout prints in belongs to the device, resolved once for the whole tree rather
-  // than once per node: one drawing shows one glass.
-  DisplayUnit unit = DisplayUnit::Kpa;
-  parseDisplayUnit(
-      panel.config().get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-
-  const Paint paint = paintOf(vm, be_absindex(vm, node), panel, unit);
+  // One state for the whole tree rather than one per node: one drawing shows one glass, and the
+  // unit the readout prints in comes with it.
+  const SystemState state = panel.systemState();
+  const Paint paint = paintOf(vm, be_absindex(vm, node), state);
   if (paint) paint(canvas);
 }
 
