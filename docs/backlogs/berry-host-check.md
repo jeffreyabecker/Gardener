@@ -35,7 +35,7 @@ what is left is the activation bug and the suites that say the check holds the i
       record's page, Forward opening the settings list and launching on its answer, and Back leaving.
 - [x] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
       and the flat ladder the ramp refuses and it does not.
-- [ ] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
+- [x] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
       answers, `duration_text`'s string and `--` for a clock that is not running, and `icon` refusing
       a string that is not a bitmap.
 - [ ] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
