@@ -83,7 +83,7 @@ end
 # nothing is all a machine case wants above the root.
 class Scene
   def draw_page()
-    return screen.column([])
+    return screen.column(nil, [])
   end
 end
 

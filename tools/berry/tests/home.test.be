@@ -80,20 +80,23 @@ end
 
 test("the page draws the clock its machine reports", the_page_draws_the_clock_its_machine_reports)
 
-def a_double_up_opens_the_device_list()
+def a_double_up_opens_the_browser()
   var mock = MockHomeMachine(nil)
   var home = mock_home(mock)
 
+  # The browser is what home opens: the routine list, which the page pushes rather than opening the
+  # device's settings — a routine's own settings are reached through its row.
   harness.press("up:double")
   harness.beat(1)
-  assert_eq(ux.depth(), 2, "Up held to a double did not open a list")
-  assert_eq(classname(ux.top()), "SettingsEditScene", "the home list is not the settings list")
+  assert_eq(ux.depth(), 2, "Up held to a double did not open a page")
+  assert_eq(classname(ux.top()), "BrowserScene", "the home list is not the browser")
 
-  # Back closes it on the set it was opened with, which is what hands the page its values back.
+  # Back leaves the browser for the page it was pushed from.
   harness.press("back:single")
   harness.beat(1)
-  assert_eq(ux.depth(), 1, "Back did not close the list")
+  assert_eq(ux.depth(), 1, "Back did not leave the browser")
+  assert_eq(classname(ux.top()), "HomeScene", "the page under the browser is not home")
   home.machine = HomeMachine()
 end
 
-test("Up held to a double opens the device's list", a_double_up_opens_the_device_list)
+test("Up held to a double opens the browser", a_double_up_opens_the_browser)
