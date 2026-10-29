@@ -30,7 +30,7 @@ what is left is the activation bug and the suites that say the check holds the i
 
 ## The suites the image has to answer for
 
-- [ ] Hold a browser suite: the rows the registry answers, the selected row inverted and no other,
+- [x] Hold a browser suite: the rows the registry answers, the selected row inverted and no other,
       the first row the window shows once the selection passes the bottom edge, OK launching the
       record's page, Forward opening the settings list and launching on its answer, and Back leaving.
 - [ ] Hold an interval page suite: the settings set it declares, the chrome it inherits from the ramp
