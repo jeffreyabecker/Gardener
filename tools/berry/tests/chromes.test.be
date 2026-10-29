@@ -3,19 +3,14 @@
 
 suite = "chromes"
 
-# The node a layout's [bounds, draw] pair holds.
-def child_at(tree, index)
-  return tree.children[index][1]
-end
-
 def home_chrome_draws_the_title_the_readout_and_the_clock()
   var tree = home_chrome(65000)
   assert_eq(tree.kind, "column", "the home chrome is not a column")
   assert_eq(tree.children.size(), 2, "the home chrome is not a title and a body")
 
   var title = child_at(tree, 0)
-  assert_eq(title.kind, "row", "the home title is not a row")
-  assert_eq(child_at(title, 1).value, "Gardener", "the home title is not the device's name")
+  assert_eq(title.kind, "centred", "the home title is not centred")
+  assert_eq(title.value, "Gardener", "the home title is not the device's name")
 
   var body = child_at(tree, 1)
   assert_eq(body.kind, "row", "the home body is not a row")

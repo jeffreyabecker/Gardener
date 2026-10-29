@@ -227,7 +227,9 @@ int uxDepth(bvm* vm) {
 // and nil with nothing showing.
 int uxTop(bvm* vm) {
   requirePanel(vm, "ux.top: no panel");
-  BerryScene* page = dynamic_cast<BerryScene*>(routines->scenes().top());
+  const gfx::ui::Scene* showing = routines->scenes().top();
+  const BerryScene* page =
+      showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
   be_return(vm);
 }

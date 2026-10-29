@@ -47,6 +47,9 @@ class BerryScene : public gfx::ui::Scene {
   // can answer which page is showing. False, pushing nothing, when the scene holds no page.
   bool pushPage(bvm* vm) const;
 
+  // This scene, which is how ux.top() reaches the page it holds.
+  const void* scripted() const override { return this; }
+
  protected:
   bool handle(const char* gesture) override;
   void tick(uint32_t nowMs) override;

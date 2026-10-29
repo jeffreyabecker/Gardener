@@ -177,18 +177,23 @@ void pushSettingValue(bvm* vm, const std::any& value) {
   be_pushnil(vm);
 }
 
-// A set as a map the page reads: one entry per key, in the order the store answered them.
+// A set as a map the page reads: one entry per key, in the order the store answered them. The map is an
+// instance of the map class — the braced literal a routine file writes, which indexes through the
+// class's item — rather than the interpreter's raw container, which no page can subscript.
 void pushSettingsMap(bvm* vm, const gfx::ui::SettingValues& values) {
-  be_newmap(vm);
-  const int map = be_absindex(vm, -1);
+  // The map class's instance with the raw container it wraps on top of it, as be_newobject leaves an
+  // instance: the entries go into the container and the pop below leaves the instance as the answer.
+  be_newobject(vm, "map");
+  const int raw = be_absindex(vm, -1);
   for (const std::pair<const String, std::any>& held : values) {
     be_pushstring(vm, held.first.c_str());
     pushSettingValue(vm, held.second);
-    // be_setindex copies the pair into the map and leaves both where they were, so the push is
-    // undone here.
-    be_setindex(vm, map);
+    // be_data_insert takes the pair this call left on the stack and leaves both where they are, so
+    // the push is undone here.
+    be_data_insert(vm, raw);
     be_pop(vm, 2);
   }
+  be_pop(vm, 1);
 }
 
 // A map as a set: every key that holds a value a setting can hold, as the type it was written as. A
@@ -198,11 +203,12 @@ bool takeSettingMap(bvm* vm, int index, gfx::ui::SettingValues& values) {
   const int base = be_top(vm);
   const bool map = pushMap(vm, at);
   if (map) {
+    // The map the entries are read from; the iterator the API walks it with is the value on top of the
+    // stack, which is why it is the map, not that value, that is handed to the two calls below.
     const int source = be_absindex(vm, -1);
     be_pushiter(vm, source);
-    const int iterator = be_absindex(vm, -1);
-    while (be_iter_hasnext(vm, iterator)) {
-      be_iter_next(vm, iterator);
+    while (be_iter_hasnext(vm, source)) {
+      be_iter_next(vm, source);
       std::any value;
       if (be_isstring(vm, -2) && settingValue(vm, -1, value)) {
         values[String(argText(vm, -2))] = std::move(value);
@@ -239,6 +245,7 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
   be_pushstring(vm, activation.routineKey.c_str());
   pushSettingsMap(vm, activation.values);
   be_call(vm, 2);
+  settleClassCall(vm, 2);
 }
 
 // The page a registration names: an instance of the class the file gave, built from the activation and
@@ -270,7 +277,7 @@ std::unique_ptr<gfx::ui::Scene> buildPage(bvm* vm, int slot, const RoutineActiva
           message += detail != nullptr ? detail : "error";
           logger->error(message.c_str());
         }
-      } else if (be_isinstance(vm, -1)) {
+      } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
         page = std::make_unique<BerryScene>(routines->presses(), vm, be_absindex(vm, -1), *context);
       }
     }

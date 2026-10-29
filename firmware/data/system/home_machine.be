@@ -69,12 +69,12 @@ class HomeMachine
     self.phase = HomePhase.IDLE
   end
 
-  # The run's clock: nil while there is no run, so the chrome draws no time, and the seconds since
-  # the chamber started pulling while there is one.
+  # The run's clock: nil while there is no run, so the chrome draws no time, and the milliseconds since
+  # the chamber started pulling while there is one — the device's own unit, which the chrome reads.
   def elapsed()
     if self.phase != HomePhase.RUNNING
       return nil
     end
-    return (device.now_ms() - self.mark) / 1000
+    return device.now_ms() - self.mark
   end
 end

@@ -49,6 +49,15 @@ inline int recordInit(bvm* vm) {
   be_return(vm);
 }
 
+// What a class call left on the stack, from C: a class answers in the slot its callable had, with the
+// arguments it shifted above it. Dropping one value per argument leaves that answer on top, which is
+// the instance the class built — the same value a page reads from a Berry call, and not the init's
+// own return.
+inline int settleClassCall(bvm* vm, int argc) {
+  be_pop(vm, argc);
+  return be_absindex(vm, -1);
+}
+
 inline void installRecord(bvm* vm, const char* name, const bnfuncinfo* fields) {
   be_pushclass(vm, name, fields);
   be_setglobal(vm, name);

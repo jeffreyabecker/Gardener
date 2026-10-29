@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ is broken and is not to be run.'
+description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, and which side of the Berry boundary a piece belongs on. The host harness in tools/berry/ runs the image on the host.'
 ---
 
 # Berry
@@ -19,16 +19,9 @@ only packs it. It is checked on the device: `--task upload`, then a look at the 
 A change to the C++ under `libraries/Gardener` or `libraries/Gfx` is not this skill's business and
 does not need the interpreter: `python tools/unit/check.py` compiles and runs it on the host.
 
-> **NEVER RUN THIS SCRIPT — the berry check in `tools/berry/` is in a known broken state.** Ignore
-> the rest of the harness documentation; it is commented out below, ready for when the check works
-> again.
-
-<!-- Harness notes, commented out while `tools/berry/check.py` is broken.
-
-- A page misbehaves on the panel and you want the answer without a build and a flash
-
-The harness in [tools/berry/](../../../tools/berry) compiles and runs the whole image on the host
-instead.
+A page that misbehaves on the panel is where the harness earns its place: the one in
+[tools/berry/](../../../tools/berry) compiles and runs the whole image on the host, so the answer
+comes without a build and a flash.
 
 ## Run it
 
@@ -41,9 +34,10 @@ python tools/berry/check.py --tests                      # run the test suites, 
 python tools/berry/check.py --test ramped_static         # run one suite (or part of one)
 ```
 
-The last line says how much loaded — `12 of 12 files loaded, check passed` — and the exit code is 0
-only when every file compiled, every registration looked like a routine, and every page ran. The
-build lands in `tools/berry/build/`, which is ignored, so a `.be` edit only recompiles and loads.
+The last line says how much the run did — `9 of 9 files loaded, 3 of 3 routines driven, check
+passed` — and the exit code is 0 only when every file compiled, every registration looked like a
+routine, and every page ran. The build lands in `tools/berry/build/`, which is ignored, so a `.be`
+edit only recompiles and loads.
 
 The flags, the load order, the six modules and records a routine compiles against, the frame and
 what the drive does are held by `tools/berry/` itself, and that is the whole statement of them:
@@ -89,11 +83,9 @@ that the next edit invalidates. When the user asks for one, run it. Otherwise on
 of a change that can break a routine is the verification, and a second is waiting for an answer it
 already gave.
 
--->
-
 ## Reading the output
 
-Two things bite when the image loads:
+Three things bite when the image loads:
 
 - A file resolves globals **when it compiles**, method bodies included, so a class a file names has
   to be a global an earlier file defined. A new class belongs in an earlier module, or the call is
@@ -105,9 +97,6 @@ Two things bite when the image loads:
   `print`, `input`, `assert`, `super`, `open`, `isinstance`, `issubclass`, `__iterator__` are the
   VM's own; a class named `size` fails at load with no message and exit code `0xC0000005`, which
   reads as a crash rather than an error.
-
-<!-- Harness output, commented out while `tools/berry/check.py` is broken.
-
 - A page that never returns hangs the check. There is no instruction budget, on either side.
 
 | Message | What it means |
@@ -128,7 +117,6 @@ Two things bite when the image loads:
 The pump, the sensor and Bluetooth are models or counters and the clock is virtual, so timing and
 the actual vacuum stay the device's. `print` writes nowhere, here as on the device: `vacuum.log()`
 lands in the output as `[I]`. LittleFS is a map, so a write that would fill a filesystem succeeds.
--->
 
 ## A binding is a wrapper
 
