@@ -123,7 +123,7 @@ bool Routines::showDefault() {
 bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
   updateOverlay(nowMs);
-  if (!stack_.poll(panel_->canvas(), nowMs)) return false;
+  if (!ux_.poll(panel_->canvas(), nowMs)) return false;
   show();
   return true;
 }
@@ -132,7 +132,7 @@ bool Routines::enterPage() {
   if (panel_ == nullptr) return false;
   const uint32_t now = millis();
   updateOverlay(now);
-  if (!stack_.enter(panel_->canvas(), now)) return false;
+  if (!ux_.enter(panel_->canvas(), now)) return false;
   show();
   return true;
 }
@@ -146,11 +146,11 @@ void Routines::show() { panel_->canvas().flush(panel_->display()); }
 // page, and the device's mark when the image sets none. The stack draws it, so the overlay is drawn
 // over it like any other page.
 bool Routines::resetToRoot() {
-  if (panel_ == nullptr) return stack_.reset(nullptr);
+  if (panel_ == nullptr) return ux_.reset(nullptr);
   if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
-    if (stack_.reset(std::move(page))) return true;
+    if (ux_.reset(std::move(page))) return true;
   }
-  return stack_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
+  return ux_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
 }
 
 void Routines::updateOverlay(uint32_t nowMs) {
@@ -164,7 +164,7 @@ void Routines::updateOverlay(uint32_t nowMs) {
   // else touches them and they keep whatever the last frame left.
   const int16_t start =
       static_cast<int16_t>(panel_->canvas().height() - panel::glass::OverlayHeight);
-  stack_.setOverlay(start,
+  ux_.setOverlay(start,
                     gfx::underlay(gfx::row(1.0f, {
                         gfx::Child{gfx::Cell(0.25f, 1.0f),
                                    panel::glass::overlayUnit(displayUnitInfo(unit).suffix)},

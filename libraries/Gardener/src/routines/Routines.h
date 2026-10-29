@@ -53,7 +53,7 @@ class Routines {
 
   // Whether a page is showing. The beat takes poll()'s answer instead; this is for the gesture path,
   // which asks once per press.
-  bool active() const { return stack_.depth() > 0; }
+  bool active() const { return ux_.depth() > 0; }
 
   // What the load cost: the files that loaded of the files that were found. The difference is a file
   // that did not compile and a `.be` file `/system/order` does not name, and nothing else reads them:
@@ -68,7 +68,7 @@ class Routines {
 
   // What a settings row builds its editor on, and where a launch puts a page: the stack the beat
   // polls, so a page opened from a page is pushed over it rather than into a second one.
-  panel::page::Ux& scenes() { return stack_; }
+  panel::page::Ux& ux() { return ux_; }
 
   // The routines the image registered, in the order the files registered them: what the `routines`
   // module puts a record into and reads a set back through, and what a row launches.
@@ -104,7 +104,7 @@ class Routines {
   // The panel's parts the beat reaches: the display it draws in and flushes, and the readings the
   // overlay shows.
   panel::PanelContext* panel_ = nullptr;
-  panel::page::Ux stack_;
+  panel::page::Ux ux_;
   panel::GestureQueue gestures_;
   // What begin() loaded of what it found, for the run that reports whether the image is all there.
   size_t filesLoaded_ = 0;
