@@ -308,3 +308,32 @@ TEST_CASE("the page activates on begin, polls on a tick and goes home") {
   page.home();
   CHECK_EQ(rig.interpreter.counter().roots, roots + 1);
 }
+
+// The glass is sent the frame once per beat and once when a page goes up, whatever drew in it: the
+// scene draws into the panel's canvas and the beat is what hands it over.
+TEST_CASE("a page going up sends the frame once") {
+  PageRig rig;
+  REQUIRE(rig.ok);
+  PageTick page{rig.routines};
+  rig.display.clear();
+
+  page.begin();
+
+  CHECK_EQ(rig.display.flushCount(), 1);
+}
+
+TEST_CASE("a beat sends the frame once whether it drew or not") {
+  PageRig rig;
+  REQUIRE(rig.ok);
+  PageTick page{rig.routines};
+  page.begin();
+  rig.display.clear();
+
+  // The repaint cadence has passed, so the scene draws its page and the send follows it.
+  page.tick(300);
+  CHECK_EQ(rig.display.flushCount(), 1);
+
+  // Inside the cadence nothing is drawn, and the beat still sends what it has once.
+  page.tick(310);
+  CHECK_EQ(rig.display.flushCount(), 2);
+}

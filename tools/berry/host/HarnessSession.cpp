@@ -143,7 +143,9 @@ void HarnessSession::beat(int count) {
       vacuum_.service(now);
     }
 
-    // panelTask's own beat: the gauge, the buzzer, and one entry into the page.
+    // panelTask's own beat: the gauge, the buzzer, and one entry into the page. The page's poll is
+    // the beat's one send to the glass, so a capture takes one frame from it rather than a second
+    // flush here.
     battery_.update(millis());
     buzzer_.update(millis());
     routines_.poll(millis());
@@ -151,9 +153,6 @@ void HarnessSession::beat(int count) {
     // The run's high-water mark, sampled where the page has finished its own work for the beat.
     const size_t held = heapBytes();
     if (held > heapPeakBytes_) heapPeakBytes_ = held;
-
-    // The display keeps the beat as one frame while a capture is armed, callouts and all.
-    canvas_.flush(display_);
   }
 }
 

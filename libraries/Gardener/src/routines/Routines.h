@@ -20,8 +20,8 @@ class Library;
 // The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
 // the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
 // implementation is the host side's; the stack is `gfx::ui::Ux` and this side owns it: one entry per
-// beat, the band the panel shows drawn over the page, and the flush the panel task leaves here
-// because the stack draws in the frame the display holds.
+// beat, the band the panel shows drawn over the page, and the beat's one flush — left here because
+// the stack draws in the frame the display holds, and nothing else sends that frame.
 //
 // The beat is called from the panel task's own frame — never from inside a Berry call — so there is
 // nothing suspended, no second core and no lock.
@@ -72,6 +72,10 @@ class Routines {
   size_t loadAll(const char* folder, size_t& found);
   bool loadFile(const String& path);
   bool resetToRoot();
+
+  // The beat's one send, and the only place the frame is flushed: the page and the band have drawn
+  // into the panel's canvas, and this hands it to the glass once.
+  void show();
 
   // The band's cells from one reading: the unit's suffix, the two links, the run state and the
   // gauge, as they stood on this beat.

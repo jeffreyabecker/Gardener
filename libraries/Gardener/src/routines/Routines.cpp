@@ -122,7 +122,7 @@ bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
   updateBand(nowMs);
   if (!stack_.poll(panel_->canvas(), nowMs)) return false;
-  panel_->canvas().flush(panel_->display());
+  show();
   return true;
 }
 
@@ -131,9 +131,14 @@ bool Routines::enterPage() {
   const uint32_t now = millis();
   updateBand(now);
   if (!stack_.enter(panel_->canvas(), now)) return false;
-  panel_->canvas().flush(panel_->display());
+  show();
   return true;
 }
+
+// The beat's one send: whatever the page and the band drew goes to the glass from the panel's own
+// canvas. A scene draws into the canvas and never sends it, and no caller sends it after the beat,
+// so a beat is exactly one flush however many draws went into it.
+void Routines::show() { panel_->canvas().flush(panel_->display()); }
 
 // The root scene, at boot and on the go-home gesture: the image's own root page, which is the home
 // page, and the device's mark when the image sets none. The stack draws it, so the band is drawn
