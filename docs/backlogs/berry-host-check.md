@@ -8,7 +8,7 @@ what is left is the activation bug and the suites that say the check holds the i
 
 ## An image whose pages activate
 
-- [ ] Make the clean settings map a page's init is handed subscriptable, so `routines.activate`
+- [x] Make the clean settings map a page's init is handed subscriptable, so `routines.activate`
       answers a page for every registered key and a plain run reports `3 of 3 routines driven` and
       exits 0.
 
