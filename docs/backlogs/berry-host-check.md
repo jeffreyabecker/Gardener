@@ -38,7 +38,7 @@ what is left is the activation bug and the suites that say the check holds the i
 - [x] Hold a `screen` suite: a node of the kind it names with its fields filled, the ink `measure`
       answers, `duration_text`'s string and `--` for a clock that is not running, and `icon` refusing
       a string that is not a bitmap.
-- [ ] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
+- [x] Hold a `settings` suite: a `RoutineSetting` per declaration with the bounds it was declared
       with, a declaration consumed once so a second record taking the same row fails, and a raise
       that leaves the first record's rows untouched.
 - [ ] Hold a `routines` suite: keys, rows, a nil title for an unknown key, nil `settings_cfgs` for a
