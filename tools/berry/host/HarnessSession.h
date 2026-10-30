@@ -190,17 +190,15 @@ bool postMachineCommand(const MachineCommand& command);
 // the only thing the Berry modules know about their surroundings.
 class HarnessPanel : public panel::PanelContext {
  public:
-  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, SystemState& state,
+  HarnessPanel(gfx::DisplayDevice& display, SystemState& state,
                panel::parts::BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
-        canvas_(canvas),
         state_(state),
         buzzer_(buzzer),
         library_(library),
         logger_(logger) {}
 
   gfx::DisplayDevice& display() override { return display_; }
-  gfx::Canvas& canvas() override { return canvas_; }
   SystemState& systemState() override { return state_; }
   panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
@@ -210,7 +208,6 @@ class HarnessPanel : public panel::PanelContext {
 
  private:
   gfx::DisplayDevice& display_;
-  gfx::Canvas& canvas_;
   SystemState& state_;
   panel::parts::BuzzerPlayer& buzzer_;
   Library& library_;
@@ -315,7 +312,6 @@ class HarnessSession {
   VacuumSystem vacuum_;
   CaptureDisplay display_{CaptureDisplay::Width, CaptureDisplay::Height, 1};
   GestureStrip gestureStrip_;
-  gfx::View canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   panel::parts::BuzzerPlayer buzzer_;

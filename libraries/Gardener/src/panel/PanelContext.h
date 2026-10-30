@@ -13,9 +13,7 @@ struct MachineCommand;
 }  // namespace gardener
 
 namespace gardener::gfx {
-class Canvas;
 class DisplayDevice;
-class View;
 }  // namespace gardener::gfx
 
 namespace gardener::panel::parts {
@@ -31,10 +29,10 @@ class PanelContext {
  public:
   virtual ~PanelContext() = default;
 
-  // The glass, and the one frame everything draws into: a canvas over the device's buffer, shared
-  // by the page, the overlay and the `screen` module, so one flush sends what any of them wrote.
+  // The glass, and the one frame everything draws into: the device's own buffer, shared by the page,
+  // the overlay and the `screen` module, so one flush sends what any of them wrote. It is a Canvas,
+  // so a caller that draws hands this where a canvas is wanted.
   virtual gfx::DisplayDevice& display() = 0;
-  virtual gfx::Canvas& canvas() = 0;
   // What the device is doing, as the composition built it and the tasks publish it: the run and the
   // chamber, the pack, the two links and the unit the device prints in. It is a dependency handed in
   // rather than an answer worked out here, and there is nothing on it to command.

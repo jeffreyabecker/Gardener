@@ -54,7 +54,6 @@ class Panel : public Machine, public PanelContext {
         settings_(&library, state),
         state_(state),
         display_(display),
-        canvas_(display->root()),
         routines_(routines),
         library_(library) {}
 
@@ -77,7 +76,6 @@ class Panel : public Machine, public PanelContext {
   Logger& logger() override { return Machine::logger(); }
   // The glass, and the frame every drawing verb lands in.
   gfx::DisplayDevice& display() override { return *display_; }
-  gfx::Canvas& canvas() override { return canvas_; }
   // The device's own document, for the two places that write it: the serial `device set` and the
   // BLE unit characteristic.
   DeviceSettings& settings() { return settings_; }
@@ -98,8 +96,6 @@ class Panel : public Machine, public PanelContext {
   // The published state, owned by whoever composed the panel.
   SystemState& state_;
   gfx::DisplayDevice* display_;
-  // The one frame a page draws into, over the device's own buffer.
-  gfx::View canvas_;
   Routines* routines_;
   Library& library_;
 };

@@ -467,12 +467,12 @@ int screenAlign(bvm* vm) {
 
 // The panel's size, which is what a page's outermost box is.
 int screenWidth(bvm* vm) {
-  be_pushint(vm, context->canvas().width());
+  be_pushint(vm, context->display().width());
   be_return(vm);
 }
 
 int screenHeight(bvm* vm) {
-  be_pushint(vm, context->canvas().height());
+  be_pushint(vm, context->display().height());
   be_return(vm);
 }
 

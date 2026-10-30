@@ -20,7 +20,9 @@ namespace gardener::gfx
   } // namespace
 
   Transform::Transform(Rect window)
-      : width_(window.width > 0 ? window.width : 0),
+      : tx_(window.x),
+        ty_(window.y),
+        width_(window.width > 0 ? window.width : 0),
         height_(window.height > 0 ? window.height : 0),
         window_(width_ > 0 && height_ > 0 ? window : Rect(window.x, window.y, 0, 0)) {}
 

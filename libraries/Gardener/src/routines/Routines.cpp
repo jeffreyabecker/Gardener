@@ -102,7 +102,7 @@ bool Routines::begin(panel::PanelContext& context) {
 
   // The strip the stack draws over every page: one paint over the state the panel was handed, so it
   // is set once and each frame reads the machine as it stands when that frame is drawn.
-  ux_.setOverlay(static_cast<int16_t>(panel_->canvas().height() - panel::glass::Overlay::Height),
+  ux_.setOverlay(static_cast<int16_t>(panel_->display().height() - panel::glass::Overlay::Height),
                  panel::glass::Overlay(panel_->systemState()));
 
   resetToRoot();
@@ -118,14 +118,14 @@ bool Routines::showDefault() {
 // the same frame: the values the machine has now, not the ones it had when the page went up.
 bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
-  if (!ux_.poll(panel_->canvas(), nowMs)) return false;
+  if (!ux_.poll(panel_->display(), nowMs)) return false;
   show();
   return true;
 }
 
 bool Routines::enterPage() {
   if (panel_ == nullptr) return false;
-  if (!ux_.enter(panel_->canvas(), millis())) return false;
+  if (!ux_.enter(panel_->display(), millis())) return false;
   show();
   return true;
 }

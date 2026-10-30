@@ -137,17 +137,15 @@ class FakeInterpreter : public Interpreter {
 // nothing of the device: the state it draws from is the one the rig publishes into.
 class PageContext : public PanelContext {
  public:
-  PageContext(DisplayDevice& display, Canvas& canvas, SystemState& state, BuzzerPlayer& buzzer,
+  PageContext(DisplayDevice& display, SystemState& state, BuzzerPlayer& buzzer,
               Library& library, Logger& logger)
       : display_(display),
-        canvas_(canvas),
         state_(state),
         buzzer_(buzzer),
         library_(library),
         logger_(logger) {}
 
   DisplayDevice& display() override { return display_; }
-  Canvas& canvas() override { return canvas_; }
   SystemState& systemState() override { return state_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
@@ -156,7 +154,6 @@ class PageContext : public PanelContext {
 
  private:
   DisplayDevice& display_;
-  Canvas& canvas_;
   SystemState& state_;
   BuzzerPlayer& buzzer_;
   Library& library_;
@@ -169,10 +166,9 @@ class PageContext : public PanelContext {
 struct PageRig {
   PageRig()
       : settings(&library, state),
-        canvas(display.root()),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
-        context(display, canvas, state, buzzer, library, logger),
+        context(display, state, buzzer, library, logger),
         routines(interpreter) {
     state.batteryPresent = battery.present();
     state.batteryPercent = battery.percent();
@@ -187,7 +183,6 @@ struct PageRig {
   SystemState state;
   DeviceSettings settings;
   CaptureDisplay display{128, 64};
-  View canvas;
   FakeBuzzer buzzerPart;
   BuzzerPlayer buzzer;
   FakePump pump;
