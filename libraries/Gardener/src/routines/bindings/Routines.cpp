@@ -11,11 +11,9 @@
 #include <Gfx.h>
 
 #include "routines/BerryScene.h"
-#include "core/Logger.h"
-#include "panel/PanelContext.h"
 #include "routines/Registration.h"
 #include "routines/RoutineRegistry.h"
-#include "routines/Routines.h"
+#include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -249,7 +247,7 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
 // class is the file's and may refuse the set it is handed.
 std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
                                               const RoutineActivation& activation) {
-  if (vm == nullptr || context == nullptr || routines == nullptr || slot < 0) return nullptr;
+  if (vm == nullptr || bindings == nullptr || slot < 0) return nullptr;
 
   const int base = be_top(vm);
   std::unique_ptr<panel::page::Scene> page;
@@ -264,7 +262,7 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
       // The class is the callable and the activation its argument; a page that raised leaves the
       // exception and its message where the pop below clears them.
       if (be_pcall(vm, 1) != BE_OK) {
-        if (logger != nullptr) {
+        if (bindings != nullptr) {
           String message("vm: routine ");
           message += activation.routineKey;
           message += ": ";
@@ -272,11 +270,11 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
           message += ": ";
           const char* detail = be_tostring(vm, -1);
           message += detail != nullptr ? detail : "error";
-          logger->error(message.c_str());
+          bindings->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<BerryScene>(routines->presses(), vm, be_absindex(vm, -1),
-                                            context->systemState());
+        page = std::make_unique<BerryScene>(bindings->presses(), vm, be_absindex(vm, -1),
+                                            bindings->systemState());
       }
     }
   }
@@ -289,7 +287,7 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
 // declarations, in the order the settings list shows, and each is consumed here, because a row belongs
 // to the one record that took it; nil declares nothing.
 int routinesRegister(bvm* vm) {
-  if (context == nullptr || routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.register: no panel");
   }
   if (be_top(vm) < 5) {
@@ -314,27 +312,27 @@ int routinesRegister(bvm* vm) {
                         return buildPage(vm, slot, activation);
                       },
                       glyph);
-  be_pushbool(vm, routines->registry().add(std::move(record)));
+  be_pushbool(vm, bindings->registry().add(std::move(record)));
   be_return(vm);
 }
 
 // routines.load_settings(routine_key): the set a routine begins with, as a map the page reads. A key
 // that is not registered answers an empty map rather than raising: a page has an answer either way.
 int routinesLoadSettings(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.load_settings: no panel");
   }
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.load_settings: load_settings(routine_key)");
   }
-  pushSettingsMap(vm, routines->registry().loadSettings(String(argText(vm, 1))));
+  pushSettingsMap(vm, bindings->registry().loadSettings(String(argText(vm, 1))));
   be_return(vm);
 }
 
 // routines.save_settings(routine_key, values): a settled set written back under the keys the record
 // declares, once, and a key the map leaves out written as nothing.
 int routinesSaveSettings(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.save_settings: no panel");
   }
   if (be_top(vm) < 2 || !be_isstring(vm, 1)) {
@@ -346,7 +344,7 @@ int routinesSaveSettings(bvm* vm) {
   }
   const int map = be_absindex(vm, -1);
 
-  const RoutineRegistry& registry = routines->registry();
+  const RoutineRegistry& registry = bindings->registry();
   const std::vector<panel::page::SettingsRow*>* rows = registry.settingsRows(routineKey);
   panel::page::SettingValues values;
   if (rows != nullptr) {
@@ -372,14 +370,14 @@ int routinesSaveSettings(bvm* vm) {
 // routines.rows(): the browser's list, one row per record and per alternate in the order they
 // registered.
 int routinesRows(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.rows: no panel");
   }
   // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const RoutineRow& row : routines->registry().rows()) {
+  for (const RoutineRow& row : bindings->registry().rows()) {
     pushRow(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -391,13 +389,13 @@ int routinesRows(bvm* vm) {
 // routines.title(routine_key): the label a page draws for a record or an alternate, and nil for a
 // key nobody registered, which is what a page tests before it draws a heading.
 int routinesTitle(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.title: no panel");
   }
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.title: title(routine_key)");
   }
-  const RoutineRegistry& registry = routines->registry();
+  const RoutineRegistry& registry = bindings->registry();
   const String routineKey(argText(vm, 1));
   if (registry.entry(routineKey) == nullptr) be_return_nil(vm);
   be_pushstring(vm, registry.title(routineKey).c_str());
@@ -409,14 +407,14 @@ int routinesTitle(bvm* vm) {
 // and for a record that declares nothing, which is what a page tests before it opens a list; reading
 // leaves the record's rows where they were, so a list opened twice edits the same declarations.
 int routinesSettingsCfgs(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.settings_cfgs: no panel");
   }
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
   }
   const std::vector<panel::page::SettingsRow*>* rows =
-      routines->registry().settingsRows(String(argText(vm, 1)));
+      bindings->registry().settingsRows(String(argText(vm, 1)));
   if (rows == nullptr || rows->empty()) be_return_nil(vm);
 
   // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
@@ -438,7 +436,7 @@ int routinesSettingsCfgs(bvm* vm) {
 // refuses begins at the default. Nil, with the stack untouched, for a key nobody registered, a
 // record that names no page and a page whose init raised.
 int routinesActivate(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.activate: no panel");
   }
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
@@ -451,7 +449,7 @@ int routinesActivate(bvm* vm) {
   const String routineKey(argText(vm, 1));
   panel::page::SettingValues values;
   if (be_top(vm) >= 2 && !be_isnil(vm, 2)) takeSettingMap(vm, 2, values);
-  std::unique_ptr<panel::page::Scene> page = routines->registry().activate(routineKey, values);
+  std::unique_ptr<panel::page::Scene> page = bindings->registry().activate(routineKey, values);
   if (!page) be_return_nil(vm);
   pushSceneHandle(vm, std::move(page));
   be_return(vm);
@@ -461,14 +459,14 @@ int routinesActivate(bvm* vm) {
 // the list a driver walks and a summary counts the image by. An empty list, never nil, for an image
 // that registered nothing.
 int routinesKeys(bvm* vm) {
-  if (routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.keys: no panel");
   }
   // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const String& key : routines->registry().keys()) {
+  for (const String& key : bindings->registry().keys()) {
     be_pushstring(vm, key.c_str());
     be_data_push(vm, list);
     be_pop(vm, 1);

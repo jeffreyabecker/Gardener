@@ -2,9 +2,7 @@
 
 #include "core/SystemState.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "core/Logger.h"
-#include "panel/PanelContext.h"
-#include "routines/Routines.h"
+#include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -14,7 +12,7 @@ namespace {
 
 // The target the default program pulls to; 0 when none has been set.
 int deviceTarget(bvm* vm) {
-  be_pushreal(vm, context->systemState().deviceTargetKpa);
+  be_pushreal(vm, bindings->systemState().deviceTargetKpa);
   be_return(vm);
 }
 
@@ -25,7 +23,7 @@ int devicePlaySequence(bvm* vm) {
   }
   const char* sequence = argText(vm, 1);
   const bool ok = panel::parts::BuzzerPlayer::validate(sequence);
-  if (ok) context->buzzer().play(sequence);
+  if (ok) bindings->buzzer().play(sequence);
   be_pushbool(vm, ok);
   be_return(vm);
 }
@@ -40,18 +38,18 @@ int deviceTone(bvm* vm) {
   float hz = (float)argReal(vm, 1);
   const bint duration = argInt(vm, 2);
   if (hz <= 0.0f || duration < 0) {
-    context->buzzer().off();
+    bindings->buzzer().off();
     be_return_nil(vm);
   }
   if (hz < BuzzerMinHz) hz = BuzzerMinHz;
   if (hz > BuzzerMaxHz) hz = BuzzerMaxHz;
-  context->buzzer().tone((uint16_t)hz, (uint32_t)duration);
+  bindings->buzzer().tone((uint16_t)hz, (uint32_t)duration);
   be_return_nil(vm);
 }
 
 // Silence, and stop whatever is playing.
 int deviceSilence(bvm* vm) {
-  context->buzzer().off();
+  bindings->buzzer().off();
   be_return_nil(vm);
 }
 
@@ -66,8 +64,8 @@ int deviceNowMs(bvm* vm) {
 // lands where the firmware's own lines do, which is why the sink is the panel's logger rather than
 // anything of the VM's.
 int deviceLog(bvm* vm) {
-  if (be_top(vm) >= 1 && be_isstring(vm, 1) && logger != nullptr) {
-    logger->info(argText(vm, 1));
+  if (be_top(vm) >= 1 && be_isstring(vm, 1) && bindings != nullptr) {
+    bindings->info(argText(vm, 1));
   }
   be_return_nil(vm);
 }
@@ -76,7 +74,7 @@ int deviceLog(bvm* vm) {
 // runs while a native call is on the stack.
 int deviceTakeGesture(bvm* vm) {
   String gesture;
-  if (routines == nullptr || !routines->takePress(gesture)) be_return_nil(vm);
+  if (bindings == nullptr || !bindings->takePress(gesture)) be_return_nil(vm);
   be_pushstring(vm, gesture.c_str());
   be_return(vm);
 }

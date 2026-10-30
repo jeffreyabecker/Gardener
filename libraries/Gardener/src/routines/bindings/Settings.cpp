@@ -10,10 +10,9 @@
 #include <berry.h>
 
 #include "core/SystemState.h"
-#include "panel/PanelContext.h"
 #include "core/Units.h"
 #include "panel/page/SettingsRows.h"
-#include "routines/Routines.h"
+#include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -126,7 +125,7 @@ void requireFormatter(bvm* vm, int index, const char* kind) {
 // Every call needs the panel's parts: a row takes the queue its editor reads and the stack its
 // editor is pushed on, and neither exists before the panel runs.
 void requirePanel(bvm* vm) {
-  if (context == nullptr || routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "settings: no panel");
   }
 }
@@ -173,7 +172,7 @@ std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
 
 // The unit the panel prints pressure in: a declaration is made while the panel runs, so a row is
 // built in the unit showing then.
-DisplayUnit displayUnit() { return context->systemState().unit; }
+DisplayUnit displayUnit() { return bindings->systemState().unit; }
 
 void holdRow(bvm* vm, std::unique_ptr<panel::page::SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
@@ -226,7 +225,7 @@ int numberInit(bvm* vm) {
 
   const uint8_t decimals = be_tobool(vm, 10) ? 0 : 2;
   holdRow(vm, std::make_unique<panel::page::NumberRow>(
-                  routines->presses(), routines->ux(), String(argText(vm, 2)),
+                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   (float)be_toreal(vm, 6), (float)be_toreal(vm, 7), (float)be_toreal(vm, 8),
                   be_tobool(vm, 9), nullptr, decimals));
@@ -247,7 +246,7 @@ int pressureInit(bvm* vm) {
   requireBool(vm, 7, PressureName, "the nullable flag");
 
   holdRow(vm, std::make_unique<panel::page::PressureRow>(
-                  routines->presses(), routines->ux(), String(argText(vm, 2)),
+                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   displayUnit(), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
   be_return_nil(vm);
@@ -268,7 +267,7 @@ int durationInit(bvm* vm) {
   requireBool(vm, 9, DurationName, "the nullable flag");
 
   holdRow(vm, std::make_unique<panel::page::DurationRow>(
-                  routines->presses(), routines->ux(), String(argText(vm, 2)),
+                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), (int32_t)be_toint(vm, 3), (int32_t)be_toint(vm, 6),
                   (int32_t)be_toint(vm, 7), (int32_t)be_toint(vm, 8), be_tobool(vm, 9)));
   be_return_nil(vm);
@@ -316,7 +315,7 @@ int choiceInit(bvm* vm) {
   be_pop(vm, 1);  // the entries
 
   holdRow(vm, std::make_unique<panel::page::ChoiceRow>(
-                  routines->presses(), routines->ux(), String(argText(vm, 2)),
+                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), String(argText(vm, 3)), items, be_tobool(vm, 7)));
   be_return_nil(vm);
 }
@@ -435,7 +434,7 @@ panel::page::SettingsRow* borrowedRow(bvm* vm, int index) {
 // nil declarations draw an empty list. The list answers the set it settled on, which is what a page
 // pushed with it is handed back.
 int settingsEditScene(bvm* vm) {
-  if (context == nullptr || routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "SettingsEditScene: no panel");
   }
   if (be_top(vm) < 2) {
@@ -479,7 +478,7 @@ int settingsEditScene(bvm* vm) {
   if (values) takeSettingMap(vm, 2, held);
   const String title = titled ? String(argText(vm, 3)) : String();
   std::unique_ptr<panel::page::SettingsScene> scene = std::make_unique<panel::page::SettingsScene>(
-      routines->presses(), routines->ux(), title, rows, held);
+      bindings->presses(), bindings->ux(), title, rows, held);
   be_pop(vm, be_top(vm) - base);
   pushSceneHandle(vm, std::move(scene));
   be_return(vm);

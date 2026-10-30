@@ -10,8 +10,8 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
 - Editing `libraries/Gardener/src/routines/` — the install, the page scene, the draw tree and the
-  VM behind `Interpreter.h`, and the six native modules under `bindings/` — or `Routines.cpp`,
-  which loads the image and drives the beat
+  VM behind `Interpreter.h`, and the six native modules and the `BindingContext` they reach the app
+  through under `bindings/` — or `Routines.cpp`, which loads the image and drives the beat
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
 only packs it.

@@ -3,7 +3,7 @@
 
 #include <Gfx.h>
 
-#include "panel/PanelContext.h"
+#include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -461,12 +461,12 @@ int screenAlign(bvm* vm) {
 
 // The panel's size, which is what a page's outermost box is.
 int screenWidth(bvm* vm) {
-  be_pushint(vm, context->display().width());
+  be_pushint(vm, bindings->display().width());
   be_return(vm);
 }
 
 int screenHeight(bvm* vm) {
-  be_pushint(vm, context->display().height());
+  be_pushint(vm, bindings->display().height());
   be_return(vm);
 }
 

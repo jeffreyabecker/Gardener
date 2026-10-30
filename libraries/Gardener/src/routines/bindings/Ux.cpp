@@ -10,10 +10,8 @@
 #include <Gfx.h>
 
 #include "routines/BerryScene.h"
-#include "core/Logger.h"
-#include "panel/PanelContext.h"
 #include "panel/page/Ux.h"
-#include "routines/Routines.h"
+#include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
@@ -122,11 +120,11 @@ void runCallback(bvm* vm, int slot, const std::any& answer) {
     be_remove(vm, -2);  // the index the read left under the function
     if (be_isfunction(vm, -1)) {
       pushAnswer(vm, answer);
-      if (be_pcall(vm, 1) != BE_OK && logger != nullptr) {
+      if (be_pcall(vm, 1) != BE_OK && bindings != nullptr) {
         String message("vm: ux.push: ");
         const char* detail = be_tostring(vm, -1);
         message += detail != nullptr ? detail : "error";
-        logger->error(message.c_str());
+        bindings->error(message.c_str());
       }
     }
   }
@@ -157,7 +155,7 @@ std::unique_ptr<panel::page::Scene> takeSceneHandle(bvm* vm, int index) {
 // The page called before the stack moves: the panel's parts are what a scene and a handle are built
 // from, and neither exists before the panel runs.
 void requirePanel(bvm* vm, const char* call) {
-  if (context == nullptr || routines == nullptr) {
+  if (bindings == nullptr) {
     be_raise(vm, "runtime_error", call);
   }
 }
@@ -185,7 +183,7 @@ int uxPush(bvm* vm) {
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<BerryScene>(routines->presses(), vm, 1, context->systemState());
+    scene = std::make_unique<BerryScene>(bindings->presses(), vm, 1, bindings->systemState());
   }
   panel::page::Ux::Callback held;
   if (callback) {
@@ -194,7 +192,7 @@ int uxPush(bvm* vm) {
       runCallback(slot->vm, slot->slot, popped.value());
     };
   }
-  be_pushbool(vm, routines->ux().push(std::move(scene), std::move(held)));
+  be_pushbool(vm, bindings->ux().push(std::move(scene), std::move(held)));
   be_return(vm);
 }
 
@@ -202,7 +200,7 @@ int uxPush(bvm* vm) {
 // which is what pop_to_root is for.
 int uxPop(bvm* vm) {
   requirePanel(vm, "ux.pop: no panel");
-  be_pushbool(vm, routines->ux().pop());
+  be_pushbool(vm, bindings->ux().pop());
   be_return(vm);
 }
 
@@ -210,7 +208,7 @@ int uxPop(bvm* vm) {
 // whether a page is showing.
 int uxPopToRoot(bvm* vm) {
   requirePanel(vm, "ux.pop_to_root: no panel");
-  be_pushbool(vm, routines->ux().popToRoot());
+  be_pushbool(vm, bindings->ux().popToRoot());
   be_return(vm);
 }
 
@@ -218,7 +216,7 @@ int uxPopToRoot(bvm* vm) {
 // 0 with nothing showing. The stack's own count, never more than its cap.
 int uxDepth(bvm* vm) {
   requirePanel(vm, "ux.depth: no panel");
-  be_pushint(vm, routines->ux().depth());
+  be_pushint(vm, bindings->ux().depth());
   be_return(vm);
 }
 
@@ -227,7 +225,7 @@ int uxDepth(bvm* vm) {
 // and nil with nothing showing.
 int uxTop(bvm* vm) {
   requirePanel(vm, "ux.top: no panel");
-  const panel::page::Scene* showing = routines->ux().top();
+  const panel::page::Scene* showing = bindings->ux().top();
   const BerryScene* page =
       showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
@@ -238,7 +236,7 @@ int uxTop(bvm* vm) {
 // when the stack has no overlay. A case marks from there rather than assuming a height.
 int uxOverlayStart(bvm* vm) {
   requirePanel(vm, "ux.overlay_start: no panel");
-  be_pushint(vm, routines->ux().overlayStart());
+  be_pushint(vm, bindings->ux().overlayStart());
   be_return(vm);
 }
 

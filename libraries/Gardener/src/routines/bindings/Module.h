@@ -3,21 +3,7 @@
 #include <berry.h>
 
 namespace gardener {
-
-namespace panel {
-class PanelContext;
-}  // namespace panel
-
-class Routines;
-class Logger;
-
 namespace berry {
-
-// One VM and one app, so the native callbacks -- plain C functions with no user data -- reach their
-// owners through these. install() is the only writer.
-extern panel::PanelContext* context;
-extern Routines* routines;
-extern Logger* logger;
 
 // --- building a module -----------------------------------------------------
 

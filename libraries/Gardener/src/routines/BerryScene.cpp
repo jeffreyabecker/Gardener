@@ -2,10 +2,9 @@
 
 #include <berry.h>
 
-#include "core/Logger.h"
 #include "core/SystemState.h"
 #include "DrawTree.h"
-#include "routines/bindings/Module.h"
+#include "routines/bindings/BindingContext.h"
 
 namespace gardener {
 namespace {
@@ -124,13 +123,13 @@ bool BerryScene::endCall(const char* method, int argc) {
     // A failed call leaves the exception and its argument, the argument being the message. A page
     // that raised is not called again: the beat is 250 ms, so it would raise every beat.
     broken_ = true;
-    if (berry::logger != nullptr) {
+    if (berry::bindings != nullptr) {
       String message = "vm: ";
       message += method;
       message += ": ";
       const char* detail = be_tostring(vm_, -1);
       message += detail != nullptr ? detail : "error";
-      berry::logger->error(message.c_str());
+      berry::bindings->error(message.c_str());
     }
     be_pop(vm_, 2);
     return false;

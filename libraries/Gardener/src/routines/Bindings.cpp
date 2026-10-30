@@ -4,21 +4,17 @@
 
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "routines/bindings/Module.h"
+#include "routines/bindings/BindingContext.h"
 #include "routines/bindings/Modules.h"
 
 namespace gardener {
 namespace berry {
 
-// The pointers `Module.h` declares. install() is the one assignment.
-panel::PanelContext* context = nullptr;
-Routines* routines = nullptr;
-Logger* logger = nullptr;
+// The one `BindingContext.h` declares. install() is the one that builds it.
+std::unique_ptr<BindingContext> bindings;
 
 void install(bvm* vm, panel::PanelContext& appContext, Routines& appRoutines, Logger& appLogger) {
-  context = &appContext;
-  routines = &appRoutines;
-  logger = &appLogger;
+  bindings = std::make_unique<BindingContext>(appContext, appRoutines, appLogger);
 
   installVacuumModule(vm);
   installScreenModule(vm);
