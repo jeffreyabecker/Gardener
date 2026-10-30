@@ -59,7 +59,8 @@ class PackedFrame : public gfx::DisplayDevice {
       : bytes_(bytes), width_(width), height_(height) {}
 
   bool begin() override { return true; }
-  gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
+  int16_t width() const override { return width_; }
+  int16_t height() const override { return height_; }
   uint8_t bitsPerPixel() const override { return 1; }
 
   void setPixel(int16_t x, int16_t y, uint8_t color) override {
@@ -166,7 +167,7 @@ void CaptureDisplay::flush() {
 void CaptureDisplay::keepFrame() {
   std::vector<uint8_t> pixels(Capture::frameBytes(frame_.width, frame_.height), 0);
   PackedFrame picture(pixels.data(), frame_.width, frame_.height);
-  gfx::Canvas canvas = picture.root();
+  gfx::View canvas = picture.root();
 
   // The glass as it was sent, at the place the frame gives it.
   for (int16_t y = 0; y < height_; y++) {
@@ -181,7 +182,7 @@ void CaptureDisplay::keepFrame() {
 
   for (const Component& component : components_) {
     if (!component.draw) continue;
-    gfx::Canvas box = canvas.child(component.box);
+    gfx::View box = canvas.child(component.box);
     component.draw(box);
   }
 

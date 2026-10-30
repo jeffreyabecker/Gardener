@@ -96,7 +96,7 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
     gfx::text(gfx::Rect(0, 0, canvas.width(), Row), title_.c_str(), nullptr, 1)(canvas);
   }
   if (rows_.empty()) return;
-  gfx::Canvas band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
+  gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
   const int16_t count = static_cast<int16_t>(rows_.size());
   int16_t visible = static_cast<int16_t>(band.height() / Row);
   if (visible < 1) visible = 1;
@@ -111,7 +111,7 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
     if (row == nullptr) continue;
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
-    gfx::Canvas cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
+    gfx::View cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
     const gfx::Paint content = rowText(*row, value);
     cell.draw(at == selected_ ? gfx::inverted(content) : content);
   }

@@ -64,7 +64,7 @@ Paint text(Rect box, const char* value, const Font* face, uint8_t scale) {
   const char* string = value == nullptr ? "" : value;
   if (scale == 0) scale = 1;
   return [box, string, face, scale](Canvas& canvas) {
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     own.draw(shapes::Text(0, baseline(string, face, scale), string, face, scale, Ink));
   };
 }
@@ -80,7 +80,7 @@ void drawCentred(Canvas& canvas, const char* value, const Font* face, uint8_t sc
 
 Paint icon(Rect box, Paint glyph) {
   return [box, glyph](Canvas& canvas) {
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     glyph(own);
   };
 }
@@ -89,7 +89,7 @@ Paint icon(Rect box, const char* glyph) {
   return [box, glyph](Canvas& canvas) {
     const std::vector<uint8_t> bits = shapes::monoBitmapBits(glyph);
     if (bits.empty()) return;
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     own.draw(shapes::MonoBitmap(0, 0, bits.data(), Ink));
   };
 }
@@ -101,7 +101,7 @@ Paint inverted(Paint content) {
     // old draw-then-flip made: the content's ink comes out as paper on ink. It is also the only
     // order a blend allows, since a blend sees the value being written and never the frame.
     canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Ink));
-    Canvas flipped = canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())),
+    View flipped = canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())),
                                   Blend().invert());
     content(flipped);
   };
@@ -119,7 +119,7 @@ Paint progressBar(Rect box, float value) {
   if (value < 0.0f) value = 0.0f;
   if (value > 100.0f) value = 100.0f;
   return [box, value](Canvas& canvas) {
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     const int16_t width = own.width();
     const int16_t height = own.height();
     own.draw(shapes::Rect(0, 0, width, height, Ink));
@@ -131,7 +131,7 @@ Paint progressBar(Rect box, float value) {
 Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool hollow) {
   return [box, index, count, visible, hollow](Canvas& canvas) {
     if (count <= 0) return;
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     const int16_t width = own.width();
     const int16_t height = own.height();
     int16_t thumb = static_cast<int16_t>(height * visible / count);
@@ -169,7 +169,7 @@ Paint duration(Rect box, DurationFormat format, int32_t seconds, const Font* fac
   durationText(format, seconds, known, out, sizeof(out));
   const std::string formatted(out);
   return [box, formatted, face](Canvas& canvas) {
-    Canvas own = canvas.child(box);
+    View own = canvas.child(box);
     const char* value = formatted.c_str();
     own.draw(shapes::Text(0, baseline(value, face, 1), value, face, 1, Ink));
   };

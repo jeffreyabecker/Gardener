@@ -76,7 +76,7 @@ class Ux {
   // stack has already left; that needs the canvas and the time, which the beat holds here.
   void beginBeat(gfx::Canvas& canvas, uint32_t nowMs);
   void endBeat();
-  gfx::Canvas page();
+  gfx::View page();
   void paintScene(Scene* scene);
   void paintOverlay(gfx::Canvas& canvas);
 

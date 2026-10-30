@@ -57,7 +57,8 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   // The frame and the glass start clear.
   bool begin() override;
 
-  gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
+  int16_t width() const override { return width_; }
+  int16_t height() const override { return height_; }
   uint8_t bitsPerPixel() const override { return depth_; }
 
   // One pixel of the drawn frame, in the glass's own coordinates: the byte itself at 8 bits per

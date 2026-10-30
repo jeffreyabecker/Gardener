@@ -18,7 +18,7 @@ constexpr uint8_t Paper = 0;
 
 // A draw the caller runs on the canvas it is drawing on: the box is closed over, the content is
 // drawn inside it, and a write past its edge is clipped rather than painted over its neighbour. By
-// reference because a Canvas is neither copyable nor movable.
+// reference because a View is neither copyable nor movable.
 using Paint = std::function<void(Canvas&)>;
 
 // The largest unit a duration shows.

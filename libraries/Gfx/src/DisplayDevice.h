@@ -13,7 +13,7 @@ namespace gardener::gfx {
 // into and whatever the part needs to come up are the driver's own business: it owns the buffer,
 // says how big and how deep that frame is, brings itself up and sends the frame to the glass when
 // asked. A device is one of, so it cannot be copied.
-class DisplayDevice : public DrawingSurface{
+class DisplayDevice : public Canvas{
  public:
   DisplayDevice() = default;
   virtual ~DisplayDevice() = default;
@@ -26,9 +26,8 @@ class DisplayDevice : public DrawingSurface{
   // report, because only it knows whether a panel that stayed dark is a fault or a mode.
   virtual bool begin() = 0;
 
-  // The panel's full-frame geometry, origin at the top left: Rect(0, 0, width, height). Const
-  // because the geometry does not change across a call.
-  virtual Rect size() const = 0;
+  // The panel's full-frame geometry is its width and height, which the surface answers; a caller
+  // that wants the rect of it builds one, and nothing stores it.
 
   // The depth the glass shows, in bits per pixel: 1 for a panel that is only on or off, 8 for one
   // with levels. It is the layout of the frame the device keeps, a byte per pixel at 8 and a bit per
@@ -39,13 +38,16 @@ class DisplayDevice : public DrawingSurface{
   // that reaches past the glass clips to it, and a page asks for its root canvas by giving the
   // panel's rect. Anything the surface below already does for a canvas is the same here — it is
   // the frame that differs, and this is the one surface whose frame is the whole of it.
-  Canvas child(Transform transform, Blend blend) override {
-    return Canvas(*this, transform.then(Transform(size())), blend);
+  View child(Transform transform, Blend blend) override {
+    const Rect panel(0, 0, width(), height());
+    return View(*this, transform.then(Transform(panel)), blend);
   }
 
-  // The root canvas: the whole panel at the panel's own geometry, with no blend of its own, so a
-  // page that wants the glass asks the device rather than naming a frame.
-  Canvas root() { return Canvas(*this, Transform(size()), Blend::none()); }
+  // The root view: the whole panel at the panel's own geometry, with no blend of its own, so a page
+  // that wants the glass asks the device rather than naming a frame.
+  View root() {
+    return View(*this, Transform(Rect(0, 0, width(), height())), Blend::none());
+  }
 
 
 

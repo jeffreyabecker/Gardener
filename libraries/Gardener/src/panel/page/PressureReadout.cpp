@@ -28,22 +28,22 @@ gfx::Paint pressureReadout(gfx::Rect box, const SystemState& state, float sizeHi
                                     : std::string("--");
     const std::string target = readingText(state.targetPressureKpa, state.unit);
 
-    gfx::Canvas own = canvas.child(box);
+    gfx::View own = canvas.child(box);
     const int16_t width = own.width();
     const int16_t height = own.height();
     const int16_t halfWidth = width / 2;
     const int16_t halfHeight = height / 2;
 
     if (sizeHint >= 1.0f) {
-      gfx::Canvas left = own.child(gfx::Rect(0, 0, halfWidth, height));
-      gfx::Canvas right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
+      gfx::View left = own.child(gfx::Rect(0, 0, halfWidth, height));
+      gfx::View right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
       gfx::drawCentred(left, reading.c_str(), face, scale);
       gfx::drawCentred(right, target.c_str(), face, scale);
       return;
     }
 
     gfx::drawCentred(own, reading.c_str(), face, scale);
-    gfx::Canvas corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
+    gfx::View corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
                                              height - halfHeight));
     gfx::drawCentred(corner, target.c_str(), face, secondaryScale);
   };

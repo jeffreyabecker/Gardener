@@ -8,7 +8,7 @@
 
 namespace gardener {
 
-// A native 128x64 SH1106 on an I2C bus. The device owns the row-major Packed1 frame a Canvas draws
+// A native 128x64 SH1106 on an I2C bus. The device owns the row-major Packed1 frame a View draws
 // into, converts the columns a flush reports into the page-major bytes the panel reads, and sends
 // only the pages and columns inside that rectangle. The init sequence and page writes follow
 // Adafruit_SH110X's SH1106 driver; the BSD notice travels with them in the source.
@@ -22,7 +22,8 @@ class Sh1106Device : public gfx::DisplayDevice {
 
   bool begin() override;
 
-  gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
+  int16_t width() const override { return width_; }
+  int16_t height() const override { return height_; }
   uint8_t bitsPerPixel() const override { return 1; }
   void setPixel(int16_t x, int16_t y, uint8_t color) override;
   void flush() override;

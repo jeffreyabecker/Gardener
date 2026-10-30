@@ -99,7 +99,7 @@ class Panel : public Machine, public PanelContext {
   SystemState& state_;
   gfx::DisplayDevice* display_;
   // The one frame a page draws into, over the device's own buffer.
-  gfx::Canvas canvas_;
+  gfx::View canvas_;
   Routines* routines_;
   Library& library_;
 };

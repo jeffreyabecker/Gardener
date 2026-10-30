@@ -31,7 +31,7 @@ TEST_CASE("a column divides the canvas down") {
 
 TEST_CASE("equal thirds of a row fill it") {
   reset();
-  Canvas base = canvas.child(Rect(0, 0, 96, 12));
+  View base = canvas.child(Rect(0, 0, 96, 12));
   row(1.0f, {Child{Cell(1.0f / 3.0f, 1.0f), fill()}, Child{Cell(1.0f / 3.0f, 1.0f), fill()},
              Child{Cell(1.0f / 3.0f, 1.0f), fill()}})(base);
   CHECK_EQ(display.inkCount(0, 0, 32, 12), 32 * 12);
@@ -41,7 +41,7 @@ TEST_CASE("equal thirds of a row fill it") {
 
 TEST_CASE("a rounded span is clamped to what is left") {
   reset();
-  Canvas base = canvas.child(Rect(0, 0, 10, 9));
+  View base = canvas.child(Rect(0, 0, 10, 9));
   column(1.0f, {Child{Cell(1.0f, 0.5f), fill()}, Child{Cell(1.0f, 0.5f), fill()}})(base);
   CHECK_EQ(display.inkCount(0, 0, 10, 5), 10 * 5);
   CHECK_EQ(display.inkCount(0, 5, 10, 4), 10 * 4);
@@ -57,7 +57,7 @@ TEST_CASE("a declared size above one is pixels") {
 
 TEST_CASE("a layout takes the alignment it is given") {
   reset();
-  Canvas base = canvas.child(Rect(0, 0, 100, 20));
+  View base = canvas.child(Rect(0, 0, 100, 20));
   Alignment centred;
   centred.vertical = Vertical::Center;
   column(1.0f, {Child{Cell(1.0f, 0.2f), fill()}}, centred)(base);
@@ -109,7 +109,7 @@ TEST_CASE("a layout takes the children it is given at draw time") {
 
 TEST_CASE("a row takes the height and a column the width") {
   reset();
-  Canvas base = canvas.child(Rect(0, 0, PageWidth, 40));
+  View base = canvas.child(Rect(0, 0, PageWidth, 40));
   row(8.0f, {Child{Cell(1.0f, 1.0f), fill()}})(base);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, 8), PageWidth * 8);
   CHECK_EQ(display.inkCount(0, 8, PageWidth, 32), 0);

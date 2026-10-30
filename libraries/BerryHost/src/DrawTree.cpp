@@ -241,7 +241,7 @@ Paint paintOf(bvm* vm, int node, const SystemState& state) {
     const uint8_t scale = (uint8_t)intField(vm, node, "scale");
     return leaf(box, [value, face, scale](const gfx::Rect& rect) {
       return Paint([rect, value, face, scale](gfx::Canvas& canvas) {
-        gfx::Canvas own = canvas.child(rect);
+        gfx::View own = canvas.child(rect);
         gfx::drawCentred(own, value, face, scale);
       });
     });

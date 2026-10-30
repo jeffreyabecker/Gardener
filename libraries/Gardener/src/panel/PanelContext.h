@@ -15,6 +15,7 @@ struct MachineCommand;
 namespace gardener::gfx {
 class Canvas;
 class DisplayDevice;
+class View;
 }  // namespace gardener::gfx
 
 namespace gardener::panel::parts {

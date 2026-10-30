@@ -33,7 +33,7 @@ Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Directio
   return [cell, items = std::move(items), alignment, direction](Canvas& canvas) {
     const int16_t cellWidth = resolveSpan(canvas.width(), cell.width);
     const int16_t cellHeight = resolveSpan(canvas.height(), cell.height);
-    Canvas own = canvas.child(Rect(0, 0, cellWidth, cellHeight));
+    View own = canvas.child(Rect(0, 0, cellWidth, cellHeight));
     const bool down = stacksDown(items, direction);
     const int16_t width = own.width();
     const int16_t height = own.height();
@@ -67,7 +67,7 @@ Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Directio
         h = resolveSpan(height, childCell.height);
         y = alignedOffset(static_cast<int16_t>(height - h), alignment.vertical);
       }
-      Canvas cellCanvas = own.child(Rect(x, y, w, h));
+      View cellCanvas = own.child(Rect(x, y, w, h));
       // A cell with nothing to draw is the paper row of an editor's column.
       if (items[i].paint) items[i].paint(cellCanvas);
       cursor = static_cast<int16_t>(cursor + spans[i]);

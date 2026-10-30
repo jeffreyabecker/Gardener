@@ -20,7 +20,7 @@ constexpr int16_t PageHeight = 64;
 // The page-sized glass every drawing case shares: a CaptureDisplay, so a case that wants the beat
 // it drove as a GIF arms a capture and saves it.
 extern CaptureDisplay display;
-extern Canvas canvas;
+extern View canvas;
 
 // Clears the frame the last case left, its counters, any capture it did not end and the gesture
 // state with them, and tells the canvas it has nothing left to report.

@@ -75,7 +75,7 @@ bool Ux::poll(gfx::Canvas& canvas, uint32_t nowMs) {
   beginBeat(canvas, nowMs);
   const bool held = polling_;
   polling_ = true;
-  gfx::Canvas own = page();
+  gfx::View own = page();
   scene->poll(own, nowMs);
   polling_ = held;
   apply();
@@ -97,7 +97,7 @@ void Ux::endBeat() {
 
 // The canvas the scenes draw in: the beat's own less the rows the overlay takes, so a page never
 // draws under the overlay and never has to know where it starts.
-gfx::Canvas Ux::page() {
+gfx::View Ux::page() {
   const int16_t bottom = overlay_ ? overlayStart_ : beat_->height();
   const int16_t height =
       bottom > beat_->height() ? beat_->height() : static_cast<int16_t>(bottom < 0 ? 0 : bottom);
@@ -108,7 +108,7 @@ gfx::Canvas Ux::page() {
 // keeps the page that popped over from keeping the pixels of the page that left.
 void Ux::paintScene(Scene* scene) {
   if (scene == nullptr || beat_ == nullptr) return;
-  gfx::Canvas own = page();
+  gfx::View own = page();
   scene->draw(own, beatMs_);
 }
 
@@ -120,7 +120,7 @@ void Ux::paintOverlay(gfx::Canvas& canvas) {
   if (top > canvas.height()) top = canvas.height();
   const int16_t rows = static_cast<int16_t>(canvas.height() - top);
   if (rows <= 0) return;
-  gfx::Canvas own = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
+  gfx::View own = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
   overlay_(own);
 }
 

@@ -12,7 +12,7 @@ namespace gardener::panel::page {
 // The lifecycle a page shares: the gesture drain, the repaint cadence and the hooks a page
 // overrides. A page extends it and draws in drawPage; poll is what the host calls on each beat.
 //
-// A scene draws on the sub canvas the host made for it with Canvas::child, so it works in its own
+// A scene draws on the sub canvas the host made for it with View::child, so it works in its own
 // coordinates and never asks where it sits; there is no box to stamp.
 //
 // Nothing here reads a clock or an Arduino: the canvas and the beat arrive as arguments, which is

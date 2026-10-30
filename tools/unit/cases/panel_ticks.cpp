@@ -55,6 +55,7 @@ using gardener::Routines;
 using gardener::RunState;
 using gardener::SystemState;
 using gardener::VacuumSystem;
+using gardener::gfx::View;
 using gardener::gfx::Canvas;
 using gardener::gfx::DisplayDevice;
 using gardener::panel::GestureQueue;
@@ -186,7 +187,7 @@ struct PageRig {
   SystemState state;
   DeviceSettings settings;
   CaptureDisplay display{128, 64};
-  Canvas canvas;
+  View canvas;
   FakeBuzzer buzzerPart;
   BuzzerPlayer buzzer;
   FakePump pump;

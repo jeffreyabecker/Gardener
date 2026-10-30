@@ -26,6 +26,7 @@ using gardener::CaptureDisplay;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
 using gardener::RenderScale;
+using gardener::gfx::View;
 using gardener::gfx::Canvas;
 using gardener::gfx::Rect;
 using gardener::panel::GestureQueue;
@@ -326,7 +327,7 @@ TEST_CASE("the overlay mark is hashed on every captured frame") {
 TEST_CASE("a one-bit display records the bits the canvas drew") {
   CaptureDisplay screen(64, 32, 1);
   CHECK_EQ(screen.bitsPerPixel(), 1);
-  Canvas canvas = screen.root();
+  View canvas = screen.root();
   screen.beginCapture();
   canvas.setPixel(3, 3, 255);
   screen.flush();

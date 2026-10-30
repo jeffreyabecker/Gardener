@@ -120,7 +120,7 @@ gfx::Paint ChoiceScene::pageContents() {
     }
     gfx::Alignment centred;
     centred.vertical = gfx::Vertical::Center;
-    gfx::Canvas plot = canvas.child(gfx::Rect(0, 0, rowsWidth, canvas.height()));
+    gfx::View plot = canvas.child(gfx::Rect(0, 0, rowsWidth, canvas.height()));
     gfx::column(1.0f, rows, centred)(plot);
     if (scrolls) gfx::drawScrollbar(canvas, first, count, visible);
   };

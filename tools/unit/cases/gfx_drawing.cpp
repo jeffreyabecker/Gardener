@@ -45,7 +45,7 @@ TEST_CASE("a text draws at its box") {
 
 TEST_CASE("a text past its canvas is cut") {
   reset();
-  Canvas narrow = canvas.child(Rect(0, 0, 6, 8));
+  View narrow = canvas.child(Rect(0, 0, 6, 8));
   text(Rect(0, 0, 6, 8), "AB")(narrow);
   CHECK(display.anyInk(0, 0, 6, 8));
   CHECK_EQ(display.inkCount(6, 0, 6, 8), 0);
@@ -53,7 +53,7 @@ TEST_CASE("a text past its canvas is cut") {
 
 TEST_CASE("a string is centred on its canvas") {
   reset();
-  Canvas band = canvas.child(Rect(0, 0, 100, 20));
+  View band = canvas.child(Rect(0, 0, 100, 20));
   drawCentred(band, "A");
   const shapes::TextBox ink = shapes::measureText(nullptr, "A", 1);
   const int16_t x = static_cast<int16_t>((100 - ink.width) / 2);
@@ -151,7 +151,7 @@ TEST_CASE("a duration draws its text") {
 
 TEST_CASE("an inverted paint flips the whole cell it was given") {
   reset();
-  Canvas band = canvas.child(Rect(0, 0, 20, 8));
+  View band = canvas.child(Rect(0, 0, 20, 8));
   inverted([](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); })(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 0);
   CHECK_EQ(display.inkCount(10, 0, 10, 8), 10 * 8);
@@ -168,7 +168,7 @@ TEST_CASE("an underlay clears the cell the child draws in") {
   reset();
   canvas.draw(shapes::FillRect(0, 0, 20, 8, Ink));
   const Paint child = [](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); };
-  Canvas band = canvas.child(Rect(0, 0, 20, 8));
+  View band = canvas.child(Rect(0, 0, 20, 8));
   underlay(child)(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8);
   CHECK_EQ(display.inkCount(10, 0, 10, 8), 0);

@@ -315,7 +315,7 @@ class HarnessSession {
   VacuumSystem vacuum_;
   CaptureDisplay display_{CaptureDisplay::Width, CaptureDisplay::Height, 1};
   GestureStrip gestureStrip_;
-  gfx::Canvas canvas_;
+  gfx::View canvas_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   panel::parts::BuzzerPlayer buzzer_;
