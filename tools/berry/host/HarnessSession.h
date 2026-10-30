@@ -308,7 +308,7 @@ class HarnessSession {
   CountingBuzzer buzzerPart_;
   panel::parts::BuzzerPlayer buzzer_;
   BerryInterpreter interpreter_;
-  Routines routines_{interpreter_};
+  Routines routines_{interpreter_, display_, state_};
   HarnessPanel context_;
 };
 

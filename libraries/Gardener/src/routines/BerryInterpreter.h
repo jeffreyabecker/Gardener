@@ -22,6 +22,10 @@ class BerryInterpreter : public Interpreter {
   bool load(const String& path, const String& source) override;
   std::unique_ptr<panel::page::Scene> rootScene() override;
 
+  // Whether the VM came up: false when be_vm_new() could not allocate it, which leaves every load
+  // below refusing.
+  bool ready() const override { return vm_ != nullptr; }
+
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after
   // the image has loaded and reads the heap it holds.
   bvm* vm() const { return vm_; }

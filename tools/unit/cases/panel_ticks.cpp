@@ -24,7 +24,6 @@
 #include "machine/VacuumSystem.h"
 #include "panel/parts/ButtonsTick.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/PanelContext.h"
 #include "panel/parts/PartsTick.h"
 #include "routines/Interpreter.h"
 #include "routines/Routines.h"
@@ -45,7 +44,6 @@ using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
 using gardener::MachineCommand;
-using gardener::panel::PanelContext;
 using gardener::panel::parts::PartsTick;
 using gardener::Press;
 using gardener::Routines;
@@ -114,57 +112,40 @@ class CountingScene : public Scene {
 };
 
 // The interpreter the page's scenes come from: a fresh counting scene for each root, and the
-// figures the cases read.
+// figures the cases read. The queue its scenes are driven from is its own, since the cases count
+// what the stack does rather than what a press does.
 class FakeInterpreter : public Interpreter {
  public:
-  bool begin(Logger&, gardener::panel::PanelContext&, Routines&) override { return true; }
   bool load(const String&, const String&) override { return true; }
+  bool ready() const override { return true; }
 
-  std::unique_ptr<Scene> rootScene(GestureQueue& gestures, const SystemState&) override {
+  std::unique_ptr<Scene> rootScene() override {
     counter_.roots++;
-    return std::make_unique<CountingScene>(gestures, counter_);
+    return std::make_unique<CountingScene>(gestures_, counter_);
   }
 
   const SceneCounter& counter() const { return counter_; }
 
  private:
   SceneCounter counter_;
-};
-
-// The panel a routines object draws through, assembled from the fakes and a stub glass. It reads
-// nothing of the device: the state it draws from is the one the rig publishes into.
-class PageContext : public PanelContext {
- public:
-  PageContext(DisplayDevice& display, SystemState& state, BuzzerPlayer& buzzer)
-      : display_(display), state_(state), buzzer_(buzzer) {}
-
-  DisplayDevice& display() override { return display_; }
-  SystemState& systemState() override { return state_; }
-  BuzzerPlayer& buzzer() override { return buzzer_; }
-  bool post(const MachineCommand&) override { return true; }
-
- private:
-  DisplayDevice& display_;
-  SystemState& state_;
-  BuzzerPlayer& buzzer_;
+  GestureQueue gestures_;
 };
 
 // The routines a page tick drives: the fake interpreter, an empty order file so no image is read,
-// and the context the root scene is put on. The rig owns the published state, so a case can say what
-// the overlay draws.
+// and the glass and state the root scene is put on. The rig owns the published state, so a case can
+// say what the overlay draws.
 struct PageRig {
   PageRig()
       : settings(&library, state),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
-        context(display, state, buzzer),
-        routines(interpreter) {
+        routines(interpreter, display, state) {
     state.batteryPresent = battery.present();
     state.batteryPercent = battery.percent();
     state.batteryLow = battery.low();
 
     library.put("/system/order", "");
-    ok = routines.begin(logger, library, context);
+    ok = routines.begin(logger, library);
   }
 
   MemoryLibrary library;
@@ -180,15 +161,13 @@ struct PageRig {
   VacuumSystem vacuum;
   FakeBattery battery;
   FakeInterpreter interpreter;
-  PageContext context;
   Routines routines;
   bool ok = false;
 };
 
 // The buttons tick and the parts it answers into.
 struct ButtonsRig {
-  explicit ButtonsRig(Routines& routines)
-      : tick(buttons, routines.presses(), outbox, logger) {}
+  explicit ButtonsRig(GestureQueue& presses) : tick(buttons, presses, outbox, logger) {}
 
   FakeButtonPanel buttons;
   MemoryQueue queue;
@@ -200,9 +179,8 @@ struct ButtonsRig {
 }  // namespace
 
 TEST_CASE("the reset hold is handed back and posts nothing") {
-  FakeInterpreter interpreter;
-  Routines routines{interpreter};
-  ButtonsRig rig{routines};
+  GestureQueue presses;
+  ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Ok, 5000);
   rig.buttons.hold(Button::Cancel, 5000);
@@ -216,9 +194,8 @@ TEST_CASE("the reset hold is handed back and posts nothing") {
 }
 
 TEST_CASE("the cancel hold stops the machine and asks for home") {
-  FakeInterpreter interpreter;
-  Routines routines{interpreter};
-  ButtonsRig rig{routines};
+  GestureQueue presses;
+  ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Cancel, 5000);
   rig.tick.tick();
@@ -234,7 +211,7 @@ TEST_CASE("the cancel hold stops the machine and asks for home") {
 TEST_CASE("a gesture reaches the queue the page drains") {
   PageRig page;
   REQUIRE(page.ok);
-  ButtonsRig rig{page.routines};
+  ButtonsRig rig{page.routines.presses()};
 
   rig.buttons.press(Button::Back);
   rig.tick.tick();

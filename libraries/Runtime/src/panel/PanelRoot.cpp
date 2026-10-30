@@ -41,7 +41,7 @@ panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::Pane
   // The VM is the interpreter's own part; the routines above it are the loader's, so the panel owns
   // the VM and the page beat separately.
   auto* interpreter = new BerryInterpreter();
-  auto* routines = new Routines(*interpreter);
+  auto* routines = new Routines(*interpreter, *display, state);
   auto* panel = new panel::Panel(logger, machine.pump, machine.sensor, machine.valve, buttons,
                                  buzzer, battery, display, library, routines, queue, state);
 

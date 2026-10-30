@@ -14,9 +14,7 @@
 
 namespace gardener {
 
-namespace panel {
-class PanelContext;
-}  // namespace panel
+struct SystemState;
 
 class Logger;
 class Library;
@@ -31,13 +29,15 @@ class Library;
 // nothing suspended, no second core and no lock.
 class Routines {
  public:
-  explicit Routines(Interpreter& interpreter) : interpreter_(interpreter) {}
+  // The VM the files are loaded into and the root page read from; the glass the beat draws in and
+  // flushes; and the readings the overlay over every page shows.
+  Routines(Interpreter& interpreter, gfx::DisplayDevice& display, SystemState& state)
+      : interpreter_(interpreter), display_(display), state_(state) {}
 
-  // Starts the interpreter with the logger it reports through and the files it compiles, loads the
-  // files `/system/order` names and then every `/routines/*.be`, and resets the scene stack. The
-  // system comes first so a page can use what one of its files defines. False only when the
-  // interpreter cannot be allocated at all.
-  bool begin(Logger& logger, Library& library, panel::PanelContext& panel);
+  // Loads the files `/system/order` names and then every `/routines/*.be`, and resets the scene
+  // stack. The system comes first so a page can use what one of its files defines. False only when
+  // the interpreter holds no VM, which nothing can be loaded into.
+  bool begin(Logger& logger, Library& library);
 
   // The page's way out: leave whichever scenes are showing and give the panel back to the root.
   // False when no scene is left showing, which leaves the mark.
@@ -89,6 +89,9 @@ class Routines {
 
   // The VM the files are loaded into and the root page read from.
   Interpreter& interpreter_;
+  // The glass, and the readings the overlay over every page shows.
+  gfx::DisplayDevice& display_;
+  SystemState& state_;
   Logger* logger_ = nullptr;
   // The files the interpreter loads and the routine documents it reads and writes, handed at
   // begin(), so nothing here names a filesystem or a path.
@@ -96,9 +99,6 @@ class Routines {
   // Where the image's routine files put their records, built at begin() because the library and the
   // logger it reads documents through are the context's.
   std::unique_ptr<RoutineRegistry> registry_;
-  // The panel's parts the beat reaches: the display it draws in and flushes, and the readings the
-  // overlay shows.
-  panel::PanelContext* panel_ = nullptr;
   panel::page::Ux ux_;
   panel::GestureQueue gestures_;
   // What begin() loaded of what it found, for the run that reports whether the image is all there.

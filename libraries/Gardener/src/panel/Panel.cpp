@@ -23,9 +23,9 @@ bool Panel::boot() {
   const bool batteryOk = battery().begin();
   const bool buzzerOk = buzzer().begin();
 
-  // The interpreter comes up here and stays: routines are loaded into it later, and a device with
-  // no routines simply never enters it.
-  const bool vmOk = routines().begin(logger(), library_, *this);
+  // The VM came up with the interpreter; the image is loaded into it here, and a device with no
+  // routines simply never enters it.
+  const bool vmOk = routines().begin(logger(), library_);
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.
