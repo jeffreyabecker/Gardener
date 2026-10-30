@@ -22,7 +22,7 @@ reach for instead of hand-rolling — is the [firmware skill](../firmware/SKILL.
 | What | Case | Example |
 | --- | --- | --- |
 | Types — `class`, `struct`, `enum`, alias | PascalCase | `VacuumSystem`, `RunState`, `RoutineSettingStore` |
-| Functions and methods | camelCase | `service()`, `startRefusal()`, `buildPanelRoot()` |
+| Functions and methods | camelCase | `service()`, `startRefusal()`, `buildMachineParts()` |
 | Local variables and parameters | camelCase | `targetPressureKpa`, `nowMs` |
 | Data members | camelCase, trailing underscore | `pump_`, `logger_`, `pidIntegral_` |
 | Constants — `constexpr`, `const`, `static constexpr` | PascalCase | `PanelPriority`, `BackStopMs`, `MarkAsset` |

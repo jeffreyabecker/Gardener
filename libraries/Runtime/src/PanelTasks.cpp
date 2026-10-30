@@ -5,6 +5,7 @@
 
 #include "machine/SafeReboot.h"
 #include "core/SystemState.h"
+#include "machine/MachineCommand.h"
 #include "routines/ButtonsTick.h"
 #include "routines/PartsTick.h"
 #include "routines/RoutinesTick.h"
