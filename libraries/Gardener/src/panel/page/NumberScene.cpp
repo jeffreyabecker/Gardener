@@ -5,38 +5,13 @@
 
 #include <utility>
 
-#include "Text.h"
 #include "Drawing.h"
-#include "Layout.h"
 
 namespace gardener::panel::page {
 namespace {
 
-// The face the number is drawn at, the bar under it and the paper between the two.
+// The face the number is drawn at.
 constexpr uint8_t ValueScale = 2;
-constexpr int16_t BarHeight = 6;
-constexpr int16_t BarGap = 2;
-
-// The band, as the column the editor page draws it in: the number at the value face, two pixels of
-// paper and, when the setting declares both bounds, the bar that shows where the number sits
-// between them. The column is centred in the band and the number centred in the column, so the
-// band reads as one thing rather than as a number with a bar under it. `printed` is the scene's
-// own string, which outlives the paint.
-gfx::Paint numberBand(const char* printed, gfx::shapes::TextBox ink, bool bar, int16_t percent) {
-  const gfx::Child number{gfx::Cell(static_cast<float>(ink.width),
-                                    static_cast<float>(ink.height)),
-                          gfx::text(gfx::Rect(0, 0, ink.width, ink.height), printed, nullptr,
-                                    ValueScale)};
-  gfx::Justification centred;
-  centred.along = gfx::Justify::Center;
-  centred.across = gfx::Justify::Center;
-  if (!bar) return gfx::column(1.0f, {number}, centred);
-  const gfx::Child gap{gfx::Cell(1.0f, BarGap), gfx::Paint()};
-  const gfx::Child filled{gfx::Cell(1.0f, BarHeight), [percent](gfx::Canvas& own) {
-    gfx::progressBar(gfx::Rect(0, 0, own.width(), own.height()), percent)(own);
-  }};
-  return gfx::column(1.0f, {number, gap, filled}, centred);
-}
 
 }  // namespace
 
@@ -87,15 +62,12 @@ float NumberScene::within(float value) const {
   return value;
 }
 
+// The number centred in the contents band at the value face.
 gfx::Paint NumberScene::pageContents() {
   printed_ = text();
-  const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, printed_.c_str(), ValueScale);
-  const bool bar = isfinite(min_) && isfinite(max_) && max_ > min_;
-  int16_t percent = 0;
-  if (bar && hasValue()) {
-    percent = static_cast<int16_t>((number_ - min_) * 100 / (max_ - min_));
-  }
-  return numberBand(printed_.c_str(), ink, bar, percent);
+  return [this](gfx::Canvas& canvas) {
+    gfx::drawCentered(canvas, printed_.c_str(), nullptr, ValueScale);
+  };
 }
 
 }  // namespace gardener::panel::page

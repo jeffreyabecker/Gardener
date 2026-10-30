@@ -103,22 +103,21 @@ TEST_CASE("a number with no bounds steps freely") {
   CHECK_EQ(std::string(number.text().c_str()), std::string("-4"));
 }
 
-TEST_CASE("a number band draws the value and the bar") {
+// The number is the band: its ink sits centred in the contents band, with paper above, below and
+// beside it rather than a bar under it.
+TEST_CASE("a number band centres the value") {
   NoGestures gestures;
   Ux ux;
   String label("Target");
+  NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false);
   View band = canvas.child(Rect(0, 0, 40, 24));
   reset();
-  NumberProbe bounded(gestures, ux, label, 5, 1, 0, 10, false);
-  bounded.pageContents()(band);
-  CHECK(display.anyInk(0, 0, 40, 16));
-  CHECK(display.anyInk(0, 16, 40, 8));
-
-  reset();
-  NumberProbe free(gestures, ux, label, 5, 1, -INFINITY, INFINITY, false);
-  free.pageContents()(band);
+  number.pageContents()(band);
   CHECK(display.anyInk(0, 0, 40, 24));
-  CHECK_EQ(display.inkCount(0, 18, 40, 6), 0);
+  CHECK_EQ(display.inkCount(0, 0, 40, 4), 0);
+  CHECK_EQ(display.inkCount(0, 20, 40, 4), 0);
+  CHECK_EQ(display.inkCount(0, 0, 14, 24), 0);
+  CHECK_EQ(display.inkCount(26, 0, 14, 24), 0);
 }
 
 // The check a row's declaration gave is asked on OK: a value it refuses keeps the editor open with
