@@ -17,8 +17,10 @@ constexpr int16_t Row = 8;
 // the entry showing.
 gfx::Paint rowOf(const ChoiceItem* item, bool showing) {
   return [item, showing](gfx::Canvas& own) {
-    gfx::drawCentred(own, item->title.c_str());
-    if (showing) own.invert(gfx::Rect(0, 0, own.width(), own.height()));
+    const gfx::Paint title = [item](gfx::Canvas& canvas) {
+      gfx::drawCentred(canvas, item->title.c_str());
+    };
+    own.draw(showing ? gfx::inverted(title) : title);
   };
 }
 

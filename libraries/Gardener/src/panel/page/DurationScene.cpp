@@ -32,8 +32,9 @@ gfx::Paint centredText(const char* value) {
 gfx::Child field(const char* title, bool showing) {
   const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, title, FieldScale);
   const gfx::Paint label = [title, showing, ink](gfx::Canvas& own) {
-    gfx::text(gfx::Rect(0, 0, ink.width, ink.height), title, nullptr, FieldScale)(own);
-    if (showing) own.invert(gfx::Rect(0, 0, ink.width, ink.height));
+    const gfx::Paint content =
+        gfx::text(gfx::Rect(0, 0, ink.width, ink.height), title, nullptr, FieldScale);
+    own.draw(showing ? gfx::inverted(content) : content);
   };
   const gfx::Child centredLabel{gfx::Cell(static_cast<float>(ink.width),
                                           static_cast<float>(ink.height)),

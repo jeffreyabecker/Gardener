@@ -97,8 +97,13 @@ Paint icon(Rect box, const char* glyph) {
 Paint inverted(Paint content) {
   if (!content) return Paint();
   return [content](Canvas& canvas) {
-    content(canvas);
-    canvas.invert(Rect(0, 0, canvas.width(), canvas.height()));
+    // Ink under the content, and the content drawn through an inverting blend, is the picture the
+    // old draw-then-flip made: the content's ink comes out as paper on ink. It is also the only
+    // order a blend allows, since a blend sees the value being written and never the frame.
+    canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Ink));
+    Canvas flipped = canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())),
+                                  Blend().invert());
+    content(flipped);
   };
 }
 
@@ -138,9 +143,11 @@ Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool ho
     if (top < 0) top = 0;
     if (top + thumb > height) top = static_cast<int16_t>(height - thumb);
     if (hollow) {
-      own.invert(Rect(0, 0, width, top));
-      own.invert(Rect(0, static_cast<int16_t>(top + thumb), width,
-                      static_cast<int16_t>(height - (top + thumb))));
+      // The track is untouched paper and inverting paper is ink, so a fill is the same picture
+      // without a read the blend cannot make.
+      const int16_t below = static_cast<int16_t>(top + thumb);
+      own.draw(shapes::FillRect(0, 0, width, top, Ink));
+      own.draw(shapes::FillRect(0, below, width, static_cast<int16_t>(height - below), Ink));
     } else {
       own.draw(shapes::Rect(0, 0, width, height, Ink));
       own.draw(shapes::FillRect(0, top, width, thumb, Ink));

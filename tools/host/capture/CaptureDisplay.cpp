@@ -50,6 +50,39 @@ void drawOverlayHash(gfx::Canvas& canvas, const gfx::Rect& glass, int16_t top, i
   }
 }
 
+// The picture a capture composes for one frame: a packed one-bit frame over the bytes the frame
+// writer takes. The glass, the overlay hash and the components are drawn through it, so the drawing
+// gets a device to write to; nothing ever flushes it, because the capture hands the bytes on itself.
+class PackedFrame : public gfx::DisplayDevice {
+ public:
+  PackedFrame(uint8_t* bytes, int16_t width, int16_t height)
+      : bytes_(bytes), width_(width), height_(height) {}
+
+  bool begin() override { return true; }
+  gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
+  uint8_t bitsPerPixel() const override { return 1; }
+
+  void setPixel(int16_t x, int16_t y, uint8_t color) override {
+    if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
+    uint8_t& cell = bytes_[y * stride() + (x >> 3)];
+    const uint8_t mask = static_cast<uint8_t>(0x80 >> (x & 7));
+    if (color >= 128) {
+      cell |= mask;
+    } else {
+      cell &= static_cast<uint8_t>(~mask);
+    }
+  }
+
+  void flush() override {}
+
+ private:
+  int16_t stride() const { return static_cast<int16_t>((width_ + 7) / 8); }
+
+  uint8_t* bytes_;
+  int16_t width_;
+  int16_t height_;
+};
+
 }  // namespace
 
 CaptureDisplay::CaptureDisplay(int16_t width, int16_t height, uint8_t bitsPerPixel)
@@ -65,9 +98,40 @@ bool CaptureDisplay::begin() {
   return true;
 }
 
-void CaptureDisplay::flush(const gfx::Rect& dirty) {
+void CaptureDisplay::setPixel(int16_t x, int16_t y, uint8_t color) {
+  if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
+  include(x, y);
+  if (depth_ == 8) {
+    drawn_[static_cast<size_t>(y) * stride_ + x] = color;
+    return;
+  }
+  uint8_t& cell = drawn_[static_cast<size_t>(y) * stride_ + (x >> 3)];
+  const uint8_t mask = static_cast<uint8_t>(0x80 >> (x & 7));
+  if (color >= 128) {
+    cell |= mask;
+  } else {
+    cell &= static_cast<uint8_t>(~mask);
+  }
+}
+
+void CaptureDisplay::include(int16_t x, int16_t y) {
+  if (dirty_.width <= 0 || dirty_.height <= 0) {
+    dirty_ = gfx::Rect(x, y, 1, 1);
+    return;
+  }
+  const int16_t left = x < dirty_.x ? x : dirty_.x;
+  const int16_t top = y < dirty_.y ? y : dirty_.y;
+  const int16_t right = x > dirty_.right() ? x : dirty_.right();
+  const int16_t bottom = y > dirty_.bottom() ? y : dirty_.bottom();
+  dirty_ = gfx::Rect(left, top, static_cast<int16_t>(right - left + 1),
+                     static_cast<int16_t>(bottom - top + 1));
+}
+
+void CaptureDisplay::flush() {
   flushes_++;
-  lastDirty_ = dirty;
+  lastDirty_ = dirty_;
+  const gfx::Rect dirty = dirty_;
+  dirty_ = gfx::Rect(0, 0, 0, 0);
 
   const int16_t firstRow = std::max<int16_t>(0, dirty.y);
   const int16_t lastRow = std::min<int16_t>((int16_t)(height_ - 1), dirty.bottom());
@@ -101,8 +165,8 @@ void CaptureDisplay::flush(const gfx::Rect& dirty) {
 
 void CaptureDisplay::keepFrame() {
   std::vector<uint8_t> pixels(Capture::frameBytes(frame_.width, frame_.height), 0);
-  const gfx::Rect area(0, 0, frame_.width, frame_.height);
-  gfx::Canvas canvas(pixels.data(), area, area, gfx::PixelLayout::Packed1);
+  PackedFrame picture(pixels.data(), frame_.width, frame_.height);
+  gfx::Canvas canvas = picture.root();
 
   // The glass as it was sent, at the place the frame gives it.
   for (int16_t y = 0; y < height_; y++) {
@@ -165,6 +229,7 @@ const std::vector<uint8_t>* CaptureDisplay::frame(int index) const { return capt
 void CaptureDisplay::clear() {
   std::fill(drawn_.begin(), drawn_.end(), 0);
   std::fill(sent_.begin(), sent_.end(), 0);
+  dirty_ = gfx::Rect(0, 0, 0, 0);
   flushes_ = 0;
   lastDirty_ = gfx::Rect(0, 0, 0, 0);
   endCapture();

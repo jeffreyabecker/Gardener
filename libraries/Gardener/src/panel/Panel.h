@@ -54,7 +54,7 @@ class Panel : public Machine, public PanelContext {
         settings_(&library, state),
         state_(state),
         display_(display),
-        canvas_(display->rootCanvas()),
+        canvas_(display->root()),
         routines_(routines),
         library_(library) {}
 

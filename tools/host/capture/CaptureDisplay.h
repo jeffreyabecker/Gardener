@@ -59,11 +59,14 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
 
   gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
   uint8_t bitsPerPixel() const override { return depth_; }
-  uint8_t* buffer() override { return drawn_.data(); }
 
-  // Sends the rectangle the canvas reports to the glass, and keeps it when a capture is armed. A
-  // rectangle holding no pixels sends nothing and keeps nothing, but is still a flush.
-  void flush(const gfx::Rect& dirty) override;
+  // One pixel of the drawn frame, in the glass's own coordinates: the byte itself at 8 bits per
+  // pixel and on or off at 1, where a colour of 128 or more sets the bit.
+  void setPixel(int16_t x, int16_t y, uint8_t color) override;
+
+  // Sends the pixels written since the last flush to the glass, and keeps them when a capture is
+  // armed. A flush with nothing written sends nothing and keeps nothing, but is still a flush.
+  void flush() override;
 
   // --- the page's input -----------------------------------------------------
   // The token a page will take. The queue is this display's own, so a case hands the same object
@@ -121,6 +124,9 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   gfx::Rect lastDirty() const { return lastDirty_; }
 
  private:
+  // Grow the rectangle of glass pixels written since the last flush to take in one more.
+  void include(int16_t x, int16_t y);
+
   // Packs the glass into the frame it captured, with the overlay hash on its rows and the
   // components over it, and hands the result to the capture as one frame.
   void keepFrame();
@@ -135,6 +141,8 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   // keeps.
   std::vector<uint8_t> drawn_;
   std::vector<uint8_t> sent_;
+  // What has been written since the last flush, in the glass's own coordinates.
+  gfx::Rect dirty_{0, 0, 0, 0};
   int flushes_ = 0;
   gfx::Rect lastDirty_{0, 0, 0, 0};
 

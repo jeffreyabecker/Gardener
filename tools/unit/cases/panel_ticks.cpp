@@ -168,7 +168,7 @@ class PageContext : public PanelContext {
 struct PageRig {
   PageRig()
       : settings(&library, state),
-        canvas(display.rootCanvas()),
+        canvas(display.root()),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
         context(display, canvas, state, buzzer, library, logger),

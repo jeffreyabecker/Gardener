@@ -24,8 +24,8 @@ class Sh1106Device : public gfx::DisplayDevice {
 
   gfx::Rect size() const override { return gfx::Rect(0, 0, width_, height_); }
   uint8_t bitsPerPixel() const override { return 1; }
-  uint8_t* buffer() override { return frame_; }
-  void flush(const gfx::Rect& dirty) override;
+  void setPixel(int16_t x, int16_t y, uint8_t color) override;
+  void flush() override;
 
  private:
   bool command(uint8_t value);
@@ -35,6 +35,9 @@ class Sh1106Device : public gfx::DisplayDevice {
   // The eight rows of one column as the panel stores them, lowest row in the lowest bit.
   uint8_t pageColumn(int16_t page, int16_t column) const;
 
+  // Grow the rectangle of panel pixels written since the last flush to take in one more.
+  void include(int16_t x, int16_t y);
+
   int16_t stride() const { return static_cast<int16_t>((width_ + 7) / 8); }
   int16_t pages() const { return static_cast<int16_t>((height_ + 7) / 8); }
 
@@ -43,6 +46,8 @@ class Sh1106Device : public gfx::DisplayDevice {
   int16_t width_;
   int16_t height_;
   uint8_t* frame_;
+  // What has been written since the last flush, in the panel's own coordinates.
+  gfx::Rect dirty_{0, 0, 0, 0};
 };
 
 }  // namespace gardener

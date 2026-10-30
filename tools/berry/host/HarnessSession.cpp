@@ -92,7 +92,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       sensor_(chamber_),
       valve_(chamber_),
       vacuum_(&pump_, &sensor_, &valve_),
-      canvas_(display_.rootCanvas()),
+      canvas_(display_.root()),
       buzzer_(buzzerPart_),
       context_(display_, canvas_, state_, buzzer_, files_, logger_) {}
 

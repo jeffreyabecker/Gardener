@@ -73,10 +73,10 @@ std::vector<uint8_t> readFile(const char* path) {
 // A rectangle of ink at the top left, which is enough to make a frame non-empty.
 void drawMark() {
   reset();
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   gardener::gfx::test::canvas.setPixel(10, 10, 1);
   gardener::gfx::test::canvas.setPixel(11, 10, 1);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
 }
 
 int countFrameBlocks(const std::vector<uint8_t>& bytes) {
@@ -203,9 +203,9 @@ TEST_CASE("a recording display keeps one frame per flush that drew") {
   reset();
   display.beginCapture();
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   // Nothing drawn since: still a flush, but nothing sent and so nothing kept.
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   CHECK_EQ(display.flushCount(), 2);
   CHECK_EQ(display.frameCount(), 1);
   display.endCapture();
@@ -215,9 +215,9 @@ TEST_CASE("a beat saved through the display is one GIF frame per send") {
   reset();
   display.beginCapture();
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   gardener::gfx::test::canvas.setPixel(6, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   REQUIRE(display.save("tools/unit/build/capture_display_beat.gif"));
   display.endCapture();
 
@@ -235,7 +235,7 @@ TEST_CASE("the gesture a page takes is named under the glass on the frame it dre
   display.press("ok:double");
   strip.show(display.take());
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
@@ -253,9 +253,9 @@ TEST_CASE("the gesture is on the frame it landed on and not the next") {
   display.press("ok:single");
   strip.show(display.take());
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   gardener::gfx::test::canvas.setPixel(6, 20, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 2);
   const std::vector<uint8_t>* first = display.frame(0);
   const std::vector<uint8_t>* second = display.frame(1);
@@ -294,7 +294,7 @@ TEST_CASE("a component draws in the box the frame gives it") {
            [](Canvas& canvas) { canvas.setPixel(1, 1, 255); }},
       });
   gardener::gfx::test::canvas.setPixel(10, 10, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
@@ -312,7 +312,7 @@ TEST_CASE("the overlay mark is hashed on every captured frame") {
   display.beginCapture();
   display.markOverlay(40, 8);
   gardener::gfx::test::canvas.setPixel(4, 44, 255);
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
@@ -326,10 +326,10 @@ TEST_CASE("the overlay mark is hashed on every captured frame") {
 TEST_CASE("a one-bit display records the bits the canvas drew") {
   CaptureDisplay screen(64, 32, 1);
   CHECK_EQ(screen.bitsPerPixel(), 1);
-  Canvas canvas = screen.rootCanvas();
+  Canvas canvas = screen.root();
   screen.beginCapture();
   canvas.setPixel(3, 3, 255);
-  canvas.flush(screen);
+  screen.flush();
   REQUIRE_EQ(screen.frameCount(), 1);
 
   const std::vector<uint8_t>* frame = screen.frame(0);
@@ -384,7 +384,7 @@ TEST_CASE("a scene driven through the display takes its press from it") {
   display.press("ok:single");
   strip.show("ok:single");
   CHECK(ux.poll(gardener::gfx::test::canvas, 1));
-  gardener::gfx::test::canvas.flush(display);
+  gardener::gfx::test::display.flush();
   CHECK_EQ(handled, 1);
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);

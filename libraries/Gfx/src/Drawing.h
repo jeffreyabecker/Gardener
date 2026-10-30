@@ -50,8 +50,9 @@ Paint icon(Rect box, Paint glyph);
 // as the draw runs, and a string that names no bitmap draws nothing.
 Paint icon(Rect box, const char* glyph);
 
-// A paint that draws `content` and then inverts the whole canvas it was given, so a selected row
-// reads as paper on ink. An empty content stays empty and inverts nothing.
+// A paint that draws `content` as paper on ink — the whole canvas filled with ink and the content
+// drawn through an inverting blend, so a selected row reads inverted. An empty content stays empty
+// and fills nothing.
 Paint inverted(Paint content);
 
 // A paint that clears the whole canvas it was given to paper and then runs the child on it, so a

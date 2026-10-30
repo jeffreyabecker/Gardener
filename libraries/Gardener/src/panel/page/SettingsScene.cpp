@@ -112,8 +112,8 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
     gfx::Canvas cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
-    rowText(*row, value)(cell);
-    if (at == selected_) cell.invert(gfx::Rect(0, 0, cell.width(), Row));
+    const gfx::Paint content = rowText(*row, value);
+    cell.draw(at == selected_ ? gfx::inverted(content) : content);
   }
   if (scrolls) gfx::drawScrollbar(band, first, count, visible);
 }

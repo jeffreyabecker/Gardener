@@ -5,13 +5,15 @@
 #include "Canvas.h"
 #include "Rect.h"
 
+
 namespace gardener::gfx {
+
 
 // The interface a concrete panel driver implements. The glass, the bus, the frame a canvas draws
 // into and whatever the part needs to come up are the driver's own business: it owns the buffer,
 // says how big and how deep that frame is, brings itself up and sends the frame to the glass when
 // asked. A device is one of, so it cannot be copied.
-class DisplayDevice {
+class DisplayDevice : public DrawingSurface{
  public:
   DisplayDevice() = default;
   virtual ~DisplayDevice() = default;
@@ -29,29 +31,29 @@ class DisplayDevice {
   virtual Rect size() const = 0;
 
   // The depth the glass shows, in bits per pixel: 1 for a panel that is only on or off, 8 for one
-  // with levels. It is the layout of the frame below, a byte per pixel at 8 and a bit per pixel at
-  // 1, so a caller that wants a colour the panel can show picks one this depth allows.
+  // with levels. It is the layout of the frame the device keeps, a byte per pixel at 8 and a bit per
+  // pixel at 1, so a caller that wants a colour the panel can show picks one this depth allows.
   virtual uint8_t bitsPerPixel() const = 0;
 
-  // The frame this device draws into: size().width by size().height pixels, laid out as
-  // bitsPerPixel() says. The device allocates it, owns it and keeps it for as long as it lives, so
-  // a canvas draws straight into it and there is one frame rather than a copy per canvas.
-  virtual uint8_t* buffer() = 0;
-
-  // The root canvas: a canvas over the whole frame, at the panel's own geometry and in the layout its
-  // depth says — a one-bit glass a Packed1 frame and anything deeper a Gray8 one. Asking the device is
-  // how a caller gets one without naming a layout, and every canvas inside it is child() of it, so the
-  // whole tree reports through its one dirty rectangle.
-  Canvas rootCanvas() {
-    return Canvas(buffer(), size(), size(),
-                  bitsPerPixel() == 1 ? PixelLayout::Packed1 : PixelLayout::Gray8);
+  // A canvas over this panel: the transform is placed inside the panel's own geometry, so a window
+  // that reaches past the glass clips to it, and a page asks for its root canvas by giving the
+  // panel's rect. Anything the surface below already does for a canvas is the same here — it is
+  // the frame that differs, and this is the one surface whose frame is the whole of it.
+  Canvas child(Transform transform, Blend blend) override {
+    return Canvas(*this, transform.then(Transform(size())), blend);
   }
 
-  // Send the panel pixels this device was told about to the glass, and only those: the rectangle is
-  // what a canvas has written since the last flush, in the panel's own coordinates. A rectangle
-  // holding no pixels asks for nothing, which is what a canvas nobody has drawn on reports. The
-  // device reads the frame and writes none of it back.
-  virtual void flush(const Rect& dirty) = 0;
+  // The root canvas: the whole panel at the panel's own geometry, with no blend of its own, so a
+  // page that wants the glass asks the device rather than naming a frame.
+  Canvas root() { return Canvas(*this, Transform(size()), Blend::none()); }
+
+
+
+
+  // Send the pixels written since the last flush to the glass, and only those: the rectangle is what
+  // the device has been told about since the last call, in the panel's own coordinates. A device
+  // nobody has drawn on since flushes nothing. The device reads the frame and writes none of it back.
+  virtual void flush() = 0;
 };
 
 }  // namespace gardener::gfx

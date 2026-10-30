@@ -70,7 +70,34 @@ bool Sh1106Device::begin() {
   return command(0xAF);  // display on
 }
 
-void Sh1106Device::flush(const gfx::Rect& dirty) {
+void Sh1106Device::setPixel(int16_t x, int16_t y, uint8_t color) {
+  if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
+  uint8_t& cell = frame_[y * stride() + (x >> 3)];
+  const uint8_t mask = static_cast<uint8_t>(0x80 >> (x & 7));
+  if (color >= 128) {
+    cell |= mask;
+  } else {
+    cell &= static_cast<uint8_t>(~mask);
+  }
+  include(x, y);
+}
+
+void Sh1106Device::include(int16_t x, int16_t y) {
+  if (dirty_.width <= 0 || dirty_.height <= 0) {
+    dirty_ = gfx::Rect(x, y, 1, 1);
+    return;
+  }
+  const int16_t left = x < dirty_.x ? x : dirty_.x;
+  const int16_t top = y < dirty_.y ? y : dirty_.y;
+  const int16_t right = x > dirty_.right() ? x : dirty_.right();
+  const int16_t bottom = y > dirty_.bottom() ? y : dirty_.bottom();
+  dirty_ = gfx::Rect(left, top, static_cast<int16_t>(right - left + 1),
+                     static_cast<int16_t>(bottom - top + 1));
+}
+
+void Sh1106Device::flush() {
+  const gfx::Rect dirty = dirty_;
+  dirty_ = gfx::Rect(0, 0, 0, 0);
   if (dirty.width <= 0 || dirty.height <= 0) return;
 
   const int16_t firstColumn = dirty.x < 0 ? 0 : dirty.x;

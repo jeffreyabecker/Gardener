@@ -12,7 +12,7 @@ namespace {
 
 TEST_CASE("a child draws at its parents offset") {
   reset();
-  canvas.flush(display);
+  display.flush();
   Canvas plot = canvas.child(Rect(20, 10, 40, 20));
   CHECK_EQ(plot.width(), 40);
   CHECK_EQ(plot.height(), 20);
@@ -24,7 +24,7 @@ TEST_CASE("a child draws at its parents offset") {
 
 TEST_CASE("a child is clipped to its rect") {
   reset();
-  canvas.flush(display);
+  display.flush();
   Canvas plot = canvas.child(Rect(20, 10, 40, 20));
   plot.setPixel(40, 0, Ink);
   plot.setPixel(0, 20, Ink);
@@ -38,7 +38,7 @@ TEST_CASE("a child is clipped to its rect") {
 
 TEST_CASE("siblings do not overlap") {
   reset();
-  canvas.flush(display);
+  display.flush();
   Canvas left = canvas.child(Rect(0, 40, 10, 10));
   Canvas right = canvas.child(Rect(10, 40, 10, 10));
   left.setPixel(9, 9, Ink);
@@ -59,8 +59,8 @@ TEST_CASE("a child of a child nests") {
 
 TEST_CASE("a child of a turned parent follows the turn") {
   reset();
-  Canvas turned = display.rootCanvas();
-  turned.setRotation(90);
+  Canvas turned = canvas.child(Transform(Rect(0, 0, PageWidth, PageHeight)).rotate(90),
+                               Blend::none());
   Canvas quarter = turned.child(Rect(10, 5, 30, 20));
   CHECK_EQ(quarter.width(), 30);
   CHECK_EQ(quarter.height(), 20);
@@ -71,33 +71,26 @@ TEST_CASE("a child of a turned parent follows the turn") {
   CHECK_EQ(display.at(103, 39), Ink);
 }
 
-TEST_CASE("a child cannot be turned") {
-  reset();
-  Canvas plot = canvas.child(Rect(0, 0, 40, 20));
-  plot.setRotation(90);
-  CHECK_EQ(plot.rotation(), 0);
-  canvas.setRotation(0);
-}
-
 TEST_CASE("a flush sends what a child drew") {
-  canvas.flush(display);
+  display.flush();
   reset();
   Canvas plot = canvas.child(Rect(50, 30, 10, 10));
   plot.setPixel(0, 0, Ink);
-  canvas.flush(display);
+  display.flush();
   CHECK_EQ(display.flushCount(), 1);
   const Rect dirty = display.lastDirty();
   CHECK_EQ(dirty.x, 50);
   CHECK_EQ(dirty.y, 30);
   CHECK_EQ(dirty.width, 1);
   CHECK_EQ(dirty.height, 1);
-  canvas.flush(display);
+  display.flush();
   CHECK_EQ(display.lastDirty().width, 0);
 }
 
 TEST_CASE("a child outside its parent draws nothing") {
+  // The space is the rect's — clip() keeps its size and narrows the window to nothing — so what
+  // the case pins is that nothing reaches the glass.
   Canvas plot = canvas.child(Rect(PageWidth + 10, PageHeight + 10, 10, 10));
-  CHECK_EQ(plot.width(), 0);
   reset();
   plot.setPixel(0, 0, Ink);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);

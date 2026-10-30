@@ -133,7 +133,7 @@ bool Routines::enterPage() {
 // The beat's one send: whatever the page and the overlay drew goes to the glass from the panel's
 // own canvas. A scene draws into the canvas and never sends it, and no caller sends it after the
 // beat, so a beat is exactly one flush however many draws went into it.
-void Routines::show() { panel_->canvas().flush(panel_->display()); }
+void Routines::show() { panel_->display().flush(); }
 
 // The root scene, at boot and on the go-home gesture: the image's own root page, which is the home
 // page, and the device's mark when the image sets none. The stack draws it, so the overlay is drawn
