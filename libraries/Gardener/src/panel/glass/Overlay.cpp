@@ -84,9 +84,9 @@ gfx::Paint stateCell(RunState state, uint32_t nowMs) {
 // inside it.
 gfx::Paint batteryCell(int8_t percent, bool low, uint32_t nowMs) {
   return [percent, low, nowMs](gfx::Canvas& cell) {
-    cell.draw(gfx::shapes::FillRect(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::Paper));
+    cell.draw(gfx::shapes::Rect(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::Paper, true));
     cell.draw(gfx::shapes::Rect(0, GlyphTop, BatteryOutline, BatteryHeight, gfx::Ink));
-    cell.draw(gfx::shapes::FillRect(BatteryOutline, GlyphTop + 2, BatteryNub, 3, gfx::Ink));
+    cell.draw(gfx::shapes::Rect(BatteryOutline, GlyphTop + 2, BatteryNub, 3, gfx::Ink, true));
     if (percent < 0) {
       cell.draw(gfx::shapes::Line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::Ink));
       return;
@@ -96,7 +96,7 @@ gfx::Paint batteryCell(int8_t percent, bool low, uint32_t nowMs) {
     int16_t fill = static_cast<int16_t>(BatteryFill * percent / 100);
     if (fill < 1) fill = 1;
     if (fill > BatteryFill) fill = BatteryFill;
-    cell.draw(gfx::shapes::FillRect(2, GlyphTop + 2, fill, 3, gfx::Ink));
+    cell.draw(gfx::shapes::Rect(2, GlyphTop + 2, fill, 3, gfx::Ink, true));
   };
 }
 

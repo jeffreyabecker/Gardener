@@ -18,7 +18,7 @@ constexpr int16_t Row = 8;
 gfx::Paint rowOf(const ChoiceItem* item, bool showing) {
   return [item, showing](gfx::Canvas& own) {
     const gfx::Paint title = [item](gfx::Canvas& canvas) {
-      gfx::drawCentred(canvas, item->title.c_str());
+      gfx::drawCentered(canvas, item->title.c_str());
     };
     own.draw(showing ? gfx::inverted(title) : title);
   };
@@ -99,7 +99,7 @@ int16_t ChoiceScene::index() const {
 gfx::Paint ChoiceScene::pageContents() {
   return [this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      gfx::drawCentred(canvas, "--");
+      gfx::drawCentered(canvas, "--");
       return;
     }
     const int16_t selected = index();

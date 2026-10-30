@@ -110,23 +110,25 @@ void triangleFill(Canvas& canvas, int16_t x0, int16_t y0, int16_t x1, int16_t y1
   }
 }
 
-// The four corners of a rectangle turned about its centre, clockwise for a positive angle.
-void turnedCorners(int16_t centerX, int16_t centerY, int16_t w, int16_t h, int16_t angle,
-                   int16_t xs[4], int16_t ys[4]) {
-  const float radians = static_cast<float>(angle) * 0.017453292519943295f;
-  const float cosine = cosf(radians);
-  const float sine = sinf(radians);
-  const float halfW = static_cast<float>(w) / 2.0f;
-  const float halfH = static_cast<float>(h) / 2.0f;
-  const float cornerX[4] = {-halfW, halfW, halfW, -halfW};
-  const float cornerY[4] = {-halfH, -halfH, halfH, halfH};
-  for (int i = 0; i < 4; i++) {
-    const float px = cornerX[i] * cosine - cornerY[i] * sine;
-    const float py = cornerX[i] * sine + cornerY[i] * cosine;
-    xs[i] = static_cast<int16_t>(lroundf(static_cast<float>(centerX) + px));
-    ys[i] = static_cast<int16_t>(lroundf(static_cast<float>(centerY) + py));
-  }
-}
+// The four corners of a rectangle turned about its centre, clockwise for a positive angle, kept
+// for the turned rectangle that is in comment above.
+//
+// void turnedCorners(int16_t centerX, int16_t centerY, int16_t w, int16_t h, int16_t angle,
+//                    int16_t xs[4], int16_t ys[4]) {
+//   const float radians = static_cast<float>(angle) * 0.017453292519943295f;
+//   const float cosine = cosf(radians);
+//   const float sine = sinf(radians);
+//   const float halfW = static_cast<float>(w) / 2.0f;
+//   const float halfH = static_cast<float>(h) / 2.0f;
+//   const float cornerX[4] = {-halfW, halfW, halfW, -halfW};
+//   const float cornerY[4] = {-halfH, -halfH, halfH, halfH};
+//   for (int i = 0; i < 4; i++) {
+//     const float px = cornerX[i] * cosine - cornerY[i] * sine;
+//     const float py = cornerX[i] * sine + cornerY[i] * cosine;
+//     xs[i] = static_cast<int16_t>(lroundf(static_cast<float>(centerX) + px));
+//     ys[i] = static_cast<int16_t>(lroundf(static_cast<float>(centerY) + py));
+//   }
+// }
 
 // One hex digit as the value it names, or -1 for a character that is not one.
 int hexDigit(char digit) {
@@ -166,29 +168,35 @@ void Line::operator()(Canvas& canvas) const {
   }
 }
 
-void HLine::operator()(Canvas& canvas) const { hline(canvas, x, y, w, color); }
-
-void VLine::operator()(Canvas& canvas) const { vline(canvas, x, y, h, color); }
-
 void Rect::operator()(Canvas& canvas) const {
-  if (w <= 0 || h <= 0) return;
-  hline(canvas, x, y, w, color);
-  hline(canvas, x, static_cast<int16_t>(y + h - 1), w, color);
-  vline(canvas, x, y, h, color);
-  vline(canvas, static_cast<int16_t>(x + w - 1), y, h, color);
-}
-
-void FillRect::operator()(Canvas& canvas) const {
-  for (int16_t row = 0; row < h; row++) {
-    hline(canvas, x, static_cast<int16_t>(y + row), w, color);
-  }
-}
-
-void RoundRect::operator()(Canvas& canvas) const {
   if (w <= 0 || h <= 0) return;
   const int16_t r = clampRadius(w, h, radius);
   if (r <= 0) {
-    Rect(x, y, w, h, color)(canvas);
+    if (filled) {
+      for (int16_t row = 0; row < h; row++) {
+        hline(canvas, x, static_cast<int16_t>(y + row), w, color);
+      }
+      return;
+    }
+
+    hline(canvas, x, y, w, color);
+    hline(canvas, x, static_cast<int16_t>(y + h - 1), w, color);
+    vline(canvas, x, y, h, color);
+    vline(canvas, static_cast<int16_t>(x + w - 1), y, h, color);
+    return;
+  }
+
+  if (filled) {
+    for (int16_t step = 0; step < r; step++) {
+      const int16_t inset = cornerInset(r, step);
+      const int16_t span = static_cast<int16_t>(w - 2 * inset);
+      hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + step), span, color);
+      hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + h - 1 - step),
+            span, color);
+    }
+    for (int16_t row = r; row < h - r; row++) {
+      hline(canvas, x, static_cast<int16_t>(y + row), w, color);
+    }
     return;
   }
 
@@ -221,71 +229,54 @@ void RoundRect::operator()(Canvas& canvas) const {
   }
 }
 
-void FillRoundRect::operator()(Canvas& canvas) const {
-  if (w <= 0 || h <= 0) return;
-  const int16_t r = clampRadius(w, h, radius);
-  if (r <= 0) {
-    FillRect(x, y, w, h, color)(canvas);
+void Circle::operator()(Canvas& canvas) const {
+  if (filled) {
+    ellipseFill(canvas, x, y, radius, radius, color);
     return;
   }
-
-  for (int16_t step = 0; step < r; step++) {
-    const int16_t inset = cornerInset(r, step);
-    const int16_t span = static_cast<int16_t>(w - 2 * inset);
-    hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + step), span, color);
-    hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + h - 1 - step), span,
-          color);
-  }
-  for (int16_t row = r; row < h - r; row++) {
-    hline(canvas, x, static_cast<int16_t>(y + row), w, color);
-  }
-}
-
-void Circle::operator()(Canvas& canvas) const {
   ellipseOutline(canvas, x, y, radius, radius, color);
 }
 
-void FillCircle::operator()(Canvas& canvas) const {
-  ellipseFill(canvas, x, y, radius, radius, color);
-}
-
 void Ellipse::operator()(Canvas& canvas) const {
+  if (filled) {
+    ellipseFill(canvas, x, y, radiusX, radiusY, color);
+    return;
+  }
   ellipseOutline(canvas, x, y, radiusX, radiusY, color);
 }
 
-void FillEllipse::operator()(Canvas& canvas) const {
-  ellipseFill(canvas, x, y, radiusX, radiusY, color);
-}
-
 void Triangle::operator()(Canvas& canvas) const {
+  if (filled) {
+    triangleFill(canvas, x0, y0, x1, y1, x2, y2, color);
+    return;
+  }
   Line(x0, y0, x1, y1, color)(canvas);
   Line(x1, y1, x2, y2, color)(canvas);
   Line(x2, y2, x0, y0, color)(canvas);
 }
 
-void FillTriangle::operator()(Canvas& canvas) const {
-  triangleFill(canvas, x0, y0, x1, y1, x2, y2, color);
-}
-
-void RotatedRect::operator()(Canvas& canvas) const {
-  if (w <= 0 || h <= 0) return;
-  int16_t xs[4];
-  int16_t ys[4];
-  turnedCorners(centerX, centerY, w, h, angle, xs, ys);
-  for (int i = 0; i < 4; i++) {
-    const int next = (i + 1) % 4;
-    Line(xs[i], ys[i], xs[next], ys[next], color)(canvas);
-  }
-}
-
-void FillRotatedRect::operator()(Canvas& canvas) const {
-  if (w <= 0 || h <= 0) return;
-  int16_t xs[4];
-  int16_t ys[4];
-  turnedCorners(centerX, centerY, w, h, angle, xs, ys);
-  triangleFill(canvas, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2], color);
-  triangleFill(canvas, xs[0], ys[0], xs[2], ys[2], xs[3], ys[3], color);
-}
+// Nothing draws a turned rectangle yet, so the two operators and the corner arithmetic they share
+// stay in comment until a needle or a dial arrives.
+//
+// void RotatedRect::operator()(Canvas& canvas) const {
+//   if (w <= 0 || h <= 0) return;
+//   int16_t xs[4];
+//   int16_t ys[4];
+//   turnedCorners(centerX, centerY, w, h, angle, xs, ys);
+//   for (int i = 0; i < 4; i++) {
+//     const int next = (i + 1) % 4;
+//     Line(xs[i], ys[i], xs[next], ys[next], color)(canvas);
+//   }
+// }
+//
+// void FillRotatedRect::operator()(Canvas& canvas) const {
+//   if (w <= 0 || h <= 0) return;
+//   int16_t xs[4];
+//   int16_t ys[4];
+//   turnedCorners(centerX, centerY, w, h, angle, xs, ys);
+//   triangleFill(canvas, xs[0], ys[0], xs[1], ys[1], xs[2], ys[2], color);
+//   triangleFill(canvas, xs[0], ys[0], xs[2], ys[2], xs[3], ys[3], color);
+// }
 
 void MonoBitmap::operator()(Canvas& canvas) const {
   const int16_t width = bits[0];
@@ -327,15 +318,17 @@ std::vector<uint8_t> monoBitmapBits(const char* text) {
   return bits;
 }
 
-void Bitmap::operator()(Canvas& canvas) const {
-  const int16_t width = bits[0];
-  const int16_t height = bits[1];
-  for (int16_t row = 0; row < height; row++) {
-    for (int16_t col = 0; col < width; col++) {
-      const int32_t index = 2 + static_cast<int32_t>(row) * width + col;
-      canvas.setPixel(static_cast<int16_t>(x + col), static_cast<int16_t>(y + row), bits[index]);
-    }
-  }
-}
+// The grayscale image is in comment in the header, so its operator is here in comment beside it.
+//
+// void Bitmap::operator()(Canvas& canvas) const {
+//   const int16_t width = bits[0];
+//   const int16_t height = bits[1];
+//   for (int16_t row = 0; row < height; row++) {
+//     for (int16_t col = 0; col < width; col++) {
+//       const int32_t index = 2 + static_cast<int32_t>(row) * width + col;
+//       canvas.setPixel(static_cast<int16_t>(x + col), static_cast<int16_t>(y + row), bits[index]);
+//     }
+//   }
+// }
 
 }  // namespace gardener::gfx::shapes

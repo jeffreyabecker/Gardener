@@ -69,7 +69,7 @@ Paint text(Rect box, const char* value, const Font* face, uint8_t scale) {
   };
 }
 
-void drawCentred(Canvas& canvas, const char* value, const Font* face, uint8_t scale) {
+void drawCentered(Canvas& canvas, const char* value, const Font* face, uint8_t scale) {
   const char* string = value == nullptr ? "" : value;
   if (scale == 0) scale = 1;
   const shapes::TextBox ink = shapes::measureText(face, string, scale);
@@ -100,7 +100,7 @@ Paint inverted(Paint content) {
     // Ink under the content, and the content drawn through an inverting blend, is the picture the
     // old draw-then-flip made: the content's ink comes out as paper on ink. It is also the only
     // order a blend allows, since a blend sees the value being written and never the frame.
-    canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Ink));
+    canvas.draw(shapes::Rect(0, 0, canvas.width(), canvas.height(), Ink, true));
     View flipped = canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())),
                                   Blend().invert());
     content(flipped);
@@ -110,7 +110,7 @@ Paint inverted(Paint content) {
 Paint underlay(Paint child) {
   if (!child) return Paint();
   return [child](Canvas& canvas) {
-    canvas.draw(shapes::FillRect(0, 0, canvas.width(), canvas.height(), Paper));
+    canvas.draw(shapes::Rect(0, 0, canvas.width(), canvas.height(), Paper, true));
     child(canvas);
   };
 }
@@ -124,7 +124,7 @@ Paint progressBar(Rect box, float value) {
     const int16_t height = own.height();
     own.draw(shapes::Rect(0, 0, width, height, Ink));
     const int16_t fill = static_cast<int16_t>((width - 2) * value / 100.0f);
-    if (fill > 0) own.draw(shapes::FillRect(1, 1, fill, height - 2, Ink));
+    if (fill > 0) own.draw(shapes::Rect(1, 1, fill, height - 2, Ink, true));
   };
 }
 
@@ -146,11 +146,11 @@ Paint scrollbar(Rect box, int16_t index, int16_t count, int16_t visible, bool ho
       // The track is untouched paper and inverting paper is ink, so a fill is the same picture
       // without a read the blend cannot make.
       const int16_t below = static_cast<int16_t>(top + thumb);
-      own.draw(shapes::FillRect(0, 0, width, top, Ink));
-      own.draw(shapes::FillRect(0, below, width, static_cast<int16_t>(height - below), Ink));
+      own.draw(shapes::Rect(0, 0, width, top, Ink, true));
+      own.draw(shapes::Rect(0, below, width, static_cast<int16_t>(height - below), Ink, true));
     } else {
       own.draw(shapes::Rect(0, 0, width, height, Ink));
-      own.draw(shapes::FillRect(0, top, width, thumb, Ink));
+      own.draw(shapes::Rect(0, top, width, thumb, Ink, true));
     }
   };
 }

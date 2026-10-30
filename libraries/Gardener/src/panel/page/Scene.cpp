@@ -8,7 +8,7 @@ namespace gardener::panel::page {
 Scene::Scene(GestureQueue& gestures) : gestures_(gestures) {}
 
 void Scene::draw(gfx::Canvas& canvas, uint32_t nowMs) {
-  canvas.draw(gfx::shapes::FillRect(0, 0, canvas.width(), canvas.height(), gfx::Paper));
+  canvas.draw(gfx::shapes::Rect(0, 0, canvas.width(), canvas.height(), gfx::Paper, true));
   drawPage(canvas);
   lastDraw_ = nowMs;
 }

@@ -37,15 +37,15 @@ gfx::Paint pressureReadout(gfx::Rect box, const SystemState& state, float sizeHi
     if (sizeHint >= 1.0f) {
       gfx::View left = own.child(gfx::Rect(0, 0, halfWidth, height));
       gfx::View right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
-      gfx::drawCentred(left, reading.c_str(), face, scale);
-      gfx::drawCentred(right, target.c_str(), face, scale);
+      gfx::drawCentered(left, reading.c_str(), face, scale);
+      gfx::drawCentered(right, target.c_str(), face, scale);
       return;
     }
 
-    gfx::drawCentred(own, reading.c_str(), face, scale);
+    gfx::drawCentered(own, reading.c_str(), face, scale);
     gfx::View corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
                                              height - halfHeight));
-    gfx::drawCentred(corner, target.c_str(), face, secondaryScale);
+    gfx::drawCentered(corner, target.c_str(), face, secondaryScale);
   };
 }
 

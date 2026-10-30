@@ -23,7 +23,7 @@ gfx::Justification centred() {
 
 // A string centred across and down the canvas it is drawn on, at the face and scale it is given.
 gfx::Paint centredText(const char* value) {
-  return [value](gfx::Canvas& canvas) { gfx::drawCentred(canvas, value, nullptr, FieldScale); };
+  return [value](gfx::Canvas& canvas) { gfx::drawCentered(canvas, value, nullptr, FieldScale); };
 }
 
 // One field of the pair: its title centred in an equal share of the row, and that title inverted

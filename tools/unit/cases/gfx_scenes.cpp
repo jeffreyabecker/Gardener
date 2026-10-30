@@ -166,7 +166,7 @@ class InkedScene : public Scene {
 
  protected:
   void drawPage(Canvas& own) override {
-    own.draw(gfx::shapes::FillRect(0, 0, own.width(), own.height(), Ink));
+    own.draw(gfx::shapes::Rect(0, 0, own.width(), own.height(), Ink, true));
   }
 };
 
@@ -178,7 +178,7 @@ constexpr int16_t OverlayRows = PageHeight - OverlayTop;
 // A paint that fills the canvas it is handed, so a case reads the overlay from the ink it leaves.
 Paint filledCell() {
   return [](Canvas& cell) {
-    cell.draw(gfx::shapes::FillRect(0, 0, cell.width(), cell.height(), Ink));
+    cell.draw(gfx::shapes::Rect(0, 0, cell.width(), cell.height(), Ink, true));
   };
 }
 

@@ -15,7 +15,7 @@ namespace {
 // A paint that inks the whole canvas it is given, which is what a glyph does and what a case reads
 // back as a filled box.
 Paint fill() {
-  return [](Canvas& own) { own.draw(shapes::FillRect(0, 0, own.width(), own.height(), Ink)); };
+  return [](Canvas& own) { own.draw(shapes::Rect(0, 0, own.width(), own.height(), Ink, true)); };
 }
 
 TEST_CASE("a text measures the built in face") {
@@ -54,7 +54,7 @@ TEST_CASE("a text past its canvas is cut") {
 TEST_CASE("a string is centred on its canvas") {
   reset();
   View band = canvas.child(Rect(0, 0, 100, 20));
-  drawCentred(band, "A");
+  drawCentered(band, "A");
   const shapes::TextBox ink = shapes::measureText(nullptr, "A", 1);
   const int16_t x = static_cast<int16_t>((100 - ink.width) / 2);
   const int16_t y = static_cast<int16_t>((20 - ink.height) / 2);
@@ -62,7 +62,7 @@ TEST_CASE("a string is centred on its canvas") {
   CHECK_EQ(display.inkCount(0, 0, 100, y), 0);
 
   reset();
-  drawCentred(band, "A", nullptr, 2);
+  drawCentered(band, "A", nullptr, 2);
   const shapes::TextBox large = shapes::measureText(nullptr, "A", 2);
   const int16_t largeX = static_cast<int16_t>((100 - large.width) / 2);
   const int16_t largeY = static_cast<int16_t>((20 - large.height) / 2);
@@ -152,7 +152,7 @@ TEST_CASE("a duration draws its text") {
 TEST_CASE("an inverted paint flips the whole cell it was given") {
   reset();
   View band = canvas.child(Rect(0, 0, 20, 8));
-  inverted([](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); })(band);
+  inverted([](Canvas& own) { own.draw(shapes::Rect(0, 0, 10, 8, Ink, true)); })(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 0);
   CHECK_EQ(display.inkCount(10, 0, 10, 8), 10 * 8);
 }
@@ -166,8 +166,8 @@ TEST_CASE("an inverted paint with nothing to draw draws nothing") {
 
 TEST_CASE("an underlay clears the cell the child draws in") {
   reset();
-  canvas.draw(shapes::FillRect(0, 0, 20, 8, Ink));
-  const Paint child = [](Canvas& own) { own.draw(shapes::FillRect(0, 0, 10, 8, Ink)); };
+  canvas.draw(shapes::Rect(0, 0, 20, 8, Ink, true));
+  const Paint child = [](Canvas& own) { own.draw(shapes::Rect(0, 0, 10, 8, Ink, true)); };
   View band = canvas.child(Rect(0, 0, 20, 8));
   underlay(child)(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8);
@@ -176,7 +176,7 @@ TEST_CASE("an underlay clears the cell the child draws in") {
 
 TEST_CASE("an underlay with nothing to draw clears nothing") {
   reset();
-  canvas.draw(shapes::FillRect(0, 0, 20, 8, Ink));
+  canvas.draw(shapes::Rect(0, 0, 20, 8, Ink, true));
   const Paint nothing = underlay(Paint());
   CHECK(!nothing);
   CHECK_EQ(display.inkCount(0, 0, 20, 8), 20 * 8);

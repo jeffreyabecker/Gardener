@@ -79,10 +79,10 @@ void EditorScene::drawPage(gfx::Canvas& canvas) {
 gfx::Paint EditorScene::pageComponents() {
   return gfx::column(1.0f, {
       gfx::Child{gfx::Cell(1.0f, TitleBandPct),
-                 [this](gfx::Canvas& canvas) { gfx::drawCentred(canvas, title()); }},
+                 [this](gfx::Canvas& canvas) { gfx::drawCentered(canvas, title()); }},
       gfx::Child{gfx::Cell(1.0f, ContentsBandPct), pageContents()},
       gfx::Child{gfx::Cell(1.0f, HintBandPct),
-                 [this](gfx::Canvas& canvas) { gfx::drawCentred(canvas, hint()); }},
+                 [this](gfx::Canvas& canvas) { gfx::drawCentered(canvas, hint()); }},
   });
 }
 

@@ -240,7 +240,7 @@ Paint paintOf(bvm* vm, int node, const SystemState& state) {
     return leaf(box, [value, face, scale](const gfx::Rect& rect) {
       return Paint([rect, value, face, scale](gfx::Canvas& canvas) {
         gfx::View own = canvas.child(rect);
-        gfx::drawCentred(own, value, face, scale);
+        gfx::drawCentered(own, value, face, scale);
       });
     });
   }
