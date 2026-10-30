@@ -4,7 +4,7 @@
 
 #include "core/Logger.h"
 #include "DrawTree.h"
-#include "Module.h"
+#include "routines/bindings/Module.h"
 
 namespace gardener {
 namespace {

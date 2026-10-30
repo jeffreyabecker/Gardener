@@ -18,7 +18,7 @@ class Routines;
 
 // The interpreter the routines are compiled and run in, and the image's root page as a scene. It is
 // the core's surface over the vendored VM: the core names this and never `<berry.h>`, and
-// `libraries/BerryHost` supplies the implementation.
+// `BerryInterpreter.h` beside this file supplies the implementation.
 //
 // The loader owns the policy — which files, in what order — and the interpreter owns the VM: what a
 // file compiled to, what a raise means and where the page it made is kept.

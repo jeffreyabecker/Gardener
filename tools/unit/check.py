@@ -11,8 +11,8 @@ The suite is the firmware's own C++ compiled for the host: libraries/Gfx and lib
 their cases under this folder, the fakes the cases drive, the recording display, the gesture strip
 and the frame writer the tools share, and doctest. It needs a C++ compiler and Python and nothing
 else -- no interpreter, no data image and no board. A source that names one of those things is not
-one of its inputs, and neither is anything under libraries/berry, libraries/BerryHost, tools/berry or
-firmware/data.
+one of its inputs, and neither is anything under libraries/berry, tools/berry or firmware/data, or
+the interpreter's host side under libraries/Gardener/src/routines.
 
 Every argument the script does not recognise is passed to the test binary, so doctest's own filter,
 listing and reporting are the suite's.
@@ -39,6 +39,10 @@ EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 # A source naming any of these needs the interpreter, a filesystem, a radio or an RTOS, and so is not
 # part of what the suite compiles.
 PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "<NimBLE", "freertos/", "<SD.h>")
+
+# The interpreter's native modules, which reach the VM through the headers beside them rather than
+# through a `<berry.h>` of their own: the folder is the interpreter's, so none of it is the suite's.
+HOST_MODULES = GARDENER / "src" / "routines" / "bindings"
 
 # The API's own sources, and the two a board's C library would provide.
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")
@@ -81,7 +85,11 @@ def sources():
         *(TOOL / "fakes").glob("*.cpp"),
         *(TOOL / "cases").glob("*.cpp"),
     ]
-    found.extend(path for path in (GARDENER / "src").rglob("*.cpp") if interpreter_free(path))
+    found.extend(
+        path
+        for path in (GARDENER / "src").rglob("*.cpp")
+        if HOST_MODULES not in path.parents and interpreter_free(path)
+    )
     return found
 
 

@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "BerryInterpreter.h"
 #include "CaptureDisplay.h"
 #include "GestureStrip.h"
 #include "core/Logger.h"
@@ -21,6 +20,7 @@
 #include "MemoryFiles.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/PanelContext.h"
+#include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
 #include "core/SystemState.h"
 #include "storage/DeviceSettings.h"

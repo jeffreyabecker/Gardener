@@ -9,7 +9,7 @@
 
 #include <Gfx.h>
 
-#include "BerryScene.h"
+#include "routines/BerryScene.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
 #include "panel/page/Ux.h"

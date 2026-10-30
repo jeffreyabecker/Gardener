@@ -36,8 +36,8 @@ namespace berry {
 // page reads sit beside the code that fills them. The settings a routine declares are not records:
 // they are objects the `settings` module's classes build, and each holds the row it was declared with.
 //
-// The reference a routine author reads is the tables in this folder: what a routine can call and
-// what it must be, as the same surface in code. One file here is one of the modules, and this
+// The reference a routine author reads is the tables under `bindings/`: what a routine can call and
+// what it must be, as the same surface in code. One file there is one of the modules, and this
 // header is only the install.
 //
 // They are built at runtime rather than declared in the interpreter's module table: that table is

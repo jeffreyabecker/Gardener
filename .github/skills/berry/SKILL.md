@@ -1,6 +1,6 @@
 ---
 name: berry
-description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding in libraries/BerryHost/src/: the load order the image compiles in, the names a class may not take, which side of the Berry boundary a piece belongs on, and the host harness in tools/berry/.'
+description: 'Writing the Berry data image under firmware/data. Use when writing, changing, debugging or reviewing a .be routine or module, or a C++ binding under libraries/Gardener/src/routines/: the load order the image compiles in, the names a class may not take, which side of the Berry boundary a piece belongs on, and the host harness in tools/berry/.'
 ---
 
 # Berry
@@ -9,15 +9,16 @@ description: 'Writing the Berry data image under firmware/data. Use when writing
 
 - Editing anything under `firmware/data/system/` or
   `firmware/data/routines/`
-- Editing `libraries/BerryHost/src/` — the install, the six native modules, the page scene, the
-  draw tree and the VM behind `routines/Interpreter.h` — or `routines/Routines.cpp`, which loads
-  the image and drives the beat
+- Editing `libraries/Gardener/src/routines/` — the install, the page scene, the draw tree and the
+  VM behind `Interpreter.h`, and the six native modules under `bindings/` — or `Routines.cpp`,
+  which loads the image and drives the beat
 
 A `.be` file is compiled by the device at boot, so `arduino.py build` never sees it and `--task data`
 only packs it.
 
-A change to the C++ under `libraries/Gardener` or `libraries/Gfx` is not this skill's business and
-does not need the interpreter: `python tools/unit/check.py` compiles and runs it on the host.
+A change to the rest of the C++ under `libraries/Gardener`, or to `libraries/Gfx`, is not this
+skill's business and does not need the interpreter: `python tools/unit/check.py` compiles and runs it
+on the host.
 
 A page that misbehaves on the panel is where the harness earns its place: the one in
 [tools/berry/](../../../tools/berry) compiles and runs the whole image on the host, so the answer

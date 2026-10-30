@@ -4,7 +4,8 @@
 
 #include <memory>
 
-#include "BerryHost.h"
+#include "BerryScene.h"
+#include "Bindings.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"

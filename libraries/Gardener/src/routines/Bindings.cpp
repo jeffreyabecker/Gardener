@@ -4,8 +4,8 @@
 
 #include "core/Logger.h"
 #include "panel/PanelContext.h"
-#include "Module.h"
-#include "Modules.h"
+#include "routines/bindings/Module.h"
+#include "routines/bindings/Modules.h"
 
 namespace gardener {
 namespace berry {

@@ -11,7 +11,7 @@
     python tools/berry/check.py --test interval
     python tools/berry/check.py --memory     # what the image holds at boot, file by file
 
-The check is the firmware, not a model of it: the interpreter's host library, the panel's registry,
+The check is the firmware, not a model of it: the interpreter's host side, the panel's registry,
 overlay, settings and control law are compiled here against the vendored VM, with a bitmap for a
 glass, a chamber for a rig and an in-memory data image. A page therefore runs on the code the
 device runs, and the driver walks the image's own routines.
@@ -32,7 +32,6 @@ from pathlib import Path
 TOOL = Path(__file__).resolve().parent
 ROOT = TOOL.parents[1]
 BERRY = ROOT / "libraries" / "berry"
-BERRYHOST = ROOT / "libraries" / "BerryHost"
 GARDENER = ROOT / "libraries" / "Gardener"
 GFX = ROOT / "libraries" / "Gfx"
 DATA = ROOT / "firmware" / "data"
@@ -41,10 +40,10 @@ BUILD = TOOL / "build"
 EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 
 # What the check compiles is discovered, not listed, so a source that moves and a file a library
-# gains or loses is not an edit here. Both library folders are the whole library: BerryHost is the
-# interpreter's host side and Gfx is what the pages draw with, and the check is that code. Gardener
-# is the part of it a panel build compiles on a host — the sources that name no board header — which
-# is the selection tools/unit/check.py makes in the other direction.
+# gains or loses is not an edit here. Gfx is the whole library, and the check is that code. Gardener
+# is the part of it a panel build compiles on a host — the sources that name no board header, the
+# interpreter's host side under routines/ among them — which is the selection tools/unit/check.py
+# makes in the other direction.
 PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "<NimBLE", "freertos/",
                      "<TFT_eSPI", "<WiFi", "<Preferences.h>")
 
@@ -54,9 +53,7 @@ def board_free(source):
     return not any(name in text for name in PLATFORM_INCLUDES)
 
 
-BERRYHOST_SOURCES = sorted((BERRYHOST / "src").glob("*.cpp"))
-
-GFX_SOURCES = sorted((GFX / "src").glob("*.cpp"))
+GFX_SOURCES = sorted((GFX / "src").rglob("*.cpp"))
 
 FIRMWARE_SOURCES = [path for path in sorted((GARDENER / "src").rglob("*.cpp")) if board_free(path)]
 
@@ -113,7 +110,7 @@ def build(cc, cxx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
-    for path in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src", GFX / "src",
+    for path in (HOST, BERRY / "src", BERRY / "generate", GFX / "src",
                  GARDENER / "src", SHARED / "arduino", SHARED / "capture", API):
         includes.extend(["-I", str(path)])
     # The API's folder holds String.h, which a case-insensitive filesystem would otherwise hand to
@@ -127,7 +124,7 @@ def build(cc, cxx):
     # the class grows. The cache is keyed on source files, so the newest header is the other half.
     header_mtime = 0.0
     if not args.no_cache:
-        for directory in (HOST, BERRY / "src", BERRY / "generate", BERRYHOST / "src",
+        for directory in (HOST, BERRY / "src", BERRY / "generate",
                           GFX / "src", GARDENER / "src"):
             for header in directory.rglob("*.h"):
                 header_mtime = max(header_mtime, header.stat().st_mtime)
@@ -142,8 +139,8 @@ def build(cc, cxx):
 
     for source in sorted((BERRY / "src").glob("*.c")):
         compile(source, "-std=gnu11", cc)
-    for source in (*MAIN_SOURCES, *SHARED_SOURCES, *API_SOURCES, *BERRYHOST_SOURCES,
-                   *FIRMWARE_SOURCES, *GFX_SOURCES):
+    for source in (*MAIN_SOURCES, *SHARED_SOURCES, *API_SOURCES, *FIRMWARE_SOURCES,
+                   *GFX_SOURCES):
         compile(source, "-std=c++17", cxx)
 
     # Static, because the first libstdc++ on PATH is usually a different MinGW's and the exe then

@@ -130,22 +130,6 @@ unit. So it is a value a hand-edited or reflashed document sets and nothing else
 nothing has decided whether that is the shape it should have, or whether the key, the getter and the
 three lines in `home.be` should go with the writer.
 
-## The Berry host library's dependency
-
-The library holding the interpreter's install, its six native modules, the page scene and the draw
-tree compiles against [libraries/Gardener](../libraries/Gardener) for the machine's bounds, the
-published state and the buzzer — more than `PanelContext` carries. A surface declared in that library
-and implemented by the firmware would let it build with only the vendored VM and Gfx beside it.
-Blocked by: the `vacuum` module reaches past the context into `machine/Machine.h` for the two target
-bounds, and `device` into `panel/parts/BuzzerPlayer.h` for the piezo's actions, and nothing has
-chosen one shape for a reading and an action.
-
-## A spec for the image's check
-
-The host check compiles the image, drives its scenes and writes its captures, and nothing states
-what it loads, what it drives or what it writes. Blocked by: the check is in a known broken state, so
-a spec written today would describe a tool that does not run.
-
 ## One file to compile
 
 A task in [scripts/arduino.py](../scripts/arduino.py) that keeps a verbose build's compile command
@@ -163,5 +147,4 @@ still reports one. Blocked by: nothing has decided whether that is a build optio
 `be_newcomobj` stores the object it is handed only if its own allocation succeeds, and frees nothing
 when it does not, so an owner or a scene is dropped silently at the moment memory is already short. A
 host build whose allocator fails a chosen allocation would show that and every other path that hands
-ownership over in an argument list. Blocked by: nothing builds one, and the interpreter's check that
-would host it is in a known broken state.
+ownership over in an argument list. Blocked by: nothing builds one.

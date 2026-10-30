@@ -3,7 +3,6 @@
 #include <cstring>
 #include <deque>
 
-#include "BerryHost.h"
 #include "Clock.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
