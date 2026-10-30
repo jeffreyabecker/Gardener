@@ -119,10 +119,10 @@ class CountingScene : public Scene {
 // figures the cases read.
 class FakeInterpreter : public Interpreter {
  public:
-  bool begin(gardener::panel::PanelContext&, Routines&) override { return true; }
+  bool begin(Logger&, gardener::panel::PanelContext&, Routines&) override { return true; }
   bool load(const String&, const String&) override { return true; }
 
-  std::unique_ptr<Scene> rootScene(GestureQueue& gestures, PanelContext&) override {
+  std::unique_ptr<Scene> rootScene(GestureQueue& gestures, const SystemState&) override {
     counter_.roots++;
     return std::make_unique<CountingScene>(gestures, counter_);
   }
@@ -137,27 +137,18 @@ class FakeInterpreter : public Interpreter {
 // nothing of the device: the state it draws from is the one the rig publishes into.
 class PageContext : public PanelContext {
  public:
-  PageContext(DisplayDevice& display, SystemState& state, BuzzerPlayer& buzzer,
-              Library& library, Logger& logger)
-      : display_(display),
-        state_(state),
-        buzzer_(buzzer),
-        library_(library),
-        logger_(logger) {}
+  PageContext(DisplayDevice& display, SystemState& state, BuzzerPlayer& buzzer)
+      : display_(display), state_(state), buzzer_(buzzer) {}
 
   DisplayDevice& display() override { return display_; }
   SystemState& systemState() override { return state_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
-  Library& library() override { return library_; }
-  Logger& logger() override { return logger_; }
   bool post(const MachineCommand&) override { return true; }
 
  private:
   DisplayDevice& display_;
   SystemState& state_;
   BuzzerPlayer& buzzer_;
-  Library& library_;
-  Logger& logger_;
 };
 
 // The routines a page tick drives: the fake interpreter, an empty order file so no image is read,
@@ -168,14 +159,14 @@ struct PageRig {
       : settings(&library, state),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
-        context(display, state, buzzer, library, logger),
+        context(display, state, buzzer),
         routines(interpreter) {
     state.batteryPresent = battery.present();
     state.batteryPercent = battery.percent();
     state.batteryLow = battery.low();
 
     library.put("/system/order", "");
-    ok = routines.begin(context);
+    ok = routines.begin(logger, library, context);
   }
 
   MemoryLibrary library;

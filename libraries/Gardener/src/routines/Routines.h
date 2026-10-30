@@ -33,10 +33,11 @@ class Routines {
  public:
   explicit Routines(Interpreter& interpreter) : interpreter_(interpreter) {}
 
-  // Starts the interpreter and loads the files `/system/order` names and then every
-  // `/routines/*.be`, and resets the scene stack. The system comes first so a page can use what one
-  // of its files defines. False only when the interpreter cannot be allocated at all.
-  bool begin(panel::PanelContext& context);
+  // Starts the interpreter with the logger it reports through and the files it compiles, loads the
+  // files `/system/order` names and then every `/routines/*.be`, and resets the scene stack. The
+  // system comes first so a page can use what one of its files defines. False only when the
+  // interpreter cannot be allocated at all.
+  bool begin(Logger& logger, Library& library, panel::PanelContext& panel);
 
   // The page's way out: leave whichever scenes are showing and give the panel back to the root.
   // False when no scene is left showing, which leaves the mark.
@@ -90,8 +91,8 @@ class Routines {
   // The VM the files are loaded into and the root page read from.
   Interpreter& interpreter_;
   Logger* logger_ = nullptr;
-  // The files the interpreter loads and the routine documents it reads and writes, from the context
-  // at begin(), so nothing here names a filesystem or a path.
+  // The files the interpreter loads and the routine documents it reads and writes, handed at
+  // begin(), so nothing here names a filesystem or a path.
   Library* library_ = nullptr;
   // Where the image's routine files put their records, built at begin() because the library and the
   // logger it reads documents through are the context's.

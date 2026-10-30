@@ -191,18 +191,12 @@ bool postMachineCommand(const MachineCommand& command);
 class HarnessPanel : public panel::PanelContext {
  public:
   HarnessPanel(gfx::DisplayDevice& display, SystemState& state,
-               panel::parts::BuzzerPlayer& buzzer, Library& library, Logger& logger)
-      : display_(display),
-        state_(state),
-        buzzer_(buzzer),
-        library_(library),
-        logger_(logger) {}
+               panel::parts::BuzzerPlayer& buzzer)
+      : display_(display), state_(state), buzzer_(buzzer) {}
 
   gfx::DisplayDevice& display() override { return display_; }
   SystemState& systemState() override { return state_; }
   panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
-  Library& library() override { return library_; }
-  Logger& logger() override { return logger_; }
   // The host has no queue to fill, so the command is always taken.
   bool post(const MachineCommand& command) override { return postMachineCommand(command); }
 
@@ -210,8 +204,6 @@ class HarnessPanel : public panel::PanelContext {
   gfx::DisplayDevice& display_;
   SystemState& state_;
   panel::parts::BuzzerPlayer& buzzer_;
-  Library& library_;
-  Logger& logger_;
 };
 
 // Everything the device's panel brings up, on the host: the image, the storage, the settings, the

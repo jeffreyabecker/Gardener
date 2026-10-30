@@ -85,18 +85,18 @@ void setup() {
       gardener::buildPanelRoot(*logger, *files, Board, *commands, panelState);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
-  // one serial link and the one BLE link. The panel is a machine, so the same object serves both
-  // halves.
+  // one serial link and the one BLE link. The panel holds the machine, so the same object serves
+  // both halves.
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
-  serial->registerDomain(gardener::createVacuumDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createVacuumDomain(context.machine(), serial->outbox()));
   serial->registerDomain(
-      gardener::createDeviceDomain(context, serial->outbox(), BoardInfo, context.battery(),
-                                   context.settings()));
+      gardener::createDeviceDomain(context.machine(), serial->outbox(), BoardInfo,
+                                   context.battery(), context.settings()));
   serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
   serial->registerDomain(gardener::createFsDomain(serial->outbox(), LittleFS));
   gardener::BleLink* ble = new gardener::BleLink(*commands);
-  ble->registerDomain(gardener::createMachineBleDomain(context));
+  ble->registerDomain(gardener::createMachineBleDomain(context.machine()));
   ble->registerDomain(gardener::createPanelBleDomain(context));
 
   serial->begin();
@@ -115,7 +115,7 @@ void setup() {
   // The parts, then the tasks that drive them.
   gardener::bootPanel(context, Board);
 
-  gardener::spawnMachineTasks(context, *commands, serial, ble, panelState);
+  gardener::spawnMachineTasks(context.machine(), *commands, serial, ble, panelState);
   gardener::spawnPanelTask(context, panelState);
 
   String ready = "app: ready, heap ";

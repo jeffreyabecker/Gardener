@@ -9,9 +9,7 @@ struct bvm;
 
 namespace gardener {
 
-namespace panel {
-class PanelContext;
-}  // namespace panel
+struct SystemState;
 
 // A page's drawing, walked: the node at `node` of the interpreter's stack turned into the paint it
 // describes and drawn on `canvas`. The tree is what the `draw` record the screen module declares
@@ -19,8 +17,9 @@ class PanelContext;
 // kind the drawing does not know, draws nothing.
 //
 // A node that borrows its text points into the interpreter's own string, so a tree is built and
-// drawn in the same call and never kept across a beat. Nothing here raises: the walk runs after the
-// page's own call has returned, where a raise would unwind through C++ frames.
-void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas);
+// drawn in the same call and never kept across a beat. The state is the copy the caller took for
+// this drawing, so every node reads one instant. Nothing here raises: the walk runs after the page's
+// own call has returned, where a raise would unwind through C++ frames.
+void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas);
 
 }  // namespace gardener

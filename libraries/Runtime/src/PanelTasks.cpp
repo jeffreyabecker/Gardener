@@ -42,7 +42,7 @@ void panelTask(void* arg) {
     state.buttons.tick();
 
     // The reset stops and vents before anything else on this beat draws.
-    if (state.buttons.takeReset()) safeReboot(state.context);
+    if (state.buttons.takeReset()) safeReboot(state.context.machine());
 
     // The panel's own beat: the gauge and the buzzer, then the glass.
     const uint32_t now = millis();

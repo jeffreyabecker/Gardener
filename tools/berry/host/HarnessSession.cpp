@@ -92,7 +92,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       valve_(chamber_),
       vacuum_(&pump_, &sensor_, &valve_),
       buzzer_(buzzerPart_),
-      context_(display_, state_, buzzer_, files_, logger_) {}
+      context_(display_, state_, buzzer_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -113,7 +113,7 @@ bool HarnessSession::begin() {
   vacuum_.begin();
   publish();
 
-  if (!routines_.begin(context_)) return false;
+  if (!routines_.begin(logger_, files_, context_)) return false;
   // The image's own files, before the panel's root scene is built: what the loader itself cost.
   loadedBytes_ = heapOf(interpreter_.vm());
   if (frameworkBytes_ == 0) frameworkBytes_ = loadedBytes_;

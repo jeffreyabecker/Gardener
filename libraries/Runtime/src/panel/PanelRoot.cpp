@@ -46,7 +46,7 @@ panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::Pane
                                  buzzer, battery, display, library, routines, queue, state);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
-  panel->setCapabilities(PanelFitted | BatteryFitted);
+  panel->machine().setCapabilities(PanelFitted | BatteryFitted);
   return *panel;
 }
 

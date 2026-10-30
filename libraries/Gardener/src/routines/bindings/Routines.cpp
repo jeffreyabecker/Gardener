@@ -275,7 +275,8 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
           logger->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<BerryScene>(routines->presses(), vm, be_absindex(vm, -1), *context);
+        page = std::make_unique<BerryScene>(routines->presses(), vm, be_absindex(vm, -1),
+                                            context->systemState());
       }
     }
   }

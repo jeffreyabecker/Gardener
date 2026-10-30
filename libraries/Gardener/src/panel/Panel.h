@@ -33,19 +33,19 @@ struct PanelPins {
   uint8_t keyData;
 };
 
-// The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged on top of the
-// machine it reads and commands. It *is* a Machine, so the panel's code reaches the machine by the
-// same surface a controller uses and there is no second name for it.
+// The panel's graph: the display, keys, buzzer, gauge, interpreter and files, arranged around the
+// machine it holds. machine() is that machine, so the composition reaches it by the same surface a
+// controller uses; the panel itself only brings it up and commands it through its own outbox.
 //
 // It commands the machine through its own outbox, the same queue a wire link uses, so a press and a
 // serial command are two writers to one machine rather than two paths.
-class Panel : public Machine, public PanelContext {
+class Panel : public PanelContext {
  public:
   Panel(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve,
         ButtonPanel* buttons, parts::BuzzerPlayer* buzzer, Battery* battery,
         gfx::DisplayDevice* display, Library& library, Routines* routines, CommandQueue& queue,
         SystemState& state)
-      : Machine(logger, pump, sensor, valve),
+      : machine_(logger, pump, sensor, valve),
         outbox_(queue),
         buttons_(buttons),
         gestures_(*buttons),
@@ -73,7 +73,6 @@ class Panel : public Machine, public PanelContext {
   parts::BuzzerPlayer& buzzer() override { return *buzzer_; }
   // The gauge, for the panel task's own beat and the wire's `device get`, which hold a Panel.
   Battery& battery() { return *battery_; }
-  Logger& logger() override { return Machine::logger(); }
   // The glass, and the frame every drawing verb lands in.
   gfx::DisplayDevice& display() override { return *display_; }
   // The device's own document, for the two places that write it: the serial `device set` and the
@@ -82,10 +81,15 @@ class Panel : public Machine, public PanelContext {
   // The published state the composition owns: the tasks write their slices into it and whatever
   // draws reads a copy of it.
   SystemState& systemState() override { return state_; }
-  Library& library() override { return library_; }
   Routines& routines() { return *routines_; }
+  // The machine the panel is arranged around: the composition hands it to the wire's domains and the
+  // machine task, which reach it by the surface a controller uses.
+  Machine& machine() { return machine_; }
+  // What the panel task and the panel's own boot report through, from the machine it holds.
+  Logger& logger() { return machine_.logger(); }
 
  private:
+  Machine machine_;
   CommandOutbox outbox_;
   ButtonPanel* buttons_;
   parts::GestureClassifier gestures_;

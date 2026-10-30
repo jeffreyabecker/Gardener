@@ -9,9 +9,7 @@ struct bvm;
 
 namespace gardener {
 
-namespace panel {
-class PanelContext;
-}  // namespace panel
+struct SystemState;
 
 // A page whose body is Berry: a scene whose activate, handle, tick and draw_page are methods of an
 // instance the interpreter holds. The stack drives it like any other scene, so a page can move to
@@ -34,9 +32,9 @@ class PanelContext;
 class BerryScene : public panel::page::Scene {
  public:
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps
-  // it; the caller's stack is left as it was found. The context is the device the page draws about,
-  // which is what a pressure readout in its tree needs.
-  BerryScene(panel::GestureQueue& gestures, bvm* vm, int page, panel::PanelContext& panel);
+  // it; the caller's stack is left as it was found. The state is what the frame is drawn from, which
+  // is what a pressure readout in the page's tree needs.
+  BerryScene(panel::GestureQueue& gestures, bvm* vm, int page, const SystemState& state);
   ~BerryScene() override;
 
   BerryScene(const BerryScene&) = delete;
@@ -68,8 +66,8 @@ class BerryScene : public panel::page::Scene {
   bool endCall(const char* method, int argc);
 
   bvm* vm_ = nullptr;
-  // The device the page draws about, held for a pressure readout in the tree it answers.
-  panel::PanelContext& panel_;
+  // The published state, held for a pressure readout in the tree the page answers.
+  const SystemState& state_;
   // Where the page sits in the interpreter's list, or -1 when the scene is holding nothing.
   int slot_ = -1;
   bool broken_ = false;

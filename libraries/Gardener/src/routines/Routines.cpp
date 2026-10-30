@@ -64,14 +64,14 @@ void reportUnlisted(Library& library, Logger& logger, const std::vector<String>&
 
 }  // namespace
 
-bool Routines::begin(panel::PanelContext& context) {
-  logger_ = &context.logger();
-  library_ = &context.library();
-  panel_ = &context;
+bool Routines::begin(Logger& logger, Library& library, panel::PanelContext& panel) {
+  logger_ = &logger;
+  library_ = &library;
+  panel_ = &panel;
   // Before a file loads: a routine file registers itself as the interpreter runs it.
-  registry_ = std::make_unique<RoutineRegistry>(context.library(), context.logger());
+  registry_ = std::make_unique<RoutineRegistry>(library, logger);
 
-  if (!interpreter_.begin(context, *this)) {
+  if (!interpreter_.begin(logger, panel, *this)) {
     logger_->error("vm: no memory, routines off");
     return false;
   }
@@ -140,7 +140,8 @@ void Routines::show() { panel_->display().flush(); }
 // over it like any other page.
 bool Routines::resetToRoot() {
   if (panel_ == nullptr) return ux_.reset(nullptr);
-  if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene(gestures_, *panel_)) {
+  if (std::unique_ptr<panel::page::Scene> page =
+          interpreter_.rootScene(gestures_, panel_->systemState())) {
     if (ux_.reset(std::move(page))) return true;
   }
   return ux_.reset(std::make_unique<panel::page::MarkScene>(gestures_));

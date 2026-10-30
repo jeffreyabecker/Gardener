@@ -185,7 +185,7 @@ int uxPush(bvm* vm) {
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<BerryScene>(routines->presses(), vm, 1, *context);
+    scene = std::make_unique<BerryScene>(routines->presses(), vm, 1, context->systemState());
   }
   panel::page::Ux::Callback held;
   if (callback) {

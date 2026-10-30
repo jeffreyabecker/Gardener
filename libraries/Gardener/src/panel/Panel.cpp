@@ -9,7 +9,7 @@ namespace gardener::panel {
 // and buzzer, and the interpreter. The bus the display sits on, the links, the screens and the panel
 // task belong to the composition that calls this, which is also what makes a missing display fatal.
 bool Panel::boot() {
-  Machine::boot();
+  machine_.boot();
 
   // The device's own document comes up before the interpreter, which reads it when its modules are
   // installed.
@@ -25,7 +25,7 @@ bool Panel::boot() {
 
   // The interpreter comes up here and stays: routines are loaded into it later, and a device with
   // no routines simply never enters it.
-  const bool vmOk = routines().begin(*this);
+  const bool vmOk = routines().begin(logger(), library_, *this);
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.

@@ -68,8 +68,9 @@ does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; `buildMachineParts()` and `buildPanelRoot()` build the parts, the contexts they hand out
-expose what they own, and the serial domains read the owner when they format a reply. The panel is a
-machine with its parts arranged around it, so it needs no second name for the machine.
+expose what they own, and the serial domains read the owner when they format a reply. The panel
+holds the machine alongside its own parts and answers it as `machine()`, so one object still serves
+both halves of the graph.
 
 **One exception, and it is the panel's view of the device.** `core/SystemState.h` is one object the
 composition owns: a reference is injected into every task that owns a fact, and each writes its own

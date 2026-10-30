@@ -8,7 +8,6 @@
 #include <Gfx.h>
 
 #include "core/SystemState.h"
-#include "panel/PanelContext.h"
 #include "panel/page/PressureReadout.h"
 
 namespace gardener {
@@ -279,10 +278,9 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
 
 }  // namespace
 
-void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas) {
-  // One copy of the published state for the whole tree rather than one per node: one drawing shows
-  // one glass, and the unit the readout prints in comes with it.
-  const SystemState state = panel.systemState();
+// The state is the copy the caller took when it asked for the tree, so one drawing shows one glass
+// and the unit the readout prints in comes with it.
+void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas) {
   const gfx::PaintNodeRef paint = paintOf(vm, be_absindex(vm, node), state);
   if (paint) paint->draw(canvas);
 }

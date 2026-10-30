@@ -3,6 +3,7 @@
 #include <berry.h>
 
 #include "core/Logger.h"
+#include "core/SystemState.h"
 #include "DrawTree.h"
 #include "routines/bindings/Module.h"
 
@@ -17,8 +18,8 @@ constexpr const char* PageList = "__pages";
 }  // namespace
 
 BerryScene::BerryScene(panel::GestureQueue& gestures, bvm* vm, int page,
-                       panel::PanelContext& panel)
-    : Scene(gestures), vm_(vm), panel_(panel) {
+                       const SystemState& state)
+    : Scene(gestures), vm_(vm), state_(state) {
   const int base = be_top(vm_);
   if (!be_getglobal(vm_, PageList) || !be_islist(vm_, -1)) {
     // The lookup leaves a nil whether it found a global or not, and the list replaces it.
@@ -94,7 +95,7 @@ void BerryScene::drawPage(gfx::Canvas& canvas) {
   const int base = be_top(vm_);
   if (beginCall("draw_page")) {
     if (endCall("draw_page", 1)) {
-      drawTree(vm_, be_absindex(vm_, -1), panel_, canvas);
+      drawTree(vm_, be_absindex(vm_, -1), state_, canvas);
     }
   }
   be_pop(vm_, be_top(vm_) - base);
