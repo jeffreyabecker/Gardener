@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "routines/Routines.h"
 
 #include <stddef.h>
@@ -242,4 +238,3 @@ bool Routines::loadFile(const String& path) {
 }
 
 }  // namespace gardener
-#endif

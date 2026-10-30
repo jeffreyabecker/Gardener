@@ -1,9 +1,5 @@
 #pragma once
 
-#include "Build.h"
-
-#if GARDENER_BLUETOOTH
-
 namespace gardener {
 
 class BleDomain;
@@ -16,5 +12,3 @@ class Panel;
 BleDomain* createPanelBleDomain(panel::Panel& panel);
 
 }  // namespace gardener
-
-#endif  // GARDENER_BLUETOOTH

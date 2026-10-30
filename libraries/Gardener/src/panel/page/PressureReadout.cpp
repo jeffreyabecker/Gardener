@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/page/PressureReadout.h"
 
 #include <stdio.h>
@@ -54,4 +50,3 @@ gfx::Paint pressureReadout(gfx::Rect box, const SystemState& state, float sizeHi
 }
 
 }  // namespace gardener::panel::page
-#endif

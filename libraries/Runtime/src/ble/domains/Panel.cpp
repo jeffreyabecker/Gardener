@@ -1,10 +1,4 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "ble/PanelDomains.h"
-
-#if GARDENER_BLUETOOTH
 
 #include "ble/BleDomain.h"
 #include "ble/BleLink.h"
@@ -106,6 +100,3 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
 BleDomain* createPanelBleDomain(panel::Panel& panel) { return new PanelBleDomain(panel); }
 
 }  // namespace gardener
-
-#endif  // GARDENER_BLUETOOTH
-#endif

@@ -7,11 +7,13 @@ namespace gardener {
 class Machine;
 class CommandOutbox;
 class Domain;
+class Battery;
+class DeviceSettings;
 
 Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);
-// The machine's own `device` domain: what the firmware is and which assemblies are fitted. A build
-// with a panel registers the panel's `device` instead, which answers the machine's fields and the
-// panel's beside them.
-Domain* createMachineDeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board);
+// What the firmware is and which assemblies are fitted: the board's facts from `board`, the gauge
+// from `battery` and the unit and target from `settings`.
+Domain* createDeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board,
+                           const Battery& battery, DeviceSettings& settings);
 
 }  // namespace gardener

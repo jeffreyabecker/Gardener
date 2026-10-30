@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "serial/PanelDomains.h"
 
 #include <Arduino.h>
@@ -189,4 +185,3 @@ Domain* createBuzzerDomain(panel::Panel& app, CommandOutbox& outbox) {
 }
 
 }  // namespace gardener
-#endif

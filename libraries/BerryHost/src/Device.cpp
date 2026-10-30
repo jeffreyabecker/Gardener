@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include <Arduino.h>
 
 #include "core/SystemState.h"
@@ -104,4 +100,3 @@ void installDeviceModule(bvm* vm) {
 
 }  // namespace berry
 }  // namespace gardener
-#endif

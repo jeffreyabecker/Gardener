@@ -24,11 +24,4 @@ MachineParts buildMachineParts(const MachinePins& pins) {
   return parts;
 }
 
-// The parts are new'd once and never deleted — the device's destructor never runs — so the
-// composition owns them by the graph it hands out and nothing frees them.
-Machine& buildMachineRoot(Logger& logger, const MachinePins& pins) {
-  const MachineParts parts = buildMachineParts(pins);
-  return *new Machine(logger, parts.pump, parts.sensor, parts.valve);
-}
-
 }  // namespace gardener

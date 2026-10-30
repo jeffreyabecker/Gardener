@@ -1,11 +1,6 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "BerryScene.h"
 
 #include <berry.h>
-
 
 #include "core/Logger.h"
 #include "DrawTree.h"
@@ -148,4 +143,3 @@ bool BerryScene::endCall(const char* method, int argc) {
 }
 
 }  // namespace gardener
-#endif

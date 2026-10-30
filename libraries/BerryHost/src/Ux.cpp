@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include <string.h>
 
 #include <any>
@@ -282,4 +278,3 @@ void installUxModule(bvm* vm) {
 
 }  // namespace berry
 }  // namespace gardener
-#endif

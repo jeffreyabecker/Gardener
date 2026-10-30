@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include <stdio.h>
 #include <string.h>
 
@@ -514,4 +510,3 @@ void installScreenModule(bvm* vm) {
 
 }  // namespace berry
 }  // namespace gardener
-#endif

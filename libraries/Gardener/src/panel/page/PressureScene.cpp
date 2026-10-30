@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/page/PressureScene.h"
 
 #include "machine/Machine.h"
@@ -19,4 +15,3 @@ PressureScene::PressureScene(GestureQueue& gestures, Ux& ux,
                   [unit](float pressureKpa) { return displayText(pressureKpa, unit); }) {}
 
 }  // namespace gardener::panel::page
-#endif

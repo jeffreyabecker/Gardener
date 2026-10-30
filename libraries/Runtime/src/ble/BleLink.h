@@ -1,9 +1,5 @@
 #pragma once
 
-#include "Build.h"
-
-#if GARDENER_BLUETOOTH
-
 #include <NimBLEDevice.h>
 #include <vector>
 
@@ -16,9 +12,8 @@ namespace gardener {
 // The Bluetooth interface to the controller: the machine as a GATT table
 // rather than as lines. This is deliberately a second contract and not the
 // serial grammar over a pipe, and the table is composed the same way the
-// serial link's domains are: the build registers domains, each contributing
-// its characteristics, so a panel build adds its own and a machine-alone
-// build does not.
+// serial link's domains are: the sketch registers domains, each contributing
+// its characteristics — the machine's own, and the panel's beside them.
 //
 // A pairing is what lets a central write; there is no claim to make after it.
 //
@@ -97,5 +92,3 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
 };
 
 }  // namespace gardener
-
-#endif  // GARDENER_BLUETOOTH

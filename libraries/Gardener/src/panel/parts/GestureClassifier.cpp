@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/parts/GestureClassifier.h"
 
 namespace gardener::panel::parts {
@@ -117,4 +113,3 @@ String GestureClassifier::update() {
 }
 
 }  // namespace gardener::panel::parts
-#endif

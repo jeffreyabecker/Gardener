@@ -1,9 +1,5 @@
 #pragma once
 
-#include "Build.h"
-
-#if GARDENER_BLUETOOTH
-
 #include <NimBLEDevice.h>
 
 namespace gardener {
@@ -76,5 +72,3 @@ inline void setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
 }
 
 }  // namespace gardener
-
-#endif  // GARDENER_BLUETOOTH

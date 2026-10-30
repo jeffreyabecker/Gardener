@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "routines/Registration.h"
 
 #include <any>
@@ -47,5 +43,3 @@ bool Registration::saveSettings(Library& library, const String& section,
 }
 
 }  // namespace gardener
-
-#endif

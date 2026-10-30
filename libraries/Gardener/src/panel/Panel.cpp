@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/Panel.h"
 
 #include "core/Logger.h"
@@ -47,4 +43,3 @@ bool Panel::boot() {
 }
 
 }  // namespace gardener::panel
-#endif

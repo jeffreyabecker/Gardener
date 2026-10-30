@@ -2,9 +2,8 @@
 //
 // ESP32-S3 + CFSensor XGZP6847A + SH1106 OLED, with a vent valve and a 1S Li-ion battery gauge.
 //
-// This sketch is the full device's composition root: it builds the two links, registers the
-// machine's and the panel's domains on them, brings the machine and the panel up, and starts the
-// three tasks. A build with no panel does the same with two tasks and no panel domain.
+// This sketch is the device's composition root: it builds the two links, registers the machine's and
+// the panel's domains on them, brings the machine and the panel up, and starts the three tasks.
 
 #include <LittleFS.h>
 #include <Gardener.h>
@@ -91,17 +90,16 @@ void setup() {
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(context, serial->outbox()));
-  serial->registerDomain(gardener::createDeviceDomain(context, serial->outbox(), BoardInfo));
+  serial->registerDomain(
+      gardener::createDeviceDomain(context, serial->outbox(), BoardInfo, context.battery(),
+                                   context.settings()));
   serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
   serial->registerDomain(gardener::createFsDomain(serial->outbox(), LittleFS));
-#if GARDENER_BLUETOOTH
   gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(context));
   ble->registerDomain(gardener::createPanelBleDomain(context));
-#endif
 
   serial->begin();
-#if GARDENER_BLUETOOTH
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
   // up. It comes up before the ready line so that line reports the heap the firmware actually runs
   // with.
@@ -113,16 +111,11 @@ void setup() {
       logger->warn("ble: start failed, serial only");
       break;
   }
-#endif
 
   // The parts, then the tasks that drive them.
   gardener::bootPanel(context, Board);
 
-#if GARDENER_BLUETOOTH
   gardener::spawnMachineTasks(context, *commands, serial, ble, panelState);
-#else
-  gardener::spawnMachineTasks(context, *commands, serial, panelState);
-#endif
   gardener::spawnPanelTask(context, panelState);
 
   String ready = "app: ready, heap ";

@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "PanelTasks.h"
 
 #include <freertos/FreeRTOS.h>
@@ -77,4 +73,3 @@ void spawnPanelTask(panel::Panel& context, SystemState& state) {
 }
 
 }  // namespace gardener
-#endif

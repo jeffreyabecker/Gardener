@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/glass/Overlay.h"
 
 #include "Shapes.h"
@@ -100,4 +96,3 @@ gfx::Paint overlayBattery(int8_t percent, bool low, uint32_t nowMs) {
 }
 
 }  // namespace gardener::panel::glass
-#endif

@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/PanelRoot.h"
 
 #include <BerryHost.h>
@@ -67,4 +63,3 @@ void bootPanel(panel::Panel& panel, const panel::PanelPins& pins) {
 }
 
 }  // namespace gardener
-#endif

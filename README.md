@@ -8,11 +8,10 @@ machine, and the last write wins. What the device owns is what has to happen whe
 watching: pulling to the target, and venting the chamber through one path on stop, abort, fault or
 the panel's reserved key hold. Pressures are kPa, on the wire and in the firmware.
 
-The firmware ships as two builds from one tree. The **full device** is the machine, the OLED panel,
-the keys, the buzzer and the battery gauge. The **headless** build is the machine alone — pump,
-sensor and vent valve with the serial and Bluetooth links — for a chamber with no panel on it. Each
-is a sketch that composes the libraries for its own build, so what a build has is what its sketch
-names.
+The device is the machine — pump, sensor and vent valve — with the OLED panel, the keys, the buzzer
+and the battery gauge arranged around it. One sketch, [firmware/gardener](./firmware/gardener),
+composes the libraries for it: what it names is what the device has, over the serial link and the
+Bluetooth link it registers.
 
 ## Build
 
@@ -26,23 +25,8 @@ python scripts/arduino.py --task upload --port COM5
 python scripts/arduino.py --task monitor --port COM5
 ```
 
-`--sketch` picks the build: `gardener` is the full device and the default, `headless` is the machine
-alone. `--task data` writes [firmware/data/](./firmware/data) to the device's
-filesystem, and the headless build has none to write. VS Code has the same commands as tasks.
-
-```powershell
-python scripts/arduino.py --task build --sketch headless
-python scripts/arduino.py --task upload --sketch headless --port COM5
-```
-
-Bluetooth is a build option rather than a setting. The full device compiles the radio in by default;
-`--no-enable-bluetooth` leaves the NimBLE stack, the GATT table and the `bluetooth` transport out of
-that image. The headless build always keeps the radio, because a machine with no panel has only the
-two links to drive it.
-
-```powershell
-python scripts/arduino.py --task build --no-enable-bluetooth
-```
+`--task data` writes [firmware/data/](./firmware/data) to the device's filesystem. VS Code has the
+same commands as tasks.
 
 The board options are pinned in
 [firmware/gardener/sketch.yaml](./firmware/gardener/sketch.yaml) — including `CDCOnBoot=cdc`,
@@ -55,11 +39,10 @@ the Bluetooth transport, the two composition roots and the tasks that drive them
 modules a page is written against and the page scene; [libraries/Gfx](./libraries/Gfx), the canvas
 those pages draw on; and [libraries/berry](./libraries/berry), the vendored VM itself.
 
-A build keeps its object files in `firmware/<sketch>/build/compile`, so the next one compiles only
+A build keeps its object files in `firmware/gardener/build/compile`, so the next one compiles only
 what changed since, header dependents included. Changing a build option starts over on its own:
-`arduino-cli` treats the panel and radio switches, the rig's numbers and the FQBN as part of the
-build and throws the objects away when one of them differs. `--task clean` removes them, and the
-data image beside them, by hand.
+`arduino-cli` treats the rig's numbers and the FQBN as part of the build and throws the objects away
+when one of them differs. `--task clean` removes them, and the data image beside them, by hand.
 
 ## Unit tests
 

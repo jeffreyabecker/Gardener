@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "hal/impl/Sh1106Device.h"
 
 #include <Arduino.h>
@@ -141,5 +137,3 @@ bool Sh1106Device::data(const uint8_t* values, size_t count) {
 }
 
 }  // namespace gardener
-
-#endif

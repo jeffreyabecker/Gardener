@@ -1,11 +1,6 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "hal/impl/AdcBattery.h"
 
 #include <Arduino.h>
-
 
 namespace gardener {
 namespace {
@@ -63,4 +58,3 @@ void AdcBattery::update(uint32_t nowMs) {
 }
 
 }  // namespace gardener
-#endif

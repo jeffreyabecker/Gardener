@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "DrawTree.h"
 
 #include <berry.h>
@@ -343,4 +339,3 @@ void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas
 }
 
 }  // namespace gardener
-#endif

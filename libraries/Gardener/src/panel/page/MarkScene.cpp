@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/page/MarkScene.h"
 
 #include "panel/page/Mark.h"
@@ -13,4 +9,3 @@ void MarkScene::drawPage(gfx::Canvas& canvas) {
 }
 
 }  // namespace gardener::panel::page
-#endif

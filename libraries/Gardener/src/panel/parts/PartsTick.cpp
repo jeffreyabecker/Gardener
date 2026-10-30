@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/parts/PartsTick.h"
 
 #include "core/Battery.h"
@@ -25,4 +21,3 @@ void PartsTick::tick(uint32_t nowMs) {
 }
 
 }  // namespace gardener::panel::parts
-#endif

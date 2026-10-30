@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/GestureQueue.h"
 
 #include "core/Logger.h"
@@ -47,4 +43,3 @@ void GestureQueue::clear() {
 }
 
 }  // namespace gardener::panel
-#endif

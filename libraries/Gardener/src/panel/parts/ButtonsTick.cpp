@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/parts/ButtonsTick.h"
 
 #include "core/Logger.h"
@@ -71,4 +67,3 @@ void ButtonsTick::deliver(const String& gesture) {
 }
 
 }  // namespace gardener::panel::parts
-#endif

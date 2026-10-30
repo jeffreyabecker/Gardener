@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/parts/BuzzerPlayer.h"
 
 #include <math.h>
@@ -180,4 +176,3 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, const char*
 }
 
 }  // namespace gardener::panel::parts
-#endif

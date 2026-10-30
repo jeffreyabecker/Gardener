@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "routines/RoutineRegistry.h"
 
 #include <any>
@@ -171,5 +167,3 @@ std::unique_ptr<panel::page::Scene> RoutineRegistry::activate(
 }
 
 }  // namespace gardener
-
-#endif

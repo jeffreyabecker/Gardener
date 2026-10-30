@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "Bindings.h"
 
 #include <berry.h>
@@ -34,4 +30,3 @@ void install(bvm* vm, panel::PanelContext& appContext, Routines& appRoutines, Lo
 
 }  // namespace berry
 }  // namespace gardener
-#endif

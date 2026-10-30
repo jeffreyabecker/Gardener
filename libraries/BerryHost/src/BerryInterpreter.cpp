@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "BerryInterpreter.h"
 
 #include <berry.h>
@@ -84,4 +80,3 @@ void BerryInterpreter::reportError(const char* file, const char* what) {
 }
 
 }  // namespace gardener
-#endif

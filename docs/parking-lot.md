@@ -49,14 +49,12 @@ A `--task release` that packs [firmware/data](../firmware/data) into the build's
 
 
 
-## Verify the two builds on hardware
+## Verify the device on hardware
 
-The machine/panel split and the two builds have only ever been compiled. Everything the specs now
-promise still needs a device: the full device's serial and Bluetooth surfaces with writes accepted
-from any link, the panel's page and routine live whatever else is connected, and Back+OK rebooting.
-The machine-alone build needs the same: `device get` reporting `caps` and `log` with no battery or
-unit field, `fs` and `buzzer` answering `unknown_domain`, and a run that a second link can command
-mid-flight.
+The machine/panel split has only ever been compiled. Everything the specs now promise still needs a
+device: the serial and Bluetooth surfaces with writes accepted from any link, `device get` reporting
+the gauge and the unit beside the machine's fields, the panel's page and routine live whatever else
+is connected, and Back+OK rebooting.
 
 ## Thermal and continuous-duty protection
 
@@ -69,9 +67,8 @@ minutes, which is the whole of the protection there is.
 ## Low-battery start refusal
 
 `startRefusal()` should answer `low_battery` when a gauge is fitted and the pack is below a
-threshold, so a brownout is refused rather than survived. Blocked by: no gauge on the
-machine-alone build, and no pack fitted to either build yet — the alpha PCB leaves the divider
-deferred until a Super Mini variant with one is chosen.
+threshold, so a brownout is refused rather than survived. Blocked by: no pack fitted to the device
+yet — the alpha PCB leaves the divider deferred until a Super Mini variant with one is chosen.
 
 ## A local event log
 
@@ -84,8 +81,8 @@ nothing decided about where it lives, how it is bounded, or what reads it back.
 Just Works is proximity rather than authorization: anyone in radio range of an advertising machine
 can pair and command pressure, and bonds are uncapped. Until a pairing window or passkey replaces
 it, the exposure should be bounded: cap the bonds at four and add a local action that forgets every
-bond. Blocked by: the machine-alone build has no panel to show a code, and no spare input has been
-chosen for a window — a jumper read at power-up is the only candidate so far.
+bond. Blocked by: no spare input has been chosen for a window — a jumper read at power-up is the
+only candidate so far.
 
 ## An overlay that adapts to the panel
 

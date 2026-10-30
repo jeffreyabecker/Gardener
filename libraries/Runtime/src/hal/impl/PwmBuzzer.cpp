@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "hal/impl/PwmBuzzer.h"
 
 #include <Arduino.h>
@@ -48,4 +44,3 @@ void PwmBuzzer::off() {
 }
 
 }  // namespace gardener
-#endif

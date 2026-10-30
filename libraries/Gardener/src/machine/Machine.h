@@ -158,7 +158,7 @@ class Machine {
   Machine& operator=(const Machine&) = delete;
 
   // The parts come up and say whether they answered. The links and the tasks are the
-  // composition's, so a machine-alone build calls this alone.
+  // composition's, so this is the whole of what the machine starts.
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }

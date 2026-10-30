@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include <stdio.h>
 
 #include <any>
@@ -512,4 +508,3 @@ void installRoutinesModule(bvm* vm) {
 
 }  // namespace berry
 }  // namespace gardener
-#endif

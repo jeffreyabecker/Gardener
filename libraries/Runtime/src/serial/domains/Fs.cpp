@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "serial/FsDomain.h"
 
 #include <Arduino.h>
@@ -473,4 +469,3 @@ Domain* createFsDomain(CommandOutbox& outbox, FS& fs) {
 }
 
 }  // namespace gardener
-#endif

@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "hal/impl/Buttons.h"
 
 namespace gardener {
@@ -145,4 +141,3 @@ uint32_t Buttons::heldMs(Button button) {
 }
 
 }  // namespace gardener
-#endif

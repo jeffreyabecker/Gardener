@@ -9,9 +9,7 @@
 #include "machine/Machine.h"
 #include "machine/SafeReboot.h"
 #include "machine/VacuumSystem.h"
-#if GARDENER_BLUETOOTH
 #include "ble/BleLink.h"
-#endif
 #include "serial/SerialLink.h"
 
 namespace gardener {
@@ -39,9 +37,7 @@ struct ControlState {
 struct InterfaceState {
   SerialLink* link;
   SystemState& published;
-#if GARDENER_BLUETOOTH
   BleLink* ble;
-#endif
 };
 
 }  // namespace
@@ -66,38 +62,22 @@ void interfaceTask(void* arg) {
 
     // The links answer the wire.
     state.link->poll(now);
-#if GARDENER_BLUETOOTH
     state.ble->poll(now);
-#endif
 
     // Connection presence, published for the panel's overlay: a connected link that has not
-    // acquired control still counts, and a build without the radio reports none.
-#if GARDENER_BLUETOOTH
+    // acquired control still counts.
     state.published.serialConnected = state.link->controllerAttached();
     state.published.bluetoothConnected = state.ble->connected();
-#else
-    state.published.serialConnected = state.link->controllerAttached();
-    state.published.bluetoothConnected = false;
-#endif
 
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-#if GARDENER_BLUETOOTH
 void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble,
                        SystemState& state) {
-#else
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
-                       SystemState& state) {
-#endif
   static ControlTick tick{machine.vacuum(), machine.logger(), queue, state};
   static ControlState control{machine, tick};
-#if GARDENER_BLUETOOTH
   static InterfaceState interface{link, state, ble};
-#else
-  static InterfaceState interface{link, state};
-#endif
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

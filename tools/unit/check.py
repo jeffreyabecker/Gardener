@@ -44,10 +44,6 @@ PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "<NimBLE", "freertos/", 
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")
 API_EXTRAS = ("itoa.cpp", "dtostrf.cpp")
 
-# A source that needs a build symbol of its own. Device.cpp is the machine-alone build's `device`
-# domain: its panel branch is the panel composition's, so the suite keeps to the machine-alone one.
-SOURCE_DEFINES = {"serial/domains/Device.cpp": ("-DGARDENER_PANEL=0",)}
-
 
 def compiler():
     preferred = os.environ.get("CXX")
@@ -93,14 +89,6 @@ def include_dirs():
     return [TOOL, HOST / "arduino", HOST / "capture", API, DOCTEST, GFX / "src", GARDENER / "src"]
 
 
-def defines_for(source):
-    path = source.as_posix()
-    for name, flags in SOURCE_DEFINES.items():
-        if path.endswith(name):
-            return flags
-    return ()
-
-
 def build(cxx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
@@ -127,7 +115,7 @@ def build(cxx):
         if (args.no_cache or not obj.exists()
                 or obj.stat().st_mtime < Path(source).stat().st_mtime
                 or obj.stat().st_mtime < header_mtime):
-            run([cxx, "-std=c++17", "-O0", *defines_for(source), *includes, "-c", str(source),
+            run([cxx, "-std=c++17", "-O0", *includes, "-c", str(source),
                  "-o", str(obj)])
         built.append(obj)
 

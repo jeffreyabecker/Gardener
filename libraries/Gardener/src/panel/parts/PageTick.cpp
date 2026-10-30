@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "panel/parts/PageTick.h"
 
 #include "routines/Routines.h"
@@ -15,4 +11,3 @@ void PageTick::tick(uint32_t nowMs) { routines_.poll(nowMs); }
 void PageTick::home() { routines_.showDefault(); }
 
 }  // namespace gardener::panel::parts
-#endif

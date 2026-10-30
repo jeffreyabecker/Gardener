@@ -1,7 +1,5 @@
 #include "ble/BleLink.h"
 
-#if GARDENER_BLUETOOTH
-
 #include <stdio.h>
 
 namespace gardener {
@@ -155,5 +153,3 @@ void BleLink::onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& 
 }
 
 }  // namespace gardener
-
-#endif  // GARDENER_BLUETOOTH

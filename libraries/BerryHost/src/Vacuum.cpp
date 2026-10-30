@@ -1,7 +1,3 @@
-#include "Build.h"
-
-#if GARDENER_PANEL
-
 #include "core/RunState.h"
 #include "core/SystemState.h"
 #include "panel/PanelContext.h"
@@ -110,4 +106,3 @@ void installVacuumModule(bvm* vm) { installModule(vm, "vacuum", VacuumLibrary); 
 
 }  // namespace berry
 }  // namespace gardener
-#endif
