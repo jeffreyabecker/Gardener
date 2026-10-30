@@ -183,7 +183,7 @@ void CaptureDisplay::keepFrame() {
   for (const Component& component : components_) {
     if (!component.draw) continue;
     gfx::View box = canvas.child(component.box);
-    component.draw(box);
+    component.draw->draw(box);
   }
 
   capture_.add(pixels.data());
@@ -204,9 +204,15 @@ void CaptureDisplay::beginCapture() {
   beginCapture(Frame{width_, height_, gfx::Rect(0, 0, width_, height_)}, {});
 }
 
-void CaptureDisplay::beginCapture(const Frame& frame, const std::vector<Component>& components) {
+void CaptureDisplay::beginCapture(const Frame& frame, Component component) {
+  std::vector<Component> components;
+  components.push_back(std::move(component));
+  beginCapture(frame, std::move(components));
+}
+
+void CaptureDisplay::beginCapture(const Frame& frame, std::vector<Component> components) {
   frame_ = frame;
-  components_ = components;
+  components_ = std::move(components);
   capture_.arm(frame_.width, frame_.height);
   capturing_ = true;
 }

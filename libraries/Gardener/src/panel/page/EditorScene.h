@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#include "Drawing.h"
+#include "layout/Drawing.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 
@@ -40,8 +40,8 @@ class EditorScene : public Scene {
  protected:
   void drawPage(gfx::Canvas& canvas) override;
   bool handle(const char* gesture) override;
-  virtual gfx::Paint pageComponents();
-  virtual gfx::Paint pageContents();
+  virtual gfx::PaintNodeRef pageComponents();
+  virtual gfx::PaintNodeRef pageContents();
 
   // The hint band's text: the text a refused value answered where there is one, or the kind's own
   // hint.

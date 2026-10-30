@@ -50,7 +50,7 @@ class ChoiceScene : public EditorScene {
   bool handle(const char* gesture) override;
   void nudge(int8_t direction) override;
   void canceled() override;
-  gfx::Paint pageContents() override;
+  gfx::PaintNodeRef pageContents() override;
 
   // The key the setting holds, and the one it opened on: a kind that shows the same ring another
   // way — the bool's switch — reads these rather than the items.

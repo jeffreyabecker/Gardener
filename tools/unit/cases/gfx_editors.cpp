@@ -112,7 +112,7 @@ TEST_CASE("a number band centres the value") {
   NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false);
   View band = canvas.child(Rect(0, 0, 40, 24));
   reset();
-  number.pageContents()(band);
+  number.pageContents()->draw(band);
   CHECK(display.anyInk(0, 0, 40, 24));
   CHECK_EQ(display.inkCount(0, 0, 40, 4), 0);
   CHECK_EQ(display.inkCount(0, 20, 40, 4), 0);
@@ -270,7 +270,7 @@ TEST_CASE("a choice band inverts the entry showing") {
   ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()(band);
+  choice.pageContents()->draw(band);
   CHECK(display.inkCount(0, 14, PageWidth, 8) > PageWidth * 8 / 2);
   CHECK(display.inkCount(0, 6, PageWidth, 8) < PageWidth * 8 / 2);
 }
@@ -282,7 +282,7 @@ TEST_CASE("a choice band prints every title") {
   ChoiceProbe choice(gestures, ux, label, "a", threeEntries(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()(band);
+  choice.pageContents()->draw(band);
   CHECK(display.anyInk(0, 6, PageWidth, 8));
   CHECK(display.anyInk(0, 14, PageWidth, 8));
   CHECK(display.anyInk(0, 22, PageWidth, 8));
@@ -295,7 +295,7 @@ TEST_CASE("a choice band prints dashes for nothing") {
   ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()(band);
+  choice.pageContents()->draw(band);
   CHECK(display.anyInk(0, 10, PageWidth, 16));
   CHECK_EQ(display.inkCount(0, 6, PageWidth, 4), 0);
 }
@@ -345,7 +345,7 @@ TEST_CASE("a bool switch inverts the state showing") {
   BoolProbe toggle(gestures, ux, label, "false", false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  toggle.pageContents()(band);
+  toggle.pageContents()->draw(band);
   CHECK(display.inkCount(14, 10, 36, 16) > display.inkCount(84, 10, 24, 16));
   CHECK(display.anyInk(84, 10, 24, 16));
 }
@@ -357,7 +357,7 @@ TEST_CASE("a bool switch shows the nothing first") {
   BoolProbe nullable(gestures, ux, label, "", true);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  nullable.pageContents()(band);
+  nullable.pageContents()->draw(band);
   CHECK(display.inkCount(9, 10, 24, 16) > display.inkCount(46, 10, 36, 16));
   CHECK(display.anyInk(95, 10, 24, 16));
 }
@@ -371,13 +371,13 @@ TEST_CASE("a choice bar shows where the window is") {
   ChoiceProbe many(gestures, ux, label, String(5), six, false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  many.pageContents()(band);
+  many.pageContents()->draw(band);
   CHECK(display.anyInk(126, 2, 2, 8));
   CHECK_EQ(display.inkCount(126, 15, 2, 6), 0);
 
   ChoiceProbe few(gestures, ux, label, "b", threeEntries(), false);
   reset();
-  few.pageContents()(band);
+  few.pageContents()->draw(band);
   CHECK_EQ(display.inkCount(126, 2, 2, 4), 0);
 }
 
@@ -455,13 +455,13 @@ TEST_CASE("a duration band inverts the stage") {
   DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  duration.pageContents()(band);
+  duration.pageContents()->draw(band);
   CHECK(display.inkCount(20, 10, 24, 16) > display.inkCount(78, 10, 36, 16));
   CHECK(display.anyInk(78, 10, 36, 16));
 
   duration.press("forward:single");
   reset();
-  duration.pageContents()(band);
+  duration.pageContents()->draw(band);
   CHECK(display.inkCount(78, 10, 36, 16) > display.inkCount(20, 10, 24, 16));
 }
 
@@ -484,7 +484,7 @@ TEST_CASE("an editor page is three bands") {
   String label("Number");
   PageProbe page(gestures, ux, label);
   View band = canvas.child(Rect(0, 0, PageWidth, 52));
-  page.pageComponents()(band);
+  page.pageComponents()->draw(band);
   CHECK(display.anyInk(0, 0, PageWidth, 8));
   CHECK_EQ(display.inkCount(0, 8, PageWidth, 36), 0);
   CHECK(display.anyInk(0, 44, PageWidth, 8));

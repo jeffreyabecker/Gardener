@@ -229,7 +229,7 @@ void HarnessSession::beginCapture(const char* path) {
   display_.beginCapture(
       CaptureDisplay::Frame{glassWidth, static_cast<int16_t>(stripTop + GestureStrip::Rows),
                             gfx::Rect(0, 0, glassWidth, glassHeight)},
-      {gestureStrip_.component(gfx::Rect(0, stripTop, glassWidth, GestureStrip::Rows))});
+      gestureStrip_.component(gfx::Rect(0, stripTop, glassWidth, GestureStrip::Rows)));
 }
 
 bool HarnessSession::endCapture() {

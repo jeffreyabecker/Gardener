@@ -5,7 +5,9 @@
 
 #include <utility>
 
-#include "Drawing.h"
+#include "Text.h"
+#include "layout/Drawing.h"
+#include "layout/Layout.h"
 
 namespace gardener::panel::page {
 namespace {
@@ -63,11 +65,11 @@ float NumberScene::within(float value) const {
 }
 
 // The number centred in the contents band at the value face.
-gfx::Paint NumberScene::pageContents() {
+gfx::PaintNodeRef NumberScene::pageContents() {
   printed_ = text();
-  return [this](gfx::Canvas& canvas) {
-    gfx::drawCentered(canvas, printed_.c_str(), nullptr, ValueScale);
-  };
+  const gfx::Size ink = gfx::shapes::measureText(nullptr, printed_.c_str(), ValueScale);
+  return gfx::aligned(gfx::sized(
+      gfx::borrowedText(gfx::Box::whole(), printed_.c_str(), nullptr, ValueScale), ink));
 }
 
 }  // namespace gardener::panel::page

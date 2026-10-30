@@ -421,7 +421,7 @@ int screenMeasure(bvm* vm) {
   }
   const gfx::Font* face = argFace(vm, 2, "measure");
   const uint8_t scale = argScale(vm, 3, "measure", 1);
-  const gfx::shapes::TextBox box = gfx::shapes::measureText(face, argText(vm, 1), scale);
+  const gfx::Size box = gfx::shapes::measureText(face, argText(vm, 1), scale);
 
   const int record = beginRecord(vm, "bounds");
   setInt(vm, record, "w", box.width);

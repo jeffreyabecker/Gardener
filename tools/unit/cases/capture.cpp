@@ -28,6 +28,7 @@ using gardener::GifDelayCs;
 using gardener::RenderScale;
 using gardener::gfx::View;
 using gardener::gfx::Canvas;
+using gardener::gfx::callable;
 using gardener::gfx::Rect;
 using gardener::panel::GestureQueue;
 using gardener::panel::page::Scene;
@@ -99,7 +100,7 @@ void beginStripCapture(GestureStrip& strip) {
   display.beginCapture(CaptureDisplay::Frame{PageWidth,
                                              static_cast<int16_t>(PageHeight + GestureStrip::Rows),
                                              Rect(0, 0, PageWidth, PageHeight)},
-                       {strip.component(stripBox)});
+                       strip.component(stripBox));
 }
 
 }  // namespace
@@ -280,20 +281,20 @@ TEST_CASE("a component draws in the box the frame gives it") {
   const Rect glass(6, 8, PageWidth, PageHeight);
   const int16_t frameWidth = static_cast<int16_t>(glass.x + glass.width + 20);
   const int16_t frameHeight = static_cast<int16_t>(glass.y + glass.height + 3);
-  display.beginCapture(
-      CaptureDisplay::Frame{frameWidth, frameHeight, glass},
-      {
-          // Beside the glass on the left: a write past its box's edge is clipped, not painted over
-          // its neighbour.
-          {Rect(0, 0, 6, PageHeight),
-           [](Canvas& canvas) {
-             canvas.setPixel(5, 3, 255);
-             canvas.setPixel(6, 3, 255);
-           }},
-          // And one on the right, which knows nothing of where the other is.
-          {Rect(static_cast<int16_t>(glass.x + glass.width), 0, 20, 20),
-           [](Canvas& canvas) { canvas.setPixel(1, 1, 255); }},
-      });
+  std::vector<CaptureDisplay::Component> components;
+  // Beside the glass on the left: a write past its box's edge is clipped, not painted over its
+  // neighbour.
+  components.push_back(
+      {Rect(0, 0, 6, PageHeight),
+       callable([](Canvas& canvas) {
+         canvas.setPixel(5, 3, 255);
+         canvas.setPixel(6, 3, 255);
+       })});
+  // And one on the right, which knows nothing of where the other is.
+  components.push_back({Rect(static_cast<int16_t>(glass.x + glass.width), 0, 20, 20),
+                        callable([](Canvas& canvas) { canvas.setPixel(1, 1, 255); })});
+  display.beginCapture(CaptureDisplay::Frame{frameWidth, frameHeight, glass},
+                       std::move(components));
   gardener::gfx::test::canvas.setPixel(10, 10, 255);
   gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);

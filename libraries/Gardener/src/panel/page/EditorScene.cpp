@@ -5,8 +5,9 @@
 
 #include <utility>
 
-#include "Drawing.h"
-#include "Layout.h"
+#include "Text.h"
+#include "layout/Drawing.h"
+#include "layout/Layout.h"
 
 namespace gardener::panel::page {
 namespace {
@@ -25,6 +26,13 @@ constexpr int16_t SettingsChrome = 2 * (SettingsRow + SettingsGap);
 constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
+
+// One line of chrome centred in the band it is given: the ink the string measures, placed by the
+// layout's own alignment.
+gfx::PaintNodeRef centredLine(const char* text) {
+  const gfx::Size ink = gfx::shapes::measureText(nullptr, text, 1);
+  return gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), text), ink));
+}
 
 }  // namespace
 
@@ -73,21 +81,18 @@ bool EditorScene::handle(const char* gesture) {
 }
 
 void EditorScene::drawPage(gfx::Canvas& canvas) {
-  pageComponents()(canvas);
+  pageComponents()->draw(canvas);
 }
 
-gfx::Paint EditorScene::pageComponents() {
-  return gfx::column(1.0f, {
-      gfx::Child{gfx::Cell(1.0f, TitleBandPct),
-                 [this](gfx::Canvas& canvas) { gfx::drawCentered(canvas, title()); }},
-      gfx::Child{gfx::Cell(1.0f, ContentsBandPct), pageContents()},
-      gfx::Child{gfx::Cell(1.0f, HintBandPct),
-                 [this](gfx::Canvas& canvas) { gfx::drawCentered(canvas, hint()); }},
-  });
+gfx::PaintNodeRef EditorScene::pageComponents() {
+  return gfx::column(
+      1.0f, gfx::children(gfx::Child{gfx::Cell(1.0f, TitleBandPct), centredLine(title())},
+                          gfx::Child{gfx::Cell(1.0f, ContentsBandPct), pageContents()},
+                          gfx::Child{gfx::Cell(1.0f, HintBandPct), centredLine(hint())}));
 }
 
-gfx::Paint EditorScene::pageContents() {
-  return gfx::Paint();
+gfx::PaintNodeRef EditorScene::pageContents() {
+  return gfx::PaintNodeRef();
 }
 
 }  // namespace gardener::panel::page

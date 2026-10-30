@@ -38,7 +38,7 @@ class NumberScene : public EditorScene {
  protected:
   void nudge(int8_t direction) override;
   void canceled() override;
-  gfx::Paint pageContents() override;
+  gfx::PaintNodeRef pageContents() override;
 
  private:
   bool hasValue() const;

@@ -79,7 +79,7 @@ void Text::operator()(Canvas& canvas) const {
   }
 }
 
-TextBox measureText(const Font* font, const char* value, uint8_t size) {
+Size measureText(const Font* font, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
   if (font == nullptr) {

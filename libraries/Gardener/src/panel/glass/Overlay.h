@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "core/SystemState.h"
-#include "Drawing.h"
+#include "layout/Drawing.h"
 
 namespace gardener::panel::glass {
 
@@ -18,8 +18,8 @@ class Overlay {
 
   explicit Overlay(const SystemState& state) : state_(state) {}
 
-  // The strip, painted from one copy of the state so a frame shows one instant.
-  void operator()(gfx::Canvas& canvas) const;
+  // The strip as one paint: it reads the state as it draws, so a frame shows one instant.
+  gfx::PaintNodeRef paint() const;
 
  private:
   const SystemState& state_;

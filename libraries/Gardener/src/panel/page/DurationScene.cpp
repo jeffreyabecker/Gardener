@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "Text.h"
-#include "Drawing.h"
-#include "Layout.h"
+#include "layout/Drawing.h"
+#include "layout/Layout.h"
 
 namespace gardener::panel::page {
 namespace {
@@ -14,32 +14,22 @@ namespace {
 // The face the two fields are drawn at.
 constexpr uint8_t FieldScale = 2;
 
-gfx::Justification centred() {
-  gfx::Justification justification;
-  justification.along = gfx::Justify::Center;
-  justification.across = gfx::Justify::Center;
-  return justification;
-}
-
-// A string centred across and down the canvas it is drawn on, at the face and scale it is given.
-gfx::Paint centredText(const char* value) {
-  return [value](gfx::Canvas& canvas) { gfx::drawCentered(canvas, value, nullptr, FieldScale); };
+// A band holding one string: the dashes centred at the field face.
+gfx::PaintNodeRef centredDashes() {
+  const gfx::Size ink = gfx::shapes::measureText(nullptr, "--", FieldScale);
+  return gfx::aligned(
+      gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--", nullptr, FieldScale), ink));
 }
 
 // One field of the pair: its title centred in an equal share of the row, and that title inverted
-// when it is the field the keys are stepping. The inner column is what centres the title's own ink
-// inside the share, so the inverted box is the field rather than the whole cell.
+// when it is the field the keys are stepping. The alignment places the title's own ink inside the
+// share, so the inverted box is the field rather than the whole cell.
 gfx::Child field(const char* title, bool showing) {
-  const gfx::shapes::TextBox ink = gfx::shapes::measureText(nullptr, title, FieldScale);
-  const gfx::Paint label = [title, showing, ink](gfx::Canvas& own) {
-    const gfx::Paint content =
-        gfx::text(gfx::Rect(0, 0, ink.width, ink.height), title, nullptr, FieldScale);
-    own.draw(showing ? gfx::inverted(content) : content);
-  };
-  const gfx::Child centredLabel{gfx::Cell(static_cast<float>(ink.width),
-                                          static_cast<float>(ink.height)),
-                                label};
-  return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::column(1.0f, {centredLabel}, centred())};
+  const gfx::Size ink = gfx::shapes::measureText(nullptr, title, FieldScale);
+  gfx::PaintNodeRef content =
+      gfx::borrowedText(gfx::Box::whole(), title, nullptr, FieldScale);
+  if (showing) content = gfx::inverted(std::move(content));
+  return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
 }
 
 }  // namespace
@@ -132,14 +122,15 @@ void DurationScene::canceled() { current_ = opened_; }
 
 // The two fields side by side, each an equal share of the band, with the one the keys are stepping
 // inverted. A setting holding nothing has no fields to show, so the band prints `--`.
-gfx::Paint DurationScene::pageContents() {
+gfx::PaintNodeRef DurationScene::pageContents() {
   if (!hasValue()) {
-    return centredText("--");
+    return centredDashes();
   }
   minutes_ = minutesText();
   seconds_ = secondsText();
   const bool minutes = stage_ == Stage::Minutes;
-  return gfx::row(1.0f, {field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes)});
+  return gfx::row(1.0f, gfx::children(field(minutes_.c_str(), minutes),
+                                     field(seconds_.c_str(), !minutes)));
 }
 
 }  // namespace gardener::panel::page

@@ -5,7 +5,7 @@
 #include <functional>
 #include <memory>
 
-#include "Drawing.h"
+#include "layout/Drawing.h"
 #include "panel/page/Scene.h"
 
 namespace gardener::panel::page {
@@ -53,7 +53,7 @@ class Ux {
   // `startY` down to the bottom of the glass. The page above it gives up those rows, so a page
   // never draws under the overlay. An empty paint is no overlay and the page keeps the whole
   // canvas.
-  void setOverlay(int16_t startY, gfx::Paint overlay);
+  void setOverlay(int16_t startY, gfx::PaintNodeRef overlay);
 
   // The row the overlay starts at, which is where the page stops; 0 when there is no overlay.
   int16_t overlayStart() const { return overlay_ ? overlayStart_ : 0; }
@@ -83,7 +83,7 @@ class Ux {
   std::unique_ptr<Scene> frames_[MaxFrames];
   Callback callbacks_[MaxFrames];
   int16_t depth_ = 0;
-  gfx::Paint overlay_;
+  gfx::PaintNodeRef overlay_;
   int16_t overlayStart_ = 0;
   gfx::Canvas* beat_ = nullptr;
   uint32_t beatMs_ = 0;

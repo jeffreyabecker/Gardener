@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "Drawing.h"
+#include "layout/Drawing.h"
 
 namespace gardener::panel::page {
 namespace {
@@ -11,11 +11,9 @@ namespace {
 constexpr int16_t Row = 8;
 
 // The row as the list prints it: the setting's label, an equals sign and the value it holds now.
-gfx::Paint rowText(const SettingsRow& setting, const std::any& value) {
+gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value) {
   const String printed = setting.label() + "=" + setting.text(value);
-  return [printed](gfx::Canvas& row) {
-    gfx::text(gfx::Rect(0, 0, row.width(), Row), printed.c_str(), nullptr, 1)(row);
-  };
+  return gfx::text(gfx::Box(0, 0, 0, Row, true, false), printed, nullptr, 1);
 }
 
 }  // namespace
@@ -93,7 +91,7 @@ void SettingsScene::open() {
 void SettingsScene::drawPage(gfx::Canvas& canvas) {
   const int16_t heading = title_.isEmpty() ? 0 : Row;
   if (heading > 0) {
-    gfx::text(gfx::Rect(0, 0, canvas.width(), Row), title_.c_str(), nullptr, 1)(canvas);
+    gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_, nullptr, 1)->draw(canvas);
   }
   if (rows_.empty()) return;
   gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
@@ -112,8 +110,9 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
     gfx::View cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
-    const gfx::Paint content = rowText(*row, value);
-    cell.draw(at == selected_ ? gfx::inverted(content) : content);
+    gfx::PaintNodeRef content = rowText(*row, value);
+    if (at == selected_) content = gfx::inverted(std::move(content));
+    content->draw(cell);
   }
   if (scrolls) gfx::drawScrollbar(band, first, count, visible);
 }

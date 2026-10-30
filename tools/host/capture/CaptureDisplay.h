@@ -8,7 +8,7 @@
 #include "GifWriter.h"
 #include "DisplayDevice.h"
 #include "Rect.h"
-#include "Drawing.h"
+#include "layout/Drawing.h"
 #include "panel/GestureQueue.h"
 
 namespace gardener {
@@ -42,12 +42,12 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
 
   // One thing a capture draws outside the glass: the box it draws in, in frame coordinates, and
   // what it draws there. It is handed a canvas over that box, so its coordinates are the box's own
-  // and a write past the edge is clipped rather than painted over its neighbour. By value because
-  // the capture keeps the list for the whole sequence: whatever a component closes over has to
-  // outlive it.
+  // and a write past the edge is clipped rather than painted over its neighbour. Held by the
+  // capture for the whole sequence, so a node that borrows a string has to borrow one that outlives
+  // it.
   struct Component {
     gfx::Rect box;
-    gfx::Paint draw;
+    gfx::PaintNodeRef draw;
   };
 
   // A display at one of the two depths a device may report: 8 is a byte per pixel, the layout the
@@ -94,7 +94,10 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   // says and `components` drawn over it in the order given. The size and the components are kept
   // for the whole sequence, so every frame of a GIF is one size and a component with nothing to
   // show leaves its box blank rather than making that frame shorter.
-  void beginCapture(const Frame& frame, const std::vector<Component>& components = {});
+  void beginCapture(const Frame& frame, std::vector<Component> components = {});
+
+  // The same with one component: a braced list would copy the vector, and a component holds a paint.
+  void beginCapture(const Frame& frame, Component component);
 
   // Keeps the picture as one frame now, without a send: a still of what the panel already holds.
   void record();

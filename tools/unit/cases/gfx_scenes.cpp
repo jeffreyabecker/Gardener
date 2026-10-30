@@ -176,10 +176,10 @@ constexpr int16_t OverlayTop = PageHeight - 12;
 constexpr int16_t OverlayRows = PageHeight - OverlayTop;
 
 // A paint that fills the canvas it is handed, so a case reads the overlay from the ink it leaves.
-Paint filledCell() {
-  return [](Canvas& cell) {
+PaintNodeRef filledCell() {
+  return callable([](Canvas& cell) {
     cell.draw(gfx::shapes::Rect(0, 0, cell.width(), cell.height(), Ink, true));
-  };
+  });
 }
 
 TEST_CASE("the overlay is handed the rows from where it starts") {
@@ -198,7 +198,7 @@ TEST_CASE("the page stops where the overlay starts") {
   NoGestures gestures;
   Ux ux;
   reset();
-  ux.setOverlay(OverlayTop, [](Canvas&) {});
+  ux.setOverlay(OverlayTop, callable([](Canvas&) {}));
   ux.reset(std::make_unique<InkedScene>(gestures));
   ux.poll(canvas, 300);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, OverlayTop), PageWidth * OverlayTop);
@@ -209,7 +209,7 @@ TEST_CASE("an empty paint is no overlay") {
   NoGestures gestures;
   Ux ux;
   reset();
-  ux.setOverlay(OverlayTop, Paint());
+  ux.setOverlay(OverlayTop, PaintNodeRef());
   CHECK_EQ(ux.overlayStart(), 0);
   ux.reset(std::make_unique<InkedScene>(gestures));
   ux.poll(canvas, 300);
