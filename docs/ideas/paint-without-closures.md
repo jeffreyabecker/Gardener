@@ -1,81 +1,11 @@
 # How should a paint hold what it draws without a closure stack?
 
-`Paint` is a `std::function<void(Canvas&)>`, so the drawing language is a language of closures:
-each factory in [Drawing.h](../../libraries/Gfx/src/Drawing.h) returns one, `layout`/`row`/`column`
-return one holding a vector of them, the pages wrap those in lambdas of their own, and the Berry
-walk in [DrawTree.cpp](../../libraries/BerryHost/src/DrawTree.cpp) wraps every leaf in a closure
-before any of it runs. The alignment idea in `alignment-in-layout.md` proposes `Sized` and
-`aligned` on top of that — two more closure layers for every centred string. The question here is
-whether `Paint` should stop being a `std::function` first, so that the alignment change lands on a
-value instead of a stack.
+`Paint` is a `std::function<void(Canvas&)>`, so the drawing language is built from nested
+closures — one per factory, per layout child and per Berry node, plus a fresh span vector on
+every layout draw. The shape vocabulary underneath is already plain value structs; the
+composition above it is not.
 
-## What the stack costs today
-
-- The drawing factories in [Drawing.cpp](../../libraries/Gfx/src/Drawing.cpp) each answer a lambda:
-  `text`, `icon` in both forms, `inverted`, `underlay`, `progressBar`, `scrollbar` and `duration`.
-  `duration` captures a `std::string`; the rest capture a `Rect` and their arguments. A
-  `std::function` is a type-erased callable whose captured state goes to the heap once it outgrows
-  the small buffer, and on this toolchain that buffer is a few words — a captured `std::vector`, a
-  captured `std::string` or a captured copy of `SystemState` is an allocation.
-- `arrange` in [Layout.cpp](../../libraries/Gfx/src/Layout.cpp) returns a lambda that holds a
-  `std::vector<Child>`, and each `Child` holds a `Paint`. Building a layout with N children is the
-  vector plus a closure for every child paint that does not fit the buffer. Every draw of that
-  layout also allocates a fresh `std::vector<int16_t> spans`, so a list page allocates twice a
-  frame.
-- The pages add their own layers. `EditorScene::pageComponents` captures `this` twice, once for the
-  title and once for the hint. `BoolScene::chip` and `DurationScene::field` measure a label, wrap it
-  in a lambda that builds `inverted(text(...))`, and centre that through a one-child column.
-  `NumberScene::numberBand` wraps `progressBar` in a lambda only to size it to the cell it lands in.
-  `ChoiceScene::pageContents` and `SettingsScene::drawPage` build paints per row as they draw.
-- The Berry boundary turns every node into a closure. `leaf()` in `DrawTree.cpp` is one closure
-  around a `Make` lambda, so a `text` node is two `std::function`s before it is drawn, and
-  `childrenOf` collects them into a vector the layout closure then copies.
-- The alignment idea, built on this, would make each centred string `aligned(Sized{ink, text(...)})`:
-  three nested closures where one value would do.
-
-The shape vocabulary already shows the way out. Every leaf draw in
-[Shapes.h](../../libraries/Gfx/src/Shapes.h) is a value struct that carries its arguments and runs
-through `operator()(Canvas&)` — `Line`, `Rect`, `Text`, `MonoBitmap`. The closures live one layer
-up, in the composition: the factories, the layout and the pages.
-
-## The options
-
-**Keep `Paint` a `std::function` and only thin the closures.** Land `Size`/`Sized`/`aligned` to
-delete `drawCentered` and the measured cells, pre-format `duration`, drop the per-draw `spans`
-vector, and build the Berry tree with fewer `leaf()` layers. The type stays type-erased, every leaf
-and every layout still allocates, and the alignment change still adds a `Sized` — one more
-`std::function` — per aligned child. This is the fallback if the value `Paint` proves too much, not
-the answer.
-
-**Typed nodes with templates.** Each factory returns its own struct (`TextNode`, `BarNode` and so
-on) and composition nests through the types, so `inverted(text(...))` is `Inverted<TextNode>` with
-no erasure at all. It falls over on the one thing the tree always does: a layout's children are
-heterogeneous, so `std::vector<Child>` cannot hold `Inverted<TextNode>` beside `LayoutNode<...>`
-without an erasure somewhere — which moves the `std::function` to `Child` and saves nothing — and
-the bodies move into the header, where every other function in `Layout.h` is a declaration. Ruled
-out by the heterogeneous-children constraint.
-
-**A virtual node hierarchy.** A `PaintNode` base with `virtual void draw(Canvas&)` and one subclass
-per kind. It removes `std::function` and replaces it with a vtable and one heap object per node —
-the same allocation count, more classes, more surface. The firmware rule is that an interface earns
-its place at a foreign boundary, not as a second implementation that does not exist; every kind here
-exists, but they are a finite set the code already lists. Ruled out: it trades one erasure for a
-bespoke one without removing the allocations.
-
-**A finite node vocabulary in a value `Paint`.** `Paint` becomes a small value carrying one node
-struct per fixed kind, with one `std::function` case kept for draws the vocabulary cannot name.
-Leaves are inline and cost nothing to build; the composite nodes — icon, inverted, underlay,
-aligned, layout — own their children behind one shared pointer, which is also what breaks the
-recursive type. The draw is a `switch` in the `.cpp`, the way the layout's helpers already are.
-This is the preferred shape, below.
-
-**The same vocabulary in a `std::variant`.** The same nodes, erased by `std::variant` and
-`std::visit` instead of a hand-rolled tag. It is cheaper to write and heavier to compile: the tree
-has never used `<variant>`, the dispatch becomes a template in the header, and a visitation table is
-bought for a union the code can hold by hand. Set aside as the spelling to reach for if the
-hand-rolled one ever costs more code than it saves.
-
-## The preferred shape
+## The shape
 
 One box type comes first, because it is what lets the C++ pages drop their sizing lambdas. The
 Berry walk already knows it as `NodeBox`: a pixel box whose sides may be the whole of the canvas it
@@ -161,7 +91,7 @@ answer that nothing checks. The value `Paint` makes the refusal cheaper to rever
 "how big is this paint" is a switch over the finite kinds plus an honest unknown for the callable
 case — it no longer has to touch every paint and every node kind to be added.
 
-## What has to be true for the preferred one
+## What has to be true
 
 - `Box` exists beside `Rect`, and the leaf factories take it; the implicit conversion from `Rect`
   leaves every call site as it is.
@@ -194,17 +124,48 @@ case — it no longer has to touch every paint and every node kind to be added.
 - Whether the grown `Paint` matters anywhere it is stored across beats. `Ux::overlay_` is the only
   long-lived one, and it is one paint, not a stack.
 
-## Recommendation
+The vocabulary and the arithmetic are already in the tree as value structs — `shapes::*` and
+`alignedOffset` — so this extends a shape the code already has rather than inventing one, and what
+it buys is the removal of the closure stack from the one path that runs every frame.
 
-Take the value `Paint` with the finite node vocabulary and the one callable seam, and land it
-together with the alignment idea's `Size`, `Sized` and `aligned`, because the two are one change to
-the one path that runs every frame. The fallback is the closure-thinning option if the value type
-proves too much for the call sites that build paints from lambdas, and the suite and the panel are
-the measurement.
+`Paint` is a `std::function<void(Canvas&)>`, so the drawing language is a language of closures:
+each factory in [Drawing.h](../../libraries/Gfx/src/Drawing.h) returns one, `layout`/`row`/`column`
+return one holding a vector of them, the pages wrap those in lambdas of their own, and the Berry
+walk in [DrawTree.cpp](../../libraries/BerryHost/src/DrawTree.cpp) wraps every leaf in a closure
+before any of it runs. The alignment idea in `alignment-in-layout.md` proposes `Sized` and
+`aligned` on top of that — two more closure layers for every centred string.
 
-Held moderately. The vocabulary and the arithmetic are already in the tree as value structs —
-`shapes::*` and `alignedOffset` — so this extends a shape the code already has rather than inventing
-one, and what it buys is the removal of the closure stack from the hot path rather than a new
-abstraction. What is not bought is certainty that the callable seam stays small: if the pages keep
-writing bespoke lambdas, the seam becomes the stack again, and the honest test is whether the
-factories and the Berry walk are enough of the tree to carry the design.
+The idea is to stop holding a drawing in a callable. `Paint` becomes a small value carrying a finite
+vocabulary of node structs — one per factory, the leaves inline and the composites behind one shared
+pointer — with a single callable case kept for the few draws the vocabulary cannot name. The size
+logic the alignment idea proposes slots into the same vocabulary as `Size`, `Sized` and an `Aligned`
+node, so the alignment change lands on a value instead of a stack.
+
+## What the stack costs today
+
+- The drawing factories in [Drawing.cpp](../../libraries/Gfx/src/Drawing.cpp) each answer a lambda:
+  `text`, `icon` in both forms, `inverted`, `underlay`, `progressBar`, `scrollbar` and `duration`.
+  `duration` captures a `std::string`; the rest capture a `Rect` and their arguments. A
+  `std::function` is a type-erased callable whose captured state goes to the heap once it outgrows
+  the small buffer, and on this toolchain that buffer is a few words — a captured `std::vector`, a
+  captured `std::string` or a captured copy of `SystemState` is an allocation.
+- `arrange` in [Layout.cpp](../../libraries/Gfx/src/Layout.cpp) returns a lambda that holds a
+  `std::vector<Child>`, and each `Child` holds a `Paint`. Building a layout with N children is the
+  vector plus a closure for every child paint that does not fit the buffer. Every draw of that
+  layout also allocates a fresh `std::vector<int16_t> spans`, so a list page allocates twice a
+  frame.
+- The pages add their own layers. `EditorScene::pageComponents` captures `this` twice, once for the
+  title and once for the hint. `BoolScene::chip` and `DurationScene::field` measure a label, wrap it
+  in a lambda that builds `inverted(text(...))`, and centre that through a one-child column.
+  `NumberScene::numberBand` wraps `progressBar` in a lambda only to size it to the cell it lands in.
+  `ChoiceScene::pageContents` and `SettingsScene::drawPage` build paints per row as they draw.
+- The Berry boundary turns every node into a closure. `leaf()` in `DrawTree.cpp` is one closure
+  around a `Make` lambda, so a `text` node is two `std::function`s before it is drawn, and
+  `childrenOf` collects them into a vector the layout closure then copies.
+- The alignment idea, built on this, would make each centred string `aligned(Sized{ink, text(...)})`:
+  three nested closures where one value would do.
+
+The shape vocabulary already shows the way out. Every leaf draw in
+[Shapes.h](../../libraries/Gfx/src/Shapes.h) is a value struct that carries its arguments and runs
+through `operator()(Canvas&)` — `Line`, `Rect`, `Text`, `MonoBitmap`. The closures live one layer
+up, in the composition: the factories, the layout and the pages.
