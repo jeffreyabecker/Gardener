@@ -10,6 +10,11 @@ firmware/**/build/
 *.d
 *.a
 
+# Prebuilt archives and the rig header they are built beside: packed by scripts/arduino.py from a
+# build's own objects, so never committed
+libraries/berry/src/esp32s3/
+firmware/gardener/rig_options.h
+
 # Python
 __pycache__/
 *.py[cod]

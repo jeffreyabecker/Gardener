@@ -39,10 +39,19 @@ the Bluetooth transport, the two composition roots and the tasks that drive them
 modules a page is written against and the page scene; [libraries/Gfx](./libraries/Gfx), the canvas
 those pages draw on; and [libraries/berry](./libraries/berry), the vendored VM itself.
 
-A build keeps its object files in `firmware/gardener/build/compile`, so the next one compiles only
-what changed since, header dependents included. Changing a build option starts over on its own:
-`arduino-cli` treats the rig's numbers and the FQBN as part of the build and throws the objects away
-when one of them differs. `--task clean` removes them, and the data image beside them, by hand.
+A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
+define set, so the next one compiles only what changed since, header dependents included. The two
+libraries that never change are not compiled at all after the first build:
+[libraries/berry](./libraries/berry) and the staged NimBLE are packed into an archive beside their
+sources — `src/esp32s3/libberry.a` — which `arduino-cli` links instead, and which is two thirds of
+what a full build used to be. The archives are not committed: a fresh clone, a new toolchain or a
+deleted one compiles the sources and packs again. `--task archive` repacks them on demand, and
+`--task clean` keeps them.
+
+The rig's numbers are written to a generated `firmware/gardener/rig_options.h` rather than passed
+as compiler flags, so retuning a rig recompiles the files that read them and nothing else.
+`--task libs` installs the pinned libraries and stages the copies the build compiles against;
+`--task clean` removes the object files, and the data image beside them, by hand.
 
 ## Unit tests
 

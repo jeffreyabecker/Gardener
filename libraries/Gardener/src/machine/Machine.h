@@ -18,9 +18,17 @@ constexpr float CONTROL_MIN_TARGET_KPA = 5.0f;
 // --- The rig's own numbers ---------------------------------------------------
 // What a different pump, chamber or valve changes. These are facts about the build rather than
 // preferences a running device holds, so each is a macro: the value here is the fitted rig's,
-// measured on the bench, and a build for another rig replaces it with `-DNAME=value` (see
-// scripts/arduino.py's `--define`). Neither link carries them, because nothing changes one at run
-// time.
+// measured on the bench, and a build for another rig sets its own by generating the sketch's
+// `rig_options.h` (see scripts/arduino.py's `--define`). Neither link carries them, because nothing
+// changes one at run time.
+//
+// The header rather than a define on the command line, because a define there is part of
+// arduino-cli's build options: changing one throws away every object in the build path, the
+// precompiled archives included. The sketch folder is on the include path of every translation
+// unit, so a header in it reaches the files that read these numbers and no others.
+#if __has_include("rig_options.h")
+#include "rig_options.h"
+#endif
 #ifndef PUMP_FLOW_LPM
 #define PUMP_FLOW_LPM 1.0f  // the fitted pump's free flow, in L/min
 #endif

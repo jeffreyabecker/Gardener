@@ -11,8 +11,9 @@ stops costing a full rebuild.
 
 A full build is 354 translation units and about 3m45s here, measured from `build.options.json` being
 written to the last object landing in `firmware/gardener/build/compile`. By source, 189 of those
-units are NimBLE-Arduino 2.5.1 (its whole `src`), 41 are `libraries/berry`, 54 are the ESP32 core and
-the rest are the first-party libraries under `libraries/`.
+units are NimBLE-Arduino 2.5.1 (its whole `src`), 41 are `libraries/berry`, about 70 are the
+first-party libraries under `libraries/`, and the remaining 55 are the ESP32 core and the libraries
+it bundles — `Wire`, `FS`, `LittleFS`.
 
 The objects are already cached. `scripts/arduino.py` keeps `build/compile` between runs precisely so
 that arduino-cli can skip a file whose object and `.d` are newer than its sources, and the comment
@@ -79,7 +80,7 @@ the wrapper all behave exactly as today.
 and the core version, so switching a board or a panel no longer destroys the other configuration's
 97 MB of objects. `--task clean` removes all of them; `build/littlefs.bin` stays where it is.
 
-What remains after this is the 54 core units and the first-party libraries — what an edit to the
+What remains after this is the core's ~55 units and the first-party ~70 — what an edit to the
 firmware genuinely touches.
 
 ### Files it touches
