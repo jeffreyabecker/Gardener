@@ -1,0 +1,154 @@
+# Plan for this session
+
+Write the design as a repository plan document: `docs/plans/build-cache.md`.
+
+It is a *plan* in the project's sense (`.github/skills/project/SKILL.md`): the design of the change —
+what is wrong now and where, the shape of the change, the alternatives and why not, the entry points
+it has to hold on, and how it is known to have worked. It carries no step sequence, no commit order
+and no estimates; that is a backlog's job, written separately if the plan is accepted.
+
+Nothing else changes: `docs/README.md` indexes specs, guides and backlogs only, and plans are found
+by name in their folder, so the new file needs no index entry.
+
+## The document to write
+
+---
+
+# Build cache
+
+Two thirds of the firmware compile is code that does not change when the firmware changes: NimBLE
+(189 of 354 translation units) and Berry (41). arduino-cli already caches their object files — what
+destroys the cache is the wrapper's own build options, which change with every rig retune, and
+arduino-cli cleaning the build path when they do. This plan gives both libraries prebuilt archives
+that arduino-cli skips, and takes the rig numbers out of the compiler flags so that retuning a rig
+stops costing a full rebuild.
+
+## What is wrong now, and where
+
+A full build is 354 translation units and about 3m45s on this machine: `build.options.json` is
+written at 19:41:47 and the last object lands at 19:45:33. Of those units, 189 are NimBLE-Arduino
+2.5.1 (188 `.cpp`/`.c` files under its `src`, one more from the sketch's include graph) and 41 are
+`libraries/berry`; the ESP32 core contributes 54 and the first-party libraries the rest.
+
+The objects are already cached. `scripts/arduino.py` keeps `build/compile` between runs precisely so
+that arduino-cli can skip a file whose object and `.d` are newer than its sources, and its own
+comment says so. What the cache does not survive is a change of *build options*: arduino-cli compares
+`build.options.json` on every run and cleans the build path when any field differs —
+`additionalFiles`, `compiler.optimization_flags`, `customBuildProperties`, `fqbn`,
+`hardwareFolders`, `otherLibrariesFolders`, `sketchLocation`.
+
+Rig numbers arrive through that path. `--define PUMP_FLOW_LPM=2.0f` becomes part of
+`--build-property build.defines=…` (`scripts/arduino.py`, `build_defines`), so it lands in
+`customBuildProperties` and wipes the build path; it also expands into `build.extra_flags` in the
+ESP32 platform (`platform.txt:102`), which every compile recipe carries, so it is a flag change on
+all 354 units as well. Nothing about `PUMP_FLOW_LPM` can affect NimBLE: NimBLE includes neither
+`Machine.h` nor anything that includes it. The 189 NimBLE objects a retune discards are discarded for
+nothing, and so are Berry's 41.
+
+The two libraries also sit in different places. Berry is vendored at `libraries/berry` and its
+`library.properties` is the repository's to change. NimBLE is installed by `--task libs` into
+`Documents\Arduino\libraries\NimBLE-Arduino`, outside the tree, and is replaced there by
+`arduino-cli lib install` or a version bump.
+
+arduino-cli 1.4.1 has no cache of its own: `compile`'s flags include `--build-path`,
+`--build-property`, `--clean`, `-j`, `--libraries`, `--library` and `--only-compilation-database`,
+and nothing that reuses objects across build paths.
+
+## The shape of the change
+
+**A prebuilt archive per library.** The library specification's `precompiled=full` is the mechanism
+for this: an archive in `src/{build.mcu}/` means the library's sources are not compiled and the
+archive is linked instead; if no archive exists for the board, the sources compile as a fallback. The
+fallback is what makes the design safe — a fresh clone, a new toolchain or a deleted archive is slow,
+never broken. For this board `build.mcu` is `esp32s3` (`boards.txt:555`), so the archives are
+`libraries/berry/src/esp32s3/libberry.a` and, in the staged copy below,
+`src/esp32s3/libNimBLE.a`. Whether the platform also needs `ldflags=-l<name>` in `library.properties`
+is one of the unknowns the spike settles.
+
+**A staged copy of NimBLE the repository owns.** Because the archive has to sit inside a
+`library.properties` the build answers to, `--task libs` stages the pinned version into
+`firmware/gardener/build/third_party/NimBLE-Arduino/` (gitignored, regenerated from the pinned
+version), and `compile_sketch()` passes a second `--libraries` for it — arduino-cli's `--libraries`
+is repeatable. The installed copy in `Documents` stays as the source of the staging, not as the
+library the sketch compiles against.
+
+**Packing from objects that were just compiled.** After a build in which a precompiled library's
+sources did compile, `build/compile/libraries/<Name>/` holds exactly the objects a correct archive
+needs; `gcc-ar cr` over them is the pack, and it cannot drift from the flags because arduino-cli
+produced them with those flags. Beside each archive, `archive.json` records the toolchain version,
+the compile-flag string and a digest of every file under the library. The wrapper recomputes those
+three before it invokes arduino-cli and **deletes** the archive when they differ, so a stale archive
+is never linked; the build then takes the fallback path and re-packs at the end. That is also what
+`--task archive` does explicitly, using `--only-compilation-database` to get the per-file commands
+without compiling.
+
+**Rig numbers in a generated header.** `--define` writes `firmware/gardener/rig_options.h`
+(gitignored) and stops being passed to arduino-cli. `Machine.h` includes it behind
+`#if __has_include("rig_options.h")` above its existing `#ifndef` defaults. The sketch folder is
+already on the include path for every translation unit (`-I{build.source.path}` in the platform's
+`compiler.cpreprocessor.flags`), so nothing about the flags changes; the defaults stay in
+`Machine.h`, so a tree without the header, the host builds under `tools/` and a build made outside
+the wrapper all behave exactly as today.
+
+**One build path per configuration.** `COMPILE_DIR` gains a short hash of the FQBN, `build.defines`
+and the core version, so switching a board or panel no longer destroys the other configuration's
+97 MB of objects. `--task clean` removes all of them.
+
+What is left after this is the ESP32 core's 54 units and the first-party libraries' ~120, which is
+what an edit to the firmware genuinely touches.
+
+## The alternatives, and why not
+
+**ccache in front of the compiler.** The standard answer, and it needs no library-properties surgery:
+a shim directory named as `compiler.path`, holding masquerade copies of `ccache.exe` for
+`xtensa-esp32s3-elf-gcc`/`g++` and hardlinks for `gcc-ar`/`size`, silent when ccache is not
+installed. It was set aside because it caches the *flags* as well: a rig retune still misses on every
+unit, and NimBLE still recompiles — the rig-header change is needed either way, and with it the
+archives remove the work instead of replaying it. It stays the fallback if `precompiled=full` turns
+out not to work on this platform, and the two can be combined later without undoing either.
+
+**A build path per rig, keeping the flags.** Cheaper than the header and it does stop one retune from
+destroying another, but it fixes nothing for `--task clean`, a core upgrade or a fresh clone, and it
+multiplies 97 MB per rig.
+
+**Vendoring NimBLE into `libraries/`.** It gives the repository the `library.properties` and the
+archive directory outright, at the price of 189 third-party files in the tree. Staging reaches the
+same ownership without the tree carrying code the project does not own.
+
+**Committing the archives.** A binary that has to be rebuilt on every core or toolchain change, in a
+repository whose firmware target is a chip rather than a package. Both archives are gitignored and
+regenerated; the fallback path makes their absence a cost, not a failure.
+
+**ESP-IDF with CMake and Ninja.** A genuine build-system improvement — a shared prebuilt core,
+first-class ccache, options in a CMake cache rather than an options hash that wipes a directory — and
+a migration of the sketch, the libraries layout and the data-image task for a three-minute problem.
+
+**Amalgamating Berry's sources.** Berry is vendored unmodified apart from `berry_conf.h` and
+`be_port.c`; folding it into fewer translation units is a fork of the vendored library.
+
+## The entry points it has to hold on
+
+- `scripts/arduino.py`: `build`, `upload` (which shares `compile_sketch` with `--upload`), `data`,
+  `libs`, `clean`, `monitor`. The packing has to hang off `compile_sketch`, not off `build`, or
+  `--task upload` builds without it.
+- `--task clean` keeps the archives, because they live beside the libraries rather than in `build/`;
+  `--task libs` must invalidate and re-stage rather than keep a stale copy.
+- The host builds — `tools/unit`, `tools/panel`, `tools/gfx/check.py` — read the same library sources
+  without arduino-cli, so they must be unaffected by an archive appearing beside them.
+- `build_opt.h` must stay untouched: it is hashed into `build.options.json` as `additionalFiles`, so
+  putting rig numbers there would be the one way to keep the wipe and lose the win.
+
+## How it is known to have worked
+
+- **The spike, before any of this is written:** a two-file library with `precompiled=full` and an
+  archive in `src/esp32s3/`, included from the sketch. `--verbose` shows no compile line for its
+  source, a symbol from the archive appears in the `.elf`, and the board accepts the archive at all.
+- A repeat build after the archives exist: `--verbose` carries no `NimBLE-Arduino` or `berry` compile
+  lines and the `.elf` links. The same after `--task clean`.
+- A rig retune, `--define PUMP_FLOW_LPM=2.0f`: `build.options.json` is unchanged, every NimBLE object
+  keeps its mtime, and only the `Machine.h` includers and their dependents recompile.
+- Deleting an `archive.json`, or editing a Berry source: the next build drops that archive, compiles
+  the sources and re-packs — the staleness path, observed rather than assumed.
+- On the device: `--task upload`, the panel comes up and the `[E]` lines appear on the serial
+  console. That is the only check that an archived BLE stack actually runs; a wrong archive links
+  silently, and this is where it would show.
