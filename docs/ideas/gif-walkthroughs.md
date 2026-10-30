@@ -21,13 +21,11 @@ a pressure or a duration is parsed.
 | `load <scene> (settings)` | pushes `home`, `browser`, or a routine by key; settings are `key=value;key=value` | `routines.activate(key, map)`; `home` and `browser` are globals |
 | `send <gesture>` | one gesture, spelled as the classifier spells it | `harness.press`, into the queue the page drains next beat |
 | `wait <n> s\|ms` | advances the device's virtual clock by that much | `HarnessSession::beat`, one 250 ms beat: four control ticks and a page poll |
-| `set-pump <kpa_per_s>` | the chamber's pull at full duty | `PullKpaPerSecond`, 3, a constant in the host |
-| `set-vent <kpa_per_s>` | the chamber's venting rate | `VentKpaPerSecond`, 40, a constant in the host |
+| `set-rate <pump_kpa_per_s> <vent_kpa_per_s>` | the chamber's pull at full duty and its venting rate | `PullKpaPerSecond`, 3, and `VentKpaPerSecond`, 40, constants in the host |
 | `emit` | writes what was drawn and quits | `harness.capture_finish()`, after which a run returns |
 
-The two rate commands are what make a walk possible at all inside a GIF: at 3 kPa/s a forty-kPa
-target is thirteen seconds of device time, which is fifty-two frames of a picture whose point is
-the last one.
+The rates are what make a walk possible at all inside a GIF: at 3 kPa/s a forty-kPa target is
+thirteen seconds of device time, which is fifty-two frames of a picture whose point is the last one.
 
 ## The tool
 
@@ -38,9 +36,9 @@ arguments, its output or its exit code about the image's files or the routines a
 
 It reads the whole command file into a list before anything is drawn, skipping the blank lines and
 the `#` comments, refuses the file when a line is not a command and names the line, and then runs
-the list. The four verbs that are not the page's are the host's already: `wait` converts its units
-into beats and hands the count to `HarnessSession::beat`, `set-pump` and `set-vent` are setters on
-the chamber, and `emit` writes the captured frames and returns. The other two need no Berry of the
+the list. The three verbs that are not the page's are the host's already: `wait` converts its units
+into beats and hands the count to `HarnessSession::beat`, `set-rate` sets both of the chamber's
+rates, and `emit` writes the captured frames and returns. The other two need no Berry of the
 tool's either: `send` is `Routines::pushPress`, and `load` is a name looked up three ways — `home`
 gives the panel back to its root, `browser` is the image's global wrapped in a `BerryScene` the way
 the interpreter wraps `__rootScene`, and any other name is a routine key handed to
@@ -68,9 +66,9 @@ holds.
 - **Beats, not milliseconds.** The conversion is into 250 ms beats and the remainder rounds up, so a
   `wait 300 ms` is two beats and a `wait 1 s` is four: the clock always advances at least as far as
   the line asks, and never more than one beat past it.
-- **`set-pump` configures a model, not a rig.** What moves is the chamber's depth per duty second
-  in the host; the leak stays at its own constant and the ceiling stays `--ceiling-kpa`. A file
-  that reads like a bench setting is a file someone will trust as one.
+- **`set-rate` configures a model, not a rig.** What moves is the chamber's depth per duty second
+  and its venting rate in the host; the leak stays at its own constant and the ceiling stays
+  `--ceiling-kpa`. A file that reads like a bench setting is a file someone will trust as one.
 - **A gesture is a label as well as a press.** The strip under the picture shows the gesture for
   `GestureStrip::Frames` frames after it is sent, so a `send` and a one-beat `wait` put the press in
   the queue and a single frame of the label in the picture.
@@ -96,4 +94,4 @@ holds.
 
 The tool as described, built against the small library the check also builds against, with `wait`
 converting its units into beats for the session, the GIF's timing one of the tool's options rather
-than a line of the file, and a setter on the chamber for each of its rates.
+than a line of the file, and `set-rate` the one command that touches the chamber's model.
