@@ -68,9 +68,18 @@ does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; `buildMachineParts()` and `buildPanelRoot()` build the parts, the contexts they hand out
-expose what they own, and the serial domains read the owner when they format a reply, so there is no
-snapshot or second copy to keep in step. The panel is a machine with its parts arranged around it,
-so it needs no second name for the machine.
+expose what they own, and the serial domains read the owner when they format a reply. The panel is a
+machine with its parts arranged around it, so it needs no second name for the machine.
+
+**One exception, and it is the panel's view of the device.** `core/SystemState.h` is one object the
+composition owns: a reference is injected into every task that owns a fact, and each writes its own
+slice where the fact changes — the control tick the run and the chamber, the parts tick the pack,
+the interface loop the two links, the device's document the unit and the stored target. A reader
+copies the object and reads the copy, so one draw shows one instant, and accepts that the copy is up
+to the writer's period old: 50 ms for the machine, 10 ms for the pack, 5 ms for the links. A slice
+whose writer stops running stops moving. That staleness is the price of not having a fold with five
+parameters and no owner, and it is paid knowingly — which means the state is never read as though it
+were the instant's.
 
 **No speculative generality.** One caller means no interface. One implementation means no template,
 no compile-time flag, no `mode` field for a behaviour nothing uses. Add the second case when the
