@@ -19,7 +19,7 @@ panel::GestureQueue& BindingContext::presses() { return presses_; }
 
 panel::page::Ux& BindingContext::ux() { return ux_; }
 
-RoutineRegistry& BindingContext::registry() { return registry_; }
+panel::page::RoutineRegistry& BindingContext::registry() { return registry_; }
 
 bool BindingContext::takePress(String& gesture) { return presses_.take(gesture); }
 

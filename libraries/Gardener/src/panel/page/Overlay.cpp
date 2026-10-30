@@ -1,4 +1,4 @@
-#include "panel/glass/Overlay.h"
+#include "panel/page/Overlay.h"
 
 #include <Arduino.h>
 
@@ -8,7 +8,7 @@
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
 
-namespace gardener::panel::glass {
+namespace gardener::panel::page {
 namespace {
 
 // The glyphs the overlay draws, from the built-in face's symbol range: the serial link, the two
@@ -125,4 +125,4 @@ gfx::PaintNodeRef Overlay::paint() const {
   });
 }
 
-}  // namespace gardener::panel::glass
+}  // namespace gardener::panel::page

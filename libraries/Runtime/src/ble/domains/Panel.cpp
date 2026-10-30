@@ -2,15 +2,17 @@
 
 #include "ble/BleDomain.h"
 #include "ble/BleLink.h"
-#include "panel/Panel.h"
+#include "core/Battery.h"
 #include "core/Units.h"
+#include "storage/DeviceSettings.h"
 
 namespace gardener {
 
 // The panel's slice of the GATT table, private to the factory at the bottom of this file.
 class PanelBleDomain : public BleDomain {
  public:
-  explicit PanelBleDomain(panel::Panel& panel) : app_(&panel) {}
+  PanelBleDomain(DeviceSettings& settings, Battery& battery)
+      : settings_(settings), battery_(battery) {}
 
   uint8_t specCount() const override;
   Spec specAt(uint8_t index) const override;
@@ -24,7 +26,8 @@ class PanelBleDomain : public BleDomain {
 
   static const Spec Specs[Count];
 
-  panel::Panel* app_;
+  DeviceSettings& settings_;
+  Battery& battery_;
   NimBLECharacteristic* characteristics_[Count] = {};
   struct PendingByte {
     volatile bool has = false;
@@ -56,12 +59,12 @@ void PanelBleDomain::bind(uint8_t index, NimBLECharacteristic* characteristic) {
 void PanelBleDomain::describe(uint8_t index) {
   switch (index) {
     case Unit: {
-      setByte(characteristics_[Unit], static_cast<uint8_t>(app_->settings().unit()));
+      setByte(characteristics_[Unit], static_cast<uint8_t>(settings_.unit()));
       break;
     }
     case Batt:
       setByte(characteristics_[Batt],
-              app_->battery().present() ? app_->battery().percent() : 0xFF);
+              battery_.present() ? battery_.percent() : 0xFF);
       break;
     case Count:
       break;
@@ -84,8 +87,8 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
     if (unitWrite_.value < DisplayUnitCount) {
       const DisplayUnit unit =
           static_cast<DisplayUnit>(unitWrite_.value);
-      app_->settings().setUnit(unit);
-      app_->settings().save();
+      settings_.setUnit(unit);
+      settings_.save();
     }
     describe(Unit);
   }
@@ -97,6 +100,8 @@ void PanelBleDomain::poll(uint32_t nowMs, BleLink& link, bool baseline) {
   }
 }
 
-BleDomain* createPanelBleDomain(panel::Panel& panel) { return new PanelBleDomain(panel); }
+BleDomain* createPanelBleDomain(DeviceSettings& settings, Battery& battery) {
+  return new PanelBleDomain(settings, battery);
+}
 
 }  // namespace gardener

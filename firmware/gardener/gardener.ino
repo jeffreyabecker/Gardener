@@ -85,19 +85,19 @@ void setup() {
       gardener::buildPanelRoot(*logger, *files, Board, *commands, panelState);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
-  // one serial link and the one BLE link. The panel holds the machine, so the same object serves
-  // both halves.
+  // one serial link and the one BLE link. The machine and the panel's parts are the composition's,
+  // so the same objects serve both halves.
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
   serial->registerDomain(gardener::createVacuumDomain(context.machine(), serial->outbox()));
   serial->registerDomain(
       gardener::createDeviceDomain(context.machine(), serial->outbox(), BoardInfo,
                                    context.battery(), context.settings()));
-  serial->registerDomain(gardener::createBuzzerDomain(context, serial->outbox()));
+  serial->registerDomain(gardener::createBuzzerDomain(context.buzzer(), serial->outbox()));
   serial->registerDomain(gardener::createFsDomain(serial->outbox(), LittleFS));
   gardener::BleLink* ble = new gardener::BleLink(*commands);
   ble->registerDomain(gardener::createMachineBleDomain(context.machine()));
-  ble->registerDomain(gardener::createPanelBleDomain(context));
+  ble->registerDomain(gardener::createPanelBleDomain(context.settings(), context.battery()));
 
   serial->begin();
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
@@ -116,7 +116,9 @@ void setup() {
   gardener::bootPanel(context, Board);
 
   gardener::spawnMachineTasks(context.machine(), *commands, serial, ble, panelState);
-  gardener::spawnPanelTask(context, panelState);
+  gardener::spawnPanelTask(context.buttons(), context.routines().presses(), context.outbox(),
+                           context.logger(), context.battery(), context.buzzer(),
+                           context.routines(), context.machine(), panelState);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

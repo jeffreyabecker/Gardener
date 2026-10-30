@@ -92,7 +92,7 @@ sized to its own contents.
 
 ## The overlay as cells the panel hands out
 
-`glass::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
+`page::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
 overlay's four paints in a fixed order, so what the overlay shows is decided in one paint and a
 device with no gauge or no radio still contributes a cell that draws only the absence. Each cell
 could be an object the panel context returns — the unit, the links, the run state, the gauge —

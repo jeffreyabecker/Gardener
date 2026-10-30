@@ -19,8 +19,8 @@
 #include "machine/VacuumSystem.h"
 #include "MemoryFiles.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/PanelContext.h"
 #include "routines/BerryInterpreter.h"
+#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
 #include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
@@ -186,26 +186,6 @@ class BufferLogger : public Logger {
 // instant it is made. A deque has no depth, so a post is always taken.
 bool postMachineCommand(const MachineCommand& command);
 
-// The parts a Panel is on the device, composed without one: the interpreter reads this, and it is
-// the only thing the Berry modules know about their surroundings.
-class HarnessPanel : public panel::PanelContext {
- public:
-  HarnessPanel(gfx::DisplayDevice& display, SystemState& state,
-               panel::parts::BuzzerPlayer& buzzer)
-      : display_(display), state_(state), buzzer_(buzzer) {}
-
-  gfx::DisplayDevice& display() override { return display_; }
-  SystemState& systemState() override { return state_; }
-  panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
-  // The host has no queue to fill, so the command is always taken.
-  bool post(const MachineCommand& command) override { return postMachineCommand(command); }
-
- private:
-  gfx::DisplayDevice& display_;
-  SystemState& state_;
-  panel::parts::BuzzerPlayer& buzzer_;
-};
-
 // Everything the device's panel brings up, on the host: the image, the storage, the settings, the
 // panel, the chamber, the interpreter.
 class HarnessSession {
@@ -307,9 +287,11 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   panel::parts::BuzzerPlayer buzzer_;
+  panel::GestureQueue presses_;
+  panel::page::Ux ux_;
   BerryInterpreter interpreter_;
-  Routines routines_{interpreter_, display_, state_};
-  HarnessPanel context_;
+  RoutineRegistry registry_{files_, logger_};
+  Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };
 
 void installHarnessModule(bvm* vm, HarnessSession& appSession);

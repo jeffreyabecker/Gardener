@@ -4,8 +4,11 @@
 
 #include "MachineRoot.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "panel/GestureQueue.h"
+#include "panel/page/Ux.h"
 #include "panel/Panel.h"
 #include "routines/BerryInterpreter.h"
+#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
@@ -24,12 +27,13 @@ constexpr uint8_t PanelAddress = 0x3C;
 
 }  // namespace
 
-// The full device's composition: the machine's parts, then the panel's. The parts are new'd once and
-// never deleted — the device's destructor never runs — so the composition owns them by the graph it
-// hands out and nothing frees them.
+// The full device's composition: the machine over its parts, then the panel's. The parts are new'd
+// once and never deleted — the device's destructor never runs — so the composition owns them by the
+// graph it hands out and nothing frees them.
 panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::PanelPins& pins,
                              CommandQueue& queue, SystemState& state) {
-  const MachineParts machine = buildMachineParts(pins.machine);
+  const MachineParts parts = buildMachineParts(pins.machine);
+  auto* machine = new Machine(logger, parts.pump, parts.sensor, parts.valve);
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
   // The piezo is a bare square-wave part; the player above it owns durations and note sequences.
@@ -38,12 +42,19 @@ panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::Pane
   // The panel is an SH1106 on its own bus. Its driver takes its geometry and wiring at
   // construction and comes up in Panel::boot, once the bus is running.
   auto* display = new Sh1106Device(Wire1, PanelAddress, PanelWidth, PanelHeight);
-  // The VM is the interpreter's own part; the routines above it are the loader's, so the panel owns
-  // the VM and the page beat separately.
+  // What the bindings reach and the beats share: the queue a gesture goes to, the stack a page is
+  // pushed on, the registry the image registers into and the outbox the machine is commanded
+  // through. The VM is the interpreter's own and the loader is the routines', so the composition
+  // owns each part and hands it to whoever reads it.
+  auto* presses = new panel::GestureQueue();
+  auto* ux = new panel::page::Ux();
+  auto* registry = new panel::page::RoutineRegistry(library, logger);
+  auto* outbox = new CommandOutbox(queue);
   auto* interpreter = new BerryInterpreter();
-  auto* routines = new Routines(*interpreter, *display, state);
-  auto* panel = new panel::Panel(logger, machine.pump, machine.sensor, machine.valve, buttons,
-                                 buzzer, battery, display, library, routines, queue, state);
+  auto* routines =
+      new Routines(*interpreter, *display, state, *presses, *ux, *registry, logger, library);
+  auto* panel = new panel::Panel(*machine, buttons, buzzer, battery, display, library, routines,
+                                 *outbox, state);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->machine().setCapabilities(PanelFitted | BatteryFitted);

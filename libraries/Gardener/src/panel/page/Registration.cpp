@@ -1,13 +1,14 @@
-#include "routines/Registration.h"
+#include "panel/page/Registration.h"
 
 #include <any>
 
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
+namespace panel::page {
 
 Registration::Registration(const String& routineKey, const String& title,
-                           std::vector<std::unique_ptr<panel::page::SettingsRow>> settings,
+                           std::vector<std::unique_ptr<SettingsRow>> settings,
                            Factory factory, String glyph)
     : routineKey_(routineKey),
       title_(title.isEmpty() ? routineKey : title),
@@ -15,14 +16,14 @@ Registration::Registration(const String& routineKey, const String& title,
       factory_(std::move(factory)),
       glyph_(std::move(glyph)) {
   settings_.reserve(owned_.size());
-  for (const std::unique_ptr<panel::page::SettingsRow>& row : owned_) {
+  for (const std::unique_ptr<SettingsRow>& row : owned_) {
     if (row) settings_.push_back(row.get());
   }
 }
 
-panel::page::SettingValues Registration::loadSettings(Library& library,
+SettingValues Registration::loadSettings(Library& library,
                                                   const String& section) const {
-  panel::page::SettingValues values;
+  SettingValues values;
   if (settings_.empty()) return values;
 
   RoutineSettingStore store(library);
@@ -31,10 +32,10 @@ panel::page::SettingValues Registration::loadSettings(Library& library,
 }
 
 bool Registration::saveSettings(Library& library, const String& section,
-                                panel::page::SettingValues& values) const {
+                                SettingValues& values) const {
   if (settings_.empty()) return false;
 
-  for (const panel::page::SettingsRow* row : settings_) {
+  for (const SettingsRow* row : settings_) {
     if (values.find(row->key()) == values.end()) values[row->key()] = std::any();
   }
 
@@ -42,4 +43,5 @@ bool Registration::saveSettings(Library& library, const String& section,
   return store.save(routineKey_, section.isEmpty() ? routineKey_ : section, settings_, values);
 }
 
+}  // namespace panel::page
 }  // namespace gardener

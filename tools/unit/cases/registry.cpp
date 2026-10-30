@@ -17,15 +17,15 @@
 
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "routines/Registration.h"
-#include "routines/RoutineRegistry.h"
+#include "panel/page/Registration.h"
+#include "panel/page/RoutineRegistry.h"
 #include "storage/RoutineSettingStore.h"
 #include "panel/page/SettingsRows.h"
 
 namespace {
 
-using gardener::Registration;
-using gardener::RoutineRegistry;
+using gardener::panel::page::Registration;
+using gardener::panel::page::RoutineRegistry;
 using gardener::RoutineSettingStore;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
@@ -232,7 +232,7 @@ TEST_CASE("an alternate follows its record and resolves to it") {
   Ux ux;
   REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
 
-  const std::vector<gardener::RoutineRow> rows = registry.rows();
+  const std::vector<gardener::panel::page::RoutineRow> rows = registry.rows();
   REQUIRE(rows.size() >= 3);
   CHECK_EQ(std::string(rows[0].routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(std::string(rows[1].routineKey.c_str()), std::string("cold"));
@@ -280,10 +280,10 @@ TEST_CASE("a launch carries the set the caller stated, held to the record's decl
   NoPresses gestures;
   Ux ux;
 
-  gardener::RoutineActivation launched;
+  gardener::panel::page::RoutineActivation launched;
   REQUIRE(registry.add(Registration(
       "ramped_static", "Ramped", rampedDeclaration(gestures, ux),
-      [&launched, &gestures](const gardener::RoutineActivation& activation) {
+      [&launched, &gestures](const gardener::panel::page::RoutineActivation& activation) {
         launched = activation;
         return std::make_unique<StubPage>(gestures);
       })));

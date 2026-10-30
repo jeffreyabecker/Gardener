@@ -13,10 +13,6 @@ namespace panel {
 class GestureQueue;
 }  // namespace panel
 
-}  // namespace gardener
-
-namespace gardener::panel::parts {
-
 // The keys' policy on the panel beat: one call to the classifier, the two holds the panel takes for
 // itself, and the gesture a page gets. A caller steps it, so the sequence a beat runs is reached by
 // a case rather than only by the task that runs it; nothing here needs an RTOS, a clock of its own
@@ -45,7 +41,7 @@ class ButtonsTick {
   // never delivered twice.
   void deliver(const String& gesture);
 
-  GestureClassifier classifier_;
+  panel::parts::GestureClassifier classifier_;
   panel::GestureQueue& presses_;
   CommandOutbox& outbox_;
   Logger& logger_;
@@ -53,4 +49,4 @@ class ButtonsTick {
   bool home_ = false;
 };
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

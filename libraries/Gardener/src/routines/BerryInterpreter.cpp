@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "BerryScene.h"
+#include "panel/page/BerryScene.h"
 #include "routines/bindings/BindingContext.h"
 #include "routines/bindings/Modules.h"
 
@@ -17,11 +17,15 @@ constexpr const char* RootPage = "__rootScene";
 
 }  // namespace
 
-BerryInterpreter::BerryInterpreter(berry::BindingContext& bindings) : bindings_(bindings) {
+BerryInterpreter::BerryInterpreter(berry::BindingContext& bindings) : bindings_(bindings) {}
+
+bool BerryInterpreter::begin() {
   vm_ = be_vm_new();
-  // A VM that could not be allocated leaves vm() null and every load below refuses, so the image
-  // runs nothing and the panel keeps its mark rather than a page nothing can compile.
-  if (vm_ != nullptr) installModules();
+  // A VM that could not be allocated leaves every load below refusing, so the image runs nothing and
+  // the panel keeps its mark rather than a page nothing can compile.
+  if (vm_ == nullptr) return false;
+  installModules();
+  return true;
 }
 
 void BerryInterpreter::installModules() {
@@ -61,7 +65,7 @@ std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene() {
   const int base = be_top(vm_);
   std::unique_ptr<panel::page::Scene> scene;
   if (be_getglobal(vm_, RootPage) && be_isinstance(vm_, -1)) {
-    scene = std::make_unique<BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
+    scene = std::make_unique<panel::page::BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
   }
   be_pop(vm_, be_top(vm_) - base);
   return scene;

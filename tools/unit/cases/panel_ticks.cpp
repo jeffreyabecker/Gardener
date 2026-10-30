@@ -22,10 +22,11 @@
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "panel/parts/ButtonsTick.h"
+#include "routines/ButtonsTick.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/parts/PartsTick.h"
+#include "routines/PartsTick.h"
 #include "routines/Interpreter.h"
+#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
 #include "routines/RoutinesTick.h"
 #include "storage/DeviceSettings.h"
@@ -34,7 +35,7 @@ namespace {
 
 using gardener::Battery;
 using gardener::Button;
-using gardener::panel::parts::ButtonsTick;
+using gardener::ButtonsTick;
 using gardener::panel::parts::BuzzerPlayer;
 using gardener::CommandOutbox;
 using gardener::CommandQueue;
@@ -44,8 +45,9 @@ using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
 using gardener::MachineCommand;
-using gardener::panel::parts::PartsTick;
+using gardener::PartsTick;
 using gardener::Press;
+using gardener::panel::page::RoutineRegistry;
 using gardener::Routines;
 using gardener::RoutinesTick;
 using gardener::RunState;
@@ -116,8 +118,8 @@ class CountingScene : public Scene {
 // what the stack does rather than what a press does.
 class FakeInterpreter : public Interpreter {
  public:
+  bool begin() override { return true; }
   bool load(const String&, const String&) override { return true; }
-  bool ready() const override { return true; }
 
   std::unique_ptr<Scene> rootScene() override {
     counter_.roots++;
@@ -139,13 +141,13 @@ struct PageRig {
       : settings(&library, state),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
-        routines(interpreter, display, state) {
+        routines(interpreter, display, state, presses, ux, registry, logger, library) {
     state.batteryPresent = battery.present();
     state.batteryPercent = battery.percent();
     state.batteryLow = battery.low();
 
     library.put("/system/order", "");
-    ok = routines.begin(logger, library);
+    ok = routines.begin();
   }
 
   MemoryLibrary library;
@@ -161,6 +163,9 @@ struct PageRig {
   VacuumSystem vacuum;
   FakeBattery battery;
   FakeInterpreter interpreter;
+  GestureQueue presses;
+  gardener::panel::page::Ux ux;
+  RoutineRegistry registry{library, logger};
   Routines routines;
   bool ok = false;
 };

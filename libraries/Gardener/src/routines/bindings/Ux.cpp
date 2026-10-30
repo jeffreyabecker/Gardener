@@ -9,7 +9,7 @@
 
 #include <Gfx.h>
 
-#include "routines/BerryScene.h"
+#include "panel/page/BerryScene.h"
 #include "panel/page/Ux.h"
 #include "BindingContext.h"
 #include "Module.h"
@@ -184,7 +184,7 @@ int uxPush(bvm* vm) {
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<BerryScene>(vm, 1, *bindings);
+    scene = std::make_unique<panel::page::BerryScene>(vm, 1, *bindings);
   }
   panel::page::Ux::Callback held;
   if (callback) {
@@ -231,8 +231,9 @@ int uxTop(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   requirePanel(bindings, vm, "ux.top: no panel");
   const panel::page::Scene* showing = bindings->ux().top();
-  const BerryScene* page =
-      showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
+  const panel::page::BerryScene* page =
+      showing == nullptr ? nullptr
+                         : static_cast<const panel::page::BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
   be_return(vm);
 }

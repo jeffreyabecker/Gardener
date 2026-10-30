@@ -6,7 +6,6 @@ namespace gardener {
 
 class CommandOutbox;
 class Logger;
-class RoutineRegistry;
 struct MachineCommand;
 struct SystemState;
 
@@ -20,6 +19,7 @@ namespace parts {
 class BuzzerPlayer;
 }
 namespace page {
+class RoutineRegistry;
 class Ux;
 }
 }  // namespace panel
@@ -35,8 +35,8 @@ class BindingContext {
  public:
   BindingContext(gfx::DisplayDevice& display, SystemState& state,
                  panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox,
-                 panel::GestureQueue& presses, panel::page::Ux& ux, RoutineRegistry& registry,
-                 Logger& logger)
+                 panel::GestureQueue& presses, panel::page::Ux& ux,
+                 panel::page::RoutineRegistry& registry, Logger& logger)
       : display_(display),
         state_(state),
         buzzer_(buzzer),
@@ -58,7 +58,7 @@ class BindingContext {
   // registered, and the queue the `device` module drains.
   panel::GestureQueue& presses();
   panel::page::Ux& ux();
-  RoutineRegistry& registry();
+  panel::page::RoutineRegistry& registry();
   bool takePress(String& gesture);
 
   // --- the device's log ----------------------------------------------------
@@ -72,7 +72,7 @@ class BindingContext {
   CommandOutbox& outbox_;
   panel::GestureQueue& presses_;
   panel::page::Ux& ux_;
-  RoutineRegistry& registry_;
+  panel::page::RoutineRegistry& registry_;
   Logger& logger_;
 };
 

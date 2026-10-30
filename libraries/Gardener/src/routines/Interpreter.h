@@ -22,9 +22,10 @@ class Interpreter {
  public:
   virtual ~Interpreter() = default;
 
-  // Whether the VM came up. False only when it could not be allocated, in which case nothing loads
-  // and the image leaves the panel its mark.
-  virtual bool ready() const = 0;
+  // Creates the VM and installs the native modules a page is written against, the app they reach
+  // being the one the interpreter was built with. False only when the VM cannot be allocated at all,
+  // in which case nothing loads and the image leaves the panel its mark.
+  virtual bool begin() = 0;
 
   // Compiles and runs one of the image's files, logging a compile or run failure. False when the
   // file did not load; reading it is the loader's.

@@ -4,7 +4,7 @@
 
 A page draws by answering a `draw` record tree from `draw_page()`. The tree is built one node at a
 time by the `screen` module ([Screen.cpp](../../ode/eggplan-vacuum/libraries/Gardener/src/routines/bindings/Screen.cpp))
-and walked into paints by the interpreter ([DrawTree.cpp](../../ode/eggplan-vacuum/libraries/Gardener/src/routines/DrawTree.cpp)).
+and walked into paints by the interpreter ([DrawTree.cpp](../../ode/eggplan-vacuum/libraries/Gardener/src/routines/bindings/DrawTree.cpp)).
 The paints it walks into are the gfx vocabulary ([Drawing.h](../../ode/eggplan-vacuum/libraries/Gfx/src/layout/Drawing.h),
 [Layout.h](../../ode/eggplan-vacuum/libraries/Gfx/src/layout/Layout.h), [Paint.h](../../ode/eggplan-vacuum/libraries/Gfx/src/layout/Paint.h)).
 

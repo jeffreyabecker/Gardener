@@ -25,7 +25,7 @@ bool Panel::boot() {
 
   // The VM came up with the interpreter; the image is loaded into it here, and a device with no
   // routines simply never enters it.
-  const bool vmOk = routines().begin(logger(), library_);
+  const bool vmOk = routines().begin();
 
   // What came up, and what did not. The devices report as values and one place decides what is
   // worth saying.

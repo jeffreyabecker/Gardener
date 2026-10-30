@@ -15,11 +15,13 @@ namespace gardener {
 
 class Library;
 
+namespace panel::page {
+
 // What a launch hands a routine's page: the key the routine was launched under, and the settings map
 // read through the declaration.
 struct RoutineActivation {
   String routineKey;
-  panel::page::SettingValues values;
+  SettingValues values;
 };
 
 // A routine's registration: the declaration the browser lists and the settings list edits, and
@@ -32,7 +34,7 @@ struct RoutineActivation {
 class Registration {
  public:
   // Builds the routine's page from the activation a launch hands it.
-  using Factory = std::function<std::unique_ptr<panel::page::Scene>(const RoutineActivation&)>;
+  using Factory = std::function<std::unique_ptr<Scene>(const RoutineActivation&)>;
 
   // `settings` is the declaration, in the order the settings list shows it, and the record owns it
   // from here, so the list and the store reach the rows by pointer. The title is the label the
@@ -40,7 +42,7 @@ class Registration {
   // the packed bitmap, empty for a record that names none — the browser hands it to `screen.icon`,
   // which reads it when it draws the icon.
   Registration(const String& routineKey, const String& title,
-               std::vector<std::unique_ptr<panel::page::SettingsRow>> settings,
+               std::vector<std::unique_ptr<SettingsRow>> settings,
                Factory factory = nullptr, String glyph = String());
 
   Registration(const Registration&) = delete;
@@ -50,7 +52,7 @@ class Registration {
 
   const String& routineKey() const { return routineKey_; }
   const String& title() const { return title_; }
-  const std::vector<panel::page::SettingsRow*>& settings() const { return settings_; }
+  const std::vector<SettingsRow*>& settings() const { return settings_; }
   const Factory& factory() const { return factory_; }
   const String& glyph() const { return glyph_; }
 
@@ -58,22 +60,23 @@ class Registration {
   // held to its kind. The document is opened once. An alternate also carries its section's
   // `routine_title` on the map. A record that declares nothing begins with an empty map, without
   // opening a file.
-  panel::page::SettingValues loadSettings(Library& library, const String& section) const;
+  SettingValues loadSettings(Library& library, const String& section) const;
 
   // A settled set written back: a setting the map says nothing about is written as nothing, which
   // reads back as the default. Every key goes into one document and the document is written once.
   // False, writing nothing, when the record declares no settings.
   bool saveSettings(Library& library, const String& section,
-                    panel::page::SettingValues& values) const;
+                    SettingValues& values) const;
 
  private:
   String routineKey_;
   String title_;
-  std::vector<std::unique_ptr<panel::page::SettingsRow>> owned_;
+  std::vector<std::unique_ptr<SettingsRow>> owned_;
   // The declaration as the list and the store take it, over the rows this record owns.
-  std::vector<panel::page::SettingsRow*> settings_;
+  std::vector<SettingsRow*> settings_;
   Factory factory_;
   String glyph_;
 };
 
+}  // namespace panel::page
 }  // namespace gardener

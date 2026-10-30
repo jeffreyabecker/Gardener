@@ -5,9 +5,8 @@
 
 #include "machine/SafeReboot.h"
 #include "core/SystemState.h"
-#include "panel/parts/ButtonsTick.h"
-#include "panel/Panel.h"
-#include "panel/parts/PartsTick.h"
+#include "routines/ButtonsTick.h"
+#include "routines/PartsTick.h"
 #include "routines/RoutinesTick.h"
 
 namespace gardener {
@@ -21,11 +20,12 @@ constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 constexpr uint32_t PanelBeatMs = 10;
 
-// The panel task's own state: the machine it drives and the three beats it steps.
+// The panel task's own state: the beats it steps, the outbox it flushes and the machine it reboots.
 struct PanelState {
-  panel::Panel& context;
-  panel::parts::ButtonsTick& buttons;
-  panel::parts::PartsTick& parts;
+  CommandOutbox& outbox;
+  Machine& machine;
+  ButtonsTick& buttons;
+  PartsTick& parts;
   RoutinesTick& page;
 };
 
@@ -38,11 +38,11 @@ void panelTask(void* arg) {
 
   for (;;) {
     // A command the panel could not hand to the control task on its last beat is retried first.
-    state.context.flushCommands();
+    state.outbox.flush();
     state.buttons.tick();
 
     // The reset stops and vents before anything else on this beat draws.
-    if (state.buttons.takeReset()) safeReboot(state.context.machine());
+    if (state.buttons.takeReset()) safeReboot(state.machine);
 
     // The panel's own beat: the gauge and the buzzer, then the glass.
     const uint32_t now = millis();
@@ -61,12 +61,13 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(panel::Panel& context, SystemState& state) {
-  static panel::parts::ButtonsTick buttons{context.buttons(), context.routines().presses(),
-                                           context.outbox(), context.logger()};
-  static panel::parts::PartsTick parts{context.battery(), context.buzzer(), state};
-  static RoutinesTick page{context.routines()};
-  static PanelState panel{context, buttons, parts, page};
+void spawnPanelTask(ButtonPanel& buttonsPart, panel::GestureQueue& presses, CommandOutbox& outbox,
+                    Logger& logger, Battery& battery, panel::parts::BuzzerPlayer& buzzer,
+                    Routines& routines, Machine& machine, SystemState& state) {
+  static ButtonsTick buttons{buttonsPart, presses, outbox, logger};
+  static PartsTick parts{battery, buzzer, state};
+  static RoutinesTick page{routines};
+  static PanelState panel{outbox, machine, buttons, parts, page};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,
                           PanelCore);

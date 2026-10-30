@@ -15,16 +15,13 @@ class BindingContext;
 // through.
 class BerryInterpreter : public Interpreter {
  public:
-  // The app the native modules reach, and the VM they are installed into: both come up here,
-  // because neither changes once the image's files are handed to load().
+  // The app the native modules reach. The VM they are installed into comes up in begin(), so the
+  // app this is built from is fixed from here on.
   explicit BerryInterpreter(berry::BindingContext& bindings);
 
+  bool begin() override;
   bool load(const String& path, const String& source) override;
   std::unique_ptr<panel::page::Scene> rootScene() override;
-
-  // Whether the VM came up: false when be_vm_new() could not allocate it, which leaves every load
-  // below refusing.
-  bool ready() const override { return vm_ != nullptr; }
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after
   // the image has loaded and reads the heap it holds.

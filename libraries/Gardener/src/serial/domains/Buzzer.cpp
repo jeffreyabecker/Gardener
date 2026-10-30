@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <stdint.h>
 
-#include "panel/Panel.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "serial/Domain.h"
 
@@ -17,7 +16,8 @@ String firstToken(const String& args) {
 
 class BuzzerDomain : public Domain {
  public:
-  BuzzerDomain(panel::Panel& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
+  BuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox)
+      : Domain(outbox), buzzer_(buzzer) {}
 
   const char* name() const override { return "buzzer"; }
   void execute(Stream& io) override;
@@ -28,7 +28,7 @@ class BuzzerDomain : public Domain {
   void play(Stream& io, const String& args);
   void stop(Stream& io, const String& args);
 
-  panel::Panel& app_;
+  panel::parts::BuzzerPlayer& buzzer_;
 };
 
 void BuzzerDomain::execute(Stream& io) {
@@ -70,18 +70,17 @@ void BuzzerDomain::get(Stream& io, const String& args) {
     return;
   }
 
-  panel::parts::BuzzerPlayer& buzzer = app_.buzzer();
   io.print("ok tone=");
-  if (!buzzer.sounding()) {
+  if (!buzzer_.sounding()) {
     io.print('-');
   } else {
     // The same compact `hz,ms` a tone reply has always used: the frequency now and what is left.
-    io.print(buzzer.frequencyHz());
+    io.print(buzzer_.frequencyHz());
     io.print(',');
-    io.print(buzzer.remainingMs(millis()));
+    io.print(buzzer_.remainingMs(millis()));
   }
   io.print(" playing=");
-  io.print(buzzer.playing() ? "on" : "off");
+  io.print(buzzer_.playing() ? "on" : "off");
   io.print('\n');
 }
 
@@ -134,7 +133,7 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
 
-  app_.buzzer().tone((uint16_t)hz, ms);
+  buzzer_.tone((uint16_t)hz, ms);
 
   io.print("ok tone=");
   io.print((uint32_t)hz);
@@ -162,7 +161,7 @@ void BuzzerDomain::play(Stream& io, const String& args) {
     return;
   }
 
-  app_.buzzer().play(args.c_str());
+  buzzer_.play(args.c_str());
   io.print("ok playing=on\n");
 }
 
@@ -174,14 +173,14 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
     return;
   }
 
-  app_.buzzer().off();
+  buzzer_.off();
   io.print("ok playing=off\n");
 }
 
 }  // namespace
 
-Domain* createBuzzerDomain(panel::Panel& app, CommandOutbox& outbox) {
-  return new BuzzerDomain(app, outbox);
+Domain* createBuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox) {
+  return new BuzzerDomain(buzzer, outbox);
 }
 
 }  // namespace gardener

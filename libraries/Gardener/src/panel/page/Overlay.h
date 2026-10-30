@@ -5,7 +5,7 @@
 #include "core/SystemState.h"
 #include "layout/Drawing.h"
 
-namespace gardener::panel::glass {
+namespace gardener::panel::page {
 
 // The status strip across the bottom of the glass, in four equal cells: the unit's suffix, the two
 // ways in, the run state and the battery. It is a paint over the state the panel was handed, so the
@@ -25,4 +25,4 @@ class Overlay {
   const SystemState& state_;
 };
 
-}  // namespace gardener::panel::glass
+}  // namespace gardener::panel::page

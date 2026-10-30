@@ -1,4 +1,4 @@
-#include "routines/RoutineRegistry.h"
+#include "panel/page/RoutineRegistry.h"
 
 #include <any>
 #include <utility>
@@ -8,6 +8,7 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
+namespace panel::page {
 
 RoutineRegistry::RoutineRegistry(Library& library, Logger& logger)
     : library_(library), logger_(logger) {}
@@ -126,27 +127,27 @@ const String* RoutineRegistry::icon(const String& routineKey) const {
   return &record->glyph();
 }
 
-const std::vector<panel::page::SettingsRow*>* RoutineRegistry::settingsRows(
+const std::vector<SettingsRow*>* RoutineRegistry::settingsRows(
     const String& routineKey) const {
   const Registration* record = entry(routineKey);
   return record == nullptr ? nullptr : &record->settings();
 }
 
-panel::page::SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
+SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
   const Registration* record = entry(routineKey);
-  if (record == nullptr) return panel::page::SettingValues();
+  if (record == nullptr) return SettingValues();
   return record->loadSettings(library_, section(routineKey));
 }
 
 bool RoutineRegistry::saveSettings(const String& routineKey,
-                                   panel::page::SettingValues& values) const {
+                                   SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr) return false;
   return record->saveSettings(library_, section(routineKey), values);
 }
 
-std::unique_ptr<panel::page::Scene> RoutineRegistry::activate(
-    const String& routineKey, const panel::page::SettingValues& values) const {
+std::unique_ptr<Scene> RoutineRegistry::activate(
+    const String& routineKey, const SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr || !record->factory()) return nullptr;
 
@@ -154,9 +155,9 @@ std::unique_ptr<panel::page::Scene> RoutineRegistry::activate(
   activation.routineKey = routineKey;
   // The caller states what it launches with; the declaration is what holds a setting to its kind,
   // and one the set leaves out begins at its default, as one its document lacks does.
-  for (panel::page::SettingsRow* row : record->settings()) {
+  for (SettingsRow* row : record->settings()) {
     std::any value = row->defaultValue();
-    const panel::page::SettingValues::const_iterator held = values.find(row->key());
+    const SettingValues::const_iterator held = values.find(row->key());
     if (held != values.end()) {
       std::any given = held->second;
       if (row->accept(given)) value = std::move(given);
@@ -166,4 +167,5 @@ std::unique_ptr<panel::page::Scene> RoutineRegistry::activate(
   return record->factory()(activation);
 }
 
+}  // namespace panel::page
 }  // namespace gardener

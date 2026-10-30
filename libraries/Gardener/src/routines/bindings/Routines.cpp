@@ -10,9 +10,9 @@
 
 #include <Gfx.h>
 
-#include "routines/BerryScene.h"
-#include "routines/Registration.h"
-#include "routines/RoutineRegistry.h"
+#include "panel/page/BerryScene.h"
+#include "panel/page/Registration.h"
+#include "panel/page/RoutineRegistry.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
@@ -219,7 +219,7 @@ namespace {
 // One row of the browser's list, left on the stack as the record itself so the caller can push it
 // onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
 // shows and the key a launch is made from.
-void pushRow(bvm* vm, const RoutineRow& row) {
+void pushRow(bvm* vm, const panel::page::RoutineRow& row) {
   const int record = beginRecord(vm, RowRecord);
   if (row.glyph.isEmpty()) {
     be_pushnil(vm);
@@ -234,7 +234,7 @@ void pushRow(bvm* vm, const RoutineRow& row) {
 
 // The activation a page's init reads, built from the record this module installed. Its init assigns the
 // two fields and cannot raise, so nothing here needs a protected call.
-void pushActivation(bvm* vm, const RoutineActivation& activation) {
+void pushActivation(bvm* vm, const panel::page::RoutineActivation& activation) {
   be_getglobal(vm, ActivationRecord);
   be_pushstring(vm, activation.routineKey.c_str());
   pushSettingsMap(vm, activation.values);
@@ -246,7 +246,7 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
 // wrapped as the scene the stack drives. Nothing, with one line, for a page whose init raised — the
 // class is the file's and may refuse the set it is handed.
 std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm, int slot,
-                                              const RoutineActivation& activation) {
+                                              const panel::page::RoutineActivation& activation) {
   if (vm == nullptr || bindings == nullptr || slot < 0) return nullptr;
 
   const int base = be_top(vm);
@@ -273,7 +273,7 @@ std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm,
           bindings->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<BerryScene>(vm, be_absindex(vm, -1), *bindings);
+        page = std::make_unique<panel::page::BerryScene>(vm, be_absindex(vm, -1), *bindings);
       }
     }
   }
@@ -307,11 +307,12 @@ int routinesRegister(bvm* vm) {
   const String glyph = be_isnil(vm, 3) ? String() : String(argText(vm, 3));
   const int slot = holdClass(vm, 5);
 
-  Registration record(routineKey, title, std::move(rows),
-                      [vm, slot, bindings](const RoutineActivation& activation) {
-                        return buildPage(bindings, vm, slot, activation);
-                      },
-                      glyph);
+  panel::page::Registration record(
+      routineKey, title, std::move(rows),
+      [vm, slot, bindings](const panel::page::RoutineActivation& activation) {
+        return buildPage(bindings, vm, slot, activation);
+      },
+      glyph);
   be_pushbool(vm, bindings->registry().add(std::move(record)));
   be_return(vm);
 }
@@ -346,7 +347,7 @@ int routinesSaveSettings(bvm* vm) {
   }
   const int map = be_absindex(vm, -1);
 
-  const RoutineRegistry& registry = bindings->registry();
+  const panel::page::RoutineRegistry& registry = bindings->registry();
   const std::vector<panel::page::SettingsRow*>* rows = registry.settingsRows(routineKey);
   panel::page::SettingValues values;
   if (rows != nullptr) {
@@ -380,7 +381,7 @@ int routinesRows(bvm* vm) {
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const RoutineRow& row : bindings->registry().rows()) {
+  for (const panel::page::RoutineRow& row : bindings->registry().rows()) {
     pushRow(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -399,7 +400,7 @@ int routinesTitle(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.title: title(routine_key)");
   }
-  const RoutineRegistry& registry = bindings->registry();
+  const panel::page::RoutineRegistry& registry = bindings->registry();
   const String routineKey(argText(vm, 1));
   if (registry.entry(routineKey) == nullptr) be_return_nil(vm);
   be_pushstring(vm, registry.title(routineKey).c_str());

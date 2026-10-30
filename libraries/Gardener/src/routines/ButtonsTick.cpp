@@ -1,10 +1,10 @@
-#include "panel/parts/ButtonsTick.h"
+#include "routines/ButtonsTick.h"
 
 #include "core/Logger.h"
 #include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"
 
-namespace gardener::panel::parts {
+namespace gardener {
 namespace {
 
 // The holds the panel acts on, as the marks the gesture carries in whole seconds: Okay and Cancel
@@ -57,4 +57,4 @@ void ButtonsTick::tick() {
 
 void ButtonsTick::deliver(const String& gesture) { presses_.push(gesture); }
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

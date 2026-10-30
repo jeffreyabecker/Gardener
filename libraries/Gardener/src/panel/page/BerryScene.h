@@ -9,11 +9,13 @@ struct bvm;
 
 namespace gardener {
 
+struct SystemState;
+
 namespace berry {
 class BindingContext;
 }
 
-struct SystemState;
+namespace panel::page {
 
 // A page whose body is Berry: a scene whose activate, handle, tick and draw_page are methods of an
 // instance the interpreter holds. The stack drives it like any other scene, so a page can move to
@@ -33,7 +35,7 @@ struct SystemState;
 // The page answers its drawing rather than making it: draw_page returns the tree the screen module
 // built node by node, and the scene renders it on the canvas it was handed — the page, which is the
 // panel less the overlay's rows. A page that answers nothing draws nothing.
-class BerryScene : public panel::page::Scene {
+class BerryScene : public Scene {
  public:
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps
   // it; the caller's stack is left as it was found. The queue the scene drains, the state a
@@ -80,4 +82,5 @@ class BerryScene : public panel::page::Scene {
   bool broken_ = false;
 };
 
+}  // namespace panel::page
 }  // namespace gardener

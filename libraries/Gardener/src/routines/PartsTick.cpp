@@ -1,12 +1,12 @@
-#include "panel/parts/PartsTick.h"
+#include "routines/PartsTick.h"
 
 #include "core/Battery.h"
 #include "core/SystemState.h"
 #include "panel/parts/BuzzerPlayer.h"
 
-namespace gardener::panel::parts {
+namespace gardener {
 
-PartsTick::PartsTick(Battery& battery, BuzzerPlayer& buzzer, SystemState& state)
+PartsTick::PartsTick(Battery& battery, panel::parts::BuzzerPlayer& buzzer, SystemState& state)
     : battery_(battery), buzzer_(buzzer), state_(state) {}
 
 void PartsTick::tick(uint32_t nowMs) {
@@ -20,4 +20,4 @@ void PartsTick::tick(uint32_t nowMs) {
   state_.batteryLow = battery_.low();
 }
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

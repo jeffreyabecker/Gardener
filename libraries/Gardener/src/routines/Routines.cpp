@@ -7,7 +7,7 @@
 
 #include "core/Logger.h"
 #include "Canvas.h"
-#include "panel/glass/Overlay.h"
+#include "panel/page/Overlay.h"
 #include "panel/page/MarkScene.h"
 #include "core/Library.h"
 
@@ -63,17 +63,12 @@ void reportUnlisted(Library& library, Logger& logger, const std::vector<String>&
 
 }  // namespace
 
-bool Routines::begin(Logger& logger, Library& library) {
-  logger_ = &logger;
-  library_ = &library;
-  // Before a file loads: a routine file registers itself as the interpreter runs it.
-  registry_ = std::make_unique<RoutineRegistry>(library, logger);
-
-  if (!interpreter_.ready()) {
-    logger_->error("vm: no memory, routines off");
+bool Routines::begin() {
+  if (!interpreter_.begin()) {
+    logger_.error("vm: no memory, routines off");
     return false;
   }
-  gestures_.begin(*logger_);
+  presses_.begin(logger_);
 
   // The system first, in the order `/system/order` states: a scene may construct a class one of
   // those files defines — or answer with a record one of them declares — so they have to have run
@@ -96,19 +91,19 @@ bool Routines::begin(Logger& logger, Library& library) {
   summary += String((uint32_t)files);
   summary += " file";
   if (files != 1) summary += 's';
-  logger_->info(summary.c_str());
+  logger_.info(summary.c_str());
 
   // The strip the stack draws over every page: one paint over the state the panel was handed, so it
   // is set once and each frame reads the machine as it stands when that frame is drawn.
-  ux_.setOverlay(static_cast<int16_t>(display_.height() - panel::glass::Overlay::Height),
-                 panel::glass::Overlay(state_).paint());
+  ux_.setOverlay(static_cast<int16_t>(display_.height() - panel::page::Overlay::Height),
+                 panel::page::Overlay(state_).paint());
 
   resetToRoot();
   return true;
 }
 
 bool Routines::showDefault() {
-  gestures_.clear();
+  presses_.clear();
   return resetToRoot();
 }
 
@@ -138,7 +133,7 @@ bool Routines::resetToRoot() {
   if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene()) {
     if (ux_.reset(std::move(page))) return true;
   }
-  return ux_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
+  return ux_.reset(std::make_unique<panel::page::MarkScene>(presses_));
 }
 
 // --- loading ---------------------------------------------------------------
@@ -149,8 +144,8 @@ size_t Routines::loadSystem(size_t& found) {
   found = 0;
 
   String order;
-  if (library_ == nullptr || !library_->read(SystemOrder, order)) {
-    logger_->error("vm: /system/order unreadable, no system files");
+  if (!library_.read(SystemOrder, order)) {
+    logger_.error("vm: /system/order unreadable, no system files");
     return 0;
   }
 
@@ -174,13 +169,13 @@ size_t Routines::loadSystem(size_t& found) {
     start = end + 1;
   }
 
-  reportUnlisted(*library_, *logger_, listed);
+  reportUnlisted(library_, logger_, listed);
   return loaded;
 }
 
 size_t Routines::loadAll(const char* folder, size_t& found) {
   std::vector<String> files;
-  if (library_ != nullptr) library_->list(folder, files);
+  library_.list(folder, files);
   found = files.size();
 
   size_t loaded = 0;
@@ -196,11 +191,11 @@ size_t Routines::loadAll(const char* folder, size_t& found) {
 
 bool Routines::loadFile(const String& path) {
   String source;
-  if (library_ == nullptr || !library_->read(path, source)) {
+  if (!library_.read(path, source)) {
     String message = "vm: ";
     message += path;
     message += " unreadable";
-    logger_->error(message.c_str());
+    logger_.error(message.c_str());
     return false;
   }
 

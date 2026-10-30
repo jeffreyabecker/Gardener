@@ -1,12 +1,13 @@
-#include "BerryScene.h"
+#include "panel/page/BerryScene.h"
 
 #include <berry.h>
 
 #include "core/SystemState.h"
-#include "DrawTree.h"
 #include "routines/bindings/BindingContext.h"
+#include "routines/bindings/DrawTree.h"
 
 namespace gardener {
+namespace panel::page {
 namespace {
 
 // The pages the scenes hold, in a list the interpreter owns: a scene's page is reachable from the
@@ -93,7 +94,7 @@ void BerryScene::drawPage(gfx::Canvas& canvas) {
   const int base = be_top(vm_);
   if (beginCall("draw_page")) {
     if (endCall("draw_page", 1)) {
-      drawTree(vm_, be_absindex(vm_, -1), state_, canvas);
+      berry::drawTree(vm_, be_absindex(vm_, -1), state_, canvas);
     }
   }
   be_pop(vm_, be_top(vm_) - base);
@@ -139,4 +140,5 @@ bool BerryScene::endCall(const char* method, int argc) {
   return true;
 }
 
+}  // namespace panel::page
 }  // namespace gardener

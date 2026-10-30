@@ -2,13 +2,12 @@
 
 namespace gardener {
 
+class Battery;
 class BleDomain;
-namespace panel {
-class Panel;
-}  // namespace panel
+class DeviceSettings;
 
 // The panel's slice of the GATT table: `unit` — what the panel prints — and `batt` — the gauge.
 // Both have no meaning on a device without a panel.
-BleDomain* createPanelBleDomain(panel::Panel& panel);
+BleDomain* createPanelBleDomain(DeviceSettings& settings, Battery& battery);
 
 }  // namespace gardener
