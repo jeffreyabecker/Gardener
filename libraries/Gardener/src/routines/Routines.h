@@ -42,9 +42,8 @@ class Routines {
   // False when no scene is left showing, which leaves the mark.
   bool showDefault();
 
-  // One beat: the overlay built from this beat's values, the top scene's poll, the overlay drawn
-  // over it, and the frame sent. True while a page is showing, so the caller knows whether to draw
-  // its own frame.
+  // One beat: the top scene's poll, the overlay drawn over it from the state as it stands, and the
+  // frame sent. True while a page is showing, so the caller knows whether to draw its own frame.
   bool poll(uint32_t nowMs);
 
   // The page became visible: the top scene's activate and the frame with it, so a scene re-reads the
@@ -87,10 +86,6 @@ class Routines {
   // The beat's one send, and the only place the frame is flushed: the page and the overlay have
   // drawn into the panel's canvas, and this hands it to the glass once.
   void show();
-
-  // The overlay from one reading: the unit's suffix, the two links, the run state and the gauge, as
-  // they stood on this beat, in four equal cells over the bottom rows of the glass.
-  void updateOverlay(uint32_t nowMs);
 
   // The VM the files are loaded into and the root page read from.
   Interpreter& interpreter_;

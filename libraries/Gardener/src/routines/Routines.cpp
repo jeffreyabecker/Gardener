@@ -10,8 +10,6 @@
 #include "Canvas.h"
 #include "panel/glass/Overlay.h"
 #include "panel/page/MarkScene.h"
-#include "core/SystemState.h"
-#include "core/Units.h"
 #include "core/Library.h"
 
 namespace gardener {
@@ -102,6 +100,11 @@ bool Routines::begin(panel::PanelContext& context) {
   if (files != 1) summary += 's';
   logger_->info(summary.c_str());
 
+  // The strip the stack draws over every page: one paint over the state the panel was handed, so it
+  // is set once and each frame reads the machine as it stands when that frame is drawn.
+  ux_.setOverlay(static_cast<int16_t>(panel_->canvas().height() - panel::glass::Overlay::Height),
+                 panel::glass::Overlay(panel_->systemState()));
+
   resetToRoot();
   return true;
 }
@@ -111,12 +114,10 @@ bool Routines::showDefault() {
   return resetToRoot();
 }
 
-// The overlay is the stack's, so it is set from this beat's reading before the page is polled and
-// drawn with it in the same frame: the values the machine has now, not the ones it had when the
-// page went up.
+// The overlay reads the state as it paints, so the page is polled and the strip drawn over it in
+// the same frame: the values the machine has now, not the ones it had when the page went up.
 bool Routines::poll(uint32_t nowMs) {
   if (panel_ == nullptr) return false;
-  updateOverlay(nowMs);
   if (!ux_.poll(panel_->canvas(), nowMs)) return false;
   show();
   return true;
@@ -124,9 +125,7 @@ bool Routines::poll(uint32_t nowMs) {
 
 bool Routines::enterPage() {
   if (panel_ == nullptr) return false;
-  const uint32_t now = millis();
-  updateOverlay(now);
-  if (!ux_.enter(panel_->canvas(), now)) return false;
+  if (!ux_.enter(panel_->canvas(), millis())) return false;
   show();
   return true;
 }
@@ -145,30 +144,6 @@ bool Routines::resetToRoot() {
     if (ux_.reset(std::move(page))) return true;
   }
   return ux_.reset(std::make_unique<panel::page::MarkScene>(gestures_));
-}
-
-void Routines::updateOverlay(uint32_t nowMs) {
-  // One copy of the state the panel was handed, so the four cells are drawn from one instant rather
-  // than from four reads of an object a task is publishing into.
-  const SystemState state = panel_->systemState();
-  const int8_t percent = state.batteryPresent ? static_cast<int8_t>(state.batteryPercent) : -1;
-
-  // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
-  // else touches them and they keep whatever the last frame left.
-  const int16_t start =
-      static_cast<int16_t>(panel_->canvas().height() - panel::glass::OverlayHeight);
-  ux_.setOverlay(start,
-                    gfx::underlay(gfx::row(1.0f, {
-                        gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayUnit(displayUnitInfo(state.unit).suffix)},
-                        gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayLinks(state.serialConnected,
-                                                              state.bluetoothConnected)},
-                        gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayState(state.runState, nowMs)},
-                        gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                   panel::glass::overlayBattery(percent, state.batteryLow, nowMs)},
-                    })));
 }
 
 // --- loading ---------------------------------------------------------------

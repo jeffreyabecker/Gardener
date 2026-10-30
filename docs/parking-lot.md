@@ -92,13 +92,13 @@ sized to its own contents.
 
 ## The overlay as cells the panel hands out
 
-`Routines::updateOverlay` reads the unit, the links, the run state and the gauge itself and builds
-the overlay's four paints in a fixed order, so what the overlay shows is decided at one call site
-and a device with no gauge or no radio still contributes a cell that draws only the absence. Each
-cell could be an object the panel context returns — the unit, the links, the run state, the gauge —
+`glass::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
+overlay's four paints in a fixed order, so what the overlay shows is decided in one paint and a
+device with no gauge or no radio still contributes a cell that draws only the absence. Each cell
+could be an object the panel context returns — the unit, the links, the run state, the gauge —
 drawn in the order it is given them, so a fitted part adds its cell and a missing one is not there
-at all. Blocked by: nothing owns the overlay, so the container, the order and which side re-reads
-the machine each beat are all undecided.
+at all. Blocked by: the strip is one paint rather than a set of parts, so the container, the order
+and which side re-reads the machine each frame are all undecided.
 
 ## Berry drawing through a canvas
 
