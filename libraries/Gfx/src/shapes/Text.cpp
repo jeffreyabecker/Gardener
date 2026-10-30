@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "BuiltinFont.h"
+#include "../BuiltinFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
 //

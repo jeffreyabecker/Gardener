@@ -126,19 +126,6 @@ class ScrollbarNode : public PaintNode {
   bool hollow_;
 };
 
-// Whole seconds in a format, formatted once into a fixed buffer rather than into a string.
-class DurationNode : public PaintNode {
- public:
-  DurationNode(Box box, DurationFormat format, int32_t seconds, const Font* face, bool known);
-
-  void draw(Canvas& canvas) const override;
-
- private:
-  Box box_;
-  const Font* face_;
-  char text_[16];
-};
-
 // The seam: a draw the vocabulary cannot name, for a page whose content depends on something only
 // known as it draws.
 class CallableNode : public PaintNode {
@@ -188,6 +175,7 @@ PaintNodeRef icon(Box box, PaintNodeRef glyph);
 PaintNodeRef progressBar(Box box, float value);
 PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible,
                        bool hollow = false);
+// Whole seconds printed in a format, as the text node it is: the formatting is all this adds.
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Font* face = nullptr,
                       bool known = true);
 PaintNodeRef blend(Blend blend, PaintNodeRef child);

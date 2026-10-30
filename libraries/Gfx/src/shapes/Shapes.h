@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "Canvas.h"
+#include "../Canvas.h"
 
 namespace gardener::gfx::shapes {
 

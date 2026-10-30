@@ -5,8 +5,8 @@
 #include "core/Units.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "Shapes.h"
-#include "Text.h"
+#include "shapes/Shapes.h"
+#include "shapes/Text.h"
 
 namespace gardener::panel::glass {
 namespace {

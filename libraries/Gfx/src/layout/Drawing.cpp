@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "../Shapes.h"
-#include "../Text.h"
+#include "../shapes/Shapes.h"
+#include "../shapes/Text.h"
 
 namespace gardener::gfx {
 namespace {
@@ -145,17 +145,6 @@ void ScrollbarNode::draw(Canvas& canvas) const {
   }
 }
 
-DurationNode::DurationNode(Box box, DurationFormat format, int32_t seconds, const Font* face,
-                           bool known)
-    : box_(box), face_(face) {
-  durationText(format, seconds, known, text_, sizeof(text_));
-}
-
-void DurationNode::draw(Canvas& canvas) const {
-  View own = canvas.child(box_.in(canvas));
-  own.draw(shapes::Text(0, baseline(text_, face_, 1), text_, face_, 1, Ink));
-}
-
 CallableNode::CallableNode(std::function<void(Canvas&)> draw) : draw_(std::move(draw)) {}
 
 void CallableNode::draw(Canvas& canvas) const {
@@ -214,7 +203,9 @@ PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, b
 
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Font* face,
                       bool known) {
-  return std::make_unique<DurationNode>(box, format, seconds, face, known);
+  char printed[16];
+  durationText(format, seconds, known, printed, sizeof(printed));
+  return text(box, String(printed), face, 1);
 }
 
 PaintNodeRef blend(Blend blend, PaintNodeRef child) {

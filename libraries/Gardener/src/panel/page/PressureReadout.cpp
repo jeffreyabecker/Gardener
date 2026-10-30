@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "Text.h"
+#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 

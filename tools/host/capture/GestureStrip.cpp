@@ -2,7 +2,7 @@
 
 #include "BuiltinFont.h"
 #include "Canvas.h"
-#include "Text.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 

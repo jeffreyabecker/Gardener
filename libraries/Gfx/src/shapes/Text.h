@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-#include "Canvas.h"
-#include "Font.h"
+#include "../Canvas.h"
+#include "../Font.h"
 
 namespace gardener::gfx::shapes {
 
