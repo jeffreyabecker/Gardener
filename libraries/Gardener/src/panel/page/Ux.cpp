@@ -50,7 +50,7 @@ Scene* Ux::top() const { return depth_ > 0 ? frames_[depth_ - 1].get() : nullptr
 
 int16_t Ux::depth() const { return depth_; }
 
-void Ux::setOverlay(int16_t startY, gfx::Paint overlay) {
+void Ux::setOverlay(int16_t startY, gfx::PaintNodeRef overlay) {
   overlayStart_ = startY < 0 ? 0 : startY;
   overlay_ = std::move(overlay);
 }
@@ -121,7 +121,7 @@ void Ux::paintOverlay(gfx::Canvas& canvas) {
   const int16_t rows = static_cast<int16_t>(canvas.height() - top);
   if (rows <= 0) return;
   gfx::View own = canvas.child(gfx::Rect(0, top, canvas.width(), rows));
-  overlay_(own);
+  overlay_->draw(own);
 }
 
 bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {

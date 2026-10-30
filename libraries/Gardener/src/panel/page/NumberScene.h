@@ -14,10 +14,10 @@ namespace gardener::panel::page {
 // scene draws what it returns instead of `%g` of the value.
 using NumberFormatter = std::function<String(float)>;
 
-// The value editor of a number: the number at the value face, over a bar showing where it sits
-// between the bounds when the setting has both. Up and Down step it within those bounds, OK keeps
-// it and Cancel puts back the number it opened on; a nullable setting's nothing sits one step below
-// the floor, where Up enters the floor and Down clears back to nothing.
+// The value editor of a number: the number at the value face, centred in the contents band. Up and
+// Down step it within the bounds the setting declared, OK keeps it and Cancel puts back the number
+// it opened on; a nullable setting's nothing sits one step below the floor, where Up enters the
+// floor and Down clears back to nothing.
 //
 // A bound the setting does not declare is -INFINITY or INFINITY, so the clamp holds the value to
 // what was declared without asking whether anything was, and a setting holding nothing is NAN.
@@ -38,7 +38,7 @@ class NumberScene : public EditorScene {
  protected:
   void nudge(int8_t direction) override;
   void canceled() override;
-  gfx::Paint pageContents() override;
+  gfx::PaintNodeRef pageContents() override;
 
  private:
   bool hasValue() const;
@@ -53,8 +53,8 @@ class NumberScene : public EditorScene {
   bool nullable_;
   NumberFormatter format_;
 
-  // What the band prints. The paint closes over a pointer into it, so the scene keeps the string
-  // rather than a local pageContents() returns without.
+  // What the band prints. The paint reads it as it draws, so the scene keeps the string rather
+  // than a local pageContents() returns without.
   String printed_;
 };
 

@@ -103,7 +103,7 @@ bool Routines::begin(panel::PanelContext& context) {
   // The strip the stack draws over every page: one paint over the state the panel was handed, so it
   // is set once and each frame reads the machine as it stands when that frame is drawn.
   ux_.setOverlay(static_cast<int16_t>(panel_->display().height() - panel::glass::Overlay::Height),
-                 panel::glass::Overlay(panel_->systemState()));
+                 panel::glass::Overlay(panel_->systemState()).paint());
 
   resetToRoot();
   return true;

@@ -18,7 +18,6 @@ using gfx::Cell;
 using gfx::Child;
 using gfx::Justification;
 using gfx::Justify;
-using gfx::Paint;
 
 // --- reading a node --------------------------------------------------------
 //
@@ -74,40 +73,14 @@ bool numberField(bvm* vm, int node, const char* field) {
 // The box a leaf declares: x and y in pixels from the corner of the canvas it is drawn in, and a
 // side the page left out is the whole of that canvas — which is how a node fills the cell a layout
 // gave it without the page computing a number.
-struct NodeBox {
-  int16_t x = 0;
-  int16_t y = 0;
-  int16_t w = 0;
-  int16_t h = 0;
-  bool wholeWidth = false;
-  bool wholeHeight = false;
-
-  gfx::Rect in(const gfx::Canvas& canvas) const {
-    const int16_t width = wholeWidth ? static_cast<int16_t>(canvas.width() - x) : w;
-    const int16_t height = wholeHeight ? static_cast<int16_t>(canvas.height() - y) : h;
-    return gfx::Rect(x, y, width, height);
-  }
-};
-
-NodeBox boxOf(bvm* vm, int node) {
-  NodeBox box;
-  box.x = (int16_t)intField(vm, node, "x");
-  box.y = (int16_t)intField(vm, node, "y");
-  box.w = (int16_t)intField(vm, node, "w");
-  box.h = (int16_t)intField(vm, node, "h");
-  box.wholeWidth = !numberField(vm, node, "w");
-  box.wholeHeight = !numberField(vm, node, "h");
-  return box;
-}
-
-// A leaf's paint: the ui/ draw the node describes, made when the paint runs, because the box it
-// leaves open is only known once the canvas it sits in is.
-template <typename Make>
-Paint leaf(NodeBox box, Make make) {
-  return [box, make](gfx::Canvas& canvas) {
-    const Paint paint = make(box.in(canvas));
-    if (paint) paint(canvas);
-  };
+gfx::Box boxOf(bvm* vm, int node) {
+  const int16_t x = (int16_t)intField(vm, node, "x");
+  const int16_t y = (int16_t)intField(vm, node, "y");
+  const int16_t w = (int16_t)intField(vm, node, "w");
+  const int16_t h = (int16_t)intField(vm, node, "h");
+  const bool wholeWidth = !numberField(vm, node, "w");
+  const bool wholeHeight = !numberField(vm, node, "h");
+  return gfx::Box(x, y, w, h, wholeWidth, wholeHeight);
 }
 
 // The face a node names. A name the library does not hold is drawn in the built-in one: the binding
@@ -149,7 +122,7 @@ Justification justificationOf(bvm* vm, int node) {
   return justification;
 }
 
-Paint paintOf(bvm* vm, int node, const SystemState& state);
+gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state);
 
 // The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
 // interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
@@ -168,8 +141,8 @@ bool pushItems(bvm* vm, int index) {
 
 // The [bounds, draw] pairs a layout holds, as the layout's own children: the cell each declares and
 // the paint each answers. A child that is not a pair is skipped rather than raised on.
-std::vector<Child> childrenOf(bvm* vm, int node, const SystemState& state) {
-  std::vector<Child> children;
+gfx::Children childrenOf(bvm* vm, int node, const SystemState& state) {
+  gfx::Children children;
 
   be_getmember(vm, node, "children");
   if (!pushItems(vm, -1)) {
@@ -201,10 +174,10 @@ std::vector<Child> childrenOf(bvm* vm, int node, const SystemState& state) {
         be_pushint(vm, 1);
         be_getindex(vm, pair);
         be_remove(vm, -2);
-        const Paint paint = paintOf(vm, be_absindex(vm, -1), state);
+        gfx::PaintNodeRef paint = paintOf(vm, be_absindex(vm, -1), state);
         be_pop(vm, 1);
 
-        children.push_back(Child{Cell(width, height), paint});
+        children.push_back(gfx::Child{Cell(width, height), std::move(paint)});
       }
       be_pop(vm, 1);  // the pair's items
     }
@@ -217,85 +190,63 @@ std::vector<Child> childrenOf(bvm* vm, int node, const SystemState& state) {
 
 // The node as the paint it describes. A kind the drawing has no case for answers an empty paint,
 // which is a node that draws nothing.
-Paint paintOf(bvm* vm, int node, const SystemState& state) {
-  if (!be_isinstance(vm, node)) return Paint();
+gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
+  if (!be_isinstance(vm, node)) return gfx::PaintNodeRef();
   const char* kind = textField(vm, node, "kind");
-  if (kind == nullptr) return Paint();
+  if (kind == nullptr) return gfx::PaintNodeRef();
 
   if (strcmp(kind, "text") == 0) {
-    const NodeBox box = boxOf(vm, node);
     const char* value = textField(vm, node, "value");
-    const gfx::Font* face = faceOf(vm, node);
-    const uint8_t scale = (uint8_t)intField(vm, node, "scale");
-    return leaf(box, [value, face, scale](const gfx::Rect& rect) {
-      return gfx::text(rect, value, face, scale);
-    });
+    return gfx::borrowedText(boxOf(vm, node), value, faceOf(vm, node),
+                             (uint8_t)intField(vm, node, "scale"));
   }
 
   if (strcmp(kind, "centred") == 0) {
-    const NodeBox box = boxOf(vm, node);
+    // The ink the string takes, centred in the box the node declares: the same arithmetic the call
+    // this replaces made, said in the layout's own words.
     const char* value = textField(vm, node, "value");
     const gfx::Font* face = faceOf(vm, node);
-    const uint8_t scale = (uint8_t)intField(vm, node, "scale");
-    return leaf(box, [value, face, scale](const gfx::Rect& rect) {
-      return Paint([rect, value, face, scale](gfx::Canvas& canvas) {
-        gfx::View own = canvas.child(rect);
-        gfx::drawCentered(own, value, face, scale);
-      });
-    });
+    const uint8_t raw = (uint8_t)intField(vm, node, "scale");
+    const uint8_t scale = raw == 0 ? 1 : raw;
+    const gfx::Size ink = gfx::shapes::measureText(face, value, scale);
+    return gfx::icon(
+        boxOf(vm, node),
+        gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), value, face, scale), ink)));
   }
 
   if (strcmp(kind, "icon") == 0) {
-    const NodeBox box = boxOf(vm, node);
     // The hex digits point into the node's own string, which lives as long as the node the walk is
     // holding — the same lifetime a text field's string has. The bitmap is read when the paint runs.
     const char* glyph = textField(vm, node, "glyph");
-    if (glyph == nullptr) return Paint();
-    return leaf(box, [glyph](const gfx::Rect& rect) { return gfx::icon(rect, glyph); });
+    if (glyph == nullptr) return gfx::PaintNodeRef();
+    return gfx::icon(boxOf(vm, node), glyph);
   }
 
   if (strcmp(kind, "bar") == 0) {
-    const NodeBox box = boxOf(vm, node);
-    const float percent = realField(vm, node, "percent");
-    return leaf(box, [percent](const gfx::Rect& rect) {
-      return gfx::progressBar(rect, percent);
-    });
+    return gfx::progressBar(boxOf(vm, node), realField(vm, node, "percent"));
   }
 
   if (strcmp(kind, "scrollbar") == 0) {
-    const NodeBox box = boxOf(vm, node);
-    const int16_t index = (int16_t)intField(vm, node, "index");
-    const int16_t count = (int16_t)intField(vm, node, "count");
-    const int16_t visible = (int16_t)intField(vm, node, "visible");
-    const bool hollow = flagField(vm, node, "hollow", false);
-    return leaf(box, [index, count, visible, hollow](const gfx::Rect& rect) {
-      return gfx::scrollbar(rect, index, count, visible, hollow);
-    });
+    return gfx::scrollbar(boxOf(vm, node), (int16_t)intField(vm, node, "index"),
+                          (int16_t)intField(vm, node, "count"),
+                          (int16_t)intField(vm, node, "visible"),
+                          flagField(vm, node, "hollow", false));
   }
 
   if (strcmp(kind, "duration") == 0) {
-    const NodeBox box = boxOf(vm, node);
-    const gfx::DurationFormat format = formatOf(textField(vm, node, "format"));
-    const gfx::Font* face = faceOf(vm, node);
-    const int seconds = intField(vm, node, "seconds");
-    const bool known = flagField(vm, node, "known", true);
-    return leaf(box, [format, seconds, face, known](const gfx::Rect& rect) {
-      return gfx::duration(rect, format, seconds, face, known);
-    });
+    return gfx::duration(boxOf(vm, node), formatOf(textField(vm, node, "format")),
+                         intField(vm, node, "seconds"), faceOf(vm, node),
+                         flagField(vm, node, "known", true));
   }
 
   // The readout takes the state the tree was built with rather than a number, so one node serves
   // every beat: the tree is built again for each draw.
   if (strcmp(kind, "pressure_readout") == 0) {
-    const NodeBox box = boxOf(vm, node);
     float sizeHint = realField(vm, node, "size_hint");
     if (sizeHint <= 0.0f) sizeHint = 0.5f;
-    const gfx::Font* face = faceOf(vm, node);
-    const uint8_t scale = (uint8_t)intField(vm, node, "scale");
-    const uint8_t secondary = (uint8_t)intField(vm, node, "secondary_scale");
-    return leaf(box, [state, sizeHint, face, scale, secondary](const gfx::Rect& rect) {
-      return panel::page::pressureReadout(rect, state, sizeHint, face, scale, secondary);
-    });
+    return panel::page::pressureReadout(boxOf(vm, node), state, sizeHint, faceOf(vm, node),
+                                       (uint8_t)intField(vm, node, "scale"),
+                                       (uint8_t)intField(vm, node, "secondary_scale"));
   }
 
   if (strcmp(kind, "layout") == 0) {
@@ -317,13 +268,13 @@ Paint paintOf(bvm* vm, int node, const SystemState& state) {
   // makes a row read as paper on ink after it has been painted.
   if (strcmp(kind, "inverted") == 0) {
     be_getmember(vm, node, "child");
-    const Paint child =
-        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), state) : Paint();
+    gfx::PaintNodeRef child =
+        be_isinstance(vm, -1) ? paintOf(vm, be_absindex(vm, -1), state) : gfx::PaintNodeRef();
     be_pop(vm, 1);
-    return gfx::inverted(child);
+    return gfx::inverted(std::move(child));
   }
 
-  return Paint();
+  return gfx::PaintNodeRef();
 }
 
 }  // namespace
@@ -332,8 +283,8 @@ void drawTree(bvm* vm, int node, panel::PanelContext& panel, gfx::Canvas& canvas
   // One copy of the published state for the whole tree rather than one per node: one drawing shows
   // one glass, and the unit the readout prints in comes with it.
   const SystemState state = panel.systemState();
-  const Paint paint = paintOf(vm, be_absindex(vm, node), state);
-  if (paint) paint(canvas);
+  const gfx::PaintNodeRef paint = paintOf(vm, be_absindex(vm, node), state);
+  if (paint) paint->draw(canvas);
 }
 
 }  // namespace gardener

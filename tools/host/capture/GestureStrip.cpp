@@ -2,7 +2,7 @@
 
 #include "BuiltinFont.h"
 #include "Canvas.h"
-#include "Text.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 
@@ -99,7 +99,8 @@ void GestureStrip::show(const char* gesture) {
 }
 
 CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
-  return {box, [this](gfx::Canvas& canvas) { draw(canvas); }};
+  return CaptureDisplay::Component{
+      box, gfx::callable([this](gfx::Canvas& canvas) { draw(canvas); })};
 }
 
 void GestureStrip::draw(gfx::Canvas& canvas) {

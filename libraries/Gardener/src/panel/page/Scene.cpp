@@ -1,7 +1,7 @@
 #include "panel/page/Scene.h"
 
-#include "Shapes.h"
-#include "Drawing.h"
+#include "shapes/Shapes.h"
+#include "layout/Drawing.h"
 
 namespace gardener::panel::page {
 

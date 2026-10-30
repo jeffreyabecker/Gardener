@@ -7,7 +7,7 @@
 
 #include "panel/page/BoolScene.h"
 #include "core/Units.h"
-#include "Drawing.h"
+#include "layout/Drawing.h"
 #include "panel/page/DurationScene.h"
 #include "machine/Machine.h"
 #include "panel/page/PressureScene.h"

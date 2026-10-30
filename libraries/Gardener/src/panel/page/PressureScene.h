@@ -15,9 +15,8 @@ namespace gardener::panel::page {
 // stores.
 //
 // A pressure declares no bounds of its own, so the machine's are the bounds: a keypress cannot leave
-// the editor on a target `vacuum target` would refuse, and the bar under the value is where the
-// target sits between the shallowest depth the loop regulates and the deepest the pump reaches. A
-// nullable setting's nothing sits one step below the shallowest target, where a depth begins.
+// the editor on a target `vacuum target` would refuse. A nullable setting's nothing sits one step
+// below the shallowest target, where a depth begins.
 class PressureScene : public NumberScene {
  public:
   // `currentKpa` is the target stored now and `wholeSteps` how many whole steps of the panel's unit

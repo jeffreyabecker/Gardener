@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "BuiltinFont.h"
+#include "../BuiltinFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
 //
@@ -79,7 +79,7 @@ void Text::operator()(Canvas& canvas) const {
   }
 }
 
-TextBox measureText(const Font* font, const char* value, uint8_t size) {
+Size measureText(const Font* font, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
   if (font == nullptr) {
