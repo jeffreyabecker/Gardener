@@ -1,12 +1,63 @@
 # How should a child be placed inside the box it is given?
 
-`drawCentered` measures a string and draws it in the middle of the canvas it is handed, and it is the
-only thing in the tree that places something smaller than the cell it lands in. A layout can only be
-made to do it by hand: a `Cell` declares a share of the parent, never the child's own size, and a
-`Justification` places the run of cells rather than one child in its share, so the page measures the
-string first, declares a cell of the ink and wraps it in a one-child column. Three pages do exactly
-that. The question is what one function would replace both spellings, if it had to work on any child
-rather than on a string, and had to name both axes rather than only the middle.
+## In short
+
+A centred title is a lambda around a call today, because `drawCentered` is not a `Paint`:
+
+```
+gfx::Child{gfx::Cell(1.0f, TitleBandPct),
+           [this](gfx::Canvas& canvas) { gfx::drawCentered(canvas, title()); }},
+```
+
+One function replaces that lambda and the measured cell the other pages write by hand:
+
+```
+gfx::Child{gfx::Cell(1.0f, TitleBandPct), gfx::aligned(gfx::text(title()))},
+```
+
+`aligned` takes an ink box with the paint that draws in it — that pair is `Sized` — and two
+`Justify`s, horizontal first and both `Center` unless the page says otherwise:
+
+```
+// A paint and the box it draws in, where that box is not the canvas it is handed.
+struct Sized {
+  Sized(Size ink, Paint paint) : ink(ink), paint(std::move(paint)) {}
+
+  Size ink;
+  Paint paint;
+};
+
+// The child drawn at the place the two justifications name, horizontal first, as a paint that
+// fills the canvas it is handed.
+Paint aligned(Sized child, Justify horizontal = Justify::Center,
+              Justify vertical = Justify::Center);
+```
+
+`Size` is the two numbers a thing is wide and tall, and belongs beside `Rect` in the geometry header
+every drawing already includes: a `Rect` converts to one, `measureText` can answer one, and a
+bitmap's first two bytes are one. So `shapes::TextBox` goes — it is that type under a narrower name,
+in the wrong namespace. `text(value, face, scale)` answers a `Sized` by measuring the string it is
+about to draw, so the box and the draw cannot disagree; `sized(paint, size)` makes one for a child
+whose size the caller already knows. Delete `drawCentered` and the three measured cells, and fold
+the Berry `centred` node into `text` with the same two names.
+
+`Paint` does not need to change for that. A size carried on `Paint` is four bytes and no edits
+anywhere, but it asks every paint and every node kind a question that only alignment uses, and a
+wrong answer is silent. Measuring a paint by drawing it into a recorder needs no vocabulary at all,
+and is refused on `Canvas::draw`'s promise that a shape is called once and not kept.
+
+What is settled is the arithmetic and the words: `alignedOffset` already answers the one, and two
+`Justify`s already name the other. What is not settled is the type — `Sized` is a bet until a page
+wants to align something that is not a string, and if one arrives the ink moves onto `Paint` and
+`Sized` goes rather than sitting beside it.
+
+`drawCentered` measures a string and draws it in the middle of the canvas it is handed, and it is
+the only thing in the tree that places something smaller than the cell it lands in. A layout can
+only be made to do it by hand: a `Cell` declares a share of the parent, never the child's own size,
+and a `Justification` places the run of cells rather than one child in its share, so the page
+measures the string first, declares a cell of the ink and wraps it in a one-child column. Three
+pages do exactly that. The question is what one function would replace both spellings, if it had to
+work on any child rather than on a string, and had to name both axes rather than only the middle.
 
 ## The two spellings, and what each costs
 
@@ -40,21 +91,34 @@ real design question is where that size comes from.
 
 ## The options
 
-**The size as arguments, no new type.** `Paint aligned(shapes::TextBox ink, Paint child, Justify
-horizontal, Justify vertical)`, drawing on the canvas it is handed as `inverted` and `underlay` do
-rather than filling a box of a bigger canvas as the factories do. It removes the one-child-column
-trick and the `Cell` arithmetic and nothing else. What it costs is that the ink box is stated by the
-caller and can disagree with the paint, and that the call site is hardly shorter than the form it
-replaces.
+**The size as arguments, no new type.** `aligned(ink, child, horizontal, vertical)`: the box and the
+paint both stated at the call. It removes the one-child-column trick and the `Cell` arithmetic and
+nothing else, and it leaves the page measuring by hand what `aligned(text(…))` measures for it, in a
+place where the number can disagree with the paint.
 
-**A size beside the paint.** `struct Sized { shapes::TextBox ink; Paint paint; };` with measuring
-twins — `Sized text(const char* value, const Font* face, uint8_t scale)` beside the `Paint text(Rect
-box, …)` that exists, and an escape `Sized sized(Paint child, shapes::TextBox ink)` for a child
-whose size the caller states. Then `aligned(Sized child, Justify horizontal, Justify vertical)`, a
-page writes `aligned(text("4m", nullptr, 2))`, and `inverted(aligned(…))` is the chip. It buys one
-source of truth for the ink box and one measurement per construction instead of one per frame. It
-costs a second name for a thing that draws, and an overload of `text` told apart only by its first
-argument.
+**A size beside the paint.** The pair `aligned` takes above. `Sized` holds a `Size`, which is
+whatever the source happens to know: `text` and a hex-named `icon` answer a `Sized` beside the
+`Paint` they answer now, measuring what they are about to draw; `sized(paint, size)` covers
+everything else, and a caller with the numbers in hand writes `sized(paint, Size(width, height))`.
+It is one word at the call site, one source of truth for the box, and a measurement at construction
+instead of one a frame. It owes `inverted` and `underlay` the same overload, or the chip that
+inverts its own label — `aligned(inverted(text("OFF", nullptr, 2)))` — goes back to measuring by
+hand.
+
+**A size that is whatever the caller has.** `Sized` a template over its box and `aligned` a template
+over that, so any struct with a `width` and a `height` is a size and nothing converts:
+
+```
+template <typename Ink>
+Paint aligned(Sized<Ink> child, Justify horizontal, Justify vertical) { ... }
+```
+
+It buys a `Rect`, a `shapes::TextBox` and a page's own metrics passing as they are. It costs the
+body in the header, where every other function in `Layout.h` is a declaration; an instantiation per
+ink type, each one a closure and a `std::function`; and a return type of `Sized<shapes::TextBox>` on
+`text`, which drags the shapes header into `Drawing.h` — the include that a two-number `Size` beside
+`Rect` avoids. What it does not buy is the generality that matters: whatever the type, the numbers
+have to exist when the paint is built, and every source that has them answers two integers.
 
 **Alignment on the child in a layout.** A `Justify` pair on `Child`, beside its `Cell`. It is the
 shape that reads most like a browser's `align-self`, but the child still has to declare a pixel cell
@@ -98,27 +162,16 @@ proves too much.
 
 ## How the two axes are named
 
-`Justify` already has the three values the arithmetic needs, and spells the middle `Center`; nothing
-new is required. The choice is how a pair of them is passed, and the precedent is awkward: the tree
-has held `Horizontal{Left, Center, Right}` and `Vertical{Top, Center, Bottom}` in one `Alignment`
-record, and holds `Justification{along, across}` over a single `Justify` in their place.
-
-What was wrong there is worth separating from the two words. `arrange` chose which field was the
-stacking axis from the direction it inferred, so one field meant the block's placement in a row and
-a cell's placement in a column, and the two `alignedOffset` overloads were one arithmetic under two
-names. Placement in a box infers no direction: horizontal always means across and vertical always
-means down, so a pair of `Justify`s carries one meaning there and none of the trouble the record
-had. What is left is that one header would then read the same three words two ways, and a `Justify`
-no longer says on its face whether it is a layout's or a box's.
-
-`Justification` is still wrong for the box, because `along` and `across` are the stacking axis and
-the other one, and a box has no stacking axis. A new record `Placement{horizontal, vertical}` reads
-well in the header and is filled field by field at the call site — the verbosity the `centred()`
-helpers in `BoolScene` and `DurationScene` already are. Two parameters read in the order the
-position does, as in a `Rect`, and leave the parameter names to carry the meaning:
+`Justify` already has the three values and spells the middle `Center`, so nothing new is needed; the
+question is only how a pair is passed. The tree has been here before — `Horizontal{Left, Center,
+Right}` and `Vertical{Top, Center, Bottom}` in one `Alignment` record, replaced because one field
+meant the block's placement in a row and a cell's placement in a column. A box infers no direction,
+so that trouble does not return; but a record is still filled field by field at the call site, which
+is exactly what the `centred()` helpers in `BoolScene` and `DurationScene` are. Two parameters read
+as the position does, as in a `Rect`:
 
 ```
-aligned(text("4m", nullptr, 2), Justify::Center, Justify::End)
+aligned(text("4m"), Justify::Center, Justify::End)
 ```
 
 Nine combinations then cost no table of names. The cost is that a transposed pair compiles, and is
@@ -126,8 +179,9 @@ only seen on the panel.
 
 ## What has to be true for the preferred one
 
-- `Sized` needs an ink box, and `shapes::TextBox` is that box. Either `Drawing.h` includes
-  `Text.h`, or the pair of numbers moves down beside `Rect`. Which of the two is not settled.
+- `shapes::TextBox` becomes `gfx::Size` beside `Rect`, and `measureText` answers it: the header,
+  `Text.cpp`, `Drawing.cpp`, the three scenes that measure a label and `Screen.cpp`, every one of
+  which already sees `Rect.h`, so nothing new is included anywhere.
 - `text` gains the measuring twin: one call that answers the ink box beside the paint, measuring
   exactly as `measureText` already does and drawing nothing.
 - The three hand-written cells go, and with them the `centred()` helpers, which are there to spell
@@ -158,8 +212,11 @@ only seen on the panel.
   only paints that answer the question are the ones being aligned. What would decide it is a second
   consumer of "how big is this thing" — a hit region, a fit check, a scroll extent — and there is
   none.
-- Whether `icon` should have a twin. Nothing centres one; `sized(icon(rect, glyph), ink)` covers it
-  until something does, and measuring a hex string at construction is work nothing has asked for.
+- Whether `icon` should answer a `Sized` too, reading the width and height out of the bitmap it
+  names. Nothing centres one, and until something does an icon takes the cell it is given.
+- Whether a size is ever more than two numbers. `Size` says how wide and how tall and nothing else,
+  so a child whose baseline or optical centre mattered could not say so; the templated `Sized` is
+  what to reach for when one does, and nothing wants it now.
 - Whether `aligned` belongs in `Layout.h`, where the alignment vocabulary and `alignedOffset` live,
   or in `Drawing.h` beside `inverted` and `underlay`, where the wraps live. It divides nothing, and
   it is a wrap.
@@ -171,12 +228,15 @@ only seen on the panel.
 
 ## Recommendation
 
-Take the size beside the paint: `Sized` in `Drawing.h`, a measuring `text` overload and a `sized`
-escape, and `aligned(Sized, Justify horizontal, Justify vertical)` in `Layout.h` defaulting to
-`Center` on both axes so that the common case is one word. Delete `drawCentered` and the three
-hand-written cells, and fold `screen.centred` into the `text` node's two alignment names rather than
-inventing an `aligned` node nothing calls — the narrow shape the C++ side sets aside, but the one
-the `.be` pages, which centre only strings, actually ask for.
+Take the size beside the paint: `Size` beside `Rect` in place of `shapes::TextBox`, `Sized` in
+`Drawing.h` holding one of those and a paint, a measuring `text` overload and a `sized` escape, and
+`aligned(Sized, Justify horizontal, Justify vertical)` in `Layout.h` defaulting to `Center` on both
+axes so that the common case is one word. `Sized` stays one type over one `Size` rather than a
+template: the alignment consumes two integers, and a template would move the body into the header
+and instantiate once per caller to save a conversion nobody minds. Delete `drawCentered` and the
+three hand-written cells, and fold `screen.centred` into the `text` node's two alignment names
+rather than inventing an `aligned` node nothing calls — the narrow shape the C++ side sets aside,
+but the one the `.be` pages, which centre only strings, actually ask for.
 
 Held moderately. The axes and the arithmetic are not in doubt — the three values already exist and
 `alignedOffset` already answers them — and the migration is small on the C++ side. What is in doubt
@@ -184,7 +244,6 @@ is the type: it is bought for a general case the tree has not shown it needs, an
 arguments shape is the fallback if nothing but text ever gets aligned.
 
 The one change worth making to `Paint` is the ink field, and it is refused here for a reason and
-not for its price: four bytes and no edits is cheap, but it asks every paint and every node kind a
-question only alignment uses, and a wrong answer is silent. If alignment is ever wanted on a child
-the caller did not build — a glyph in a cell wider than the glyph, a block of some other kind — the
-field is the change to make, and `Sized` is then deleted rather than kept beside it.
+not for its price: if alignment is ever wanted on a child the caller did not build — a glyph in a
+cell wider than the glyph, a block of some other kind — the field is the change to make, and `Sized`
+is deleted rather than kept beside it.
