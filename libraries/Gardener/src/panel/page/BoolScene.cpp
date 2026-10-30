@@ -14,11 +14,11 @@ constexpr const char* OffKey = "false";
 // The face a state prints at.
 constexpr uint8_t ChipScale = 2;
 
-gfx::Alignment centred() {
-  gfx::Alignment alignment;
-  alignment.horizontal = gfx::Horizontal::Center;
-  alignment.vertical = gfx::Vertical::Center;
-  return alignment;
+gfx::Justification centred() {
+  gfx::Justification justification;
+  justification.along = gfx::Justify::Center;
+  justification.across = gfx::Justify::Center;
+  return justification;
 }
 
 // One state of the switch: its label centred in an equal share of the row, and that label inverted

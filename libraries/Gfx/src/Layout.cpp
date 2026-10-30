@@ -27,10 +27,11 @@ bool stacksDown(const std::vector<Child>& children, Direction direction) {
   return true;
 }
 
-Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Direction direction) {
+Paint arrange(Cell cell, std::vector<Child> items, Justification justification,
+              Direction direction) {
   // The list does not outlive the call and the draw runs on every frame, so the children are moved
   // into the draw this answers.
-  return [cell, items = std::move(items), alignment, direction](Canvas& canvas) {
+  return [cell, items = std::move(items), justification, direction](Canvas& canvas) {
     const int16_t cellWidth = resolveSpan(canvas.width(), cell.width);
     const int16_t cellHeight = resolveSpan(canvas.height(), cell.height);
     View own = canvas.child(Rect(0, 0, cellWidth, cellHeight));
@@ -51,8 +52,7 @@ Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Directio
     }
 
     const int16_t leftover = static_cast<int16_t>(extent - consumed);
-    int16_t cursor = down ? alignedOffset(leftover, alignment.vertical)
-                          : alignedOffset(leftover, alignment.horizontal);
+    int16_t cursor = alignedOffset(leftover, justification.along);
 
     for (size_t i = 0; i < items.size(); i++) {
       const Cell& childCell = items[i].cell;
@@ -62,10 +62,10 @@ Paint arrange(Cell cell, std::vector<Child> items, Alignment alignment, Directio
       int16_t h = spans[i];
       if (down) {
         w = resolveSpan(width, childCell.width);
-        x = alignedOffset(static_cast<int16_t>(width - w), alignment.horizontal);
+        x = alignedOffset(static_cast<int16_t>(width - w), justification.across);
       } else {
         h = resolveSpan(height, childCell.height);
-        y = alignedOffset(static_cast<int16_t>(height - h), alignment.vertical);
+        y = alignedOffset(static_cast<int16_t>(height - h), justification.across);
       }
       View cellCanvas = own.child(Rect(x, y, w, h));
       // A cell with nothing to draw is the paper row of an editor's column.
@@ -83,42 +83,37 @@ int16_t resolveSpan(int16_t total, float declared) {
   return span < 0 ? 0 : span;
 }
 
-int16_t alignedOffset(int16_t leftover, Horizontal where) {
+int16_t alignedOffset(int16_t leftover, Justify where) {
   if (leftover <= 0) return 0;
-  if (where == Horizontal::Center) return static_cast<int16_t>(leftover / 2);
-  if (where == Horizontal::Right) return leftover;
+  if (where == Justify::Center) return static_cast<int16_t>(leftover / 2);
+  if (where == Justify::End) return leftover;
   return 0;
 }
 
-int16_t alignedOffset(int16_t leftover, Vertical where) {
-  if (leftover <= 0) return 0;
-  if (where == Vertical::Center) return static_cast<int16_t>(leftover / 2);
-  if (where == Vertical::Bottom) return leftover;
-  return 0;
+Paint layout(Cell cell, std::initializer_list<Child> children, Justification justification) {
+  return arrange(cell, std::vector<Child>(children), justification, Direction::Declared);
 }
 
-Paint layout(Cell cell, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(cell, std::vector<Child>(children), alignment, Direction::Declared);
+Paint layout(Cell cell, const std::vector<Child>& children, Justification justification) {
+  return arrange(cell, children, justification, Direction::Declared);
 }
 
-Paint layout(Cell cell, const std::vector<Child>& children, Alignment alignment) {
-  return arrange(cell, children, alignment, Direction::Declared);
+Paint row(float heightPct, std::initializer_list<Child> children, Justification justification) {
+  return arrange(Cell(1.0f, heightPct), std::vector<Child>(children), justification,
+                 Direction::Across);
 }
 
-Paint row(float heightPct, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(Cell(1.0f, heightPct), std::vector<Child>(children), alignment, Direction::Across);
+Paint column(float widthPct, std::initializer_list<Child> children, Justification justification) {
+  return arrange(Cell(widthPct, 1.0f), std::vector<Child>(children), justification,
+                 Direction::Down);
 }
 
-Paint column(float widthPct, std::initializer_list<Child> children, Alignment alignment) {
-  return arrange(Cell(widthPct, 1.0f), std::vector<Child>(children), alignment, Direction::Down);
+Paint row(float heightPct, const std::vector<Child>& children, Justification justification) {
+  return arrange(Cell(1.0f, heightPct), children, justification, Direction::Across);
 }
 
-Paint row(float heightPct, const std::vector<Child>& children, Alignment alignment) {
-  return arrange(Cell(1.0f, heightPct), children, alignment, Direction::Across);
-}
-
-Paint column(float widthPct, const std::vector<Child>& children, Alignment alignment) {
-  return arrange(Cell(widthPct, 1.0f), children, alignment, Direction::Down);
+Paint column(float widthPct, const std::vector<Child>& children, Justification justification) {
+  return arrange(Cell(widthPct, 1.0f), children, justification, Direction::Down);
 }
 
 }  // namespace gardener::gfx

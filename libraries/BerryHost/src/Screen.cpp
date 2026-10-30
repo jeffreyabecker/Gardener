@@ -70,21 +70,21 @@ const bnfuncinfo BoundsFields[] = {
     {nullptr, nullptr},
 };
 
-// `alignment(align, v_align)`: a side left out is the left across and the top down, which is what a
-// layout, a row and a column draw by when the node carries no record.
+// `alignment(along, across)`: a side left out is the start of it, which is what a layout, a row and
+// a column draw by when the node carries no record.
 int alignmentInit(bvm* vm) {
-  setText(vm, 1, "align", be_top(vm) >= 2 && be_isstring(vm, 2) ? argText(vm, 2) : "left");
-  setText(vm, 1, "v_align", be_top(vm) >= 3 && be_isstring(vm, 3) ? argText(vm, 3) : "top");
+  setText(vm, 1, "along", be_top(vm) >= 2 && be_isstring(vm, 2) ? argText(vm, 2) : "start");
+  setText(vm, 1, "across", be_top(vm) >= 3 && be_isstring(vm, 3) ? argText(vm, 3) : "start");
   be_return_nil(vm);
 }
 
-// Where a thing sits in the space it is given: `align` is left, center or right and `v_align` top,
-// center or bottom, each nil for the left and the top. A layout, a row and a column take one after
-// their children, and the default is the left and the top.
+// Where a layout puts what it holds: `along` places the run of cells on the stacking axis and
+// `across` each cell on the other, each start, center or end and nil for the start. A layout, a row
+// and a column take one after their children, and the default is the start of both.
 const bnfuncinfo AlignmentFields[] = {
     {"init", alignmentInit},
-    {"align", nullptr},
-    {"v_align", nullptr},
+    {"along", nullptr},
+    {"across", nullptr},
     {nullptr, nullptr},
 };
 
@@ -232,8 +232,8 @@ void requireChildren(bvm* vm, int index, const char* function) {
   be_pop(vm, 1);  // the items
 }
 
-// The alignment a layout is given, passed through as the record it is, or left nil for the left and
-// the top.
+// The justification a layout is given, passed through as the record it is, or left nil for the
+// start of both.
 void setAlignment(bvm* vm, int draw, int index) {
   if (be_top(vm) < index || be_isnil(vm, index)) return;
   setValue(vm, draw, "alignment", index);
@@ -439,29 +439,23 @@ int screenCell(bvm* vm) {
   be_return(vm);
 }
 
-// The offset an alignment takes of the room left over. Both axes agree on the centre, so one name
-// carries it and the rest say which rule they mean.
+// The offset a justification takes of the room left over: none at the start, half at the centre and
+// all of it at the end.
 int screenAlign(bvm* vm) {
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "screen.align(leftover, where)");
   }
   const int16_t leftover = (int16_t)argInt(vm, 1);
   const char* where = be_isstring(vm, 2) ? argText(vm, 2) : nullptr;
-  int16_t offset = 0;
-  if (where != nullptr && strcmp(where, "left") == 0) {
-    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Left);
-  } else if (where != nullptr && strcmp(where, "center") == 0) {
-    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Center);
-  } else if (where != nullptr && strcmp(where, "right") == 0) {
-    offset = gfx::alignedOffset(leftover, gfx::Horizontal::Right);
-  } else if (where != nullptr && strcmp(where, "top") == 0) {
-    offset = gfx::alignedOffset(leftover, gfx::Vertical::Top);
-  } else if (where != nullptr && strcmp(where, "bottom") == 0) {
-    offset = gfx::alignedOffset(leftover, gfx::Vertical::Bottom);
-  } else {
-    be_raise(vm, "value_error", "screen.align: left, center, right, top or bottom expected");
+  gfx::Justify justify = gfx::Justify::Start;
+  if (where != nullptr && strcmp(where, "center") == 0) {
+    justify = gfx::Justify::Center;
+  } else if (where != nullptr && strcmp(where, "end") == 0) {
+    justify = gfx::Justify::End;
+  } else if (where == nullptr || strcmp(where, "start") != 0) {
+    be_raise(vm, "value_error", "screen.align: start, center or end expected");
   }
-  be_pushint(vm, offset);
+  be_pushint(vm, gfx::alignedOffset(leftover, justify));
   be_return(vm);
 }
 

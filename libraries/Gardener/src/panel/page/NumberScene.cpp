@@ -27,9 +27,9 @@ gfx::Paint numberBand(const char* printed, gfx::shapes::TextBox ink, bool bar, i
                                     static_cast<float>(ink.height)),
                           gfx::text(gfx::Rect(0, 0, ink.width, ink.height), printed, nullptr,
                                     ValueScale)};
-  gfx::Alignment centred;
-  centred.horizontal = gfx::Horizontal::Center;
-  centred.vertical = gfx::Vertical::Center;
+  gfx::Justification centred;
+  centred.along = gfx::Justify::Center;
+  centred.across = gfx::Justify::Center;
   if (!bar) return gfx::column(1.0f, {number}, centred);
   const gfx::Child gap{gfx::Cell(1.0f, BarGap), gfx::Paint()};
   const gfx::Child filled{gfx::Cell(1.0f, BarHeight), [percent](gfx::Canvas& own) {

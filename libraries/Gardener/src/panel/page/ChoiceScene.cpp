@@ -118,8 +118,8 @@ gfx::Paint ChoiceScene::pageContents() {
                            rowOf(&items_[at], at == selected)};
       rows.push_back(row);
     }
-    gfx::Alignment centred;
-    centred.vertical = gfx::Vertical::Center;
+    gfx::Justification centred;
+    centred.along = gfx::Justify::Center;
     gfx::View plot = canvas.child(gfx::Rect(0, 0, rowsWidth, canvas.height()));
     gfx::column(1.0f, rows, centred)(plot);
     if (scrolls) gfx::drawScrollbar(canvas, first, count, visible);

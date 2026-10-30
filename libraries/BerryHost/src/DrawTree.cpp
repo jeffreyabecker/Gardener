@@ -14,12 +14,11 @@
 namespace gardener {
 namespace {
 
-using gfx::Alignment;
 using gfx::Cell;
 using gfx::Child;
-using gfx::Horizontal;
+using gfx::Justification;
+using gfx::Justify;
 using gfx::Paint;
-using gfx::Vertical;
 
 // --- reading a node --------------------------------------------------------
 //
@@ -127,28 +126,27 @@ gfx::DurationFormat formatOf(const char* name) {
   return gfx::DurationFormat::Minutes;
 }
 
-// Where a layout puts what it holds: the two names of the alignment record, the left and the top
-// when the node carries none.
-Alignment alignmentOf(bvm* vm, int node) {
-  Alignment alignment;
+// The justify a record's field names: the centre and the end, and the start for a name that is
+// neither, which is what the binding's default leaves.
+Justify justifyOf(bvm* vm, int record, const char* field) {
+  const char* name = textField(vm, record, field);
+  if (name != nullptr && strcmp(name, "center") == 0) return Justify::Center;
+  if (name != nullptr && strcmp(name, "end") == 0) return Justify::End;
+  return Justify::Start;
+}
+
+// Where a layout puts what it holds: the two names of the alignment record, the start of each when
+// the node carries none.
+Justification justificationOf(bvm* vm, int node) {
+  Justification justification;
   be_getmember(vm, node, "alignment");
   if (be_isinstance(vm, -1)) {
     const int record = be_absindex(vm, -1);
-    const char* across = textField(vm, record, "align");
-    const char* down = textField(vm, record, "v_align");
-    if (across != nullptr && strcmp(across, "center") == 0) {
-      alignment.horizontal = Horizontal::Center;
-    } else if (across != nullptr && strcmp(across, "right") == 0) {
-      alignment.horizontal = Horizontal::Right;
-    }
-    if (down != nullptr && strcmp(down, "center") == 0) {
-      alignment.vertical = Vertical::Center;
-    } else if (down != nullptr && strcmp(down, "bottom") == 0) {
-      alignment.vertical = Vertical::Bottom;
-    }
+    justification.along = justifyOf(vm, record, "along");
+    justification.across = justifyOf(vm, record, "across");
   }
   be_pop(vm, 1);
-  return alignment;
+  return justification;
 }
 
 Paint paintOf(bvm* vm, int node, const SystemState& state);
@@ -302,17 +300,17 @@ Paint paintOf(bvm* vm, int node, const SystemState& state) {
 
   if (strcmp(kind, "layout") == 0) {
     const Cell cell(cellSide(vm, node, "w"), cellSide(vm, node, "h"));
-    return gfx::layout(cell, childrenOf(vm, node, state), alignmentOf(vm, node));
+    return gfx::layout(cell, childrenOf(vm, node, state), justificationOf(vm, node));
   }
 
   if (strcmp(kind, "row") == 0) {
     const float height = cellSide(vm, node, "h");
-    return gfx::row(height, childrenOf(vm, node, state), alignmentOf(vm, node));
+    return gfx::row(height, childrenOf(vm, node, state), justificationOf(vm, node));
   }
 
   if (strcmp(kind, "column") == 0) {
     const float width = cellSide(vm, node, "w");
-    return gfx::column(width, childrenOf(vm, node, state), alignmentOf(vm, node));
+    return gfx::column(width, childrenOf(vm, node, state), justificationOf(vm, node));
   }
 
   // The draw the node holds, run and then inverted in the cell the node was given: the step that

@@ -55,15 +55,37 @@ TEST_CASE("a declared size above one is pixels") {
   CHECK_EQ(display.inkCount(0, 8, 128, 56), 128 * 56);
 }
 
-TEST_CASE("a layout takes the alignment it is given") {
+TEST_CASE("a layout takes the justification it is given") {
   reset();
   View base = canvas.child(Rect(0, 0, 100, 20));
-  Alignment centred;
-  centred.vertical = Vertical::Center;
+  Justification centred;
+  centred.along = Justify::Center;
   column(1.0f, {Child{Cell(1.0f, 0.2f), fill()}}, centred)(base);
   CHECK_EQ(display.inkCount(0, 0, 100, 8), 0);
   CHECK_EQ(display.inkCount(0, 8, 100, 4), 100 * 4);
   CHECK_EQ(display.inkCount(0, 12, 100, 8), 0);
+}
+
+TEST_CASE("a cell narrower than the column is placed across it") {
+  reset();
+  View base = canvas.child(Rect(0, 0, 100, 20));
+  Justification centred;
+  centred.across = Justify::Center;
+  column(1.0f, {Child{Cell(8.0f, 8.0f), fill()}}, centred)(base);
+  CHECK_EQ(display.inkCount(0, 0, 46, 8), 0);
+  CHECK_EQ(display.inkCount(46, 0, 8, 8), 8 * 8);
+  CHECK_EQ(display.inkCount(54, 0, 46, 8), 0);
+}
+
+TEST_CASE("a cell shallower than the row is placed across it") {
+  reset();
+  View base = canvas.child(Rect(0, 0, 100, 20));
+  Justification centred;
+  centred.across = Justify::Center;
+  row(1.0f, {Child{Cell(0.2f, 8.0f), fill()}}, centred)(base);
+  CHECK_EQ(display.inkCount(0, 0, 20, 6), 0);
+  CHECK_EQ(display.inkCount(0, 6, 20, 8), 20 * 8);
+  CHECK_EQ(display.inkCount(0, 14, 20, 6), 0);
 }
 
 TEST_CASE("a layout draws its children in order") {

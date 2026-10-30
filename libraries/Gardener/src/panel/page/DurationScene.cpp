@@ -14,11 +14,11 @@ namespace {
 // The face the two fields are drawn at.
 constexpr uint8_t FieldScale = 2;
 
-gfx::Alignment centred() {
-  gfx::Alignment alignment;
-  alignment.horizontal = gfx::Horizontal::Center;
-  alignment.vertical = gfx::Vertical::Center;
-  return alignment;
+gfx::Justification centred() {
+  gfx::Justification justification;
+  justification.along = gfx::Justify::Center;
+  justification.across = gfx::Justify::Center;
+  return justification;
 }
 
 // A string centred across and down the canvas it is drawn on, at the face and scale it is given.
