@@ -25,11 +25,11 @@
 #include "panel/parts/ButtonsTick.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/parts/GestureClassifier.h"
-#include "panel/parts/PageTick.h"
 #include "panel/PanelContext.h"
 #include "panel/parts/PartsTick.h"
 #include "routines/Interpreter.h"
 #include "routines/Routines.h"
+#include "routines/RoutinesTick.h"
 #include "storage/DeviceSettings.h"
 
 namespace {
@@ -47,11 +47,11 @@ using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
 using gardener::MachineCommand;
-using gardener::panel::parts::PageTick;
 using gardener::panel::PanelContext;
 using gardener::panel::parts::PartsTick;
 using gardener::Press;
 using gardener::Routines;
+using gardener::RoutinesTick;
 using gardener::RunState;
 using gardener::SystemState;
 using gardener::VacuumSystem;
@@ -317,7 +317,7 @@ TEST_CASE("the page activates on begin, polls on a tick and goes home") {
   REQUIRE(rig.ok);
   const int activates = rig.interpreter.counter().activates;
   const int roots = rig.interpreter.counter().roots;
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
 
   page.begin();
   CHECK_EQ(rig.interpreter.counter().activates, activates + 1);
@@ -334,7 +334,7 @@ TEST_CASE("the page activates on begin, polls on a tick and goes home") {
 TEST_CASE("a page going up sends the frame once") {
   PageRig rig;
   REQUIRE(rig.ok);
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
   rig.display.clear();
 
   page.begin();
@@ -345,7 +345,7 @@ TEST_CASE("a page going up sends the frame once") {
 TEST_CASE("a beat sends the frame once whether it drew or not") {
   PageRig rig;
   REQUIRE(rig.ok);
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
   page.begin();
   rig.display.clear();
 
@@ -374,7 +374,7 @@ std::vector<uint8_t> beatFrame(PageRig& rig) {
 TEST_CASE("the overlay draws the unit the document publishes") {
   PageRig rig;
   REQUIRE(rig.ok);
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
   page.begin();
 
   rig.settings.setUnit(DisplayUnit::Kpa);
@@ -387,7 +387,7 @@ TEST_CASE("the overlay draws the unit the document publishes") {
 TEST_CASE("the overlay draws the pack the parts beat publishes") {
   PageRig rig;
   REQUIRE(rig.ok);
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
   page.begin();
 
   rig.state.batteryPresent = true;
@@ -401,7 +401,7 @@ TEST_CASE("the overlay draws the pack the parts beat publishes") {
 TEST_CASE("the overlay draws the run state and both links") {
   PageRig rig;
   REQUIRE(rig.ok);
-  PageTick page{rig.routines};
+  RoutinesTick page{rig.routines};
   page.begin();
   const std::vector<uint8_t> idleFrame = beatFrame(rig);
 

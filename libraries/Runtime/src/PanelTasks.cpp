@@ -6,9 +6,9 @@
 #include "machine/SafeReboot.h"
 #include "core/SystemState.h"
 #include "panel/parts/ButtonsTick.h"
-#include "panel/parts/PageTick.h"
 #include "panel/Panel.h"
 #include "panel/parts/PartsTick.h"
+#include "routines/RoutinesTick.h"
 
 namespace gardener {
 
@@ -26,7 +26,7 @@ struct PanelState {
   panel::Panel& context;
   panel::parts::ButtonsTick& buttons;
   panel::parts::PartsTick& parts;
-  panel::parts::PageTick& page;
+  RoutinesTick& page;
 };
 
 }  // namespace
@@ -65,7 +65,7 @@ void spawnPanelTask(panel::Panel& context, SystemState& state) {
   static panel::parts::ButtonsTick buttons{context.gestures(), context.routines(), context.outbox(),
                              context.logger()};
   static panel::parts::PartsTick parts{context.battery(), context.buzzer(), state};
-  static panel::parts::PageTick page{context.routines()};
+  static RoutinesTick page{context.routines()};
   static PanelState panel{context, buttons, parts, page};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,

@@ -6,15 +6,11 @@ namespace gardener {
 
 class Routines;
 
-}  // namespace gardener
-
-namespace gardener::panel::parts {
-
 // The page's beat: the root scene goes on when the panel comes up, the top scene is polled on each
 // beat, and the go-home gesture gives the panel back to the root.
-class PageTick {
+class RoutinesTick {
  public:
-  explicit PageTick(Routines& routines) : routines_(routines) {}
+  explicit RoutinesTick(Routines& routines) : routines_(routines) {}
 
   // The panel came up: the root scene goes on with the first page, so a scene re-reads the unit and
   // draws rather than trusting what a previous boot left on the glass.
@@ -30,4 +26,4 @@ class PageTick {
   Routines& routines_;
 };
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener
