@@ -12,9 +12,9 @@ class Logger;
 struct SystemState;
 
 // The control tick's policy: what a beat applies from the queue and how a burst of commands
-// collapses, the order the parts are updated in, and the run log. A caller posts to it and steps it
-// with a millisecond, so the sequence a tick runs is reached by a case rather than only by the task
-// that runs it; nothing here needs an RTOS, a clock of its own or a board.
+// collapses, the order the parts are updated in, and the run log. A caller steps it with a
+// millisecond, so the sequence a tick runs is reached by a case rather than only by the task that
+// runs it; nothing here needs an RTOS, a clock of its own or a board.
 //
 // The queue is the composition's — the links and the panel post into the same one — and a Reboot is
 // not applied here: it belongs to the machine's composition, so takeReboot() hands it back rather
@@ -22,10 +22,6 @@ struct SystemState;
 class ControlTick {
  public:
   ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue, SystemState& state);
-
-  // A command for the next tick. False when the queue is full, in which case nothing was queued and
-  // the caller keeps the command.
-  bool post(const MachineCommand& command);
 
   // One beat: applies what is queued, then updates the sensor and the pump, services the machine
   // and writes the run log, in that order. The millisecond is the tick's only clock.

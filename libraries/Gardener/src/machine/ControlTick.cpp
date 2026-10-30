@@ -10,8 +10,6 @@ ControlTick::ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& que
     : vacuum_(vacuum), logger_(logger), queue_(queue), state_(state),
       lastState_(vacuum.runState()) {}
 
-bool ControlTick::post(const MachineCommand& command) { return queue_.post(command); }
-
 void ControlTick::tick(uint32_t nowMs) {
   // Commands first, against the machine as the last tick left it.
   drainCommands();

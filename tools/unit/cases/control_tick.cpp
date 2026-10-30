@@ -59,8 +59,7 @@ class BoundedQueue : public CommandQueue {
 // The machine a tick drives: the three fakes, the loop over them, the queue, the log, and the state
 // the tick publishes its slice into.
 struct Rig {
-  explicit Rig(size_t queueDepth = 8)
-      : queue(queueDepth), tick(system, logger, queue, published) {
+  Rig() : tick(system, logger, queue, published) {
     gardener::host::reset();
     sensor.read(20.0f);
     system.begin();
@@ -154,13 +153,6 @@ TEST_CASE("the run log names a state change once") {
   CHECK_EQ(linesWith(rig.logger, "IDLE -> VENT"), 1);
   rig.tick.tick(50);
   CHECK_EQ(linesWith(rig.logger, "IDLE -> VENT"), 1);
-}
-
-TEST_CASE("a full queue refuses a post rather than losing the command silently") {
-  Rig rig(1);
-  CHECK(rig.tick.post(op(Op::ResetFault)));
-  CHECK_FALSE(rig.tick.post(op(Op::ResetFault)));
-  CHECK_EQ(rig.queue.count(), static_cast<size_t>(1));
 }
 
 TEST_CASE("the outbox holds what a full queue could not take and flushes in order") {
