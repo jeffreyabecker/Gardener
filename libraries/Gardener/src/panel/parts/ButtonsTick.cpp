@@ -2,8 +2,7 @@
 
 #include "core/Logger.h"
 #include "machine/MachineCommand.h"
-#include "panel/parts/GestureClassifier.h"
-#include "routines/Routines.h"
+#include "panel/GestureQueue.h"
 
 namespace gardener::panel::parts {
 namespace {
@@ -14,9 +13,9 @@ constexpr uint32_t ResetHoldSeconds = 5;
 
 }  // namespace
 
-ButtonsTick::ButtonsTick(GestureClassifier& gestures, Routines& routines, CommandOutbox& outbox,
-                         Logger& logger)
-    : gestures_(gestures), routines_(routines), outbox_(outbox), logger_(logger) {}
+ButtonsTick::ButtonsTick(ButtonPanel& buttons, panel::GestureQueue& presses,
+                         CommandOutbox& outbox, Logger& logger)
+    : classifier_(buttons), presses_(presses), outbox_(outbox), logger_(logger) {}
 
 bool ButtonsTick::takeReset() {
   const bool pending = reset_;
@@ -31,7 +30,7 @@ bool ButtonsTick::takeHome() {
 }
 
 void ButtonsTick::tick() {
-  const String gesture = gestures_.update();
+  const String gesture = classifier_.update();
 
   static const String ResetGesture =
       String("ok:") + ResetHoldSeconds + "+cancel:" + ResetHoldSeconds;
@@ -56,14 +55,6 @@ void ButtonsTick::tick() {
   if (!gesture.isEmpty()) deliver(gesture);
 }
 
-void ButtonsTick::deliver(const String& gesture) {
-  if (routines_.active()) {
-    routines_.pushPress(gesture);
-    return;
-  }
-  String message = "btn: ";
-  message += gesture;
-  logger_.info(message.c_str());
-}
+void ButtonsTick::deliver(const String& gesture) { presses_.push(gesture); }
 
 }  // namespace gardener::panel::parts

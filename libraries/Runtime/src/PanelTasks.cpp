@@ -62,8 +62,8 @@ void panelTask(void* arg) {
 }
 
 void spawnPanelTask(panel::Panel& context, SystemState& state) {
-  static panel::parts::ButtonsTick buttons{context.gestures(), context.routines(), context.outbox(),
-                             context.logger()};
+  static panel::parts::ButtonsTick buttons{context.buttons(), context.routines().presses(),
+                                           context.outbox(), context.logger()};
   static panel::parts::PartsTick parts{context.battery(), context.buzzer(), state};
   static RoutinesTick page{context.routines()};
   static PanelState panel{context, buttons, parts, page};

@@ -10,7 +10,6 @@
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/parts/GestureClassifier.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
 #include "storage/DeviceSettings.h"
@@ -48,7 +47,6 @@ class Panel : public PanelContext {
       : machine_(logger, pump, sensor, valve),
         outbox_(queue),
         buttons_(buttons),
-        gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
         settings_(&library, state),
@@ -69,7 +67,6 @@ class Panel : public PanelContext {
   bool boot();
 
   ButtonPanel& buttons() { return *buttons_; }
-  parts::GestureClassifier& gestures() { return gestures_; }
   parts::BuzzerPlayer& buzzer() override { return *buzzer_; }
   // The gauge, for the panel task's own beat and the wire's `device get`, which hold a Panel.
   Battery& battery() { return *battery_; }
@@ -92,7 +89,6 @@ class Panel : public PanelContext {
   Machine machine_;
   CommandOutbox outbox_;
   ButtonPanel* buttons_;
-  parts::GestureClassifier gestures_;
   parts::BuzzerPlayer* buzzer_;
   Battery* battery_;
   // The device's document, ahead of the display and of the interpreter that reads it.

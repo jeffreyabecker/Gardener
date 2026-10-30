@@ -16,9 +16,8 @@ constexpr const char* PageList = "__pages";
 
 }  // namespace
 
-BerryScene::BerryScene(panel::GestureQueue& gestures, bvm* vm, int page,
-                       const SystemState& state)
-    : Scene(gestures), vm_(vm), state_(state) {
+BerryScene::BerryScene(bvm* vm, int page, berry::BindingContext& bindings)
+    : Scene(bindings.presses()), vm_(vm), bindings_(bindings), state_(bindings.systemState()) {
   const int base = be_top(vm_);
   if (!be_getglobal(vm_, PageList) || !be_islist(vm_, -1)) {
     // The lookup leaves a nil whether it found a global or not, and the list replaces it.
@@ -123,14 +122,12 @@ bool BerryScene::endCall(const char* method, int argc) {
     // A failed call leaves the exception and its argument, the argument being the message. A page
     // that raised is not called again: the beat is 250 ms, so it would raise every beat.
     broken_ = true;
-    if (berry::bindings != nullptr) {
-      String message = "vm: ";
-      message += method;
-      message += ": ";
-      const char* detail = be_tostring(vm_, -1);
-      message += detail != nullptr ? detail : "error";
-      berry::bindings->error(message.c_str());
-    }
+    String message = "vm: ";
+    message += method;
+    message += ": ";
+    const char* detail = be_tostring(vm_, -1);
+    message += detail != nullptr ? detail : "error";
+    bindings_.error(message.c_str());
     be_pop(vm_, 2);
     return false;
   }

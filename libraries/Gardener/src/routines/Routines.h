@@ -51,8 +51,7 @@ class Routines {
   // unit and redraws rather than trusting what it knew before. True while a page is showing.
   bool enterPage();
 
-  // Whether a page is showing. The beat takes poll()'s answer instead; this is for the gesture path,
-  // which asks once per press.
+  // Whether a page is showing, for the host harness's driver, which asks once per press.
   bool active() const { return ux_.depth() > 0; }
 
   // What the load cost: the files that loaded of the files that were found. The difference is a file

@@ -461,11 +461,13 @@ int screenAlign(bvm* vm) {
 
 // The panel's size, which is what a page's outermost box is.
 int screenWidth(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   be_pushint(vm, bindings->display().width());
   be_return(vm);
 }
 
 int screenHeight(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   be_pushint(vm, bindings->display().height());
   be_return(vm);
 }
@@ -495,11 +497,11 @@ const bnfuncinfo ScreenLibrary[] = {
 
 // The module a page describes its drawing through, and the three records it answers with: the node
 // every call builds, the ink box `measure` answers, and where a layout puts what it holds.
-void installScreenModule(bvm* vm) {
-  installRecord(vm, DrawClass, DrawFields);
-  installRecord(vm, "bounds", BoundsFields);
-  installRecord(vm, "alignment", AlignmentFields);
-  installModule(vm, "screen", ScreenLibrary);
+void installScreenModule(bvm* vm, BindingContext& bindings) {
+  installRecord(vm, DrawClass, DrawFields, bindings);
+  installRecord(vm, "bounds", BoundsFields, bindings);
+  installRecord(vm, "alignment", AlignmentFields, bindings);
+  installModule(vm, "screen", ScreenLibrary, bindings);
 }
 
 }  // namespace berry

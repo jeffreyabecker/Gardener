@@ -24,7 +24,6 @@
 #include "machine/VacuumSystem.h"
 #include "panel/parts/ButtonsTick.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/parts/GestureClassifier.h"
 #include "panel/PanelContext.h"
 #include "panel/parts/PartsTick.h"
 #include "routines/Interpreter.h"
@@ -42,7 +41,6 @@ using gardener::CommandOutbox;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
-using gardener::panel::parts::GestureClassifier;
 using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
@@ -190,10 +188,9 @@ struct PageRig {
 // The buttons tick and the parts it answers into.
 struct ButtonsRig {
   explicit ButtonsRig(Routines& routines)
-      : classifier(buttons), tick(classifier, routines, outbox, logger) {}
+      : tick(buttons, routines.presses(), outbox, logger) {}
 
   FakeButtonPanel buttons;
-  GestureClassifier classifier;
   MemoryQueue queue;
   CommandOutbox outbox{queue};
   RecordingLogger logger;
@@ -234,7 +231,7 @@ TEST_CASE("the cancel hold stops the machine and asks for home") {
   CHECK(rig.logger.saw("panel: cancel held"));
 }
 
-TEST_CASE("a gesture goes to the active page rather than the log") {
+TEST_CASE("a gesture reaches the queue the page drains") {
   PageRig page;
   REQUIRE(page.ok);
   ButtonsRig rig{page.routines};
@@ -248,21 +245,6 @@ TEST_CASE("a gesture goes to the active page rather than the log") {
   String gesture;
   REQUIRE(page.routines.takePress(gesture));
   CHECK_EQ(std::string(gesture.c_str()), std::string("back:single"));
-  CHECK_FALSE(rig.logger.saw("btn:"));
-}
-
-TEST_CASE("a gesture with no page is logged") {
-  FakeInterpreter interpreter;
-  Routines routines{interpreter};
-  ButtonsRig rig{routines};
-
-  rig.buttons.press(Button::Back);
-  rig.tick.tick();
-  rig.buttons.release(Button::Back);
-  rig.buttons.classify(Button::Back, Press::Single);
-  rig.tick.tick();
-
-  CHECK(rig.logger.saw("btn: back:single"));
 }
 
 TEST_CASE("the gauge and the piezo are updated on the same millisecond") {

@@ -245,7 +245,7 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
 // The page a registration names: an instance of the class the file gave, built from the activation and
 // wrapped as the scene the stack drives. Nothing, with one line, for a page whose init raised — the
 // class is the file's and may refuse the set it is handed.
-std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
+std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm, int slot,
                                               const RoutineActivation& activation) {
   if (vm == nullptr || bindings == nullptr || slot < 0) return nullptr;
 
@@ -273,8 +273,7 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
           bindings->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<BerryScene>(bindings->presses(), vm, be_absindex(vm, -1),
-                                            bindings->systemState());
+        page = std::make_unique<BerryScene>(vm, be_absindex(vm, -1), *bindings);
       }
     }
   }
@@ -287,6 +286,7 @@ std::unique_ptr<panel::page::Scene> buildPage(bvm* vm, int slot,
 // declarations, in the order the settings list shows, and each is consumed here, because a row belongs
 // to the one record that took it; nil declares nothing.
 int routinesRegister(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.register: no panel");
   }
@@ -308,8 +308,8 @@ int routinesRegister(bvm* vm) {
   const int slot = holdClass(vm, 5);
 
   Registration record(routineKey, title, std::move(rows),
-                      [vm, slot](const RoutineActivation& activation) {
-                        return buildPage(vm, slot, activation);
+                      [vm, slot, bindings](const RoutineActivation& activation) {
+                        return buildPage(bindings, vm, slot, activation);
                       },
                       glyph);
   be_pushbool(vm, bindings->registry().add(std::move(record)));
@@ -319,6 +319,7 @@ int routinesRegister(bvm* vm) {
 // routines.load_settings(routine_key): the set a routine begins with, as a map the page reads. A key
 // that is not registered answers an empty map rather than raising: a page has an answer either way.
 int routinesLoadSettings(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.load_settings: no panel");
   }
@@ -332,6 +333,7 @@ int routinesLoadSettings(bvm* vm) {
 // routines.save_settings(routine_key, values): a settled set written back under the keys the record
 // declares, once, and a key the map leaves out written as nothing.
 int routinesSaveSettings(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.save_settings: no panel");
   }
@@ -370,6 +372,7 @@ int routinesSaveSettings(bvm* vm) {
 // routines.rows(): the browser's list, one row per record and per alternate in the order they
 // registered.
 int routinesRows(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.rows: no panel");
   }
@@ -389,6 +392,7 @@ int routinesRows(bvm* vm) {
 // routines.title(routine_key): the label a page draws for a record or an alternate, and nil for a
 // key nobody registered, which is what a page tests before it draws a heading.
 int routinesTitle(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.title: no panel");
   }
@@ -407,6 +411,7 @@ int routinesTitle(bvm* vm) {
 // and for a record that declares nothing, which is what a page tests before it opens a list; reading
 // leaves the record's rows where they were, so a list opened twice edits the same declarations.
 int routinesSettingsCfgs(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.settings_cfgs: no panel");
   }
@@ -436,6 +441,7 @@ int routinesSettingsCfgs(bvm* vm) {
 // refuses begins at the default. Nil, with the stack untouched, for a key nobody registered, a
 // record that names no page and a page whose init raised.
 int routinesActivate(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.activate: no panel");
   }
@@ -459,6 +465,7 @@ int routinesActivate(bvm* vm) {
 // the list a driver walks and a summary counts the image by. An empty list, never nil, for an image
 // that registered nothing.
 int routinesKeys(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "routines.keys: no panel");
   }
@@ -492,10 +499,10 @@ const bnfuncinfo RoutinesLibrary[] = {
 // The module the image registers its routines through: one call to declare a record with the page
 // it names, one to build that page for a launch, the two the page reads and writes its set through,
 // and the three the browser lists them and edits them with.
-void installRoutinesModule(bvm* vm) {
-  installRecord(vm, ActivationRecord, ActivationFields);
-  installRecord(vm, RowRecord, RowFields);
-  installModule(vm, "routines", RoutinesLibrary);
+void installRoutinesModule(bvm* vm, BindingContext& bindings) {
+  installRecord(vm, ActivationRecord, ActivationFields, bindings);
+  installRecord(vm, RowRecord, RowFields, bindings);
+  installModule(vm, "routines", RoutinesLibrary, bindings);
   // The classes a registration names, in a list the interpreter owns for the life of the VM: the
   // registrations outlive the call that made them, the pages are built later, and a value a C++ object
   // holds is none of the collector's.

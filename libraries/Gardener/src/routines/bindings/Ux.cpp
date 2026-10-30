@@ -110,7 +110,7 @@ std::shared_ptr<CallbackSlot> holdCallback(bvm* vm, int index) {
 
 // The function at `slot` called with the answer the page handed back. A raise is one line and the
 // call is dropped, the way a page's own hook reports one.
-void runCallback(bvm* vm, int slot, const std::any& answer) {
+void runCallback(BindingContext* bindings, bvm* vm, int slot, const std::any& answer) {
   if (vm == nullptr || slot < 0) return;
   const int base = be_top(vm);
   if (be_getglobal(vm, CallbackList) && be_islist(vm, -1)) {
@@ -154,7 +154,7 @@ std::unique_ptr<panel::page::Scene> takeSceneHandle(bvm* vm, int index) {
 
 // The page called before the stack moves: the panel's parts are what a scene and a handle are built
 // from, and neither exists before the panel runs.
-void requirePanel(bvm* vm, const char* call) {
+void requirePanel(BindingContext* bindings, bvm* vm, const char* call) {
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", call);
   }
@@ -166,7 +166,8 @@ void requirePanel(bvm* vm, const char* call) {
 // refuses — an empty handle, one already pushed, or the eight-frame cap — and true when placed or
 // held to the end of the beat.
 int uxPush(bvm* vm) {
-  requirePanel(vm, "ux.push: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.push: no panel");
   if (be_top(vm) < 1) {
     be_raise(vm, "type_error", "ux.push: push(page, callback)");
   }
@@ -183,13 +184,13 @@ int uxPush(bvm* vm) {
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<BerryScene>(bindings->presses(), vm, 1, bindings->systemState());
+    scene = std::make_unique<BerryScene>(vm, 1, *bindings);
   }
   panel::page::Ux::Callback held;
   if (callback) {
     const std::shared_ptr<CallbackSlot> slot = holdCallback(vm, 2);
-    held = [slot](panel::page::Scene& popped) {
-      runCallback(slot->vm, slot->slot, popped.value());
+    held = [slot, bindings](panel::page::Scene& popped) {
+      runCallback(bindings, slot->vm, slot->slot, popped.value());
     };
   }
   be_pushbool(vm, bindings->ux().push(std::move(scene), std::move(held)));
@@ -199,7 +200,8 @@ int uxPush(bvm* vm) {
 // ux.pop(): the top page taken off, its callback run. Answers false when only the root is left,
 // which is what pop_to_root is for.
 int uxPop(bvm* vm) {
-  requirePanel(vm, "ux.pop: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.pop: no panel");
   be_pushbool(vm, bindings->ux().pop());
   be_return(vm);
 }
@@ -207,7 +209,8 @@ int uxPop(bvm* vm) {
 // ux.pop_to_root(): every page above the root taken off in one move, no callback run. Answers
 // whether a page is showing.
 int uxPopToRoot(bvm* vm) {
-  requirePanel(vm, "ux.pop_to_root: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.pop_to_root: no panel");
   be_pushbool(vm, bindings->ux().popToRoot());
   be_return(vm);
 }
@@ -215,7 +218,8 @@ int uxPopToRoot(bvm* vm) {
 // ux.depth(): how many frames are showing, the root included — 1 at boot and after every reset, and
 // 0 with nothing showing. The stack's own count, never more than its cap.
 int uxDepth(bvm* vm) {
-  requirePanel(vm, "ux.depth: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.depth: no panel");
   be_pushint(vm, bindings->ux().depth());
   be_return(vm);
 }
@@ -224,7 +228,8 @@ int uxDepth(bvm* vm) {
 // field on it and call its methods. Nil for a scene a native factory answered, which no page wrote,
 // and nil with nothing showing.
 int uxTop(bvm* vm) {
-  requirePanel(vm, "ux.top: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.top: no panel");
   const panel::page::Scene* showing = bindings->ux().top();
   const BerryScene* page =
       showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
@@ -235,7 +240,8 @@ int uxTop(bvm* vm) {
 // ux.overlay_start(): the row the overlay begins at, which is where the page above it stops — 0
 // when the stack has no overlay. A case marks from there rather than assuming a height.
 int uxOverlayStart(bvm* vm) {
-  requirePanel(vm, "ux.overlay_start: no panel");
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm, "ux.overlay_start: no panel");
   be_pushint(vm, bindings->ux().overlayStart());
   be_return(vm);
 }
@@ -262,9 +268,9 @@ void pushSceneHandle(bvm* vm, std::unique_ptr<panel::page::Scene> scene) {
 
 // The module a page moves the stack through: the two calls that take a page and the one that takes
 // every page above the root, and the class a native factory answers a scene with.
-void installUxModule(bvm* vm) {
-  installRecord(vm, SceneRecord, SceneFields);
-  installModule(vm, "ux", UxLibrary);
+void installUxModule(bvm* vm, BindingContext& bindings) {
+  installRecord(vm, SceneRecord, SceneFields, bindings);
+  installModule(vm, "ux", UxLibrary, bindings);
   // The callbacks a pushed page carries, in a list the interpreter owns for the life of the VM: the
   // frames outlive the call that pushed them, and a value a C++ object holds is none of the
   // collector's.

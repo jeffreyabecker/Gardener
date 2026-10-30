@@ -12,12 +12,14 @@ namespace {
 
 // The target the default program pulls to; 0 when none has been set.
 int deviceTarget(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   be_pushreal(vm, bindings->systemState().deviceTargetKpa);
   be_return(vm);
 }
 
 // The sequence a routine plays at its finish, in the same notation the device's own documents use.
 int devicePlaySequence(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "device.play_sequence(notes)");
   }
@@ -31,6 +33,7 @@ int devicePlaySequence(bvm* vm) {
 // A tone with a duration; 0 ms means until silence(). A frequency outside the machine's range is
 // clamped rather than dropped, and a non-positive one is silence.
 int deviceTone(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (be_top(vm) < 2) {
     be_raise(vm, "type_error", "device.tone(hz, duration_ms)");
   }
@@ -49,6 +52,7 @@ int deviceTone(bvm* vm) {
 
 // Silence, and stop whatever is playing.
 int deviceSilence(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   bindings->buzzer().off();
   be_return_nil(vm);
 }
@@ -64,6 +68,7 @@ int deviceNowMs(bvm* vm) {
 // lands where the firmware's own lines do, which is why the sink is the panel's logger rather than
 // anything of the VM's.
 int deviceLog(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (be_top(vm) >= 1 && be_isstring(vm, 1) && bindings != nullptr) {
     bindings->info(argText(vm, 1));
   }
@@ -73,6 +78,7 @@ int deviceLog(bvm* vm) {
 // A pull, not a callback: the queue is drained by the routine when it is ready, so no Berry code
 // runs while a native call is on the stack.
 int deviceTakeGesture(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   String gesture;
   if (bindings == nullptr || !bindings->takePress(gesture)) be_return_nil(vm);
   be_pushstring(vm, gesture.c_str());
@@ -92,8 +98,8 @@ const bnfuncinfo DeviceLibrary[] = {
 
 }  // namespace
 
-void installDeviceModule(bvm* vm) {
-  installModule(vm, "device", DeviceLibrary);
+void installDeviceModule(bvm* vm, BindingContext& bindings) {
+  installModule(vm, "device", DeviceLibrary, bindings);
 }
 
 }  // namespace berry

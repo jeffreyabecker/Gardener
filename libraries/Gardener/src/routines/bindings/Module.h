@@ -5,13 +5,44 @@
 namespace gardener {
 namespace berry {
 
+class BindingContext;
+
+// --- the app a callback reaches --------------------------------------------
+//
+// A callback is a plain C function with no user data, so the app it reaches is the one upvalue of
+// the native closure it was installed as: installModule() and pushClass() capture it, and a
+// callback asks boundContext() for it. Nothing names a global, so the modules of one VM cannot
+// answer with the parts of another.
+
+// Captures the app in the native closure on top of the stack.
+inline void captureBindingContext(bvm* vm, BindingContext& bindings) {
+  const int closure = be_absindex(vm, -1);
+  be_pushcomptr(vm, &bindings);
+  // be_setupval copies the top into the upvalue and leaves it there, so the push is undone here.
+  be_setupval(vm, closure, 0);
+  be_pop(vm, 1);
+}
+
+// The app the running callback was installed with, and nothing for one installed without it. Only a
+// callback's own frame has the closure to read it from: a C++ helper is handed the pointer by its
+// caller.
+inline BindingContext* boundContext(bvm* vm) {
+  be_getupval(vm, 0, 0);
+  BindingContext* bindings =
+      be_iscomptr(vm, -1) ? static_cast<BindingContext*>(be_tocomptr(vm, -1)) : nullptr;
+  be_pop(vm, 1);
+  return bindings;
+}
+
 // --- building a module -----------------------------------------------------
 
-inline void installModule(bvm* vm, const char* name, const bnfuncinfo* library) {
+inline void installModule(bvm* vm, const char* name, const bnfuncinfo* library,
+                          BindingContext& bindings) {
   be_newmodule(vm);
   const int module = be_absindex(vm, -1);
   for (const bnfuncinfo* entry = library; entry->name != nullptr; entry++) {
-    be_pushntvfunction(vm, entry->function);
+    be_pushntvclosure(vm, entry->function, 1);
+    captureBindingContext(vm, bindings);
     // be_setmember copies into the module and leaves the value where it was, so the push is
     // undone here. Passing the absolute index keeps it valid across the push.
     be_setmember(vm, module, entry->name);
@@ -47,8 +78,29 @@ inline int settleClassCall(bvm* vm, int argc) {
   return be_absindex(vm, -1);
 }
 
-inline void installRecord(bvm* vm, const char* name, const bnfuncinfo* fields) {
+// The methods a class is pushed with arrive as plain native functions, which capture nothing; each
+// is replaced here by a closure over the app the module's own functions hold, so a record's init
+// can reach it. The entries with no function are the instance variables, and are left as they are.
+inline void bindMethods(bvm* vm, int record, const bnfuncinfo* fields, BindingContext& bindings) {
+  for (const bnfuncinfo* entry = fields; entry->name != nullptr; entry++) {
+    if (entry->function == nullptr) continue;
+    be_pushntvclosure(vm, entry->function, 1);
+    captureBindingContext(vm, bindings);
+    be_setmember(vm, record, entry->name);
+    be_pop(vm, 1);
+  }
+}
+
+// Pushes the class `fields` declares, every method bound to the app, and leaves it on top.
+inline void pushClass(bvm* vm, const char* name, const bnfuncinfo* fields,
+                      BindingContext& bindings) {
   be_pushclass(vm, name, fields);
+  bindMethods(vm, be_absindex(vm, -1), fields, bindings);
+}
+
+inline void installRecord(bvm* vm, const char* name, const bnfuncinfo* fields,
+                          BindingContext& bindings) {
+  pushClass(vm, name, fields, bindings);
   be_setglobal(vm, name);
   // be_setglobal leaves the value it stored on the stack; the record is done with here.
   be_pop(vm, 1);

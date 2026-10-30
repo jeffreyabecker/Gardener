@@ -2,17 +2,20 @@
 
 #include <Arduino.h>
 
+#include "panel/parts/GestureClassifier.h"
+
 namespace gardener {
 
 class CommandOutbox;
 class Logger;
-class Routines;
+
+namespace panel {
+class GestureQueue;
+}  // namespace panel
 
 }  // namespace gardener
 
 namespace gardener::panel::parts {
-
-class GestureClassifier;
 
 // The keys' policy on the panel beat: one call to the classifier, the two holds the panel takes for
 // itself, and the gesture a page gets. A caller steps it, so the sequence a beat runs is reached by
@@ -24,7 +27,9 @@ class GestureClassifier;
 // tick, so it parks takeHome() rather than moving the page from here.
 class ButtonsTick {
  public:
-  ButtonsTick(GestureClassifier& gestures, Routines& routines, CommandOutbox& outbox,
+  // The keys are this beat's: the classifier is the tick's own, built on the reader it is handed,
+  // so no other caller settles the same panel between two beats.
+  ButtonsTick(ButtonPanel& buttons, panel::GestureQueue& presses, CommandOutbox& outbox,
               Logger& logger);
 
   // One call to the classifier, and the policy for what it answers.
@@ -36,12 +41,12 @@ class ButtonsTick {
   bool takeHome();
 
  private:
-  // The gesture goes to the active routine on the panel page, or to the press log. The
-  // classifier is its one consumer, so it is never delivered twice.
+  // The gesture goes to the queue the page drains. The classifier is its one consumer, so it is
+  // never delivered twice.
   void deliver(const String& gesture);
 
-  GestureClassifier& gestures_;
-  Routines& routines_;
+  GestureClassifier classifier_;
+  panel::GestureQueue& presses_;
   CommandOutbox& outbox_;
   Logger& logger_;
   bool reset_ = false;

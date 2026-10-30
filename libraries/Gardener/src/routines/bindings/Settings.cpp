@@ -124,7 +124,7 @@ void requireFormatter(bvm* vm, int index, const char* kind) {
 
 // Every call needs the panel's parts: a row takes the queue its editor reads and the stack its
 // editor is pushed on, and neither exists before the panel runs.
-void requirePanel(bvm* vm) {
+void requirePanel(BindingContext* bindings, bvm* vm) {
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "settings: no panel");
   }
@@ -172,7 +172,7 @@ std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
 
 // The unit the panel prints pressure in: a declaration is made while the panel runs, so a row is
 // built in the unit showing then.
-DisplayUnit displayUnit() { return bindings->systemState().unit; }
+DisplayUnit displayUnit(BindingContext* bindings) { return bindings->systemState().unit; }
 
 void holdRow(bvm* vm, std::unique_ptr<panel::page::SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
@@ -210,7 +210,8 @@ void pushEntries(bvm* vm, const std::vector<panel::page::ChoiceItem>& entries) {
 // settings.number(key, default, label, format, step, min, max, nullable, whole). A whole
 // declaration is held, printed and stored with no decimals; a real one keeps two.
 int numberInit(bvm* vm) {
-  requirePanel(vm);
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm);
   requireArguments(vm, 10, NumberName,
                    "init(key, default, label, format, step, min, max, nullable, whole)");
   requireText(vm, 2, NumberName, "the key");
@@ -236,7 +237,8 @@ int numberInit(bvm* vm) {
 // and the bounds are the machine's, so a keypress cannot leave the editor on a target the loop
 // refuses.
 int pressureInit(bvm* vm) {
-  requirePanel(vm);
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm);
   requireArguments(vm, 7, PressureName, "init(key, default, label, format, step, nullable)");
   requireText(vm, 2, PressureName, "the key");
   requireNumberOrNil(vm, 3, PressureName, "a default");
@@ -248,13 +250,14 @@ int pressureInit(bvm* vm) {
   holdRow(vm, std::make_unique<panel::page::PressureRow>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
-                  displayUnit(), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
+                  displayUnit(bindings), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 
 // settings.duration(key, default, label, format, step, min, max, nullable), in whole seconds.
 int durationInit(bvm* vm) {
-  requirePanel(vm);
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm);
   requireArguments(vm, 9, DurationName,
                    "init(key, default, label, format, step, min, max, nullable)");
   requireText(vm, 2, DurationName, "the key");
@@ -276,7 +279,8 @@ int durationInit(bvm* vm) {
 // settings.choice(key, default, label, format, entries, nullable). An entry is one string, carried
 // as the key the document keeps and the title the list prints.
 int choiceInit(bvm* vm) {
-  requirePanel(vm);
+  BindingContext* bindings = boundContext(vm);
+  requirePanel(bindings, vm);
   requireArguments(vm, 7, ChoiceName, "init(key, default, label, format, entries, nullable)");
   requireText(vm, 2, ChoiceName, "the key");
   requireText(vm, 3, ChoiceName, "a default");
@@ -434,6 +438,7 @@ panel::page::SettingsRow* borrowedRow(bvm* vm, int index) {
 // nil declarations draw an empty list. The list answers the set it settled on, which is what a page
 // pushed with it is handed back.
 int settingsEditScene(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
     be_raise(vm, "runtime_error", "SettingsEditScene: no panel");
   }
@@ -487,7 +492,7 @@ int settingsEditScene(bvm* vm) {
 // The `settings` module: the four declaration classes, installed as members so a file reaches a
 // kind through the module rather than through a global of its own, the record a routine's
 // declarations are read back through, and the list a declaration list opens.
-void installSettingsModule(bvm* vm) {
+void installSettingsModule(bvm* vm, BindingContext& bindings) {
   struct Kind {
     const char* name;
     const bnfuncinfo* members;
@@ -502,7 +507,7 @@ void installSettingsModule(bvm* vm) {
   be_newmodule(vm);
   const int module = be_absindex(vm, -1);
   for (const Kind& kind : kinds) {
-    be_pushclass(vm, kind.name, kind.members);
+    pushClass(vm, kind.name, kind.members, bindings);
     // be_setmember copies into the module and leaves the class where it was, so the push is undone
     // here. The absolute index keeps the module valid across the push.
     be_setmember(vm, module, kind.name);
@@ -512,10 +517,11 @@ void installSettingsModule(bvm* vm) {
   // be_setglobal leaves the value it stored on the stack; the module is done with here.
   be_pop(vm, 1);
 
-  installRecord(vm, SettingRecord, SettingFields);
+  installRecord(vm, SettingRecord, SettingFields, bindings);
 
   // The list a declaration list opens, a global because a page names it as one.
-  be_pushntvfunction(vm, settingsEditScene);
+  be_pushntvclosure(vm, settingsEditScene, 1);
+  captureBindingContext(vm, bindings);
   be_setglobal(vm, "SettingsEditScene");
   // be_setglobal leaves the value it stored on the stack; the function is done with here.
   be_pop(vm, 1);
