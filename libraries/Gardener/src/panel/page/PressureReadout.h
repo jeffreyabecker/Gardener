@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "panel/SystemState.h"
+#include "core/SystemState.h"
 #include "Drawing.h"
 
 namespace gardener::panel::page {

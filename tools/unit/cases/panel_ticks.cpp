@@ -11,6 +11,7 @@
 #include "CaptureDisplay.h"
 #include "Clock.h"
 #include "core/Logger.h"
+#include "core/SystemState.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
 #include "Canvas.h"
@@ -51,6 +52,7 @@ using gardener::panel::PanelContext;
 using gardener::panel::parts::PartsTick;
 using gardener::Press;
 using gardener::Routines;
+using gardener::RunState;
 using gardener::SystemState;
 using gardener::VacuumSystem;
 using gardener::gfx::Canvas;
@@ -130,31 +132,22 @@ class FakeInterpreter : public Interpreter {
   SceneCounter counter_;
 };
 
-// The panel a routines object draws through, assembled from the fakes and a stub glass.
+// The panel a routines object draws through, assembled from the fakes and a stub glass. It reads
+// nothing of the device: the state it draws from is the one the rig publishes into.
 class PageContext : public PanelContext {
  public:
-  PageContext(DisplayDevice& display, Canvas& canvas, DeviceSettings& settings,
-              VacuumSystem& vacuum, Battery& battery, BuzzerPlayer& buzzer, Library& library,
-              Logger& logger)
+  PageContext(DisplayDevice& display, Canvas& canvas, SystemState& state, BuzzerPlayer& buzzer,
+              Library& library, Logger& logger)
       : display_(display),
         canvas_(canvas),
-        settings_(settings),
-        vacuum_(vacuum),
-        battery_(battery),
+        state_(state),
         buzzer_(buzzer),
         library_(library),
         logger_(logger) {}
 
   DisplayDevice& display() override { return display_; }
   Canvas& canvas() override { return canvas_; }
-  // Nothing is fitted beyond the gauge and no link is up unless a case puts one up.
-  SystemState systemState() override {
-    return readSystemState(vacuum_, battery_, settings_, serialConnected_, bluetoothConnected_);
-  }
-  void setConnected(bool serial, bool bluetooth) {
-    serialConnected_ = serial;
-    bluetoothConnected_ = bluetooth;
-  }
+  SystemState& systemState() override { return state_; }
   BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
@@ -163,32 +156,34 @@ class PageContext : public PanelContext {
  private:
   DisplayDevice& display_;
   Canvas& canvas_;
-  DeviceSettings& settings_;
-  VacuumSystem& vacuum_;
-  Battery& battery_;
+  SystemState& state_;
   BuzzerPlayer& buzzer_;
   Library& library_;
   Logger& logger_;
-  bool serialConnected_ = false;
-  bool bluetoothConnected_ = false;
 };
 
 // The routines a page tick drives: the fake interpreter, an empty order file so no image is read,
-// and the context the root scene is put on.
+// and the context the root scene is put on. The rig owns the published state, so a case can say what
+// the overlay draws.
 struct PageRig {
   PageRig()
-      : settings(&library),
+      : settings(&library, state),
         canvas(display.rootCanvas()),
         buzzer(buzzerPart),
         vacuum(&pump, &sensor, &valve),
-        context(display, canvas, settings, vacuum, battery, buzzer, library, logger),
+        context(display, canvas, state, buzzer, library, logger),
         routines(interpreter) {
+    state.batteryPresent = battery.present();
+    state.batteryPercent = battery.percent();
+    state.batteryLow = battery.low();
+
     library.put("/system/order", "");
     ok = routines.begin(context);
   }
 
   MemoryLibrary library;
   RecordingLogger logger;
+  SystemState state;
   DeviceSettings settings;
   CaptureDisplay display{128, 64};
   Canvas canvas;
@@ -288,7 +283,8 @@ TEST_CASE("the gauge and the piezo are updated on the same millisecond") {
   FakeBattery battery;
   FakeBuzzer buzzerPart;
   BuzzerPlayer buzzer{buzzerPart};
-  PartsTick tick{battery, buzzer};
+  SystemState state;
+  PartsTick tick{battery, buzzer, state};
 
   buzzer.tone(440, 10);
   REQUIRE(buzzer.sounding());
@@ -298,6 +294,26 @@ TEST_CASE("the gauge and the piezo are updated on the same millisecond") {
   CHECK_FALSE(buzzer.sounding());
   CHECK_EQ(battery.updates(), 2);
   CHECK_EQ(battery.lastUpdateMs(), 20u);
+
+  // The beat also publishes the pack it read, which is what the overlay draws.
+  CHECK(state.batteryPresent);
+  CHECK_EQ(state.batteryPercent, battery.percent());
+  CHECK(state.batteryLow == battery.low());
+}
+
+TEST_CASE("a pack with no gauge behind it publishes no percentage") {
+  gardener::host::reset();
+  FakeBattery battery;
+  battery.setPresent(false);
+  battery.setPercent(73);
+  FakeBuzzer buzzerPart;
+  BuzzerPlayer buzzer{buzzerPart};
+  SystemState state;
+  PartsTick tick{battery, buzzer, state};
+
+  tick.tick(10);
+  CHECK_FALSE(state.batteryPresent);
+  CHECK_EQ(state.batteryPercent, 0);
 }
 
 TEST_CASE("the page activates on begin, polls on a tick and goes home") {
@@ -346,13 +362,10 @@ TEST_CASE("a beat sends the frame once whether it drew or not") {
   CHECK_EQ(rig.display.flushCount(), 2);
 }
 
-// The overlay's four cells are drawn from the one state a beat folds, so a field that stopped
-// arriving is a cell that draws the same thing whatever the parts say. Each case changes one part
-// and compares the frame the beat sent.
+// The overlay's four cells are drawn from the published state, so a slice whose writer stopped, or a
+// field one stopped writing, is a cell that draws the same thing whatever the machine says. Each case
+// changes one field and compares the frame the beat sent.
 std::vector<uint8_t> beatFrame(PageRig& rig) {
-  REQUIRE(rig.ok);
-  PageTick page{rig.routines};
-  page.begin();
   rig.display.clear();
   rig.display.beginCapture();
 
@@ -362,35 +375,45 @@ std::vector<uint8_t> beatFrame(PageRig& rig) {
   return *frame;
 }
 
-TEST_CASE("the overlay draws the unit the document holds") {
-  PageRig kpa;
-  PageRig psi;
-  psi.settings.setUnit(DisplayUnit::Psi);
+TEST_CASE("the overlay draws the unit the document publishes") {
+  PageRig rig;
+  REQUIRE(rig.ok);
+  PageTick page{rig.routines};
+  page.begin();
 
-  const std::vector<uint8_t> kpaFrame = beatFrame(kpa);
-  CHECK(kpaFrame != beatFrame(psi));
+  rig.settings.setUnit(DisplayUnit::Kpa);
+  const std::vector<uint8_t> kpaFrame = beatFrame(rig);
+
+  rig.settings.setUnit(DisplayUnit::Psi);
+  CHECK(kpaFrame != beatFrame(rig));
 }
 
-TEST_CASE("the overlay draws the pack it is given") {
-  PageRig fitted;
-  PageRig absent;
-  absent.battery.setPresent(false);
+TEST_CASE("the overlay draws the pack the parts beat publishes") {
+  PageRig rig;
+  REQUIRE(rig.ok);
+  PageTick page{rig.routines};
+  page.begin();
 
-  const std::vector<uint8_t> fittedFrame = beatFrame(fitted);
-  CHECK(fittedFrame != beatFrame(absent));
+  rig.state.batteryPresent = true;
+  rig.state.batteryPercent = 80;
+  const std::vector<uint8_t> fittedFrame = beatFrame(rig);
+
+  rig.state.batteryPresent = false;
+  CHECK(fittedFrame != beatFrame(rig));
 }
 
-TEST_CASE("the overlay draws the run state and runs the links through the state") {
-  PageRig idle;
-  PageRig pulling;
-  pulling.sensor.read(20.0f);
-  pulling.vacuum.setTarget(40.0f);
-  pulling.vacuum.start();
+TEST_CASE("the overlay draws the run state and both links") {
+  PageRig rig;
+  REQUIRE(rig.ok);
+  PageTick page{rig.routines};
+  page.begin();
+  const std::vector<uint8_t> idleFrame = beatFrame(rig);
 
-  PageRig linked;
-  linked.context.setConnected(true, true);
+  rig.state.runState = RunState::Pulling;
+  CHECK(idleFrame != beatFrame(rig));
 
-  const std::vector<uint8_t> idleFrame = beatFrame(idle);
-  CHECK(idleFrame != beatFrame(pulling));
-  CHECK(idleFrame != beatFrame(linked));
+  rig.state.runState = RunState::Idle;
+  rig.state.serialConnected = true;
+  rig.state.bluetoothConnected = true;
+  CHECK(idleFrame != beatFrame(rig));
 }

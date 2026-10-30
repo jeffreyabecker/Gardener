@@ -22,6 +22,7 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/PanelContext.h"
 #include "routines/Routines.h"
+#include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
 
 struct bvm;
@@ -189,24 +190,18 @@ bool postMachineCommand(const MachineCommand& command);
 // the only thing the Berry modules know about their surroundings.
 class HarnessPanel : public panel::PanelContext {
  public:
-  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, DeviceSettings& settings,
-               VacuumSystem& vacuum, Battery& battery,
+  HarnessPanel(gfx::DisplayDevice& display, gfx::Canvas& canvas, SystemState& state,
                panel::parts::BuzzerPlayer& buzzer, Library& library, Logger& logger)
       : display_(display),
         canvas_(canvas),
-        settings_(settings),
-        vacuum_(vacuum),
-        battery_(battery),
+        state_(state),
         buzzer_(buzzer),
         library_(library),
         logger_(logger) {}
 
   gfx::DisplayDevice& display() override { return display_; }
   gfx::Canvas& canvas() override { return canvas_; }
-  // The host models a device with both links up, so the overlay shows both icons.
-  SystemState systemState() override {
-    return readSystemState(vacuum_, battery_, settings_, true, true);
-  }
+  SystemState& systemState() override { return state_; }
   panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
   Library& library() override { return library_; }
   Logger& logger() override { return logger_; }
@@ -216,9 +211,7 @@ class HarnessPanel : public panel::PanelContext {
  private:
   gfx::DisplayDevice& display_;
   gfx::Canvas& canvas_;
-  DeviceSettings& settings_;
-  VacuumSystem& vacuum_;
-  Battery& battery_;
+  SystemState& state_;
   panel::parts::BuzzerPlayer& buzzer_;
   Library& library_;
   Logger& logger_;
@@ -297,6 +290,9 @@ class HarnessSession {
  private:
   // One read the loader makes: the heap before it, when the path is one of the image's own files.
   void sampleRead(const String& path);
+  // The host's beat publishes both slices the device's three tasks publish, since it has one loop
+  // rather than three: the machine's and the pack's, plus both links up.
+  void publish();
   std::string dataDir_;
   std::string capturePath_;
   std::string captureStem_ = "build/runs";
@@ -310,6 +306,7 @@ class HarnessSession {
 
   MemoryFiles files_;
   BufferLogger logger_;
+  SystemState state_;
   DeviceSettings settings_;
   Chamber chamber_;
   ModelPump pump_;

@@ -86,7 +86,7 @@ void ModelPump::update(uint32_t nowMs) {
 
 HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
     : dataDir_(std::move(dataDir)),
-      settings_(&files_),
+      settings_(&files_, state_),
       chamber_(ceilingKpa),
       pump_(chamber_),
       sensor_(chamber_),
@@ -94,7 +94,7 @@ HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
       vacuum_(&pump_, &sensor_, &valve_),
       canvas_(display_.rootCanvas()),
       buzzer_(buzzerPart_),
-      context_(display_, canvas_, settings_, vacuum_, battery_, buzzer_, files_, logger_) {}
+      context_(display_, canvas_, state_, buzzer_, files_, logger_) {}
 
 HarnessSession::~HarnessSession() = default;
 
@@ -113,6 +113,7 @@ bool HarnessSession::begin() {
   pump_.begin();
   valve_.begin();
   vacuum_.begin();
+  publish();
 
   if (!routines_.begin(context_)) return false;
   // The image's own files, before the panel's root scene is built: what the loader itself cost.
@@ -122,6 +123,22 @@ bool HarnessSession::begin() {
   routines_.enterPage();
   imageBytes_ = heapBytes();
   return true;
+}
+
+void HarnessSession::publish() {
+  state_.runState = vacuum_.runState();
+  state_.running = vacuum_.running();
+  state_.currentPressureKpa = vacuum_.currentPressureKpa();
+  state_.targetPressureKpa = vacuum_.targetPressureKpa();
+  state_.canStart = vacuum_.startRefusal() == nullptr;
+
+  state_.batteryPresent = battery_.present();
+  state_.batteryPercent = state_.batteryPresent ? battery_.percent() : 0;
+  state_.batteryLow = battery_.low();
+
+  // The host models a device with both links up, so the overlay shows both icons.
+  state_.serialConnected = true;
+  state_.bluetoothConnected = true;
 }
 
 void HarnessSession::beat(int count) {
@@ -148,6 +165,7 @@ void HarnessSession::beat(int count) {
     // flush here.
     battery_.update(millis());
     buzzer_.update(millis());
+    publish();
     routines_.poll(millis());
 
     // The run's high-water mark, sampled where the page has finished its own work for the beat.
@@ -199,6 +217,7 @@ void HarnessSession::reset() {
   postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();
   vacuum_.service(millis());
+  publish();
 }
 
 void HarnessSession::beginCapture(const char* path) {

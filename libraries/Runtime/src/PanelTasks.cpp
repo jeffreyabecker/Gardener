@@ -8,6 +8,7 @@
 #include <freertos/task.h>
 
 #include "machine/SafeReboot.h"
+#include "core/SystemState.h"
 #include "panel/parts/ButtonsTick.h"
 #include "panel/parts/PageTick.h"
 #include "panel/Panel.h"
@@ -64,10 +65,10 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(panel::Panel& context) {
+void spawnPanelTask(panel::Panel& context, SystemState& state) {
   static panel::parts::ButtonsTick buttons{context.gestures(), context.routines(), context.outbox(),
                              context.logger()};
-  static panel::parts::PartsTick parts{context.battery(), context.buzzer()};
+  static panel::parts::PartsTick parts{context.battery(), context.buzzer(), state};
   static panel::parts::PageTick page{context.routines()};
   static PanelState panel{context, buttons, parts, page};
 

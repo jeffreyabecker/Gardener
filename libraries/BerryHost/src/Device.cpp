@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 
+#include "core/SystemState.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "core/Logger.h"
 #include "panel/PanelContext.h"

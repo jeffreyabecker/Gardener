@@ -32,7 +32,7 @@ constexpr uint8_t PanelAddress = 0x3C;
 // never deleted — the device's destructor never runs — so the composition owns them by the graph it
 // hands out and nothing frees them.
 panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::PanelPins& pins,
-                             CommandQueue& queue) {
+                             CommandQueue& queue, SystemState& state) {
   const MachineParts machine = buildMachineParts(pins.machine);
   auto* battery = new AdcBattery(pins.batteryAdc, pins.batteryDivider);
   auto* buttons = new Buttons(pins.keyLatch, pins.keyClock, pins.keyData);
@@ -47,7 +47,7 @@ panel::Panel& buildPanelRoot(Logger& logger, Library& library, const panel::Pane
   auto* interpreter = new BerryInterpreter();
   auto* routines = new Routines(*interpreter);
   auto* panel = new panel::Panel(logger, machine.pump, machine.sensor, machine.valve, buttons,
-                                 buzzer, battery, display, library, routines, queue);
+                                 buzzer, battery, display, library, routines, queue, state);
 
   // The full device has the panel and the gauge, so it is the one build with bits set.
   panel->setCapabilities(PanelFitted | BatteryFitted);

@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 
 #include "core/Logger.h"
+#include "core/SystemState.h"
 #include "machine/ControlTick.h"
 #include "machine/Machine.h"
 #include "machine/SafeReboot.h"
@@ -34,10 +35,10 @@ struct ControlState {
   ControlTick& tick;
 };
 
-// The interface task's own state: the machine it reports through and the links it polls.
+// The interface task's own state: the links it polls and the state it publishes their presence into.
 struct InterfaceState {
-  Machine& machine;
   SerialLink* link;
+  SystemState& published;
 #if GARDENER_BLUETOOTH
   BleLink* ble;
 #endif
@@ -72,9 +73,11 @@ void interfaceTask(void* arg) {
     // Connection presence, published for the panel's overlay: a connected link that has not
     // acquired control still counts, and a build without the radio reports none.
 #if GARDENER_BLUETOOTH
-    state.machine.setPresence(state.link->controllerAttached(), state.ble->connected());
+    state.published.serialConnected = state.link->controllerAttached();
+    state.published.bluetoothConnected = state.ble->connected();
 #else
-    state.machine.setPresence(state.link->controllerAttached(), false);
+    state.published.serialConnected = state.link->controllerAttached();
+    state.published.bluetoothConnected = false;
 #endif
 
     vTaskDelay(pdMS_TO_TICKS(5));
@@ -82,16 +85,18 @@ void interfaceTask(void* arg) {
 }
 
 #if GARDENER_BLUETOOTH
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble,
+                       SystemState& state) {
 #else
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link) {
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
+                       SystemState& state) {
 #endif
-  static ControlTick tick{machine.vacuum(), machine.logger(), queue};
+  static ControlTick tick{machine.vacuum(), machine.logger(), queue, state};
   static ControlState control{machine, tick};
 #if GARDENER_BLUETOOTH
-  static InterfaceState interface{machine, link, ble};
+  static InterfaceState interface{link, state, ble};
 #else
-  static InterfaceState interface{machine, link};
+  static InterfaceState interface{link, state};
 #endif
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,

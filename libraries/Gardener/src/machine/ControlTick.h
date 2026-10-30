@@ -9,6 +9,7 @@
 namespace gardener {
 
 class Logger;
+struct SystemState;
 
 // The control tick's policy: what a beat applies from the queue and how a burst of commands
 // collapses, the order the parts are updated in, and the run log. A caller posts to it and steps it
@@ -20,7 +21,7 @@ class Logger;
 // than restarting from inside a tick.
 class ControlTick {
  public:
-  ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue);
+  ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue, SystemState& state);
 
   // A command for the next tick. False when the queue is full, in which case nothing was queued and
   // the caller keeps the command.
@@ -46,10 +47,14 @@ class ControlTick {
   void drainCommands();
   // One line per state change, the time a vent took, the deadline and the fault code.
   void logRunChanges(uint32_t nowMs);
+  // The machine's slice of the published state, once at the end of the beat.
+  void publish();
 
   VacuumSystem& vacuum_;
   Logger& logger_;
   CommandQueue& queue_;
+  // The machine's slice of the published state, written at the end of each beat.
+  SystemState& state_;
   RunState lastState_;
   uint32_t ventStartMs_ = 0;
   bool rebootPending_ = false;

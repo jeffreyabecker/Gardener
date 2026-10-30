@@ -10,30 +10,32 @@ constexpr const char* TargetKey = "target";
 
 }  // namespace
 
-DeviceSettings::DeviceSettings(Library* store) : document_(store) {}
+DeviceSettings::DeviceSettings(Library* store, SystemState& state)
+    : document_(store), state_(state) {}
 
 bool DeviceSettings::begin() {
   const bool read = document_.begin();
 
   DisplayUnit unit = DisplayUnit::Kpa;
   parseDisplayUnit(document_.get<String>(DeviceSection, UnitKey, "").c_str(), unit);
-  unit_ = unit;
+  state_.unit = unit;
 
   // A stored depth at or below zero is the ambient target, which is the same as none.
   const float target = document_.get<float>(DeviceSection, TargetKey, 0.0f);
-  targetKpa_ = target > 0.0f ? target : 0.0f;
+  state_.deviceTargetKpa = target > 0.0f ? target : 0.0f;
 
   return read;
 }
 
 void DeviceSettings::setUnit(DisplayUnit unit) {
-  unit_ = unit;
+  state_.unit = unit;
   document_.set(DeviceSection, UnitKey, displayUnitInfo(unit).name);
 }
 
 void DeviceSettings::setTargetKpa(float pressureKpa) {
-  targetKpa_ = pressureKpa > 0.0f ? pressureKpa : 0.0f;
-  document_.set(DeviceSection, TargetKey, targetKpa_);
+  const float target = pressureKpa > 0.0f ? pressureKpa : 0.0f;
+  state_.deviceTargetKpa = target;
+  document_.set(DeviceSection, TargetKey, target);
 }
 
 bool DeviceSettings::save() { return document_.save(); }

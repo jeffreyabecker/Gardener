@@ -2,10 +2,11 @@
 
 #if GARDENER_PANEL
 
+#include "core/RunState.h"
+#include "core/SystemState.h"
 #include "panel/PanelContext.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
-#include "machine/VacuumSystem.h"
 #include "Module.h"
 #include "Modules.h"
 

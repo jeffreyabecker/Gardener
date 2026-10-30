@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Clock.h"
+#include "core/SystemState.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/ControlTick.h"
@@ -21,6 +22,7 @@ using gardener::CommandQueue;
 using gardener::ControlTick;
 using gardener::MachineCommand;
 using gardener::RunState;
+using gardener::SystemState;
 using gardener::VacuumSystem;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
@@ -54,10 +56,11 @@ class BoundedQueue : public CommandQueue {
   std::vector<MachineCommand> commands_;
 };
 
-// The machine a tick drives: the three fakes, the loop over them, the queue and the log.
+// The machine a tick drives: the three fakes, the loop over them, the queue, the log, and the state
+// the tick publishes its slice into.
 struct Rig {
   explicit Rig(size_t queueDepth = 8)
-      : queue(queueDepth), tick(system, logger, queue) {
+      : queue(queueDepth), tick(system, logger, queue, published) {
     gardener::host::reset();
     sensor.read(20.0f);
     system.begin();
@@ -68,6 +71,7 @@ struct Rig {
   FakeValve valve;
   VacuumSystem system{&pump, &sensor, &valve};
   RecordingLogger logger;
+  SystemState published;
   BoundedQueue queue;
   ControlTick tick;
 };
@@ -90,6 +94,28 @@ TEST_CASE("a queued command reaches the machine on the next tick") {
   REQUIRE(rig.queue.post(target(20.0f)));
   rig.tick.tick(0);
   CHECK_EQ(rig.system.targetPressureKpa(), 20.0f);
+}
+
+// The beat's own publication: what the panel draws and what a page's read answers is this slice.
+TEST_CASE("a tick publishes the machine's slice") {
+  Rig rig;
+  REQUIRE(rig.queue.post(target(40.0f)));
+  REQUIRE(rig.queue.post(op(Op::Start)));
+  rig.tick.tick(0);
+
+  CHECK_EQ(rig.published.targetPressureKpa, 40.0f);
+  CHECK_EQ(rig.published.currentPressureKpa, 20.0f);
+  CHECK(rig.published.runState == RunState::Pulling);
+  CHECK(rig.published.running);
+  CHECK(rig.published.canStart);
+}
+
+TEST_CASE("a start a page would be refused for is published that way") {
+  Rig rig;
+  rig.sensor.detach();
+  rig.tick.tick(0);
+
+  CHECK_FALSE(rig.published.canStart);
 }
 
 TEST_CASE("a stop in a burst discards the targets before it") {

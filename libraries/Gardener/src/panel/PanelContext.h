@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "panel/SystemState.h"
+#include "core/SystemState.h"
 
 namespace gardener {
 
@@ -34,10 +34,10 @@ class PanelContext {
   // by the page, the overlay and the `screen` module, so one flush sends what any of them wrote.
   virtual gfx::DisplayDevice& display() = 0;
   virtual gfx::Canvas& canvas() = 0;
-  // What the machine is doing, as one value folded out of the panel's own parts when it is asked
-  // for: the run and the chamber, the pack, the two links and the unit the device prints in. A
-  // routine reads the machine here and nowhere else, and there is nothing on it to command.
-  virtual SystemState systemState() = 0;
+  // What the device is doing, as the composition built it and the tasks publish it: the run and the
+  // chamber, the pack, the two links and the unit the device prints in. It is a dependency handed in
+  // rather than an answer worked out here, and there is nothing on it to command.
+  virtual SystemState& systemState() = 0;
   virtual parts::BuzzerPlayer& buzzer() = 0;
   // The interpreter's own files: the modules and routines it compiles, and the data it reads.
   virtual Library& library() = 0;

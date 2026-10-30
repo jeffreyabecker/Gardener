@@ -77,8 +77,13 @@ void setup() {
   // composition builds it before any of them.
   auto* commands = new gardener::RtosCommandQueue();
 
+  // The panel's view of the device: each task publishes the slice it owns into this and whatever
+  // draws reads it, so the composition owns it and hands a reference to everything that touches it.
+  static gardener::SystemState panelState;
+
   // The full device's graph: the machine, with the panel arranged around it.
-  gardener::panel::Panel& context = gardener::buildPanelRoot(*logger, *files, Board, *commands);
+  gardener::panel::Panel& context =
+      gardener::buildPanelRoot(*logger, *files, Board, *commands, panelState);
 
   // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
   // one serial link and the one BLE link. The panel is a machine, so the same object serves both
@@ -114,11 +119,11 @@ void setup() {
   gardener::bootPanel(context, Board);
 
 #if GARDENER_BLUETOOTH
-  gardener::spawnMachineTasks(context, *commands, serial, ble);
+  gardener::spawnMachineTasks(context, *commands, serial, ble, panelState);
 #else
-  gardener::spawnMachineTasks(context, *commands, serial);
+  gardener::spawnMachineTasks(context, *commands, serial, panelState);
 #endif
-  gardener::spawnPanelTask(context);
+  gardener::spawnPanelTask(context, panelState);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

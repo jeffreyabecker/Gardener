@@ -6,6 +6,7 @@
 
 #include "core/Battery.h"
 #include "core/ButtonPanel.h"
+#include "core/SystemState.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "panel/parts/BuzzerPlayer.h"
@@ -42,14 +43,16 @@ class Panel : public Machine, public PanelContext {
  public:
   Panel(Logger& logger, Pump* pump, PressureSensor* sensor, VentValve* valve,
         ButtonPanel* buttons, parts::BuzzerPlayer* buzzer, Battery* battery,
-        gfx::DisplayDevice* display, Library& library, Routines* routines, CommandQueue& queue)
+        gfx::DisplayDevice* display, Library& library, Routines* routines, CommandQueue& queue,
+        SystemState& state)
       : Machine(logger, pump, sensor, valve),
         outbox_(queue),
         buttons_(buttons),
         gestures_(*buttons),
         buzzer_(buzzer),
         battery_(battery),
-        settings_(&library),
+        settings_(&library, state),
+        state_(state),
         display_(display),
         canvas_(display->rootCanvas()),
         routines_(routines),
@@ -78,11 +81,9 @@ class Panel : public Machine, public PanelContext {
   // The device's own document, for the two places that write it: the serial `device set` and the
   // BLE unit characteristic.
   DeviceSettings& settings() { return settings_; }
-  // What the panel reads of the machine, folded from its own parts each time it is asked.
-  SystemState systemState() override {
-    return readSystemState(Machine::vacuum(), *battery_, settings_, Machine::serialConnected(),
-                           Machine::bluetoothConnected());
-  }
+  // The published state the composition owns: the tasks write their slices into it and whatever
+  // draws reads a copy of it.
+  SystemState& systemState() override { return state_; }
   Library& library() override { return library_; }
   Routines& routines() { return *routines_; }
 
@@ -94,6 +95,8 @@ class Panel : public Machine, public PanelContext {
   Battery* battery_;
   // The device's document, ahead of the display and of the interpreter that reads it.
   DeviceSettings settings_;
+  // The published state, owned by whoever composed the panel.
+  SystemState& state_;
   gfx::DisplayDevice* display_;
   // The one frame a page draws into, over the device's own buffer.
   gfx::Canvas canvas_;

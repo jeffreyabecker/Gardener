@@ -13,6 +13,7 @@
 #include <Arduino.h>
 #include <berry.h>
 
+#include "core/SystemState.h"
 #include "panel/PanelContext.h"
 #include "core/Units.h"
 #include "panel/page/SettingsRows.h"

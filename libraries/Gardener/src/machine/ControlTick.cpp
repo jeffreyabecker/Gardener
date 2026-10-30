@@ -1,11 +1,14 @@
 #include "machine/ControlTick.h"
 
 #include "core/Logger.h"
+#include "core/SystemState.h"
 
 namespace gardener {
 
-ControlTick::ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue)
-    : vacuum_(vacuum), logger_(logger), queue_(queue), lastState_(vacuum.runState()) {}
+ControlTick::ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
+                         SystemState& state)
+    : vacuum_(vacuum), logger_(logger), queue_(queue), state_(state),
+      lastState_(vacuum.runState()) {}
 
 bool ControlTick::post(const MachineCommand& command) { return queue_.post(command); }
 
@@ -18,6 +21,19 @@ void ControlTick::tick(uint32_t nowMs) {
   vacuum_.pump().update(nowMs);
   vacuum_.service(nowMs);
   logRunChanges(nowMs);
+
+  publish();
+}
+
+// The machine's slice, read once at the end of the beat: the run the panel draws and the answer a
+// page's start gets are the ones this beat produced. A page that asks between two beats is answered
+// from here, so the machine can still refuse the command it posts.
+void ControlTick::publish() {
+  state_.runState = vacuum_.runState();
+  state_.running = vacuum_.running();
+  state_.currentPressureKpa = vacuum_.currentPressureKpa();
+  state_.targetPressureKpa = vacuum_.targetPressureKpa();
+  state_.canStart = vacuum_.startRefusal() == nullptr;
 }
 
 bool ControlTick::takeReboot() {

@@ -14,6 +14,7 @@
 #include "Canvas.h"
 #include "panel/glass/Overlay.h"
 #include "panel/page/MarkScene.h"
+#include "core/SystemState.h"
 #include "core/Units.h"
 #include "core/Library.h"
 
@@ -151,6 +152,8 @@ bool Routines::resetToRoot() {
 }
 
 void Routines::updateOverlay(uint32_t nowMs) {
+  // One copy of the state the panel was handed, so the four cells are drawn from one instant rather
+  // than from four reads of an object a task is publishing into.
   const SystemState state = panel_->systemState();
   const int8_t percent = state.batteryPresent ? static_cast<int8_t>(state.batteryPercent) : -1;
 

@@ -15,6 +15,7 @@ namespace {
 
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
+using gardener::SystemState;
 using gardener::test::MemoryLibrary;
 
 constexpr const char* Path = "/cfg/settings.ini";
@@ -26,7 +27,8 @@ struct Bench {
   }
 
   MemoryLibrary library;
-  DeviceSettings settings{&library};
+  SystemState state;
+  DeviceSettings settings{&library, state};
   bool read = false;
 };
 
@@ -62,7 +64,7 @@ TEST_CASE("a set and a save write once and read back, with a key it does not own
   CHECK(bench.settings.save());
   CHECK_EQ(bench.library.writes(), 1);
 
-  DeviceSettings again{&bench.library};
+  DeviceSettings again{&bench.library, bench.state};
   CHECK(again.begin());
   CHECK(again.unit() == DisplayUnit::InHg);
   CHECK_EQ(again.targetKpa(), 22.0f);
@@ -79,7 +81,8 @@ TEST_CASE("a save with nothing changed writes nothing") {
 }
 
 TEST_CASE("a build with no store behind it reads its defaults") {
-  DeviceSettings settings{nullptr};
+  SystemState state;
+  DeviceSettings settings{nullptr, state};
   CHECK_FALSE(settings.begin());
   CHECK(settings.unit() == DisplayUnit::Kpa);
   CHECK_EQ(settings.targetKpa(), 0.0f);
@@ -87,4 +90,17 @@ TEST_CASE("a build with no store behind it reads its defaults") {
   // There is nowhere to write a change to, which is the one case a save answers false on.
   settings.setUnit(DisplayUnit::Psi);
   CHECK_FALSE(settings.save());
+}
+
+// The document's own publication: what the panel and the wire read is the state, and these two
+// values are what DeviceSettings puts there.
+TEST_CASE("the document publishes what it reads and what it writes") {
+  Bench bench("[device]\nunit=psi\ntarget=15.5\n");
+  CHECK(bench.state.unit == DisplayUnit::Psi);
+  CHECK_EQ(bench.state.deviceTargetKpa, 15.5f);
+
+  bench.settings.setUnit(DisplayUnit::InHg);
+  bench.settings.setTargetKpa(22.0f);
+  CHECK(bench.state.unit == DisplayUnit::InHg);
+  CHECK_EQ(bench.state.deviceTargetKpa, 22.0f);
 }

@@ -64,6 +64,10 @@ void setup() {
   // composition builds it before the links that fill it.
   auto* commands = new gardener::RtosCommandQueue();
 
+  // The machine's slice of the published state. Nothing in this build reads it — there is no panel —
+  // but the control tick publishes to it as it does on a panel build.
+  static gardener::SystemState machineState;
+
   // The wire surface is this build's: the machine's domains and nothing else.
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, *logger, *commands);
@@ -87,7 +91,7 @@ void setup() {
 
   // The parts, then the two tasks that drive them.
   machine.boot();
-  gardener::spawnMachineTasks(machine, *commands, serial, ble);
+  gardener::spawnMachineTasks(machine, *commands, serial, ble, machineState);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());
