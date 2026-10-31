@@ -28,11 +28,10 @@ constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
 
-// One line of chrome centred in the band it is given: the ink the string measures, placed by the
-// layout's own alignment.
-gfx::PaintNodeRef centredLine(const char* text) {
-  const gfx::Size ink = gfx::measureText(nullptr, text, 1);
-  return gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), text), ink));
+// One line of chrome centred in the band it is given: the family's cut that the band's height
+// holds, placed by the leaf itself, so the title is the size its band can carry.
+gfx::PaintNodeRef centredLine(const char* text, const gfx::Family* family) {
+  return gfx::fitted(gfx::Box::whole(), text, family);
 }
 
 // The arrows a hint band marks its keys with: as wide and as tall as the ink of the glyphs they
@@ -144,11 +143,15 @@ gfx::PaintNodeRef EditorScene::pageComponents() {
 }
 
 gfx::PaintNodeRef EditorScene::pageContents() { return gfx::PaintNodeRef(); }
-gfx::PaintNodeRef EditorScene::titleComponent() { return centredLine(title()); }
+gfx::PaintNodeRef EditorScene::titleComponent() {
+  return centredLine(title(), gfx::findFamily("ttyp0"));
+}
+
 gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
-  // step a value the editor has not taken.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str());
+  // step a value the editor has not taken. The hint band is a hint's height, which the shortest
+  // ttyp0 cut is taller than, so the words are the built-in face's.
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())
