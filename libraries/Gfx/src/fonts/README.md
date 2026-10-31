@@ -9,6 +9,8 @@ aliases.
 - TomThumb carries its own BSD notice in its header. Picopixel is attributed to Sebastian Weber.
 - Org_01 and Tiny3x3a2pt7b are not ported: Tiny3x3a2pt7b is CC BY-NC-SA, and neither face is used by
   the firmware.
+- The built-in 5x7 is the one face written here rather than converted: BuiltinFont.h declares it and
+  BuiltinFont.cpp holds its table, and it is what a caller that names no face draws in.
 
 A face sets fixedWidth, fixedHeight and fixedAdvance when every glyph in its range shares that
 metric; otherwise the field is zero.

@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <string>
 
-#include "BuiltinFont.h"
+#include "fonts/BuiltinFont.h"
 #include "Canvas.h"
 #include "layout/Drawing.h"
 #include "shapes/Shapes.h"
