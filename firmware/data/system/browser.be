@@ -21,13 +21,14 @@ def browser_chrome(rows, selected, first, visible, width)
     var at = first + line
     var row = rows[at]
     # A routine that registered no glyph has no cell to draw it in: the row keeps the title's share for
-    # itself rather than asking for an icon it does not hold.
+    # itself rather than asking for an icon it does not hold. A row is eight rows tall, which no ttyp0
+    # cut fits, so it names the Adafruit face rather than the panel's design.
     var cells = []
     if row.icon != nil
       cells.push([bounds(0.125, 1), screen.icon(nil, nil, nil, nil, row.icon)])
-      cells.push([bounds(0.875, 1), screen.text(nil, nil, nil, nil, row.title)])
+      cells.push([bounds(0.875, 1), screen.text(nil, nil, nil, nil, row.title, "adafruit")])
     else
-      cells.push([bounds(1, 1), screen.text(nil, nil, nil, nil, row.title)])
+      cells.push([bounds(1, 1), screen.text(nil, nil, nil, nil, row.title, "adafruit")])
     end
     var line_draw = screen.row(nil, cells)
     if at == selected

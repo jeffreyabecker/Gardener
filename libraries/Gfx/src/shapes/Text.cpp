@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "../Fonts.h"
+#include "../FontsInternal.h"
 #include "../fonts/AdafruitFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
@@ -165,7 +166,7 @@ uint8_t tallestFitting(const Family& family, int16_t height) {
 }  // namespace
 
 Fit resolve(const Family* family, int16_t height) {
-  const Family& design = family != nullptr ? *family : AdafruitFamily;
+  const Family& design = family != nullptr ? *family : *defaultFamily();
   if (design.cuts == nullptr || design.count == 0) return {&AdafruitFont, 1};
   if (height <= 0) return {design.cuts[design.count - 1], 1};
   const Font* face = design.cuts[tallestFitting(design, height)];
@@ -173,7 +174,7 @@ Fit resolve(const Family* family, int16_t height) {
 }
 
 Fit resolve(const Family* family, const char* value, int16_t width, int16_t height) {
-  const Family& design = family != nullptr ? *family : AdafruitFamily;
+  const Family& design = family != nullptr ? *family : *defaultFamily();
   if (design.cuts == nullptr || design.count == 0) return {&AdafruitFont, 1};
   if (height <= 0) return {design.cuts[design.count - 1], 1};
   const uint8_t start = tallestFitting(design, height);

@@ -11,16 +11,18 @@
 namespace gardener {
 namespace {
 
-// One row of the Adafruit face, which is the pitch a choice is drawn at.
+// One row of the Adafruit face, which is the pitch a choice is drawn at: a ttyp0 cut's shortest
+// line box is ten rows, so the panel's design cannot be drawn in one.
+const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
 constexpr int16_t Row = 8;
 
 // One row of the window: the entry's title centred, inverted across the whole of the row when it is
 // the entry showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
   const char* title = item->title.c_str();
-  const gfx::Size ink = gfx::measureText(nullptr, title, 0, Row);
+  const gfx::Size ink = gfx::measureText(rowFace(), title, 0, Row);
   gfx::PaintNodeRef content =
-      gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), title), ink));
+      gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), title, rowFace()), ink));
   if (showing) content = gfx::inverted(std::move(content));
   return content;
 }
@@ -97,9 +99,9 @@ int16_t ChoiceScene::index() const {
 gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      const gfx::Size ink = gfx::measureText(nullptr, "--", 0, Row);
+      const gfx::Size ink = gfx::measureText(rowFace(), "--", 0, Row);
       gfx::aligned(
-          gfx::sized(gfx::text(gfx::Box::whole(), "--"), ink))
+          gfx::sized(gfx::text(gfx::Box::whole(), "--", rowFace()), ink))
           ->draw(canvas);
       return;
     }

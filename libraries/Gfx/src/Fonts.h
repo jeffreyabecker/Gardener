@@ -19,11 +19,17 @@ struct Family {
   uint8_t count;
 };
 
-// The family a caller's family name stands for: one the library ships, one a caller registered, or a
-// shipped face's name as a family of one cut. Null for a name nobody holds, so a lookup answers what
-// the module holds and nothing more; a leaf that names no family draws in the default family, which
-// is the resolver's own business and no caller's.
+// The family a caller's family name stands for: one the library ships, or a family a caller
+// registered. Null for a name nobody holds, so a lookup answers what the module holds and nothing
+// more; a leaf that names no family draws in the default family, which is the resolver's own
+// business and no caller's.
 const Family* findFamily(const char* name);
+
+// The design a leaf or a measurement that names no family draws in. It is the Adafruit family until
+// a composition sets another, and nullptr puts that back, so a composition names the panel's design
+// once instead of at every leaf. Nothing reads it back: the resolver applies it where the fit is
+// made, so a caller sets it and a leaf draws.
+void setDefaultFamily(const Family* family);
 
 // A family a caller registers, beside the ones the library ships: a name, and the cuts of the
 // design it names. The entry is the module's own, so a caller keeps neither the array nor the faces

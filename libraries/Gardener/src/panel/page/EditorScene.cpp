@@ -28,6 +28,11 @@ constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
 
+// The rows this scene draws that no cut of the panel's design can hold: the hint band is a hint's
+// height and the refusal is words in it, and the shortest line box of ttyp0 is ten rows, so both
+// name the face that fits an eight-row band.
+const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
+
 // One line of chrome centred in the band it is given: the family's cut that the band's height
 // holds, placed by the leaf itself, so the title is the size its band can carry.
 gfx::PaintNodeRef centredLine(const char* text, const gfx::Family* family) {
@@ -91,7 +96,8 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
-  return hintItem(gfx::text(gfx::Box::whole(), text), gfx::measureText(nullptr, text, 0, SettingsRow));
+  return hintItem(gfx::text(gfx::Box::whole(), text, rowFace()),
+                  gfx::measureText(rowFace(), text, 0, SettingsRow));
 }
 
 gfx::Children EditorScene::hintItems() {
@@ -144,14 +150,14 @@ gfx::PaintNodeRef EditorScene::pageComponents() {
 
 gfx::PaintNodeRef EditorScene::pageContents() { return gfx::PaintNodeRef(); }
 gfx::PaintNodeRef EditorScene::titleComponent() {
-  return centredLine(title(), gfx::findFamily("ttyp0"));
+  // The composition's design, which the title band's height spends on the largest cut it holds.
+  return centredLine(title(), nullptr);
 }
 
 gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
-  // step a value the editor has not taken. The hint band is a hint's height, which the shortest
-  // ttyp0 cut is taller than, so the words name no family and are drawn in the default one.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
+  // step a value the editor has not taken.
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), rowFace());
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())

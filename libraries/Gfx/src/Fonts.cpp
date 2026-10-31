@@ -75,6 +75,20 @@ const Family* namedFamily(const char* name) {
 
 const Family AdafruitFamily = {"adafruit", AdafruitCuts, 1};
 
+namespace {
+
+// The design a leaf that names no family draws in: the Adafruit family until a composition sets
+// another, and never null, so the resolver has nothing to check.
+const Family* chosenFamily = &AdafruitFamily;
+
+}  // namespace
+
+const Family* defaultFamily() { return chosenFamily; }
+
+void setDefaultFamily(const Family* family) {
+  chosenFamily = family != nullptr ? family : &AdafruitFamily;
+}
+
 const Family* findFamily(const char* name) { return namedFamily(name); }
 
 bool registerFamily(const char* name, const Font* const* cuts, uint8_t count) {

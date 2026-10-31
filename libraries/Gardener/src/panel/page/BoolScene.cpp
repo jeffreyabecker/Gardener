@@ -11,15 +11,17 @@ namespace {
 constexpr const char* OnKey = "true";
 constexpr const char* OffKey = "false";
 
-// The rows a state prints at: twice the Adafruit face's, which is the height of a two-row chip.
+// The rows a state prints at: twice the Adafruit face's, which is the height of a two-row chip, and
+// the face itself, because a ttyp0 cut is chosen by a taller box than a chip's.
+const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
 constexpr int16_t ChipHeight = 16;
 
 // One state of the switch: its label centred in an equal share of the row, and that label inverted
 // when it is the state showing. The alignment places the label's own ink inside the share, so the
 // inverted box is the label rather than the whole cell.
 gfx::Child chip(const char* title, bool showing, float share) {
-  const gfx::Size ink = gfx::measureText(nullptr, title, 0, ChipHeight);
-  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title);
+  const gfx::Size ink = gfx::measureText(rowFace(), title, 0, ChipHeight);
+  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::Child{gfx::Cell(share, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
 }

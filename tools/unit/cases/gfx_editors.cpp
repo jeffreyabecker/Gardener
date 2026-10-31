@@ -115,6 +115,9 @@ TEST_CASE("a number band centres the value") {
   String label("Target");
   NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false);
   View band = canvas.child(Rect(0, 0, 40, 24));
+  // The composition's design, which is what the panel sets on its way up: the value names no family
+  // and takes the cut the band's height holds.
+  setDefaultFamily(findFamily("ttyp0"));
   reset();
   number.pageContents()->draw(band);
   CHECK(display.anyInk(0, 0, 40, 24));
@@ -122,6 +125,7 @@ TEST_CASE("a number band centres the value") {
   CHECK_EQ(display.inkCount(0, 20, 40, 4), 0);
   CHECK_EQ(display.inkCount(0, 0, 14, 24), 0);
   CHECK_EQ(display.inkCount(26, 0, 14, 24), 0);
+  setDefaultFamily(nullptr);
 }
 
 // The check a row's declaration gave is asked on OK: a value it refuses keeps the editor open with

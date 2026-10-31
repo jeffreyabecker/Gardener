@@ -52,6 +52,28 @@ TEST_CASE("a name answers a family, and a name nobody holds answers nothing") {
   CHECK_EQ(findFamily(nullptr), nullptr);
 }
 
+TEST_CASE("a leaf that names no family draws in the default family") {
+  // The module starts on the Adafruit design, whose line box is eight rows and which inks the top of
+  // its cell.
+  CHECK_EQ(resolve(nullptr, 10).face, &AdafruitFont);
+  reset();
+  text(Box(0, 0, 6, 8), "I")->draw(canvas);
+  CHECK(display.anyInk(0, 0, 6, 8));
+
+  // A composition names its own design once, and a leaf that names none follows it without being
+  // told: ttyp0's shortest line box is ten rows, which is what the box now holds, and its ascent
+  // leaves the letter a row down.
+  setDefaultFamily(findFamily("ttyp0"));
+  CHECK_EQ(resolve(nullptr, 10).face, &Ttyp011);
+  reset();
+  text(Box(0, 0, 12, 10), "A")->draw(canvas);
+  CHECK(display.anyInk(0, 1, 12, 8));
+
+  // And nullptr puts the Adafruit family back, which is what a tree that never set one draws in.
+  setDefaultFamily(nullptr);
+  CHECK_EQ(resolve(nullptr, 10).face, &AdafruitFont);
+}
+
 TEST_CASE("a text draws at its box") {
   reset();
   text(Box(10, 10, 6, 8), "I")->draw(canvas);
