@@ -1,7 +1,12 @@
 #include "GestureStrip.h"
 
+#include <cstdio>
+#include <string>
+
 #include "BuiltinFont.h"
 #include "Canvas.h"
+#include "layout/Drawing.h"
+#include "shapes/Shapes.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -13,49 +18,20 @@ namespace {
 constexpr int16_t CellWidth = 6;
 constexpr int16_t CellHeight = 8;
 
-std::string uppercase(std::string text) {
-  for (char& c : text) {
-    if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
-  }
-  return text;
-}
+// The panel's six buttons in the order the row reads them, and the glyph each shows: the four the
+// face's arrows name, then the two that settle a page. The glyphs are the face's own codes.
+struct Key {
+  const char* name;
+  const char* glyph;
+};
 
-bool isDigits(const std::string& text) {
-  if (text.empty()) return false;
-  for (char c : text) {
-    if (c < '0' || c > '9') return false;
-  }
-  return true;
-}
+constexpr Key Keys[] = {{"up", "\x1E"},   {"down", "\x1F"}, {"forward", "\x10"},
+                        {"back", "\x11"}, {"ok", "OK"},     {"cancel", "X"}};
 
-std::string keyLabel(const std::string& key) {
-  if (key == "ok") return "OK";
-  if (key == "cancel") return "CANCEL";
-  if (key == "up") return "UP";
-  if (key == "down") return "DOWN";
-  if (key == "forward") return "FORWARD";
-  if (key == "back") return "BACK";
-  return uppercase(key);
-}
-
-// One part of a gesture, key:form: single keys name themselves, a double appends the times sign, a
-// hold its seconds, and anything else falls back to the raw token uppercased.
-std::string partLabel(const std::string& part) {
-  const size_t colon = part.find(':');
-  const std::string key = part.substr(0, colon);
-  const std::string form = colon == std::string::npos ? "" : part.substr(colon + 1);
-
-  std::string label = keyLabel(key);
-  if (form.empty() || form == "single") {
-    return label;
-  }
-  if (form == "double") {
-    return label + "\xD7" "2";  // UP×2
-  }
-  if (isDigits(form)) {
-    return label + " " + form + "s";  // CANCEL 5s
-  }
-  return uppercase(key + ":" + form);
+int16_t textWidth(const char* text) {
+  int16_t width = 0;
+  for (const char* c = text; *c != '\0'; c++) width = static_cast<int16_t>(width + CellWidth);
+  return width;
 }
 
 // Whether the built-in face has no ink for a code, so a label can fall back rather than print a
@@ -78,24 +54,63 @@ bool glyphBlank(uint8_t c) {
   return true;
 }
 
-}  // namespace
-
-std::string GestureStrip::label(const std::string& gesture) {
-  std::string out;
-  size_t start = 0;
-  while (start <= gesture.size()) {
-    size_t end = gesture.find('+', start);
-    if (end == std::string::npos) end = gesture.size();
-    if (!out.empty()) out += " + ";
-    out += partLabel(gesture.substr(start, end - start));
-    start = end + 1;
+void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
+  for (const char* c = text; *c != '\0'; c++) {
+    uint8_t code = static_cast<uint8_t>(*c);
+    if (code >= 176 && code < 255) code++;
+    if (glyphBlank(code)) code = 'x';
+    gfx::shapes::drawGlyph(canvas, x, y, code, 1, gfx::Ink);
+    x = static_cast<int16_t>(x + CellWidth);
   }
-  return out;
 }
 
+// Whether a form is a count of seconds rather than a name: `cancel:5` is a five-second hold.
+bool isCount(const std::string& form) {
+  if (form.empty()) return false;
+  return form.find_first_not_of("0123456789") == std::string::npos;
+}
+
+}  // namespace
+
 void GestureStrip::show(const char* gesture) {
-  label_ = gesture != nullptr && gesture[0] != '\0' ? label(gesture) : "";
-  frames_ = label_.empty() ? 0 : Frames;
+  for (Mark& mark : marks_) mark = Mark();
+  frames_ = 0;
+  if (gesture == nullptr || gesture[0] == '\0') return;
+
+  // A token is one key:form or several joined with '+', which is how the panel names a chord.
+  const std::string token(gesture);
+  size_t start = 0;
+  while (start < token.size()) {
+    const size_t plus = token.find('+', start);
+    const std::string part = token.substr(start, plus == std::string::npos
+                                                    ? std::string::npos
+                                                    : plus - start);
+    const size_t colon = part.find(':');
+    mark(part.substr(0, colon),
+         colon == std::string::npos ? std::string() : part.substr(colon + 1));
+    if (plus == std::string::npos) break;
+    start = plus + 1;
+  }
+  frames_ = Frames;
+}
+
+void GestureStrip::mark(const std::string& key, const std::string& form) {
+  for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
+    if (key != Keys[button].name) continue;
+    Mark& state = marks_[button];
+    if (form == "double") {
+      state.outlines = 2;
+    } else if (isCount(form)) {
+      // Two digits of seconds is as much as the columns beside a two-glyph label hold, and a hold
+      // longer than that is not what a walkthrough has to show.
+      const int seconds = std::stoi(form);
+      state.outlines = 1;
+      state.seconds = static_cast<int8_t>(seconds > 99 ? 99 : seconds);
+    } else {
+      state.outlines = 1;
+    }
+    return;
+  }
 }
 
 CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
@@ -104,19 +119,44 @@ CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
 }
 
 void GestureStrip::draw(gfx::Canvas& canvas) {
-  if (frames_ <= 0) return;
+  // The buttons are part of the picture whether or not anything is pressed; only the marks a press
+  // leaves are what the frames run out.
+  const Mark noMark;
+  for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
+    const Mark& mark = frames_ > 0 ? marks_[button] : noMark;
+    const int16_t left = static_cast<int16_t>(button * CapturePicture::ButtonWidth);
+    const char* glyph = Keys[button].glyph;
+    // A hold's number goes under the glyph, so the glyph sits a row higher when there is one and is
+    // centred in the button when there is not.
+    const bool held = mark.seconds >= 0;
+    const int16_t glyphTop =
+        held ? 1 : static_cast<int16_t>((CapturePicture::ButtonHeight - CellHeight) / 2);
+    drawText(
+        canvas,
+        static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(glyph)) / 2),
+        glyphTop, glyph);
 
-  int16_t x = static_cast<int16_t>(
-      (canvas.width() - CellWidth * static_cast<int16_t>(label_.size())) / 2);
-  const int16_t y = static_cast<int16_t>((canvas.height() - CellHeight) / 2);
-  for (char c : label_) {
-    uint8_t code = static_cast<uint8_t>(c);
-    if (code >= 176 && code < 255) code++;
-    if (glyphBlank(code)) code = 'x';
-    gfx::shapes::drawGlyph(canvas, x, y, code, 1, gfx::Ink);
-    x = static_cast<int16_t>(x + CellWidth);
+    if (held) {
+      char seconds[4];
+      snprintf(seconds, sizeof(seconds), "%d", static_cast<int>(mark.seconds));
+      drawText(canvas,
+               static_cast<int16_t>(left + CapturePicture::ButtonWidth - 1 - textWidth(seconds)),
+               9, seconds);
+    }
+
+    if (mark.outlines > 0) {
+      canvas.draw(gfx::shapes::Rect(left, 0, CapturePicture::ButtonWidth,
+                                    CapturePicture::ButtonHeight, gfx::Ink));
+    }
+    if (mark.outlines > 1) {
+      canvas.draw(gfx::shapes::Rect(static_cast<int16_t>(left + 2), 2,
+                                    static_cast<int16_t>(CapturePicture::ButtonWidth - 4),
+                                    static_cast<int16_t>(CapturePicture::ButtonHeight - 4),
+                                    gfx::Ink));
+    }
   }
-  frames_--;
+
+  if (frames_ > 0) frames_--;
 }
 
 }  // namespace gardener

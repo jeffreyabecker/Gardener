@@ -93,9 +93,16 @@ or a setting key no routine declares fails with a line number rather than a half
 
 The animation's timing and enlargement are the tool's options, not the file's: `--delay-cs` is how
 long a frame plays — 25, one beat, unless told otherwise, so a walk plays at the speed it was walked
-— and `--scale` how much it is enlarged. `--data` picks the image (default `firmware/data`) and
-`--ceiling-kpa` the model chamber's depth. A `.gif` under `tools/walkthrough/build/` is there for a
-human to look at, like the check's.
+— and `--scale` how much it is enlarged. `--lead-beats` is how many beats a press is held on the
+picture before the page is handed it: two, half a second, unless told otherwise, so a reader sees the
+button go down and then the panel answer rather than both on one frame; zero lands the press as it is
+marked. `--data` picks the image (default `firmware/data`) and `--ceiling-kpa` the model chamber's
+depth. A `.gif` under `tools/walkthrough/build/` is there for a human to look at, like the check's.
+
+Every frame is the panel's glass inside a dotted border, with the six buttons a panel's user can
+press — up, down, forward, back, OK and cancel — across the top. A press marks the button it names
+for four frames: one outline for a single, two for a double, and the seconds of a hold written under
+the glyph. The picture is 130 by 86 pixels before `--scale`, and 260 by 172 at the default of 2.
 
 ## Documentation
 

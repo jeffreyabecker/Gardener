@@ -91,11 +91,19 @@ const bnfuncinfo AlignmentFields[] = {
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
 // would need.
 
+// Whether the call has an argument at `index`. The node a call makes is pushed on top of the
+// arguments and stays there, so the count taken when the call began is what says where they end:
+// an argument the page left out is past it, and the slot just past it is the node itself, which
+// would otherwise be read as the argument and handed back as a number.
+bool hasArg(bvm* vm, int argc, int index) {
+  return index <= argc && !be_isnil(vm, index);
+}
+
 // The face a call names, held to the table the renderer will look it up in. Nil is the built-in 5x7,
 // and a name that is not a compiled face is a typo at the call that made it rather than a blank line
 // when the tree is drawn.
-const gfx::Font* argFace(bvm* vm, int index, const char* function) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return nullptr;
+const gfx::Font* argFace(bvm* vm, int argc, int index, const char* function) {
+  if (!hasArg(vm, argc, index)) return nullptr;
   if (!be_isstring(vm, index)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: font name expected", function);
@@ -113,8 +121,8 @@ const gfx::Font* argFace(bvm* vm, int index, const char* function) {
 }
 
 // The size a face is drawn at: 1 for the face as designed, which is what an absent argument means.
-uint8_t argScale(bvm* vm, int index, const char* function, uint8_t fallback) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return fallback;
+uint8_t argScale(bvm* vm, int argc, int index, const char* function, uint8_t fallback) {
+  if (!hasArg(vm, argc, index)) return fallback;
   if (!be_isnumber(vm, index)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: scale expected", function);
@@ -125,8 +133,8 @@ uint8_t argScale(bvm* vm, int index, const char* function, uint8_t fallback) {
 }
 
 // A number the call has a default for, for an argument a page may leave out or pass nil.
-float argNumber(bvm* vm, int index, const char* function, float fallback) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return fallback;
+float argNumber(bvm* vm, int argc, int index, const char* function, float fallback) {
+  if (!hasArg(vm, argc, index)) return fallback;
   if (!be_isnumber(vm, index)) {
     char message[64];
     snprintf(message, sizeof(message), "screen.%s: number expected", function);
@@ -137,8 +145,9 @@ float argNumber(bvm* vm, int index, const char* function, float fallback) {
 
 // The format a call names, held to the three the duration formatter knows and handed back as written,
 // so a record keeps the name the page used rather than a number nothing can read.
-const char* argFormat(bvm* vm, int index, const char* function) {
-  const char* name = be_isstring(vm, index) ? argText(vm, index) : nullptr;
+const char* argFormat(bvm* vm, int argc, int index, const char* function) {
+  const bool named = hasArg(vm, argc, index) && be_isstring(vm, index);
+  const char* name = named ? argText(vm, index) : nullptr;
   if (name != nullptr) {
     if (strcmp(name, "minutes") == 0 || strcmp(name, "seconds") == 0 || strcmp(name, "hours") == 0) {
       return name;
@@ -166,23 +175,23 @@ int beginDraw(bvm* vm, const char* kind) {
 // One side of a leaf's box. A side the page leaves out, or passes nil, stays nil — and the drawing
 // reads that as the whole of the canvas the node is drawn in, which is how a node fills the cell a
 // layout gave it without the page computing a number.
-void setBoxSide(bvm* vm, int draw, const char* field, int index) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return;
+void setBoxSide(bvm* vm, int draw, int argc, const char* field, int index) {
+  if (!hasArg(vm, argc, index)) return;
   setInt(vm, draw, field, argInt(vm, index));
 }
 
 // The four sides of a leaf's box, in pixels from the corner of the canvas it is drawn in.
-void setBox(bvm* vm, int draw) {
-  setBoxSide(vm, draw, "x", 1);
-  setBoxSide(vm, draw, "y", 2);
-  setBoxSide(vm, draw, "w", 3);
-  setBoxSide(vm, draw, "h", 4);
+void setBox(bvm* vm, int draw, int argc) {
+  setBoxSide(vm, draw, argc, "x", 1);
+  setBoxSide(vm, draw, argc, "y", 2);
+  setBoxSide(vm, draw, argc, "w", 3);
+  setBoxSide(vm, draw, argc, "h", 4);
 }
 
 // The share of what holds it a layout, a row or a column declares. A side the page leaves out is the
 // whole of it, which is the nil the drawing reads as the whole side.
-void setCellSide(bvm* vm, int draw, const char* field, int index) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return;
+void setCellSide(bvm* vm, int draw, int argc, const char* field, int index) {
+  if (!hasArg(vm, argc, index)) return;
   setReal(vm, draw, field, (float)argReal(vm, index));
 }
 
@@ -234,37 +243,39 @@ void requireChildren(bvm* vm, int index, const char* function) {
 
 // The justification a layout is given, passed through as the record it is, or left nil for the
 // start of both.
-void setAlignment(bvm* vm, int draw, int index) {
-  if (be_top(vm) < index || be_isnil(vm, index)) return;
+void setAlignment(bvm* vm, int draw, int argc, int index) {
+  if (!hasArg(vm, argc, index)) return;
   setValue(vm, draw, "alignment", index);
 }
 
 // --- the nodes -------------------------------------------------------------
 
 int screenText(bvm* vm) {
-  if (be_top(vm) < 5 || !be_isstring(vm, 5)) {
+  const int argc = be_top(vm);
+  if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.text(x, y, w, h, value[, font[, scale]])");
   }
-  const gfx::Font* face = argFace(vm, 6, "text");
+  const gfx::Font* face = argFace(vm, argc, 6, "text");
   const int draw = beginDraw(vm, "text");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, 7, "text", 1));
+  setInt(vm, draw, "scale", argScale(vm, argc, 7, "text", 1));
   be_return(vm);
 }
 
 // The same string centred across and down its box.
 int screenCentred(bvm* vm) {
-  if (be_top(vm) < 5 || !be_isstring(vm, 5)) {
+  const int argc = be_top(vm);
+  if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.centred(x, y, w, h, value[, font[, scale]])");
   }
-  const gfx::Font* face = argFace(vm, 6, "centred");
+  const gfx::Font* face = argFace(vm, argc, 6, "centred");
   const int draw = beginDraw(vm, "centred");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setText(vm, draw, "value", argText(vm, 5));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, 7, "centred", 1));
+  setInt(vm, draw, "scale", argScale(vm, argc, 7, "centred", 1));
   be_return(vm);
 }
 
@@ -274,7 +285,8 @@ int screenCentred(bvm* vm) {
 // panel reads them when it draws the node; a string that names no glyph is refused here rather than
 // drawn as nothing.
 int screenIcon(bvm* vm) {
-  if (be_top(vm) < 5 || !be_isstring(vm, 5)) {
+  const int argc = be_top(vm);
+  if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.icon(x, y, w, h, glyph)");
   }
   if (!gfx::shapes::isMonoBitmap(argText(vm, 5))) {
@@ -282,7 +294,7 @@ int screenIcon(bvm* vm) {
              "screen.icon: the glyph is hex digits, the width, the height and the rows");
   }
   const int draw = beginDraw(vm, "icon");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setValue(vm, draw, "glyph", 5);
   be_return(vm);
 }
@@ -300,41 +312,44 @@ int screenInverted(bvm* vm) {
 
 // A framed bar filled to a percentage, held to its ends by whoever draws it.
 int screenBar(bvm* vm) {
-  if (be_top(vm) < 5) {
+  const int argc = be_top(vm);
+  if (argc < 5) {
     be_raise(vm, "type_error", "screen.bar(x, y, w, h, percent)");
   }
   const int draw = beginDraw(vm, "bar");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setReal(vm, draw, "percent", (float)argReal(vm, 5));
   be_return(vm);
 }
 
 int screenScrollbar(bvm* vm) {
-  if (be_top(vm) < 7) {
+  const int argc = be_top(vm);
+  if (argc < 7) {
     be_raise(vm, "type_error",
              "screen.scrollbar(x, y, w, h, index, count, visible[, hollow])");
   }
   const int draw = beginDraw(vm, "scrollbar");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setInt(vm, draw, "index", argInt(vm, 5));
   setInt(vm, draw, "count", argInt(vm, 6));
   setInt(vm, draw, "visible", argInt(vm, 7));
-  setFlag(vm, draw, "hollow", be_top(vm) >= 8 && !be_isnil(vm, 8) && be_tobool(vm, 8));
+  setFlag(vm, draw, "hollow", hasArg(vm, argc, 8) && be_tobool(vm, 8));
   be_return(vm);
 }
 
 // Whole seconds in the format's text, drawn from the top of the box. A count that is not known reads
 // `--`, which is what an absent `known` means the opposite of.
 int screenDuration(bvm* vm) {
-  if (be_top(vm) < 6) {
+  const int argc = be_top(vm);
+  if (argc < 6) {
     be_raise(vm, "type_error",
              "screen.duration(x, y, w, h, format, seconds[, font[, known]])");
   }
-  const char* format = argFormat(vm, 5, "duration");
-  const gfx::Font* face = argFace(vm, 7, "duration");
-  const bool known = be_top(vm) < 8 || be_isnil(vm, 8) || be_tobool(vm, 8);
+  const char* format = argFormat(vm, argc, 5, "duration");
+  const gfx::Font* face = argFace(vm, argc, 7, "duration");
+  const bool known = !hasArg(vm, argc, 8) || be_tobool(vm, 8);
   const int draw = beginDraw(vm, "duration");
-  setBox(vm, draw);
+  setBox(vm, draw, argc);
   setText(vm, draw, "format", format);
   setInt(vm, draw, "seconds", argInt(vm, 6));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 7));
@@ -348,13 +363,14 @@ int screenDuration(bvm* vm) {
 // second reading sits small in the bottom right of the box; at 1 or more the two sit side by side at
 // the main scale, the second on the right.
 int screenPressureReadout(bvm* vm) {
-  const gfx::Font* face = argFace(vm, 6, "pressure_readout");
+  const int argc = be_top(vm);
+  const gfx::Font* face = argFace(vm, argc, 6, "pressure_readout");
   const int draw = beginDraw(vm, "pressure_readout");
-  setBox(vm, draw);
-  setReal(vm, draw, "size_hint", argNumber(vm, 5, "pressure_readout", 0.5f));
+  setBox(vm, draw, argc);
+  setReal(vm, draw, "size_hint", argNumber(vm, argc, 5, "pressure_readout", 0.5f));
   if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, 7, "pressure_readout", 2));
-  setInt(vm, draw, "secondary_scale", argScale(vm, 8, "pressure_readout", 1));
+  setInt(vm, draw, "scale", argScale(vm, argc, 7, "pressure_readout", 2));
+  setInt(vm, draw, "secondary_scale", argScale(vm, argc, 8, "pressure_readout", 1));
   be_return(vm);
 }
 
@@ -363,39 +379,42 @@ int screenPressureReadout(bvm* vm) {
 // The children it holds, divided by the cell it declares. `w` and `h` are the share of the parent a
 // layout takes; a row states the height it takes and a column the width.
 int screenLayout(bvm* vm) {
-  if (be_top(vm) < 3 || !isListValue(vm, 3)) {
+  const int argc = be_top(vm);
+  if (argc < 3 || !isListValue(vm, 3)) {
     be_raise(vm, "type_error", "screen.layout(w, h, children[, alignment])");
   }
   requireChildren(vm, 3, "layout");
   const int draw = beginDraw(vm, "layout");
-  setCellSide(vm, draw, "w", 1);
-  setCellSide(vm, draw, "h", 2);
+  setCellSide(vm, draw, argc, "w", 1);
+  setCellSide(vm, draw, argc, "h", 2);
   setValue(vm, draw, "children", 3);
-  setAlignment(vm, draw, 4);
+  setAlignment(vm, draw, argc, 4);
   be_return(vm);
 }
 
 int screenRow(bvm* vm) {
-  if (be_top(vm) < 2 || !isListValue(vm, 2)) {
+  const int argc = be_top(vm);
+  if (argc < 2 || !isListValue(vm, 2)) {
     be_raise(vm, "type_error", "screen.row(h, children[, alignment])");
   }
   requireChildren(vm, 2, "row");
   const int draw = beginDraw(vm, "row");
-  setCellSide(vm, draw, "h", 1);
+  setCellSide(vm, draw, argc, "h", 1);
   setValue(vm, draw, "children", 2);
-  setAlignment(vm, draw, 3);
+  setAlignment(vm, draw, argc, 3);
   be_return(vm);
 }
 
 int screenColumn(bvm* vm) {
-  if (be_top(vm) < 2 || !isListValue(vm, 2)) {
+  const int argc = be_top(vm);
+  if (argc < 2 || !isListValue(vm, 2)) {
     be_raise(vm, "type_error", "screen.column(w, children[, alignment])");
   }
   requireChildren(vm, 2, "column");
   const int draw = beginDraw(vm, "column");
-  setCellSide(vm, draw, "w", 1);
+  setCellSide(vm, draw, argc, "w", 1);
   setValue(vm, draw, "children", 2);
-  setAlignment(vm, draw, 3);
+  setAlignment(vm, draw, argc, 3);
   be_return(vm);
 }
 
@@ -403,11 +422,12 @@ int screenColumn(bvm* vm) {
 
 // A count of seconds as the text the duration node would draw, for a page that centres or measures it.
 int screenDurationText(bvm* vm) {
-  if (be_top(vm) < 2) {
+  const int argc = be_top(vm);
+  if (argc < 2) {
     be_raise(vm, "type_error", "screen.duration_text(format, seconds[, known])");
   }
-  const char* format = argFormat(vm, 1, "duration_text");
-  const bool known = be_top(vm) < 3 || be_isnil(vm, 3) || be_tobool(vm, 3);
+  const char* format = argFormat(vm, argc, 1, "duration_text");
+  const bool known = !hasArg(vm, argc, 3) || be_tobool(vm, 3);
   char out[16];
   be_pushstring(vm, gfx::durationText(formatOf(format), (int32_t)argInt(vm, 2), known, out,
                                           sizeof(out)));
@@ -416,11 +436,12 @@ int screenDurationText(bvm* vm) {
 
 // The ink a string takes at the face it will be drawn in, which is what a page places a suffix by.
 int screenMeasure(bvm* vm) {
-  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+  const int argc = be_top(vm);
+  if (argc < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "screen.measure(value[, font[, scale]])");
   }
-  const gfx::Font* face = argFace(vm, 2, "measure");
-  const uint8_t scale = argScale(vm, 3, "measure", 1);
+  const gfx::Font* face = argFace(vm, argc, 2, "measure");
+  const uint8_t scale = argScale(vm, argc, 3, "measure", 1);
   const gfx::Size box = gfx::shapes::measureText(face, argText(vm, 1), scale);
 
   const int record = beginRecord(vm, "bounds");

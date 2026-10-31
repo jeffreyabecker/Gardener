@@ -249,11 +249,35 @@ def harness_art_scene(name, seconds, path)
   return harnessErrors == 0
 end
 
+# A node's box is the sides the page passed and nil for the ones it did not. The readout takes no box
+# at all, so every side stays nil and the drawing reads that as the whole of the cell it lands in: a
+# side that comes back a number is the node's own record read as an argument the call never had, and
+# where the node is drawn follows the heap rather than the page.
+def harness_boxes()
+  var readout = screen.pressure_readout()
+  if readout.x != nil || readout.y != nil || readout.w != nil || readout.h != nil
+    harness_fail("boxes: pressure_readout declared " + str(readout.x) + "," + str(readout.y) + "," +
+                 str(readout.w) + "," + str(readout.h))
+  end
+
+  var text = screen.text(1, 2, 3, 4, "v")
+  if text.x != 1 || text.y != 2 || text.w != 3 || text.h != 4
+    harness_fail("boxes: text declared " + str(text.x) + "," + str(text.y) + "," + str(text.w) +
+                 "," + str(text.h))
+  end
+
+  var row = screen.row(0.5, [[bounds(1, 1), screen.pressure_readout()]])
+  if row.alignment != nil
+    harness_fail("boxes: a row with no alignment declared " + str(row.alignment))
+  end
+end
+
 # The whole image, driven: every registered key's page activated, a started run, every gesture the
 # panel sends, and the settings list where the record declares one. The counts the last line reports
 # are this harness's, so a key that answered no page is a failed run rather than a quiet gap in a
 # log that says the check passed.
 def harness_check()
+  harness_boxes()
   var keys = routines.keys()
   for routine_key : keys
     harness_run_page(routine_key)
