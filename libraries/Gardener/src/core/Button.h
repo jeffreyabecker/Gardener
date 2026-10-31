@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace core {
 
 // The keys on the front panel, declared in the order they sit on it. A gesture's parts are reported
 // in panel order, so the declaration is the order.
@@ -31,4 +32,5 @@ enum class Press : uint8_t { None, Single, Double };
 // one hold boundary left now that a tap and a hold are no longer told apart below it.
 inline constexpr uint32_t ExtendedHoldMs = 2000;
 
+}  // namespace core
 }  // namespace gardener

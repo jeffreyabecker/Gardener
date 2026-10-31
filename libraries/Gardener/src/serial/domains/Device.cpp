@@ -4,7 +4,7 @@
 
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
-#include "firmwareversion.h"
+#include "core/firmwareversion.h"
 #include "core/Logger.h"
 #include "core/Battery.h"
 #include "serial/Domain.h"

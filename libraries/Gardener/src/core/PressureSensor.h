@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace core {
 
 // Where the vacuum system gets pressure from: how far below ambient the chamber is, in kPa.
 //
@@ -32,4 +33,5 @@ class PressureSensor {
   virtual float pressureKpa() const = 0;
 };
 
+}  // namespace core
 }  // namespace gardener

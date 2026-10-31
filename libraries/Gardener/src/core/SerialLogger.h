@@ -6,6 +6,7 @@
 #include "core/Logger.h"
 
 namespace gardener {
+inline namespace core {
 
 // The diagnostic sink: three levels, framed as [I], [W] and [E] records on the serial line the link
 // writes its replies to. It writes every level from boot, and the links narrow the set; a record for
@@ -43,4 +44,5 @@ class SerialLogger : public Logger {
   String levels_ = "IWE";
 };
 
+}  // namespace core
 }  // namespace gardener

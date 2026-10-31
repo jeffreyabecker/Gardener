@@ -3,6 +3,7 @@
 #include "core/Button.h"
 
 namespace gardener {
+inline namespace core {
 
 // The front panel keys, as the rest of the firmware sees them. The part and the lines it is wired
 // to are in hal/impl/, which arms what it is given.
@@ -26,4 +27,5 @@ class ButtonPanel {
   virtual uint32_t heldMs(Button button) = 0;
 };
 
+}  // namespace core
 }  // namespace gardener

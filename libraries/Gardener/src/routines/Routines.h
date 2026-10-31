@@ -11,10 +11,14 @@
 
 namespace gardener {
 
+inline namespace core {
 struct SystemState;
+}
 
+inline namespace core {
 class Logger;
 class Library;
+}
 
 namespace panel::page {
 class RoutineRegistry;

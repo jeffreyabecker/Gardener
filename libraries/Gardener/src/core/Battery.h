@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace core {
 
 // The pack gauge: a readout, not a protection. Nothing in the firmware acts on a low reading
 // (Q11), the icon and the battery keys are the whole story. percent() is a straight line between
@@ -25,4 +26,5 @@ class Battery {
   virtual uint8_t percent() const = 0;
 };
 
+}  // namespace core
 }  // namespace gardener

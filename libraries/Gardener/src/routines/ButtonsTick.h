@@ -7,7 +7,9 @@
 namespace gardener {
 
 class CommandOutbox;
+inline namespace core {
 class Logger;
+}
 
 namespace panel {
 class GestureQueue;

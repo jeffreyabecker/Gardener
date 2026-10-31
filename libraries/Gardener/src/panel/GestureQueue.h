@@ -6,7 +6,9 @@
 
 namespace gardener {
 
+inline namespace core {
 class Logger;
+}
 
 }  // namespace gardener
 

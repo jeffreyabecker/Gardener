@@ -4,8 +4,10 @@
 
 namespace gardener {
 
+inline namespace core {
 class Battery;
 struct SystemState;
+}
 
 namespace panel {
 namespace parts {

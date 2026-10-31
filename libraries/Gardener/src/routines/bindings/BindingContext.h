@@ -5,9 +5,13 @@
 namespace gardener {
 
 class CommandOutbox;
+inline namespace core {
 class Logger;
+}
 struct MachineCommand;
+inline namespace core {
 struct SystemState;
+}
 
 namespace gfx {
 class DisplayDevice;

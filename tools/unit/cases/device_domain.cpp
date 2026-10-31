@@ -12,7 +12,7 @@
 #include "core/SystemState.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "firmwareversion.h"
+#include "core/firmwareversion.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
 #include "serial/BoardFacts.h"

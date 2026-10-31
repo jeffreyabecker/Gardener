@@ -13,7 +13,9 @@
 
 namespace gardener {
 
+inline namespace core {
 class Library;
+}
 
 namespace panel::page {
 

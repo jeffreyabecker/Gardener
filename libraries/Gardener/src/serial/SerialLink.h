@@ -14,7 +14,9 @@ namespace gardener {
 // as a compatibility guarantee.
 constexpr uint32_t PROTOCOL_VERSION = 1;
 
+inline namespace core {
 class Logger;
+}
 class Machine;
 
 // The serial interface to the controller. It reads the first token of each command, finds that

@@ -10,7 +10,9 @@ namespace gardener {
 class Machine;
 class SerialLink;
 class BleLink;
+inline namespace core {
 struct SystemState;
+}
 
 void controlTask(void* arg);
 void interfaceTask(void* arg);

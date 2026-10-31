@@ -5,7 +5,7 @@
 
 #include "ble/BleDomain.h"
 #include "ble/BleLink.h"
-#include "firmwareversion.h"
+#include "core/firmwareversion.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"

@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace core {
 
 // The range the fitted piezo reproduces. The note parser rejects a frequency outside it, and the
 // wire publishes it as the `tone` bounds, so it belongs to the part family rather than to a driver.
@@ -29,4 +30,5 @@ class Buzzer {
   virtual uint16_t frequencyHz() const = 0;
 };
 
+}  // namespace core
 }  // namespace gardener

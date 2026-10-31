@@ -6,6 +6,7 @@
 #include "core/Units.h"
 
 namespace gardener {
+inline namespace core {
 
 // What the device is doing, as the panel draws it and a routine reads it: the run and the chamber,
 // the pack, the two links, and the two preferences the device's document holds.
@@ -44,4 +45,5 @@ struct SystemState {
   volatile float deviceTargetKpa = 0.0f;
 };
 
+}  // namespace core
 }  // namespace gardener

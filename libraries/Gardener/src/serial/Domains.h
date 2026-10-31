@@ -7,7 +7,9 @@ namespace gardener {
 class Machine;
 class CommandOutbox;
 class Domain;
+inline namespace core {
 class Battery;
+}
 class DeviceSettings;
 
 Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);

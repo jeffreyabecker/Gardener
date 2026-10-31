@@ -9,7 +9,9 @@ struct bvm;
 
 namespace gardener {
 
+inline namespace core {
 struct SystemState;
+}
 
 namespace berry {
 

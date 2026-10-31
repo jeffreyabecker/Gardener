@@ -150,7 +150,9 @@ enum Capability : uint8_t {
   FailSafeValve = 0x04,
 };
 
+inline namespace core {
 class Logger;
+}
 
 // The machine: the pressure loop and the policy around it, with no panel part named. It commands
 // the three parts it is handed and holds the capability byte, and it reports through the logger it

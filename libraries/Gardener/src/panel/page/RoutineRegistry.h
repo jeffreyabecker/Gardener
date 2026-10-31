@@ -12,8 +12,10 @@
 
 namespace gardener {
 
+inline namespace core {
 class Library;
 class Logger;
+}
 
 namespace panel::page {
 

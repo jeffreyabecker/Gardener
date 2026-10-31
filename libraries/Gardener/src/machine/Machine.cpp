@@ -1,7 +1,7 @@
 #include "machine/Machine.h"
 
 #include "core/Logger.h"
-#include "firmwareversion.h"
+#include "core/firmwareversion.h"
 
 namespace gardener {
 

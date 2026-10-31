@@ -2,7 +2,9 @@
 
 namespace gardener {
 
+inline namespace core {
 class Battery;
+}
 class BleDomain;
 class DeviceSettings;
 
