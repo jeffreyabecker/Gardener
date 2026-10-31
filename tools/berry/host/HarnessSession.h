@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <deque>
 #include <memory>
 #include <string>
 #include <utility>
@@ -15,13 +16,15 @@
 #include "core/PressureSensor.h"
 #include "core/Pump.h"
 #include "core/VentValve.h"
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 #include "MemoryFiles.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "panel/PanelContext.h"
 #include "routines/BerryInterpreter.h"
+#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
+#include "bindings/BindingContext.h"
 #include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
 
@@ -181,29 +184,25 @@ class BufferLogger : public Logger {
   int errors_ = 0;
 };
 
-// The harness's queue, as a list: everything that writes the machine posts here and the beat drains
+// The machine's queue on the host: everything that writes the machine posts here and the beat drains
 // it before its own tick, so a write is seen on the next beat as it is on the device rather than the
 // instant it is made. A deque has no depth, so a post is always taken.
-bool postMachineCommand(const MachineCommand& command);
-
-// The parts a Panel is on the device, composed without one: the interpreter reads this, and it is
-// the only thing the Berry modules know about their surroundings.
-class HarnessPanel : public panel::PanelContext {
+class HostQueue : public CommandQueue {
  public:
-  HarnessPanel(gfx::DisplayDevice& display, SystemState& state,
-               panel::parts::BuzzerPlayer& buzzer)
-      : display_(display), state_(state), buzzer_(buzzer) {}
+  bool post(const MachineCommand& command) override {
+    pending_.push_back(command);
+    return true;
+  }
 
-  gfx::DisplayDevice& display() override { return display_; }
-  SystemState& systemState() override { return state_; }
-  panel::parts::BuzzerPlayer& buzzer() override { return buzzer_; }
-  // The host has no queue to fill, so the command is always taken.
-  bool post(const MachineCommand& command) override { return postMachineCommand(command); }
+  bool take(MachineCommand& command) override {
+    if (pending_.empty()) return false;
+    command = pending_.front();
+    pending_.pop_front();
+    return true;
+  }
 
  private:
-  gfx::DisplayDevice& display_;
-  SystemState& state_;
-  panel::parts::BuzzerPlayer& buzzer_;
+  std::deque<MachineCommand> pending_;
 };
 
 // Everything the device's panel brings up, on the host: the image, the storage, the settings, the
@@ -217,11 +216,12 @@ class HarnessSession {
   HarnessSession& operator=(const HarnessSession&) = delete;
 
   // Loads the image, brings the parts up and loads the routines into the interpreter, in the order
-  // Panel::boot does. False when the data directory is not there or the VM cannot be made.
+  // the sketch's PanelRoot does. False when the data directory is not there or the VM cannot be made.
   bool begin();
 
   bvm* vm() const { return interpreter_.vm(); }
   Routines& routines() { return routines_; }
+  bindings::BindingContext& bindings() { return bindings_; }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -307,9 +307,17 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   panel::parts::BuzzerPlayer buzzer_;
-  BerryInterpreter interpreter_;
-  Routines routines_{interpreter_};
-  HarnessPanel context_;
+  panel::GestureQueue presses_;
+  panel::page::Ux ux_;
+  // The queue the machine's commands wait in, and the outbox the app posts them through.
+  HostQueue queue_;
+  CommandOutbox outbox_{queue_};
+  // The routines the image registers into, the app the native modules reach, and the VM over them.
+  panel::page::RoutineRegistry registry_{files_, logger_};
+  bindings::BindingContext bindings_{
+      display_, state_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
+  BerryInterpreter interpreter_{bindings_};
+  Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };
 
 void installHarnessModule(bvm* vm, HarnessSession& appSession);

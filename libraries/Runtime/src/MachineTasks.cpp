@@ -5,7 +5,7 @@
 
 #include "core/Logger.h"
 #include "core/SystemState.h"
-#include "machine/ControlTick.h"
+#include "beats/MachineTick.h"
 #include "machine/Machine.h"
 #include "machine/SafeReboot.h"
 #include "machine/VacuumSystem.h"
@@ -30,7 +30,7 @@ constexpr UBaseType_t InterfaceCore = 0;
 // tick's, so this file keeps only the beat.
 struct ControlState {
   Machine& machine;
-  ControlTick& tick;
+  MachineTick& tick;
 };
 
 // The interface task's own state: the links it polls and the state it publishes their presence into.
@@ -75,7 +75,7 @@ void interfaceTask(void* arg) {
 
 void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble,
                        SystemState& state) {
-  static ControlTick tick{machine.vacuum(), machine.logger(), queue, state};
+  static MachineTick tick{machine.vacuum(), machine.logger(), queue, state};
   static ControlState control{machine, tick};
   static InterfaceState interface{link, state, ble};
 

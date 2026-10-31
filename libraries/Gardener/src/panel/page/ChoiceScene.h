@@ -8,14 +8,11 @@
 #include <Arduino.h>
 
 #include "panel/page/EditorScene.h"
+#include "storage/SettingKind.h"
 
 namespace gardener::panel::page {
 
-// One entry a choice offers: the key the setting stores and the title it prints.
-struct ChoiceItem {
-  String key;
-  String title;
-};
+using storage::ChoiceItem;
 
 // The value editor of a fixed list of choices, from choice_scene.be: Up and Down step through the
 // entries and wrap at the ends, OK keeps the key showing and Cancel puts back the key it opened on.

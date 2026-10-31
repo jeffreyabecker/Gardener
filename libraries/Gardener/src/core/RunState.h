@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace core {
 
 // What the device is doing, which is also the state a controller watches. There is no DONE: after a
 // release it is IDLE, and the controller knows when the run is over because it is the one that
@@ -26,4 +27,5 @@ inline const char* runStateName(RunState state) {
   }
 }
 
+}  // namespace core
 }  // namespace gardener

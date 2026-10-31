@@ -6,7 +6,7 @@ namespace gardener {
 namespace {
 
 // The service's base UUID: the last 16 bits select the characteristic, so the
-// suffix in each domain's spec is the whole of a characteristic's name.
+// suffix in each slot's spec is the whole of a characteristic's name.
 constexpr const char* ServiceUuid = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e0a10";
 constexpr const char* UuidPrefix = "6b1d0000-9a3e-4c6f-8f2a-1b7c5d9e";
 constexpr const char* DeviceName = "gardener";
@@ -19,12 +19,9 @@ String characteristicUuid(uint16_t suffix) {
 
 }  // namespace
 
-void BleLink::registerDomain(BleDomain* domain) {
-  if (domain == nullptr) return;
-  domains_.push_back(domain);
-}
-
 BleLink::Start BleLink::begin() {
+  static_assert(Count <= 16, "subscriptions_ is one bit per slot");
+
   if (!NimBLEDevice::init(DeviceName)) return Start::Failed;
 
   // Just Works, bonded: the device pairs without a passkey and keeps the bond
@@ -44,19 +41,14 @@ BleLink::Start BleLink::begin() {
   NimBLEService* service = server_->createService(ServiceUuid);
   if (service == nullptr) return Start::Failed;
 
-  // Each registered domain contributes its characteristics in registration
-  // order, and the link hands each one back so the domain can answer it.
-  fields_.clear();
-  for (BleDomain* domain : domains_) {
-    for (uint8_t i = 0; i < domain->specCount(); ++i) {
-      const BleDomain::Spec& spec = domain->specAt(i);
-      NimBLECharacteristic* characteristic = service->createCharacteristic(
-          characteristicUuid(spec.suffix).c_str(), spec.properties, spec.maxLength);
-      if (characteristic == nullptr) return Start::Failed;
-      characteristic->setCallbacks(this);
-      domain->bind(i, characteristic);
-      fields_.push_back({domain, i, characteristic});
-    }
+  // The table is fixed, so every characteristic is created here, in slot order.
+  for (uint8_t i = 0; i < Count; ++i) {
+    const Spec& spec = Specs[i];
+    NimBLECharacteristic* characteristic = service->createCharacteristic(
+        characteristicUuid(spec.suffix).c_str(), spec.properties, spec.maxLength);
+    if (characteristic == nullptr) return Start::Failed;
+    characteristic->setCallbacks(this);
+    characteristics_[i] = characteristic;
   }
 
   NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
@@ -75,15 +67,13 @@ void BleLink::poll(uint32_t nowMs) {
 
   // A command the control task's queue could not take on an earlier pass is retried first, so a
   // momentarily full queue costs this link a beat rather than the command.
-  flushCommands();
+  outbox_.flush();
 
-  // A fresh subscription wants a baseline, and it is consumed by the first
-  // pass after it.
+  // A fresh subscription wants a baseline, and it is consumed by the first pass after it.
   const bool baseline = baseline_;
   baseline_ = false;
-  for (BleDomain* domain : domains_) {
-    domain->poll(nowMs, *this, baseline);
-  }
+  applyPending();
+  publish(nowMs, baseline);
 }
 
 void BleLink::notify(NimBLECharacteristic* characteristic) {
@@ -99,8 +89,8 @@ bool BleLink::subscribed(const NimBLECharacteristic* characteristic) const {
 }
 
 int BleLink::find(const NimBLECharacteristic* characteristic) const {
-  for (size_t i = 0; i < fields_.size(); ++i) {
-    if (fields_[i].characteristic == characteristic) return static_cast<int>(i);
+  for (uint8_t i = 0; i < Count; ++i) {
+    if (characteristics_[i] == characteristic) return static_cast<int>(i);
   }
   return -1;
 }
@@ -121,18 +111,16 @@ void BleLink::onRead(NimBLECharacteristic* characteristic, NimBLEConnInfo& info)
   (void)info;
   const int index = find(characteristic);
   if (index < 0) return;
-  const Field& field = fields_[index];
-  field.domain->describe(field.index);
+  describe(static_cast<uint8_t>(index));
 }
 
-// A write only lands in its slot. Lengths are checked by the owning domain,
-// because they are the payload's shape, not a decision about the machine.
+// A write only lands in its slot. Lengths are checked in `write`, because they are the payload's
+// shape, not a decision about the machine.
 void BleLink::onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo& info) {
   (void)info;
   const int index = find(characteristic);
   if (index < 0) return;
-  const Field& field = fields_[index];
-  field.domain->write(field.index, characteristic->getValue());
+  write(static_cast<uint8_t>(index), characteristic->getValue());
 }
 
 void BleLink::onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& info,
@@ -150,6 +138,31 @@ void BleLink::onSubscribe(NimBLECharacteristic* characteristic, NimBLEConnInfo& 
   // subscriber starts from the machine's state rather than from the first
   // thing that moves.
   baseline_ = true;
+}
+
+// --- the value setters ------------------------------------------------------
+
+void BleLink::setByte(NimBLECharacteristic* characteristic, uint8_t value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(&value, sizeof(value));
+}
+
+// The part is little-endian and the contract is little-endian, so the float
+// goes out as it lies.
+void BleLink::setFloat(NimBLECharacteristic* characteristic, float value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+}
+
+// The same trade for the integer fields: the ESP32 and the contract are both little-endian.
+void BleLink::setUint16(NimBLECharacteristic* characteristic, uint16_t value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+}
+
+void BleLink::setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
+  if (characteristic == nullptr) return;
+  characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
 }  // namespace gardener

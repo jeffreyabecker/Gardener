@@ -9,7 +9,7 @@ dropped and the reason is in git.
 ## Second pump/sensor/solenoid combo
 
 Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. The machine
-context, the `vacuum` wire domain and the alpha PCB all assume one combo today.
+context, the `vacuum` wire commands and the alpha PCB all assume one combo today.
 
 ## Firmware size
 
@@ -92,7 +92,7 @@ sized to its own contents.
 
 ## The overlay as cells the panel hands out
 
-`glass::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
+`page::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
 overlay's four paints in a fixed order, so what the overlay shows is decided in one paint and a
 device with no gauge or no radio still contributes a cell that draws only the absence. Each cell
 could be an object the panel context returns — the unit, the links, the run state, the gauge —
@@ -148,3 +148,9 @@ still reports one. Blocked by: nothing has decided whether that is a build optio
 when it does not, so an owner or a scene is dropped silently at the moment memory is already short. A
 host build whose allocator fails a chosen allocation would show that and every other path that hands
 ownership over in an argument list. Blocked by: nothing builds one.
+
+
+# Make the serial link report the VM usage 
+ ESP.getFreeHeap()
+ ESP.getMaxAllocHeap()
+ ESP.getMinFreeHeap()

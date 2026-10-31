@@ -67,10 +67,10 @@ exactly when it is a foreign boundary like that; anywhere else it is a second im
 does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
-accessor; `buildMachineParts()` and `buildPanelRoot()` build the parts, the contexts they hand out
-expose what they own, and the serial domains read the owner when they format a reply. The panel
-holds the machine alongside its own parts and answers it as `machine()`, so one object still serves
-both halves of the graph.
+accessor; the composition builds the parts and the objects it builds expose what they own, and the
+serial domains read the owner when they format a reply. The sketch's `PanelRoot` is that owner for
+the device: it holds the machine, the panel's parts and the interpreter, and answers each by
+accessor, so one object still serves both halves of the graph.
 
 **One exception, and it is the panel's view of the device.** `core/SystemState.h` is one object the
 composition owns: a reference is injected into every task that owns a fact, and each writes its own
@@ -103,7 +103,7 @@ driver that can actually know them.
 The panel's pages are written against models the interpreter compiles. Each of those models — the
 scene, the stack, the registry, the settings kinds, the components — is a C++ class in the library,
 and the Berry side is a wrapper that presents it to a page. The wrapper is a `be_pushclass` table in
-a file in `libraries/Gardener/src/routines/bindings/`, beside the modules, whose callbacks unpack
+a file in `libraries/Gardener/src/bindings/`, beside the modules, whose callbacks unpack
 their arguments, call the class and push its answer; the C++ object belongs to the instance the way
 `Config`'s does, a comobj in the instance's own member, freed with it.
 

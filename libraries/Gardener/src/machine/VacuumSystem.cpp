@@ -7,6 +7,7 @@
 #include "core/Math.h"
 
 namespace gardener {
+inline namespace machine {
 
 // A latched fault owns the state until it is reset: a command can still make the vacuum system safe,
 // but none of them can move the state off Fault, so runState() == Fault and faulted() agree.
@@ -310,4 +311,5 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   lastMeasured_ = measured;
 }
 
+}  // namespace machine
 }  // namespace gardener

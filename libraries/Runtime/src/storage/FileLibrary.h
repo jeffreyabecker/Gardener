@@ -15,8 +15,14 @@ class FileLibrary : public Library {
   explicit FileLibrary(FS& fs) : fs_(fs) {}
 
   void list(const String& folder, std::vector<String>& names) override;
+  void entries(const String& path, std::vector<Entry>& out) override;
   bool read(const String& path, String& out) override;
   bool write(const String& path, const String& text) override;
+
+  bool exists(const String& path) override;
+  bool isDirectory(const String& path) override;
+  bool makeDirectory(const String& path) override;
+  bool remove(const String& path) override;
 
  private:
   FS& fs_;

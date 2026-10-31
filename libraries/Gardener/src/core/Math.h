@@ -4,9 +4,11 @@
 // no domain knowledge, which is why it lives in core/ rather than beside one owner.
 
 namespace gardener {
+inline namespace core {
 
 inline constexpr float clampf(float value, float low, float high) {
   return value < low ? low : (value > high ? high : value);
 }
 
+}  // namespace core
 }  // namespace gardener

@@ -6,9 +6,10 @@
 
 #include "storage/Config.h"
 #include "core/Library.h"
-#include "panel/page/SettingsRows.h"
+#include "storage/SettingKind.h"
 
 namespace gardener {
+inline namespace storage {
 
 // Where a routine's settings document lives: one document per routine, its aliases as named sections
 // of it.
@@ -33,19 +34,20 @@ class RoutineSettingStore {
   // One value per key the rows declare: the document's text read as the row's kind, and the row's
   // default where the section does not carry the key or carries it empty. An alias's set also
   // carries its section's `routine_title`, which no row declares but which the browser shows.
-  panel::page::SettingValues load(const String& parentRoutineKey, const String& routineKey,
-                              const std::vector<panel::page::SettingsRow*>& rows) const;
+  storage::SettingValues load(const String& parentRoutineKey, const String& routineKey,
+                              const std::vector<const storage::SettingKind*>& rows) const;
 
   // The settled set written under the keys the rows declare, then the document once; a key the set
   // does not carry is left as the document has it. A value that is nothing is written as an empty one,
   // which reads back as the default. False when the store refused the write, and true without a write
   // when nothing changed.
   bool save(const String& parentRoutineKey, const String& routineKey,
-            const std::vector<panel::page::SettingsRow*>& rows,
-            const panel::page::SettingValues& values);
+            const std::vector<const storage::SettingKind*>& rows,
+            const storage::SettingValues& values);
 
  private:
   Library& library_;
 };
 
+}  // namespace storage
 }  // namespace gardener

@@ -1,6 +1,7 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
+inline namespace storage {
 namespace {
 
 // The document a routine's set lives in: the parent's, since an alias reads a section of it.
@@ -21,14 +22,14 @@ String sectionOf(const String& parentRoutineKey, const String& routineKey) {
 
 RoutineSettingStore::RoutineSettingStore(Library& library) : library_(library) {}
 
-panel::page::SettingValues RoutineSettingStore::load(
+storage::SettingValues RoutineSettingStore::load(
     const String& parentRoutineKey, const String& routineKey,
-    const std::vector<panel::page::SettingsRow*>& rows) const {
+    const std::vector<const storage::SettingKind*>& rows) const {
   Config document(&library_, documentPath(parentRoutineKey));
   document.begin();
   const String section = sectionOf(parentRoutineKey, routineKey);
-  panel::page::SettingValues values;
-  for (const panel::page::SettingsRow* row : rows) {
+  storage::SettingValues values;
+  for (const storage::SettingKind* row : rows) {
     if (row == nullptr) continue;
     const String stored = document.get<String>(section.c_str(), row->key().c_str(), "");
     values[row->key()] = stored.isEmpty() ? row->defaultValue() : row->parse(stored);
@@ -41,12 +42,12 @@ panel::page::SettingValues RoutineSettingStore::load(
 }
 
 bool RoutineSettingStore::save(const String& parentRoutineKey, const String& routineKey,
-                               const std::vector<panel::page::SettingsRow*>& rows,
-                               const panel::page::SettingValues& values) {
+                               const std::vector<const storage::SettingKind*>& rows,
+                               const storage::SettingValues& values) {
   Config document(&library_, documentPath(parentRoutineKey));
   document.begin();
   const String section = sectionOf(parentRoutineKey, routineKey);
-  for (const panel::page::SettingsRow* row : rows) {
+  for (const storage::SettingKind* row : rows) {
     if (row == nullptr) continue;
     const auto held = values.find(row->key());
     if (held == values.end()) continue;
@@ -55,4 +56,5 @@ bool RoutineSettingStore::save(const String& parentRoutineKey, const String& rou
   return document.save();
 }
 
+}  // namespace storage
 }  // namespace gardener

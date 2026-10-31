@@ -5,6 +5,7 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
+inline namespace machine {
 
 const char* machineCommandName(MachineCommand::Op op) {
   switch (op) {
@@ -44,4 +45,5 @@ void CommandOutbox::flush() {
   }
 }
 
+}  // namespace machine
 }  // namespace gardener

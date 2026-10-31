@@ -17,15 +17,15 @@
 
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "routines/Registration.h"
-#include "routines/RoutineRegistry.h"
+#include "panel/page/Registration.h"
+#include "panel/page/RoutineRegistry.h"
 #include "storage/RoutineSettingStore.h"
 #include "panel/page/SettingsRows.h"
 
 namespace {
 
-using gardener::Registration;
-using gardener::RoutineRegistry;
+using gardener::panel::page::Registration;
+using gardener::panel::page::RoutineRegistry;
 using gardener::RoutineSettingStore;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
@@ -80,6 +80,11 @@ std::vector<ChoiceItem> resumeChoices() {
   return {{"hold", "Hold"}, {"immediately", "Immediately"}};
 }
 
+// A row is the document's half and the page's, and the store takes the first.
+std::vector<const gardener::storage::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
+  return std::vector<const gardener::storage::SettingKind*>(rows.begin(), rows.end());
+}
+
 // The rows the store cases declare: one of every kind, a key written as nothing and a key the
 // document lacks.
 struct StoreRows {
@@ -125,7 +130,7 @@ TEST_CASE("a routine set reads its document") {
   library.put(StoreDocument, StoreFixture);
   StoreRows rows;
   RoutineSettingStore store(library);
-  const SettingValues values = store.load("store_test", "store_test", rows.held);
+  const SettingValues values = store.load("store_test", "store_test", kindsOf(rows.held));
 
   CHECK_EQ(kpaOf(values, "target_pressure"), 20.0f);
   CHECK_EQ(secondsOf(values, "total_duration"), 450);
@@ -139,7 +144,7 @@ TEST_CASE("a key written as nothing and a key the document lacks answer the defa
   library.put(StoreDocument, StoreFixture);
   StoreRows rows;
   RoutineSettingStore store(library);
-  const SettingValues values = store.load("store_test", "store_test", rows.held);
+  const SettingValues values = store.load("store_test", "store_test", kindsOf(rows.held));
 
   CHECK_EQ(kpaOf(values, "empty_key"), 3.0f);
   CHECK_EQ(kpaOf(values, "missing_key"), 7.0f);
@@ -150,7 +155,7 @@ TEST_CASE("an alias reads its own section") {
   library.put(StoreDocument, StoreFixture);
   StoreRows rows;
   RoutineSettingStore store(library);
-  const SettingValues values = store.load("store_test", "cold", rows.held);
+  const SettingValues values = store.load("store_test", "cold", kindsOf(rows.held));
 
   CHECK_EQ(kpaOf(values, "target_pressure"), 15.0f);
   CHECK_EQ(secondsOf(values, "total_duration"), 300);
@@ -164,10 +169,10 @@ TEST_CASE("a save writes once and leaves what it does not declare") {
   RoutineSettingStore store(library);
   const int before = library.writes();
 
-  SettingValues values = store.load("store_test", "store_test", rows.held);
+  SettingValues values = store.load("store_test", "store_test", kindsOf(rows.held));
   values["total_duration"] = static_cast<int32_t>(480);
   values["target_pressure"] = 42.0f;
-  REQUIRE(store.save("store_test", "store_test", rows.held, values));
+  REQUIRE(store.save("store_test", "store_test", kindsOf(rows.held), values));
 
   CHECK_EQ(library.writes(), before + 1);
   const std::string written = library.textAt(StoreDocument);
@@ -175,9 +180,9 @@ TEST_CASE("a save writes once and leaves what it does not declare") {
   CHECK(written.find("routine_title=Cold") != std::string::npos);
   CHECK(written.find("[cold]") != std::string::npos);
 
-  const SettingValues reread = store.load("store_test", "store_test", rows.held);
+  const SettingValues reread = store.load("store_test", "store_test", kindsOf(rows.held));
   CHECK_EQ(kpaOf(reread, "target_pressure"), 42.0f);
-  const SettingValues alias = store.load("store_test", "cold", rows.held);
+  const SettingValues alias = store.load("store_test", "cold", kindsOf(rows.held));
   CHECK_EQ(kpaOf(alias, "target_pressure"), 15.0f);
 }
 
@@ -186,10 +191,10 @@ TEST_CASE("a set that changed nothing is not written") {
   library.put(StoreDocument, StoreFixture);
   StoreRows rows;
   RoutineSettingStore store(library);
-  const SettingValues values = store.load("store_test", "store_test", rows.held);
-  REQUIRE(store.save("store_test", "store_test", rows.held, values));
+  const SettingValues values = store.load("store_test", "store_test", kindsOf(rows.held));
+  REQUIRE(store.save("store_test", "store_test", kindsOf(rows.held), values));
   const int settled = library.writes();
-  REQUIRE(store.save("store_test", "store_test", rows.held, values));
+  REQUIRE(store.save("store_test", "store_test", kindsOf(rows.held), values));
   CHECK_EQ(library.writes(), settled);
 }
 
@@ -199,11 +204,11 @@ TEST_CASE("a value written as nothing reads back as nothing") {
   StoreRows rows;
   RoutineSettingStore store(library);
 
-  SettingValues values = store.load("store_test", "store_test", rows.held);
+  SettingValues values = store.load("store_test", "store_test", kindsOf(rows.held));
   values["target_pressure"] = std::any();
-  REQUIRE(store.save("store_test", "store_test", rows.held, values));
+  REQUIRE(store.save("store_test", "store_test", kindsOf(rows.held), values));
 
-  const SettingValues reread = store.load("store_test", "store_test", rows.held);
+  const SettingValues reread = store.load("store_test", "store_test", kindsOf(rows.held));
   CHECK_FALSE(reread.at("target_pressure").has_value());
 }
 
@@ -232,7 +237,7 @@ TEST_CASE("an alternate follows its record and resolves to it") {
   Ux ux;
   REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
 
-  const std::vector<gardener::RoutineRow> rows = registry.rows();
+  const std::vector<gardener::panel::page::RoutineRow> rows = registry.rows();
   REQUIRE(rows.size() >= 3);
   CHECK_EQ(std::string(rows[0].routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(std::string(rows[1].routineKey.c_str()), std::string("cold"));
@@ -280,10 +285,10 @@ TEST_CASE("a launch carries the set the caller stated, held to the record's decl
   NoPresses gestures;
   Ux ux;
 
-  gardener::RoutineActivation launched;
+  gardener::panel::page::RoutineActivation launched;
   REQUIRE(registry.add(Registration(
       "ramped_static", "Ramped", rampedDeclaration(gestures, ux),
-      [&launched, &gestures](const gardener::RoutineActivation& activation) {
+      [&launched, &gestures](const gardener::panel::page::RoutineActivation& activation) {
         launched = activation;
         return std::make_unique<StubPage>(gestures);
       })));

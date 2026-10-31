@@ -8,6 +8,7 @@
 #include "core/VentValve.h"
 
 namespace gardener {
+inline namespace machine {
 
 // The vacuum system: the pressure loop, the release path and the run state, between the devices and
 // the wire. The devices are not its own — it is handed the three it commands, so the pins and the
@@ -127,4 +128,5 @@ class VacuumSystem {
   uint32_t lastControlMs_ = 0;
 };
 
+}  // namespace machine
 }  // namespace gardener

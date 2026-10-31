@@ -6,11 +6,20 @@
 #include "machine/MachineCommand.h"
 
 namespace gardener {
-
-class Machine;
-class SerialLink;
-class BleLink;
+inline namespace core {
 struct SystemState;
+}
+inline namespace machine {
+class Machine;
+}
+}  // namespace gardener
+
+namespace gardener {
+
+inline namespace serial {
+class SerialLink;
+}
+class BleLink;
 
 void controlTask(void* arg);
 void interfaceTask(void* arg);

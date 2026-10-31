@@ -1,6 +1,7 @@
 #include "storage/Config.h"
 
 namespace gardener {
+inline namespace storage {
 
 Config::Config(Library* store, const String& path) : store_(store), path_(path) {}
 
@@ -154,4 +155,5 @@ const Config::KeyValue* Config::find(const char* section, const char* key) const
   return nullptr;
 }
 
+}  // namespace storage
 }  // namespace gardener
