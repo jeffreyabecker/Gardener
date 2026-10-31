@@ -10,12 +10,6 @@
 #include "shapes/Text.h"
 
 namespace gardener {
-namespace {
-
-// The face the number is drawn at.
-constexpr uint8_t ValueScale = 2;
-
-}  // namespace
 
 NumberScene::NumberScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step,
                          float min, float max, bool nullable, NumberFormatter format)
@@ -58,12 +52,10 @@ float NumberScene::within(float value) const {
   return value;
 }
 
-// The number centred in the contents band at the value face.
+// The number in the contents band, at the cut the band's height takes.
 gfx::PaintNodeRef NumberScene::pageContents() {
   printed_ = text();
-  const gfx::Size ink = gfx::measureText(nullptr, printed_.c_str(), ValueScale);
-  return gfx::aligned(
-      gfx::sized(gfx::borrowedText(gfx::Box::whole(), printed_.c_str(), nullptr, ValueScale), ink));
+  return gfx::fitted(gfx::Box::whole(), printed_.c_str(), gfx::findFamily("ttyp0"));
 }
 
 }  // namespace gardener

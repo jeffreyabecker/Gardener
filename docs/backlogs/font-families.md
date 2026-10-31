@@ -41,5 +41,6 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The pages
 
-- [ ] Name `ttyp0` in the editor's title, refusal and field text and in the home page's title and
-      timer, and re-record the captures, so the panel's bands are filled by a real cut.
+- [x] Name `ttyp0` in the editor's title and the number's value, and in the home page's title and
+      timer and the two ramp chromes' titles and clocks, so the panel's bands are filled by a real
+      cut.
