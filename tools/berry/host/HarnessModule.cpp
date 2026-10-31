@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "routines/bindings/Module.h"
+#include "bindings/Module.h"
 
 namespace {
 
@@ -135,5 +135,5 @@ const bnfuncinfo HarnessLibrary[] = {
 
 void gardener::installHarnessModule(bvm* vm, HarnessSession& appSession) {
   session = &appSession;
-  gardener::berry::installModule(vm, "harness", HarnessLibrary, appSession.bindings());
+  gardener::bindings::installModule(vm, "harness", HarnessLibrary, appSession.bindings());
 }

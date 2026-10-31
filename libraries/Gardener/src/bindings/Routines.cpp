@@ -10,7 +10,7 @@
 
 #include <Gfx.h>
 
-#include "panel/page/BerryScene.h"
+#include "bindings/BerryScene.h"
 #include "panel/page/Registration.h"
 #include "panel/page/RoutineRegistry.h"
 #include "BindingContext.h"
@@ -18,7 +18,7 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 // The list the registrations' classes are held in, installed empty and appended to as they register.
@@ -273,7 +273,7 @@ std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm,
           bindings->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<panel::page::BerryScene>(vm, be_absindex(vm, -1), *bindings);
+        page = std::make_unique<bindings::BerryScene>(vm, be_absindex(vm, -1), *bindings);
       }
     }
   }
@@ -513,5 +513,5 @@ void installRoutinesModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

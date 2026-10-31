@@ -24,7 +24,7 @@
 #include "routines/BerryInterpreter.h"
 #include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
-#include "routines/bindings/BindingContext.h"
+#include "bindings/BindingContext.h"
 #include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
 
@@ -221,7 +221,7 @@ class HarnessSession {
 
   bvm* vm() const { return interpreter_.vm(); }
   Routines& routines() { return routines_; }
-  berry::BindingContext& bindings() { return bindings_; }
+  bindings::BindingContext& bindings() { return bindings_; }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -314,7 +314,7 @@ class HarnessSession {
   CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   panel::page::RoutineRegistry registry_{files_, logger_};
-  berry::BindingContext bindings_{
+  bindings::BindingContext bindings_{
       display_, state_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};

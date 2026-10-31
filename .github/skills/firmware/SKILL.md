@@ -103,7 +103,7 @@ driver that can actually know them.
 The panel's pages are written against models the interpreter compiles. Each of those models — the
 scene, the stack, the registry, the settings kinds, the components — is a C++ class in the library,
 and the Berry side is a wrapper that presents it to a page. The wrapper is a `be_pushclass` table in
-a file in `libraries/Gardener/src/routines/bindings/`, beside the modules, whose callbacks unpack
+a file in `libraries/Gardener/src/bindings/`, beside the modules, whose callbacks unpack
 their arguments, call the class and push its answer; the C++ object belongs to the instance the way
 `Config`'s does, a comobj in the instance's own member, freed with it.
 

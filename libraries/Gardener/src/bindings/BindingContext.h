@@ -30,7 +30,7 @@ class Ux;
 }
 }  // namespace panel
 
-namespace berry {
+namespace bindings {
 
 // What the native modules reach of the app, held as the parts themselves: one VM and one app, so a
 // callback -- a plain C function with no user data -- gets at the glass, the published state, the
@@ -82,5 +82,5 @@ class BindingContext {
   Logger& logger_;
 };
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

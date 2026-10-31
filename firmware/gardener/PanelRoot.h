@@ -17,7 +17,7 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
-#include "routines/bindings/BindingContext.h"
+#include "bindings/BindingContext.h"
 #include "storage/DeviceSettings.h"
 
 namespace gardener {
@@ -96,7 +96,7 @@ class PanelRoot {
   panel::page::Ux ux_;
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   panel::page::RoutineRegistry registry_;
-  berry::BindingContext bindings_;
+  bindings::BindingContext bindings_;
   BerryInterpreter interpreter_;
   Routines routines_;
 };

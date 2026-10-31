@@ -17,7 +17,7 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 // The four declarations a routine's settings list is made of, one class per kind. A call builds the
@@ -527,5 +527,5 @@ void installSettingsModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

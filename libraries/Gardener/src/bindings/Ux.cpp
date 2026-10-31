@@ -9,14 +9,14 @@
 
 #include <Gfx.h>
 
-#include "panel/page/BerryScene.h"
+#include "bindings/BerryScene.h"
 #include "panel/page/Ux.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 // The functions the image pushed with a page, in a list the interpreter owns: a frame outlives the
@@ -184,7 +184,7 @@ int uxPush(bvm* vm) {
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<panel::page::BerryScene>(vm, 1, *bindings);
+    scene = std::make_unique<bindings::BerryScene>(vm, 1, *bindings);
   }
   panel::page::Ux::Callback held;
   if (callback) {
@@ -231,9 +231,9 @@ int uxTop(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   requirePanel(bindings, vm, "ux.top: no panel");
   const panel::page::Scene* showing = bindings->ux().top();
-  const panel::page::BerryScene* page =
+  const bindings::BerryScene* page =
       showing == nullptr ? nullptr
-                         : static_cast<const panel::page::BerryScene*>(showing->scripted());
+                         : static_cast<const bindings::BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
   be_return(vm);
 }
@@ -281,5 +281,5 @@ void installUxModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

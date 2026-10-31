@@ -6,7 +6,7 @@ struct bvm;
 
 namespace gardener {
 
-namespace berry {
+namespace bindings {
 class BindingContext;
 }
 
@@ -17,7 +17,7 @@ class BerryInterpreter : public Interpreter {
  public:
   // The app the native modules reach. The VM they are installed into comes up in begin(), so the
   // app this is built from is fixed from here on.
-  explicit BerryInterpreter(berry::BindingContext& bindings);
+  explicit BerryInterpreter(bindings::BindingContext& bindings);
 
   bool begin() override;
   bool load(const String& path, const String& source) override;
@@ -33,7 +33,7 @@ class BerryInterpreter : public Interpreter {
   // behind them.
   void installModules();
 
-  berry::BindingContext& bindings_;
+  bindings::BindingContext& bindings_;
   bvm* vm_ = nullptr;
 };
 

@@ -8,7 +8,7 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 // The record a page's drawing is made of, installed by this module. Every call below fills one in and
@@ -504,5 +504,5 @@ void installScreenModule(bvm* vm, BindingContext& bindings) {
   installModule(vm, "screen", ScreenLibrary, bindings);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

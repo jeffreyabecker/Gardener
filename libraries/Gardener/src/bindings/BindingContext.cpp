@@ -5,7 +5,7 @@
 #include "panel/GestureQueue.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 
 gfx::DisplayDevice& BindingContext::display() { return display_; }
 
@@ -27,5 +27,5 @@ void BindingContext::info(const char* message) { logger_.info(message); }
 
 void BindingContext::error(const char* message) { logger_.error(message); }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

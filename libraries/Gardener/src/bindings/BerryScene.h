@@ -15,11 +15,11 @@ struct SystemState;
 
 namespace gardener {
 
-namespace berry {
+namespace bindings {
 class BindingContext;
 }
 
-namespace panel::page {
+namespace bindings {
 
 // A page whose body is Berry: a scene whose activate, handle, tick and draw_page are methods of an
 // instance the interpreter holds. The stack drives it like any other scene, so a page can move to
@@ -39,13 +39,13 @@ namespace panel::page {
 // The page answers its drawing rather than making it: draw_page returns the tree the screen module
 // built node by node, and the scene renders it on the canvas it was handed — the page, which is the
 // panel less the overlay's rows. A page that answers nothing draws nothing.
-class BerryScene : public Scene {
+class BerryScene : public panel::page::Scene {
  public:
   // `page` is the instance at index `page` of the interpreter's stack, and the scene is what keeps
   // it; the caller's stack is left as it was found. The queue the scene drains, the state a
   // pressure readout in the page's tree needs and the log a raise goes to are the app's it was
   // built for.
-  BerryScene(bvm* vm, int page, berry::BindingContext& bindings);
+  BerryScene(bvm* vm, int page, BindingContext& bindings);
   ~BerryScene() override;
 
   BerryScene(const BerryScene&) = delete;
@@ -78,7 +78,7 @@ class BerryScene : public Scene {
 
   bvm* vm_ = nullptr;
   // The app the page was built for: the queue above, the state below, and the log a raise goes to.
-  berry::BindingContext& bindings_;
+  BindingContext& bindings_;
   // The published state, held for a pressure readout in the tree the page answers.
   const SystemState& state_;
   // Where the page sits in the interpreter's list, or -1 when the scene is holding nothing.
@@ -86,5 +86,5 @@ class BerryScene : public Scene {
   bool broken_ = false;
 };
 
-}  // namespace panel::page
+}  // namespace bindings
 }  // namespace gardener

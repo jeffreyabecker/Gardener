@@ -8,7 +8,7 @@ inline is dropped later, one layer per item, when its uses are qualified.
 - [x] `machine/` and `storage/` declare `gardener::machine` and `gardener::storage` inline.
 - [ ] `panel/` and `panel/parts/` declare their namespaces inline, and `BerryScene`, `Registration`
       and `RoutineRegistry` join `gardener::panel::page`.
-- [ ] `routines/bindings/` becomes `bindings/` declaring `gardener::bindings`, with `BerryScene` in it.
+- [x] `routines/bindings/` becomes `bindings/` declaring `gardener::bindings`, with `BerryScene` in it.
 - [ ] The three ticks move to `beats/` declaring `gardener::beats`.
 - [ ] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
       stops naming `panel`.

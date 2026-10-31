@@ -1,13 +1,13 @@
-#include "panel/page/BerryScene.h"
+#include "bindings/BerryScene.h"
 
 #include <berry.h>
 
 #include "core/SystemState.h"
-#include "routines/bindings/BindingContext.h"
-#include "routines/bindings/DrawTree.h"
+#include "bindings/BindingContext.h"
+#include "bindings/DrawTree.h"
 
 namespace gardener {
-namespace panel::page {
+namespace bindings {
 namespace {
 
 // The pages the scenes hold, in a list the interpreter owns: a scene's page is reachable from the
@@ -17,7 +17,7 @@ constexpr const char* PageList = "__pages";
 
 }  // namespace
 
-BerryScene::BerryScene(bvm* vm, int page, berry::BindingContext& bindings)
+BerryScene::BerryScene(bvm* vm, int page, BindingContext& bindings)
     : Scene(bindings.presses()), vm_(vm), bindings_(bindings), state_(bindings.systemState()) {
   const int base = be_top(vm_);
   if (!be_getglobal(vm_, PageList) || !be_islist(vm_, -1)) {
@@ -94,7 +94,7 @@ void BerryScene::drawPage(gfx::Canvas& canvas) {
   const int base = be_top(vm_);
   if (beginCall("draw_page")) {
     if (endCall("draw_page", 1)) {
-      berry::drawTree(vm_, be_absindex(vm_, -1), state_, canvas);
+      drawTree(vm_, be_absindex(vm_, -1), state_, canvas);
     }
   }
   be_pop(vm_, be_top(vm_) - base);
@@ -140,5 +140,5 @@ bool BerryScene::endCall(const char* method, int argc) {
   return true;
 }
 
-}  // namespace panel::page
+}  // namespace bindings
 }  // namespace gardener

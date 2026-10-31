@@ -41,8 +41,8 @@ EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "<NimBLE", "freertos/", "<SD.h>")
 
 # The interpreter's native modules, which reach the VM through the headers beside them rather than
-# through a `<berry.h>` of their own: the folder is the interpreter's, so none of it is the suite's.
-HOST_MODULES = GARDENER / "src" / "routines" / "bindings"
+# through a `<berry.h>` of their own: the folder is the boundary itself, so none of it is the suite's.
+HOST_MODULES = GARDENER / "src" / "bindings"
 
 # The API's own sources, and the two a board's C library would provide.
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")

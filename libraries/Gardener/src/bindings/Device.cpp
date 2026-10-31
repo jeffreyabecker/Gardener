@@ -7,7 +7,7 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 // The target the default program pulls to; 0 when none has been set.
@@ -102,5 +102,5 @@ void installDeviceModule(bvm* vm, BindingContext& bindings) {
   installModule(vm, "device", DeviceLibrary, bindings);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

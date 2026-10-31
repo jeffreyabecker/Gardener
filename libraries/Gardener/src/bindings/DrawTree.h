@@ -15,7 +15,7 @@ struct SystemState;
 
 namespace gardener {
 
-namespace berry {
+namespace bindings {
 
 // A page's drawing, walked: the node at `node` of the interpreter's stack turned into the paint it
 // describes and drawn on `canvas`. The tree is what the `draw` record the screen module declares
@@ -28,5 +28,5 @@ namespace berry {
 // own call has returned, where a raise would unwind through C++ frames.
 void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas);
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

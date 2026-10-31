@@ -4,9 +4,9 @@
 
 #include <memory>
 
-#include "panel/page/BerryScene.h"
-#include "routines/bindings/BindingContext.h"
-#include "routines/bindings/Modules.h"
+#include "bindings/BerryScene.h"
+#include "bindings/BindingContext.h"
+#include "bindings/Modules.h"
 
 namespace gardener {
 namespace {
@@ -17,7 +17,7 @@ constexpr const char* RootPage = "__rootScene";
 
 }  // namespace
 
-BerryInterpreter::BerryInterpreter(berry::BindingContext& bindings) : bindings_(bindings) {}
+BerryInterpreter::BerryInterpreter(bindings::BindingContext& bindings) : bindings_(bindings) {}
 
 bool BerryInterpreter::begin() {
   vm_ = be_vm_new();
@@ -29,12 +29,12 @@ bool BerryInterpreter::begin() {
 }
 
 void BerryInterpreter::installModules() {
-  berry::installVacuumModule(vm_, bindings_);
-  berry::installScreenModule(vm_, bindings_);
-  berry::installDeviceModule(vm_, bindings_);
-  berry::installSettingsModule(vm_, bindings_);
-  berry::installRoutinesModule(vm_, bindings_);
-  berry::installUxModule(vm_, bindings_);
+  bindings::installVacuumModule(vm_, bindings_);
+  bindings::installScreenModule(vm_, bindings_);
+  bindings::installDeviceModule(vm_, bindings_);
+  bindings::installSettingsModule(vm_, bindings_);
+  bindings::installRoutinesModule(vm_, bindings_);
+  bindings::installUxModule(vm_, bindings_);
 }
 
 bool BerryInterpreter::load(const String& path, const String& source) {
@@ -65,7 +65,7 @@ std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene() {
   const int base = be_top(vm_);
   std::unique_ptr<panel::page::Scene> scene;
   if (be_getglobal(vm_, RootPage) && be_isinstance(vm_, -1)) {
-    scene = std::make_unique<panel::page::BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
+    scene = std::make_unique<bindings::BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
   }
   be_pop(vm_, be_top(vm_) - base);
   return scene;

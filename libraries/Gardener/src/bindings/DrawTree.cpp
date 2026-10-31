@@ -1,4 +1,4 @@
-#include "routines/bindings/DrawTree.h"
+#include "bindings/DrawTree.h"
 
 #include <berry.h>
 #include <string.h>
@@ -11,7 +11,7 @@
 #include "panel/page/PressureReadout.h"
 
 namespace gardener {
-namespace berry {
+namespace bindings {
 namespace {
 
 using gfx::Cell;
@@ -286,5 +286,5 @@ void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas) {
   if (paint) paint->draw(canvas);
 }
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener

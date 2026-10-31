@@ -14,7 +14,7 @@ namespace panel::page {
 class SettingsRow;
 }  // namespace panel::page
 
-namespace berry {
+namespace bindings {
 
 class BindingContext;
 
@@ -92,5 +92,5 @@ void pushSceneHandle(bvm* vm, std::unique_ptr<panel::page::Scene> scene);
 // settings list is built from.
 void installRoutinesModule(bvm* vm, BindingContext& bindings);
 
-}  // namespace berry
+}  // namespace bindings
 }  // namespace gardener
