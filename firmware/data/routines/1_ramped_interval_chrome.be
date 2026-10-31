@@ -26,7 +26,7 @@ def ramped_interval_chrome(icon, title, current_set, total_sets, status, remaini
       [bounds(0.5, 1), screen.text(nil, nil, nil, nil, sets, "ttyp0")]
     ])],
     [bounds(1, 0.25), screen.row(nil, [
-      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status)],
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status, "ttyp0")],
       [bounds(0.5, 1), screen.bar(nil, nil, nil, nil, percent)]
     ])]
   ])

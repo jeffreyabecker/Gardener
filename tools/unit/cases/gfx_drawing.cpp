@@ -38,28 +38,18 @@ TEST_CASE("a text scales the face it draws") {
   CHECK_EQ(ink.height, 16);
 }
 
-TEST_CASE("the Adafruit family is the one the library ships and the one a name answers to") {
-  // A draw or a measurement that names no family, and a page that names "adafruit", all mean this
-  // one: the design the panel drew in before there was another.
-  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
-  CHECK_EQ(familyOr(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(""), findFamily("adafruit"));
-  CHECK_EQ(defaultFamily()->count, 1);
-  CHECK_EQ(defaultFamily()->cuts[0], &AdafruitFont);
+TEST_CASE("a name answers a family, and a name nobody holds answers nothing") {
+  // The design the panel drew in before there was another is a family of one cut like any other.
+  const Family* adafruit = findFamily("adafruit");
+  REQUIRE(adafruit != nullptr);
+  CHECK_EQ(adafruit->count, 1);
+  CHECK_EQ(adafruit->cuts[0], &AdafruitFont);
 
-  // Setting it is what a composition does to change the look, and nullptr puts the Adafruit family
-  // back.
-  setDefaultFamily(findFamily("ttyp0"));
-  CHECK_EQ(defaultFamily(), findFamily("ttyp0"));
-  CHECK_EQ(find(nullptr), &Ttyp011);
-  setDefaultFamily(nullptr);
-  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
-  CHECK_EQ(find(nullptr), &AdafruitFont);
-
-  // A name the module does not hold draws in the default family rather than raising.
-  CHECK_EQ(findFamily("sans12"), defaultFamily());
-  CHECK_EQ(find("sans12"), defaultFamily()->cuts[0]);
+  // A name the module does not hold is a lookup that finds nothing rather than a quieter answer:
+  // what a leaf that names no family draws in is the resolver's business, not the lookup's.
+  CHECK_EQ(findFamily("sans12"), nullptr);
+  CHECK_EQ(findFamily(""), nullptr);
+  CHECK_EQ(findFamily(nullptr), nullptr);
 }
 
 TEST_CASE("a text draws at its box") {
@@ -260,10 +250,10 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
 
 TEST_CASE("the faces the library ships answer to their names") {
   // The ttyp0 faces are registered as the library loads, so a page names one and is given it back.
-  CHECK_EQ(find("ttyp011"), &Ttyp011);
-  CHECK_EQ(find("ttyp016"), &Ttyp016);
-  CHECK_EQ(find("ttyp022"), &Ttyp022);
-  CHECK_NE(find("ttyp016"), faceOr(nullptr));
+  CHECK_EQ(findFamily("ttyp011")->cuts[0], &Ttyp011);
+  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
+  CHECK_EQ(findFamily("ttyp022")->cuts[0], &Ttyp022);
+  CHECK_NE(findFamily("ttyp016")->cuts[0], &AdafruitFont);
 
   // The Adafruit is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
@@ -271,7 +261,7 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK(Ttyp016.kind == Font::Kind::Variable);
 
   // A name the library does not hold is still a draw: it falls back rather than raising.
-  CHECK_EQ(find("ttyp012"), faceOr(nullptr));
+  CHECK_EQ(findFamily("ttyp012"), nullptr);
 }
 
 TEST_CASE("a face says its own line box") {
@@ -391,13 +381,13 @@ TEST_CASE("a family is a design's cuts, shortest first") {
   CHECK_EQ(ttyp0->cuts[1], &Ttyp016);
   CHECK_EQ(ttyp0->cuts[2], &Ttyp022);
 
-  // The Adafruit face is a family of one cut, and it is the answer a name the module does not hold
-  // and a page that names none are both given.
+  // The Adafruit face is a family of one cut like any other, and a name the module does not hold is
+  // a lookup that finds nothing rather than a quieter answer.
   CHECK_EQ(findFamily("adafruit")->count, 1);
   CHECK_EQ(findFamily("adafruit")->cuts[0], &AdafruitFont);
-  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(""), findFamily("adafruit"));
-  CHECK_EQ(findFamily("sans"), findFamily("adafruit"));
+  CHECK_EQ(findFamily(nullptr), nullptr);
+  CHECK_EQ(findFamily(""), nullptr);
+  CHECK_EQ(findFamily("sans"), nullptr);
 }
 
 }  // namespace

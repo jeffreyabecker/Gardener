@@ -93,7 +93,7 @@ int16_t drawFontGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* f
 
 void Text::operator()(Canvas& canvas) const {
   if (size == 0) return;
-  const Font* font = faceOr(face);
+  const Font* font = face != nullptr ? face : &AdafruitFont;
   int16_t cursorX = x;
   for (const char* character = value; *character != '\0'; character++) {
     cursorX = static_cast<int16_t>(cursorX + drawFontGlyph(canvas, cursorX, y, font,
@@ -105,7 +105,7 @@ void Text::operator()(Canvas& canvas) const {
 Size measureText(const Font* face, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
-  const Font* font = faceOr(face);
+  const Font* font = face != nullptr ? face : &AdafruitFont;
   if (font->kind == Font::Kind::Fixed) {
     // A fixed face measures as a run of cells, including the blank column behind the glyph that the
     // advance leaves.
@@ -165,16 +165,16 @@ uint8_t tallestFitting(const Family& family, int16_t height) {
 }  // namespace
 
 Fit resolve(const Family* family, int16_t height) {
-  const Family& design = *familyOr(family);
-  if (design.cuts == nullptr || design.count == 0) return {faceOr(nullptr), 1};
+  const Family& design = family != nullptr ? *family : AdafruitFamily;
+  if (design.cuts == nullptr || design.count == 0) return {&AdafruitFont, 1};
   if (height <= 0) return {design.cuts[design.count - 1], 1};
   const Font* face = design.cuts[tallestFitting(design, height)];
   return {face, scaleIn(*face, height)};
 }
 
 Fit resolve(const Family* family, const char* value, int16_t width, int16_t height) {
-  const Family& design = *familyOr(family);
-  if (design.cuts == nullptr || design.count == 0) return {faceOr(nullptr), 1};
+  const Family& design = family != nullptr ? *family : AdafruitFamily;
+  if (design.cuts == nullptr || design.count == 0) return {&AdafruitFont, 1};
   if (height <= 0) return {design.cuts[design.count - 1], 1};
   const uint8_t start = tallestFitting(design, height);
   for (uint8_t at = static_cast<uint8_t>(start + 1); at-- > 0;) {

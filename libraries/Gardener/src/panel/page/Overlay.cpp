@@ -11,7 +11,7 @@
 namespace gardener {
 namespace {
 
-// The glyphs the overlay draws, from the built-in face's symbol range: the serial link, and the two
+// The glyphs the overlay draws, from the Adafruit face's symbol range: the serial link, and the two
 // states that stand still while the chamber does. The two that move it are arrows, drawn as shapes
 // so that each is a triangle rather than the face's few pixels of one.
 constexpr uint8_t SerialGlyph = 0x15;

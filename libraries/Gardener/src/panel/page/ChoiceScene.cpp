@@ -89,7 +89,7 @@ int16_t ChoiceScene::index() const {
   return 0;
 }
 
-// The entries in the value band as the column of rows a list is: one built-in row each, the window
+// The entries in the value band as the column of rows a list is: one Adafruit row each, the window
 // scrolled to keep the entry showing in it, the block centred in the band and the row showing
 // inverted. The rows are the ones the band has room for, which is why the column is built as the
 // paint runs rather than before. A window shorter than the entries carries a scrollbar down the

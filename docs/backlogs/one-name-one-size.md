@@ -28,8 +28,9 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 - [x] Give `duration` and `pressureReadout` a family, and let the readout divide its box into two
       parts instead of two scales, dropping `size_hint`, `scale` and `secondary_scale`.
-- [ ] Give the scene constructors a family and name `ttyp0` once where the panel builds them, so the
-      design reaches a scene as an argument and the panel stops writing a global to reach it.
+- [x] Name the design where the chrome is drawn — the editor's title in ttyp0 and its eight-row
+      refusal in no family at all — and delete the panel's `setDefaultFamily` call, so no global
+      carries a design to a leaf the composition never told.
 
 ## The module
 
@@ -39,16 +40,16 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 ## The surface is a family, a lookup and a registration
 
-- [ ] Move the default family inside the resolution: `resolve` and `measureText` take a
+- [x] Move the default family inside the resolution: `resolve` and `measureText` take a
       `const Family*` and answer the default family — the Adafruit family, declared beside the face
-      in `fonts/AdafruitFont.h` — for none, so `defaultFamily`, `setDefaultFamily`, `familyOr`,
-      `faceOr` and the face-taking `measureText` go with the global they read.
-- [ ] Answer `nullptr` from `findFamily` for a name nobody holds, and delete the two `resolve`
+      in `fonts/AdafruitFont.h` — for none, so `defaultFamily`, `setDefaultFamily`, `familyOr` and
+      `faceOr` go with the global they read.
+- [x] Answer `nullptr` from `findFamily` for a name nobody holds, and delete the two `resolve`
       overloads that take a family's name, so a name is looked up in one place and fitted in one.
-- [ ] Delete `find` and the Adafruit row of the one-cut table, which repeats the design the lookup
+- [x] Delete `find` and the Adafruit row of the one-cut table, which repeated the design the lookup
       already answers with, so no caller names a face and every name answers a family.
 
 ## The pages
 
-- [ ] Name the design in the pages and the chromes where they place a leaf, so no node draws in a
+- [x] Name the design in the pages and the chromes where they place a leaf, so no node draws in a
       design its page did not name.

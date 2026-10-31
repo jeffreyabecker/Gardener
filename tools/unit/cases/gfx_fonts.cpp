@@ -47,7 +47,7 @@ TEST_CASE("the two designs answer to a name per rung and a family per design") {
       {"x11_7x14", &X11Cell7x14, 12}, {"x11_10x20", &X11Cell10x20, 17},
   };
   for (const auto& rung : rungs) {
-    CHECK_EQ(find(rung.name), rung.face);
+    CHECK_EQ(findFamily(rung.name)->cuts[0], rung.face);
     CHECK_EQ(lineHeight(*rung.face), rung.line);
   }
 
@@ -193,14 +193,13 @@ TEST_CASE("a face's name answers a family of one cut") {
   REQUIRE(cut != nullptr);
   CHECK_EQ(cut->count, 1);
   CHECK_EQ(cut->cuts[0], &Ttyp016);
-  CHECK_EQ(find("ttyp016"), &Ttyp016);
+  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
 
   // A design's own name answers its ladder, its shortest cut is the face a name gives a leaf that
   // has no box, and a name nobody holds answers the default family.
   CHECK_EQ(findFamily("ttyp0")->count, 3);
-  CHECK_EQ(find("ttyp0"), &Ttyp011);
-  CHECK_EQ(findFamily("nobody"), defaultFamily());
-  CHECK_EQ(find("nobody"), defaultFamily()->cuts[0]);
+  CHECK_EQ(findFamily("ttyp0")->cuts[0], &Ttyp011);
+  CHECK_EQ(findFamily("nobody"), nullptr);
 }
 
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
@@ -219,7 +218,7 @@ TEST_CASE("a caller registers a family and its cuts come back ordered") {
 
   // A registered design is a name like any other: its shortest cut is what a name gives a leaf that
   // has no box, and its faces measure as they say rather than as the Adafruit cell does.
-  CHECK_EQ(find("probe design"), &small);
+  CHECK_EQ(family->cuts[0], &small);
   const Size ink = measureText(family->cuts[1], "A", 1);
   CHECK_EQ(ink.width, 2);
   CHECK_EQ(ink.height, 8);

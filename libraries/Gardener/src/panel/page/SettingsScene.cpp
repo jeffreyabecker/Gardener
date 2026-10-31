@@ -84,7 +84,7 @@ void SettingsScene::open() {
   ux_.push(std::move(editor), [this, row](Scene& popped) { values_[row->key()] = popped.value(); });
 }
 
-// The heading, when the list has one, and the rows under it one built-in row each: the window
+// The heading, when the list has one, and the rows under it one Adafruit row each: the window
 // scrolled to keep the row the keys are on in view, that row inverted across the width, and the
 // scrollbar down the right of the rows when they do not all fit.
 void SettingsScene::drawPage(gfx::Canvas& canvas) {

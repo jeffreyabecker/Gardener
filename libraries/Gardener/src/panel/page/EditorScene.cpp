@@ -14,7 +14,7 @@ namespace gardener {
 namespace {
 
 // The settings view's geometry, from view.be: the paper outside the border, the border, the paper
-// inside it, a chrome row of the built-in face, and the gap between a chrome row and the body.
+// inside it, a chrome row of the Adafruit face, and the gap between a chrome row and the body.
 constexpr int16_t SettingsMargin = 1;
 constexpr int16_t SettingsBorder = 1;
 constexpr int16_t SettingsPadding = 1;
@@ -150,8 +150,8 @@ gfx::PaintNodeRef EditorScene::titleComponent() {
 gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
   // step a value the editor has not taken. The hint band is a hint's height, which the shortest
-  // ttyp0 cut is taller than, so the words are the built-in face's.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), gfx::findFamily("adafruit"));
+  // ttyp0 cut is taller than, so the words name no family and are drawn in the default one.
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())

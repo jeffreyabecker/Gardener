@@ -59,10 +59,6 @@ bool PanelRoot::begin() {
   machine_.boot();
   settings_.begin();
 
-  // The panel's own look: a page or a scene that names no family draws in ttyp0, and a row shorter
-  // than any ttyp0 cut names the Adafruit face for itself.
-  gfx::setDefaultFamily(gfx::findFamily("ttyp0"));
-
   const bool displayOk = display_.begin();
   logger_.info(displayOk ? "oled: online" : "oled: not found");
 
