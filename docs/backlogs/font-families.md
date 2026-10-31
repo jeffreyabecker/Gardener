@@ -36,7 +36,7 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The fitted leaf
 
-- [ ] Add `gfx::fitted` with its record field, its walk branch and `screen.fitted`, so a page draws
+- [x] Add `gfx::fitted` with its record field, its walk branch and `screen.fitted`, so a page draws
       a string at the cut its box's height takes.
 
 ## The pages

@@ -9,6 +9,7 @@
 #include "../Fonts.h"
 #include "../shapes/Shapes.h"
 #include "../shapes/Text.h"
+#include "Layout.h"
 
 namespace gardener::gfx {
 namespace {
@@ -80,6 +81,24 @@ BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face,
 void BorrowedTextNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
   own.draw(Text(0, baseline(face_, scale_), value_, face_, scale_, Ink));
+}
+
+FittedNode::FittedNode(Box box, const char* value, const Family* family, Justify horizontal,
+                       Justify vertical)
+    : box_(box), value_(value == nullptr ? "" : value),
+      family_(family != nullptr ? family : findFamily(nullptr)), horizontal_(horizontal),
+      vertical_(vertical) {}
+
+void FittedNode::draw(Canvas& canvas) const {
+  const Rect in = box_.in(canvas);
+  View own = canvas.child(in);
+  const Fit fit = resolve(*family_, value_, in.width, in.height);
+  const int16_t line = static_cast<int16_t>(lineHeight(*fit.face) * fit.scale);
+  const int16_t ink = measureText(fit.face, value_, fit.scale).width;
+  const int16_t left = alignedOffset(static_cast<int16_t>(in.width - ink), horizontal_);
+  const int16_t top = alignedOffset(static_cast<int16_t>(in.height - line), vertical_);
+  const int16_t baseline = static_cast<int16_t>(top + fit.face->ascent * fit.scale);
+  own.draw(Text(left, baseline, value_, fit.face, fit.scale, Ink));
 }
 
 GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)
@@ -179,6 +198,11 @@ PaintNodeRef text(Box box, String value, const Font* face, uint8_t scale) {
 
 PaintNodeRef borrowedText(Box box, const char* value, const Font* face, uint8_t scale) {
   return std::make_unique<BorrowedTextNode>(box, value, face, scale);
+}
+
+PaintNodeRef fitted(Box box, const char* value, const Family* family, Justify horizontal,
+                    Justify vertical) {
+  return std::make_unique<FittedNode>(box, value, family, horizontal, vertical);
 }
 
 PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale) {

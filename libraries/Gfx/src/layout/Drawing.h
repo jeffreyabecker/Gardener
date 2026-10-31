@@ -7,6 +7,7 @@
 
 #include "../Blend.h"
 #include "../Font.h"
+#include "../Fonts.h"
 #include "Paint.h"
 
 namespace gardener::gfx {
@@ -58,6 +59,25 @@ class BorrowedTextNode : public PaintNode {
   const char* value_;
   const Font* face_;
   uint8_t scale_;
+};
+
+// A string in a family, drawn at the cut and scale the height of its box takes. The line box is
+// placed by the vertical justification and the glyphs sit on its baseline, so two of these in one
+// row share a baseline; the ink is placed across by the horizontal one. The string is borrowed, as
+// a page's strings are, and the family is the module's own table entry, which outlives the tree.
+class FittedNode : public PaintNode {
+ public:
+  FittedNode(Box box, const char* value, const Family* family, Justify horizontal,
+             Justify vertical);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Box box_;
+  const char* value_;
+  const Family* family_;
+  Justify horizontal_;
+  Justify vertical_;
 };
 
 // One glyph of the built-in face by its code, for the symbols above the printable range.
@@ -169,6 +189,9 @@ class UnderlayNode : public PaintNode {
 PaintNodeRef text(Box box, String value, const Font* face = nullptr, uint8_t scale = 1);
 PaintNodeRef borrowedText(Box box, const char* value, const Font* face = nullptr,
                           uint8_t scale = 1);
+// The string at the cut its box's height takes, centred in the box unless the caller says where.
+PaintNodeRef fitted(Box box, const char* value, const Family* family = nullptr,
+                    Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
 PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale = 1);
 PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);

@@ -165,6 +165,30 @@ TEST_CASE("a family's name resolves as the family it found does") {
   CHECK_EQ(unknown.scale, 5);
 }
 
+TEST_CASE("a fitted string takes the cut and the scale its box's height holds") {
+  // A band forty-five rows tall: the 22 px design at two scales is thirty-four rows of line, which
+  // centred leaves five rows above, and the letter starts six rows into that line box because the
+  // face's ascent is sixteen and the letter is thirteen tall.
+  reset();
+  View band = canvas.child(Rect(0, 0, 128, 45));
+  fitted(Box::whole(), "A", findFamily("ttyp0"))->draw(band);
+  CHECK_EQ(display.inkCount(0, 0, 128, 11), 0);
+  CHECK_EQ(display.inkCount(0, 37, 128, 8), 0);
+  // Across, the ink is centred: twenty-two pixels of it in one hundred and twenty-eight, from the
+  // fifty-fourth to the seventy-fifth column and nothing outside them.
+  CHECK_EQ(display.inkCount(0, 0, 54, 45), 0);
+  CHECK_EQ(display.inkCount(76, 0, 52, 45), 0);
+
+  // A band of ten rows takes the shortest cut at one scale — its line is exactly ten — and the
+  // letter starts one row down it, the face's ascent being nine and the letter eight tall.
+  reset();
+  View title = canvas.child(Rect(0, 0, 64, 10));
+  fitted(Box::whole(), "A", findFamily("ttyp0"))->draw(title);
+  CHECK_EQ(display.inkCount(0, 0, 64, 1), 0);
+  CHECK(display.anyInk(0, 1, 64, 1));
+  CHECK_EQ(display.inkCount(0, 10, 64, 54), 0);
+}
+
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
   const Font small = probeFace(2);
   const Font large = probeFace(8);
