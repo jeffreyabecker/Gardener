@@ -12,7 +12,7 @@
 #include "machine/Machine.h"
 #include "panel/page/PressureScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // A number as the list prints it: `%g` of it, which is what a number scene prints when the setting
@@ -316,4 +316,4 @@ std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
                                          nullable_);
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

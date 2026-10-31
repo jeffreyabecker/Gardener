@@ -18,7 +18,6 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The list the registrations' classes are held in, installed empty and appended to as they register.
@@ -76,7 +75,7 @@ void requireGlyph(bvm* vm, int index) {
   if (!be_isstring(vm, index)) {
     be_raise(vm, "type_error", "routines.register: the icon is a string of hex digits");
   }
-  if (!gfx::shapes::isMonoBitmap(argText(vm, index))) {
+  if (!gfx::isMonoBitmap(argText(vm, index))) {
     be_raise(vm, "value_error", "routines.register: the icon is the width, the height and the rows");
   }
 }
@@ -174,7 +173,7 @@ void pushSettingValue(bvm* vm, const std::any& value) {
 // A set as a map the page reads: one entry per key, in the order the store answered them. The map is an
 // instance of the map class — the braced literal a routine file writes, which indexes through the
 // class's item — rather than the interpreter's raw container, which no page can subscript.
-void pushSettingsMap(bvm* vm, const panel::page::SettingValues& values) {
+void pushSettingsMap(bvm* vm, const SettingValues& values) {
   // The map class's instance with the raw container it wraps on top of it, as be_newobject leaves an
   // instance: the entries go into the container and the pop below leaves the instance as the answer.
   be_newobject(vm, "map");
@@ -192,7 +191,7 @@ void pushSettingsMap(bvm* vm, const panel::page::SettingValues& values) {
 
 // A map as a set: every key that holds a value a setting can hold, as the type it was written as. A
 // value no setting holds is left out, which is how a refused value falls back to the row's default.
-bool takeSettingMap(bvm* vm, int index, panel::page::SettingValues& values) {
+bool takeSettingMap(bvm* vm, int index, SettingValues& values) {
   const int at = be_absindex(vm, index);
   const int base = be_top(vm);
   const bool map = pushMap(vm, at);
@@ -219,7 +218,7 @@ namespace {
 // One row of the browser's list, left on the stack as the record itself so the caller can push it
 // onto a list: the glyph the routine's file gave or nothing when it gave none, the title the row
 // shows and the key a launch is made from.
-void pushRow(bvm* vm, const panel::page::RoutineRow& row) {
+void pushRow(bvm* vm, const RoutineRow& row) {
   const int record = beginRecord(vm, RowRecord);
   if (row.glyph.isEmpty()) {
     be_pushnil(vm);
@@ -234,7 +233,7 @@ void pushRow(bvm* vm, const panel::page::RoutineRow& row) {
 
 // The activation a page's init reads, built from the record this module installed. Its init assigns the
 // two fields and cannot raise, so nothing here needs a protected call.
-void pushActivation(bvm* vm, const panel::page::RoutineActivation& activation) {
+void pushActivation(bvm* vm, const RoutineActivation& activation) {
   be_getglobal(vm, ActivationRecord);
   be_pushstring(vm, activation.routineKey.c_str());
   pushSettingsMap(vm, activation.values);
@@ -245,12 +244,12 @@ void pushActivation(bvm* vm, const panel::page::RoutineActivation& activation) {
 // The page a registration names: an instance of the class the file gave, built from the activation and
 // wrapped as the scene the stack drives. Nothing, with one line, for a page whose init raised — the
 // class is the file's and may refuse the set it is handed.
-std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm, int slot,
-                                              const panel::page::RoutineActivation& activation) {
+std::unique_ptr<Scene> buildPage(BindingContext* bindings, bvm* vm, int slot,
+                                              const RoutineActivation& activation) {
   if (vm == nullptr || bindings == nullptr || slot < 0) return nullptr;
 
   const int base = be_top(vm);
-  std::unique_ptr<panel::page::Scene> page;
+  std::unique_ptr<Scene> page;
   if (be_getglobal(vm, PageClasses) && be_islist(vm, -1)) {
     const int list = be_absindex(vm, -1);
     be_pushint(vm, slot);
@@ -273,7 +272,7 @@ std::unique_ptr<panel::page::Scene> buildPage(BindingContext* bindings, bvm* vm,
           bindings->error(message.c_str());
         }
       } else if (be_isinstance(vm, settleClassCall(vm, 1))) {
-        page = std::make_unique<bindings::BerryScene>(vm, be_absindex(vm, -1), *bindings);
+        page = std::make_unique<BerryScene>(vm, be_absindex(vm, -1), *bindings);
       }
     }
   }
@@ -299,7 +298,7 @@ int routinesRegister(bvm* vm) {
   requireGlyph(vm, 3);
   requireClass(vm, 5);
   // Every check runs before a row is taken, so a refused registration changes nothing.
-  std::vector<std::unique_ptr<panel::page::SettingsRow>> rows;
+  std::vector<std::unique_ptr<SettingsRow>> rows;
   if (!be_isnil(vm, 4)) rows = takeSettingsRows(vm, 4);
 
   const String routineKey(argText(vm, 1));
@@ -307,9 +306,9 @@ int routinesRegister(bvm* vm) {
   const String glyph = be_isnil(vm, 3) ? String() : String(argText(vm, 3));
   const int slot = holdClass(vm, 5);
 
-  panel::page::Registration record(
+  Registration record(
       routineKey, title, std::move(rows),
-      [vm, slot, bindings](const panel::page::RoutineActivation& activation) {
+      [vm, slot, bindings](const RoutineActivation& activation) {
         return buildPage(bindings, vm, slot, activation);
       },
       glyph);
@@ -347,11 +346,11 @@ int routinesSaveSettings(bvm* vm) {
   }
   const int map = be_absindex(vm, -1);
 
-  const panel::page::RoutineRegistry& registry = bindings->registry();
-  const std::vector<panel::page::SettingsRow*>* rows = registry.settingsRows(routineKey);
-  panel::page::SettingValues values;
+  const RoutineRegistry& registry = bindings->registry();
+  const std::vector<SettingsRow*>* rows = registry.settingsRows(routineKey);
+  SettingValues values;
   if (rows != nullptr) {
-    for (const panel::page::SettingsRow* row : *rows) {
+    for (const SettingsRow* row : *rows) {
       be_pushstring(vm, row->key().c_str());
       be_getindex(vm, map);
       be_remove(vm, -2);  // the key the read left under the value
@@ -381,7 +380,7 @@ int routinesRows(bvm* vm) {
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const panel::page::RoutineRow& row : bindings->registry().rows()) {
+  for (const RoutineRow& row : bindings->registry().rows()) {
     pushRow(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -400,7 +399,7 @@ int routinesTitle(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.title: title(routine_key)");
   }
-  const panel::page::RoutineRegistry& registry = bindings->registry();
+  const RoutineRegistry& registry = bindings->registry();
   const String routineKey(argText(vm, 1));
   if (registry.entry(routineKey) == nullptr) be_return_nil(vm);
   be_pushstring(vm, registry.title(routineKey).c_str());
@@ -419,7 +418,7 @@ int routinesSettingsCfgs(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
   }
-  const std::vector<panel::page::SettingsRow*>* rows =
+  const std::vector<SettingsRow*>* rows =
       bindings->registry().settingsRows(String(argText(vm, 1)));
   if (rows == nullptr || rows->empty()) be_return_nil(vm);
 
@@ -427,7 +426,7 @@ int routinesSettingsCfgs(bvm* vm) {
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (panel::page::SettingsRow* row : *rows) {
+  for (SettingsRow* row : *rows) {
     pushSettingDeclaration(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -454,9 +453,9 @@ int routinesActivate(bvm* vm) {
   }
   // The checks are above: a raise below would longjmp past the key's String and the set.
   const String routineKey(argText(vm, 1));
-  panel::page::SettingValues values;
+  SettingValues values;
   if (be_top(vm) >= 2 && !be_isnil(vm, 2)) takeSettingMap(vm, 2, values);
-  std::unique_ptr<panel::page::Scene> page = bindings->registry().activate(routineKey, values);
+  std::unique_ptr<Scene> page = bindings->registry().activate(routineKey, values);
   if (!page) be_return_nil(vm);
   pushSceneHandle(vm, std::move(page));
   be_return(vm);
@@ -513,5 +512,4 @@ void installRoutinesModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace bindings
 }  // namespace gardener

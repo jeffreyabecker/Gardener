@@ -12,7 +12,7 @@
 #include "ble/BleLink.h"
 #include "serial/SerialLink.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 namespace {
 
@@ -85,4 +85,4 @@ void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, 
                           InterfacePriority, nullptr, InterfaceCore);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

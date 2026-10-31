@@ -7,7 +7,7 @@
 #include "Canvas.h"
 #include "panel/GestureQueue.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The lifecycle a page shares: the gesture drain, the repaint cadence and the hooks a page
 // overrides. A page extends it and draws in drawPage; poll is what the host calls on each beat.
@@ -80,4 +80,4 @@ class Scene {
   uint32_t lastDraw_ = 0;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

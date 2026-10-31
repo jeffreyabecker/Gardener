@@ -44,4 +44,4 @@ namespace gardener::gfx
                      blend_.apply(color));
   }
 
-} // namespace gardener::gfx
+}  // namespace gardener::gfx

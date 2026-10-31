@@ -4,7 +4,6 @@
 #include "core/SystemState.h"
 
 namespace gardener {
-inline namespace beats {
 
 MachineTick::MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
                          SystemState& state)
@@ -122,5 +121,4 @@ void MachineTick::logRunChanges(uint32_t nowMs) {
   lastState_ = current;
 }
 
-}  // namespace beats
 }  // namespace gardener

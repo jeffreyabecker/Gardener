@@ -8,7 +8,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // The face the two fields are drawn at.
@@ -16,7 +16,7 @@ constexpr uint8_t FieldScale = 2;
 
 // A band holding one string: the dashes centred at the field face.
 gfx::PaintNodeRef centredDashes() {
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, "--", FieldScale);
+  const gfx::Size ink = gfx::measureText(nullptr, "--", FieldScale);
   return gfx::aligned(
       gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--", nullptr, FieldScale), ink));
 }
@@ -25,7 +25,7 @@ gfx::PaintNodeRef centredDashes() {
 // when it is the field the keys are stepping. The alignment places the title's own ink inside the
 // share, so the inverted box is the field rather than the whole cell.
 gfx::Child field(const char* title, bool showing) {
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, title, FieldScale);
+  const gfx::Size ink = gfx::measureText(nullptr, title, FieldScale);
   gfx::PaintNodeRef content =
       gfx::borrowedText(gfx::Box::whole(), title, nullptr, FieldScale);
   if (showing) content = gfx::inverted(std::move(content));
@@ -142,4 +142,4 @@ gfx::PaintNodeRef DurationScene::pageContents() {
                                      field(seconds_.c_str(), !minutes)));
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

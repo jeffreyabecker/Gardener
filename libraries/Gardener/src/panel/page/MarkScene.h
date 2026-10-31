@@ -4,7 +4,7 @@
 
 #include "panel/page/Scene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The panel's own page, and the stack's root until the home page is written: the device's mark on
 // the page, with the overlay drawn over its bottom rows by the stack. It answers no gesture and
@@ -17,4 +17,4 @@ class MarkScene : public Scene {
   void drawPage(gfx::Canvas& canvas) override;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

@@ -8,7 +8,6 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The depth the machine pulls to, in kPa below ambient. 0 is the ambient target: the chamber is
@@ -116,5 +115,4 @@ void installVacuumModule(bvm* vm, BindingContext& bindings) {
   installModule(vm, "vacuum", VacuumLibrary, bindings);
 }
 
-}  // namespace bindings
 }  // namespace gardener

@@ -97,4 +97,4 @@ namespace gardener::gfx
     Blend blend_;
   };
 
-} // namespace gardener::gfx
+}  // namespace gardener::gfx

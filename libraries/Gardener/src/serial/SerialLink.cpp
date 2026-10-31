@@ -3,7 +3,6 @@
 #include "core/Logger.h"
 
 namespace gardener {
-inline namespace serial {
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
                        SerialParts parts)
@@ -140,5 +139,4 @@ bool SerialLink::dispatch(const String& token) {
   return false;
 }
 
-}  // namespace serial
 }  // namespace gardener

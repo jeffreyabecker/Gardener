@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-namespace gardener::panel::parts {
+namespace gardener {
 namespace {
 
 const char* skipSpaces(const char* text) {
@@ -175,4 +175,4 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, const char*
   return true;
 }
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

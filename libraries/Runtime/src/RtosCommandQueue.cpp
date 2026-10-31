@@ -1,6 +1,6 @@
 #include "RtosCommandQueue.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 RtosCommandQueue::RtosCommandQueue()
     : handle_(xQueueCreate(CommandQueueDepth, sizeof(MachineCommand))) {}
@@ -15,4 +15,4 @@ bool RtosCommandQueue::take(MachineCommand& command) {
   return xQueueReceive(handle_, &command, 0) == pdTRUE;
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

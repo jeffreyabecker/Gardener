@@ -12,7 +12,6 @@
 #include "core/Library.h"
 
 namespace gardener {
-inline namespace routines {
 namespace {
 
 // The system is the files the interpreter needs before anything else: the registry and the pages the
@@ -96,8 +95,8 @@ bool Routines::begin() {
 
   // The strip the stack draws over every page: one paint over the state the panel was handed, so it
   // is set once and each frame reads the machine as it stands when that frame is drawn.
-  ux_.setOverlay(static_cast<int16_t>(display_.height() - panel::page::Overlay::Height),
-                 panel::page::Overlay(state_).paint());
+  ux_.setOverlay(static_cast<int16_t>(display_.height() - Overlay::Height),
+                 Overlay(state_).paint());
 
   resetToRoot();
   return true;
@@ -131,10 +130,10 @@ void Routines::show() { display_.flush(); }
 // page, and the device's mark when the image sets none. The stack draws it, so the overlay is drawn
 // over it like any other page.
 bool Routines::resetToRoot() {
-  if (std::unique_ptr<panel::page::Scene> page = interpreter_.rootScene()) {
+  if (std::unique_ptr<Scene> page = interpreter_.rootScene()) {
     if (ux_.reset(std::move(page))) return true;
   }
-  return ux_.reset(std::make_unique<panel::page::MarkScene>(presses_));
+  return ux_.reset(std::make_unique<MarkScene>(presses_));
 }
 
 // --- loading ---------------------------------------------------------------
@@ -203,5 +202,4 @@ bool Routines::loadFile(const String& path) {
   return interpreter_.load(path, source);
 }
 
-}  // namespace routines
 }  // namespace gardener

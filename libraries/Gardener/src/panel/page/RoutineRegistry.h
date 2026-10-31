@@ -11,12 +11,8 @@
 #include "panel/page/Scene.h"
 
 namespace gardener {
-inline namespace core {
 class Library;
 class Logger;
-}
-
-namespace panel::page {
 
 // One row the browser draws: the routine's glyph as the image wrote it, the title the row shows and
 // the key the row stands for. An alternate carries its own title and its own key, and its record's
@@ -116,7 +112,5 @@ class RoutineRegistry {
   Logger& logger_;
   std::vector<Entry> entries_;
 };
-
-}  // namespace panel::page
 
 }  // namespace gardener

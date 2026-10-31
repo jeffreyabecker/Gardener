@@ -7,7 +7,6 @@
 #include "serial/SerialLink.h"
 
 namespace gardener {
-inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -218,5 +217,4 @@ void SerialLink::executeVacuum(Stream& io) {
   io.print('\n');
 }
 
-}  // namespace serial
 }  // namespace gardener

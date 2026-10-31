@@ -1,7 +1,6 @@
 #pragma once
 
 namespace gardener {
-inline namespace core {
 
 // The vent valve: the only way back toward ambient, since the pump can pull down and nothing else
 // can.
@@ -28,5 +27,4 @@ class VentValve {
   virtual bool energiseWhenOpen() const = 0;
 };
 
-}  // namespace core
 }  // namespace gardener

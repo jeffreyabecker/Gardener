@@ -4,7 +4,7 @@
 
 #include "core/Battery.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The fitted gauge: a 1S Li-ion pack on a divider into an ADC pin. The pin and the board's divider
 // come from the composition root; the calibration and the volts-to-percent line are here.
@@ -31,4 +31,4 @@ class AdcBattery : public Battery {
   uint32_t lastSampleMs_ = 0;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

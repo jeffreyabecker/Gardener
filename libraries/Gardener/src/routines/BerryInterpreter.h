@@ -5,9 +5,8 @@
 struct bvm;
 
 namespace gardener {
-namespace bindings { class BindingContext; }
 
-inline namespace routines {
+class BindingContext;
 
 // The vendored Berry VM behind the core's Interpreter surface: the VM itself, the install that gives
 // it the modules a page is written against, and the scene the image's root page is put on the panel
@@ -16,11 +15,11 @@ class BerryInterpreter : public Interpreter {
  public:
   // The app the native modules reach. The VM they are installed into comes up in begin(), so the
   // app this is built from is fixed from here on.
-  explicit BerryInterpreter(bindings::BindingContext& bindings);
+  explicit BerryInterpreter(BindingContext& bindings);
 
   bool begin() override;
   bool load(const String& path, const String& source) override;
-  std::unique_ptr<panel::page::Scene> rootScene() override;
+  std::unique_ptr<Scene> rootScene() override;
 
   // The interpreter itself, for the host harness, which loads its own driver into the same VM after
   // the image has loaded and reads the heap it holds.
@@ -32,9 +31,8 @@ class BerryInterpreter : public Interpreter {
   // behind them.
   void installModules();
 
-  bindings::BindingContext& bindings_;
+  BindingContext& bindings_;
   bvm* vm_ = nullptr;
 };
 
-}  // namespace routines
 }  // namespace gardener

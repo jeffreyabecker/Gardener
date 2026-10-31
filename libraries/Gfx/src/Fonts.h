@@ -2,7 +2,7 @@
 
 #include "Font.h"
 
-namespace gardener::gfx::fonts {
+namespace gardener::gfx {
 
 // The library ships one face, the built-in 5x7: all 256 byte values, each in a five-by-eight cell,
 // six pixels apart, declared in fonts/BuiltinFont.h. It is what a page that names no font draws in,
@@ -38,4 +38,4 @@ constexpr int NameLength = 16;
 // about which face wins.
 bool registerFont(const char* name, const Font* font);
 
-}  // namespace gardener::gfx::fonts
+}  // namespace gardener::gfx

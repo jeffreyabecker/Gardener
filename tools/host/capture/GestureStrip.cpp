@@ -29,13 +29,13 @@ constexpr int16_t ArrowHeight = 8;
 struct Key {
   const char* name;
   const char* text;
-  gfx::shapes::Triangle (*arrow)(gfx::Rect, uint8_t, bool);
+  gfx::Triangle (*arrow)(gfx::Rect, uint8_t, bool);
 };
 
-constexpr Key Keys[] = {{"up", nullptr, &gfx::shapes::Triangle::up},
-                        {"down", nullptr, &gfx::shapes::Triangle::down},
-                        {"forward", nullptr, &gfx::shapes::Triangle::right},
-                        {"back", nullptr, &gfx::shapes::Triangle::left},
+constexpr Key Keys[] = {{"up", nullptr, &gfx::Triangle::up},
+                        {"down", nullptr, &gfx::Triangle::down},
+                        {"forward", nullptr, &gfx::Triangle::right},
+                        {"back", nullptr, &gfx::Triangle::left},
                         {"ok", "OK", nullptr},
                         {"cancel", "X", nullptr}};
 
@@ -60,7 +60,7 @@ bool glyphBlank(uint8_t c) {
 void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
   for (const char* c = text; *c != '\0'; c++) {
     const uint8_t code = static_cast<uint8_t>(*c);
-    gfx::shapes::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
+    gfx::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
     x = static_cast<int16_t>(x + CellWidth);
   }
 }
@@ -153,11 +153,11 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
     }
 
     if (mark.outlines > 0) {
-      canvas.draw(gfx::shapes::Rect(left, 0, CapturePicture::ButtonWidth,
+      canvas.draw(gfx::Rectangle(left, 0, CapturePicture::ButtonWidth,
                                     CapturePicture::ButtonHeight, gfx::Ink));
     }
     if (mark.outlines > 1) {
-      canvas.draw(gfx::shapes::Rect(static_cast<int16_t>(left + 2), 2,
+      canvas.draw(gfx::Rectangle(static_cast<int16_t>(left + 2), 2,
                                     static_cast<int16_t>(CapturePicture::ButtonWidth - 4),
                                     static_cast<int16_t>(CapturePicture::ButtonHeight - 4),
                                     gfx::Ink));

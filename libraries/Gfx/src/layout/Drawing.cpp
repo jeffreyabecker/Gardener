@@ -17,11 +17,11 @@ namespace {
 // baseline is the last of the cell's rows; a variable face is measured instead, and its ink height
 // is what moves the corner to the baseline.
 int16_t baseline(const char* value, const Font* face, uint8_t scale) {
-  const Font* font = fonts::faceOr(face);
+  const Font* font = faceOr(face);
   if (font->kind == Font::Kind::Fixed) {
     return static_cast<int16_t>((font->height - 1) * scale);
   }
-  return shapes::measureText(font, value, scale).height;
+  return measureText(font, value, scale).height;
 }
 
 // Appends the part a unit of time contributes, and answers where what has been written ends.
@@ -73,7 +73,7 @@ TextNode::TextNode(Box box, String value, const Font* face, uint8_t scale)
 void TextNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
   const char* text = value_.c_str();
-  own.draw(shapes::Text(0, baseline(text, face_, scale_), text, face_, scale_, Ink));
+  own.draw(Text(0, baseline(text, face_, scale_), text, face_, scale_, Ink));
 }
 
 BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face, uint8_t scale)
@@ -82,7 +82,7 @@ BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face,
 
 void BorrowedTextNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
-  own.draw(shapes::Text(0, baseline(value_, face_, scale_), value_, face_, scale_, Ink));
+  own.draw(Text(0, baseline(value_, face_, scale_), value_, face_, scale_, Ink));
 }
 
 GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)
@@ -90,16 +90,16 @@ GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)
 
 void GlyphNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
-  shapes::drawGlyph(own, 0, 0, code_, scale_, Ink);
+  drawGlyph(own, 0, 0, code_, scale_, Ink);
 }
 
 BitmapNode::BitmapNode(Box box, const char* glyph) : box_(box), glyph_(glyph) {}
 
 void BitmapNode::draw(Canvas& canvas) const {
-  const std::vector<uint8_t> bits = shapes::monoBitmapBits(glyph_);
+  const std::vector<uint8_t> bits = monoBitmapBits(glyph_);
   if (bits.empty()) return;
   View own = canvas.child(box_.in(canvas));
-  own.draw(shapes::MonoBitmap(0, 0, bits.data(), Ink));
+  own.draw(MonoBitmap(0, 0, bits.data(), Ink));
 }
 
 IconNode::IconNode(Box box, PaintNodeRef glyph) : box_(box), glyph_(std::move(glyph)) {}
@@ -116,9 +116,9 @@ void ProgressBarNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
   const int16_t width = own.width();
   const int16_t height = own.height();
-  own.draw(shapes::Rect(0, 0, width, height, Ink));
+  own.draw(Rectangle(0, 0, width, height, Ink));
   const int16_t fill = static_cast<int16_t>((width - 2) * value_ / 100.0f);
-  if (fill > 0) own.draw(shapes::Rect(1, 1, fill, height - 2, Ink, true));
+  if (fill > 0) own.draw(Rectangle(1, 1, fill, height - 2, Ink, true));
 }
 
 ScrollbarNode::ScrollbarNode(Box box, int16_t index, int16_t count, int16_t visible, bool hollow)
@@ -141,11 +141,11 @@ void ScrollbarNode::draw(Canvas& canvas) const {
     // The track is untouched paper and inverting paper is ink, so a fill is the same picture without
     // a read the blend cannot make.
     const int16_t below = static_cast<int16_t>(top + thumb);
-    own.draw(shapes::Rect(0, 0, width, top, Ink, true));
-    own.draw(shapes::Rect(0, below, width, static_cast<int16_t>(height - below), Ink, true));
+    own.draw(Rectangle(0, 0, width, top, Ink, true));
+    own.draw(Rectangle(0, below, width, static_cast<int16_t>(height - below), Ink, true));
   } else {
-    own.draw(shapes::Rect(0, 0, width, height, Ink));
-    own.draw(shapes::Rect(0, top, width, thumb, Ink, true));
+    own.draw(Rectangle(0, 0, width, height, Ink));
+    own.draw(Rectangle(0, top, width, thumb, Ink, true));
   }
 }
 
@@ -171,7 +171,7 @@ void BlendNode::draw(Canvas& canvas) const {
 UnderlayNode::UnderlayNode(PaintNodeRef child) : child_(std::move(child)) {}
 
 void UnderlayNode::draw(Canvas& canvas) const {
-  canvas.draw(shapes::Rect(0, 0, canvas.width(), canvas.height(), Paper, true));
+  canvas.draw(Rectangle(0, 0, canvas.width(), canvas.height(), Paper, true));
   if (child_) child_->draw(canvas);
 }
 

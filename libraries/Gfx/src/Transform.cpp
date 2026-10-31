@@ -163,4 +163,4 @@ namespace gardener::gfx
                 static_cast<int16_t>(bottom - top + 1));
   }
 
-} // namespace gardener::gfx
+}  // namespace gardener::gfx

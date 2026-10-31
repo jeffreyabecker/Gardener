@@ -10,8 +10,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page
-{
+namespace gardener {
   namespace
   {
 
@@ -34,7 +33,7 @@ namespace gardener::panel::page
     // layout's own alignment.
     gfx::PaintNodeRef centredLine(const char *text)
     {
-      const gfx::Size ink = gfx::shapes::measureText(nullptr, text, 1);
+      const gfx::Size ink = gfx::measureText(nullptr, text, 1);
       return gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), text), ink));
     }
 
@@ -80,16 +79,16 @@ namespace gardener::panel::page
                 switch (arrow)
                 {
                 case HintArrow::Up:
-                  cell.draw(gfx::shapes::Triangle::up(at, gfx::Ink, true));
+                  cell.draw(gfx::Triangle::up(at, gfx::Ink, true));
                   break;
                 case HintArrow::Down:
-                  cell.draw(gfx::shapes::Triangle::down(at, gfx::Ink, true));
+                  cell.draw(gfx::Triangle::down(at, gfx::Ink, true));
                   break;
                 case HintArrow::Back:
-                  cell.draw(gfx::shapes::Triangle::left(at, gfx::Ink, true));
+                  cell.draw(gfx::Triangle::left(at, gfx::Ink, true));
                   break;
                 case HintArrow::Forward:
-                  cell.draw(gfx::shapes::Triangle::right(at, gfx::Ink, true));
+                  cell.draw(gfx::Triangle::right(at, gfx::Ink, true));
                   break;
                 case HintArrow::None:
                   break;
@@ -105,7 +104,7 @@ namespace gardener::panel::page
   gfx::Child EditorScene::wordsHint(const char *text)
   {
     return hintItem(gfx::borrowedText(gfx::Box::whole(), text),
-                    gfx::shapes::measureText(nullptr, text, 1));
+                    gfx::measureText(nullptr, text, 1));
   }
 
   gfx::Children EditorScene::hintItems()
@@ -191,4 +190,4 @@ namespace gardener::panel::page
                     gfx::Justification{gfx::Justify::Center, gfx::Justify::Center});
   }
 
-} // namespace gardener::panel::page
+}  // namespace gardener

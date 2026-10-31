@@ -6,7 +6,7 @@
 
 #include "panel/page/EditorScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The value editor of a duration, from duration_scene.be: whole seconds drawn as two fields, the
 // minutes and the seconds, with Up and Down stepping the one the editor is in — whole minutes, or
@@ -59,4 +59,4 @@ class DurationScene : public EditorScene {
   String seconds_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

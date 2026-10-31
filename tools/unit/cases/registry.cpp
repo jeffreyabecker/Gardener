@@ -24,21 +24,21 @@
 
 namespace {
 
-using gardener::panel::page::Registration;
-using gardener::panel::page::RoutineRegistry;
+using gardener::Registration;
+using gardener::RoutineRegistry;
 using gardener::RoutineSettingStore;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
-using gardener::panel::page::BoolRow;
-using gardener::panel::page::ChoiceItem;
-using gardener::panel::page::ChoiceRow;
-using gardener::panel::page::DurationRow;
-using gardener::panel::GestureQueue;
-using gardener::panel::page::NumberRow;
-using gardener::panel::page::Scene;
-using gardener::panel::page::SettingValues;
-using gardener::panel::page::SettingsRow;
-using gardener::panel::page::Ux;
+using gardener::BoolRow;
+using gardener::ChoiceItem;
+using gardener::ChoiceRow;
+using gardener::DurationRow;
+using gardener::GestureQueue;
+using gardener::NumberRow;
+using gardener::Scene;
+using gardener::SettingValues;
+using gardener::SettingsRow;
+using gardener::Ux;
 
 // The queue no case presses: nothing here is drawn, so nothing reads it.
 using NoPresses = GestureQueue;
@@ -81,8 +81,8 @@ std::vector<ChoiceItem> resumeChoices() {
 }
 
 // A row is the document's half and the page's, and the store takes the first.
-std::vector<const gardener::storage::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
-  return std::vector<const gardener::storage::SettingKind*>(rows.begin(), rows.end());
+std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
+  return std::vector<const gardener::SettingKind*>(rows.begin(), rows.end());
 }
 
 // The rows the store cases declare: one of every kind, a key written as nothing and a key the
@@ -237,7 +237,7 @@ TEST_CASE("an alternate follows its record and resolves to it") {
   Ux ux;
   REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
 
-  const std::vector<gardener::panel::page::RoutineRow> rows = registry.rows();
+  const std::vector<gardener::RoutineRow> rows = registry.rows();
   REQUIRE(rows.size() >= 3);
   CHECK_EQ(std::string(rows[0].routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(std::string(rows[1].routineKey.c_str()), std::string("cold"));
@@ -285,10 +285,10 @@ TEST_CASE("a launch carries the set the caller stated, held to the record's decl
   NoPresses gestures;
   Ux ux;
 
-  gardener::panel::page::RoutineActivation launched;
+  gardener::RoutineActivation launched;
   REQUIRE(registry.add(Registration(
       "ramped_static", "Ramped", rampedDeclaration(gestures, ux),
-      [&launched, &gestures](const gardener::panel::page::RoutineActivation& activation) {
+      [&launched, &gestures](const gardener::RoutineActivation& activation) {
         launched = activation;
         return std::make_unique<StubPage>(gestures);
       })));

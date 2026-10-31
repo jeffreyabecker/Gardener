@@ -54,6 +54,12 @@ class HomeScene
     if ev == "up:double"
       return self.machine.handle_command("browser")
     end
+    if ev == "up:single"
+      return self.machine.handle_command("inc_pressure")
+    end
+    if ev == "down:single"
+      return self.machine.handle_command("dec_pressure")
+    end
     if ev == "ok:single"
       return self.machine.handle_command("start")
     end

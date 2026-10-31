@@ -4,7 +4,7 @@
 
 #include "core/Buzzer.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The rig's piezo: a passive element on one GPIO through an LEDC channel. The channel's setup is
 // here because it belongs to the drive; what to play is the player's business.
@@ -26,4 +26,4 @@ class PwmBuzzer : public Buzzer {
   bool sounding_ = false;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

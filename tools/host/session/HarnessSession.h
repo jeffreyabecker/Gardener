@@ -232,7 +232,7 @@ class HarnessSession {
 
   bvm* vm() const { return interpreter_.vm(); }
   Routines& routines() { return routines_; }
-  bindings::BindingContext& bindings() { return bindings_; }
+  BindingContext& bindings() { return bindings_; }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -327,15 +327,15 @@ class HarnessSession {
   GestureStrip gestureStrip_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
-  panel::parts::BuzzerPlayer buzzer_;
-  panel::GestureQueue presses_;
-  panel::page::Ux ux_;
+  BuzzerPlayer buzzer_;
+  GestureQueue presses_;
+  Ux ux_;
   // The queue the machine's commands wait in, and the outbox the app posts them through.
   HostQueue queue_;
   CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
-  panel::page::RoutineRegistry registry_{files_, logger_};
-  bindings::BindingContext bindings_{
+  RoutineRegistry registry_{files_, logger_};
+  BindingContext bindings_{
       display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};

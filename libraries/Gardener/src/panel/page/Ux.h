@@ -8,7 +8,7 @@
 #include "layout/Drawing.h"
 #include "panel/page/Scene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The scene stack: what is showing, and the request a scene makes of it. A push or a pop asked for
 // from inside a scene's own activate or poll is held and applied once that call returns, because a
@@ -95,4 +95,4 @@ class Ux {
   bool polling_ = false;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

@@ -7,12 +7,8 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
-inline namespace core {
 class Logger;
 struct SystemState;
-}
-
-inline namespace beats {
 
 // The machine's beat: what a tick applies from the queue and how a burst of commands collapses, the
 // order the parts are updated in, and the run log. A caller steps it with a millisecond, so the
@@ -59,5 +55,4 @@ class MachineTick {
   bool rebootPending_ = false;
 };
 
-}  // namespace beats
 }  // namespace gardener

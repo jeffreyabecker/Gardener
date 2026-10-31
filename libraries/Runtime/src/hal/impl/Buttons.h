@@ -6,7 +6,7 @@
 #include "core/Button.h"
 #include "core/ButtonPanel.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The front panel keys: six active low switches with pull ups, read through one 74HC165 shift
 // register.
@@ -55,4 +55,4 @@ class Buttons : public ButtonPanel {
   uint32_t firstReleaseMs_[ButtonCount] = {};
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

@@ -34,16 +34,25 @@ class HomeMachine
     if cmd == "browser"
       return self.show_browser()
     end
+    if cmd == "inc_pressure"
+      return self.step_pressure(1)
+    end
+    if(cms == "dec_pressure")
+      return self.step_pressure(-1)
+    end
+    if(cmd == "")
     return false
   end
-
-  def inc_pressure()
-
+  
+  def step_pressure(dir)
+    dir = dir == nil? 1 : dir
+    var unit = device.display_unit()
+    var pressure = vacuum.get_target_pressure()
+    pressure = pressure + unit.whole_step * dir
+    vacuum.set_target_pressure(pressure)
+    return true
   end
 
-  def dec_pressure()
-
-  end
   def show_browser()
     return ux.push(browserScene)
   end

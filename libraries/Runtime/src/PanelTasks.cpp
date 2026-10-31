@@ -10,7 +10,7 @@
 #include "beats/PartsTick.h"
 #include "beats/RoutinesTick.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 namespace {
 
@@ -62,8 +62,8 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(ButtonPanel& buttonsPart, panel::GestureQueue& presses, CommandOutbox& outbox,
-                    Logger& logger, Battery& battery, panel::parts::BuzzerPlayer& buzzer,
+void spawnPanelTask(ButtonPanel& buttonsPart, GestureQueue& presses, CommandOutbox& outbox,
+                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer,
                     Routines& routines, Machine& machine, SystemState& state) {
   static ButtonsTick buttons{buttonsPart, presses, outbox, logger};
   static PartsTick parts{battery, buzzer, state};
@@ -74,4 +74,4 @@ void spawnPanelTask(ButtonPanel& buttonsPart, panel::GestureQueue& presses, Comm
                           PanelCore);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

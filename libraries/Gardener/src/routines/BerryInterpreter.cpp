@@ -9,7 +9,6 @@
 #include "bindings/Modules.h"
 
 namespace gardener {
-inline namespace routines {
 namespace {
 
 // The root page the image answers: the Berry instance the system sets here is what the panel shows
@@ -18,7 +17,7 @@ constexpr const char* RootPage = "__rootScene";
 
 }  // namespace
 
-BerryInterpreter::BerryInterpreter(bindings::BindingContext& bindings) : bindings_(bindings) {}
+BerryInterpreter::BerryInterpreter(BindingContext& bindings) : bindings_(bindings) {}
 
 bool BerryInterpreter::begin() {
   vm_ = be_vm_new();
@@ -30,12 +29,12 @@ bool BerryInterpreter::begin() {
 }
 
 void BerryInterpreter::installModules() {
-  bindings::installVacuumModule(vm_, bindings_);
-  bindings::installScreenModule(vm_, bindings_);
-  bindings::installDeviceModule(vm_, bindings_);
-  bindings::installSettingsModule(vm_, bindings_);
-  bindings::installRoutinesModule(vm_, bindings_);
-  bindings::installUxModule(vm_, bindings_);
+  installVacuumModule(vm_, bindings_);
+  installScreenModule(vm_, bindings_);
+  installDeviceModule(vm_, bindings_);
+  installSettingsModule(vm_, bindings_);
+  installRoutinesModule(vm_, bindings_);
+  installUxModule(vm_, bindings_);
 }
 
 bool BerryInterpreter::load(const String& path, const String& source) {
@@ -61,12 +60,12 @@ bool BerryInterpreter::load(const String& path, const String& source) {
   return true;
 }
 
-std::unique_ptr<panel::page::Scene> BerryInterpreter::rootScene() {
+std::unique_ptr<Scene> BerryInterpreter::rootScene() {
   if (vm_ == nullptr) return nullptr;
   const int base = be_top(vm_);
-  std::unique_ptr<panel::page::Scene> scene;
+  std::unique_ptr<Scene> scene;
   if (be_getglobal(vm_, RootPage) && be_isinstance(vm_, -1)) {
-    scene = std::make_unique<bindings::BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
+    scene = std::make_unique<BerryScene>(vm_, be_absindex(vm_, -1), bindings_);
   }
   be_pop(vm_, be_top(vm_) - base);
   return scene;
@@ -90,5 +89,4 @@ void BerryInterpreter::reportError(const char* file, const char* what) {
   be_pop(vm_, 2);
 }
 
-}  // namespace routines
 }  // namespace gardener

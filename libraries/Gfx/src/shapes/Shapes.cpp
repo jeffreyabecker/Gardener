@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-namespace gardener::gfx::shapes {
+namespace gardener::gfx {
 namespace {
 
 void hline(Canvas& canvas, int16_t x, int16_t y, int16_t w, uint8_t color) {
@@ -168,7 +168,7 @@ void Line::operator()(Canvas& canvas) const {
   }
 }
 
-void Rect::operator()(Canvas& canvas) const {
+void Rectangle::operator()(Canvas& canvas) const {
   if (w <= 0 || h <= 0) return;
   const int16_t r = clampRadius(w, h, radius);
   if (r <= 0) {
@@ -331,4 +331,4 @@ std::vector<uint8_t> monoBitmapBits(const char* text) {
 //   }
 // }
 
-}  // namespace gardener::gfx::shapes
+}  // namespace gardener::gfx

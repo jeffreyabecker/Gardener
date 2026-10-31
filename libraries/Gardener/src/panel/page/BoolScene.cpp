@@ -4,7 +4,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // The keys the document keeps for the two states.
@@ -18,7 +18,7 @@ constexpr uint8_t ChipScale = 2;
 // when it is the state showing. The alignment places the label's own ink inside the share, so the
 // inverted box is the label rather than the whole cell.
 gfx::Child chip(const char* title, bool showing, float share) {
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, title, ChipScale);
+  const gfx::Size ink = gfx::measureText(nullptr, title, ChipScale);
   gfx::PaintNodeRef content =
       gfx::borrowedText(gfx::Box::whole(), title, nullptr, ChipScale);
   if (showing) content = gfx::inverted(std::move(content));
@@ -51,4 +51,4 @@ std::any BoolScene::value() const { return hasValue_ ? std::any(on()) : std::any
 
 gfx::PaintNodeRef BoolScene::pageContents() { return switchRow(nullable_, hasValue_, on()); }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

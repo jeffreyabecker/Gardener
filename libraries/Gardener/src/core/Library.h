@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace gardener {
-inline namespace core {
 
 // The storage part: the device's file store, the text documents the firmware reads and writes. It is
 // a boundary like the pins and the bus beside it — the implementation knows the filesystem it was
@@ -40,5 +39,4 @@ class Library {
   virtual bool remove(const String& path) = 0;
 };
 
-}  // namespace core
 }  // namespace gardener

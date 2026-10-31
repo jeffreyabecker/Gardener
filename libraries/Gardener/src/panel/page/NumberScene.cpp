@@ -9,7 +9,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // The face the number is drawn at.
@@ -67,9 +67,9 @@ float NumberScene::within(float value) const {
 // The number centred in the contents band at the value face.
 gfx::PaintNodeRef NumberScene::pageContents() {
   printed_ = text();
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, printed_.c_str(), ValueScale);
+  const gfx::Size ink = gfx::measureText(nullptr, printed_.c_str(), ValueScale);
   return gfx::aligned(gfx::sized(
       gfx::borrowedText(gfx::Box::whole(), printed_.c_str(), nullptr, ValueScale), ink));
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

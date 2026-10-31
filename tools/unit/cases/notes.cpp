@@ -11,7 +11,7 @@
 
 namespace {
 
-using gardener::panel::parts::BuzzerPlayer;
+using gardener::BuzzerPlayer;
 using gardener::test::FakeBuzzer;
 
 bool refused(const char* sequence, std::string& token) {

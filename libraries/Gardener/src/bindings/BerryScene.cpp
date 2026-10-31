@@ -7,7 +7,6 @@
 #include "bindings/DrawTree.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The pages the scenes hold, in a list the interpreter owns: a scene's page is reachable from the
@@ -140,5 +139,4 @@ bool BerryScene::endCall(const char* method, int argc) {
   return true;
 }
 
-}  // namespace bindings
 }  // namespace gardener

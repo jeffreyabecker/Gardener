@@ -6,9 +6,8 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
-inline namespace core { class Logger; }
 
-inline namespace machine {
+class Logger;
 
 // --- Closed loop vacuum control ---------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
@@ -183,5 +182,4 @@ class Machine {
   uint8_t capabilities_ = 0;
 };
 
-}  // namespace machine
 }  // namespace gardener

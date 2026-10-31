@@ -11,7 +11,6 @@
 #include <Arduino.h>
 
 namespace gardener {
-inline namespace storage {
 
 // One entry a choice offers: the key the setting stores and the title it prints.
 struct ChoiceItem {
@@ -49,5 +48,4 @@ class SettingKind {
   virtual std::any parse(const String& stored) const = 0;
 };
 
-}  // namespace storage
 }  // namespace gardener

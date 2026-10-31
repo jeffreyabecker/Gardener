@@ -12,9 +12,8 @@
 #include "panel/page/SettingsRows.h"
 
 namespace gardener {
-inline namespace core { class Library; }
 
-namespace panel::page {
+class Library;
 
 // What a launch hands a routine's page: the key the routine was launched under, and the settings map
 // read through the declaration.
@@ -76,7 +75,5 @@ class Registration {
   Factory factory_;
   String glyph_;
 };
-
-}  // namespace panel::page
 
 }  // namespace gardener

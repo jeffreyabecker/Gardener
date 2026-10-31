@@ -10,7 +10,6 @@
 #include "core/Library.h"
 
 namespace gardener {
-inline namespace storage {
 
 // Where the device's own document lives on the filesystem it mounts: the settings folder, with the
 // routines' documents. The wire's `fs` commands refuse to overwrite it.
@@ -128,5 +127,4 @@ class Config {
   bool dirty_ = false;
 };
 
-}  // namespace storage
 }  // namespace gardener

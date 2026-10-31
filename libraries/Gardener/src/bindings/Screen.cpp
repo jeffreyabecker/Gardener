@@ -8,7 +8,6 @@
 #include "Modules.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The record a page's drawing is made of, installed by this module. Every call below fills one in and
@@ -110,7 +109,7 @@ const gfx::Font* argFace(bvm* vm, int argc, int index, const char* function) {
     be_raise(vm, "type_error", message);
   }
   const char* name = argText(vm, index);
-  return name[0] == '\0' ? nullptr : gfx::fonts::find(name);
+  return name[0] == '\0' ? nullptr : gfx::find(name);
 }
 
 // The size a face is drawn at: 1 for the face as designed, which is what an absent argument means.
@@ -282,7 +281,7 @@ int screenIcon(bvm* vm) {
   if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.icon(x, y, w, h, glyph)");
   }
-  if (!gfx::shapes::isMonoBitmap(argText(vm, 5))) {
+  if (!gfx::isMonoBitmap(argText(vm, 5))) {
     be_raise(vm, "value_error",
              "screen.icon: the glyph is hex digits, the width, the height and the rows");
   }
@@ -435,7 +434,7 @@ int screenMeasure(bvm* vm) {
   }
   const gfx::Font* face = argFace(vm, argc, 2, "measure");
   const uint8_t scale = argScale(vm, argc, 3, "measure", 1);
-  const gfx::Size box = gfx::shapes::measureText(face, argText(vm, 1), scale);
+  const gfx::Size box = gfx::measureText(face, argText(vm, 1), scale);
 
   const int record = beginRecord(vm, "bounds");
   setInt(vm, record, "w", box.width);
@@ -518,5 +517,4 @@ void installScreenModule(bvm* vm, BindingContext& bindings) {
   installModule(vm, "screen", ScreenLibrary, bindings);
 }
 
-}  // namespace bindings
 }  // namespace gardener

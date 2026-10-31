@@ -4,7 +4,7 @@
 
 #include "core/PressureSensor.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The rig's sensor: a CFSensor XGZP6847A100KPGN33, a -100..0 kPa gauge part with an amplified
 // analog output. Its reading is a voltage, so the ADC pin it sits on is the whole interface.
@@ -38,4 +38,4 @@ class XgzpSensor : public PressureSensor {
   float filteredVolts_ = 0.0f;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

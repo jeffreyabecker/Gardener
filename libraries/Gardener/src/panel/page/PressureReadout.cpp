@@ -8,7 +8,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // A reading as the panel prints it: the unit's scale, and the decimals the unit's fine step can
@@ -47,8 +47,8 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
     // when the target is the small one.
     const bool side = sizeHint >= 1.0f;
     const uint8_t targetScale = side ? scale : secondaryScale;
-    const gfx::Size readingInk = gfx::shapes::measureText(face, reading.c_str(), scale);
-    const gfx::Size targetInk = gfx::shapes::measureText(face, target.c_str(), targetScale);
+    const gfx::Size readingInk = gfx::measureText(face, reading.c_str(), scale);
+    const gfx::Size targetInk = gfx::measureText(face, target.c_str(), targetScale);
 
     gfx::PaintNodeRef large =
         readingNode(String(reading), face, scale, readingInk, gfx::Justify::Center);
@@ -75,4 +75,4 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
   });
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

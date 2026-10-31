@@ -7,7 +7,7 @@
 #include "../Canvas.h"
 #include "../Rect.h"
 
-namespace gardener::gfx::shapes {
+namespace gardener::gfx {
 
 // The shape vocabulary: each shape is a value carrying its arguments that draws itself on the
 // canvas it is given, through `canvas.setPixel` and nothing else. Clipping, the frame layout and a
@@ -43,8 +43,8 @@ struct Line {
 
 // A rectangle whose top-left pixel is (x, y), its corners rounded off by `radius` when that is
 // positive, the radius clamped to half the shorter side so the arcs cannot cross.
-struct Rect {
-  Rect(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color, bool filled = false,
+struct Rectangle {
+  Rectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color, bool filled = false,
        int16_t radius = 0)
       : x(x), y(y), w(w), h(h), color(color), filled(filled), radius(radius) {}
 
@@ -216,4 +216,4 @@ std::vector<uint8_t> monoBitmapBits(const char* text);
 //   const uint8_t* bits;
 // };
 
-}  // namespace gardener::gfx::shapes
+}  // namespace gardener::gfx

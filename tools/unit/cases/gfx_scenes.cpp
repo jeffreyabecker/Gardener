@@ -22,8 +22,8 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::panel::page;
-using gardener::panel::GestureQueue;
+using namespace gardener;
+using gardener::GestureQueue;
 
 // What a case watches a scene by. The stack owns its scenes, so a scene that pops is gone: a case
 // reads what it did from counts that live outside it.
@@ -166,7 +166,7 @@ class InkedScene : public Scene {
 
  protected:
   void drawPage(Canvas& own) override {
-    own.draw(gfx::shapes::Rect(0, 0, own.width(), own.height(), Ink, true));
+    own.draw(gfx::Rectangle(0, 0, own.width(), own.height(), Ink, true));
   }
 };
 
@@ -178,7 +178,7 @@ constexpr int16_t OverlayRows = PageHeight - OverlayTop;
 // A paint that fills the canvas it is handed, so a case reads the overlay from the ink it leaves.
 PaintNodeRef filledCell() {
   return callable([](Canvas& cell) {
-    cell.draw(gfx::shapes::Rect(0, 0, cell.width(), cell.height(), Ink, true));
+    cell.draw(gfx::Rectangle(0, 0, cell.width(), cell.height(), Ink, true));
   });
 }
 

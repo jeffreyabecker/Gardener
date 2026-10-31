@@ -2,7 +2,7 @@
 
 #include "core/Logger.h"
 
-namespace gardener::panel {
+namespace gardener {
 
 void GestureQueue::push(const String& gesture) {
   if (gesture.isEmpty()) return;
@@ -42,4 +42,4 @@ void GestureQueue::clear() {
   overflowed_ = false;
 }
 
-}  // namespace gardener::panel
+}  // namespace gardener

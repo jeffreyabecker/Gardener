@@ -21,7 +21,7 @@ PanelRoot::PanelRoot(const PanelPins& pins)
     : pins_(pins),
       logger_(Serial),
       files_(LittleFS),
-      parts_(buildMachineParts(pins.machine)),
+      parts_(runtime::buildMachineParts(pins.machine)),
       machine_(logger_, parts_.pump, parts_.sensor, parts_.valve),
       outbox_(commands_),
       battery_(pins.batteryAdc, pins.batteryDivider),

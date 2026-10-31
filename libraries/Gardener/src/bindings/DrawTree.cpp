@@ -11,7 +11,6 @@
 #include "panel/page/PressureReadout.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 using gfx::Cell;
@@ -108,7 +107,7 @@ gfx::Box boxOf(bvm* vm, int node) {
 // what a record that names no face draws in, so nothing here can leave a node without one.
 const gfx::Font* faceOf(bvm* vm, int node) {
   const char* name = textField(vm, node, "font");
-  return name == nullptr ? nullptr : gfx::fonts::find(name);
+  return name == nullptr ? nullptr : gfx::find(name);
 }
 
 gfx::DurationFormat formatOf(const char* name) {
@@ -226,7 +225,7 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
     const gfx::Font* face = faceOf(vm, node);
     const uint8_t raw = (uint8_t)intField(vm, node, "scale");
     const uint8_t scale = raw == 0 ? 1 : raw;
-    const gfx::Size ink = gfx::shapes::measureText(face, value, scale);
+    const gfx::Size ink = gfx::measureText(face, value, scale);
     return gfx::icon(
         boxOf(vm, node),
         gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), value, face, scale), ink)));
@@ -262,7 +261,7 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
   if (strcmp(kind, "pressure_readout") == 0) {
     float sizeHint = realField(vm, node, "size_hint");
     if (sizeHint <= 0.0f) sizeHint = 0.5f;
-    return panel::page::pressureReadout(boxOf(vm, node), state, sizeHint, faceOf(vm, node),
+    return pressureReadout(boxOf(vm, node), state, sizeHint, faceOf(vm, node),
                                        (uint8_t)intField(vm, node, "scale"),
                                        (uint8_t)intField(vm, node, "secondary_scale"));
   }
@@ -304,5 +303,4 @@ void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas) {
   if (paint) paint->draw(canvas);
 }
 
-}  // namespace bindings
 }  // namespace gardener

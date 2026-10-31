@@ -135,5 +135,5 @@ const bnfuncinfo HarnessLibrary[] = {
 
 void gardener::installHarnessModule(bvm* vm, HarnessSession& appSession) {
   session = &appSession;
-  gardener::bindings::installModule(vm, "harness", HarnessLibrary, appSession.bindings());
+  gardener::installModule(vm, "harness", HarnessLibrary, appSession.bindings());
 }

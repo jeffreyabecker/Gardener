@@ -54,18 +54,18 @@ void setup() {
       Serial, serialAttached, root.logger(), root.commands(),
       gardener::SerialParts{root.machine(), BoardInfo, root.battery(), root.settings(),
                             root.buzzer(), root.files()});
-  gardener::BleLink* ble =
-      new gardener::BleLink(root.commands(), root.machine(), root.settings(), root.battery());
+  gardener::runtime::BleLink* ble =
+      new gardener::runtime::BleLink(root.commands(), root.machine(), root.settings(), root.battery());
 
   serial->begin();
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
   // up. It comes up before the ready line so that line reports the heap the firmware actually runs
   // with.
   switch (ble->begin()) {
-    case gardener::BleLink::Start::Advertising:
+    case gardener::runtime::BleLink::Start::Advertising:
       root.logger().info("ble: advertising as gardener");
       break;
-    case gardener::BleLink::Start::Failed:
+    case gardener::runtime::BleLink::Start::Failed:
       root.logger().warn("ble: start failed, serial only");
       break;
   }
@@ -77,8 +77,8 @@ void setup() {
     abort();
   }
 
-  gardener::spawnMachineTasks(root.machine(), root.commands(), serial, ble, root.state());
-  gardener::spawnPanelTask(root.buttons(), root.routines().presses(), root.outbox(),
+  gardener::runtime::spawnMachineTasks(root.machine(), root.commands(), serial, ble, root.state());
+  gardener::runtime::spawnPanelTask(root.buttons(), root.routines().presses(), root.outbox(),
                            root.logger(), root.battery(), root.buzzer(), root.routines(),
                            root.machine(), root.state());
 

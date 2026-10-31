@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The service's base UUID: the last 16 bits select the characteristic, so the
@@ -165,4 +165,4 @@ void BleLink::setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
   characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

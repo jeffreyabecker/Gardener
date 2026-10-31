@@ -5,11 +5,8 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace core { class Logger; }
 
-}  // namespace gardener
-
-namespace gardener::panel {
+class Logger;
 
 // The gestures the panel task has accepted and the page has not taken yet. Its writer is the panel
 // task; its readers are the device binding's pull and the scene stack, so the two are never the
@@ -42,4 +39,4 @@ class GestureQueue {
   bool overflowed_ = false;
 };
 
-}  // namespace gardener::panel
+}  // namespace gardener

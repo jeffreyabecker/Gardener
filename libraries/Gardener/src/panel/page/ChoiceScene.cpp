@@ -8,7 +8,7 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // One row of the built-in face, which is the pitch a choice is drawn at.
@@ -18,7 +18,7 @@ constexpr int16_t Row = 8;
 // the entry showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
   const char* title = item->title.c_str();
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, title, 1);
+  const gfx::Size ink = gfx::measureText(nullptr, title, 1);
   gfx::PaintNodeRef content =
       gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), title), ink));
   if (showing) content = gfx::inverted(std::move(content));
@@ -100,7 +100,7 @@ int16_t ChoiceScene::index() const {
 gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      const gfx::Size ink = gfx::shapes::measureText(nullptr, "--", 1);
+      const gfx::Size ink = gfx::measureText(nullptr, "--", 1);
       gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--"), ink))->draw(canvas);
       return;
     }
@@ -127,4 +127,4 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
   });
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

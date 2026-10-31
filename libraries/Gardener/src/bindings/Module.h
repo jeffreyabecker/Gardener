@@ -3,7 +3,6 @@
 #include <berry.h>
 
 namespace gardener {
-namespace bindings {
 
 class BindingContext;
 
@@ -154,5 +153,4 @@ inline breal argReal(bvm* vm, int index) { return be_toreal(vm, index); }
 inline bint argInt(bvm* vm, int index) { return be_toint(vm, index); }
 inline const char* argText(bvm* vm, int index) { return be_tostring(vm, index); }
 
-}  // namespace bindings
 }  // namespace gardener

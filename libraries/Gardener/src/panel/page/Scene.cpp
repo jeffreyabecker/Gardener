@@ -3,12 +3,12 @@
 #include "shapes/Shapes.h"
 #include "layout/Drawing.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 Scene::Scene(GestureQueue& gestures) : gestures_(gestures) {}
 
 void Scene::draw(gfx::Canvas& canvas, uint32_t nowMs) {
-  canvas.draw(gfx::shapes::Rect(0, 0, canvas.width(), canvas.height(), gfx::Paper, true));
+  canvas.draw(gfx::Rectangle(0, 0, canvas.width(), canvas.height(), gfx::Paper, true));
   drawPage(canvas);
   lastDraw_ = nowMs;
 }
@@ -29,4 +29,4 @@ bool Scene::takeEvents() {
   return acted;
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

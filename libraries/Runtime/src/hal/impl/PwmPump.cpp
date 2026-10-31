@@ -6,7 +6,7 @@
 
 #include "core/Math.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 constexpr uint32_t MaxStepMs = 250;
 
@@ -63,4 +63,4 @@ void PwmPump::update(uint32_t nowMs) {
   }
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

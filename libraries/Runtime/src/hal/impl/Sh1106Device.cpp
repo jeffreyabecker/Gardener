@@ -27,7 +27,7 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The SH1106 has 132 columns of RAM for a 128-pixel glass; the panel's first column is RAM column 2.
@@ -163,4 +163,4 @@ bool Sh1106Device::data(const uint8_t* values, size_t count) {
   return wire_.endTransmission() == 0;
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

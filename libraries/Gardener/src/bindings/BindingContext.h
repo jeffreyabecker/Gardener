@@ -3,31 +3,17 @@
 #include <Arduino.h>
 
 namespace gardener {
-inline namespace core {
 class Logger;
 struct SystemState;
-}
-inline namespace machine {
 class CommandOutbox;
 struct MachineCommand;
-}
-inline namespace storage {
 class DeviceSettings;
-}
 namespace gfx { class DisplayDevice; }
 
-namespace panel {
 class GestureQueue;
-namespace parts {
 class BuzzerPlayer;
-}
-namespace page {
 class RoutineRegistry;
 class Ux;
-}
-}  // namespace panel
-
-namespace bindings {
 
 // What the native modules reach of the app, held as the parts themselves: one VM and one app, so a
 // callback -- a plain C function with no user data -- gets at the glass, the published state and
@@ -38,9 +24,9 @@ namespace bindings {
 class BindingContext {
  public:
   BindingContext(gfx::DisplayDevice& display, SystemState& state,
-                 storage::DeviceSettings& settings, panel::parts::BuzzerPlayer& buzzer,
-                 CommandOutbox& outbox, panel::GestureQueue& presses, panel::page::Ux& ux,
-                 panel::page::RoutineRegistry& registry, Logger& logger)
+                 DeviceSettings& settings, BuzzerPlayer& buzzer,
+                 CommandOutbox& outbox, GestureQueue& presses, Ux& ux,
+                 RoutineRegistry& registry, Logger& logger)
       : display_(display),
         state_(state),
         settings_(settings),
@@ -55,19 +41,19 @@ class BindingContext {
   // The glass, the published state, the piezo, and the queue a command is posted to.
   gfx::DisplayDevice& display();
   SystemState& systemState();
-  panel::parts::BuzzerPlayer& buzzer();
+  BuzzerPlayer& buzzer();
   bool post(const MachineCommand& command);
 
   // The document the state's two device values come from: what a module reads a preference from,
   // and what it writes one through.
-  storage::DeviceSettings& settings();
+  DeviceSettings& settings();
 
   // --- the runtime behind the image ----------------------------------------
   // The presses waiting for a page, the stack a launch pushes on, the routines the image
   // registered, and the queue the `device` module drains.
-  panel::GestureQueue& presses();
-  panel::page::Ux& ux();
-  panel::page::RoutineRegistry& registry();
+  GestureQueue& presses();
+  Ux& ux();
+  RoutineRegistry& registry();
   bool takePress(String& gesture);
 
   // --- the device's log ----------------------------------------------------
@@ -77,14 +63,13 @@ class BindingContext {
  private:
   gfx::DisplayDevice& display_;
   SystemState& state_;
-  storage::DeviceSettings& settings_;
-  panel::parts::BuzzerPlayer& buzzer_;
+  DeviceSettings& settings_;
+  BuzzerPlayer& buzzer_;
   CommandOutbox& outbox_;
-  panel::GestureQueue& presses_;
-  panel::page::Ux& ux_;
-  panel::page::RoutineRegistry& registry_;
+  GestureQueue& presses_;
+  Ux& ux_;
+  RoutineRegistry& registry_;
   Logger& logger_;
 };
 
-}  // namespace bindings
 }  // namespace gardener

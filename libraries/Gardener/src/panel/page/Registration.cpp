@@ -5,7 +5,6 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
-namespace panel::page {
 
 Registration::Registration(const String& routineKey, const String& title,
                            std::vector<std::unique_ptr<SettingsRow>> settings,
@@ -27,7 +26,7 @@ SettingValues Registration::loadSettings(Library& library,
   if (settings_.empty()) return values;
 
   RoutineSettingStore store(library);
-  const std::vector<const storage::SettingKind*> kinds(settings_.begin(), settings_.end());
+  const std::vector<const SettingKind*> kinds(settings_.begin(), settings_.end());
   values = store.load(routineKey_, section.isEmpty() ? routineKey_ : section, kinds);
   return values;
 }
@@ -41,9 +40,8 @@ bool Registration::saveSettings(Library& library, const String& section,
   }
 
   RoutineSettingStore store(library);
-  const std::vector<const storage::SettingKind*> kinds(settings_.begin(), settings_.end());
+  const std::vector<const SettingKind*> kinds(settings_.begin(), settings_.end());
   return store.save(routineKey_, section.isEmpty() ? routineKey_ : section, kinds, values);
 }
 
-}  // namespace panel::page
 }  // namespace gardener

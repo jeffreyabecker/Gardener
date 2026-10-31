@@ -7,15 +7,12 @@
 #include "machine/MachineCommand.h"
 
 namespace gardener {
-inline namespace core {
 class Battery;
-}
-inline namespace machine {
 class Machine;
-}
-inline namespace storage {
 class DeviceSettings;
 }
+
+namespace gardener::runtime {
 
 // The Bluetooth interface to the controller: the machine as a GATT table rather than as lines. This
 // is deliberately a second contract and not the serial grammar over a pipe. The table is one
@@ -161,4 +158,4 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   volatile bool baseline_ = false;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

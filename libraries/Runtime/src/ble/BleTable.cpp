@@ -10,7 +10,7 @@
 #include "machine/VacuumSystem.h"
 #include "storage/DeviceSettings.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 constexpr uint8_t BleProtocolVersion = 1;
@@ -337,4 +337,4 @@ void BleLink::publishOnChange(uint8_t index, float value, float& last, bool forc
   notify(characteristics_[index]);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

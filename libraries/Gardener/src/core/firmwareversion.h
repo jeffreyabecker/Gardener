@@ -14,9 +14,7 @@
 #define GARDENER_STRINGIFY(token) GARDENER_STRINGIFY_(token)
 
 namespace gardener {
-inline namespace core {
 
 constexpr const char* FirmwareVersion = GARDENER_STRINGIFY(GARDENER_VERSION);
 
-}  // namespace core
 }  // namespace gardener

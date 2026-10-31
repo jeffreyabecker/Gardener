@@ -12,7 +12,7 @@
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The check a row's declaration gave, closed over the declaration and the set in force: whether the
 // value an editor is about to keep is accepted and, when it is not, the text that refuses it. This
@@ -81,4 +81,4 @@ class EditorScene : public Scene {
   String refusal_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace gardener::panel::page {
+namespace gardener {
 
 bool Ux::reset(std::unique_ptr<Scene> root) {
   while (depth_ > 0) {
@@ -200,4 +200,4 @@ void Ux::apply() {
   polling_ = held;
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

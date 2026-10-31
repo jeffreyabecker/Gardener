@@ -4,7 +4,7 @@
 
 #include "layout/Drawing.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // One row of the built-in face, which is the pitch the rows and the heading are drawn at.
@@ -117,4 +117,4 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
   if (scrolls) gfx::drawScrollbar(band, first, count, visible);
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

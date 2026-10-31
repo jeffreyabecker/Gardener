@@ -4,7 +4,6 @@
 #include "core/firmwareversion.h"
 
 namespace gardener {
-inline namespace machine {
 
 // The parts are the composition's: it builds them from the board's pins and hands them here, so
 // this class is the control law and the boot report rather than the wiring.
@@ -47,5 +46,4 @@ void Machine::boot() {
   logger_.info(pid.c_str());
 }
 
-}  // namespace machine
 }  // namespace gardener

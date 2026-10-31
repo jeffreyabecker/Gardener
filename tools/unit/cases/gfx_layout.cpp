@@ -13,13 +13,13 @@ namespace {
 // A paint that inks the whole canvas it is given, so a case reads back the cell it landed in.
 PaintNodeRef fill() {
   return callable(
-      [](Canvas& own) { own.draw(shapes::Rect(0, 0, own.width(), own.height(), Ink, true)); });
+      [](Canvas& own) { own.draw(Rectangle(0, 0, own.width(), own.height(), Ink, true)); });
 }
 
 // A paint that inks past its canvas, so a case can see the canvas cut it at the cell's edge.
 PaintNodeRef spill() {
   return callable([](Canvas& own) {
-    own.draw(shapes::Rect(-8, -8, own.width() + 16, own.height() + 16, Ink, true));
+    own.draw(Rectangle(-8, -8, own.width() + 16, own.height() + 16, Ink, true));
   });
 }
 

@@ -5,7 +5,6 @@
 #include "serial/SerialLink.h"
 
 namespace gardener {
-inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -13,7 +12,7 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
+void get(Stream& io, const String& args, BuzzerPlayer& buzzer) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -35,7 +34,7 @@ void get(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   io.print('\n');
 }
 
-void tone(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
+void tone(Stream& io, const String& args, BuzzerPlayer& buzzer) {
   const int split = args.indexOf(' ');
   if (split < 0) {
     io.print("err bad_argument\n");
@@ -93,7 +92,7 @@ void tone(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   io.print('\n');
 }
 
-void play(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
+void play(Stream& io, const String& args, BuzzerPlayer& buzzer) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -102,7 +101,7 @@ void play(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   // The sequence is the rest of the line: no quotes, no escapes. It is checked here for the
   // reply, then sent raw — the control task parses it again inside play().
   const char* badToken = nullptr;
-  if (!panel::parts::BuzzerPlayer::validate(args.c_str(), &badToken)) {
+  if (!BuzzerPlayer::validate(args.c_str(), &badToken)) {
     io.print("err bad_argument");
     if (badToken && *badToken) {
       io.print(' ');
@@ -116,7 +115,7 @@ void play(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   io.print("ok playing=on\n");
 }
 
-void stop(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
+void stop(Stream& io, const String& args, BuzzerPlayer& buzzer) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -162,5 +161,4 @@ void SerialLink::executeBuzzer(Stream& io) {
   }
 }
 
-}  // namespace serial
 }  // namespace gardener

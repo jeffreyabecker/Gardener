@@ -8,7 +8,6 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
-namespace panel::page {
 
 RoutineRegistry::RoutineRegistry(Library& library, Logger& logger)
     : library_(library), logger_(logger) {}
@@ -167,5 +166,4 @@ std::unique_ptr<Scene> RoutineRegistry::activate(
   return record->factory()(activation);
 }
 
-}  // namespace panel::page
 }  // namespace gardener

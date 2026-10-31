@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <type_traits>
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The part's own numbers, at its 3.3 V variant. The output spans 0.2 V at -100 kPa to 2.7 V at
@@ -76,4 +76,4 @@ float XgzpSensor::pressureKpa() const {
   return depth > 0.0f ? depth : 0.0f;
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime
