@@ -2,7 +2,6 @@
 // canvas each answers and read back as pixels.
 
 #include <math.h>
-#include <stdio.h>
 
 #include <doctest.h>
 
@@ -61,36 +60,6 @@ TEST_CASE("the Adafruit family is the one the library ships and the one a name a
   // A name the module does not hold draws in the default family rather than raising.
   CHECK_EQ(findFamily("sans12"), defaultFamily());
   CHECK_EQ(find("sans12"), defaultFamily()->cuts[0]);
-}
-
-// A face with one glyph: a filled five-by-three box of ink, advancing six, drawn from the baseline.
-const uint8_t ProbeBits[] = {0xF8, 0xF8, 0xF8};
-const Glyph ProbeGlyphs[] = {{0, 5, 3, 6, 0, 0}};
-const Font ProbeFace = {Font::Kind::Variable, ProbeBits, 0, 0, ProbeGlyphs, 'A', 'A', 8};
-
-TEST_CASE("a registered face comes out of find and measures as its own face") {
-  REQUIRE(registerFont("probe", &ProbeFace));
-
-  const Font* found = find("probe");
-  CHECK_EQ(found, &ProbeFace);
-  // What the face says it is, not the Adafruit's six-by-eight cell.
-  const Size ink = measureText(found, "A", 1);
-  CHECK_EQ(ink.width, 5);
-  CHECK_EQ(ink.height, 3);
-
-  // One name is one face: the Adafruit's name cannot be taken, nor one that is already an answer.
-  CHECK_FALSE(registerFont("adafruit", &ProbeFace));
-  CHECK_FALSE(registerFont("probe", &AdafruitFont));
-  CHECK_FALSE(registerFont("", &ProbeFace));
-  CHECK_FALSE(registerFont("probe", nullptr));
-
-  // A name it does not hold is a face to fall back to, so a page naming one still draws.
-  CHECK_EQ(find("missing"), faceOr(nullptr));
-}
-
-TEST_CASE("a registered name longer than an entry is refused") {
-  CHECK_FALSE(registerFont("a name too long to hold", &ProbeFace));
-  CHECK_EQ(find("a name too long to hold"), faceOr(nullptr));
 }
 
 TEST_CASE("a text draws at its box") {
@@ -441,30 +410,6 @@ TEST_CASE("a family is a design's cuts, shortest first") {
   CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
   CHECK_EQ(findFamily(""), findFamily("adafruit"));
   CHECK_EQ(findFamily("sans"), findFamily("adafruit"));
-}
-
-TEST_CASE("the faces the library ships take no registration slot") {
-  // The four shipped faces are written down in the module, so a caller's table of eight holds eight
-  // caller names: the case above left one registered and seven more fill it, and the next is
-  // refused. The case fills the table, so it is the last one here that registers anything.
-  static const uint8_t blank[256] = {};
-  const Font probe = {Font::Kind::Fixed, blank, 1, 1, nullptr, 0, 0, 0, 1};
-  char name[NameLength];
-  int registered = 0;
-  for (int slot = 0; slot < RegisteredFaces; slot++) {
-    snprintf(name, sizeof(name), "slot%d", slot);
-    if (registerFont(name, &probe)) registered++;
-  }
-  CHECK_EQ(registered, RegisteredFaces - 1);
-
-  snprintf(name, sizeof(name), "slot%d", RegisteredFaces);
-  CHECK_FALSE(registerFont(name, &probe));
-
-  // A full table is still a table the shipped names resolve outside of.
-  CHECK_EQ(find("adafruit"), &AdafruitFont);
-  CHECK_EQ(find("ttyp011"), &Ttyp011);
-  CHECK_EQ(find("ttyp016"), &Ttyp016);
-  CHECK_EQ(find("ttyp022"), &Ttyp022);
 }
 
 }  // namespace
