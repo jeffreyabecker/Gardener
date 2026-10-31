@@ -189,9 +189,27 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   CHECK_EQ(display.inkCount(0, 10, 64, 54), 0);
 }
 
+TEST_CASE("a face's name answers a family of one cut") {
+  // Every shipped face is a design of one size, so a page that names one keeps drawing and a caller
+  // has one kind of name to learn.
+  const Family* cut = findFamily("ttyp016");
+  REQUIRE(cut != nullptr);
+  CHECK_EQ(cut->count, 1);
+  CHECK_EQ(cut->cuts[0], &Ttyp016);
+  CHECK_EQ(find("ttyp016"), &Ttyp016);
+
+  // A design's own name answers its ladder, its shortest cut is the face a name gives a leaf that
+  // has no box, and a name nobody holds answers the default family.
+  CHECK_EQ(findFamily("ttyp0")->count, 3);
+  CHECK_EQ(find("ttyp0"), &Ttyp011);
+  CHECK_EQ(findFamily("nobody"), defaultFamily());
+  CHECK_EQ(find("nobody"), defaultFamily()->cuts[0]);
+}
+
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
-  const Font small = probeFace(2);
-  const Font large = probeFace(8);
+  // Static, because the module keeps the cuts' addresses for the rest of the run.
+  static const Font small = probeFace(2);
+  static const Font large = probeFace(8);
   const Font* cuts[] = {&large, &small};  // written tallest first on purpose
 
   REQUIRE(registerFamily("probe design", cuts, 2));
@@ -201,12 +219,19 @@ TEST_CASE("a caller registers a family and its cuts come back ordered") {
   CHECK_EQ(family->count, 2);
   CHECK_EQ(family->cuts[0], &small);
   CHECK_EQ(family->cuts[1], &large);
+
+  // A registered design is a name like any other: its shortest cut is what a name gives a leaf that
+  // has no box, and its faces measure as they say rather than as the Adafruit cell does.
+  CHECK_EQ(find("probe design"), &small);
+  const Size ink = measureText(family->cuts[1], "A", 1);
+  CHECK_EQ(ink.width, 2);
+  CHECK_EQ(ink.height, 8);
 }
 
 TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") {
   // Two cases and no more register a family: the table is four entries and this one fills it, so
   // that the last refusal below is the table being full rather than a name being taken.
-  const Font probe = probeFace(2);
+  static const Font probe = probeFace(2);
   const Font* one[] = {&probe};
 
   CHECK_FALSE(registerFamily(nullptr, one, 1));
@@ -216,14 +241,12 @@ TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") 
   const Font* withNull[] = {&probe, nullptr};
   CHECK_FALSE(registerFamily("a null cut", withNull, 2));
 
-  // A name stands for one thing, so a family takes no name a face answers and no name a family
-  // already does, and a face takes none of a family's either.
+  // A name stands for one thing, so a family takes no name a design, a face or another family
+  // already answers.
   CHECK_FALSE(registerFamily("ttyp0", one, 1));
   CHECK_FALSE(registerFamily("adafruit", one, 1));
   CHECK_FALSE(registerFamily("ttyp016", one, 1));
   CHECK_FALSE(registerFamily("probe design", one, 1));
-  CHECK_FALSE(registerFont("ttyp0", &probe));
-  CHECK_FALSE(registerFont("probe design", &probe));
 
   // More cuts than an entry holds is a refusal rather than a truncation, and so is a name that will
   // not fit the entry's own copy of it.
