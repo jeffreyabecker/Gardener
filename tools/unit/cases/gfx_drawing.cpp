@@ -248,20 +248,31 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), display.inkCount(10, 10, 9, 6));
 }
 
-TEST_CASE("the faces the library ships answer to their names") {
-  // The ttyp0 faces are registered as the library loads, so a page names one and is given it back.
-  CHECK_EQ(findFamily("ttyp011")->cuts[0], &Ttyp011);
-  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
-  CHECK_EQ(findFamily("ttyp022")->cuts[0], &Ttyp022);
-  CHECK_NE(findFamily("ttyp016")->cuts[0], &AdafruitFont);
+TEST_CASE("a design answers its own name and a size does not") {
+  // The designs the library ships answer their ladders, shortest cut first, so a page names the
+  // design and the box picks the size.
+  const Family* profont = findFamily("profont");
+  REQUIRE(profont != nullptr);
+  CHECK_EQ(profont->count, 4);
+  CHECK_EQ(lineHeight(*profont->cuts[0]), 8);
+  CHECK_EQ(lineHeight(*profont->cuts[3]), 24);
+  const Family* x11 = findFamily("x11");
+  REQUIRE(x11 != nullptr);
+  CHECK_EQ(x11->count, 4);
+  CHECK_EQ(lineHeight(*x11->cuts[0]), 7);
+  CHECK(findFamily("adafruit") != nullptr);
+
+  // A cut is not a name of its own: the faces answer to nothing, and a caller that wants one of them
+  // registers it as a family of one.
+  CHECK_EQ(findFamily("ttyp016"), nullptr);
+  CHECK_EQ(findFamily("profont10"), nullptr);
+  CHECK_EQ(findFamily("x11_10x20"), nullptr);
+  CHECK_EQ(findFamily("ttyp012"), nullptr);
 
   // The Adafruit is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
   CHECK(AdafruitFont.kind == Font::Kind::Fixed);
   CHECK(Ttyp016.kind == Font::Kind::Variable);
-
-  // A name the library does not hold is still a draw: it falls back rather than raising.
-  CHECK_EQ(findFamily("ttyp012"), nullptr);
 }
 
 TEST_CASE("a face says its own line box") {
@@ -316,8 +327,9 @@ TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {
   // row. The ink starts on the second row of the box, because the face's ascent is twelve rows and
   // the letter is ten tall.
   reset();
-  text(Box(0, 0, 128, 13), "A", findFamily("ttyp016"), Justify::Start, Justify::Start)
-      ->draw(canvas);
+  const Font* only[] = {&Ttyp016};
+  const Family oneCut = {"ttyp016", only, 1};
+  text(Box(0, 0, 128, 13), "A", &oneCut, Justify::Start, Justify::Start)->draw(canvas);
   CHECK_EQ(display.inkCount(3, 2, 2, 1), 2);
   CHECK_EQ(display.inkCount(1, 8, 6, 1), 6);
   CHECK_EQ(display.inkCount(0, 0, 1, 12), 0);
@@ -330,10 +342,10 @@ TEST_CASE("a face puts every string of it on one baseline") {
   // letter with a descender start on the same row of their boxes, and only the descender inks below
   // it. Measured from the string, the pair would sit three rows lower than the letter alone.
   reset();
-  text(Box(0, 0, 40, 16), "A", findFamily("ttyp016"), Justify::Start, Justify::Start)
-      ->draw(canvas);
-  text(Box(40, 0, 40, 16), "Ag", findFamily("ttyp016"), Justify::Start, Justify::Start)
-      ->draw(canvas);
+  const Font* only[] = {&Ttyp016};
+  const Family oneCut = {"ttyp016", only, 1};
+  text(Box(0, 0, 40, 16), "A", &oneCut, Justify::Start, Justify::Start)->draw(canvas);
+  text(Box(40, 0, 40, 16), "Ag", &oneCut, Justify::Start, Justify::Start)->draw(canvas);
   CHECK_EQ(display.inkCount(0, 0, 80, 2), 0);
   CHECK(display.anyInk(0, 2, 8, 1));
   CHECK(display.anyInk(40, 2, 40, 1));

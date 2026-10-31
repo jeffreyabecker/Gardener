@@ -33,21 +33,17 @@ Font probeFace(uint8_t rows) {
 
 }  // namespace
 
-TEST_CASE("the two designs answer to a name per rung and a family per design") {
-  // Every rung is a face a page can name, and its line box is the one its source declares — not the
-  // size in its name, which is the design's nominal em.
+TEST_CASE("the two converted designs answer to one name and hold their rungs shortest first") {
+  // Every rung's line box is the one its source declares — not the size in the face's own name,
+  // which is the design's nominal em.
   const struct {
-    const char* name;
     const Font* face;
     uint8_t line;
   } rungs[] = {
-      {"profont10", &ProFont10, 8},   {"profont12", &ProFont12, 10},
-      {"profont17", &ProFont17, 14},  {"profont29", &ProFont29, 24},
-      {"x11_5x7", &X11Cell5x7, 7},    {"x11_6x10", &X11Cell6x10, 9},
-      {"x11_7x14", &X11Cell7x14, 12}, {"x11_10x20", &X11Cell10x20, 17},
+      {&ProFont10, 8},   {&ProFont12, 10},  {&ProFont17, 14},   {&ProFont29, 24},
+      {&X11Cell5x7, 7},  {&X11Cell6x10, 9}, {&X11Cell7x14, 12}, {&X11Cell10x20, 17},
   };
   for (const auto& rung : rungs) {
-    CHECK_EQ(findFamily(rung.name)->cuts[0], rung.face);
     CHECK_EQ(lineHeight(*rung.face), rung.line);
   }
 
@@ -82,7 +78,9 @@ TEST_CASE("a rung of a converted design draws the glyph its source holds") {
   // ink is thirteen tall.
   reset();
   View box = canvas.child(Rect(0, 0, 64, 24));
-  text(Box::whole(), "A", findFamily("x11_10x20"), Justify::Start, Justify::Start)->draw(box);
+  const Font* only[] = {&X11Cell10x20};
+  const Family oneCut = {"x11_10x20", only, 1};
+  text(Box::whole(), "A", &oneCut, Justify::Start, Justify::Start)->draw(box);
   CHECK(display.anyInk(0, 0, 8, 1));
   CHECK_EQ(display.inkCount(0, 13, 64, 11), 0);
 }
@@ -186,20 +184,16 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   CHECK_EQ(display.inkCount(0, 10, 64, 54), 0);
 }
 
-TEST_CASE("a face's name answers a family of one cut") {
-  // Every shipped face is a design of one size, so a page that names one keeps drawing and a caller
-  // has one kind of name to learn.
-  const Family* cut = findFamily("ttyp016");
-  REQUIRE(cut != nullptr);
-  CHECK_EQ(cut->count, 1);
-  CHECK_EQ(cut->cuts[0], &Ttyp016);
-  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
-
-  // A design's own name answers its ladder, its shortest cut is the face a name gives a leaf that
-  // has no box, and a name nobody holds answers the default family.
+TEST_CASE("a name answers a design and a size is not a name") {
+  // The designs the library ships answer their own names, and a name nobody holds answers nothing.
   CHECK_EQ(findFamily("ttyp0")->count, 3);
   CHECK_EQ(findFamily("ttyp0")->cuts[0], &Ttyp011);
   CHECK_EQ(findFamily("nobody"), nullptr);
+
+  // A cut is not a name of its own: a caller that wants one cut of a design registers it as a
+  // family of one, which is the only table a name comes from besides the designs.
+  CHECK_EQ(findFamily("ttyp016"), nullptr);
+  CHECK_EQ(findFamily("profont10"), nullptr);
 }
 
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
