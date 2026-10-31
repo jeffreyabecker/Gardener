@@ -28,8 +28,8 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 - [ ] Give `duration` and `pressureReadout` a family, and let the readout divide its box into two
       cells instead of two scales, dropping `size_hint`, `scale` and `secondary_scale`.
-- [ ] Give the scene constructors a family, name `ttyp0` once where the panel builds them, and
-      delete `defaultFamily` and `setDefaultFamily` with the global they read.
+- [ ] Give the scene constructors a family and name `ttyp0` once where the panel builds them, so the
+      design reaches a scene as an argument and the panel stops writing a global to reach it.
 
 ## The module
 
@@ -37,15 +37,17 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 - [ ] Fold `fitted` into it as well and give `screen.measure` a box, so the record carries a family
       and two places and neither `font` nor a kind.
 
-## The surface is a lookup
+## The surface is a family, a lookup and a registration
 
-- [ ] Let `resolve` and `measureText` take a family and answer the Adafruit cut for no family, and
-      delete `familyOr`, `faceOr` and the face-taking `measureText`.
-- [ ] Delete `find`, answer `nullptr` from `findFamily` for a name nobody holds, delete the
-      `resolve` overloads that take a family's name, and drop the Adafruit row of the one-cut table,
-      which repeats the design the lookup already answers with — so `Fonts.h` asks a name for a
-      family and a registration for a name, and the cases that expected a fallback from the lookup
-      say so.
+- [ ] Delete `defaultFamily` and `setDefaultFamily` with the `chosenFamily` global they hold, now
+      that nothing sets or reads them.
+- [ ] Let `resolve` and `measureText` take a `const Family*` and answer the Adafruit family for no
+      family, declare `AdafruitFamily` beside the face in `fonts/AdafruitFont.h`, and delete
+      `familyOr`, `faceOr` and the face-taking `measureText` with the coalescing they hold.
+- [ ] Answer `nullptr` from `findFamily` for a name nobody holds, and delete the two `resolve`
+      overloads that take a family's name, so a name is looked up in one place and fitted in one.
+- [ ] Delete `find` and the Adafruit row of the one-cut table, which repeats the design the lookup
+      already answers with, so no caller names a face and every name answers a family.
 
 ## The pages
 

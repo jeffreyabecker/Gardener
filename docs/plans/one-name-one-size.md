@@ -248,15 +248,15 @@ than a global a leaf has to consult.
 5. **Measuring a box.** `measureText(family, value, width, height)` and the scenes that size a box
    from it.
 6. **The components take a family.** `duration`, `pressureReadout` with its two cells, and the scene
-   constructors, with the panel naming `ttyp0` once and `defaultFamily` and `setDefaultFamily` gone.
-7. **The surface is the fit.** `resolve` and `measureText` take a family, no family is the Adafruit
-   family, and `familyOr`, `faceOr` and the face-taking `measureText` go.
-8. **The module.** `centred` and `fitted` folded into `screen.text`, `screen.measure` taking a box,
+   constructors, with the panel naming `ttyp0` once where it builds them.
+7. **The module.** `centred` and `fitted` folded into `screen.text`, `screen.measure` taking a box,
    and the record carrying a family and two places and nothing else.
+8. **The surface.** `defaultFamily` and `setDefaultFamily` go with the global they read; `resolve`
+   and `measureText` take a family and answer the Adafruit family for none; `familyOr`, `faceOr`,
+   the face-taking `measureText` and the two name-taking `resolve` overloads go; `findFamily`
+   answers nothing for a name nobody holds; and `find` goes with the Adafruit row of the one-cut
+   table — so `Fonts.h` is a family, a lookup and a registration.
 9. **The pages and the chromes** name the design they draw in where they place a leaf.
-10. **No face by name.** `find` goes, the Adafruit row of the one-cut table goes with it, and
-    `findFamily` answers nothing for a name nobody holds, so `Fonts.h` asks a name for a family
-    and a registration for a name.
 
 ## Notes
 
