@@ -14,7 +14,7 @@ namespace gardener {
 namespace {
 
 // The settings view's geometry, from view.be: the paper outside the border, the border, the paper
-// inside it, a chrome row of the built-in face, and the gap between a chrome row and the body.
+// inside it, a chrome row of the Adafruit face, and the gap between a chrome row and the body.
 constexpr int16_t SettingsMargin = 1;
 constexpr int16_t SettingsBorder = 1;
 constexpr int16_t SettingsPadding = 1;
@@ -31,7 +31,7 @@ constexpr float HintBandPct = 0.15f;
 // One line of chrome centred in the band it is given: the family's cut that the band's height
 // holds, placed by the leaf itself, so the title is the size its band can carry.
 gfx::PaintNodeRef centredLine(const char* text, const gfx::Family* family) {
-  return gfx::fitted(gfx::Box::whole(), text, family);
+  return gfx::text(gfx::Box::whole(), text, family);
 }
 
 // The arrows a hint band marks its keys with: as wide and as tall as the ink of the glyphs they
@@ -91,8 +91,7 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
-  return hintItem(gfx::borrowedText(gfx::Box::whole(), text, gfx::find("adafruit")),
-                  gfx::measureText(gfx::find("adafruit"), text, 1));
+  return hintItem(gfx::text(gfx::Box::whole(), text), gfx::measureText(nullptr, text, 0, SettingsRow));
 }
 
 gfx::Children EditorScene::hintItems() {
@@ -151,8 +150,8 @@ gfx::PaintNodeRef EditorScene::titleComponent() {
 gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
   // step a value the editor has not taken. The hint band is a hint's height, which the shortest
-  // ttyp0 cut is taller than, so the words are the built-in face's.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), gfx::findFamily("adafruit"));
+  // ttyp0 cut is taller than, so the words name no family and are drawn in the default one.
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())

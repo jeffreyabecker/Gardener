@@ -38,28 +38,18 @@ TEST_CASE("a text scales the face it draws") {
   CHECK_EQ(ink.height, 16);
 }
 
-TEST_CASE("the Adafruit family is the one the library ships and the one a name answers to") {
-  // A draw or a measurement that names no family, and a page that names "adafruit", all mean this
-  // one: the design the panel drew in before there was another.
-  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
-  CHECK_EQ(familyOr(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(""), findFamily("adafruit"));
-  CHECK_EQ(defaultFamily()->count, 1);
-  CHECK_EQ(defaultFamily()->cuts[0], &AdafruitFont);
+TEST_CASE("a name answers a family, and a name nobody holds answers nothing") {
+  // The design the panel drew in before there was another is a family of one cut like any other.
+  const Family* adafruit = findFamily("adafruit");
+  REQUIRE(adafruit != nullptr);
+  CHECK_EQ(adafruit->count, 1);
+  CHECK_EQ(adafruit->cuts[0], &AdafruitFont);
 
-  // Setting it is what a composition does to change the look, and nullptr puts the Adafruit family
-  // back.
-  setDefaultFamily(findFamily("ttyp0"));
-  CHECK_EQ(defaultFamily(), findFamily("ttyp0"));
-  CHECK_EQ(find(nullptr), &Ttyp011);
-  setDefaultFamily(nullptr);
-  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
-  CHECK_EQ(find(nullptr), &AdafruitFont);
-
-  // A name the module does not hold draws in the default family rather than raising.
-  CHECK_EQ(findFamily("sans12"), defaultFamily());
-  CHECK_EQ(find("sans12"), defaultFamily()->cuts[0]);
+  // A name the module does not hold is a lookup that finds nothing rather than a quieter answer:
+  // what a leaf that names no family draws in is the resolver's business, not the lookup's.
+  CHECK_EQ(findFamily("sans12"), nullptr);
+  CHECK_EQ(findFamily(""), nullptr);
+  CHECK_EQ(findFamily(nullptr), nullptr);
 }
 
 TEST_CASE("a text draws at its box") {
@@ -77,22 +67,16 @@ TEST_CASE("a text past its canvas is cut") {
   CHECK_EQ(display.inkCount(6, 0, 6, 8), 0);
 }
 
-TEST_CASE("a string is centred on its canvas") {
+TEST_CASE("a string is centred in the box it is given") {
   reset();
   View band = canvas.child(Rect(0, 0, 100, 20));
-  const Size ink = measureText(nullptr, "A", 1);
-  const int16_t x = static_cast<int16_t>((100 - ink.width) / 2);
-  const int16_t y = static_cast<int16_t>((20 - ink.height) / 2);
-  aligned(sized(borrowedText(Box::whole(), "A"), ink))->draw(band);
-  CHECK(display.anyInk(x, y, ink.width, ink.height));
-  CHECK_EQ(display.inkCount(0, 0, 100, y), 0);
-
-  reset();
-  const Size large = measureText(nullptr, "A", 2);
-  const int16_t largeX = static_cast<int16_t>((100 - large.width) / 2);
-  const int16_t largeY = static_cast<int16_t>((20 - large.height) / 2);
-  aligned(sized(borrowedText(Box::whole(), "A", nullptr, 2), large))->draw(band);
-  CHECK(display.anyInk(largeX, largeY, large.width, large.height));
+  // Twenty rows hold two lines of the Adafruit face, so the letter is drawn at two scales: twelve
+  // pixels of ink across in a hundred, from the forty-fourth column, and sixteen rows of the
+  // twenty, two down.
+  text(Box::whole(), "A")->draw(band);
+  CHECK_EQ(display.inkCount(0, 0, 44, 20), 0);
+  CHECK(display.anyInk(44, 2, 12, 16));
+  CHECK_EQ(display.inkCount(56, 0, 44, 20), 0);
 }
 
 TEST_CASE("an icon draws in its box") {
@@ -266,10 +250,10 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
 
 TEST_CASE("the faces the library ships answer to their names") {
   // The ttyp0 faces are registered as the library loads, so a page names one and is given it back.
-  CHECK_EQ(find("ttyp011"), &Ttyp011);
-  CHECK_EQ(find("ttyp016"), &Ttyp016);
-  CHECK_EQ(find("ttyp022"), &Ttyp022);
-  CHECK_NE(find("ttyp016"), faceOr(nullptr));
+  CHECK_EQ(findFamily("ttyp011")->cuts[0], &Ttyp011);
+  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
+  CHECK_EQ(findFamily("ttyp022")->cuts[0], &Ttyp022);
+  CHECK_NE(findFamily("ttyp016")->cuts[0], &AdafruitFont);
 
   // The Adafruit is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
@@ -277,7 +261,7 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK(Ttyp016.kind == Font::Kind::Variable);
 
   // A name the library does not hold is still a draw: it falls back rather than raising.
-  CHECK_EQ(find("ttyp012"), faceOr(nullptr));
+  CHECK_EQ(findFamily("ttyp012"), nullptr);
 }
 
 TEST_CASE("a face says its own line box") {
@@ -306,7 +290,9 @@ TEST_CASE("a fixed face draws the cell it declares rather than the Adafruit's") 
   CHECK_EQ(ink.height, 3);
 
   reset();
-  text(Box(0, 0, 128, 64), "AA", &face, 1)->draw(canvas);
+  const Font* cuts[] = {&face};
+  const Family family = {"probe", cuts, 1};
+  text(Box(0, 0, 128, 64), "AA", &family, Justify::Start, Justify::Start)->draw(canvas);
   CHECK_EQ(display.inkCount(0, 0, 1, 3), 2);
   CHECK_EQ(display.inkCount(1, 0, 1, 3), 0);
   CHECK_EQ(display.inkCount(3, 0, 1, 3), 2);
@@ -330,7 +316,8 @@ TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {
   // row. The ink starts on the second row of the box, because the face's ascent is twelve rows and
   // the letter is ten tall.
   reset();
-  text(Box(0, 0, 128, 64), "A", &Ttyp016, 1)->draw(canvas);
+  text(Box(0, 0, 128, 13), "A", findFamily("ttyp016"), Justify::Start, Justify::Start)
+      ->draw(canvas);
   CHECK_EQ(display.inkCount(3, 2, 2, 1), 2);
   CHECK_EQ(display.inkCount(1, 8, 6, 1), 6);
   CHECK_EQ(display.inkCount(0, 0, 1, 12), 0);
@@ -343,8 +330,10 @@ TEST_CASE("a face puts every string of it on one baseline") {
   // letter with a descender start on the same row of their boxes, and only the descender inks below
   // it. Measured from the string, the pair would sit three rows lower than the letter alone.
   reset();
-  text(Box(0, 0, 40, 16), "A", &Ttyp016, 1)->draw(canvas);
-  text(Box(40, 0, 40, 16), "Ag", &Ttyp016, 1)->draw(canvas);
+  text(Box(0, 0, 40, 16), "A", findFamily("ttyp016"), Justify::Start, Justify::Start)
+      ->draw(canvas);
+  text(Box(40, 0, 40, 16), "Ag", findFamily("ttyp016"), Justify::Start, Justify::Start)
+      ->draw(canvas);
   CHECK_EQ(display.inkCount(0, 0, 80, 2), 0);
   CHECK(display.anyInk(0, 2, 8, 1));
   CHECK(display.anyInk(40, 2, 40, 1));
@@ -362,35 +351,24 @@ SystemState readoutState(float readingKpa, float targetKpa) {
   return state;
 }
 
-TEST_CASE("a readout stacks a reading too wide for its glass over the target") {
-  // Six characters at scale two is 72 pixels of ink and four at scale one is 24, so the two cannot
-  // sit side by side in 128: the reading is given the top of a column and the target the end of the
-  // cell under it, and no pixel of one lands in the other's rows.
+TEST_CASE("a readout gives the reading the top of its box and the target the rest") {
+  // The box is divided in three fifths and two: the reading fills the upper eighteen rows of a
+  // thirty row band at whatever cut fits them, and the target the twelve below, its line box against
+  // the end of its part, so no pixel of one lands in the other's rows.
   const SystemState state = readoutState(-101.3f, 45.6f);
   reset();
   View band = canvas.child(Rect(0, 0, 128, 30));
-  pressureReadout(Box::whole(), state, 0.5f)->draw(band);
+  pressureReadout(Box::whole(), state)->draw(band);
 
-  // The reading is centred across the top cell and the target flush to the end of the lower one,
-  // the pair centred down the 30 rows it was given: three clear above, sixteen, eight, three clear.
-  CHECK_EQ(display.inkCount(0, 0, 128, 3), 0);
-  CHECK_EQ(display.inkCount(0, 3, 128, 16), display.inkCount(28, 3, 72, 16));
-  CHECK_EQ(display.inkCount(0, 19, 128, 8), display.inkCount(104, 19, 24, 8));
-  CHECK_EQ(display.inkCount(0, 27, 128, 3), 0);
-}
-
-TEST_CASE("a readout puts the target beside the reading when there is room") {
-  // At a size hint of one both readings are drawn at the main scale, in the two halves of a row:
-  // nothing is drawn across the seam between them.
-  const SystemState state = readoutState(-12.3f, 45.6f);
-  reset();
-  View band = canvas.child(Rect(0, 0, 128, 32));
-  pressureReadout(Box::whole(), state, 1.0f)->draw(band);
-
-  // Five characters at scale two are 60 pixels of ink, centred in the first half and eight rows
-  // down; four are 48, centred in the second, so no pixel of one is drawn in the other's half.
-  CHECK_EQ(display.inkCount(0, 0, 64, 32), display.inkCount(2, 8, 60, 16));
-  CHECK_EQ(display.inkCount(64, 0, 64, 32), display.inkCount(72, 8, 48, 16));
+  // Six characters of the Adafruit face at two scales are 72 pixels of ink, centred in the hundred
+  // and twenty-eight across and sixteen of the eighteen rows down, one row in.
+  CHECK_EQ(display.inkCount(0, 0, 128, 1), 0);
+  CHECK_EQ(display.inkCount(0, 1, 128, 16), display.inkCount(28, 1, 72, 16));
+  // The target is four characters at one scale: 24 pixels of ink, centred across, in the last eight
+  // rows of the twelve under the reading.
+  CHECK_EQ(display.inkCount(0, 17, 128, 5), 0);
+  CHECK_EQ(display.inkCount(0, 22, 128, 8), display.inkCount(52, 22, 24, 8));
+  CHECK_EQ(display.inkCount(0, 30, 128, 34), 0);
 }
 
 TEST_CASE("a family is a design's cuts, shortest first") {
@@ -403,13 +381,13 @@ TEST_CASE("a family is a design's cuts, shortest first") {
   CHECK_EQ(ttyp0->cuts[1], &Ttyp016);
   CHECK_EQ(ttyp0->cuts[2], &Ttyp022);
 
-  // The Adafruit face is a family of one cut, and it is the answer a name the module does not hold
-  // and a page that names none are both given.
+  // The Adafruit face is a family of one cut like any other, and a name the module does not hold is
+  // a lookup that finds nothing rather than a quieter answer.
   CHECK_EQ(findFamily("adafruit")->count, 1);
   CHECK_EQ(findFamily("adafruit")->cuts[0], &AdafruitFont);
-  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
-  CHECK_EQ(findFamily(""), findFamily("adafruit"));
-  CHECK_EQ(findFamily("sans"), findFamily("adafruit"));
+  CHECK_EQ(findFamily(nullptr), nullptr);
+  CHECK_EQ(findFamily(""), nullptr);
+  CHECK_EQ(findFamily("sans"), nullptr);
 }
 
 }  // namespace

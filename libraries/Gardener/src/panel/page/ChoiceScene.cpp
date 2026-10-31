@@ -11,16 +11,16 @@
 namespace gardener {
 namespace {
 
-// One row of the built-in face, which is the pitch a choice is drawn at.
+// One row of the Adafruit face, which is the pitch a choice is drawn at.
 constexpr int16_t Row = 8;
 
 // One row of the window: the entry's title centred, inverted across the whole of the row when it is
 // the entry showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
   const char* title = item->title.c_str();
-  const gfx::Size ink = gfx::measureText(gfx::find("adafruit"), title, 1);
-  gfx::PaintNodeRef content = gfx::aligned(
-      gfx::sized(gfx::borrowedText(gfx::Box::whole(), title, gfx::find("adafruit")), ink));
+  const gfx::Size ink = gfx::measureText(nullptr, title, 0, Row);
+  gfx::PaintNodeRef content =
+      gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), title), ink));
   if (showing) content = gfx::inverted(std::move(content));
   return content;
 }
@@ -89,7 +89,7 @@ int16_t ChoiceScene::index() const {
   return 0;
 }
 
-// The entries in the value band as the column of rows a list is: one built-in row each, the window
+// The entries in the value band as the column of rows a list is: one Adafruit row each, the window
 // scrolled to keep the entry showing in it, the block centred in the band and the row showing
 // inverted. The rows are the ones the band has room for, which is why the column is built as the
 // paint runs rather than before. A window shorter than the entries carries a scrollbar down the
@@ -97,9 +97,9 @@ int16_t ChoiceScene::index() const {
 gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      const gfx::Size ink = gfx::measureText(gfx::find("adafruit"), "--", 1);
+      const gfx::Size ink = gfx::measureText(nullptr, "--", 0, Row);
       gfx::aligned(
-          gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--", gfx::find("adafruit")), ink))
+          gfx::sized(gfx::text(gfx::Box::whole(), "--"), ink))
           ->draw(canvas);
       return;
     }

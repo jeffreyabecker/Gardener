@@ -18,15 +18,15 @@ import string
 # reached by a case that holds a clock rather than a machine. Both strings name the ttyp0 design, so
 # the band's height picks the cut and the page names no size.
 def home_chrome(elapsed)
-  var timer = screen.fitted(nil, nil, nil, nil,
+  var timer = screen.text(nil, nil, nil, nil,
                             screen.duration_text("minutes",
                                                  (elapsed == nil ? 0 : elapsed) / 1000,
                                                  elapsed != nil),
                             "ttyp0")
   return screen.column(nil, [
-    [bounds(1, 0.25), screen.fitted(nil, nil, nil, nil, "Gardener", "ttyp0")],
+    [bounds(1, 0.25), screen.text(nil, nil, nil, nil, "Gardener", "ttyp0")],
     [bounds(1, 0.75), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), screen.pressure_readout("ttyp0")],
       [bounds(0.5, 1), timer]
     ])]
   ])

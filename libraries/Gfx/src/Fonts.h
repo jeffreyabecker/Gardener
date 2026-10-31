@@ -6,15 +6,8 @@ namespace gardener::gfx {
 
 // The faces the library ships are declared beside it, in fonts/: the Adafruit 5x7, all 256 byte
 // values in a five-by-eight cell six pixels apart, and the cuts of ttyp0, ProFont and X11. They
-// answer to the names written down with them, and the Adafruit family is what a page that names
-// nothing draws in, so everything below is a question about those faces and the names they answer
-// to.
-
-// The face a page's font name stands for: a face the library ships, the face a caller registered
-// under the name, and the default family's first cut for "" and for a name the module does not
-// hold. A name nobody registered is a page drawing in the face it would have drawn in without the
-// name, rather than a picture that does not arrive, so there is nothing here to check.
-const Font* find(const char* name);
+// answer to the names written down with them, and a design's name answers the family of its cuts,
+// so a caller names a design and a box chooses the size. A name is all a caller has to know.
 
 // --- the families -------------------------------------------------------------
 // A design's cuts, shortest first: a page names the design and a height picks the cut, so a page
@@ -26,25 +19,10 @@ struct Family {
   uint8_t count;
 };
 
-// The family a caller that names none draws and measures in. It is the Adafruit one unless
-// something sets it, and setting nullptr puts that back: a caller that sets nothing draws as it
-// always has.
-const Family* defaultFamily();
-void setDefaultFamily(const Family* family);
-
-// The family a draw or a measurement uses: the one it was given, or the default when it was given
-// none. Every leaf and every scene resolves a family here rather than repeating the fallback, so one
-// answer serves the picture and the ink it measures with.
-const Family* familyOr(const Family* family);
-
-// The face a rasteriser draws through: the one it was given, or the first cut of the default
-// family, which is what a caller that names nothing draws in. It is the null guard under the family
-// fallback, not a way for a caller to name a face.
-const Font* faceOr(const Font* face);
-
-// The family a page's family name stands for: one the library ships, one a caller registered, and
-// the default family for "" and for a name the module does not hold, so a page that names a family
-// nobody has draws as it does without one rather than not drawing.
+// The family a caller's family name stands for: one the library ships, one a caller registered, or a
+// shipped face's name as a family of one cut. Null for a name nobody holds, so a lookup answers what
+// the module holds and nothing more; a leaf that names no family draws in the default family, which
+// is the resolver's own business and no caller's.
 const Family* findFamily(const char* name);
 
 // A family a caller registers, beside the ones the library ships: a name, and the cuts of the
