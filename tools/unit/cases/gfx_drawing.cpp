@@ -39,23 +39,28 @@ TEST_CASE("a text scales the face it draws") {
   CHECK_EQ(ink.height, 16);
 }
 
-TEST_CASE("the built in face is the one the library ships and the one a name answers to") {
-  // A draw or a measurement that names no face, and a page that names "adafruit", all mean this one.
-  CHECK_EQ(defaultFace(), &AdafruitFont);
-  CHECK_EQ(faceOr(nullptr), &AdafruitFont);
+TEST_CASE("the Adafruit family is the one the library ships and the one a name answers to") {
+  // A draw or a measurement that names no family, and a page that names "adafruit", all mean this
+  // one: the design the panel drew in before there was another.
+  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
+  CHECK_EQ(familyOr(nullptr), findFamily("adafruit"));
+  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
+  CHECK_EQ(findFamily(""), findFamily("adafruit"));
+  CHECK_EQ(defaultFamily()->count, 1);
+  CHECK_EQ(defaultFamily()->cuts[0], &AdafruitFont);
+
+  // Setting it is what a composition does to change the look, and nullptr puts the Adafruit family
+  // back.
+  setDefaultFamily(findFamily("ttyp0"));
+  CHECK_EQ(defaultFamily(), findFamily("ttyp0"));
+  CHECK_EQ(find(nullptr), &Ttyp011);
+  setDefaultFamily(nullptr);
+  CHECK_EQ(defaultFamily(), findFamily("adafruit"));
   CHECK_EQ(find(nullptr), &AdafruitFont);
-  CHECK_EQ(find(""), &AdafruitFont);
-  CHECK_EQ(find("adafruit"), &AdafruitFont);
 
-  // Naming it is what a caller does to say so, and nullptr puts the Adafruit back.
-  setDefaultFace(&AdafruitFont);
-  CHECK_EQ(defaultFace(), &AdafruitFont);
-  setDefaultFace(nullptr);
-  CHECK_EQ(defaultFace(), &AdafruitFont);
-  CHECK_EQ(faceOr(nullptr), &AdafruitFont);
-
-  // A name the module does not hold draws in the default face rather than raising.
-  CHECK_EQ(find("sans12"), defaultFace());
+  // A name the module does not hold draws in the default family rather than raising.
+  CHECK_EQ(findFamily("sans12"), defaultFamily());
+  CHECK_EQ(find("sans12"), defaultFamily()->cuts[0]);
 }
 
 // A face with one glyph: a filled five-by-three box of ink, advancing six, drawn from the baseline.
@@ -80,12 +85,12 @@ TEST_CASE("a registered face comes out of find and measures as its own face") {
   CHECK_FALSE(registerFont("probe", nullptr));
 
   // A name it does not hold is a face to fall back to, so a page naming one still draws.
-  CHECK_EQ(find("missing"), defaultFace());
+  CHECK_EQ(find("missing"), faceOr(nullptr));
 }
 
 TEST_CASE("a registered name longer than an entry is refused") {
   CHECK_FALSE(registerFont("a name too long to hold", &ProbeFace));
-  CHECK_EQ(find("a name too long to hold"), defaultFace());
+  CHECK_EQ(find("a name too long to hold"), faceOr(nullptr));
 }
 
 TEST_CASE("a text draws at its box") {
@@ -295,7 +300,7 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK_EQ(find("ttyp011"), &Ttyp011);
   CHECK_EQ(find("ttyp016"), &Ttyp016);
   CHECK_EQ(find("ttyp022"), &Ttyp022);
-  CHECK_NE(find("ttyp016"), defaultFace());
+  CHECK_NE(find("ttyp016"), faceOr(nullptr));
 
   // The Adafruit is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
@@ -303,7 +308,7 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK(Ttyp016.kind == Font::Kind::Variable);
 
   // A name the library does not hold is still a draw: it falls back rather than raising.
-  CHECK_EQ(find("ttyp012"), defaultFace());
+  CHECK_EQ(find("ttyp012"), faceOr(nullptr));
 }
 
 TEST_CASE("a face says its own line box") {

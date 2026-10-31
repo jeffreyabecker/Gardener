@@ -5,24 +5,15 @@
 namespace gardener::gfx {
 
 // The faces the library ships are declared beside it, in fonts/: the Adafruit 5x7, all 256 byte
-// values in a five-by-eight cell six pixels apart, and the three cuts of ttyp0. They answer to the
-// names written down with them, and the Adafruit is what a page that names no font draws in, so
-// everything below is a question about those faces and the names they answer to.
-
-// The face a caller that names none draws and measures in. It is the Adafruit 5x7 unless something
-// sets it, and setting nullptr puts that back: a caller that sets nothing draws as it always has.
-const Font* defaultFace();
-void setDefaultFace(const Font* face);
-
-// The face a draw or a measurement uses: the one it was given, or the default when it was given
-// none. Every reader resolves a face here rather than repeating the fallback, so one answer serves
-// the draw and the ink it measures with.
-const Font* faceOr(const Font* face);
+// values in a five-by-eight cell six pixels apart, and the cuts of ttyp0, ProFont and X11. They
+// answer to the names written down with them, and the Adafruit family is what a page that names
+// nothing draws in, so everything below is a question about those faces and the names they answer
+// to.
 
 // The face a page's font name stands for: a face the library ships, the face a caller registered
-// under the name, and the default face for "" and for a name the module does not hold. A name
-// nobody registered is a page drawing in the face it would have drawn in without the name, rather
-// than a picture that does not arrive, so there is nothing here to check.
+// under the name, and the default family's first cut for "" and for a name the module does not
+// hold. A name nobody registered is a page drawing in the face it would have drawn in without the
+// name, rather than a picture that does not arrive, so there is nothing here to check.
 const Font* find(const char* name);
 
 // --- the families -------------------------------------------------------------
@@ -35,9 +26,25 @@ struct Family {
   uint8_t count;
 };
 
+// The family a caller that names none draws and measures in. It is the Adafruit one unless
+// something sets it, and setting nullptr puts that back: a caller that sets nothing draws as it
+// always has.
+const Family* defaultFamily();
+void setDefaultFamily(const Family* family);
+
+// The family a draw or a measurement uses: the one it was given, or the default when it was given
+// none. Every leaf and every scene resolves a family here rather than repeating the fallback, so one
+// answer serves the picture and the ink it measures with.
+const Family* familyOr(const Family* family);
+
+// The face a rasteriser draws through: the one it was given, or the first cut of the default
+// family, which is what a caller that names nothing draws in. It is the null guard under the family
+// fallback, not a way for a caller to name a face.
+const Font* faceOr(const Font* face);
+
 // The family a page's family name stands for: one the library ships, one a caller registered, and
-// the Adafruit for "" and for a name the module does not hold, so a page that names a family nobody
-// has draws as it does without one rather than not drawing.
+// the default family for "" and for a name the module does not hold, so a page that names a family
+// nobody has draws as it does without one rather than not drawing.
 const Family* findFamily(const char* name);
 
 // A family a caller registers, beside the ones the library ships: a name, and the cuts of the

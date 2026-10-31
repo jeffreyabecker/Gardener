@@ -85,9 +85,8 @@ void BorrowedTextNode::draw(Canvas& canvas) const {
 
 FittedNode::FittedNode(Box box, const char* value, const Family* family, Justify horizontal,
                        Justify vertical)
-    : box_(box), value_(value == nullptr ? "" : value),
-      family_(family != nullptr ? family : findFamily(nullptr)), horizontal_(horizontal),
-      vertical_(vertical) {}
+    : box_(box), value_(value == nullptr ? "" : value), family_(familyOr(family)),
+      horizontal_(horizontal), vertical_(vertical) {}
 
 void FittedNode::draw(Canvas& canvas) const {
   const Rect in = box_.in(canvas);
