@@ -12,6 +12,9 @@
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
 #include "fonts/ProFont29.h"
+#include "fonts/Ttyp011.h"
+#include "fonts/Ttyp016.h"
+#include "fonts/Ttyp022.h"
 #include "fonts/X11Cell10x20.h"
 #include "fonts/X11Cell5x7.h"
 #include "fonts/X11Cell6x10.h"
@@ -81,6 +84,65 @@ TEST_CASE("a rung of a converted design draws the glyph its source holds") {
   text(Box::whole(), "A", &X11Cell10x20, 1)->draw(box);
   CHECK(display.anyInk(0, 0, 8, 1));
   CHECK_EQ(display.inkCount(0, 13, 64, 11), 0);
+}
+
+TEST_CASE("a height resolves to the tallest cut it can hold and the scale it spends") {
+  const Family* ttyp0 = findFamily("ttyp0");
+
+  // A height under the shortest cut is that cut at one scale: the answer is the smallest thing the
+  // family has rather than nothing.
+  Fit fit = resolve(*ttyp0, 5);
+  CHECK_EQ(fit.face, &Ttyp011);
+  CHECK_EQ(fit.scale, 1);
+
+  // Each cut at one scale where the band holds it exactly, and the tallest cut that fits at all
+  // where the band is between two of them: 24 rows is the 22 px design at one scale, not the 16 px
+  // one at one.
+  CHECK_EQ(resolve(*ttyp0, 10).face, &Ttyp011);
+  CHECK_EQ(resolve(*ttyp0, 13).face, &Ttyp016);
+  CHECK_EQ(resolve(*ttyp0, 17).face, &Ttyp022);
+  CHECK_EQ(resolve(*ttyp0, 24).face, &Ttyp022);
+  CHECK_EQ(resolve(*ttyp0, 24).scale, 1);
+
+  // A band that holds two of a cut's lines is spent at two, and one that holds three at three.
+  fit = resolve(*ttyp0, 34);
+  CHECK_EQ(fit.face, &Ttyp022);
+  CHECK_EQ(fit.scale, 2);
+  fit = resolve(*ttyp0, 64);
+  CHECK_EQ(fit.face, &Ttyp022);
+  CHECK_EQ(fit.scale, 3);
+
+  // Two designs answer the same band differently, because the ladder is the design's.
+  CHECK_EQ(resolve(*findFamily("x11"), 45).face, &X11Cell10x20);
+  CHECK_EQ(resolve(*findFamily("x11"), 45).scale, 2);
+  CHECK_EQ(resolve(*findFamily("profont"), 45).face, &ProFont29);
+  CHECK_EQ(resolve(*findFamily("profont"), 45).scale, 1);
+}
+
+TEST_CASE("a width narrows the cut and the scale the height chose") {
+  const Family* ttyp0 = findFamily("ttyp0");
+
+  // The home page's timer is five characters in a cell 64 across and 48 down: two lines of the 22 px
+  // design are 110 pixels wide, so the timer is that design at one scale.
+  Fit fit = resolve(*ttyp0, "4m30s", 64, 48);
+  CHECK_EQ(fit.face, &Ttyp022);
+  CHECK_EQ(fit.scale, 1);
+
+  // The same string across a whole page keeps the taller answer.
+  fit = resolve(*ttyp0, "4m30s", 128, 48);
+  CHECK_EQ(fit.face, &Ttyp022);
+  CHECK_EQ(fit.scale, 2);
+
+  // A box too narrow for the tallest cut steps down through its scales and then to the next cut:
+  // five characters in 40 pixels is the 16 px design at one, which is exactly 40 wide.
+  fit = resolve(*ttyp0, "123.4", 40, 45);
+  CHECK_EQ(fit.face, &Ttyp016);
+  CHECK_EQ(fit.scale, 1);
+
+  // A string no cut fits is drawn at the height's own answer, and the box clips it.
+  fit = resolve(*ttyp0, "123.4", 10, 45);
+  CHECK_EQ(fit.face, &Ttyp022);
+  CHECK_EQ(fit.scale, 2);
 }
 
 TEST_CASE("a caller registers a family and its cuts come back ordered") {

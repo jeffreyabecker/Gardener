@@ -30,7 +30,7 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The resolver
 
-- [ ] Add `Fit` and `resolve(family, height)` with the width form, so a height and a box answer a
+- [x] Add `Fit` and `resolve(family, height)` with the width form, so a height and a box answer a
       cut and a scale.
 - [ ] Add the two by-name overloads, so a name resolves as the family it found does.
 
