@@ -231,11 +231,10 @@ TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") 
   const Font* withNull[] = {&probe, nullptr};
   CHECK_FALSE(registerFamily("a null cut", withNull, 2));
 
-  // A name stands for one thing, so a family takes no name a design, a face or another family
-  // already answers.
+  // A name stands for one thing, so a family takes no name a design or another family already
+  // answers, and a size is not a name at all.
   CHECK_FALSE(registerFamily("ttyp0", one, 1));
   CHECK_FALSE(registerFamily("adafruit", one, 1));
-  CHECK_FALSE(registerFamily("ttyp016", one, 1));
   CHECK_FALSE(registerFamily("probe design", one, 1));
 
   // More cuts than an entry holds is a refusal rather than a truncation, and so is a name that will
