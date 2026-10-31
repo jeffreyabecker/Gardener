@@ -19,11 +19,6 @@ namespace gardener::gfx {
 
 namespace {
 
-// What a caller that names no face draws in. The Adafruit 5x7 is what such a caller has always
-// drawn in, so it is where this starts; setDefaultFace is the only writer, and it never stores a
-// null, so a reader has nothing to check.
-const Font* chosenFace = &AdafruitFont;
-
 // One face the library ships and the name it answers to. The library writes these down rather than
 // registering them, so the registration table below is a caller's and its slots are not spent on
 // faces every build carries anyway.
@@ -72,6 +67,11 @@ const Family X11Family = {"x11", X11Cuts, 4};
 
 const Family* const ShippedFamilies[] = {&AdafruitFamily, &Ttyp0Family, &ProFontFamily, &X11Family};
 
+// What a caller that names no family draws in. The Adafruit family is what such a caller has always
+// drawn in, so it is where this starts; setDefaultFamily is the only writer, and it never stores a
+// null, so a reader has nothing to check.
+const Family* chosenFamily = &AdafruitFamily;
+
 // Copies a name into an entry, or answers false when it does not fit.
 bool copyName(char* into, const char* from) {
   int at = 0;
@@ -118,11 +118,15 @@ const Family* namedFamily(const char* name) {
 
 }  // namespace
 
-const Font* defaultFace() { return chosenFace; }
+const Family* defaultFamily() { return chosenFamily; }
 
-void setDefaultFace(const Font* face) { chosenFace = face != nullptr ? face : &AdafruitFont; }
+void setDefaultFamily(const Family* family) {
+  chosenFamily = family != nullptr ? family : &AdafruitFamily;
+}
 
-const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFace; }
+const Family* familyOr(const Family* family) { return family != nullptr ? family : chosenFamily; }
+
+const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFamily->cuts[0]; }
 
 bool registerFont(const char* name, const Font* font) {
   if (name == nullptr || name[0] == '\0' || font == nullptr) return false;
@@ -140,16 +144,13 @@ bool registerFont(const char* name, const Font* font) {
 }
 
 const Font* find(const char* name) {
-  if (name == nullptr || name[0] == '\0') return defaultFace();
+  if (name == nullptr || name[0] == '\0') return faceOr(nullptr);
   if (const Font* shipped = shippedFace(name)) return shipped;
   if (const Font* registered = registeredFace(name)) return registered;
-  return defaultFace();
+  return faceOr(nullptr);
 }
 
-const Family* findFamily(const char* name) {
-  const Family* family = namedFamily(name);
-  return family != nullptr ? family : &AdafruitFamily;
-}
+const Family* findFamily(const char* name) { return familyOr(namedFamily(name)); }
 
 bool registerFamily(const char* name, const Font* const* cuts, uint8_t count) {
   if (name == nullptr || name[0] == '\0' || cuts == nullptr) return false;
