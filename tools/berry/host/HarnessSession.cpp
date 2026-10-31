@@ -1,7 +1,6 @@
 #include "HarnessSession.h"
 
 #include <cstring>
-#include <deque>
 
 #include "Clock.h"
 #include "machine/Machine.h"
@@ -16,11 +15,6 @@ namespace gardener {
 
 namespace {
 
-// The control task's queue, as a list. Everything that writes the machine posts here and the beat
-// drains it before its own tick, so a write is seen on the next beat as it is on the device rather
-// than the instant it is made. A deque has no depth, so a post is always taken.
-std::deque<MachineCommand> pendingCommands;
-
 // The interpreter's heap, read after a collection: the figures the check reports are all this.
 size_t heapOf(bvm* vm) {
   if (vm == nullptr) return 0;
@@ -29,14 +23,6 @@ size_t heapOf(bvm* vm) {
 }
 
 }  // namespace
-
-bool postMachineCommand(const MachineCommand& command) {
-  pendingCommands.push_back(command);
-  return true;
-}
-}  // namespace gardener
-
-namespace gardener {
 
 namespace {
 
@@ -147,11 +133,8 @@ void HarnessSession::beat(int count) {
       chamber_.advance(TickMs);
 
       // controlTask's three calls, in its order, with its commands drained first.
-      while (!pendingCommands.empty()) {
-        const MachineCommand command = pendingCommands.front();
-        pendingCommands.pop_front();
-        applyMachineCommand(vacuum_, command);
-      }
+      MachineCommand command;
+      while (queue_.take(command)) applyMachineCommand(vacuum_, command);
       sensor_.update(now);
       pump_.update(now);
       vacuum_.service(now);
@@ -204,14 +187,14 @@ int HarnessSession::errorLines() const { return logger_.errors(); }
 void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
 
 void HarnessSession::backHold() {
-  postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
+  outbox_.post(MachineCommand{MachineCommand::Op::Stop});
 }
 
 void HarnessSession::reset() {
   // Leaving the page under test runs default's activate(), which is where the device would be.
   routines_.showDefault();
 
-  postMachineCommand(MachineCommand{MachineCommand::Op::Stop});
+  outbox_.post(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();
   vacuum_.service(millis());
   publish();
