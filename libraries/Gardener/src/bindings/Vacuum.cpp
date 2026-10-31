@@ -1,11 +1,11 @@
-#include "core/RunState.h"
-#include "core/SystemState.h"
-#include "storage/DeviceSettings.h"
-#include "machine/Machine.h"
-#include "machine/MachineCommand.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "core/RunState.h"
+#include "core/SystemState.h"
+#include "machine/Machine.h"
+#include "machine/MachineCommand.h"
+#include "storage/DeviceSettings.h"
 
 namespace gardener {
 namespace {

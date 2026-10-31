@@ -59,8 +59,8 @@ TEST_CASE("a child of a child nests") {
 
 TEST_CASE("a child of a turned parent follows the turn") {
   reset();
-  View turned = canvas.child(Transform(Rect(0, 0, PageWidth, PageHeight)).rotate(90),
-                               Blend::none());
+  View turned =
+      canvas.child(Transform(Rect(0, 0, PageWidth, PageHeight)).rotate(90), Blend::none());
   View quarter = turned.child(Rect(10, 5, 30, 20));
   CHECK_EQ(quarter.width(), 30);
   CHECK_EQ(quarter.height(), 20);

@@ -8,7 +8,9 @@ struct SystemState;
 class CommandOutbox;
 struct MachineCommand;
 class DeviceSettings;
-namespace gfx { class DisplayDevice; }
+namespace gfx {
+class DisplayDevice;
+}
 
 class GestureQueue;
 class BuzzerPlayer;
@@ -23,19 +25,11 @@ class Ux;
 // objects beside it happen to hold.
 class BindingContext {
  public:
-  BindingContext(gfx::DisplayDevice& display, SystemState& state,
-                 DeviceSettings& settings, BuzzerPlayer& buzzer,
-                 CommandOutbox& outbox, GestureQueue& presses, Ux& ux,
+  BindingContext(gfx::DisplayDevice& display, SystemState& state, DeviceSettings& settings,
+                 BuzzerPlayer& buzzer, CommandOutbox& outbox, GestureQueue& presses, Ux& ux,
                  RoutineRegistry& registry, Logger& logger)
-      : display_(display),
-        state_(state),
-        settings_(settings),
-        buzzer_(buzzer),
-        outbox_(outbox),
-        presses_(presses),
-        ux_(ux),
-        registry_(registry),
-        logger_(logger) {}
+      : display_(display), state_(state), settings_(settings), buzzer_(buzzer), outbox_(outbox),
+        presses_(presses), ux_(ux), registry_(registry), logger_(logger) {}
 
   // --- the panel's parts ---------------------------------------------------
   // The glass, the published state, the piezo, and the queue a command is posted to.

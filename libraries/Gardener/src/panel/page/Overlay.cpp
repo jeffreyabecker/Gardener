@@ -50,8 +50,7 @@ bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 // A cell draws only what its arguments say, so one paint reads the state once and hands each of
 // these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
-  return gfx::borrowedText(gfx::Box(2, GlyphTop, 0, 0, true, true),
-                           displayUnitInfo(unit).suffix);
+  return gfx::borrowedText(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix);
 }
 
 gfx::PaintNodeRef linksCell(bool serial, bool bluetooth) {
@@ -67,22 +66,26 @@ gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
   const bool venting = state == RunState::Venting;
   uint8_t glyph = IdleGlyph;
   switch (state) {
-    case RunState::Holding: glyph = HoldGlyph; break;
-    case RunState::Fault: glyph = FaultGlyph; break;
+    case RunState::Holding:
+      glyph = HoldGlyph;
+      break;
+    case RunState::Fault:
+      glyph = FaultGlyph;
+      break;
     case RunState::Pulling:
     case RunState::Venting:
-    case RunState::Idle: break;
+    case RunState::Idle:
+      break;
   }
   return gfx::callable([pulling, venting, glyph, nowMs](gfx::Canvas& cell) {
     if ((pulling || venting) && !movingLit(nowMs)) return;
     if (pulling) {
-      cell.draw(gfx::Triangle::up(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight),
-                                          gfx::Ink, true));
+      cell.draw(gfx::Triangle::up(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight), gfx::Ink, true));
       return;
     }
     if (venting) {
-      cell.draw(gfx::Triangle::down(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight),
-                                            gfx::Ink, true));
+      cell.draw(
+          gfx::Triangle::down(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight), gfx::Ink, true));
       return;
     }
     gfx::drawGlyph(cell, 0, GlyphTop, glyph, 1, gfx::Ink);
@@ -123,15 +126,14 @@ gfx::PaintNodeRef Overlay::paint() const {
 
     // The strip clears its own rows first: the page canvas stops where the overlay starts, so
     // nothing else touches them and they keep whatever the last frame left.
-    gfx::underlay(gfx::row(1.0f, gfx::children(
-                                      gfx::Child{gfx::Cell(0.25f, 1.0f), unitCell(now.unit)},
-                                      gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                                 linksCell(now.serialConnected,
-                                                           now.bluetoothConnected)},
-                                      gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                                 stateCell(now.runState, nowMs)},
-                                      gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                                 batteryCell(percent, now.batteryLow, nowMs)})))
+    gfx::underlay(
+        gfx::row(1.0f,
+                 gfx::children(gfx::Child{gfx::Cell(0.25f, 1.0f), unitCell(now.unit)},
+                               gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                          linksCell(now.serialConnected, now.bluetoothConnected)},
+                               gfx::Child{gfx::Cell(0.25f, 1.0f), stateCell(now.runState, nowMs)},
+                               gfx::Child{gfx::Cell(0.25f, 1.0f),
+                                          batteryCell(percent, now.batteryLow, nowMs)})))
         ->draw(canvas);
   });
 }

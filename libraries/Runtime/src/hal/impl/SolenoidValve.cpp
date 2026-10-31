@@ -32,12 +32,8 @@ void SolenoidValve::close() {
   write(!energiseWhenOpen());
 }
 
-bool SolenoidValve::energised() const {
-  return open_ ? energiseWhenOpen() : !energiseWhenOpen();
-}
+bool SolenoidValve::energised() const { return open_ ? energiseWhenOpen() : !energiseWhenOpen(); }
 
-void SolenoidValve::write(bool energise) {
-  digitalWrite(pin_, energise ? HIGH : LOW);
-}
+void SolenoidValve::write(bool energise) { digitalWrite(pin_, energise ? HIGH : LOW); }
 
 }  // namespace gardener::runtime

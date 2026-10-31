@@ -23,8 +23,7 @@ void Machine::boot() {
 
   logger_.info(sensorOk ? "sensor: online" : "sensor: not found");
   logger_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
-  logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed"
-                                                 : "vent: normally open");
+  logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
 
   // The fitted valve is the fail-safe: a normally open part vents when the coil is not held, so
   // the bit says the resting state is safe rather than that a valve is fitted at all.

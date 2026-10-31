@@ -10,10 +10,10 @@
 #include <string>
 #include <vector>
 
-#include "core/Logger.h"
 #include "core/Battery.h"
 #include "core/ButtonPanel.h"
 #include "core/Buzzer.h"
+#include "core/Logger.h"
 #include "core/PressureSensor.h"
 #include "core/Pump.h"
 #include "core/VentValve.h"

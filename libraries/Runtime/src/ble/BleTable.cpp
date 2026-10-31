@@ -57,22 +57,24 @@ static_assert(static_cast<uint8_t>(RunState::Idle) == 0 &&
 // The table, in the order the link creates the characteristics: the machine's fields, then the
 // panel's `unit` and `batt`.
 const BleLink::Spec BleLink::Specs[] = {
-    {0x0009, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // state
-    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // pressure_kpa
-    {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 4}, // target
-    {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},                             // fault
-    {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},                         // command
-    {0x0008, NIMBLE_PROPERTY::READ, 16},                                                       // fw
-    {0x0001, NIMBLE_PROPERTY::READ, 1},                                                        // ble_proto
-    {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // sensor
-    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // floor
-    {0x000E, NIMBLE_PROPERTY::READ, 1},                                                        // caps
-    {0x0014, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 2}, // hold_s
-    {0x0015, NIMBLE_PROPERTY::READ, 2},                                                        // max_run_s
-    {0x0016, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 3},                              // write_result
-    {0x0017, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},                              // uptime_ms
-    {0x000A, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},                           // unit
-    {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},                              // batt
+    {0x0009, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},  // state
+    {0x0002, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},  // pressure_kpa
+    {0x0003, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY,
+     4},                                                                // target
+    {0x0005, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 12},      // fault
+    {0x0007, NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY, 1},  // command
+    {0x0008, NIMBLE_PROPERTY::READ, 16},                                // fw
+    {0x0001, NIMBLE_PROPERTY::READ, 1},                                 // ble_proto
+    {0x000C, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},       // sensor
+    {0x000D, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},       // floor
+    {0x000E, NIMBLE_PROPERTY::READ, 1},                                 // caps
+    {0x0014, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC | NIMBLE_PROPERTY::NOTIFY,
+     2},                                                              // hold_s
+    {0x0015, NIMBLE_PROPERTY::READ, 2},                               // max_run_s
+    {0x0016, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 3},     // write_result
+    {0x0017, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 4},     // uptime_ms
+    {0x000A, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE_ENC, 1},  // unit
+    {0x0006, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY, 1},     // batt
 };
 
 void BleLink::describe(uint8_t index) {

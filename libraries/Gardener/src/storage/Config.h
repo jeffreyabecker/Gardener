@@ -43,8 +43,7 @@ class Config {
 
   // The value for a section/key, read back as the fallback's type: `String`, `bool`, `float` or
   // `int`.
-  template <typename T>
-  T get(const char* section, const char* key, T fallback) const {
+  template <typename T> T get(const char* section, const char* key, T fallback) const {
     const String value = stored(section, key);
     if constexpr (std::is_same<T, String>::value) {
       return value.isEmpty() ? fallback : value;

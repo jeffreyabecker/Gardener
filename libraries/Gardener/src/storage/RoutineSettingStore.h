@@ -4,8 +4,8 @@
 
 #include <vector>
 
-#include "storage/Config.h"
 #include "core/Library.h"
+#include "storage/Config.h"
 #include "storage/SettingKind.h"
 
 namespace gardener {
@@ -34,15 +34,14 @@ class RoutineSettingStore {
   // default where the section does not carry the key or carries it empty. An alias's set also
   // carries its section's `routine_title`, which no row declares but which the browser shows.
   SettingValues load(const String& parentRoutineKey, const String& routineKey,
-                              const std::vector<const SettingKind*>& rows) const;
+                     const std::vector<const SettingKind*>& rows) const;
 
   // The settled set written under the keys the rows declare, then the document once; a key the set
   // does not carry is left as the document has it. A value that is nothing is written as an empty one,
   // which reads back as the default. False when the store refused the write, and true without a write
   // when nothing changed.
   bool save(const String& parentRoutineKey, const String& routineKey,
-            const std::vector<const SettingKind*>& rows,
-            const SettingValues& values);
+            const std::vector<const SettingKind*>& rows, const SettingValues& values);
 
  private:
   Library& library_;

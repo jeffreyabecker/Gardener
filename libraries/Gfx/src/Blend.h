@@ -17,8 +17,7 @@ class Blend {
   enum class Rule : uint8_t { Plain, Invert, Dim };
 
   Blend() = default;
-  explicit Blend(Rule rule, uint8_t level = 255)
-      : rules_{rule}, levels_{level}, count_(1) {}
+  explicit Blend(Rule rule, uint8_t level = 255) : rules_{rule}, levels_{level}, count_(1) {}
 
   // No blend at all: the value goes in and comes out.
   static Blend none() { return Blend(); }

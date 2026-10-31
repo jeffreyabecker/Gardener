@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Wire.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <Wire.h>
 
 #include <Gfx.h>
 

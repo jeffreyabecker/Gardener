@@ -3,8 +3,8 @@
 #include <Arduino.h>
 #include <math.h>
 
-#include "machine/Machine.h"
 #include "core/Math.h"
+#include "machine/Machine.h"
 
 namespace gardener {
 
@@ -38,8 +38,8 @@ void VacuumSystem::rest() {
 }
 
 void VacuumSystem::release() {
-  rest();                    // pump off, valve open, the loop forgotten
-  ventStartMs_ = millis();   // this vent is timed
+  rest();                   // pump off, valve open, the loop forgotten
+  ventStartMs_ = millis();  // this vent is timed
   setState(RunState::Venting);
 }
 
@@ -209,9 +209,8 @@ void VacuumSystem::service(uint32_t nowMs) {
   // run; a release waits for this rig's vent floor and is a fault if it never gets there.
   if (state_ == RunState::Venting) {
     if (ventingToTarget_) {
-      const float landing = CONTROL_VENT_TO_TARGET
-                                ? targetPressureKpa_ + VENT_TARGET_LEAD_KPA
-                                : targetPressureKpa_;
+      const float landing =
+          CONTROL_VENT_TO_TARGET ? targetPressureKpa_ + VENT_TARGET_LEAD_KPA : targetPressureKpa_;
       const bool arrived = currentPressureKpa() <= landing;
       const bool timedOut = (nowMs - ventStartMs_) >= VENT_TIMEOUT_MS;
       if (!arrived && !timedOut) return;
@@ -256,8 +255,8 @@ void VacuumSystem::service(uint32_t nowMs) {
 // numbers, so a pump or chamber change retunes it without touching a gain.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
   const PidGains gains = pidGainsFor(PUMP_FLOW_LPM, CHAMBER_VOLUME_L);
-  pidIntegral_ = clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit,
-                        gains.integralLimit);
+  pidIntegral_ =
+      clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit, gains.integralLimit);
   return gains.kp * error + pidIntegral_ - gains.kd * measurementSlew;
 }
 

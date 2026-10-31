@@ -13,10 +13,10 @@
 #include <Arduino.h>
 
 #include "panel/page/ChoiceScene.h"
-#include "storage/SettingKind.h"
 #include "panel/page/EditorScene.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
+#include "storage/SettingKind.h"
 
 namespace gardener {
 
@@ -28,9 +28,9 @@ class SettingsRow;
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
 // refuses it. The editor holds the same check closed over the declaration and the set, which is
 // CurriedValidator.
-using Validator = std::function<std::pair<bool, String>(
-    const std::vector<SettingsRow*>& settings, const SettingValues& values,
-    const std::any& proposed)>;
+using Validator =
+    std::function<std::pair<bool, String>(const std::vector<SettingsRow*>& settings,
+                                          const SettingValues& values, const std::any& proposed)>;
 
 // One row of a settings list: the key its value is stored under, the label it prints, the default
 // its declaration gives, the check it carries and the editor that edits it. A row is a class of its

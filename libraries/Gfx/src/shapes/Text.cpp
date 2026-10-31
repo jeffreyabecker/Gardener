@@ -96,9 +96,9 @@ void Text::operator()(Canvas& canvas) const {
   const Font* font = faceOr(face);
   int16_t cursorX = x;
   for (const char* character = value; *character != '\0'; character++) {
-    cursorX = static_cast<int16_t>(
-        cursorX + drawFontGlyph(canvas, cursorX, y, font, static_cast<uint8_t>(*character), size,
-                                color));
+    cursorX = static_cast<int16_t>(cursorX + drawFontGlyph(canvas, cursorX, y, font,
+                                                           static_cast<uint8_t>(*character), size,
+                                                           color));
   }
 }
 

@@ -4,9 +4,9 @@
 
 #include <utility>
 
-#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
@@ -25,8 +25,8 @@ String readingText(float pressureKpa, DisplayUnit unit) {
 // page or literal behind it to borrow from.
 gfx::PaintNodeRef readingNode(String value, const gfx::Font* face, uint8_t scale, gfx::Size ink,
                               gfx::Justify across) {
-  return gfx::aligned(
-      gfx::sized(gfx::text(gfx::Box::whole(), std::move(value), face, scale), ink), across);
+  return gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), std::move(value), face, scale), ink),
+                      across);
 }
 
 }  // namespace
@@ -57,17 +57,14 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
 
     gfx::PaintNodeRef readout;
     if (side) {
-      readout = gfx::row(1.0f, gfx::children(
-                                   gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(large)},
-                                   gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(small)}));
+      readout = gfx::row(1.0f, gfx::children(gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(large)},
+                                             gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(small)}));
     } else {
       readout = gfx::column(
           1.0f,
           gfx::children(
-              gfx::Child{gfx::Cell(1.0f, static_cast<float>(readingInk.height)),
-                         std::move(large)},
-              gfx::Child{gfx::Cell(1.0f, static_cast<float>(targetInk.height)),
-                         std::move(small)}),
+              gfx::Child{gfx::Cell(1.0f, static_cast<float>(readingInk.height)), std::move(large)},
+              gfx::Child{gfx::Cell(1.0f, static_cast<float>(targetInk.height)), std::move(small)}),
           gfx::Justification{gfx::Justify::Center, gfx::Justify::Start});
     }
     gfx::View own = canvas.child(box.in(canvas));

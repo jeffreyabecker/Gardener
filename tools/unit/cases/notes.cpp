@@ -23,9 +23,7 @@ bool refused(const char* sequence, std::string& token) {
 
 }  // namespace
 
-TEST_CASE("a note sequence parses") {
-  CHECK(BuzzerPlayer::validate("a4:1000 c6:500"));
-}
+TEST_CASE("a note sequence parses") { CHECK(BuzzerPlayer::validate("a4:1000 c6:500")); }
 
 TEST_CASE("a token that is not a note names itself") {
   std::string token;

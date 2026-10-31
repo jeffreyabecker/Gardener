@@ -1,0 +1,3 @@
+# The host's Arduino stand-ins follow the API they imitate: keep its formatting.
+---
+DisableFormat: true

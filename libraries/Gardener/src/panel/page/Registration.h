@@ -40,8 +40,8 @@ class Registration {
   // the packed bitmap, empty for a record that names none — the browser hands it to `screen.icon`,
   // which reads it when it draws the icon.
   Registration(const String& routineKey, const String& title,
-               std::vector<std::unique_ptr<SettingsRow>> settings,
-               Factory factory = nullptr, String glyph = String());
+               std::vector<std::unique_ptr<SettingsRow>> settings, Factory factory = nullptr,
+               String glyph = String());
 
   Registration(const Registration&) = delete;
   Registration& operator=(const Registration&) = delete;
@@ -63,8 +63,7 @@ class Registration {
   // A settled set written back: a setting the map says nothing about is written as nothing, which
   // reads back as the default. Every key goes into one document and the document is written once.
   // False, writing nothing, when the record declares no settings.
-  bool saveSettings(Library& library, const String& section,
-                    SettingValues& values) const;
+  bool saveSettings(Library& library, const String& section, SettingValues& values) const;
 
  private:
   String routineKey_;

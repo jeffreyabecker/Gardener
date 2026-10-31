@@ -5,9 +5,9 @@
 
 #include <utility>
 
-#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
@@ -19,14 +19,8 @@ constexpr uint8_t ValueScale = 2;
 
 NumberScene::NumberScene(GestureQueue& gestures, Ux& ux, String& label, float current, float step,
                          float min, float max, bool nullable, NumberFormatter format)
-    : EditorScene(gestures, ux, label),
-      number_(current),
-      opened_(current),
-      step_(step),
-      min_(min),
-      max_(max),
-      nullable_(nullable),
-      format_(std::move(format)) {}
+    : EditorScene(gestures, ux, label), number_(current), opened_(current), step_(step), min_(min),
+      max_(max), nullable_(nullable), format_(std::move(format)) {}
 
 bool NumberScene::hasValue() const { return !isnan(number_); }
 
@@ -68,8 +62,8 @@ float NumberScene::within(float value) const {
 gfx::PaintNodeRef NumberScene::pageContents() {
   printed_ = text();
   const gfx::Size ink = gfx::measureText(nullptr, printed_.c_str(), ValueScale);
-  return gfx::aligned(gfx::sized(
-      gfx::borrowedText(gfx::Box::whole(), printed_.c_str(), nullptr, ValueScale), ink));
+  return gfx::aligned(
+      gfx::sized(gfx::borrowedText(gfx::Box::whole(), printed_.c_str(), nullptr, ValueScale), ink));
 }
 
 }  // namespace gardener

@@ -3,13 +3,13 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "beats/MachineTick.h"
+#include "ble/BleLink.h"
 #include "core/Logger.h"
 #include "core/SystemState.h"
-#include "beats/MachineTick.h"
 #include "machine/Machine.h"
 #include "machine/SafeReboot.h"
 #include "machine/VacuumSystem.h"
-#include "ble/BleLink.h"
 #include "serial/SerialLink.h"
 
 namespace gardener::runtime {

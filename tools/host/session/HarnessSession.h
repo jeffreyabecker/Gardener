@@ -7,25 +7,25 @@
 #include <utility>
 #include <vector>
 
+#include "Canvas.h"
 #include "CaptureDisplay.h"
 #include "GestureStrip.h"
-#include "core/Logger.h"
-#include "Canvas.h"
+#include "MemoryFiles.h"
+#include "bindings/BindingContext.h"
 #include "core/Battery.h"
 #include "core/Buzzer.h"
+#include "core/Logger.h"
 #include "core/PressureSensor.h"
 #include "core/Pump.h"
+#include "core/SystemState.h"
 #include "core/VentValve.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "MemoryFiles.h"
+#include "panel/page/RoutineRegistry.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
-#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
-#include "bindings/BindingContext.h"
-#include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
 
 struct bvm;
@@ -286,7 +286,9 @@ class HarnessSession {
   // The ink a rectangle of the frame holds now, as a count of set pixels: what a node drew in the box
   // the layout gave it, which is the one thing only the draw walk decides. Nothing is read from
   // outside the frame.
-  int ink(int16_t x, int16_t y, int16_t w, int16_t h) const { return display_.inkCount(x, y, w, h); }
+  int ink(int16_t x, int16_t y, int16_t w, int16_t h) const {
+    return display_.inkCount(x, y, w, h);
+  }
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
@@ -335,8 +337,8 @@ class HarnessSession {
   CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   RoutineRegistry registry_{files_, logger_};
-  BindingContext bindings_{
-      display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
+  BindingContext bindings_{display_, state_, settings_, buzzer_, outbox_,
+                           presses_, ux_,    registry_, logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };

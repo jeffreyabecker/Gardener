@@ -72,7 +72,8 @@ void MachineTick::drainCommands() {
       break;
     }
   }
-  for (uint8_t i = 0; i < first; i++) logCollapsed(batch[i], "before a stop");
+  for (uint8_t i = 0; i < first; i++)
+    logCollapsed(batch[i], "before a stop");
 
   // Of what is left, only the last target is worth applying: the depths before it are setpoints
   // the machine never has to stand still at.

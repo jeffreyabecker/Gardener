@@ -25,16 +25,16 @@ namespace {
 using gardener::Capture;
 using gardener::CaptureDisplay;
 using gardener::CapturePicture;
+using gardener::GestureQueue;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
 using gardener::RenderScale;
-using gardener::gfx::View;
-using gardener::gfx::Canvas;
-using gardener::gfx::callable;
-using gardener::gfx::Rect;
-using gardener::GestureQueue;
 using gardener::Scene;
 using gardener::Ux;
+using gardener::gfx::callable;
+using gardener::gfx::Canvas;
+using gardener::gfx::Rect;
+using gardener::gfx::View;
 using gardener::gfx::test::display;
 using gardener::gfx::test::PageHeight;
 using gardener::gfx::test::PageWidth;
@@ -106,22 +106,22 @@ void beginStripCapture(GestureStrip& strip) {
 
 // The top row of one button: what a single outline draws and what nothing else does.
 bool outlined(const std::vector<uint8_t>& frame, int16_t button) {
-  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x +
-                                            button * CapturePicture::ButtonWidth);
+  const int16_t left =
+      static_cast<int16_t>(CapturePicture::bar().x + button * CapturePicture::ButtonWidth);
   return packedInk(frame, CapturePicture::Width, left, 0, CapturePicture::ButtonWidth, 1);
 }
 
 // The second outline, down the left of the button where neither a glyph nor a hold's number reaches.
 bool doubleOutlined(const std::vector<uint8_t>& frame, int16_t button) {
-  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x + 2 +
-                                            button * CapturePicture::ButtonWidth);
+  const int16_t left =
+      static_cast<int16_t>(CapturePicture::bar().x + 2 + button * CapturePicture::ButtonWidth);
   return packedInk(frame, CapturePicture::Width, left, 4, 1, 10);
 }
 
 // Two rows under a centred glyph and inside both outlines, which only a hold's number inks.
 bool holdsNumber(const std::vector<uint8_t>& frame, int16_t button) {
-  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x + 3 +
-                                            button * CapturePicture::ButtonWidth);
+  const int16_t left =
+      static_cast<int16_t>(CapturePicture::bar().x + 3 + button * CapturePicture::ButtonWidth);
   return packedInk(frame, CapturePicture::Width, left, 13,
                    static_cast<int>(CapturePicture::ButtonWidth - 6), 2);
 }
@@ -173,7 +173,8 @@ TEST_CASE("the delay a frame is held for is the writer's own") {
 
   const std::vector<uint8_t> bytes = readFile("tools/unit/build/capture_delay.gif");
   size_t at = 0;
-  while (at + 5 < bytes.size() && !(bytes[at] == 0x21 && bytes[at + 1] == 0xF9)) at++;
+  while (at + 5 < bytes.size() && !(bytes[at] == 0x21 && bytes[at + 1] == 0xF9))
+    at++;
   REQUIRE(at + 5 < bytes.size());
   CHECK_EQ(littleEndian(bytes, at + 4), GifDelayCs);
   std::remove("tools/unit/build/capture_delay.gif");
@@ -192,7 +193,8 @@ TEST_CASE("a capture written with a delay and a scale of the caller's carries th
   CHECK_EQ(littleEndian(bytes, 6), static_cast<uint16_t>(PageWidth * 3));
   CHECK_EQ(littleEndian(bytes, 8), static_cast<uint16_t>(PageHeight * 3));
   size_t at = 0;
-  while (at + 5 < bytes.size() && !(bytes[at] == 0x21 && bytes[at + 1] == 0xF9)) at++;
+  while (at + 5 < bytes.size() && !(bytes[at] == 0x21 && bytes[at + 1] == 0xF9))
+    at++;
   REQUIRE(at + 5 < bytes.size());
   CHECK_EQ(littleEndian(bytes, at + 4), static_cast<uint16_t>(20));
   std::remove("tools/unit/build/capture_timing.gif");
@@ -287,8 +289,8 @@ TEST_CASE("the gesture a page takes is outlined over the glass on the frame it d
   CHECK_FALSE(outlined(*frame, 3));
   CHECK(outlined(*frame, 4));
   // The glass is inside the border and the bar above it, and holds what the page drew.
-  CHECK(packedAt(*frame, CapturePicture::Width,
-                 CapturePicture::glass().x + 4, CapturePicture::glass().y + 20));
+  CHECK(packedAt(*frame, CapturePicture::Width, CapturePicture::glass().x + 4,
+                 CapturePicture::glass().y + 20));
   // The border is dotted, and its top row is one above the glass.
   CHECK(packedInk(*frame, CapturePicture::Width, 0, CapturePicture::glass().y - 1,
                   CapturePicture::Width, 1));
@@ -334,7 +336,7 @@ TEST_CASE("a press is one outline, a double press two and a hold its seconds") {
 
   const std::vector<uint8_t>* single = drawn("up:single");
   REQUIRE(single != nullptr);
-  CHECK(outlined(*single, 0));        // up
+  CHECK(outlined(*single, 0));  // up
   CHECK_FALSE(doubleOutlined(*single, 0));
   CHECK_FALSE(holdsNumber(*single, 0));
 
@@ -367,12 +369,10 @@ TEST_CASE("a component draws in the box the frame gives it") {
   std::vector<CaptureDisplay::Component> components;
   // Beside the glass on the left: a write past its box's edge is clipped, not painted over its
   // neighbour.
-  components.push_back(
-      {Rect(0, 0, 6, PageHeight),
-       callable([](Canvas& canvas) {
-         canvas.setPixel(5, 3, 255);
-         canvas.setPixel(6, 3, 255);
-       })});
+  components.push_back({Rect(0, 0, 6, PageHeight), callable([](Canvas& canvas) {
+                          canvas.setPixel(5, 3, 255);
+                          canvas.setPixel(6, 3, 255);
+                        })});
   // And one on the right, which knows nothing of where the other is.
   components.push_back({Rect(static_cast<int16_t>(glass.x + glass.width), 0, 20, 20),
                         callable([](Canvas& canvas) { canvas.setPixel(1, 1, 255); })});
@@ -401,8 +401,8 @@ TEST_CASE("the overlay mark is hashed on every captured frame") {
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
-  CHECK(packedAt(*frame, PageWidth, 0, 40));      // the outline
-  CHECK(packedAt(*frame, PageWidth, 0, 44));      // the left edge
+  CHECK(packedAt(*frame, PageWidth, 0, 40));        // the outline
+  CHECK(packedAt(*frame, PageWidth, 0, 44));        // the left edge
   CHECK_FALSE(packedAt(*frame, PageWidth, 1, 44));  // the spacing leaves this clear
   CHECK(packedAt(*frame, PageWidth, 4, 44));
   display.endCapture();

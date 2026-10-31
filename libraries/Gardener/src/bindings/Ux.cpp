@@ -9,11 +9,11 @@
 
 #include <Gfx.h>
 
-#include "bindings/BerryScene.h"
-#include "panel/page/Ux.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "bindings/BerryScene.h"
+#include "panel/page/Ux.h"
 
 namespace gardener {
 namespace {
@@ -63,8 +63,7 @@ struct CallbackSlot {
 // A value a scene answered, as the image reads it: the settled set a settings list hands back as a
 // map, and the single value an editor hands back in the type its row holds it in.
 void pushAnswer(bvm* vm, const std::any& value) {
-  if (const SettingValues* values =
-          std::any_cast<SettingValues>(&value)) {
+  if (const SettingValues* values = std::any_cast<SettingValues>(&value)) {
     pushSettingsMap(vm, *values);
     return;
   }
@@ -231,8 +230,7 @@ int uxTop(bvm* vm) {
   requirePanel(bindings, vm, "ux.top: no panel");
   const Scene* showing = bindings->ux().top();
   const BerryScene* page =
-      showing == nullptr ? nullptr
-                         : static_cast<const BerryScene*>(showing->scripted());
+      showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
   be_return(vm);
 }
@@ -247,12 +245,8 @@ int uxOverlayStart(bvm* vm) {
 }
 
 const bnfuncinfo UxLibrary[] = {
-    {"push", uxPush},
-    {"pop", uxPop},
-    {"pop_to_root", uxPopToRoot},
-    {"depth", uxDepth},
-    {"top", uxTop},
-    {"overlay_start", uxOverlayStart},
+    {"push", uxPush},   {"pop", uxPop}, {"pop_to_root", uxPopToRoot},
+    {"depth", uxDepth}, {"top", uxTop}, {"overlay_start", uxOverlayStart},
     {nullptr, nullptr},
 };
 

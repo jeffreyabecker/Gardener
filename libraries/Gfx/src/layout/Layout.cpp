@@ -120,8 +120,7 @@ PaintNodeRef layout(Cell cell, Children children, Justification justification,
   return std::make_unique<LayoutNode>(cell, std::move(children), justification, direction);
 }
 
-PaintNodeRef layout(Cell cell, Builder builder, Justification justification,
-                    Direction direction) {
+PaintNodeRef layout(Cell cell, Builder builder, Justification justification, Direction direction) {
   return std::make_unique<LayoutNode>(cell, Children(), justification, direction,
                                       std::move(builder));
 }

@@ -8,27 +8,27 @@
 #include <utility>
 #include <vector>
 
+#include "Canvas.h"
 #include "CaptureDisplay.h"
 #include "Clock.h"
+#include "DisplayDevice.h"
+#include "beats/ButtonsTick.h"
+#include "beats/PartsTick.h"
+#include "beats/RoutinesTick.h"
+#include "core/Battery.h"
+#include "core/Button.h"
+#include "core/Library.h"
 #include "core/Logger.h"
 #include "core/SystemState.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "Canvas.h"
-#include "DisplayDevice.h"
-#include "core/Battery.h"
-#include "core/Button.h"
-#include "core/Library.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "beats/ButtonsTick.h"
-#include "panel/parts/BuzzerPlayer.h"
-#include "beats/PartsTick.h"
-#include "routines/Interpreter.h"
 #include "panel/page/RoutineRegistry.h"
+#include "panel/parts/BuzzerPlayer.h"
+#include "routines/Interpreter.h"
 #include "routines/Routines.h"
-#include "beats/RoutinesTick.h"
 #include "storage/DeviceSettings.h"
 
 namespace {
@@ -37,10 +37,12 @@ using gardener::Battery;
 using gardener::Button;
 using gardener::ButtonsTick;
 using gardener::BuzzerPlayer;
+using gardener::CaptureDisplay;
 using gardener::CommandOutbox;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
+using gardener::GestureQueue;
 using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
@@ -51,14 +53,12 @@ using gardener::RoutineRegistry;
 using gardener::Routines;
 using gardener::RoutinesTick;
 using gardener::RunState;
+using gardener::Scene;
 using gardener::SystemState;
 using gardener::VacuumSystem;
-using gardener::gfx::View;
 using gardener::gfx::Canvas;
 using gardener::gfx::DisplayDevice;
-using gardener::GestureQueue;
-using gardener::Scene;
-using gardener::CaptureDisplay;
+using gardener::gfx::View;
 using gardener::test::FakeBattery;
 using gardener::test::FakeButtonPanel;
 using gardener::test::FakeBuzzer;
@@ -138,9 +138,7 @@ class FakeInterpreter : public Interpreter {
 // say what the overlay draws.
 struct PageRig {
   PageRig()
-      : settings(&library, state),
-        buzzer(buzzerPart),
-        vacuum(&pump, &sensor, &valve),
+      : settings(&library, state), buzzer(buzzerPart), vacuum(&pump, &sensor, &valve),
         routines(interpreter, display, state, presses, ux, registry, logger, library) {
     state.batteryPresent = battery.present();
     state.batteryPercent = battery.percent();

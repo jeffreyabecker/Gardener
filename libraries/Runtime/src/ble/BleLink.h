@@ -10,7 +10,7 @@ namespace gardener {
 class Battery;
 class Machine;
 class DeviceSettings;
-}
+}  // namespace gardener
 
 namespace gardener::runtime {
 

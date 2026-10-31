@@ -17,12 +17,18 @@ enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
 inline const char* runStateName(RunState state) {
   switch (state) {
-    case RunState::Idle: return "IDLE";
-    case RunState::Pulling: return "PULL";
-    case RunState::Holding: return "HOLD";
-    case RunState::Venting: return "VENT";
-    case RunState::Fault: return "FAULT";
-    default: return "?";
+    case RunState::Idle:
+      return "IDLE";
+    case RunState::Pulling:
+      return "PULL";
+    case RunState::Holding:
+      return "HOLD";
+    case RunState::Venting:
+      return "VENT";
+    case RunState::Fault:
+      return "FAULT";
+    default:
+      return "?";
   }
 }
 

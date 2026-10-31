@@ -36,9 +36,9 @@
 namespace {
 
 using gardener::HarnessSession;
-using gardener::SettingValues;
 using gardener::Scene;
 using gardener::SettingsRow;
+using gardener::SettingValues;
 using gardener::Ux;
 using gardener::walkthrough::Command;
 
@@ -81,8 +81,7 @@ std::unique_ptr<Scene> browserScene(HarnessSession& session) {
   const int base = be_top(vm);
   std::unique_ptr<Scene> scene;
   if (be_getglobal(vm, BrowserGlobal) && be_isinstance(vm, -1)) {
-    scene = std::make_unique<gardener::BerryScene>(vm, be_absindex(vm, -1),
-                                                             session.bindings());
+    scene = std::make_unique<gardener::BerryScene>(vm, be_absindex(vm, -1), session.bindings());
   }
   be_pop(vm, be_top(vm) - base);
   return scene;
@@ -91,8 +90,7 @@ std::unique_ptr<Scene> browserScene(HarnessSession& session) {
 // The stop a launch posts before its page: the browser vents whatever was running under it, and a
 // load is that same switch.
 void stopMachine(HarnessSession& session) {
-  session.bindings().post(
-      gardener::MachineCommand{gardener::MachineCommand::Op::Stop});
+  session.bindings().post(gardener::MachineCommand{gardener::MachineCommand::Op::Stop});
 }
 
 // The setting a key names in a record's declaration, or nullptr.
@@ -152,8 +150,8 @@ bool resolve(const Command& command, HarnessSession& session, Target& target, st
     }
     std::any value = row->parse(String(setting.second.c_str()));
     if (!row->accept(value)) {
-      error = "'" + target.key + "' does not take '" + setting.second + "' for '" + setting.first +
-              "'";
+      error =
+          "'" + target.key + "' does not take '" + setting.second + "' for '" + setting.first + "'";
       return false;
     }
     target.values[row->key()] = std::move(value);

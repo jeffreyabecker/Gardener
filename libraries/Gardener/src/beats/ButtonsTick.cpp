@@ -13,8 +13,8 @@ constexpr uint32_t ResetHoldSeconds = 5;
 
 }  // namespace
 
-ButtonsTick::ButtonsTick(ButtonPanel& buttons, GestureQueue& presses,
-                         CommandOutbox& outbox, Logger& logger)
+ButtonsTick::ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
+                         Logger& logger)
     : classifier_(buttons), presses_(presses), outbox_(outbox), logger_(logger) {}
 
 bool ButtonsTick::takeReset() {

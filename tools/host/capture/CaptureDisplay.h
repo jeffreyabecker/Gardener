@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "GifWriter.h"
 #include "DisplayDevice.h"
+#include "GifWriter.h"
 #include "Rect.h"
 #include "layout/Drawing.h"
 #include "panel/GestureQueue.h"

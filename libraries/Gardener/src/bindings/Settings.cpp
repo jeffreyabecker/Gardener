@@ -9,12 +9,12 @@
 #include <Arduino.h>
 #include <berry.h>
 
-#include "core/SystemState.h"
-#include "core/Units.h"
-#include "panel/page/SettingsRows.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "core/SystemState.h"
+#include "core/Units.h"
+#include "panel/page/SettingsRows.h"
 
 namespace gardener {
 namespace {
@@ -46,16 +46,9 @@ int rowRelease(bvm* vm) {
 constexpr const char* SettingRecord = "RoutineSetting";
 
 const bnfuncinfo SettingFields[] = {
-    {"init", recordInit},
-    {".p", nullptr},
-    {"key", nullptr},
-    {"label", nullptr},
-    {"kind", nullptr},
-    {"step", nullptr},
-    {"min", nullptr},
-    {"max", nullptr},
-    {"entries", nullptr},
-    {nullptr, nullptr},
+    {"init", recordInit}, {".p", nullptr},    {"key", nullptr}, {"label", nullptr},
+    {"kind", nullptr},    {"step", nullptr},  {"min", nullptr}, {"max", nullptr},
+    {"entries", nullptr}, {nullptr, nullptr},
 };
 
 // The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
@@ -317,9 +310,9 @@ int choiceInit(bvm* vm) {
   }
   be_pop(vm, 1);  // the entries
 
-  holdRow(vm, std::make_unique<ChoiceRow>(
-                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
-                  String(argText(vm, 4)), String(argText(vm, 3)), items, be_tobool(vm, 7)));
+  holdRow(vm, std::make_unique<ChoiceRow>(bindings->presses(), bindings->ux(),
+                                          String(argText(vm, 2)), String(argText(vm, 4)),
+                                          String(argText(vm, 3)), items, be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 
@@ -481,8 +474,8 @@ int settingsEditScene(bvm* vm) {
   SettingValues held;
   if (values) takeSettingMap(vm, 2, held);
   const String title = titled ? String(argText(vm, 3)) : String();
-  std::unique_ptr<SettingsScene> scene = std::make_unique<SettingsScene>(
-      bindings->presses(), bindings->ux(), title, rows, held);
+  std::unique_ptr<SettingsScene> scene =
+      std::make_unique<SettingsScene>(bindings->presses(), bindings->ux(), title, rows, held);
   be_pop(vm, be_top(vm) - base);
   pushSceneHandle(vm, std::move(scene));
   be_return(vm);

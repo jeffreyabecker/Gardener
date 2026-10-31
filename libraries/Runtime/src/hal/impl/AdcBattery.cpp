@@ -40,7 +40,8 @@ void AdcBattery::update(uint32_t nowMs) {
   sampled_ = true;
 
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < SamplesPerRead; i++) totalMilliVolts += analogReadMilliVolts(pin_);
+  for (uint8_t i = 0; i < SamplesPerRead; i++)
+    totalMilliVolts += analogReadMilliVolts(pin_);
 
   float pinVolts = (float)totalMilliVolts / (float)SamplesPerRead / 1000.0f;
   volts_ = pinVolts * divider_ * Calibration;

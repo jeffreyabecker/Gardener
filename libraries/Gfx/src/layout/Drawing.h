@@ -1,13 +1,13 @@
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <Arduino.h>
 
-#include "Paint.h"
 #include "../Blend.h"
 #include "../Font.h"
+#include "Paint.h"
 
 namespace gardener::gfx {
 
@@ -173,8 +173,7 @@ PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale = 1);
 PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);
 PaintNodeRef progressBar(Box box, float value);
-PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible,
-                       bool hollow = false);
+PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, bool hollow = false);
 // Whole seconds printed in a format, as the text node it is: the formatting is all this adds.
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Font* face = nullptr,
                       bool known = true);

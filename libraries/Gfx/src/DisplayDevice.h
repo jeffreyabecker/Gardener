@@ -5,15 +5,13 @@
 #include "Canvas.h"
 #include "Rect.h"
 
-
 namespace gardener::gfx {
-
 
 // The interface a concrete panel driver implements. The glass, the bus, the frame a canvas draws
 // into and whatever the part needs to come up are the driver's own business: it owns the buffer,
 // says how big and how deep that frame is, brings itself up and sends the frame to the glass when
 // asked. A device is one of, so it cannot be copied.
-class DisplayDevice : public Canvas{
+class DisplayDevice : public Canvas {
  public:
   DisplayDevice() = default;
   virtual ~DisplayDevice() = default;
@@ -45,12 +43,7 @@ class DisplayDevice : public Canvas{
 
   // The root view: the whole panel at the panel's own geometry, with no blend of its own, so a page
   // that wants the glass asks the device rather than naming a frame.
-  View root() {
-    return View(*this, Transform(Rect(0, 0, width(), height())), Blend::none());
-  }
-
-
-
+  View root() { return View(*this, Transform(Rect(0, 0, width(), height())), Blend::none()); }
 
   // Send the pixels written since the last flush to the glass, and only those: the rectangle is what
   // the device has been told about since the last call, in the panel's own coordinates. A device

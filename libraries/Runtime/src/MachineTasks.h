@@ -9,7 +9,7 @@ namespace gardener {
 struct SystemState;
 class Machine;
 class SerialLink;
-}
+}  // namespace gardener
 
 namespace gardener::runtime {
 

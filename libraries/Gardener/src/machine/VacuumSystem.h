@@ -86,10 +86,10 @@ class VacuumSystem {
   bool released() const;  // settled at the vent floor
   // The one decision every command ends in: open the valve, close it, or run the pump.
   void converge();
-  void release();         // stop, then open: the one release path
-  void rest();            // the resting state without releasing: pump off, valve open
-  void closeValve();      // seal the chamber and hand it to the PID
-  void beginTargetVent(); // stop, open, and land on the current target
+  void release();          // stop, then open: the one release path
+  void rest();             // the resting state without releasing: pump off, valve open
+  void closeValve();       // seal the chamber and hand it to the PID
+  void beginTargetVent();  // stop, open, and land on the current target
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);

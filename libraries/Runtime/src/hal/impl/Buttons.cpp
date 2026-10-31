@@ -110,9 +110,7 @@ uint32_t Buttons::settle() {
   return stable_;
 }
 
-bool Buttons::pressed(Button button) {
-  return (settle() & bitOf(button)) != 0;
-}
+bool Buttons::pressed(Button button) { return (settle() & bitOf(button)) != 0; }
 
 Press Buttons::consumePress(Button button) {
   settle();

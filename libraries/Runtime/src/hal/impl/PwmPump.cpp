@@ -37,9 +37,7 @@ void PwmPump::write(float percent) {
   ledcWrite(pin_, duty);
 }
 
-void PwmPump::setDuty(float percent) {
-  target_ = clampf(percent, 0.0f, dutyMax_);
-}
+void PwmPump::setDuty(float percent) { target_ = clampf(percent, 0.0f, dutyMax_); }
 
 void PwmPump::halt() {
   target_ = 0.0f;

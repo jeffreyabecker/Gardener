@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "panel/page/Ux.h"
 #include "panel/GestureQueue.h"
+#include "panel/page/Ux.h"
 #include "routines/Interpreter.h"
 #include <Gfx.h>
 
@@ -31,16 +31,10 @@ class Routines {
   // stack a page is pushed on; the registry its files register into; and the log and the file store
   // the image is read through.
   Routines(Interpreter& interpreter, gfx::DisplayDevice& display, SystemState& state,
-           GestureQueue& presses, Ux& ux,
-           RoutineRegistry& registry, Logger& logger, Library& library)
-      : interpreter_(interpreter),
-        display_(display),
-        state_(state),
-        presses_(presses),
-        ux_(ux),
-        registry_(registry),
-        logger_(logger),
-        library_(library) {}
+           GestureQueue& presses, Ux& ux, RoutineRegistry& registry, Logger& logger,
+           Library& library)
+      : interpreter_(interpreter), display_(display), state_(state), presses_(presses), ux_(ux),
+        registry_(registry), logger_(logger), library_(library) {}
 
   // Loads the files `/system/order` names and then every `/routines/*.be`, and resets the scene
   // stack. The system comes first so a page can use what one of its files defines. False only when

@@ -244,10 +244,9 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
   }
 
   if (strcmp(kind, "scrollbar") == 0) {
-    return gfx::scrollbar(boxOf(vm, node), (int16_t)intField(vm, node, "index"),
-                          (int16_t)intField(vm, node, "count"),
-                          (int16_t)intField(vm, node, "visible"),
-                          flagField(vm, node, "hollow", false));
+    return gfx::scrollbar(
+        boxOf(vm, node), (int16_t)intField(vm, node, "index"), (int16_t)intField(vm, node, "count"),
+        (int16_t)intField(vm, node, "visible"), flagField(vm, node, "hollow", false));
   }
 
   if (strcmp(kind, "duration") == 0) {
@@ -262,8 +261,8 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
     float sizeHint = realField(vm, node, "size_hint");
     if (sizeHint <= 0.0f) sizeHint = 0.5f;
     return pressureReadout(boxOf(vm, node), state, sizeHint, faceOf(vm, node),
-                                       (uint8_t)intField(vm, node, "scale"),
-                                       (uint8_t)intField(vm, node, "secondary_scale"));
+                           (uint8_t)intField(vm, node, "scale"),
+                           (uint8_t)intField(vm, node, "secondary_scale"));
   }
 
   if (strcmp(kind, "layout") == 0) {

@@ -1,0 +1,3 @@
+# The Arduino core this tree is built against: keep its formatting.
+---
+DisableFormat: true

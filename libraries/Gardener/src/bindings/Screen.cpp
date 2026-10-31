@@ -25,30 +25,18 @@ constexpr const char* DrawClass = "draw";
 // significant bit first and each row padded to a whole byte. The panel reads them when it draws the
 // node.
 const bnfuncinfo DrawFields[] = {
-    {"init", recordInit},
-    {"kind", nullptr},
-    {"x", nullptr},
-    {"y", nullptr},
-    {"w", nullptr},
-    {"h", nullptr},
-    {"value", nullptr},
-    {"font", nullptr},
-    {"scale", nullptr},
-    {"secondary_scale", nullptr},
-    {"size_hint", nullptr},
-    {"format", nullptr},
-    {"seconds", nullptr},
-    {"known", nullptr},
-    {"percent", nullptr},
-    {"index", nullptr},
-    {"count", nullptr},
-    {"visible", nullptr},
-    {"hollow", nullptr},
-    {"children", nullptr},
-    {"child", nullptr},
-    {"glyph", nullptr},
-    {"alignment", nullptr},
-    {nullptr, nullptr},
+    {"init", recordInit},   {"kind", nullptr},
+    {"x", nullptr},         {"y", nullptr},
+    {"w", nullptr},         {"h", nullptr},
+    {"value", nullptr},     {"font", nullptr},
+    {"scale", nullptr},     {"secondary_scale", nullptr},
+    {"size_hint", nullptr}, {"format", nullptr},
+    {"seconds", nullptr},   {"known", nullptr},
+    {"percent", nullptr},   {"index", nullptr},
+    {"count", nullptr},     {"visible", nullptr},
+    {"hollow", nullptr},    {"children", nullptr},
+    {"child", nullptr},     {"glyph", nullptr},
+    {"alignment", nullptr}, {nullptr, nullptr},
 };
 
 // `bounds(w, h)`, and `bounds()` for the record `screen.measure` fills: a side left out stays nil,
@@ -94,9 +82,7 @@ const bnfuncinfo AlignmentFields[] = {
 // arguments and stays there, so the count taken when the call began is what says where they end:
 // an argument the page left out is past it, and the slot just past it is the node itself, which
 // would otherwise be read as the argument and handed back as a number.
-bool hasArg(bvm* vm, int argc, int index) {
-  return index <= argc && !be_isnil(vm, index);
-}
+bool hasArg(bvm* vm, int argc, int index) { return index <= argc && !be_isnil(vm, index); }
 
 // The face a call names: nil for a call that names none, and otherwise what the fonts module
 // answers for the name — the face a page registered, or the default face when the name is one it
@@ -141,7 +127,8 @@ const char* argFormat(bvm* vm, int argc, int index, const char* function) {
   const bool named = hasArg(vm, argc, index) && be_isstring(vm, index);
   const char* name = named ? argText(vm, index) : nullptr;
   if (name != nullptr) {
-    if (strcmp(name, "minutes") == 0 || strcmp(name, "seconds") == 0 || strcmp(name, "hours") == 0) {
+    if (strcmp(name, "minutes") == 0 || strcmp(name, "seconds") == 0 ||
+        strcmp(name, "hours") == 0) {
       return name;
     }
   }
@@ -317,8 +304,7 @@ int screenBar(bvm* vm) {
 int screenScrollbar(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 7) {
-    be_raise(vm, "type_error",
-             "screen.scrollbar(x, y, w, h, index, count, visible[, hollow])");
+    be_raise(vm, "type_error", "screen.scrollbar(x, y, w, h, index, count, visible[, hollow])");
   }
   const int draw = beginDraw(vm, "scrollbar");
   setBox(vm, draw, argc);
@@ -334,8 +320,7 @@ int screenScrollbar(bvm* vm) {
 int screenDuration(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 6) {
-    be_raise(vm, "type_error",
-             "screen.duration(x, y, w, h, format, seconds[, font[, known]])");
+    be_raise(vm, "type_error", "screen.duration(x, y, w, h, format, seconds[, font[, known]])");
   }
   const char* format = argFormat(vm, argc, 5, "duration");
   const gfx::Font* face = argFace(vm, argc, 7, "duration");
@@ -421,8 +406,8 @@ int screenDurationText(bvm* vm) {
   const char* format = argFormat(vm, argc, 1, "duration_text");
   const bool known = !hasArg(vm, argc, 3) || be_tobool(vm, 3);
   char out[16];
-  be_pushstring(vm, gfx::durationText(formatOf(format), (int32_t)argInt(vm, 2), known, out,
-                                          sizeof(out)));
+  be_pushstring(
+      vm, gfx::durationText(formatOf(format), (int32_t)argInt(vm, 2), known, out, sizeof(out)));
   be_return(vm);
 }
 
@@ -486,24 +471,15 @@ int screenHeight(bvm* vm) {
 }
 
 const bnfuncinfo ScreenLibrary[] = {
-    {"text", screenText},
-    {"centred", screenCentred},
-    {"icon", screenIcon},
-    {"inverted", screenInverted},
-    {"bar", screenBar},
-    {"scrollbar", screenScrollbar},
-    {"duration", screenDuration},
-    {"pressure_readout", screenPressureReadout},
-    {"layout", screenLayout},
-    {"row", screenRow},
-    {"column", screenColumn},
-    {"duration_text", screenDurationText},
-    {"measure", screenMeasure},
-    {"cell", screenCell},
-    {"align", screenAlign},
-    {"width", screenWidth},
-    {"height", screenHeight},
-    {nullptr, nullptr},
+    {"text", screenText},         {"centred", screenCentred},
+    {"icon", screenIcon},         {"inverted", screenInverted},
+    {"bar", screenBar},           {"scrollbar", screenScrollbar},
+    {"duration", screenDuration}, {"pressure_readout", screenPressureReadout},
+    {"layout", screenLayout},     {"row", screenRow},
+    {"column", screenColumn},     {"duration_text", screenDurationText},
+    {"measure", screenMeasure},   {"cell", screenCell},
+    {"align", screenAlign},       {"width", screenWidth},
+    {"height", screenHeight},     {nullptr, nullptr},
 };
 
 }  // namespace

@@ -36,10 +36,7 @@ constexpr uint8_t PageColumnOffset = 2;
 }  // namespace
 
 Sh1106Device::Sh1106Device(TwoWire& wire, uint8_t address, int16_t width, int16_t height)
-    : wire_(wire),
-      address_(address),
-      width_(width),
-      height_(height),
+    : wire_(wire), address_(address), width_(width), height_(height),
       frame_(new uint8_t[static_cast<size_t>(stride()) * static_cast<size_t>(height)]) {
   memset(frame_, 0, static_cast<size_t>(stride()) * static_cast<size_t>(height_));
 }
@@ -152,14 +149,16 @@ bool Sh1106Device::command(uint8_t value) { return commands(&value, 1); }
 bool Sh1106Device::commands(const uint8_t* values, size_t count) {
   wire_.beginTransmission(address_);
   wire_.write(static_cast<uint8_t>(0x00));
-  for (size_t i = 0; i < count; i++) wire_.write(values[i]);
+  for (size_t i = 0; i < count; i++)
+    wire_.write(values[i]);
   return wire_.endTransmission() == 0;
 }
 
 bool Sh1106Device::data(const uint8_t* values, size_t count) {
   wire_.beginTransmission(address_);
   wire_.write(static_cast<uint8_t>(0x40));
-  for (size_t i = 0; i < count; i++) wire_.write(values[i]);
+  for (size_t i = 0; i < count; i++)
+    wire_.write(values[i]);
   return wire_.endTransmission() == 0;
 }
 

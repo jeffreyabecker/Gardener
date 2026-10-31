@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
@@ -26,8 +26,7 @@ gfx::PaintNodeRef centredDashes() {
 // share, so the inverted box is the field rather than the whole cell.
 gfx::Child field(const char* title, bool showing) {
   const gfx::Size ink = gfx::measureText(nullptr, title, FieldScale);
-  gfx::PaintNodeRef content =
-      gfx::borrowedText(gfx::Box::whole(), title, nullptr, FieldScale);
+  gfx::PaintNodeRef content = gfx::borrowedText(gfx::Box::whole(), title, nullptr, FieldScale);
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
 }
@@ -36,13 +35,8 @@ gfx::Child field(const char* title, bool showing) {
 
 DurationScene::DurationScene(GestureQueue& gestures, Ux& ux, String& label, float current,
                              float step, float min, float max, bool nullable)
-    : EditorScene(gestures, ux, label),
-      current_(current),
-      opened_(current),
-      step_(step < 1 ? 1 : static_cast<int32_t>(step)),
-      min_(min),
-      max_(max),
-      nullable_(nullable) {}
+    : EditorScene(gestures, ux, label), current_(current), opened_(current),
+      step_(step < 1 ? 1 : static_cast<int32_t>(step)), min_(min), max_(max), nullable_(nullable) {}
 
 bool DurationScene::hasValue() const { return !isnan(current_); }
 
@@ -81,9 +75,7 @@ String DurationScene::secondsText() const {
   return String(printed);
 }
 
-std::any DurationScene::value() const {
-  return hasValue() ? std::any(whole()) : std::any();
-}
+std::any DurationScene::value() const { return hasValue() ? std::any(whole()) : std::any(); }
 
 const char* DurationScene::hint() { return stage_ == Stage::Minutes ? "MIN" : "SEC"; }
 
@@ -138,8 +130,8 @@ gfx::PaintNodeRef DurationScene::pageContents() {
   minutes_ = minutesText();
   seconds_ = secondsText();
   const bool minutes = stage_ == Stage::Minutes;
-  return gfx::row(1.0f, gfx::children(field(minutes_.c_str(), minutes),
-                                     field(seconds_.c_str(), !minutes)));
+  return gfx::row(
+      1.0f, gfx::children(field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes)));
 }
 
 }  // namespace gardener

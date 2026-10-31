@@ -50,12 +50,12 @@ void setup() {
 
   // The wire surface is this build's to compose: the serial link serves the machine's and the panel's
   // commands and the store, and the Bluetooth link serves the machine and the panel as one table.
-  gardener::SerialLink* serial = new gardener::SerialLink(
-      Serial, serialAttached, root.logger(), root.commands(),
-      gardener::SerialParts{root.machine(), BoardInfo, root.battery(), root.settings(),
-                            root.buzzer(), root.files()});
-  gardener::runtime::BleLink* ble =
-      new gardener::runtime::BleLink(root.commands(), root.machine(), root.settings(), root.battery());
+  gardener::SerialLink* serial =
+      new gardener::SerialLink(Serial, serialAttached, root.logger(), root.commands(),
+                               gardener::SerialParts{root.machine(), BoardInfo, root.battery(),
+                                                     root.settings(), root.buzzer(), root.files()});
+  gardener::runtime::BleLink* ble = new gardener::runtime::BleLink(root.commands(), root.machine(),
+                                                                   root.settings(), root.battery());
 
   serial->begin();
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
@@ -79,8 +79,8 @@ void setup() {
 
   gardener::runtime::spawnMachineTasks(root.machine(), root.commands(), serial, ble, root.state());
   gardener::runtime::spawnPanelTask(root.buttons(), root.routines().presses(), root.outbox(),
-                           root.logger(), root.battery(), root.buzzer(), root.routines(),
-                           root.machine(), root.state());
+                                    root.logger(), root.battery(), root.buzzer(), root.routines(),
+                                    root.machine(), root.state());
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

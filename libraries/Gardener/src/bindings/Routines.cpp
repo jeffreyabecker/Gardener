@@ -10,12 +10,12 @@
 
 #include <Gfx.h>
 
-#include "bindings/BerryScene.h"
-#include "panel/page/Registration.h"
-#include "panel/page/RoutineRegistry.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "bindings/BerryScene.h"
+#include "panel/page/Registration.h"
+#include "panel/page/RoutineRegistry.h"
 
 namespace gardener {
 namespace {
@@ -49,11 +49,8 @@ const bnfuncinfo ActivationFields[] = {
 
 // The three fields one row of the browser's list carries.
 const bnfuncinfo RowFields[] = {
-    {"init", recordInit},
-    {"icon", nullptr},
-    {"title", nullptr},
-    {"value", nullptr},
-    {nullptr, nullptr},
+    {"init", recordInit}, {"icon", nullptr},  {"title", nullptr},
+    {"value", nullptr},   {nullptr, nullptr},
 };
 
 // The messages below are stack buffers because be_raise longjmps past any C++ destructor a String
@@ -76,7 +73,8 @@ void requireGlyph(bvm* vm, int index) {
     be_raise(vm, "type_error", "routines.register: the icon is a string of hex digits");
   }
   if (!gfx::isMonoBitmap(argText(vm, index))) {
-    be_raise(vm, "value_error", "routines.register: the icon is the width, the height and the rows");
+    be_raise(vm, "value_error",
+             "routines.register: the icon is the width, the height and the rows");
   }
 }
 
@@ -245,7 +243,7 @@ void pushActivation(bvm* vm, const RoutineActivation& activation) {
 // wrapped as the scene the stack drives. Nothing, with one line, for a page whose init raised — the
 // class is the file's and may refuse the set it is handed.
 std::unique_ptr<Scene> buildPage(BindingContext* bindings, bvm* vm, int slot,
-                                              const RoutineActivation& activation) {
+                                 const RoutineActivation& activation) {
   if (vm == nullptr || bindings == nullptr || slot < 0) return nullptr;
 
   const int base = be_top(vm);
@@ -418,8 +416,7 @@ int routinesSettingsCfgs(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
   }
-  const std::vector<SettingsRow*>* rows =
-      bindings->registry().settingsRows(String(argText(vm, 1)));
+  const std::vector<SettingsRow*>* rows = bindings->registry().settingsRows(String(argText(vm, 1)));
   if (rows == nullptr || rows->empty()) be_return_nil(vm);
 
   // The list class's instance with the raw list it appends to on top of it: the pop below leaves the

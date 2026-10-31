@@ -36,7 +36,8 @@ const char* GestureQueue::take() {
 }
 
 void GestureQueue::clear() {
-  for (String& press : presses_) press = "";
+  for (String& press : presses_)
+    press = "";
   head_ = 0;
   count_ = 0;
   overflowed_ = false;

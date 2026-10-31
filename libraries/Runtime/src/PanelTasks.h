@@ -12,7 +12,7 @@ class Machine;
 class GestureQueue;
 class BuzzerPlayer;
 class Routines;
-}
+}  // namespace gardener
 
 namespace gardener::runtime {
 
@@ -24,7 +24,7 @@ void panelTask(void* arg);
 // flushes, the gauge and the piezo, the stack the page beat polls, and the machine the reset
 // reboots.
 void spawnPanelTask(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
-                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer,
-                    Routines& routines, Machine& machine, SystemState& state);
+                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer, Routines& routines,
+                    Machine& machine, SystemState& state);
 
 }  // namespace gardener::runtime

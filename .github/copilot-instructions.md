@@ -32,6 +32,10 @@ seconds or minutes.
 global-variables figures, and they move a little with every edit; keep them out of the report unless
 someone asks how much room the firmware has, and don't build a baseline or a delta nobody requested.
 
+**Formatting is not a run to weigh up.** `clang-format -i` over the tracked sources costs seconds and
+compiles nothing, and [.clang-format](.clang-format) is the style the cpp skill describes — so a
+save or a sweep, not a build, is the answer to a line that looks wrong.
+
 **Consider the Berry check before running it.** The check compiles and drives the `.be` files under
 `firmware/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
 VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside

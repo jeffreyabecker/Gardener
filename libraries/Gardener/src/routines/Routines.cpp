@@ -5,11 +5,11 @@
 #include <memory>
 #include <vector>
 
-#include "core/Logger.h"
 #include "Canvas.h"
-#include "panel/page/Overlay.h"
-#include "panel/page/MarkScene.h"
 #include "core/Library.h"
+#include "core/Logger.h"
+#include "panel/page/MarkScene.h"
+#include "panel/page/Overlay.h"
 
 namespace gardener {
 namespace {

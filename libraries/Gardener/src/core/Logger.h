@@ -35,10 +35,17 @@ inline bool parseLevels(const String& text, String& levels) {
   bool error = false;
   for (unsigned int i = 0; i < text.length(); ++i) {
     switch (toupper((unsigned char)text[i])) {
-      case 'I': info = true; break;
-      case 'W': warn = true; break;
-      case 'E': error = true; break;
-      default: return false;
+      case 'I':
+        info = true;
+        break;
+      case 'W':
+        warn = true;
+        break;
+      case 'E':
+        error = true;
+        break;
+      default:
+        return false;
     }
   }
   if (!info && !warn && !error) return false;

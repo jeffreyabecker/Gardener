@@ -3,12 +3,12 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "machine/SafeReboot.h"
-#include "core/SystemState.h"
-#include "machine/MachineCommand.h"
 #include "beats/ButtonsTick.h"
 #include "beats/PartsTick.h"
 #include "beats/RoutinesTick.h"
+#include "core/SystemState.h"
+#include "machine/MachineCommand.h"
+#include "machine/SafeReboot.h"
 
 namespace gardener::runtime {
 
@@ -63,8 +63,8 @@ void panelTask(void* arg) {
 }
 
 void spawnPanelTask(ButtonPanel& buttonsPart, GestureQueue& presses, CommandOutbox& outbox,
-                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer,
-                    Routines& routines, Machine& machine, SystemState& state) {
+                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer, Routines& routines,
+                    Machine& machine, SystemState& state) {
   static ButtonsTick buttons{buttonsPart, presses, outbox, logger};
   static PartsTick parts{battery, buzzer, state};
   static RoutinesTick page{routines};

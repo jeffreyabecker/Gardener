@@ -22,8 +22,8 @@ constexpr uint16_t GifDelayCs = 100;
 // enlarged before it is written. The two arguments default to the constants below, which is what
 // every capture in the check takes; a walkthrough passes its own.
 bool writeGif(const char* path, int16_t width, int16_t height,
-              const std::vector<std::vector<uint8_t>>& frames,
-              uint16_t delayCs = GifDelayCs, int scale = RenderScale);
+              const std::vector<std::vector<uint8_t>>& frames, uint16_t delayCs = GifDelayCs,
+              int scale = RenderScale);
 
 // The frames a case drives, collected as they are drawn and written when the case is done: a still
 // is one frame, an armed capture is one per beat. It knows no panel, page or harness — it takes the

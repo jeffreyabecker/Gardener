@@ -92,8 +92,7 @@ class RoutineRegistry {
   // setting the set leaves out or one a row refuses begins at its default. Nothing for a key nobody
   // registered, a record that names no page, or a page whose init refused the activation. The page
   // is not put on a stack here: the caller decides where it goes.
-  std::unique_ptr<Scene> activate(const String& routineKey,
-                                  const SettingValues& values) const;
+  std::unique_ptr<Scene> activate(const String& routineKey, const SettingValues& values) const;
 
  private:
   struct Alias {

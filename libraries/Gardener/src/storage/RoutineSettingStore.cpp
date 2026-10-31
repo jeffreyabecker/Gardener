@@ -21,9 +21,8 @@ String sectionOf(const String& parentRoutineKey, const String& routineKey) {
 
 RoutineSettingStore::RoutineSettingStore(Library& library) : library_(library) {}
 
-SettingValues RoutineSettingStore::load(
-    const String& parentRoutineKey, const String& routineKey,
-    const std::vector<const SettingKind*>& rows) const {
+SettingValues RoutineSettingStore::load(const String& parentRoutineKey, const String& routineKey,
+                                        const std::vector<const SettingKind*>& rows) const {
   Config document(&library_, documentPath(parentRoutineKey));
   document.begin();
   const String section = sectionOf(parentRoutineKey, routineKey);

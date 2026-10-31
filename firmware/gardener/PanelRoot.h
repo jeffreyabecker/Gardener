@@ -5,6 +5,7 @@
 #include <Gardener.h>
 #include <Runtime.h>
 
+#include "bindings/BindingContext.h"
 #include "core/SystemState.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
@@ -17,7 +18,6 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
-#include "bindings/BindingContext.h"
 #include "storage/DeviceSettings.h"
 
 namespace gardener {

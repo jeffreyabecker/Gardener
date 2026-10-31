@@ -22,8 +22,7 @@ class ButtonsTick {
  public:
   // The keys are this beat's: the classifier is the tick's own, built on the reader it is handed,
   // so no other caller settles the same panel between two beats.
-  ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
-              Logger& logger);
+  ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox, Logger& logger);
 
   // One call to the classifier, and the policy for what it answers.
   void tick();

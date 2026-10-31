@@ -41,7 +41,8 @@ bool XgzpSensor::begin() {
 
 bool XgzpSensor::sample(float& outVolts) {
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < Samples; i++) totalMilliVolts += analogReadMilliVolts(pin_);
+  for (uint8_t i = 0; i < Samples; i++)
+    totalMilliVolts += analogReadMilliVolts(pin_);
 
   float volts = (float)totalMilliVolts / (float)Samples / 1000.0f;
   if (volts < MinPlausibleVolts || volts > MaxPlausibleVolts) return false;

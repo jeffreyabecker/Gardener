@@ -4,9 +4,9 @@
 
 #include <vector>
 
-#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
@@ -30,10 +30,7 @@ gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
 ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
                          const std::vector<ChoiceItem>& items, bool nullable,
                          std::function<void(String& current)> forward)
-    : EditorScene(gestures, ux, label),
-      items_(items),
-      forward_(forward),
-      nullable_(nullable) {
+    : EditorScene(gestures, ux, label), items_(items), forward_(forward), nullable_(nullable) {
   value_ = current;
   hasValue_ = !nullable_ || !current.isEmpty();
   opened_ = value_;
@@ -116,8 +113,8 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
     gfx::Children rows;
     for (int16_t line = 0; line < visible; line++) {
       const int16_t at = static_cast<int16_t>(first + line);
-      rows.push_back(gfx::Child{gfx::Cell(1.0f, static_cast<float>(Row)),
-                                rowOf(&items_[at], at == selected)});
+      rows.push_back(
+          gfx::Child{gfx::Cell(1.0f, static_cast<float>(Row)), rowOf(&items_[at], at == selected)});
     }
     gfx::Justification centred;
     centred.along = gfx::Justify::Center;

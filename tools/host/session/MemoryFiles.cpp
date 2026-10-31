@@ -47,7 +47,8 @@ std::string baseName(const std::string& path) {
 // A path as the map holds one: no trailing slash, and the root is "/".
 std::string normalised(const std::string& path) {
   std::string text = path;
-  while (text.size() > 1 && text.back() == '/') text.pop_back();
+  while (text.size() > 1 && text.back() == '/')
+    text.pop_back();
   return text.empty() ? "/" : text;
 }
 
@@ -118,7 +119,8 @@ void MemoryFiles::list(const String& folder, std::vector<String>& names) {
   }
 
   std::sort(found.begin(), found.end());
-  for (const std::string& name : found) names.push_back(name.c_str());
+  for (const std::string& name : found)
+    names.push_back(name.c_str());
 }
 
 void MemoryFiles::entries(const String& path, std::vector<Entry>& out) {
@@ -139,7 +141,8 @@ void MemoryFiles::entries(const String& path, std::vector<Entry>& out) {
   }
 
   // A map's order is the name order, which is the order FileLibrary sorts to.
-  for (const auto& entry : found) out.push_back(Entry{entry.first.c_str(), entry.second});
+  for (const auto& entry : found)
+    out.push_back(Entry{entry.first.c_str(), entry.second});
 }
 
 bool MemoryFiles::exists(const String& path) {

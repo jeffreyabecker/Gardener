@@ -45,7 +45,7 @@ struct Line {
 // positive, the radius clamped to half the shorter side so the arcs cannot cross.
 struct Rectangle {
   Rectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color, bool filled = false,
-       int16_t radius = 0)
+            int16_t radius = 0)
       : x(x), y(y), w(w), h(h), color(color), filled(filled), radius(radius) {}
 
   void operator()(Canvas& canvas) const;

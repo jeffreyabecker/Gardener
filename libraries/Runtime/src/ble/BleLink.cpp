@@ -58,9 +58,7 @@ BleLink::Start BleLink::begin() {
   return advertising->start() ? Start::Advertising : Start::Failed;
 }
 
-bool BleLink::connected() const {
-  return server_ != nullptr && server_->getConnectedCount() > 0;
-}
+bool BleLink::connected() const { return server_ != nullptr && server_->getConnectedCount() > 0; }
 
 void BleLink::poll(uint32_t nowMs) {
   if (server_ == nullptr) return;

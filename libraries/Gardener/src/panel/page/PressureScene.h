@@ -21,8 +21,8 @@ class PressureScene : public NumberScene {
  public:
   // `currentKpa` is the target stored now and `wholeSteps` how many whole steps of the panel's unit
   // one keypress takes.
-  PressureScene(GestureQueue& gestures, Ux& ux, String& label,
-                float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable);
+  PressureScene(GestureQueue& gestures, Ux& ux, String& label, float currentKpa, DisplayUnit unit,
+                float wholeSteps, bool nullable);
 };
 
 }  // namespace gardener

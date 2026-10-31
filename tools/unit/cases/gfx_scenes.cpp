@@ -152,7 +152,8 @@ TEST_CASE("the stack holds eight frames") {
   Watched watched;
   Ux ux;
   ux.reset(aScene(gestures, watched));
-  while (ux.depth() < Ux::MaxFrames) ux.push(aScene(gestures, watched));
+  while (ux.depth() < Ux::MaxFrames)
+    ux.push(aScene(gestures, watched));
   CHECK_EQ(ux.depth(), Ux::MaxFrames);
   CHECK_EQ(ux.push(aScene(gestures, watched)), 0);
   CHECK_EQ(ux.depth(), Ux::MaxFrames);
@@ -318,8 +319,8 @@ class TestRow : public SettingsRow {
 // A settings list with the hooks it answers opened up, so a case can press the keys and draw it.
 class SettingsProbe : public SettingsScene {
  public:
-  using SettingsScene::SettingsScene;
   using SettingsScene::drawPage;
+  using SettingsScene::SettingsScene;
 
   bool press(const char* gesture) { return handle(gesture); }
 };
@@ -388,9 +389,8 @@ TEST_CASE("a settings list cancel puts the set back") {
   SettingValues handed;
   Watched rootWatch;
   ux.reset(aScene(gestures, rootWatch));
-  ux.push(std::move(list), [&handed](Scene& scene) {
-    handed = static_cast<SettingsScene&>(scene).values();
-  });
+  ux.push(std::move(list),
+          [&handed](Scene& scene) { handed = static_cast<SettingsScene&>(scene).values(); });
 
   settings->press("forward:single");
   static_cast<TestEditor*>(ux.top())->set(String("70"));
@@ -417,9 +417,7 @@ TEST_CASE("a settings list draws its rows") {
 }
 
 // The two entries the choice row offers, and the keys they store.
-std::vector<ChoiceItem> choices() {
-  return {{"lo", "Low"}, {"hi", "High"}};
-}
+std::vector<ChoiceItem> choices() { return {{"lo", "Low"}, {"hi", "High"}}; }
 
 TEST_CASE("a settings list edits every kind") {
   GestureQueue gestures;
@@ -435,9 +433,8 @@ TEST_CASE("a settings list edits every kind") {
   SettingValues handed;
   Watched rootWatch;
   ux.reset(aScene(gestures, rootWatch));
-  ux.push(std::move(list), [&handed](Scene& scene) {
-    handed = static_cast<SettingsScene&>(scene).values();
-  });
+  ux.push(std::move(list),
+          [&handed](Scene& scene) { handed = static_cast<SettingsScene&>(scene).values(); });
 
   uint32_t now = 1000;
   // The number: two steps of one, from 5 to 7.
@@ -493,7 +490,8 @@ TEST_CASE("a row prints its value and opens its editor") {
 
   CHECK_EQ(std::any_cast<float>(number.scene(number.defaultValue())->value()) == 5.0f, 1);
   CHECK_EQ(std::any_cast<bool>(power.scene(power.defaultValue())->value()), 1);
-  CHECK_EQ(std::string(std::any_cast<String>(unit.scene(unit.defaultValue())->value()).c_str()), std::string("hi"));
+  CHECK_EQ(std::string(std::any_cast<String>(unit.scene(unit.defaultValue())->value()).c_str()),
+           std::string("hi"));
   CHECK_EQ(std::any_cast<int32_t>(hold.scene(hold.defaultValue())->value()), 90);
 
   CHECK_EQ(unset.defaultValue().has_value(), 0);
@@ -591,7 +589,8 @@ TEST_CASE("a row stores its document form") {
   CHECK_EQ(std::string(number.stored(std::any(7.5f)).c_str()), std::string("7.50"));
   CHECK_EQ(std::string(power.stored(std::any(true)).c_str()), std::string("on"));
   CHECK_EQ(std::string(unit.stored(std::any(String("lo"))).c_str()), std::string("lo"));
-  CHECK_EQ(std::string(hold.stored(std::any(static_cast<int32_t>(150))).c_str()), std::string("150"));
+  CHECK_EQ(std::string(hold.stored(std::any(static_cast<int32_t>(150))).c_str()),
+           std::string("150"));
 
   CHECK_EQ(std::any_cast<float>(number.parse(String("7.50"))) == 7.5f, 1);
   CHECK_EQ(std::any_cast<bool>(power.parse(String("off"))), 0);
@@ -610,13 +609,11 @@ TEST_CASE("a row stores its document form") {
 // ramp, so the total covers the holds. This is the declaration's form of a check — the declaration,
 // the set in force and the value proposed — which is what a row's constructor is handed.
 std::pair<bool, String> totalCoversHolds(const std::vector<SettingsRow*>&,
-                                         const SettingValues& values,
-                                         const std::any& proposed) {
+                                         const SettingValues& values, const std::any& proposed) {
   const auto initial = values.find("initial_duration");
   const auto target = values.find("target_duration");
-  const int32_t holds =
-      (initial == values.end() ? 0 : std::any_cast<int32_t>(initial->second)) +
-      (target == values.end() ? 0 : std::any_cast<int32_t>(target->second));
+  const int32_t holds = (initial == values.end() ? 0 : std::any_cast<int32_t>(initial->second)) +
+                        (target == values.end() ? 0 : std::any_cast<int32_t>(target->second));
   const int32_t total = std::any_cast<int32_t>(proposed);
   return total < holds ? std::make_pair(false, String("TOTAL < HOLDS"))
                        : std::make_pair(true, String());
@@ -689,9 +686,8 @@ TEST_CASE("a settings list keeps a refused value out") {
   SettingValues handed;
   Watched rootWatch;
   ux.reset(aScene(gestures, rootWatch));
-  ux.push(std::move(list), [&handed](Scene& scene) {
-    handed = static_cast<SettingsScene&>(scene).values();
-  });
+  ux.push(std::move(list),
+          [&handed](Scene& scene) { handed = static_cast<SettingsScene&>(scene).values(); });
 
   settings->press("down:single");
   settings->press("forward:single");
@@ -722,7 +718,8 @@ TEST_CASE("a parsed value is held to its row") {
   CHECK_EQ(std::any_cast<int32_t>(hold.parse(String("99999"))), 7200);
   CHECK_EQ(std::any_cast<int32_t>(hold.parse(String("-5"))), 0);
   CHECK_EQ(std::any_cast<float>(target.parse(String("400"))) == 100.0f, 1);
-  CHECK_EQ(std::string(std::any_cast<String>(unit.parse(String("middle"))).c_str()), std::string("hi"));
+  CHECK_EQ(std::string(std::any_cast<String>(unit.parse(String("middle"))).c_str()),
+           std::string("hi"));
 }
 
 }  // namespace

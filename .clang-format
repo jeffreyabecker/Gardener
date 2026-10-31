@@ -1,0 +1,32 @@
+# The style .github/skills/cpp describes: two spaces, a brace on the statement's own line, an access
+# specifier one space in, the pointer bound to the type, and a hundred columns. Written here so the
+# editor and tools/format.py read one answer. The trees that keep another style -- the vendored VM,
+# doctest, the Arduino stand-ins -- switch formatting off in a .clang-format of their own.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++17
+ColumnLimit: 100
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+AccessModifierOffset: -1
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 4
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+IndentCaseLabels: true
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+AlignTrailingComments: true
+SpacesBeforeTrailingComments: 2
+ReflowComments: false
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+FixNamespaceComments: true
+InsertNewlineAtEOF: false
+...

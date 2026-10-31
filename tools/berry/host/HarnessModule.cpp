@@ -52,7 +52,7 @@ int harnessInk(bvm* vm) {
     be_raise(vm, "type_error", "harness.ink(x, y, w, h)");
   }
   be_pushint(vm, session->ink((int16_t)be_toint(vm, 1), (int16_t)be_toint(vm, 2),
-                             (int16_t)be_toint(vm, 3), (int16_t)be_toint(vm, 4)));
+                              (int16_t)be_toint(vm, 3), (int16_t)be_toint(vm, 4)));
   be_return(vm);
 }
 
@@ -122,12 +122,21 @@ int harnessMarkOverlay(bvm* vm) {
 }
 
 const bnfuncinfo HarnessLibrary[] = {
-    {"beat", harnessBeat},      {"press", harnessPress},     {"back_hold", harnessBackHold},
-    {"reset", harnessReset},    {"ink", harnessInk},         {"log", harnessLog},
-    {"wrote", harnessWrote},    {"writes", harnessWrites},   {"buzzer_sounds", harnessBuzzerSounds},
-    {"mem", harnessMem},        {"mem_peak", harnessMemPeak},
-    {"capture_start", harnessCaptureStart}, {"capture_finish", harnessCaptureFinish},
-    {"capture_stem", harnessCaptureStem}, {"mark_overlay", harnessMarkOverlay},
+    {"beat", harnessBeat},
+    {"press", harnessPress},
+    {"back_hold", harnessBackHold},
+    {"reset", harnessReset},
+    {"ink", harnessInk},
+    {"log", harnessLog},
+    {"wrote", harnessWrote},
+    {"writes", harnessWrites},
+    {"buzzer_sounds", harnessBuzzerSounds},
+    {"mem", harnessMem},
+    {"mem_peak", harnessMemPeak},
+    {"capture_start", harnessCaptureStart},
+    {"capture_finish", harnessCaptureFinish},
+    {"capture_stem", harnessCaptureStem},
+    {"mark_overlay", harnessMarkOverlay},
     {nullptr, nullptr},
 };
 

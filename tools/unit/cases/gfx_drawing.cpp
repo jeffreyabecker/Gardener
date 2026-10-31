@@ -180,14 +180,22 @@ TEST_CASE("a scrollbar with no rows draws nothing") {
 
 TEST_CASE("a duration formats each unit") {
   char out[16];
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 270, true, out, sizeof(out))), std::string("4m30s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 300, true, out, sizeof(out))), std::string("5m"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 45, true, out, sizeof(out))), std::string("45s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Seconds, 90, true, out, sizeof(out))), std::string("90s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 3723, true, out, sizeof(out))), std::string("1h2m3s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 7260, true, out, sizeof(out))), std::string("2h1m"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, true, out, sizeof(out))), std::string("0s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, false, out, sizeof(out))), std::string("--"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 270, true, out, sizeof(out))),
+           std::string("4m30s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 300, true, out, sizeof(out))),
+           std::string("5m"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 45, true, out, sizeof(out))),
+           std::string("45s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Seconds, 90, true, out, sizeof(out))),
+           std::string("90s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 3723, true, out, sizeof(out))),
+           std::string("1h2m3s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 7260, true, out, sizeof(out))),
+           std::string("2h1m"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, true, out, sizeof(out))),
+           std::string("0s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, false, out, sizeof(out))),
+           std::string("--"));
 }
 
 TEST_CASE("a duration draws its text") {
@@ -203,8 +211,7 @@ TEST_CASE("a duration draws its text") {
 TEST_CASE("an inverted paint flips the whole cell it was given") {
   reset();
   View band = canvas.child(Rect(0, 0, 20, 8));
-  inverted(callable([](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); }))
-      ->draw(band);
+  inverted(callable([](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); }))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 0);
   CHECK_EQ(display.inkCount(10, 0, 10, 8), 10 * 8);
 }
@@ -219,8 +226,7 @@ TEST_CASE("an inverted paint with nothing to draw draws nothing") {
 TEST_CASE("an underlay clears the cell the child draws in") {
   reset();
   canvas.draw(Rectangle(0, 0, 20, 8, Ink, true));
-  PaintNodeRef child = callable(
-      [](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); });
+  PaintNodeRef child = callable([](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); });
   View band = canvas.child(Rect(0, 0, 20, 8));
   underlay(std::move(child))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8);

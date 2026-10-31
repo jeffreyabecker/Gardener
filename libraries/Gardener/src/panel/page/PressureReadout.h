@@ -7,7 +7,6 @@
 
 namespace gardener {
 
-
 // The AutoPressureDisplay the pages drew, composed from the drawing styles: the reading and its
 // target in the unit the state carries, taken from the beat's state rather than from the machine at
 // paint time, so one paint serves every beat. The reading is the primary number at `scale`; the

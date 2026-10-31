@@ -7,21 +7,17 @@
 namespace gardener {
 
 Registration::Registration(const String& routineKey, const String& title,
-                           std::vector<std::unique_ptr<SettingsRow>> settings,
-                           Factory factory, String glyph)
-    : routineKey_(routineKey),
-      title_(title.isEmpty() ? routineKey : title),
-      owned_(std::move(settings)),
-      factory_(std::move(factory)),
-      glyph_(std::move(glyph)) {
+                           std::vector<std::unique_ptr<SettingsRow>> settings, Factory factory,
+                           String glyph)
+    : routineKey_(routineKey), title_(title.isEmpty() ? routineKey : title),
+      owned_(std::move(settings)), factory_(std::move(factory)), glyph_(std::move(glyph)) {
   settings_.reserve(owned_.size());
   for (const std::unique_ptr<SettingsRow>& row : owned_) {
     if (row) settings_.push_back(row.get());
   }
 }
 
-SettingValues Registration::loadSettings(Library& library,
-                                                  const String& section) const {
+SettingValues Registration::loadSettings(Library& library, const String& section) const {
   SettingValues values;
   if (settings_.empty()) return values;
 

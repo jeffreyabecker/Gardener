@@ -28,7 +28,8 @@ int16_t baseline(const char* value, const Font* face, uint8_t scale) {
 char* append(char* out, size_t capacity, const char* suffix, int32_t count) {
   if (count <= 0) return out;
   size_t used = 0;
-  while (out[used] != '\0' && used < capacity) used++;
+  while (out[used] != '\0' && used < capacity)
+    used++;
   if (used >= capacity) return out;
   snprintf(out + used, capacity - used, "%ld%s", static_cast<long>(count), suffix);
   return out;
@@ -163,8 +164,7 @@ void BlendNode::draw(Canvas& canvas) const {
   // Ink under the content, and the content drawn through an inverting blend, is the picture the old
   // draw-then-flip made: the content's ink comes out as paper on ink. It is also the only order a
   // blend allows, since a blend sees the value being written and never the frame.
-  View blended =
-      canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())), blend_);
+  View blended = canvas.child(Transform(Rect(0, 0, canvas.width(), canvas.height())), blend_);
   if (child_) child_->draw(blended);
 }
 
@@ -189,9 +189,7 @@ PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale) {
   return std::make_unique<GlyphNode>(box, code, scale);
 }
 
-PaintNodeRef icon(Box box, const char* bits) {
-  return std::make_unique<BitmapNode>(box, bits);
-}
+PaintNodeRef icon(Box box, const char* bits) { return std::make_unique<BitmapNode>(box, bits); }
 
 PaintNodeRef icon(Box box, PaintNodeRef glyph) {
   return std::make_unique<IconNode>(box, std::move(glyph));
