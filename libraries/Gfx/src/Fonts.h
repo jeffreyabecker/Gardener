@@ -25,6 +25,33 @@ const Font* faceOr(const Font* face);
 // than a picture that does not arrive, so there is nothing here to check.
 const Font* find(const char* name);
 
+// --- the families -------------------------------------------------------------
+// A design's cuts, shortest first: a page names the design and a height picks the cut, so a page
+// written against one size of a design still draws when a shorter or a taller one is fitted. A
+// family of one cut is a design with one size, which is what the built-in face is.
+struct Family {
+  const char* name;
+  const Font* const* cuts;
+  uint8_t count;
+};
+
+// The family a page's family name stands for: one the library ships, one a caller registered, and
+// the built-in for "" and for a name the module does not hold, so a page that names a family nobody
+// has draws as it does without one rather than not drawing.
+const Family* findFamily(const char* name);
+
+// A family a caller registers, beside the ones the library ships: a name, and the cuts of the
+// design it names. The entry is the module's own, so a caller keeps neither the array nor the faces
+// alive for it, and the module orders the cuts by line height as it registers them, shortest first,
+// so the order a caller writes is not a promise it can break.
+constexpr int RegisteredFamilies = 4;
+constexpr int FamilyCuts = 8;
+
+// Registers `cuts` under `name`. False for an empty or too long name, a name a face or a family
+// already answers, no cuts, more cuts than the table holds, or a cut that is null. A name stands for
+// one thing, so a family named for a face, or a face named for a family, is refused.
+bool registerFamily(const char* name, const Font* const* cuts, uint8_t count);
+
 // --- registering a face ------------------------------------------------------
 // A face the library does not hold: a page, a host tool or a driver hands the module a name and a
 // Font, and every draw or measurement that names it resolves through find. The table is static, so
