@@ -24,7 +24,9 @@ class BuzzerPlayer;
 }
 }  // namespace panel
 
+inline namespace routines {
 class Routines;
+}
 
 void panelTask(void* arg);
 

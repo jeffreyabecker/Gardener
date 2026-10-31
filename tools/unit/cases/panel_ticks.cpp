@@ -22,13 +22,13 @@
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "routines/ButtonsTick.h"
+#include "beats/ButtonsTick.h"
 #include "panel/parts/BuzzerPlayer.h"
-#include "routines/PartsTick.h"
+#include "beats/PartsTick.h"
 #include "routines/Interpreter.h"
 #include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
-#include "routines/RoutinesTick.h"
+#include "beats/RoutinesTick.h"
 #include "storage/DeviceSettings.h"
 
 namespace {

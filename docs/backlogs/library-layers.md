@@ -14,7 +14,7 @@ inline is dropped later, one layer per item, when its uses are qualified.
 - [x] The fifteen headers that open `namespace gardener` twice collapse to one block, its
       declarations at the head and the layer opened below them.
 - [x] `routines/` declares `gardener::routines`, opening after its declarations.
-- [ ] The three ticks move to `beats/` declaring `gardener::beats`.
+- [x] The three ticks move to `beats/` declaring `gardener::beats`.
 - [ ] `serial/` declares `gardener::serial`, and its domains `gardener::serial::domains`.
 - [ ] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
       stops naming `panel`.

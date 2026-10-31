@@ -9,7 +9,7 @@ inline namespace core { class Logger; }
 inline namespace machine { class CommandOutbox; }
 namespace panel { class GestureQueue; }
 
-inline namespace routines {
+inline namespace beats {
 
 // The keys' policy on the panel beat: one call to the classifier, the two holds the panel takes for
 // itself, and the gesture a page gets. A caller steps it, so the sequence a beat runs is reached by
@@ -47,5 +47,5 @@ class ButtonsTick {
   bool home_ = false;
 };
 
-}  // namespace routines
+}  // namespace beats
 }  // namespace gardener

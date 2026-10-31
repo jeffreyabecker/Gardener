@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace routines {
+inline namespace routines { class Routines; }
 
-class Routines;
+inline namespace beats {
 
 // The page's beat: the root scene goes on when the panel comes up, the top scene is polled on each
 // beat, and the go-home gesture gives the panel back to the root.
@@ -27,5 +27,5 @@ class RoutinesTick {
   Routines& routines_;
 };
 
-}  // namespace routines
+}  // namespace beats
 }  // namespace gardener
