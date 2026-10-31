@@ -14,13 +14,6 @@
 namespace gardener::gfx {
 namespace {
 
-// Gfx draws a string from its baseline, and the baseline is the face's own ascent: a fixed face's
-// rows run from the top of its cell to the baseline and a variable face says how many rows sit above
-// it, so a string sits where the face says and not where its own ink happens to end.
-int16_t baseline(const Font* face, uint8_t scale) {
-  return static_cast<int16_t>(faceOr(face)->ascent * scale);
-}
-
 // Appends the part a unit of time contributes, and answers where what has been written ends.
 char* append(char* out, size_t capacity, const char* suffix, int32_t count) {
   if (count <= 0) return out;
@@ -65,39 +58,21 @@ const char* durationText(DurationFormat format, int32_t seconds, bool known, cha
 
 // --- the leaves -------------------------------------------------------------
 
-TextNode::TextNode(Box box, String value, const Font* face, uint8_t scale)
-    : box_(box), value_(std::move(value)), face_(face), scale_(scale == 0 ? 1 : scale) {}
+TextNode::TextNode(Box box, String value, const Family* family, Justify horizontal,
+                   Justify vertical)
+    : box_(box), value_(std::move(value)), family_(family), horizontal_(horizontal),
+      vertical_(vertical) {}
 
 void TextNode::draw(Canvas& canvas) const {
-  View own = canvas.child(box_.in(canvas));
-  const char* text = value_.c_str();
-  own.draw(Text(0, baseline(face_, scale_), text, face_, scale_, Ink));
-}
-
-BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face, uint8_t scale)
-    : box_(box), value_(value == nullptr ? "" : value), face_(face),
-      scale_(scale == 0 ? 1 : scale) {}
-
-void BorrowedTextNode::draw(Canvas& canvas) const {
-  View own = canvas.child(box_.in(canvas));
-  own.draw(Text(0, baseline(face_, scale_), value_, face_, scale_, Ink));
-}
-
-FittedNode::FittedNode(Box box, const char* value, const Family* family, Justify horizontal,
-                       Justify vertical)
-    : box_(box), value_(value == nullptr ? "" : value), family_(familyOr(family)),
-      horizontal_(horizontal), vertical_(vertical) {}
-
-void FittedNode::draw(Canvas& canvas) const {
   const Rect in = box_.in(canvas);
   View own = canvas.child(in);
-  const Fit fit = resolve(*family_, value_, in.width, in.height);
+  const Fit fit = resolve(family_, value_.c_str(), in.width, in.height);
   const int16_t line = static_cast<int16_t>(lineHeight(*fit.face) * fit.scale);
-  const int16_t ink = measureText(fit.face, value_, fit.scale).width;
+  const int16_t ink = measureText(fit.face, value_.c_str(), fit.scale).width;
   const int16_t left = alignedOffset(static_cast<int16_t>(in.width - ink), horizontal_);
   const int16_t top = alignedOffset(static_cast<int16_t>(in.height - line), vertical_);
   const int16_t baseline = static_cast<int16_t>(top + fit.face->ascent * fit.scale);
-  own.draw(Text(left, baseline, value_, fit.face, fit.scale, Ink));
+  own.draw(Text(left, baseline, value_.c_str(), fit.face, fit.scale, Ink));
 }
 
 GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)
@@ -191,17 +166,9 @@ void UnderlayNode::draw(Canvas& canvas) const {
 
 // --- the factories ----------------------------------------------------------
 
-PaintNodeRef text(Box box, String value, const Font* face, uint8_t scale) {
-  return std::make_unique<TextNode>(box, std::move(value), face, scale);
-}
-
-PaintNodeRef borrowedText(Box box, const char* value, const Font* face, uint8_t scale) {
-  return std::make_unique<BorrowedTextNode>(box, value, face, scale);
-}
-
-PaintNodeRef fitted(Box box, const char* value, const Family* family, Justify horizontal,
-                    Justify vertical) {
-  return std::make_unique<FittedNode>(box, value, family, horizontal, vertical);
+PaintNodeRef text(Box box, String value, const Family* family, Justify horizontal,
+                  Justify vertical) {
+  return std::make_unique<TextNode>(box, std::move(value), family, horizontal, vertical);
 }
 
 PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale) {
@@ -222,11 +189,11 @@ PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, b
   return std::make_unique<ScrollbarNode>(box, index, count, visible, hollow);
 }
 
-PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Font* face,
+PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Family* family,
                       bool known) {
   char printed[16];
   durationText(format, seconds, known, printed, sizeof(printed));
-  return text(box, String(printed), face, 1);
+  return text(box, String(printed), family, Justify::Start, Justify::Start);
 }
 
 PaintNodeRef blend(Blend blend, PaintNodeRef child) {

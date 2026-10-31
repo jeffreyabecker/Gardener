@@ -31,50 +31,21 @@ const char* durationText(DurationFormat format, int32_t seconds, bool known, cha
 
 // --- the leaves -------------------------------------------------------------
 
-// A string in the box it declares, owned: the node keeps the text it was handed. The copy costs one
-// allocation a node, which is what a page that builds its text needs to be safe.
+// A string in the box it declares, owned: the node keeps the text it was handed. The box's height
+// chooses the cut and scale of the family and the box's width narrows them, so a page names a design
+// and a cell and the leaf fills it. The line box is placed by the vertical justification and the
+// glyphs sit on its baseline, so two of these in one row share a baseline; the ink is placed across
+// by the horizontal one. The family is the module's own table entry, which outlives the tree, and a
+// node that names none draws in the default family.
 class TextNode : public PaintNode {
  public:
-  TextNode(Box box, String value, const Font* face, uint8_t scale);
+  TextNode(Box box, String value, const Family* family, Justify horizontal, Justify vertical);
 
   void draw(Canvas& canvas) const override;
 
  private:
   Box box_;
   String value_;
-  const Font* face_;
-  uint8_t scale_;
-};
-
-// The same string borrowed: the pointer must outlive the node, which a literal or a scene's own
-// member already does. No allocation, so it is the node for text that is static.
-class BorrowedTextNode : public PaintNode {
- public:
-  BorrowedTextNode(Box box, const char* value, const Font* face, uint8_t scale);
-
-  void draw(Canvas& canvas) const override;
-
- private:
-  Box box_;
-  const char* value_;
-  const Font* face_;
-  uint8_t scale_;
-};
-
-// A string in a family, drawn at the cut and scale the height of its box takes. The line box is
-// placed by the vertical justification and the glyphs sit on its baseline, so two of these in one
-// row share a baseline; the ink is placed across by the horizontal one. The string is borrowed, as
-// a page's strings are, and the family is the module's own table entry, which outlives the tree.
-class FittedNode : public PaintNode {
- public:
-  FittedNode(Box box, const char* value, const Family* family, Justify horizontal,
-             Justify vertical);
-
-  void draw(Canvas& canvas) const override;
-
- private:
-  Box box_;
-  const char* value_;
   const Family* family_;
   Justify horizontal_;
   Justify vertical_;
@@ -186,20 +157,19 @@ class UnderlayNode : public PaintNode {
 
 // --- the factories ----------------------------------------------------------
 
-PaintNodeRef text(Box box, String value, const Font* face = nullptr, uint8_t scale = 1);
-PaintNodeRef borrowedText(Box box, const char* value, const Font* face = nullptr,
-                          uint8_t scale = 1);
-// The string at the cut its box's height takes, centred in the box unless the caller says where.
-PaintNodeRef fitted(Box box, const char* value, const Family* family = nullptr,
-                    Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
+// A string fitted to its box: the cut and scale its height takes, placed by the two justifications,
+// which are the centre of the box unless the caller says where. A family that is null is the default
+// family, so a leaf that names none still draws.
+PaintNodeRef text(Box box, String value, const Family* family = nullptr,
+                  Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
 PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale = 1);
 PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);
 PaintNodeRef progressBar(Box box, float value);
 PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, bool hollow = false);
 // Whole seconds printed in a format, as the text node it is: the formatting is all this adds.
-PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Font* face = nullptr,
-                      bool known = true);
+PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds,
+                      const Family* family = nullptr, bool known = true);
 PaintNodeRef blend(Blend blend, PaintNodeRef child);
 PaintNodeRef underlay(PaintNodeRef child);
 PaintNodeRef callable(std::function<void(Canvas&)> draw);

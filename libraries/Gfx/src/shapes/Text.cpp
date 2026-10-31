@@ -164,30 +164,31 @@ uint8_t tallestFitting(const Family& family, int16_t height) {
 
 }  // namespace
 
-Fit resolve(const Family& family, int16_t height) {
-  if (family.cuts == nullptr || family.count == 0) return {faceOr(nullptr), 1};
-  const Font* face = family.cuts[tallestFitting(family, height)];
+Fit resolve(const Family* family, int16_t height) {
+  const Family& design = *familyOr(family);
+  if (design.cuts == nullptr || design.count == 0) return {faceOr(nullptr), 1};
+  if (height <= 0) return {design.cuts[design.count - 1], 1};
+  const Font* face = design.cuts[tallestFitting(design, height)];
   return {face, scaleIn(*face, height)};
 }
 
-Fit resolve(const Family& family, const char* value, int16_t width, int16_t height) {
-  if (family.cuts == nullptr || family.count == 0) return {faceOr(nullptr), 1};
-  const uint8_t start = tallestFitting(family, height);
+Fit resolve(const Family* family, const char* value, int16_t width, int16_t height) {
+  const Family& design = *familyOr(family);
+  if (design.cuts == nullptr || design.count == 0) return {faceOr(nullptr), 1};
+  if (height <= 0) return {design.cuts[design.count - 1], 1};
+  const uint8_t start = tallestFitting(design, height);
   for (uint8_t at = static_cast<uint8_t>(start + 1); at-- > 0;) {
-    const Font* face = family.cuts[at];
+    const Font* face = design.cuts[at];
     for (uint8_t scale = scaleIn(*face, height); scale > 0; scale--) {
-      if (measureText(face, value, scale).width <= width) return {face, scale};
+      if (width <= 0 || measureText(face, value, scale).width <= width) return {face, scale};
     }
   }
   return resolve(family, height);
 }
 
-Fit resolve(const char* familyName, int16_t height) {
-  return resolve(*findFamily(familyName), height);
-}
-
-Fit resolve(const char* familyName, const char* value, int16_t width, int16_t height) {
-  return resolve(*findFamily(familyName), value, width, height);
+Size measureText(const Family* family, const char* value, int16_t width, int16_t height) {
+  const Fit fit = resolve(family, value, width, height);
+  return measureText(fit.face, value, fit.scale);
 }
 
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {

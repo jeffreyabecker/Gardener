@@ -9,17 +9,17 @@ import string
 # numbers rather than from a page or a machine.
 def ramped_static_chrome(icon, title, status, duration, elapsed)
   var spent = elapsed == nil ? 0 : elapsed
-  var timer = screen.fitted(nil, nil, nil, nil,
+  var timer = screen.text(nil, nil, nil, nil,
                             screen.duration_text("minutes", spent / 1000, elapsed != nil),
                             "ttyp0")
   var percent = duration > 0 ? spent * 100.0 / duration : 0.0
   return screen.column(nil, [
     [bounds(1, 0.25), screen.row(nil, [
       [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, icon)],
-      [bounds(0.875, 1), screen.fitted(nil, nil, nil, nil, title, "ttyp0")]
+      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title, "ttyp0")]
     ])],
     [bounds(1, 0.5), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), screen.pressure_readout("ttyp0")],
       [bounds(0.5, 1), timer]
     ])],
     [bounds(1, 0.25), screen.row(nil, [

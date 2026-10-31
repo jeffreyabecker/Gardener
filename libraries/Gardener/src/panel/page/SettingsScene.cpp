@@ -7,13 +7,13 @@
 namespace gardener {
 namespace {
 
-// One row of the built-in face, which is the pitch the rows and the heading are drawn at.
+// One row of the Adafruit face, which is the pitch the rows and the heading are drawn at.
 constexpr int16_t Row = 8;
 
 // The row as the list prints it: the setting's label, an equals sign and the value it holds now.
 gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value) {
   const String printed = setting.label() + "=" + setting.text(value);
-  return gfx::text(gfx::Box(0, 0, 0, Row, true, false), printed, gfx::find("adafruit"), 1);
+  return gfx::text(gfx::Box(0, 0, 0, Row, true, false), printed);
 }
 
 }  // namespace
@@ -90,7 +90,7 @@ void SettingsScene::open() {
 void SettingsScene::drawPage(gfx::Canvas& canvas) {
   const int16_t heading = title_.isEmpty() ? 0 : Row;
   if (heading > 0) {
-    gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_, gfx::find("adafruit"), 1)->draw(canvas);
+    gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_)->draw(canvas);
   }
   if (rows_.empty()) return;
   gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));

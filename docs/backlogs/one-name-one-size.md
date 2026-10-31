@@ -17,24 +17,24 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 ## One text leaf
 
-- [ ] Fold `borrowedText` and `fitted` into one `text` that fits its box, takes a place and owns its
-      value, and convert every leaf call in the scenes and the pages.
+- [x] Fold `borrowedText` and `fitted` into one `text` that fits its box, takes a place and owns its
+      value, and convert every leaf call in the scenes, the pages and the module.
 - [ ] Fold `glyph` and `drawGlyph` into a one-byte value through the text leaf, so the overlay's two
       glyph nodes are text.
-- [ ] Measure a box: `measureText(family, value, width, height)` answers the ink a fitted draw
+- [x] Measure a box: `measureText(family, value, width, height)` answers the ink a fitted draw
       takes, and the scenes that size a box from ink ask it.
 
 ## The components take a family
 
-- [ ] Give `duration` and `pressureReadout` a family, and let the readout divide its box into two
-      cells instead of two scales, dropping `size_hint`, `scale` and `secondary_scale`.
+- [x] Give `duration` and `pressureReadout` a family, and let the readout divide its box into two
+      parts instead of two scales, dropping `size_hint`, `scale` and `secondary_scale`.
 - [ ] Give the scene constructors a family and name `ttyp0` once where the panel builds them, so the
       design reaches a scene as an argument and the panel stops writing a global to reach it.
 
 ## The module
 
-- [ ] Fold `centred` into `screen.text`, which takes a family and a place.
-- [ ] Fold `fitted` into it as well and give `screen.measure` a box, so the record carries a family
+- [x] Fold `centred` into `screen.text`, which takes a family and a place.
+- [x] Fold `fitted` into it as well and give `screen.measure` a box, so the record carries a family
       and two places and neither `font` nor a kind.
 
 ## The surface is a family, a lookup and a registration

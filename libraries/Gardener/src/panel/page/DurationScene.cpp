@@ -11,22 +11,21 @@
 namespace gardener {
 namespace {
 
-// The face the two fields are drawn at.
-constexpr uint8_t FieldScale = 2;
+// The rows the two fields are drawn at: twice the Adafruit face's.
+constexpr int16_t FieldHeight = 16;
 
-// A band holding one string: the dashes centred at the field face.
+// A band holding one string: the dashes centred at the field height.
 gfx::PaintNodeRef centredDashes() {
-  const gfx::Size ink = gfx::measureText(nullptr, "--", FieldScale);
-  return gfx::aligned(
-      gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--", nullptr, FieldScale), ink));
+  const gfx::Size ink = gfx::measureText(nullptr, "--", 0, FieldHeight);
+  return gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), "--"), ink));
 }
 
 // One field of the pair: its title centred in an equal share of the row, and that title inverted
 // when it is the field the keys are stepping. The alignment places the title's own ink inside the
 // share, so the inverted box is the field rather than the whole cell.
 gfx::Child field(const char* title, bool showing) {
-  const gfx::Size ink = gfx::measureText(nullptr, title, FieldScale);
-  gfx::PaintNodeRef content = gfx::borrowedText(gfx::Box::whole(), title, nullptr, FieldScale);
+  const gfx::Size ink = gfx::measureText(nullptr, title, 0, FieldHeight);
+  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title);
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
 }

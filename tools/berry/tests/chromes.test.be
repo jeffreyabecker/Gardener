@@ -9,7 +9,7 @@ def home_chrome_draws_the_title_the_readout_and_the_clock()
   assert_eq(tree.children.size(), 2, "the home chrome is not a title and a body")
 
   var title = child_at(tree, 0)
-  assert_eq(title.kind, "fitted", "the home title is not a fitted string")
+  assert_eq(title.kind, "text", "the home title is not a text string")
   assert_eq(title.family, "ttyp0", "the home title does not name its design")
   assert_eq(title.value, "Gardener", "the home title is not the device's name")
 
@@ -17,7 +17,7 @@ def home_chrome_draws_the_title_the_readout_and_the_clock()
   assert_eq(body.kind, "row", "the home body is not a row")
   assert_eq(child_at(body, 0).kind, "pressure_readout", "the home body does not hold the readout")
   var clock = child_at(body, 1)
-  assert_eq(clock.kind, "fitted", "the home clock is not a fitted string")
+  assert_eq(clock.kind, "text", "the home clock is not a text string")
   assert_eq(clock.family, "ttyp0", "the home clock does not name its design")
   assert_eq(clock.value, screen.duration_text("minutes", 65),
             "the home clock is not the run's elapsed time")
