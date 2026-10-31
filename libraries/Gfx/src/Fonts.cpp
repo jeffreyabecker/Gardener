@@ -3,9 +3,17 @@
 #include <string.h>
 
 #include "fonts/BuiltinFont.h"
+#include "fonts/ProFont10.h"
+#include "fonts/ProFont12.h"
+#include "fonts/ProFont17.h"
+#include "fonts/ProFont29.h"
 #include "fonts/Ttyp011.h"
 #include "fonts/Ttyp016.h"
 #include "fonts/Ttyp022.h"
+#include "fonts/X11Cell10x20.h"
+#include "fonts/X11Cell5x7.h"
+#include "fonts/X11Cell6x10.h"
+#include "fonts/X11Cell7x14.h"
 
 namespace gardener::gfx {
 
@@ -25,10 +33,10 @@ struct NamedFace {
 };
 
 const NamedFace ShippedFaces[] = {
-    {"builtin", &BuiltinFont},
-    {"ttyp011", &Ttyp011},
-    {"ttyp016", &Ttyp016},
-    {"ttyp022", &Ttyp022},
+    {"builtin", &BuiltinFont},  {"ttyp011", &Ttyp011},      {"ttyp016", &Ttyp016},
+    {"ttyp022", &Ttyp022},      {"profont10", &ProFont10},  {"profont12", &ProFont12},
+    {"profont17", &ProFont17},  {"profont29", &ProFont29},  {"x11_5x7", &X11Cell5x7},
+    {"x11_6x10", &X11Cell6x10}, {"x11_7x14", &X11Cell7x14}, {"x11_10x20", &X11Cell10x20},
 };
 
 // The face a shipped name stands for, or nullptr when the module ships no face by that name.
@@ -50,14 +58,19 @@ struct Entry {
 Entry entries[RegisteredFaces];
 
 // The families the library ships: each a name and the cuts of one design, shortest first. The
-// built-in face is a family of one cut, and it is the answer a name nobody holds is given.
+// built-in face is a family of one cut, and it is the answer a name nobody holds is given. A
+// design's ladder is the rungs this panel's bands can tell apart, not every size the design has.
 const Font* const BuiltinCuts[] = {&BuiltinFont};
 const Font* const Ttyp0Cuts[] = {&Ttyp011, &Ttyp016, &Ttyp022};
+const Font* const ProFontCuts[] = {&ProFont10, &ProFont12, &ProFont17, &ProFont29};
+const Font* const X11Cuts[] = {&X11Cell5x7, &X11Cell6x10, &X11Cell7x14, &X11Cell10x20};
 
 const Family BuiltinFamily = {"builtin", BuiltinCuts, 1};
 const Family Ttyp0Family = {"ttyp0", Ttyp0Cuts, 3};
+const Family ProFontFamily = {"profont", ProFontCuts, 4};
+const Family X11Family = {"x11", X11Cuts, 4};
 
-const Family* const ShippedFamilies[] = {&BuiltinFamily, &Ttyp0Family};
+const Family* const ShippedFamilies[] = {&BuiltinFamily, &Ttyp0Family, &ProFontFamily, &X11Family};
 
 // Copies a name into an entry, or answers false when it does not fit.
 bool copyName(char* into, const char* from) {
