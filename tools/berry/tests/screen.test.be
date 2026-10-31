@@ -21,6 +21,29 @@ end
 
 test("a node is the kind it names with its fields", a_node_is_the_kind_it_names_with_its_fields)
 
+def fitted_names_a_design_and_no_scale()
+  # A fitted node carries the family the page named and no scale, because the height of the box it
+  # lands in picks both the cut and the scale. Its two justifications are the centre unless the page
+  # says where, so a page that wants a band centred writes nothing extra.
+  var node = screen.fitted(nil, nil, nil, nil, "12.5", "ttyp0")
+  assert_eq(node.kind, "fitted", "screen.fitted does not answer a fitted node")
+  assert_eq(node.value, "12.5", "the fitted node does not carry its string")
+  assert_eq(node.family, "ttyp0", "the fitted node does not carry its family")
+  assert_eq(node.horizontal, "center", "a fitted node that names no place is not centred")
+  assert_eq(node.vertical, "center", "a fitted node that names no place is not centred")
+  assert_nil(node.scale, "the fitted node was given a scale to use")
+
+  var placed = screen.fitted(nil, nil, nil, nil, "12.5", "x11", "start", "end")
+  assert_eq(placed.horizontal, "start", "the fitted node does not keep where it was put")
+  assert_eq(placed.vertical, "end", "the fitted node does not keep where it was put")
+
+  # Naming no family is the built-in, and the node says so by carrying none.
+  assert_nil(screen.fitted(nil, nil, nil, nil, "12.5").family,
+             "a fitted node that names no family carries one")
+end
+
+test("fitted names a design and no scale", fitted_names_a_design_and_no_scale)
+
 def measure_answers_the_ink_a_string_takes()
   var short = screen.measure("1")
   var long = screen.measure("12.5")

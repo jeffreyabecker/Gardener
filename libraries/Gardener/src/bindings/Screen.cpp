@@ -14,9 +14,10 @@ namespace {
 // hands it back: what is drawn, not the drawing. Nothing here reaches a canvas.
 constexpr const char* DrawClass = "draw";
 
-// The fields one node of a page's drawing carries. `kind` names what the node is — text, centred,
-// icon, inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields
-// that kind uses are set, the rest nil. A leaf names its box in pixels; a layout, a row and a column
+// The fields one node of a page's drawing carries. `kind` names what the node is — text, fitted,
+// centred, icon, inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and
+// the fields that kind uses are set, the rest nil. A leaf names its box in pixels; a layout, a row
+// and a column
 // name the cell they declare as a share of what holds them, nil for the whole side, so a row sets `h`
 // and a column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child
 // declares and the child — and `alignment` is where it puts them, the record below. An `inverted` node
@@ -29,14 +30,16 @@ const bnfuncinfo DrawFields[] = {
     {"x", nullptr},         {"y", nullptr},
     {"w", nullptr},         {"h", nullptr},
     {"value", nullptr},     {"font", nullptr},
-    {"scale", nullptr},     {"secondary_scale", nullptr},
-    {"size_hint", nullptr}, {"format", nullptr},
-    {"seconds", nullptr},   {"known", nullptr},
-    {"percent", nullptr},   {"index", nullptr},
-    {"count", nullptr},     {"visible", nullptr},
-    {"hollow", nullptr},    {"children", nullptr},
-    {"child", nullptr},     {"glyph", nullptr},
-    {"alignment", nullptr}, {nullptr, nullptr},
+    {"family", nullptr},    {"scale", nullptr},
+    {"secondary_scale", nullptr}, {"size_hint", nullptr},
+    {"format", nullptr},    {"seconds", nullptr},
+    {"known", nullptr},     {"percent", nullptr},
+    {"index", nullptr},     {"count", nullptr},
+    {"visible", nullptr},   {"hollow", nullptr},
+    {"children", nullptr},  {"child", nullptr},
+    {"glyph", nullptr},     {"alignment", nullptr},
+    {"horizontal", nullptr}, {"vertical", nullptr},
+    {nullptr, nullptr},
 };
 
 // `bounds(w, h)`, and `bounds()` for the record `screen.measure` fills: a side left out stays nil,
@@ -258,6 +261,24 @@ int screenCentred(bvm* vm) {
   be_return(vm);
 }
 
+// The same string in a family, at the cut and scale its box's height takes: the panel chooses the
+// size, so a page names a design and no scale, and both justifications are the centre unless the
+// page says where.
+int screenFitted(bvm* vm) {
+  const int argc = be_top(vm);
+  if (argc < 5 || !be_isstring(vm, 5)) {
+    be_raise(vm, "type_error",
+             "screen.fitted(x, y, w, h, value[, family[, horizontal[, vertical]]])");
+  }
+  const int draw = beginDraw(vm, "fitted");
+  setBox(vm, draw, argc);
+  setText(vm, draw, "value", argText(vm, 5));
+  if (hasArg(vm, argc, 6)) setText(vm, draw, "family", argText(vm, 6));
+  setText(vm, draw, "horizontal", hasArg(vm, argc, 7) ? argText(vm, 7) : "center");
+  setText(vm, draw, "vertical", hasArg(vm, argc, 8) ? argText(vm, 8) : "center");
+  be_return(vm);
+}
+
 // A fixed glyph in the box: the argument is the hex digits that name the bitmap itself, in
 // MonoBitmap's format — the width, the height, then one row per byte-run, most significant bit first
 // and each row padded to a whole byte. The node keeps the string rather than the bytes, and the
@@ -471,8 +492,8 @@ int screenHeight(bvm* vm) {
 }
 
 const bnfuncinfo ScreenLibrary[] = {
-    {"text", screenText},         {"centred", screenCentred},
-    {"icon", screenIcon},         {"inverted", screenInverted},
+    {"text", screenText},         {"fitted", screenFitted},
+    {"centred", screenCentred},   {"icon", screenIcon},         {"inverted", screenInverted},
     {"bar", screenBar},           {"scrollbar", screenScrollbar},
     {"duration", screenDuration}, {"pressure_readout", screenPressureReadout},
     {"layout", screenLayout},     {"row", screenRow},
