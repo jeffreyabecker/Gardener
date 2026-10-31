@@ -97,11 +97,12 @@ std::vector<uint8_t> lzwEncode(const uint8_t* indices, size_t count) {
 }  // namespace
 
 bool writeGif(const char* path, int16_t width, int16_t height,
-              const std::vector<std::vector<uint8_t>>& frames) {
+              const std::vector<std::vector<uint8_t>>& frames, uint16_t delayCs, int scale) {
   if (frames.empty()) return false;
+  if (scale < 1) scale = 1;
 
-  const int16_t outWidth = width * RenderScale;
-  const int16_t outHeight = height * RenderScale;
+  const int16_t outWidth = width * scale;
+  const int16_t outHeight = height * scale;
 
   FILE* file = fopen(path, "wb");
   if (file == nullptr) return false;
@@ -133,7 +134,7 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put8(file, 0xF9);
     put8(file, 0x04);
     put8(file, 0x00);
-    put16(file, GifDelayCs);
+    put16(file, delayCs);
     put8(file, 0x00);
     put8(file, 0x00);
 
@@ -145,7 +146,7 @@ bool writeGif(const char* path, int16_t width, int16_t height,
     put16(file, (uint16_t)outHeight);
     put8(file, 0x00);  // no local colour table, not interlaced
 
-    const std::vector<uint8_t> pixels = unpackScaled(frame.data(), width, height, RenderScale);
+    const std::vector<uint8_t> pixels = unpackScaled(frame.data(), width, height, scale);
     const std::vector<uint8_t> compressed = lzwEncode(pixels.data(), pixels.size());
     put8(file, 2);  // min code size
     size_t at = 0;
@@ -178,9 +179,9 @@ void Capture::add(const uint8_t* packedFrame) {
   frames_.emplace_back(packedFrame, packedFrame + bytes);
 }
 
-bool Capture::save(const char* path) const {
+bool Capture::save(const char* path, uint16_t delayCs, int scale) const {
   if (frames_.empty()) return false;
-  return writeGif(path, width_, height_, frames_);
+  return writeGif(path, width_, height_, frames_, delayCs, scale);
 }
 
 const std::vector<uint8_t>* Capture::frame(int index) const {

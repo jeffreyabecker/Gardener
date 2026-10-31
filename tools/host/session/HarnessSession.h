@@ -49,11 +49,22 @@ class Chamber {
   void setVenting(bool venting) { venting_ = venting; }
   bool venting() const { return venting_; }
 
+  // What the pump pulls at full duty and what the open valve lets back, in kPa per second. The
+  // check leaves them at the model's own; a walkthrough sets them so a run fits inside a GIF.
+  void setRates(float pullKpaPerSecond, float ventKpaPerSecond) {
+    pullKpaPerSecond_ = pullKpaPerSecond;
+    ventKpaPerSecond_ = ventKpaPerSecond;
+  }
+  float pullKpaPerSecond() const { return pullKpaPerSecond_; }
+  float ventKpaPerSecond() const { return ventKpaPerSecond_; }
+
  private:
   const float ceilingKpa_;
   float pressureKpa_ = 0.0f;
   float duty_ = 0.0f;
   bool venting_ = true;
+  float pullKpaPerSecond_ = 3.0f;
+  float ventKpaPerSecond_ = 40.0f;
 };
 
 class ModelPump : public Pump {
@@ -229,6 +240,13 @@ class HarnessSession {
   // One beat: 250 ms of the device's loop, four control ticks and one page poll.
   void beat(int count);
 
+  // The model chamber's rates, in kPa per second: its pull at full duty and its venting rate.
+  void setChamberRates(float pullKpaPerSecond, float ventKpaPerSecond) {
+    chamber_.setRates(pullKpaPerSecond, ventKpaPerSecond);
+  }
+  float pullKpaPerSecond() const { return chamber_.pullKpaPerSecond(); }
+  float ventKpaPerSecond() const { return chamber_.ventKpaPerSecond(); }
+
   // The bytes the interpreter holds, read after a collection: everything it has allocated, so what
   // the image and the page under test keep rather than the garbage they have not dropped yet.
   size_t heapBytes();
@@ -260,8 +278,11 @@ class HarnessSession {
   // --- capture -------------------------------------------------------------
   // Arms capture: every flush from now keeps the frame, and endCapture() writes them as a GIF.
   void beginCapture(const char* path);
-  // Writes the captured frames to the armed path; false when there was nothing to write.
-  bool endCapture();
+  // Writes the captured frames to the armed path, with the frame delay and enlargement the caller
+  // asks for; false when there was nothing to write.
+  bool endCapture(uint16_t delayCs = GifDelayCs, int scale = RenderScale);
+  // How many frames the capture holds now: what a run reports it wrote.
+  int capturedFrames() const { return display_.frameCount(); }
   // The ink a rectangle of the frame holds now, as a count of set pixels: what a node drew in the box
   // the layout gave it, which is the one thing only the draw walk decides. Nothing is read from
   // outside the frame.

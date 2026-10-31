@@ -57,26 +57,25 @@ GFX_SOURCES = sorted((GFX / "src").rglob("*.cpp"))
 
 FIRMWARE_SOURCES = [path for path in sorted((GARDENER / "src").rglob("*.cpp")) if board_free(path)]
 
-# The parts the panel's pieces are made of here: a chamber and its three parts, a counted piezo, a
-# full battery, the data image in memory and a log buffer. The glass is the shared recording
-# display.
-HOST_SOURCES = [
-    HOST / "HarnessModule.cpp",
-    HOST / "HarnessSession.cpp",
-    HOST / "MemoryFiles.cpp",
-]
-
-MAIN_SOURCES = [TOOL / "main.cpp", TOOL / "entry.cpp", *HOST_SOURCES]
-
 # What a host tool shares with the others: the Arduino API, the clock, the recording display, the
-# gesture strip and the frame writer.
+# gesture strip and the frame writer, and the session and the data image the walkthrough compiles too.
 SHARED = ROOT / "tools" / "host"
+SESSION = SHARED / "session"
+SESSION_SOURCES = [SESSION / "HarnessSession.cpp", SESSION / "MemoryFiles.cpp"]
 SHARED_SOURCES = [
     SHARED / "arduino" / "Clock.cpp",
     SHARED / "capture" / "CaptureDisplay.cpp",
     SHARED / "capture" / "GestureStrip.cpp",
     SHARED / "capture" / "GifWriter.cpp",
 ]
+
+# The parts the panel's pieces are made of here: a chamber and its three parts, a counted piezo, a
+# full battery, the data image in memory and a log buffer. The glass is the shared recording
+# display. The session is not the check's own: it is the host library beside it, and the `harness`
+# module is the one Berry surface the check adds over it.
+HOST_SOURCES = [HOST / "HarnessModule.cpp", *SESSION_SOURCES]
+
+MAIN_SOURCES = [TOOL / "main.cpp", TOOL / "entry.cpp", *HOST_SOURCES]
 
 # The API's own sources, and the two a board's C library would provide: a device's core library links
 # them, so a host tool that compiles the API's headers has to compile these as well.
@@ -106,12 +105,17 @@ def slug(path):
     return "_".join(Path(path).resolve().parts[-4:])
 
 
+# Every folder an include reaches, so the header watch below reads the same set the compiler does: a
+# header that is not watched is an object that keeps a class's old layout.
+INCLUDES = (HOST, SESSION, BERRY / "src", BERRY / "generate", GFX / "src", GARDENER / "src",
+            SHARED / "arduino", SHARED / "capture", API)
+
+
 def build(cc, cxx):
     objects = BUILD / "obj"
     objects.mkdir(parents=True, exist_ok=True)
     includes = []
-    for path in (HOST, BERRY / "src", BERRY / "generate", GFX / "src",
-                 GARDENER / "src", SHARED / "arduino", SHARED / "capture", API):
+    for path in INCLUDES:
         includes.extend(["-I", str(path)])
     # The API's folder holds String.h, which a case-insensitive filesystem would otherwise hand to
     # #include <string.h> in place of the C library's.
@@ -124,8 +128,7 @@ def build(cc, cxx):
     # the class grows. The cache is keyed on source files, so the newest header is the other half.
     header_mtime = 0.0
     if not args.no_cache:
-        for directory in (HOST, BERRY / "src", BERRY / "generate",
-                          GFX / "src", GARDENER / "src"):
+        for directory in INCLUDES:
             for header in directory.rglob("*.h"):
                 header_mtime = max(header_mtime, header.stat().st_mtime)
 

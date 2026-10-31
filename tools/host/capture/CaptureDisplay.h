@@ -105,9 +105,9 @@ class CaptureDisplay : public gfx::DisplayDevice, public panel::GestureQueue {
   // Stops recording and discards what was collected.
   void endCapture();
 
-  // Writes what was collected to `path`, as writeGif does. False when nothing was collected or the
-  // file cannot be opened.
-  bool save(const char* path) const;
+  // Writes what was collected to `path`, as writeGif does, with the frame delay and enlargement the
+  // caller asks for. False when nothing was collected or the file cannot be opened.
+  bool save(const char* path, uint16_t delayCs = GifDelayCs, int scale = RenderScale) const;
 
   int frameCount() const;
   // One frame the capture holds, packed one bit per pixel as it will be written. Null when the

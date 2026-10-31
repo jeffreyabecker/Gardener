@@ -16,11 +16,13 @@ constexpr int RenderScale = 2;
 constexpr uint16_t GifDelayCs = 100;
 
 // A minimal GIF89a writer for the harness's one-bit frames: a two-entry palette (white paper, black
-// ink), a NETSCAPE loop so the animation repeats, and one frame per entry, each held for
-// GifDelayCs. Each frame is packed one bit per pixel, row-major and top-down, and is enlarged by
-// RenderScale before it is written.
+// ink), a NETSCAPE loop so the animation repeats, and one frame per entry, each held for `delayCs`
+// and enlarged by `scale`. Each frame is packed one bit per pixel, row-major and top-down, and is
+// enlarged before it is written. The two arguments default to the constants below, which is what
+// every capture in the check takes; a walkthrough passes its own.
 bool writeGif(const char* path, int16_t width, int16_t height,
-              const std::vector<std::vector<uint8_t>>& frames);
+              const std::vector<std::vector<uint8_t>>& frames,
+              uint16_t delayCs = GifDelayCs, int scale = RenderScale);
 
 // The frames a case drives, collected as they are drawn and written when the case is done: a still
 // is one frame, an armed capture is one per beat. It knows no panel, page or harness — it takes the
@@ -37,9 +39,9 @@ class Capture {
   // before arm() or of the wrong size is ignored.
   void add(const uint8_t* packedFrame);
 
-  // Writes what was collected to `path`, as writeGif does. False when nothing was collected or the
-  // file cannot be opened.
-  bool save(const char* path) const;
+  // Writes what was collected to `path`, as writeGif does, with the frame delay and the enlargement
+  // the caller asks for. False when nothing was collected or the file cannot be opened.
+  bool save(const char* path, uint16_t delayCs = GifDelayCs, int scale = RenderScale) const;
 
   // One frame the sequence holds, packed as it was added, for a caller that reads back what it
   // captured. Null when the index is not one of them.

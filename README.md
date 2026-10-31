@@ -69,6 +69,34 @@ Arduino API it is built against, a clock a case advances and the display a case 
 recording display that keeps the beats it drove and writes them as a GIF. It needs a C++ compiler
 (`g++` or `clang++`) and Python, and nothing else.
 
+## Walkthroughs
+
+A GIF of the app can be scripted as a command file and run on the host, with no board and no
+interpreter on the device:
+
+```powershell
+python tools/walkthrough/walk.py tools/walkthrough/sample.walk
+python tools/walkthrough/walk.py my.walk --out build/my.gif --delay-cs 20 --scale 3
+```
+
+The file is one command per line, run top to bottom; a `#` line and a blank line are not commands.
+The whole file is read and every scene resolved before the first frame is drawn, so a misspelt scene
+or a setting key no routine declares fails with a line number rather than a half-written picture.
+
+| Command | What it does |
+| --- | --- |
+| `load <scene> [key=value;…]` | the panel back to its root (`home`), the browser, or a routine by key, with settings over the ones its document holds |
+| `send <gesture>` | one gesture, spelled as the panel's classifier spells it — `ok:single`, `up:double`, `cancel:single` |
+| `wait <n> s\|ms` | device time, rounded up to whole 250 ms beats |
+| `set-rate <pull> <vent>` | the model chamber's pull at full duty and its venting rate, in kPa/s |
+| `emit` | writes the frames as the GIF and ends the walk; it has to be the last line |
+
+The animation's timing and enlargement are the tool's options, not the file's: `--delay-cs` is how
+long a frame plays — 25, one beat, unless told otherwise, so a walk plays at the speed it was walked
+— and `--scale` how much it is enlarged. `--data` picks the image (default `firmware/data`) and
+`--ceiling-kpa` the model chamber's depth. A `.gif` under `tools/walkthrough/build/` is there for a
+human to look at, like the check's.
+
 ## Documentation
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs

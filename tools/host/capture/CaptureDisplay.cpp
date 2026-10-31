@@ -227,7 +227,9 @@ void CaptureDisplay::endCapture() {
   capture_.disarm();
 }
 
-bool CaptureDisplay::save(const char* path) const { return capture_.save(path); }
+bool CaptureDisplay::save(const char* path, uint16_t delayCs, int scale) const {
+  return capture_.save(path, delayCs, scale);
+}
 
 int CaptureDisplay::frameCount() const { return capture_.frameCount(); }
 

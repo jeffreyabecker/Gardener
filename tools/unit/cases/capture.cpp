@@ -156,6 +156,25 @@ TEST_CASE("the delay a frame is held for is the writer's own") {
   std::remove("tools/unit/build/capture_delay.gif");
 }
 
+TEST_CASE("a capture written with a delay and a scale of the caller's carries them") {
+  drawMark();
+  const std::vector<uint8_t> packed = packedFrame();
+  Capture capture;
+  capture.arm(PageWidth, PageHeight);
+  capture.add(packed.data());
+  REQUIRE(capture.save("tools/unit/build/capture_timing.gif", 20, 3));
+
+  const std::vector<uint8_t> bytes = readFile("tools/unit/build/capture_timing.gif");
+  REQUIRE(bytes.size() > 20);
+  CHECK_EQ(littleEndian(bytes, 6), static_cast<uint16_t>(PageWidth * 3));
+  CHECK_EQ(littleEndian(bytes, 8), static_cast<uint16_t>(PageHeight * 3));
+  size_t at = 0;
+  while (at + 5 < bytes.size() && !(bytes[at] == 0x21 && bytes[at + 1] == 0xF9)) at++;
+  REQUIRE(at + 5 < bytes.size());
+  CHECK_EQ(littleEndian(bytes, at + 4), static_cast<uint16_t>(20));
+  std::remove("tools/unit/build/capture_timing.gif");
+}
+
 TEST_CASE("an armed capture keeps every frame it was handed") {
   drawMark();
   const std::vector<uint8_t> packed = packedFrame();
