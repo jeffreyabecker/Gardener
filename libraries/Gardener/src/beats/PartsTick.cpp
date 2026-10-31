@@ -5,6 +5,7 @@
 #include "panel/parts/BuzzerPlayer.h"
 
 namespace gardener {
+inline namespace beats {
 
 PartsTick::PartsTick(Battery& battery, panel::parts::BuzzerPlayer& buzzer, SystemState& state)
     : battery_(battery), buzzer_(buzzer), state_(state) {}
@@ -20,4 +21,5 @@ void PartsTick::tick(uint32_t nowMs) {
   state_.batteryLow = battery_.low();
 }
 
+}  // namespace beats
 }  // namespace gardener

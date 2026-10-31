@@ -3,11 +3,11 @@
 namespace gardener {
 inline namespace machine { class CommandOutbox; }
 
-inline namespace serial {
-
 namespace panel::parts {
 class BuzzerPlayer;
 }  // namespace panel::parts
+
+inline namespace serial {
 
 class Domain;
 

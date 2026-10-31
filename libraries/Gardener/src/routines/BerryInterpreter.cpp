@@ -9,6 +9,7 @@
 #include "bindings/Modules.h"
 
 namespace gardener {
+inline namespace routines {
 namespace {
 
 // The root page the image answers: the Berry instance the system sets here is what the panel shows
@@ -89,4 +90,5 @@ void BerryInterpreter::reportError(const char* file, const char* what) {
   be_pop(vm_, 2);
 }
 
+}  // namespace routines
 }  // namespace gardener

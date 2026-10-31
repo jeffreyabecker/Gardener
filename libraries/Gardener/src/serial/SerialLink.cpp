@@ -5,6 +5,7 @@
 #include "core/Logger.h"
 
 namespace gardener {
+inline namespace serial {
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue)
     : outbox_(queue), stream_(stream), port_(stream), present_(present), logger_(logger) {
@@ -129,4 +130,5 @@ Domain* SerialLink::findDomain(const char* name) const {
   return nullptr;
 }
 
+}  // namespace serial
 }  // namespace gardener

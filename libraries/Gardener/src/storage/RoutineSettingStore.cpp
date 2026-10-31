@@ -1,6 +1,7 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
+inline namespace storage {
 namespace {
 
 // The document a routine's set lives in: the parent's, since an alias reads a section of it.
@@ -55,4 +56,5 @@ bool RoutineSettingStore::save(const String& parentRoutineKey, const String& rou
   return document.save();
 }
 
+}  // namespace storage
 }  // namespace gardener

@@ -1,6 +1,7 @@
 #include "storage/DeviceSettings.h"
 
 namespace gardener {
+inline namespace storage {
 namespace {
 
 // The keys this class owns under [device].
@@ -40,4 +41,5 @@ void DeviceSettings::setTargetKpa(float pressureKpa) {
 
 bool DeviceSettings::save() { return document_.save(); }
 
+}  // namespace storage
 }  // namespace gardener

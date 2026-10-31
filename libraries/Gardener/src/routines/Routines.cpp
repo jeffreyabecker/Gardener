@@ -12,6 +12,7 @@
 #include "core/Library.h"
 
 namespace gardener {
+inline namespace routines {
 namespace {
 
 // The system is the files the interpreter needs before anything else: the registry and the pages the
@@ -202,4 +203,5 @@ bool Routines::loadFile(const String& path) {
   return interpreter_.load(path, source);
 }
 
+}  // namespace routines
 }  // namespace gardener
