@@ -5,41 +5,46 @@
 #include <string>
 
 #include "CaptureDisplay.h"
+#include "CapturePicture.h"
 #include "Rect.h"
 
 namespace gardener {
 
-// The gesture a page took, drawn in the room a capture's frame leaves outside the glass: the press
-// a frame carried is named under the picture rather than across it, so a reader sees what was
+// The gesture a page took, drawn in the room a capture's frame leaves outside the glass: the six
+// buttons a panel's user can press, across the top of the picture, so a reader sees what was
 // pressed and what it drew without the one covering the other. A display knows no gesture by
 // itself, so the token to show is the host's to hand over.
+//
+// Every frame draws all six buttons. A press marks the button it names: one outline for a single
+// press, two for a double, and the seconds of a hold written under the glyph it held. The three
+// forms are three marks because there are three of them — an outline alone cannot tell a hold from
+// a press.
 class GestureStrip {
  public:
-  // How many captured frames a token stays on; 1 is the frame it lands on. Raise it to keep the
-  // label readable in a tutorial.
-  static constexpr int Frames = 1;
+  // How many captured frames a press stays marked; 1 is the frame it lands on. Four is a second at
+  // the capture's default delay, which is long enough for a reader to see.
+  static constexpr int Frames = 4;
 
-  // The rows a strip wants outside the glass: one pad, the built-in face's eight rows, one pad.
-  static constexpr int16_t Rows = 10;
-
-  // What a gesture token renders as: ok:single -> OK, up:double -> UP×2, cancel:5 -> CANCEL 5s, and
-  // a sum joins its parts with " + ". Anything unrecognised comes back as the token uppercased.
-  static std::string label(const std::string& gesture);
-
-  // The token the frames that follow show, for Frames of them. nullptr or an empty token shows
-  // none.
+  // The token the frames that follow mark, for Frames of them. nullptr, an empty token or one that
+  // names no button the panel has marks nothing.
   void show(const char* gesture);
 
-  // The component a capture draws the strip with, in `box` of the frame: Rows tall, and as wide as
-  // the room the host gave it, which is normally under the glass. This strip has to outlive the
-  // capture the component is handed to.
+  // The component a capture draws the buttons with, in `box` of the frame: as tall as a button and
+  // as wide as the room the host gave it. This strip has to outlive the capture it is handed to.
   CaptureDisplay::Component component(gfx::Rect box);
 
  private:
-  // Draws the label centred in the box it is handed, then counts one of the frames it stays on.
-  void draw(gfx::Canvas& canvas);
+  // What one button carries while a press on it is marked: the outlines round it, and the seconds
+  // of a hold, which is -1 when the press was not one.
+  struct Mark {
+    int8_t outlines = 0;
+    int8_t seconds = -1;
+  };
 
-  std::string label_;
+  void draw(gfx::Canvas& canvas);
+  void mark(const std::string& key, const std::string& form);
+
+  Mark marks_[CapturePicture::Buttons] = {};
   int frames_ = 0;
 };
 

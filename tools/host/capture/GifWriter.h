@@ -7,7 +7,8 @@
 
 namespace gardener {
 
-// How much a captured GIF is enlarged, by nearest-neighbour: 2 is 256 x 128. Change it and every
+// How much a captured GIF is enlarged, by nearest-neighbour: 2 is 256 x 128 for the glass alone, and
+// the picture a harness capture writes has the bar and the border around that. Change it and every
 // capture scales.
 constexpr int RenderScale = 2;
 

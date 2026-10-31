@@ -290,8 +290,8 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
-  // Records a gesture for the strip under the glass, shown on the next captured frame. The page
-  // takes its presses from routines, so only the strip is told.
+  // Records a gesture for the buttons across the top of the picture, marked on the next captured
+  // frames. The page takes its presses from routines, so only the picture is told.
   void pressGesture(const char* gesture);
   // Marks the overlay in every frame captured from now on: the suite framework hashes those rows,
   // because the overlay is the panel's own and no case draws it.

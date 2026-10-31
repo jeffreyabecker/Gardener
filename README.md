@@ -97,6 +97,11 @@ long a frame plays — 25, one beat, unless told otherwise, so a walk plays at t
 `--ceiling-kpa` the model chamber's depth. A `.gif` under `tools/walkthrough/build/` is there for a
 human to look at, like the check's.
 
+Every frame is the panel's glass inside a dotted border, with the six buttons a panel's user can
+press — up, down, forward, back, OK and cancel — across the top. A press marks the button it names
+for four frames: one outline for a single, two for a double, and the seconds of a hold written under
+the glyph. The picture is 130 by 86 pixels before `--scale`, and 260 by 172 at the default of 2.
+
 ## Documentation
 
 - [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs

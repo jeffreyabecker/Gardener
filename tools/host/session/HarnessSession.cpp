@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "Clock.h"
+#include "CapturePicture.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 
@@ -202,15 +203,13 @@ void HarnessSession::reset() {
 
 void HarnessSession::beginCapture(const char* path) {
   capturePath_ = path != nullptr ? path : "";
-  // The picture a harness capture writes: the glass, with the gesture strip's rows under it, so the
-  // press a frame carried reads below it rather than over it.
-  const int16_t glassWidth = CaptureDisplay::Width;
-  const int16_t glassHeight = CaptureDisplay::Height;
-  const int16_t stripTop = glassHeight;
-  display_.beginCapture(
-      CaptureDisplay::Frame{glassWidth, static_cast<int16_t>(stripTop + GestureStrip::Rows),
-                            gfx::Rect(0, 0, glassWidth, glassHeight)},
-      gestureStrip_.component(gfx::Rect(0, stripTop, glassWidth, GestureStrip::Rows)));
+  // The picture a walkthrough capture writes: the buttons a reader could press across the top, a
+  // dotted border round the glass and the glass inside it, so the press a frame carried reads above
+  // the picture rather than over it.
+  std::vector<CaptureDisplay::Component> components;
+  components.push_back(gestureStrip_.component(CapturePicture::bar()));
+  components.push_back(CapturePicture::borderComponent());
+  display_.beginCapture(CapturePicture::frame(), std::move(components));
 }
 
 bool HarnessSession::endCapture(uint16_t delayCs, int scale) {

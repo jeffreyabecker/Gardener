@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "CapturePicture.h"
 #include "GestureStrip.h"
 #include "GifWriter.h"
 #include "panel/page/Scene.h"
@@ -23,6 +24,7 @@ namespace {
 
 using gardener::Capture;
 using gardener::CaptureDisplay;
+using gardener::CapturePicture;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
 using gardener::RenderScale;
@@ -93,14 +95,35 @@ uint16_t littleEndian(const std::vector<uint8_t>& bytes, size_t at) {
   return static_cast<uint16_t>(bytes[at] | (bytes[at + 1] << 8));
 }
 
-// Arms the shared display with the picture a harness capture writes: the glass at the top, a
-// strip's rows under it, and the strip in them.
+// Arms the shared display with the picture a harness capture writes: the buttons across the top, a
+// dotted border round the glass and the glass inside it.
 void beginStripCapture(GestureStrip& strip) {
-  const Rect stripBox(0, PageHeight, PageWidth, GestureStrip::Rows);
-  display.beginCapture(CaptureDisplay::Frame{PageWidth,
-                                             static_cast<int16_t>(PageHeight + GestureStrip::Rows),
-                                             Rect(0, 0, PageWidth, PageHeight)},
-                       strip.component(stripBox));
+  std::vector<CaptureDisplay::Component> components;
+  components.push_back(strip.component(CapturePicture::bar()));
+  components.push_back(CapturePicture::borderComponent());
+  display.beginCapture(CapturePicture::frame(), std::move(components));
+}
+
+// The top row of one button: what a single outline draws and what nothing else does.
+bool outlined(const std::vector<uint8_t>& frame, int16_t button) {
+  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x +
+                                            button * CapturePicture::ButtonWidth);
+  return packedInk(frame, CapturePicture::Width, left, 0, CapturePicture::ButtonWidth, 1);
+}
+
+// The second outline, down the left of the button where neither a glyph nor a hold's number reaches.
+bool doubleOutlined(const std::vector<uint8_t>& frame, int16_t button) {
+  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x + 2 +
+                                            button * CapturePicture::ButtonWidth);
+  return packedInk(frame, CapturePicture::Width, left, 4, 1, 10);
+}
+
+// Two rows under a centred glyph and inside both outlines, which only a hold's number inks.
+bool holdsNumber(const std::vector<uint8_t>& frame, int16_t button) {
+  const int16_t left = static_cast<int16_t>(CapturePicture::bar().x + 3 +
+                                            button * CapturePicture::ButtonWidth);
+  return packedInk(frame, CapturePicture::Width, left, 13,
+                   static_cast<int>(CapturePicture::ButtonWidth - 6), 2);
 }
 
 }  // namespace
@@ -249,7 +272,7 @@ TEST_CASE("a beat saved through the display is one GIF frame per send") {
   std::remove("tools/unit/build/capture_display_beat.gif");
 }
 
-TEST_CASE("the gesture a page takes is named under the glass on the frame it drew") {
+TEST_CASE("the gesture a page takes is outlined over the glass on the frame it drew") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
@@ -260,39 +283,80 @@ TEST_CASE("the gesture a page takes is named under the glass on the frame it dre
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
-  CHECK(packedInk(*frame, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));  // the strip
-  CHECK_FALSE(packedInk(*frame, PageWidth, 0, 0, PageWidth, GestureStrip::Rows));  // not the glass
-  CHECK(packedAt(*frame, PageWidth, 4, 20));  // and what the page drew
+  // The fourth button is cancel and the fifth is OK, which is the one the press named.
+  CHECK_FALSE(outlined(*frame, 3));
+  CHECK(outlined(*frame, 4));
+  // The glass is inside the border and the bar above it, and holds what the page drew.
+  CHECK(packedAt(*frame, CapturePicture::Width,
+                 CapturePicture::glass().x + 4, CapturePicture::glass().y + 20));
+  // The border is dotted, and its top row is one above the glass.
+  CHECK(packedInk(*frame, CapturePicture::Width, 0, CapturePicture::glass().y - 1,
+                  CapturePicture::Width, 1));
   CHECK_EQ(display.gestures().size(), 1);
   display.endCapture();
 }
 
-TEST_CASE("the gesture is on the frame it landed on and not the next") {
+TEST_CASE("the gesture is marked on the frame it landed on and not after") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
   display.press("ok:single");
   strip.show(display.take());
-  gardener::gfx::test::canvas.setPixel(4, 20, 255);
-  gardener::gfx::test::display.flush();
-  gardener::gfx::test::canvas.setPixel(6, 20, 255);
-  gardener::gfx::test::display.flush();
-  REQUIRE_EQ(display.frameCount(), 2);
+  for (int16_t beat = 0; beat < GestureStrip::Frames + 1; beat++) {
+    gardener::gfx::test::canvas.setPixel(static_cast<int16_t>(4 + beat), 20, 255);
+    gardener::gfx::test::display.flush();
+  }
+  REQUIRE_EQ(display.frameCount(), GestureStrip::Frames + 1);
   const std::vector<uint8_t>* first = display.frame(0);
-  const std::vector<uint8_t>* second = display.frame(1);
+  const std::vector<uint8_t>* held = display.frame(GestureStrip::Frames - 1);
+  const std::vector<uint8_t>* after = display.frame(GestureStrip::Frames);
   REQUIRE(first != nullptr);
-  REQUIRE(second != nullptr);
-  CHECK(packedInk(*first, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
-  CHECK_FALSE(packedInk(*second, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
+  REQUIRE(held != nullptr);
+  REQUIRE(after != nullptr);
+  CHECK(outlined(*first, 4));
+  CHECK(outlined(*held, 4));
+  CHECK_FALSE(outlined(*after, 4));
   display.endCapture();
 }
 
-TEST_CASE("a gesture token renders as the label a reader sees") {
-  CHECK_EQ(GestureStrip::label("ok:single"), std::string("OK"));
-  CHECK_EQ(GestureStrip::label("up:double"), std::string("UP\xD7" "2"));
-  CHECK_EQ(GestureStrip::label("cancel:5"), std::string("CANCEL 5s"));
-  CHECK_EQ(GestureStrip::label("ok:single+up:double"), std::string("OK + UP\xD7" "2"));
-  CHECK_EQ(GestureStrip::label("cmd:stop"), std::string("CMD:STOP"));
+TEST_CASE("a press is one outline, a double press two and a hold its seconds") {
+  reset();
+  GestureStrip strip;
+  beginStripCapture(strip);
+
+  const auto drawn = [&strip](const char* token) {
+    display.press(token);
+    strip.show(display.take());
+    gardener::gfx::test::canvas.setPixel(4, 20, 255);
+    gardener::gfx::test::display.flush();
+    return display.frame(display.frameCount() - 1);
+  };
+
+  const std::vector<uint8_t>* single = drawn("up:single");
+  REQUIRE(single != nullptr);
+  CHECK(outlined(*single, 0));        // up
+  CHECK_FALSE(doubleOutlined(*single, 0));
+  CHECK_FALSE(holdsNumber(*single, 0));
+
+  const std::vector<uint8_t>* twice = drawn("up:double");
+  REQUIRE(twice != nullptr);
+  CHECK(outlined(*twice, 0));
+  CHECK(doubleOutlined(*twice, 0));
+  CHECK_FALSE(holdsNumber(*twice, 0));
+
+  const std::vector<uint8_t>* held = drawn("up:7");
+  REQUIRE(held != nullptr);
+  CHECK(outlined(*held, 0));
+  CHECK_FALSE(doubleOutlined(*held, 0));
+  CHECK(holdsNumber(*held, 0));
+
+  const std::vector<uint8_t>* chord = drawn("up:single+ok:double");
+  REQUIRE(chord != nullptr);
+  CHECK(outlined(*chord, 0));
+  CHECK(outlined(*chord, 4));
+  CHECK(doubleOutlined(*chord, 4));
+
+  display.endCapture();
 }
 
 TEST_CASE("a component draws in the box the frame gives it") {
@@ -410,7 +474,8 @@ TEST_CASE("a scene driven through the display takes its press from it") {
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
-  CHECK(packedAt(*frame, PageWidth, 4, 20));
-  CHECK(packedInk(*frame, PageWidth, 0, PageHeight, PageWidth, GestureStrip::Rows));
+  CHECK(packedAt(*frame, CapturePicture::Width, CapturePicture::glass().x + 4,
+                 CapturePicture::glass().y + 20));
+  CHECK(outlined(*frame, 4));  // the OK the scene took
   display.endCapture();
 }

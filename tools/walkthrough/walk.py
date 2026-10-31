@@ -60,6 +60,7 @@ MAIN_SOURCES = [TOOL / "Script.cpp", TOOL / "main.cpp", TOOL / "entry.cpp", *SES
 SHARED_SOURCES = [
     SHARED / "arduino" / "Clock.cpp",
     SHARED / "capture" / "CaptureDisplay.cpp",
+    SHARED / "capture" / "CapturePicture.cpp",
     SHARED / "capture" / "GestureStrip.cpp",
     SHARED / "capture" / "GifWriter.cpp",
 ]
