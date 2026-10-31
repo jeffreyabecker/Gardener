@@ -9,7 +9,8 @@ The steps of [laying the library out by layer](../plans/laying-the-library-out-b
 - [x] The headers that opened `namespace gardener` twice collapse to one block, its declarations at
       the head and the layer opened below them.
 - [x] `routines/` declares `gardener::routines`, opening after its declarations.
-- [x] The three ticks move to `beats/` declaring `gardener::beats`.
+- [x] The three panel ticks move to `beats/` declaring `gardener::beats`, and `ControlTick`
+      joins them as `MachineTick`: it is a task's beat like the others.
 - [x] `serial/` declares `gardener::serial`, and its domains `gardener::serial::domains`.
 - [x] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
       stops naming `panel`.

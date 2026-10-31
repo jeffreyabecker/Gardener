@@ -11,7 +11,7 @@
 #include "core/SystemState.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
-#include "machine/ControlTick.h"
+#include "beats/MachineTick.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 
@@ -19,7 +19,7 @@ namespace {
 
 using gardener::CommandOutbox;
 using gardener::CommandQueue;
-using gardener::ControlTick;
+using gardener::MachineTick;
 using gardener::MachineCommand;
 using gardener::RunState;
 using gardener::SystemState;
@@ -72,7 +72,7 @@ struct Rig {
   RecordingLogger logger;
   SystemState published;
   BoundedQueue queue;
-  ControlTick tick;
+  MachineTick tick;
 };
 
 MachineCommand target(float kpa) { return MachineCommand{Op::SetTarget, kpa}; }

@@ -1,16 +1,16 @@
-#include "machine/ControlTick.h"
+#include "beats/MachineTick.h"
 
 #include "core/Logger.h"
 #include "core/SystemState.h"
 
 namespace gardener {
 
-ControlTick::ControlTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
+MachineTick::MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
                          SystemState& state)
     : vacuum_(vacuum), logger_(logger), queue_(queue), state_(state),
       lastState_(vacuum.runState()) {}
 
-void ControlTick::tick(uint32_t nowMs) {
+void MachineTick::tick(uint32_t nowMs) {
   // Commands first, against the machine as the last tick left it.
   drainCommands();
 
@@ -26,7 +26,7 @@ void ControlTick::tick(uint32_t nowMs) {
 // The machine's slice, read once at the end of the beat: the run the panel draws and the answer a
 // page's start gets are the ones this beat produced. A page that asks between two beats is answered
 // from here, so the machine can still refuse the command it posts.
-void ControlTick::publish() {
+void MachineTick::publish() {
   state_.runState = vacuum_.runState();
   state_.running = vacuum_.running();
   state_.currentPressureKpa = vacuum_.currentPressureKpa();
@@ -34,17 +34,17 @@ void ControlTick::publish() {
   state_.canStart = vacuum_.startRefusal() == nullptr;
 }
 
-bool ControlTick::takeReboot() {
+bool MachineTick::takeReboot() {
   const bool pending = rebootPending_;
   rebootPending_ = false;
   return pending;
 }
 
-void ControlTick::apply(const MachineCommand& command) {
+void MachineTick::apply(const MachineCommand& command) {
   if (!applyMachineCommand(vacuum_, command)) rebootPending_ = true;
 }
 
-void ControlTick::logCollapsed(const MachineCommand& command, const char* reason) {
+void MachineTick::logCollapsed(const MachineCommand& command, const char* reason) {
   String message = "queue: dropped ";
   message += machineCommandName(command.op);
   if (command.op == MachineCommand::Op::SetTarget) {
@@ -56,7 +56,7 @@ void ControlTick::logCollapsed(const MachineCommand& command, const char* reason
   logger_.warn(message.c_str());
 }
 
-void ControlTick::drainCommands() {
+void MachineTick::drainCommands() {
   MachineCommand batch[CommandQueueDepth];
   uint8_t count = 0;
   while (count < CommandQueueDepth && queue_.take(batch[count])) {
@@ -92,7 +92,7 @@ void ControlTick::drainCommands() {
   }
 }
 
-void ControlTick::logRunChanges(uint32_t nowMs) {
+void MachineTick::logRunChanges(uint32_t nowMs) {
   if (vacuum_.takeDeadlineExpired()) {
     String deadline = "run: hold deadline reached after ";
     deadline += String(vacuum_.holdSeconds());

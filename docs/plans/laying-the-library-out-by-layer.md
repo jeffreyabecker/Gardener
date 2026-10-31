@@ -42,7 +42,7 @@ folder, one segment each, and a file may include only from its own layer or a lo
 | 3 | `panel/page/` | `gardener::panel::page` | every scene, the stack, the registry |
 | 4 | `bindings/` | `gardener::bindings` | everything that knows `bvm` and C++ both |
 | 5 | `routines/` | `gardener::routines` | the interpreter and the loader |
-| 6 | `beats/` | `gardener::beats` | the three things a task steps |
+| 6 | `beats/` | `gardener::beats` | the four things a task steps |
 | 6 | `serial/` | `gardener::serial` | the wire and its domains |
 
 `serial::domains` is the one nested pair (`serial/domains/`), because a domain is a file of the wire
@@ -66,7 +66,6 @@ libraries/Gardener/src/
     Machine.{h,cpp}  VacuumSystem.{h,cpp}                    the chamber and the run
     MachineCommand.{h,cpp}                                   the record, the queue and the outbox
     CommandQueue.h
-    ControlTick.{h,cpp}
 
   storage/                               gardener::storage
     Config.{h,cpp}                                           the .ini reader and writer
@@ -97,7 +96,7 @@ libraries/Gardener/src/
     Interpreter.h  BerryInterpreter.{h,cpp}  Routines.{h,cpp}
 
   beats/                                 gardener::beats
-    ButtonsTick.{h,cpp}  PartsTick.{h,cpp}  RoutinesTick.{h,cpp}
+    MachineTick.{h,cpp}  ButtonsTick.{h,cpp}  PartsTick.{h,cpp}  RoutinesTick.{h,cpp}
 
   serial/                                gardener::serial
     Domain.h  Domains.h  PanelDomains.h  BoardFacts.h
@@ -114,6 +113,7 @@ libraries/Gardener/src/
 | `routines/ButtonsTick.{h,cpp}` | `beats/` | clocked by the panel task, above the panel |
 | `routines/PartsTick.{h,cpp}` | `beats/` | same |
 | `routines/RoutinesTick.{h,cpp}` | `beats/` | it takes `Routines&`, so it cannot sit in `panel/` |
+| `machine/ControlTick.{h,cpp}` | `beats/MachineTick.{h,cpp}` | it is the machine task's beat, as the other three are the panel task's |
 | `firmwareversion.h` | `core/` | the boot line and `device get` both read it |
 | `routines/bindings/*` | `bindings/` | the folder and its namespace become the same word |
 
