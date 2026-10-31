@@ -43,6 +43,9 @@ class EditorScene : public Scene {
   virtual gfx::PaintNodeRef pageComponents();
   virtual gfx::PaintNodeRef pageContents();
 
+  virtual gfx::PaintNodeRef titleComponent();
+  virtual gfx::PaintNodeRef hintComponent();
+
   // The hint band's text: the text a refused value answered where there is one, or the kind's own
   // hint.
   const char* hintOr(const char* text) const;
