@@ -13,29 +13,19 @@
 #include <Arduino.h>
 
 #include "panel/page/ChoiceScene.h"
+#include "storage/SettingKind.h"
 #include "panel/page/EditorScene.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 
 namespace gardener::panel::page {
 
-// The values a settings list holds, keyed by setting key: what an editor wrote back and what OK
-// hands on.
-using SettingValues = std::map<String, std::any>;
+// The values a list holds and the declaration a row was built from are the document's vocabulary,
+// in `storage/SettingKind.h`; a row is that and the page's half of it.
+using storage::SettingDeclaration;
+using storage::SettingValues;
 
 class SettingsRow;
-
-// The declaration a row was built from, as a page reads it back off a routine's record: the kind the
-// file named, the step and bounds that kind was given and the entries a choice offers. A kind with
-// none of them answers NAN and no entries, which a record carries as nil. A row answers this from the
-// fields it holds rather than from a copy kept beside it, so the two cannot come apart.
-struct SettingDeclaration {
-  const char* kind = "";
-  float step = NAN;
-  float min = NAN;
-  float max = NAN;
-  std::vector<ChoiceItem> entries;
-};
 
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
@@ -53,22 +43,11 @@ using Validator = std::function<std::pair<bool, String>(
 // The value in force is the list's, not the row's: the row answers only what a setting starts as
 // where the set the list is handed carries nothing for it. The check is the row's, but it needs the
 // whole declaration and the set it edits to answer, which is what the list curries it with.
-class SettingsRow {
+class SettingsRow : public storage::SettingKind {
  public:
   virtual ~SettingsRow() = default;
 
-  virtual const String& key() const = 0;
   virtual const String& label() const = 0;
-
-  // The default the row's declaration gives, in whatever type the setting holds — a bool, a number,
-  // a key. The list starts a key its set does not carry from this, and nothing at all is an empty
-  // any, which the list prints as `--`.
-  virtual std::any defaultValue() const = 0;
-
-  // The declaration this row was built from: the kind, and the step, bounds and entries that kind
-  // was given. A caller outside the list reads it back — the registry's record through the module —
-  // so what a page sees is the declaration the record holds.
-  virtual SettingDeclaration declaration() const = 0;
 
   // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
   // a number its digits, a duration its compact text.
@@ -79,14 +58,6 @@ class SettingsRow {
   // builds the check that goes with it. The stack owns what it is handed, so the row builds one and
   // lets it go.
   virtual std::unique_ptr<EditorScene> scene(const std::any& value) = 0;
-
-  // The text the document keeps for a value of this kind, which is not the form the list prints — a
-  // bool is on or off, a duration its whole seconds — and empty for nothing at all.
-  virtual String stored(const std::any& value) const = 0;
-
-  // A value of this kind from the text a document held. Text written as nothing answers the row's
-  // default, and so does a bool's word this kind cannot read.
-  virtual std::any parse(const String& stored) const = 0;
 
   // The value held as this kind holds it, from a caller outside the list: a number is taken as the
   // kind's own numeric type, so a whole literal written for a pressure reads as the pressure, and

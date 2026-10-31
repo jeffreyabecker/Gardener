@@ -16,7 +16,7 @@ inline is dropped later, one layer per item, when its uses are qualified.
 - [x] `routines/` declares `gardener::routines`, opening after its declarations.
 - [x] The three ticks move to `beats/` declaring `gardener::beats`.
 - [x] `serial/` declares `gardener::serial`, and its domains `gardener::serial::domains`.
-- [ ] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
+- [x] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
       stops naming `panel`.
 - [ ] `core` drops its inline and its uses are qualified.
 - [ ] `machine` and `storage` drop their inline and their uses are qualified.

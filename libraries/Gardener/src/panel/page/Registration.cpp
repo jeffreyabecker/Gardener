@@ -27,7 +27,8 @@ SettingValues Registration::loadSettings(Library& library,
   if (settings_.empty()) return values;
 
   RoutineSettingStore store(library);
-  values = store.load(routineKey_, section.isEmpty() ? routineKey_ : section, settings_);
+  const std::vector<const storage::SettingKind*> kinds(settings_.begin(), settings_.end());
+  values = store.load(routineKey_, section.isEmpty() ? routineKey_ : section, kinds);
   return values;
 }
 
@@ -40,7 +41,8 @@ bool Registration::saveSettings(Library& library, const String& section,
   }
 
   RoutineSettingStore store(library);
-  return store.save(routineKey_, section.isEmpty() ? routineKey_ : section, settings_, values);
+  const std::vector<const storage::SettingKind*> kinds(settings_.begin(), settings_.end());
+  return store.save(routineKey_, section.isEmpty() ? routineKey_ : section, kinds, values);
 }
 
 }  // namespace panel::page
