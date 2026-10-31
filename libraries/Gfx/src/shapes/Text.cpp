@@ -182,6 +182,12 @@ Fit resolve(const Family& family, const char* value, int16_t width, int16_t heig
   return resolve(family, height);
 }
 
+Fit resolve(const char* familyName, int16_t height) { return resolve(*findFamily(familyName), height); }
+
+Fit resolve(const char* familyName, const char* value, int16_t width, int16_t height) {
+  return resolve(*findFamily(familyName), value, width, height);
+}
+
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
   if (size == 0) return;
   const int16_t baseline = static_cast<int16_t>(y + (BuiltinFont.height - 1) * size);

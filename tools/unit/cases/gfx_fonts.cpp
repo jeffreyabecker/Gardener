@@ -8,6 +8,7 @@
 
 #include "suite.h"
 
+#include "fonts/BuiltinFont.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -143,6 +144,25 @@ TEST_CASE("a width narrows the cut and the scale the height chose") {
   fit = resolve(*ttyp0, "123.4", 10, 45);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 2);
+}
+
+TEST_CASE("a family's name resolves as the family it found does") {
+  // The by-name forms are the family forms with the module's table in front of them.
+  const Fit named = resolve("ttyp0", 45);
+  const Fit family = resolve(*findFamily("ttyp0"), 45);
+  CHECK_EQ(named.face, family.face);
+  CHECK_EQ(named.scale, family.scale);
+
+  const Fit wide = resolve("x11", "4m30s", 128, 48);
+  const Fit same = resolve(*findFamily("x11"), "4m30s", 128, 48);
+  CHECK_EQ(wide.face, same.face);
+  CHECK_EQ(wide.scale, same.scale);
+
+  // A name the module does not hold resolves the built-in family: its eight row line, five times, in
+  // a band of forty-five rows.
+  const Fit unknown = resolve("sans", 45);
+  CHECK_EQ(unknown.face, &BuiltinFont);
+  CHECK_EQ(unknown.scale, 5);
 }
 
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
