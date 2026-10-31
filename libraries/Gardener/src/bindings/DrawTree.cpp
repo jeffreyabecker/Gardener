@@ -104,14 +104,11 @@ gfx::Box boxOf(bvm* vm, int node) {
   return gfx::Box(x, y, w, h, wholeWidth, wholeHeight);
 }
 
-// The face a node names. A name the library does not hold is drawn in the built-in one: the binding
-// refused it when the page built the node, so there is nothing left to say about it here.
+// The face a node names. A name the fonts module does not hold draws in the default face, which is
+// what a record that names no face draws in, so nothing here can leave a node without one.
 const gfx::Font* faceOf(bvm* vm, int node) {
   const char* name = textField(vm, node, "font");
-  if (name == nullptr) return nullptr;
-  const gfx::Font* face = nullptr;
-  gfx::fonts::find(name, face);
-  return face;
+  return name == nullptr ? nullptr : gfx::fonts::find(name);
 }
 
 gfx::DurationFormat formatOf(const char* name) {

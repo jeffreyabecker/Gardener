@@ -101,7 +101,6 @@ Three things bite when the image loads:
 | `'X' undeclared (first use in this function)` | The file names a global no earlier file declared: a load-order problem, a missing stub, or a typo |
 | `value 'nil' does not support set super` | The base class's file failed to load; find its error first |
 | `X needs activate() and poll()` | The registered class is not a scene, or a method is missing or misspelt |
-| `value_error: screen.draw_text: unknown font X` | The face is not one of the compiled ones |
 | `art: no routine named X` | `--art` was given a name no file registered |
 | `art: no scene named X` | `--scene` was given a name that is not `home`, `browser` or `system` |
 | `art: cannot write PATH` | A GIF could not be written, or the run had no frames |

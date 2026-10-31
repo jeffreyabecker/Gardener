@@ -31,31 +31,53 @@ TEST_CASE("a text scales the face it draws") {
   CHECK_EQ(ink.height, 16);
 }
 
-TEST_CASE("a text measures a compiled face") {
-  const Size ink = shapes::measureText(fonts::Sans12, "A", 1);
-  CHECK(ink.width > 0);
-  CHECK(ink.height > 8);
-}
-
-TEST_CASE("the default face is the built in one until something sets another") {
-  // The default is one answer for the whole library, so this case puts back what it found: another
-  // case that draws a string is not the one that set it.
+TEST_CASE("the built in face is the one the library ships and the one a name answers to") {
+  // A draw or a measurement that names no face, and a page that names "builtin", all mean this one.
   CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
   CHECK_EQ(fonts::faceOr(nullptr), &BuiltinFont);
-  CHECK_EQ(fonts::faceOr(fonts::Sans12), fonts::Sans12);
-  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width, 12);  // the built-in cells
+  CHECK_EQ(fonts::find(nullptr), &BuiltinFont);
+  CHECK_EQ(fonts::find(""), &BuiltinFont);
+  CHECK_EQ(fonts::find("builtin"), &BuiltinFont);
 
-  fonts::setDefaultFace(fonts::Sans12);
-  CHECK_EQ(fonts::defaultFace(), fonts::Sans12);
-  CHECK_EQ(fonts::faceOr(nullptr), fonts::Sans12);
-  CHECK_EQ(fonts::faceOr(fonts::TomThumbFace), fonts::TomThumbFace);
-  // A draw that names no face draws in the default, so what it measures moves with it.
-  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width,
-           shapes::measureText(fonts::Sans12, "AB", 1).width);
-
+  // Naming it is what a caller does to say so, and nullptr puts the built-in back.
+  fonts::setDefaultFace(&BuiltinFont);
+  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
   fonts::setDefaultFace(nullptr);
   CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
-  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width, 12);
+  CHECK_EQ(fonts::faceOr(nullptr), &BuiltinFont);
+
+  // A name the module does not hold draws in the default face rather than raising.
+  CHECK_EQ(fonts::find("sans12"), fonts::defaultFace());
+}
+
+// A face with one glyph: a filled five-by-three box of ink, advancing six, drawn from the baseline.
+const uint8_t ProbeBits[] = {0xF8, 0xF8, 0xF8};
+const Glyph ProbeGlyphs[] = {{0, 5, 3, 6, 0, 0}};
+const Font ProbeFace = {ProbeBits, ProbeGlyphs, 'A', 'A', 8, 5, 3, 6};
+
+TEST_CASE("a registered face comes out of find and measures as its own face") {
+  REQUIRE(fonts::registerFont("probe", &ProbeFace));
+
+  const Font* found = fonts::find("probe");
+  CHECK_EQ(found, &ProbeFace);
+  // What the face says it is, not the built-in's six-by-eight cell.
+  const Size ink = shapes::measureText(found, "A", 1);
+  CHECK_EQ(ink.width, 5);
+  CHECK_EQ(ink.height, 3);
+
+  // One name is one face: the built-in's name cannot be taken, nor one that is already an answer.
+  CHECK_FALSE(fonts::registerFont("builtin", &ProbeFace));
+  CHECK_FALSE(fonts::registerFont("probe", &BuiltinFont));
+  CHECK_FALSE(fonts::registerFont("", &ProbeFace));
+  CHECK_FALSE(fonts::registerFont("probe", nullptr));
+
+  // A name it does not hold is a face to fall back to, so a page naming one still draws.
+  CHECK_EQ(fonts::find("missing"), fonts::defaultFace());
+}
+
+TEST_CASE("a registered name longer than an entry is refused") {
+  CHECK_FALSE(fonts::registerFont("a name too long to hold", &ProbeFace));
+  CHECK_EQ(fonts::find("a name too long to hold"), fonts::defaultFace());
 }
 
 TEST_CASE("a text draws at its box") {

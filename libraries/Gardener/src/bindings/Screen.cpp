@@ -99,9 +99,9 @@ bool hasArg(bvm* vm, int argc, int index) {
   return index <= argc && !be_isnil(vm, index);
 }
 
-// The face a call names, held to the table the renderer will look it up in. Nil is the built-in 5x7,
-// and a name that is not a compiled face is a typo at the call that made it rather than a blank line
-// when the tree is drawn.
+// The face a call names: nil for a call that names none, and otherwise what the fonts module
+// answers for the name — the face a page registered, or the default face when the name is one it
+// does not hold, so a page that names a face nobody registered still draws.
 const gfx::Font* argFace(bvm* vm, int argc, int index, const char* function) {
   if (!hasArg(vm, argc, index)) return nullptr;
   if (!be_isstring(vm, index)) {
@@ -110,14 +110,7 @@ const gfx::Font* argFace(bvm* vm, int argc, int index, const char* function) {
     be_raise(vm, "type_error", message);
   }
   const char* name = argText(vm, index);
-  if (name[0] == '\0') return nullptr;
-  const gfx::Font* face = nullptr;
-  if (!gfx::fonts::find(name, face)) {
-    char message[64];
-    snprintf(message, sizeof(message), "screen.%s: unknown font %s", function, name);
-    be_raise(vm, "value_error", message);
-  }
-  return face;
+  return name[0] == '\0' ? nullptr : gfx::fonts::find(name);
 }
 
 // The size a face is drawn at: 1 for the face as designed, which is what an absent argument means.

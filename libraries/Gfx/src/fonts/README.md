@@ -1,16 +1,11 @@
 # Fonts
 
-The compiled faces the Gfx library ships. Each header converts an Adafruit_GFX Fonts header into the
-library's own `Font` and `Glyph` structures. Fonts.cpp names the faces and Fonts.h declares the
-aliases.
+The one face the Gfx library ships: the built-in 5x7, converted from Adafruit_GFX 1.12.6's
+glcdfont.c into the library's own `Font` and `Glyph` structures. Its BSD notice is in the header of
+BuiltinFont.cpp, and Fonts.h is what a caller asks about it: which face a page that names none draws
+in, and which name the face answers to.
 
-- The FreeSans and FreeMono families are Adafruit's generated headers from GNU FreeFont.
-  Adafruit_GFX's BSD license is in LICENSE-Adafruit.txt.
-- TomThumb carries its own BSD notice in its header. Picopixel is attributed to Sebastian Weber.
-- Org_01 and Tiny3x3a2pt7b are not ported: Tiny3x3a2pt7b is CC BY-NC-SA, and neither face is used by
-  the firmware.
-- The built-in 5x7 is the one face written here rather than converted: BuiltinFont.h declares it and
-  BuiltinFont.cpp holds its table, and it is what a caller that names no face draws in.
-
-A face sets fixedWidth, fixedHeight and fixedAdvance when every glyph in its range shares that
-metric; otherwise the field is zero.
+Every byte value has a glyph, each in a five-by-eight cell six pixels apart, which is why the face
+measures as a run of cells rather than as the ink of its glyphs. A page that names a face names this
+one as `builtin` or leaves the name out; any other name is refused where the record is made, unless
+a caller registered it with `registerFont`, which is how a face that is not compiled in is named.
