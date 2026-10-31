@@ -5,10 +5,10 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The line box
 
-- [ ] Give `Font` its ascent and its descent in place of `yAdvance`, fill them for the built-in and
+- [x] Give `Font` its ascent and its descent in place of `yAdvance`, fill them for the built-in and
       the three ttyp0 faces, and have `from_u8g2.py` write both, so `lineHeight` answers without a
       string in hand.
-- [ ] Place a text's baseline from the face's ascent for both kinds, so the same band puts two
+- [x] Place a text's baseline from the face's ascent for both kinds, so the same band puts two
       strings on one line, and move the case that pins a ttyp0 glyph's rows with it.
 
 ## The shipped faces

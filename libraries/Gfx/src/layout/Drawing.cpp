@@ -13,15 +13,11 @@
 namespace gardener::gfx {
 namespace {
 
-// Gfx draws a string from its baseline. A fixed face is drawn from the top of its cell, so its
-// baseline is the last of the cell's rows; a variable face is measured instead, and its ink height
-// is what moves the corner to the baseline.
-int16_t baseline(const char* value, const Font* face, uint8_t scale) {
-  const Font* font = faceOr(face);
-  if (font->kind == Font::Kind::Fixed) {
-    return static_cast<int16_t>((font->height - 1) * scale);
-  }
-  return measureText(font, value, scale).height;
+// Gfx draws a string from its baseline, and the baseline is the face's own ascent: a fixed face's
+// rows run from the top of its cell to the baseline and a variable face says how many rows sit above
+// it, so a string sits where the face says and not where its own ink happens to end.
+int16_t baseline(const Font* face, uint8_t scale) {
+  return static_cast<int16_t>(faceOr(face)->ascent * scale);
 }
 
 // Appends the part a unit of time contributes, and answers where what has been written ends.
@@ -74,7 +70,7 @@ TextNode::TextNode(Box box, String value, const Font* face, uint8_t scale)
 void TextNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
   const char* text = value_.c_str();
-  own.draw(Text(0, baseline(text, face_, scale_), text, face_, scale_, Ink));
+  own.draw(Text(0, baseline(face_, scale_), text, face_, scale_, Ink));
 }
 
 BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face, uint8_t scale)
@@ -83,7 +79,7 @@ BorrowedTextNode::BorrowedTextNode(Box box, const char* value, const Font* face,
 
 void BorrowedTextNode::draw(Canvas& canvas) const {
   View own = canvas.child(box_.in(canvas));
-  own.draw(Text(0, baseline(value_, face_, scale_), value_, face_, scale_, Ink));
+  own.draw(Text(0, baseline(face_, scale_), value_, face_, scale_, Ink));
 }
 
 GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)

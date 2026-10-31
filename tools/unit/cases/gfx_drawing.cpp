@@ -305,6 +305,18 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK_EQ(find("ttyp012"), defaultFace());
 }
 
+TEST_CASE("a face says its own line box") {
+  // The rows above the baseline and on and below it, which is a face's height without a string to
+  // measure: the fixed face's last row sits on the baseline, and the ttyp0 faces declare one row of
+  // descent over the rows their line is.
+  CHECK_EQ(BuiltinFont.ascent, 7);
+  CHECK_EQ(BuiltinFont.descent, 1);
+  CHECK_EQ(lineHeight(BuiltinFont), 8);
+  CHECK_EQ(lineHeight(Ttyp011), 10);
+  CHECK_EQ(lineHeight(Ttyp016), 13);
+  CHECK_EQ(lineHeight(Ttyp022), 17);
+}
+
 TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") {
   // Two columns by three rows, one byte to a column with the least significant bit the top row: an
   // 'A' that inks the top and bottom row of its first column is 0x05 there, and the second column
@@ -338,15 +350,31 @@ TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {
   CHECK_EQ(large.width, 10);
   CHECK_EQ(large.height, 13);
 
-  // Drawn, it is an 'A' where the glyph says it is: an apex two pixels wide on the top row, the
-  // crossbar across the sixth, a clear column for its bearing, and nothing past the last row.
+  // Drawn, it is an 'A' where the glyph says it is: an apex two pixels wide on the top row of the
+  // ink, the crossbar across the sixth, a clear column for its bearing, and nothing past the last
+  // row. The ink starts on the second row of the box, because the face's ascent is twelve rows and
+  // the letter is ten tall.
   reset();
   text(Box(0, 0, 128, 64), "A", &Ttyp016, 1)->draw(canvas);
-  CHECK_EQ(display.inkCount(3, 0, 2, 1), 2);
-  CHECK_EQ(display.inkCount(1, 6, 6, 1), 6);
-  CHECK_EQ(display.inkCount(0, 0, 1, 10), 0);
-  CHECK_EQ(display.inkCount(0, 10, 128, 54), 0);
+  CHECK_EQ(display.inkCount(3, 2, 2, 1), 2);
+  CHECK_EQ(display.inkCount(1, 8, 6, 1), 6);
+  CHECK_EQ(display.inkCount(0, 0, 1, 12), 0);
+  CHECK_EQ(display.inkCount(0, 12, 128, 52), 0);
   CHECK_EQ(display.inkCount(0, 0, 128, 64), 24);
+}
+
+TEST_CASE("a face puts every string of it on one baseline") {
+  // The baseline is the face's ascent and not the height of the string being drawn: a letter and a
+  // letter with a descender start on the same row of their boxes, and only the descender inks below
+  // it. Measured from the string, the pair would sit three rows lower than the letter alone.
+  reset();
+  text(Box(0, 0, 40, 16), "A", &Ttyp016, 1)->draw(canvas);
+  text(Box(40, 0, 40, 16), "Ag", &Ttyp016, 1)->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, 80, 2), 0);
+  CHECK(display.anyInk(0, 2, 8, 1));
+  CHECK(display.anyInk(40, 2, 40, 1));
+  CHECK_EQ(display.inkCount(0, 12, 40, 4), 0);
+  CHECK(display.anyInk(40, 12, 40, 4));
 }
 
 // A readout to draw, in the unit and at the values a case expects on the glass.

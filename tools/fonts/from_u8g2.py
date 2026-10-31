@@ -235,14 +235,15 @@ def write_face(symbol, first, last, glyphs, header, note):
         }}  // namespace
 
         // A variable face: each glyph carries its own ink and advance, so the face holds the glyph
-        // table, the codes it covers and its line height, and no cell of its own.
+        // table, the codes it covers and the rows above and below the baseline, and no cell of its
+        // own.
         const Font {symbol} PROGMEM = {{Font::Kind::Variable, {symbol}Bits, 0, 0, {symbol}Glyphs,
-                                      0x{first:02X}, 0x{last:02X}, {line}}};
+                                      0x{first:02X}, 0x{last:02X}, {ascent}, {descent}}};
 
         }}  // namespace gardener::gfx
         """).format(symbol=symbol, note=note, bitmap=byte_literals(bitmap),
                     table="\n".join(entries), first=first, last=last,
-                    line=header["ascent"] - header["descent"])
+                    ascent=header["ascent"], descent=-header["descent"])
 
     (FONTS / (symbol + ".h")).write_text(declaration, encoding="utf-8", newline="\r\n")
     (FONTS / (symbol + ".cpp")).write_text(definition, encoding="utf-8", newline="\r\n")

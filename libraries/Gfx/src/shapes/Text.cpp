@@ -46,7 +46,7 @@ void drawBlock(Canvas& canvas, int16_t x, int16_t y, uint8_t size, uint8_t color
 int16_t drawFixedGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* font,
                        uint8_t character, uint8_t size, uint8_t color) {
   const uint8_t* column = &font->bitmap[character * font->width];
-  const int16_t top = static_cast<int16_t>(baseline - (font->height - 1) * size);
+  const int16_t top = static_cast<int16_t>(baseline - font->ascent * size);
   for (uint8_t across = 0; across < font->width; across++) {
     const uint8_t bits = pgm_read_byte(&column[across]);
     for (uint8_t down = 0; down < font->height; down++) {
