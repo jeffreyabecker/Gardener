@@ -37,13 +37,9 @@ class HomeScene
     self.machine = HomeMachine()
   end
 
-  # The page went on top: the target the device stores is what a run works to, and the phase is read
-  # before the first draw so coming back to a run the device left going shows a run.
+  # The page went on top: the phase is read before the first draw, so coming back to a run the
+  # device left going shows a run.
   def activate()
-    var pressure_kpa = device.target()
-    if pressure_kpa > 0.0
-      vacuum.set_target_pressure(vacuum.clamp(pressure_kpa))
-    end
     self.machine.advance(device.now_ms())
   end
 

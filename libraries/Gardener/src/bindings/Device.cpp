@@ -11,17 +11,10 @@ namespace gardener {
 namespace bindings {
 namespace {
 
-// The target the default program pulls to; 0 when none has been set.
-int deviceTarget(bvm* vm) {
-  BindingContext* bindings = boundContext(vm);
-  be_pushreal(vm, bindings->systemState().deviceTargetKpa);
-  be_return(vm);
-}
-
 // The unit the panel prints pressure in, as `device.display_unit()` answers it: the wire token, the
-// suffix the glass prints, the scale from a kPa depth, the two steps and the decimals the fine step can
-// express. It is the document's own row rather than a copy a page keeps, so a unit the wire changes
-// reads new on the next call and an instance held across the change does not.
+// suffix the glass prints, the scale from a kPa depth, the two steps and the decimals the fine step
+// can express. Every field comes from the row the state names on each call, so a unit the wire
+// changes reads new on the next one rather than staying what a page first saw.
 constexpr const char* DisplayUnitRecord = "DisplayUnit";
 
 const bnfuncinfo DisplayUnitFields[] = {
@@ -119,7 +112,6 @@ int deviceTakeGesture(bvm* vm) {
 }
 
 const bnfuncinfo DeviceLibrary[] = {
-    {"target", deviceTarget},
     {"display_unit", deviceDisplayUnit},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},

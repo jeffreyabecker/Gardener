@@ -31,7 +31,7 @@ PanelRoot::PanelRoot(const PanelPins& pins)
       display_(Wire1, PanelAddress, PanelWidth, PanelHeight),
       settings_(&files_, state_),
       registry_(files_, logger_),
-      bindings_(display_, state_, buzzer_, outbox_, presses_, ux_, registry_, logger_),
+      bindings_(display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_),
       interpreter_(bindings_),
       routines_(interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_) {}
 

@@ -11,6 +11,8 @@ gfx::DisplayDevice& BindingContext::display() { return display_; }
 
 SystemState& BindingContext::systemState() { return state_; }
 
+storage::DeviceSettings& BindingContext::settings() { return settings_; }
+
 panel::parts::BuzzerPlayer& BindingContext::buzzer() { return buzzer_; }
 
 bool BindingContext::post(const MachineCommand& command) { return outbox_.post(command); }

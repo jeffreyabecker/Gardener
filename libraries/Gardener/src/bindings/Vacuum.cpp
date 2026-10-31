@@ -14,8 +14,10 @@ namespace {
 // released rather than the target cleared, so a page can go back to the stored one.
 int vacuumSetTargetPressure(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
-  const MachineCommand set{MachineCommand::Op::SetTarget, (float)argReal(vm, 1)};
+  float newTargetPressure = (float)argReal(vm, 1);
+  const MachineCommand set{MachineCommand::Op::SetTarget, newTargetPressure};
   bindings->post(set);
+  bindings->settings().setTargetKpa(newTargetPressure);
   be_return_nil(vm);
 }
 

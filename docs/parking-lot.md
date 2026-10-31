@@ -123,12 +123,13 @@ neither copyable nor movable, so a getter cannot hand one out by value or keep o
 
 ## The stored default target
 
-`device.target()` reads `[device] target` and the home page uses it as the depth a run works to,
-but nothing in the firmware writes the key any more: `device.set_target` went with the panel's other
-dead write, the shipped `settings.ini` does not carry it, and the wire's `device set` takes only the
-unit. So it is a value a hand-edited or reflashed document sets and nothing else can. Blocked by:
-nothing has decided whether that is the shape it should have, or whether the key, the getter and the
-three lines in `home.be` should go with the writer.
+`[device] target` is read into `SystemState::deviceTargetKpa` when the document loads, and
+`vacuum.set_target_pressure` writes it through `DeviceSettings::setTargetKpa()`. Nothing reads it
+back — the Berry getter that did (`device.target`) and the three lines in `home.be` that applied it
+are gone — and no set saves it: the document reaches the flash only when a unit write beside it
+saves, which is the serial and wire `device set` path. Blocked by: nothing has decided whether a page
+should be given the stored depth again, whether a target a page sets should save where it is set, or
+whether the key and the published field should go now that the setter is what moves them.
 
 ## One file to compile
 

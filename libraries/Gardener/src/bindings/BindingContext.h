@@ -11,6 +11,9 @@ inline namespace machine {
 class CommandOutbox;
 struct MachineCommand;
 }
+inline namespace storage {
+class DeviceSettings;
+}
 namespace gfx { class DisplayDevice; }
 
 namespace panel {
@@ -27,18 +30,20 @@ class Ux;
 namespace bindings {
 
 // What the native modules reach of the app, held as the parts themselves: one VM and one app, so a
-// callback -- a plain C function with no user data -- gets at the glass, the published state, the
-// piezo, the machine's queue, the presses, the stack, the registry and the log through this, and no
-// module names a global of its own. The accessors are the ones the modules need and nothing more,
-// so what a page can reach is this list rather than whatever the objects beside it happen to hold.
+// callback -- a plain C function with no user data -- gets at the glass, the published state and
+// the document behind it, the piezo, the machine's queue, the presses, the stack, the registry and
+// the log through this, and no module names a global of its own. The accessors are the ones the
+// modules need and nothing more, so what a page can reach is this list rather than whatever the
+// objects beside it happen to hold.
 class BindingContext {
  public:
   BindingContext(gfx::DisplayDevice& display, SystemState& state,
-                 panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox,
-                 panel::GestureQueue& presses, panel::page::Ux& ux,
+                 storage::DeviceSettings& settings, panel::parts::BuzzerPlayer& buzzer,
+                 CommandOutbox& outbox, panel::GestureQueue& presses, panel::page::Ux& ux,
                  panel::page::RoutineRegistry& registry, Logger& logger)
       : display_(display),
         state_(state),
+        settings_(settings),
         buzzer_(buzzer),
         outbox_(outbox),
         presses_(presses),
@@ -52,6 +57,10 @@ class BindingContext {
   SystemState& systemState();
   panel::parts::BuzzerPlayer& buzzer();
   bool post(const MachineCommand& command);
+
+  // The document the state's two device values come from: what a module reads a preference from,
+  // and what it writes one through.
+  storage::DeviceSettings& settings();
 
   // --- the runtime behind the image ----------------------------------------
   // The presses waiting for a page, the stack a launch pushes on, the routines the image
@@ -68,6 +77,7 @@ class BindingContext {
  private:
   gfx::DisplayDevice& display_;
   SystemState& state_;
+  storage::DeviceSettings& settings_;
   panel::parts::BuzzerPlayer& buzzer_;
   CommandOutbox& outbox_;
   panel::GestureQueue& presses_;

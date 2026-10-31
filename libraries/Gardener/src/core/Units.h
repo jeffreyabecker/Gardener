@@ -18,7 +18,8 @@ enum class DisplayUnit : uint8_t { Kpa, Psi, InHg, MmHg };
 //
 // `perKpa` is the whole conversion. The reading is a vacuum depth, so every unit is a straight
 // scale of it rather than an absolute pressure. `wholeStep` and `subStep` are increments in display
-// units for the target control the UI will grow; nothing reads them yet.
+// units: the target editor steps by the first, `displayDecimals()` reads the second, and a page is
+// handed both by `device.display_unit()`.
 struct DisplayUnitInfo {
   const char* name;    // the wire token, and what `device get` answers
   const char* suffix;  // what the panel prints after the number

@@ -336,7 +336,7 @@ class HarnessSession {
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   panel::page::RoutineRegistry registry_{files_, logger_};
   bindings::BindingContext bindings_{
-      display_, state_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
+      display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };
