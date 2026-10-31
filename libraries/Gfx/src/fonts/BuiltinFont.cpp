@@ -124,6 +124,8 @@ const uint8_t BuiltinBitmaps[] PROGMEM = {
 
 }  // namespace
 
-const Font BuiltinFont PROGMEM = {Font::Kind::Fixed, BuiltinBitmaps, 5, 8};
+// A fixed face: the classic 5x7 in glcdfont.c's own packing, one byte to a column with the least
+// significant bit the top row. Its last row sits on the baseline, so that row is its descent.
+const Font BuiltinFont PROGMEM = {Font::Kind::Fixed, BuiltinBitmaps, 5, 8, nullptr, 0, 0, 7, 1};
 
 }  // namespace gardener::gfx

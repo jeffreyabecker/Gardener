@@ -47,13 +47,14 @@ struct Glyph {
 // the glyph for code c is the `width` bytes at bitmap[c * width], one byte to a column, and in each
 // byte the least significant bit is the top row. That is glcdfont.c's own packing, so a classic
 // 5x7 table is a fixed face without conversion. Nothing else is stored: the advance is the width
-// plus the blank column between cells, the line advance is the height, and the face's last row
-// sits on the baseline. One byte holds a column's eight rows, which is the most a fixed face can
-// have.
+// plus the blank column between cells, and the face's last row sits on the baseline. One byte holds
+// a column's eight rows, which is the most a fixed face can have.
 //
 // A variable face draws the glyph for code c from glyph[c - first] at that glyph's own offsets and
 // moves the cursor by that glyph's own advance, so a run of text moves by whatever each glyph says.
-// `yAdvance` is the line advance.
+//
+// Both kinds carry their line box: `ascent` rows above the baseline and `descent` rows on and below
+// it, which is what a face's height is without a string to measure. A glyph may reach past it.
 struct Font {
   enum class Kind : uint8_t { Fixed, Variable };
 
@@ -64,7 +65,13 @@ struct Font {
   const Glyph* glyph;  // variable: the glyph table
   uint16_t first;      // variable: the first code the table holds
   uint16_t last;       // variable: the last
-  uint8_t yAdvance;    // variable: the line advance
+  uint8_t ascent;      // the rows above the baseline
+  uint8_t descent;     // the rows on and below it
 };
+
+// The rows one line of the face takes, which is the height a band has to hold for it.
+inline uint8_t lineHeight(const Font& face) {
+  return static_cast<uint8_t>(face.ascent + face.descent);
+}
 
 }  // namespace gardener::gfx
