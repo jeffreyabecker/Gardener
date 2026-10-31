@@ -21,9 +21,11 @@ inline is dropped later, one layer per item, when its uses are qualified.
 - [ ] `core` drops its inline and its uses are qualified.
 - [ ] `machine` and `storage` drop their inline and their uses are qualified.
 - [ ] `panel`, `panel::parts` and `panel::page` drop their inline.
-- [ ] `bindings`, `routines` and `beats` drop their inline.
+- [ ] `bindings`, `routines`, `beats` and `serial` drop their inline.
 - [ ] The three greps hold: no `routines/` include under `panel/`, no `panel/` include under
-      `storage/`, and no namespace that does not end in its folder's path.
+      `storage/`, and no namespace that does not end in its folder's path. The first and third hold
+      now -- `panel` reaches nothing above it, and every header but the umbrella names its folder --
+      and the second waits on the `SettingKind` item.
 
 ## The rule the nesting needs
 
@@ -51,10 +53,12 @@ type it does not include must declare it directly in `gardener`:
 
 Written inside `inline namespace beats`, that `namespace panel { class GestureQueue; }` would declare
 `beats::panel::GestureQueue`, and the `panel::GestureQueue` in the member list would bind to it. So
-the layer's brace goes *below* the declarations, not above them, and the header keeps one
-`namespace gardener` block. Declarations hoisted to a second block above the first work too, and
-that is what the first four items did, but they read as the namespace opened twice and leave two
-places to put the next one.
+the layer's brace goes below the declarations, not above them, and the header keeps one
+`namespace gardener` block.
+
+The same rule catches a declaration of the layer's own type written in the enclosing namespace: with
+the layer inline, `class Routines;` at `gardener` scope names a second type and the two are
+ambiguous wherever both are visible. It belongs inside `inline namespace routines`.
 
 ## Where it stands
 
@@ -62,9 +66,9 @@ places to put the next one.
 `#include "routines/` under `src/panel` comes back empty. `storage/RoutineSettingStore.h` still
 includes `panel/page/SettingsRows.h`, which the `SettingKind` item above is what removes.
 
-The unit suite was green at 239 cases and 980 assertions after the second item. It has not been run
+The unit suite was green at 239 cases and 980 assertions up to the second item. It has not been run
 since: from the third item onward this machine's linker has stopped producing executables, failing
 with `collect2.exe: error: ld returned 1 exit status` and no diagnostic, at every output path and on
 the untouched tree as well. Everything after that point is compiled by `tools/unit/check.py` and by
-`scripts/arduino.py --task build`, both of which reach the link and report no error before it, but
-it is compiled and not run. Run the suite before anything else is built on top of it.
+`scripts/arduino.py --task build`, both of which reach the link and report no error before it, but it
+is compiled and not run. Run the suite before anything else is built on top of it.
