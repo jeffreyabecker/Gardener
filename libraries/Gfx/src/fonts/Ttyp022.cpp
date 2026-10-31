@@ -240,9 +240,9 @@ const Glyph Ttyp022Glyphs[] PROGMEM = {
 
 }  // namespace
 
-// A variable face: each glyph carries its own ink and advance, so the face holds the glyph reads
-// them from, the codes it covers and its line height, and no cell of its own.
+// A variable face: each glyph carries its own ink and advance, so the face holds the glyph table,
+// the codes it covers and the rows above and below the baseline, and no cell of its own.
 const Font Ttyp022 PROGMEM = {Font::Kind::Variable, Ttyp022Bits, 0,    0,
-                              Ttyp022Glyphs,        0x20,        0xFF, 17};
+                              Ttyp022Glyphs,        0x20,        0xFF, 16, 1};
 
 }  // namespace gardener::gfx

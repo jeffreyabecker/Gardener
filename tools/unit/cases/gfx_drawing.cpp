@@ -305,6 +305,18 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK_EQ(find("ttyp012"), defaultFace());
 }
 
+TEST_CASE("a face says its own line box") {
+  // The rows above the baseline and on and below it, which is a face's height without a string to
+  // measure: the fixed face's last row sits on the baseline, and the ttyp0 faces declare one row of
+  // descent over the rows their line is.
+  CHECK_EQ(BuiltinFont.ascent, 7);
+  CHECK_EQ(BuiltinFont.descent, 1);
+  CHECK_EQ(lineHeight(BuiltinFont), 8);
+  CHECK_EQ(lineHeight(Ttyp011), 10);
+  CHECK_EQ(lineHeight(Ttyp016), 13);
+  CHECK_EQ(lineHeight(Ttyp022), 17);
+}
+
 TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") {
   // Two columns by three rows, one byte to a column with the least significant bit the top row: an
   // 'A' that inks the top and bottom row of its first column is 0x05 there, and the second column
