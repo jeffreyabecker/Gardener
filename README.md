@@ -110,7 +110,12 @@ and `settings-cancel.walk` for the same list throwing each change away.
 | `send <gesture>` | one gesture, spelled as the panel's classifier spells it — `ok:single`, `up:double`, `cancel:single` |
 | `wait <n> s\|ms` | device time, rounded up to whole 250 ms beats |
 | `set-rate <pull> <vent>` | the model chamber's pull at full duty and its venting rate, in kPa/s |
+| `set-font <design>` | the design every leaf that names no family draws in — `ttyp0`, `profont`, `x11`, `adafruit` |
 | `emit` | writes the frames as the GIF and ends the walk; it has to be the last line |
+
+The panel's own design is the firmware composition's to set, once on its way up, so a walk that
+wants the device's look names it rather than every page doing so: `set-font ttyp0` is that line, and
+a walk that names no design draws in the library's Adafruit face.
 
 The animation's timing and enlargement are the tool's options, not the file's: `--delay-cs` is how
 long a frame plays — 25, one beat, unless told otherwise, so a walk plays at the speed it was walked

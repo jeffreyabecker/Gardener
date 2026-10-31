@@ -4,7 +4,8 @@
 
 # The interval chrome: the glyph and title row, the pressure and the set count, and a
 # status-plus-bar row, laid out as fractions of the page. Every value is handed in, so a case draws
-# the chrome from numbers rather than from a page or a machine.
+# the chrome from numbers rather than from a page or a machine. No leaf names a family, so the
+# chrome draws in the composition's design and the band's height picks the cut.
 def ramped_interval_chrome(icon, title, current_set, total_sets, status, remaining_percent)
   var sets
   if current_set > 0
@@ -19,14 +20,14 @@ def ramped_interval_chrome(icon, title, current_set, total_sets, status, remaini
   return screen.column(nil, [
     [bounds(1, 0.25), screen.row(nil, [
       [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, icon)],
-      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title, "ttyp0")]
+      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title)]
     ])],
     [bounds(1, 0.5), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
-      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, sets, "ttyp0")]
+      [bounds(0.5, 1), screen.pressure_readout()],
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, sets)]
     ])],
     [bounds(1, 0.25), screen.row(nil, [
-      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status, "ttyp0")],
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status)],
       [bounds(0.5, 1), screen.bar(nil, nil, nil, nil, percent)]
     ])]
   ])

@@ -3,12 +3,13 @@
 
 suite = "chromes"
 
-# The readout a chrome hands to its layout: the design it prints in and no box of its own, since the
-# cell the row above gave it is the box it draws in. A page that passes the design where the box is
-# read leaves the readout at whatever the name's pointer makes of an x, so both halves are pinned.
+# The readout a chrome hands to its layout: no family and no box of its own, since it draws in the
+# composition's design in the cell the row above gave it. A page that writes a design name where the
+# box is read leaves the readout drawn at whatever the name's pointer makes of an x, so both halves
+# are pinned.
 def assert_readout(readout, where)
   assert_eq(readout.kind, "pressure_readout", where + " does not hold the readout")
-  assert_eq(readout.family, "ttyp0", where + " readout does not name its design")
+  assert_eq(readout.family, nil, where + " readout names a family of its own")
   assert_eq(readout.x, nil, where + " readout names a box its cell should give it")
   assert_eq(readout.w, nil, where + " readout names a box its cell should give it")
 end
@@ -20,7 +21,7 @@ def home_chrome_draws_the_title_the_readout_and_the_clock()
 
   var title = child_at(tree, 0)
   assert_eq(title.kind, "text", "the home title is not a text string")
-  assert_eq(title.family, "ttyp0", "the home title does not name its design")
+  assert_eq(title.family, nil, "the home title names a family of its own")
   assert_eq(title.value, "Gardener", "the home title is not the device's name")
 
   var body = child_at(tree, 1)
@@ -28,7 +29,7 @@ def home_chrome_draws_the_title_the_readout_and_the_clock()
   assert_readout(child_at(body, 0), "the home body")
   var clock = child_at(body, 1)
   assert_eq(clock.kind, "text", "the home clock is not a text string")
-  assert_eq(clock.family, "ttyp0", "the home clock does not name its design")
+  assert_eq(clock.family, nil, "the home clock names a family of its own")
   assert_eq(clock.value, screen.duration_text("minutes", 65),
             "the home clock is not the run's elapsed time")
 

@@ -2,13 +2,14 @@
 // would have through the session the check drives, and writes the frames as a GIF.
 //
 // The tool writes no Berry. `load` and `send` are the calls a launch and a press already take — the
-// registry and the stack for a page, the press queue for a gesture — and the three verbs that are
-// not the page's are the host's: a wait is beats of the session, a rate is the chamber's model, and
-// an emit is the capture written.
+// registry and the stack for a page, the press queue for a gesture — and the verbs that are not the
+// page's are the host's: a wait is beats of the session, a rate is the chamber's model, a font is
+// the design a leaf that names no family draws in, and an emit is the capture written.
 //
-// The whole file is read before anything is drawn, and every load is resolved against the image
-// before the first frame is captured, so a misspelled scene, an unknown routine and a setting key
-// nobody declared all fail with a line number rather than a half-written picture.
+// The whole file is read before anything is drawn, and every load and font is resolved against the
+// image before the first frame is captured, so a misspelled scene, an unknown routine, a setting
+// key nobody declared and a design nothing ships all fail with a line number rather than a
+// half-written picture.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #include <vector>
 
 #include "Clock.h"
+#include "Fonts.h"
 #include "HarnessSession.h"
 #include "Script.h"
 #include "berry.h"
@@ -262,9 +264,18 @@ int hostMain(int argc, char** argv) {
   }
 
   // Every load is resolved before the capture is armed: a scene the image does not hold, a key the
-  // registry does not know and a setting nobody declared all fail with nothing on disk.
+  // registry does not know and a setting nobody declared all fail with nothing on disk. A font is
+  // resolved here for the same reason — a design nothing answers for is a line number rather than a
+  // picture drawn in whatever the name fell back to.
   std::vector<Target> targets(commands.size());
   for (size_t i = 0; i < commands.size(); i++) {
+    if (commands[i].verb == Command::Verb::SetFont) {
+      if (gardener::gfx::findFamily(commands[i].font.c_str()) == nullptr) {
+        printf("[E] line %d: no font '%s'\n", commands[i].line, commands[i].font.c_str());
+        return 2;
+      }
+      continue;
+    }
     if (commands[i].verb != Command::Verb::Load) continue;
     if (!resolve(commands[i], session, targets[i], error)) {
       printf("[E] line %d: %s\n", commands[i].line, error.c_str());
@@ -299,6 +310,11 @@ int hostMain(int argc, char** argv) {
         break;
       case Command::Verb::SetRate:
         session.setChamberRates(command.pullKpaPerSecond, command.ventKpaPerSecond);
+        break;
+      case Command::Verb::SetFont:
+        // The one line a composition sets on a device, set here from the walk instead: the resolver
+        // reads it as it fits each leaf, so the next frame is the first drawn in it.
+        gardener::gfx::setDefaultFamily(gardener::gfx::findFamily(command.font.c_str()));
         break;
       case Command::Verb::Emit:
         break;

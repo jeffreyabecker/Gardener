@@ -133,6 +133,19 @@ bool parseSetRate(const std::string& rest, Command& command, std::string& error)
   return true;
 }
 
+// The word the fonts module answers for a design. Whether it answers at all is the image's
+// business, which the tool asks before it arms the capture; a name of two words is the file's
+// mistake.
+bool parseSetFont(const std::string& rest, Command& command, std::string& error) {
+  std::string extra;
+  splitWord(rest, command.font, extra);
+  if (command.font.empty() || !extra.empty()) {
+    error = "set-font takes one design's name";
+    return false;
+  }
+  return true;
+}
+
 bool parseLine(const std::string& text, int line, Command& command, std::string& error) {
   command = Command();
   command.line = line;
@@ -156,6 +169,10 @@ bool parseLine(const std::string& text, int line, Command& command, std::string&
   if (verb == "set-rate") {
     command.verb = Command::Verb::SetRate;
     return parseSetRate(rest, command, error);
+  }
+  if (verb == "set-font") {
+    command.verb = Command::Verb::SetFont;
+    return parseSetFont(rest, command, error);
   }
   if (verb == "emit") {
     command.verb = Command::Verb::Emit;

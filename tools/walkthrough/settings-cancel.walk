@@ -4,6 +4,10 @@
 #
 #   python tools/walkthrough/walk.py tools/walkthrough/settings-cancel.walk
 
+# The panel's design, which the composition sets once on a device: a leaf that names no family draws
+# in it, and the band's height picks the cut.
+set-font ttyp0
+
 # Up held to a double opens the list on the unit row.
 load home
 send up:double

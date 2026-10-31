@@ -15,18 +15,18 @@ import string
 # The page's chrome from the run's clock: the title over the readout and the timer, a quarter and
 # three quarters of the page. `elapsed` is the run's elapsed time in milliseconds, as the device's clock
 # keeps it and as the static page's chrome takes it, or nil while nothing is running, so the drawing is
-# reached by a case that holds a clock rather than a machine. Both strings name the ttyp0 design, so
-# the band's height picks the cut and the page names no size.
+# reached by a case that holds a clock rather than a machine. Nothing here names a family: the
+# leaves draw in the composition's design, so the band's height picks the cut and the page names no
+# size.
 def home_chrome(elapsed)
   var timer = screen.text(nil, nil, nil, nil,
                             screen.duration_text("minutes",
                                                  (elapsed == nil ? 0 : elapsed) / 1000,
-                                                 elapsed != nil),
-                            "ttyp0")
+                                                 elapsed != nil))
   return screen.column(nil, [
-    [bounds(1, 0.25), screen.text(nil, nil, nil, nil, "Gardener", "ttyp0")],
+    [bounds(1, 0.25), screen.text(nil, nil, nil, nil, "Gardener")],
     [bounds(1, 0.75), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
+      [bounds(0.5, 1), screen.pressure_readout()],
       [bounds(0.5, 1), timer]
     ])]
   ])

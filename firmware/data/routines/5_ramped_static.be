@@ -6,24 +6,24 @@ import string
 
 # The static chrome: the glyph and title row, the pressure and the duration, and a status-plus-bar
 # row, laid out as fractions of the page. Every value is handed in, so a case draws the chrome from
-# numbers rather than from a page or a machine.
+# numbers rather than from a page or a machine. No leaf names a family, so the chrome draws in the
+# composition's design and the band's height picks the cut.
 def ramped_static_chrome(icon, title, status, duration, elapsed)
   var spent = elapsed == nil ? 0 : elapsed
   var timer = screen.text(nil, nil, nil, nil,
-                            screen.duration_text("minutes", spent / 1000, elapsed != nil),
-                            "ttyp0")
+                            screen.duration_text("minutes", spent / 1000, elapsed != nil))
   var percent = duration > 0 ? spent * 100.0 / duration : 0.0
   return screen.column(nil, [
     [bounds(1, 0.25), screen.row(nil, [
       [bounds(0.125, 1), screen.icon(nil, nil, nil, nil, icon)],
-      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title, "ttyp0")]
+      [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title)]
     ])],
     [bounds(1, 0.5), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
+      [bounds(0.5, 1), screen.pressure_readout()],
       [bounds(0.5, 1), timer]
     ])],
     [bounds(1, 0.25), screen.row(nil, [
-      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status, "ttyp0")],
+      [bounds(0.5, 1), screen.text(nil, nil, nil, nil, status)],
       [bounds(0.5, 1), screen.bar(nil, nil, nil, nil, percent)]
     ])]
   ])

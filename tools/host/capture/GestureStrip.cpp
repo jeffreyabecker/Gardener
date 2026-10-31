@@ -58,12 +58,15 @@ bool glyphBlank(uint8_t c) {
   return true;
 }
 
+// A label at the built-in face's own cell pitch. The strip is the six buttons as that face draws
+// them — the arrows beside the letters are the same height as its line — so it names the face rather
+// than following the session's default family, which a walk sets to the panel's design.
 void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
   for (const char* c = text; *c != '\0'; c++) {
     const uint8_t code = static_cast<uint8_t>(*c);
     const char value[] = {static_cast<char>(glyphBlank(code) ? 'x' : code), '\0'};
-    gfx::text(gfx::Box(x, y, 0, gfx::lineHeight(gfx::AdafruitFont), true, false), value, nullptr,
-              gfx::Justify::Start, gfx::Justify::Start)
+    gfx::text(gfx::Box(x, y, 0, gfx::lineHeight(gfx::AdafruitFont), true, false), value,
+              gfx::findFamily("adafruit"), gfx::Justify::Start, gfx::Justify::Start)
         ->draw(canvas);
     x = static_cast<int16_t>(x + CellWidth);
   }

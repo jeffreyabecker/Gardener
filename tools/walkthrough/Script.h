@@ -12,7 +12,7 @@ namespace gardener::walkthrough {
 // walk is the list of them, run top to bottom, so the file says what is drawn and the tool only
 // drives what it says.
 struct Command {
-  enum class Verb : uint8_t { Load, Send, Wait, SetRate, Emit };
+  enum class Verb : uint8_t { Load, Send, Wait, SetRate, SetFont, Emit };
 
   Verb verb = Verb::Emit;
   // The line it was read from, which every error about it names.
@@ -32,6 +32,10 @@ struct Command {
   // A set-rate: the model chamber's pull at full duty and its venting rate, in kPa per second.
   float pullKpaPerSecond = 0.0f;
   float ventKpaPerSecond = 0.0f;
+
+  // A set-font: the design every leaf that names no family draws in, by the name the fonts module
+  // answers for it.
+  std::string font;
 };
 
 // Reads a whole walkthrough file into its commands, in order. A blank line and a `#` line are not
