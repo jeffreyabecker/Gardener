@@ -4,12 +4,12 @@
 
 namespace gardener::gfx {
 
-// The faces the library ships are declared beside it, in fonts/: the built-in 5x7, all 256 byte
+// The faces the library ships are declared beside it, in fonts/: the Adafruit 5x7, all 256 byte
 // values in a five-by-eight cell six pixels apart, and the three cuts of ttyp0. They answer to the
-// names written down with them, and the built-in is what a page that names no font draws in, so
+// names written down with them, and the Adafruit is what a page that names no font draws in, so
 // everything below is a question about those faces and the names they answer to.
 
-// The face a caller that names none draws and measures in. It is the built-in 5x7 unless something
+// The face a caller that names none draws and measures in. It is the Adafruit 5x7 unless something
 // sets it, and setting nullptr puts that back: a caller that sets nothing draws as it always has.
 const Font* defaultFace();
 void setDefaultFace(const Font* face);
@@ -28,7 +28,7 @@ const Font* find(const char* name);
 // --- the families -------------------------------------------------------------
 // A design's cuts, shortest first: a page names the design and a height picks the cut, so a page
 // written against one size of a design still draws when a shorter or a taller one is fitted. A
-// family of one cut is a design with one size, which is what the built-in face is.
+// family of one cut is a design with one size, which is what the Adafruit face is.
 struct Family {
   const char* name;
   const Font* const* cuts;
@@ -36,7 +36,7 @@ struct Family {
 };
 
 // The family a page's family name stands for: one the library ships, one a caller registered, and
-// the built-in for "" and for a name the module does not hold, so a page that names a family nobody
+// the Adafruit for "" and for a name the module does not hold, so a page that names a family nobody
 // has draws as it does without one rather than not drawing.
 const Family* findFamily(const char* name);
 

@@ -8,7 +8,7 @@
 
 #include "suite.h"
 
-#include "fonts/BuiltinFont.h"
+#include "fonts/AdafruitFont.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -158,10 +158,10 @@ TEST_CASE("a family's name resolves as the family it found does") {
   CHECK_EQ(wide.face, same.face);
   CHECK_EQ(wide.scale, same.scale);
 
-  // A name the module does not hold resolves the built-in family: its eight row line, five times, in
+  // A name the module does not hold resolves the Adafruit family: its eight row line, five times, in
   // a band of forty-five rows.
   const Fit unknown = resolve("sans", 45);
-  CHECK_EQ(unknown.face, &BuiltinFont);
+  CHECK_EQ(unknown.face, &AdafruitFont);
   CHECK_EQ(unknown.scale, 5);
 }
 
@@ -219,7 +219,7 @@ TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") 
   // A name stands for one thing, so a family takes no name a face answers and no name a family
   // already does, and a face takes none of a family's either.
   CHECK_FALSE(registerFamily("ttyp0", one, 1));
-  CHECK_FALSE(registerFamily("builtin", one, 1));
+  CHECK_FALSE(registerFamily("adafruit", one, 1));
   CHECK_FALSE(registerFamily("ttyp016", one, 1));
   CHECK_FALSE(registerFamily("probe design", one, 1));
   CHECK_FALSE(registerFont("ttyp0", &probe));

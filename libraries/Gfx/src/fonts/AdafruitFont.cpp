@@ -1,8 +1,8 @@
-#include "BuiltinFont.h"
+#include "AdafruitFont.h"
 
 #include <Arduino.h>
 
-// The built-in 5x7 face is Adafruit_GFX's glcdfont.c, taken as it stands: the table below is that
+// The Adafruit 5x7 face is Adafruit_GFX's glcdfont.c, taken as it stands: the table below is that
 // file's 1280 bytes in its order, so the two can be compared byte for byte and neither a glyph nor
 // a bit has to be trusted to a conversion.
 //
@@ -33,7 +33,7 @@ namespace {
 
 // 256 glyphs of five columns by eight rows, one byte to a column and the least significant bit the
 // top row, which is glcdfont.c's own packing: the glyph for code c starts at c * 5.
-const uint8_t BuiltinBitmaps[] PROGMEM = {
+const uint8_t AdafruitBitmaps[] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x3E, 0x5B, 0x4F, 0x5B, 0x3E, 0x3E, 0x6B, 0x4F, 0x6B, 0x3E,
     0x1C, 0x3E, 0x7C, 0x3E, 0x1C, 0x18, 0x3C, 0x7E, 0x3C, 0x18, 0x1C, 0x57, 0x7D, 0x57, 0x1C,
     0x1C, 0x5E, 0x7F, 0x5E, 0x1C, 0x00, 0x18, 0x3C, 0x18, 0x00, 0xFF, 0xE7, 0xC3, 0xE7, 0xFF,
@@ -126,6 +126,6 @@ const uint8_t BuiltinBitmaps[] PROGMEM = {
 
 // A fixed face: the classic 5x7 in glcdfont.c's own packing, one byte to a column with the least
 // significant bit the top row. Its last row sits on the baseline, so that row is its descent.
-const Font BuiltinFont PROGMEM = {Font::Kind::Fixed, BuiltinBitmaps, 5, 8, nullptr, 0, 0, 7, 1};
+const Font AdafruitFont PROGMEM = {Font::Kind::Fixed, AdafruitBitmaps, 5, 8, nullptr, 0, 0, 7, 1};
 
 }  // namespace gardener::gfx

@@ -5,7 +5,7 @@
 
 #include "Canvas.h"
 #include "Rect.h"
-#include "fonts/BuiltinFont.h"
+#include "fonts/AdafruitFont.h"
 #include "layout/Drawing.h"
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
@@ -50,9 +50,9 @@ int16_t textWidth(const char* text) {
 // blank where a glyph is missing. A column of the cell is a byte of the face's bitmap, so a glyph
 // with no bit set in any of its columns has nothing to draw.
 bool glyphBlank(uint8_t c) {
-  const uint8_t* glyph = gfx::BuiltinFont.bitmap;
-  const uint16_t start = static_cast<uint16_t>(c * gfx::BuiltinFont.width);
-  for (uint8_t across = 0; across < gfx::BuiltinFont.width; across++) {
+  const uint8_t* glyph = gfx::AdafruitFont.bitmap;
+  const uint16_t start = static_cast<uint16_t>(c * gfx::AdafruitFont.width);
+  for (uint8_t across = 0; across < gfx::AdafruitFont.width; across++) {
     if (glyph[start + across] != 0) return false;
   }
   return true;
