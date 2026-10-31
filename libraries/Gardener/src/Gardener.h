@@ -8,7 +8,5 @@
 #include "core/Logger.h"
 #include "core/SerialLogger.h"
 #include "machine/Machine.h"
-#include "serial/Domains.h"
+#include "serial/BoardFacts.h"
 #include "serial/SerialLink.h"
-
-#include "serial/PanelDomains.h"

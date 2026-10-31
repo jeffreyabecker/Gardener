@@ -1,16 +1,14 @@
 #include "serial/SerialLink.h"
 
-#include <string.h>
-
 #include "core/Logger.h"
 
 namespace gardener {
 inline namespace serial {
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue)
-    : outbox_(queue), stream_(stream), port_(stream), present_(present), logger_(logger) {
-  domains_.reserve(MaxDomains);
-}
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
+                       SerialParts parts)
+    : outbox_(queue), stream_(stream), port_(stream), present_(present), logger_(logger),
+      parts_(parts) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
@@ -22,7 +20,7 @@ void SerialLink::begin() {
 bool SerialLink::controllerAttached() const { return present_ ? present_() : true; }
 
 // --- replies ---------------------------------------------------------------
-// The link writes only its own errors and diagnostics. A domain formats its reply through the
+// The link writes only its own errors and diagnostics. A grammar formats its reply through the
 // stream it is handed.
 
 void SerialLink::linkError(const char* code, const String& detail) {
@@ -42,10 +40,10 @@ void SerialLink::poll(uint32_t nowMs) {
 
   // A command the control task's queue could not take on an earlier pass is retried first, so a
   // momentarily full queue costs this link a beat rather than the command.
-  flushCommands();
+  outbox_.flush();
 
   // The link reads the domain token and nothing else. Once the token is followed by a space or a
-  // tab, the stream belongs to the domain, which parses the rest of the line (and any body).
+  // tab, the stream belongs to the grammar, which parses the rest of the line (and any body).
   while (stream_.available() > 0) {
     int value = stream_.read();
     if (value < 0) break;
@@ -68,8 +66,8 @@ void SerialLink::poll(uint32_t nowMs) {
       }
 
       token.toLowerCase();
-      if (findDomain(token.c_str())) {
-        // A domain with no command.
+      if (grammarFor(token) != Grammar::None) {
+        // A grammar with no command.
         linkError("bad_argument", "");
       } else {
         linkError("unknown_domain", token);
@@ -86,7 +84,7 @@ void SerialLink::poll(uint32_t nowMs) {
       }
       String token = buffer_;
       buffer_ = "";
-      if (!dispatchDomain(token)) swallowing_ = true;
+      if (!dispatch(token)) swallowing_ = true;
       continue;
     }
 
@@ -108,26 +106,38 @@ void SerialLink::poll(uint32_t nowMs) {
   attached_ = attached;
 }
 
-bool SerialLink::dispatchDomain(const String& token) {
+// The one list of what the link serves: the dispatcher and the token-only line both read it.
+SerialLink::Grammar SerialLink::grammarFor(const String& token) const {
+  if (token == "vacuum") return Grammar::Vacuum;
+  if (token == "device") return Grammar::Device;
+  if (token == "buzzer") return Grammar::Buzzer;
+  if (token == "fs") return Grammar::Files;
+  return Grammar::None;
+}
+
+bool SerialLink::dispatch(const String& token) {
   String name = token;
   name.toLowerCase();
 
-  Domain* domain = findDomain(name.c_str());
-  if (!domain) {
-    linkError("unknown_domain", name);
-    return false;
+  switch (grammarFor(name)) {
+    case Grammar::Vacuum:
+      executeVacuum(port_);
+      return true;
+    case Grammar::Device:
+      executeDevice(port_);
+      return true;
+    case Grammar::Buzzer:
+      executeBuzzer(port_);
+      return true;
+    case Grammar::Files:
+      executeFiles(port_);
+      return true;
+    case Grammar::None:
+      break;
   }
 
-  domain->execute(port_);
-  return true;
-}
-
-Domain* SerialLink::findDomain(const char* name) const {
-  if (!name) return nullptr;
-  for (Domain* domain : domains_) {
-    if (strcmp(domain->name(), name) == 0) return domain;
-  }
-  return nullptr;
+  linkError("unknown_domain", name);
+  return false;
 }
 
 }  // namespace serial

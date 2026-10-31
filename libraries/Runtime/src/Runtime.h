@@ -11,8 +11,5 @@
 #include "RtosCommandQueue.h"
 #include "storage/FileLibrary.h"
 #include "ble/BleLink.h"
-#include "ble/Domains.h"
 
 #include "PanelTasks.h"
-#include "ble/PanelDomains.h"
-#include "serial/FsDomain.h"

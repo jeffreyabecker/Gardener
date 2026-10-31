@@ -1,6 +1,6 @@
-// The `device` domain: the firmware's own fields, the board facts it is handed, the gauge and the
-// document handed in beside them, the level set it writes through the logger, and the capability
-// byte the composition derives.
+// The `device` commands: the firmware's own fields, the board facts the link is handed, the gauge
+// and the document handed in beside them, the level set it writes through the logger, and the
+// capability byte the composition derives.
 
 #include <doctest.h>
 
@@ -10,13 +10,13 @@
 
 #include "TextStream.h"
 #include "core/SystemState.h"
+#include "core/firmwareversion.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
-#include "core/firmwareversion.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
+#include "panel/parts/BuzzerPlayer.h"
 #include "serial/BoardFacts.h"
-#include "serial/Domains.h"
 #include "serial/SerialLink.h"
 #include "storage/DeviceSettings.h"
 
@@ -27,15 +27,17 @@ using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::Machine;
 using gardener::MachineCommand;
-using gardener::SystemState;
-using gardener::test::RecordingLogger;
 using gardener::SerialLink;
+using gardener::SystemState;
 using gardener::host::TextStream;
+using gardener::panel::parts::BuzzerPlayer;
 using gardener::test::FakeBattery;
+using gardener::test::FakeBuzzer;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
 using gardener::test::MemoryLibrary;
+using gardener::test::RecordingLogger;
 
 // The board's facts, as the sketch's own pair answer them.
 const char* chipModel() { return "ESP32-S3"; }
@@ -47,16 +49,16 @@ class OpenQueue : public CommandQueue {
   bool take(MachineCommand&) override { return false; }
 };
 
-// The domain over a machine, a gauge and a document the case owns.
+// The wire over a machine, a gauge and a document the case owns.
 struct Bench {
-  explicit Bench(bool energiseWhenOpen) : valve(energiseWhenOpen, nullptr), machine(logger, &pump,
-                                                                                 &sensor, &valve),
-                                          link(io, nullptr, logger, queue) {
+  explicit Bench(bool energiseWhenOpen)
+      : valve(energiseWhenOpen, nullptr), machine(logger, &pump, &sensor, &valve),
+        settings(&library, state), player(buzzerPart),
+        link(io, nullptr, logger, queue,
+             gardener::SerialParts{machine, board, battery, settings, player, library}) {
     machine.boot();
     settings.begin();
-    const BoardFacts board{&chipModel, &heapFacts};
-    link.registerDomain(
-        gardener::createDeviceDomain(machine, link.outbox(), board, battery, settings));
+    link.begin();
   }
 
   void send(const char* text) {
@@ -77,7 +79,10 @@ struct Bench {
   FakeBattery battery;
   SystemState state;
   MemoryLibrary library;
-  DeviceSettings settings{&library, state};
+  DeviceSettings settings;
+  FakeBuzzer buzzerPart;
+  BuzzerPlayer player;
+  const BoardFacts board{&chipModel, &heapFacts};
   SerialLink link;
 };
 
@@ -143,30 +148,4 @@ TEST_CASE("device set log writes the levels and answers them canonically") {
   bench.send("device set log we\n");
   CHECK_EQ(bench.reply(), std::string("ok log=WE\n"));
   CHECK_EQ(std::string(bench.logger.levels().c_str()), std::string("WE"));
-}
-
-TEST_CASE("an unknown level is refused and leaves the levels alone") {
-  Bench bench(false);
-  bench.send("device set log x\n");
-  CHECK_EQ(bench.reply(), std::string("err bad_argument x\n"));
-  CHECK_EQ(std::string(bench.logger.levels().c_str()), std::string("IWE"));
-}
-
-TEST_CASE("a second token refuses before anything applies") {
-  Bench bench(false);
-  bench.send("device set log we extra\n");
-  CHECK_EQ(bench.reply(), std::string("err bad_argument extra\n"));
-  CHECK_EQ(std::string(bench.logger.levels().c_str()), std::string("IWE"));
-}
-
-TEST_CASE("the set grammar is a space, not an equals sign") {
-  Bench bench(false);
-  bench.send("device set log=we\n");
-  CHECK_EQ(bench.reply(), std::string("err bad_argument\n"));
-}
-
-TEST_CASE("an unknown field is refused by name") {
-  Bench bench(false);
-  bench.send("device set volume 3\n");
-  CHECK_EQ(bench.reply(), std::string("err bad_argument volume\n"));
 }

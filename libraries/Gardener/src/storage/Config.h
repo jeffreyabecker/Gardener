@@ -13,7 +13,7 @@ namespace gardener {
 inline namespace storage {
 
 // Where the device's own document lives on the filesystem it mounts: the settings folder, with the
-// routines' documents. The wire's `fs` domain refuses to overwrite it.
+// routines' documents. The wire's `fs` commands refuse to overwrite it.
 constexpr const char* ConfigPath = "/cfg/settings.ini";
 
 // An INI document read through a store: `[section]` headers, `key=value` lines, blank lines and `;`

@@ -1,6 +1,6 @@
-// The machine's `vacuum` domain: the field list `get` publishes, the bounds `target` and `start`
-// hold their arguments to, and the refusals `start` answers. It runs over the machine's real
-// VacuumSystem with the parts faked, because the domain's answers are the loop's state.
+// The machine's `vacuum` commands: the field list `get` publishes, the bounds `target` and `start`
+// hold their arguments to, and the refusals `start` answers. They run over the machine's real
+// VacuumSystem with the parts faked, because the answers are the loop's state.
 
 #include <doctest.h>
 
@@ -11,26 +11,40 @@
 
 #include "Clock.h"
 #include "TextStream.h"
+#include "core/SystemState.h"
+#include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
-#include "serial/Domains.h"
+#include "panel/parts/BuzzerPlayer.h"
+#include "serial/BoardFacts.h"
 #include "serial/SerialLink.h"
+#include "storage/DeviceSettings.h"
 
 namespace {
 
+using gardener::BoardFacts;
 using gardener::CommandQueue;
-using gardener::Domain;
+using gardener::DeviceSettings;
 using gardener::Machine;
 using gardener::MachineCommand;
-using gardener::test::RecordingLogger;
 using gardener::SerialLink;
+using gardener::SystemState;
 using gardener::host::TextStream;
+using gardener::panel::parts::BuzzerPlayer;
+using gardener::test::FakeBattery;
+using gardener::test::FakeBuzzer;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
+using gardener::test::MemoryLibrary;
+using gardener::test::RecordingLogger;
 
-// The queue the link posts into: everything fits, so a case reads back what the domain queued.
+// The board's facts, as the sketch's own pair answer them.
+const char* chipModel() { return "ESP32-S3"; }
+uint32_t heapFacts() { return 123456; }
+
+// The queue the link posts into: everything fits, so a case reads back what the grammar queued.
 class OpenQueue : public CommandQueue {
  public:
   bool post(const MachineCommand& command) override {
@@ -54,10 +68,13 @@ class OpenQueue : public CommandQueue {
 
 // The machine the wire is built over, one per case, with a clock that starts at zero.
 struct Bench {
-  Bench() : machine(logger, &pump, &sensor, &valve), link(io, nullptr, logger, queue) {
+  Bench()
+      : machine(logger, &pump, &sensor, &valve), settings(&library, state), player(buzzerPart),
+        link(io, nullptr, logger, queue,
+             gardener::SerialParts{machine, board, battery, settings, player, library}) {
     gardener::host::reset();
     machine.boot();
-    link.registerDomain(gardener::createVacuumDomain(machine, link.outbox()));
+    link.begin();
   }
 
   void send(const char* text) {
@@ -75,6 +92,13 @@ struct Bench {
   OpenQueue queue;
   Machine machine;
   TextStream io;
+  FakeBattery battery;
+  SystemState state;
+  MemoryLibrary library;
+  DeviceSettings settings;
+  FakeBuzzer buzzerPart;
+  BuzzerPlayer player;
+  const BoardFacts board{&chipModel, &heapFacts};
   SerialLink link;
 };
 

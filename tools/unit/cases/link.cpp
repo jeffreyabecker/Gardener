@@ -1,6 +1,7 @@
 // The serial link's framing: which bytes end a domain token, what a line the link cannot dispatch
-// answers, and what happens to a half-read token when the controller goes away. The domains are
-// fakes here; the machine's own are in vacuum_domain.cpp and device_domain.cpp.
+// answers, and what happens to a half-read token when the controller goes away. The bench is the
+// real surface over fakes — a grammar's short reply is enough to see that the body reached it; the
+// machine's own commands are in vacuum_commands.cpp and device_commands.cpp.
 
 #include <doctest.h>
 
@@ -9,25 +10,44 @@
 #include <string>
 #include <vector>
 
+#include "Clock.h"
 #include "TextStream.h"
+#include "core/SystemState.h"
+#include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
-#include "serial/Domain.h"
+#include "machine/Machine.h"
+#include "panel/parts/BuzzerPlayer.h"
+#include "serial/BoardFacts.h"
 #include "serial/SerialLink.h"
+#include "storage/DeviceSettings.h"
 
 namespace {
 
-using gardener::CommandOutbox;
+using gardener::BoardFacts;
 using gardener::CommandQueue;
-using gardener::Domain;
+using gardener::DeviceSettings;
+using gardener::Machine;
 using gardener::MachineCommand;
-using gardener::test::RecordingLogger;
 using gardener::SerialLink;
+using gardener::SystemState;
 using gardener::host::TextStream;
+using gardener::panel::parts::BuzzerPlayer;
+using gardener::test::FakeBattery;
+using gardener::test::FakeBuzzer;
+using gardener::test::FakePump;
+using gardener::test::FakeSensor;
+using gardener::test::FakeValve;
+using gardener::test::MemoryLibrary;
+using gardener::test::RecordingLogger;
 
 bool controllerPresent = true;
 
 bool presentFn() { return controllerPresent; }
+
+// The board's facts, as the sketch's own pair answer them.
+const char* chipModel() { return "ESP32-S3"; }
+uint32_t heapFacts() { return 123456; }
 
 // The queue the link posts into: everything fits, and a case can see what was posted.
 class OpenQueue : public CommandQueue {
@@ -48,72 +68,59 @@ class OpenQueue : public CommandQueue {
   std::vector<MachineCommand> commands_;
 };
 
-// A domain that answers with the body it was handed, so a case can see exactly what reached
-// execute().
-class EchoDomain : public Domain {
- public:
-  EchoDomain(const char* name, CommandOutbox& outbox) : Domain(outbox), name_(name) {}
-
-  const char* name() const override { return name_; }
-
-  void execute(Stream& io) override {
-    const String body = io.readStringUntil('\n');
-    body_ = body.c_str();
-    io.print("ok ");
-    io.print(body);
-    io.print('\n');
-  }
-
-  const std::string& body() const { return body_; }
-
- private:
-  const char* name_;
-  std::string body_;
-};
-
-// One link with two domains over a stream the case types into.
+// One link over the fakes, with the piezo's grammar as the short reply a framing case reads.
 struct Bench {
-  Bench() : link(io, &presentFn, logger, queue) {
+  Bench()
+      : machine(logger, &pump, &sensor, &valve), settings(&library, state), player(buzzerPart),
+        link(io, &presentFn, logger, queue,
+             gardener::SerialParts{machine, board, battery, settings, player, library}) {
+    gardener::host::reset();
+    machine.boot();
     link.begin();
-    vacuum = new EchoDomain("vacuum", link.outbox());
-    device = new EchoDomain("device", link.outbox());
-    link.registerDomain(vacuum);
-    link.registerDomain(device);
   }
 
   // Types a line and runs one poll, which is what a link pass with a whole command in the buffer
   // does.
   void send(const char* text) {
     io.type(text);
-    link.poll(0);
+    link.poll(gardener::host::nowMs());
   }
 
-  TextStream io;
+  FakePump pump;
+  FakeSensor sensor;
+  FakeValve valve;
   RecordingLogger logger;
   OpenQueue queue;
+  Machine machine;
+  TextStream io;
+  FakeBattery battery;
+  SystemState state;
+  MemoryLibrary library;
+  DeviceSettings settings;
+  FakeBuzzer buzzerPart;
+  BuzzerPlayer player;
+  const BoardFacts board{&chipModel, &heapFacts};
   SerialLink link;
-  EchoDomain* vacuum = nullptr;
-  EchoDomain* device = nullptr;
 };
 
 }  // namespace
 
 TEST_CASE("a lowercase domain dispatches") {
   Bench bench;
-  bench.send("vacuum get\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
+  bench.send("buzzer stop\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("an uppercase domain dispatches") {
   Bench bench;
-  bench.send("VACUUM get\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
+  bench.send("BUZZER stop\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("a mixed case domain dispatches") {
   Bench bench;
-  bench.send("VaCuUm get\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
+  bench.send("BuZzEr stop\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("a domain token with nothing after it is a bad argument") {
@@ -124,21 +131,20 @@ TEST_CASE("a domain token with nothing after it is a bad argument") {
 
 TEST_CASE("a comment answers nothing and the next line still dispatches") {
   Bench bench;
-  bench.send("# a note about the line below\nvacuum get\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
+  bench.send("# a note about the line below\nbuzzer stop\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("a tab ends the domain token") {
   Bench bench;
-  bench.send("vacuum\tget\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
+  bench.send("buzzer\tstop\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("a CRLF line leaves no carriage return in the body") {
   Bench bench;
-  bench.send("vacuum get\r\n");
-  CHECK_EQ(bench.io.printed(), std::string("ok get\n"));
-  CHECK_EQ(bench.vacuum->body(), std::string("get"));
+  bench.send("buzzer stop\r\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok playing=off\n"));
 }
 
 TEST_CASE("a token longer than the line maximum is refused") {
@@ -155,20 +161,20 @@ TEST_CASE("an unknown domain names the token it could not dispatch") {
   CHECK_EQ(bench.io.printed(), std::string("err unknown_domain bogus\n"));
 }
 
-TEST_CASE("a domain's body reaches execute intact") {
+TEST_CASE("a domain's body reaches its grammar intact") {
   Bench bench;
-  bench.send("vacuum set target=5 hold=60\n");
-  CHECK_EQ(bench.vacuum->body(), std::string("set target=5 hold=60"));
+  bench.send("buzzer tone 1000 50\n");
+  CHECK_EQ(bench.io.printed(), std::string("ok tone=1000,50\n"));
 }
 
 TEST_CASE("a lost controller is reported and a half-read token is dropped") {
   Bench bench;
   controllerPresent = true;
   bench.io.type("vac");
-  bench.link.poll(0);
+  bench.link.poll(gardener::host::nowMs());
 
   controllerPresent = false;
-  bench.link.poll(0);
+  bench.link.poll(gardener::host::nowMs());
   CHECK(bench.logger.saw("serial: controller detached"));
 
   controllerPresent = true;

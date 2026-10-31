@@ -11,7 +11,7 @@ the panel's reserved key hold. Pressures are kPa, on the wire and in the firmwar
 The device is the machine — pump, sensor and vent valve — with the OLED panel, the keys, the buzzer
 and the battery gauge arranged around it. One sketch, [firmware/gardener](./firmware/gardener),
 composes the libraries for it: what it names is what the device has, over the serial link and the
-Bluetooth link it registers.
+Bluetooth link it builds.
 
 ## Build
 

@@ -9,7 +9,7 @@ dropped and the reason is in git.
 ## Second pump/sensor/solenoid combo
 
 Add a second pump, pressure sensor and vent solenoid so the device can run two chambers. The machine
-context, the `vacuum` wire domain and the alpha PCB all assume one combo today.
+context, the `vacuum` wire commands and the alpha PCB all assume one combo today.
 
 ## Firmware size
 

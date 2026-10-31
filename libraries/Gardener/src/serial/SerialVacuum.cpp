@@ -4,8 +4,7 @@
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "serial/Domain.h"
-#include "serial/Domains.h"
+#include "serial/SerialLink.h"
 
 namespace gardener {
 inline namespace serial {
@@ -16,75 +15,8 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-class VacuumDomain : public Domain {
- public:
-  VacuumDomain(Machine& app, CommandOutbox& outbox) : Domain(outbox), app_(app) {}
-
-  const char* name() const override { return "vacuum"; }
-  void execute(Stream& io) override;
-
- private:
-  void get(Stream& io);
-  void target(Stream& io, const String& args);
-  void start(Stream& io, const String& args);
-  void stop(Stream& io, const String& args);
-  void reset(Stream& io, const String& args);
-
-  Machine& app_;
-};
-
-void VacuumDomain::execute(Stream& io) {
-  String line = io.readStringUntil('\n');
-  line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
-    io.print("err bad_argument\n");
-    return;
-  }
-
-  const int space = line.indexOf(' ');
-  String verb = space < 0 ? line : line.substring(0, (unsigned int)space);
-  String args = space < 0 ? String() : line.substring((unsigned int)space + 1);
-  args.trim();
-  verb.toLowerCase();
-
-  if (verb.isEmpty()) {
-    io.print("err bad_argument\n");
-    return;
-  }
-  if (verb == "get") {
-    if (!args.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(args));
-      io.print('\n');
-      return;
-    }
-    get(io);
-    return;
-  }
-  if (verb == "target") {
-    target(io, args);
-    return;
-  }
-  if (verb == "start") {
-    start(io, args);
-    return;
-  }
-  if (verb == "stop") {
-    stop(io, args);
-    return;
-  }
-  if (verb == "reset") {
-    reset(io, args);
-    return;
-  }
-
-  io.print("err unknown_verb ");
-  io.print(verb);
-  io.print('\n');
-}
-
-void VacuumDomain::get(Stream& io) {
-  VacuumSystem& vacuum = app_.vacuum();
+void get(Stream& io, Machine& machine) {
+  VacuumSystem& vacuum = machine.vacuum();
   io.print("ok pressure_kpa=");
   io.print(vacuum.currentPressureKpa(), 2u);
 
@@ -109,11 +41,11 @@ void VacuumDomain::get(Stream& io) {
   io.print(" max_run=");
   io.print((uint32_t)(CONTROL_MAX_RUN_MS / 1000));
   io.print(" up=");
-  io.print(app_.uptimeMs());
+  io.print(machine.uptimeMs());
   io.print('\n');
 }
 
-void VacuumDomain::target(Stream& io, const String& args) {
+void target(Stream& io, const String& args, CommandOutbox& outbox) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -151,13 +83,13 @@ void VacuumDomain::target(Stream& io, const String& args) {
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  outbox_.post(set);
+  outbox.post(set);
   io.print("ok target=");
   io.print(pressureKpa, 1u);
   io.print('\n');
 }
 
-void VacuumDomain::start(Stream& io, const String& args) {
+void start(Stream& io, const String& args, Machine& machine, CommandOutbox& outbox) {
   // The optional argument is the hold, in whole seconds. Without one the run gets the compiled
   // maximum, which is also its ceiling.
   const uint32_t maxSeconds = CONTROL_MAX_RUN_MS / 1000;
@@ -194,7 +126,7 @@ void VacuumDomain::start(Stream& io, const String& args) {
 
   // The refusal is a pure read of the machine's fault and reading, so it is answered from a dirty
   // read; a would-succeed start is queued and the reply is optimistic.
-  const char* refusal = app_.vacuum().startRefusal();
+  const char* refusal = machine.vacuum().startRefusal();
   if (refusal != nullptr) {
     io.print("err not_ready ");
     io.print(refusal);
@@ -202,11 +134,11 @@ void VacuumDomain::start(Stream& io, const String& args) {
     return;
   }
   const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
-  outbox_.post(start);
+  outbox.post(start);
   io.print("ok state=PULL\n");
 }
 
-void VacuumDomain::stop(Stream& io, const String& args) {
+void stop(Stream& io, const String& args, CommandOutbox& outbox) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -215,11 +147,11 @@ void VacuumDomain::stop(Stream& io, const String& args) {
   }
 
   const MachineCommand stop{MachineCommand::Op::Stop};
-  outbox_.post(stop);
+  outbox.post(stop);
   io.print("ok state=VENT\n");
 }
 
-void VacuumDomain::reset(Stream& io, const String& args) {
+void reset(Stream& io, const String& args, CommandOutbox& outbox) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -228,14 +160,62 @@ void VacuumDomain::reset(Stream& io, const String& args) {
   }
 
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  outbox_.post(reset);
+  outbox.post(reset);
   io.print("ok state=IDLE\n");
 }
 
 }  // namespace
 
-Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox) {
-  return new VacuumDomain(app, outbox);
+// The machine's own commands: what a run is doing, the target it pulls to, and the three the control
+// tick applies.
+void SerialLink::executeVacuum(Stream& io) {
+  String line = io.readStringUntil('\n');
+  line.trim();
+  if (line.length() > COMMAND_LINE_MAX) {
+    io.print("err bad_argument\n");
+    return;
+  }
+
+  const int space = line.indexOf(' ');
+  String verb = space < 0 ? line : line.substring(0, (unsigned int)space);
+  String args = space < 0 ? String() : line.substring((unsigned int)space + 1);
+  args.trim();
+  verb.toLowerCase();
+
+  if (verb.isEmpty()) {
+    io.print("err bad_argument\n");
+    return;
+  }
+  if (verb == "get") {
+    if (!args.isEmpty()) {
+      io.print("err bad_argument ");
+      io.print(firstToken(args));
+      io.print('\n');
+      return;
+    }
+    get(io, parts_.machine);
+    return;
+  }
+  if (verb == "target") {
+    target(io, args, outbox_);
+    return;
+  }
+  if (verb == "start") {
+    start(io, args, parts_.machine, outbox_);
+    return;
+  }
+  if (verb == "stop") {
+    stop(io, args, outbox_);
+    return;
+  }
+  if (verb == "reset") {
+    reset(io, args, outbox_);
+    return;
+  }
+
+  io.print("err unknown_verb ");
+  io.print(verb);
+  io.print('\n');
 }
 
 }  // namespace serial

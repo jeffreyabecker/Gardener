@@ -1,10 +1,8 @@
-#include "serial/PanelDomains.h"
-
 #include <Arduino.h>
 #include <stdint.h>
 
 #include "panel/parts/BuzzerPlayer.h"
-#include "serial/Domain.h"
+#include "serial/SerialLink.h"
 
 namespace gardener {
 inline namespace serial {
@@ -15,55 +13,7 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-class BuzzerDomain : public Domain {
- public:
-  BuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox)
-      : Domain(outbox), buzzer_(buzzer) {}
-
-  const char* name() const override { return "buzzer"; }
-  void execute(Stream& io) override;
-
- private:
-  void get(Stream& io, const String& args);
-  void tone(Stream& io, const String& args);
-  void play(Stream& io, const String& args);
-  void stop(Stream& io, const String& args);
-
-  panel::parts::BuzzerPlayer& buzzer_;
-};
-
-void BuzzerDomain::execute(Stream& io) {
-  String line = io.readStringUntil('\n');
-  line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
-    io.print("err bad_argument\n");
-    return;
-  }
-
-  const int split = line.indexOf(' ');
-  String verb = split < 0 ? line : line.substring(0, split);
-  String args = split < 0 ? String() : line.substring(split + 1);
-  args.trim();
-  verb.toLowerCase();
-
-  if (verb.isEmpty()) {
-    io.print("err bad_argument\n");
-  } else if (verb == "get") {
-    get(io, args);
-  } else if (verb == "tone") {
-    tone(io, args);
-  } else if (verb == "play") {
-    play(io, args);
-  } else if (verb == "stop") {
-    stop(io, args);
-  } else {
-    io.print("err unknown_verb ");
-    io.print(verb);
-    io.print('\n');
-  }
-}
-
-void BuzzerDomain::get(Stream& io, const String& args) {
+void get(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -72,20 +22,20 @@ void BuzzerDomain::get(Stream& io, const String& args) {
   }
 
   io.print("ok tone=");
-  if (!buzzer_.sounding()) {
+  if (!buzzer.sounding()) {
     io.print('-');
   } else {
     // The same compact `hz,ms` a tone reply has always used: the frequency now and what is left.
-    io.print(buzzer_.frequencyHz());
+    io.print(buzzer.frequencyHz());
     io.print(',');
-    io.print(buzzer_.remainingMs(millis()));
+    io.print(buzzer.remainingMs(millis()));
   }
   io.print(" playing=");
-  io.print(buzzer_.playing() ? "on" : "off");
+  io.print(buzzer.playing() ? "on" : "off");
   io.print('\n');
 }
 
-void BuzzerDomain::tone(Stream& io, const String& args) {
+void tone(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   const int split = args.indexOf(' ');
   if (split < 0) {
     io.print("err bad_argument\n");
@@ -134,7 +84,7 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
     return;
   }
 
-  buzzer_.tone((uint16_t)hz, ms);
+  buzzer.tone((uint16_t)hz, ms);
 
   io.print("ok tone=");
   io.print((uint32_t)hz);
@@ -143,7 +93,7 @@ void BuzzerDomain::tone(Stream& io, const String& args) {
   io.print('\n');
 }
 
-void BuzzerDomain::play(Stream& io, const String& args) {
+void play(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -162,11 +112,11 @@ void BuzzerDomain::play(Stream& io, const String& args) {
     return;
   }
 
-  buzzer_.play(args.c_str());
+  buzzer.play(args.c_str());
   io.print("ok playing=on\n");
 }
 
-void BuzzerDomain::stop(Stream& io, const String& args) {
+void stop(Stream& io, const String& args, panel::parts::BuzzerPlayer& buzzer) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -174,14 +124,42 @@ void BuzzerDomain::stop(Stream& io, const String& args) {
     return;
   }
 
-  buzzer_.off();
+  buzzer.off();
   io.print("ok playing=off\n");
 }
 
 }  // namespace
 
-Domain* createBuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox) {
-  return new BuzzerDomain(buzzer, outbox);
+// The panel's piezo: the tone it is sounding, one timed tone, a note list, and silence.
+void SerialLink::executeBuzzer(Stream& io) {
+  String line = io.readStringUntil('\n');
+  line.trim();
+  if (line.length() > COMMAND_LINE_MAX) {
+    io.print("err bad_argument\n");
+    return;
+  }
+
+  const int split = line.indexOf(' ');
+  String verb = split < 0 ? line : line.substring(0, split);
+  String args = split < 0 ? String() : line.substring(split + 1);
+  args.trim();
+  verb.toLowerCase();
+
+  if (verb.isEmpty()) {
+    io.print("err bad_argument\n");
+  } else if (verb == "get") {
+    get(io, args, parts_.buzzer);
+  } else if (verb == "tone") {
+    tone(io, args, parts_.buzzer);
+  } else if (verb == "play") {
+    play(io, args, parts_.buzzer);
+  } else if (verb == "stop") {
+    stop(io, args, parts_.buzzer);
+  } else {
+    io.print("err unknown_verb ");
+    io.print(verb);
+    io.print('\n');
+  }
 }
 
 }  // namespace serial

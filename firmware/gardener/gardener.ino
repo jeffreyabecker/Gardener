@@ -3,10 +3,9 @@
 // ESP32-S3 + CFSensor XGZP6847A + SH1106 OLED, with a vent valve and a 1S Li-ion battery gauge.
 //
 // This sketch is the device's composition root. PanelRoot builds and owns the parts, and this file
-// names the board, registers the machine's and the panel's domains on the two links, brings the
-// parts up and starts the three tasks.
+// names the board, hands each link the parts it serves, brings the parts up and starts the three
+// tasks.
 
-#include <LittleFS.h>
 #include <Gardener.h>
 #include <Runtime.h>
 
@@ -49,19 +48,14 @@ void setup() {
   // The whole device, owned in one place; its constructor builds the graph and begin() brings it up.
   static gardener::PanelRoot root(Board);
 
-  // The wire surface is this build's to compose: the machine's domains and the panel's, both on the
-  // one serial link and the one BLE link.
-  gardener::SerialLink* serial =
-      new gardener::SerialLink(Serial, serialAttached, root.logger(), root.commands());
-  serial->registerDomain(gardener::createVacuumDomain(root.machine(), serial->outbox()));
-  serial->registerDomain(
-      gardener::createDeviceDomain(root.machine(), serial->outbox(), BoardInfo,
-                                   root.battery(), root.settings()));
-  serial->registerDomain(gardener::createBuzzerDomain(root.buzzer(), serial->outbox()));
-  serial->registerDomain(gardener::createFsDomain(serial->outbox(), LittleFS));
-  gardener::BleLink* ble = new gardener::BleLink(root.commands());
-  ble->registerDomain(gardener::createMachineBleDomain(root.machine()));
-  ble->registerDomain(gardener::createPanelBleDomain(root.settings(), root.battery()));
+  // The wire surface is this build's to compose: the serial link serves the machine's and the panel's
+  // commands and the store, and the Bluetooth link serves the machine and the panel as one table.
+  gardener::SerialLink* serial = new gardener::SerialLink(
+      Serial, serialAttached, root.logger(), root.commands(),
+      gardener::SerialParts{root.machine(), BoardInfo, root.battery(), root.settings(),
+                            root.buzzer(), root.files()});
+  gardener::BleLink* ble =
+      new gardener::BleLink(root.commands(), root.machine(), root.settings(), root.battery());
 
   serial->begin();
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
