@@ -1,5 +1,6 @@
 #include "core/RunState.h"
 #include "core/SystemState.h"
+#include "storage/DeviceSettings.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 #include "BindingContext.h"
