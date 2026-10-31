@@ -5,7 +5,7 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 ## The Adafruit name
 
-- [ ] Rename the built-in face to the design it came from — `AdafruitFont`, `fonts/AdafruitFont.h`
+- [x] Rename the built-in face to the design it came from — `AdafruitFont`, `fonts/AdafruitFont.h`
       and `.cpp`, the name `adafruit`, the family `AdafruitFamily`, the README and the cases that
       name it — so nothing in the tree calls one face the built-in one.
 
