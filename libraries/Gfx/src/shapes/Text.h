@@ -59,7 +59,4 @@ Fit resolve(const Family* family, const char* value, int16_t width, int16_t heig
 // what a scene asks when it has to know how much room a leaf will fill.
 Size measureText(const Family* family, const char* value, int16_t width, int16_t height);
 
-// Draws one glyph of the built-in 5x7 face by code, with (x, y) the top-left of its cell.
-void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color);
-
 }  // namespace gardener::gfx

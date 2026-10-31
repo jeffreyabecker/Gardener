@@ -51,19 +51,6 @@ class TextNode : public PaintNode {
   Justify vertical_;
 };
 
-// One glyph of the built-in face by its code, for the symbols above the printable range.
-class GlyphNode : public PaintNode {
- public:
-  GlyphNode(Box box, uint8_t code, uint8_t scale);
-
-  void draw(Canvas& canvas) const override;
-
- private:
-  Box box_;
-  uint8_t code_;
-  uint8_t scale_;
-};
-
 // A fixed bitmap named by hex digits: two per byte, the width, the height, then one row per
 // byte-run. The string is the caller's and outlives the draw; one that names no bitmap draws
 // nothing.
@@ -162,7 +149,6 @@ class UnderlayNode : public PaintNode {
 // family, so a leaf that names none still draws.
 PaintNodeRef text(Box box, String value, const Family* family = nullptr,
                   Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
-PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale = 1);
 PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);
 PaintNodeRef progressBar(Box box, float value);

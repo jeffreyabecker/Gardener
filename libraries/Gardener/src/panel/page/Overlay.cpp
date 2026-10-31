@@ -47,6 +47,18 @@ bool movingLit(uint32_t nowMs) { return nowMs % 1000 < 650; }
 // A battery that is low shows its fill for every other half second.
 bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 
+// One glyph of the Adafruit face by its code, at the top-left of a cell: a code is a one-byte
+// string, so the text leaf draws it as it draws any other. The box is one line of that face, which
+// is the size the overlay's glyphs have always been drawn at.
+constexpr int16_t GlyphRows = 8;
+
+void oneGlyph(gfx::Canvas& cell, uint8_t code) {
+  const char value[] = {static_cast<char>(code), '\0'};
+  gfx::text(gfx::Box(0, GlyphTop, 0, GlyphRows, true, false), value, nullptr, gfx::Justify::Start,
+            gfx::Justify::Start)
+      ->draw(cell);
+}
+
 // A cell draws only what its arguments say, so one paint reads the state once and hands each of
 // these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
@@ -55,7 +67,7 @@ gfx::PaintNodeRef unitCell(DisplayUnit unit) {
 
 gfx::PaintNodeRef linksCell(bool serial, bool bluetooth) {
   return gfx::callable([serial, bluetooth](gfx::Canvas& cell) {
-    if (serial) gfx::drawGlyph(cell, 0, GlyphTop, SerialGlyph, 1, gfx::Ink);
+    if (serial) oneGlyph(cell, SerialGlyph);
     if (bluetooth) cell.draw(gfx::MonoBitmap(RuneLeft, 0, BluetoothBits, gfx::Ink));
   });
 }
@@ -88,7 +100,7 @@ gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
           gfx::Triangle::down(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight), gfx::Ink, true));
       return;
     }
-    gfx::drawGlyph(cell, 0, GlyphTop, glyph, 1, gfx::Ink);
+    oneGlyph(cell, glyph);
   });
 }
 

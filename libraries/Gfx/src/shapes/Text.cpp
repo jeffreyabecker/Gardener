@@ -191,10 +191,4 @@ Size measureText(const Family* family, const char* value, int16_t width, int16_t
   return measureText(fit.face, value, fit.scale);
 }
 
-void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
-  if (size == 0) return;
-  const int16_t baseline = static_cast<int16_t>(y + (AdafruitFont.height - 1) * size);
-  drawFontGlyph(canvas, x, baseline, &AdafruitFont, code, size, color);
-}
-
 }  // namespace gardener::gfx

@@ -61,7 +61,10 @@ bool glyphBlank(uint8_t c) {
 void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
   for (const char* c = text; *c != '\0'; c++) {
     const uint8_t code = static_cast<uint8_t>(*c);
-    gfx::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
+    const char value[] = {static_cast<char>(glyphBlank(code) ? 'x' : code), '\0'};
+    gfx::text(gfx::Box(x, y, 0, gfx::lineHeight(gfx::AdafruitFont), true, false), value, nullptr,
+              gfx::Justify::Start, gfx::Justify::Start)
+        ->draw(canvas);
     x = static_cast<int16_t>(x + CellWidth);
   }
 }

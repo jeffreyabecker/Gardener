@@ -19,7 +19,7 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 - [x] Fold `borrowedText` and `fitted` into one `text` that fits its box, takes a place and owns its
       value, and convert every leaf call in the scenes, the pages and the module.
-- [ ] Fold `glyph` and `drawGlyph` into a one-byte value through the text leaf, so the overlay's two
+- [x] Fold `glyph` and `drawGlyph` into a one-byte value through the text leaf, so the overlay's two
       glyph nodes are text.
 - [x] Measure a box: `measureText(family, value, width, height)` answers the ink a fitted draw
       takes, and the scenes that size a box from ink ask it.

@@ -75,14 +75,6 @@ void TextNode::draw(Canvas& canvas) const {
   own.draw(Text(left, baseline, value_.c_str(), fit.face, fit.scale, Ink));
 }
 
-GlyphNode::GlyphNode(Box box, uint8_t code, uint8_t scale)
-    : box_(box), code_(code), scale_(scale == 0 ? 1 : scale) {}
-
-void GlyphNode::draw(Canvas& canvas) const {
-  View own = canvas.child(box_.in(canvas));
-  drawGlyph(own, 0, 0, code_, scale_, Ink);
-}
-
 BitmapNode::BitmapNode(Box box, const char* glyph) : box_(box), glyph_(glyph) {}
 
 void BitmapNode::draw(Canvas& canvas) const {
@@ -169,10 +161,6 @@ void UnderlayNode::draw(Canvas& canvas) const {
 PaintNodeRef text(Box box, String value, const Family* family, Justify horizontal,
                   Justify vertical) {
   return std::make_unique<TextNode>(box, std::move(value), family, horizontal, vertical);
-}
-
-PaintNodeRef glyph(Box box, uint8_t code, uint8_t scale) {
-  return std::make_unique<GlyphNode>(box, code, scale);
 }
 
 PaintNodeRef icon(Box box, const char* bits) { return std::make_unique<BitmapNode>(box, bits); }
