@@ -25,22 +25,34 @@ using gfx::Justify;
 // field has. None of these raises: a node the walk cannot make sense of draws less, it does not take
 // the beat down.
 
+// be_getmember always leaves a value on the stack — nil when the field is not there — so every read
+// pops the answer it asked for, whether it found one or not.
+
 int intField(bvm* vm, int node, const char* field) {
-  if (!be_getmember(vm, node, field)) return 0;
+  if (!be_getmember(vm, node, field)) {
+    be_pop(vm, 1);
+    return 0;
+  }
   const bint value = be_isnumber(vm, -1) ? be_toint(vm, -1) : 0;
   be_pop(vm, 1);
   return (int)value;
 }
 
 float realField(bvm* vm, int node, const char* field) {
-  if (!be_getmember(vm, node, field)) return 0.0f;
+  if (!be_getmember(vm, node, field)) {
+    be_pop(vm, 1);
+    return 0.0f;
+  }
   const float value = be_isnumber(vm, -1) ? (float)be_toreal(vm, -1) : 0.0f;
   be_pop(vm, 1);
   return value;
 }
 
 bool flagField(bvm* vm, int node, const char* field, bool fallback) {
-  if (!be_getmember(vm, node, field)) return fallback;
+  if (!be_getmember(vm, node, field)) {
+    be_pop(vm, 1);
+    return fallback;
+  }
   const bool value = be_isbool(vm, -1) ? be_tobool(vm, -1) != 0 : fallback;
   be_pop(vm, 1);
   return value;
@@ -49,7 +61,10 @@ bool flagField(bvm* vm, int node, const char* field, bool fallback) {
 // A string field, or nullptr. The answer points into the interpreter's own string, which lives as
 // long as the node it was read from — and the node lives on the stack for the whole walk.
 const char* textField(bvm* vm, int node, const char* field) {
-  if (!be_getmember(vm, node, field)) return nullptr;
+  if (!be_getmember(vm, node, field)) {
+    be_pop(vm, 1);
+    return nullptr;
+  }
   const char* value = be_isstring(vm, -1) ? be_tostring(vm, -1) : nullptr;
   be_pop(vm, 1);
   return value;
@@ -57,14 +72,20 @@ const char* textField(bvm* vm, int node, const char* field) {
 
 // A declared side of a cell: nil is the whole of what holds it, which is what Cell says with Whole.
 float cellSide(bvm* vm, int record, const char* field) {
-  if (!be_getmember(vm, record, field)) return Cell::Whole;
+  if (!be_getmember(vm, record, field)) {
+    be_pop(vm, 1);
+    return Cell::Whole;
+  }
   const float value = be_isnumber(vm, -1) ? (float)be_toreal(vm, -1) : Cell::Whole;
   be_pop(vm, 1);
   return value;
 }
 
 bool numberField(bvm* vm, int node, const char* field) {
-  if (!be_getmember(vm, node, field)) return false;
+  if (!be_getmember(vm, node, field)) {
+    be_pop(vm, 1);
+    return false;
+  }
   const bool present = be_isnumber(vm, -1);
   be_pop(vm, 1);
   return present;

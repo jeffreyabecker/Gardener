@@ -140,3 +140,36 @@ Verified by:
 The branch-only probes (`--pad`, the ink print) are deleted before the fix is committed. No device
 build is needed unless the fix reaches something the host tools cannot compile, which it should not:
 this is a host-visible fault on device code, and the suite compiles the code it is in.
+
+## The outcome
+
+The cause was not in the readout at all. A draw record's `x` was an integer whose value was a
+pointer's low bits, so the node was drawn at a corner that depended on where the heap happened to put
+the record: sometimes off the glass, sometimes far enough left that the cell clipped the box back to
+itself and the picture looked right. That is why every perturbation moved it and why the "reference"
+GIF turned out to be the broken drawing, with home's own readout blank.
+
+The argument readers in [bindings/Screen.cpp](../../libraries/Gardener/src/bindings/Screen.cpp) were
+bounded by `be_top(vm)`, but the node a call makes is pushed on top of its arguments before they run,
+so the count included the record. An index one past the last argument — which is what
+`screen.pressure_readout()`, taking no box at all, asks for — passed the check and read the record
+itself: `argInt` is `be_toint`, which reinterprets a value's payload without looking at its type, so a
+pointer came back as a whole number. `y`, `w` and `h` were past that slot and stayed nil, which is why
+one field moved and not four.
+
+The fix is one count, taken before the node is made, and `hasArg` in its place everywhere an argument
+is read: the call's own argument count is what says where the arguments end. Auditing the rest of
+`bindings/` found the same shape in three more places that happened to be harmless — a row's
+`alignment` was being set to its children, a scrollbar's `hollow` to its record, and `screen.text`
+raised on a font passed without a scale.
+
+The six field readers in [bindings/DrawTree.cpp](../../libraries/Gardener/src/bindings/DrawTree.cpp)
+are the other half: `be_getmember` always leaves a value on the stack, so each now pops the nil it
+asked for instead of leaking the slot when a field is absent.
+
+Verified by the reproducer: all sixty-five lengths of the environment variable, and every in-program
+heap pad the earlier sweep found, now write one GIF — `D1C3583E…`, with the readout drawn on home and
+on the interval page. The case that fails without the fix is `harness_boxes()` in
+[tools/berry/driver.be](../../tools/berry/driver.be), which reads the box off a node the way a page
+does: with the fault it answers `1733273392,nil,nil,nil`. The unit suite and the Berry check both pass,
+and the sample walk still writes 100 frames over 25.0 s of device time.

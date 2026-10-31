@@ -1,7 +1,6 @@
 #include "panel/page/PressureReadout.h"
 
 #include <Arduino.h>
-#include <stdio.h>
 
 #include <utility>
 

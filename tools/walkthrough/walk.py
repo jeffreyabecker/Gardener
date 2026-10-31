@@ -123,7 +123,7 @@ def build(cc, cxx):
         if (args.no_cache or not obj.exists()
                 or obj.stat().st_mtime < Path(source).stat().st_mtime
                 or obj.stat().st_mtime < header_mtime):
-            run([compiler_path, std, "-O0", "-g", *includes, "-c", str(source), "-o", str(obj)])
+            run([compiler_path, std, "-O0", *includes, "-c", str(source), "-o", str(obj)])
         built.append(obj)
 
     for source in sorted((BERRY / "src").glob("*.c")):
