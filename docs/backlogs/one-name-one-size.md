@@ -39,11 +39,10 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 ## The surface is a family, a lookup and a registration
 
-- [ ] Delete `defaultFamily` and `setDefaultFamily` with the `chosenFamily` global they hold, now
-      that nothing sets or reads them.
-- [ ] Let `resolve` and `measureText` take a `const Family*` and answer the Adafruit family for no
-      family, declare `AdafruitFamily` beside the face in `fonts/AdafruitFont.h`, and delete
-      `familyOr`, `faceOr` and the face-taking `measureText` with the coalescing they hold.
+- [ ] Move the default family inside the resolution: `resolve` and `measureText` take a
+      `const Family*` and answer the default family — the Adafruit family, declared beside the face
+      in `fonts/AdafruitFont.h` — for none, so `defaultFamily`, `setDefaultFamily`, `familyOr`,
+      `faceOr` and the face-taking `measureText` go with the global they read.
 - [ ] Answer `nullptr` from `findFamily` for a name nobody holds, and delete the two `resolve`
       overloads that take a family's name, so a name is looked up in one place and fitted in one.
 - [ ] Delete `find` and the Adafruit row of the one-cut table, which repeats the design the lookup

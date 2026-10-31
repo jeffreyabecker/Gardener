@@ -14,12 +14,13 @@ Family*`, named through `findFamily` ([Fonts.h](../../libraries/Gfx/src/Fonts.h:
 decide which of the two it will be built on, and that decision is what the rest of this plan
 removes.
 
-**A fallback with four names on it.** The module answers "what does a page that names nothing draw
-in" three times over: `defaultFamily` says what it is, `setDefaultFamily` sets it, and `familyOr`
-and `faceOr` apply it ([Fonts.h](../../libraries/Gfx/src/Fonts.h:32)). One line in the panel writes
-the setter ([PanelRoot.cpp](../../firmware/gardener/PanelRoot.cpp:64)) and nothing reads the getter
-outside the suites, so all four exist to carry `ttyp0` from the composition that chose it to the
-leaves that draw — which is a job an argument does, without a global to hold it.
+**A default four public names wide.** A leaf that names nothing has to draw in something, so the
+module has a default family — but the header spells it as four entries: `defaultFamily` says what it
+is, `setDefaultFamily` sets it, and `familyOr` and `faceOr` apply it
+([Fonts.h](../../libraries/Gfx/src/Fonts.h:32)). One line in the panel writes the setter
+([PanelRoot.cpp](../../firmware/gardener/PanelRoot.cpp:64)) and nothing reads the getter outside the
+suites, so what belongs inside the resolver as one constant is a global a composition writes and
+every leaf consults.
 
 **Four spellings of a size.** `text` and `borrowedText` take a multiplier; `duration` takes a face
 and no size at all ([Drawing.h](../../libraries/Gfx/src/layout/Drawing.h:201)); `glyph` takes a
@@ -49,7 +50,7 @@ scenes, and the two that were converted to a family name it inline
 
 ## The shape of the change
 
-Two rules and one deletion, and everything below follows from them.
+Two rules and one move inward, and everything below follows from them.
 
 ### A name is a family
 
@@ -89,8 +90,8 @@ the rasteriser; neither is a size a page or a scene writes.
 The plain text leaves that place a string at the top-left of their box keep working by declaring
 `{Start, Start}`, which is the one thing the placement argument adds.
 
-A family pointer that is null is the Adafruit family, decided in `resolve` itself, so a leaf and a
-measurement share one fallback and neither asks what a default is.
+A family pointer that is null means the default family, and the resolver decides that once, so a
+leaf and a measurement share one answer and neither calls a coalescer to get it.
 
 ### One text leaf
 
@@ -107,12 +108,17 @@ one rule in place of a lifetime argument at each call, and the strings are a row
 `glyph(Box, code, scale)` and `drawGlyph` go with it: a glyph by code is a one-byte string, and the
 two nodes in the overlay that draw one become `text` with a one-byte value.
 
-### No default
+### The default family is the resolver's
 
-There is no default family, because a default is a name a caller never wrote. A family pointer that
-is null is the Adafruit family, and that line sits inside `resolve`
-([shapes/Text.cpp](../../libraries/Gfx/src/shapes/Text.cpp:1)), beside the faces it chooses
-between. `defaultFamily`, `setDefaultFamily`, `familyOr` and `faceOr` go with it.
+There is a default family, and there has to be: a leaf or a measurement that names none draws in
+one, or every caller would name a family to draw a character. What goes is the API around it. The
+default is the Adafruit family, a constant of the selection surface declared beside the face in
+[fonts/AdafruitFont.h](../../libraries/Gfx/src/fonts/AdafruitFont.h), and `resolve` applies it where
+the fit is made ([shapes/Text.cpp](../../libraries/Gfx/src/shapes/Text.cpp:1)) — so a leaf that
+names nothing draws, and no caller reads the default, sets it or passes it along.
+
+`defaultFamily`, `setDefaultFamily`, `familyOr` and `faceOr` go: three of them exist only to carry
+the global, and the fourth is the same coalescer under a second name.
 
 What the panel drew in ttyp0 because a global said so, it draws in ttyp0 because the composition
 that builds its scenes names the design once and hands it to them. A scene that wants the Adafruit
@@ -177,10 +183,10 @@ than a global a leaf has to consult.
 - **Keep a face registry beside the families** — `find` and a separate table of caller-registered
   faces: two names for one design, two budgets and two sets of refusals, and a caller with a single
   face registering it twice.
-- **Keep a default family and its setter** — a leaf that names nothing keeps drawing in whatever the
-  composition chose, and the panel keeps the one line it writes today. It is a global that four
-  public names exist to serve, one with no reader outside the suites, and it makes a picture depend
-  on something no leaf was told.
+- **Keep the default settable** — a leaf that names nothing draws in whatever the composition chose
+  at run time, and the panel keeps the line it writes today. The default is there either way; the
+  setter buys a composition that can change it after the fact, at the cost of a picture depending on
+  something no leaf was told and four names in the header to say so.
 - **A page that names a cut and a multiplier** — the face-and-scale form kept as a special case
   beside the family. It is a second way to ask, and the size it asks for is never narrowed to the
   box the way the resolver's is, so a leaf can draw text wider than its cell and leave the clip to
@@ -251,8 +257,8 @@ than a global a leaf has to consult.
    constructors, with the panel naming `ttyp0` once where it builds them.
 7. **The module.** `centred` and `fitted` folded into `screen.text`, `screen.measure` taking a box,
    and the record carrying a family and two places and nothing else.
-8. **The surface.** `defaultFamily` and `setDefaultFamily` go with the global they read; `resolve`
-   and `measureText` take a family and answer the Adafruit family for none; `familyOr`, `faceOr`,
+8. **The surface.** The default family moves inside the resolver — `resolve` and `measureText` take
+   a family and answer it for none — so `defaultFamily`, `setDefaultFamily`, `familyOr`, `faceOr`,
    the face-taking `measureText` and the two name-taking `resolve` overloads go; `findFamily`
    answers nothing for a name nobody holds; and `find` goes with the Adafruit row of the one-cut
    table — so `Fonts.h` is a family, a lookup and a registration.
@@ -266,7 +272,7 @@ than a global a leaf has to consult.
   parity table belongs to that plan and gains this plan's single text call.
 - `scale` is not deleted from the tree, only from what a caller writes: `resolve` answers one,
   `Text` draws one, and the rasteriser's loops are built on it.
-- After this, the Adafruit family is named in its own header, in the shipped tables and in
-  `resolve`'s one line, and nowhere else: the eight-row rows name nothing and get it, everything
-  else names a design, and `Fonts.h` is a `Family`, a lookup and a registration. That is the measure
-  of whether the change landed.
+- After this, the Adafruit family — the default — is named in its own header, in the shipped tables
+  and in `resolve`'s one line, and nowhere else: the eight-row rows name nothing and get the
+  default, everything else names a design, and `Fonts.h` is a `Family`, a lookup and a
+  registration. That is the measure of whether the change landed.
