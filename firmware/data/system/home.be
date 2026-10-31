@@ -26,7 +26,7 @@ def home_chrome(elapsed)
   return screen.column(nil, [
     [bounds(1, 0.25), screen.text(nil, nil, nil, nil, "Gardener", "ttyp0")],
     [bounds(1, 0.75), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout("ttyp0")],
+      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
       [bounds(0.5, 1), timer]
     ])]
   ])

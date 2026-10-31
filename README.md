@@ -99,6 +99,11 @@ The file is one command per line, run top to bottom; a `#` line and a blank line
 The whole file is read and every scene resolved before the first frame is drawn, so a misspelt scene
 or a setting key no routine declares fails with a line number rather than a half-written picture.
 
+`sample.walk` is the tour — a run on the home page, the browser over it and a routine launched with a
+set — and the folder holds a walk per subject beside it: `home.walk` for the target stepped, started,
+stopped and resumed; `settings.walk` for the device's own list edited and saved through every row;
+and `settings-cancel.walk` for the same list throwing each change away.
+
 | Command | What it does |
 | --- | --- |
 | `load <scene> [key=value;…]` | the panel back to its root (`home`), the browser, or a routine by key, with settings over the ones its document holds |

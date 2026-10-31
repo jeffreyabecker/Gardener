@@ -1,0 +1,71 @@
+# The device's own settings list, opened from the home page and edited through every row it holds:
+# the jingle chosen with its previews, the unit changed, and the maximum walked through both stages
+# of its editor before the list saves what it settled on.
+#
+#   python tools/walkthrough/walk.py tools/walkthrough/settings.walk
+
+# Up held to a double on the home page opens the list, which comes up on the unit row with the value
+# the document holds.
+load home
+send up:double
+wait 1 s
+
+# Down to the jingle and Forward into its choices: the entries the jingle library read at boot, the
+# one showing inverted, and each move playing the entry it lands on. An editor steps its value, so
+# Up takes the next entry and Down the one before it.
+send down:single
+send forward:single
+wait 1 s
+send up:single
+send up:single
+wait 1 s
+
+# OK writes the entry into the list and returns to the rows, JINGLE showing the title it settled on.
+send ok:single
+wait 1 s
+
+# Up to the unit, Forward into its four entries, and Up once to psi.
+send up:single
+send forward:single
+wait 1 s
+send up:single
+wait 1 s
+send ok:single
+wait 1 s
+
+# Down to the maximum and Forward into the duration editor, which opens on the minute field with the
+# document's fifteen minutes inverted.
+send down:single
+send down:single
+send forward:single
+wait 1 s
+send up:single
+send up:single
+wait 1 s
+
+# Forward moves the keys to the seconds field, where Up steps the same minute, and Back returns them
+# to the minutes before OK writes the whole duration back to the rows.
+send forward:single
+wait 1 s
+send up:single
+wait 1 s
+send back:single
+wait 1 s
+send ok:single
+wait 1 s
+
+# OK on the rows pops the list: what it settled on is written through the device, and the home page
+# comes back with the target read in the unit just chosen.
+send ok:single
+wait 1 s
+
+# Up twice steps the target in that unit — one whole step of psi — and OK runs to it.
+send up:single
+send up:single
+wait 1 s
+send ok:single
+wait 3 s
+send cancel:single
+wait 1 s
+
+emit

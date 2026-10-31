@@ -22,7 +22,7 @@ def ramped_interval_chrome(icon, title, current_set, total_sets, status, remaini
       [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title, "ttyp0")]
     ])],
     [bounds(1, 0.5), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout("ttyp0")],
+      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
       [bounds(0.5, 1), screen.text(nil, nil, nil, nil, sets, "ttyp0")]
     ])],
     [bounds(1, 0.25), screen.row(nil, [

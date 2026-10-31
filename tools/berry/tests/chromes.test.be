@@ -3,6 +3,16 @@
 
 suite = "chromes"
 
+# The readout a chrome hands to its layout: the design it prints in and no box of its own, since the
+# cell the row above gave it is the box it draws in. A page that passes the design where the box is
+# read leaves the readout at whatever the name's pointer makes of an x, so both halves are pinned.
+def assert_readout(readout, where)
+  assert_eq(readout.kind, "pressure_readout", where + " does not hold the readout")
+  assert_eq(readout.family, "ttyp0", where + " readout does not name its design")
+  assert_eq(readout.x, nil, where + " readout names a box its cell should give it")
+  assert_eq(readout.w, nil, where + " readout names a box its cell should give it")
+end
+
 def home_chrome_draws_the_title_the_readout_and_the_clock()
   var tree = home_chrome(65000)
   assert_eq(tree.kind, "column", "the home chrome is not a column")
@@ -15,7 +25,7 @@ def home_chrome_draws_the_title_the_readout_and_the_clock()
 
   var body = child_at(tree, 1)
   assert_eq(body.kind, "row", "the home body is not a row")
-  assert_eq(child_at(body, 0).kind, "pressure_readout", "the home body does not hold the readout")
+  assert_readout(child_at(body, 0), "the home body")
   var clock = child_at(body, 1)
   assert_eq(clock.kind, "text", "the home clock is not a text string")
   assert_eq(clock.family, "ttyp0", "the home clock does not name its design")
@@ -40,8 +50,7 @@ def ramped_static_chrome_draws_the_status_the_clock_and_the_bar()
   assert_eq(child_at(top, 1).value, "STATIC", "the static title is not the routine's title")
 
   var middle = child_at(tree, 1)
-  assert_eq(child_at(middle, 0).kind, "pressure_readout",
-            "the static body does not hold the readout")
+  assert_readout(child_at(middle, 0), "the static body")
   assert_eq(child_at(middle, 1).value, screen.duration_text("minutes", 50),
             "the static clock is not the run's elapsed time")
 
@@ -57,6 +66,7 @@ test("the static chrome draws the status, the clock and the bar",
 def ramped_interval_chrome_counts_the_sets()
   var glyph = "0c080000f3c012401240124012401e700000"
   var running = ramped_interval_chrome(glyph, "INTERVAL", 2, 4, "WORK", 50.0)
+  assert_readout(child_at(child_at(running, 1), 0), "the interval body")
   assert_eq(child_at(child_at(running, 1), 1).value, "2 / 4",
             "a running set is not counted out of the total")
   assert_eq(child_at(child_at(running, 2), 0).value, "WORK",

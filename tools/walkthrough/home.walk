@@ -1,0 +1,51 @@
+# The home page on its own: the target stepped with nothing running, a run started and given time to
+# climb, stopped and vented, then resumed from the target it kept.
+#
+#   python tools/walkthrough/walk.py tools/walkthrough/home.walk
+
+# The model chamber is left at its own rates, so the target the presses build is a few seconds'
+# climb and the reading can be seen to arrive at it rather than appear there.
+load home
+wait 1 s
+
+# Up six times and Down once: a press moves the target by the panel's whole step, which is one kPa
+# while the unit is kPa, and the readout under the title carries the target beside the dashes a
+# stopped machine reads. The machine works no shallower than five kPa, so the first press from
+# ambient lands there and the five that follow step above it.
+send up:single
+send up:single
+send up:single
+send up:single
+send up:single
+send up:single
+wait 1 s
+send down:single
+wait 1 s
+
+# OK starts the run: the valve closes, the reading climbs to the target and holds there, and the
+# timer beside the pressure counts the run's seconds.
+send ok:single
+wait 4 s
+
+# OK again with a run going is not a second start: the machine answers the run already under way and
+# the clock keeps counting.
+send ok:single
+wait 3 s
+
+# Up while it runs moves the target one step deeper, and the pump follows it without the clock
+# restarting.
+send up:single
+wait 3 s
+
+# Cancel stops the pump and opens the valve: nothing is running, so the reading goes back to dashes
+# and the timer goes with the run.
+send cancel:single
+wait 2 s
+
+# A further OK resumes from the target a press left, and the clock starts again from zero.
+send ok:single
+wait 3 s
+send cancel:single
+wait 1 s
+
+emit

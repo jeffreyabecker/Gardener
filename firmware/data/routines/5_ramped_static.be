@@ -19,7 +19,7 @@ def ramped_static_chrome(icon, title, status, duration, elapsed)
       [bounds(0.875, 1), screen.text(nil, nil, nil, nil, title, "ttyp0")]
     ])],
     [bounds(1, 0.5), screen.row(nil, [
-      [bounds(0.5, 1), screen.pressure_readout("ttyp0")],
+      [bounds(0.5, 1), screen.pressure_readout(nil, nil, nil, nil, "ttyp0")],
       [bounds(0.5, 1), timer]
     ])],
     [bounds(1, 0.25), screen.row(nil, [
