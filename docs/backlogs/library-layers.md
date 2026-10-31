@@ -11,9 +11,9 @@ inline is dropped later, one layer per item, when its uses are qualified.
       were inside `namespace panel::page` all along, and `GestureQueue`, the parts and every page
       name their folder, so no change was needed.
 - [x] `routines/bindings/` becomes `bindings/` declaring `gardener::bindings`, with `BerryScene` in it.
-- [ ] The fifteen headers that open `namespace gardener` twice collapse to one block, its
+- [x] The fifteen headers that open `namespace gardener` twice collapse to one block, its
       declarations at the head and the layer opened below them.
-- [ ] `routines/` declares `gardener::routines`, opening after its declarations.
+- [x] `routines/` declares `gardener::routines`, opening after its declarations.
 - [ ] The three ticks move to `beats/` declaring `gardener::beats`.
 - [ ] `serial/` declares `gardener::serial`, and its domains `gardener::serial::domains`.
 - [ ] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`

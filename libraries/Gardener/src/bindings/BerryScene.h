@@ -8,18 +8,10 @@
 struct bvm;
 
 namespace gardener {
-inline namespace core {
-struct SystemState;
-}
-}  // namespace gardener
-
-namespace gardener {
+inline namespace core { struct SystemState; }
 
 namespace bindings {
 class BindingContext;
-}
-
-namespace bindings {
 
 // A page whose body is Berry: a scene whose activate, handle, tick and draw_page are methods of an
 // instance the interpreter holds. The stack drives it like any other scene, so a page can move to

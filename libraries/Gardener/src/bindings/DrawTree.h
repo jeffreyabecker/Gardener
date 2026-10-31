@@ -8,12 +8,7 @@
 struct bvm;
 
 namespace gardener {
-inline namespace core {
-struct SystemState;
-}
-}  // namespace gardener
-
-namespace gardener {
+inline namespace core { struct SystemState; }
 
 namespace bindings {
 

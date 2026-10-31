@@ -7,9 +7,7 @@ inline namespace machine {
 class VacuumSystem;
 class CommandQueue;
 }
-}  // namespace gardener
 
-namespace gardener {
 inline namespace machine {
 
 // A write to the machine that the control task applies, carried across from the link or the VM

@@ -8,15 +8,8 @@
 #include "serial/Domain.h"
 
 namespace gardener {
-inline namespace core {
-class Logger;
-}
-inline namespace machine {
-class Machine;
-}
-}  // namespace gardener
-
-namespace gardener {
+inline namespace core { class Logger; }
+inline namespace machine { class Machine; }
 
 // The wire revision this link serves, reported as `proto` by `device get`. The wire is still
 // unsettled, so the number stays 1 and does not move per revision; a controller must not treat it

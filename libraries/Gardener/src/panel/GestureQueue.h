@@ -5,12 +5,7 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace core {
-class Logger;
-}
-}  // namespace gardener
-
-namespace gardener {
+inline namespace core { class Logger; }
 
 }  // namespace gardener
 

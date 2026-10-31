@@ -11,9 +11,7 @@ inline namespace core {
 class Logger;
 struct SystemState;
 }
-}  // namespace gardener
 
-namespace gardener {
 inline namespace machine {
 
 // The control tick's policy: what a beat applies from the queue and how a burst of commands

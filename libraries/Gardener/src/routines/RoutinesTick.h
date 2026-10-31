@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 namespace gardener {
+inline namespace routines {
 
 class Routines;
 
@@ -26,4 +27,5 @@ class RoutinesTick {
   Routines& routines_;
 };
 
+}  // namespace routines
 }  // namespace gardener

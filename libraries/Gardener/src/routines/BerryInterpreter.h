@@ -5,10 +5,9 @@
 struct bvm;
 
 namespace gardener {
+namespace bindings { class BindingContext; }
 
-namespace bindings {
-class BindingContext;
-}
+inline namespace routines {
 
 // The vendored Berry VM behind the core's Interpreter surface: the VM itself, the install that gives
 // it the modules a page is written against, and the scene the image's root page is put on the panel
@@ -37,4 +36,5 @@ class BerryInterpreter : public Interpreter {
   bvm* vm_ = nullptr;
 };
 
+}  // namespace routines
 }  // namespace gardener

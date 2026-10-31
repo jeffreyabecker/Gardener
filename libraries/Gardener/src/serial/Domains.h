@@ -3,20 +3,12 @@
 #include "serial/BoardFacts.h"
 
 namespace gardener {
-inline namespace core {
-class Battery;
-}
+inline namespace core { class Battery; }
 inline namespace machine {
 class Machine;
 class CommandOutbox;
 }
-inline namespace storage {
-class DeviceSettings;
-}
-}  // namespace gardener
-
-namespace gardener {
-
+inline namespace storage { class DeviceSettings; }
 class Domain;
 
 Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);

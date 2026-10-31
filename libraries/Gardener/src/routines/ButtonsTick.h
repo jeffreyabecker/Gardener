@@ -5,19 +5,11 @@
 #include "panel/parts/GestureClassifier.h"
 
 namespace gardener {
-inline namespace core {
-class Logger;
-}
-inline namespace machine {
-class CommandOutbox;
-}
-}  // namespace gardener
+inline namespace core { class Logger; }
+inline namespace machine { class CommandOutbox; }
+namespace panel { class GestureQueue; }
 
-namespace gardener {
-
-namespace panel {
-class GestureQueue;
-}  // namespace panel
+inline namespace routines {
 
 // The keys' policy on the panel beat: one call to the classifier, the two holds the panel takes for
 // itself, and the gesture a page gets. A caller steps it, so the sequence a beat runs is reached by
@@ -55,4 +47,5 @@ class ButtonsTick {
   bool home_ = false;
 };
 
+}  // namespace routines
 }  // namespace gardener

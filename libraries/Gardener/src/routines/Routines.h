@@ -15,13 +15,12 @@ struct SystemState;
 class Logger;
 class Library;
 }
-}  // namespace gardener
-
-namespace gardener {
 
 namespace panel::page {
 class RoutineRegistry;
 }
+
+inline namespace routines {
 
 // The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
 // the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
@@ -122,4 +121,5 @@ class Routines {
   size_t filesFound_ = 0;
 };
 
+}  // namespace routines
 }  // namespace gardener

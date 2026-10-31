@@ -6,12 +6,8 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
-inline namespace core {
-class Logger;
-}
-}  // namespace gardener
+inline namespace core { class Logger; }
 
-namespace gardener {
 inline namespace machine {
 
 // --- Closed loop vacuum control ---------------------------------------------

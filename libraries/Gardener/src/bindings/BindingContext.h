@@ -11,13 +11,7 @@ inline namespace machine {
 class CommandOutbox;
 struct MachineCommand;
 }
-}  // namespace gardener
-
-namespace gardener {
-
-namespace gfx {
-class DisplayDevice;
-}
+namespace gfx { class DisplayDevice; }
 
 namespace panel {
 class GestureQueue;

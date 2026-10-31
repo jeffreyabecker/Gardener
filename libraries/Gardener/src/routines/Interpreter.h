@@ -4,12 +4,13 @@
 #include <memory>
 
 namespace gardener {
-
 namespace panel {
 namespace page {
 class Scene;
 }  // namespace page
 }  // namespace panel
+
+inline namespace routines {
 
 // The interpreter the routines are compiled and run in, and the image's root page as a scene. It is
 // the core's surface over the vendored VM: the core names this and never `<berry.h>`, and
@@ -38,4 +39,5 @@ class Interpreter {
   virtual std::unique_ptr<panel::page::Scene> rootScene() = 0;
 };
 
+}  // namespace routines
 }  // namespace gardener

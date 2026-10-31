@@ -7,15 +7,14 @@ inline namespace core {
 class Battery;
 struct SystemState;
 }
-}  // namespace gardener
-
-namespace gardener {
 
 namespace panel {
 namespace parts {
 class BuzzerPlayer;
 }  // namespace parts
 }  // namespace panel
+
+inline namespace routines {
 
 // The panel's own parts' beat: the pack gauge and the piezo, updated on the one millisecond the
 // panel task hands a beat. Nothing here blocks or owns a clock.
@@ -33,4 +32,5 @@ class PartsTick {
   SystemState& state_;
 };
 
+}  // namespace routines
 }  // namespace gardener

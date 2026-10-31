@@ -1,12 +1,7 @@
 #pragma once
 
 namespace gardener {
-inline namespace machine {
-class CommandOutbox;
-}
-}  // namespace gardener
-
-namespace gardener {
+inline namespace machine { class CommandOutbox; }
 
 namespace panel::parts {
 class BuzzerPlayer;

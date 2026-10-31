@@ -15,9 +15,6 @@ inline namespace core {
 class Library;
 class Logger;
 }
-}  // namespace gardener
-
-namespace gardener {
 
 namespace panel::page {
 
@@ -121,4 +118,5 @@ class RoutineRegistry {
 };
 
 }  // namespace panel::page
+
 }  // namespace gardener
