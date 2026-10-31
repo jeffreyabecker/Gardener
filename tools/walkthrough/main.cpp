@@ -49,6 +49,11 @@ const char* DefaultOutput = "build/walk.gif";
 // hundred centiseconds is the check's: it slows a capture down for a reader who is studying it.
 constexpr int DefaultDelayCs = 25;
 
+// The beats a press is held on the picture before the page is handed it. A person's thumb is on the
+// button before the panel answers, and a frame that shows both at once reads as neither: half a
+// second of the button held is what the eye needs to see the press arrive.
+constexpr int DefaultLeadBeats = 2;
+
 // The scene the image sets as its browser: a global rather than a registry entry, so it is reached
 // by name the way the interpreter reaches `__rootScene`.
 const char* BrowserGlobal = "browserScene";
@@ -196,6 +201,7 @@ int hostMain(int argc, char** argv) {
   const char* scriptPath = nullptr;
   const char* outPath = DefaultOutput;
   int delayCs = DefaultDelayCs;
+  int leadBeats = DefaultLeadBeats;
   int scale = gardener::RenderScale;
   float ceilingKpa = gardener::ChamberCeilingKpa;
   bool verbose = false;
@@ -209,6 +215,8 @@ int hostMain(int argc, char** argv) {
       outPath = argv[++i];
     } else if (strcmp(argv[i], "--delay-cs") == 0 && i + 1 < argc) {
       delayCs = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--lead-beats") == 0 && i + 1 < argc) {
+      leadBeats = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--scale") == 0 && i + 1 < argc) {
       scale = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--ceiling-kpa") == 0 && i + 1 < argc) {
@@ -227,6 +235,10 @@ int hostMain(int argc, char** argv) {
   }
   if (delayCs < 1 || delayCs > 65535) {
     fprintf(stderr, "--delay-cs takes a frame delay in centiseconds, above zero\n");
+    return 2;
+  }
+  if (leadBeats < 0 || leadBeats > 1000) {
+    fprintf(stderr, "--lead-beats takes the beats a press is held before it lands, zero or more\n");
     return 2;
   }
   if (scale < 1 || scale > 16) {
@@ -277,8 +289,11 @@ int hostMain(int argc, char** argv) {
         }
         break;
       case Command::Verb::Send:
-        // The strip under the picture names the press, and the queue under the page takes it.
+        // The picture shows the press first and the page is handed it afterwards: the beats between
+        // them are the frames a reader sees the button held on, and the page has nothing to answer
+        // until the queue takes it.
         session.pressGesture(command.gesture.c_str());
+        session.beat(leadBeats);
         session.routines().pushPress(String(command.gesture.c_str()));
         break;
       case Command::Verb::Wait:

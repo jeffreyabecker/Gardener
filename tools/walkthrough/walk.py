@@ -148,6 +148,9 @@ parser.add_argument("--data", default=str(DATA), help="the data image to walk (d
 parser.add_argument("--out", help="where the GIF goes (default: build/<script>.gif)")
 parser.add_argument("--delay-cs", type=int,
                     help="how long each frame plays, in centiseconds (default 25, one beat)")
+parser.add_argument("--lead-beats", type=int,
+                    help="the beats a press is held on the picture before the page takes it "
+                         "(default 2, half a second)")
 parser.add_argument("--scale", type=int, help="how much the picture is enlarged")
 parser.add_argument("--ceiling-kpa", type=float,
                     help="the deepest depth the model chamber reaches, in kPa (default 70)")
@@ -168,6 +171,8 @@ out = Path(args.out) if args.out else BUILD / (Path(args.script).stem + ".gif")
 command.extend(["--out", str(out.resolve())])
 if args.delay_cs is not None:
     command.extend(["--delay-cs", str(args.delay_cs)])
+if args.lead_beats is not None:
+    command.extend(["--lead-beats", str(args.lead_beats)])
 if args.scale is not None:
     command.extend(["--scale", str(args.scale)])
 if args.ceiling_kpa is not None:
