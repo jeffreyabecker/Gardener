@@ -91,7 +91,8 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
-  return hintItem(gfx::borrowedText(gfx::Box::whole(), text), gfx::measureText(nullptr, text, 1));
+  return hintItem(gfx::borrowedText(gfx::Box::whole(), text, gfx::find("adafruit")),
+                  gfx::measureText(gfx::find("adafruit"), text, 1));
 }
 
 gfx::Children EditorScene::hintItems() {
@@ -151,7 +152,7 @@ gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
   // step a value the editor has not taken. The hint band is a hint's height, which the shortest
   // ttyp0 cut is taller than, so the words are the built-in face's.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), gfx::findFamily("adafruit"));
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())

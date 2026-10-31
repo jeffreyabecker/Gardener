@@ -50,7 +50,8 @@ bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 // A cell draws only what its arguments say, so one paint reads the state once and hands each of
 // these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
-  return gfx::borrowedText(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix);
+  return gfx::borrowedText(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix,
+                           gfx::find("adafruit"));
 }
 
 gfx::PaintNodeRef linksCell(bool serial, bool bluetooth) {
