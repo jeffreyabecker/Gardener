@@ -17,8 +17,8 @@ glass, a chamber for a rig and an in-memory data image. A page therefore runs on
 device runs, and the driver walks the image's own routines.
 
 --art runs one routine and saves what it drew, using the Gfx library the device compiles: an
-animated GIF of every beat. --scene does the same for one of the device's own scenes: home or
-browser.
+animated GIF of every beat. --scene does the same for one of the device's own scenes: home, browser
+or system.
 --tests saves a GIF per case that ran.
 """
 
@@ -169,7 +169,7 @@ parser.add_argument("--art", metavar="NAME", help="draw that routine and save it
 parser.add_argument(
     "--scene",
     metavar="NAME",
-    help="draw that device scene — home or browser — and save it as a GIF animation",
+    help="draw that device scene — home, browser or system — and save it as a GIF animation",
 )
 parser.add_argument(
     "--seconds",

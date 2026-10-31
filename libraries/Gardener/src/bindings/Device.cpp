@@ -5,6 +5,7 @@
 #include "Modules.h"
 #include "core/SystemState.h"
 #include "core/Units.h"
+#include "panel/page/SystemSettings.h"
 #include "panel/parts/BuzzerPlayer.h"
 
 namespace gardener {
@@ -104,8 +105,27 @@ int deviceTakeGesture(bvm* vm) {
   be_return(vm);
 }
 
+// The set a system settings list settled on, written back through the device's document. Answers
+// whether the document was written; an unchanged set writes nothing.
+int deviceSaveSettings(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
+  if (bindings == nullptr) {
+    be_raise(vm, "runtime_error", "device.save_settings: no panel");
+  }
+  if (be_top(vm) < 1) {
+    be_raise(vm, "type_error", "device.save_settings(values)");
+  }
+  SettingValues values;
+  if (!takeSettingMap(vm, 1, values)) {
+    be_raise(vm, "type_error", "device.save_settings: values is a map");
+  }
+  be_pushbool(vm, bindings->systemSettings().apply(values));
+  be_return(vm);
+}
+
 const bnfuncinfo DeviceLibrary[] = {
     {"display_unit", deviceDisplayUnit},
+    {"save_settings", deviceSaveSettings},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},
     {"silence", deviceSilence},

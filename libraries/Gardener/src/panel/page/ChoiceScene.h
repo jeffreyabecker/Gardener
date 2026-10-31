@@ -20,18 +20,23 @@ namespace gardener {
 // An entry prints its title, centred in the row: the scene places the rows, inverts the one showing
 // and scrolls the window to keep it in view.
 //
-// Forward is the page's own too: a scene handed a forward function runs it on the key showing, for
-// a page whose entries do something beyond being picked — an audition, a preview. A scene handed
-// none drops the key, which is what every page that only reads the answer does.
+// Forward is the page's own too: a scene handed a forward function runs it on the key showing — when
+// the editor goes on top, as its entries are stepped, and on Forward — for a page whose entries do
+// something beyond being picked: an audition, a preview. A scene handed none drops the key, which is
+// what every page that only reads the answer does.
 class ChoiceScene : public EditorScene {
  public:
   // `current` is the key stored now. A nullable setting holding nothing passes an empty one, which
   // is what the band prints `--` for; a key no entry names shows the first, as a setting that no
-  // longer offers it reads as its default. `forward` is what Forward runs on the key showing, or
-  // nothing for a page that has no work of its own there.
+  // longer offers it reads as its default. `forward` is what the page runs on the key showing, when
+  // the editor opens, as the entries are stepped and on Forward; nothing for a page that has no work
+  // of its own there.
   ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
               const std::vector<ChoiceItem>& items, bool nullable,
               std::function<void(String& current)> forward = nullptr);
+
+  // The editor going on top: the entry it opens on is previewed before the first draw.
+  void activate() override;
 
   // What the entry showing prints: its title, or `--` when the setting holds nothing.
   String text() const;
@@ -56,6 +61,8 @@ class ChoiceScene : public EditorScene {
 
  private:
   int16_t index() const;
+  // The page's work on the entry showing, when there is one and the page has work there.
+  void preview();
 
   std::vector<ChoiceItem> items_;
   std::function<void(String& current)> forward_;

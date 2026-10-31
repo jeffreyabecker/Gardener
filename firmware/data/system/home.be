@@ -1,10 +1,10 @@
 # home.be — the home scene: the device's own page, and the root the firmware will push.
 #
 # It registers with nothing. The home scene is the device's well-known page, so its gestures are the
-# machine's: OK starts or resumes a run and Cancel stops and vents, while Up held to a double pushes
-# the browser. It reads the machine through `vacuum` and the clock through `device`, and it draws by
-# answering a tree from draw_page() — the chrome `home_chrome()` builds from the run's clock — which
-# the stack paints in the page.
+# machine's: OK starts or resumes a run and Cancel stops and vents, Up held to a double opens the
+# device's own settings list, and Forward held to a double pushes the browser. It reads the machine
+# through `vacuum` and the clock through `device`, and it draws by answering a tree from draw_page() —
+# the chrome `home_chrome()` builds from the run's clock — which the stack paints in the page.
 #
 # It is a Berry scene, not a class of the old component model: the four hooks are its own methods and
 # the page clears itself, and no node carries a pixel of the panel's geometry because a node that
@@ -47,13 +47,16 @@ class HomeScene
 
   # A gesture that names a command outright — cmd:stop — is handed to the machine as it stands with
   # the prefix trimmed; anything else is a key, and the page maps it to the command it means. Up held
-  # to a double pushes the browser, which vents the chamber as it opens; Back or Cancel there returns
-  # to this page.
+  # to a double opens the device's own settings list, and Forward held to a double pushes the browser,
+  # which vents the chamber as it opens; Back or Cancel there returns to this page.
   def handle(ev)
     if string.startswith(ev, "cmd:")
       return self.machine.handle_command(string.split(ev, ":")[1])
     end
     if ev == "up:double"
+      return open_system_settings()
+    end
+    if ev == "forward:double"
       return self.machine.handle_command("browser")
     end
     if ev == "up:single"

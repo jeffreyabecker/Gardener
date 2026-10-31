@@ -203,8 +203,9 @@ def harness_art(routine_key, seconds, path)
 end
 
 # Draw one of the device's own scenes and save it as a GIF animation. The well-known scenes are not
-# registry entries — the home scene is the root, and the browser is the global browser.be sets — so
-# they are reached by name here rather than through routines.activate.
+# registry entries — the home scene is the root, the browser is the global browser.be sets, and the
+# system settings list is the native scene its factory answers — so they are reached by name here
+# rather than through routines.activate.
 def harness_art_scene(name, seconds, path)
   harness.reset()
   harness.capture_start(path)
@@ -213,6 +214,9 @@ def harness_art_scene(name, seconds, path)
     var scene = nil
     if name == "browser"
       scene = browserScene
+    end
+    if name == "system"
+      scene = SystemSettingsScene()
     end
     if scene == nil
       harness_fail("art: no scene named " + name)

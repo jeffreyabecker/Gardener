@@ -15,6 +15,7 @@ class DisplayDevice;
 class GestureQueue;
 class BuzzerPlayer;
 class RoutineRegistry;
+class SystemSettings;
 class Ux;
 
 // What the native modules reach of the app, held as the parts themselves: one VM and one app, so a
@@ -26,10 +27,11 @@ class Ux;
 class BindingContext {
  public:
   BindingContext(gfx::DisplayDevice& display, SystemState& state, DeviceSettings& settings,
-                 BuzzerPlayer& buzzer, CommandOutbox& outbox, GestureQueue& presses, Ux& ux,
-                 RoutineRegistry& registry, Logger& logger)
-      : display_(display), state_(state), settings_(settings), buzzer_(buzzer), outbox_(outbox),
-        presses_(presses), ux_(ux), registry_(registry), logger_(logger) {}
+                 SystemSettings& systemSettings, BuzzerPlayer& buzzer, CommandOutbox& outbox,
+                 GestureQueue& presses, Ux& ux, RoutineRegistry& registry, Logger& logger)
+      : display_(display), state_(state), settings_(settings), systemSettings_(systemSettings),
+        buzzer_(buzzer), outbox_(outbox), presses_(presses), ux_(ux), registry_(registry),
+        logger_(logger) {}
 
   // --- the panel's parts ---------------------------------------------------
   // The glass, the published state, the piezo, and the queue a command is posted to.
@@ -41,6 +43,9 @@ class BindingContext {
   // The document the state's two device values come from: what a module reads a preference from,
   // and what it writes one through.
   DeviceSettings& settings();
+
+  // The device's own settings list: the rows the system page opens over, and the set it writes back.
+  SystemSettings& systemSettings();
 
   // --- the runtime behind the image ----------------------------------------
   // The presses waiting for a page, the stack a launch pushes on, the routines the image
@@ -58,6 +63,7 @@ class BindingContext {
   gfx::DisplayDevice& display_;
   SystemState& state_;
   DeviceSettings& settings_;
+  SystemSettings& systemSettings_;
   BuzzerPlayer& buzzer_;
   CommandOutbox& outbox_;
   GestureQueue& presses_;

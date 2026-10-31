@@ -12,9 +12,9 @@ load home
 send ok:single
 wait 10 s
 
-# Up held to a double opens the browser, which vents the chamber as it comes up; Down moves the
+# Forward held to a double opens the browser, which vents the chamber as it comes up; Down moves the
 # selection, which is the picture.
-send up:double
+send forward:double
 wait 1 s
 send down:single
 wait 500 ms

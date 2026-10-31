@@ -59,7 +59,8 @@ void installDeviceModule(bvm* vm, BindingContext& bindings);
 void installUxModule(bvm* vm, BindingContext& bindings);
 // The settings module's declarations, the rows a settings list declares, each one consumed: a row
 // belongs to the one record that takes it. Installs the record a declaration is read back through,
-// and the SettingsEditScene the image opens a declaration list with.
+// the SettingsEditScene the image opens a declaration list with, and the SystemSettingsScene the
+// device's own list opens through.
 void installSettingsModule(bvm* vm, BindingContext& bindings);
 // The rows a settings list declares, in order, each declaration consumed: a row belongs to the one
 // record that takes it. Raises, leaving every declaration as it was, for a list holding anything

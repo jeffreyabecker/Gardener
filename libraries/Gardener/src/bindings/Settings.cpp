@@ -15,6 +15,7 @@
 #include "core/SystemState.h"
 #include "core/Units.h"
 #include "panel/page/SettingsRows.h"
+#include "panel/page/SystemSettings.h"
 
 namespace gardener {
 namespace {
@@ -481,9 +482,25 @@ int settingsEditScene(bvm* vm) {
   be_return(vm);
 }
 
+// SystemSettingsScene(): the device's own settings list, built from the rows the device's document
+// declares and the values it holds now, with no title argument because there is one list. The list
+// answers the set it settled on, which the page's callback writes back through `device.save_settings`.
+int systemSettingsScene(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
+  if (bindings == nullptr) {
+    be_raise(vm, "runtime_error", "SystemSettingsScene: no panel");
+  }
+  SystemSettings& settings = bindings->systemSettings();
+  std::unique_ptr<SettingsScene> scene = std::make_unique<SettingsScene>(
+      bindings->presses(), bindings->ux(), "SYSTEM", settings.rows(), settings.values());
+  pushSceneHandle(vm, std::move(scene));
+  be_return(vm);
+}
+
 // The `settings` module: the four declaration classes, installed as members so a file reaches a
 // kind through the module rather than through a global of its own, the record a routine's
-// declarations are read back through, and the list a declaration list opens.
+// declarations are read back through, and the two lists a declaration list or the device's own
+// document opens.
 void installSettingsModule(bvm* vm, BindingContext& bindings) {
   struct Kind {
     const char* name;
@@ -515,6 +532,13 @@ void installSettingsModule(bvm* vm, BindingContext& bindings) {
   be_pushntvclosure(vm, settingsEditScene, 1);
   captureBindingContext(vm, bindings);
   be_setglobal(vm, "SettingsEditScene");
+  // be_setglobal leaves the value it stored on the stack; the function is done with here.
+  be_pop(vm, 1);
+
+  // The device's own settings list, a global for the same reason.
+  be_pushntvclosure(vm, systemSettingsScene, 1);
+  captureBindingContext(vm, bindings);
+  be_setglobal(vm, "SystemSettingsScene");
   // be_setglobal leaves the value it stored on the stack; the function is done with here.
   be_pop(vm, 1);
 }

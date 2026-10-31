@@ -72,3 +72,71 @@ def a_list_that_holds_another_value_is_refused()
 end
 
 test("a list that holds another value is refused", a_list_that_holds_another_value_is_refused)
+
+# --- the device's own list -------------------------------------------------
+
+def the_system_list_writes_the_set_it_settles_on()
+  # The home page's own entry opens the device's list over it. Down moves from the unit to the jingle
+  # and then to the maximum, Forward opens the duration and Up takes one minute, and OK settles both
+  # the editor and the list. The set the list settles on is written back through `device`.
+  assert_true(open_system_settings(), "the system list would not open")
+  harness.beat(1)
+  assert_eq(ux.depth(), 2, "the system list did not go over the home page")
+
+  harness.press("down:single")
+  harness.beat(1)
+  harness.press("down:single")
+  harness.beat(1)
+  harness.press("forward:single")
+  harness.beat(1)
+  harness.press("up:single")
+  harness.beat(1)
+  harness.press("ok:single")
+  harness.beat(1)
+  harness.press("ok:single")
+  harness.beat(1)
+
+  assert_eq(ux.depth(), 1, "OK did not close the system list")
+  assert_eq(harness.setting("max_duration"), "960",
+            "the settled maximum did not reach the document")
+end
+
+test("the system list writes the set it settles on", the_system_list_writes_the_set_it_settles_on)
+
+def the_jingle_row_auditions_the_entry_it_shows()
+  assert_true(open_system_settings(), "the system list would not open")
+  harness.beat(1)
+
+  # Down from the unit row to the jingle. Forward opens its entries and previews the one showing;
+  # Up steps to the next entry and previews that one; Forward previews the entry showing again.
+  harness.press("down:single")
+  harness.beat(1)
+
+  device.silence()
+  var sounds = harness.buzzer_sounds()
+  harness.press("forward:single")
+  harness.beat(1)
+  assert_true(harness.buzzer_sounds() > sounds, "opening the jingle row did not preview it")
+
+  device.silence()
+  sounds = harness.buzzer_sounds()
+  harness.press("up:single")
+  harness.beat(1)
+  assert_true(harness.buzzer_sounds() > sounds, "stepping to a jingle did not preview it")
+
+  device.silence()
+  sounds = harness.buzzer_sounds()
+  harness.press("forward:single")
+  harness.beat(1)
+  assert_true(harness.buzzer_sounds() > sounds, "Forward did not preview the jingle")
+
+  # Leave: the editor on Cancel and the list on Cancel, neither settling a change.
+  harness.press("cancel:single")
+  harness.beat(1)
+  harness.press("cancel:single")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "Cancel did not close the system list")
+end
+
+test("the jingle row auditions the entry it shows",
+     the_jingle_row_auditions_the_entry_it_shows)

@@ -14,11 +14,13 @@
 #include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"
 #include "panel/page/RoutineRegistry.h"
+#include "panel/page/SystemSettings.h"
 #include "panel/page/Ux.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
 #include "storage/DeviceSettings.h"
+#include "storage/JingleLibrary.h"
 
 namespace gardener {
 
@@ -91,9 +93,13 @@ class PanelRoot {
   BuzzerPlayer buzzer_;
   runtime::Sh1106Device display_;
   DeviceSettings settings_;
+  // The library the system list chooses a jingle from, read once at boot.
+  JingleLibrary jingles_;
   // The queue a gesture goes to and the stack a page is pushed on.
   GestureQueue presses_;
   Ux ux_;
+  // The device's own settings rows, held for the life of the device because the list borrows them.
+  SystemSettings systemSettings_;
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   RoutineRegistry registry_;
   BindingContext bindings_;

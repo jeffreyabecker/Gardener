@@ -23,10 +23,12 @@
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 #include "panel/page/RoutineRegistry.h"
+#include "panel/page/SystemSettings.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
 #include "storage/DeviceSettings.h"
+#include "storage/JingleLibrary.h"
 
 struct bvm;
 
@@ -320,6 +322,7 @@ class HarnessSession {
   BufferLogger logger_;
   SystemState state_;
   DeviceSettings settings_;
+  JingleLibrary jingles_{&files_, logger_};
   Chamber chamber_;
   ModelPump pump_;
   ModelSensor sensor_;
@@ -332,13 +335,15 @@ class HarnessSession {
   BuzzerPlayer buzzer_;
   GestureQueue presses_;
   Ux ux_;
+  // The device's own settings rows, which the system list borrows.
+  SystemSettings systemSettings_{presses_, ux_, settings_, jingles_, buzzer_};
   // The queue the machine's commands wait in, and the outbox the app posts them through.
   HostQueue queue_;
   CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   RoutineRegistry registry_{files_, logger_};
-  BindingContext bindings_{display_, state_, settings_, buzzer_, outbox_,
-                           presses_, ux_,    registry_, logger_};
+  BindingContext bindings_{display_, state_,   settings_, systemSettings_, buzzer_,
+                           outbox_,  presses_, ux_,       registry_,       logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };

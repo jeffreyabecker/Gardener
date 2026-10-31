@@ -84,6 +84,7 @@ bool HarnessSession::begin() {
   // The order Panel::boot brings them up in, minus the bus and the keys. The document is read before
   // the interpreter, which reads it when its modules are installed.
   settings_.begin();
+  jingles_.begin();
   battery_.begin();
   buzzerPart_.begin();
   buzzer_.begin();

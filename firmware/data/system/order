@@ -5,5 +5,7 @@
 browser.be
 # The home scene's run, which home.be holds.
 home_machine.be
-# Last: it names browserScene in its gestures.
+# The device's own settings list, which home.be opens on a held Up.
+settings.be
+# Last: it names browserScene and open_system_settings in its gestures.
 home.be

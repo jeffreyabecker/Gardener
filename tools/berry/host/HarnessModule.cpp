@@ -5,6 +5,7 @@
 #include <string>
 
 #include "bindings/Module.h"
+#include "storage/Config.h"
 
 namespace {
 
@@ -75,6 +76,20 @@ int harnessWrites(bvm* vm) {
   be_return(vm);
 }
 
+// The value /cfg/settings.ini holds for a [device] key: what a system settings list wrote back, read
+// through the same document the device uses. Nil when the document names no such key.
+int harnessSetting(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
+    be_raise(vm, "type_error", "harness.setting(key)");
+  }
+  gardener::Config document(&session->files());
+  document.begin();
+  const String value = document.get<String>("device", be_tostring(vm, 1), "");
+  if (value.isEmpty()) be_return_nil(vm);
+  be_pushstring(vm, value.c_str());
+  be_return(vm);
+}
+
 int harnessBuzzerSounds(bvm* vm) {
   be_pushint(vm, session->buzzerPart().sounds());
   be_return(vm);
@@ -130,6 +145,7 @@ const bnfuncinfo HarnessLibrary[] = {
     {"log", harnessLog},
     {"wrote", harnessWrote},
     {"writes", harnessWrites},
+    {"setting", harnessSetting},
     {"buzzer_sounds", harnessBuzzerSounds},
     {"mem", harnessMem},
     {"mem_peak", harnessMemPeak},

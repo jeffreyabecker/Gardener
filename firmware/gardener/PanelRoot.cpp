@@ -25,8 +25,10 @@ PanelRoot::PanelRoot(const PanelPins& pins)
       battery_(pins.batteryAdc, pins.batteryDivider),
       keys_(pins.keyLatch, pins.keyClock, pins.keyData), buzzerPart_(pins.buzzerPwm),
       buzzer_(buzzerPart_), display_(Wire1, PanelAddress, PanelWidth, PanelHeight),
-      settings_(&files_, state_), registry_(files_, logger_),
-      bindings_(display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_),
+      settings_(&files_, state_), jingles_(&files_, logger_),
+      systemSettings_(presses_, ux_, settings_, jingles_, buzzer_), registry_(files_, logger_),
+      bindings_(display_, state_, settings_, systemSettings_, buzzer_, outbox_, presses_, ux_,
+                registry_, logger_),
       interpreter_(bindings_),
       routines_(interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_) {}
 
@@ -58,6 +60,7 @@ bool PanelRoot::begin() {
 
   machine_.boot();
   settings_.begin();
+  jingles_.begin();
 
   // The panel's own look: everything that names no family draws in ttyp0, and a row shorter than any
   // ttyp0 cut names the Adafruit face for itself.

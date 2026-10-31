@@ -1,6 +1,6 @@
 # home.test.be — the home scene's page: the gestures it hands its machine, and the clock it draws.
-# The run itself is home_machine.test.be's, and the device rows it declares belong to the settings
-# model.
+# The run itself is home_machine.test.be's, and the device rows the settings list shows are the system
+# settings suite's.
 
 suite = "home"
 
@@ -90,19 +90,38 @@ end
 
 test("the page draws the clock its machine reports", the_page_draws_the_clock_its_machine_reports)
 
-def a_double_up_asks_the_machine_for_the_browser()
+def a_double_forward_asks_the_machine_for_the_browser()
   var mock = MockHomeMachine(nil)
   var home = mock_home(mock)
 
-  # The browser is what home opens: the routine list, which the page asks its machine for rather than
-  # pushing itself — a routine's own settings are reached through its row, not the device's. The push
-  # is the machine's, and home_machine.test.be is where it is proved.
-  harness.press("up:double")
+  # The browser is what Forward opens: the routine list, which the page asks its machine for rather
+  # than pushing itself — a routine's own settings are reached through its row, not the device's. The
+  # push is the machine's, and home_machine.test.be is where it is proved.
+  harness.press("forward:double")
   harness.beat(1)
-  assert_eq(mock.commands.size(), 1, "Up held to a double reached nothing")
-  assert_eq(mock.commands[0], "browser", "Up held to a double is not the browser")
+  assert_eq(mock.commands.size(), 1, "Forward held to a double reached nothing")
+  assert_eq(mock.commands[0], "browser", "Forward held to a double is not the browser")
   assert_eq(ux.depth(), 1, "the page pushed a scene of its own")
   home.machine = HomeMachine()
 end
 
-test("Up held to a double asks for the browser", a_double_up_asks_the_machine_for_the_browser)
+test("Forward held to a double asks for the browser", a_double_forward_asks_the_machine_for_the_browser)
+
+def a_double_up_opens_the_systems_settings()
+  var mock = MockHomeMachine(nil)
+  var home = mock_home(mock)
+
+  # The device's own list is not the machine's: Up held to a double pushes it over the page, and OK
+  # settles it and hands the page back. No command of the machine's belongs to that key.
+  harness.press("up:double")
+  harness.beat(1)
+  assert_eq(mock.commands.size(), 0, "Up held to a double reached the machine")
+  assert_eq(ux.depth(), 2, "Up held to a double did not open the system settings")
+
+  harness.press("ok:single")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "OK did not close the system settings")
+  home.machine = HomeMachine()
+end
+
+test("Up held to a double opens the system settings", a_double_up_opens_the_systems_settings)

@@ -12,6 +12,8 @@ SystemState& BindingContext::systemState() { return state_; }
 
 DeviceSettings& BindingContext::settings() { return settings_; }
 
+SystemSettings& BindingContext::systemSettings() { return systemSettings_; }
+
 BuzzerPlayer& BindingContext::buzzer() { return buzzer_; }
 
 bool BindingContext::post(const MachineCommand& command) { return outbox_.post(command); }

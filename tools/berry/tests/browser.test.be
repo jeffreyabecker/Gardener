@@ -4,8 +4,8 @@
 
 suite = "browser"
 
-# The browser on the stack over the home page, as pressing Up twice on home would put it there, and a
-# beat for its activate to read the registry.
+# The browser on the stack over the home page, as pressing Forward twice on home would put it there,
+# and a beat for its activate to read the registry.
 def opened()
   ux.push(BrowserScene())
   harness.beat(1)
@@ -25,7 +25,7 @@ end
 
 def the_rows_are_the_registrys()
   var browser = opened()
-  assert_eq(classname(browser), "BrowserScene", "Up twice did not open the browser")
+  assert_eq(classname(browser), "BrowserScene", "Forward twice did not open the browser")
 
   var listed = routines.rows()
   assert_eq(browser.rows.size(), listed.size(), "the browser does not show every row")

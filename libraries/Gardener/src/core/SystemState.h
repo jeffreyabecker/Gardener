@@ -8,7 +8,8 @@
 namespace gardener {
 
 // What the device is doing, as the panel draws it and a routine reads it: the run and the chamber,
-// the pack, the two links, and the two preferences the device's document holds.
+// the pack, the two links, and the two preferences from the device's document that the panel and
+// the wire draw and report.
 //
 // It is one object, published rather than folded, and it is a dependency like any other: whoever
 // composes the device owns it, hands a reference to every task that publishes a slice, and the panel

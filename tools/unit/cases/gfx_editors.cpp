@@ -287,19 +287,29 @@ TEST_CASE("a choice forward is the pages work") {
   String heard;
   ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false,
                      [&heard](String& current) { heard = current; });
-  CHECK_EQ(choice.press("forward:single"), 1);
+  // The entry the editor opens on is previewed before the first draw, each step previews the entry
+  // it lands on, and Forward previews the one showing again.
+  choice.activate();
   CHECK_EQ(std::string(heard.c_str()), std::string("b"));
   choice.nudge(1);
-  choice.press("forward:single");
+  CHECK_EQ(std::string(heard.c_str()), std::string("c"));
+  CHECK_EQ(choice.press("forward:single"), 1);
   CHECK_EQ(std::string(heard.c_str()), std::string("c"));
 
   ChoiceProbe none(gestures, ux, label, "b", threeEntries(), false);
   CHECK_EQ(none.press("forward:single"), 0);
 
-  bool ran = false;
-  ChoiceProbe empty(gestures, ux, label, "", threeEntries(), true, [&ran](String&) { ran = true; });
+  int previews = 0;
+  ChoiceProbe empty(gestures, ux, label, "", threeEntries(), true,
+                    [&previews](String&) { previews++; });
+  empty.activate();
+  CHECK_EQ(previews, 0);
+  empty.nudge(1);
+  CHECK_EQ(previews, 1);
+  empty.nudge(-1);
+  CHECK_EQ(previews, 1);
   CHECK_EQ(empty.press("forward:single"), 0);
-  CHECK_EQ(ran, 0);
+  CHECK_EQ(previews, 1);
 }
 
 TEST_CASE("a choice band inverts the entry showing") {

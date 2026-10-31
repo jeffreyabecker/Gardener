@@ -13,6 +13,7 @@
 
 namespace {
 
+using gardener::DefaultMaxDurationSeconds;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
 using gardener::SystemState;
@@ -39,6 +40,19 @@ TEST_CASE("a document with no device section reads kPa and no target") {
   CHECK(bench.read);
   CHECK(bench.settings.unit() == DisplayUnit::Kpa);
   CHECK_EQ(bench.settings.targetKpa(), 0.0f);
+  CHECK_EQ(std::string(bench.settings.jingle().c_str()), std::string(""));
+  CHECK_EQ(bench.settings.maxDurationSeconds(), DefaultMaxDurationSeconds);
+}
+
+TEST_CASE("the jingle and the maximum are read as the document holds them") {
+  Bench bench("[device]\njingle=forelle\nmax_duration=1800\n");
+  CHECK_EQ(std::string(bench.settings.jingle().c_str()), std::string("forelle"));
+  CHECK_EQ(bench.settings.maxDurationSeconds(), 1800);
+}
+
+TEST_CASE("a maximum at or below zero reads as none") {
+  Bench bench("[device]\nmax_duration=-5\n");
+  CHECK_EQ(bench.settings.maxDurationSeconds(), 0);
 }
 
 TEST_CASE("a unit name this firmware does not hold reads kPa") {
@@ -61,6 +75,8 @@ TEST_CASE("a set and a save write once and read back, with a key it does not own
   Bench bench("[device]\nunit=kpa\njingle=poacher\n");
   bench.settings.setUnit(DisplayUnit::InHg);
   bench.settings.setTargetKpa(22.0f);
+  bench.settings.setJingle("forelle");
+  bench.settings.setMaxDurationSeconds(600);
   CHECK(bench.settings.save());
   CHECK_EQ(bench.library.writes(), 1);
 
@@ -68,9 +84,12 @@ TEST_CASE("a set and a save write once and read back, with a key it does not own
   CHECK(again.begin());
   CHECK(again.unit() == DisplayUnit::InHg);
   CHECK_EQ(again.targetKpa(), 22.0f);
+  CHECK_EQ(std::string(again.jingle().c_str()), std::string("forelle"));
+  CHECK_EQ(again.maxDurationSeconds(), 600);
 
   const std::string text = bench.library.textAt(Path);
-  CHECK(text.find("jingle=poacher") != std::string::npos);
+  CHECK(text.find("jingle=forelle") != std::string::npos);
+  CHECK(text.find("max_duration=600") != std::string::npos);
   CHECK(text.find("unit=inhg") != std::string::npos);
 }
 

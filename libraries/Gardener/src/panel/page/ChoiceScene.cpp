@@ -39,11 +39,13 @@ ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const St
   hasOpened_ = hasValue_;
 }
 
+void ChoiceScene::activate() { preview(); }
+
 // Forward on an entry showing is the page's work; with nothing showing there is no entry to hand
 // it, and a page that gave none drops the key as the editor always has.
 bool ChoiceScene::handle(const char* gesture) {
   if (!closed_ && forward_ && hasValue_ && strcmp(gesture, "forward:single") == 0) {
-    forward_(value_);
+    preview();
     return true;
   }
   return EditorScene::handle(gesture);
@@ -57,11 +59,13 @@ void ChoiceScene::nudge(int8_t direction) {
         value_ = items_[0].key;
         hasValue_ = true;
       }
+      preview();
       return;
     }
     if (direction < 0 && value_ == items_[0].key) {
       value_ = "";
       hasValue_ = false;
+      preview();
       return;
     }
   }
@@ -70,6 +74,11 @@ void ChoiceScene::nudge(int8_t direction) {
   const int16_t next = static_cast<int16_t>(((at + direction) % count + count) % count);
   value_ = items_[next].key;
   hasValue_ = true;
+  preview();
+}
+
+void ChoiceScene::preview() {
+  if (forward_ && hasValue_) forward_(value_);
 }
 
 String ChoiceScene::text() const {
@@ -100,9 +109,7 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
       const gfx::Size ink = gfx::measureText(rowFace(), "--", 0, Row);
-      gfx::aligned(
-          gfx::sized(gfx::text(gfx::Box::whole(), "--", rowFace()), ink))
-          ->draw(canvas);
+      gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), "--", rowFace()), ink))->draw(canvas);
       return;
     }
     const int16_t selected = index();
