@@ -20,13 +20,13 @@ String readingText(float pressureKpa, DisplayUnit unit) {
   return out;
 }
 
-// A reading centred in the space it is handed, at the face and scale the readout was given. The node
-// keeps the text: it is built as the draw runs, so there is no page or literal behind it to borrow
-// from.
-gfx::PaintNodeRef centredReading(String value, const gfx::Font* face, uint8_t scale) {
-  const gfx::Size ink = gfx::shapes::measureText(face, value.c_str(), scale);
-  return gfx::aligned(gfx::sized(
-      gfx::text(gfx::Box::whole(), std::move(value), face, scale), ink));
+// A reading drawn at the place its cell gives it, at the face and scale the readout was given, with
+// the ink it was measured at. The node keeps the text: it is built as the draw runs, so there is no
+// page or literal behind it to borrow from.
+gfx::PaintNodeRef readingNode(String value, const gfx::Font* face, uint8_t scale, gfx::Size ink,
+                              gfx::Justify across) {
+  return gfx::aligned(
+      gfx::sized(gfx::text(gfx::Box::whole(), std::move(value), face, scale), ink), across);
 }
 
 }  // namespace
@@ -36,29 +36,42 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
   return gfx::callable([box, state, sizeHint, face, scale, secondaryScale](gfx::Canvas& canvas) {
     // A stopped machine has no chamber reading to show, so the reading is dashes; the target is
     // known either way.
-    const String reading = state.running
-                               ? readingText(state.currentPressureKpa, state.unit)
-                               : String("--");
+    const String reading =
+        state.running ? readingText(state.currentPressureKpa, state.unit) : String("--");
     const String target = readingText(state.targetPressureKpa, state.unit);
 
-    gfx::View own = canvas.child(box.in(canvas));
-    const int16_t width = own.width();
-    const int16_t height = own.height();
-    const int16_t halfWidth = width / 2;
-    const int16_t halfHeight = height / 2;
+    // The two readings are two cells of one layout rather than two boxes over the same glass, which
+    // is what keeps a reading as wide as the box from being drawn through the target: a cell is the
+    // ink the reading takes, and no reading is drawn outside the cell it was given. Side by side
+    // when both are at the main scale, and stacked — the target at the end of the lower cell —
+    // when the target is the small one.
+    const bool side = sizeHint >= 1.0f;
+    const uint8_t targetScale = side ? scale : secondaryScale;
+    const gfx::Size readingInk = gfx::shapes::measureText(face, reading.c_str(), scale);
+    const gfx::Size targetInk = gfx::shapes::measureText(face, target.c_str(), targetScale);
 
-    if (sizeHint >= 1.0f) {
-      gfx::View left = own.child(gfx::Rect(0, 0, halfWidth, height));
-      gfx::View right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
-      centredReading(std::move(reading), face, scale)->draw(left);
-      centredReading(std::move(target), face, scale)->draw(right);
-      return;
+    gfx::PaintNodeRef large =
+        readingNode(String(reading), face, scale, readingInk, gfx::Justify::Center);
+    gfx::PaintNodeRef small = readingNode(String(target), face, targetScale, targetInk,
+                                          side ? gfx::Justify::Center : gfx::Justify::End);
+
+    gfx::PaintNodeRef readout;
+    if (side) {
+      readout = gfx::row(1.0f, gfx::children(
+                                   gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(large)},
+                                   gfx::Child{gfx::Cell(0.5f, 1.0f), std::move(small)}));
+    } else {
+      readout = gfx::column(
+          1.0f,
+          gfx::children(
+              gfx::Child{gfx::Cell(1.0f, static_cast<float>(readingInk.height)),
+                         std::move(large)},
+              gfx::Child{gfx::Cell(1.0f, static_cast<float>(targetInk.height)),
+                         std::move(small)}),
+          gfx::Justification{gfx::Justify::Center, gfx::Justify::Start});
     }
-
-    centredReading(std::move(reading), face, scale)->draw(own);
-    gfx::View corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
-                                             height - halfHeight));
-    centredReading(std::move(target), face, secondaryScale)->draw(corner);
+    gfx::View own = canvas.child(box.in(canvas));
+    readout->draw(own);
   });
 }
 

@@ -3,6 +3,9 @@
 #include <string.h>
 
 #include "fonts/BuiltinFont.h"
+#include "fonts/Ttyp011.h"
+#include "fonts/Ttyp016.h"
+#include "fonts/Ttyp022.h"
 
 namespace gardener::gfx::fonts {
 
@@ -66,5 +69,20 @@ const Font* find(const char* name) {
   }
   return defaultFace();
 }
+
+namespace {
+
+// The faces the library compiles in are registered as the module comes up, so a page or a record can
+// name one without the composition registering anything. The table is declared above this, so the
+// order between the two is the file's own.
+struct Shipped {
+  Shipped() {
+    registerFont("ttyp011", &Ttyp011);
+    registerFont("ttyp016", &Ttyp016);
+    registerFont("ttyp022", &Ttyp022);
+  }
+} shippedFaces;
+
+}  // namespace
 
 }  // namespace gardener::gfx::fonts

@@ -9,6 +9,12 @@
 
 #include "suite.h"
 
+#include "core/SystemState.h"
+#include "fonts/Ttyp011.h"
+#include "fonts/Ttyp016.h"
+#include "fonts/Ttyp022.h"
+#include "panel/page/PressureReadout.h"
+
 namespace gardener::gfx::test {
 namespace {
 
@@ -274,6 +280,81 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
   CHECK(display.anyInk(18, 15, 1, 1));
   CHECK(!display.anyInk(10, 16, 9, 1));  // nothing below the box
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), display.inkCount(10, 10, 9, 6));
+}
+
+TEST_CASE("the faces the library ships answer to their names") {
+  // The ttyp0 faces are registered as the library loads, so a page names one and is given it back.
+  CHECK_EQ(fonts::find("ttyp011"), &Ttyp011);
+  CHECK_EQ(fonts::find("ttyp016"), &Ttyp016);
+  CHECK_EQ(fonts::find("ttyp022"), &Ttyp022);
+  CHECK_NE(fonts::find("ttyp016"), fonts::defaultFace());
+
+  // A name the library does not hold is still a draw: it falls back rather than raising.
+  CHECK_EQ(fonts::find("ttyp012"), fonts::defaultFace());
+}
+
+TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {
+  // The ink of an 'A' in the three sizes, as the u8g2 glyphs measured it.
+  const Size small = shapes::measureText(&Ttyp011, "A", 1);
+  CHECK_EQ(small.width, 4);
+  CHECK_EQ(small.height, 8);
+  const Size middle = shapes::measureText(&Ttyp016, "A", 1);
+  CHECK_EQ(middle.width, 6);
+  CHECK_EQ(middle.height, 10);
+  const Size large = shapes::measureText(&Ttyp022, "A", 1);
+  CHECK_EQ(large.width, 10);
+  CHECK_EQ(large.height, 13);
+
+  // Drawn, it is an 'A' where the glyph says it is: an apex two pixels wide on the top row, the
+  // crossbar across the sixth, a clear column for its bearing, and nothing past the last row.
+  reset();
+  text(Box(0, 0, 128, 64), "A", &Ttyp016, 1)->draw(canvas);
+  CHECK_EQ(display.inkCount(3, 0, 2, 1), 2);
+  CHECK_EQ(display.inkCount(1, 6, 6, 1), 6);
+  CHECK_EQ(display.inkCount(0, 0, 1, 10), 0);
+  CHECK_EQ(display.inkCount(0, 10, 128, 54), 0);
+  CHECK_EQ(display.inkCount(0, 0, 128, 64), 24);
+}
+
+// A readout to draw, in the unit and at the values a case expects on the glass.
+SystemState readoutState(float readingKpa, float targetKpa) {
+  SystemState state;
+  state.running = true;
+  state.currentPressureKpa = readingKpa;
+  state.targetPressureKpa = targetKpa;
+  state.unit = DisplayUnit::Kpa;
+  return state;
+}
+
+TEST_CASE("a readout stacks a reading too wide for its glass over the target") {
+  // Six characters at scale two is 72 pixels of ink and four at scale one is 24, so the two cannot
+  // sit side by side in 128: the reading is given the top of a column and the target the end of the
+  // cell under it, and no pixel of one lands in the other's rows.
+  const SystemState state = readoutState(-101.3f, 45.6f);
+  reset();
+  View band = canvas.child(Rect(0, 0, 128, 30));
+  panel::page::pressureReadout(Box::whole(), state, 0.5f)->draw(band);
+
+  // The reading is centred across the top cell and the target flush to the end of the lower one,
+  // the pair centred down the 30 rows it was given: three clear above, sixteen, eight, three clear.
+  CHECK_EQ(display.inkCount(0, 0, 128, 3), 0);
+  CHECK_EQ(display.inkCount(0, 3, 128, 16), display.inkCount(28, 3, 72, 16));
+  CHECK_EQ(display.inkCount(0, 19, 128, 8), display.inkCount(104, 19, 24, 8));
+  CHECK_EQ(display.inkCount(0, 27, 128, 3), 0);
+}
+
+TEST_CASE("a readout puts the target beside the reading when there is room") {
+  // At a size hint of one both readings are drawn at the main scale, in the two halves of a row:
+  // nothing is drawn across the seam between them.
+  const SystemState state = readoutState(-12.3f, 45.6f);
+  reset();
+  View band = canvas.child(Rect(0, 0, 128, 32));
+  panel::page::pressureReadout(Box::whole(), state, 1.0f)->draw(band);
+
+  // Five characters at scale two are 60 pixels of ink, centred in the first half and eight rows
+  // down; four are 48, centred in the second, so no pixel of one is drawn in the other's half.
+  CHECK_EQ(display.inkCount(0, 0, 64, 32), display.inkCount(2, 8, 60, 16));
+  CHECK_EQ(display.inkCount(64, 0, 64, 32), display.inkCount(72, 8, 48, 16));
 }
 
 }  // namespace
