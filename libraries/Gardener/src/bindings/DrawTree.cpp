@@ -110,6 +110,12 @@ const gfx::Font* faceOf(bvm* vm, int node) {
   return name == nullptr ? nullptr : gfx::find(name);
 }
 
+// The family a node names. A node that names none, and a name the module does not hold, are the
+// built-in family, which is what the resolver holds a family of one cut for.
+const gfx::Family* familyOf(bvm* vm, int node) {
+  return gfx::findFamily(textField(vm, node, "family"));
+}
+
 gfx::DurationFormat formatOf(const char* name) {
   if (name != nullptr && strcmp(name, "seconds") == 0) return gfx::DurationFormat::Seconds;
   if (name != nullptr && strcmp(name, "hours") == 0) return gfx::DurationFormat::Hours;
@@ -216,6 +222,13 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
     const char* value = textField(vm, node, "value");
     return gfx::borrowedText(boxOf(vm, node), value, faceOf(vm, node),
                              (uint8_t)intField(vm, node, "scale"));
+  }
+
+  if (strcmp(kind, "fitted") == 0) {
+    // The family's cuts choose the size, so the node carries a design and no scale: the leaf reads
+    // the box it lands in and resolves as it draws.
+    return gfx::fitted(boxOf(vm, node), textField(vm, node, "value"), familyOf(vm, node),
+                       justifyOf(vm, node, "horizontal"), justifyOf(vm, node, "vertical"));
   }
 
   if (strcmp(kind, "centred") == 0) {
