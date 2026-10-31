@@ -20,8 +20,8 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 
 ## A name is a family
 
-- [ ] Answer a face's name as a family of one cut, and fold `find` into `findFamily`.
-- [ ] Fold `registerFont` into `registerFamily`, so one table, one budget and one set of refusals
+- [x] Answer a face's name as a family of one cut, and fold `find` into `findFamily`.
+- [x] Fold `registerFont` into `registerFamily`, so one table, one budget and one set of refusals
       hold every name a caller adds.
 
 ## One text leaf

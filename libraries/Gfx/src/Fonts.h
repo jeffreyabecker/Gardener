@@ -54,24 +54,12 @@ const Family* findFamily(const char* name);
 constexpr int RegisteredFamilies = 4;
 constexpr int FamilyCuts = 8;
 
-// Registers `cuts` under `name`. False for an empty or too long name, a name a face or a family
-// already answers, no cuts, more cuts than the table holds, or a cut that is null. A name stands for
-// one thing, so a family named for a face, or a face named for a family, is refused.
-bool registerFamily(const char* name, const Font* const* cuts, uint8_t count);
-
-// --- registering a face ------------------------------------------------------
-// A face the library does not hold: a page, a host tool or a driver hands the module a name and a
-// Font, and every draw or measurement that names it resolves through find. The table is static, so
-// a registration costs no heap, and the name is copied into the entry, so a caller keeps nothing
-// alive for it. The faces the library ships are not in this table: they are written down beside it,
-// so a registration is a caller's and the slots are a caller's budget.
-constexpr int RegisteredFaces = 8;
+// Registers `cuts` under `name`. False for an empty or too long name, a name the module already
+// answers — a shipped design, a shipped face's, or a caller's — no cuts, more cuts than the table
+// holds, or a cut that is null. A caller that has one face registers it as a family of one cut, so
+// there is one table, one budget and one set of refusals for every name a caller adds.
 constexpr int NameLength = 16;
 
-// Registers `font` under `name`. False when the table is full, the name is empty or too long, the
-// name is one the module already answers — a face it ships, or a name a caller registered — or the
-// face is null. A name stands for one face, so registering a name twice is refused rather than made
-// a rule about which face wins.
-bool registerFont(const char* name, const Font* font);
+bool registerFamily(const char* name, const Font* const* cuts, uint8_t count);
 
 }  // namespace gardener::gfx
