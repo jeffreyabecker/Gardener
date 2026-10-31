@@ -14,10 +14,10 @@ its own ink, offsets and advance, which is what a proportional bitmap face needs
 their line box: the rows above the baseline and the rows on and below it, which is a face's height
 without a string to measure.
 
-- **The built-in 5x7** (`BuiltinFont.h`/`.cpp`) is the face every page drew in before there was
+- **The Adafruit 5x7** (`AdafruitFont.h`/`.cpp`) is the face every page drew in before there was
   another: the 1280 bytes of Adafruit_GFX's glcdfont.c, taken exactly as that file has them, so the
   table can be compared against the original byte for byte. It is a fixed face of five columns by
-  eight rows, six pixels apart, and Adafruit's BSD notice is in the header of BuiltinFont.cpp. Every
+  eight rows, six pixels apart, and Adafruit's BSD notice is in the header of AdafruitFont.cpp. Every
   byte value has a glyph, which is why it measures as a run of cells rather than as the ink of its
   glyphs.
 - **UW ttyp0** (`Ttyp011`, `Ttyp016`, `Ttyp022`) is a real bitmap face at 11, 16 and 22 pixels, from
@@ -34,7 +34,7 @@ without a string to measure.
   has no single nominal size. It holds 191 codes over 0x20 to 0xFF; the rest are blanks.
 
 A family is the cuts of one design, shortest first, and `Fonts.h` names the four the library ships:
-`builtin`, `ttyp0`, `profont` and `x11`. A page names the design and a height picks the cut, so the
+`adafruit`, `ttyp0`, `profont` and `x11`. A page names the design and a height picks the cut, so the
 rungs of a design are a statement about which sizes the product has, and a rung is added when a band
 needs one rather than because the source offers it.
 
@@ -43,5 +43,5 @@ so a size or range can be regenerated rather than hand-edited: u8g2 keeps a face
 run-length encoded, and the tool decodes it into this library's plain, byte-aligned glyph bitmaps.
 Its `--note` is the sentence the new header opens with, so each design carries whose work it is and
 which licence travels with it. The twelve shipped faces are written down in `Fonts.cpp`, so a page or
-a record can name one; the default face is still the built-in 5x7.
+a record can name one; the default face is still the Adafruit 5x7.
 

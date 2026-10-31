@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #include "../Fonts.h"
-#include "../fonts/BuiltinFont.h"
+#include "../fonts/AdafruitFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
 //
@@ -192,8 +192,8 @@ Fit resolve(const char* familyName, const char* value, int16_t width, int16_t he
 
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
   if (size == 0) return;
-  const int16_t baseline = static_cast<int16_t>(y + (BuiltinFont.height - 1) * size);
-  drawFontGlyph(canvas, x, baseline, &BuiltinFont, code, size, color);
+  const int16_t baseline = static_cast<int16_t>(y + (AdafruitFont.height - 1) * size);
+  drawFontGlyph(canvas, x, baseline, &AdafruitFont, code, size, color);
 }
 
 }  // namespace gardener::gfx

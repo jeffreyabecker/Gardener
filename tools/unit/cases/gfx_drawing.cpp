@@ -40,19 +40,19 @@ TEST_CASE("a text scales the face it draws") {
 }
 
 TEST_CASE("the built in face is the one the library ships and the one a name answers to") {
-  // A draw or a measurement that names no face, and a page that names "builtin", all mean this one.
-  CHECK_EQ(defaultFace(), &BuiltinFont);
-  CHECK_EQ(faceOr(nullptr), &BuiltinFont);
-  CHECK_EQ(find(nullptr), &BuiltinFont);
-  CHECK_EQ(find(""), &BuiltinFont);
-  CHECK_EQ(find("builtin"), &BuiltinFont);
+  // A draw or a measurement that names no face, and a page that names "adafruit", all mean this one.
+  CHECK_EQ(defaultFace(), &AdafruitFont);
+  CHECK_EQ(faceOr(nullptr), &AdafruitFont);
+  CHECK_EQ(find(nullptr), &AdafruitFont);
+  CHECK_EQ(find(""), &AdafruitFont);
+  CHECK_EQ(find("adafruit"), &AdafruitFont);
 
-  // Naming it is what a caller does to say so, and nullptr puts the built-in back.
-  setDefaultFace(&BuiltinFont);
-  CHECK_EQ(defaultFace(), &BuiltinFont);
+  // Naming it is what a caller does to say so, and nullptr puts the Adafruit back.
+  setDefaultFace(&AdafruitFont);
+  CHECK_EQ(defaultFace(), &AdafruitFont);
   setDefaultFace(nullptr);
-  CHECK_EQ(defaultFace(), &BuiltinFont);
-  CHECK_EQ(faceOr(nullptr), &BuiltinFont);
+  CHECK_EQ(defaultFace(), &AdafruitFont);
+  CHECK_EQ(faceOr(nullptr), &AdafruitFont);
 
   // A name the module does not hold draws in the default face rather than raising.
   CHECK_EQ(find("sans12"), defaultFace());
@@ -68,14 +68,14 @@ TEST_CASE("a registered face comes out of find and measures as its own face") {
 
   const Font* found = find("probe");
   CHECK_EQ(found, &ProbeFace);
-  // What the face says it is, not the built-in's six-by-eight cell.
+  // What the face says it is, not the Adafruit's six-by-eight cell.
   const Size ink = measureText(found, "A", 1);
   CHECK_EQ(ink.width, 5);
   CHECK_EQ(ink.height, 3);
 
-  // One name is one face: the built-in's name cannot be taken, nor one that is already an answer.
-  CHECK_FALSE(registerFont("builtin", &ProbeFace));
-  CHECK_FALSE(registerFont("probe", &BuiltinFont));
+  // One name is one face: the Adafruit's name cannot be taken, nor one that is already an answer.
+  CHECK_FALSE(registerFont("adafruit", &ProbeFace));
+  CHECK_FALSE(registerFont("probe", &AdafruitFont));
   CHECK_FALSE(registerFont("", &ProbeFace));
   CHECK_FALSE(registerFont("probe", nullptr));
 
@@ -297,9 +297,9 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK_EQ(find("ttyp022"), &Ttyp022);
   CHECK_NE(find("ttyp016"), defaultFace());
 
-  // The built-in is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
+  // The Adafruit is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
-  CHECK(BuiltinFont.kind == Font::Kind::Fixed);
+  CHECK(AdafruitFont.kind == Font::Kind::Fixed);
   CHECK(Ttyp016.kind == Font::Kind::Variable);
 
   // A name the library does not hold is still a draw: it falls back rather than raising.
@@ -310,15 +310,15 @@ TEST_CASE("a face says its own line box") {
   // The rows above the baseline and on and below it, which is a face's height without a string to
   // measure: the fixed face's last row sits on the baseline, and the ttyp0 faces declare one row of
   // descent over the rows their line is.
-  CHECK_EQ(BuiltinFont.ascent, 7);
-  CHECK_EQ(BuiltinFont.descent, 1);
-  CHECK_EQ(lineHeight(BuiltinFont), 8);
+  CHECK_EQ(AdafruitFont.ascent, 7);
+  CHECK_EQ(AdafruitFont.descent, 1);
+  CHECK_EQ(lineHeight(AdafruitFont), 8);
   CHECK_EQ(lineHeight(Ttyp011), 10);
   CHECK_EQ(lineHeight(Ttyp016), 13);
   CHECK_EQ(lineHeight(Ttyp022), 17);
 }
 
-TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") {
+TEST_CASE("a fixed face draws the cell it declares rather than the Adafruit's") {
   // Two columns by three rows, one byte to a column with the least significant bit the top row: an
   // 'A' that inks the top and bottom row of its first column is 0x05 there, and the second column
   // is the blank one the advance leaves.
@@ -429,13 +429,13 @@ TEST_CASE("a family is a design's cuts, shortest first") {
   CHECK_EQ(ttyp0->cuts[1], &Ttyp016);
   CHECK_EQ(ttyp0->cuts[2], &Ttyp022);
 
-  // The built-in face is a family of one cut, and it is the answer a name the module does not hold
+  // The Adafruit face is a family of one cut, and it is the answer a name the module does not hold
   // and a page that names none are both given.
-  CHECK_EQ(findFamily("builtin")->count, 1);
-  CHECK_EQ(findFamily("builtin")->cuts[0], &BuiltinFont);
-  CHECK_EQ(findFamily(nullptr), findFamily("builtin"));
-  CHECK_EQ(findFamily(""), findFamily("builtin"));
-  CHECK_EQ(findFamily("sans"), findFamily("builtin"));
+  CHECK_EQ(findFamily("adafruit")->count, 1);
+  CHECK_EQ(findFamily("adafruit")->cuts[0], &AdafruitFont);
+  CHECK_EQ(findFamily(nullptr), findFamily("adafruit"));
+  CHECK_EQ(findFamily(""), findFamily("adafruit"));
+  CHECK_EQ(findFamily("sans"), findFamily("adafruit"));
 }
 
 TEST_CASE("the faces the library ships take no registration slot") {
@@ -456,7 +456,7 @@ TEST_CASE("the faces the library ships take no registration slot") {
   CHECK_FALSE(registerFont(name, &probe));
 
   // A full table is still a table the shipped names resolve outside of.
-  CHECK_EQ(find("builtin"), &BuiltinFont);
+  CHECK_EQ(find("adafruit"), &AdafruitFont);
   CHECK_EQ(find("ttyp011"), &Ttyp011);
   CHECK_EQ(find("ttyp016"), &Ttyp016);
   CHECK_EQ(find("ttyp022"), &Ttyp022);
