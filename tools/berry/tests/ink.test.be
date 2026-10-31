@@ -69,10 +69,14 @@ end
 
 test("a child that names no size fills its cell", a_child_that_names_no_size_fills_its_cell)
 
-def a_text_node_draws_inside_the_width_measure_answers()
+def a_text_node_draws_inside_the_box_measure_answers()
+  # One box for both answers: the ink the measurement reports is the ink the draw takes, because
+  # both come from the resolver.
   var string = "12.5"
-  var box = screen.measure(string)
-  drew(screen.column(nil, [[bounds(1, 1), screen.text(nil, nil, nil, nil, string)]]))
+  var box = screen.measure(string, nil, screen.width(), page_rows())
+  drew(screen.column(nil, [
+    [bounds(1, 1), screen.text(0, 0, screen.width(), page_rows(), string, nil, "start", "start")]
+  ]))
 
   var inside = harness.ink(0, 0, box.w, page_rows())
   assert_true(inside > 0, "the string drew no ink at all")
@@ -81,5 +85,4 @@ def a_text_node_draws_inside_the_width_measure_answers()
   assert_true(inside < box.w * page_rows(), "the string filled the box measure answers")
 end
 
-test("a text node draws inside the width measure answers",
-     a_text_node_draws_inside_the_width_measure_answers)
+test("a text node draws inside the box measure answers", a_text_node_draws_inside_the_box_measure_answers)

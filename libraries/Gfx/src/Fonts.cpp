@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "fonts/BuiltinFont.h"
+#include "fonts/AdafruitFont.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -19,58 +19,52 @@ namespace gardener::gfx {
 
 namespace {
 
-// What a caller that names no face draws in. The built-in 5x7 is what such a caller has always
-// drawn in, so it is where this starts; setDefaultFace is the only writer, and it never stores a
-// null, so a reader has nothing to check.
-const Font* chosenFace = &BuiltinFont;
-
-// One face the library ships and the name it answers to. The library writes these down rather than
-// registering them, so the registration table below is a caller's and its slots are not spent on
-// faces every build carries anyway.
-struct NamedFace {
-  const char* name;
-  const Font* face;
-};
-
-const NamedFace ShippedFaces[] = {
-    {"builtin", &BuiltinFont},  {"ttyp011", &Ttyp011},      {"ttyp016", &Ttyp016},
-    {"ttyp022", &Ttyp022},      {"profont10", &ProFont10},  {"profont12", &ProFont12},
-    {"profont17", &ProFont17},  {"profont29", &ProFont29},  {"x11_5x7", &X11Cell5x7},
-    {"x11_6x10", &X11Cell6x10}, {"x11_7x14", &X11Cell7x14}, {"x11_10x20", &X11Cell10x20},
-};
-
-// The face a shipped name stands for, or nullptr when the module ships no face by that name.
-const Font* shippedFace(const char* name) {
-  for (const NamedFace& shipped : ShippedFaces) {
-    if (strcmp(shipped.name, name) == 0) return shipped.face;
-  }
-  return nullptr;
-}
-
-// One name a caller registered and the face it stands for. The name is the entry's own copy, so the
-// caller's string need not outlive the call, and `named` is how a slot that was never filled reads.
-struct Entry {
-  bool named = false;
-  char name[NameLength] = {};
-  const Font* font = nullptr;
-};
-
-Entry entries[RegisteredFaces];
-
 // The families the library ships: each a name and the cuts of one design, shortest first. The
-// built-in face is a family of one cut, and it is the answer a name nobody holds is given. A
-// design's ladder is the rungs this panel's bands can tell apart, not every size the design has.
-const Font* const BuiltinCuts[] = {&BuiltinFont};
+// Adafruit family is a design of one cut, and it is the default a leaf that names no family draws
+// in. A design's ladder is the rungs this panel's bands can tell apart, not every size the design
+// has.
+const Font* const AdafruitCuts[] = {&AdafruitFont};
 const Font* const Ttyp0Cuts[] = {&Ttyp011, &Ttyp016, &Ttyp022};
 const Font* const ProFontCuts[] = {&ProFont10, &ProFont12, &ProFont17, &ProFont29};
 const Font* const X11Cuts[] = {&X11Cell5x7, &X11Cell6x10, &X11Cell7x14, &X11Cell10x20};
 
-const Family BuiltinFamily = {"builtin", BuiltinCuts, 1};
 const Family Ttyp0Family = {"ttyp0", Ttyp0Cuts, 3};
 const Family ProFontFamily = {"profont", ProFontCuts, 4};
 const Family X11Family = {"x11", X11Cuts, 4};
 
-const Family* const ShippedFamilies[] = {&BuiltinFamily, &Ttyp0Family, &ProFontFamily, &X11Family};
+const Family* const ShippedFamilies[] = {&AdafruitFamily, &Ttyp0Family, &ProFontFamily, &X11Family};
+
+// One family per shipped face, so a name that is a face's answers a design of one cut: a page
+// written against a size keeps drawing, and a caller has one kind of name to learn. The Adafruit
+// face is the design above, which is a family of one cut already, so it is not named twice.
+const Font* const Ttyp011Face[] = {&Ttyp011};
+const Font* const Ttyp016Face[] = {&Ttyp016};
+const Font* const Ttyp022Face[] = {&Ttyp022};
+const Font* const ProFont10Face[] = {&ProFont10};
+const Font* const ProFont12Face[] = {&ProFont12};
+const Font* const ProFont17Face[] = {&ProFont17};
+const Font* const ProFont29Face[] = {&ProFont29};
+const Font* const X11Cell5x7Face[] = {&X11Cell5x7};
+const Font* const X11Cell6x10Face[] = {&X11Cell6x10};
+const Font* const X11Cell7x14Face[] = {&X11Cell7x14};
+const Font* const X11Cell10x20Face[] = {&X11Cell10x20};
+
+const Family ShippedFaceFamilies[] = {
+    {"ttyp011", Ttyp011Face, 1},      {"ttyp016", Ttyp016Face, 1},
+    {"ttyp022", Ttyp022Face, 1},      {"profont10", ProFont10Face, 1},
+    {"profont12", ProFont12Face, 1},  {"profont17", ProFont17Face, 1},
+    {"profont29", ProFont29Face, 1},  {"x11_5x7", X11Cell5x7Face, 1},
+    {"x11_6x10", X11Cell6x10Face, 1}, {"x11_7x14", X11Cell7x14Face, 1},
+    {"x11_10x20", X11Cell10x20Face, 1},
+};
+
+// The family a shipped face's name stands for, or nullptr when the module ships no face by it.
+const Family* shippedFaceFamily(const char* name) {
+  for (const Family& family : ShippedFaceFamilies) {
+    if (strcmp(family.name, name) == 0) return &family;
+  }
+  return nullptr;
+}
 
 // Copies a name into an entry, or answers false when it does not fit.
 bool copyName(char* into, const char* from) {
@@ -94,22 +88,15 @@ struct FamilyEntry {
 
 FamilyEntry families[RegisteredFamilies];
 
-// The face a name stands for among the ones a caller registered, or nullptr when none holds it.
-const Font* registeredFace(const char* name) {
-  for (const Entry& entry : entries) {
-    if (entry.named && strcmp(entry.name, name) == 0) return entry.font;
-  }
-  return nullptr;
-}
-
-// The family a name stands for, or nullptr when nothing answers to it. findFamily is this with the
-// built-in as the answer, and the two callers that must tell a name nobody holds from the built-in
-// ask this instead.
+// The family a name stands for, or nullptr when nothing answers to it: a shipped design, a shipped
+// face's name as a family of one cut, which is how a page that names a size keeps drawing, or a
+// family a caller registered.
 const Family* namedFamily(const char* name) {
   if (name == nullptr || name[0] == '\0') return nullptr;
   for (const Family* family : ShippedFamilies) {
     if (strcmp(family->name, name) == 0) return family;
   }
+  if (const Family* face = shippedFaceFamily(name)) return face;
   for (const FamilyEntry& entry : families) {
     if (entry.named && strcmp(entry.name, name) == 0) return &entry.family;
   }
@@ -118,44 +105,13 @@ const Family* namedFamily(const char* name) {
 
 }  // namespace
 
-const Font* defaultFace() { return chosenFace; }
+const Family AdafruitFamily = {"adafruit", AdafruitCuts, 1};
 
-void setDefaultFace(const Font* face) { chosenFace = face != nullptr ? face : &BuiltinFont; }
-
-const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFace; }
-
-bool registerFont(const char* name, const Font* font) {
-  if (name == nullptr || name[0] == '\0' || font == nullptr) return false;
-  if (shippedFace(name) != nullptr) return false;
-  if (registeredFace(name) != nullptr) return false;
-  if (namedFamily(name) != nullptr) return false;
-  for (Entry& entry : entries) {
-    if (entry.named) continue;
-    if (!copyName(entry.name, name)) return false;
-    entry.font = font;
-    entry.named = true;
-    return true;
-  }
-  return false;
-}
-
-const Font* find(const char* name) {
-  if (name == nullptr || name[0] == '\0') return defaultFace();
-  if (const Font* shipped = shippedFace(name)) return shipped;
-  if (const Font* registered = registeredFace(name)) return registered;
-  return defaultFace();
-}
-
-const Family* findFamily(const char* name) {
-  const Family* family = namedFamily(name);
-  return family != nullptr ? family : &BuiltinFamily;
-}
+const Family* findFamily(const char* name) { return namedFamily(name); }
 
 bool registerFamily(const char* name, const Font* const* cuts, uint8_t count) {
   if (name == nullptr || name[0] == '\0' || cuts == nullptr) return false;
   if (count == 0 || count > FamilyCuts) return false;
-  if (shippedFace(name) != nullptr) return false;
-  if (registeredFace(name) != nullptr) return false;
   if (namedFamily(name) != nullptr) return false;
   for (uint8_t at = 0; at < count; at++) {
     if (cuts[at] == nullptr) return false;

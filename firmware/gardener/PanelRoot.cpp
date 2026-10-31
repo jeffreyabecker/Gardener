@@ -3,6 +3,7 @@
 #include <LittleFS.h>
 #include <Wire.h>
 
+#include "Fonts.h"
 #include "core/Units.h"
 
 namespace gardener {

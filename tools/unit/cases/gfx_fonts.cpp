@@ -8,7 +8,7 @@
 
 #include "suite.h"
 
-#include "fonts/BuiltinFont.h"
+#include "fonts/AdafruitFont.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -47,7 +47,7 @@ TEST_CASE("the two designs answer to a name per rung and a family per design") {
       {"x11_7x14", &X11Cell7x14, 12}, {"x11_10x20", &X11Cell10x20, 17},
   };
   for (const auto& rung : rungs) {
-    CHECK_EQ(find(rung.name), rung.face);
+    CHECK_EQ(findFamily(rung.name)->cuts[0], rung.face);
     CHECK_EQ(lineHeight(*rung.face), rung.line);
   }
 
@@ -82,7 +82,7 @@ TEST_CASE("a rung of a converted design draws the glyph its source holds") {
   // ink is thirteen tall.
   reset();
   View box = canvas.child(Rect(0, 0, 64, 24));
-  text(Box::whole(), "A", &X11Cell10x20, 1)->draw(box);
+  text(Box::whole(), "A", findFamily("x11_10x20"), Justify::Start, Justify::Start)->draw(box);
   CHECK(display.anyInk(0, 0, 8, 1));
   CHECK_EQ(display.inkCount(0, 13, 64, 11), 0);
 }
@@ -92,32 +92,32 @@ TEST_CASE("a height resolves to the tallest cut it can hold and the scale it spe
 
   // A height under the shortest cut is that cut at one scale: the answer is the smallest thing the
   // family has rather than nothing.
-  Fit fit = resolve(*ttyp0, 5);
+  Fit fit = resolve(ttyp0, 5);
   CHECK_EQ(fit.face, &Ttyp011);
   CHECK_EQ(fit.scale, 1);
 
   // Each cut at one scale where the band holds it exactly, and the tallest cut that fits at all
   // where the band is between two of them: 24 rows is the 22 px design at one scale, not the 16 px
   // one at one.
-  CHECK_EQ(resolve(*ttyp0, 10).face, &Ttyp011);
-  CHECK_EQ(resolve(*ttyp0, 13).face, &Ttyp016);
-  CHECK_EQ(resolve(*ttyp0, 17).face, &Ttyp022);
-  CHECK_EQ(resolve(*ttyp0, 24).face, &Ttyp022);
-  CHECK_EQ(resolve(*ttyp0, 24).scale, 1);
+  CHECK_EQ(resolve(ttyp0, 10).face, &Ttyp011);
+  CHECK_EQ(resolve(ttyp0, 13).face, &Ttyp016);
+  CHECK_EQ(resolve(ttyp0, 17).face, &Ttyp022);
+  CHECK_EQ(resolve(ttyp0, 24).face, &Ttyp022);
+  CHECK_EQ(resolve(ttyp0, 24).scale, 1);
 
   // A band that holds two of a cut's lines is spent at two, and one that holds three at three.
-  fit = resolve(*ttyp0, 34);
+  fit = resolve(ttyp0, 34);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 2);
-  fit = resolve(*ttyp0, 64);
+  fit = resolve(ttyp0, 64);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 3);
 
   // Two designs answer the same band differently, because the ladder is the design's.
-  CHECK_EQ(resolve(*findFamily("x11"), 45).face, &X11Cell10x20);
-  CHECK_EQ(resolve(*findFamily("x11"), 45).scale, 2);
-  CHECK_EQ(resolve(*findFamily("profont"), 45).face, &ProFont29);
-  CHECK_EQ(resolve(*findFamily("profont"), 45).scale, 1);
+  CHECK_EQ(resolve(findFamily("x11"), 45).face, &X11Cell10x20);
+  CHECK_EQ(resolve(findFamily("x11"), 45).scale, 2);
+  CHECK_EQ(resolve(findFamily("profont"), 45).face, &ProFont29);
+  CHECK_EQ(resolve(findFamily("profont"), 45).scale, 1);
 }
 
 TEST_CASE("a width narrows the cut and the scale the height chose") {
@@ -125,44 +125,41 @@ TEST_CASE("a width narrows the cut and the scale the height chose") {
 
   // The home page's timer is five characters in a cell 64 across and 48 down: two lines of the 22 px
   // design are 110 pixels wide, so the timer is that design at one scale.
-  Fit fit = resolve(*ttyp0, "4m30s", 64, 48);
+  Fit fit = resolve(ttyp0, "4m30s", 64, 48);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 1);
 
   // The same string across a whole page keeps the taller answer.
-  fit = resolve(*ttyp0, "4m30s", 128, 48);
+  fit = resolve(ttyp0, "4m30s", 128, 48);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 2);
 
   // A box too narrow for the tallest cut steps down through its scales and then to the next cut:
   // five characters in 40 pixels is the 16 px design at one, which is exactly 40 wide.
-  fit = resolve(*ttyp0, "123.4", 40, 45);
+  fit = resolve(ttyp0, "123.4", 40, 45);
   CHECK_EQ(fit.face, &Ttyp016);
   CHECK_EQ(fit.scale, 1);
 
   // A string no cut fits is drawn at the height's own answer, and the box clips it.
-  fit = resolve(*ttyp0, "123.4", 10, 45);
+  fit = resolve(ttyp0, "123.4", 10, 45);
   CHECK_EQ(fit.face, &Ttyp022);
   CHECK_EQ(fit.scale, 2);
 }
 
-TEST_CASE("a family's name resolves as the family it found does") {
-  // The by-name forms are the family forms with the module's table in front of them.
-  const Fit named = resolve("ttyp0", 45);
-  const Fit family = resolve(*findFamily("ttyp0"), 45);
-  CHECK_EQ(named.face, family.face);
-  CHECK_EQ(named.scale, family.scale);
+TEST_CASE("no family resolves the default family") {
+  // A leaf or a measurement that names no family draws in the default, which is the Adafruit design:
+  // its eight row line, five times, in a band of forty-five rows.
+  const Fit none = resolve(nullptr, 45);
+  const Fit named = resolve(findFamily("adafruit"), 45);
+  CHECK_EQ(none.face, named.face);
+  CHECK_EQ(none.scale, named.scale);
+  CHECK_EQ(none.face, &AdafruitFont);
 
-  const Fit wide = resolve("x11", "4m30s", 128, 48);
-  const Fit same = resolve(*findFamily("x11"), "4m30s", 128, 48);
-  CHECK_EQ(wide.face, same.face);
-  CHECK_EQ(wide.scale, same.scale);
-
-  // A name the module does not hold resolves the built-in family: its eight row line, five times, in
-  // a band of forty-five rows.
-  const Fit unknown = resolve("sans", 45);
-  CHECK_EQ(unknown.face, &BuiltinFont);
-  CHECK_EQ(unknown.scale, 5);
+  // A height that asks for nothing is the design's tallest cut at one scale, which is what measuring
+  // a string with no box to fit it means.
+  const Fit free = resolve(findFamily("ttyp0"), 0);
+  CHECK_EQ(free.face, &Ttyp022);
+  CHECK_EQ(free.scale, 1);
 }
 
 TEST_CASE("a fitted string takes the cut and the scale its box's height holds") {
@@ -171,7 +168,7 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   // face's ascent is sixteen and the letter is thirteen tall.
   reset();
   View band = canvas.child(Rect(0, 0, 128, 45));
-  fitted(Box::whole(), "A", findFamily("ttyp0"))->draw(band);
+  text(Box::whole(), "A", findFamily("ttyp0"))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 128, 11), 0);
   CHECK_EQ(display.inkCount(0, 37, 128, 8), 0);
   // Across, the ink is centred: twenty-two pixels of it in one hundred and twenty-eight, from the
@@ -183,15 +180,32 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   // letter starts one row down it, the face's ascent being nine and the letter eight tall.
   reset();
   View title = canvas.child(Rect(0, 0, 64, 10));
-  fitted(Box::whole(), "A", findFamily("ttyp0"))->draw(title);
+  text(Box::whole(), "A", findFamily("ttyp0"))->draw(title);
   CHECK_EQ(display.inkCount(0, 0, 64, 1), 0);
   CHECK(display.anyInk(0, 1, 64, 1));
   CHECK_EQ(display.inkCount(0, 10, 64, 54), 0);
 }
 
+TEST_CASE("a face's name answers a family of one cut") {
+  // Every shipped face is a design of one size, so a page that names one keeps drawing and a caller
+  // has one kind of name to learn.
+  const Family* cut = findFamily("ttyp016");
+  REQUIRE(cut != nullptr);
+  CHECK_EQ(cut->count, 1);
+  CHECK_EQ(cut->cuts[0], &Ttyp016);
+  CHECK_EQ(findFamily("ttyp016")->cuts[0], &Ttyp016);
+
+  // A design's own name answers its ladder, its shortest cut is the face a name gives a leaf that
+  // has no box, and a name nobody holds answers the default family.
+  CHECK_EQ(findFamily("ttyp0")->count, 3);
+  CHECK_EQ(findFamily("ttyp0")->cuts[0], &Ttyp011);
+  CHECK_EQ(findFamily("nobody"), nullptr);
+}
+
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
-  const Font small = probeFace(2);
-  const Font large = probeFace(8);
+  // Static, because the module keeps the cuts' addresses for the rest of the run.
+  static const Font small = probeFace(2);
+  static const Font large = probeFace(8);
   const Font* cuts[] = {&large, &small};  // written tallest first on purpose
 
   REQUIRE(registerFamily("probe design", cuts, 2));
@@ -201,12 +215,19 @@ TEST_CASE("a caller registers a family and its cuts come back ordered") {
   CHECK_EQ(family->count, 2);
   CHECK_EQ(family->cuts[0], &small);
   CHECK_EQ(family->cuts[1], &large);
+
+  // A registered design is a name like any other: its shortest cut is what a name gives a leaf that
+  // has no box, and its faces measure as they say rather than as the Adafruit cell does.
+  CHECK_EQ(family->cuts[0], &small);
+  const Size ink = measureText(family->cuts[1], "A", 1);
+  CHECK_EQ(ink.width, 2);
+  CHECK_EQ(ink.height, 8);
 }
 
 TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") {
   // Two cases and no more register a family: the table is four entries and this one fills it, so
   // that the last refusal below is the table being full rather than a name being taken.
-  const Font probe = probeFace(2);
+  static const Font probe = probeFace(2);
   const Font* one[] = {&probe};
 
   CHECK_FALSE(registerFamily(nullptr, one, 1));
@@ -216,14 +237,12 @@ TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") 
   const Font* withNull[] = {&probe, nullptr};
   CHECK_FALSE(registerFamily("a null cut", withNull, 2));
 
-  // A name stands for one thing, so a family takes no name a face answers and no name a family
-  // already does, and a face takes none of a family's either.
+  // A name stands for one thing, so a family takes no name a design, a face or another family
+  // already answers.
   CHECK_FALSE(registerFamily("ttyp0", one, 1));
-  CHECK_FALSE(registerFamily("builtin", one, 1));
+  CHECK_FALSE(registerFamily("adafruit", one, 1));
   CHECK_FALSE(registerFamily("ttyp016", one, 1));
   CHECK_FALSE(registerFamily("probe design", one, 1));
-  CHECK_FALSE(registerFont("ttyp0", &probe));
-  CHECK_FALSE(registerFont("probe design", &probe));
 
   // More cuts than an entry holds is a refusal rather than a truncation, and so is a name that will
   // not fit the entry's own copy of it.

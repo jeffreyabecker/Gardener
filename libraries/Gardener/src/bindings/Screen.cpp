@@ -14,31 +14,29 @@ namespace {
 // hands it back: what is drawn, not the drawing. Nothing here reaches a canvas.
 constexpr const char* DrawClass = "draw";
 
-// The fields one node of a page's drawing carries. `kind` names what the node is — text, fitted,
-// centred, icon, inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and
-// the fields that kind uses are set, the rest nil. A leaf names its box in pixels; a layout, a row
-// and a column
-// name the cell they declare as a share of what holds them, nil for the whole side, so a row sets `h`
-// and a column `w`. A layout's `children` is a list of [bounds, draw] pairs — the cell a child
-// declares and the child — and `alignment` is where it puts them, the record below. An `inverted` node
-// holds the draw it flips in `child`, and an `icon` node holds its fixed bitmap in `glyph` as the hex
-// digits that name it: two per byte, the width, the height, then one row per byte-run, most
-// significant bit first and each row padded to a whole byte. The panel reads them when it draws the
-// node.
+// The fields one node of a page's drawing carries. `kind` names what the node is — text, icon,
+// inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields that
+// kind uses are set, the rest nil. A leaf names its box in pixels, and a text names the family it
+// prints in and the two justifications that place its line box, nil for the default family and the
+// centre. A layout, a row and a column name the cell they declare as a share of what holds them, nil
+// for the whole side, so a row sets `h` and a column `w`. A layout's `children` is a list of
+// [bounds, draw] pairs — the cell a child declares and the child — and `alignment` is where it puts
+// them, the record below. An `inverted` node holds the draw it flips in `child`, and an `icon` node
+// holds its fixed bitmap in `glyph` as the hex digits that name it: two per byte, the width, the
+// height, then one row per byte-run, most significant bit first and each row padded to a whole byte.
+// The panel reads them when it draws the node.
 const bnfuncinfo DrawFields[] = {
     {"init", recordInit},   {"kind", nullptr},
     {"x", nullptr},         {"y", nullptr},
     {"w", nullptr},         {"h", nullptr},
-    {"value", nullptr},     {"font", nullptr},
-    {"family", nullptr},    {"scale", nullptr},
-    {"secondary_scale", nullptr}, {"size_hint", nullptr},
+    {"value", nullptr},     {"family", nullptr},
+    {"horizontal", nullptr}, {"vertical", nullptr},
     {"format", nullptr},    {"seconds", nullptr},
     {"known", nullptr},     {"percent", nullptr},
     {"index", nullptr},     {"count", nullptr},
     {"visible", nullptr},   {"hollow", nullptr},
     {"children", nullptr},  {"child", nullptr},
     {"glyph", nullptr},     {"alignment", nullptr},
-    {"horizontal", nullptr}, {"vertical", nullptr},
     {nullptr, nullptr},
 };
 
@@ -87,41 +85,19 @@ const bnfuncinfo AlignmentFields[] = {
 // would otherwise be read as the argument and handed back as a number.
 bool hasArg(bvm* vm, int argc, int index) { return index <= argc && !be_isnil(vm, index); }
 
-// The face a call names: nil for a call that names none, and otherwise what the fonts module
-// answers for the name — the face a page registered, or the default face when the name is one it
-// does not hold, so a page that names a face nobody registered still draws.
-const gfx::Font* argFace(bvm* vm, int argc, int index, const char* function) {
+// The family a call names: nil for a call that names none, which is the default family, and
+// otherwise what the fonts module answers for the name — a family a page registered, a design the
+// library ships, or a face's name as a family of one cut. A name the module does not hold is nil
+// too, and a node that names no family draws in the default.
+const gfx::Family* argFamily(bvm* vm, int argc, int index, const char* function) {
   if (!hasArg(vm, argc, index)) return nullptr;
   if (!be_isstring(vm, index)) {
     char message[64];
-    snprintf(message, sizeof(message), "screen.%s: font name expected", function);
+    snprintf(message, sizeof(message), "screen.%s: family name expected", function);
     be_raise(vm, "type_error", message);
   }
   const char* name = argText(vm, index);
-  return name[0] == '\0' ? nullptr : gfx::find(name);
-}
-
-// The size a face is drawn at: 1 for the face as designed, which is what an absent argument means.
-uint8_t argScale(bvm* vm, int argc, int index, const char* function, uint8_t fallback) {
-  if (!hasArg(vm, argc, index)) return fallback;
-  if (!be_isnumber(vm, index)) {
-    char message[64];
-    snprintf(message, sizeof(message), "screen.%s: scale expected", function);
-    be_raise(vm, "type_error", message);
-  }
-  const bint scale = argInt(vm, index);
-  return scale < 1 ? 1 : (uint8_t)scale;
-}
-
-// A number the call has a default for, for an argument a page may leave out or pass nil.
-float argNumber(bvm* vm, int argc, int index, const char* function, float fallback) {
-  if (!hasArg(vm, argc, index)) return fallback;
-  if (!be_isnumber(vm, index)) {
-    char message[64];
-    snprintf(message, sizeof(message), "screen.%s: number expected", function);
-    be_raise(vm, "type_error", message);
-  }
-  return (float)be_toreal(vm, index);
+  return name[0] == '\0' ? nullptr : gfx::findFamily(name);
 }
 
 // The format a call names, held to the three the duration formatter knows and handed back as written,
@@ -232,48 +208,20 @@ void setAlignment(bvm* vm, int draw, int argc, int index) {
 
 // --- the nodes -------------------------------------------------------------
 
-int screenText(bvm* vm) {
-  const int argc = be_top(vm);
-  if (argc < 5 || !be_isstring(vm, 5)) {
-    be_raise(vm, "type_error", "screen.text(x, y, w, h, value[, font[, scale]])");
-  }
-  const gfx::Font* face = argFace(vm, argc, 6, "text");
-  const int draw = beginDraw(vm, "text");
-  setBox(vm, draw, argc);
-  setText(vm, draw, "value", argText(vm, 5));
-  if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, argc, 7, "text", 1));
-  be_return(vm);
-}
-
-// The same string centred across and down its box.
-int screenCentred(bvm* vm) {
-  const int argc = be_top(vm);
-  if (argc < 5 || !be_isstring(vm, 5)) {
-    be_raise(vm, "type_error", "screen.centred(x, y, w, h, value[, font[, scale]])");
-  }
-  const gfx::Font* face = argFace(vm, argc, 6, "centred");
-  const int draw = beginDraw(vm, "centred");
-  setBox(vm, draw, argc);
-  setText(vm, draw, "value", argText(vm, 5));
-  if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, argc, 7, "centred", 1));
-  be_return(vm);
-}
-
 // The same string in a family, at the cut and scale its box's height takes: the panel chooses the
 // size, so a page names a design and no scale, and both justifications are the centre unless the
 // page says where.
-int screenFitted(bvm* vm) {
+int screenText(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error",
-             "screen.fitted(x, y, w, h, value[, family[, horizontal[, vertical]]])");
+             "screen.text(x, y, w, h, value[, family[, horizontal[, vertical]]])");
   }
-  const int draw = beginDraw(vm, "fitted");
+  const int draw = beginDraw(vm, "text");
   setBox(vm, draw, argc);
   setText(vm, draw, "value", argText(vm, 5));
-  if (hasArg(vm, argc, 6)) setText(vm, draw, "family", argText(vm, 6));
+  const gfx::Family* family = argFamily(vm, argc, 6, "text");
+  if (family != nullptr) setText(vm, draw, "family", argText(vm, 6));
   setText(vm, draw, "horizontal", hasArg(vm, argc, 7) ? argText(vm, 7) : "center");
   setText(vm, draw, "vertical", hasArg(vm, argc, 8) ? argText(vm, 8) : "center");
   be_return(vm);
@@ -341,34 +289,30 @@ int screenScrollbar(bvm* vm) {
 int screenDuration(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 6) {
-    be_raise(vm, "type_error", "screen.duration(x, y, w, h, format, seconds[, font[, known]])");
+    be_raise(vm, "type_error",
+             "screen.duration(x, y, w, h, format, seconds[, family[, known]])");
   }
   const char* format = argFormat(vm, argc, 5, "duration");
-  const gfx::Font* face = argFace(vm, argc, 7, "duration");
+  const gfx::Family* family = argFamily(vm, argc, 7, "duration");
   const bool known = !hasArg(vm, argc, 8) || be_tobool(vm, 8);
   const int draw = beginDraw(vm, "duration");
   setBox(vm, draw, argc);
   setText(vm, draw, "format", format);
   setInt(vm, draw, "seconds", argInt(vm, 6));
-  if (face != nullptr) setText(vm, draw, "font", argText(vm, 7));
+  if (family != nullptr) setText(vm, draw, "family", argText(vm, 7));
   setFlag(vm, draw, "known", known);
   be_return(vm);
 }
 
 // The machine's own readout: the depth it is at, and its target as a second reading, both printed in
 // the panel's unit. Nothing about the machine is in the node — it names where the readout goes and
-// how it is set, and the numbers are the ones in force when it is drawn. Below a size hint of 1 the
-// second reading sits small in the bottom right of the box; at 1 or more the two sit side by side at
-// the main scale, the second on the right.
+// the design it prints in, and the numbers are the ones in force when it is drawn.
 int screenPressureReadout(bvm* vm) {
   const int argc = be_top(vm);
-  const gfx::Font* face = argFace(vm, argc, 6, "pressure_readout");
+  const gfx::Family* family = argFamily(vm, argc, 5, "pressure_readout");
   const int draw = beginDraw(vm, "pressure_readout");
   setBox(vm, draw, argc);
-  setReal(vm, draw, "size_hint", argNumber(vm, argc, 5, "pressure_readout", 0.5f));
-  if (face != nullptr) setText(vm, draw, "font", argText(vm, 6));
-  setInt(vm, draw, "scale", argScale(vm, argc, 7, "pressure_readout", 2));
-  setInt(vm, draw, "secondary_scale", argScale(vm, argc, 8, "pressure_readout", 1));
+  if (family != nullptr) setText(vm, draw, "family", argText(vm, 5));
   be_return(vm);
 }
 
@@ -432,15 +376,19 @@ int screenDurationText(bvm* vm) {
   be_return(vm);
 }
 
-// The ink a string takes at the face it will be drawn in, which is what a page places a suffix by.
+// The ink a string takes in a box, which is what a page places a suffix and a row by: the same
+// answer the leaf draws with, so the width it reports is the width the draw takes. A side left out is
+// no limit — a width to narrow to when there is one, and the design's tallest cut at one scale when
+// there is no height to fit.
 int screenMeasure(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 1 || !be_isstring(vm, 1)) {
-    be_raise(vm, "type_error", "screen.measure(value[, font[, scale]])");
+    be_raise(vm, "type_error", "screen.measure(value[, family[, width[, height]]])");
   }
-  const gfx::Font* face = argFace(vm, argc, 2, "measure");
-  const uint8_t scale = argScale(vm, argc, 3, "measure", 1);
-  const gfx::Size box = gfx::measureText(face, argText(vm, 1), scale);
+  const gfx::Family* family = argFamily(vm, argc, 2, "measure");
+  const int16_t width = hasArg(vm, argc, 3) ? (int16_t)argInt(vm, 3) : 0;
+  const int16_t height = hasArg(vm, argc, 4) ? (int16_t)argInt(vm, 4) : 0;
+  const gfx::Size box = gfx::measureText(family, argText(vm, 1), width, height);
 
   const int record = beginRecord(vm, "bounds");
   setInt(vm, record, "w", box.width);
@@ -492,15 +440,15 @@ int screenHeight(bvm* vm) {
 }
 
 const bnfuncinfo ScreenLibrary[] = {
-    {"text", screenText},         {"fitted", screenFitted},
-    {"centred", screenCentred},   {"icon", screenIcon},         {"inverted", screenInverted},
-    {"bar", screenBar},           {"scrollbar", screenScrollbar},
-    {"duration", screenDuration}, {"pressure_readout", screenPressureReadout},
-    {"layout", screenLayout},     {"row", screenRow},
-    {"column", screenColumn},     {"duration_text", screenDurationText},
-    {"measure", screenMeasure},   {"cell", screenCell},
-    {"align", screenAlign},       {"width", screenWidth},
-    {"height", screenHeight},     {nullptr, nullptr},
+    {"text", screenText},         {"icon", screenIcon},
+    {"inverted", screenInverted}, {"bar", screenBar},
+    {"scrollbar", screenScrollbar}, {"duration", screenDuration},
+    {"pressure_readout", screenPressureReadout}, {"layout", screenLayout},
+    {"row", screenRow},           {"column", screenColumn},
+    {"duration_text", screenDurationText}, {"measure", screenMeasure},
+    {"cell", screenCell},         {"align", screenAlign},
+    {"width", screenWidth},       {"height", screenHeight},
+    {nullptr, nullptr},
 };
 
 }  // namespace

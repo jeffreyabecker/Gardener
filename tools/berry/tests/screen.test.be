@@ -21,28 +21,27 @@ end
 
 test("a node is the kind it names with its fields", a_node_is_the_kind_it_names_with_its_fields)
 
-def fitted_names_a_design_and_no_scale()
-  # A fitted node carries the family the page named and no scale, because the height of the box it
+def a_text_names_a_design_and_no_scale()
+  # A text node carries the family the page named and no scale, because the height of the box it
   # lands in picks both the cut and the scale. Its two justifications are the centre unless the page
   # says where, so a page that wants a band centred writes nothing extra.
-  var node = screen.fitted(nil, nil, nil, nil, "12.5", "ttyp0")
-  assert_eq(node.kind, "fitted", "screen.fitted does not answer a fitted node")
-  assert_eq(node.value, "12.5", "the fitted node does not carry its string")
-  assert_eq(node.family, "ttyp0", "the fitted node does not carry its family")
-  assert_eq(node.horizontal, "center", "a fitted node that names no place is not centred")
-  assert_eq(node.vertical, "center", "a fitted node that names no place is not centred")
-  assert_nil(node.scale, "the fitted node was given a scale to use")
+  var node = screen.text(nil, nil, nil, nil, "12.5", "ttyp0")
+  assert_eq(node.kind, "text", "screen.text does not answer a text node")
+  assert_eq(node.value, "12.5", "the text node does not carry its string")
+  assert_eq(node.family, "ttyp0", "the text node does not carry its family")
+  assert_eq(node.horizontal, "center", "a text node that names no place is not centred")
+  assert_eq(node.vertical, "center", "a text node that names no place is not centred")
 
-  var placed = screen.fitted(nil, nil, nil, nil, "12.5", "x11", "start", "end")
-  assert_eq(placed.horizontal, "start", "the fitted node does not keep where it was put")
-  assert_eq(placed.vertical, "end", "the fitted node does not keep where it was put")
+  var placed = screen.text(nil, nil, nil, nil, "12.5", "x11", "start", "end")
+  assert_eq(placed.horizontal, "start", "the text node does not keep where it was put")
+  assert_eq(placed.vertical, "end", "the text node does not keep where it was put")
 
-  # Naming no family is the built-in, and the node says so by carrying none.
-  assert_nil(screen.fitted(nil, nil, nil, nil, "12.5").family,
-             "a fitted node that names no family carries one")
+  # Naming no family is the default, and the node says so by carrying none.
+  assert_nil(screen.text(nil, nil, nil, nil, "12.5").family,
+             "a text node that names no family carries one")
 end
 
-test("fitted names a design and no scale", fitted_names_a_design_and_no_scale)
+test("a text names a design and no scale", a_text_names_a_design_and_no_scale)
 
 def measure_answers_the_ink_a_string_takes()
   var short = screen.measure("1")
@@ -51,10 +50,13 @@ def measure_answers_the_ink_a_string_takes()
   assert_true(long.w > short.w, "a longer string does not measure wider")
   assert_true(long.h > 0, "a measured string has no height")
 
-  # The face and the scale are the measurer's, as they are the renderer's: twice the scale is twice the
-  # ink, and a face that is twice as large shows in the same call.
-  var scaled = screen.measure("12.5", nil, 2)
-  assert_eq(scaled.w, long.w * 2, "a doubled scale does not measure twice as wide")
+  # The box is the measurer's, as it is the renderer's: the same string in a taller box takes the
+  # same ink at a larger scale, and a width that only holds the smaller scale steps down to it.
+  var tall = screen.measure("12.5", nil, nil, long.h * 2)
+  assert_eq(tall.w, long.w * 2, "a doubled box does not measure twice as wide")
+  var narrowed = screen.measure("12.5", nil, long.w, long.h * 2)
+  assert_eq(narrowed.w, long.w, "a width that holds one scale does not step down to it")
+  assert_eq(narrowed.h, long.h, "a narrowed string is not one scale shorter")
 end
 
 test("measure answers the ink a string takes", measure_answers_the_ink_a_string_takes)

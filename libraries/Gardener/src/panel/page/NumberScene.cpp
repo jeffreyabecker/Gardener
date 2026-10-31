@@ -55,7 +55,7 @@ float NumberScene::within(float value) const {
 // The number in the contents band, at the cut the band's height takes.
 gfx::PaintNodeRef NumberScene::pageContents() {
   printed_ = text();
-  return gfx::fitted(gfx::Box::whole(), printed_.c_str(), gfx::findFamily("ttyp0"));
+  return gfx::text(gfx::Box::whole(), printed_, gfx::findFamily("ttyp0"));
 }
 
 }  // namespace gardener

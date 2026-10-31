@@ -103,15 +103,8 @@ gfx::Box boxOf(bvm* vm, int node) {
   return gfx::Box(x, y, w, h, wholeWidth, wholeHeight);
 }
 
-// The face a node names. A name the fonts module does not hold draws in the default face, which is
-// what a record that names no face draws in, so nothing here can leave a node without one.
-const gfx::Font* faceOf(bvm* vm, int node) {
-  const char* name = textField(vm, node, "font");
-  return name == nullptr ? nullptr : gfx::find(name);
-}
-
-// The family a node names. A node that names none, and a name the module does not hold, are the
-// built-in family, which is what the resolver holds a family of one cut for.
+// The family a node names. A node that names none draws in the default family, which is what the
+// resolver answers for a family it was not given.
 const gfx::Family* familyOf(bvm* vm, int node) {
   return gfx::findFamily(textField(vm, node, "family"));
 }
@@ -219,29 +212,10 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
   if (kind == nullptr) return gfx::PaintNodeRef();
 
   if (strcmp(kind, "text") == 0) {
-    const char* value = textField(vm, node, "value");
-    return gfx::borrowedText(boxOf(vm, node), value, faceOf(vm, node),
-                             (uint8_t)intField(vm, node, "scale"));
-  }
-
-  if (strcmp(kind, "fitted") == 0) {
-    // The family's cuts choose the size, so the node carries a design and no scale: the leaf reads
-    // the box it lands in and resolves as it draws.
-    return gfx::fitted(boxOf(vm, node), textField(vm, node, "value"), familyOf(vm, node),
-                       justifyOf(vm, node, "horizontal"), justifyOf(vm, node, "vertical"));
-  }
-
-  if (strcmp(kind, "centred") == 0) {
-    // The ink the string takes, centred in the box the node declares: the same arithmetic the call
-    // this replaces made, said in the layout's own words.
-    const char* value = textField(vm, node, "value");
-    const gfx::Font* face = faceOf(vm, node);
-    const uint8_t raw = (uint8_t)intField(vm, node, "scale");
-    const uint8_t scale = raw == 0 ? 1 : raw;
-    const gfx::Size ink = gfx::measureText(face, value, scale);
-    return gfx::icon(
-        boxOf(vm, node),
-        gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), value, face, scale), ink)));
+    // One leaf for every string a page draws: the family and the box choose the size, and the two
+    // justifications place the line box in it.
+    return gfx::text(boxOf(vm, node), textField(vm, node, "value"), familyOf(vm, node),
+                     justifyOf(vm, node, "horizontal"), justifyOf(vm, node, "vertical"));
   }
 
   if (strcmp(kind, "icon") == 0) {
@@ -264,18 +238,14 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
 
   if (strcmp(kind, "duration") == 0) {
     return gfx::duration(boxOf(vm, node), formatOf(textField(vm, node, "format")),
-                         intField(vm, node, "seconds"), faceOf(vm, node),
+                         intField(vm, node, "seconds"), familyOf(vm, node),
                          flagField(vm, node, "known", true));
   }
 
   // The readout takes the state the tree was built with rather than a number, so one node serves
   // every beat: the tree is built again for each draw.
   if (strcmp(kind, "pressure_readout") == 0) {
-    float sizeHint = realField(vm, node, "size_hint");
-    if (sizeHint <= 0.0f) sizeHint = 0.5f;
-    return pressureReadout(boxOf(vm, node), state, sizeHint, faceOf(vm, node),
-                           (uint8_t)intField(vm, node, "scale"),
-                           (uint8_t)intField(vm, node, "secondary_scale"));
+    return pressureReadout(boxOf(vm, node), state, familyOf(vm, node));
   }
 
   if (strcmp(kind, "layout") == 0) {
