@@ -2,6 +2,7 @@
 // canvas each answers and read back as pixels.
 
 #include <math.h>
+#include <stdio.h>
 
 #include <doctest.h>
 
@@ -416,6 +417,30 @@ TEST_CASE("a readout puts the target beside the reading when there is room") {
   // down; four are 48, centred in the second, so no pixel of one is drawn in the other's half.
   CHECK_EQ(display.inkCount(0, 0, 64, 32), display.inkCount(2, 8, 60, 16));
   CHECK_EQ(display.inkCount(64, 0, 64, 32), display.inkCount(72, 8, 48, 16));
+}
+
+TEST_CASE("the faces the library ships take no registration slot") {
+  // The four shipped faces are written down in the module, so a caller's table of eight holds eight
+  // caller names: the case above left one registered and seven more fill it, and the next is
+  // refused. The case fills the table, so it is the last one here that registers anything.
+  static const uint8_t blank[256] = {};
+  const Font probe = {Font::Kind::Fixed, blank, 1, 1, nullptr, 0, 0, 0, 1};
+  char name[NameLength];
+  int registered = 0;
+  for (int slot = 0; slot < RegisteredFaces; slot++) {
+    snprintf(name, sizeof(name), "slot%d", slot);
+    if (registerFont(name, &probe)) registered++;
+  }
+  CHECK_EQ(registered, RegisteredFaces - 1);
+
+  snprintf(name, sizeof(name), "slot%d", RegisteredFaces);
+  CHECK_FALSE(registerFont(name, &probe));
+
+  // A full table is still a table the shipped names resolve outside of.
+  CHECK_EQ(find("builtin"), &BuiltinFont);
+  CHECK_EQ(find("ttyp011"), &Ttyp011);
+  CHECK_EQ(find("ttyp016"), &Ttyp016);
+  CHECK_EQ(find("ttyp022"), &Ttyp022);
 }
 
 }  // namespace
