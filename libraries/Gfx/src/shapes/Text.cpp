@@ -41,10 +41,32 @@ void drawBlock(Canvas& canvas, int16_t x, int16_t y, uint8_t size, uint8_t color
   }
 }
 
-// Draws one glyph and returns how far the cursor moves for it: zero when the font has no glyph
-// for the character, and the glyph's own advance otherwise.
+// Draws one fixed-face glyph and returns how far the cursor moves for it: a column of the cell is a
+// byte, read least significant bit first as the top row, and the last row sits on the baseline.
+int16_t drawFixedGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* font,
+                       uint8_t character, uint8_t size, uint8_t color) {
+  const uint8_t* column = &font->bitmap[character * font->width];
+  const int16_t top = static_cast<int16_t>(baseline - (font->height - 1) * size);
+  for (uint8_t across = 0; across < font->width; across++) {
+    const uint8_t bits = pgm_read_byte(&column[across]);
+    for (uint8_t down = 0; down < font->height; down++) {
+      if (((bits >> down) & 1) != 0) {
+        drawBlock(canvas, static_cast<int16_t>(x + across * size),
+                  static_cast<int16_t>(top + down * size), size, color);
+      }
+    }
+  }
+  return static_cast<int16_t>((font->width + 1) * size);
+}
+
+// Draws one glyph of the face and returns how far the cursor moves for it: a cell's advance for a
+// fixed face, and for a variable one the glyph's own advance, or zero when the face has no glyph for
+// the character.
 int16_t drawFontGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* font,
                       uint8_t character, uint8_t size, uint8_t color) {
+  if (font->kind == Font::Kind::Fixed) {
+    return drawFixedGlyph(canvas, x, baseline, font, character, size, color);
+  }
   if (character < font->first || character > font->last) return 0;
   const Glyph& glyph = font->glyph[character - font->first];
   const uint8_t width = pgm_read_byte(&glyph.width);
@@ -84,11 +106,11 @@ Size measureText(const Font* face, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
   const Font* font = fonts::faceOr(face);
-  if (font == &BuiltinFont) {
-    // The classic face measures as a run of six-by-eight cells, including the blank column behind
-    // the glyph that the advance leaves.
-    const int16_t cellWidth = static_cast<int16_t>(6 * size);
-    const int16_t cellHeight = static_cast<int16_t>(8 * size);
+  if (font->kind == Font::Kind::Fixed) {
+    // A fixed face measures as a run of cells, including the blank column behind the glyph that the
+    // advance leaves.
+    const int16_t cellWidth = static_cast<int16_t>((font->width + 1) * size);
+    const int16_t cellHeight = static_cast<int16_t>(font->height * size);
     int16_t width = 0;
     for (const char* character = value; *character != '\0'; character++) {
       width = static_cast<int16_t>(width + cellWidth);
@@ -123,7 +145,7 @@ Size measureText(const Font* face, const char* value, uint8_t size) {
 
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
   if (size == 0) return;
-  const int16_t baseline = static_cast<int16_t>(y + 7 * size);
+  const int16_t baseline = static_cast<int16_t>(y + (BuiltinFont.height - 1) * size);
   drawFontGlyph(canvas, x, baseline, &BuiltinFont, code, size, color);
 }
 

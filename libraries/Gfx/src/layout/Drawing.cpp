@@ -6,18 +6,22 @@
 #include <utility>
 #include <vector>
 
+#include "../Fonts.h"
 #include "../shapes/Shapes.h"
 #include "../shapes/Text.h"
 
 namespace gardener::gfx {
 namespace {
 
-// Gfx draws a string from its baseline. The built-in face is drawn from the top of a five-by-seven
-// cell, so its baseline is seven rows below the corner; a compiled face is measured instead, and its
-// ink height is what moves the corner to the baseline.
+// Gfx draws a string from its baseline. A fixed face is drawn from the top of its cell, so its
+// baseline is the last of the cell's rows; a variable face is measured instead, and its ink height
+// is what moves the corner to the baseline.
 int16_t baseline(const char* value, const Font* face, uint8_t scale) {
-  if (face == nullptr) return static_cast<int16_t>(7 * scale);
-  return shapes::measureText(face, value, scale).height;
+  const Font* font = fonts::faceOr(face);
+  if (font->kind == Font::Kind::Fixed) {
+    return static_cast<int16_t>((font->height - 1) * scale);
+  }
+  return shapes::measureText(font, value, scale).height;
 }
 
 // Appends the part a unit of time contributes, and answers where what has been written ends.

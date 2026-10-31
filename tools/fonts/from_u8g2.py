@@ -234,15 +234,15 @@ def write_face(symbol, first, last, glyphs, header, note):
 
         }}  // namespace
 
-        // The face's line height, its codes and the advance every glyph of a monospace face shares;
-        // its glyphs differ in ink, so the width and height are the glyph's own.
-        const Font {symbol} PROGMEM = {{{symbol}Bits, {symbol}Glyphs, 0x{first:02X}, 0x{last:02X}, {line},
-                                       0, 0, {advance}}};
+        // A variable face: each glyph carries its own ink and advance, so the face holds the glyph
+        // table, the codes it covers and its line height, and no cell of its own.
+        const Font {symbol} PROGMEM = {{Font::Kind::Variable, {symbol}Bits, 0, 0, {symbol}Glyphs,
+                                      0x{first:02X}, 0x{last:02X}, {line}}};
 
         }}  // namespace gardener::gfx
         """).format(symbol=symbol, note=note, bitmap=byte_literals(bitmap),
                     table="\n".join(entries), first=first, last=last,
-                    line=header["ascent"] - header["descent"], advance=advance)
+                    line=header["ascent"] - header["descent"])
 
     (FONTS / (symbol + ".h")).write_text(declaration, encoding="utf-8", newline="\r\n")
     (FONTS / (symbol + ".cpp")).write_text(definition, encoding="utf-8", newline="\r\n")

@@ -46,31 +46,21 @@ int16_t textWidth(const char* text) {
 }
 
 // Whether the built-in face has no ink for a code, so a label can fall back rather than print a
-// blank where a glyph is missing. The classic face's high half is shifted by one, as Adafruit's
-// printer shifts it.
+// blank where a glyph is missing. A column of the cell is a byte of the face's bitmap, so a glyph
+// with no bit set in any of its columns has nothing to draw.
 bool glyphBlank(uint8_t c) {
-  if (c < gfx::BuiltinFont.first || c > gfx::BuiltinFont.last) return true;
-  const gfx::Glyph& glyph = gfx::BuiltinFont.glyph[c - gfx::BuiltinFont.first];
-  const uint8_t* bitmap = gfx::BuiltinFont.bitmap;
-  uint16_t offset = glyph.bitmapOffset;
-  uint8_t bits = 0;
-  uint8_t bit = 0;
-  for (uint8_t row = 0; row < glyph.height; row++) {
-    for (uint8_t column = 0; column < glyph.width; column++) {
-      if ((bit++ & 7) == 0) bits = bitmap[offset++];
-      if ((bits & 0x80) != 0) return false;
-      bits = static_cast<uint8_t>(bits << 1);
-    }
+  const uint8_t* glyph = gfx::BuiltinFont.bitmap;
+  const uint16_t start = static_cast<uint16_t>(c * gfx::BuiltinFont.width);
+  for (uint8_t across = 0; across < gfx::BuiltinFont.width; across++) {
+    if (glyph[start + across] != 0) return false;
   }
   return true;
 }
 
 void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
   for (const char* c = text; *c != '\0'; c++) {
-    uint8_t code = static_cast<uint8_t>(*c);
-    if (code >= 176 && code < 255) code++;
-    if (glyphBlank(code)) code = 'x';
-    gfx::shapes::drawGlyph(canvas, x, y, code, 1, gfx::Ink);
+    const uint8_t code = static_cast<uint8_t>(*c);
+    gfx::shapes::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
     x = static_cast<int16_t>(x + CellWidth);
   }
 }

@@ -6,6 +6,7 @@
 #include <doctest.h>
 
 #include <string>
+#include <vector>
 
 #include "suite.h"
 
@@ -59,7 +60,7 @@ TEST_CASE("the built in face is the one the library ships and the one a name ans
 // A face with one glyph: a filled five-by-three box of ink, advancing six, drawn from the baseline.
 const uint8_t ProbeBits[] = {0xF8, 0xF8, 0xF8};
 const Glyph ProbeGlyphs[] = {{0, 5, 3, 6, 0, 0}};
-const Font ProbeFace = {ProbeBits, ProbeGlyphs, 'A', 'A', 8, 5, 3, 6};
+const Font ProbeFace = {Font::Kind::Variable, ProbeBits, 0, 0, ProbeGlyphs, 'A', 'A', 8};
 
 TEST_CASE("a registered face comes out of find and measures as its own face") {
   REQUIRE(fonts::registerFont("probe", &ProbeFace));
@@ -289,8 +290,34 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK_EQ(fonts::find("ttyp022"), &Ttyp022);
   CHECK_NE(fonts::find("ttyp016"), fonts::defaultFace());
 
+  // The built-in is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
+  // tables of glyphs.
+  CHECK(BuiltinFont.kind == Font::Kind::Fixed);
+  CHECK(Ttyp016.kind == Font::Kind::Variable);
+
   // A name the library does not hold is still a draw: it falls back rather than raising.
   CHECK_EQ(fonts::find("ttyp012"), fonts::defaultFace());
+}
+
+TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") {
+  // Two columns by three rows, one byte to a column with the least significant bit the top row: an
+  // 'A' that inks the top and bottom row of its first column is 0x05 there, and the second column
+  // is the blank one the advance leaves.
+  std::vector<uint8_t> bits(256 * 2, 0x00);
+  bits['A' * 2] = 0x05;
+  const Font face = {Font::Kind::Fixed, bits.data(), 2, 3};
+
+  // The face's cell, not the classic six-by-eight: two columns and a blank, three rows.
+  const Size ink = shapes::measureText(&face, "AA", 1);
+  CHECK_EQ(ink.width, 6);
+  CHECK_EQ(ink.height, 3);
+
+  reset();
+  text(Box(0, 0, 128, 64), "AA", &face, 1)->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, 1, 3), 2);
+  CHECK_EQ(display.inkCount(1, 0, 1, 3), 0);
+  CHECK_EQ(display.inkCount(3, 0, 1, 3), 2);
+  CHECK_EQ(display.inkCount(0, 0, 128, 64), 4);
 }
 
 TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {

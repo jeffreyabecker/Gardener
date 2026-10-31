@@ -400,9 +400,9 @@ const Glyph Ttyp022Glyphs[] PROGMEM = {
 
 }  // namespace
 
-// The face's line height, its codes and the advance every glyph of a monospace face shares;
-// its glyphs differ in ink, so the width and height are the glyph's own.
-const Font Ttyp022 PROGMEM = {Ttyp022Bits, Ttyp022Glyphs, 0x20, 0xFF, 17,
-                               0, 0, 11};
+// A variable face: each glyph carries its own ink and advance, so the face holds the glyph reads
+// them from, the codes it covers and its line height, and no cell of its own.
+const Font Ttyp022 PROGMEM = {Font::Kind::Variable, Ttyp022Bits, 0, 0, Ttyp022Glyphs,
+                              0x20, 0xFF, 17};
 
 }  // namespace gardener::gfx

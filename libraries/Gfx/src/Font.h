@@ -29,9 +29,9 @@
 
 namespace gardener::gfx {
 
-// One glyph of a face. `bitmapOffset` indexes the face's bitmap, where the glyph's rows are packed
-// most-significant bit first with no padding between rows. `xOffset` and `yOffset` place the
-// glyph's top-left relative to the cursor's baseline.
+// One glyph of a variable face. `bitmapOffset` indexes the face's bitmap, where the glyph's rows
+// are packed most-significant bit first with no padding between rows. `xOffset` and `yOffset` place
+// the glyph's top-left relative to the cursor's baseline.
 struct Glyph {
   uint16_t bitmapOffset;
   uint8_t width;
@@ -41,19 +41,30 @@ struct Glyph {
   int8_t yOffset;
 };
 
-// A face: the concatenated glyph bitmaps, the glyph table, the character range and the line
-// advance. The last three fields describe a face whose glyphs share one size and advance; a zero
-// means that metric varies from glyph to glyph. A fixed-size face has a non-zero `fixedWidth` and
-// `fixedHeight`; a monospace face has a non-zero `fixedAdvance`.
+// A face in one of two kinds, which `kind` names and which decides the fields that are read.
+//
+// A fixed face is one size for every byte value from 0 to 255, drawn straight from a packed bitmap:
+// the glyph for code c is the `width` bytes at bitmap[c * width], one byte to a column, and in each
+// byte the least significant bit is the top row. That is glcdfont.c's own packing, so a classic
+// 5x7 table is a fixed face without conversion. Nothing else is stored: the advance is the width
+// plus the blank column between cells, the line advance is the height, and the face's last row
+// sits on the baseline. One byte holds a column's eight rows, which is the most a fixed face can
+// have.
+//
+// A variable face draws the glyph for code c from glyph[c - first] at that glyph's own offsets and
+// moves the cursor by that glyph's own advance, so a run of text moves by whatever each glyph says.
+// `yAdvance` is the line advance.
 struct Font {
+  enum class Kind : uint8_t { Fixed, Variable };
+
+  Kind kind;
   const uint8_t* bitmap;
-  const Glyph* glyph;
-  uint16_t first;
-  uint16_t last;
-  uint8_t yAdvance;
-  uint8_t fixedWidth;
-  uint8_t fixedHeight;
-  uint8_t fixedAdvance;
+  uint8_t width;       // fixed: the cell's columns, one byte of `bitmap` each
+  uint8_t height;      // fixed: the cell's rows, one bit of a column each
+  const Glyph* glyph;  // variable: the glyph table
+  uint16_t first;      // variable: the first code the table holds
+  uint16_t last;       // variable: the last
+  uint8_t yAdvance;    // variable: the line advance
 };
 
 }  // namespace gardener::gfx
