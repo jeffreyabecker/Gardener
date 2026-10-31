@@ -1,5 +1,7 @@
 #include "HarnessSession.h"
 
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "Clock.h"
@@ -145,6 +147,13 @@ void HarnessSession::beat(int count) {
     buzzer_.update(millis());
     publish();
     routines_.poll(millis());
+
+    // The reproducer's probe: what the readout's box holds after the beat drew, and how many frames
+    // the capture has kept. Branch-only.
+    if (getenv("WALK_INK") != nullptr) {
+      printf("ink %lu %d %d\n", (unsigned long)millis(), ink(0, 13, 64, 26),
+             display_.frameCount());
+    }
 
     // The run's high-water mark, sampled where the page has finished its own work for the beat.
     const size_t held = heapBytes();

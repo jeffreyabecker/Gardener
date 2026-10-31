@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <stdio.h>
 
+#include <utility>
+
 #include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
@@ -19,11 +21,13 @@ String readingText(float pressureKpa, DisplayUnit unit) {
   return out;
 }
 
-// A reading centred in the space it is handed, at the face and scale the readout was given.
-gfx::PaintNodeRef centredReading(const String& value, const gfx::Font* face, uint8_t scale) {
+// A reading centred in the space it is handed, at the face and scale the readout was given. The node
+// keeps the text: it is built as the draw runs, so there is no page or literal behind it to borrow
+// from.
+gfx::PaintNodeRef centredReading(String value, const gfx::Font* face, uint8_t scale) {
   const gfx::Size ink = gfx::shapes::measureText(face, value.c_str(), scale);
   return gfx::aligned(gfx::sized(
-      gfx::borrowedText(gfx::Box::whole(), value.c_str(), face, scale), ink));
+      gfx::text(gfx::Box::whole(), std::move(value), face, scale), ink));
 }
 
 }  // namespace
@@ -47,15 +51,15 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
     if (sizeHint >= 1.0f) {
       gfx::View left = own.child(gfx::Rect(0, 0, halfWidth, height));
       gfx::View right = own.child(gfx::Rect(halfWidth, 0, width - halfWidth, height));
-      centredReading(reading, face, scale)->draw(left);
-      centredReading(target, face, scale)->draw(right);
+      centredReading(std::move(reading), face, scale)->draw(left);
+      centredReading(std::move(target), face, scale)->draw(right);
       return;
     }
 
-    centredReading(reading, face, scale)->draw(own);
+    centredReading(std::move(reading), face, scale)->draw(own);
     gfx::View corner = own.child(gfx::Rect(halfWidth, halfHeight, width - halfWidth,
                                              height - halfHeight));
-    centredReading(target, face, secondaryScale)->draw(corner);
+    centredReading(std::move(target), face, secondaryScale)->draw(corner);
   });
 }
 
