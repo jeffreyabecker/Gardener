@@ -33,6 +33,7 @@ class DurationScene : public EditorScene {
   void canceled() override;
   gfx::PaintNodeRef pageContents() override;
   const char* hint() override;
+  gfx::Children hintItems() override;
 
  private:
   enum class Stage : uint8_t { Minutes, Seconds };

@@ -56,7 +56,7 @@ class HomeScene
       return self.machine.handle_command(string.split(ev, ":")[1])
     end
     if ev == "up:double"
-      return ux.push(browserScene)
+      return self.machine.handle_command("browser")
     end
     if ev == "ok:single"
       return self.machine.handle_command("start")

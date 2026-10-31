@@ -31,7 +31,21 @@ class HomeMachine
     if cmd == "stop"
       return self.stop()
     end
+    if cmd == "browser"
+      return self.show_browser()
+    end
     return false
+  end
+
+  def inc_pressure()
+
+  end
+
+  def dec_pressure()
+
+  end
+  def show_browser()
+    return ux.push(browserScene)
   end
 
   # OK resumes the run, unless one is already going. The machine answers for itself: with no target,

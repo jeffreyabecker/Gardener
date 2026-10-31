@@ -37,6 +37,7 @@ class NumberProbe : public NumberScene {
   using NumberScene::NumberScene;
   using EditorScene::handle;
   using EditorScene::hint;
+  using EditorScene::hintComponent;
   using EditorScene::nudge;
   using EditorScene::pageContents;
 };
@@ -134,11 +135,19 @@ TEST_CASE("a refused value keeps the editor open") {
   });
 
   CHECK_EQ(number.handle("ok:single"), 1);
-  CHECK_EQ(std::string(number.hint()), std::string("TOTAL < HOLDS"));
   CHECK_EQ(std::string(number.text().c_str()), std::string("30"));
 
+  // The band is the answer's words and nothing else: no marks beside a value the editor has not
+  // taken. Thirteen characters are seventy-eight pixels, centred in the 128-wide band.
+  View band = canvas.child(Rect(0, 0, 128, 9));
+  reset();
+  number.hintComponent()->draw(band);
+  CHECK_EQ(display.inkCount(0, 0, 25, 9), 0);
+  CHECK(display.anyInk(25, 0, 78, 8));
+  CHECK_EQ(display.inkCount(103, 0, 25, 9), 0);
+
   CHECK_EQ(number.handle("up:single"), 1);
-  CHECK_EQ(std::string(number.hint()), std::string("\x1E/\x1F  OK=SAVE"));
+  CHECK_EQ(std::string(number.hint()), std::string("OK=SAVE"));
   CHECK_EQ(std::string(number.text().c_str()), std::string("40"));
   number.handle("up:single");
   number.handle("up:single");
@@ -146,6 +155,32 @@ TEST_CASE("a refused value keeps the editor open") {
 
   CHECK_EQ(number.handle("ok:single"), 1);
   CHECK_EQ(number.handle("up:single"), 0);
+}
+
+// The hint band is a run of marks and words rather than a line of text: the step arrows are two
+// triangles a step and a gap apart, the words follow them, and the run is centred in the band.
+TEST_CASE("a hint band draws its marks beside the words") {
+  NoGestures gestures;
+  Ux ux;
+  String label("Target");
+  NumberProbe number(gestures, ux, label, 5, 1, 0, 10, false);
+  View band = canvas.child(Rect(0, 0, 128, 9));
+  reset();
+  number.hintComponent()->draw(band);
+
+  // Twelve pixels of arrow and forty-two of words, less the gap between them: the run is fifty-six
+  // wide, so it starts at 36 and the words at 50. A seven-row mark in a nine-row band sits one row
+  // down.
+  CHECK(display.anyInk(38, 1, 1, 1));          // the up arrow's apex
+  CHECK(display.anyInk(36, 7, 1, 1));          // its base, corner to corner
+  CHECK(display.anyInk(40, 7, 1, 1));
+  CHECK(display.anyInk(43, 1, 5, 1));          // the down arrow's base along the top row
+  CHECK(display.anyInk(45, 7, 1, 1));          // its apex
+  CHECK_EQ(display.inkCount(41, 0, 2, 9), 0);  // paper between the two arrows
+  CHECK_EQ(display.inkCount(48, 0, 2, 9), 0);  // and between the marks and the words
+  CHECK(display.anyInk(50, 0, 42, 8));         // the words, in the face's own cell
+  CHECK_EQ(display.inkCount(0, 0, 36, 9), 0);
+  CHECK_EQ(display.inkCount(92, 0, 36, 9), 0);
 }
 
 // --- the choice -------------------------------------------------------------
@@ -387,6 +422,7 @@ TEST_CASE("a choice bar shows where the window is") {
 class DurationProbe : public DurationScene {
  public:
   using DurationScene::DurationScene;
+  using EditorScene::hintComponent;
   using EditorScene::nudge;
   using EditorScene::pageContents;
 
@@ -424,13 +460,42 @@ TEST_CASE("a duration holds its bounds") {
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
   duration.nudge(1);
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
-  CHECK_EQ(std::string(duration.caption()), std::string("\x1E/\x1F MIN  \x1A=NEXT"));
+  CHECK_EQ(std::string(duration.caption()), std::string("MIN"));
   duration.press("forward:single");
-  CHECK_EQ(std::string(duration.caption()), std::string("\x1E/\x1F SEC  OK=SAVE"));
+  CHECK_EQ(std::string(duration.caption()), std::string("SEC"));
   duration.setValidator(
       [](const std::any&) { return std::make_pair(false, String("TOTAL < HOLDS")); });
   duration.press("ok:single");
-  CHECK_EQ(std::string(duration.caption()), std::string("TOTAL < HOLDS"));
+  // The refusal is what the band draws in place of the marks and the stage's words; the stage
+  // itself has not moved.
+  CHECK_EQ(std::string(duration.caption()), std::string("SEC"));
+}
+
+// The minutes stage's band marks Forward as the key that moves the editor to the seconds; the
+// seconds stage has nowhere left to go, so its band carries the step arrows and words only.
+TEST_CASE("a duration band marks the key that moves between its fields") {
+  NoGestures gestures;
+  Ux ux;
+  String label("Hold");
+  DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
+  View band = canvas.child(Rect(0, 0, 128, 9));
+
+  // [12 arrows][18 MIN][5 forward][24 NEXT] and the three gaps is sixty-five: the run starts at 31,
+  // which puts the forward arrow in the five columns at 65.
+  reset();
+  duration.hintComponent()->draw(band);
+  CHECK(display.anyInk(69, 4, 1, 1));          // its apex, mid band
+  CHECK(display.anyInk(65, 1, 1, 1));          // its base, top to bottom
+  CHECK(display.anyInk(65, 7, 1, 1));
+  CHECK_EQ(display.inkCount(63, 0, 2, 9), 0);  // paper either side of it
+  CHECK_EQ(display.inkCount(70, 0, 2, 9), 0);
+
+  // Without it the run is [12][18][42] and the two gaps: seventy-six from 26, and nothing beyond.
+  duration.press("forward:single");
+  reset();
+  duration.hintComponent()->draw(band);
+  CHECK_EQ(display.inkCount(0, 0, 26, 9), 0);
+  CHECK_EQ(display.inkCount(102, 0, 26, 9), 0);
 }
 
 TEST_CASE("a nullable duration holds nothing") {

@@ -38,6 +38,10 @@ class EditorScene : public Scene {
   void setValidator(CurriedValidator validator);
 
  protected:
+  // The arrows a hint band draws for the keys: Up and Down step the value, and Back and Forward
+  // move between a kind's own fields. None is the absence of a second arrow in a one-arrow item.
+  enum class HintArrow : uint8_t { None, Up, Down, Back, Forward };
+
   void drawPage(gfx::Canvas& canvas) override;
   bool handle(const char* gesture) override;
   virtual gfx::PaintNodeRef pageComponents();
@@ -46,9 +50,14 @@ class EditorScene : public Scene {
   virtual gfx::PaintNodeRef titleComponent();
   virtual gfx::PaintNodeRef hintComponent();
 
-  // The hint band's text: the text a refused value answered where there is one, or the kind's own
-  // hint.
-  const char* hintOr(const char* text) const;
+  // The items the hint band centres: the two step arrows and the words beside them, and whatever a
+  // kind's own keys need between the two.
+  virtual gfx::Children hintItems();
+
+  // One item of the band: one arrow or a pair side by side, or a run of words, each as wide as the
+  // ink it draws.
+  static gfx::Child arrowsHint(HintArrow first, HintArrow second = HintArrow::None);
+  static gfx::Child wordsHint(const char* text);
 
   Ux& ux_;
   String label_;
@@ -63,7 +72,9 @@ class EditorScene : public Scene {
   virtual void canceled() {}
 
   virtual const char* title() { return label_.c_str(); }
-  virtual const char* hint() { return hintOr("\x1E/\x1F  OK=SAVE"); }
+
+  // The words the band prints after the step arrows.
+  virtual const char* hint() { return "OK=SAVE"; }
 
  private:
   CurriedValidator validator_;

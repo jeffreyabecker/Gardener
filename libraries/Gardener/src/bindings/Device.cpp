@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "core/SystemState.h"
+#include "core/Units.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "BindingContext.h"
 #include "Module.h"
@@ -14,6 +15,38 @@ namespace {
 int deviceTarget(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   be_pushreal(vm, bindings->systemState().deviceTargetKpa);
+  be_return(vm);
+}
+
+// The unit the panel prints pressure in, as `device.display_unit()` answers it: the wire token, the
+// suffix the glass prints, the scale from a kPa depth, the two steps and the decimals the fine step can
+// express. It is the document's own row rather than a copy a page keeps, so a unit the wire changes
+// reads new on the next call and an instance held across the change does not.
+constexpr const char* DisplayUnitRecord = "DisplayUnit";
+
+const bnfuncinfo DisplayUnitFields[] = {
+    {"init", recordInit},
+    {"name", nullptr},
+    {"suffix", nullptr},
+    {"per_kpa", nullptr},
+    {"whole_step", nullptr},
+    {"sub_step", nullptr},
+    {"decimals", nullptr},
+    {nullptr, nullptr},
+};
+
+// The unit the panel prints pressure in, filled from the published state.
+int deviceDisplayUnit(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
+  const DisplayUnit unit = bindings->systemState().unit;
+  const DisplayUnitInfo& info = displayUnitInfo(unit);
+  const int record = beginRecord(vm, DisplayUnitRecord);
+  setText(vm, record, "name", info.name);
+  setText(vm, record, "suffix", info.suffix);
+  setReal(vm, record, "per_kpa", info.perKpa);
+  setReal(vm, record, "whole_step", info.wholeStep);
+  setReal(vm, record, "sub_step", info.subStep);
+  setInt(vm, record, "decimals", displayDecimals(unit));
   be_return(vm);
 }
 
@@ -87,6 +120,7 @@ int deviceTakeGesture(bvm* vm) {
 
 const bnfuncinfo DeviceLibrary[] = {
     {"target", deviceTarget},
+    {"display_unit", deviceDisplayUnit},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},
     {"silence", deviceSilence},
@@ -99,6 +133,7 @@ const bnfuncinfo DeviceLibrary[] = {
 }  // namespace
 
 void installDeviceModule(bvm* vm, BindingContext& bindings) {
+  installRecord(vm, DisplayUnitRecord, DisplayUnitFields, bindings);
   installModule(vm, "device", DeviceLibrary, bindings);
 }
 
