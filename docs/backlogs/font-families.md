@@ -25,7 +25,7 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The two designs
 
-- [ ] Land ProFont and X11 as two more families: eight rungs converted with their licences and the
+- [x] Land ProFont and X11 as two more families: eight rungs converted with their licences and the
       README's paragraphs, so a page names `profont` or `x11` and the family answers a band.
 
 ## The resolver

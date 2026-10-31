@@ -6,7 +6,16 @@
 
 #include <doctest.h>
 
-#include <Gfx.h>
+#include "suite.h"
+
+#include "fonts/ProFont10.h"
+#include "fonts/ProFont12.h"
+#include "fonts/ProFont17.h"
+#include "fonts/ProFont29.h"
+#include "fonts/X11Cell10x20.h"
+#include "fonts/X11Cell5x7.h"
+#include "fonts/X11Cell6x10.h"
+#include "fonts/X11Cell7x14.h"
 
 namespace gardener::gfx::test {
 namespace {
@@ -19,6 +28,60 @@ Font probeFace(uint8_t rows) {
 }
 
 }  // namespace
+
+TEST_CASE("the two designs answer to a name per rung and a family per design") {
+  // Every rung is a face a page can name, and its line box is the one its source declares — not the
+  // size in its name, which is the design's nominal em.
+  const struct {
+    const char* name;
+    const Font* face;
+    uint8_t line;
+  } rungs[] = {
+      {"profont10", &ProFont10, 8},   {"profont12", &ProFont12, 10},
+      {"profont17", &ProFont17, 14},  {"profont29", &ProFont29, 24},
+      {"x11_5x7", &X11Cell5x7, 7},    {"x11_6x10", &X11Cell6x10, 9},
+      {"x11_7x14", &X11Cell7x14, 12}, {"x11_10x20", &X11Cell10x20, 17},
+  };
+  for (const auto& rung : rungs) {
+    CHECK_EQ(find(rung.name), rung.face);
+    CHECK_EQ(lineHeight(*rung.face), rung.line);
+  }
+
+  // The families hold the rungs shortest first, and both are a design a page can name.
+  const Family* profont = findFamily("profont");
+  REQUIRE(profont != nullptr);
+  CHECK_EQ(profont->count, 4);
+  CHECK_EQ(profont->cuts[0], &ProFont10);
+  CHECK_EQ(profont->cuts[3], &ProFont29);
+  const Family* x11 = findFamily("x11");
+  REQUIRE(x11 != nullptr);
+  CHECK_EQ(x11->count, 4);
+  CHECK_EQ(x11->cuts[0], &X11Cell5x7);
+  CHECK_EQ(x11->cuts[3], &X11Cell10x20);
+  for (uint8_t at = 1; at < profont->count; at++) {
+    CHECK(lineHeight(*profont->cuts[at - 1]) <= lineHeight(*profont->cuts[at]));
+    CHECK(lineHeight(*x11->cuts[at - 1]) <= lineHeight(*x11->cuts[at]));
+  }
+}
+
+TEST_CASE("a rung of a converted design draws the glyph its source holds") {
+  // The smallest and the largest X11 rungs, measured as their glyphs were converted: an 'A' five
+  // wide and six tall in 5x7, and eight by thirteen in 10x20.
+  const Size small = measureText(&X11Cell5x7, "A", 1);
+  CHECK_EQ(small.width, 4);
+  CHECK_EQ(small.height, 6);
+  const Size large = measureText(&X11Cell10x20, "A", 1);
+  CHECK_EQ(large.width, 8);
+  CHECK_EQ(large.height, 13);
+
+  // Drawn, the large one starts on the first row of its box: its ascent is thirteen rows and its
+  // ink is thirteen tall.
+  reset();
+  View box = canvas.child(Rect(0, 0, 64, 24));
+  text(Box::whole(), "A", &X11Cell10x20, 1)->draw(box);
+  CHECK(display.anyInk(0, 0, 8, 1));
+  CHECK_EQ(display.inkCount(0, 13, 64, 11), 0);
+}
 
 TEST_CASE("a caller registers a family and its cuts come back ordered") {
   const Font small = probeFace(2);
@@ -59,7 +122,8 @@ TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") 
   // More cuts than an entry holds is a refusal rather than a truncation, and so is a name that will
   // not fit the entry's own copy of it.
   const Font* tooMany[FamilyCuts + 1] = {};
-  for (int at = 0; at <= FamilyCuts; at++) tooMany[at] = &probe;
+  for (int at = 0; at <= FamilyCuts; at++)
+    tooMany[at] = &probe;
   CHECK_FALSE(registerFamily("too many", tooMany, FamilyCuts + 1));
   CHECK_FALSE(registerFamily("a name too long to hold", one, 1));
 
