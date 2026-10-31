@@ -14,7 +14,7 @@ branch, one commit and a diff; every item leaves the tree building and the suite
 - [x] Make the default a family — `defaultFamily`, `setDefaultFamily` and `familyOr` in place of the
       three face forms, and `findFamily(nullptr)` answering the same one — so a page that names
       nothing has one fallback.
-- [ ] Set the device's default family to ttyp0 where the panel comes up, and name the Adafruit family
+- [x] Set the device's default family to ttyp0 where the panel comes up, and name the Adafruit family
       in the rows too short for any ttyp0 cut, so the panel draws in the design its pages were
       composed with and its rows still hold their text.
 

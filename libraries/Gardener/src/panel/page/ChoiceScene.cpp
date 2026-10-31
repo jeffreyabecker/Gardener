@@ -18,9 +18,9 @@ constexpr int16_t Row = 8;
 // the entry showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
   const char* title = item->title.c_str();
-  const gfx::Size ink = gfx::measureText(nullptr, title, 1);
-  gfx::PaintNodeRef content =
-      gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), title), ink));
+  const gfx::Size ink = gfx::measureText(gfx::find("adafruit"), title, 1);
+  gfx::PaintNodeRef content = gfx::aligned(
+      gfx::sized(gfx::borrowedText(gfx::Box::whole(), title, gfx::find("adafruit")), ink));
   if (showing) content = gfx::inverted(std::move(content));
   return content;
 }
@@ -97,8 +97,10 @@ int16_t ChoiceScene::index() const {
 gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      const gfx::Size ink = gfx::measureText(nullptr, "--", 1);
-      gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--"), ink))->draw(canvas);
+      const gfx::Size ink = gfx::measureText(gfx::find("adafruit"), "--", 1);
+      gfx::aligned(
+          gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--", gfx::find("adafruit")), ink))
+          ->draw(canvas);
       return;
     }
     const int16_t selected = index();
