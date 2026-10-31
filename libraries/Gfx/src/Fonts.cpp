@@ -49,6 +49,16 @@ struct Entry {
 
 Entry entries[RegisteredFaces];
 
+// The families the library ships: each a name and the cuts of one design, shortest first. The
+// built-in face is a family of one cut, and it is the answer a name nobody holds is given.
+const Font* const BuiltinCuts[] = {&BuiltinFont};
+const Font* const Ttyp0Cuts[] = {&Ttyp011, &Ttyp016, &Ttyp022};
+
+const Family BuiltinFamily = {"builtin", BuiltinCuts, 1};
+const Family Ttyp0Family = {"ttyp0", Ttyp0Cuts, 3};
+
+const Family* const ShippedFamilies[] = {&BuiltinFamily, &Ttyp0Family};
+
 // Copies a name into an entry, or answers false when it does not fit.
 bool copyName(char* into, const char* from) {
   int at = 0;
@@ -91,6 +101,15 @@ const Font* find(const char* name) {
     if (entry.named && strcmp(entry.name, name) == 0) return entry.font;
   }
   return defaultFace();
+}
+
+const Family* findFamily(const char* name) {
+  if (name != nullptr && name[0] != '\0') {
+    for (const Family* family : ShippedFamilies) {
+      if (strcmp(family->name, name) == 0) return family;
+    }
+  }
+  return &BuiltinFamily;
 }
 
 }  // namespace gardener::gfx

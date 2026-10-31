@@ -18,7 +18,7 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The families
 
-- [ ] Add `Family` and `findFamily` with `builtin` and `ttyp0` as the two shipped families, so a
+- [x] Add `Family` and `findFamily` with `builtin` and `ttyp0` as the two shipped families, so a
       page can name a design rather than a size.
 - [ ] Add `registerFamily`, keeping its own copy of the cuts ordered by line height and refusing what
       a face registry refuses, and have `registerFont` refuse a name a family answers.

@@ -419,6 +419,25 @@ TEST_CASE("a readout puts the target beside the reading when there is room") {
   CHECK_EQ(display.inkCount(64, 0, 64, 32), display.inkCount(72, 8, 48, 16));
 }
 
+TEST_CASE("a family is a design's cuts, shortest first") {
+  // A page names the design and a height picks the cut, so the cuts are the design's own sizes in
+  // the order the shortest of them comes first.
+  const Family* ttyp0 = findFamily("ttyp0");
+  REQUIRE(ttyp0 != nullptr);
+  CHECK_EQ(ttyp0->count, 3);
+  CHECK_EQ(ttyp0->cuts[0], &Ttyp011);
+  CHECK_EQ(ttyp0->cuts[1], &Ttyp016);
+  CHECK_EQ(ttyp0->cuts[2], &Ttyp022);
+
+  // The built-in face is a family of one cut, and it is the answer a name the module does not hold
+  // and a page that names none are both given.
+  CHECK_EQ(findFamily("builtin")->count, 1);
+  CHECK_EQ(findFamily("builtin")->cuts[0], &BuiltinFont);
+  CHECK_EQ(findFamily(nullptr), findFamily("builtin"));
+  CHECK_EQ(findFamily(""), findFamily("builtin"));
+  CHECK_EQ(findFamily("sans"), findFamily("builtin"));
+}
+
 TEST_CASE("the faces the library ships take no registration slot") {
   // The four shipped faces are written down in the module, so a caller's table of eight holds eight
   // caller names: the case above left one registered and seven more fill it, and the next is
