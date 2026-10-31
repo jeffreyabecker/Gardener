@@ -46,7 +46,7 @@ void drawBlock(Canvas& canvas, int16_t x, int16_t y, uint8_t size, uint8_t color
 int16_t drawFixedGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* font,
                        uint8_t character, uint8_t size, uint8_t color) {
   const uint8_t* column = &font->bitmap[character * font->width];
-  const int16_t top = static_cast<int16_t>(baseline - (font->height - 1) * size);
+  const int16_t top = static_cast<int16_t>(baseline - font->ascent * size);
   for (uint8_t across = 0; across < font->width; across++) {
     const uint8_t bits = pgm_read_byte(&column[across]);
     for (uint8_t down = 0; down < font->height; down++) {
@@ -141,6 +141,53 @@ Size measureText(const Font* face, const char* value, uint8_t size) {
   }
   if (maxX < minX || maxY < minY) return {0, 0};
   return {static_cast<int16_t>(maxX - minX + 1), static_cast<int16_t>(maxY - minY + 1)};
+}
+
+namespace {
+
+// The largest whole number of a cut's lines a height holds, and never less than one.
+uint8_t scaleIn(const Font& face, int16_t height) {
+  const int16_t line = lineHeight(face);
+  if (line <= 0 || height < line) return 1;
+  const int16_t scale = static_cast<int16_t>(height / line);
+  return static_cast<uint8_t>(scale > 255 ? 255 : scale);
+}
+
+// The index of the tallest cut whose line box fits the height at one scale, or the shortest cut when
+// none does.
+uint8_t tallestFitting(const Family& family, int16_t height) {
+  for (uint8_t at = family.count; at > 0; at--) {
+    if (lineHeight(*family.cuts[at - 1]) <= height) return static_cast<uint8_t>(at - 1);
+  }
+  return 0;
+}
+
+}  // namespace
+
+Fit resolve(const Family& family, int16_t height) {
+  if (family.cuts == nullptr || family.count == 0) return {faceOr(nullptr), 1};
+  const Font* face = family.cuts[tallestFitting(family, height)];
+  return {face, scaleIn(*face, height)};
+}
+
+Fit resolve(const Family& family, const char* value, int16_t width, int16_t height) {
+  if (family.cuts == nullptr || family.count == 0) return {faceOr(nullptr), 1};
+  const uint8_t start = tallestFitting(family, height);
+  for (uint8_t at = static_cast<uint8_t>(start + 1); at-- > 0;) {
+    const Font* face = family.cuts[at];
+    for (uint8_t scale = scaleIn(*face, height); scale > 0; scale--) {
+      if (measureText(face, value, scale).width <= width) return {face, scale};
+    }
+  }
+  return resolve(family, height);
+}
+
+Fit resolve(const char* familyName, int16_t height) {
+  return resolve(*findFamily(familyName), height);
+}
+
+Fit resolve(const char* familyName, const char* value, int16_t width, int16_t height) {
+  return resolve(*findFamily(familyName), value, width, height);
 }
 
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color) {
