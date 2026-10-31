@@ -1,6 +1,6 @@
-# home.test.be — the home scene's page: the gestures it maps to its machine, the clock it draws,
-# and the list it opens. The run itself is home_machine.test.be's, and the device rows it declares
-# belong to the settings model.
+# home.test.be — the home scene's page: the gestures it hands its machine, and the clock it draws.
+# The run itself is home_machine.test.be's, and the device rows it declares belong to the settings
+# model.
 
 suite = "home"
 
@@ -56,9 +56,19 @@ def the_keys_map_to_the_machines_commands()
   harness.beat(1)
   assert_eq(mock.commands[2], "stop", "a cmd: gesture is not handed over by name")
 
+  # Up and Down are the target's own keys: the step is the machine's to take, so the page hands the
+  # two over by name rather than moving the target itself.
+  harness.press("up:single")
+  harness.beat(1)
+  assert_eq(mock.commands[3], "inc_pressure", "Up is not a pressure step")
+
   harness.press("down:single")
   harness.beat(1)
-  assert_eq(mock.commands.size(), 3, "a key the page does not use reached the machine")
+  assert_eq(mock.commands[4], "dec_pressure", "Down is not a pressure step")
+
+  harness.press("forward:single")
+  harness.beat(1)
+  assert_eq(mock.commands.size(), 5, "a key the page does not use reached the machine")
   home.machine = HomeMachine()
 end
 
@@ -80,23 +90,19 @@ end
 
 test("the page draws the clock its machine reports", the_page_draws_the_clock_its_machine_reports)
 
-def a_double_up_opens_the_browser()
+def a_double_up_asks_the_machine_for_the_browser()
   var mock = MockHomeMachine(nil)
   var home = mock_home(mock)
 
-  # The browser is what home opens: the routine list, which the page pushes rather than opening the
-  # device's settings — a routine's own settings are reached through its row.
+  # The browser is what home opens: the routine list, which the page asks its machine for rather than
+  # pushing itself — a routine's own settings are reached through its row, not the device's. The push
+  # is the machine's, and home_machine.test.be is where it is proved.
   harness.press("up:double")
   harness.beat(1)
-  assert_eq(ux.depth(), 2, "Up held to a double did not open a page")
-  assert_eq(classname(ux.top()), "BrowserScene", "the home list is not the browser")
-
-  # Back leaves the browser for the page it was pushed from.
-  harness.press("back:single")
-  harness.beat(1)
-  assert_eq(ux.depth(), 1, "Back did not leave the browser")
-  assert_eq(classname(ux.top()), "HomeScene", "the page under the browser is not home")
+  assert_eq(mock.commands.size(), 1, "Up held to a double reached nothing")
+  assert_eq(mock.commands[0], "browser", "Up held to a double is not the browser")
+  assert_eq(ux.depth(), 1, "the page pushed a scene of its own")
   home.machine = HomeMachine()
 end
 
-test("Up held to a double opens the browser", a_double_up_opens_the_browser)
+test("Up held to a double asks for the browser", a_double_up_asks_the_machine_for_the_browser)

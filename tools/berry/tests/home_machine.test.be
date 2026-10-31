@@ -1,6 +1,6 @@
 # home_machine.test.be — the home scene's run as a machine, driven directly: the phase that follows
-# the chamber, the clock that runs with it and the two commands the page hands over. The page is
-# tested against a mock in home.test.be, so there is no page and no gesture here.
+# the chamber, the clock that runs with it, the commands the page hands over and the list it opens.
+# The page is tested against a mock in home.test.be, so there is no page and no gesture here.
 
 suite = "home_machine"
 
@@ -70,3 +70,44 @@ def an_unknown_command_is_not_answered()
 end
 
 test("a command the home run does not have is not answered", an_unknown_command_is_not_answered)
+
+def the_browser_is_pushed_over_the_page()
+  var machine = HomeMachine()
+  assert_true(machine.handle_command("browser"), "the browser command was not answered")
+  harness.beat(1)
+  assert_eq(ux.depth(), 2, "the browser was not pushed")
+  assert_eq(classname(ux.top()), "BrowserScene", "the home list is not the browser")
+
+  # Back leaves the browser for the page it was pushed from.
+  harness.press("back:single")
+  harness.beat(1)
+  assert_eq(ux.depth(), 1, "Back did not leave the browser")
+  assert_eq(classname(ux.top()), "HomeScene", "the page under the browser is not home")
+end
+
+test("the browser is pushed over the page", the_browser_is_pushed_over_the_page)
+
+def a_press_steps_the_target_by_the_rows_step()
+  var machine = HomeMachine()
+  # The host boots in kPa, so a whole step is one kPa of depth.
+  vacuum.set_target_pressure(20.0)
+  harness.beat(1)
+
+  assert_true(machine.handle_command("inc_pressure"), "Up was not answered")
+  harness.beat(1)
+  assert_eq(vacuum.get_target_pressure(), 21.0, "Up did not step the target by the whole step")
+
+  assert_true(machine.handle_command("dec_pressure"), "Down was not answered")
+  harness.beat(1)
+  assert_eq(vacuum.get_target_pressure(), 20.0, "Down did not step the target back")
+
+  # A step past the deepest target the pump reaches is held at it rather than refused.
+  vacuum.set_target_pressure(vacuum.get_deepest_pressure())
+  harness.beat(1)
+  machine.handle_command("inc_pressure")
+  harness.beat(1)
+  assert_eq(vacuum.get_target_pressure(), vacuum.get_deepest_pressure(),
+            "a step past the floor left the floor")
+end
+
+test("Up and Down step the target by the row's step", a_press_steps_the_target_by_the_rows_step)

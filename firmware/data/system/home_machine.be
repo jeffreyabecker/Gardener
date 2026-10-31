@@ -37,19 +37,21 @@ class HomeMachine
     if cmd == "inc_pressure"
       return self.step_pressure(1)
     end
-    if(cms == "dec_pressure")
+    if cmd == "dec_pressure"
       return self.step_pressure(-1)
     end
-    if(cmd == "")
     return false
   end
-  
+
+  # One press moves the target by the panel's own whole step. That step is stated in the unit the
+  # glass prints, so it is divided by the row's scale before it joins a depth in kPa, and the sum is
+  # clamped to the bounds the machine works within rather than handed over to be refused.
   def step_pressure(dir)
-    dir = dir == nil? 1 : dir
+    dir = dir == nil ? 1 : dir
     var unit = device.display_unit()
-    var pressure = vacuum.get_target_pressure()
-    pressure = pressure + unit.whole_step * dir
-    vacuum.set_target_pressure(pressure)
+    var step = unit.whole_step / unit.per_kpa
+    var pressure = vacuum.get_target_pressure() + step * dir
+    vacuum.set_target_pressure(vacuum.clamp(pressure))
     return true
   end
 

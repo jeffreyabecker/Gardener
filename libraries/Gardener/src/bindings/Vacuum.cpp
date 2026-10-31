@@ -12,12 +12,20 @@ namespace {
 
 // The depth the machine pulls to, in kPa below ambient. 0 is the ambient target: the chamber is
 // released rather than the target cleared, so a page can go back to the stored one.
+//
+// The value is held to the machine's own bounds before it is posted, 0 through the floor, because a
+// page has no channel to be refused on: a depth past the floor is what the pump cannot reach, and
+// one below ambient is the release. The editor's bounds are not these — vacuum.clamp keeps a value
+// off the ambient target and is the one a page steps within — so this floors the top alone.
 int vacuumSetTargetPressure(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
-  float newTargetPressure = (float)argReal(vm, 1);
-  const MachineCommand set{MachineCommand::Op::SetTarget, newTargetPressure};
+  float pressureKpa = (float)argReal(vm, 1);
+  // `!(>=)` rather than `<` so a value that is not a number is held with the rest, as ambient is.
+  if (!(pressureKpa >= 0.0f)) pressureKpa = 0.0f;
+  if (pressureKpa > CONTROL_FLOOR_KPA) pressureKpa = CONTROL_FLOOR_KPA;
+  const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
   bindings->post(set);
-  bindings->settings().setTargetKpa(newTargetPressure);
+  bindings->settings().setTargetKpa(pressureKpa);
   be_return_nil(vm);
 }
 
