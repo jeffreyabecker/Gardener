@@ -70,6 +70,39 @@ bool copyName(char* into, const char* from) {
   return true;
 }
 
+// One family a caller registered: the entry's own name, its own run of cuts and the Family a reader
+// is handed, which points at those two rather than at the caller's array.
+struct FamilyEntry {
+  bool named = false;
+  char name[NameLength] = {};
+  const Font* cuts[FamilyCuts] = {};
+  Family family = {};
+};
+
+FamilyEntry families[RegisteredFamilies];
+
+// The face a name stands for among the ones a caller registered, or nullptr when none holds it.
+const Font* registeredFace(const char* name) {
+  for (const Entry& entry : entries) {
+    if (entry.named && strcmp(entry.name, name) == 0) return entry.font;
+  }
+  return nullptr;
+}
+
+// The family a name stands for, or nullptr when nothing answers to it. findFamily is this with the
+// built-in as the answer, and the two callers that must tell a name nobody holds from the built-in
+// ask this instead.
+const Family* namedFamily(const char* name) {
+  if (name == nullptr || name[0] == '\0') return nullptr;
+  for (const Family* family : ShippedFamilies) {
+    if (strcmp(family->name, name) == 0) return family;
+  }
+  for (const FamilyEntry& entry : families) {
+    if (entry.named && strcmp(entry.name, name) == 0) return &entry.family;
+  }
+  return nullptr;
+}
+
 }  // namespace
 
 const Font* defaultFace() { return chosenFace; }
@@ -81,9 +114,8 @@ const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFac
 bool registerFont(const char* name, const Font* font) {
   if (name == nullptr || name[0] == '\0' || font == nullptr) return false;
   if (shippedFace(name) != nullptr) return false;
-  for (const Entry& entry : entries) {
-    if (entry.named && strcmp(entry.name, name) == 0) return false;
-  }
+  if (registeredFace(name) != nullptr) return false;
+  if (namedFamily(name) != nullptr) return false;
   for (Entry& entry : entries) {
     if (entry.named) continue;
     if (!copyName(entry.name, name)) return false;
@@ -97,19 +129,42 @@ bool registerFont(const char* name, const Font* font) {
 const Font* find(const char* name) {
   if (name == nullptr || name[0] == '\0') return defaultFace();
   if (const Font* shipped = shippedFace(name)) return shipped;
-  for (const Entry& entry : entries) {
-    if (entry.named && strcmp(entry.name, name) == 0) return entry.font;
-  }
+  if (const Font* registered = registeredFace(name)) return registered;
   return defaultFace();
 }
 
 const Family* findFamily(const char* name) {
-  if (name != nullptr && name[0] != '\0') {
-    for (const Family* family : ShippedFamilies) {
-      if (strcmp(family->name, name) == 0) return family;
-    }
+  const Family* family = namedFamily(name);
+  return family != nullptr ? family : &BuiltinFamily;
+}
+
+bool registerFamily(const char* name, const Font* const* cuts, uint8_t count) {
+  if (name == nullptr || name[0] == '\0' || cuts == nullptr) return false;
+  if (count == 0 || count > FamilyCuts) return false;
+  if (shippedFace(name) != nullptr) return false;
+  if (registeredFace(name) != nullptr) return false;
+  if (namedFamily(name) != nullptr) return false;
+  for (uint8_t at = 0; at < count; at++) {
+    if (cuts[at] == nullptr) return false;
   }
-  return &BuiltinFamily;
+  for (FamilyEntry& entry : families) {
+    if (entry.named) continue;
+    if (!copyName(entry.name, name)) return false;
+    for (uint8_t at = 0; at < count; at++) {
+      uint8_t where = at;
+      while (where > 0 && lineHeight(*entry.cuts[where - 1]) > lineHeight(*cuts[at])) {
+        entry.cuts[where] = entry.cuts[where - 1];
+        where--;
+      }
+      entry.cuts[where] = cuts[at];
+    }
+    entry.family.name = entry.name;
+    entry.family.cuts = entry.cuts;
+    entry.family.count = count;
+    entry.named = true;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace gardener::gfx
