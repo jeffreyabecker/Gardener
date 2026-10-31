@@ -1,8 +1,7 @@
 #include "panel/page/PressureReadout.h"
 
+#include <Arduino.h>
 #include <stdio.h>
-
-#include <string>
 
 #include "shapes/Text.h"
 #include "layout/Drawing.h"
@@ -13,7 +12,7 @@ namespace {
 
 // A reading as the panel prints it: the unit's scale, and the decimals the unit's fine step can
 // express.
-std::string readingText(float pressureKpa, DisplayUnit unit) {
+String readingText(float pressureKpa, DisplayUnit unit) {
   char out[16];
   snprintf(out, sizeof(out), "%.*f", static_cast<int>(displayDecimals(unit)),
            displayValue(pressureKpa, unit));
@@ -21,7 +20,7 @@ std::string readingText(float pressureKpa, DisplayUnit unit) {
 }
 
 // A reading centred in the space it is handed, at the face and scale the readout was given.
-gfx::PaintNodeRef centredReading(const std::string& value, const gfx::Font* face, uint8_t scale) {
+gfx::PaintNodeRef centredReading(const String& value, const gfx::Font* face, uint8_t scale) {
   const gfx::Size ink = gfx::shapes::measureText(face, value.c_str(), scale);
   return gfx::aligned(gfx::sized(
       gfx::borrowedText(gfx::Box::whole(), value.c_str(), face, scale), ink));
@@ -34,10 +33,10 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
   return gfx::callable([box, state, sizeHint, face, scale, secondaryScale](gfx::Canvas& canvas) {
     // A stopped machine has no chamber reading to show, so the reading is dashes; the target is
     // known either way.
-    const std::string reading = state.running
-                                    ? readingText(state.currentPressureKpa, state.unit)
-                                    : std::string("--");
-    const std::string target = readingText(state.targetPressureKpa, state.unit);
+    const String reading = state.running
+                               ? readingText(state.currentPressureKpa, state.unit)
+                               : String("--");
+    const String target = readingText(state.targetPressureKpa, state.unit);
 
     gfx::View own = canvas.child(box.in(canvas));
     const int16_t width = own.width();

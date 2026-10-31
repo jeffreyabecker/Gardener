@@ -1,0 +1,30 @@
+# A walk through the panel: home with a run going, the browser over it, then a routine launched
+# with a set of its own. Every line is a command; a `#` line and a blank one are not.
+#
+#   python tools/walkthrough/walk.py tools/walkthrough/sample.walk
+
+# The model chamber at a bench's pace, so a pull fits inside the picture rather than taking fifty
+# frames to reach the last one.
+set-rate 20 45
+
+# Home, with a run started by a person: OK, then ten seconds of it.
+load home
+send ok:single
+wait 10 s
+
+# Up held to a double opens the browser, which vents the chamber as it comes up; Down moves the
+# selection, which is the picture.
+send up:double
+wait 1 s
+send down:single
+wait 500 ms
+
+# A routine, launched with a set of its own, run far enough to be caught mid-phase and then paused.
+load interval set_count=3;target_pressure=30;work_duration=60
+send ok:single
+wait 12 s
+send cancel:single
+wait 1 s
+
+# What was drawn, written as the animation.
+emit

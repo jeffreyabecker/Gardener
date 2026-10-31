@@ -56,6 +56,10 @@ strip is a component the harness hands the capture, so what a host draws beside 
 covers what the page drew. A suite's captures hash the overlay instead of drawing the device's
 status row, so the page the case drove reads as the whole picture.
 
+A walk longer than one `--art` runs is scripted instead, as a command file driven by
+[tools/walkthrough](../../../tools/walkthrough): a load, the gestures, the waits, the model
+chamber's rates and an emit, with the GIF's own timing an option. Its verbs are in the README.
+
 Nothing in a run reads a capture back, and nothing it prints describes one: a `.gif` under
 `tools/berry/build/` or `tools/berry/artifacts/` is there for a human to look at. Do not convert
 one, enlarge it, transcribe it or diff two of them to decide whether a change is right: that is a

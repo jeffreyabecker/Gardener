@@ -10,7 +10,7 @@
 
 namespace gardener {
 
-// The device's documents and the interpreter's files for the check, held in memory.
+// The device's documents and the interpreter's files for the host tools, held in memory.
 //
 // It is loaded from the real data directory once, so `/cfg/settings.ini`, each routine's `.ini`, the
 // system files and the routines are the ones the image ships; every write afterwards lands here, so a
@@ -23,8 +23,18 @@ class MemoryFiles : public Library {
   bool load(const std::string& root);
 
   void list(const String& folder, std::vector<String>& names) override;
+  // Everything directly under `path`, files and folders, in name order. Folders are not stored: a
+  // path with a file under it is a folder, so what a walk reports is derived from the files' paths.
+  void entries(const String& path, std::vector<Entry>& out) override;
   bool read(const String& path, String& out) override;
   bool write(const String& path, const String& text) override;
+
+  bool exists(const String& path) override;
+  bool isDirectory(const String& path) override;
+  // Nothing to do: a folder exists as soon as a file is written under it.
+  bool makeDirectory(const String& path) override;
+  // A file, or a folder with everything under it.
+  bool remove(const String& path) override;
 
   // Whether a `key=value` line for `key` changed in `path` since the run began.
   bool wrote(const std::string& path, const std::string& key) const;

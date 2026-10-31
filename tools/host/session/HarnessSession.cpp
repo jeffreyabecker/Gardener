@@ -26,8 +26,6 @@ size_t heapOf(bvm* vm) {
 
 namespace {
 
-constexpr float PullKpaPerSecond = 3.0f;   // at full duty
-constexpr float VentKpaPerSecond = 40.0f;
 constexpr float LeakKpaPerSecond = 0.2f;
 constexpr uint32_t BeatMs = 250;
 constexpr uint32_t TickMs = 50;
@@ -37,9 +35,9 @@ constexpr uint32_t TickMs = 50;
 void Chamber::advance(uint32_t ms) {
   const float seconds = (float)ms / 1000.0f;
   if (venting_) {
-    pressureKpa_ -= VentKpaPerSecond * seconds;
+    pressureKpa_ -= ventKpaPerSecond_ * seconds;
   } else {
-    pressureKpa_ += (duty_ / 100.0f) * PullKpaPerSecond * seconds;
+    pressureKpa_ += (duty_ / 100.0f) * pullKpaPerSecond_ * seconds;
     pressureKpa_ -= LeakKpaPerSecond * seconds;
   }
   if (pressureKpa_ < 0.0f) pressureKpa_ = 0.0f;
@@ -213,9 +211,9 @@ void HarnessSession::beginCapture(const char* path) {
       gestureStrip_.component(gfx::Rect(0, stripTop, glassWidth, GestureStrip::Rows)));
 }
 
-bool HarnessSession::endCapture() {
+bool HarnessSession::endCapture(uint16_t delayCs, int scale) {
   // Nothing to write is not a write failure: a case that never beats has no motion to show.
-  const bool ok = display_.frameCount() == 0 || display_.save(capturePath_.c_str());
+  const bool ok = display_.frameCount() == 0 || display_.save(capturePath_.c_str(), delayCs, scale);
   display_.endCapture();
   capturePath_.clear();
   return ok;
