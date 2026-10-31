@@ -5,6 +5,7 @@
 #include "machine/MachineCommand.h"
 
 namespace gardener {
+inline namespace machine {
 
 // How many commands the machine's queue holds, and the size of the batch a tick drains: a link that
 // writes faster than the tick runs is held in its outbox rather than blocking the link.
@@ -26,4 +27,5 @@ class CommandQueue {
   virtual bool take(MachineCommand& command) = 0;
 };
 
+}  // namespace machine
 }  // namespace gardener

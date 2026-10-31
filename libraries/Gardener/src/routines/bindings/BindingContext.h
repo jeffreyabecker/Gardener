@@ -3,15 +3,17 @@
 #include <Arduino.h>
 
 namespace gardener {
-
-class CommandOutbox;
 inline namespace core {
 class Logger;
-}
-struct MachineCommand;
-inline namespace core {
 struct SystemState;
 }
+inline namespace machine {
+class CommandOutbox;
+struct MachineCommand;
+}
+}  // namespace gardener
+
+namespace gardener {
 
 namespace gfx {
 class DisplayDevice;

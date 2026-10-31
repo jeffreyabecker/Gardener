@@ -5,11 +5,15 @@
 #include "panel/parts/GestureClassifier.h"
 
 namespace gardener {
-
-class CommandOutbox;
 inline namespace core {
 class Logger;
 }
+inline namespace machine {
+class CommandOutbox;
+}
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel {
 class GestureQueue;

@@ -3,6 +3,19 @@
 #include <Arduino.h>
 
 namespace gardener {
+inline namespace core {
+class Battery;
+class ButtonPanel;
+class Logger;
+struct SystemState;
+}
+inline namespace machine {
+class CommandOutbox;
+class Machine;
+}
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel {
 class GestureQueue;
@@ -11,19 +24,7 @@ class BuzzerPlayer;
 }
 }  // namespace panel
 
-inline namespace core {
-class Battery;
-class ButtonPanel;
-}
-class CommandOutbox;
-inline namespace core {
-class Logger;
-}
-class Machine;
 class Routines;
-inline namespace core {
-struct SystemState;
-}
 
 void panelTask(void* arg);
 

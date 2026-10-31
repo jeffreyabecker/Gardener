@@ -3,8 +3,13 @@
 #include <FS.h>
 
 namespace gardener {
-
+inline namespace machine {
 class CommandOutbox;
+}
+}  // namespace gardener
+
+namespace gardener {
+
 class Domain;
 
 // The panel build's `fs` domain: the device's files over the wire, on the store the composition

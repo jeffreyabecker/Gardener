@@ -6,6 +6,13 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
+inline namespace core {
+class Logger;
+}
+}  // namespace gardener
+
+namespace gardener {
+inline namespace machine {
 
 // --- Closed loop vacuum control ---------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
@@ -150,10 +157,6 @@ enum Capability : uint8_t {
   FailSafeValve = 0x04,
 };
 
-inline namespace core {
-class Logger;
-}
-
 // The machine: the pressure loop and the policy around it, with no panel part named. It commands
 // the three parts it is handed and holds the capability byte, and it reports through the logger it
 // was built with. boot() brings the parts up; the parts themselves, the links and the tasks stay the
@@ -184,4 +187,5 @@ class Machine {
   uint8_t capabilities_ = 0;
 };
 
+}  // namespace machine
 }  // namespace gardener

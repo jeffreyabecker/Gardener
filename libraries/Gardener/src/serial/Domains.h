@@ -3,14 +3,21 @@
 #include "serial/BoardFacts.h"
 
 namespace gardener {
-
-class Machine;
-class CommandOutbox;
-class Domain;
 inline namespace core {
 class Battery;
 }
+inline namespace machine {
+class Machine;
+class CommandOutbox;
+}
+inline namespace storage {
 class DeviceSettings;
+}
+}  // namespace gardener
+
+namespace gardener {
+
+class Domain;
 
 Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);
 // What the firmware is and which assemblies are fitted: the board's facts from `board`, the gauge

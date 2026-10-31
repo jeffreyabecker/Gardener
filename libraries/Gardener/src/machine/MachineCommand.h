@@ -3,9 +3,14 @@
 #include <stdint.h>
 
 namespace gardener {
-
+inline namespace machine {
 class VacuumSystem;
 class CommandQueue;
+}
+}  // namespace gardener
+
+namespace gardener {
+inline namespace machine {
 
 // A write to the machine that the control task applies, carried across from the link or the VM
 // that originated it. The op names the verb; `value` is the op's own — kPa for a target, whole
@@ -59,4 +64,5 @@ class CommandOutbox {
   uint8_t count_ = 0;
 };
 
+}  // namespace machine
 }  // namespace gardener

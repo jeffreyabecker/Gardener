@@ -9,6 +9,7 @@
 #include "panel/page/SettingsRows.h"
 
 namespace gardener {
+inline namespace storage {
 
 // Where a routine's settings document lives: one document per routine, its aliases as named sections
 // of it.
@@ -48,4 +49,5 @@ class RoutineSettingStore {
   Library& library_;
 };
 
+}  // namespace storage
 }  // namespace gardener

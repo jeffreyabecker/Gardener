@@ -11,11 +11,13 @@
 #include "panel/page/Scene.h"
 
 namespace gardener {
-
 inline namespace core {
 class Library;
 class Logger;
 }
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel::page {
 

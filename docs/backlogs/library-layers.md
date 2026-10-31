@@ -5,7 +5,7 @@ layer gains its namespace behind `inline` first, so the move lands with no call 
 inline is dropped later, one layer per item, when its uses are qualified.
 
 - [x] `core/` declares `gardener::core` inline, and `firmwareversion.h` joins it.
-- [ ] `machine/` and `storage/` declare `gardener::machine` and `gardener::storage` inline.
+- [x] `machine/` and `storage/` declare `gardener::machine` and `gardener::storage` inline.
 - [ ] `panel/` and `panel/parts/` declare their namespaces inline, and `BerryScene`, `Registration`
       and `RoutineRegistry` join `gardener::panel::page`.
 - [ ] `routines/bindings/` becomes `bindings/` declaring `gardener::bindings`, with `BerryScene` in it.

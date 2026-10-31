@@ -3,11 +3,13 @@
 #include <stdint.h>
 
 namespace gardener {
-
 inline namespace core {
 class Battery;
 struct SystemState;
 }
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel {
 namespace parts {

@@ -5,6 +5,7 @@
 #include "storage/Config.h"
 
 namespace gardener {
+inline namespace storage {
 
 // The device's own document, /cfg/settings.ini: the unit the panel prints pressure in, and the depth
 // the default program pulls to. Each is answered as what it means rather than as the text the
@@ -44,4 +45,5 @@ class DeviceSettings {
   SystemState& state_;
 };
 
+}  // namespace storage
 }  // namespace gardener

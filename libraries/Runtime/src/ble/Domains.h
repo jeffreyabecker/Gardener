@@ -1,9 +1,14 @@
 #pragma once
 
 namespace gardener {
+inline namespace machine {
+class Machine;
+}
+}  // namespace gardener
+
+namespace gardener {
 
 class BleDomain;
-class Machine;
 
 // The machine's slice of the GATT table: state, pressure_kpa, target, fault, command, fw, ble_proto,
 // sensor, floor, caps, hold_s, max_run_s, write_result and uptime_ms. Everything a controller

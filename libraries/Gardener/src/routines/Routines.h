@@ -10,15 +10,14 @@
 #include <Gfx.h>
 
 namespace gardener {
-
 inline namespace core {
 struct SystemState;
-}
-
-inline namespace core {
 class Logger;
 class Library;
 }
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel::page {
 class RoutineRegistry;

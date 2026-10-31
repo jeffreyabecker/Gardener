@@ -7,11 +7,14 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
-
 inline namespace core {
 class Logger;
 struct SystemState;
 }
+}  // namespace gardener
+
+namespace gardener {
+inline namespace machine {
 
 // The control tick's policy: what a beat applies from the queue and how a burst of commands
 // collapses, the order the parts are updated in, and the run log. A caller steps it with a
@@ -58,4 +61,5 @@ class ControlTick {
   bool rebootPending_ = false;
 };
 
+}  // namespace machine
 }  // namespace gardener

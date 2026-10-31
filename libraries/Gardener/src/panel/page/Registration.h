@@ -12,10 +12,12 @@
 #include "panel/page/SettingsRows.h"
 
 namespace gardener {
-
 inline namespace core {
 class Library;
 }
+}  // namespace gardener
+
+namespace gardener {
 
 namespace panel::page {
 
