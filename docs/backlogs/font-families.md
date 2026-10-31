@@ -13,7 +13,7 @@ one commit and a diff; every item leaves the tree building and the suite passing
 
 ## The shipped faces
 
-- [ ] Hold the shipped faces in a table the module writes and have `find` scan it first, so a
+- [x] Hold the shipped faces in a table the module writes and have `find` scan it first, so a
       registration is a caller's only and `RegisteredFaces` is a caller's budget.
 
 ## The families

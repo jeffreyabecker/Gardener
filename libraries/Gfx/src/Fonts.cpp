@@ -16,6 +16,29 @@ namespace {
 // null, so a reader has nothing to check.
 const Font* chosenFace = &BuiltinFont;
 
+// One face the library ships and the name it answers to. The library writes these down rather than
+// registering them, so the registration table below is a caller's and its slots are not spent on
+// faces every build carries anyway.
+struct NamedFace {
+  const char* name;
+  const Font* face;
+};
+
+const NamedFace ShippedFaces[] = {
+    {"builtin", &BuiltinFont},
+    {"ttyp011", &Ttyp011},
+    {"ttyp016", &Ttyp016},
+    {"ttyp022", &Ttyp022},
+};
+
+// The face a shipped name stands for, or nullptr when the module ships no face by that name.
+const Font* shippedFace(const char* name) {
+  for (const NamedFace& shipped : ShippedFaces) {
+    if (strcmp(shipped.name, name) == 0) return shipped.face;
+  }
+  return nullptr;
+}
+
 // One name a caller registered and the face it stands for. The name is the entry's own copy, so the
 // caller's string need not outlive the call, and `named` is how a slot that was never filled reads.
 struct Entry {
@@ -47,7 +70,7 @@ const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFac
 
 bool registerFont(const char* name, const Font* font) {
   if (name == nullptr || name[0] == '\0' || font == nullptr) return false;
-  if (strcmp(name, "builtin") == 0) return false;
+  if (shippedFace(name) != nullptr) return false;
   for (const Entry& entry : entries) {
     if (entry.named && strcmp(entry.name, name) == 0) return false;
   }
@@ -63,26 +86,11 @@ bool registerFont(const char* name, const Font* font) {
 
 const Font* find(const char* name) {
   if (name == nullptr || name[0] == '\0') return defaultFace();
-  if (strcmp(name, "builtin") == 0) return &BuiltinFont;
+  if (const Font* shipped = shippedFace(name)) return shipped;
   for (const Entry& entry : entries) {
     if (entry.named && strcmp(entry.name, name) == 0) return entry.font;
   }
   return defaultFace();
 }
-
-namespace {
-
-// The faces the library compiles in are registered as the module comes up, so a page or a record can
-// name one without the composition registering anything. The table is declared above this, so the
-// order between the two is the file's own.
-struct Shipped {
-  Shipped() {
-    registerFont("ttyp011", &Ttyp011);
-    registerFont("ttyp016", &Ttyp016);
-    registerFont("ttyp022", &Ttyp022);
-  }
-} shippedFaces;
-
-}  // namespace
 
 }  // namespace gardener::gfx
