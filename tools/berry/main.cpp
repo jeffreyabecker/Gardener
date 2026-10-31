@@ -168,20 +168,23 @@ int callArt(bvm* vm, const char* name, int seconds, const char* path) {
   return ok ? 1 : 0;
 }
 
+// The figures the report prints are kilobytes, one decimal: a file is not a whole number of them and
+// the difference between two of them is what the table is read for.
+double kbOf(size_t bytes) { return (double)bytes / 1024.0; }
+
 // The boot's own figures: the interpreter before the image loads, the framework once `/system` has,
-// and the image once the root scene is built. Bytes, as the host bills them.
+// and the image once the root scene is built.
 void printMemorySummary(gardener::HarnessSession& session) {
-  printf("[I] mem: vm %llu B, framework %llu B, image %llu B\n",
-         (unsigned long long)session.vmBytes(), (unsigned long long)session.frameworkBytes(),
-         (unsigned long long)session.imageBytes());
+  printf("[I] mem: vm %.1f KB, framework %.1f KB, image %.1f KB\n", kbOf(session.vmBytes()),
+         kbOf(session.frameworkBytes()), kbOf(session.imageBytes()));
 }
 
 // What each image file added, in the order they loaded, and then what the root scene added.
 void printMemoryTable(gardener::HarnessSession& session) {
   for (const std::pair<std::string, size_t>& file : session.fileCosts()) {
-    printf("[I] mem: %s %llu B\n", file.first.c_str(), (unsigned long long)file.second);
+    printf("[I] mem: %s %.1f KB\n", file.first.c_str(), kbOf(file.second));
   }
-  printf("[I] mem: root scene %llu B\n", (unsigned long long)session.sceneBytes());
+  printf("[I] mem: root scene %.1f KB\n", kbOf(session.sceneBytes()));
 }
 
 }  // namespace
