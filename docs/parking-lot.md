@@ -148,3 +148,9 @@ still reports one. Blocked by: nothing has decided whether that is a build optio
 when it does not, so an owner or a scene is dropped silently at the moment memory is already short. A
 host build whose allocator fails a chosen allocation would show that and every other path that hands
 ownership over in an argument list. Blocked by: nothing builds one.
+
+
+# Make the serial link report the VM usage 
+ ESP.getFreeHeap()
+ ESP.getMaxAllocHeap()
+ ESP.getMinFreeHeap()
