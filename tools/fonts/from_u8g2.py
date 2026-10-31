@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Convert a u8g2 single-font source into a Gfx face.
 
-    python tools/fonts/from_u8g2.py u8g2_font_t0_16_tf.c Ttyp016
-    python tools/fonts/from_u8g2.py u8g2_font_t0_16_tf.c Ttyp016 --first 0x20 --last 0xff
+    python tools/fonts/from_u8g2.py u8g2_font_t0_16_tf.c Ttyp016 --note "UW ttyp0 16: ..."
+    python tools/fonts/from_u8g2.py u8g2_font_5x7_tf.c X11Cell5x7 --last 0x7f --note "..."
 
 u8g2 keeps a face packed and run-length encoded, in a form only its own decoder reads. Gfx draws
 from a plain Glyph table, so this decodes the face once and writes it out as C++: the bitmaps packed
@@ -87,10 +87,14 @@ class Bits:
     def unsigned(self, count):
         value = 0
         for index in range(count):
-            byte = self.data[self.at // 8]
+            position = self.at // 8
+            byte = self.data[position] if position < len(self.data) else 0
             value |= ((byte >> (self.at % 8)) & 1) << index
             self.at += 1
         return value
+
+    def ended(self):
+        return self.at >= len(self.data) * 8
 
     def signed(self, count):
         if count == 0:
@@ -115,9 +119,11 @@ def decode_glyph(data, at, header):
     total = width * height
     if total > 0:
         # A run of zeros then a run of ones, repeated while the bit after them is set; a new pair is
-        # read when it is not, and the glyph ends once the pixels have run past its last row.
+        # read when it is not, and the glyph ends once the pixels have run past its last row. A run
+        # that ends on the last byte of the face reads its trailing bit as a zero, which is what the
+        # font's own decoder gets by stopping at the pixel count rather than at the data's end.
         at = 0
-        while at // width < height:
+        while at // width < height and not bits.ended():
             zeros = bits.unsigned(header["m0"])
             ones = bits.unsigned(header["m1"])
             while True:
@@ -126,7 +132,7 @@ def decode_glyph(data, at, header):
                     if at // width < height:
                         rows[at // width][at % width] = 1
                     at += 1
-                if bits.unsigned(1) == 0:
+                if bits.ended() or bits.unsigned(1) == 0:
                     break
     return {"width": width, "height": height, "x": x, "y": y, "advance": advance, "rows": rows}
 
@@ -189,6 +195,11 @@ def byte_literals(data):
     return "\n".join(lines)
 
 
+def comment(text):
+    """The note as the header writes it: one // line per 95 columns."""
+    return "\n".join("// " + line for line in textwrap.wrap(text, width=95))
+
+
 def write_face(symbol, first, last, glyphs, header, note):
     advance = next(iter(glyphs.values()))["advance"] if glyphs else 6
     blank = {"width": 0, "height": 0, "x": 0, "y": 0, "advance": advance, "rows": []}
@@ -209,7 +220,7 @@ def write_face(symbol, first, last, glyphs, header, note):
 
         namespace gardener::gfx {{
 
-        // {note}
+        {note}
         extern const Font {symbol};
 
         }}  // namespace gardener::gfx
@@ -223,7 +234,7 @@ def write_face(symbol, first, last, glyphs, header, note):
         namespace gardener::gfx {{
         namespace {{
 
-        // {note}
+        {note}
         const uint8_t {symbol}Bits[] PROGMEM = {{
         {bitmap}
         }};
@@ -255,6 +266,9 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("source", help="a u8g2 single-font .c file, e.g. u8g2_font_t0_16_tf.c")
     parser.add_argument("symbol", help="the C++ name for the face, e.g. Ttyp016")
+    parser.add_argument("--note", required=True,
+                        help="the sentence the header opens with: whose design this is and the "
+                             "licence that travels with it")
     parser.add_argument("--first", type=lambda text: int(text, 0), default=0x20,
                         help="the first code the face answers (default 0x20)")
     parser.add_argument("--last", type=lambda text: int(text, 0), default=0xFF,
@@ -262,12 +276,10 @@ def main():
     args = parser.parse_args()
 
     name, header, glyphs = read_face(args.source)
-    note = ("UW ttyp0 %s: the %u codes of 0x%02X..0x%02X of %s, converted by\n"
-            "// tools/fonts/from_u8g2.py; the glyph designs are Uwe Waldmann's, so LICENSE-ttyp0.txt\n"
-            "// travels with this header. Its source font:\n"
-            "// %s"
-            % (args.symbol, args.last - args.first + 1, args.first, args.last,
-               Path(args.source).name, name))
+    note = comment("%s It is the %u codes of 0x%02X..0x%02X of %s, converted by "
+                   "tools/fonts/from_u8g2.py. Its source font:\n%s"
+                   % (args.note, args.last - args.first + 1, args.first, args.last,
+                      Path(args.source).name, name))
     bitmap_bytes, entries = write_face(args.symbol, args.first, args.last, glyphs, header, note)
     print("%s: %u glyphs in the source, %u codes written, %u bytes of bitmap, %u entries"
           % (args.symbol, len(glyphs), args.last - args.first + 1, bitmap_bytes, entries))
