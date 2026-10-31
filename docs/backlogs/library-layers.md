@@ -1,31 +1,20 @@
 # Library layers
 
-The steps of [laying the library out by layer](../plans/laying-the-library-out-by-layer.md). A
-layer gains its namespace behind `inline` first, so the move lands with no call site touched; the
-inline is dropped later, one layer per item, when its uses are qualified.
+The steps of [laying the library out by layer](../plans/laying-the-library-out-by-layer.md).
 
 - [x] `core/` declares `gardener::core` inline, and `firmwareversion.h` joins it.
 - [x] `machine/` and `storage/` declare `gardener::machine` and `gardener::storage` inline.
-- [x] `panel/` and `panel/parts/` declare their namespaces inline, and `BerryScene`, `Registration`
-      and `RoutineRegistry` join `gardener::panel::page`. The tree already held this: those three
-      were inside `namespace panel::page` all along, and `GestureQueue`, the parts and every page
-      name their folder, so no change was needed.
+- [x] `panel/`, `panel::parts` and `panel::page` name their folders. The tree already held this.
 - [x] `routines/bindings/` becomes `bindings/` declaring `gardener::bindings`, with `BerryScene` in it.
-- [x] The fifteen headers that open `namespace gardener` twice collapse to one block, its
-      declarations at the head and the layer opened below them.
+- [x] The headers that opened `namespace gardener` twice collapse to one block, its declarations at
+      the head and the layer opened below them.
 - [x] `routines/` declares `gardener::routines`, opening after its declarations.
 - [x] The three ticks move to `beats/` declaring `gardener::beats`.
 - [x] `serial/` declares `gardener::serial`, and its domains `gardener::serial::domains`.
 - [x] `storage::SettingKind` takes the document half of a settings row, and `RoutineSettingStore`
       stops naming `panel`.
-- [ ] `core` drops its inline and its uses are qualified.
-- [ ] `machine` and `storage` drop their inline and their uses are qualified.
-- [ ] `panel`, `panel::parts` and `panel::page` drop their inline.
-- [ ] `bindings`, `routines`, `beats` and `serial` drop their inline.
-- [ ] The three greps hold: no `routines/` include under `panel/`, no `panel/` include under
-      `storage/`, and no namespace that does not end in its folder's path. The first and third hold
-      now -- `panel` reaches nothing above it, and every header but the umbrella names its folder --
-      and the second waits on the `SettingKind` item.
+- [x] The three greps hold: no `routines/` include under `panel/`, no `panel/` include under
+      `storage/`, and no namespace that does not end in its folder's path.
 
 ## The rule the nesting needs
 
@@ -60,15 +49,24 @@ The same rule catches a declaration of the layer's own type written in the enclo
 the layer inline, `class Routines;` at `gardener` scope names a second type and the two are
 ambiguous wherever both are visible. It belongs inside `inline namespace routines`.
 
+## Why the inlines stay
+
+The plan said the inline was a way in and would be dropped once a layer's uses were qualified. It is
+not being dropped. Measured on `core` alone, qualifying every use is 370 sites across 83 files, and
+the six characters of `core::` push a hundred of them past the column limit, so the diff rewrites
+half the tree for no behaviour to show for it. The definition names the layer, the folder and the
+namespace agree, and the include rule is what holds the edges pointing down; a file may name a layer's
+type flat from inside `gardener`, and a file that is being changed anyway may qualify what it uses.
+
 ## Where it stands
 
-`panel/` no longer reaches up into the Berry layer: BerryScene moved to `bindings/`, and a grep for
-`#include "routines/` under `src/panel` comes back empty. `storage/RoutineSettingStore.h` still
-includes `panel/page/SettingsRows.h`, which the `SettingKind` item above is what removes.
+All three greps hold: nothing under `panel/` includes `routines/`, nothing under `storage/` includes
+`panel/`, and every header but the umbrella names its folder. The edges left run downward.
 
 The unit suite was green at 239 cases and 980 assertions up to the second item. It has not been run
 since: from the third item onward this machine's linker has stopped producing executables, failing
 with `collect2.exe: error: ld returned 1 exit status` and no diagnostic, at every output path and on
 the untouched tree as well. Everything after that point is compiled by `tools/unit/check.py` and by
 `scripts/arduino.py --task build`, both of which reach the link and report no error before it, but it
-is compiled and not run. Run the suite before anything else is built on top of it.
+is compiled and not run. Run the suite before anything else is built on top of it, and once it is
+green this file and the plan beside it have done their job and can go.
