@@ -5,6 +5,7 @@
 
 #include "fonts/BuiltinFont.h"
 #include "Canvas.h"
+#include "Rect.h"
 #include "layout/Drawing.h"
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
@@ -18,15 +19,25 @@ namespace {
 constexpr int16_t CellWidth = 6;
 constexpr int16_t CellHeight = 8;
 
-// The panel's six buttons in the order the row reads them, and the glyph each shows: the four the
-// face's arrows name, then the two that settle a page. The glyphs are the face's own codes.
+// The box an arrow fills in its button: centred across, and as tall as the glyph the letters beside
+// it are drawn at, so the six buttons read as one row.
+constexpr int16_t ArrowWidth = 9;
+constexpr int16_t ArrowHeight = 8;
+
+// The panel's six buttons in the order the row reads them: the four the arrows fill, then the two
+// that settle a page. A key draws either an arrow in the button's own box or the letters beside it.
 struct Key {
   const char* name;
-  const char* glyph;
+  const char* text;
+  gfx::shapes::Triangle (*arrow)(gfx::Rect, uint8_t, bool);
 };
 
-constexpr Key Keys[] = {{"up", "\x1E"},   {"down", "\x1F"}, {"forward", "\x10"},
-                        {"back", "\x11"}, {"ok", "OK"},     {"cancel", "X"}};
+constexpr Key Keys[] = {{"up", nullptr, &gfx::shapes::Triangle::up},
+                        {"down", nullptr, &gfx::shapes::Triangle::down},
+                        {"forward", nullptr, &gfx::shapes::Triangle::right},
+                        {"back", nullptr, &gfx::shapes::Triangle::left},
+                        {"ok", "OK", nullptr},
+                        {"cancel", "X", nullptr}};
 
 int16_t textWidth(const char* text) {
   int16_t width = 0;
@@ -125,16 +136,23 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
   for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
     const Mark& mark = frames_ > 0 ? marks_[button] : noMark;
     const int16_t left = static_cast<int16_t>(button * CapturePicture::ButtonWidth);
-    const char* glyph = Keys[button].glyph;
-    // A hold's number goes under the glyph, so the glyph sits a row higher when there is one and is
-    // centred in the button when there is not.
+    const Key& key = Keys[button];
+    // A hold's number goes under the glyph, so what the button shows sits a row higher when there
+    // is one and is centred in the button when there is not.
     const bool held = mark.seconds >= 0;
-    const int16_t glyphTop =
+    const int16_t top =
         held ? 1 : static_cast<int16_t>((CapturePicture::ButtonHeight - CellHeight) / 2);
-    drawText(
-        canvas,
-        static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(glyph)) / 2),
-        glyphTop, glyph);
+    if (key.arrow != nullptr) {
+      const int16_t arrowLeft =
+          static_cast<int16_t>(left + (CapturePicture::ButtonWidth - ArrowWidth) / 2);
+      canvas.draw(
+          key.arrow(gfx::Rect(arrowLeft, top, ArrowWidth, ArrowHeight), gfx::Ink, true));
+    } else {
+      drawText(
+          canvas,
+          static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(key.text)) / 2), top,
+          key.text);
+    }
 
     if (held) {
       char seconds[4];

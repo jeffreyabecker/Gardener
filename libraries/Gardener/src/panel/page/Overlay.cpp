@@ -11,14 +11,19 @@
 namespace gardener::panel::page {
 namespace {
 
-// The glyphs the overlay draws, from the built-in face's symbol range: the serial link, the two
-// states that move the chamber, and the three that stand still.
+// The glyphs the overlay draws, from the built-in face's symbol range: the serial link, and the two
+// states that stand still while the chamber does. The two that move it are arrows, drawn as shapes
+// so that each is a triangle rather than the face's few pixels of one.
 constexpr uint8_t SerialGlyph = 0x15;
-constexpr uint8_t PullGlyph = 0x1E;
-constexpr uint8_t VentGlyph = 0x1F;
 constexpr uint8_t HoldGlyph = 0x0A;
 constexpr uint8_t FaultGlyph = 0x58;
 constexpr uint8_t IdleGlyph = 0x08;
+
+// The box a moving state's arrow fills: the width and height of the glyph it stands in for, one row
+// down from it, so the cell reads the same size whichever of the two it is showing.
+constexpr int16_t ArrowTop = 3;
+constexpr int16_t ArrowWidth = 5;
+constexpr int16_t ArrowHeight = 5;
 
 // The Bluetooth rune, packed the way a mono bitmap reads it: width and height, then one bit per
 // pixel, most-significant bit first, two bytes to a row.
@@ -57,23 +62,29 @@ gfx::PaintNodeRef linksCell(bool serial, bool bluetooth) {
 }
 
 gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
+  // A state that moves the chamber shows an arrow; the three that stand still show a glyph.
+  const bool pulling = state == RunState::Pulling;
+  const bool venting = state == RunState::Venting;
   uint8_t glyph = IdleGlyph;
-  bool blinks = false;
   switch (state) {
-    case RunState::Pulling:
-      glyph = PullGlyph;
-      blinks = true;
-      break;
-    case RunState::Venting:
-      glyph = VentGlyph;
-      blinks = true;
-      break;
     case RunState::Holding: glyph = HoldGlyph; break;
     case RunState::Fault: glyph = FaultGlyph; break;
+    case RunState::Pulling:
+    case RunState::Venting:
     case RunState::Idle: break;
   }
-  return gfx::callable([glyph, blinks, nowMs](gfx::Canvas& cell) {
-    if (blinks && !movingLit(nowMs)) return;
+  return gfx::callable([pulling, venting, glyph, nowMs](gfx::Canvas& cell) {
+    if ((pulling || venting) && !movingLit(nowMs)) return;
+    if (pulling) {
+      cell.draw(gfx::shapes::Triangle::up(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight),
+                                          gfx::Ink, true));
+      return;
+    }
+    if (venting) {
+      cell.draw(gfx::shapes::Triangle::down(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight),
+                                            gfx::Ink, true));
+      return;
+    }
     gfx::shapes::drawGlyph(cell, 0, GlyphTop, glyph, 1, gfx::Ink);
   });
 }

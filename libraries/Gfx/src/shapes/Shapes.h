@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../Canvas.h"
+#include "../Rect.h"
 
 namespace gardener::gfx::shapes {
 
@@ -93,6 +94,39 @@ struct Triangle {
   Triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color,
            bool filled = false)
       : x0(x0), y0(y0), x1(x1), y1(y1), x2(x2), y2(y2), color(color), filled(filled) {}
+
+  // An arrow inscribed in a rectangle: the apex on the middle of the side it points at, and the
+  // base along the opposite side from corner to corner, so the triangle fills the rectangle it is
+  // given and nothing of it is outside. A side of one is the degenerate arrow, and a rectangle with
+  // no extent draws nothing, as every shape here does.
+
+  static Triangle up(gfx::Rect rect, uint8_t color, bool filled = false) {
+    const int16_t right = static_cast<int16_t>(rect.x + rect.width - 1);
+    const int16_t bottom = static_cast<int16_t>(rect.y + rect.height - 1);
+    const int16_t middle = static_cast<int16_t>(rect.x + (rect.width - 1) / 2);
+    return Triangle(middle, rect.y, rect.x, bottom, right, bottom, color, filled);
+  }
+
+  static Triangle down(gfx::Rect rect, uint8_t color, bool filled = false) {
+    const int16_t right = static_cast<int16_t>(rect.x + rect.width - 1);
+    const int16_t bottom = static_cast<int16_t>(rect.y + rect.height - 1);
+    const int16_t middle = static_cast<int16_t>(rect.x + (rect.width - 1) / 2);
+    return Triangle(rect.x, rect.y, right, rect.y, middle, bottom, color, filled);
+  }
+
+  static Triangle left(gfx::Rect rect, uint8_t color, bool filled = false) {
+    const int16_t right = static_cast<int16_t>(rect.x + rect.width - 1);
+    const int16_t bottom = static_cast<int16_t>(rect.y + rect.height - 1);
+    const int16_t middle = static_cast<int16_t>(rect.y + (rect.height - 1) / 2);
+    return Triangle(rect.x, middle, right, rect.y, right, bottom, color, filled);
+  }
+
+  static Triangle right(gfx::Rect rect, uint8_t color, bool filled = false) {
+    const int16_t right = static_cast<int16_t>(rect.x + rect.width - 1);
+    const int16_t bottom = static_cast<int16_t>(rect.y + rect.height - 1);
+    const int16_t middle = static_cast<int16_t>(rect.y + (rect.height - 1) / 2);
+    return Triangle(right, middle, rect.x, rect.y, rect.x, bottom, color, filled);
+  }
 
   void operator()(Canvas& canvas) const;
 

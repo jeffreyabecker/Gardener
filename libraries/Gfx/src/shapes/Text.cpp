@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "../Fonts.h"
 #include "../fonts/BuiltinFont.h"
 
 // The glyph-writing rules in this file are taken from Adafruit_GFX 1.12.6's drawChar.
@@ -70,7 +71,7 @@ int16_t drawFontGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* f
 
 void Text::operator()(Canvas& canvas) const {
   if (size == 0) return;
-  const Font* font = face != nullptr ? face : &BuiltinFont;
+  const Font* font = fonts::faceOr(face);
   int16_t cursorX = x;
   for (const char* character = value; *character != '\0'; character++) {
     cursorX = static_cast<int16_t>(
@@ -79,10 +80,11 @@ void Text::operator()(Canvas& canvas) const {
   }
 }
 
-Size measureText(const Font* font, const char* value, uint8_t size) {
+Size measureText(const Font* face, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
-  if (font == nullptr) {
+  const Font* font = fonts::faceOr(face);
+  if (font == &BuiltinFont) {
     // The classic face measures as a run of six-by-eight cells, including the blank column behind
     // the glyph that the advance leaves.
     const int16_t cellWidth = static_cast<int16_t>(6 * size);

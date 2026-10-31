@@ -37,6 +37,27 @@ TEST_CASE("a text measures a compiled face") {
   CHECK(ink.height > 8);
 }
 
+TEST_CASE("the default face is the built in one until something sets another") {
+  // The default is one answer for the whole library, so this case puts back what it found: another
+  // case that draws a string is not the one that set it.
+  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
+  CHECK_EQ(fonts::faceOr(nullptr), &BuiltinFont);
+  CHECK_EQ(fonts::faceOr(fonts::Sans12), fonts::Sans12);
+  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width, 12);  // the built-in cells
+
+  fonts::setDefaultFace(fonts::Sans12);
+  CHECK_EQ(fonts::defaultFace(), fonts::Sans12);
+  CHECK_EQ(fonts::faceOr(nullptr), fonts::Sans12);
+  CHECK_EQ(fonts::faceOr(fonts::TomThumbFace), fonts::TomThumbFace);
+  // A draw that names no face draws in the default, so what it measures moves with it.
+  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width,
+           shapes::measureText(fonts::Sans12, "AB", 1).width);
+
+  fonts::setDefaultFace(nullptr);
+  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
+  CHECK_EQ(shapes::measureText(nullptr, "AB", 1).width, 12);
+}
+
 TEST_CASE("a text draws at its box") {
   reset();
   text(Box(10, 10, 6, 8), "I")->draw(canvas);
@@ -183,6 +204,54 @@ TEST_CASE("an underlay with nothing to draw clears nothing") {
   const PaintNodeRef nothing = underlay(PaintNodeRef());
   CHECK(!nothing);
   CHECK_EQ(display.inkCount(0, 0, 20, 8), 20 * 8);
+}
+
+TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
+  const Rect box(10, 20, 9, 5);  // 10..18 across, 20..24 down
+  const shapes::Triangle up = shapes::Triangle::up(box, Ink, true);
+  CHECK_EQ(up.x0, 14);  // the apex, on the middle column
+  CHECK_EQ(up.y0, 20);
+  CHECK_EQ(up.x1, 10);
+  CHECK_EQ(up.y1, 24);  // the base, along the bottom
+  CHECK_EQ(up.x2, 18);
+  CHECK_EQ(up.y2, 24);
+  CHECK(up.filled);
+
+  const shapes::Triangle down = shapes::Triangle::down(box, Ink);
+  CHECK_EQ(down.x0, 10);
+  CHECK_EQ(down.y0, 20);
+  CHECK_EQ(down.x1, 18);
+  CHECK_EQ(down.y1, 20);
+  CHECK_EQ(down.x2, 14);
+  CHECK_EQ(down.y2, 24);
+  CHECK_FALSE(down.filled);
+
+  const shapes::Triangle left = shapes::Triangle::left(box, Ink, true);
+  CHECK_EQ(left.x0, 10);  // the apex, on the middle row
+  CHECK_EQ(left.y0, 22);
+  CHECK_EQ(left.x1, 18);
+  CHECK_EQ(left.y1, 20);
+  CHECK_EQ(left.x2, 18);
+  CHECK_EQ(left.y2, 24);
+
+  const shapes::Triangle right = shapes::Triangle::right(box, Ink, true);
+  CHECK_EQ(right.x0, 18);
+  CHECK_EQ(right.y0, 22);
+  CHECK_EQ(right.x1, 10);
+  CHECK_EQ(right.y1, 20);
+  CHECK_EQ(right.x2, 10);
+  CHECK_EQ(right.y2, 24);
+}
+
+TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
+  reset();
+  canvas.draw(shapes::Triangle::up(Rect(10, 10, 9, 6), Ink, true));
+  CHECK(display.anyInk(14, 10, 1, 1));   // the apex, on the middle column
+  CHECK(!display.anyInk(10, 10, 1, 1));  // the corner beside it is outside the arrow
+  CHECK(display.anyInk(10, 15, 1, 1));   // the base, corner to corner
+  CHECK(display.anyInk(18, 15, 1, 1));
+  CHECK(!display.anyInk(10, 16, 9, 1));  // nothing below the box
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), display.inkCount(10, 10, 9, 6));
 }
 
 }  // namespace

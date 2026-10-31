@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "fonts/BuiltinFont.h"
 #include "fonts/FreeMono12pt7b.h"
 #include "fonts/FreeMono18pt7b.h"
 #include "fonts/FreeMono24pt7b.h"
@@ -83,5 +84,22 @@ bool find(const char* name, const Font*& face) {
   }
   return false;
 }
+
+// --- the default -------------------------------------------------------------
+
+namespace {
+
+// What a caller that names no face draws in. The built-in 5x7 is what such a caller has always
+// drawn in, so it is where this starts; setDefaultFace is the only writer, and it never stores a
+// null, so a reader has nothing to check.
+const Font* chosenFace = &BuiltinFont;
+
+}  // namespace
+
+const Font* defaultFace() { return chosenFace; }
+
+void setDefaultFace(const Font* face) { chosenFace = face != nullptr ? face : &BuiltinFont; }
+
+const Font* faceOr(const Font* face) { return face != nullptr ? face : chosenFace; }
 
 }  // namespace gardener::gfx::fonts
