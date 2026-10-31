@@ -10,7 +10,9 @@ class CommandOutbox;
 
 namespace gardener {
 
+inline namespace serial {
 class Domain;
+}
 
 // The panel build's `fs` domain: the device's files over the wire, on the store the composition
 // mounted. It is handed the filesystem rather than the panel because the mount is the composition's,

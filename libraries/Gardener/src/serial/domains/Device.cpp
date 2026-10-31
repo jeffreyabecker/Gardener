@@ -13,6 +13,7 @@
 #include "core/Units.h"
 
 namespace gardener {
+inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -225,4 +226,5 @@ Domain* createDeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts
   return new DeviceDomain(app, outbox, board, battery, settings);
 }
 
+}  // namespace serial
 }  // namespace gardener

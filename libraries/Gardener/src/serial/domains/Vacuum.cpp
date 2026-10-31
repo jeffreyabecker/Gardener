@@ -8,6 +8,7 @@
 #include "serial/Domains.h"
 
 namespace gardener {
+inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -237,4 +238,5 @@ Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox) {
   return new VacuumDomain(app, outbox);
 }
 
+}  // namespace serial
 }  // namespace gardener

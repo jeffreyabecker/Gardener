@@ -7,6 +7,7 @@
 #include "serial/Domain.h"
 
 namespace gardener {
+inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -183,4 +184,5 @@ Domain* createBuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& ou
   return new BuzzerDomain(buzzer, outbox);
 }
 
+}  // namespace serial
 }  // namespace gardener

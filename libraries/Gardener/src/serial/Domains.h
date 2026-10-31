@@ -9,6 +9,9 @@ class Machine;
 class CommandOutbox;
 }
 inline namespace storage { class DeviceSettings; }
+
+inline namespace serial {
+
 class Domain;
 
 Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);
@@ -17,4 +20,5 @@ Domain* createVacuumDomain(Machine& app, CommandOutbox& outbox);
 Domain* createDeviceDomain(Machine& app, CommandOutbox& outbox, const BoardFacts& board,
                            const Battery& battery, DeviceSettings& settings);
 
+}  // namespace serial
 }  // namespace gardener

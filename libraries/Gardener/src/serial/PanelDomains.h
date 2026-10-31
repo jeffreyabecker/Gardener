@@ -3,6 +3,8 @@
 namespace gardener {
 inline namespace machine { class CommandOutbox; }
 
+inline namespace serial {
+
 namespace panel::parts {
 class BuzzerPlayer;
 }  // namespace panel::parts
@@ -13,4 +15,5 @@ class Domain;
 // The files ride with the composition, which owns the mount.
 Domain* createBuzzerDomain(panel::parts::BuzzerPlayer& buzzer, CommandOutbox& outbox);
 
+}  // namespace serial
 }  // namespace gardener

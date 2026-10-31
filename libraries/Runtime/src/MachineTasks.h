@@ -16,7 +16,9 @@ class Machine;
 
 namespace gardener {
 
+inline namespace serial {
 class SerialLink;
+}
 class BleLink;
 
 void controlTask(void* arg);

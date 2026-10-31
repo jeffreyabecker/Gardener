@@ -6,6 +6,7 @@
 #include "machine/MachineCommand.h"
 
 namespace gardener {
+inline namespace serial {
 
 // The longest command line a domain serves: the link refuses a longer one, and so does each domain
 // handed one. A command body, when a domain defines one, is not bounded here.
@@ -26,4 +27,5 @@ class Domain {
   CommandOutbox& outbox_;
 };
 
+}  // namespace serial
 }  // namespace gardener

@@ -11,6 +11,8 @@ namespace gardener {
 inline namespace core { class Logger; }
 inline namespace machine { class Machine; }
 
+inline namespace serial {
+
 // The wire revision this link serves, reported as `proto` by `device get`. The wire is still
 // unsettled, so the number stays 1 and does not move per revision; a controller must not treat it
 // as a compatibility guarantee.
@@ -90,4 +92,5 @@ class SerialLink {
   bool attached_ = false;
 };
 
+}  // namespace serial
 }  // namespace gardener
