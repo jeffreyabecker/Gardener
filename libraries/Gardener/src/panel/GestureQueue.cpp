@@ -2,7 +2,7 @@
 
 #include "core/Logger.h"
 
-namespace gardener::panel {
+namespace gardener {
 
 void GestureQueue::push(const String& gesture) {
   if (gesture.isEmpty()) return;
@@ -36,10 +36,11 @@ const char* GestureQueue::take() {
 }
 
 void GestureQueue::clear() {
-  for (String& press : presses_) press = "";
+  for (String& press : presses_)
+    press = "";
   head_ = 0;
   count_ = 0;
   overflowed_ = false;
 }
 
-}  // namespace gardener::panel
+}  // namespace gardener

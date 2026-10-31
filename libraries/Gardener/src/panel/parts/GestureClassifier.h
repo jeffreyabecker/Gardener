@@ -6,7 +6,7 @@
 #include "core/Button.h"
 #include "core/ButtonPanel.h"
 
-namespace gardener::panel::parts {
+namespace gardener {
 
 // The keys as gestures. It owns the panel's button reader, settles it on each beat and answers the
 // gesture it detected as one string: `ok:single`, `up:single+down:single`, `back:3`. Nothing in it
@@ -38,4 +38,4 @@ class GestureClassifier {
   uint32_t markedSecond_[ButtonCount] = {};
 };
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

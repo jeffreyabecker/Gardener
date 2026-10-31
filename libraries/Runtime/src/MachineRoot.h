@@ -2,7 +2,7 @@
 
 #include "machine/Machine.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The three parts the board wires, in the order the vacuum system commands them.
 struct MachineParts {
@@ -16,4 +16,4 @@ struct MachineParts {
 // closed inverts it.
 MachineParts buildMachineParts(const MachinePins& pins);
 
-}  // namespace gardener
+}  // namespace gardener::runtime

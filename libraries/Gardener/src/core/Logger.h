@@ -4,7 +4,6 @@
 #include <ctype.h>
 
 namespace gardener {
-inline namespace core {
 
 // What every consumer holds: the three diagnostic levels and the set of them the links choose. There
 // is one sink — SerialLogger, framed records on the serial line — and it writes every level from
@@ -36,10 +35,17 @@ inline bool parseLevels(const String& text, String& levels) {
   bool error = false;
   for (unsigned int i = 0; i < text.length(); ++i) {
     switch (toupper((unsigned char)text[i])) {
-      case 'I': info = true; break;
-      case 'W': warn = true; break;
-      case 'E': error = true; break;
-      default: return false;
+      case 'I':
+        info = true;
+        break;
+      case 'W':
+        warn = true;
+        break;
+      case 'E':
+        error = true;
+        break;
+      default:
+        return false;
     }
   }
   if (!info && !warn && !error) return false;
@@ -51,5 +57,4 @@ inline bool parseLevels(const String& text, String& levels) {
   return true;
 }
 
-}  // namespace core
 }  // namespace gardener

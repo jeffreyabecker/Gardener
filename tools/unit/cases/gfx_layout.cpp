@@ -13,13 +13,13 @@ namespace {
 // A paint that inks the whole canvas it is given, so a case reads back the cell it landed in.
 PaintNodeRef fill() {
   return callable(
-      [](Canvas& own) { own.draw(shapes::Rect(0, 0, own.width(), own.height(), Ink, true)); });
+      [](Canvas& own) { own.draw(Rectangle(0, 0, own.width(), own.height(), Ink, true)); });
 }
 
 // A paint that inks past its canvas, so a case can see the canvas cut it at the cell's edge.
 PaintNodeRef spill() {
   return callable([](Canvas& own) {
-    own.draw(shapes::Rect(-8, -8, own.width() + 16, own.height() + 16, Ink, true));
+    own.draw(Rectangle(-8, -8, own.width() + 16, own.height() + 16, Ink, true));
   });
 }
 
@@ -34,8 +34,7 @@ TEST_CASE("a column divides the canvas down") {
 TEST_CASE("equal thirds of a row fill it") {
   reset();
   View base = canvas.child(Rect(0, 0, 96, 12));
-  row(1.0f, children(Child{Cell(1.0f / 3.0f, 1.0f), fill()},
-                     Child{Cell(1.0f / 3.0f, 1.0f), fill()},
+  row(1.0f, children(Child{Cell(1.0f / 3.0f, 1.0f), fill()}, Child{Cell(1.0f / 3.0f, 1.0f), fill()},
                      Child{Cell(1.0f / 3.0f, 1.0f), fill()}))
       ->draw(base);
   CHECK_EQ(display.inkCount(0, 0, 32, 12), 32 * 12);
@@ -98,12 +97,10 @@ TEST_CASE("a layout draws its children in order") {
   static char order[8] = {};
   static int count = 0;
   count = 0;
-  row(1.0f, children(Child{Cell(1.0f, 1.0f),
-                           callable([](Canvas&) {
+  row(1.0f, children(Child{Cell(1.0f, 1.0f), callable([](Canvas&) {
                              if (count < 8) order[count++] = 'a';
                            })},
-                     Child{Cell(1.0f, 1.0f),
-                           callable([](Canvas&) {
+                     Child{Cell(1.0f, 1.0f), callable([](Canvas&) {
                              if (count < 8) order[count++] = 'b';
                            })},
                      Child{Cell(1.0f, 1.0f), callable([](Canvas&) {
@@ -116,8 +113,7 @@ TEST_CASE("a layout draws its children in order") {
 
 TEST_CASE("a nested layout lands in its cell") {
   reset();
-  row(1.0f, children(Child{Cell(0.5f, 1.0f),
-                           row(1.0f, children(Child{Cell(1.0f, 1.0f), fill()}))}))
+  row(1.0f, children(Child{Cell(0.5f, 1.0f), row(1.0f, children(Child{Cell(1.0f, 1.0f), fill()}))}))
       ->draw(canvas);
   CHECK_EQ(display.inkCount(0, 0, 64, PageHeight), 64 * PageHeight);
   CHECK_EQ(display.inkCount(64, 0, 64, PageHeight), 0);

@@ -10,7 +10,6 @@
 #include "storage/DeviceSettings.h"
 
 namespace gardener {
-inline namespace serial {
 namespace {
 
 String firstToken(const String& args) {
@@ -199,5 +198,4 @@ void SerialLink::executeDevice(Stream& io) {
   io.print('\n');
 }
 
-}  // namespace serial
 }  // namespace gardener

@@ -4,7 +4,7 @@
 
 #include "layout/Drawing.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // One row of the built-in face, which is the pitch the rows and the heading are drawn at.
@@ -27,8 +27,7 @@ CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
 }
 
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
-                             const std::vector<SettingsRow*>& rows,
-                             const SettingValues& values)
+                             const std::vector<SettingsRow*>& rows, const SettingValues& values)
     : Scene(gestures), title_(title), ux_(ux), rows_(rows) {
   for (const SettingsRow* row : rows_) {
     if (row == nullptr) continue;
@@ -117,4 +116,4 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
   if (scrolls) gfx::drawScrollbar(band, first, count, visible);
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

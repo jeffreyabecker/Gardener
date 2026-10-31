@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace core {
 
 // The pump: the one actuator the control loop has, so the vacuum system can pull down and never vent.
 //
@@ -29,5 +28,4 @@ class Pump {
   virtual float dutyPercent() const = 0;
 };
 
-}  // namespace core
 }  // namespace gardener

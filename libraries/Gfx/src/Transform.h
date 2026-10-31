@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Rect.h"
 #include <stdint.h>
 #include <utility>
-#include "Rect.h"
 
 namespace gardener::gfx {
 

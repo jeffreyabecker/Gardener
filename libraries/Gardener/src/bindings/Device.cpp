@@ -1,14 +1,13 @@
 #include <Arduino.h>
 
-#include "core/SystemState.h"
-#include "core/Units.h"
-#include "panel/parts/BuzzerPlayer.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "core/SystemState.h"
+#include "core/Units.h"
+#include "panel/parts/BuzzerPlayer.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The unit the panel prints pressure in, as `device.display_unit()` answers it: the wire token, the
@@ -18,14 +17,8 @@ namespace {
 constexpr const char* DisplayUnitRecord = "DisplayUnit";
 
 const bnfuncinfo DisplayUnitFields[] = {
-    {"init", recordInit},
-    {"name", nullptr},
-    {"suffix", nullptr},
-    {"per_kpa", nullptr},
-    {"whole_step", nullptr},
-    {"sub_step", nullptr},
-    {"decimals", nullptr},
-    {nullptr, nullptr},
+    {"init", recordInit},    {"name", nullptr},     {"suffix", nullptr},   {"per_kpa", nullptr},
+    {"whole_step", nullptr}, {"sub_step", nullptr}, {"decimals", nullptr}, {nullptr, nullptr},
 };
 
 // The unit the panel prints pressure in, filled from the published state.
@@ -50,7 +43,7 @@ int devicePlaySequence(bvm* vm) {
     be_raise(vm, "type_error", "device.play_sequence(notes)");
   }
   const char* sequence = argText(vm, 1);
-  const bool ok = panel::parts::BuzzerPlayer::validate(sequence);
+  const bool ok = BuzzerPlayer::validate(sequence);
   if (ok) bindings->buzzer().play(sequence);
   be_pushbool(vm, ok);
   be_return(vm);
@@ -129,5 +122,4 @@ void installDeviceModule(bvm* vm, BindingContext& bindings) {
   installModule(vm, "device", DeviceLibrary, bindings);
 }
 
-}  // namespace bindings
 }  // namespace gardener

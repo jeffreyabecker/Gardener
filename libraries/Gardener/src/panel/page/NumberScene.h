@@ -8,7 +8,7 @@
 
 #include "panel/page/EditorScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // What the band prints for a number: a setting that reads in its own units passes one and the
 // scene draws what it returns instead of `%g` of the value.
@@ -58,4 +58,4 @@ class NumberScene : public EditorScene {
   String printed_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

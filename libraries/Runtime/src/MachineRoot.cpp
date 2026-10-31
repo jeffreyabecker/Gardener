@@ -5,7 +5,7 @@
 #include "hal/impl/SolenoidValve.h"
 #include "hal/impl/XgzpSensor.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 VentValve* makeValve(uint8_t pin) {
@@ -24,4 +24,4 @@ MachineParts buildMachineParts(const MachinePins& pins) {
   return parts;
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

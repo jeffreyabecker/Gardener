@@ -5,7 +5,7 @@
 #include "../Canvas.h"
 #include "../Font.h"
 
-namespace gardener::gfx::shapes {
+namespace gardener::gfx {
 
 // A string drawn from its first glyph's baseline at (x, y), one glyph after another along x. The
 // face belongs to the shape, so a page mixing faces needs nothing from the canvas: nullptr selects
@@ -38,4 +38,4 @@ Size measureText(const Font* font, const char* value, uint8_t size);
 // Draws one glyph of the built-in 5x7 face by code, with (x, y) the top-left of its cell.
 void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size, uint8_t color);
 
-}  // namespace gardener::gfx::shapes
+}  // namespace gardener::gfx

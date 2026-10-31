@@ -2,30 +2,37 @@
 
 #include <math.h>
 
-namespace gardener::panel::parts {
+namespace gardener {
 namespace {
 
 const char* skipSpaces(const char* text) {
-  while (*text == ' ' || *text == '\t') text++;
+  while (*text == ' ' || *text == '\t')
+    text++;
   return text;
 }
 
 bool isSpace(char c) { return c == ' ' || c == '\t'; }
 
-char lowerChar(char c) {
-  return c >= 'A' && c <= 'Z' ? (char)(c - 'A' + 'a') : c;
-}
+char lowerChar(char c) { return c >= 'A' && c <= 'Z' ? (char)(c - 'A' + 'a') : c; }
 
 int semitoneFor(char note) {
   switch (note) {
-    case 'c': return 0;
-    case 'd': return 2;
-    case 'e': return 4;
-    case 'f': return 5;
-    case 'g': return 7;
-    case 'a': return 9;
-    case 'b': return 11;
-    default: return -1;
+    case 'c':
+      return 0;
+    case 'd':
+      return 2;
+    case 'e':
+      return 4;
+    case 'f':
+      return 5;
+    case 'g':
+      return 7;
+    case 'a':
+      return 9;
+    case 'b':
+      return 11;
+    default:
+      return -1;
   }
 }
 
@@ -175,4 +182,4 @@ bool BuzzerPlayer::parse(const char* text, std::vector<Note>& notes, const char*
   return true;
 }
 
-}  // namespace gardener::panel::parts
+}  // namespace gardener

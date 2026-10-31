@@ -29,7 +29,7 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-namespace gardener::gfx::shapes {
+namespace gardener::gfx {
 namespace {
 
 // A glyph pixel is a size-by-size block of the frame, so one pixel and one scale share the loop.
@@ -93,19 +93,19 @@ int16_t drawFontGlyph(Canvas& canvas, int16_t x, int16_t baseline, const Font* f
 
 void Text::operator()(Canvas& canvas) const {
   if (size == 0) return;
-  const Font* font = fonts::faceOr(face);
+  const Font* font = faceOr(face);
   int16_t cursorX = x;
   for (const char* character = value; *character != '\0'; character++) {
-    cursorX = static_cast<int16_t>(
-        cursorX + drawFontGlyph(canvas, cursorX, y, font, static_cast<uint8_t>(*character), size,
-                                color));
+    cursorX = static_cast<int16_t>(cursorX + drawFontGlyph(canvas, cursorX, y, font,
+                                                           static_cast<uint8_t>(*character), size,
+                                                           color));
   }
 }
 
 Size measureText(const Font* face, const char* value, uint8_t size) {
   if (value == nullptr || size == 0) return {0, 0};
 
-  const Font* font = fonts::faceOr(face);
+  const Font* font = faceOr(face);
   if (font->kind == Font::Kind::Fixed) {
     // A fixed face measures as a run of cells, including the blank column behind the glyph that the
     // advance leaves.
@@ -149,4 +149,4 @@ void drawGlyph(Canvas& canvas, int16_t x, int16_t y, uint8_t code, uint8_t size,
   drawFontGlyph(canvas, x, baseline, &BuiltinFont, code, size, color);
 }
 
-}  // namespace gardener::gfx::shapes
+}  // namespace gardener::gfx

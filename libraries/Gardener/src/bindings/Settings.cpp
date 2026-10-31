@@ -9,15 +9,14 @@
 #include <Arduino.h>
 #include <berry.h>
 
-#include "core/SystemState.h"
-#include "core/Units.h"
-#include "panel/page/SettingsRows.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "core/SystemState.h"
+#include "core/Units.h"
+#include "panel/page/SettingsRows.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The four declarations a routine's settings list is made of, one class per kind. A call builds the
@@ -31,7 +30,7 @@ constexpr const char* ChoiceName = "choice";
 
 // The row belongs to the instance: the comobj owns it and the interpreter frees it with the
 // instance.
-using RowOwner = std::unique_ptr<panel::page::SettingsRow>;
+using RowOwner = std::unique_ptr<SettingsRow>;
 
 int rowRelease(bvm* vm) {
   delete static_cast<RowOwner*>(be_tocomptr(vm, 1));
@@ -47,22 +46,15 @@ int rowRelease(bvm* vm) {
 constexpr const char* SettingRecord = "RoutineSetting";
 
 const bnfuncinfo SettingFields[] = {
-    {"init", recordInit},
-    {".p", nullptr},
-    {"key", nullptr},
-    {"label", nullptr},
-    {"kind", nullptr},
-    {"step", nullptr},
-    {"min", nullptr},
-    {"max", nullptr},
-    {"entries", nullptr},
-    {nullptr, nullptr},
+    {"init", recordInit}, {".p", nullptr},    {"key", nullptr}, {"label", nullptr},
+    {"kind", nullptr},    {"step", nullptr},  {"min", nullptr}, {"max", nullptr},
+    {"entries", nullptr}, {nullptr, nullptr},
 };
 
 // The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
 // box is what the interpreter frees, never the row in it.
 struct RowRef {
-  panel::page::SettingsRow* row;
+  SettingsRow* row;
 };
 
 int rowRefRelease(bvm* vm) {
@@ -163,7 +155,7 @@ bool isDeclaration(bvm* vm, int index) {
 
 // The row a declaration holds, moved out of it: a declaration that has been taken holds nothing, so
 // one setting is one row on one record.
-std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
+std::unique_ptr<SettingsRow> takeRow(bvm* vm, int index) {
   be_getmember(vm, index, ".p");
   RowOwner* owner = static_cast<RowOwner*>(be_tocomptr(vm, -1));
   be_pop(vm, 1);
@@ -174,7 +166,7 @@ std::unique_ptr<panel::page::SettingsRow> takeRow(bvm* vm, int index) {
 // built in the unit showing then.
 DisplayUnit displayUnit(BindingContext* bindings) { return bindings->systemState().unit; }
 
-void holdRow(bvm* vm, std::unique_ptr<panel::page::SettingsRow> row) {
+void holdRow(bvm* vm, std::unique_ptr<SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
@@ -194,10 +186,10 @@ void setNumberOrNil(bvm* vm, int record, const char* field, float value) {
 
 // The keys a choice offers, as the list class's instance the image iterates over, and an empty one
 // for a kind that offers none. Left on the stack for the caller to set on a record.
-void pushEntries(bvm* vm, const std::vector<panel::page::ChoiceItem>& entries) {
+void pushEntries(bvm* vm, const std::vector<ChoiceItem>& entries) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const panel::page::ChoiceItem& entry : entries) {
+  for (const ChoiceItem& entry : entries) {
     be_pushstring(vm, entry.key.c_str());
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -225,7 +217,7 @@ int numberInit(bvm* vm) {
   requireBool(vm, 10, NumberName, "the whole flag");
 
   const uint8_t decimals = be_tobool(vm, 10) ? 0 : 2;
-  holdRow(vm, std::make_unique<panel::page::NumberRow>(
+  holdRow(vm, std::make_unique<NumberRow>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   (float)be_toreal(vm, 6), (float)be_toreal(vm, 7), (float)be_toreal(vm, 8),
@@ -247,7 +239,7 @@ int pressureInit(bvm* vm) {
   requireNumber(vm, 6, PressureName, "the step");
   requireBool(vm, 7, PressureName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<panel::page::PressureRow>(
+  holdRow(vm, std::make_unique<PressureRow>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   displayUnit(bindings), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
@@ -269,7 +261,7 @@ int durationInit(bvm* vm) {
   requireNumber(vm, 8, DurationName, "the upper bound");
   requireBool(vm, 9, DurationName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<panel::page::DurationRow>(
+  holdRow(vm, std::make_unique<DurationRow>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), (int32_t)be_toint(vm, 3), (int32_t)be_toint(vm, 6),
                   (int32_t)be_toint(vm, 7), (int32_t)be_toint(vm, 8), be_tobool(vm, 9)));
@@ -304,13 +296,13 @@ int choiceInit(bvm* vm) {
     }
   }
 
-  std::vector<panel::page::ChoiceItem> items;
+  std::vector<ChoiceItem> items;
   items.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
     be_getindex(vm, entries);
     be_remove(vm, -2);
-    panel::page::ChoiceItem item;
+    ChoiceItem item;
     item.key = argText(vm, -1);
     item.title = item.key;
     be_pop(vm, 1);
@@ -318,9 +310,9 @@ int choiceInit(bvm* vm) {
   }
   be_pop(vm, 1);  // the entries
 
-  holdRow(vm, std::make_unique<panel::page::ChoiceRow>(
-                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
-                  String(argText(vm, 4)), String(argText(vm, 3)), items, be_tobool(vm, 7)));
+  holdRow(vm, std::make_unique<ChoiceRow>(bindings->presses(), bindings->ux(),
+                                          String(argText(vm, 2)), String(argText(vm, 4)),
+                                          String(argText(vm, 3)), items, be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 
@@ -354,7 +346,7 @@ const bnfuncinfo ChoiceMembers[] = {
 // of one of this module's kinds, and each is consumed, since a row belongs to the record that takes
 // it. The checks run before any row is taken, so a list holding anything else raises and leaves
 // every declaration as it was.
-std::vector<std::unique_ptr<panel::page::SettingsRow>> takeSettingsRows(bvm* vm, int index) {
+std::vector<std::unique_ptr<SettingsRow>> takeSettingsRows(bvm* vm, int index) {
   if (!pushItems(vm, index)) {
     be_raise(vm, "type_error", "routines.register: settings is a list of declarations");
   }
@@ -372,7 +364,7 @@ std::vector<std::unique_ptr<panel::page::SettingsRow>> takeSettingsRows(bvm* vm,
     }
   }
 
-  std::vector<std::unique_ptr<panel::page::SettingsRow>> rows;
+  std::vector<std::unique_ptr<SettingsRow>> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
@@ -388,8 +380,8 @@ std::vector<std::unique_ptr<panel::page::SettingsRow>> takeSettingsRows(bvm* vm,
 // The declaration a record holds, as the record a page reads it back through: the row it names,
 // borrowed, with the key, label, kind and the step, bounds and entries that kind was declared with.
 // Left on the stack for the caller to push onto a list.
-void pushSettingDeclaration(bvm* vm, panel::page::SettingsRow* row) {
-  const panel::page::SettingDeclaration declaration = row->declaration();
+void pushSettingDeclaration(bvm* vm, SettingsRow* row) {
+  const SettingDeclaration declaration = row->declaration();
   const int record = beginRecord(vm, SettingRecord);
 
   be_newcomobj(vm, new RowRef{row}, rowRefRelease);
@@ -419,9 +411,9 @@ bool isDeclarationRecord(bvm* vm, int index) {
 
 // The row a declaration record borrows: it is in the comobj the record's `.p` field carries, and the
 // list is read rather than consumed, so the same declarations open a list again.
-panel::page::SettingsRow* borrowedRow(bvm* vm, int index) {
+SettingsRow* borrowedRow(bvm* vm, int index) {
   const int base = be_top(vm);
-  panel::page::SettingsRow* row = nullptr;
+  SettingsRow* row = nullptr;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
     RowRef* held = static_cast<RowRef*>(be_tocomptr(vm, -1));
     if (held != nullptr) row = held->row;
@@ -471,7 +463,7 @@ int settingsEditScene(bvm* vm) {
     }
   }
 
-  std::vector<panel::page::SettingsRow*> rows;
+  std::vector<SettingsRow*> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
@@ -479,11 +471,11 @@ int settingsEditScene(bvm* vm) {
     rows.push_back(borrowedRow(vm, -1));
     be_pop(vm, 2);
   }
-  panel::page::SettingValues held;
+  SettingValues held;
   if (values) takeSettingMap(vm, 2, held);
   const String title = titled ? String(argText(vm, 3)) : String();
-  std::unique_ptr<panel::page::SettingsScene> scene = std::make_unique<panel::page::SettingsScene>(
-      bindings->presses(), bindings->ux(), title, rows, held);
+  std::unique_ptr<SettingsScene> scene =
+      std::make_unique<SettingsScene>(bindings->presses(), bindings->ux(), title, rows, held);
   be_pop(vm, be_top(vm) - base);
   pushSceneHandle(vm, std::move(scene));
   be_return(vm);
@@ -527,5 +519,4 @@ void installSettingsModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace bindings
 }  // namespace gardener

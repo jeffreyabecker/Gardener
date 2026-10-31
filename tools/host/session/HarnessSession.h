@@ -7,25 +7,25 @@
 #include <utility>
 #include <vector>
 
+#include "Canvas.h"
 #include "CaptureDisplay.h"
 #include "GestureStrip.h"
-#include "core/Logger.h"
-#include "Canvas.h"
+#include "MemoryFiles.h"
+#include "bindings/BindingContext.h"
 #include "core/Battery.h"
 #include "core/Buzzer.h"
+#include "core/Logger.h"
 #include "core/PressureSensor.h"
 #include "core/Pump.h"
+#include "core/SystemState.h"
 #include "core/VentValve.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
-#include "MemoryFiles.h"
+#include "panel/page/RoutineRegistry.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
-#include "panel/page/RoutineRegistry.h"
 #include "routines/Routines.h"
-#include "bindings/BindingContext.h"
-#include "core/SystemState.h"
 #include "storage/DeviceSettings.h"
 
 struct bvm;
@@ -232,7 +232,7 @@ class HarnessSession {
 
   bvm* vm() const { return interpreter_.vm(); }
   Routines& routines() { return routines_; }
-  bindings::BindingContext& bindings() { return bindings_; }
+  BindingContext& bindings() { return bindings_; }
   MemoryFiles& files() { return files_; }
   BufferLogger& logger() { return logger_; }
   CountingBuzzer& buzzerPart() { return buzzerPart_; }
@@ -286,7 +286,9 @@ class HarnessSession {
   // The ink a rectangle of the frame holds now, as a count of set pixels: what a node drew in the box
   // the layout gave it, which is the one thing only the draw walk decides. Nothing is read from
   // outside the frame.
-  int ink(int16_t x, int16_t y, int16_t w, int16_t h) const { return display_.inkCount(x, y, w, h); }
+  int ink(int16_t x, int16_t y, int16_t w, int16_t h) const {
+    return display_.inkCount(x, y, w, h);
+  }
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
@@ -327,16 +329,16 @@ class HarnessSession {
   GestureStrip gestureStrip_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
-  panel::parts::BuzzerPlayer buzzer_;
-  panel::GestureQueue presses_;
-  panel::page::Ux ux_;
+  BuzzerPlayer buzzer_;
+  GestureQueue presses_;
+  Ux ux_;
   // The queue the machine's commands wait in, and the outbox the app posts them through.
   HostQueue queue_;
   CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
-  panel::page::RoutineRegistry registry_{files_, logger_};
-  bindings::BindingContext bindings_{
-      display_, state_, settings_, buzzer_, outbox_, presses_, ux_, registry_, logger_};
+  RoutineRegistry registry_{files_, logger_};
+  BindingContext bindings_{display_, state_, settings_, buzzer_, outbox_,
+                           presses_, ux_,    registry_, logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };

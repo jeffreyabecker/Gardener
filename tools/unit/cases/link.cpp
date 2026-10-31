@@ -25,6 +25,7 @@
 namespace {
 
 using gardener::BoardFacts;
+using gardener::BuzzerPlayer;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::Machine;
@@ -32,7 +33,6 @@ using gardener::MachineCommand;
 using gardener::SerialLink;
 using gardener::SystemState;
 using gardener::host::TextStream;
-using gardener::panel::parts::BuzzerPlayer;
 using gardener::test::FakeBattery;
 using gardener::test::FakeBuzzer;
 using gardener::test::FakePump;

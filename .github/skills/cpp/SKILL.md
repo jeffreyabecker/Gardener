@@ -63,6 +63,11 @@ decision with its own measurement.
   angle-bracket headers, then the project's quoted ones. A class declares its public interface
   first, then ` private:` with the data members at the end, initialised where they are declared.
 
+These are held by [.clang-format](../../../.clang-format) at the repository root: format the file
+rather than lining a line up by hand, and where this page and the config disagree about a line, the
+config is what `clang-format` does. The one rule it leaves alone is the grouping of includes: it
+sorts inside each group it is given and never moves a header between them.
+
 ## Types and values
 
 - Use the fixed-width types from `<stdint.h>` for anything stored, sent or compared against a

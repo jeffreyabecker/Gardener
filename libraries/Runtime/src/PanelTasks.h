@@ -3,30 +3,18 @@
 #include <Arduino.h>
 
 namespace gardener {
-inline namespace core {
 class Battery;
 class ButtonPanel;
 class Logger;
 struct SystemState;
-}
-inline namespace machine {
 class CommandOutbox;
 class Machine;
-}
+class GestureQueue;
+class BuzzerPlayer;
+class Routines;
 }  // namespace gardener
 
-namespace gardener {
-
-namespace panel {
-class GestureQueue;
-namespace parts {
-class BuzzerPlayer;
-}
-}  // namespace panel
-
-inline namespace routines {
-class Routines;
-}
+namespace gardener::runtime {
 
 void panelTask(void* arg);
 
@@ -35,8 +23,8 @@ void panelTask(void* arg);
 // parts the three beats reach: the keys and the queue a gesture goes to, the outbox the beat
 // flushes, the gauge and the piezo, the stack the page beat polls, and the machine the reset
 // reboots.
-void spawnPanelTask(ButtonPanel& buttons, panel::GestureQueue& presses, CommandOutbox& outbox,
-                    Logger& logger, Battery& battery, panel::parts::BuzzerPlayer& buzzer,
-                    Routines& routines, Machine& machine, SystemState& state);
+void spawnPanelTask(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
+                    Logger& logger, Battery& battery, BuzzerPlayer& buzzer, Routines& routines,
+                    Machine& machine, SystemState& state);
 
-}  // namespace gardener
+}  // namespace gardener::runtime

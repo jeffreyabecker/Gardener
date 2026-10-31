@@ -6,19 +6,13 @@
 #include "machine/MachineCommand.h"
 
 namespace gardener {
-inline namespace core {
 struct SystemState;
-}
-inline namespace machine {
 class Machine;
-}
+class SerialLink;
 }  // namespace gardener
 
-namespace gardener {
+namespace gardener::runtime {
 
-inline namespace serial {
-class SerialLink;
-}
 class BleLink;
 
 void controlTask(void* arg);
@@ -30,4 +24,4 @@ void interfaceTask(void* arg);
 // publish their slices of — the machine's, and the two ways a controller can reach the device.
 void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble,
                        SystemState& state);
-}  // namespace gardener
+}  // namespace gardener::runtime

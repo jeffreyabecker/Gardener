@@ -9,14 +9,13 @@
 
 #include <Gfx.h>
 
-#include "bindings/BerryScene.h"
-#include "panel/page/Ux.h"
 #include "BindingContext.h"
 #include "Module.h"
 #include "Modules.h"
+#include "bindings/BerryScene.h"
+#include "panel/page/Ux.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The functions the image pushed with a page, in a list the interpreter owns: a frame outlives the
@@ -35,7 +34,7 @@ const bnfuncinfo SceneFields[] = {
     {nullptr, nullptr},
 };
 
-using SceneOwner = std::unique_ptr<panel::page::Scene>;
+using SceneOwner = std::unique_ptr<Scene>;
 
 int sceneRelease(bvm* vm) {
   delete static_cast<SceneOwner*>(be_tocomptr(vm, 1));
@@ -64,8 +63,7 @@ struct CallbackSlot {
 // A value a scene answered, as the image reads it: the settled set a settings list hands back as a
 // map, and the single value an editor hands back in the type its row holds it in.
 void pushAnswer(bvm* vm, const std::any& value) {
-  if (const panel::page::SettingValues* values =
-          std::any_cast<panel::page::SettingValues>(&value)) {
+  if (const SettingValues* values = std::any_cast<SettingValues>(&value)) {
     pushSettingsMap(vm, *values);
     return;
   }
@@ -140,10 +138,10 @@ bool isSceneHandle(bvm* vm, int index) {
 }
 
 // The scene a handle holds, moved out: a handle pushed twice answers nothing the second time.
-std::unique_ptr<panel::page::Scene> takeSceneHandle(bvm* vm, int index) {
+std::unique_ptr<Scene> takeSceneHandle(bvm* vm, int index) {
   if (!isSceneHandle(vm, index)) return nullptr;
   const int base = be_top(vm);
-  std::unique_ptr<panel::page::Scene> scene;
+  std::unique_ptr<Scene> scene;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
     SceneOwner* owner = static_cast<SceneOwner*>(be_tocomptr(vm, -1));
     if (owner != nullptr) scene = std::move(*owner);
@@ -180,16 +178,16 @@ int uxPush(bvm* vm) {
     be_raise(vm, "type_error", "ux.push: the callback is a function");
   }
   // The checks are above: a raise below would longjmp past the scene and the callback it holds.
-  std::unique_ptr<panel::page::Scene> scene;
+  std::unique_ptr<Scene> scene;
   if (handle) {
     scene = takeSceneHandle(vm, 1);
   } else if (be_isinstance(vm, 1)) {
-    scene = std::make_unique<bindings::BerryScene>(vm, 1, *bindings);
+    scene = std::make_unique<BerryScene>(vm, 1, *bindings);
   }
-  panel::page::Ux::Callback held;
+  Ux::Callback held;
   if (callback) {
     const std::shared_ptr<CallbackSlot> slot = holdCallback(vm, 2);
-    held = [slot, bindings](panel::page::Scene& popped) {
+    held = [slot, bindings](Scene& popped) {
       runCallback(bindings, slot->vm, slot->slot, popped.value());
     };
   }
@@ -230,10 +228,9 @@ int uxDepth(bvm* vm) {
 int uxTop(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   requirePanel(bindings, vm, "ux.top: no panel");
-  const panel::page::Scene* showing = bindings->ux().top();
-  const bindings::BerryScene* page =
-      showing == nullptr ? nullptr
-                         : static_cast<const bindings::BerryScene*>(showing->scripted());
+  const Scene* showing = bindings->ux().top();
+  const BerryScene* page =
+      showing == nullptr ? nullptr : static_cast<const BerryScene*>(showing->scripted());
   if (page == nullptr || !page->pushPage(vm)) be_return_nil(vm);
   be_return(vm);
 }
@@ -248,19 +245,15 @@ int uxOverlayStart(bvm* vm) {
 }
 
 const bnfuncinfo UxLibrary[] = {
-    {"push", uxPush},
-    {"pop", uxPop},
-    {"pop_to_root", uxPopToRoot},
-    {"depth", uxDepth},
-    {"top", uxTop},
-    {"overlay_start", uxOverlayStart},
+    {"push", uxPush},   {"pop", uxPop}, {"pop_to_root", uxPopToRoot},
+    {"depth", uxDepth}, {"top", uxTop}, {"overlay_start", uxOverlayStart},
     {nullptr, nullptr},
 };
 
 }  // namespace
 
 // The scene a native factory built, carried into the image as an instance the one field holds.
-void pushSceneHandle(bvm* vm, std::unique_ptr<panel::page::Scene> scene) {
+void pushSceneHandle(bvm* vm, std::unique_ptr<Scene> scene) {
   const int record = beginRecord(vm, SceneRecord);
   be_newcomobj(vm, new SceneOwner(std::move(scene)), sceneRelease);
   be_setmember(vm, record, ".p");
@@ -281,5 +274,4 @@ void installUxModule(bvm* vm, BindingContext& bindings) {
   be_pop(vm, 1);
 }
 
-}  // namespace bindings
 }  // namespace gardener

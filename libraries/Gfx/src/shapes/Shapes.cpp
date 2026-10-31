@@ -3,15 +3,17 @@
 #include <math.h>
 #include <string.h>
 
-namespace gardener::gfx::shapes {
+namespace gardener::gfx {
 namespace {
 
 void hline(Canvas& canvas, int16_t x, int16_t y, int16_t w, uint8_t color) {
-  for (int16_t i = 0; i < w; i++) canvas.setPixel(static_cast<int16_t>(x + i), y, color);
+  for (int16_t i = 0; i < w; i++)
+    canvas.setPixel(static_cast<int16_t>(x + i), y, color);
 }
 
 void vline(Canvas& canvas, int16_t x, int16_t y, int16_t h, uint8_t color) {
-  for (int16_t i = 0; i < h; i++) canvas.setPixel(x, static_cast<int16_t>(y + i), color);
+  for (int16_t i = 0; i < h; i++)
+    canvas.setPixel(x, static_cast<int16_t>(y + i), color);
 }
 
 // How far an ellipse reaches at `offset` from its centre along the axis of `radius`, measured on
@@ -168,7 +170,7 @@ void Line::operator()(Canvas& canvas) const {
   }
 }
 
-void Rect::operator()(Canvas& canvas) const {
+void Rectangle::operator()(Canvas& canvas) const {
   if (w <= 0 || h <= 0) return;
   const int16_t r = clampRadius(w, h, radius);
   if (r <= 0) {
@@ -191,8 +193,8 @@ void Rect::operator()(Canvas& canvas) const {
       const int16_t inset = cornerInset(r, step);
       const int16_t span = static_cast<int16_t>(w - 2 * inset);
       hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + step), span, color);
-      hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + h - 1 - step),
-            span, color);
+      hline(canvas, static_cast<int16_t>(x + inset), static_cast<int16_t>(y + h - 1 - step), span,
+            color);
     }
     for (int16_t row = r; row < h - r; row++) {
       hline(canvas, x, static_cast<int16_t>(y + row), w, color);
@@ -314,7 +316,8 @@ std::vector<uint8_t> monoBitmapBits(const char* text) {
 
   const size_t count = strlen(text);
   bits.reserve(count / 2);
-  for (size_t i = 0; i < count; i += 2) bits.push_back(hexByte(text + i));
+  for (size_t i = 0; i < count; i += 2)
+    bits.push_back(hexByte(text + i));
   return bits;
 }
 
@@ -331,4 +334,4 @@ std::vector<uint8_t> monoBitmapBits(const char* text) {
 //   }
 // }
 
-}  // namespace gardener::gfx::shapes
+}  // namespace gardener::gfx

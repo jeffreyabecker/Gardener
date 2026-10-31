@@ -4,7 +4,7 @@
 
 #include "core/Library.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // A Library on the filesystem the composition root mounted: it opens the path it is handed and
 // carries no layout of its own. The callers build the paths — Config names the device's document and
@@ -28,4 +28,4 @@ class FileLibrary : public Library {
   FS& fs_;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

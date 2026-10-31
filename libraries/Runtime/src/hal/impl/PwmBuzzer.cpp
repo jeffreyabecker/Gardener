@@ -5,7 +5,7 @@
 
 #include "core/Buzzer.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The channel is attached once at a nominal tone; ledcWriteTone() changes the frequency without
@@ -43,4 +43,4 @@ void PwmBuzzer::off() {
   ledcWrite(pin_, 0);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

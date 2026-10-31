@@ -16,7 +16,8 @@ TEST_CASE("a float prints the decimals it is asked for") {
 
 TEST_CASE("a text grown past its first allocation keeps its bytes") {
   String text = "short";
-  for (int i = 0; i < 64; i++) text += "0123456789";
+  for (int i = 0; i < 64; i++)
+    text += "0123456789";
   CHECK(text.length() == 5 + 64 * 10);
   CHECK(text.endsWith("0123456789"));
 }

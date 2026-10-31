@@ -21,8 +21,8 @@
 namespace gardener::gfx::test {
 namespace {
 
-using namespace gardener::panel::page;
-using gardener::panel::GestureQueue;
+using namespace gardener;
+using gardener::GestureQueue;
 
 // The key a choice hands back, as the text a case compares; empty is the nullable nothing.
 String keyOf(const ChoiceScene& scene) {
@@ -34,12 +34,12 @@ String keyOf(const ChoiceScene& scene) {
 // A number scene with the hooks it answers opened up, so a case can step and draw it.
 class NumberProbe : public NumberScene {
  public:
-  using NumberScene::NumberScene;
   using EditorScene::handle;
   using EditorScene::hint;
   using EditorScene::hintComponent;
   using EditorScene::nudge;
   using EditorScene::pageContents;
+  using NumberScene::NumberScene;
 };
 
 TEST_CASE("a number steps and holds") {
@@ -50,9 +50,11 @@ TEST_CASE("a number steps and holds") {
   CHECK_EQ(std::string(number.text().c_str()), std::string("5"));
   number.nudge(1);
   CHECK_EQ(std::string(number.text().c_str()), std::string("6"));
-  for (int i = 0; i < 20; i++) number.nudge(1);
+  for (int i = 0; i < 20; i++)
+    number.nudge(1);
   CHECK_EQ(std::string(number.text().c_str()), std::string("10"));
-  for (int i = 0; i < 20; i++) number.nudge(-1);
+  for (int i = 0; i < 20; i++)
+    number.nudge(-1);
   CHECK_EQ(std::string(number.text().c_str()), std::string("0"));
   CHECK_EQ(number.isNull(), 0);
 }
@@ -100,7 +102,8 @@ TEST_CASE("a number with no bounds steps freely") {
   Ux ux;
   String label("Target");
   NumberProbe number(gestures, ux, label, 1, 1, -INFINITY, INFINITY, false);
-  for (int i = 0; i < 5; i++) number.nudge(-1);
+  for (int i = 0; i < 5; i++)
+    number.nudge(-1);
   CHECK_EQ(std::string(number.text().c_str()), std::string("-4"));
 }
 
@@ -130,8 +133,7 @@ TEST_CASE("a refused value keeps the editor open") {
   NumberProbe number(gestures, ux, label, 30, 10, 0, 100, false);
   number.setValidator([](const std::any& proposed) {
     const bool holds = std::any_cast<float>(proposed) >= 60;
-    return holds ? std::make_pair(true, String())
-                 : std::make_pair(false, String("TOTAL < HOLDS"));
+    return holds ? std::make_pair(true, String()) : std::make_pair(false, String("TOTAL < HOLDS"));
   });
 
   CHECK_EQ(number.handle("ok:single"), 1);
@@ -171,8 +173,8 @@ TEST_CASE("a hint band draws its marks beside the words") {
   // Twelve pixels of arrow and forty-two of words, less the gap between them: the run is fifty-six
   // wide, so it starts at 36 and the words at 50. A seven-row mark in a nine-row band sits one row
   // down.
-  CHECK(display.anyInk(38, 1, 1, 1));          // the up arrow's apex
-  CHECK(display.anyInk(36, 7, 1, 1));          // its base, corner to corner
+  CHECK(display.anyInk(38, 1, 1, 1));  // the up arrow's apex
+  CHECK(display.anyInk(36, 7, 1, 1));  // its base, corner to corner
   CHECK(display.anyInk(40, 7, 1, 1));
   CHECK(display.anyInk(43, 1, 5, 1));          // the down arrow's base along the top row
   CHECK(display.anyInk(45, 7, 1, 1));          // its apex
@@ -185,9 +187,7 @@ TEST_CASE("a hint band draws its marks beside the words") {
 
 // --- the choice -------------------------------------------------------------
 
-std::vector<ChoiceItem> threeEntries() {
-  return {{"a", "Alpha"}, {"b", "Beta"}, {"c", "Gamma"}};
-}
+std::vector<ChoiceItem> threeEntries() { return {{"a", "Alpha"}, {"b", "Beta"}, {"c", "Gamma"}}; }
 
 // A choice scene with the hooks it answers opened up, so a case can step and draw it.
 class ChoiceProbe : public ChoiceScene {
@@ -402,7 +402,8 @@ TEST_CASE("a choice bar shows where the window is") {
   Ux ux;
   String label("Choice");
   std::vector<ChoiceItem> six;
-  for (int i = 0; i < 6; i++) six.push_back({String(i), "Row"});
+  for (int i = 0; i < 6; i++)
+    six.push_back({String(i), "Row"});
   ChoiceProbe many(gestures, ux, label, String(5), six, false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
@@ -484,8 +485,8 @@ TEST_CASE("a duration band marks the key that moves between its fields") {
   // which puts the forward arrow in the five columns at 65.
   reset();
   duration.hintComponent()->draw(band);
-  CHECK(display.anyInk(69, 4, 1, 1));          // its apex, mid band
-  CHECK(display.anyInk(65, 1, 1, 1));          // its base, top to bottom
+  CHECK(display.anyInk(69, 4, 1, 1));  // its apex, mid band
+  CHECK(display.anyInk(65, 1, 1, 1));  // its base, top to bottom
   CHECK(display.anyInk(65, 7, 1, 1));
   CHECK_EQ(display.inkCount(63, 0, 2, 9), 0);  // paper either side of it
   CHECK_EQ(display.inkCount(70, 0, 2, 9), 0);

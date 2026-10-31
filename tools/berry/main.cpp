@@ -324,11 +324,12 @@ int hostMain(int argc, char** argv) {
   // A --tests, --art or --compile run drives the pages its cases, its name or nothing reach, not
   // every registration, so only a full check holds the two counts to each other.
   const bool whole = loaded == found && session.errorLines() == 0;
-  const bool drove = artName != nullptr || sceneName != nullptr || suites || compileOnly ||
-                     driven == registered;
+  const bool drove =
+      artName != nullptr || sceneName != nullptr || suites || compileOnly || driven == registered;
   const bool ok = failed == 0 && passed != 0 && whole && drove;
 
-  printf("%lld of %lld files loaded, %lld of %lld routines driven", loaded, found, driven, registered);
+  printf("%lld of %lld files loaded, %lld of %lld routines driven", loaded, found, driven,
+         registered);
   if (artName != nullptr) {
     printf(", art %s %s", artName, ok ? "saved" : "failed");
   } else if (sceneName != nullptr) {

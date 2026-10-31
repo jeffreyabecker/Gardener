@@ -5,14 +5,14 @@
 
 #include <utility>
 
-#include "panel/page/BoolScene.h"
 #include "core/Units.h"
 #include "layout/Drawing.h"
-#include "panel/page/DurationScene.h"
 #include "machine/Machine.h"
+#include "panel/page/BoolScene.h"
+#include "panel/page/DurationScene.h"
 #include "panel/page/PressureScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // A number as the list prints it: `%g` of it, which is what a number scene prints when the setting
@@ -25,8 +25,7 @@ String printedNumber(float number) {
 
 // A value handed in from outside the list is asked for by the type the row holds rather than asked
 // what type it is: the cast to a pointer answers nothing for the wrong one instead of throwing.
-template <typename T>
-bool isHeldAs(const std::any& value) {
+template <typename T> bool isHeldAs(const std::any& value) {
   return !value.has_value() || std::any_cast<T>(&value) != nullptr;
 }
 
@@ -54,13 +53,8 @@ bool takeNumber(std::any& value, bool whole) {
 
 BoolRow::BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                  bool defaultValue, bool nullable, Validator validator)
-    : SettingsRow(std::move(validator)),
-      gestures_(gestures),
-      ux_(ux),
-      key_(key),
-      label_(label),
-      default_(defaultValue),
-      nullable_(nullable) {}
+    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
+      default_(defaultValue), nullable_(nullable) {}
 
 // The switch declares its kind and nothing else: it has no step, no bound and no entries.
 SettingDeclaration BoolRow::declaration() const { return {"bool"}; }
@@ -102,15 +96,8 @@ ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const St
                      const String& defaultValue, const std::vector<ChoiceItem>& items,
                      bool nullable, std::function<void(String& current)> forward,
                      Validator validator)
-    : SettingsRow(std::move(validator)),
-      gestures_(gestures),
-      ux_(ux),
-      key_(key),
-      label_(label),
-      default_(defaultValue),
-      items_(items),
-      nullable_(nullable),
-      forward_(std::move(forward)) {}
+    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
+      default_(defaultValue), items_(items), nullable_(nullable), forward_(std::move(forward)) {}
 
 // A choice declares its entries — the keys it offers, which are the titles it prints — and no step
 // or bound, because the keys are the only thing it moves between.
@@ -160,16 +147,8 @@ bool ChoiceRow::accept(std::any& value) const { return isHeldAs<String>(value); 
 DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                          int32_t defaultValue, int32_t step, int32_t min, int32_t max,
                          bool nullable, Validator validator)
-    : SettingsRow(std::move(validator)),
-      gestures_(gestures),
-      ux_(ux),
-      key_(key),
-      label_(label),
-      default_(defaultValue),
-      step_(step),
-      min_(min),
-      max_(max),
-      nullable_(nullable) {}
+    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
+      default_(defaultValue), step_(step), min_(min), max_(max), nullable_(nullable) {}
 
 // The bounds a duration was declared with are whole seconds; a caller reading the declaration back
 // takes them as the numbers they are.
@@ -220,18 +199,9 @@ bool DurationRow::accept(std::any& value) const { return takeNumber(value, true)
 NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                      float defaultValue, float step, float min, float max, bool nullable,
                      NumberFormatter format, uint8_t decimals, Validator validator)
-    : SettingsRow(std::move(validator)),
-      gestures_(gestures),
-      ux_(ux),
-      label_(label),
-      step_(step),
-      min_(min),
-      max_(max),
-      nullable_(nullable),
-      format_(std::move(format)),
-      key_(key),
-      default_(defaultValue),
-      decimals_(decimals) {}
+    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), label_(label), step_(step),
+      min_(min), max_(max), nullable_(nullable), format_(std::move(format)), key_(key),
+      default_(defaultValue), decimals_(decimals) {}
 
 // Nothing is NAN, which is what the number kind holds its nothing as, so the list never carries a
 // NAN where it means `--`.
@@ -289,17 +259,16 @@ bool NumberRow::accept(std::any& value) const { return takeNumber(value, false);
 
 // --- the pressure -----------------------------------------------------------
 
-PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key,
-                         const String& label, float currentKpa,
-                         DisplayUnit unit, float wholeSteps, bool nullable,
+PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                         float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable,
                          Validator validator)
-    : NumberRow(gestures, ux, key, label, currentKpa,
-                wholeSteps * displayUnitInfo(unit).wholeStep / displayUnitInfo(unit).perKpa,
-                CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable,
-                [unit](float pressureKpa) { return displayText(pressureKpa, unit); }, 2,
-                std::move(validator)),
-      unit_(unit),
-      wholeSteps_(wholeSteps) {}
+    : NumberRow(
+          gestures, ux, key, label, currentKpa,
+          wholeSteps * displayUnitInfo(unit).wholeStep / displayUnitInfo(unit).perKpa,
+          CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable,
+          [unit](float pressureKpa) { return displayText(pressureKpa, unit); }, 2,
+          std::move(validator)),
+      unit_(unit), wholeSteps_(wholeSteps) {}
 
 // The pressure's number row, under the kind its declaration named. The step and bounds are the
 // number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
@@ -316,4 +285,4 @@ std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
                                          nullable_);
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

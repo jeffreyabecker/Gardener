@@ -34,7 +34,8 @@ void drawOverlayHash(gfx::Canvas& canvas, const gfx::Rect& glass, int16_t top, i
   const int16_t last = static_cast<int16_t>(glass.y + bottom - 1);
 
   for (int16_t y = first; y <= last; y++) {
-    for (int16_t x = left; x <= right; x++) canvas.setPixel(x, y, gfx::Paper);
+    for (int16_t x = left; x <= right; x++)
+      canvas.setPixel(x, y, gfx::Paper);
   }
   for (int16_t x = left; x <= right; x++) {
     canvas.setPixel(x, first, gfx::Ink);
@@ -87,9 +88,7 @@ class PackedFrame : public gfx::DisplayDevice {
 }  // namespace
 
 CaptureDisplay::CaptureDisplay(int16_t width, int16_t height, uint8_t bitsPerPixel)
-    : width_(width),
-      height_(height),
-      depth_(bitsPerPixel == 1 ? 1 : 8),
+    : width_(width), height_(height), depth_(bitsPerPixel == 1 ? 1 : 8),
       stride_(bitsPerPixel == 1 ? (int16_t)((width + 7) / 8) : width),
       drawn_(static_cast<size_t>(stride_) * static_cast<size_t>(height), 0),
       sent_(drawn_.size(), 0) {}

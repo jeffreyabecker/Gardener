@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <type_traits>
 
-namespace gardener {
+namespace gardener::runtime {
 
 // Nothing else spells the interface out, so a verb added to VentValve and not implemented here would
 // leave these classes abstract - silently, until something tried to construct one.
@@ -32,12 +32,8 @@ void SolenoidValve::close() {
   write(!energiseWhenOpen());
 }
 
-bool SolenoidValve::energised() const {
-  return open_ ? energiseWhenOpen() : !energiseWhenOpen();
-}
+bool SolenoidValve::energised() const { return open_ ? energiseWhenOpen() : !energiseWhenOpen(); }
 
-void SolenoidValve::write(bool energise) {
-  digitalWrite(pin_, energise ? HIGH : LOW);
-}
+void SolenoidValve::write(bool energise) { digitalWrite(pin_, energise ? HIGH : LOW); }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

@@ -4,7 +4,6 @@
 #include "core/SystemState.h"
 
 namespace gardener {
-inline namespace beats {
 
 MachineTick::MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
                          SystemState& state)
@@ -73,7 +72,8 @@ void MachineTick::drainCommands() {
       break;
     }
   }
-  for (uint8_t i = 0; i < first; i++) logCollapsed(batch[i], "before a stop");
+  for (uint8_t i = 0; i < first; i++)
+    logCollapsed(batch[i], "before a stop");
 
   // Of what is left, only the last target is worth applying: the depths before it are setpoints
   // the machine never has to stand still at.
@@ -122,5 +122,4 @@ void MachineTick::logRunChanges(uint32_t nowMs) {
   lastState_ = current;
 }
 
-}  // namespace beats
 }  // namespace gardener

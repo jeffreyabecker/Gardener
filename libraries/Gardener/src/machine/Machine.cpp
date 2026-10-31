@@ -4,7 +4,6 @@
 #include "core/firmwareversion.h"
 
 namespace gardener {
-inline namespace machine {
 
 // The parts are the composition's: it builds them from the board's pins and hands them here, so
 // this class is the control law and the boot report rather than the wiring.
@@ -24,8 +23,7 @@ void Machine::boot() {
 
   logger_.info(sensorOk ? "sensor: online" : "sensor: not found");
   logger_.info(pumpOk ? "pump: pwm ready" : "pump: PWM unavailable");
-  logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed"
-                                                 : "vent: normally open");
+  logger_.info(vacuum_.vent().energiseWhenOpen() ? "vent: normally closed" : "vent: normally open");
 
   // The fitted valve is the fail-safe: a normally open part vents when the coil is not held, so
   // the bit says the resting state is safe rather than that a valve is fitted at all.
@@ -47,5 +45,4 @@ void Machine::boot() {
   logger_.info(pid.c_str());
 }
 
-}  // namespace machine
 }  // namespace gardener

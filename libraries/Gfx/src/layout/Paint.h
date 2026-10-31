@@ -23,10 +23,10 @@ namespace gardener::gfx {
 // the canvas extent less its own offset, which is how a leaf fills the cell a layout gave it without
 // the page computing a number.
 struct Box {
-  Box(int16_t x = 0, int16_t y = 0, int16_t width = 0, int16_t height = 0,
-      bool wholeWidth = false, bool wholeHeight = false)
-      : x(x), y(y), width(width), height(height), wholeWidth(wholeWidth),
-        wholeHeight(wholeHeight) {}
+  Box(int16_t x = 0, int16_t y = 0, int16_t width = 0, int16_t height = 0, bool wholeWidth = false,
+      bool wholeHeight = false)
+      : x(x), y(y), width(width), height(height), wholeWidth(wholeWidth), wholeHeight(wholeHeight) {
+  }
 
   Box(Rect rect)  // a fixed rect is a box with no whole sides
       : x(rect.x), y(rect.y), width(rect.width), height(rect.height), wholeWidth(false),
@@ -108,8 +108,7 @@ using Builder = std::function<Children(Canvas&)>;
 
 // The braces a call site used to write. A braced list would be a vector built through its own
 // initializer_list constructor, which copies, and a node cannot be copied; this moves each child in.
-template <typename... Rest>
-Children children(Child&& first, Rest&&... rest) {
+template <typename... Rest> Children children(Child&& first, Rest&&... rest) {
   Children out;
   out.reserve(1 + sizeof...(Rest));
   out.push_back(std::move(first));

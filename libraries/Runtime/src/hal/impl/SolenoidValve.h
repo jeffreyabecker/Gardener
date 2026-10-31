@@ -4,7 +4,7 @@
 
 #include "core/VentValve.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // A solenoid vent valve on one GPIO through a low side MOSFET, driven active high because the
 // MOSFET gate is. The chamber verbs live on VentValve: open() vents and close() makes the chamber
@@ -49,4 +49,4 @@ class NormallyClosedValve : public SolenoidValve {
   explicit NormallyClosedValve(uint8_t pin) : SolenoidValve(true, pin) {}
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

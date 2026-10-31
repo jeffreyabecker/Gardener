@@ -19,26 +19,26 @@
 #include "fakes/Parts.h"
 #include "panel/page/Registration.h"
 #include "panel/page/RoutineRegistry.h"
-#include "storage/RoutineSettingStore.h"
 #include "panel/page/SettingsRows.h"
+#include "storage/RoutineSettingStore.h"
 
 namespace {
 
-using gardener::panel::page::Registration;
-using gardener::panel::page::RoutineRegistry;
+using gardener::BoolRow;
+using gardener::ChoiceItem;
+using gardener::ChoiceRow;
+using gardener::DurationRow;
+using gardener::GestureQueue;
+using gardener::NumberRow;
+using gardener::Registration;
+using gardener::RoutineRegistry;
 using gardener::RoutineSettingStore;
+using gardener::Scene;
+using gardener::SettingsRow;
+using gardener::SettingValues;
+using gardener::Ux;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
-using gardener::panel::page::BoolRow;
-using gardener::panel::page::ChoiceItem;
-using gardener::panel::page::ChoiceRow;
-using gardener::panel::page::DurationRow;
-using gardener::panel::GestureQueue;
-using gardener::panel::page::NumberRow;
-using gardener::panel::page::Scene;
-using gardener::panel::page::SettingValues;
-using gardener::panel::page::SettingsRow;
-using gardener::panel::page::Ux;
 
 // The queue no case presses: nothing here is drawn, so nothing reads it.
 using NoPresses = GestureQueue;
@@ -51,38 +51,36 @@ class StubPage : public Scene {
 };
 
 constexpr const char* StoreDocument = "/cfg/routines/store_test.ini";
-constexpr const char* StoreFixture =
-    "initial_pressure=5.0\n"
-    "target_pressure=20.0\n"
-    "total_duration=450\n"
-    "resume_behavior=immediately\n"
-    "enabled=on\n"
-    "empty_key=\n"
-    "\n"
-    "[cold]\n"
-    "routine_title=Cold\n"
-    "target_pressure=15.0\n";
+constexpr const char* StoreFixture = "initial_pressure=5.0\n"
+                                     "target_pressure=20.0\n"
+                                     "total_duration=450\n"
+                                     "resume_behavior=immediately\n"
+                                     "enabled=on\n"
+                                     "empty_key=\n"
+                                     "\n"
+                                     "[cold]\n"
+                                     "routine_title=Cold\n"
+                                     "target_pressure=15.0\n";
 
 constexpr const char* RampedDocument = "/cfg/routines/ramped_static.ini";
-constexpr const char* RampedFixture =
-    "initial_pressure=9.0\n"
-    "target_pressure=20.0\n"
-    "total_duration=400\n"
-    "\n"
-    "[cold]\n"
-    "routine_title=Cold\n"
-    "target_pressure=15.0\n"
-    "\n"
-    "[warm]\n"
-    "target_pressure=30.0\n";
+constexpr const char* RampedFixture = "initial_pressure=9.0\n"
+                                      "target_pressure=20.0\n"
+                                      "total_duration=400\n"
+                                      "\n"
+                                      "[cold]\n"
+                                      "routine_title=Cold\n"
+                                      "target_pressure=15.0\n"
+                                      "\n"
+                                      "[warm]\n"
+                                      "target_pressure=30.0\n";
 
 std::vector<ChoiceItem> resumeChoices() {
   return {{"hold", "Hold"}, {"immediately", "Immediately"}};
 }
 
 // A row is the document's half and the page's, and the store takes the first.
-std::vector<const gardener::storage::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
-  return std::vector<const gardener::storage::SettingKind*>(rows.begin(), rows.end());
+std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
+  return std::vector<const gardener::SettingKind*>(rows.begin(), rows.end());
 }
 
 // The rows the store cases declare: one of every kind, a key written as nothing and a key the
@@ -237,7 +235,7 @@ TEST_CASE("an alternate follows its record and resolves to it") {
   Ux ux;
   REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
 
-  const std::vector<gardener::panel::page::RoutineRow> rows = registry.rows();
+  const std::vector<gardener::RoutineRow> rows = registry.rows();
   REQUIRE(rows.size() >= 3);
   CHECK_EQ(std::string(rows[0].routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(std::string(rows[1].routineKey.c_str()), std::string("cold"));
@@ -285,13 +283,13 @@ TEST_CASE("a launch carries the set the caller stated, held to the record's decl
   NoPresses gestures;
   Ux ux;
 
-  gardener::panel::page::RoutineActivation launched;
-  REQUIRE(registry.add(Registration(
-      "ramped_static", "Ramped", rampedDeclaration(gestures, ux),
-      [&launched, &gestures](const gardener::panel::page::RoutineActivation& activation) {
-        launched = activation;
-        return std::make_unique<StubPage>(gestures);
-      })));
+  gardener::RoutineActivation launched;
+  REQUIRE(registry.add(
+      Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux),
+                   [&launched, &gestures](const gardener::RoutineActivation& activation) {
+                     launched = activation;
+                     return std::make_unique<StubPage>(gestures);
+                   })));
 
   // The caller states the set it launches with; a whole number written for a pressure is the
   // pressure, and a setting the set leaves out begins at the declaration's default.

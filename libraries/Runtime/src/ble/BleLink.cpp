@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The service's base UUID: the last 16 bits select the characteristic, so the
@@ -58,9 +58,7 @@ BleLink::Start BleLink::begin() {
   return advertising->start() ? Start::Advertising : Start::Failed;
 }
 
-bool BleLink::connected() const {
-  return server_ != nullptr && server_->getConnectedCount() > 0;
-}
+bool BleLink::connected() const { return server_ != nullptr && server_->getConnectedCount() > 0; }
 
 void BleLink::poll(uint32_t nowMs) {
   if (server_ == nullptr) return;
@@ -165,4 +163,4 @@ void BleLink::setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
   characteristic->setValue(reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

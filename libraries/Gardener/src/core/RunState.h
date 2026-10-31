@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace core {
 
 // What the device is doing, which is also the state a controller watches. There is no DONE: after a
 // release it is IDLE, and the controller knows when the run is over because it is the one that
@@ -18,14 +17,19 @@ enum class RunState : uint8_t { Idle, Pulling, Holding, Venting, Fault };
 
 inline const char* runStateName(RunState state) {
   switch (state) {
-    case RunState::Idle: return "IDLE";
-    case RunState::Pulling: return "PULL";
-    case RunState::Holding: return "HOLD";
-    case RunState::Venting: return "VENT";
-    case RunState::Fault: return "FAULT";
-    default: return "?";
+    case RunState::Idle:
+      return "IDLE";
+    case RunState::Pulling:
+      return "PULL";
+    case RunState::Holding:
+      return "HOLD";
+    case RunState::Venting:
+      return "VENT";
+    case RunState::Fault:
+      return "FAULT";
+    default:
+      return "?";
   }
 }
 
-}  // namespace core
 }  // namespace gardener

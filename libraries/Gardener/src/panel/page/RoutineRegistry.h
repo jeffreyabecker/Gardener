@@ -11,12 +11,8 @@
 #include "panel/page/Scene.h"
 
 namespace gardener {
-inline namespace core {
 class Library;
 class Logger;
-}
-
-namespace panel::page {
 
 // One row the browser draws: the routine's glyph as the image wrote it, the title the row shows and
 // the key the row stands for. An alternate carries its own title and its own key, and its record's
@@ -96,8 +92,7 @@ class RoutineRegistry {
   // setting the set leaves out or one a row refuses begins at its default. Nothing for a key nobody
   // registered, a record that names no page, or a page whose init refused the activation. The page
   // is not put on a stack here: the caller decides where it goes.
-  std::unique_ptr<Scene> activate(const String& routineKey,
-                                  const SettingValues& values) const;
+  std::unique_ptr<Scene> activate(const String& routineKey, const SettingValues& values) const;
 
  private:
   struct Alias {
@@ -116,7 +111,5 @@ class RoutineRegistry {
   Logger& logger_;
   std::vector<Entry> entries_;
 };
-
-}  // namespace panel::page
 
 }  // namespace gardener

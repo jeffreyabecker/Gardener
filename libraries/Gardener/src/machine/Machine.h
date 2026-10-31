@@ -6,9 +6,8 @@
 #include "machine/VacuumSystem.h"
 
 namespace gardener {
-inline namespace core { class Logger; }
 
-inline namespace machine {
+class Logger;
 
 // --- Closed loop vacuum control ---------------------------------------------
 constexpr uint32_t CONTROL_PERIOD_MS = 50;
@@ -71,10 +70,10 @@ constexpr uint32_t CONTROL_MAX_RUN_MS = 900000;
 // The loop's shape, rig-independent: the proportional correction time, the derivative's damping
 // fraction at full slew, the integrator time and the integral clamp. These are tuned once, not per
 // rig; the values reproduce the loop as it was hand-tuned for the reference pump and chamber.
-constexpr float PID_RESPONSE_S = 0.1f;        // seconds to correct an error proportionally
-constexpr float PID_DAMP_FRACTION = 0.17f;    // duty the derivative takes off at full slew
-constexpr float PID_INTEGRAL_TIME_S = 150.0f; // integrator time constant; slow, so the saturated
-                                              // pull does not wind the integral
+constexpr float PID_RESPONSE_S = 0.1f;         // seconds to correct an error proportionally
+constexpr float PID_DAMP_FRACTION = 0.17f;     // duty the derivative takes off at full slew
+constexpr float PID_INTEGRAL_TIME_S = 150.0f;  // integrator time constant; slow, so the saturated
+                                               // pull does not wind the integral
 constexpr float PID_INTEGRAL_LIMIT_PERCENT = 150.0f;
 
 // The four gains the loop runs with, in the units `VacuumSystem::pidUpdate` consumes.
@@ -108,7 +107,7 @@ constexpr float PUMP_RAMP_PERCENT_PER_SEC = 150.0f;
 // Timing only; which part is fitted, and therefore which coil level means "open", is the
 // composition root's call in Machine.cpp from the VALVE_NORMALLY_OPEN build symbol — normally open
 // is the fail-safe default.
-constexpr float VENT_MARGIN_KPA = 2.0f;      // close enough to the vent floor to be released
+constexpr float VENT_MARGIN_KPA = 2.0f;  // close enough to the vent floor to be released
 // The depth this rig settles at with the valve open, measured on the bench. A chamber with the
 // valve open does not reach ambient: the tube, the orifice and the sensor's offset leave it a
 // little above zero, so the release criterion is this floor rather than 0.
@@ -128,10 +127,10 @@ constexpr uint32_t REBOOT_VENT_WAIT_MS = 2000;
 // A pull driven hard against a blocked hose or a stuck sensor moves nothing, and a depth that runs
 // past its target is the loop not holding what it was asked to. Both are the machine's to notice,
 // because a controller that has stopped talking is exactly when they matter.
-constexpr float CONTROL_PROGRESS_KPA = 1.0f;      // headway that counts as a pull making progress
+constexpr float CONTROL_PROGRESS_KPA = 1.0f;  // headway that counts as a pull making progress
 constexpr uint32_t CONTROL_PROGRESS_TIMEOUT_MS = 10000;
 constexpr float CONTROL_PROGRESS_DUTY_FRACTION = 0.5f;  // of the duty cap
-constexpr float CONTROL_OVERSHOOT_KPA = 5.0f;     // deeper than the target, and so past it
+constexpr float CONTROL_OVERSHOOT_KPA = 5.0f;           // deeper than the target, and so past it
 constexpr uint8_t CONTROL_OVERSHOOT_READINGS = 5;
 
 // The pins the machine's parts are wired to. The sketch names them and the composition builds the
@@ -183,5 +182,4 @@ class Machine {
   uint8_t capabilities_ = 0;
 };
 
-}  // namespace machine
 }  // namespace gardener

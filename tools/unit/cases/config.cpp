@@ -19,15 +19,14 @@ using gardener::test::MemoryLibrary;
 // A document with every shape the parser has to survive: comments, a blank line, a line with no
 // equals sign, a header with spaces in it, keys before the first header, a key that appears twice,
 // and a value holding an equals sign.
-constexpr const char* Document =
-    "; a comment\n"
-    "\n"
-    "no equals here\n"
-    "loose=1\n"
-    "[ cold ]\n"
-    "target=15.0\n"
-    "target=16.0\n"
-    "expression=a=b\n";
+constexpr const char* Document = "; a comment\n"
+                                 "\n"
+                                 "no equals here\n"
+                                 "loose=1\n"
+                                 "[ cold ]\n"
+                                 "target=15.0\n"
+                                 "target=16.0\n"
+                                 "expression=a=b\n";
 
 constexpr const char* Path = "/cfg/settings.ini";
 

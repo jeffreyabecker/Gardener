@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // A single ADC sample on this part is noisy, and the pack does not move quickly, so one
@@ -40,7 +40,8 @@ void AdcBattery::update(uint32_t nowMs) {
   sampled_ = true;
 
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < SamplesPerRead; i++) totalMilliVolts += analogReadMilliVolts(pin_);
+  for (uint8_t i = 0; i < SamplesPerRead; i++)
+    totalMilliVolts += analogReadMilliVolts(pin_);
 
   float pinVolts = (float)totalMilliVolts / (float)SamplesPerRead / 1000.0f;
   volts_ = pinVolts * divider_ * Calibration;
@@ -57,4 +58,4 @@ void AdcBattery::update(uint32_t nowMs) {
   percent_ = (uint8_t)(fraction * 100.0f + 0.5f);
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

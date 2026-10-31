@@ -6,7 +6,7 @@
 
 #include "core/Math.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 constexpr uint32_t MaxStepMs = 250;
 
@@ -37,9 +37,7 @@ void PwmPump::write(float percent) {
   ledcWrite(pin_, duty);
 }
 
-void PwmPump::setDuty(float percent) {
-  target_ = clampf(percent, 0.0f, dutyMax_);
-}
+void PwmPump::setDuty(float percent) { target_ = clampf(percent, 0.0f, dutyMax_); }
 
 void PwmPump::halt() {
   target_ = 0.0f;
@@ -63,4 +61,4 @@ void PwmPump::update(uint32_t nowMs) {
   }
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

@@ -6,7 +6,7 @@
 
 #include "panel/page/ChoiceScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The value editor of an on/off setting, from bool_scene.be: OFF and ON walked with Up and Down,
 // and a nullable setting's nothing below OFF. The states are the choice ring's — OFF and ON as its
@@ -31,4 +31,4 @@ class BoolScene : public ChoiceScene {
   bool nullable_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

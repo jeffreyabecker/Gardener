@@ -3,9 +3,9 @@
 #include <cstdio>
 #include <string>
 
-#include "fonts/BuiltinFont.h"
 #include "Canvas.h"
 #include "Rect.h"
+#include "fonts/BuiltinFont.h"
 #include "layout/Drawing.h"
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
@@ -29,19 +29,20 @@ constexpr int16_t ArrowHeight = 8;
 struct Key {
   const char* name;
   const char* text;
-  gfx::shapes::Triangle (*arrow)(gfx::Rect, uint8_t, bool);
+  gfx::Triangle (*arrow)(gfx::Rect, uint8_t, bool);
 };
 
-constexpr Key Keys[] = {{"up", nullptr, &gfx::shapes::Triangle::up},
-                        {"down", nullptr, &gfx::shapes::Triangle::down},
-                        {"forward", nullptr, &gfx::shapes::Triangle::right},
-                        {"back", nullptr, &gfx::shapes::Triangle::left},
+constexpr Key Keys[] = {{"up", nullptr, &gfx::Triangle::up},
+                        {"down", nullptr, &gfx::Triangle::down},
+                        {"forward", nullptr, &gfx::Triangle::right},
+                        {"back", nullptr, &gfx::Triangle::left},
                         {"ok", "OK", nullptr},
                         {"cancel", "X", nullptr}};
 
 int16_t textWidth(const char* text) {
   int16_t width = 0;
-  for (const char* c = text; *c != '\0'; c++) width = static_cast<int16_t>(width + CellWidth);
+  for (const char* c = text; *c != '\0'; c++)
+    width = static_cast<int16_t>(width + CellWidth);
   return width;
 }
 
@@ -60,7 +61,7 @@ bool glyphBlank(uint8_t c) {
 void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
   for (const char* c = text; *c != '\0'; c++) {
     const uint8_t code = static_cast<uint8_t>(*c);
-    gfx::shapes::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
+    gfx::drawGlyph(canvas, x, y, glyphBlank(code) ? 'x' : code, 1, gfx::Ink);
     x = static_cast<int16_t>(x + CellWidth);
   }
 }
@@ -74,7 +75,8 @@ bool isCount(const std::string& form) {
 }  // namespace
 
 void GestureStrip::show(const char* gesture) {
-  for (Mark& mark : marks_) mark = Mark();
+  for (Mark& mark : marks_)
+    mark = Mark();
   frames_ = 0;
   if (gesture == nullptr || gesture[0] == '\0') return;
 
@@ -83,9 +85,8 @@ void GestureStrip::show(const char* gesture) {
   size_t start = 0;
   while (start < token.size()) {
     const size_t plus = token.find('+', start);
-    const std::string part = token.substr(start, plus == std::string::npos
-                                                    ? std::string::npos
-                                                    : plus - start);
+    const std::string part =
+        token.substr(start, plus == std::string::npos ? std::string::npos : plus - start);
     const size_t colon = part.find(':');
     mark(part.substr(0, colon),
          colon == std::string::npos ? std::string() : part.substr(colon + 1));
@@ -115,8 +116,8 @@ void GestureStrip::mark(const std::string& key, const std::string& form) {
 }
 
 CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
-  return CaptureDisplay::Component{
-      box, gfx::callable([this](gfx::Canvas& canvas) { draw(canvas); })};
+  return CaptureDisplay::Component{box,
+                                   gfx::callable([this](gfx::Canvas& canvas) { draw(canvas); })};
 }
 
 void GestureStrip::draw(gfx::Canvas& canvas) {
@@ -135,32 +136,29 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
     if (key.arrow != nullptr) {
       const int16_t arrowLeft =
           static_cast<int16_t>(left + (CapturePicture::ButtonWidth - ArrowWidth) / 2);
-      canvas.draw(
-          key.arrow(gfx::Rect(arrowLeft, top, ArrowWidth, ArrowHeight), gfx::Ink, true));
+      canvas.draw(key.arrow(gfx::Rect(arrowLeft, top, ArrowWidth, ArrowHeight), gfx::Ink, true));
     } else {
-      drawText(
-          canvas,
-          static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(key.text)) / 2), top,
-          key.text);
+      drawText(canvas,
+               static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(key.text)) / 2),
+               top, key.text);
     }
 
     if (held) {
       char seconds[4];
       snprintf(seconds, sizeof(seconds), "%d", static_cast<int>(mark.seconds));
       drawText(canvas,
-               static_cast<int16_t>(left + CapturePicture::ButtonWidth - 1 - textWidth(seconds)),
-               9, seconds);
+               static_cast<int16_t>(left + CapturePicture::ButtonWidth - 1 - textWidth(seconds)), 9,
+               seconds);
     }
 
     if (mark.outlines > 0) {
-      canvas.draw(gfx::shapes::Rect(left, 0, CapturePicture::ButtonWidth,
-                                    CapturePicture::ButtonHeight, gfx::Ink));
+      canvas.draw(gfx::Rectangle(left, 0, CapturePicture::ButtonWidth, CapturePicture::ButtonHeight,
+                                 gfx::Ink));
     }
     if (mark.outlines > 1) {
-      canvas.draw(gfx::shapes::Rect(static_cast<int16_t>(left + 2), 2,
-                                    static_cast<int16_t>(CapturePicture::ButtonWidth - 4),
-                                    static_cast<int16_t>(CapturePicture::ButtonHeight - 4),
-                                    gfx::Ink));
+      canvas.draw(gfx::Rectangle(static_cast<int16_t>(left + 2), 2,
+                                 static_cast<int16_t>(CapturePicture::ButtonWidth - 4),
+                                 static_cast<int16_t>(CapturePicture::ButtonHeight - 4), gfx::Ink));
     }
   }
 

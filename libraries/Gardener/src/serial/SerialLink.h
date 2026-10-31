@@ -7,23 +7,13 @@
 #include "serial/BoardFacts.h"
 
 namespace gardener {
-inline namespace core {
 class Battery;
 class Library;
 class Logger;
-}
-inline namespace machine {
 class Machine;
-}
-inline namespace storage {
 class DeviceSettings;
-}
 
-namespace panel::parts {
 class BuzzerPlayer;
-}  // namespace panel::parts
-
-inline namespace serial {
 
 // The longest command line a grammar serves: the link refuses a longer one, and so does each grammar
 // handed one. A command body, when a grammar defines one, is not bounded here.
@@ -42,7 +32,7 @@ struct SerialParts {
   const BoardFacts& board;
   const Battery& battery;
   DeviceSettings& settings;
-  panel::parts::BuzzerPlayer& buzzer;
+  BuzzerPlayer& buzzer;
   Library& files;
 };
 
@@ -119,5 +109,4 @@ class SerialLink {
   bool attached_ = false;
 };
 
-}  // namespace serial
 }  // namespace gardener

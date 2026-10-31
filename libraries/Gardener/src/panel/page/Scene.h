@@ -7,7 +7,7 @@
 #include "Canvas.h"
 #include "panel/GestureQueue.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The lifecycle a page shares: the gesture drain, the repaint cadence and the hooks a page
 // overrides. A page extends it and draws in drawPage; poll is what the host calls on each beat.
@@ -41,7 +41,7 @@ class Scene {
   // Called when the scene goes on top, before the first draw. The Berry scene takes the pusher's
   // arguments; nothing here has anything to pass yet.
   virtual void activate() {}
-  virtual void leave(){}
+  virtual void leave() {}
 
   // What the scene hands back when it pops: the value the page reads, in whatever type the setting
   // holds — a number, a key, a book. An empty any is no value at all, which is what a nullable
@@ -59,12 +59,9 @@ class Scene {
   virtual bool nullable() const { return false; }
   bool isNull() const { return !value().has_value(); }
 
-
   uint32_t lastDraw() const { return lastDraw_; }
 
  protected:
-  
-
   // The gesture the scene answers, or false for one it drops. The whole string is the gesture, so a
   // scene matches it in full or not at all.
   virtual bool handle(const char*) { return false; }
@@ -80,4 +77,4 @@ class Scene {
   uint32_t lastDraw_ = 0;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

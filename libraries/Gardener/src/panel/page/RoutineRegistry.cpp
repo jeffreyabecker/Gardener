@@ -8,7 +8,6 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
-namespace panel::page {
 
 RoutineRegistry::RoutineRegistry(Library& library, Logger& logger)
     : library_(library), logger_(logger) {}
@@ -64,7 +63,8 @@ std::vector<String> RoutineRegistry::keys() const {
   std::vector<String> out;
   for (const Entry& entry : entries_) {
     out.push_back(entry.registration.routineKey());
-    for (const Alias& alias : entry.aliases) out.push_back(alias.routineKey);
+    for (const Alias& alias : entry.aliases)
+      out.push_back(alias.routineKey);
   }
   return out;
 }
@@ -72,8 +72,8 @@ std::vector<String> RoutineRegistry::keys() const {
 std::vector<RoutineRow> RoutineRegistry::rows() const {
   std::vector<RoutineRow> out;
   for (const Entry& entry : entries_) {
-    out.push_back({entry.registration.glyph(), entry.registration.title(),
-                   entry.registration.routineKey()});
+    out.push_back(
+        {entry.registration.glyph(), entry.registration.title(), entry.registration.routineKey()});
     for (const Alias& alias : entry.aliases) {
       out.push_back({entry.registration.glyph(), alias.title, alias.routineKey});
     }
@@ -127,8 +127,7 @@ const String* RoutineRegistry::icon(const String& routineKey) const {
   return &record->glyph();
 }
 
-const std::vector<SettingsRow*>* RoutineRegistry::settingsRows(
-    const String& routineKey) const {
+const std::vector<SettingsRow*>* RoutineRegistry::settingsRows(const String& routineKey) const {
   const Registration* record = entry(routineKey);
   return record == nullptr ? nullptr : &record->settings();
 }
@@ -139,15 +138,14 @@ SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
   return record->loadSettings(library_, section(routineKey));
 }
 
-bool RoutineRegistry::saveSettings(const String& routineKey,
-                                   SettingValues& values) const {
+bool RoutineRegistry::saveSettings(const String& routineKey, SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr) return false;
   return record->saveSettings(library_, section(routineKey), values);
 }
 
-std::unique_ptr<Scene> RoutineRegistry::activate(
-    const String& routineKey, const SettingValues& values) const {
+std::unique_ptr<Scene> RoutineRegistry::activate(const String& routineKey,
+                                                 const SettingValues& values) const {
   const Registration* record = entry(routineKey);
   if (record == nullptr || !record->factory()) return nullptr;
 
@@ -167,5 +165,4 @@ std::unique_ptr<Scene> RoutineRegistry::activate(
   return record->factory()(activation);
 }
 
-}  // namespace panel::page
 }  // namespace gardener

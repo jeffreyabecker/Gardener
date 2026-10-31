@@ -7,7 +7,7 @@
 #include "fonts/Ttyp016.h"
 #include "fonts/Ttyp022.h"
 
-namespace gardener::gfx::fonts {
+namespace gardener::gfx {
 
 namespace {
 
@@ -85,4 +85,4 @@ struct Shipped {
 
 }  // namespace
 
-}  // namespace gardener::gfx::fonts
+}  // namespace gardener::gfx

@@ -1,12 +1,12 @@
 #pragma once
 
+#include <Wire.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <Wire.h>
 
 #include <Gfx.h>
 
-namespace gardener {
+namespace gardener::runtime {
 
 // A native 128x64 SH1106 on an I2C bus. The device owns the row-major Packed1 frame a View draws
 // into, converts the columns a flush reports into the page-major bytes the panel reads, and sends
@@ -51,4 +51,4 @@ class Sh1106Device : public gfx::DisplayDevice {
   gfx::Rect dirty_{0, 0, 0, 0};
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

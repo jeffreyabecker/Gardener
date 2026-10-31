@@ -17,8 +17,7 @@ void put16(FILE* file, uint16_t value) {
 // One frame unpacked to one byte per pixel and enlarged by the scale: each source pixel becomes a
 // scale x scale block, the nearest neighbour of a one-bit picture. The LZW stage wants one pixel
 // per byte, so the packed row is spread first.
-std::vector<uint8_t> unpackScaled(const uint8_t* packed, int16_t width, int16_t height,
-                                  int scale) {
+std::vector<uint8_t> unpackScaled(const uint8_t* packed, int16_t width, int16_t height, int scale) {
   const int16_t rowBytes = (width + 7) / 8;
   const int16_t outRowBytes = width * scale;
   std::vector<uint8_t> out((size_t)outRowBytes * height * scale);
@@ -27,7 +26,8 @@ std::vector<uint8_t> unpackScaled(const uint8_t* packed, int16_t width, int16_t 
       const uint8_t bit = (packed[y * rowBytes + x / 8] >> (7 - (x & 7))) & 1;
       for (int16_t dy = 0; dy < scale; dy++) {
         uint8_t* row = out.data() + (size_t)(y * scale + dy) * outRowBytes;
-        for (int16_t dx = 0; dx < scale; dx++) row[x * scale + dx] = bit;
+        for (int16_t dx = 0; dx < scale; dx++)
+          row[x * scale + dx] = bit;
       }
     }
   }
@@ -123,9 +123,8 @@ bool writeGif(const char* path, int16_t width, int16_t height,
   fputc(0x00, file);
 
   // Loop forever.
-  const uint8_t LoopExtension[] = {0x21, 0xFF, 0x0B, 'N', 'E', 'T', 'S', 'C',
-                                    'A',  'P',  'E',  '2', '.', '0', 0x03, 0x01,
-                                    0x00, 0x00, 0x00};
+  const uint8_t LoopExtension[] = {0x21, 0xFF, 0x0B, 'N', 'E',  'T',  'S',  'C',  'A', 'P',
+                                   'E',  '2',  '.',  '0', 0x03, 0x01, 0x00, 0x00, 0x00};
   fwrite(LoopExtension, 1, sizeof LoopExtension, file);
 
   for (const std::vector<uint8_t>& frame : frames) {

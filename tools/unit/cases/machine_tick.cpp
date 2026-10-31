@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "Clock.h"
+#include "beats/MachineTick.h"
 #include "core/SystemState.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
-#include "beats/MachineTick.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 
@@ -19,8 +19,8 @@ namespace {
 
 using gardener::CommandOutbox;
 using gardener::CommandQueue;
-using gardener::MachineTick;
 using gardener::MachineCommand;
+using gardener::MachineTick;
 using gardener::RunState;
 using gardener::SystemState;
 using gardener::VacuumSystem;
@@ -184,6 +184,7 @@ TEST_CASE("the outbox refuses the newest when its own capacity is reached") {
   BoundedQueue queue(1);
   CommandOutbox outbox(queue);
   REQUIRE(outbox.post(op(Op::ResetFault)));
-  for (int i = 0; i < 8; i++) CHECK_FALSE(outbox.post(target(static_cast<float>(i))));
+  for (int i = 0; i < 8; i++)
+    CHECK_FALSE(outbox.post(target(static_cast<float>(i))));
   CHECK_FALSE(outbox.post(target(99.0f)));
 }

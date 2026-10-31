@@ -4,27 +4,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "panel/page/Ux.h"
 #include "panel/GestureQueue.h"
+#include "panel/page/Ux.h"
 #include "routines/Interpreter.h"
 #include <Gfx.h>
 
 namespace gardener {
-inline namespace core {
 struct SystemState;
 class Logger;
 class Library;
-}
 
-namespace panel::page {
 class RoutineRegistry;
-}
-
-inline namespace routines {
 
 // The Berry runtime behind the routines: the files the interpreter compiles and the beat that drives
 // the native scene stack over them. The interpreter itself is left to `Interpreter`, whose
-// implementation is the host side's; the stack is `panel::page::Ux` and this side owns it: one
+// implementation is the host side's; the stack is `Ux` and this side owns it: one
 // entry per beat, the overlay the panel shows drawn over the page, and the beat's one flush — left
 // here because the stack draws in the frame the display holds, and nothing else sends that frame.
 //
@@ -37,16 +31,10 @@ class Routines {
   // stack a page is pushed on; the registry its files register into; and the log and the file store
   // the image is read through.
   Routines(Interpreter& interpreter, gfx::DisplayDevice& display, SystemState& state,
-           panel::GestureQueue& presses, panel::page::Ux& ux,
-           panel::page::RoutineRegistry& registry, Logger& logger, Library& library)
-      : interpreter_(interpreter),
-        display_(display),
-        state_(state),
-        presses_(presses),
-        ux_(ux),
-        registry_(registry),
-        logger_(logger),
-        library_(library) {}
+           GestureQueue& presses, Ux& ux, RoutineRegistry& registry, Logger& logger,
+           Library& library)
+      : interpreter_(interpreter), display_(display), state_(state), presses_(presses), ux_(ux),
+        registry_(registry), logger_(logger), library_(library) {}
 
   // Loads the files `/system/order` names and then every `/routines/*.be`, and resets the scene
   // stack. The system comes first so a page can use what one of its files defines. False only when
@@ -77,15 +65,15 @@ class Routines {
 
   // What the scenes take their gestures from. The queue `device.take_gesture()` drains is the same
   // one, so a press goes to whichever of the two is reading.
-  panel::GestureQueue& presses() { return presses_; }
+  GestureQueue& presses() { return presses_; }
 
   // What a settings row builds its editor on, and where a launch puts a page: the stack the beat
   // polls, so a page opened from a page is pushed over it rather than into a second one.
-  panel::page::Ux& ux() { return ux_; }
+  Ux& ux() { return ux_; }
 
   // The routines the image registered, in the order the files registered them: what the `routines`
   // module puts a record into and reads a set back through, and what a row launches.
-  panel::page::RoutineRegistry& registry() { return registry_; }
+  RoutineRegistry& registry() { return registry_; }
 
   // --- the `device` module's gesture surface ---
   void pushPress(const String& gesture) { presses_.push(gesture); }
@@ -108,11 +96,11 @@ class Routines {
   SystemState& state_;
   // What a gesture goes to and what a page is pushed on: the composition's, so the buttons' beat
   // and a launched page read the same two.
-  panel::GestureQueue& presses_;
-  panel::page::Ux& ux_;
+  GestureQueue& presses_;
+  Ux& ux_;
   // Where the image's routine files register themselves: the composition's, so the bindings reach
   // it before the image is loaded.
-  panel::page::RoutineRegistry& registry_;
+  RoutineRegistry& registry_;
   // What the loader reports through, and what it reads the image from.
   Logger& logger_;
   Library& library_;
@@ -121,5 +109,4 @@ class Routines {
   size_t filesFound_ = 0;
 };
 
-}  // namespace routines
 }  // namespace gardener

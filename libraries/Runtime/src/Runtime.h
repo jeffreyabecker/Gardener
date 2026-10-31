@@ -6,10 +6,10 @@
 // plus the control task that steps the tick, the interface task that polls the links, the panel task
 // that drives the glass, and the queue the links and the panel post into.
 
-#include "MachineTasks.h"
 #include "MachineRoot.h"
+#include "MachineTasks.h"
 #include "RtosCommandQueue.h"
-#include "storage/FileLibrary.h"
 #include "ble/BleLink.h"
+#include "storage/FileLibrary.h"
 
 #include "PanelTasks.h"

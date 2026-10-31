@@ -4,11 +4,11 @@
 
 #include <vector>
 
-#include "shapes/Text.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/Text.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 namespace {
 
 // One row of the built-in face, which is the pitch a choice is drawn at.
@@ -18,7 +18,7 @@ constexpr int16_t Row = 8;
 // the entry showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
   const char* title = item->title.c_str();
-  const gfx::Size ink = gfx::shapes::measureText(nullptr, title, 1);
+  const gfx::Size ink = gfx::measureText(nullptr, title, 1);
   gfx::PaintNodeRef content =
       gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), title), ink));
   if (showing) content = gfx::inverted(std::move(content));
@@ -30,10 +30,7 @@ gfx::PaintNodeRef rowOf(const ChoiceItem* item, bool showing) {
 ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
                          const std::vector<ChoiceItem>& items, bool nullable,
                          std::function<void(String& current)> forward)
-    : EditorScene(gestures, ux, label),
-      items_(items),
-      forward_(forward),
-      nullable_(nullable) {
+    : EditorScene(gestures, ux, label), items_(items), forward_(forward), nullable_(nullable) {
   value_ = current;
   hasValue_ = !nullable_ || !current.isEmpty();
   opened_ = value_;
@@ -100,7 +97,7 @@ int16_t ChoiceScene::index() const {
 gfx::PaintNodeRef ChoiceScene::pageContents() {
   return gfx::callable([this](gfx::Canvas& canvas) {
     if (!hasValue_ || items_.empty()) {
-      const gfx::Size ink = gfx::shapes::measureText(nullptr, "--", 1);
+      const gfx::Size ink = gfx::measureText(nullptr, "--", 1);
       gfx::aligned(gfx::sized(gfx::borrowedText(gfx::Box::whole(), "--"), ink))->draw(canvas);
       return;
     }
@@ -116,8 +113,8 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
     gfx::Children rows;
     for (int16_t line = 0; line < visible; line++) {
       const int16_t at = static_cast<int16_t>(first + line);
-      rows.push_back(gfx::Child{gfx::Cell(1.0f, static_cast<float>(Row)),
-                                rowOf(&items_[at], at == selected)});
+      rows.push_back(
+          gfx::Child{gfx::Cell(1.0f, static_cast<float>(Row)), rowOf(&items_[at], at == selected)});
     }
     gfx::Justification centred;
     centred.along = gfx::Justify::Center;
@@ -127,4 +124,4 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
   });
 }
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

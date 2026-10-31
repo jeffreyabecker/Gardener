@@ -8,9 +8,8 @@
 struct bvm;
 
 namespace gardener {
-inline namespace core { struct SystemState; }
 
-namespace bindings {
+struct SystemState;
 
 // A page's drawing, walked: the node at `node` of the interpreter's stack turned into the paint it
 // describes and drawn on `canvas`. The tree is what the `draw` record the screen module declares
@@ -23,5 +22,4 @@ namespace bindings {
 // own call has returned, where a raise would unwind through C++ frames.
 void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas);
 
-}  // namespace bindings
 }  // namespace gardener

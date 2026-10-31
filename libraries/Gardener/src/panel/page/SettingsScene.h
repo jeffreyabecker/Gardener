@@ -13,27 +13,24 @@
 #include <Arduino.h>
 
 #include "panel/page/ChoiceScene.h"
-#include "storage/SettingKind.h"
 #include "panel/page/EditorScene.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
+#include "storage/SettingKind.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The values a list holds and the declaration a row was built from are the document's vocabulary,
 // in `storage/SettingKind.h`; a row is that and the page's half of it.
-using storage::SettingDeclaration;
-using storage::SettingValues;
-
 class SettingsRow;
 
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
 // refuses it. The editor holds the same check closed over the declaration and the set, which is
 // CurriedValidator.
-using Validator = std::function<std::pair<bool, String>(
-    const std::vector<SettingsRow*>& settings, const SettingValues& values,
-    const std::any& proposed)>;
+using Validator =
+    std::function<std::pair<bool, String>(const std::vector<SettingsRow*>& settings,
+                                          const SettingValues& values, const std::any& proposed)>;
 
 // One row of a settings list: the key its value is stored under, the label it prints, the default
 // its declaration gives, the check it carries and the editor that edits it. A row is a class of its
@@ -43,7 +40,7 @@ using Validator = std::function<std::pair<bool, String>(
 // The value in force is the list's, not the row's: the row answers only what a setting starts as
 // where the set the list is handed carries nothing for it. The check is the row's, but it needs the
 // whole declaration and the set it edits to answer, which is what the list curries it with.
-class SettingsRow : public storage::SettingKind {
+class SettingsRow : public SettingKind {
  public:
   virtual ~SettingsRow() = default;
 
@@ -128,4 +125,4 @@ class SettingsScene : public Scene {
   int16_t selected_ = 0;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

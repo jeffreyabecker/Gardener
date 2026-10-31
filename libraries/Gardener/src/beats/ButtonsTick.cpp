@@ -5,7 +5,6 @@
 #include "panel/GestureQueue.h"
 
 namespace gardener {
-inline namespace beats {
 namespace {
 
 // The holds the panel acts on, as the marks the gesture carries in whole seconds: Okay and Cancel
@@ -14,8 +13,8 @@ constexpr uint32_t ResetHoldSeconds = 5;
 
 }  // namespace
 
-ButtonsTick::ButtonsTick(ButtonPanel& buttons, panel::GestureQueue& presses,
-                         CommandOutbox& outbox, Logger& logger)
+ButtonsTick::ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
+                         Logger& logger)
     : classifier_(buttons), presses_(presses), outbox_(outbox), logger_(logger) {}
 
 bool ButtonsTick::takeReset() {
@@ -58,5 +57,4 @@ void ButtonsTick::tick() {
 
 void ButtonsTick::deliver(const String& gesture) { presses_.push(gesture); }
 
-}  // namespace beats
 }  // namespace gardener

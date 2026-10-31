@@ -4,7 +4,7 @@
 
 #include "core/Pump.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 // The rig's pump: a JQB2438 through a low side MOSFET, driven by one PWM channel.
 //
@@ -37,4 +37,4 @@ class PwmPump : public Pump {
   uint32_t lastUpdateMs_ = 0;
 };
 
-}  // namespace gardener
+}  // namespace gardener::runtime

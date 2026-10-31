@@ -4,13 +4,7 @@
 #include <memory>
 
 namespace gardener {
-namespace panel {
-namespace page {
 class Scene;
-}  // namespace page
-}  // namespace panel
-
-inline namespace routines {
 
 // The interpreter the routines are compiled and run in, and the image's root page as a scene. It is
 // the core's surface over the vendored VM: the core names this and never `<berry.h>`, and
@@ -36,8 +30,7 @@ class Interpreter {
   // wanted rather than cached, so whatever a later load sets is the page the go-home gesture goes
   // to. The gestures and the state the scene is driven by are the interpreter's own, taken from the
   // app it was built with.
-  virtual std::unique_ptr<panel::page::Scene> rootScene() = 0;
+  virtual std::unique_ptr<Scene> rootScene() = 0;
 };
 
-}  // namespace routines
 }  // namespace gardener

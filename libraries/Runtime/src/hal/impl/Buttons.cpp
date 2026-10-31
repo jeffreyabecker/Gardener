@@ -1,6 +1,6 @@
 #include "hal/impl/Buttons.h"
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // A mechanical key bounces for a few milliseconds, so a level has to hold this long before a read
@@ -110,9 +110,7 @@ uint32_t Buttons::settle() {
   return stable_;
 }
 
-bool Buttons::pressed(Button button) {
-  return (settle() & bitOf(button)) != 0;
-}
+bool Buttons::pressed(Button button) { return (settle() & bitOf(button)) != 0; }
 
 Press Buttons::consumePress(Button button) {
   settle();
@@ -140,4 +138,4 @@ uint32_t Buttons::heldMs(Button button) {
   return millis() - pressStartMs_[(uint8_t)button];
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

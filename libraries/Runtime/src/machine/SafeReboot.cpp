@@ -5,7 +5,7 @@
 #include "machine/Machine.h"
 #include "machine/VacuumSystem.h"
 
-namespace gardener {
+namespace gardener::runtime {
 
 void safeReboot(Machine& context) {
   VacuumSystem& vacuum = context.vacuum();
@@ -27,4 +27,4 @@ void safeReboot(Machine& context) {
   ESP.restart();
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

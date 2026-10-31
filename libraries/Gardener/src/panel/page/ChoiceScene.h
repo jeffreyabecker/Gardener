@@ -10,9 +10,7 @@
 #include "panel/page/EditorScene.h"
 #include "storage/SettingKind.h"
 
-namespace gardener::panel::page {
-
-using storage::ChoiceItem;
+namespace gardener {
 
 // The value editor of a fixed list of choices, from choice_scene.be: Up and Down step through the
 // entries and wrap at the ends, OK keeps the key showing and Cancel puts back the key it opened on.
@@ -64,4 +62,4 @@ class ChoiceScene : public EditorScene {
   bool nullable_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

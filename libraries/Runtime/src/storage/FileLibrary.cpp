@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string.h>
 
-namespace gardener {
+namespace gardener::runtime {
 
 // Sorted, so the order a routine compiles in is the file's order rather than the directory's: a
 // module that names a class another one defines has to come after it.
@@ -94,4 +94,4 @@ bool FileLibrary::remove(const String& path) {
   return fs_.rmdir(path.c_str());
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

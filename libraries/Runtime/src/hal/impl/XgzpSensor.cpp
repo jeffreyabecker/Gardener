@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <type_traits>
 
-namespace gardener {
+namespace gardener::runtime {
 namespace {
 
 // The part's own numbers, at its 3.3 V variant. The output spans 0.2 V at -100 kPa to 2.7 V at
@@ -41,7 +41,8 @@ bool XgzpSensor::begin() {
 
 bool XgzpSensor::sample(float& outVolts) {
   uint32_t totalMilliVolts = 0;
-  for (uint8_t i = 0; i < Samples; i++) totalMilliVolts += analogReadMilliVolts(pin_);
+  for (uint8_t i = 0; i < Samples; i++)
+    totalMilliVolts += analogReadMilliVolts(pin_);
 
   float volts = (float)totalMilliVolts / (float)Samples / 1000.0f;
   if (volts < MinPlausibleVolts || volts > MaxPlausibleVolts) return false;
@@ -76,4 +77,4 @@ float XgzpSensor::pressureKpa() const {
   return depth > 0.0f ? depth : 0.0f;
 }
 
-}  // namespace gardener
+}  // namespace gardener::runtime

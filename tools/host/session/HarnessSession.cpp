@@ -4,8 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "Clock.h"
 #include "CapturePicture.h"
+#include "Clock.h"
 #include "machine/Machine.h"
 #include "machine/MachineCommand.h"
 
@@ -71,13 +71,8 @@ void ModelPump::update(uint32_t nowMs) {
 }
 
 HarnessSession::HarnessSession(std::string dataDir, float ceilingKpa)
-    : dataDir_(std::move(dataDir)),
-      settings_(&files_, state_),
-      chamber_(ceilingKpa),
-      pump_(chamber_),
-      sensor_(chamber_),
-      valve_(chamber_),
-      vacuum_(&pump_, &sensor_, &valve_),
+    : dataDir_(std::move(dataDir)), settings_(&files_, state_), chamber_(ceilingKpa),
+      pump_(chamber_), sensor_(chamber_), valve_(chamber_), vacuum_(&pump_, &sensor_, &valve_),
       buzzer_(buzzerPart_) {}
 
 HarnessSession::~HarnessSession() = default;
@@ -135,7 +130,8 @@ void HarnessSession::beat(int count) {
 
       // controlTask's three calls, in its order, with its commands drained first.
       MachineCommand command;
-      while (queue_.take(command)) applyMachineCommand(vacuum_, command);
+      while (queue_.take(command))
+        applyMachineCommand(vacuum_, command);
       sensor_.update(now);
       pump_.update(now);
       vacuum_.service(now);
@@ -187,9 +183,7 @@ int HarnessSession::errorLines() const { return logger_.errors(); }
 
 void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
 
-void HarnessSession::backHold() {
-  outbox_.post(MachineCommand{MachineCommand::Op::Stop});
-}
+void HarnessSession::backHold() { outbox_.post(MachineCommand{MachineCommand::Op::Stop}); }
 
 void HarnessSession::reset() {
   // Leaving the page under test runs default's activate(), which is where the device would be.

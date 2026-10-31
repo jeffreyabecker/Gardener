@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 namespace gardener {
-inline namespace core {
 
 // The keys on the front panel, declared in the order they sit on it. A gesture's parts are reported
 // in panel order, so the declaration is the order.
@@ -13,13 +12,20 @@ inline constexpr uint8_t ButtonCount = 6;
 
 inline const char* buttonName(Button button) {
   switch (button) {
-    case Button::Up: return "up";
-    case Button::Down: return "down";
-    case Button::Forward: return "forward";
-    case Button::Back: return "back";
-    case Button::Ok: return "ok";
-    case Button::Cancel: return "cancel";
-    default: return "?";
+    case Button::Up:
+      return "up";
+    case Button::Down:
+      return "down";
+    case Button::Forward:
+      return "forward";
+    case Button::Back:
+      return "back";
+    case Button::Ok:
+      return "ok";
+    case Button::Cancel:
+      return "cancel";
+    default:
+      return "?";
   }
 }
 
@@ -32,5 +38,4 @@ enum class Press : uint8_t { None, Single, Double };
 // one hold boundary left now that a tap and a hold are no longer told apart below it.
 inline constexpr uint32_t ExtendedHoldMs = 2000;
 
-}  // namespace core
 }  // namespace gardener

@@ -14,7 +14,7 @@
 #include "panel/page/NumberScene.h"
 #include "panel/page/SettingsScene.h"
 
-namespace gardener::panel::page {
+namespace gardener {
 
 // The rows a settings list is built from, one class per value kind: each prints the kind's value
 // the way the list prints a row and builds the scene that edits it. A row carries the rules of its
@@ -28,8 +28,8 @@ namespace gardener::panel::page {
 // draws to change it. A nullable setting's nothing prints `--` and opens the switch on nothing.
 class BoolRow : public SettingsRow {
  public:
-  BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-          bool defaultValue, bool nullable = false, Validator validator = nullptr);
+  BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label, bool defaultValue,
+          bool nullable = false, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
@@ -59,9 +59,8 @@ class BoolRow : public SettingsRow {
 class ChoiceRow : public SettingsRow {
  public:
   ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-            const String& defaultValue, const std::vector<ChoiceItem>& items,
-            bool nullable = false, std::function<void(String& current)> forward = nullptr,
-            Validator validator = nullptr);
+            const String& defaultValue, const std::vector<ChoiceItem>& items, bool nullable = false,
+            std::function<void(String& current)> forward = nullptr, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
@@ -91,8 +90,8 @@ class ChoiceRow : public SettingsRow {
 class DurationRow : public SettingsRow {
  public:
   DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-              int32_t defaultValue, int32_t step, int32_t min, int32_t max,
-              bool nullable = false, Validator validator = nullptr);
+              int32_t defaultValue, int32_t step, int32_t min, int32_t max, bool nullable = false,
+              Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
@@ -127,8 +126,7 @@ class NumberRow : public SettingsRow {
  public:
   NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
             float defaultValue, float step, float min, float max, bool nullable,
-            NumberFormatter format = nullptr, uint8_t decimals = 2,
-            Validator validator = nullptr);
+            NumberFormatter format = nullptr, uint8_t decimals = 2, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
@@ -166,9 +164,9 @@ class NumberRow : public SettingsRow {
 // leave the editor on a target the loop would refuse.
 class PressureRow : public NumberRow {
  public:
-  PressureRow(GestureQueue& gestures, Ux& ux, const String& key,
-              const String& label, float currentKpa, DisplayUnit unit, float wholeSteps,
-              bool nullable = false, Validator validator = nullptr);
+  PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+              float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable = false,
+              Validator validator = nullptr);
 
   SettingDeclaration declaration() const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
@@ -178,4 +176,4 @@ class PressureRow : public NumberRow {
   float wholeSteps_;
 };
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

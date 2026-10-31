@@ -8,7 +8,6 @@
 #include "core/VentValve.h"
 
 namespace gardener {
-inline namespace machine {
 
 // The vacuum system: the pressure loop, the release path and the run state, between the devices and
 // the wire. The devices are not its own — it is handed the three it commands, so the pins and the
@@ -87,10 +86,10 @@ class VacuumSystem {
   bool released() const;  // settled at the vent floor
   // The one decision every command ends in: open the valve, close it, or run the pump.
   void converge();
-  void release();         // stop, then open: the one release path
-  void rest();            // the resting state without releasing: pump off, valve open
-  void closeValve();      // seal the chamber and hand it to the PID
-  void beginTargetVent(); // stop, open, and land on the current target
+  void release();          // stop, then open: the one release path
+  void rest();             // the resting state without releasing: pump off, valve open
+  void closeValve();       // seal the chamber and hand it to the PID
+  void beginTargetVent();  // stop, open, and land on the current target
 
   void regulate(uint32_t nowMs);
   void fail(const char* code);
@@ -128,5 +127,4 @@ class VacuumSystem {
   uint32_t lastControlMs_ = 0;
 };
 
-}  // namespace machine
 }  // namespace gardener

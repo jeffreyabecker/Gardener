@@ -5,8 +5,7 @@
 #include "core/SystemState.h"
 #include "layout/Drawing.h"
 
-namespace gardener::panel::page {
-
+namespace gardener {
 
 // The AutoPressureDisplay the pages drew, composed from the drawing styles: the reading and its
 // target in the unit the state carries, taken from the beat's state rather than from the machine at
@@ -20,4 +19,4 @@ gfx::PaintNodeRef pressureReadout(gfx::Box box, const SystemState& state, float 
                                   const gfx::Font* face = nullptr, uint8_t scale = 2,
                                   uint8_t secondaryScale = 1);
 
-}  // namespace gardener::panel::page
+}  // namespace gardener

@@ -5,6 +5,7 @@
 #include <Gardener.h>
 #include <Runtime.h>
 
+#include "bindings/BindingContext.h"
 #include "core/SystemState.h"
 #include "hal/impl/AdcBattery.h"
 #include "hal/impl/Buttons.h"
@@ -17,7 +18,6 @@
 #include "panel/parts/BuzzerPlayer.h"
 #include "routines/BerryInterpreter.h"
 #include "routines/Routines.h"
-#include "bindings/BindingContext.h"
 #include "storage/DeviceSettings.h"
 
 namespace gardener {
@@ -67,7 +67,7 @@ class PanelRoot {
   CommandOutbox& outbox() { return outbox_; }
   Battery& battery() { return battery_; }
   ButtonPanel& buttons() { return keys_; }
-  panel::parts::BuzzerPlayer& buzzer() { return buzzer_; }
+  BuzzerPlayer& buzzer() { return buzzer_; }
   DeviceSettings& settings() { return settings_; }
   Routines& routines() { return routines_; }
 
@@ -75,28 +75,28 @@ class PanelRoot {
   const PanelPins pins_;
   // The log the device reports through, and the store its documents and image are read from.
   SerialLogger logger_;
-  FileLibrary files_;
+  runtime::FileLibrary files_;
   // One queue into the machine, which the panel, either link and the control tick all reach, and the
   // state each task publishes its slice into.
-  RtosCommandQueue commands_;
+  runtime::RtosCommandQueue commands_;
   SystemState state_;
   // The machine over the parts the board wires, and the queue the panel commands it through.
-  MachineParts parts_;
+  runtime::MachineParts parts_;
   Machine machine_;
   CommandOutbox outbox_;
   // The panel's own parts.
-  AdcBattery battery_;
-  Buttons keys_;
-  PwmBuzzer buzzerPart_;
-  panel::parts::BuzzerPlayer buzzer_;
-  Sh1106Device display_;
+  runtime::AdcBattery battery_;
+  runtime::Buttons keys_;
+  runtime::PwmBuzzer buzzerPart_;
+  BuzzerPlayer buzzer_;
+  runtime::Sh1106Device display_;
   DeviceSettings settings_;
   // The queue a gesture goes to and the stack a page is pushed on.
-  panel::GestureQueue presses_;
-  panel::page::Ux ux_;
+  GestureQueue presses_;
+  Ux ux_;
   // The routines the image registers into, the app the native modules reach, and the VM over them.
-  panel::page::RoutineRegistry registry_;
-  bindings::BindingContext bindings_;
+  RoutineRegistry registry_;
+  BindingContext bindings_;
   BerryInterpreter interpreter_;
   Routines routines_;
 };

@@ -8,7 +8,6 @@
 #include "storage/Config.h"
 
 namespace gardener {
-inline namespace serial {
 namespace {
 
 // The declared body is held whole before the store sees it, so this cap is the heap's rather than
@@ -352,5 +351,4 @@ void SerialLink::executeFiles(Stream& io) {
   }
 }
 
-}  // namespace serial
 }  // namespace gardener

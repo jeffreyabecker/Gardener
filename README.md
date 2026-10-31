@@ -69,6 +69,22 @@ Arduino API it is built against, a clock a case advances and the display a case 
 recording display that keeps the beats it drove and writes them as a GIF. It needs a C++ compiler
 (`g++` or `clang++`) and Python, and nothing else.
 
+## Formatting
+
+The C++ is formatted with `clang-format` from [.clang-format](./.clang-format) at the root, which
+holds the style [.github/skills/cpp](./.github/skills/cpp/SKILL.md) describes: two spaces, a brace on
+the statement's own line, a hundred columns, and comments left as they were written.
+
+```powershell
+clang-format -i (git ls-files '*.h' '*.cpp' '*.ino')   # rewrite what is not formatted
+clang-format --dry-run --Werror libraries/Gfx/src/Canvas.h
+```
+
+What keeps another style carries a `.clang-format` of its own switching formatting off — the
+vendored VM under [libraries/berry](./libraries/berry), doctest, and the host's Arduino core and
+stand-ins — so the sweep leaves them alone. An editor reads the same files, so a save lands in the
+shape the sweep would give it.
+
 ## Walkthroughs
 
 A GIF of the app can be scripted as a command file and run on the host, with no board and no

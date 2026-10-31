@@ -2,12 +2,11 @@
 
 #include <berry.h>
 
-#include "core/SystemState.h"
 #include "bindings/BindingContext.h"
 #include "bindings/DrawTree.h"
+#include "core/SystemState.h"
 
 namespace gardener {
-namespace bindings {
 namespace {
 
 // The pages the scenes hold, in a list the interpreter owns: a scene's page is reachable from the
@@ -136,9 +135,9 @@ bool BerryScene::endCall(const char* method, int argc) {
   // own results the same way — so the answer is lifted over them and they are dropped, leaving what
   // a caller reads on top.
   be_pushvalue(vm_, -(argc + 1));
-  for (int i = 0; i < argc + 1; i++) be_remove(vm_, -2);
+  for (int i = 0; i < argc + 1; i++)
+    be_remove(vm_, -2);
   return true;
 }
 
-}  // namespace bindings
 }  // namespace gardener

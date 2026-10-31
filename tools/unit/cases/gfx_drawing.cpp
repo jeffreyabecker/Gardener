@@ -23,38 +23,38 @@ namespace {
 // back as a filled box.
 PaintNodeRef fill() {
   return callable(
-      [](Canvas& own) { own.draw(shapes::Rect(0, 0, own.width(), own.height(), Ink, true)); });
+      [](Canvas& own) { own.draw(Rectangle(0, 0, own.width(), own.height(), Ink, true)); });
 }
 
 TEST_CASE("a text measures the built in face") {
-  const Size ink = shapes::measureText(nullptr, "AB", 1);
+  const Size ink = measureText(nullptr, "AB", 1);
   CHECK_EQ(ink.width, 12);
   CHECK_EQ(ink.height, 8);
 }
 
 TEST_CASE("a text scales the face it draws") {
-  const Size ink = shapes::measureText(nullptr, "AB", 2);
+  const Size ink = measureText(nullptr, "AB", 2);
   CHECK_EQ(ink.width, 24);
   CHECK_EQ(ink.height, 16);
 }
 
 TEST_CASE("the built in face is the one the library ships and the one a name answers to") {
   // A draw or a measurement that names no face, and a page that names "builtin", all mean this one.
-  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
-  CHECK_EQ(fonts::faceOr(nullptr), &BuiltinFont);
-  CHECK_EQ(fonts::find(nullptr), &BuiltinFont);
-  CHECK_EQ(fonts::find(""), &BuiltinFont);
-  CHECK_EQ(fonts::find("builtin"), &BuiltinFont);
+  CHECK_EQ(defaultFace(), &BuiltinFont);
+  CHECK_EQ(faceOr(nullptr), &BuiltinFont);
+  CHECK_EQ(find(nullptr), &BuiltinFont);
+  CHECK_EQ(find(""), &BuiltinFont);
+  CHECK_EQ(find("builtin"), &BuiltinFont);
 
   // Naming it is what a caller does to say so, and nullptr puts the built-in back.
-  fonts::setDefaultFace(&BuiltinFont);
-  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
-  fonts::setDefaultFace(nullptr);
-  CHECK_EQ(fonts::defaultFace(), &BuiltinFont);
-  CHECK_EQ(fonts::faceOr(nullptr), &BuiltinFont);
+  setDefaultFace(&BuiltinFont);
+  CHECK_EQ(defaultFace(), &BuiltinFont);
+  setDefaultFace(nullptr);
+  CHECK_EQ(defaultFace(), &BuiltinFont);
+  CHECK_EQ(faceOr(nullptr), &BuiltinFont);
 
   // A name the module does not hold draws in the default face rather than raising.
-  CHECK_EQ(fonts::find("sans12"), fonts::defaultFace());
+  CHECK_EQ(find("sans12"), defaultFace());
 }
 
 // A face with one glyph: a filled five-by-three box of ink, advancing six, drawn from the baseline.
@@ -63,28 +63,28 @@ const Glyph ProbeGlyphs[] = {{0, 5, 3, 6, 0, 0}};
 const Font ProbeFace = {Font::Kind::Variable, ProbeBits, 0, 0, ProbeGlyphs, 'A', 'A', 8};
 
 TEST_CASE("a registered face comes out of find and measures as its own face") {
-  REQUIRE(fonts::registerFont("probe", &ProbeFace));
+  REQUIRE(registerFont("probe", &ProbeFace));
 
-  const Font* found = fonts::find("probe");
+  const Font* found = find("probe");
   CHECK_EQ(found, &ProbeFace);
   // What the face says it is, not the built-in's six-by-eight cell.
-  const Size ink = shapes::measureText(found, "A", 1);
+  const Size ink = measureText(found, "A", 1);
   CHECK_EQ(ink.width, 5);
   CHECK_EQ(ink.height, 3);
 
   // One name is one face: the built-in's name cannot be taken, nor one that is already an answer.
-  CHECK_FALSE(fonts::registerFont("builtin", &ProbeFace));
-  CHECK_FALSE(fonts::registerFont("probe", &BuiltinFont));
-  CHECK_FALSE(fonts::registerFont("", &ProbeFace));
-  CHECK_FALSE(fonts::registerFont("probe", nullptr));
+  CHECK_FALSE(registerFont("builtin", &ProbeFace));
+  CHECK_FALSE(registerFont("probe", &BuiltinFont));
+  CHECK_FALSE(registerFont("", &ProbeFace));
+  CHECK_FALSE(registerFont("probe", nullptr));
 
   // A name it does not hold is a face to fall back to, so a page naming one still draws.
-  CHECK_EQ(fonts::find("missing"), fonts::defaultFace());
+  CHECK_EQ(find("missing"), defaultFace());
 }
 
 TEST_CASE("a registered name longer than an entry is refused") {
-  CHECK_FALSE(fonts::registerFont("a name too long to hold", &ProbeFace));
-  CHECK_EQ(fonts::find("a name too long to hold"), fonts::defaultFace());
+  CHECK_FALSE(registerFont("a name too long to hold", &ProbeFace));
+  CHECK_EQ(find("a name too long to hold"), defaultFace());
 }
 
 TEST_CASE("a text draws at its box") {
@@ -105,7 +105,7 @@ TEST_CASE("a text past its canvas is cut") {
 TEST_CASE("a string is centred on its canvas") {
   reset();
   View band = canvas.child(Rect(0, 0, 100, 20));
-  const Size ink = shapes::measureText(nullptr, "A", 1);
+  const Size ink = measureText(nullptr, "A", 1);
   const int16_t x = static_cast<int16_t>((100 - ink.width) / 2);
   const int16_t y = static_cast<int16_t>((20 - ink.height) / 2);
   aligned(sized(borrowedText(Box::whole(), "A"), ink))->draw(band);
@@ -113,7 +113,7 @@ TEST_CASE("a string is centred on its canvas") {
   CHECK_EQ(display.inkCount(0, 0, 100, y), 0);
 
   reset();
-  const Size large = shapes::measureText(nullptr, "A", 2);
+  const Size large = measureText(nullptr, "A", 2);
   const int16_t largeX = static_cast<int16_t>((100 - large.width) / 2);
   const int16_t largeY = static_cast<int16_t>((20 - large.height) / 2);
   aligned(sized(borrowedText(Box::whole(), "A", nullptr, 2), large))->draw(band);
@@ -180,14 +180,22 @@ TEST_CASE("a scrollbar with no rows draws nothing") {
 
 TEST_CASE("a duration formats each unit") {
   char out[16];
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 270, true, out, sizeof(out))), std::string("4m30s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 300, true, out, sizeof(out))), std::string("5m"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 45, true, out, sizeof(out))), std::string("45s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Seconds, 90, true, out, sizeof(out))), std::string("90s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 3723, true, out, sizeof(out))), std::string("1h2m3s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 7260, true, out, sizeof(out))), std::string("2h1m"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, true, out, sizeof(out))), std::string("0s"));
-  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, false, out, sizeof(out))), std::string("--"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 270, true, out, sizeof(out))),
+           std::string("4m30s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 300, true, out, sizeof(out))),
+           std::string("5m"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 45, true, out, sizeof(out))),
+           std::string("45s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Seconds, 90, true, out, sizeof(out))),
+           std::string("90s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 3723, true, out, sizeof(out))),
+           std::string("1h2m3s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Hours, 7260, true, out, sizeof(out))),
+           std::string("2h1m"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, true, out, sizeof(out))),
+           std::string("0s"));
+  CHECK_EQ(std::string(durationText(DurationFormat::Minutes, 0, false, out, sizeof(out))),
+           std::string("--"));
 }
 
 TEST_CASE("a duration draws its text") {
@@ -203,8 +211,7 @@ TEST_CASE("a duration draws its text") {
 TEST_CASE("an inverted paint flips the whole cell it was given") {
   reset();
   View band = canvas.child(Rect(0, 0, 20, 8));
-  inverted(callable([](Canvas& own) { own.draw(shapes::Rect(0, 0, 10, 8, Ink, true)); }))
-      ->draw(band);
+  inverted(callable([](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); }))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 0);
   CHECK_EQ(display.inkCount(10, 0, 10, 8), 10 * 8);
 }
@@ -218,9 +225,8 @@ TEST_CASE("an inverted paint with nothing to draw draws nothing") {
 
 TEST_CASE("an underlay clears the cell the child draws in") {
   reset();
-  canvas.draw(shapes::Rect(0, 0, 20, 8, Ink, true));
-  PaintNodeRef child = callable(
-      [](Canvas& own) { own.draw(shapes::Rect(0, 0, 10, 8, Ink, true)); });
+  canvas.draw(Rectangle(0, 0, 20, 8, Ink, true));
+  PaintNodeRef child = callable([](Canvas& own) { own.draw(Rectangle(0, 0, 10, 8, Ink, true)); });
   View band = canvas.child(Rect(0, 0, 20, 8));
   underlay(std::move(child))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8);
@@ -229,7 +235,7 @@ TEST_CASE("an underlay clears the cell the child draws in") {
 
 TEST_CASE("an underlay with nothing to draw clears nothing") {
   reset();
-  canvas.draw(shapes::Rect(0, 0, 20, 8, Ink, true));
+  canvas.draw(Rectangle(0, 0, 20, 8, Ink, true));
   const PaintNodeRef nothing = underlay(PaintNodeRef());
   CHECK(!nothing);
   CHECK_EQ(display.inkCount(0, 0, 20, 8), 20 * 8);
@@ -237,7 +243,7 @@ TEST_CASE("an underlay with nothing to draw clears nothing") {
 
 TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
   const Rect box(10, 20, 9, 5);  // 10..18 across, 20..24 down
-  const shapes::Triangle up = shapes::Triangle::up(box, Ink, true);
+  const Triangle up = Triangle::up(box, Ink, true);
   CHECK_EQ(up.x0, 14);  // the apex, on the middle column
   CHECK_EQ(up.y0, 20);
   CHECK_EQ(up.x1, 10);
@@ -246,7 +252,7 @@ TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
   CHECK_EQ(up.y2, 24);
   CHECK(up.filled);
 
-  const shapes::Triangle down = shapes::Triangle::down(box, Ink);
+  const Triangle down = Triangle::down(box, Ink);
   CHECK_EQ(down.x0, 10);
   CHECK_EQ(down.y0, 20);
   CHECK_EQ(down.x1, 18);
@@ -255,7 +261,7 @@ TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
   CHECK_EQ(down.y2, 24);
   CHECK_FALSE(down.filled);
 
-  const shapes::Triangle left = shapes::Triangle::left(box, Ink, true);
+  const Triangle left = Triangle::left(box, Ink, true);
   CHECK_EQ(left.x0, 10);  // the apex, on the middle row
   CHECK_EQ(left.y0, 22);
   CHECK_EQ(left.x1, 18);
@@ -263,7 +269,7 @@ TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
   CHECK_EQ(left.x2, 18);
   CHECK_EQ(left.y2, 24);
 
-  const shapes::Triangle right = shapes::Triangle::right(box, Ink, true);
+  const Triangle right = Triangle::right(box, Ink, true);
   CHECK_EQ(right.x0, 18);
   CHECK_EQ(right.y0, 22);
   CHECK_EQ(right.x1, 10);
@@ -274,7 +280,7 @@ TEST_CASE("a triangle factory inscribes the arrow in its rectangle") {
 
 TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
   reset();
-  canvas.draw(shapes::Triangle::up(Rect(10, 10, 9, 6), Ink, true));
+  canvas.draw(Triangle::up(Rect(10, 10, 9, 6), Ink, true));
   CHECK(display.anyInk(14, 10, 1, 1));   // the apex, on the middle column
   CHECK(!display.anyInk(10, 10, 1, 1));  // the corner beside it is outside the arrow
   CHECK(display.anyInk(10, 15, 1, 1));   // the base, corner to corner
@@ -285,10 +291,10 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
 
 TEST_CASE("the faces the library ships answer to their names") {
   // The ttyp0 faces are registered as the library loads, so a page names one and is given it back.
-  CHECK_EQ(fonts::find("ttyp011"), &Ttyp011);
-  CHECK_EQ(fonts::find("ttyp016"), &Ttyp016);
-  CHECK_EQ(fonts::find("ttyp022"), &Ttyp022);
-  CHECK_NE(fonts::find("ttyp016"), fonts::defaultFace());
+  CHECK_EQ(find("ttyp011"), &Ttyp011);
+  CHECK_EQ(find("ttyp016"), &Ttyp016);
+  CHECK_EQ(find("ttyp022"), &Ttyp022);
+  CHECK_NE(find("ttyp016"), defaultFace());
 
   // The built-in is a fixed face, drawn straight from glcdfont.c's packing, and the ttyp0 faces are
   // tables of glyphs.
@@ -296,7 +302,7 @@ TEST_CASE("the faces the library ships answer to their names") {
   CHECK(Ttyp016.kind == Font::Kind::Variable);
 
   // A name the library does not hold is still a draw: it falls back rather than raising.
-  CHECK_EQ(fonts::find("ttyp012"), fonts::defaultFace());
+  CHECK_EQ(find("ttyp012"), defaultFace());
 }
 
 TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") {
@@ -308,7 +314,7 @@ TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") 
   const Font face = {Font::Kind::Fixed, bits.data(), 2, 3};
 
   // The face's cell, not the classic six-by-eight: two columns and a blank, three rows.
-  const Size ink = shapes::measureText(&face, "AA", 1);
+  const Size ink = measureText(&face, "AA", 1);
   CHECK_EQ(ink.width, 6);
   CHECK_EQ(ink.height, 3);
 
@@ -322,13 +328,13 @@ TEST_CASE("a fixed face draws the cell it declares rather than the built-in's") 
 
 TEST_CASE("a ttyp0 face measures and draws the glyph it was converted from") {
   // The ink of an 'A' in the three sizes, as the u8g2 glyphs measured it.
-  const Size small = shapes::measureText(&Ttyp011, "A", 1);
+  const Size small = measureText(&Ttyp011, "A", 1);
   CHECK_EQ(small.width, 4);
   CHECK_EQ(small.height, 8);
-  const Size middle = shapes::measureText(&Ttyp016, "A", 1);
+  const Size middle = measureText(&Ttyp016, "A", 1);
   CHECK_EQ(middle.width, 6);
   CHECK_EQ(middle.height, 10);
-  const Size large = shapes::measureText(&Ttyp022, "A", 1);
+  const Size large = measureText(&Ttyp022, "A", 1);
   CHECK_EQ(large.width, 10);
   CHECK_EQ(large.height, 13);
 
@@ -360,7 +366,7 @@ TEST_CASE("a readout stacks a reading too wide for its glass over the target") {
   const SystemState state = readoutState(-101.3f, 45.6f);
   reset();
   View band = canvas.child(Rect(0, 0, 128, 30));
-  panel::page::pressureReadout(Box::whole(), state, 0.5f)->draw(band);
+  pressureReadout(Box::whole(), state, 0.5f)->draw(band);
 
   // The reading is centred across the top cell and the target flush to the end of the lower one,
   // the pair centred down the 30 rows it was given: three clear above, sixteen, eight, three clear.
@@ -376,7 +382,7 @@ TEST_CASE("a readout puts the target beside the reading when there is room") {
   const SystemState state = readoutState(-12.3f, 45.6f);
   reset();
   View band = canvas.child(Rect(0, 0, 128, 32));
-  panel::page::pressureReadout(Box::whole(), state, 1.0f)->draw(band);
+  pressureReadout(Box::whole(), state, 1.0f)->draw(band);
 
   // Five characters at scale two are 60 pixels of ink, centred in the first half and eight rows
   // down; four are 48, centred in the second, so no pixel of one is drawn in the other's half.
