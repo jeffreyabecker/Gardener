@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "Clock.h"
 #include "panel/page/BoolScene.h"
 #include "panel/page/DurationScene.h"
 #include "panel/page/Overlay.h"
@@ -227,8 +228,8 @@ TEST_CASE("a stack showing nothing draws no overlay") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
 }
 
-// The strip is the node itself: four equal cells across the rows it is handed, the unit's suffix in
-// the first and the gauge in the last.
+// The strip is the node itself: five columns across the rows it is handed, the unit's suffix in the
+// first and the gauge in the last.
 TEST_CASE("the status strip draws its own cells") {
   SystemState state;
   state.unit = DisplayUnit::Kpa;
@@ -243,6 +244,15 @@ TEST_CASE("the status strip draws its own cells") {
   // The rune is a bitmap at the top of the links' second column, an eighth of the strip in.
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth / 4 + PageWidth / 8), 0, 16, 9));
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
+
+  // The strip names the Adafruit face itself, so its marks survive a design whose codes start at
+  // 0x20: under ttyp0 the idle circle and the unit's suffix would be nothing at all.
+  setDefaultFamily(findFamily("ttyp0"));
+  reset();
+  overlay.draw(band);
+  setDefaultFamily(nullptr);
+  CHECK(display.anyInk(0, 0, PageWidth / 4, OverlayRows));
+  CHECK(display.anyInk(static_cast<int16_t>(PageWidth / 2), 0, PageWidth / 4, OverlayRows));
 }
 
 // The gauge is the battery face's mark turned a quarter, so a full pack inks the bars an empty one
@@ -265,6 +275,39 @@ TEST_CASE("the gauge inks a full pack more than an empty one") {
   reset();
   empty.draw(band);
   CHECK(packed > display.inkCount(left, 0, PageWidth / 4, OverlayRows));
+}
+
+// A chamber that is moving shows the face's own triangle: up for a pull, down for a vent, lit for the
+// first 650 ms of each second and gone for the rest of it.
+TEST_CASE("a moving chamber shows its triangle") {
+  const int16_t stateLeft = static_cast<int16_t>(PageWidth / 2);
+  const int16_t markRows = 3;
+  const int16_t markWidth = 5;
+  SystemState pulling;
+  pulling.runState = RunState::Pulling;
+  Overlay strip(pulling);
+  host::reset();
+  reset();
+  View band = canvas.child(Rect(0, 0, PageWidth, OverlayRows));
+  strip.draw(band);
+  // Pointing up, so the ink is one pixel at the apex and five along the base.
+  CHECK(display.inkCount(stateLeft, markRows, markWidth, 1) <
+        display.inkCount(stateLeft, static_cast<int16_t>(markRows + 4), markWidth, 1));
+
+  SystemState venting;
+  venting.runState = RunState::Venting;
+  Overlay down(venting);
+  reset();
+  down.draw(band);
+  CHECK(display.inkCount(stateLeft, markRows, markWidth, 1) >
+        display.inkCount(stateLeft, static_cast<int16_t>(markRows + 4), markWidth, 1));
+
+  // Past the lit part of the second the mark is gone.
+  host::advance(700);
+  reset();
+  down.draw(band);
+  CHECK_EQ(display.inkCount(stateLeft, 0, PageWidth / 4, OverlayRows), 0);
+  host::reset();
 }
 
 TEST_CASE("a scene paints as soon as it is pushed") {

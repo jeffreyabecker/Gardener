@@ -7,13 +7,14 @@
 
 namespace gardener {
 
-// The status strip across the bottom of the glass, in four equal cells: the unit's suffix, the two
-// ways in, the run state and the battery. It is a paint over the state the panel was handed, so the
-// stack sets it once and each frame draws the machine as it stands when that frame is drawn.
+// The status strip across the bottom of the glass, in five columns: the unit's suffix, the serial
+// link, the Bluetooth rune, the run state and the gauge. It is a paint over the state the panel was
+// handed, so the stack sets it once and each frame draws the machine as it stands when that frame is
+// drawn.
 class Overlay : public gfx::PaintNode {
  public:
-  // The rows the overlay takes across the bottom of the glass, which is the height its four cells
-  // are drawn for.
+  // The rows the overlay takes across the bottom of the glass, which is the height its columns are
+  // drawn for.
   static constexpr int16_t Height = 12;
 
   explicit Overlay(const SystemState& state) : state_(state) {}

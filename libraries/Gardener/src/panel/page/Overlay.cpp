@@ -5,25 +5,20 @@
 #include "core/Units.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "shapes/Shapes.h"
 #include "shapes/Text.h"
 
 namespace gardener {
 namespace {
 
-// The glyphs the overlay draws, from the Adafruit face's symbol range: the serial link, and the two
-// states that stand still while the chamber does. The two that move it are arrows, drawn as shapes
-// so that each is a triangle rather than the face's few pixels of one.
-constexpr uint8_t SerialGlyph = 0x15;
-constexpr uint8_t HoldGlyph = 0x0A;
-constexpr uint8_t FaultGlyph = 0x58;
-constexpr uint8_t IdleGlyph = 0x08;
-
-// The box a moving state's arrow fills: the width and height of the glyph it stands in for, one row
-// down from it, so the cell reads the same size whichever of the two it is showing.
-constexpr int16_t ArrowTop = 3;
-constexpr int16_t ArrowWidth = 5;
-constexpr int16_t ArrowHeight = 5;
+// The marks the strip draws, by the CP437 names the Adafruit face gives them: the link arrow, the
+// empty circle an idle chamber shows, the filled square a held one shows, the double exclamation a
+// fault shows, and the two triangles the moving states show.
+constexpr uint8_t SerialGlyph = 0x12;  // UP DOWN ARROW
+constexpr uint8_t HoldGlyph = 0xFE;    // BLACK SQUARE
+constexpr uint8_t FaultGlyph = 0x13;   // DOUBLE EXCLAMATION MARK
+constexpr uint8_t IdleGlyph = 0x09;    // WHITE CIRCLE
+constexpr uint8_t PullGlyph = 0x1E;    // BLACK UP-POINTING TRIANGLE
+constexpr uint8_t VentGlyph = 0x1F;    // BLACK DOWN-POINTING TRIANGLE
 
 // The Bluetooth rune, named the way a page names a bitmap: the width and the height, then one bit
 // per pixel, most-significant bit first, two bytes to a row.
@@ -51,9 +46,11 @@ bool movingLit(uint32_t nowMs) { return nowMs % 1000 < 650; }
 // A battery that is low shows its fill for every other half second.
 bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 
-// The face the overlay's glyphs and suffix are drawn in: an overlay cell holds one eight-row line,
-// and the panel's design is chosen by a taller box than that.
-const gfx::Family* rowFace() { return gfx::findFamily("overlay"); }
+// The face the strip's glyphs and its unit suffix are drawn in: the Adafruit 5x7, which holds the
+// CP437 marks the cells name and whose line box is the eight rows a cell carries. It is named here
+// rather than taken from the default because the panel's design is chosen for a taller box, and a
+// variable face that starts at 0x20 holds none of these marks.
+const gfx::Family* adafruitFace() { return gfx::findFamily("adafruit"); }
 
 // The face the gauge's levels are drawn in: u8g2's battery marks, whose first six codes are a level
 // each and whose seventh is a bolt for the charge.
@@ -66,7 +63,7 @@ constexpr int16_t GlyphRows = 8;
 
 gfx::PaintNodeRef oneGlyph(uint8_t code) {
   const char value[] = {static_cast<char>(code), '\0'};
-  return gfx::text(gfx::Box(0, GlyphTop, 0, GlyphRows, true, false), value, rowFace(),
+  return gfx::text(gfx::Box(0, GlyphTop, 0, GlyphRows, true, false), value, adafruitFace(),
                    gfx::Justify::Start);
 }
 
@@ -74,7 +71,7 @@ gfx::PaintNodeRef oneGlyph(uint8_t code) {
 // hands each of these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
   return gfx::text(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix,
-                   rowFace());
+                   adafruitFace());
 }
 
 // The serial link's glyph, at the top-left of its column.
@@ -90,13 +87,11 @@ gfx::PaintNodeRef bluetoothRune(bool connected) {
 }
 
 gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
-  // A state that moves the chamber shows an arrow, lit for part of each second; the three that
-  // stand still show a glyph.
+  // A state that moves the chamber is lit for part of each second; the three that stand still show
+  // their mark all the while.
   if (state == RunState::Pulling || state == RunState::Venting) {
     if (!movingLit(nowMs)) return gfx::PaintNodeRef();
-    const gfx::Box box(0, ArrowTop, ArrowWidth, ArrowHeight);
-    return state == RunState::Pulling ? gfx::triangle(box, gfx::Arrow::Up, gfx::Ink, true)
-                                      : gfx::triangle(box, gfx::Arrow::Down, gfx::Ink, true);
+    return oneGlyph(state == RunState::Pulling ? PullGlyph : VentGlyph);
   }
   uint8_t glyph = IdleGlyph;
   switch (state) {
