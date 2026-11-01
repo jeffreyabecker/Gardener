@@ -38,6 +38,13 @@ A family is the cuts of one design, shortest first, and `Fonts.h` names the four
 rungs of a design are a statement about which sizes the product has, and a rung is added when a band
 needs one rather than because the source offers it.
 
+`registerFamilyAlias` adds a generic name for a design: an alias is what a page or a record can say
+— `body`, say — while a composition chooses the family behind it, so the page draws in whatever
+design the composition points the word at. An alias may be registered before its family and answers
+nothing until the family lands, registering the same alias again moves it to another family, and an
+alias names a family rather than another alias. Aliases and families share one namespace: a family
+takes no name an alias holds and an alias takes no family's.
+
 `tools/fonts/from_u8g2.py` converts a u8g2 single-font `.c` file into the pair of files beside these,
 so a size or range can be regenerated rather than hand-edited: u8g2 keeps a face packed and
 run-length encoded, and the tool decodes it into this library's plain, byte-aligned glyph bitmaps.

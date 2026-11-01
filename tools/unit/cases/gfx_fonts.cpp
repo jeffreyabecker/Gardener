@@ -1,6 +1,6 @@
-// The fonts module's two tables of names: the faces a caller registers and the families, which are
-// a design's cuts ordered shortest first. The shipped names are the drawing cases' because they are
-// what a page draws with; what a caller adds is here.
+// The fonts module's tables of names: the families a caller registers, which are a design's cuts
+// ordered shortest first, and the aliases, which are generic names pointed at them. The shipped
+// names are the drawing cases' because they are what a page draws with; what a caller adds is here.
 
 #include <string.h>
 
@@ -202,9 +202,16 @@ TEST_CASE("a caller registers a family and its cuts come back ordered") {
   static const Font large = probeFace(8);
   const Font* cuts[] = {&large, &small};  // written tallest first on purpose
 
+  // An alias may be registered before the family it names: it answers nothing until a family holds
+  // the name, and a name an alias points at cannot become another alias in the meantime.
+  REQUIRE(registerFamilyAlias("probe text", "probe design"));
+  CHECK_EQ(findFamily("probe text"), nullptr);
+  CHECK_FALSE(registerFamilyAlias("probe design", "ttyp0"));
+
   REQUIRE(registerFamily("probe design", cuts, 2));
   const Family* family = findFamily("probe design");
   REQUIRE(family != nullptr);
+  CHECK_EQ(findFamily("probe text"), family);
   CHECK_EQ(strcmp(family->name, "probe design"), 0);
   CHECK_EQ(family->count, 2);
   CHECK_EQ(family->cuts[0], &small);
@@ -216,6 +223,51 @@ TEST_CASE("a caller registers a family and its cuts come back ordered") {
   const Size ink = measureText(family->cuts[1], "A", 1);
   CHECK_EQ(ink.width, 2);
   CHECK_EQ(ink.height, 8);
+}
+
+TEST_CASE("an alias answers the family it names") {
+  // A generic name answers a shipped design and a caller's family alike, and a lookup through it is
+  // the lookup through the family's own name.
+  REQUIRE(registerFamilyAlias("body", "ttyp0"));
+  REQUIRE(registerFamilyAlias("clock", "probe design"));
+  CHECK_EQ(findFamily("body"), findFamily("ttyp0"));
+  CHECK_EQ(findFamily("clock"), findFamily("probe design"));
+  CHECK_EQ(resolve(findFamily("body"), 45).face, resolve(findFamily("ttyp0"), 45).face);
+}
+
+TEST_CASE("a second registration moves an alias to another family") {
+  REQUIRE(registerFamilyAlias("body", "x11"));
+  CHECK_EQ(findFamily("body"), findFamily("x11"));
+  CHECK_EQ(findFamily("body")->cuts[0], findFamily("x11")->cuts[0]);
+}
+
+TEST_CASE("an alias is refused a name, a target or a slot the module cannot hold") {
+  // Three aliases are held by the cases above, so five of the eight are free.
+  CHECK_FALSE(registerFamilyAlias(nullptr, "ttyp0"));
+  CHECK_FALSE(registerFamilyAlias("", "ttyp0"));
+  CHECK_FALSE(registerFamilyAlias("body", nullptr));
+  CHECK_FALSE(registerFamilyAlias("body", ""));
+  CHECK_FALSE(registerFamilyAlias("a name too long to hold", "ttyp0"));
+  CHECK_FALSE(registerFamilyAlias("body", "a family name too long"));
+
+  // A name stands for one thing: a family's is not an alias's to take, and a family takes no name
+  // an alias holds. The family table still has slots here, so the second refusal is the name.
+  CHECK_FALSE(registerFamilyAlias("ttyp0", "x11"));
+  CHECK_FALSE(registerFamilyAlias("probe design", "ttyp0"));
+  static const Font probe = probeFace(2);
+  const Font* one[] = {&probe};
+  CHECK_FALSE(registerFamily("body", one, 1));
+
+  // An alias names a family, not another alias, and not itself.
+  CHECK_FALSE(registerFamilyAlias("spare", "body"));
+  CHECK_FALSE(registerFamilyAlias("self", "self"));
+
+  REQUIRE(registerFamilyAlias("spare", "ttyp0"));
+  REQUIRE(registerFamilyAlias("spare2", "ttyp0"));
+  REQUIRE(registerFamilyAlias("spare3", "ttyp0"));
+  REQUIRE(registerFamilyAlias("spare4", "ttyp0"));
+  REQUIRE(registerFamilyAlias("spare5", "ttyp0"));
+  CHECK_FALSE(registerFamilyAlias("spare6", "ttyp0"));
 }
 
 TEST_CASE("a family is refused a name, a cut or a size the module cannot hold") {
