@@ -96,7 +96,7 @@ bool Routines::begin() {
   // The strip the stack draws over every page: one paint over the state the panel was handed, so it
   // is set once and each frame reads the machine as it stands when that frame is drawn.
   ux_.setOverlay(static_cast<int16_t>(display_.height() - Overlay::Height),
-                 Overlay(state_).paint());
+                 std::make_unique<Overlay>(state_));
 
   resetToRoot();
   return true;

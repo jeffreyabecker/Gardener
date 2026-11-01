@@ -131,24 +131,21 @@ gfx::PaintNodeRef batteryCell(int8_t percent, bool low, uint32_t nowMs) {
 
 }  // namespace
 
-gfx::PaintNodeRef Overlay::paint() const {
+void Overlay::draw(gfx::Canvas& canvas) const {
   // The strip reads the state as it draws, so one copy is taken then and the four cells are drawn
   // from one instant rather than from four reads of an object a task is publishing into.
-  const SystemState* state = &state_;
-  return gfx::callable([state](gfx::Canvas& canvas) {
-    const SystemState now = *state;
-    const uint32_t nowMs = millis();
-    const int8_t percent = now.batteryPresent ? static_cast<int8_t>(now.batteryPercent) : -1;
+  const SystemState now = state_;
+  const uint32_t nowMs = millis();
+  const int8_t percent = now.batteryPresent ? static_cast<int8_t>(now.batteryPercent) : -1;
 
-    // The strip clears its own rows first: the page canvas stops where the overlay starts, so
-    // nothing else touches them and they keep whatever the last frame left.
-    gfx::underlay(
-        gfx::row(1.0f, gfx::column(0.25f, unitCell(now.unit)),
-                 gfx::column(0.25f, linksCell(now.serialConnected, now.bluetoothConnected)),
-                 gfx::column(0.25f, stateCell(now.runState, nowMs)),
-                 gfx::column(0.25f, batteryCell(percent, now.batteryLow, nowMs))))
-        ->draw(canvas);
-  });
+  // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
+  // else touches them and they keep whatever the last frame left.
+  gfx::underlay(
+      gfx::row(1.0f, gfx::column(0.25f, unitCell(now.unit)),
+               gfx::column(0.25f, linksCell(now.serialConnected, now.bluetoothConnected)),
+               gfx::column(0.25f, stateCell(now.runState, nowMs)),
+               gfx::column(0.25f, batteryCell(percent, now.batteryLow, nowMs))))
+      ->draw(canvas);
 }
 
 }  // namespace gardener

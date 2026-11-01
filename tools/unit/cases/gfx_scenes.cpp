@@ -14,6 +14,7 @@
 
 #include "panel/page/BoolScene.h"
 #include "panel/page/DurationScene.h"
+#include "panel/page/Overlay.h"
 #include "panel/page/Scene.h"
 #include "panel/page/SettingsRows.h"
 #include "panel/page/Ux.h"
@@ -224,6 +225,21 @@ TEST_CASE("a stack showing nothing draws no overlay") {
   ux.setOverlay(OverlayTop, filledCell());
   CHECK_EQ(ux.poll(canvas, 300), 0);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
+// The strip is the node itself: four equal cells across the rows it is handed, the unit's suffix in
+// the first and the gauge in the last.
+TEST_CASE("the status strip draws its own cells") {
+  SystemState state;
+  state.unit = DisplayUnit::Kpa;
+  state.batteryPresent = true;
+  state.batteryPercent = 80;
+  Overlay overlay(state);
+  reset();
+  View band = canvas.child(Rect(0, 0, PageWidth, OverlayRows));
+  overlay.draw(band);
+  CHECK(display.anyInk(0, 0, PageWidth / 4, OverlayRows));
+  CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
 }
 
 TEST_CASE("a scene paints as soon as it is pushed") {
