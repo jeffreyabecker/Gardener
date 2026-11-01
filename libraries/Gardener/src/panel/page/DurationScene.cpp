@@ -11,24 +11,12 @@
 namespace gardener {
 namespace {
 
-// The rows the two fields are drawn at: twice the face the settings rows are drawn in, and the face
-// itself, because the panel's design is what an editor's field is not.
-constexpr int16_t FieldHeight = 16;
-
-// A band holding one string: the dashes centred at the field height.
-gfx::PaintNodeRef centredDashes() {
-  const gfx::Size ink = gfx::measureText(rowFace(), "--", 0, FieldHeight);
-  return gfx::aligned(gfx::sized(gfx::text(gfx::Box::whole(), "--", rowFace()), ink));
-}
-
-// One field of the pair: its title centred in an equal share of the row, and that title inverted
-// when it is the field the keys are stepping. The alignment places the title's own ink inside the
-// share, so the inverted box is the field rather than the whole cell.
+// One field of the pair: its title centred in an equal share of the row, and the whole share
+// inverted when it is the field the keys are stepping.
 gfx::Child field(const char* title, bool showing) {
-  const gfx::Size ink = gfx::measureText(rowFace(), title, 0, FieldHeight);
   gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
   if (showing) content = gfx::inverted(std::move(content));
-  return gfx::column(0.5f, gfx::aligned(gfx::sized(std::move(content), ink)));
+  return gfx::column(0.5f, std::move(content));
 }
 
 }  // namespace
@@ -122,10 +110,11 @@ void DurationScene::nudge(int8_t direction) {
 void DurationScene::canceled() { current_ = opened_; }
 
 // The two fields side by side, each an equal share of the band, with the one the keys are stepping
-// inverted. A setting holding nothing has no fields to show, so the band prints `--`.
-gfx::PaintNodeRef DurationScene::pageContents() {
+// inverted. A setting holding nothing has no fields to show, so the band prints `--` where they
+// would be, at the cut the band's height takes.
+gfx::PaintNodeRef DurationScene::pageContents(gfx::Size) {
   if (!hasValue()) {
-    return centredDashes();
+    return gfx::text(gfx::Box::whole(), "--", rowFace());
   }
   minutes_ = minutesText();
   seconds_ = secondsText();

@@ -119,7 +119,7 @@ TEST_CASE("a number band centres the value") {
   // and takes the cut the band's height holds.
   setDefaultFamily(findFamily("ttyp0"));
   reset();
-  number.pageContents()->draw(band);
+  number.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(0, 0, 40, 24));
   CHECK_EQ(display.inkCount(0, 0, 40, 4), 0);
   CHECK_EQ(display.inkCount(0, 20, 40, 4), 0);
@@ -221,6 +221,21 @@ TEST_CASE("a choice steps and wraps") {
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
 }
 
+TEST_CASE("a choice inverts the row showing, not just its words") {
+  NoGestures gestures;
+  Ux ux;
+  String label("Choice");
+  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  reset();
+  View band = canvas.child(Rect(0, 0, PageWidth, 36));
+  choice.pageContents({band.width(), band.height()})->draw(band);
+
+  // Three eight-row rows centred in the band: Alpha at 6, Beta at 14, Gamma at 22. The selected
+  // row's corner, outside its label, is ink; the row above it is paper.
+  CHECK(display.anyInk(0, 14, 4, 4));
+  CHECK_EQ(display.inkCount(0, 6, 4, 4), 0);
+}
+
 TEST_CASE("a key no entry names shows the first") {
   NoGestures gestures;
   Ux ux;
@@ -319,7 +334,7 @@ TEST_CASE("a choice band inverts the entry showing") {
   ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()->draw(band);
+  choice.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.inkCount(0, 14, PageWidth, 8) > PageWidth * 8 / 2);
   CHECK(display.inkCount(0, 6, PageWidth, 8) < PageWidth * 8 / 2);
 }
@@ -331,7 +346,7 @@ TEST_CASE("a choice band prints every title") {
   ChoiceProbe choice(gestures, ux, label, "a", threeEntries(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()->draw(band);
+  choice.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(0, 6, PageWidth, 8));
   CHECK(display.anyInk(0, 14, PageWidth, 8));
   CHECK(display.anyInk(0, 22, PageWidth, 8));
@@ -344,7 +359,7 @@ TEST_CASE("a choice band prints dashes for nothing") {
   ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  choice.pageContents()->draw(band);
+  choice.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(0, 10, PageWidth, 16));
   CHECK_EQ(display.inkCount(0, 6, PageWidth, 4), 0);
 }
@@ -394,9 +409,12 @@ TEST_CASE("a bool switch inverts the state showing") {
   BoolProbe toggle(gestures, ux, label, "false", false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  toggle.pageContents()->draw(band);
+  toggle.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.inkCount(14, 10, 36, 16) > display.inkCount(84, 10, 24, 16));
   CHECK(display.anyInk(84, 10, 24, 16));
+  // The whole chip is inverted, not the words: its corner is ink and the other chip's is paper.
+  CHECK(display.anyInk(0, 0, 4, 4));
+  CHECK_EQ(display.inkCount(64, 0, 4, 4), 0);
 }
 
 TEST_CASE("a bool switch shows the nothing first") {
@@ -406,9 +424,11 @@ TEST_CASE("a bool switch shows the nothing first") {
   BoolProbe nullable(gestures, ux, label, "", true);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  nullable.pageContents()->draw(band);
+  nullable.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.inkCount(9, 10, 24, 16) > display.inkCount(46, 10, 36, 16));
   CHECK(display.anyInk(95, 10, 24, 16));
+  CHECK(display.anyInk(0, 0, 4, 4));
+  CHECK_EQ(display.inkCount(43, 0, 4, 4), 0);
 }
 
 TEST_CASE("a choice bar shows where the window is") {
@@ -421,13 +441,13 @@ TEST_CASE("a choice bar shows where the window is") {
   ChoiceProbe many(gestures, ux, label, String(5), six, false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  many.pageContents()->draw(band);
+  many.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(126, 2, 2, 8));
   CHECK_EQ(display.inkCount(126, 15, 2, 6), 0);
 
   ChoiceProbe few(gestures, ux, label, "b", threeEntries(), false);
   reset();
-  few.pageContents()->draw(band);
+  few.pageContents({band.width(), band.height()})->draw(band);
   CHECK_EQ(display.inkCount(126, 2, 2, 4), 0);
 }
 
@@ -520,6 +540,12 @@ TEST_CASE("a nullable duration holds nothing") {
   DurationProbe duration(gestures, ux, label, NAN, 5, 10, 3600, true);
   CHECK_EQ(std::string(duration.text().c_str()), std::string("--"));
   CHECK_EQ(duration.isNull(), 1);
+  // The band prints the dashes where the fields would be, at the cut the band's height takes, with
+  // no measure of the words sizing a box first.
+  reset();
+  View band = canvas.child(Rect(0, 0, PageWidth, 36));
+  duration.pageContents({band.width(), band.height()})->draw(band);
+  CHECK(display.anyInk(0, 0, PageWidth, 36));
   duration.nudge(-1);
   CHECK_EQ(duration.isNull(), 1);
   duration.nudge(1);
@@ -535,14 +561,19 @@ TEST_CASE("a duration band inverts the stage") {
   DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
-  duration.pageContents()->draw(band);
+  duration.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.inkCount(20, 10, 24, 16) > display.inkCount(78, 10, 36, 16));
   CHECK(display.anyInk(78, 10, 36, 16));
+  // The whole field is inverted, not the words: its corner is ink and the other field's is paper.
+  CHECK(display.anyInk(0, 0, 4, 4));
+  CHECK_EQ(display.inkCount(64, 0, 4, 4), 0);
 
   duration.press("forward:single");
   reset();
-  duration.pageContents()->draw(band);
+  duration.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.inkCount(78, 10, 36, 16) > display.inkCount(20, 10, 24, 16));
+  CHECK(display.anyInk(64, 0, 4, 4));
+  CHECK_EQ(display.inkCount(0, 0, 4, 4), 0);
 }
 
 // --- the editor page --------------------------------------------------------
@@ -564,7 +595,7 @@ TEST_CASE("an editor page is three bands") {
   String label("Number");
   PageProbe page(gestures, ux, label);
   View band = canvas.child(Rect(0, 0, PageWidth, 52));
-  page.pageComponents()->draw(band);
+  page.pageComponents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(0, 0, PageWidth, 8));
   CHECK_EQ(display.inkCount(0, 8, PageWidth, 36), 0);
   CHECK(display.anyInk(0, 44, PageWidth, 8));

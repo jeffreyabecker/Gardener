@@ -23,7 +23,7 @@ class BoolScene : public ChoiceScene {
   std::any value() const override;
 
  protected:
-  gfx::PaintNodeRef pageContents() override;
+  gfx::PaintNodeRef pageContents(gfx::Size band) override;
 
  private:
   bool on() const;

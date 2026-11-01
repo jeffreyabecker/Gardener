@@ -7,7 +7,6 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 #include "panel/page/SettingsScene.h"
-#include "shapes/Shapes.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -28,6 +27,16 @@ constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
 
+// The contents band of a page this size, as the layout divides it: the title's share off the top,
+// and the contents taking their share of the height clamped to what the title left. It is the rule
+// LayoutNode::spanOf applies, so a kind told this band is given the one its paint lands in.
+gfx::Size contentsBand(gfx::Size page) {
+  const int16_t title = gfx::resolveSpan(page.height, TitleBandPct);
+  const int16_t room = static_cast<int16_t>(page.height - title);
+  const int16_t contents = gfx::resolveSpan(page.height, ContentsBandPct);
+  return {page.width, contents > room ? room : contents};
+}
+
 // One line of chrome centred in the band it is given: the family's cut that the band's height
 // holds, placed by the leaf itself, so the title is the size its band can carry.
 gfx::PaintNodeRef centredLine(const char* text, const gfx::Family* family) {
@@ -46,6 +55,19 @@ gfx::Size arrowsInk(uint8_t count) {
   return {width, ArrowHeight};
 }
 
+// The four arrows as the pixels the triangle of each one fills in a 5x7 box: the width and the
+// height, then one byte a row, most significant bit first. The triangle fill steps each edge a row
+// at a time, so these are the exact pixels the band drew before the marks were glyphs.
+constexpr const char* UpArrowBits = "0507203030707878f8";
+constexpr const char* DownArrowBits = "0507f8787870303020";
+constexpr const char* BackArrowBits = "0507083878f8381808";
+constexpr const char* ForwardArrowBits = "050780e0f0f8e0c080";
+
+// One arrow in a cell of the item's ink.
+gfx::PaintNodeRef arrowGlyph(const char* bits) {
+  return gfx::icon(gfx::Box(0, 0, ArrowWidth, ArrowHeight), bits);
+}
+
 // One item of the band: the ink it draws and the paper that separates it from the next item.
 gfx::Child hintItem(gfx::PaintNodeRef paint, gfx::Size ink) {
   return gfx::column(static_cast<float>(ink.width + HintGap),
@@ -60,34 +82,27 @@ EditorScene::EditorScene(GestureQueue& gestures, Ux& ux, String& label)
 void EditorScene::setValidator(CurriedValidator validator) { validator_ = std::move(validator); }
 
 gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
-  const uint8_t count = second == HintArrow::None ? 1 : 2;
-  return hintItem(gfx::callable([first, second](gfx::Canvas& cell) {
-                    // The box one arrow fills in the item's ink: the first at its left, the second after
-                    // the gap between them.
-                    const auto draw = [&cell](HintArrow arrow, int16_t left) {
-                      const gfx::Rect at(left, 0, ArrowWidth, ArrowHeight);
-                      switch (arrow) {
-                        case HintArrow::Up:
-                          cell.draw(gfx::Triangle::up(at, gfx::Ink, true));
-                          break;
-                        case HintArrow::Down:
-                          cell.draw(gfx::Triangle::down(at, gfx::Ink, true));
-                          break;
-                        case HintArrow::Back:
-                          cell.draw(gfx::Triangle::left(at, gfx::Ink, true));
-                          break;
-                        case HintArrow::Forward:
-                          cell.draw(gfx::Triangle::right(at, gfx::Ink, true));
-                          break;
-                        case HintArrow::None:
-                          break;
-                      }
-                    };
-                    draw(first, 0);
-                    if (second != HintArrow::None)
-                      draw(second, static_cast<int16_t>(ArrowWidth + HintGap));
-                  }),
-                  arrowsInk(count));
+  const auto glyph = [](HintArrow arrow) {
+    switch (arrow) {
+      case HintArrow::Up:
+        return arrowGlyph(UpArrowBits);
+      case HintArrow::Down:
+        return arrowGlyph(DownArrowBits);
+      case HintArrow::Back:
+        return arrowGlyph(BackArrowBits);
+      case HintArrow::Forward:
+        return arrowGlyph(ForwardArrowBits);
+      case HintArrow::None:
+        break;
+    }
+    return gfx::PaintNodeRef();
+  };
+  if (second == HintArrow::None) return hintItem(glyph(first), arrowsInk(1));
+  // The pair side by side in the item's ink: the first arrow, the paper between them, the second.
+  return hintItem(gfx::row(1.0f, gfx::column(static_cast<float>(ArrowWidth), glyph(first)),
+                           gfx::column(static_cast<float>(HintGap), gfx::PaintNodeRef()),
+                           gfx::column(static_cast<float>(ArrowWidth), glyph(second))),
+                  arrowsInk(2));
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
@@ -134,15 +149,17 @@ bool EditorScene::handle(const char* gesture) {
   return false;
 }
 
-void EditorScene::drawPage(gfx::Canvas& canvas) { pageComponents()->draw(canvas); }
+void EditorScene::drawPage(gfx::Canvas& canvas) {
+  pageComponents({canvas.width(), canvas.height()})->draw(canvas);
+}
 
-gfx::PaintNodeRef EditorScene::pageComponents() {
+gfx::PaintNodeRef EditorScene::pageComponents(gfx::Size page) {
   return gfx::column(1.0f, gfx::row(TitleBandPct, titleComponent()),
-                     gfx::row(ContentsBandPct, pageContents()),
+                     gfx::row(ContentsBandPct, pageContents(contentsBand(page))),
                      gfx::row(HintBandPct, hintComponent()));
 }
 
-gfx::PaintNodeRef EditorScene::pageContents() { return gfx::PaintNodeRef(); }
+gfx::PaintNodeRef EditorScene::pageContents(gfx::Size) { return gfx::PaintNodeRef(); }
 gfx::PaintNodeRef EditorScene::titleComponent() {
   // The composition's design, which the title band's height spends on the largest cut it holds.
   return centredLine(title(), nullptr);

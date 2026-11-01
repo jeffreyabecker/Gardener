@@ -3,7 +3,6 @@
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 #include "panel/page/SettingsScene.h"
-#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
@@ -12,18 +11,12 @@ namespace {
 constexpr const char* OnKey = "true";
 constexpr const char* OffKey = "false";
 
-// The rows a state prints at: twice the face the settings rows are drawn in, which is the height of
-// a two-row chip, and the face itself, because a ttyp0 cut is chosen by a taller box than a chip's.
-constexpr int16_t ChipHeight = 16;
-
-// One state of the switch: its label centred in an equal share of the row, and that label inverted
-// when it is the state showing. The alignment places the label's own ink inside the share, so the
-// inverted box is the label rather than the whole cell.
+// One state of the switch: its label centred in an equal share of the row, and the whole share
+// inverted when it is the state showing.
 gfx::Child chip(const char* title, bool showing, float share) {
-  const gfx::Size ink = gfx::measureText(rowFace(), title, 0, ChipHeight);
   gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
   if (showing) content = gfx::inverted(std::move(content));
-  return gfx::column(share, gfx::aligned(gfx::sized(std::move(content), ink)));
+  return gfx::column(share, std::move(content));
 }
 
 // The states as one row of equal cells: `--`, OFF and ON when the setting is nullable and OFF and
@@ -48,6 +41,8 @@ bool BoolScene::on() const { return value_ == OnKey; }
 
 std::any BoolScene::value() const { return hasValue_ ? std::any(on()) : std::any(); }
 
-gfx::PaintNodeRef BoolScene::pageContents() { return switchRow(nullable_, hasValue_, on()); }
+gfx::PaintNodeRef BoolScene::pageContents(gfx::Size) {
+  return switchRow(nullable_, hasValue_, on());
+}
 
 }  // namespace gardener

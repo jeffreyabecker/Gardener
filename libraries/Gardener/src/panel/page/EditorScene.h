@@ -44,8 +44,14 @@ class EditorScene : public Scene {
 
   void drawPage(gfx::Canvas& canvas) override;
   bool handle(const char* gesture) override;
-  virtual gfx::PaintNodeRef pageComponents();
-  virtual gfx::PaintNodeRef pageContents();
+
+  // The page's three bands, built for the size it will be drawn in. A kind that shows as many rows
+  // as the band has room for cannot answer a tree without the band's size, so the size is what a
+  // page is asked with rather than something a paint works out as it draws.
+  virtual gfx::PaintNodeRef pageComponents(gfx::Size page);
+
+  // The contents band, at the size this page's contents band takes.
+  virtual gfx::PaintNodeRef pageContents(gfx::Size band);
 
   virtual gfx::PaintNodeRef titleComponent();
   virtual gfx::PaintNodeRef hintComponent();
