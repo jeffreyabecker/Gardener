@@ -12,6 +12,7 @@
 #include "core/SystemState.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
+#include "machine/Machine.h"
 #include "panel/GestureQueue.h"
 #include "panel/page/SettingsRows.h"
 #include "panel/page/SystemSettings.h"
@@ -101,6 +102,12 @@ TEST_CASE("the system list shows the unit, the jingle and the maximum in that or
   CHECK_EQ(std::string(rows[2]->key().c_str()), std::string("max_duration"));
   CHECK_EQ(std::string(rows[2]->label().c_str()), std::string("MAX"));
   CHECK_EQ(std::string(rows[2]->text(std::any(int32_t(900))).c_str()), std::string("15m"));
+}
+
+TEST_CASE("the maximum row cannot offer more than the machine grants") {
+  Bench bench;
+  const gardener::SettingDeclaration declaration = bench.system.rows()[2]->declaration();
+  CHECK_EQ(declaration.max, static_cast<float>(gardener::CONTROL_MAX_RUN_MS / 1000));
 }
 
 TEST_CASE("the system list reads the document it edits") {

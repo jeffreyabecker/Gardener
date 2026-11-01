@@ -20,6 +20,7 @@ class MockStaticMachine
   var start_ok
   var status
   var elapsed_ms
+  var limit_ms
 
   def init()
     self.phase = RampedStaticPhase.READY
@@ -33,10 +34,12 @@ class MockStaticMachine
     self.start_ok = true
     self.status = "READY"
     self.elapsed_ms = 0
+    self.limit_ms = 0
   end
 
   def configure(start_pressure, target_pressure, initial_ms, target_ms, total_ms)
     self.configured = [start_pressure, target_pressure, initial_ms, target_ms, total_ms]
+    self.limit_ms = total_ms
   end
 
   def place_start()
@@ -172,6 +175,9 @@ def the_page_draws_what_its_machine_reports()
   var mock = under[1]
   mock.status = "RAMP"
   mock.elapsed_ms = 20000
+  # The run the machine reports, shorter than the total the page was configured with: the bar is
+  # scaled to what the device allows rather than to what the settings hold.
+  mock.limit_ms = 100000
 
   harness.beat(1)
   assert_true(mock.advances >= 1, "a beat did not advance the machine")
@@ -180,6 +186,9 @@ def the_page_draws_what_its_machine_reports()
             "the page is not drawing its machine's stage")
   assert_eq(child_at(child_at(tree, 1), 1).value, screen.duration_text("minutes", 20),
             "the page is not drawing the run's clock")
+  var bar = child_at(child_at(tree, 2), 1)
+  assert_true(bar.percent > 19.9 && bar.percent < 20.1,
+              "the page is not scaling the bar to the run its machine reports")
 end
 
 test("the page draws the stage and the clock its machine reports",

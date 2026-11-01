@@ -66,12 +66,15 @@ class OpenQueue : public CommandQueue {
   std::vector<MachineCommand> commands_;
 };
 
-// The machine the wire is built over, one per case, with a clock that starts at zero.
+// The machine the wire is built over, one per case, with a clock that starts at zero. A case that
+// needs a document's maximum hands one in; without one the device keeps its shipped fifteen minutes.
 struct Bench {
-  Bench()
+  explicit Bench(const char* settingsDocument = nullptr)
       : machine(logger, &pump, &sensor, &valve), settings(&library, state), player(buzzerPart),
         link(io, nullptr, logger, queue,
              gardener::SerialParts{machine, board, battery, settings, player, library}) {
+    if (settingsDocument != nullptr) library.put("/cfg/settings.ini", settingsDocument);
+    settings.begin();
     gardener::host::reset();
     machine.boot();
     link.begin();
@@ -227,11 +230,34 @@ TEST_CASE("a fractional hold is refused with its minimum") {
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=hold value=1.5 min=1\n"));
 }
 
-TEST_CASE("a hold past the ceiling is refused with its maximum") {
+TEST_CASE("a hold past the device's maximum is refused with its maximum") {
   Bench bench;
   bench.sensor.read(12.0f);
   bench.send("vacuum start 901\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=hold value=901 max=900\n"));
+}
+
+TEST_CASE("the document's maximum bounds a start and is what the wire reports") {
+  Bench bench("[device]\nmax_duration=600\n");
+  bench.sensor.read(12.0f);
+
+  bench.send("vacuum get\n");
+  CHECK(contains(bench.reply(), " max_run=600 "));
+
+  bench.send("vacuum start 601\n");
+  CHECK_EQ(bench.reply(), std::string("err out_of_range field=hold value=601 max=600\n"));
+}
+
+TEST_CASE("a start with no hold asks for the document's maximum") {
+  Bench bench("[device]\nmax_duration=600\n");
+  bench.sensor.read(12.0f);
+  bench.send("vacuum start\n");
+  CHECK_EQ(bench.reply(), std::string("ok state=PULL\n"));
+
+  MachineCommand start{MachineCommand::Op::Stop};
+  REQUIRE(bench.queue.take(start));
+  CHECK(start.op == MachineCommand::Op::Start);
+  CHECK_EQ(start.value, 600.0f);
 }
 
 TEST_CASE("stop answers the release it queues") {

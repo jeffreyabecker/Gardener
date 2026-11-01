@@ -131,13 +131,6 @@ saves, which is the serial and wire `device set` path. Blocked by: nothing has d
 should be given the stored depth again, whether a target a page sets should save where it is set, or
 whether the key and the published field should go now that the setter is what moves them.
 
-## The stored maximum run duration
-
-`[device] max_duration` is the system settings list's cap on a run, but nothing reads it: the home
-scene times a run without a limit and the static page works to its own total. Blocked by: nothing
-has decided whether the cap trims a page's total, ends the run at the cap, or replaces the machine's
-fixed fifteen-minute deadline.
-
 ## One file to compile
 
 A task in [scripts/arduino.py](../scripts/arduino.py) that keeps a verbose build's compile command

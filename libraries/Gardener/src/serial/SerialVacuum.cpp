@@ -5,6 +5,7 @@
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 #include "serial/SerialLink.h"
+#include "storage/DeviceSettings.h"
 
 namespace gardener {
 namespace {
@@ -14,7 +15,7 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, Machine& machine) {
+void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
   VacuumSystem& vacuum = machine.vacuum();
   io.print("ok pressure_kpa=");
   io.print(vacuum.currentPressureKpa(), 2u);
@@ -37,8 +38,9 @@ void get(Stream& io, Machine& machine) {
   io.print(fault[0] ? fault : "none");
   io.print(" hold=");
   io.print(vacuum.running() ? vacuum.holdSeconds() : 0u);
+  // The longest run the device allows: its stored maximum, which is what a start is granted.
   io.print(" max_run=");
-  io.print((uint32_t)(CONTROL_MAX_RUN_MS / 1000));
+  io.print(maxRunSeconds(settings.maxDurationSeconds()));
   io.print(" up=");
   io.print(machine.uptimeMs());
   io.print('\n');
@@ -88,11 +90,12 @@ void target(Stream& io, const String& args, CommandOutbox& outbox) {
   io.print('\n');
 }
 
-void start(Stream& io, const String& args, Machine& machine, CommandOutbox& outbox) {
-  // The optional argument is the hold, in whole seconds. Without one the run gets the compiled
-  // maximum, which is also its ceiling.
-  const uint32_t maxSeconds = CONTROL_MAX_RUN_MS / 1000;
-  uint32_t holdSeconds = 0;
+void start(Stream& io, const String& args, Machine& machine, const DeviceSettings& settings,
+           CommandOutbox& outbox) {
+  // The optional argument is the hold, in whole seconds. Without one the run gets the device's
+  // maximum, which is also its ceiling. A document that names no maximum leaves the machine's own.
+  const uint32_t maxSeconds = maxRunSeconds(settings.maxDurationSeconds());
+  uint32_t holdSeconds = maxSeconds;
   if (!args.isEmpty()) {
     const int space = args.indexOf(' ');
     const String token = space < 0 ? args : args.substring(0, (unsigned int)space);
@@ -192,7 +195,7 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    get(io, parts_.machine);
+    get(io, parts_.machine, parts_.settings);
     return;
   }
   if (verb == "target") {
@@ -200,7 +203,7 @@ void SerialLink::executeVacuum(Stream& io) {
     return;
   }
   if (verb == "start") {
-    start(io, args, parts_.machine, outbox_);
+    start(io, args, parts_.machine, parts_.settings, outbox_);
     return;
   }
   if (verb == "stop") {

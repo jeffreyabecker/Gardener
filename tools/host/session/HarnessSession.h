@@ -317,6 +317,9 @@ class HarnessSession {
   size_t frameworkBytes_ = 0;
   size_t loadedBytes_ = 0;
   size_t imageBytes_ = 0;
+  // The maximum the data image's document names, put back before every case: a case that cuts a run
+  // with a shorter maximum does not change the device the next case runs on.
+  int32_t bootMaxDurationSeconds_ = 0;
 
   MemoryFiles files_;
   BufferLogger logger_;

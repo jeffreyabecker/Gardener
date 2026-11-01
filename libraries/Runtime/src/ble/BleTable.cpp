@@ -115,7 +115,8 @@ void BleLink::describe(uint8_t index) {
       setUint16(chr, vacuum.running() ? (uint16_t)vacuum.holdSeconds() : 0);
       break;
     case MaxRunS:
-      setUint16(chr, (uint16_t)(CONTROL_MAX_RUN_MS / 1000));
+      // The longest run the device allows: its stored maximum, which is what a start is granted.
+      setUint16(chr, (uint16_t)maxRunSeconds(settings_.maxDurationSeconds()));
       break;
     case WriteResult:
       break;  // the last refusal, written when a write is turned away
@@ -197,11 +198,12 @@ void BleLink::applyPending() {
   if (holdWrite_.has) {
     holdWrite_.has = false;
     const uint16_t seconds = holdWrite_.value;
-    const uint16_t maxSeconds = static_cast<uint16_t>(CONTROL_MAX_RUN_MS / 1000);
+    const uint16_t maxSeconds =
+        static_cast<uint16_t>(maxRunSeconds(settings_.maxDurationSeconds()));
     if (seconds > maxSeconds) {
       refuse(HoldS, WriteOutOfRange);
     } else {
-      // 0 asks for the compiled maximum, which is what a start with no hold gets.
+      // 0 asks for the device's maximum, which is what a start with no hold gets.
       requestedHoldS_ = seconds;
     }
     describe(HoldS);
@@ -264,7 +266,10 @@ uint8_t BleLink::execute(uint8_t opcode) {
         if (strcmp(refusal, "no_reading") == 0) return ResultNoReading;
         return ResultUnknownOpcode;
       }
-      const MachineCommand start{MachineCommand::Op::Start, (float)requestedHoldS_};
+      const uint16_t holdSeconds = requestedHoldS_ == 0
+                                       ? (uint16_t)maxRunSeconds(settings_.maxDurationSeconds())
+                                       : requestedHoldS_;
+      const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
       post(start);
       return ResultApplied;
     }

@@ -84,6 +84,7 @@ bool HarnessSession::begin() {
   // The order Panel::boot brings them up in, minus the bus and the keys. The document is read before
   // the interpreter, which reads it when its modules are installed.
   settings_.begin();
+  bootMaxDurationSeconds_ = settings_.maxDurationSeconds();
   jingles_.begin();
   battery_.begin();
   buzzerPart_.begin();
@@ -189,6 +190,10 @@ void HarnessSession::backHold() { outbox_.post(MachineCommand{MachineCommand::Op
 void HarnessSession::reset() {
   // Leaving the page under test runs default's activate(), which is where the device would be.
   routines_.showDefault();
+
+  // The document's own maximum is the device's at the start of a case, whatever the case before it
+  // set to cut a run short.
+  settings_.setMaxDurationSeconds(bootMaxDurationSeconds_);
 
   outbox_.post(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();

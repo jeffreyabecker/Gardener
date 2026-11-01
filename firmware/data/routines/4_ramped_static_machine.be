@@ -36,6 +36,9 @@ class RampedStaticMachine
   var initial_ms
   var target_ms
   var total_ms
+  var limit_ms
+  var max_ms
+  var session_ms
   var on_edit
 
   def init(on_edit)
@@ -45,20 +48,33 @@ class RampedStaticMachine
     self.target = 0.0
     self.command_at = 0
     self.command_target = 0.0
+    self.limit_ms = 0
+    self.max_ms = 0
+    self.session_ms = 0
     self.on_edit = on_edit
   end
 
   # The profile's numbers, written by the page's init_from_settings: the two holds and the total,
-  # with the ramp derived from them once. A total the holds do not fit is known here, before
-  # anything starts, and refused by start().
+  # and the run the device's maximum leaves of it, which the ramp is derived from. A total the holds
+  # do not fit is known once the page configures the machine, before anything starts, and refused by
+  # start().
   def configure(start_pressure, target_pressure, initial_ms, target_ms, total_ms)
     self.start_pressure = start_pressure
     self.target_pressure = target_pressure
     self.initial_ms = initial_ms
     self.target_ms = target_ms
     self.total_ms = total_ms
-    self.ramp_ms = total_ms - initial_ms - target_ms
+    self.apply_max()
     self.target = start_pressure
+  end
+
+  # The device's maximum and the run it leaves: the profile's own total, or the maximum where that is
+  # shorter. The ramp is derived from the run the page will actually take, so a profile the device
+  # cuts runs a shorter ramp rather than overrunning its own schedule.
+  def apply_max()
+    self.max_ms = device.max_duration() * 1000
+    self.limit_ms = self.total_ms < self.max_ms ? self.total_ms : self.max_ms
+    self.ramp_ms = self.limit_ms - self.initial_ms - self.target_ms
   end
 
   # What a press means, once the page has read the phase: a command by name, answered here. It is a
@@ -88,21 +104,29 @@ class RampedStaticMachine
 
   # The profile is built once, when the run starts. A total that is exactly the two holds is a
   # profile with no ramp, but a total shorter than them describes none, so the run is refused and
-  # the page stays ready.
+  # the page stays ready. The device's maximum is read again here, so a document edited since the
+  # page was activated is the one the run is held to: the session begins with this press.
   def start()
-    if self.ramp_ms < 0
+    self.apply_max()
+    if self.total_ms - self.initial_ms - self.target_ms < 0
       device.log("durations overlap")
       return false
     end
     self.held = 0
     self.target = self.start_pressure
     vacuum.set_target_pressure(self.target)
+    self.session_ms = device.now_ms()
     return self.approach()
   end
 
   # A resume commands the target the frozen clock points at and waits for the machine to arrive
-  # there, so the chamber is back on the profile before the clock is.
+  # there, so the chamber is back on the profile before the clock is. It does not open a new
+  # session: a pause costs the run the time it is held, so a session already spent cannot resume.
   def unpause()
+    if self.session_left(device.now_ms()) <= 0
+      self.max_reached()
+      return false
+    end
     self.target = self.schedule(self.held)
     vacuum.set_target_pressure(self.target)
     return self.approach()
@@ -197,21 +221,47 @@ class RampedStaticMachine
     return state == "IDLE" && (self.phase != RampedStaticPhase.APPROACH || now - self.mark >= 1000)
   end
 
+  # What is left of the device's maximum, counted from the start the session began at rather than
+  # from a resume: a pause costs the run its wall-clock time even though it freezes the profile's own
+  # clock.
+  def session_left(now)
+    return self.max_ms - (now - self.session_ms)
+  end
+
+  # The run as the session leaves it: the profile's total, or the profile time the device's maximum
+  # still pays for once the arrival is behind it. A paused session buys the profile no more than it
+  # has left, so a trimmed run finishes exactly as the maximum lands rather than a beat after it.
+  def trim(now)
+    var affordable = self.session_left(now) + self.held
+    self.limit_ms = self.total_ms < affordable ? self.total_ms : affordable
+    self.ramp_ms = self.limit_ms - self.initial_ms - self.target_ms
+  end
+
   def advance(now)
     if self.phase == RampedStaticPhase.READY || self.phase == RampedStaticPhase.PAUSED
       return
     end
 
     var state = vacuum.state()
-    if self.lost(state, now)
+    if state == "FAULT"
       self.abandon()
       return
     end
 
     # The arrival at the start pressure is t = 0: the schedule describes what the chamber does once
-    # it is there, so the approach before it is not part of the run's clock.
+    # it is there, so the approach before it is not part of the run's clock. The session is, though,
+    # so a maximum that leaves nothing of the approach ends the run before it reaches the clock.
     if self.phase == RampedStaticPhase.APPROACH
+      if self.lost(state, now)
+        self.abandon()
+        return
+      end
+      if self.session_left(now) <= 0
+        self.max_reached()
+        return
+      end
       if state == "HOLD" && vacuum.get_target_pressure() == self.target
+        self.trim(now)
         self.mark = now - self.held
         self.command_at = now
         self.command_target = self.target
@@ -220,9 +270,19 @@ class RampedStaticMachine
       return
     end
 
+    # The profile's own end is read before the chamber's: a run trimmed to the device's maximum
+    # lands on the same beat the machine's deadline does, and that run is complete rather than lost.
     var elapsed = now - self.mark
-    if elapsed >= self.total_ms
+    if elapsed >= self.limit_ms
       self.finish()
+      return
+    end
+    if self.lost(state, now)
+      self.abandon()
+      return
+    end
+    if self.session_left(now) <= 0
+      self.max_reached()
       return
     end
     self.command(now, elapsed)
@@ -237,6 +297,17 @@ class RampedStaticMachine
     self.held = 0
     device.log("complete")
     ux.pop_to_root()
+  end
+
+  # The device's maximum ran out before the profile did: release the chamber, put the starting target
+  # back and stay on the page, ready, as a deadline on the machine itself leaves it.
+  def max_reached()
+    vacuum.stop()
+    self.phase = RampedStaticPhase.READY
+    self.held = 0
+    self.target = self.start_pressure
+    vacuum.set_target_pressure(self.start_pressure)
+    device.log("max reached")
   end
 
   # The run ended without the page asking: a latched fault, or a release the run's deadline caused.

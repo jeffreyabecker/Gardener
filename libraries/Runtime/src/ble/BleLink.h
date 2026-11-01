@@ -137,7 +137,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   PendingByte unitWrite_;
 
   // The hold a write asked for, in whole seconds; the next start grants it, and 0 asks for the
-  // compiled maximum.
+  // device's maximum.
   uint16_t requestedHoldS_ = 0;
 
   // The last value sent for each on-change field, so a pass only notifies a

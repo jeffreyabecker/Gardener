@@ -62,9 +62,21 @@ static_assert(CONTROL_FLOOR_KPA >= CONTROL_MIN_TARGET_KPA, "the floor must admit
 static_assert(CONTROL_FLOOR_KPA <= 100.0f, "the sensor reads to 100 kPa below ambient");
 
 // --- The deadline on a run --------------------------------------------------
-// The longest hold the device will grant, and the most a start may ask for. Nothing else ends a
-// run on the controller's behalf: a link that keeps its port open but stops talking is released.
-constexpr uint32_t CONTROL_MAX_RUN_MS = 900000;
+// The longest hold the machine will grant, and the most a start may ask for: the same two hours the
+// device's own maximum can be set to. Nothing else ends a run on the controller's behalf: a link
+// that keeps its port open but stops talking is released.
+constexpr uint32_t CONTROL_MAX_RUN_MS = 7200000;
+
+// The hold a start is granted: the device's stored maximum, held to the machine's ceiling, or the
+// ceiling itself when the document names none. Every path that starts a run asks this, so the
+// document bounds a start from the wire and from a page alike, and a document edited past the
+// ceiling cannot promise a run the machine would cut short.
+inline uint32_t maxRunSeconds(int32_t storedSeconds) {
+  const uint32_t ceiling = CONTROL_MAX_RUN_MS / 1000;
+  if (storedSeconds <= 0) return ceiling;
+  const uint32_t stored = static_cast<uint32_t>(storedSeconds);
+  return stored < ceiling ? stored : ceiling;
+}
 
 // --- PID configuration from the pump and the chamber ------------------------
 // The loop's shape, rig-independent: the proportional correction time, the derivative's damping

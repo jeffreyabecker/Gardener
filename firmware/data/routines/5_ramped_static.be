@@ -1,6 +1,8 @@
 # 5_ramped_static.be — the timed profile routine: hold the start pressure, ramp to the target
 # pressure, hold that, and finish. The routine's glyph, the values it edits and the rule that binds
-# them, and the page, which holds the profile and draws it. It registers `ramped_static`.
+# them, and the page, which holds the profile and draws it. A profile longer than the device's
+# maximum runs trimmed to it, so the authored total stays in the settings while the run is shorter.
+# It registers `ramped_static`.
 
 import string
 
@@ -153,10 +155,11 @@ class RampedStatic
 
   # --- drawing -------------------------------------------------------------
 
-  # The drawing: the chrome from the run's values as they stand now.
+  # The drawing: the chrome from the run's values as they stand now, with the bar scaled to the run
+  # the device's maximum leaves rather than to the total the settings hold.
   def draw_page()
     return ramped_static_chrome(ramped_static_glyph, routines.title(self.routine_key),
-                                self.machine.status_text(), self.total_ms,
+                                self.machine.status_text(), self.machine.limit_ms,
                                 self.machine.elapsed())
   end
 end

@@ -51,6 +51,19 @@ end
 
 test("the phase follows the chamber, not the page", the_phase_follows_the_chamber)
 
+def a_run_ends_at_the_devices_maximum()
+  # The home run takes its deadline from the device rather than from a clock of its own: the machine
+  # releases the chamber when the maximum is up and the page's phase and clock follow it out.
+  harness.max_duration(2)
+  var machine = start_machine(HomeMachine())
+  drive_until(machine, "the run never started", 200, / -> machine.phase == HomePhase.RUNNING)
+  drive_until(machine, "the run outlived the device's maximum", 40,
+              / -> machine.phase == HomePhase.IDLE)
+  assert_nil(machine.elapsed(), "the clock outlived the run the maximum ended")
+end
+
+test("a run ends at the device's maximum", a_run_ends_at_the_devices_maximum)
+
 def a_start_while_a_run_is_going_changes_nothing()
   var machine = start_machine(HomeMachine())
   drive_until(machine, "the run never started", 200, / -> machine.phase == HomePhase.RUNNING)

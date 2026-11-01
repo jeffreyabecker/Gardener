@@ -17,8 +17,8 @@ namespace gardener {
 // document carries that this class does not name — one a later revision adds — is carried through a
 // write untouched.
 
-// The longest run the document grants when it names none: the machine's own deadline of fifteen
-// minutes, so a device that has never opened the settings list runs for the time it always has.
+// The longest run the document grants when it names none: the shipped document's fifteen minutes,
+// so a device that has never opened the settings list runs for the time it always has.
 constexpr int32_t DefaultMaxDurationSeconds = 900;
 
 class DeviceSettings {

@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "core/Units.h"
+#include "machine/Machine.h"
 #include "panel/page/SettingsRows.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "storage/DeviceSettings.h"
@@ -22,10 +23,11 @@ constexpr const char* UnitLabel = "UNIT";
 constexpr const char* JingleLabel = "JINGLE";
 constexpr const char* MaxDurationLabel = "MAX";
 
-// A minute is the step a run is thought about in, and two hours is the longest a page's own duration
-// can offer, so the device's cap cannot be set below what a page could ask for by accident.
+// A minute is the step a run is thought about in, and the ceiling is the machine's own: the list
+// offers exactly the longest hold the machine will grant, so it cannot promise a run the machine
+// would cut short.
 constexpr int32_t MaxDurationStepSeconds = 60;
-constexpr int32_t MaxDurationCeilingSeconds = 7200;
+constexpr int32_t MaxDurationCeilingSeconds = (int32_t)(CONTROL_MAX_RUN_MS / 1000);
 
 }  // namespace
 

@@ -60,7 +60,8 @@ class HomeMachine
   end
 
   # OK resumes the run, unless one is already going. The machine answers for itself: with no target,
-  # no reading or a latched fault, start() refuses and nothing changes.
+  # no reading or a latched fault, start() refuses and nothing changes. The run is granted the
+  # device's maximum, which vacuum.start() reads, so the clock never outlives what the device allows.
   def start()
     var state = vacuum.state()
     if state == "PULL" || state == "HOLD"

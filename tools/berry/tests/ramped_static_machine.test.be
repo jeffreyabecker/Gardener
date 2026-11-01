@@ -85,6 +85,57 @@ end
 
 test("Cancel pauses and OK resumes the run", a_pause_freezes_the_clock_and_unpause_resumes_it)
 
+def a_profile_inside_the_maximum_keeps_its_own_length()
+  harness.max_duration(600)
+  var machine = profile(5.0, 10.0, 10, 10, 30)
+  assert_eq(machine.limit_ms, 30000, "a run inside the device's maximum was trimmed")
+  assert_eq(machine.ramp_ms, 10000, "the ramp is not the profile's own")
+end
+
+test("a profile inside the device's maximum keeps its own length",
+     a_profile_inside_the_maximum_keeps_its_own_length)
+
+def a_profile_longer_than_the_maximum_runs_trimmed()
+  harness.max_duration(60)
+  var machine = profile(5.0, 10.0, 10, 10, 300)
+  assert_eq(machine.limit_ms, 60000, "the profile is not trimmed to the device's maximum")
+  assert_eq(machine.ramp_ms, 40000, "the ramp is not derived from the trimmed run")
+
+  ux.push(Scene())
+  machine.place_start()
+  drive(machine, 1)
+  assert_true(machine.start(), "the trimmed profile would not start")
+  drive_until(machine, "the trimmed profile never finished", 400,
+              / -> machine.phase == RampedStaticPhase.READY)
+  assert_eq(ux.depth(), 1, "the trimmed profile did not give the panel back")
+end
+
+test("a profile longer than the maximum runs trimmed and finishes",
+     a_profile_longer_than_the_maximum_runs_trimmed)
+
+def a_pause_counts_against_the_devices_maximum()
+  harness.max_duration(30)
+  var machine = profile(5.0, 20.0, 10, 10, 300)
+  assert_eq(machine.limit_ms, 30000, "the profile is not trimmed to the device's maximum")
+
+  machine.place_start()
+  drive(machine, 1)
+  assert_true(machine.start(), "the trimmed profile would not start")
+  drive_until(machine, "the run never arrived at the start pressure", 200,
+              / -> machine.phase == RampedStaticPhase.RUN)
+  drive(machine, 4)
+  assert_true(machine.pause(), "Cancel was not answered")
+
+  # The pause is still the session's time: the maximum is spent before the clock comes back, so the
+  # run cannot resume and the page goes back to ready rather than run under a deadline it has not got.
+  drive(machine, 120)
+  assert_true(!machine.unpause(), "a spent session was resumed")
+  assert_eq(machine.phase, RampedStaticPhase.READY, "a spent session did not go back to ready")
+end
+
+test("a pause counts against the device's maximum",
+     a_pause_counts_against_the_devices_maximum)
+
 def the_way_out_opens_the_list_and_leaves()
   var opened = []
   var machine = RampedStaticMachine(/ -> opened.push(1))

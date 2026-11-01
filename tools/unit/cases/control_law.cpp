@@ -114,18 +114,37 @@ TEST_CASE("a start while running keeps the first deadline") {
   CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
 }
 
+TEST_CASE("a stored maximum is held to the machine's ceiling") {
+  CHECK_EQ(gardener::maxRunSeconds(0), CONTROL_MAX_RUN_MS / 1000);
+  CHECK_EQ(gardener::maxRunSeconds(600), static_cast<uint32_t>(600));
+  CHECK_EQ(gardener::maxRunSeconds(CONTROL_MAX_RUN_MS / 1000 + 1), CONTROL_MAX_RUN_MS / 1000);
+}
+
 TEST_CASE("a hold of zero asks for the ceiling") {
   Rig rig;
-  runFrom(rig, 40.0f, 20.0f);
-  rig.system.start(0);
+  rig.sensor.read(40.0f);
+  rig.system.begin();
+  rig.system.setTarget(20.0f);
+  REQUIRE(rig.system.start(0));
   CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
 }
 
 TEST_CASE("a hold past the ceiling asks for the ceiling") {
   Rig rig;
-  runFrom(rig, 40.0f, 20.0f);
-  rig.system.start(901);
+  rig.sensor.read(40.0f);
+  rig.system.begin();
+  rig.system.setTarget(20.0f);
+  REQUIRE(rig.system.start(CONTROL_MAX_RUN_MS / 1000 + 1));
   CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
+}
+
+TEST_CASE("a hold inside the ceiling is granted as asked") {
+  Rig rig;
+  rig.sensor.read(40.0f);
+  rig.system.begin();
+  rig.system.setTarget(20.0f);
+  REQUIRE(rig.system.start(901));
+  CHECK_EQ(rig.system.holdSeconds(), static_cast<uint32_t>(901));
 }
 
 TEST_CASE("the deadline ends the run as a release and reports itself once") {

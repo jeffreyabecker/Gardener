@@ -90,6 +90,16 @@ int harnessSetting(bvm* vm) {
   be_return(vm);
 }
 
+// The device's maximum for the case about to run, in whole seconds: what the machine grants a start
+// and what a page times itself against. The session puts the document's own back before every case.
+int harnessMaxDuration(bvm* vm) {
+  if (be_top(vm) < 1 || !be_isint(vm, 1)) {
+    be_raise(vm, "type_error", "harness.max_duration(seconds)");
+  }
+  session->bindings().settings().setMaxDurationSeconds((int32_t)be_toint(vm, 1));
+  be_return_nil(vm);
+}
+
 int harnessBuzzerSounds(bvm* vm) {
   be_pushint(vm, session->buzzerPart().sounds());
   be_return(vm);
@@ -146,6 +156,7 @@ const bnfuncinfo HarnessLibrary[] = {
     {"wrote", harnessWrote},
     {"writes", harnessWrites},
     {"setting", harnessSetting},
+    {"max_duration", harnessMaxDuration},
     {"buzzer_sounds", harnessBuzzerSounds},
     {"mem", harnessMem},
     {"mem_peak", harnessMemPeak},

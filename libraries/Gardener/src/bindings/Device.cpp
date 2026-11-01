@@ -5,8 +5,10 @@
 #include "Modules.h"
 #include "core/SystemState.h"
 #include "core/Units.h"
+#include "machine/Machine.h"
 #include "panel/page/SystemSettings.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "storage/DeviceSettings.h"
 
 namespace gardener {
 namespace {
@@ -34,6 +36,15 @@ int deviceDisplayUnit(bvm* vm) {
   setReal(vm, record, "whole_step", info.wholeStep);
   setReal(vm, record, "sub_step", info.subStep);
   setInt(vm, record, "decimals", displayDecimals(unit));
+  be_return(vm);
+}
+
+// The longest run the device allows, in whole seconds: the stored maximum, or the machine's own
+// ceiling where the document names none. It is the grant vacuum.start() gives a run, so a page that
+// times itself asks the same document the settings list edits.
+int deviceMaxDuration(bvm* vm) {
+  BindingContext* bindings = boundContext(vm);
+  be_pushint(vm, (bint)maxRunSeconds(bindings->settings().maxDurationSeconds()));
   be_return(vm);
 }
 
@@ -125,6 +136,7 @@ int deviceSaveSettings(bvm* vm) {
 
 const bnfuncinfo DeviceLibrary[] = {
     {"display_unit", deviceDisplayUnit},
+    {"max_duration", deviceMaxDuration},
     {"save_settings", deviceSaveSettings},
     {"play_sequence", devicePlaySequence},
     {"tone", deviceTone},

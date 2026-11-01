@@ -68,14 +68,16 @@ int vacuumClamp(bvm* vm) {
 }
 
 // False when the machine would refuse: no valid reading, or a latched fault. A start while a run is
-// already going is a no-op that answers true.
+// already going is a no-op that answers true. The run is granted the device's maximum, so a page
+// that times a run of its own is bounded by the same document the settings list edits.
 int vacuumStart(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (!bindings->systemState().canStart) {
     be_pushbool(vm, false);
     be_return(vm);
   }
-  const MachineCommand start{MachineCommand::Op::Start};
+  const uint32_t holdSeconds = maxRunSeconds(bindings->settings().maxDurationSeconds());
+  const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
   bindings->post(start);
   be_pushbool(vm, true);
   be_return(vm);
