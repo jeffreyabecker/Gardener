@@ -245,8 +245,9 @@ TEST_CASE("the status strip draws its own cells") {
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth / 4 + PageWidth / 8), 0, 16, 9));
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
 
-  // The strip names the Adafruit face itself, so its marks survive a design whose codes start at
-  // 0x20: under ttyp0 the idle circle and the unit's suffix would be nothing at all.
+  // The marks name the Adafruit face themselves, so they survive a design whose codes start at
+  // 0x20: under ttyp0 the idle circle would be nothing at all, while the unit's suffix takes the
+  // default and is drawn in whatever the composition chose.
   setDefaultFamily(findFamily("ttyp0"));
   reset();
   overlay.draw(band);

@@ -6,7 +6,6 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -101,8 +100,8 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
-  return hintItem(gfx::text(gfx::Box::whole(), text, rowFace()),
-                  gfx::measureText(rowFace(), text, 0, SettingsRowHeight));
+  return hintItem(gfx::text(gfx::Box::whole(), text, nullptr),
+                  gfx::measureText(nullptr, text, 0, SettingsRowHeight));
 }
 
 gfx::Children EditorScene::hintItems() {
@@ -163,7 +162,7 @@ gfx::PaintNodeRef EditorScene::titleComponent() {
 gfx::PaintNodeRef EditorScene::hintComponent() {
   // A refused value answers in words, and the band is those words: the marks would say the keys
   // step a value the editor has not taken.
-  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), rowFace());
+  if (!refusal_.isEmpty()) return centredLine(refusal_.c_str(), nullptr);
   gfx::Children items = hintItems();
   // The gap separates an item from the next, so nothing follows the last of them.
   if (!items.empty())

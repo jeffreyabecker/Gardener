@@ -5,7 +5,6 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -14,7 +13,7 @@ namespace {
 // One field of the pair: its title centred in an equal share of the row, and the whole share
 // inverted when it is the field the keys are stepping.
 gfx::Child field(const char* title, bool showing) {
-  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
+  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, nullptr);
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::column(0.5f, std::move(content));
 }
@@ -114,7 +113,7 @@ void DurationScene::canceled() { current_ = opened_; }
 // would be, at the cut the band's height takes.
 gfx::PaintNodeRef DurationScene::pageContents(gfx::Size) {
   if (!hasValue()) {
-    return gfx::text(gfx::Box::whole(), "--", rowFace());
+    return gfx::text(gfx::Box::whole(), "--", nullptr);
   }
   minutes_ = minutesText();
   seconds_ = secondsText();

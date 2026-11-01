@@ -2,7 +2,6 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "panel/page/SettingsScene.h"
 
 namespace gardener {
 namespace {
@@ -14,7 +13,7 @@ constexpr const char* OffKey = "false";
 // One state of the switch: its label centred in an equal share of the row, and the whole share
 // inverted when it is the state showing.
 gfx::Child chip(const char* title, bool showing, float share) {
-  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
+  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, nullptr);
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::column(share, std::move(content));
 }

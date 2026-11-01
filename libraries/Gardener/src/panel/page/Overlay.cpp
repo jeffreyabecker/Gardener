@@ -70,8 +70,7 @@ gfx::PaintNodeRef oneGlyph(uint8_t code) {
 // A piece of the strip draws only what its arguments say, so one paint reads the state once and
 // hands each of these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
-  return gfx::text(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix,
-                   adafruitFace());
+  return gfx::text(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix, nullptr);
 }
 
 // The serial link's glyph, at the top-left of its column.
@@ -127,9 +126,9 @@ gfx::PaintNodeRef batteryCell(int8_t percent, bool low, uint32_t nowMs) {
   const char level[] = {static_cast<char>('0' + bars), '\0'};
 
   gfx::Paints mark;
-  mark.push_back(gfx::turned(
-      gfx::Transform(gfx::Rect(0, MarkTop, MarkWidth, MarkHeight)).rotate(90),
-      gfx::text(gfx::Box::whole(), level, batteryFace())));
+  mark.push_back(
+      gfx::turned(gfx::Transform(gfx::Rect(0, MarkTop, MarkWidth, MarkHeight)).rotate(90),
+                  gfx::text(gfx::Box::whole(), level, batteryFace())));
   if (percent < 0) mark.push_back(gfx::line(2, MarkTop + 1, 16, MarkTop + 6, gfx::Ink));
   return gfx::group(std::move(mark));
 }
@@ -146,12 +145,11 @@ void Overlay::draw(gfx::Canvas& canvas) const {
   // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
   // else touches them and they keep whatever the last frame left. Five columns across the rows: the
   // unit, the two links, the run state and the gauge.
-  gfx::underlay(
-      gfx::row(1.0f, gfx::column(CellShare, unitCell(now.unit)),
-               gfx::column(LinkShare, serialGlyph(now.serialConnected)),
-               gfx::column(LinkShare, bluetoothRune(now.bluetoothConnected)),
-               gfx::column(CellShare, stateCell(now.runState, nowMs)),
-               gfx::column(CellShare, batteryCell(percent, now.batteryLow, nowMs))))
+  gfx::underlay(gfx::row(1.0f, gfx::column(CellShare, unitCell(now.unit)),
+                         gfx::column(LinkShare, serialGlyph(now.serialConnected)),
+                         gfx::column(LinkShare, bluetoothRune(now.bluetoothConnected)),
+                         gfx::column(CellShare, stateCell(now.runState, nowMs)),
+                         gfx::column(CellShare, batteryCell(percent, now.batteryLow, nowMs))))
       ->draw(canvas);
 }
 

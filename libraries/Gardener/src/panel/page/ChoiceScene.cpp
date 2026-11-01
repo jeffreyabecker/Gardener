@@ -4,7 +4,6 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -17,7 +16,7 @@ constexpr int16_t Row = 8;
 // One row of the window: the entry's title filling the row, which the list inverts when the entry
 // is the one showing.
 gfx::PaintNodeRef rowOf(const ChoiceItem* item) {
-  return gfx::text(gfx::Box::whole(), item->title.c_str(), rowFace());
+  return gfx::text(gfx::Box::whole(), item->title.c_str(), nullptr);
 }
 
 }  // namespace
@@ -103,7 +102,7 @@ gfx::PaintNodeRef ChoiceScene::pageContents(gfx::Size band) {
     // The dashes in a row of the pitch the entries are drawn at, centred in the band: a band with
     // nothing to show prints the row a first entry would take.
     gfx::Child dashes =
-        gfx::row(static_cast<float>(Row), gfx::text(gfx::Box::whole(), "--", rowFace()));
+        gfx::row(static_cast<float>(Row), gfx::text(gfx::Box::whole(), "--", nullptr));
     return gfx::column(1.0f, gfx::children(std::move(dashes)),
                        gfx::Justification{gfx::Justify::Center, gfx::Justify::Center});
   }
