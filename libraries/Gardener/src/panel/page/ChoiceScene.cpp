@@ -1,19 +1,17 @@
 #include "panel/page/ChoiceScene.h"
 
-#include <string.h>
-
 #include <vector>
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
 namespace {
 
-// One row of the Adafruit face, which is the pitch a choice is drawn at: a ttyp0 cut's shortest
-// line box is ten rows, so the panel's design cannot be drawn in one.
-const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
+// The pitch a choice is drawn at: a ttyp0 cut's shortest line box is ten rows, so the panel's
+// design cannot be drawn in one.
 constexpr int16_t Row = 8;
 
 // One row of the window: the entry's title centred, inverted across the whole of the row when it is
@@ -44,7 +42,7 @@ void ChoiceScene::activate() { preview(); }
 // Forward on an entry showing is the page's work; with nothing showing there is no entry to hand
 // it, and a page that gave none drops the key as the editor always has.
 bool ChoiceScene::handle(const char* gesture) {
-  if (!closed_ && forward_ && hasValue_ && strcmp(gesture, "forward:single") == 0) {
+  if (!closed_ && forward_ && hasValue_ && Gestures::is(gesture, Gestures::ForwardSingle)) {
     preview();
     return true;
   }

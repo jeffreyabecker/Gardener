@@ -1,12 +1,12 @@
 #include "panel/page/EditorScene.h"
 
 #include <stdio.h>
-#include <string.h>
 
 #include <utility>
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "panel/page/SettingsScene.h"
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
 
@@ -18,20 +18,15 @@ namespace {
 constexpr int16_t SettingsMargin = 1;
 constexpr int16_t SettingsBorder = 1;
 constexpr int16_t SettingsPadding = 1;
-constexpr int16_t SettingsRow = 8;
+constexpr int16_t SettingsRowHeight = 8;
 constexpr int16_t SettingsGap = 2;
-constexpr int16_t SettingsChrome = 2 * (SettingsRow + SettingsGap);
+constexpr int16_t SettingsChrome = 2 * (SettingsRowHeight + SettingsGap);
 
 // The three bands of an editor page, as shares of the page it is given: the title, the contents
 // and the hint. The two chrome bands are the same height, so the contents take what they leave.
 constexpr float TitleBandPct = 0.15f;
 constexpr float ContentsBandPct = 0.7f;
 constexpr float HintBandPct = 0.15f;
-
-// The rows this scene draws that no cut of the panel's design can hold: the hint band is a hint's
-// height and the refusal is words in it, and the shortest line box of ttyp0 is ten rows, so both
-// name the face that fits an eight-row band.
-const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
 
 // One line of chrome centred in the band it is given: the family's cut that the band's height
 // holds, placed by the leaf itself, so the title is the size its band can carry.
@@ -97,7 +92,7 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
 
 gfx::Child EditorScene::wordsHint(const char* text) {
   return hintItem(gfx::text(gfx::Box::whole(), text, rowFace()),
-                  gfx::measureText(rowFace(), text, 0, SettingsRow));
+                  gfx::measureText(rowFace(), text, 0, SettingsRowHeight));
 }
 
 gfx::Children EditorScene::hintItems() {
@@ -106,17 +101,17 @@ gfx::Children EditorScene::hintItems() {
 
 bool EditorScene::handle(const char* gesture) {
   if (closed_) return false;
-  if (strcmp(gesture, "up:single") == 0) {
+  if (Gestures::is(gesture, Gestures::UpSingle)) {
     refusal_ = String();
     nudge(1);
     return true;
   }
-  if (strcmp(gesture, "down:single") == 0) {
+  if (Gestures::is(gesture, Gestures::DownSingle)) {
     refusal_ = String();
     nudge(-1);
     return true;
   }
-  if (strcmp(gesture, "ok:single") == 0) {
+  if (Gestures::is(gesture, Gestures::OkSingle)) {
     if (validator_) {
       const std::pair<bool, String> answer = validator_(value());
       if (!answer.first) {
@@ -130,7 +125,7 @@ bool EditorScene::handle(const char* gesture) {
     ux_.pop();
     return true;
   }
-  if (strcmp(gesture, "cancel:single") == 0) {
+  if (Gestures::is(gesture, Gestures::CancelSingle)) {
     closed_ = true;
     canceled();
     ux_.pop();

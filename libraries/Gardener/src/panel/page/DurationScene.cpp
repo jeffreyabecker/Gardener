@@ -2,18 +2,17 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
 namespace {
 
-// The rows the two fields are drawn at: twice the Adafruit face's, and the face itself, because the
-// panel's design is what an editor's field is not.
-const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
+// The rows the two fields are drawn at: twice the face the settings rows are drawn in, and the face
+// itself, because the panel's design is what an editor's field is not.
 constexpr int16_t FieldHeight = 16;
 
 // A band holding one string: the dashes centred at the field height.
@@ -93,11 +92,11 @@ gfx::Children DurationScene::hintItems() {
 }
 
 bool DurationScene::handle(const char* gesture) {
-  if (strcmp(gesture, "forward:single") == 0) {
+  if (Gestures::is(gesture, Gestures::ForwardSingle)) {
     stage_ = Stage::Seconds;
     return true;
   }
-  if (strcmp(gesture, "back:single") == 0) {
+  if (Gestures::is(gesture, Gestures::BackSingle)) {
     stage_ = Stage::Minutes;
     return true;
   }

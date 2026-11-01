@@ -34,7 +34,7 @@ void ButtonsTick::tick() {
 
   static const String ResetGesture =
       String("ok:") + ResetHoldSeconds + "+cancel:" + ResetHoldSeconds;
-  if (gesture == ResetGesture) {
+  if (Gestures::is(gesture.c_str(), ResetGesture.c_str())) {
     logger_.warn("panel: reset held, rebooting");
     reset_ = true;
     return;
@@ -45,7 +45,7 @@ void ButtonsTick::tick() {
   // five seconds stops and vents. The stop is the device's, not the routine's — the routine is
   // being taken off the stack, so nothing of it runs to stop itself. The request tells the page to
   // show the root.
-  if (gesture == QuitGesture) {
+  if (Gestures::is(gesture.c_str(), QuitGesture.c_str())) {
     logger_.warn("panel: cancel held, force-quitting");
     outbox_.post(MachineCommand{MachineCommand::Op::Stop});
     home_ = true;

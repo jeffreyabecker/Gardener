@@ -43,6 +43,7 @@ using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
 using gardener::GestureQueue;
+namespace Gestures = gardener::Gestures;
 using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
@@ -225,6 +226,27 @@ TEST_CASE("a gesture reaches the queue the page drains") {
   String gesture;
   REQUIRE(page.routines.takePress(gesture));
   CHECK_EQ(std::string(gesture.c_str()), std::string("back:single"));
+}
+
+TEST_CASE("the gesture vocabulary compares a whole gesture and its parts") {
+  CHECK(Gestures::is(Gestures::OkSingle, "ok:single"));
+  CHECK_FALSE(Gestures::is(Gestures::OkDouble, Gestures::OkSingle));
+  CHECK_FALSE(Gestures::is(nullptr, Gestures::OkSingle));
+  CHECK_FALSE(Gestures::is(Gestures::OkSingle, nullptr));
+
+  // A page that treats two keys alike names both of them.
+  CHECK(Gestures::isAny(Gestures::BackSingle, {Gestures::BackSingle, Gestures::CancelSingle}));
+  CHECK(Gestures::isAny(Gestures::CancelSingle, {Gestures::BackSingle, Gestures::CancelSingle}));
+  CHECK_FALSE(Gestures::isAny(Gestures::OkSingle, {Gestures::BackSingle, Gestures::CancelSingle}));
+  CHECK_FALSE(Gestures::isAny(Gestures::OkSingle, {}));
+
+  // A chord is not either of its parts, and a word is a part only when the whole of it is there.
+  CHECK(Gestures::hasPart("ok:single+cancel:5", Gestures::OkSingle));
+  CHECK(Gestures::hasPart("ok:single+cancel:5", "cancel:5"));
+  CHECK_FALSE(Gestures::hasPart(Gestures::OkDouble, Gestures::OkSingle));
+  CHECK_FALSE(Gestures::hasPart("ok:single+cancel:5", "ok"));
+  CHECK_FALSE(Gestures::hasPart(nullptr, Gestures::OkSingle));
+  CHECK_FALSE(Gestures::hasPart(Gestures::OkSingle, ""));
 }
 
 TEST_CASE("the gauge and the piezo are updated on the same millisecond") {

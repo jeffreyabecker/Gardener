@@ -2,6 +2,7 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "panel/page/SettingsScene.h"
 #include "shapes/Text.h"
 
 namespace gardener {
@@ -11,9 +12,8 @@ namespace {
 constexpr const char* OnKey = "true";
 constexpr const char* OffKey = "false";
 
-// The rows a state prints at: twice the Adafruit face's, which is the height of a two-row chip, and
-// the face itself, because a ttyp0 cut is chosen by a taller box than a chip's.
-const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
+// The rows a state prints at: twice the face the settings rows are drawn in, which is the height of
+// a two-row chip, and the face itself, because a ttyp0 cut is chosen by a taller box than a chip's.
 constexpr int16_t ChipHeight = 16;
 
 // One state of the switch: its label centred in an equal share of the row, and that label inverted

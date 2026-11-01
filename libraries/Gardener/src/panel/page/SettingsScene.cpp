@@ -1,15 +1,13 @@
 #include "panel/page/SettingsScene.h"
 
-#include <string.h>
-
 #include "layout/Drawing.h"
 
 namespace gardener {
 namespace {
 
-// One row of the Adafruit face, which is the pitch the rows and the heading are drawn at: a ttyp0
-// cut's shortest line box is ten rows, so the panel's design cannot be drawn in one.
-const gfx::Family* rowFace() { return gfx::findFamily("adafruit"); }
+// One row of the face the settings rows are drawn in, which is the pitch the rows and the heading
+// are drawn at: a ttyp0 cut's shortest line box is ten rows, so the panel's design cannot be drawn
+// in one.
 constexpr int16_t Row = 8;
 
 // The row as the list prints it: the setting's label, an equals sign and the value it holds now.
@@ -19,6 +17,8 @@ gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value) {
 }
 
 }  // namespace
+
+const gfx::Family* rowFace() { return gfx::findFamily("settings"); }
 
 CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
                                     const SettingValues& values) const {
@@ -40,23 +40,23 @@ SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title
 }
 
 bool SettingsScene::handle(const char* gesture) {
-  if (strcmp(gesture, "up:single") == 0) {
+  if (Gestures::is(gesture, Gestures::UpSingle)) {
     move(-1);
     return true;
   }
-  if (strcmp(gesture, "down:single") == 0) {
+  if (Gestures::is(gesture, Gestures::DownSingle)) {
     move(1);
     return true;
   }
-  if (strcmp(gesture, "forward:single") == 0) {
+  if (Gestures::is(gesture, Gestures::ForwardSingle)) {
     open();
     return true;
   }
-  if (strcmp(gesture, "ok:single") == 0) {
+  if (Gestures::is(gesture, Gestures::OkSingle)) {
     ux_.pop();
     return true;
   }
-  if (strcmp(gesture, "back:single") == 0 || strcmp(gesture, "cancel:single") == 0) {
+  if (Gestures::isAny(gesture, {Gestures::BackSingle, Gestures::CancelSingle})) {
     values_ = opened_;
     ux_.pop();
     return true;

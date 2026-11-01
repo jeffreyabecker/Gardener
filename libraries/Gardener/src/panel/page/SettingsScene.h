@@ -20,9 +20,18 @@
 
 namespace gardener {
 
+namespace gfx {
+struct Family;
+}
+
 // The values a list holds and the declaration a row was built from are the document's vocabulary,
 // in `storage/SettingKind.h`; a row is that and the page's half of it.
 class SettingsRow;
+
+// The face the settings rows are drawn in: a row is one eight-row line, and the panel's design is
+// chosen by a taller box than that, so the list, its headings and every value editor name this one
+// face rather than each naming a design of its own.
+const gfx::Family* rowFace();
 
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
