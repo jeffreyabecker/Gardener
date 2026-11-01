@@ -28,7 +28,7 @@ gfx::Child field(const char* title, bool showing) {
   const gfx::Size ink = gfx::measureText(rowFace(), title, 0, FieldHeight);
   gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
   if (showing) content = gfx::inverted(std::move(content));
-  return gfx::Child{gfx::Cell(0.5f, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
+  return gfx::column(0.5f, gfx::aligned(gfx::sized(std::move(content), ink)));
 }
 
 }  // namespace
@@ -130,8 +130,7 @@ gfx::PaintNodeRef DurationScene::pageContents() {
   minutes_ = minutesText();
   seconds_ = secondsText();
   const bool minutes = stage_ == Stage::Minutes;
-  return gfx::row(
-      1.0f, gfx::children(field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes)));
+  return gfx::row(1.0f, field(minutes_.c_str(), minutes), field(seconds_.c_str(), !minutes));
 }
 
 }  // namespace gardener

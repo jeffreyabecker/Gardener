@@ -68,6 +68,23 @@ PaintNodeRef row(float heightPct, Builder builder, Justification justification =
 PaintNodeRef column(float widthPct, Children children, Justification justification = {});
 PaintNodeRef column(float widthPct, Builder builder, Justification justification = {});
 
+// A child of a column and a child of a row, as the layout each one declares: a band takes the whole
+// of the width and the height given, and a share takes the width given and the whole of the height.
+// The run forms below take those children themselves, so a page states its bands rather than the
+// vector its cells need; a run given a justification keeps the Children form.
+Child row(float heightPct, PaintNodeRef paint);
+Child column(float widthPct, PaintNodeRef paint);
+
+template <typename... Rest>
+PaintNodeRef row(float heightPct, Child&& first, Rest&&... rest) {
+  return row(heightPct, children(std::move(first), std::forward<Rest>(rest)...));
+}
+
+template <typename... Rest>
+PaintNodeRef column(float widthPct, Child&& first, Rest&&... rest) {
+  return column(widthPct, children(std::move(first), std::forward<Rest>(rest)...));
+}
+
 // The child drawn at the place the two justifications name, horizontal first, as a paint that draws
 // in the ink box it was sized with.
 PaintNodeRef aligned(Sized sized, Justify horizontal = Justify::Center,

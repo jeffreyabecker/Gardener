@@ -23,7 +23,7 @@ gfx::Child chip(const char* title, bool showing, float share) {
   const gfx::Size ink = gfx::measureText(rowFace(), title, 0, ChipHeight);
   gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, rowFace());
   if (showing) content = gfx::inverted(std::move(content));
-  return gfx::Child{gfx::Cell(share, 1.0f), gfx::aligned(gfx::sized(std::move(content), ink))};
+  return gfx::column(share, gfx::aligned(gfx::sized(std::move(content), ink)));
 }
 
 // The states as one row of equal cells: `--`, OFF and ON when the setting is nullable and OFF and
@@ -31,11 +31,10 @@ gfx::Child chip(const char* title, bool showing, float share) {
 gfx::PaintNodeRef switchRow(bool nullable, bool hasValue, bool on) {
   const float share = nullable ? 1.0f / 3.0f : 0.5f;
   if (nullable) {
-    return gfx::row(1.0f,
-                    gfx::children(chip("--", !hasValue, share), chip("OFF", hasValue && !on, share),
-                                  chip("ON", hasValue && on, share)));
+    return gfx::row(1.0f, chip("--", !hasValue, share), chip("OFF", hasValue && !on, share),
+                    chip("ON", hasValue && on, share));
   }
-  return gfx::row(1.0f, gfx::children(chip("OFF", !on, share), chip("ON", on, share)));
+  return gfx::row(1.0f, chip("OFF", !on, share), chip("ON", on, share));
 }
 
 }  // namespace

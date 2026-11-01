@@ -141,6 +141,14 @@ PaintNodeRef column(float widthPct, Builder builder, Justification justification
   return layout(Cell(widthPct, 1.0f), std::move(builder), justification, Direction::Down);
 }
 
+Child row(float heightPct, PaintNodeRef paint) {
+  return Child{Cell(1.0f, heightPct), std::move(paint)};
+}
+
+Child column(float widthPct, PaintNodeRef paint) {
+  return Child{Cell(widthPct, 1.0f), std::move(paint)};
+}
+
 PaintNodeRef aligned(Sized sized, Justify horizontal, Justify vertical) {
   return std::make_unique<AlignedNode>(std::move(sized), horizontal, vertical);
 }

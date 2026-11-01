@@ -122,8 +122,7 @@ gfx::PaintNodeRef ChoiceScene::pageContents() {
     gfx::Children rows;
     for (int16_t line = 0; line < visible; line++) {
       const int16_t at = static_cast<int16_t>(first + line);
-      rows.push_back(
-          gfx::Child{gfx::Cell(1.0f, static_cast<float>(Row)), rowOf(&items_[at], at == selected)});
+      rows.push_back(gfx::row(static_cast<float>(Row), rowOf(&items_[at], at == selected)));
     }
     gfx::Justification centred;
     centred.along = gfx::Justify::Center;

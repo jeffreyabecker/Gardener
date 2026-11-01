@@ -48,8 +48,8 @@ gfx::Size arrowsInk(uint8_t count) {
 
 // One item of the band: the ink it draws and the paper that separates it from the next item.
 gfx::Child hintItem(gfx::PaintNodeRef paint, gfx::Size ink) {
-  return gfx::Child{gfx::Cell(static_cast<float>(ink.width + HintGap), 1.0f),
-                    gfx::aligned(gfx::sized(std::move(paint), ink), gfx::Justify::Start)};
+  return gfx::column(static_cast<float>(ink.width + HintGap),
+                     gfx::aligned(gfx::sized(std::move(paint), ink), gfx::Justify::Start));
 }
 
 }  // namespace
@@ -137,10 +137,9 @@ bool EditorScene::handle(const char* gesture) {
 void EditorScene::drawPage(gfx::Canvas& canvas) { pageComponents()->draw(canvas); }
 
 gfx::PaintNodeRef EditorScene::pageComponents() {
-  return gfx::column(1.0f,
-                     gfx::children(gfx::Child{gfx::Cell(1.0f, TitleBandPct), titleComponent()},
-                                   gfx::Child{gfx::Cell(1.0f, ContentsBandPct), pageContents()},
-                                   gfx::Child{gfx::Cell(1.0f, HintBandPct), hintComponent()}));
+  return gfx::column(1.0f, gfx::row(TitleBandPct, titleComponent()),
+                     gfx::row(ContentsBandPct, pageContents()),
+                     gfx::row(HintBandPct, hintComponent()));
 }
 
 gfx::PaintNodeRef EditorScene::pageContents() { return gfx::PaintNodeRef(); }

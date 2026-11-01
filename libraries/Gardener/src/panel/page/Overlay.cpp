@@ -143,13 +143,10 @@ gfx::PaintNodeRef Overlay::paint() const {
     // The strip clears its own rows first: the page canvas stops where the overlay starts, so
     // nothing else touches them and they keep whatever the last frame left.
     gfx::underlay(
-        gfx::row(1.0f,
-                 gfx::children(gfx::Child{gfx::Cell(0.25f, 1.0f), unitCell(now.unit)},
-                               gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                          linksCell(now.serialConnected, now.bluetoothConnected)},
-                               gfx::Child{gfx::Cell(0.25f, 1.0f), stateCell(now.runState, nowMs)},
-                               gfx::Child{gfx::Cell(0.25f, 1.0f),
-                                          batteryCell(percent, now.batteryLow, nowMs)})))
+        gfx::row(1.0f, gfx::column(0.25f, unitCell(now.unit)),
+                 gfx::column(0.25f, linksCell(now.serialConnected, now.bluetoothConnected)),
+                 gfx::column(0.25f, stateCell(now.runState, nowMs)),
+                 gfx::column(0.25f, batteryCell(percent, now.batteryLow, nowMs))))
         ->draw(canvas);
   });
 }
