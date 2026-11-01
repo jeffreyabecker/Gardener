@@ -39,12 +39,11 @@ constexpr int16_t GlyphTop = 2;
 constexpr float CellShare = 0.25f;
 constexpr float LinkShare = 0.125f;
 
-// The battery: a twelve by seven footprint, the outline ten wide and the nub two, the fill six.
-constexpr int16_t BatteryWidth = 12;
-constexpr int16_t BatteryHeight = 7;
-constexpr int16_t BatteryOutline = 10;
-constexpr int16_t BatteryNub = 2;
-constexpr int16_t BatteryFill = 6;
+// The gauge as it lies across the strip: the face's 8x19 mark turned a quarter, so its nineteen rows
+// are nineteen columns here and its eight columns are eight rows, two rows down.
+constexpr int16_t MarkWidth = 19;
+constexpr int16_t MarkHeight = 8;
+constexpr int16_t MarkTop = 2;
 
 // A chamber that is moving is lit for the first 650 ms of each second.
 bool movingLit(uint32_t nowMs) { return nowMs % 1000 < 650; }
@@ -55,6 +54,10 @@ bool batteryLit(uint32_t nowMs) { return (nowMs / 500) % 2 != 0; }
 // The face the overlay's glyphs and suffix are drawn in: an overlay cell holds one eight-row line,
 // and the panel's design is chosen by a taller box than that.
 const gfx::Family* rowFace() { return gfx::findFamily("overlay"); }
+
+// The face the gauge's levels are drawn in: u8g2's battery marks, whose first six codes are a level
+// each and whose seventh is a bolt for the charge.
+const gfx::Family* batteryFace() { return gfx::findFamily("battery"); }
 
 // One glyph of the Adafruit face by its code, at the top-left of a cell: a code is a one-byte
 // string, so the text leaf draws it as it draws any other. The box is one line of that face, which
@@ -112,27 +115,28 @@ gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
   return oneGlyph(glyph);
 }
 
-// The icon owns its whole footprint, so it erases it first: the overlay lies over whatever the last
-// frame left, and filling over it without clearing would read as a battery with those pixels still
-// inside it.
+// The bars a percentage fills, nought to five: the face's sixth mark is the bolt for a charge the
+// panel is told nothing about.
+int8_t barsOf(int8_t percent) {
+  if (percent <= 0) return 0;
+  const int8_t bars = static_cast<int8_t>(percent * 6 / 100);
+  return bars > 5 ? 5 : bars;
+}
+
+// The gauge: the mark for the level the pack is at, laid across the strip by a quarter turn on the
+// canvas, which is the only way an eight by nineteen glyph fits twelve rows. A pack too low to read
+// blinks to the empty level, and a panel with no gauge shows the empty level with a slash across it.
 gfx::PaintNodeRef batteryCell(int8_t percent, bool low, uint32_t nowMs) {
-  gfx::Paints paints;
-  paints.push_back(
-      gfx::rectangle(gfx::Box(0, GlyphTop, BatteryWidth, BatteryHeight), gfx::Paper, true));
-  paints.push_back(gfx::rectangle(gfx::Box(0, GlyphTop, BatteryOutline, BatteryHeight), gfx::Ink));
-  paints.push_back(
-      gfx::rectangle(gfx::Box(BatteryOutline, GlyphTop + 2, BatteryNub, 3), gfx::Ink, true));
-  if (percent < 0) {
-    paints.push_back(gfx::line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::Ink));
-    return gfx::group(std::move(paints));
-  }
-  if ((!low || batteryLit(nowMs)) && percent > 0) {
-    int16_t fill = static_cast<int16_t>(BatteryFill * percent / 100);
-    if (fill < 1) fill = 1;
-    if (fill > BatteryFill) fill = BatteryFill;
-    paints.push_back(gfx::rectangle(gfx::Box(2, GlyphTop + 2, fill, 3), gfx::Ink, true));
-  }
-  return gfx::group(std::move(paints));
+  int8_t bars = percent < 0 ? 0 : barsOf(percent);
+  if (low && !batteryLit(nowMs)) bars = 0;
+  const char level[] = {static_cast<char>('0' + bars), '\0'};
+
+  gfx::Paints mark;
+  mark.push_back(gfx::turned(
+      gfx::Transform(gfx::Rect(0, MarkTop, MarkWidth, MarkHeight)).rotate(90),
+      gfx::text(gfx::Box::whole(), level, batteryFace())));
+  if (percent < 0) mark.push_back(gfx::line(2, MarkTop + 1, 16, MarkTop + 6, gfx::Ink));
+  return gfx::group(std::move(mark));
 }
 
 }  // namespace

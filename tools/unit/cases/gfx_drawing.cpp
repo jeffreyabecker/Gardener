@@ -317,6 +317,22 @@ TEST_CASE("a group with nothing to draw draws nothing") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
 }
 
+TEST_CASE("a turned paint draws in the footprint the turn makes") {
+  reset();
+  // A ten by four window turned a quarter is a four by ten space over that footprint, so a paint
+  // filling the space inks the ten by four the window declared.
+  turned(Transform(Rect(0, 0, 10, 4)).rotate(90), rectangle(Box::whole(), Ink, true))->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 10 * 4);
+  CHECK_EQ(display.inkCount(0, 0, 10, 4), 10 * 4);
+}
+
+TEST_CASE("a turned paint with nothing to turn draws nothing") {
+  reset();
+  const PaintNodeRef nothing = turned(Transform(Rect(0, 0, 10, 4)), PaintNodeRef());
+  CHECK(!nothing);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
 TEST_CASE("a design answers its own name and a size does not") {
   // The designs the library ships answer their ladders, shortest cut first, so a page names the
   // design and the box picks the size.

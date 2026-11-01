@@ -1,6 +1,6 @@
 # Fonts
 
-Four designs live here, in this library's own `Font` and `Glyph` structures, and `Fonts.h` is what a
+Five designs live here, in this library's own `Font` and `Glyph` structures, and `Fonts.h` is what a
 caller asks about: which face a page that names none draws in, which names a face answers to, and
 which cuts a family has.
 
@@ -32,11 +32,15 @@ without a string to measure.
   distribution's public domain fixed font — its own notice is "Public domain font. Share and enjoy."
   — from u8g2's `u8g2_font_*_tf` sources, named by the cell the source is named by because the design
   has no single nominal size. It holds 191 codes over 0x20 to 0xFF; the rest are blanks.
+- **The battery marks** (`Battery19`) is u8g2's `u8g2_font_battery19_tn`, converted the same way: an
+  icon face of eight codes at 0x30 to 0x37, a battery outline with nought to five bars filled from
+  the bottom, a bolt for the charge, and a blank. u8g2 records only that Fony 1.4.7 made it and
+  states no licence for it, so nothing beyond that is claimed for it here.
 
-A family is the cuts of one design, shortest first, and `Fonts.h` names the four the library ships:
-`adafruit`, `ttyp0`, `profont` and `x11`. A page names the design and a height picks the cut, so the
-rungs of a design are a statement about which sizes the product has, and a rung is added when a band
-needs one rather than because the source offers it.
+A family is the cuts of one design, shortest first, and `Fonts.h` names the five the library ships:
+`adafruit`, `ttyp0`, `profont`, `x11` and `battery`. A page names the design and a height picks the
+cut, so the rungs of a design are a statement about which sizes the product has, and a rung is added
+when a band needs one rather than because the source offers it.
 
 `registerFamilyAlias` adds a generic name for a design: an alias is what a page or a record can say
 — `body`, say — while a composition chooses the family behind it, so the page draws in whatever
@@ -49,6 +53,6 @@ takes no name an alias holds and an alias takes no family's.
 so a size or range can be regenerated rather than hand-edited: u8g2 keeps a face packed and
 run-length encoded, and the tool decodes it into this library's plain, byte-aligned glyph bitmaps.
 Its `--note` is the sentence the new header opens with, so each design carries whose work it is and
-which licence travels with it. The twelve shipped faces are written down in `Fonts.cpp`, so a page or
-a record can name one; the default face is still the Adafruit 5x7.
+which licence travels with it. The thirteen shipped faces are written down in `Fonts.cpp`, so a page
+or a record can name one; the default face is still the Adafruit 5x7.
 

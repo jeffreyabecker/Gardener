@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "fonts/AdafruitFont.h"
+#include "fonts/Battery19.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -27,12 +28,15 @@ const Font* const AdafruitCuts[] = {&AdafruitFont};
 const Font* const Ttyp0Cuts[] = {&Ttyp011, &Ttyp016, &Ttyp022};
 const Font* const ProFontCuts[] = {&ProFont10, &ProFont12, &ProFont17, &ProFont29};
 const Font* const X11Cuts[] = {&X11Cell5x7, &X11Cell6x10, &X11Cell7x14, &X11Cell10x20};
+const Font* const BatteryCuts[] = {&Battery19};
 
 const Family Ttyp0Family = {"ttyp0", Ttyp0Cuts, 3};
 const Family ProFontFamily = {"profont", ProFontCuts, 4};
 const Family X11Family = {"x11", X11Cuts, 4};
+const Family BatteryFamily = {"battery", BatteryCuts, 1};
 
-const Family* const ShippedFamilies[] = {&AdafruitFamily, &Ttyp0Family, &ProFontFamily, &X11Family};
+const Family* const ShippedFamilies[] = {&AdafruitFamily, &Ttyp0Family, &ProFontFamily, &X11Family,
+                                        &BatteryFamily};
 
 // Copies a name into an entry, or answers false when it does not fit. The length is checked before
 // anything is written, so a refused name leaves the entry it was aimed at as it was.

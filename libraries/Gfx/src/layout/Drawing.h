@@ -198,6 +198,19 @@ class GroupNode : public PaintNode {
   Paints paints_;
 };
 
+// A child drawn through a transform: the canvas turned a quarter, so the child draws in the space
+// the turn makes of its cell.
+class TurnedNode : public PaintNode {
+ public:
+  TurnedNode(Transform transform, PaintNodeRef child);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Transform transform_;
+  PaintNodeRef child_;
+};
+
 // --- the factories ----------------------------------------------------------
 
 // A string fitted to its box: the cut and scale its height takes, placed by the two justifications,
@@ -220,6 +233,11 @@ PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds,
 PaintNodeRef blend(Blend blend, PaintNodeRef child);
 PaintNodeRef underlay(PaintNodeRef child);
 PaintNodeRef callable(std::function<void(Canvas&)> draw);
+
+// The child drawn through a transform, which is how a mark lies down: the transform's window is the
+// footprint the ink lands in and the space inside it is that footprint turned, so the child draws
+// upright in the room the turn gives it.
+PaintNodeRef turned(Transform transform, PaintNodeRef child);
 
 // The paints drawn in the same canvas, in the order they are given.
 PaintNodeRef group(Paints paints);

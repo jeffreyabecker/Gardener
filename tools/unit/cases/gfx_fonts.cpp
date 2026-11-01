@@ -9,6 +9,7 @@
 #include "suite.h"
 
 #include "fonts/AdafruitFont.h"
+#include "fonts/Battery19.h"
 #include "fonts/ProFont10.h"
 #include "fonts/ProFont12.h"
 #include "fonts/ProFont17.h"
@@ -62,6 +63,33 @@ TEST_CASE("the two converted designs answer to one name and hold their rungs sho
     CHECK(lineHeight(*profont->cuts[at - 1]) <= lineHeight(*profont->cuts[at]));
     CHECK(lineHeight(*x11->cuts[at - 1]) <= lineHeight(*x11->cuts[at]));
   }
+}
+
+// The battery marks are an icon face: one cut, eight codes, and the level a page prints is the
+// character itself.
+TEST_CASE("the battery marks answer to their own name and draw the level asked for") {
+  const Family* battery = findFamily("battery");
+  REQUIRE(battery != nullptr);
+  CHECK_EQ(battery->count, 1);
+  CHECK_EQ(battery->cuts[0], &Battery19);
+  CHECK_EQ(lineHeight(Battery19), 19);
+
+  // Eight by nineteen from the empty level to the bolt, and the code past them is the blank the face
+  // keeps in its table.
+  const Size empty = measureText(&Battery19, "0", 1);
+  CHECK_EQ(empty.width, 8);
+  CHECK_EQ(empty.height, 19);
+  CHECK_EQ(measureText(&Battery19, "7", 1).width, 0);
+
+  // Drawn, the empty level inks the outline and a filled one inks the bars inside it.
+  reset();
+  View box = canvas.child(Rect(0, 0, 16, 24));
+  text(Box::whole(), "0", battery)->draw(box);
+  const int outline = display.inkCount(0, 0, 16, 24);
+  CHECK(outline > 0);
+  reset();
+  text(Box::whole(), "5", battery)->draw(box);
+  CHECK(display.inkCount(0, 0, 16, 24) > outline);
 }
 
 TEST_CASE("a rung of a converted design draws the glyph its source holds") {

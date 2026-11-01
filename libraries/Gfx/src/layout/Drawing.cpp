@@ -199,6 +199,15 @@ void GroupNode::draw(Canvas& canvas) const {
   }
 }
 
+TurnedNode::TurnedNode(Transform transform, PaintNodeRef child)
+    : transform_(transform), child_(std::move(child)) {}
+
+void TurnedNode::draw(Canvas& canvas) const {
+  if (!child_) return;
+  View own = canvas.child(transform_);
+  child_->draw(own);
+}
+
 // --- the factories ----------------------------------------------------------
 
 PaintNodeRef text(Box box, String value, const Family* family, Justify horizontal,
@@ -246,6 +255,11 @@ PaintNodeRef blend(Blend blend, PaintNodeRef child) {
 PaintNodeRef underlay(PaintNodeRef child) {
   if (!child) return PaintNodeRef();
   return std::make_unique<UnderlayNode>(std::move(child));
+}
+
+PaintNodeRef turned(Transform transform, PaintNodeRef child) {
+  if (!child) return PaintNodeRef();
+  return std::make_unique<TurnedNode>(transform, std::move(child));
 }
 
 PaintNodeRef callable(std::function<void(Canvas&)> draw) {

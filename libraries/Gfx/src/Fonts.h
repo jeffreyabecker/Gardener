@@ -5,9 +5,10 @@
 namespace gardener::gfx {
 
 // The faces the library ships are declared beside it, in fonts/: the Adafruit 5x7, all 256 byte
-// values in a five-by-eight cell six pixels apart, and the cuts of ttyp0, ProFont and X11. They
-// answer to the names written down with them, and a design's name answers the family of its cuts,
-// so a caller names a design and a box chooses the size. A name is all a caller has to know.
+// values in a five-by-eight cell six pixels apart, the cuts of ttyp0, ProFont and X11, and the
+// battery marks. They answer to the names written down with them, and a design's name answers the
+// family of its cuts, so a caller names a design and a box chooses the size. A name is all a caller
+// has to know.
 
 // --- the families -------------------------------------------------------------
 // A design's cuts, shortest first: a page names the design and a height picks the cut, so a page

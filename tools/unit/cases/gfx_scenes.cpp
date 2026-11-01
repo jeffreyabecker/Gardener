@@ -245,6 +245,28 @@ TEST_CASE("the status strip draws its own cells") {
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
 }
 
+// The gauge is the battery face's mark turned a quarter, so a full pack inks the bars an empty one
+// leaves as the outline's paper.
+TEST_CASE("the gauge inks a full pack more than an empty one") {
+  const int16_t left = static_cast<int16_t>(PageWidth * 3 / 4);
+  SystemState full;
+  full.batteryPresent = true;
+  full.batteryPercent = 100;
+  Overlay filled(full);
+  reset();
+  View band = canvas.child(Rect(0, 0, PageWidth, OverlayRows));
+  filled.draw(band);
+  const int packed = display.inkCount(left, 0, PageWidth / 4, OverlayRows);
+
+  SystemState flat;
+  flat.batteryPresent = true;
+  flat.batteryPercent = 0;
+  Overlay empty(flat);
+  reset();
+  empty.draw(band);
+  CHECK(packed > display.inkCount(left, 0, PageWidth / 4, OverlayRows));
+}
+
 TEST_CASE("a scene paints as soon as it is pushed") {
   NoGestures gestures;
   Watched rootWatch;
