@@ -94,10 +94,11 @@ bool BoolRow::accept(std::any& value) const { return isHeldAs<bool>(value); }
 
 ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
                      const String& defaultValue, const std::vector<ChoiceItem>& items,
-                     bool nullable, std::function<void(String& current)> forward,
+                     bool nullable, const char* icon, std::function<void(String& current)> forward,
                      Validator validator)
     : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
-      default_(defaultValue), items_(items), nullable_(nullable), forward_(std::move(forward)) {}
+      default_(defaultValue), items_(items), nullable_(nullable), forward_(std::move(forward)),
+      icon_(icon != nullptr ? icon : "") {}
 
 // A choice declares its entries — the keys it offers, which are the titles it prints — and no step
 // or bound, because the keys are the only thing it moves between.

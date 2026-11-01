@@ -1,6 +1,8 @@
 #include "panel/page/SettingsScene.h"
 
+#include "Bitmap.h"
 #include "layout/Drawing.h"
+#include "layout/Layout.h"
 
 namespace gardener {
 namespace {
@@ -11,9 +13,27 @@ namespace {
 constexpr int16_t Row = 8;
 
 // The row as the list prints it: the setting's label, an equals sign and the value it holds now.
-gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value) {
+gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value, gfx::Box box) {
   const String printed = setting.label() + "=" + setting.text(value);
-  return gfx::text(gfx::Box(0, 0, 0, Row, true, false), printed, nullptr);
+  return gfx::text(box, printed, nullptr);
+}
+
+// The row as the list draws it: the mark the row answers, in the columns its own header names and
+// centred down the row, then the label and value in what is left. A row with no mark — or one whose
+// string names no bitmap — is the text alone, starting at the left of the row as it always has.
+gfx::PaintNodeRef rowContent(const SettingsRow& setting, const std::any& value) {
+  const String& icon = setting.icon();
+  const gfx::Size mark = gfx::bitmapSize(icon.c_str());
+  if (mark.width <= 0 || mark.height <= 0) {
+    return rowText(setting, value, gfx::Box(0, 0, 0, Row, true, false));
+  }
+  const int16_t top = static_cast<int16_t>((Row - mark.height) / 2);
+  return gfx::row(1.0f,
+                  gfx::children(gfx::Child{gfx::Cell(static_cast<float>(mark.width), 1.0f),
+                                           gfx::icon(gfx::Box(0, top, mark.width, mark.height),
+                                                     icon.c_str())},
+                                gfx::Child{gfx::Cell(gfx::Cell::Whole, 1.0f),
+                                           rowText(setting, value, gfx::Box::whole())}));
 }
 
 }  // namespace
@@ -24,6 +44,13 @@ CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
   return [this, &settings, &values](const std::any& proposed) {
     return validator_(settings, values, proposed);
   };
+}
+
+// The empty answer a kind that prints no mark gives: one String for every such row, so asking costs
+// a reference rather than a copy.
+const String& SettingsRow::icon() const {
+  static const String none;
+  return none;
 }
 
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
@@ -109,7 +136,7 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
     gfx::View cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
-    gfx::PaintNodeRef content = rowText(*row, value);
+    gfx::PaintNodeRef content = rowContent(*row, value);
     if (at == selected_) content = gfx::inverted(std::move(content));
     content->draw(cell);
   }

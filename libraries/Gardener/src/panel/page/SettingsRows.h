@@ -53,17 +53,21 @@ class BoolRow : public SettingsRow {
 // --- the choice -------------------------------------------------------------
 
 // The row of a setting that stores a key out of a fixed list: the title of the entry showing as the
-// list prints it, and the choice scene over the entries the row was handed. `forward` is the page's
-// own work on the entry showing — a jingle row is built with one that sounds the entry — and a row
-// given none drops Forward.
+// list prints it, and the choice scene over the entries the row was handed. `icon` is the packed
+// bitmap printed before the label, in the hex dialect `gfx::Bitmap` reads; a list draws it in the
+// columns the bitmap names, and a row given none prints its label at the left of the row. `forward`
+// is the page's own work on the entry showing — a jingle row is built with one that sounds the
+// entry — and a row given none drops Forward.
 class ChoiceRow : public SettingsRow {
  public:
   ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
             const String& defaultValue, const std::vector<ChoiceItem>& items, bool nullable = false,
-            std::function<void(String& current)> forward = nullptr, Validator validator = nullptr);
+            const char* icon = nullptr, std::function<void(String& current)> forward = nullptr,
+            Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
+  const String& icon() const override { return icon_; }
   std::any defaultValue() const override { return default_; }
   SettingDeclaration declaration() const override;
   String text(const std::any& value) const override;
@@ -81,6 +85,7 @@ class ChoiceRow : public SettingsRow {
   std::vector<ChoiceItem> items_;
   bool nullable_;
   std::function<void(String& current)> forward_;
+  String icon_;
 };
 
 // --- the duration -----------------------------------------------------------

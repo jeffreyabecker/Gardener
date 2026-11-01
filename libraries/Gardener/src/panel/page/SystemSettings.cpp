@@ -23,6 +23,12 @@ constexpr const char* UnitLabel = "UNIT";
 constexpr const char* JingleLabel = "JINGLE";
 constexpr const char* MaxDurationLabel = "MAX";
 
+// The mark each choice row prints before its label, as the hex digits of a packed bitmap: the
+// width, the height, the format, then one byte a row. Both are eight by eight, which is the row the
+// list draws them in — a gauge for the unit and a note for the jingle.
+constexpr const char* UnitMark = "0808003C4285899981423C";
+constexpr const char* JingleMark = "0808000E0A08080878F870";
+
 // A minute is the step a run is thought about in, and the ceiling is the machine's own: the list
 // offers exactly the longest hold the machine will grant, so it cannot promise a run the machine
 // would cut short.
@@ -46,8 +52,9 @@ void SystemSettings::build() {
     const DisplayUnitInfo& info = DisplayUnits[i];
     units.push_back({info.name, info.suffix});
   }
-  owned_.push_back(std::make_unique<ChoiceRow>(
-      gestures_, ux_, UnitKey, UnitLabel, displayUnitInfo(DisplayUnit::Kpa).name, units, false));
+  owned_.push_back(std::make_unique<ChoiceRow>(gestures_, ux_, UnitKey, UnitLabel,
+                                               displayUnitInfo(DisplayUnit::Kpa).name, units, false,
+                                               UnitMark));
 
   std::vector<ChoiceItem> jingles;
   for (const Jingle& jingle : jingles_.entries()) {
@@ -55,7 +62,8 @@ void SystemSettings::build() {
   }
   owned_.push_back(std::make_unique<ChoiceRow>(gestures_, ux_, JingleKey, JingleLabel,
                                                jingles.empty() ? String() : jingles.front().key,
-                                               jingles, false, [this](String& current) {
+                                               jingles, false, JingleMark,
+                                               [this](String& current) {
                                                  const Jingle* jingle = jingles_.find(current);
                                                  if (jingle != nullptr)
                                                    buzzer_.play(jingle->notes.c_str());

@@ -18,6 +18,11 @@ enum class BitmapFormat : uint8_t { Monochrome, Grayscale, RGB565, RGB888 };
 // that refuses a string it cannot read has nothing to keep.
 bool isBitmap(const char* text);
 
+// The width and height a bitmap's header names, which is what a caller placing one needs before it
+// draws: the columns the mark takes and the rows it fills. A string that names no whole bitmap
+// answers a zero size, so a mistyped one leaves the row it was meant for as it was.
+Size bitmapSize(const char* text);
+
 // A bitmap the node owns, drawn from the top-left of the canvas it is handed: a page places it
 // with icon() and a Box, as it places any glyph. A frame keeps a byte a pixel, so a colour arrives
 // as its luminance, and a clear monochrome bit leaves whatever is under it rather than clearing it.

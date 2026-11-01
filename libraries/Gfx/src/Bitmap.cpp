@@ -66,18 +66,54 @@ uint8_t luminance(uint8_t red, uint8_t green, uint8_t blue) {
   return static_cast<uint8_t>((77u * red + 150u * green + 29u * blue) >> 8);
 }
 
+// The three bytes a bitmap's string opens with, read without decoding the pixels after them:
+// `valid` is false for a string that is not all hex digits, that is too short to hold a header, or
+// that names a width, a height or a format the drawing has no case for.
+struct Header {
+  int16_t width = 0;
+  int16_t height = 0;
+  BitmapFormat format = BitmapFormat::Monochrome;
+  bool valid = false;
+};
+
+Header headerOf(const char* text) {
+  Header header;
+  if (text == nullptr) return header;
+  const size_t count = strlen(text);
+  if (count % 2 != 0) return header;
+  for (size_t at = 0; at < count; at++) {
+    if (hexDigit(text[at]) < 0) return header;
+  }
+  if (count / 2 < 3) return header;
+
+  const auto byteAt = [text](size_t at) {
+    return static_cast<uint8_t>((hexDigit(text[2 * at]) << 4) | hexDigit(text[2 * at + 1]));
+  };
+  header.width = byteAt(0);
+  header.height = byteAt(1);
+  const uint8_t format = byteAt(2);
+  if (header.width <= 0 || header.height <= 0) return header;
+  if (format > static_cast<uint8_t>(BitmapFormat::RGB888)) return header;
+  header.format = static_cast<BitmapFormat>(format);
+  header.valid = true;
+  return header;
+}
+
+// Whether the string holds the pixels its header asks for: a header with no width, height or format
+// the drawing has no case for is not one, and neither is a string of a byte less than it names.
+bool wholeBitmap(const Header& header, const char* text) {
+  if (!header.valid) return false;
+  return strlen(text) / 2 - 3 >= bytesNeeded(header.width, header.height, header.format);
+}
+
 }  // namespace
 
-bool isBitmap(const char* text) {
-  const std::vector<uint8_t> bytes = hexBytes(text);
-  // A width, a height and a format, then the pixels those three ask for.
-  if (bytes.size() < 3) return false;
-  if (bytes[2] > static_cast<uint8_t>(BitmapFormat::RGB888)) return false;
-  const int16_t width = bytes[0];
-  const int16_t height = bytes[1];
-  if (width <= 0 || height <= 0) return false;
-  const BitmapFormat format = static_cast<BitmapFormat>(bytes[2]);
-  return bytes.size() - 3 >= bytesNeeded(width, height, format);
+bool isBitmap(const char* text) { return wholeBitmap(headerOf(text), text); }
+
+Size bitmapSize(const char* text) {
+  const Header header = headerOf(text);
+  if (!wholeBitmap(header, text)) return Size(0, 0);
+  return Size(header.width, header.height);
 }
 
 Bitmap::Bitmap(std::vector<uint8_t> bits, int16_t width, int16_t height, BitmapFormat format)

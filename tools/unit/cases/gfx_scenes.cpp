@@ -504,6 +504,32 @@ TEST_CASE("a settings list draws its rows") {
 // The two entries the choice row offers, and the keys they store.
 std::vector<ChoiceItem> choices() { return {{"lo", "Low"}, {"hi", "High"}}; }
 
+TEST_CASE("a choice row prints its mark before its label") {
+  NoGestures gestures;
+  Ux ux;
+  String title("SETTINGS");
+  // Two marks, each one ink pixel in its top-left corner so where it lands is the whole question:
+  // an eight-row one that fills its row, and a four-row one that has to be centred in it. The first
+  // row carries none and is the one the keys are on.
+  ChoiceRow plain(gestures, ux, "plain", "Plain", "lo", choices(), false);
+  ChoiceRow tall(gestures, ux, "tall", "Tall", "lo", choices(), false, "080800800000000000000000");
+  ChoiceRow shortMark(gestures, ux, "short", "Short", "lo", choices(), false, "08040080000000");
+  SettingsProbe list(gestures, ux, title, {&plain, &tall, &shortMark}, {});
+  reset();
+  list.drawPage(canvas);
+
+  // The heading takes the first eight rows, so the rows start at 8, 16 and 24.
+  CHECK(display.anyInk(0, 8, 4, 4));           // the row the keys are on, inverted across its cell
+  CHECK_EQ(display.inkCount(0, 16, 8, 8), 1);  // the eight-row mark, at the top of its row
+  CHECK(display.anyInk(0, 16, 1, 1));
+  CHECK_EQ(display.inkCount(0, 24, 8, 2), 0);  // the four-row one is centred: two rows above it
+  CHECK_EQ(display.inkCount(0, 24, 8, 8), 1);
+  CHECK(display.anyInk(0, 26, 1, 1));
+
+  // The mark takes its own columns and the label follows them, rather than starting over it.
+  CHECK(display.anyInk(8, 16, PageWidth - 8, 8));
+}
+
 TEST_CASE("a settings list edits every kind") {
   GestureQueue gestures;
   Ux ux;

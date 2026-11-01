@@ -46,6 +46,11 @@ class SettingsRow : public SettingKind {
 
   virtual const String& label() const = 0;
 
+  // The packed bitmap the row prints before its label, in the hex dialect `gfx::Bitmap` reads, or
+  // an empty string for a row that prints none. Only a choice row carries one today, so the answer
+  // is empty unless a kind overrides it.
+  virtual const String& icon() const;
+
   // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
   // a number its digits, a duration its compact text.
   virtual String text(const std::any& value) const = 0;

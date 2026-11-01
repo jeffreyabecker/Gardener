@@ -365,6 +365,23 @@ TEST_CASE("a bitmap draws the format it names") {
   CHECK_EQ(display.at(0, 0), 149);
 }
 
+TEST_CASE("a bitmap answers the size its header names") {
+  // A caller placing one — a settings row in front of its label — asks before it draws, so the size
+  // is the header's two bytes and the pixels are never decoded.
+  const Size eightByTwo = bitmapSize("0802008001");
+  CHECK_EQ(eightByTwo.width, 8);
+  CHECK_EQ(eightByTwo.height, 2);
+  const Size twoByOne = bitmapSize("020102fffff800");
+  CHECK_EQ(twoByOne.width, 2);
+  CHECK_EQ(twoByOne.height, 1);
+
+  // A string that names no whole bitmap has no size, so the row it was meant for does not move.
+  CHECK_EQ(bitmapSize("0802").width, 0);
+  CHECK_EQ(bitmapSize("08020080").width, 0);  // a pixel short of eight by two
+  CHECK_EQ(bitmapSize("zzzzzz").height, 0);   // not hex
+  CHECK_EQ(bitmapSize(nullptr).height, 0);
+}
+
 TEST_CASE("a string that names no whole bitmap draws nothing") {
   reset();
   CHECK(!Bitmap::fromHex(nullptr));
