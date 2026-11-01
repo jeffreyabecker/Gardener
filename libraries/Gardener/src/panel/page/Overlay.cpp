@@ -20,9 +20,9 @@ constexpr uint8_t IdleGlyph = 0x09;    // WHITE CIRCLE
 constexpr uint8_t PullGlyph = 0x1E;    // BLACK UP-POINTING TRIANGLE
 constexpr uint8_t VentGlyph = 0x1F;    // BLACK DOWN-POINTING TRIANGLE
 
-// The Bluetooth rune, named the way a page names a bitmap: the width and the height, then one bit
-// per pixel, most-significant bit first, two bytes to a row.
-constexpr const char* BluetoothRun = "1009010009400510014000800140051009400100";
+// The Bluetooth rune, named the way a page names a bitmap: the width, the height, the format, then
+// one bit per pixel, most-significant bit first, two bytes to a row.
+constexpr const char* BluetoothRun = "100900010009400510014000800140051009400100";
 constexpr int16_t RuneWidth = 16;
 constexpr int16_t RuneHeight = 9;
 
@@ -128,7 +128,7 @@ gfx::PaintNodeRef batteryCell(int8_t percent, bool low, uint32_t nowMs) {
   gfx::Paints mark;
   mark.push_back(
       gfx::turned(gfx::Transform(gfx::Rect(0, MarkTop, MarkWidth, MarkHeight)).rotate(90),
-                  gfx::text(gfx::Box::whole(), level, batteryFace())));
+                  gfx::text(level, batteryFace())));
   if (percent < 0) mark.push_back(gfx::line(2, MarkTop + 1, 16, MarkTop + 6, gfx::Ink));
   return gfx::group(std::move(mark));
 }

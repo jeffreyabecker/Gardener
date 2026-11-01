@@ -4,19 +4,37 @@
 
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
-#include "shapes/Text.h"
 
 namespace gardener {
 namespace {
 
-// The pitch a choice is drawn at: a ttyp0 cut's shortest line box is ten rows, so the panel's
-// design cannot be drawn in one.
-constexpr int16_t Row = 8;
+// The pitch a choice is drawn at: one line of the face the rows are drawn in, which is the default
+// the composition set, so a taller design shows fewer rows rather than a cut clipped into a cell that
+// does not hold it.
+int16_t choicePitch() {
+  const int16_t pitch = static_cast<int16_t>(gfx::shortestLine(nullptr));
+  return pitch > 0 ? pitch : 1;
+}
 
-// One row of the window: the entry's title filling the row, which the list inverts when the entry
-// is the one showing.
-gfx::PaintNodeRef rowOf(const ChoiceItem* item) {
-  return gfx::text(gfx::Box::whole(), item->title.c_str(), nullptr);
+// The bar a scrolling band carries down its right: two pixels wide, two rows in from the top and the
+// bottom, which is the box the shape form draws beside the settings list.
+constexpr int16_t BarWidth = 2;
+constexpr int16_t BarInset = 2;
+
+// The window a list of `count` rows shows in a band this tall: the rows that fit at this pitch, the
+// one it starts at so the entry showing is in them, and whether the rest are a scrollbar away.
+struct Window {
+  int16_t visible;
+  int16_t first;
+  bool scrolls;
+};
+
+Window windowOf(int16_t count, int16_t selected, int16_t height, int16_t pitch) {
+  int16_t visible = static_cast<int16_t>(height / pitch);
+  if (visible < 1) visible = 1;
+  if (visible > count) visible = count;
+  const int16_t first = selected >= visible ? static_cast<int16_t>(selected - visible + 1) : 0;
+  return {visible, first, count > visible};
 }
 
 }  // namespace
@@ -92,49 +110,44 @@ int16_t ChoiceScene::index() const {
   return 0;
 }
 
-// The entries in the value band as the column of rows a list is: one Adafruit row each, the window
-// scrolled to keep the entry showing in it, the block centred in the band and the row showing
-// inverted. The rows are the ones the band has room for, which is why the band's size is what the
-// page is built with. A window shorter than the entries carries a scrollbar down the right of the
-// band, the rows stopping the width of it and its gap short.
+// The entries in the value band as the column of rows a list is: the window the band has room for,
+// the entry showing inverted, the block centred in the band and a bar beside it for the entries that
+// did not fit.
 gfx::PaintNodeRef ChoiceScene::pageContents(gfx::Size band) {
+  const int16_t pitch = choicePitch();
+
+  // A band with nothing to show prints the row a first entry would take.
   if (!hasValue_ || items_.empty()) {
-    // The dashes in a row of the pitch the entries are drawn at, centred in the band: a band with
-    // nothing to show prints the row a first entry would take.
-    gfx::Child dashes =
-        gfx::row(static_cast<float>(Row), gfx::text(gfx::Box::whole(), "--", nullptr));
+    gfx::Child dashes = gfx::row(static_cast<float>(pitch), gfx::text("--"));
     return gfx::column(1.0f, gfx::children(std::move(dashes)),
                        gfx::Justification{gfx::Justify::Center, gfx::Justify::Center});
   }
-  const int16_t selected = index();
+
   const int16_t count = static_cast<int16_t>(items_.size());
-  int16_t visible = static_cast<int16_t>(band.height / Row);
-  if (visible < 1) visible = 1;
-  if (visible > count) visible = count;
-  const int16_t first = selected >= visible ? static_cast<int16_t>(selected - visible + 1) : 0;
-  const bool scrolls = count > visible;
-  const int16_t rowsWidth =
-      scrolls ? static_cast<int16_t>(band.width - gfx::ScrollbarColumn) : band.width;
+  const int16_t selected = index();
+  const Window window = windowOf(count, selected, band.height, pitch);
+
   gfx::Children rows;
-  for (int16_t line = 0; line < visible; line++) {
-    const int16_t at = static_cast<int16_t>(first + line);
-    gfx::Child row = gfx::row(static_cast<float>(Row), rowOf(&items_[at]));
+  for (int16_t line = 0; line < window.visible; line++) {
+    const int16_t at = static_cast<int16_t>(window.first + line);
+    //items_[at].icon.isEmpty
+    gfx::Child row = gfx::row(static_cast<float>(pitch), gfx::text(items_[at].title.c_str()));
     if (at == selected) row.paint = gfx::inverted(std::move(row.paint));
     rows.push_back(std::move(row));
   }
-  gfx::Justification centred;
-  centred.along = gfx::Justify::Center;
-  gfx::Child list =
-      gfx::column(static_cast<float>(rowsWidth), gfx::column(1.0f, std::move(rows), centred));
-  if (!scrolls) return gfx::row(1.0f, std::move(list));
-  // The bar in the band's last two columns, two rows in from the top and the bottom, which is the
-  // box the shape form draws beside the settings list.
+
+  // The rows centred down the band, and the bar in the last four columns when not all of them fit.
+  const int16_t rowsWidth =
+      window.scrolls ? static_cast<int16_t>(band.width - gfx::ScrollbarColumn) : band.width;
+  gfx::Child list{gfx::Cell(static_cast<float>(rowsWidth), 1.0f),
+                  gfx::column(1.0f, std::move(rows),
+                              gfx::Justification{gfx::Justify::Center, gfx::Justify::Start})};
+  if (!window.scrolls) return std::move(list.paint);
   gfx::Child bar = gfx::column(
       static_cast<float>(gfx::ScrollbarColumn),
-      gfx::scrollbar(
-          gfx::Box(static_cast<int16_t>(gfx::ScrollbarColumn - 2), 2, 2,
-                   static_cast<int16_t>(band.height - 4)),
-          first, count, visible, true));
+      gfx::scrollbar(gfx::Box(static_cast<int16_t>(gfx::ScrollbarColumn - BarWidth), BarInset,
+                              BarWidth, static_cast<int16_t>(band.height - 2 * BarInset)),
+                     window.first, count, window.visible, true));
   return gfx::row(1.0f, std::move(list), std::move(bar));
 }
 

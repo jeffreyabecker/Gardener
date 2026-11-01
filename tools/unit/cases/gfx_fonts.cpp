@@ -84,12 +84,22 @@ TEST_CASE("the battery marks answer to their own name and draw the level asked f
   // Drawn, the empty level inks the outline and a filled one inks the bars inside it.
   reset();
   View box = canvas.child(Rect(0, 0, 16, 24));
-  text(Box::whole(), "0", battery)->draw(box);
+  text("0", battery)->draw(box);
   const int outline = display.inkCount(0, 0, 16, 24);
   CHECK(outline > 0);
   reset();
-  text(Box::whole(), "5", battery)->draw(box);
+  text("5", battery)->draw(box);
   CHECK(display.inkCount(0, 0, 16, 24) > outline);
+}
+
+// The pitch a list of rows is drawn at is a family's shortest cut, not a number a page keeps.
+TEST_CASE("a family answers the line its shortest cut takes") {
+  setDefaultFamily(nullptr);
+  CHECK_EQ(shortestLine(nullptr), 8);  // the Adafruit face, which is the default
+  CHECK_EQ(shortestLine(findFamily("ttyp0")), 10);
+  CHECK_EQ(shortestLine(findFamily("profont")), 8);
+  CHECK_EQ(shortestLine(findFamily("x11")), 7);
+  CHECK_EQ(shortestLine(findFamily("battery")), 19);
 }
 
 TEST_CASE("a rung of a converted design draws the glyph its source holds") {
@@ -108,7 +118,7 @@ TEST_CASE("a rung of a converted design draws the glyph its source holds") {
   View box = canvas.child(Rect(0, 0, 64, 24));
   const Font* only[] = {&X11Cell10x20};
   const Family oneCut = {"x11_10x20", only, 1};
-  text(Box::whole(), "A", &oneCut, Justify::Start, Justify::Start)->draw(box);
+  text("A", &oneCut, Justify::Start, Justify::Start)->draw(box);
   CHECK(display.anyInk(0, 0, 8, 1));
   CHECK_EQ(display.inkCount(0, 13, 64, 11), 0);
 }
@@ -194,7 +204,7 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   // face's ascent is sixteen and the letter is thirteen tall.
   reset();
   View band = canvas.child(Rect(0, 0, 128, 45));
-  text(Box::whole(), "A", findFamily("ttyp0"))->draw(band);
+  text("A", findFamily("ttyp0"))->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 128, 11), 0);
   CHECK_EQ(display.inkCount(0, 37, 128, 8), 0);
   // Across, the ink is centred: twenty-two pixels of it in one hundred and twenty-eight, from the
@@ -206,7 +216,7 @@ TEST_CASE("a fitted string takes the cut and the scale its box's height holds") 
   // letter starts one row down it, the face's ascent being nine and the letter eight tall.
   reset();
   View title = canvas.child(Rect(0, 0, 64, 10));
-  text(Box::whole(), "A", findFamily("ttyp0"))->draw(title);
+  text("A", findFamily("ttyp0"))->draw(title);
   CHECK_EQ(display.inkCount(0, 0, 64, 1), 0);
   CHECK(display.anyInk(0, 1, 64, 1));
   CHECK_EQ(display.inkCount(0, 10, 64, 54), 0);

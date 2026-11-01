@@ -6,6 +6,7 @@
 // functions and the layout that divides a box. The scene lifecycle, the gestures a page takes and
 // the overlay across the bottom of the glass are the firmware's panel, in libraries/Gardener.
 
+#include "Bitmap.h"
 #include "Canvas.h"
 #include "DisplayDevice.h"
 #include "Font.h"

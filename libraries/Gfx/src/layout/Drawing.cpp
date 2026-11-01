@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "../Bitmap.h"
 #include "../Fonts.h"
 #include "../shapes/Shapes.h"
 #include "../shapes/Text.h"
@@ -73,15 +74,6 @@ void TextNode::draw(Canvas& canvas) const {
   const int16_t top = alignedOffset(static_cast<int16_t>(in.height - line), vertical_);
   const int16_t baseline = static_cast<int16_t>(top + fit.face->ascent * fit.scale);
   own.draw(Text(left, baseline, value_.c_str(), fit.face, fit.scale, Ink));
-}
-
-BitmapNode::BitmapNode(Box box, const char* glyph) : box_(box), glyph_(glyph) {}
-
-void BitmapNode::draw(Canvas& canvas) const {
-  const std::vector<uint8_t> bits = monoBitmapBits(glyph_);
-  if (bits.empty()) return;
-  View own = canvas.child(box_.in(canvas));
-  own.draw(MonoBitmap(0, 0, bits.data(), Ink));
 }
 
 IconNode::IconNode(Box box, PaintNodeRef glyph) : box_(box), glyph_(std::move(glyph)) {}
@@ -215,7 +207,13 @@ PaintNodeRef text(Box box, String value, const Family* family, Justify horizonta
   return std::make_unique<TextNode>(box, std::move(value), family, horizontal, vertical);
 }
 
-PaintNodeRef icon(Box box, const char* bits) { return std::make_unique<BitmapNode>(box, bits); }
+PaintNodeRef text(String value, const Family* family, Justify horizontal, Justify vertical) {
+  return text(Box::whole(), std::move(value), family, horizontal, vertical);
+}
+
+PaintNodeRef icon(Box box, const char* bits) {
+  return std::make_unique<IconNode>(box, Bitmap::fromHex(bits));
+}
 
 PaintNodeRef icon(Box box, PaintNodeRef glyph) {
   return std::make_unique<IconNode>(box, std::move(glyph));

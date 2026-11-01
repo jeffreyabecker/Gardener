@@ -26,6 +26,12 @@ struct Family {
 // family draws in the default family, which is the resolver's own business and no caller's.
 const Family* findFamily(const char* name);
 
+// The line box of a family's shortest cut, which is the pitch a list of rows is drawn at: a null
+// family answers the default's, and a family with no cuts answers the Adafruit face's line, as the
+// resolver does. The cuts are ordered shortest first, so a page asks this rather than reading the
+// ladder itself.
+uint8_t shortestLine(const Family* family);
+
 // The design a leaf or a measurement that names no family draws in. It is the Adafruit family until
 // a composition sets another, and nullptr puts that back, so a composition names the panel's design
 // once instead of at every leaf. Nothing reads it back: the resolver applies it where the fit is

@@ -228,18 +228,18 @@ int screenText(bvm* vm) {
 }
 
 // A fixed glyph in the box: the argument is the hex digits that name the bitmap itself, in
-// MonoBitmap's format — the width, the height, then one row per byte-run, most significant bit first
-// and each row padded to a whole byte. The node keeps the string rather than the bytes, and the
-// panel reads them when it draws the node; a string that names no glyph is refused here rather than
-// drawn as nothing.
+// Bitmap's format — the width, the height, the format, then the pixels, a row after another. The
+// panel reads them when the node is built; a string that names no glyph is refused here rather
+// than drawn as nothing.
 int screenIcon(bvm* vm) {
   const int argc = be_top(vm);
   if (argc < 5 || !be_isstring(vm, 5)) {
     be_raise(vm, "type_error", "screen.icon(x, y, w, h, glyph)");
   }
-  if (!gfx::isMonoBitmap(argText(vm, 5))) {
+  if (!gfx::isBitmap(argText(vm, 5))) {
     be_raise(vm, "value_error",
-             "screen.icon: the glyph is hex digits, the width, the height and the rows");
+             "screen.icon: the glyph is hex digits, the width, the height, the format and the "
+             "pixels");
   }
   const int draw = beginDraw(vm, "icon");
   setBox(vm, draw, argc);

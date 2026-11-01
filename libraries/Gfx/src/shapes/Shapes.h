@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-#include <vector>
-
 #include "../Canvas.h"
 #include "../Rect.h"
 
@@ -191,29 +189,5 @@ struct MonoBitmap {
   const uint8_t* bits;
   uint8_t color;
 };
-
-// Whether a string names a MonoBitmap: hex digits, two per byte, the width, the height, then one row
-// per byte-run, most significant bit first and each row padded to a whole byte. Nothing is
-// allocated, so a caller that refuses a string it cannot read has nothing to keep.
-bool isMonoBitmap(const char* text);
-
-// The bytes a string that names a MonoBitmap holds, ready for MonoBitmap to read, and nothing for a
-// string that is not one.
-std::vector<uint8_t> monoBitmapBits(const char* text);
-
-// The panel draws MonoBitmap and nothing draws one grayscale byte per pixel, so this form stays in
-// comment until an image that needs more than ink and paper arrives.
-//
-// // An image the caller keeps: bits[0] is the width, bits[1] the height, then one grayscale byte
-// // per pixel, row-major. Every pixel is drawn; there is no transparency.
-// struct Bitmap {
-//   Bitmap(int16_t x, int16_t y, const uint8_t* bits) : x(x), y(y), bits(bits) {}
-//
-//   void operator()(Canvas& canvas) const;
-//
-//   int16_t x;
-//   int16_t y;
-//   const uint8_t* bits;
-// };
 
 }  // namespace gardener::gfx

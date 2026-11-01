@@ -133,6 +133,12 @@ const Family* findFamily(const char* name) {
   return alias != nullptr ? namedFamily(alias->family) : nullptr;
 }
 
+uint8_t shortestLine(const Family* family) {
+  const Family& design = family != nullptr ? *family : *defaultFamily();
+  if (design.cuts == nullptr || design.count == 0) return lineHeight(AdafruitFont);
+  return lineHeight(*design.cuts[0]);
+}
+
 bool registerFamily(const char* name, const Font* const* cuts, uint8_t count) {
   if (name == nullptr || name[0] == '\0' || cuts == nullptr) return false;
   if (count == 0 || count > FamilyCuts) return false;

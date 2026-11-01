@@ -5,9 +5,9 @@ import string
 
 # The ramp's glyph and the browser's row glyph: the stairs, three solid steps four pixels wide,
 # each column standing from the baseline two rows higher than the one before, as the hex digits of
-# its packed bitmap — the width, the height, then the rows most significant bit first, each padded
-# to a whole byte. The panel reads them when it draws the icon.
-ramped_interval_glyph = "0c08000000e000e00ee00ee0eee0eee00000"
+# its packed bitmap — the width, the height, the format, then the pixels, a row after another, most
+# significant bit first, each padded to a whole byte. The panel reads them when it draws the icon.
+ramped_interval_glyph = "0c0800000000e000e00ee00ee0eee0eee00000"
 
 class RampedInterval
   var routine_key

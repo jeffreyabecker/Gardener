@@ -3,9 +3,9 @@
 # because its page extends the ramp's.
 
 # The interval page's glyph and the browser's row glyph: a square wave, two highs and two lows on a
-# 12 by 8 field, as the hex digits of its packed bitmap — the width, the height, then the rows most
-# significant bit first, each padded to a whole byte.
-interval_glyph = "0c080000f3c012401240124012401e700000"
+# 12 by 8 field, as the hex digits of its packed bitmap — the width, the height, the format, then the
+# pixels, a row after another, most significant bit first, each padded to a whole byte.
+interval_glyph = "0c08000000f3c012401240124012401e700000"
 
 # The interval cycle: the same machine at one target, repeated for the set count. Its settings name
 # one target pressure rather than a ladder, and a flat run is the point rather than a refusal.

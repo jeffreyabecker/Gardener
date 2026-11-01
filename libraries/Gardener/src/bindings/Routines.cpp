@@ -72,9 +72,9 @@ void requireGlyph(bvm* vm, int index) {
   if (!be_isstring(vm, index)) {
     be_raise(vm, "type_error", "routines.register: the icon is a string of hex digits");
   }
-  if (!gfx::isMonoBitmap(argText(vm, index))) {
+  if (!gfx::isBitmap(argText(vm, index))) {
     be_raise(vm, "value_error",
-             "routines.register: the icon is the width, the height and the rows");
+             "routines.register: the icon is the width, the height, the format and the pixels");
   }
 }
 

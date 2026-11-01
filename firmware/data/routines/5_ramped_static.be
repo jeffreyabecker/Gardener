@@ -33,9 +33,9 @@ end
 
 # The page's glyph and the browser's row glyph: a filled triangle whose hypotenuse is the ramp, the
 # run rising from the first row to the last, on a 12 by 8 field, as the hex digits of its packed
-# bitmap — the width, the height, then the rows most significant bit first, each padded to a whole
-# byte.
-ramped_static_glyph = "0c0800000010007001f007f01ff0fff00000"
+# bitmap — the width, the height, the format, then the pixels, a row after another, most significant
+# bit first, each padded to a whole byte.
+ramped_static_glyph = "0c080000000010007001f007f01ff0fff00000"
 
 class RampedStatic
   var routine_key

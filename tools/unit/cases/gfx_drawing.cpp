@@ -10,6 +10,7 @@
 
 #include "suite.h"
 
+#include "Bitmap.h"
 #include "core/SystemState.h"
 #include "fonts/Ttyp011.h"
 #include "fonts/Ttyp016.h"
@@ -95,7 +96,7 @@ TEST_CASE("a string is centred in the box it is given") {
   // Twenty rows hold two lines of the Adafruit face, so the letter is drawn at two scales: twelve
   // pixels of ink across in a hundred, from the forty-fourth column, and sixteen rows of the
   // twenty, two down.
-  text(Box::whole(), "A")->draw(band);
+  text("A")->draw(band);
   CHECK_EQ(display.inkCount(0, 0, 44, 20), 0);
   CHECK(display.anyInk(44, 2, 12, 16));
   CHECK_EQ(display.inkCount(56, 0, 44, 20), 0);
@@ -111,7 +112,7 @@ TEST_CASE("an icon draws in its box") {
 TEST_CASE("an icon from hex digits draws the bitmap they name") {
   reset();
   // Three pixels of ink on the first row of a three-by-two bitmap, and none on the second.
-  icon(Box(10, 10, 3, 2), "0302e000")->draw(canvas);
+  icon(Box(10, 10, 3, 2), "030200e000")->draw(canvas);
   CHECK_EQ(display.inkCount(10, 10, 3, 1), 3);
   CHECK_EQ(display.inkCount(10, 11, 3, 1), 0);
 }
@@ -330,6 +331,49 @@ TEST_CASE("a turned paint with nothing to turn draws nothing") {
   reset();
   const PaintNodeRef nothing = turned(Transform(Rect(0, 0, 10, 4)), PaintNodeRef());
   CHECK(!nothing);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
+// A bitmap names its width, its height and the format its bytes are in, then the pixels a row after
+// another. A frame keeps a byte a pixel, so a monochrome bit is ink or paper, a gray byte is itself,
+// and a colour arrives as its luminance.
+TEST_CASE("a bitmap draws the format it names") {
+  // Monochrome, eight by two: the first pixel of the top row and the last of the bottom.
+  reset();
+  Bitmap::fromHex("0802008001")->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 2);
+  CHECK(display.anyInk(0, 0, 1, 1));
+  CHECK(display.anyInk(7, 1, 1, 1));
+
+  // Grayscale, four by one: the bytes are the pixels.
+  reset();
+  Bitmap::fromHex("040101004080ff")->draw(canvas);
+  CHECK_EQ(display.at(0, 0), 0x00);
+  CHECK_EQ(display.at(1, 0), 0x40);
+  CHECK_EQ(display.at(2, 0), 0x80);
+  CHECK_EQ(display.at(3, 0), 0xFF);
+
+  // RGB565, two by one: white, then pure red, which the frame shows as its luminance.
+  reset();
+  Bitmap::fromHex("020102fffff800")->draw(canvas);
+  CHECK_EQ(display.at(0, 0), 255);
+  CHECK_EQ(display.at(1, 0), 76);
+
+  // RGB888, one by one: pure green.
+  reset();
+  Bitmap::fromHex("01010300ff00")->draw(canvas);
+  CHECK_EQ(display.at(0, 0), 149);
+}
+
+TEST_CASE("a string that names no whole bitmap draws nothing") {
+  reset();
+  CHECK(!Bitmap::fromHex(nullptr));
+  CHECK(!Bitmap::fromHex(""));
+  CHECK(!Bitmap::fromHex("0802"));        // no format byte
+  CHECK(!Bitmap::fromHex("zzzz"));        // not hex
+  CHECK(!Bitmap::fromHex("08020080"));    // a pixel short of eight by two
+  CHECK(!Bitmap::fromHex("080904"));      // a format the drawing has no case for
+  CHECK(!Bitmap::fromHex("000100"));      // no width
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
 }
 

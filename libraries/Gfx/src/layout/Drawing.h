@@ -55,20 +55,6 @@ class TextNode : public PaintNode {
   Justify vertical_;
 };
 
-// A fixed bitmap named by hex digits: two per byte, the width, the height, then one row per
-// byte-run. The string is the caller's and outlives the draw; one that names no bitmap draws
-// nothing.
-class BitmapNode : public PaintNode {
- public:
-  BitmapNode(Box box, const char* glyph);
-
-  void draw(Canvas& canvas) const override;
-
- private:
-  Box box_;
-  const char* glyph_;
-};
-
 // A glyph drawn inside the box it declares, by a paint of its own.
 class IconNode : public PaintNode {
  public:
@@ -217,6 +203,10 @@ class TurnedNode : public PaintNode {
 // which are the centre of the box unless the caller says where. A family that is null is the default
 // family, so a leaf that names none still draws.
 PaintNodeRef text(Box box, String value, const Family* family = nullptr,
+                  Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
+// The same string in the whole of the cell it lands in, for a leaf a layout has already put where
+// it belongs: the box is the one the cell gave it.
+PaintNodeRef text(String value, const Family* family = nullptr,
                   Justify horizontal = Justify::Center, Justify vertical = Justify::Center);
 PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);

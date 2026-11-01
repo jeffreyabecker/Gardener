@@ -39,7 +39,7 @@ gfx::Size contentsBand(gfx::Size page) {
 // One line of chrome centred in the band it is given: the family's cut that the band's height
 // holds, placed by the leaf itself, so the title is the size its band can carry.
 gfx::PaintNodeRef centredLine(const char* text, const gfx::Family* family) {
-  return gfx::text(gfx::Box::whole(), text, family);
+  return gfx::text(text, family);
 }
 
 // The arrows a hint band marks its keys with: as wide and as tall as the ink of the glyphs they
@@ -93,15 +93,14 @@ gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
     return hintItem(arrowGlyph(pointing(first), 0), arrowsInk(1));
   }
   // The pair side by side in the item's ink: the first arrow, the paper between them, the second.
-  return hintItem(gfx::group(arrowGlyph(pointing(first), 0),
-                             arrowGlyph(pointing(second),
-                                        static_cast<int16_t>(ArrowWidth + HintGap))),
-                  arrowsInk(2));
+  return hintItem(
+      gfx::group(arrowGlyph(pointing(first), 0),
+                 arrowGlyph(pointing(second), static_cast<int16_t>(ArrowWidth + HintGap))),
+      arrowsInk(2));
 }
 
 gfx::Child EditorScene::wordsHint(const char* text) {
-  return hintItem(gfx::text(gfx::Box::whole(), text, nullptr),
-                  gfx::measureText(nullptr, text, 0, SettingsRowHeight));
+  return hintItem(gfx::text(text), gfx::measureText(nullptr, text, 0, SettingsRowHeight));
 }
 
 gfx::Children EditorScene::hintItems() {

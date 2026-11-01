@@ -364,6 +364,36 @@ TEST_CASE("a choice band prints dashes for nothing") {
   CHECK_EQ(display.inkCount(0, 6, PageWidth, 4), 0);
 }
 
+// A row is one line of the face the rows are drawn in, so a band holds as many rows as its design
+// allows rather than a count that suits one design's cell: eight rows of the Adafruit face, ten of
+// ttyp0. One entry, inverted, shows the pitch as the block it fills.
+TEST_CASE("a choice row is one line of the face the rows are drawn in") {
+  NoGestures gestures;
+  Ux ux;
+  String label("Choice");
+  std::vector<ChoiceItem> one = {{"a", "Alpha"}};
+  ChoiceProbe choice(gestures, ux, label, "a", one, false);
+  View band = canvas.child(Rect(0, 0, PageWidth, 36));
+
+  // Centred in thirty-six rows, the default face's row runs from 14 to 21.
+  reset();
+  choice.pageContents({band.width(), band.height()})->draw(band);
+  CHECK(!display.anyInk(0, 13, PageWidth, 1));
+  CHECK(display.anyInk(0, 14, PageWidth, 1));
+  CHECK(display.anyInk(0, 21, PageWidth, 1));
+  CHECK(!display.anyInk(0, 22, PageWidth, 1));
+
+  // ttyp0's is two rows taller, so it starts a row higher and ends a row lower.
+  setDefaultFamily(findFamily("ttyp0"));
+  reset();
+  choice.pageContents({band.width(), band.height()})->draw(band);
+  setDefaultFamily(nullptr);
+  CHECK(!display.anyInk(0, 12, PageWidth, 1));
+  CHECK(display.anyInk(0, 13, PageWidth, 1));
+  CHECK(display.anyInk(0, 22, PageWidth, 1));
+  CHECK(!display.anyInk(0, 23, PageWidth, 1));
+}
+
 // --- the bool ---------------------------------------------------------------
 
 // A bool scene with the hooks it answers opened up, so a case can step and draw it.

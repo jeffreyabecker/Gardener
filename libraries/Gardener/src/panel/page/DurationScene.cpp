@@ -13,7 +13,7 @@ namespace {
 // One field of the pair: its title centred in an equal share of the row, and the whole share
 // inverted when it is the field the keys are stepping.
 gfx::Child field(const char* title, bool showing) {
-  gfx::PaintNodeRef content = gfx::text(gfx::Box::whole(), title, nullptr);
+  gfx::PaintNodeRef content = gfx::text(title);
   if (showing) content = gfx::inverted(std::move(content));
   return gfx::column(0.5f, std::move(content));
 }
@@ -113,7 +113,7 @@ void DurationScene::canceled() { current_ = opened_; }
 // would be, at the cut the band's height takes.
 gfx::PaintNodeRef DurationScene::pageContents(gfx::Size) {
   if (!hasValue()) {
-    return gfx::text(gfx::Box::whole(), "--", nullptr);
+    return gfx::text("--");
   }
   minutes_ = minutesText();
   seconds_ = secondsText();
