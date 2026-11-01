@@ -8,6 +8,7 @@
 #include "../Blend.h"
 #include "../Font.h"
 #include "../Fonts.h"
+#include "../shapes/Shapes.h"
 #include "Paint.h"
 
 namespace gardener::gfx {
@@ -22,6 +23,9 @@ constexpr uint8_t Paper = 0;
 
 // The largest unit a duration shows.
 enum class DurationFormat : uint8_t { Minutes, Seconds, Hours };
+
+// The way a triangle points: the side of its box its apex sits on.
+enum class Arrow : uint8_t { Up, Down, Left, Right };
 
 // The text a count of seconds prints in a format, written into `out`, which the caller keeps:
 // `4m30s` for minutes, `30s` for seconds, `1h2m3s` for hours, and `--` for a count that is not
@@ -104,6 +108,45 @@ class ScrollbarNode : public PaintNode {
   bool hollow_;
 };
 
+// A rectangle in the box it declares: a side left whole resolves to the canvas, so a page fills the
+// cell it lands in without computing a number.
+class RectangleNode : public PaintNode {
+ public:
+  RectangleNode(Box box, uint8_t color, bool filled);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Box box_;
+  uint8_t color_;
+  bool filled_;
+};
+
+// A line between two points: the one mark with ends rather than an extent, so it declares no box.
+class LineNode : public PaintNode {
+ public:
+  explicit LineNode(Line line);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Line line_;
+};
+
+// A triangle filling the box it declares, drawn as the arrow it names.
+class TriangleNode : public PaintNode {
+ public:
+  TriangleNode(Box box, Arrow arrow, uint8_t color, bool filled);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Box box_;
+  Arrow arrow_;
+  uint8_t color_;
+  bool filled_;
+};
+
 // The seam: a draw the vocabulary cannot name, for a page whose content depends on something only
 // known as it draws.
 class CallableNode : public PaintNode {
@@ -142,6 +185,19 @@ class UnderlayNode : public PaintNode {
   PaintNodeRef child_;
 };
 
+// A run of paints drawn in the same canvas, in the order they are given, each in the box it
+// declares: what a cell of several marks over the same pixels needs, where a layout would divide the
+// canvas among them instead.
+class GroupNode : public PaintNode {
+ public:
+  explicit GroupNode(Paints paints);
+
+  void draw(Canvas& canvas) const override;
+
+ private:
+  Paints paints_;
+};
+
 // --- the factories ----------------------------------------------------------
 
 // A string fitted to its box: the cut and scale its height takes, placed by the two justifications,
@@ -153,12 +209,31 @@ PaintNodeRef icon(Box box, const char* bits);
 PaintNodeRef icon(Box box, PaintNodeRef glyph);
 PaintNodeRef progressBar(Box box, float value);
 PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, bool hollow = false);
+// The marks a page draws itself: a rectangle in its box, a line between two points, and a triangle
+// filling its box on the side it points at.
+PaintNodeRef rectangle(Box box, uint8_t color, bool filled = false);
+PaintNodeRef line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
+PaintNodeRef triangle(Box box, Arrow arrow, uint8_t color, bool filled = false);
 // Whole seconds printed in a format, as the text node it is: the formatting is all this adds.
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds,
                       const Family* family = nullptr, bool known = true);
 PaintNodeRef blend(Blend blend, PaintNodeRef child);
 PaintNodeRef underlay(PaintNodeRef child);
 PaintNodeRef callable(std::function<void(Canvas&)> draw);
+
+// The paints drawn in the same canvas, in the order they are given.
+PaintNodeRef group(Paints paints);
+
+// The group from the paints themselves, so a cell that always draws the same marks states them
+// rather than the vector they would arrive in.
+template <typename... Rest>
+PaintNodeRef group(PaintNodeRef&& first, Rest&&... rest) {
+  Paints paints;
+  paints.reserve(1 + sizeof...(Rest));
+  paints.push_back(std::move(first));
+  ((void)paints.push_back(std::forward<Rest>(rest)), ...);
+  return group(std::move(paints));
+}
 
 // A child drawn as paper on ink: the cell filled with ink and the child drawn through an inverting
 // blend, so its ink comes out as paper. An empty child draws nothing.

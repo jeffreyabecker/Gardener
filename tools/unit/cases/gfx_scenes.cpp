@@ -234,11 +234,14 @@ TEST_CASE("the status strip draws its own cells") {
   state.unit = DisplayUnit::Kpa;
   state.batteryPresent = true;
   state.batteryPercent = 80;
+  state.bluetoothConnected = true;
   Overlay overlay(state);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, OverlayRows));
   overlay.draw(band);
   CHECK(display.anyInk(0, 0, PageWidth / 4, OverlayRows));
+  // The rune is a bitmap at the top of the links' second column, an eighth of the strip in.
+  CHECK(display.anyInk(static_cast<int16_t>(PageWidth / 4 + PageWidth / 8), 0, 16, 9));
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
 }
 

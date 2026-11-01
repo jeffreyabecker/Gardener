@@ -131,6 +131,41 @@ void ScrollbarNode::draw(Canvas& canvas) const {
   }
 }
 
+// --- the shapes -------------------------------------------------------------
+
+RectangleNode::RectangleNode(Box box, uint8_t color, bool filled)
+    : box_(box), color_(color), filled_(filled) {}
+
+void RectangleNode::draw(Canvas& canvas) const {
+  const Rect in = box_.in(canvas);
+  canvas.draw(Rectangle(in.x, in.y, in.width, in.height, color_, filled_));
+}
+
+LineNode::LineNode(Line line) : line_(line) {}
+
+void LineNode::draw(Canvas& canvas) const { line_(canvas); }
+
+TriangleNode::TriangleNode(Box box, Arrow arrow, uint8_t color, bool filled)
+    : box_(box), arrow_(arrow), color_(color), filled_(filled) {}
+
+void TriangleNode::draw(Canvas& canvas) const {
+  const Rect at = box_.in(canvas);
+  switch (arrow_) {
+    case Arrow::Up:
+      canvas.draw(Triangle::up(at, color_, filled_));
+      return;
+    case Arrow::Down:
+      canvas.draw(Triangle::down(at, color_, filled_));
+      return;
+    case Arrow::Left:
+      canvas.draw(Triangle::left(at, color_, filled_));
+      return;
+    case Arrow::Right:
+      canvas.draw(Triangle::right(at, color_, filled_));
+      return;
+  }
+}
+
 CallableNode::CallableNode(std::function<void(Canvas&)> draw) : draw_(std::move(draw)) {}
 
 void CallableNode::draw(Canvas& canvas) const {
@@ -156,6 +191,14 @@ void UnderlayNode::draw(Canvas& canvas) const {
   if (child_) child_->draw(canvas);
 }
 
+GroupNode::GroupNode(Paints paints) : paints_(std::move(paints)) {}
+
+void GroupNode::draw(Canvas& canvas) const {
+  for (const PaintNodeRef& paint : paints_) {
+    if (paint) paint->draw(canvas);
+  }
+}
+
 // --- the factories ----------------------------------------------------------
 
 PaintNodeRef text(Box box, String value, const Family* family, Justify horizontal,
@@ -177,6 +220,18 @@ PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, b
   return std::make_unique<ScrollbarNode>(box, index, count, visible, hollow);
 }
 
+PaintNodeRef rectangle(Box box, uint8_t color, bool filled) {
+  return std::make_unique<RectangleNode>(box, color, filled);
+}
+
+PaintNodeRef line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
+  return std::make_unique<LineNode>(Line(x0, y0, x1, y1, color));
+}
+
+PaintNodeRef triangle(Box box, Arrow arrow, uint8_t color, bool filled) {
+  return std::make_unique<TriangleNode>(box, arrow, color, filled);
+}
+
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Family* family,
                       bool known) {
   char printed[16];
@@ -196,6 +251,8 @@ PaintNodeRef underlay(PaintNodeRef child) {
 PaintNodeRef callable(std::function<void(Canvas&)> draw) {
   return std::make_unique<CallableNode>(std::move(draw));
 }
+
+PaintNodeRef group(Paints paints) { return std::make_unique<GroupNode>(std::move(paints)); }
 
 PaintNodeRef inverted(PaintNodeRef child) {
   if (!child) return PaintNodeRef();

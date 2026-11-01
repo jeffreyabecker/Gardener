@@ -25,14 +25,19 @@ constexpr int16_t ArrowTop = 3;
 constexpr int16_t ArrowWidth = 5;
 constexpr int16_t ArrowHeight = 5;
 
-// The Bluetooth rune, packed the way a mono bitmap reads it: width and height, then one bit per
-// pixel, most-significant bit first, two bytes to a row.
-constexpr uint8_t BluetoothBits[] = {0x10, 0x09, 0x01, 0x00, 0x09, 0x40, 0x05, 0x10, 0x01, 0x40,
-                                     0x00, 0x80, 0x01, 0x40, 0x05, 0x10, 0x09, 0x40, 0x01, 0x00};
+// The Bluetooth rune, named the way a page names a bitmap: the width and the height, then one bit
+// per pixel, most-significant bit first, two bytes to a row.
+constexpr const char* BluetoothRun = "1009010009400510014000800140051009400100";
+constexpr int16_t RuneWidth = 16;
+constexpr int16_t RuneHeight = 9;
 
-// The rune sits thirteen pixels into its cell, and every glyph two rows down in it.
-constexpr int16_t RuneLeft = 13;
+// Every glyph sits two rows down in its cell.
 constexpr int16_t GlyphTop = 2;
+
+// The share of the strip each part takes: the unit, the run state and the gauge a quarter each, and
+// the two links an eighth each of the quarter they share.
+constexpr float CellShare = 0.25f;
+constexpr float LinkShare = 0.125f;
 
 // The battery: a twelve by seven footprint, the outline ten wide and the nub two, the fill six.
 constexpr int16_t BatteryWidth = 12;
@@ -56,30 +61,40 @@ const gfx::Family* rowFace() { return gfx::findFamily("overlay"); }
 // is the size the overlay's glyphs have always been drawn at.
 constexpr int16_t GlyphRows = 8;
 
-void oneGlyph(gfx::Canvas& cell, uint8_t code) {
+gfx::PaintNodeRef oneGlyph(uint8_t code) {
   const char value[] = {static_cast<char>(code), '\0'};
-  gfx::text(gfx::Box(0, GlyphTop, 0, GlyphRows, true, false), value, rowFace(), gfx::Justify::Start)
-      ->draw(cell);
+  return gfx::text(gfx::Box(0, GlyphTop, 0, GlyphRows, true, false), value, rowFace(),
+                   gfx::Justify::Start);
 }
 
-// A cell draws only what its arguments say, so one paint reads the state once and hands each of
-// these its value.
+// A piece of the strip draws only what its arguments say, so one paint reads the state once and
+// hands each of these its value.
 gfx::PaintNodeRef unitCell(DisplayUnit unit) {
   return gfx::text(gfx::Box(2, GlyphTop, 0, 0, true, true), displayUnitInfo(unit).suffix,
                    rowFace());
 }
 
-gfx::PaintNodeRef linksCell(bool serial, bool bluetooth) {
-  return gfx::callable([serial, bluetooth](gfx::Canvas& cell) {
-    if (serial) oneGlyph(cell, SerialGlyph);
-    if (bluetooth) cell.draw(gfx::MonoBitmap(RuneLeft, 0, BluetoothBits, gfx::Ink));
-  });
+// The serial link's glyph, at the top-left of its column.
+gfx::PaintNodeRef serialGlyph(bool connected) {
+  if (!connected) return gfx::PaintNodeRef();
+  return oneGlyph(SerialGlyph);
+}
+
+// The Bluetooth rune, at the top of its own column.
+gfx::PaintNodeRef bluetoothRune(bool connected) {
+  if (!connected) return gfx::PaintNodeRef();
+  return gfx::icon(gfx::Box(0, 0, RuneWidth, RuneHeight), BluetoothRun);
 }
 
 gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
-  // A state that moves the chamber shows an arrow; the three that stand still show a glyph.
-  const bool pulling = state == RunState::Pulling;
-  const bool venting = state == RunState::Venting;
+  // A state that moves the chamber shows an arrow, lit for part of each second; the three that
+  // stand still show a glyph.
+  if (state == RunState::Pulling || state == RunState::Venting) {
+    if (!movingLit(nowMs)) return gfx::PaintNodeRef();
+    const gfx::Box box(0, ArrowTop, ArrowWidth, ArrowHeight);
+    return state == RunState::Pulling ? gfx::triangle(box, gfx::Arrow::Up, gfx::Ink, true)
+                                      : gfx::triangle(box, gfx::Arrow::Down, gfx::Ink, true);
+  }
   uint8_t glyph = IdleGlyph;
   switch (state) {
     case RunState::Holding:
@@ -88,45 +103,36 @@ gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
     case RunState::Fault:
       glyph = FaultGlyph;
       break;
-    case RunState::Pulling:
-    case RunState::Venting:
     case RunState::Idle:
       break;
+    case RunState::Pulling:
+    case RunState::Venting:
+      break;  // answered above
   }
-  return gfx::callable([pulling, venting, glyph, nowMs](gfx::Canvas& cell) {
-    if ((pulling || venting) && !movingLit(nowMs)) return;
-    if (pulling) {
-      cell.draw(gfx::Triangle::up(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight), gfx::Ink, true));
-      return;
-    }
-    if (venting) {
-      cell.draw(
-          gfx::Triangle::down(gfx::Rect(0, ArrowTop, ArrowWidth, ArrowHeight), gfx::Ink, true));
-      return;
-    }
-    oneGlyph(cell, glyph);
-  });
+  return oneGlyph(glyph);
 }
 
 // The icon owns its whole footprint, so it erases it first: the overlay lies over whatever the last
 // frame left, and filling over it without clearing would read as a battery with those pixels still
 // inside it.
 gfx::PaintNodeRef batteryCell(int8_t percent, bool low, uint32_t nowMs) {
-  return gfx::callable([percent, low, nowMs](gfx::Canvas& cell) {
-    cell.draw(gfx::Rectangle(0, GlyphTop, BatteryWidth, BatteryHeight, gfx::Paper, true));
-    cell.draw(gfx::Rectangle(0, GlyphTop, BatteryOutline, BatteryHeight, gfx::Ink));
-    cell.draw(gfx::Rectangle(BatteryOutline, GlyphTop + 2, BatteryNub, 3, gfx::Ink, true));
-    if (percent < 0) {
-      cell.draw(gfx::Line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::Ink));
-      return;
-    }
-    if (low && !batteryLit(nowMs)) return;
-    if (percent == 0) return;
+  gfx::Paints paints;
+  paints.push_back(
+      gfx::rectangle(gfx::Box(0, GlyphTop, BatteryWidth, BatteryHeight), gfx::Paper, true));
+  paints.push_back(gfx::rectangle(gfx::Box(0, GlyphTop, BatteryOutline, BatteryHeight), gfx::Ink));
+  paints.push_back(
+      gfx::rectangle(gfx::Box(BatteryOutline, GlyphTop + 2, BatteryNub, 3), gfx::Ink, true));
+  if (percent < 0) {
+    paints.push_back(gfx::line(1, GlyphTop + 1, 8, GlyphTop + 5, gfx::Ink));
+    return gfx::group(std::move(paints));
+  }
+  if ((!low || batteryLit(nowMs)) && percent > 0) {
     int16_t fill = static_cast<int16_t>(BatteryFill * percent / 100);
     if (fill < 1) fill = 1;
     if (fill > BatteryFill) fill = BatteryFill;
-    cell.draw(gfx::Rectangle(2, GlyphTop + 2, fill, 3, gfx::Ink, true));
-  });
+    paints.push_back(gfx::rectangle(gfx::Box(2, GlyphTop + 2, fill, 3), gfx::Ink, true));
+  }
+  return gfx::group(std::move(paints));
 }
 
 }  // namespace
@@ -139,12 +145,14 @@ void Overlay::draw(gfx::Canvas& canvas) const {
   const int8_t percent = now.batteryPresent ? static_cast<int8_t>(now.batteryPercent) : -1;
 
   // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
-  // else touches them and they keep whatever the last frame left.
+  // else touches them and they keep whatever the last frame left. Five columns across the rows: the
+  // unit, the two links, the run state and the gauge.
   gfx::underlay(
-      gfx::row(1.0f, gfx::column(0.25f, unitCell(now.unit)),
-               gfx::column(0.25f, linksCell(now.serialConnected, now.bluetoothConnected)),
-               gfx::column(0.25f, stateCell(now.runState, nowMs)),
-               gfx::column(0.25f, batteryCell(percent, now.batteryLow, nowMs))))
+      gfx::row(1.0f, gfx::column(CellShare, unitCell(now.unit)),
+               gfx::column(LinkShare, serialGlyph(now.serialConnected)),
+               gfx::column(LinkShare, bluetoothRune(now.bluetoothConnected)),
+               gfx::column(CellShare, stateCell(now.runState, nowMs)),
+               gfx::column(CellShare, batteryCell(percent, now.batteryLow, nowMs))))
       ->draw(canvas);
 }
 

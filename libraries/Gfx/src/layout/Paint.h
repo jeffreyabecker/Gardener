@@ -102,6 +102,9 @@ struct Child {
 // The run of children a layout divides its box among.
 using Children = std::vector<Child>;
 
+// The run of paints a group draws in one canvas, in the order they are given.
+using Paints = std::vector<PaintNodeRef>;
+
 // The run a layout works out as it draws, for the cases where the cells only exist once the canvas
 // they land in does: the rows a list has room for, and the scrollbar beside them.
 using Builder = std::function<Children(Canvas&)>;

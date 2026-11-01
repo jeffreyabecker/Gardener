@@ -270,6 +270,53 @@ TEST_CASE("a triangle factory draws in its rectangle and nowhere else") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), display.inkCount(10, 10, 9, 6));
 }
 
+// --- the shapes as paints ---------------------------------------------------
+
+TEST_CASE("a rectangle paints its box") {
+  reset();
+  rectangle(Box(4, 2, 10, 6), Ink, true)->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 10 * 6);
+  CHECK_EQ(display.inkCount(4, 2, 10, 1), 10);  // filled, so its top row is solid
+}
+
+TEST_CASE("a rectangle with a whole side fills the cell") {
+  reset();
+  View cell = canvas.child(Rect(0, 0, 20, 8));
+  rectangle(Box(2, 1, 0, 0, true, true), Ink, true)->draw(cell);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 18 * 7);
+}
+
+TEST_CASE("a line joins its two ends") {
+  reset();
+  line(2, 1, 9, 1, Ink)->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 8);
+}
+
+TEST_CASE("a triangle paints the side it points at") {
+  reset();
+  triangle(Box(0, 0, 9, 6), Arrow::Up, Ink, true)->draw(canvas);
+  CHECK(display.anyInk(4, 0, 1, 1));   // the apex, on the middle column
+  CHECK(!display.anyInk(0, 0, 1, 1));  // the corner beside it is outside the arrow
+  CHECK(display.anyInk(0, 5, 1, 1));   // the base, corner to corner
+  CHECK(display.anyInk(8, 5, 1, 1));
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), display.inkCount(0, 0, 9, 6));
+}
+
+TEST_CASE("a group paints its run in one canvas, in order") {
+  reset();
+  group(rectangle(Box(0, 0, 10, 8), Ink, true), rectangle(Box(2, 2, 4, 4), Paper, true))
+      ->draw(canvas);
+  // The second paint clears what the first inked, over the same canvas rather than a cell of its own.
+  CHECK_EQ(display.inkCount(2, 2, 4, 4), 0);
+  CHECK_EQ(display.inkCount(0, 0, 10, 8), 10 * 8 - 4 * 4);
+}
+
+TEST_CASE("a group with nothing to draw draws nothing") {
+  reset();
+  group(Paints())->draw(canvas);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
 TEST_CASE("a design answers its own name and a size does not") {
   // The designs the library ships answer their ladders, shortest cut first, so a page names the
   // design and the box picks the size.

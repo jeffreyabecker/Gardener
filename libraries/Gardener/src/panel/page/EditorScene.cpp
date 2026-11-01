@@ -55,17 +55,9 @@ gfx::Size arrowsInk(uint8_t count) {
   return {width, ArrowHeight};
 }
 
-// The four arrows as the pixels the triangle of each one fills in a 5x7 box: the width and the
-// height, then one byte a row, most significant bit first. The triangle fill steps each edge a row
-// at a time, so these are the exact pixels the band drew before the marks were glyphs.
-constexpr const char* UpArrowBits = "0507203030707878f8";
-constexpr const char* DownArrowBits = "0507f8787870303020";
-constexpr const char* BackArrowBits = "0507083878f8381808";
-constexpr const char* ForwardArrowBits = "050780e0f0f8e0c080";
-
-// One arrow in a cell of the item's ink.
-gfx::PaintNodeRef arrowGlyph(const char* bits) {
-  return gfx::icon(gfx::Box(0, 0, ArrowWidth, ArrowHeight), bits);
+// One arrow in the item's ink, at the column it starts in.
+gfx::PaintNodeRef arrowGlyph(gfx::Arrow arrow, int16_t left) {
+  return gfx::triangle(gfx::Box(left, 0, ArrowWidth, ArrowHeight), arrow, gfx::Ink, true);
 }
 
 // One item of the band: the ink it draws and the paper that separates it from the next item.
@@ -82,26 +74,29 @@ EditorScene::EditorScene(GestureQueue& gestures, Ux& ux, String& label)
 void EditorScene::setValidator(CurriedValidator validator) { validator_ = std::move(validator); }
 
 gfx::Child EditorScene::arrowsHint(HintArrow first, HintArrow second) {
-  const auto glyph = [](HintArrow arrow) {
+  const auto pointing = [](HintArrow arrow) {
     switch (arrow) {
-      case HintArrow::Up:
-        return arrowGlyph(UpArrowBits);
       case HintArrow::Down:
-        return arrowGlyph(DownArrowBits);
+        return gfx::Arrow::Down;
       case HintArrow::Back:
-        return arrowGlyph(BackArrowBits);
+        return gfx::Arrow::Left;
       case HintArrow::Forward:
-        return arrowGlyph(ForwardArrowBits);
+        return gfx::Arrow::Right;
+      case HintArrow::Up:
       case HintArrow::None:
         break;
     }
-    return gfx::PaintNodeRef();
+    return gfx::Arrow::Up;
   };
-  if (second == HintArrow::None) return hintItem(glyph(first), arrowsInk(1));
+  if (second == HintArrow::None) {
+    // A mark the band was given no arrow for draws nothing.
+    if (first == HintArrow::None) return hintItem(gfx::PaintNodeRef(), arrowsInk(1));
+    return hintItem(arrowGlyph(pointing(first), 0), arrowsInk(1));
+  }
   // The pair side by side in the item's ink: the first arrow, the paper between them, the second.
-  return hintItem(gfx::row(1.0f, gfx::column(static_cast<float>(ArrowWidth), glyph(first)),
-                           gfx::column(static_cast<float>(HintGap), gfx::PaintNodeRef()),
-                           gfx::column(static_cast<float>(ArrowWidth), glyph(second))),
+  return hintItem(gfx::group(arrowGlyph(pointing(first), 0),
+                             arrowGlyph(pointing(second),
+                                        static_cast<int16_t>(ArrowWidth + HintGap))),
                   arrowsInk(2));
 }
 
