@@ -90,6 +90,8 @@ std::any BoolRow::parse(const String& stored) const {
 
 bool BoolRow::accept(std::any& value) const { return isHeldAs<bool>(value); }
 
+std::unique_ptr<SettingsRow> BoolRow::clone() const { return std::make_unique<BoolRow>(*this); }
+
 // --- the choice -------------------------------------------------------------
 
 ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -143,6 +145,8 @@ std::any ChoiceRow::parse(const String& stored) const {
 
 bool ChoiceRow::accept(std::any& value) const { return isHeldAs<String>(value); }
 
+std::unique_ptr<SettingsRow> ChoiceRow::clone() const { return std::make_unique<ChoiceRow>(*this); }
+
 // --- the duration -----------------------------------------------------------
 
 DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -194,6 +198,10 @@ std::any DurationRow::parse(const String& stored) const {
 }
 
 bool DurationRow::accept(std::any& value) const { return takeNumber(value, true); }
+
+std::unique_ptr<SettingsRow> DurationRow::clone() const {
+  return std::make_unique<DurationRow>(*this);
+}
 
 // --- the number -------------------------------------------------------------
 
@@ -258,6 +266,8 @@ std::any NumberRow::parse(const String& stored) const {
 
 bool NumberRow::accept(std::any& value) const { return takeNumber(value, false); }
 
+std::unique_ptr<SettingsRow> NumberRow::clone() const { return std::make_unique<NumberRow>(*this); }
+
 // --- the pressure -----------------------------------------------------------
 
 PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -284,6 +294,10 @@ std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, unit_, wholeSteps_,
                                          nullable_);
+}
+
+std::unique_ptr<SettingsRow> PressureRow::clone() const {
+  return std::make_unique<PressureRow>(*this);
 }
 
 }  // namespace gardener

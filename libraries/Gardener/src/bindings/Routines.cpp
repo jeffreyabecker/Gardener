@@ -367,8 +367,8 @@ int routinesSaveSettings(bvm* vm) {
   be_return(vm);
 }
 
-// routines.rows(): the browser's list, one row per record and per alternate in the order they
-// registered.
+// routines.rows(): the browser's list, one row per registration in the order they registered, each
+// alternate's row directly behind the record it was copied from.
 int routinesRows(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
@@ -399,7 +399,7 @@ int routinesTitle(bvm* vm) {
   }
   const RoutineRegistry& registry = bindings->registry();
   const String routineKey(argText(vm, 1));
-  if (registry.entry(routineKey) == nullptr) be_return_nil(vm);
+  if (registry.registration(routineKey) == nullptr) be_return_nil(vm);
   be_pushstring(vm, registry.title(routineKey).c_str());
   be_return(vm);
 }
@@ -458,9 +458,9 @@ int routinesActivate(bvm* vm) {
   be_return(vm);
 }
 
-// routines.keys(): every registered key in registration order, each alternate after its record, as
-// the list a driver walks and a summary counts the image by. An empty list, never nil, for an image
-// that registered nothing.
+// routines.keys(): every registered key in registration order, each alternate directly behind the
+// record it was copied from, as the list a driver walks and a summary counts the image by. An empty
+// list, never nil, for an image that registered nothing.
 int routinesKeys(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {

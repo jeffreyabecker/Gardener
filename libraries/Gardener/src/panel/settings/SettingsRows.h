@@ -40,6 +40,7 @@ class BoolRow : public SettingsRow {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
+  std::unique_ptr<SettingsRow> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -75,6 +76,7 @@ class ChoiceRow : public SettingsRow {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
+  std::unique_ptr<SettingsRow> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -107,6 +109,7 @@ class DurationRow : public SettingsRow {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
+  std::unique_ptr<SettingsRow> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -142,6 +145,7 @@ class NumberRow : public SettingsRow {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
+  std::unique_ptr<SettingsRow> clone() const override;
 
  protected:
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
@@ -175,6 +179,7 @@ class PressureRow : public NumberRow {
 
   SettingDeclaration declaration() const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
+  std::unique_ptr<SettingsRow> clone() const override;
 
  private:
   DisplayUnit unit_;

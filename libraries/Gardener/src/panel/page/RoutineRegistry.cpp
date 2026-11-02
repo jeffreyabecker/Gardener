@@ -1,6 +1,7 @@
 #include "panel/page/RoutineRegistry.h"
 
 #include <any>
+#include <cstddef>
 #include <utility>
 
 #include "core/Logger.h"
@@ -19,21 +20,28 @@ String RoutineRegistry::documentPath(const String& routineKey) const {
   return path;
 }
 
-bool RoutineRegistry::add(Registration registration) {
+bool RoutineRegistry::add(Registration added) {
   // The key is also the name of the document its values live in, so it has to be a plain word.
-  const String routineKey = registration.routineKey();
+  const String routineKey = added.routineKey();
   if (routineKey.isEmpty() || routineKey.indexOf('/') >= 0 || routineKey.indexOf('\\') >= 0) {
     logger_.warn("registry: routine key must be a plain word");
     return false;
   }
 
   const int16_t held = indexOf(routineKey);
-  const size_t at = held < 0 ? entries_.size() : static_cast<size_t>(held);
+  size_t at = entries_.size();
   if (held < 0) {
-    entries_.push_back({std::move(registration), {}});
+    entries_.push_back(std::move(added));
   } else {
-    entries_[at].registration = std::move(registration);
-    entries_[at].aliases.clear();
+    at = static_cast<size_t>(held);
+    // The copies the old record made sit directly behind it and name it as their document: they go
+    // with the record they were copied from.
+    size_t last = at + 1;
+    while (last < entries_.size() && entries_[last].documentKey() == routineKey)
+      last++;
+    entries_.erase(entries_.begin() + static_cast<std::ptrdiff_t>(at + 1),
+                   entries_.begin() + static_cast<std::ptrdiff_t>(last));
+    entries_[at] = std::move(added);
   }
 
   Config document(&library_, documentPath(routineKey));
@@ -41,112 +49,90 @@ bool RoutineRegistry::add(Registration registration) {
   std::vector<String> sections;
   document.sectionKeys(sections);
 
-  Entry& added = entries_[at];
+  // Room for every section before a copy is taken of the record: an insert may move the entries, and
+  // the record is read through a reference while its copies go in.
+  entries_.reserve(entries_.size() + sections.size());
+  const Registration& record = entries_[at];
+  size_t after = at + 1;
   for (const String& name : sections) {
     if (name.isEmpty()) continue;
-    if (entry(name) != nullptr) {
+    if (registration(name) != nullptr) {
       String message = "registry: ";
       message += routineKey;
-      message += " alias ";
+      message += " alternate ";
       message += name;
       message += " already taken";
       logger_.warn(message.c_str());
       continue;
     }
     const String title = document.get<String>(name.c_str(), "routine_title", "");
-    added.aliases.push_back({name, title.isEmpty() ? name : title});
+    entries_.insert(entries_.begin() + static_cast<std::ptrdiff_t>(after),
+                    record.copyAs(name, title.isEmpty() ? name : title));
+    after++;
   }
   return true;
 }
 
 std::vector<String> RoutineRegistry::keys() const {
   std::vector<String> out;
-  for (const Entry& entry : entries_) {
-    out.push_back(entry.registration.routineKey());
-    for (const Alias& alias : entry.aliases)
-      out.push_back(alias.routineKey);
-  }
+  out.reserve(entries_.size());
+  for (const Registration& entry : entries_)
+    out.push_back(entry.routineKey());
   return out;
 }
 
 std::vector<RoutineRow> RoutineRegistry::rows() const {
   std::vector<RoutineRow> out;
-  for (const Entry& entry : entries_) {
-    out.push_back(
-        {entry.registration.glyph(), entry.registration.title(), entry.registration.routineKey()});
-    for (const Alias& alias : entry.aliases) {
-      out.push_back({entry.registration.glyph(), alias.title, alias.routineKey});
-    }
+  out.reserve(entries_.size());
+  for (const Registration& entry : entries_) {
+    out.push_back({entry.glyph(), entry.title(), entry.routineKey()});
   }
   return out;
 }
 
-const Registration* RoutineRegistry::entry(const String& routineKey) const {
-  for (const Entry& entry : entries_) {
-    for (const Alias& alias : entry.aliases) {
-      if (alias.routineKey == routineKey) return &entry.registration;
-    }
-  }
-  return registration(routineKey);
-}
-
 const Registration* RoutineRegistry::registration(const String& routineKey) const {
   const int16_t index = indexOf(routineKey);
-  return index < 0 ? nullptr : &entries_[static_cast<size_t>(index)].registration;
+  return index < 0 ? nullptr : &entries_[static_cast<size_t>(index)];
 }
 
 int16_t RoutineRegistry::indexOf(const String& routineKey) const {
   for (size_t i = 0; i < entries_.size(); i++) {
-    if (entries_[i].registration.routineKey() == routineKey) return static_cast<int16_t>(i);
+    if (entries_[i].routineKey() == routineKey) return static_cast<int16_t>(i);
   }
   return -1;
 }
 
-String RoutineRegistry::section(const String& routineKey) const {
-  for (const Entry& entry : entries_) {
-    for (const Alias& alias : entry.aliases) {
-      if (alias.routineKey == routineKey) return routineKey;
-    }
-  }
-  return String();
-}
-
 String RoutineRegistry::title(const String& routineKey) const {
-  for (const Entry& entry : entries_) {
-    for (const Alias& alias : entry.aliases) {
-      if (alias.routineKey == routineKey) return alias.title;
-    }
-  }
   const Registration* record = registration(routineKey);
   return record == nullptr ? String() : record->title();
 }
 
 const String* RoutineRegistry::icon(const String& routineKey) const {
-  const Registration* record = entry(routineKey);
+  const Registration* record = registration(routineKey);
   if (record == nullptr || record->glyph().isEmpty()) return nullptr;
   return &record->glyph();
 }
 
 const std::vector<SettingsRow*>* RoutineRegistry::settingsRows(const String& routineKey) const {
-  const Registration* record = entry(routineKey);
+  const Registration* record = registration(routineKey);
   return record == nullptr ? nullptr : &record->settings();
 }
 
 SettingValues RoutineRegistry::loadSettings(const String& routineKey) const {
-  const Registration* record = entry(routineKey);
+  const Registration* record = registration(routineKey);
   if (record == nullptr) return SettingValues();
-  return record->loadSettings(library_, section(routineKey));
+  return record->loadSettings(library_);
 }
 
 bool RoutineRegistry::saveSettings(const String& routineKey, SettingValues& values) const {
-  const Registration* record = entry(routineKey);
+  const Registration* record = registration(routineKey);
   if (record == nullptr) return false;
-  return record->saveSettings(library_, section(routineKey), values);
+  return record->saveSettings(library_, values);
 }
 
 std::unique_ptr<Scene> RoutineRegistry::activate(const String& routineKey,
                                                  const SettingValues& values) const {
-  const Registration* record = entry(routineKey);
+  const Registration* record = registration(routineKey);
   if (record == nullptr || !record->factory()) return nullptr;
 
   RoutineActivation activation;

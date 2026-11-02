@@ -387,6 +387,8 @@ class TestRow : public SettingsRow {
     return !value.has_value() || std::any_cast<String>(&value) != nullptr;
   }
 
+  std::unique_ptr<SettingsRow> clone() const override { return std::make_unique<TestRow>(*this); }
+
   SettingDeclaration declaration() const override { return {"text"}; }
 
   std::unique_ptr<EditorScene> scene(const std::any& value) override {

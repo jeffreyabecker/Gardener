@@ -126,7 +126,7 @@ bool resolve(const Command& command, HarnessSession& session, Target& target, st
     target.kind = Target::Kind::Routine;
     target.key = command.scene;
     const String key(command.scene.c_str());
-    if (registry.entry(key) == nullptr) {
+    if (registry.registration(key) == nullptr) {
       error = "no routine '" + command.scene + "'";
       return false;
     }

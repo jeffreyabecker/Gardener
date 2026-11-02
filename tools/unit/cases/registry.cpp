@@ -226,7 +226,7 @@ TEST_CASE("the registry keeps the order its records registered") {
   CHECK_EQ(std::string(keys[0].c_str()), std::string("ramped_static"));
 }
 
-TEST_CASE("an alternate follows its record and resolves to it") {
+TEST_CASE("an alternate is a copy of its record") {
   MemoryLibrary library;
   library.put(RampedDocument, RampedFixture);
   RecordingLogger logger;
@@ -240,9 +240,75 @@ TEST_CASE("an alternate follows its record and resolves to it") {
   CHECK_EQ(std::string(rows[0].routineKey.c_str()), std::string("ramped_static"));
   CHECK_EQ(std::string(rows[1].routineKey.c_str()), std::string("cold"));
 
-  const Registration* alternate = registry.entry("cold");
+  // The copy answers to the section's key, reads the record's document, and takes the section's
+  // title where it names one and its own key where it does not.
+  const Registration* alternate = registry.registration("cold");
   REQUIRE(alternate != nullptr);
-  CHECK_EQ(std::string(alternate->routineKey().c_str()), std::string("ramped_static"));
+  CHECK_EQ(std::string(alternate->routineKey().c_str()), std::string("cold"));
+  CHECK_EQ(std::string(alternate->documentKey().c_str()), std::string("ramped_static"));
+  CHECK_EQ(std::string(alternate->title().c_str()), std::string("Cold"));
+  CHECK_EQ(std::string(rows[2].routineKey.c_str()), std::string("warm"));
+  CHECK_EQ(std::string(rows[2].title.c_str()), std::string("warm"));
+
+  // The declaration is the record's, made again: the copy owns rows of its own.
+  const Registration* record = registry.registration("ramped_static");
+  REQUIRE(record != nullptr);
+  REQUIRE(alternate->settings().size() == record->settings().size());
+  for (size_t i = 0; i < record->settings().size(); i++) {
+    CHECK(alternate->settings()[i] != record->settings()[i]);
+    CHECK_EQ(std::string(alternate->settings()[i]->key().c_str()),
+             std::string(record->settings()[i]->key().c_str()));
+  }
+}
+
+TEST_CASE("an alternate reads and writes its own section") {
+  MemoryLibrary library;
+  library.put(RampedDocument, RampedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+  REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
+
+  // The section carries one key; the rest begin at the declaration's default, not at the record's
+  // global set.
+  SettingValues alternate = registry.loadSettings("cold");
+  CHECK_EQ(kpaOf(alternate, "target_pressure"), 15.0f);
+  CHECK_EQ(kpaOf(alternate, "initial_pressure"), 5.0f);
+  CHECK_EQ(secondsOf(alternate, "total_duration"), 300);
+
+  alternate["target_pressure"] = 12.0f;
+  REQUIRE(registry.saveSettings("cold", alternate));
+
+  const std::string written = library.textAt(RampedDocument);
+  CHECK(written.find("[cold]") != std::string::npos);
+  CHECK(written.find("target_pressure=12.00") != std::string::npos);
+  CHECK_EQ(kpaOf(registry.loadSettings("cold"), "target_pressure"), 12.0f);
+
+  // The record's own set is the document's global section, which the copy's write left alone.
+  CHECK_EQ(kpaOf(registry.loadSettings("ramped_static"), "target_pressure"), 20.0f);
+}
+
+TEST_CASE("a record registered again re-makes its alternates once, in their place") {
+  MemoryLibrary library;
+  library.put(RampedDocument, RampedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+
+  REQUIRE(registry.add(Registration("ramped_static", "Ramped", rampedDeclaration(gestures, ux))));
+  REQUIRE(registry.add(Registration("other", "Other", rampedDeclaration(gestures, ux))));
+  REQUIRE(
+      registry.add(Registration("ramped_static", "Ramped again", rampedDeclaration(gestures, ux))));
+
+  const std::vector<String> keys = registry.keys();
+  REQUIRE(keys.size() == 4);
+  CHECK_EQ(std::string(keys[0].c_str()), std::string("ramped_static"));
+  CHECK_EQ(std::string(keys[1].c_str()), std::string("cold"));
+  CHECK_EQ(std::string(keys[2].c_str()), std::string("warm"));
+  CHECK_EQ(std::string(keys[3].c_str()), std::string("other"));
+  CHECK_EQ(std::string(registry.title("ramped_static").c_str()), std::string("Ramped again"));
 }
 
 TEST_CASE("a key that is not a plain word is refused and changes nothing") {

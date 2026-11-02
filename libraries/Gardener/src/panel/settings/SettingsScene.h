@@ -68,6 +68,10 @@ class SettingsRow : public SettingKind {
   // than cast to.
   virtual bool accept(std::any& value) const = 0;
 
+  // This row made again: the same kind, key, label, default, rules and check, owned by whoever asked.
+  // A registration copied under another key declares its own rows rather than borrowing another's.
+  virtual std::unique_ptr<SettingsRow> clone() const = 0;
+
   // The row's check closed over the declaration and the set in force, which is the form the editor
   // it builds holds; nothing for a row whose declaration gave it no check. The check borrows the
   // row, the declaration and the set, so whoever holds it keeps all three alive.
