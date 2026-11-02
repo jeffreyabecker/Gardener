@@ -487,6 +487,46 @@ TEST_CASE("a settings list cancel puts the set back") {
   CHECK_EQ(std::string(back.c_str()), std::string("50"));
 }
 
+TEST_CASE("a settings list passes over a hidden row") {
+  GestureQueue gestures;
+  Ux ux;
+  String title("SETTINGS");
+  TestRow first(gestures, ux);
+  TestRow hidden(gestures, ux);
+  TestRow last(gestures, ux);
+  first.hold("first", "First", "10");
+  hidden.hold("hidden", "Hidden", "20");
+  last.hold("last", "Last", "30");
+  hidden.hide();
+  std::vector<SettingsRow*> rows{&first, &hidden, &last};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
+  SettingsProbe* settings = list.get();
+  CHECK_EQ(settings->selected(), 0);
+  // Two rows are drawn, so one step down is the last row and the next wraps to the first.
+  settings->press("down:single");
+  CHECK_EQ(settings->selected(), 1);
+  settings->press("down:single");
+  CHECK_EQ(settings->selected(), 0);
+  settings->press("up:single");
+  CHECK_EQ(settings->selected(), 1);
+
+  // The row the keys are on is the third, not the hidden one: Forward opens its editor, and the
+  // hidden row is still declared, so its value is in the set the list hands back untouched.
+  SettingValues handed;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list),
+          [&handed](Scene& scene) { handed = static_cast<SettingsScene&>(scene).values(); });
+  press(ux, gestures, "forward:single", 1000);
+  REQUIRE(ux.depth() == 3);
+  static_cast<TestEditor*>(ux.top())->set(String("31"));
+  ux.pop();
+  press(ux, gestures, "ok:single", 1010);
+  CHECK_EQ(std::string(std::any_cast<String>(handed.at("last")).c_str()), std::string("31"));
+  REQUIRE(handed.find("hidden") != handed.end());
+  CHECK_EQ(std::string(std::any_cast<String>(handed.at("hidden")).c_str()), std::string("20"));
+}
+
 TEST_CASE("a settings list draws its rows") {
   NoGestures gestures;
   Ux ux;

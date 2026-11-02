@@ -9,6 +9,36 @@
 #include "storage/RoutineSettingStore.h"
 
 namespace gardener {
+namespace {
+
+// What a section says about the record it copies, read beside the settings the section holds: the
+// title it shows, the glyph it draws, the rows it marks hidden, and the rows it pins to a value. A
+// pinned key's text is read by the row's own kind, which is the only thing that knows what it means,
+// and a pinned row is hidden as well because the list would have nothing to edit on it.
+SectionOverrides overridesOf(const Config& document, const String& section,
+                             const Registration& record) {
+  SectionOverrides overrides;
+  overrides.title = document.get<String>(section.c_str(), "routine_title", "");
+  overrides.glyph = document.get<String>(section.c_str(), "routine_icon", "");
+  for (const SettingsRow* row : record.settings()) {
+    if (row == nullptr) continue;
+    const String key = row->key();
+    const String constantKey = key + ":constant";
+    const String text = document.get<String>(section.c_str(), constantKey.c_str(), "");
+    if (!text.isEmpty()) {
+      overrides.constants[key] = row->parse(text);
+      overrides.hidden.push_back(key);
+      continue;
+    }
+    const String hiddenKey = key + ":hidden";
+    if (document.get<bool>(section.c_str(), hiddenKey.c_str(), false)) {
+      overrides.hidden.push_back(key);
+    }
+  }
+  return overrides;
+}
+
+}  // namespace
 
 RoutineRegistry::RoutineRegistry(Library& library, Logger& logger)
     : library_(library), logger_(logger) {}
@@ -65,9 +95,8 @@ bool RoutineRegistry::add(Registration added) {
       logger_.warn(message.c_str());
       continue;
     }
-    const String title = document.get<String>(name.c_str(), "routine_title", "");
     entries_.insert(entries_.begin() + static_cast<std::ptrdiff_t>(after),
-                    record.copyAs(name, title.isEmpty() ? name : title));
+                    record.copyAs(name, overridesOf(document, name, record)));
     after++;
   }
   return true;
@@ -147,6 +176,10 @@ std::unique_ptr<Scene> RoutineRegistry::activate(const String& routineKey,
       if (row->accept(given)) value = std::move(given);
     }
     activation.values[row->key()] = std::move(value);
+  }
+  // A setting the section pinned is the value the page is launched with, whatever the caller stated.
+  for (const SettingValues::value_type& pinned : record->constants()) {
+    activation.values[pinned.first] = pinned.second;
   }
   return record->factory()(activation);
 }

@@ -56,10 +56,13 @@ const String& SettingsRow::icon() const {
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
                              const std::vector<SettingsRow*>& rows, const SettingValues& values)
     : Scene(gestures), title_(title), ux_(ux), rows_(rows) {
-  for (const SettingsRow* row : rows_) {
+  for (size_t i = 0; i < rows_.size(); i++) {
+    const SettingsRow* row = rows_[i];
     if (row == nullptr) continue;
     const auto held = values.find(row->key());
     values_[row->key()] = held == values.end() ? row->defaultValue() : held->second;
+    if (row->hidden()) continue;
+    visible_.push_back(static_cast<int16_t>(i));
   }
   opened_ = values_;
 }
@@ -90,7 +93,7 @@ bool SettingsScene::handle(const char* gesture) {
 }
 
 void SettingsScene::move(int8_t direction) {
-  const int16_t count = static_cast<int16_t>(rows_.size());
+  const int16_t count = static_cast<int16_t>(visible_.size());
   if (count == 0) return;
   selected_ = static_cast<int16_t>((selected_ + direction + count) % count);
 }
@@ -100,8 +103,8 @@ void SettingsScene::move(int8_t direction) {
 // on, and one whose row's check refused a value stays open rather than hand it back, so the write
 // is always a value the row's declaration accepts.
 void SettingsScene::open() {
-  if (selected_ < 0 || selected_ >= static_cast<int16_t>(rows_.size())) return;
-  SettingsRow* row = rows_[selected_];
+  if (selected_ < 0 || selected_ >= static_cast<int16_t>(visible_.size())) return;
+  SettingsRow* row = rows_[visible_[selected_]];
   if (row == nullptr) return;
   const auto held = values_.find(row->key());
   const std::any value = held == values_.end() ? std::any() : held->second;
@@ -119,9 +122,9 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
   if (heading > 0) {
     gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_, nullptr)->draw(canvas);
   }
-  if (rows_.empty()) return;
+  if (visible_.empty()) return;
   gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
-  const int16_t count = static_cast<int16_t>(rows_.size());
+  const int16_t count = static_cast<int16_t>(visible_.size());
   int16_t visible = static_cast<int16_t>(band.height() / Row);
   if (visible < 1) visible = 1;
   if (visible > count) visible = count;
@@ -131,7 +134,7 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
       scrolls ? static_cast<int16_t>(band.width() - gfx::ScrollbarColumn) : band.width();
   for (int16_t line = 0; line < visible; line++) {
     const int16_t at = static_cast<int16_t>(first + line);
-    SettingsRow* row = rows_[at];
+    SettingsRow* row = rows_[visible_[at]];
     if (row == nullptr) continue;
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;

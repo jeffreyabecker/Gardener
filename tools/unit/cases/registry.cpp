@@ -74,6 +74,24 @@ constexpr const char* RampedFixture = "initial_pressure=9.0\n"
                                       "[warm]\n"
                                       "target_pressure=30.0\n";
 
+// A document whose section hides one setting, pins another and names a glyph of its own.
+constexpr const char* PinnedDocument = "/cfg/routines/pinned.ini";
+constexpr const char* PinnedFixture = "initial_pressure=9.0\n"
+                                      "target_pressure=20.0\n"
+                                      "total_duration=400\n"
+                                      "\n"
+                                      "[cold]\n"
+                                      "routine_title=Cold\n"
+                                      "routine_icon=080800800000000000000000\n"
+                                      "target_pressure:hidden=true\n"
+                                      "initial_pressure:constant=7.0\n"
+                                      "\n"
+                                      "[warm]\n"
+                                      "total_duration=600\n";
+
+// The glyph a record registers with, which a section that names none keeps.
+constexpr const char* RecordGlyph = "08010080000000";
+
 std::vector<ChoiceItem> resumeChoices() {
   return {{"hold", "Hold"}, {"immediately", "Immediately"}};
 }
@@ -287,6 +305,76 @@ TEST_CASE("an alternate reads and writes its own section") {
 
   // The record's own set is the document's global section, which the copy's write left alone.
   CHECK_EQ(kpaOf(registry.loadSettings("ramped_static"), "target_pressure"), 20.0f);
+}
+
+TEST_CASE("a section hides and pins settings and names its own glyph") {
+  MemoryLibrary library;
+  library.put(PinnedDocument, PinnedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+  REQUIRE(registry.add(
+      Registration("pinned", "Pinned", rampedDeclaration(gestures, ux), nullptr, RecordGlyph)));
+
+  // Both marked rows keep their place in the declaration — only the list leaves them out — and the
+  // record's own rows are untouched.
+  const std::vector<SettingsRow*>& cold = *registry.settingsRows("cold");
+  REQUIRE(cold.size() == 3);
+  CHECK(cold[0]->hidden());
+  CHECK(cold[1]->hidden());
+  CHECK_FALSE(cold[2]->hidden());
+  const std::vector<SettingsRow*>& own = *registry.settingsRows("pinned");
+  REQUIRE(own.size() == 3);
+  CHECK_FALSE(own[0]->hidden());
+  CHECK_FALSE(own[1]->hidden());
+
+  // The pinned setting reads as the value the section fixes; the hidden one still reads its own.
+  CHECK_EQ(kpaOf(registry.loadSettings("cold"), "initial_pressure"), 7.0f);
+  CHECK_EQ(kpaOf(registry.loadSettings("cold"), "target_pressure"), 20.0f);
+
+  // The section's glyph is the alternate's, and one that names none keeps the record's.
+  REQUIRE(registry.icon("cold") != nullptr);
+  CHECK_EQ(std::string(registry.icon("cold")->c_str()), std::string("080800800000000000000000"));
+  REQUIRE(registry.icon("warm") != nullptr);
+  CHECK_EQ(std::string(registry.icon("warm")->c_str()), std::string(RecordGlyph));
+  const std::vector<gardener::RoutineRow> rows = registry.rows();
+  REQUIRE(rows.size() >= 2);
+  CHECK_EQ(std::string(rows[1].glyph.c_str()), std::string("080800800000000000000000"));
+}
+
+TEST_CASE("a launch cannot move a setting a section pinned") {
+  MemoryLibrary library;
+  library.put(PinnedDocument, PinnedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+
+  gardener::RoutineActivation launched;
+  REQUIRE(registry.add(
+      Registration("pinned", "Pinned", rampedDeclaration(gestures, ux),
+                   [&launched, &gestures](const gardener::RoutineActivation& activation) {
+                     launched = activation;
+                     return std::make_unique<StubPage>(gestures);
+                   })));
+
+  // The caller states another value for the pinned setting, which the section's value wins over; the
+  // hidden setting is the caller's to state, since hiding only keeps it off the list.
+  SettingValues values;
+  values["initial_pressure"] = 30.0f;
+  values["target_pressure"] = 15.0f;
+  REQUIRE(registry.activate("cold", values) != nullptr);
+  CHECK_EQ(std::string(launched.routineKey.c_str()), std::string("cold"));
+  CHECK_EQ(kpaOf(launched.values, "initial_pressure"), 7.0f);
+  CHECK_EQ(kpaOf(launched.values, "target_pressure"), 15.0f);
+
+  // A settled set cannot move it either: the save writes the pinned value.
+  SettingValues settled = registry.loadSettings("cold");
+  settled["initial_pressure"] = 30.0f;
+  REQUIRE(registry.saveSettings("cold", settled));
+  CHECK(library.textAt(PinnedDocument).find("initial_pressure=7.00") != std::string::npos);
+  CHECK_EQ(kpaOf(registry.loadSettings("cold"), "initial_pressure"), 7.0f);
 }
 
 TEST_CASE("a record registered again re-makes its alternates once, in their place") {
