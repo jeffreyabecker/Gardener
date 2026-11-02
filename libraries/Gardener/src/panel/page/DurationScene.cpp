@@ -18,6 +18,11 @@ gfx::Child field(const char* title, bool showing) {
   return gfx::column(0.5f, std::move(content));
 }
 
+// The minutes band's cells: a mark in a sixth of the width each, and the words in the third that is
+// left.
+constexpr float MarkShare = 1.0f / 6.0f;
+constexpr float WordsShare = 1.0f / 3.0f;
+
 }  // namespace
 
 DurationScene::DurationScene(GestureQueue& gestures, Ux& ux, String& label, float current,
@@ -67,7 +72,20 @@ std::any DurationScene::value() const { return hasValue() ? std::any(whole()) : 
 // The minutes stage's words name the field the keys step and say that Forward moves to the seconds;
 // the seconds stage has nowhere left to go, so OK is what it offers.
 const char* DurationScene::hintText() {
-  return stage_ == Stage::Minutes ? "MIN NEXT" : "SEC OK=SAVE";
+  return stage_ == Stage::Minutes ? "MIN" : "SEC OK=SAVE";
+}
+
+// The minutes stage says which field the keys step and marks Forward as the way on to the seconds;
+// the seconds stage has nowhere left to go, so it is the page's own band and OK is what it offers.
+gfx::PaintNodeRef DurationScene::hintComponent() {
+  // A refused value is the page's answer in words, whatever stage the editor is in.
+  if (!refusal().isEmpty() || stage_ == Stage::Seconds) return EditorScene::hintComponent();
+  const gfx::Family* face = gfx::findFamily("adafruit");
+  return gfx::row(1.0f, gfx::column(MarkShare, gfx::text("\x1F", face)),
+                  gfx::column(MarkShare, gfx::text("\x1E", face)),
+                  gfx::column(MarkShare, gfx::text(hintText())),
+                  gfx::column(MarkShare, gfx::text("\x10", face)),
+                  gfx::column(WordsShare, gfx::text("NEXT")));
 }
 
 bool DurationScene::handle(const char* gesture) {

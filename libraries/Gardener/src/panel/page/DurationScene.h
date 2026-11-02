@@ -32,6 +32,7 @@ class DurationScene : public EditorScene {
   void nudge(int8_t direction) override;
   void canceled() override;
   gfx::PaintNodeRef pageContents(gfx::Size band) override;
+  gfx::PaintNodeRef hintComponent() override;
   const char* hintText() override;
 
  private:

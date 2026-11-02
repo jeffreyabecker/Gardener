@@ -400,7 +400,7 @@ TEST_CASE("a choice row is one line of the face the rows are drawn in") {
 class BoolProbe : public BoolScene {
  public:
   using BoolScene::BoolScene;
-  using EditorScene::nudge;
+  using BoolScene::nudge;
   using EditorScene::pageContents;
 
   bool press(const char* gesture) { return handle(gesture); }
@@ -525,7 +525,7 @@ TEST_CASE("a duration holds its bounds") {
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
   duration.nudge(1);
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
-  CHECK_EQ(std::string(duration.caption()), std::string("MIN NEXT"));
+  CHECK_EQ(std::string(duration.caption()), std::string("MIN"));
   duration.press("forward:single");
   CHECK_EQ(std::string(duration.caption()), std::string("SEC OK=SAVE"));
   duration.setValidator(
@@ -536,26 +536,28 @@ TEST_CASE("a duration holds its bounds") {
   CHECK_EQ(std::string(duration.caption()), std::string("SEC OK=SAVE"));
 }
 
-// The band is the same row whatever stage the editor is in — the two step marks in their sixths of
-// the width — and only the words in the last cell follow the stage.
-TEST_CASE("a duration band follows the stage in its words") {
+// The minutes stage's band names the field the keys step and marks Forward as the way on; the
+// seconds stage has nowhere left to go, so it is the page's own row of marks and words.
+TEST_CASE("a duration band marks the key that moves between its fields") {
   NoGestures gestures;
   Ux ux;
   String label("Hold");
   DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   View band = canvas.child(Rect(0, 0, 128, 9));
 
-  // "MIN NEXT" is eight characters, forty-eight columns, centred in the eighty-five: it starts at
-  // 60 and leaves the rest of the cell to paper.
+  // [1/6 \x1F][1/6 \x1E][1/6 MIN][1/6 \x10][1/3 NEXT]: the marks and MIN in twenty-one columns
+  // each from 0, then NEXT in the forty-three that are left. Six pixels a character, centred in its
+  // cell, puts MIN at 43, the forward mark at 70 and NEXT at 93.
   reset();
   duration.hintComponent()->draw(band);
   CHECK(display.anyInk(7, 0, 6, 9));
   CHECK(display.anyInk(28, 0, 6, 9));
-  CHECK(display.anyInk(60, 0, 48, 8));
-  CHECK_EQ(display.inkCount(42, 0, 18, 9), 0);
-  CHECK_EQ(display.inkCount(108, 0, 19, 9), 0);
+  CHECK(display.anyInk(43, 0, 18, 8));  // MIN
+  CHECK(display.anyInk(70, 0, 6, 9));   // the forward mark
+  CHECK(display.anyInk(93, 0, 24, 8));  // NEXT
 
-  // "SEC OK=SAVE" is eleven, sixty-six columns, so it starts at 51 and the marks have not moved.
+  // The seconds stage is the page's own row: the two step marks and the words in the eighty-five
+  // that are left, so "SEC OK=SAVE" starts at 51.
   duration.press("forward:single");
   reset();
   duration.hintComponent()->draw(band);
@@ -563,6 +565,17 @@ TEST_CASE("a duration band follows the stage in its words") {
   CHECK(display.anyInk(28, 0, 6, 9));
   CHECK(display.anyInk(51, 0, 66, 8));
   CHECK_EQ(display.inkCount(42, 0, 9, 9), 0);
+
+  // A refusal on either stage is words and nothing else: no marks beside a value the editor has
+  // not taken.
+  duration.press("back:single");
+  duration.setValidator(
+      [](const std::any&) { return std::make_pair(false, String("TOTAL < HOLDS")); });
+  duration.press("ok:single");
+  reset();
+  duration.hintComponent()->draw(band);
+  CHECK_EQ(display.inkCount(0, 0, 25, 9), 0);
+  CHECK(display.anyInk(25, 0, 78, 8));
 }
 
 TEST_CASE("a nullable duration holds nothing") {

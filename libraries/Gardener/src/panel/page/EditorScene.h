@@ -71,6 +71,10 @@ class EditorScene : public Scene {
   // The words the band prints beside the step marks, which is all a kind says about its own keys.
   virtual const char* hintText() { return "OK=SAVE"; }
 
+  // The text a refused value answered with, which the band prints in place of the marks: a kind
+  // that builds its own band asks this before it draws one.
+  const String& refusal() const { return refusal_; }
+
  private:
   CurriedValidator validator_;
   String refusal_;
