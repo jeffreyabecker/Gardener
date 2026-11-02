@@ -121,6 +121,23 @@ once the driver is up, so a base-class member cannot be built in the constructor
 neither copyable nor movable, so a getter cannot hand one out by value or keep one without an
 `optional` or a member the driver owns.
 
+## Pre-calculating the editor pages' layout
+
+The editor pages build their paint tree on every draw, and the glass and the three band shares are
+known, so the boxes could in principle be worked out once and written as numbers in each scene, or
+the built tree could be kept between draws. Measured on 2026-11-01 by driving the real scenes into a
+recording display on the host, on a 128x52 page: a number page is 32.6 µs and 13 allocations a draw
+against 28.8 µs and none when its tree is built once and drawn again; a twenty-entry choice page is
+99.2 µs and 24 allocations against 91.9 µs; the number page drawn from placements worked out once is
+26.2 µs and no allocations; and an extra canvas level costs under half a microsecond, so the deepest
+cell in a hint band is a couple of microseconds of a draw. The sizes are six or so values between 16
+and 80 bytes, so the churn is the same bins over and over, at the four draws a second the repaint
+cadence asks for. Building the tree is therefore a tenth of a draw and the allocations are not a
+fragmentation risk, which is why neither form was taken. What a hard-coded page would give up is the
+fitting — the cut and scale a band's height and a string's measured width choose — the inversion of a
+whole cell, the row windows the lists compute from the band they land in, and the one vocabulary the
+`.be` pages draw through.
+
 ## The stored default target
 
 `[device] target` is read into `SystemState::deviceTargetKpa` when the document loads, and

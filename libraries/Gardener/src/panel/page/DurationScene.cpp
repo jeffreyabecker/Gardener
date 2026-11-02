@@ -64,18 +64,10 @@ String DurationScene::secondsText() const {
 
 std::any DurationScene::value() const { return hasValue() ? std::any(whole()) : std::any(); }
 
-const char* DurationScene::hint() { return stage_ == Stage::Minutes ? "MIN" : "SEC"; }
-
-// The minutes stage's band carries the forward arrow between the words, because Forward is what
-// moves the editor to the seconds; the seconds stage has nowhere left to go, so OK is what it
-// offers.
-gfx::Children DurationScene::hintItems() {
-  if (stage_ == Stage::Minutes) {
-    return gfx::children(arrowsHint(HintArrow::Up, HintArrow::Down), wordsHint(hint()),
-                         arrowsHint(HintArrow::Forward), wordsHint("NEXT"));
-  }
-  return gfx::children(arrowsHint(HintArrow::Up, HintArrow::Down), wordsHint(hint()),
-                       wordsHint("OK=SAVE"));
+// The minutes stage's words name the field the keys step and say that Forward moves to the seconds;
+// the seconds stage has nowhere left to go, so OK is what it offers.
+const char* DurationScene::hintText() {
+  return stage_ == Stage::Minutes ? "MIN NEXT" : "SEC OK=SAVE";
 }
 
 bool DurationScene::handle(const char* gesture) {

@@ -32,8 +32,7 @@ class DurationScene : public EditorScene {
   void nudge(int8_t direction) override;
   void canceled() override;
   gfx::PaintNodeRef pageContents(gfx::Size band) override;
-  const char* hint() override;
-  gfx::Children hintItems() override;
+  const char* hintText() override;
 
  private:
   enum class Stage : uint8_t { Minutes, Seconds };

@@ -35,8 +35,8 @@ String keyOf(const ChoiceScene& scene) {
 class NumberProbe : public NumberScene {
  public:
   using EditorScene::handle;
-  using EditorScene::hint;
   using EditorScene::hintComponent;
+  using EditorScene::hintText;
   using EditorScene::nudge;
   using EditorScene::pageContents;
   using NumberScene::NumberScene;
@@ -153,7 +153,7 @@ TEST_CASE("a refused value keeps the editor open") {
   CHECK_EQ(display.inkCount(103, 0, 25, 9), 0);
 
   CHECK_EQ(number.handle("up:single"), 1);
-  CHECK_EQ(std::string(number.hint()), std::string("OK=SAVE"));
+  CHECK_EQ(std::string(number.hintText()), std::string("OK=SAVE"));
   CHECK_EQ(std::string(number.text().c_str()), std::string("40"));
   number.handle("up:single");
   number.handle("up:single");
@@ -163,9 +163,9 @@ TEST_CASE("a refused value keeps the editor open") {
   CHECK_EQ(number.handle("up:single"), 0);
 }
 
-// The hint band is a run of marks and words rather than a line of text: the step arrows are two
-// triangles a step and a gap apart, the words follow them, and the run is centred in the band.
-TEST_CASE("a hint band draws its marks beside the words") {
+// The hint band is one row of three cells: the two step marks in a sixth of the width each, in the
+// face that holds the band's eight rows, and the words in the two thirds beside them.
+TEST_CASE("a hint band is a row of marks and words") {
   NoGestures gestures;
   Ux ux;
   String label("Target");
@@ -174,19 +174,19 @@ TEST_CASE("a hint band draws its marks beside the words") {
   reset();
   number.hintComponent()->draw(band);
 
-  // Twelve pixels of arrow and forty-two of words, less the gap between them: the run is fifty-six
-  // wide, so it starts at 36 and the words at 50. A seven-row mark in a nine-row band sits one row
-  // down.
-  CHECK(display.anyInk(38, 1, 1, 1));  // the up arrow's apex
-  CHECK(display.anyInk(36, 7, 1, 1));  // its base, corner to corner
-  CHECK(display.anyInk(40, 7, 1, 1));
-  CHECK(display.anyInk(43, 1, 5, 1));          // the down arrow's base along the top row
-  CHECK(display.anyInk(45, 7, 1, 1));          // its apex
-  CHECK_EQ(display.inkCount(41, 0, 2, 9), 0);  // paper between the two arrows
-  CHECK_EQ(display.inkCount(48, 0, 2, 9), 0);  // and between the marks and the words
-  CHECK(display.anyInk(50, 0, 42, 8));         // the words, in the face's own cell
-  CHECK_EQ(display.inkCount(0, 0, 36, 9), 0);
-  CHECK_EQ(display.inkCount(92, 0, 36, 9), 0);
+  // The first two cells are twenty-one columns each and the third the rest: a six-pixel glyph sits
+  // seven columns into its cell, so each mark is ink in the middle of its sixth and paper either
+  // side of it, and the words — six pixels a character — are centred in the eighty-five that are
+  // left.
+  CHECK(display.anyInk(7, 0, 6, 9));   // \x1F, the first mark
+  CHECK(display.anyInk(28, 0, 6, 9));  // \x1E, the second
+  CHECK_EQ(display.inkCount(0, 0, 7, 9), 0);
+  CHECK_EQ(display.inkCount(12, 0, 9, 9), 0);
+  CHECK_EQ(display.inkCount(21, 0, 7, 9), 0);
+  CHECK_EQ(display.inkCount(33, 0, 9, 9), 0);
+  CHECK(display.anyInk(63, 0, 42, 8));  // OK=SAVE in the words cell
+  CHECK_EQ(display.inkCount(42, 0, 21, 9), 0);
+  CHECK_EQ(display.inkCount(105, 0, 22, 9), 0);
 }
 
 // --- the choice -------------------------------------------------------------
@@ -492,7 +492,7 @@ class DurationProbe : public DurationScene {
   using EditorScene::pageContents;
 
   bool press(const char* gesture) { return handle(gesture); }
-  const char* caption() { return hint(); }
+  const char* caption() { return hintText(); }
 };
 
 TEST_CASE("a duration steps minutes then seconds") {
@@ -525,42 +525,44 @@ TEST_CASE("a duration holds its bounds") {
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
   duration.nudge(1);
   CHECK_EQ(std::string(duration.text().c_str()), std::string("3m"));
-  CHECK_EQ(std::string(duration.caption()), std::string("MIN"));
+  CHECK_EQ(std::string(duration.caption()), std::string("MIN NEXT"));
   duration.press("forward:single");
-  CHECK_EQ(std::string(duration.caption()), std::string("SEC"));
+  CHECK_EQ(std::string(duration.caption()), std::string("SEC OK=SAVE"));
   duration.setValidator(
       [](const std::any&) { return std::make_pair(false, String("TOTAL < HOLDS")); });
   duration.press("ok:single");
   // The refusal is what the band draws in place of the marks and the stage's words; the stage
   // itself has not moved.
-  CHECK_EQ(std::string(duration.caption()), std::string("SEC"));
+  CHECK_EQ(std::string(duration.caption()), std::string("SEC OK=SAVE"));
 }
 
-// The minutes stage's band marks Forward as the key that moves the editor to the seconds; the
-// seconds stage has nowhere left to go, so its band carries the step arrows and words only.
-TEST_CASE("a duration band marks the key that moves between its fields") {
+// The band is the same row whatever stage the editor is in — the two step marks in their sixths of
+// the width — and only the words in the last cell follow the stage.
+TEST_CASE("a duration band follows the stage in its words") {
   NoGestures gestures;
   Ux ux;
   String label("Hold");
   DurationProbe duration(gestures, ux, label, 90, 5, 0, 3600, false);
   View band = canvas.child(Rect(0, 0, 128, 9));
 
-  // [12 arrows][18 MIN][5 forward][24 NEXT] and the three gaps is sixty-five: the run starts at 31,
-  // which puts the forward arrow in the five columns at 65.
+  // "MIN NEXT" is eight characters, forty-eight columns, centred in the eighty-five: it starts at
+  // 60 and leaves the rest of the cell to paper.
   reset();
   duration.hintComponent()->draw(band);
-  CHECK(display.anyInk(69, 4, 1, 1));  // its apex, mid band
-  CHECK(display.anyInk(65, 1, 1, 1));  // its base, top to bottom
-  CHECK(display.anyInk(65, 7, 1, 1));
-  CHECK_EQ(display.inkCount(63, 0, 2, 9), 0);  // paper either side of it
-  CHECK_EQ(display.inkCount(70, 0, 2, 9), 0);
+  CHECK(display.anyInk(7, 0, 6, 9));
+  CHECK(display.anyInk(28, 0, 6, 9));
+  CHECK(display.anyInk(60, 0, 48, 8));
+  CHECK_EQ(display.inkCount(42, 0, 18, 9), 0);
+  CHECK_EQ(display.inkCount(108, 0, 19, 9), 0);
 
-  // Without it the run is [12][18][42] and the two gaps: seventy-six from 26, and nothing beyond.
+  // "SEC OK=SAVE" is eleven, sixty-six columns, so it starts at 51 and the marks have not moved.
   duration.press("forward:single");
   reset();
   duration.hintComponent()->draw(band);
-  CHECK_EQ(display.inkCount(0, 0, 26, 9), 0);
-  CHECK_EQ(display.inkCount(102, 0, 26, 9), 0);
+  CHECK(display.anyInk(7, 0, 6, 9));
+  CHECK(display.anyInk(28, 0, 6, 9));
+  CHECK(display.anyInk(51, 0, 66, 8));
+  CHECK_EQ(display.inkCount(42, 0, 9, 9), 0);
 }
 
 TEST_CASE("a nullable duration holds nothing") {

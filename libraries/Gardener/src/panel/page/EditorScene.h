@@ -38,10 +38,6 @@ class EditorScene : public Scene {
   void setValidator(CurriedValidator validator);
 
  protected:
-  // The arrows a hint band draws for the keys: Up and Down step the value, and Back and Forward
-  // move between a kind's own fields. None is the absence of a second arrow in a one-arrow item.
-  enum class HintArrow : uint8_t { None, Up, Down, Back, Forward };
-
   void drawPage(gfx::Canvas& canvas) override;
   bool handle(const char* gesture) override;
 
@@ -54,16 +50,9 @@ class EditorScene : public Scene {
   virtual gfx::PaintNodeRef pageContents(gfx::Size band);
 
   virtual gfx::PaintNodeRef titleComponent();
+
+  // The band the keys are explained in: one row of the two step marks and the kind's words.
   virtual gfx::PaintNodeRef hintComponent();
-
-  // The items the hint band centres: the two step arrows and the words beside them, and whatever a
-  // kind's own keys need between the two.
-  virtual gfx::Children hintItems();
-
-  // One item of the band: one arrow or a pair side by side, or a run of words, each as wide as the
-  // ink it draws.
-  static gfx::Child arrowsHint(HintArrow first, HintArrow second = HintArrow::None);
-  static gfx::Child wordsHint(const char* text);
 
   Ux& ux_;
   String label_;
@@ -79,8 +68,8 @@ class EditorScene : public Scene {
 
   virtual const char* title() { return label_.c_str(); }
 
-  // The words the band prints after the step arrows.
-  virtual const char* hint() { return "OK=SAVE"; }
+  // The words the band prints beside the step marks, which is all a kind says about its own keys.
+  virtual const char* hintText() { return "OK=SAVE"; }
 
  private:
   CurriedValidator validator_;
