@@ -1,4 +1,4 @@
-#include "panel/page/SettingsRows.h"
+#include "panel/settings/SettingsRows.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -8,9 +8,9 @@
 #include "core/Units.h"
 #include "layout/Drawing.h"
 #include "machine/Machine.h"
-#include "panel/page/BoolScene.h"
-#include "panel/page/DurationScene.h"
-#include "panel/page/PressureScene.h"
+#include "panel/settings/BoolScene.h"
+#include "panel/settings/DurationScene.h"
+#include "panel/settings/PressureScene.h"
 
 namespace gardener {
 namespace {

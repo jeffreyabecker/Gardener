@@ -1,11 +1,11 @@
-#include "panel/page/SystemSettings.h"
+#include "panel/settings/SystemSettings.h"
 
 #include <any>
 #include <utility>
 
 #include "core/Units.h"
 #include "machine/Machine.h"
-#include "panel/page/SettingsRows.h"
+#include "panel/settings/SettingsRows.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "storage/DeviceSettings.h"
 #include "storage/JingleLibrary.h"

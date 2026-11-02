@@ -10,12 +10,12 @@
 
 #include <string>
 
-#include "panel/page/BoolScene.h"
-#include "panel/page/ChoiceScene.h"
-#include "panel/page/DurationScene.h"
-#include "panel/page/EditorScene.h"
-#include "panel/page/NumberScene.h"
 #include "panel/page/Ux.h"
+#include "panel/settings/BoolScene.h"
+#include "panel/settings/ChoiceScene.h"
+#include "panel/settings/DurationScene.h"
+#include "panel/settings/EditorScene.h"
+#include "panel/settings/NumberScene.h"
 #include "suite.h"
 
 namespace gardener::gfx::test {

@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 #include "core/Units.h"
-#include "panel/page/NumberScene.h"
+#include "panel/settings/NumberScene.h"
 
 namespace gardener {
 

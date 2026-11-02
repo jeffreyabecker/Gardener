@@ -1,4 +1,4 @@
-#include "panel/page/PressureScene.h"
+#include "panel/settings/PressureScene.h"
 
 #include "machine/Machine.h"
 

@@ -17,7 +17,7 @@ The two lists have drifted. Against today's tree:
   `alignedOffset`, and the walk's kind is `bar` where the factory says `progressBar`.
 - **One kind with no factory behind it.** `centred` is a node the walk knows and gfx does not: the
   C++ scenes spell the same picture as `icon(box, aligned(sized(text(whole, ...), measureText(...))))`
-  ([ChoiceScene.cpp:23](../../ode/eggplan-vacuum/libraries/Gardener/src/panel/page/ChoiceScene.cpp)).
+  ([ChoiceScene.cpp:23](../../ode/eggplan-vacuum/libraries/Gardener/src/panel/settings/ChoiceScene.cpp)).
   So the module invents a node the vocabulary cannot name, and the walk carries a second meaning for
   a picture the C++ side builds out of four.
 

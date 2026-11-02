@@ -10,9 +10,9 @@
 #include <Arduino.h>
 
 #include "core/Units.h"
-#include "panel/page/ChoiceScene.h"
-#include "panel/page/NumberScene.h"
-#include "panel/page/SettingsScene.h"
+#include "panel/settings/ChoiceScene.h"
+#include "panel/settings/NumberScene.h"
+#include "panel/settings/SettingsScene.h"
 
 namespace gardener {
 

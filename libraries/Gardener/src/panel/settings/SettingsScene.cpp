@@ -1,4 +1,4 @@
-#include "panel/page/SettingsScene.h"
+#include "panel/settings/SettingsScene.h"
 
 #include "Bitmap.h"
 #include "layout/Drawing.h"

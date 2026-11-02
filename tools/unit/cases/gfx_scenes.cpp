@@ -13,12 +13,12 @@
 #include <string>
 
 #include "Clock.h"
-#include "panel/page/BoolScene.h"
-#include "panel/page/DurationScene.h"
 #include "panel/page/Overlay.h"
 #include "panel/page/Scene.h"
-#include "panel/page/SettingsRows.h"
 #include "panel/page/Ux.h"
+#include "panel/settings/BoolScene.h"
+#include "panel/settings/DurationScene.h"
+#include "panel/settings/SettingsRows.h"
 #include "suite.h"
 
 namespace gardener::gfx::test {

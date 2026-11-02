@@ -12,10 +12,10 @@
 
 #include <Arduino.h>
 
-#include "panel/page/ChoiceScene.h"
-#include "panel/page/EditorScene.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
+#include "panel/settings/ChoiceScene.h"
+#include "panel/settings/EditorScene.h"
 #include "storage/SettingKind.h"
 
 namespace gardener {

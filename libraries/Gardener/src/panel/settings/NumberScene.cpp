@@ -1,4 +1,4 @@
-#include "panel/page/NumberScene.h"
+#include "panel/settings/NumberScene.h"
 
 #include <math.h>
 #include <stdio.h>

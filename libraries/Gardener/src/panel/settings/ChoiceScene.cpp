@@ -1,4 +1,4 @@
-#include "panel/page/ChoiceScene.h"
+#include "panel/settings/ChoiceScene.h"
 
 #include <vector>
 

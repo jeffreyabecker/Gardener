@@ -14,8 +14,8 @@
 #include "Modules.h"
 #include "core/SystemState.h"
 #include "core/Units.h"
-#include "panel/page/SettingsRows.h"
-#include "panel/page/SystemSettings.h"
+#include "panel/settings/SettingsRows.h"
+#include "panel/settings/SystemSettings.h"
 
 namespace gardener {
 namespace {

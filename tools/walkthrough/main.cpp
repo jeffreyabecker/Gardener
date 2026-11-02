@@ -31,8 +31,8 @@
 #include "machine/MachineCommand.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/page/Scene.h"
-#include "panel/page/SettingsRows.h"
 #include "panel/page/Ux.h"
+#include "panel/settings/SettingsRows.h"
 #include "storage/SettingKind.h"
 
 namespace {

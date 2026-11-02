@@ -19,7 +19,7 @@
 #include "fakes/Parts.h"
 #include "panel/page/Registration.h"
 #include "panel/page/RoutineRegistry.h"
-#include "panel/page/SettingsRows.h"
+#include "panel/settings/SettingsRows.h"
 #include "storage/RoutineSettingStore.h"
 
 namespace {

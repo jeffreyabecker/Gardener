@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "panel/page/EditorScene.h"
+#include "panel/settings/EditorScene.h"
 
 namespace gardener {
 

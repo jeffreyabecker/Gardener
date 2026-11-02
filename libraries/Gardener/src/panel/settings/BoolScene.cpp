@@ -1,4 +1,4 @@
-#include "panel/page/BoolScene.h"
+#include "panel/settings/BoolScene.h"
 
 #include <utility>
 

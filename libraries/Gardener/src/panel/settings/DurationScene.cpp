@@ -1,4 +1,4 @@
-#include "panel/page/DurationScene.h"
+#include "panel/settings/DurationScene.h"
 
 #include <math.h>
 #include <stdio.h>

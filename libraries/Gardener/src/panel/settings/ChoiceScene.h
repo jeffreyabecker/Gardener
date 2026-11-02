@@ -7,7 +7,7 @@
 
 #include <Arduino.h>
 
-#include "panel/page/EditorScene.h"
+#include "panel/settings/EditorScene.h"
 #include "storage/SettingKind.h"
 
 namespace gardener {

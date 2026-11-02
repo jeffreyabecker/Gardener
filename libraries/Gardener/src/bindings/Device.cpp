@@ -6,8 +6,8 @@
 #include "core/SystemState.h"
 #include "core/Units.h"
 #include "machine/Machine.h"
-#include "panel/page/SystemSettings.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "panel/settings/SystemSettings.h"
 #include "storage/DeviceSettings.h"
 
 namespace gardener {
