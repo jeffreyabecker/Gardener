@@ -5,8 +5,8 @@ branch, one commit and one diff, and leaves the tree building with the suite gre
 `backlog/row-list/main`, `backlog/row-list/epic-<n>/main` and `backlog/row-list/epic-<n>/task-<m>`,
 merged back with `--no-ff` as each item lands.
 
-The plan's Berry half — the native `RowList` class, the `row_list` node and the browser — is a later
-backlog and is not here.
+Epic 1 is the C++ model and its cases, epic 2 the settings and choice scenes on it, and epic 3 the
+class the image reaches it through and the browser on that class.
 
 The numbers every item is checked against are the plan's: the row cell is the row height the caller
 gives — 8 px for the settings list and the choice editor's shortest line of the face — the bar is
@@ -48,3 +48,23 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       `SystemSettings::rows()`, so it inherits the model with the item above; a case opens it, edits
       a row and reads the rebuilt row and the set `SystemSettings::apply()` is handed. No change to
       `SystemSettings` is expected; a hook it turns out to need lands here.
+
+## Epic 3 — the Berry bindings
+
+- [ ] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
+      comobj that owns the model and `.rows` for the page's pairs; `init(row_height, rows, selected,
+      wrap)` walks each pair's draw through a new `paintFromTree()` export, resolves the selected
+      value and builds the model, and `nudge`, `getSelectedValue` and `draw()` answer through it.
+      `draw()` answers a `row_list` record with the instance in a new `list` field, and `DrawTree`
+      answers it with a callable that calls `list->draw(canvas)`. `installRowListClass()` runs in
+      `BerryInterpreter` with the modules. `python tools/berry/check.py` loads the image.
+- [ ] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
+      rest: `RowList(...)`, `nudge` and `getSelectedValue` agree with the model, a `nil` selection
+      answers nil, a row that is not a pair or a wrap word that is neither `"wrap"` nor `"clamp"`
+      raises, and a pushed page that draws the list inks the selected row's whole cell.
+- [ ] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
+      constructs `RowList(8, pairs, key, "wrap")`; `handle()` nudges, `selected_row()` reads
+      `getSelectedValue()`, and `draw_page()` answers `self.list.draw()`. `browser_chrome()`,
+      `step()`, `first()` and `VISIBLE` go. `browser.test.be` reads the page through the wrapper and
+      its window case moves to the list's suite; `chromes.test.be` loses the browser case. The
+      suites and `--scene browser` pass.
