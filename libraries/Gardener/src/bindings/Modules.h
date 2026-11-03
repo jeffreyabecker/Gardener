@@ -52,6 +52,12 @@ class BindingContext;
 // owners through the BindingContext the interpreter holds.
 void installVacuumModule(bvm* vm, BindingContext& bindings);
 void installScreenModule(bvm* vm, BindingContext& bindings);
+// The global class a page builds a list with: RowList(row_height, rows, selected, wrap) takes the
+// pairs a page made and holds the model, and nudge, getSelectedValue and draw answer through it.
+void installRowListClass(bvm* vm, BindingContext& bindings);
+// The `row_list` draw record: the node naming the instance a page draws its list with. Left on the
+// stack for the caller to answer with.
+void pushRowListDraw(bvm* vm, int list);
 void installDeviceModule(bvm* vm, BindingContext& bindings);
 // The stack a page moves through, from Berry: push() a page over the one showing, pop() the top one
 // and pop_to_root() every page above the root. Installs the record a native factory carries a scene

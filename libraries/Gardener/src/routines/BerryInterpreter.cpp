@@ -35,6 +35,8 @@ void BerryInterpreter::installModules() {
   installSettingsModule(vm_, bindings_);
   installRoutinesModule(vm_, bindings_);
   installUxModule(vm_, bindings_);
+  // The list a page draws its rows with: a global, so it is there before any image file compiles.
+  installRowListClass(vm_, bindings_);
 }
 
 bool BerryInterpreter::load(const String& path, const String& source) {

@@ -56,7 +56,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 3 — the Berry bindings
 
-- [ ] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
+- [x] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
       comobj that owns the model and `.rows` for the page's pairs; `init(row_height, rows, selected,
       wrap)` resolves the selected value and builds the model, and `nudge`, `getSelectedValue` and
       `draw()` answer through it. A pair's draw is walked through a new `paintFromTree()` export, or,
