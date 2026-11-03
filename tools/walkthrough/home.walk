@@ -23,19 +23,15 @@ send up:single
 send up:single
 send up:single
 send up:single
-wait 1 s
+wait 5 s
 send down:single
-wait 1 s
+wait 2 s
 
 # OK starts the run: the valve closes, the reading climbs to the target and holds there, and the
 # timer beside the pressure counts the run's seconds.
 send ok:single
 wait 4 s
 
-# OK again with a run going is not a second start: the machine answers the run already under way and
-# the clock keeps counting.
-send ok:single
-wait 3 s
 
 # Up while it runs moves the target one step deeper, and the pump follows it without the clock
 # restarting.

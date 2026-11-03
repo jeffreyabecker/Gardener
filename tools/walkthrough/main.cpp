@@ -3,9 +3,10 @@
 //
 // The tool writes no Berry. `load` and `send` are the calls a launch and a press already take — the
 // registry and the stack for a page, the press queue for a gesture — and the verbs that are not the
-// page's are the host's: a wait is beats of the session, a rate is the chamber's model, a font is
-// the design a leaf that names no family draws in, a note is the band under the glass, a show and a
-// clear are the marks on the buttons, and an emit is the capture written.
+// page's are the host's: a wait is beats of the session, an advance the same beats with the glass
+// unrecorded, a rate is the chamber's model, a font is the design a leaf that names no family draws
+// in, a note is the band under the glass, a show and a clear are the marks on the buttons, and an
+// emit is the capture written.
 //
 // The whole file is read before anything is drawn, and every load and font is resolved against the
 // image before the first frame is captured, so a misspelled scene, an unknown routine, a setting
@@ -318,6 +319,11 @@ int hostMain(int argc, char** argv) {
         break;
       case Command::Verb::Wait:
         session.beat(command.beats);
+        break;
+      case Command::Verb::Advance:
+        // The same beats with the glass paused: the device arrives where a wait would have left it,
+        // and the picture jumps to what the page has drawn by then.
+        session.advance(command.beats);
         break;
       case Command::Verb::SetRate:
         session.setChamberRates(command.pullKpaPerSecond, command.ventKpaPerSecond);

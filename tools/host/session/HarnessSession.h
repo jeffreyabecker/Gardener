@@ -243,6 +243,11 @@ class HarnessSession {
   // One beat: 250 ms of the device's loop, four control ticks and one page poll.
   void beat(int count);
 
+  // The same beats with the glass unrecorded: the machine, the timers and the page run exactly as a
+  // wait would run them, and the frames those beats would have been are not kept, so a long settle
+  // costs the picture nothing.
+  void advance(int count);
+
   // The model chamber's rates, in kPa per second: its pull at full duty and its venting rate.
   void setChamberRates(float pullKpaPerSecond, float ventKpaPerSecond) {
     chamber_.setRates(pullKpaPerSecond, ventKpaPerSecond);

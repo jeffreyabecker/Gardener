@@ -360,6 +360,36 @@ TEST_CASE("a clear takes one button's mark and clearAll takes the rest") {
   display.endCapture();
 }
 
+TEST_CASE("a paused capture draws the flushes it does not keep") {
+  reset();
+  display.beginCapture();
+  gardener::gfx::test::canvas.setPixel(4, 20, 255);
+  gardener::gfx::test::display.flush();
+  REQUIRE_EQ(display.frameCount(), 1);
+
+  // Two sends while paused: the glass takes both, the sequence takes neither.
+  display.pauseCapture();
+  gardener::gfx::test::canvas.setPixel(5, 20, 255);
+  gardener::gfx::test::display.flush();
+  gardener::gfx::test::canvas.setPixel(6, 20, 255);
+  gardener::gfx::test::display.flush();
+  CHECK_EQ(display.frameCount(), 1);
+  CHECK_EQ(display.at(6, 20), 255);
+
+  // The frame after the resume is the next one kept, and holds everything the pause drew.
+  display.resumeCapture();
+  gardener::gfx::test::canvas.setPixel(7, 20, 255);
+  gardener::gfx::test::display.flush();
+  REQUIRE_EQ(display.frameCount(), 2);
+  const std::vector<uint8_t>* after = display.frame(1);
+  REQUIRE(after != nullptr);
+  CHECK(packedAt(*after, PageWidth, 5, 20));
+  CHECK(packedAt(*after, PageWidth, 6, 20));
+  CHECK(packedAt(*after, PageWidth, 7, 20));
+  CHECK_FALSE(packedAt(*after, PageWidth, 8, 20));
+  display.endCapture();
+}
+
 TEST_CASE("a mark names a button the panel has") {
   CHECK(isButton("up"));
   CHECK(isButton("cancel"));

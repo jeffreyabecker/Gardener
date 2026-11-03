@@ -50,6 +50,7 @@ output path.
 | `show <gesture>[, <gesture>…]` | Marks the named buttons and leaves the marks standing |
 | `clear [button[, button]…]` | Takes the marks off the named buttons; with no button named, off every one |
 | `wait <n> s\|ms` | Advances device time, rounded up to whole 250 ms beats |
+| `advance <n> s\|ms` | The same device time with no frames kept for it |
 | `set-rate <pull> <vent>` | Sets the model chamber's pull at full duty and its venting rate, in kPa/s |
 | `set-font <design>` | Sets the design a page that names no family draws in |
 | `set-note <text>` | Writes a line in the band under the glass |
@@ -117,6 +118,31 @@ wait 2 s
 
 Device time advances in 250 ms beats, so a wait rounds up: it advances at least as far as the line
 asked and never more than one beat past it. The unit is required, and `wait 0 s` is allowed.
+
+### advance
+
+```
+advance 10 s
+advance 750 ms
+```
+
+The same device time a wait would move, with nothing kept for it: the machine, the timers and the
+page run exactly as they would under a wait, and the flushes in that period are drawn to the glass
+but not recorded. The next frame the walk draws shows the state the advance arrived at, so a run
+left to climb for ten seconds costs one frame rather than forty.
+
+```
+show ok:single
+send ok:single
+wait 1 s
+clear ok
+advance 10 s
+set-note the reading has arrived
+wait 1 s
+```
+
+Nothing about the device is skipped — only the picture. Use `wait` where the change is what the walk
+is showing and `advance` where the walk wants the GIF to move on.
 
 ### set-rate
 

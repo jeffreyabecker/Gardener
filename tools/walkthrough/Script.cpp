@@ -87,13 +87,15 @@ bool parseSend(const std::string& rest, Command& command, std::string& error) {
 }
 
 // The units are the file's, and the beats are the session's: a wait always advances the device at
-// least as far as the line asked, and never more than one beat past it.
+// least as far as the line asked, and never more than one beat past it. An advance takes the same
+// measurement and the same rounding, and the two verbs part only at what is recorded.
 bool parseWait(const std::string& rest, Command& command, std::string& error) {
+  const char* verb = command.verb == Command::Verb::Advance ? "advance" : "wait";
   const std::string text = trimmed(rest);
   char* end = nullptr;
   const double amount = text.empty() ? 0.0 : strtod(text.c_str(), &end);
   if (text.empty() || end == text.c_str() || !isfinite(amount) || amount < 0.0) {
-    error = "wait takes a number of seconds or milliseconds";
+    error = std::string(verb) + " takes a number of seconds or milliseconds";
     return false;
   }
 
@@ -104,7 +106,7 @@ bool parseWait(const std::string& rest, Command& command, std::string& error) {
   } else if (unit == "ms") {
     ms = amount;
   } else {
-    error = "wait takes s or ms, not '" + unit + "'";
+    error = std::string(verb) + " takes s or ms, not '" + unit + "'";
     return false;
   }
 
@@ -203,6 +205,10 @@ bool parseLine(const std::string& text, int line, Command& command, std::string&
   }
   if (verb == "wait") {
     command.verb = Command::Verb::Wait;
+    return parseWait(rest, command, error);
+  }
+  if (verb == "advance") {
+    command.verb = Command::Verb::Advance;
     return parseWait(rest, command, error);
   }
   if (verb == "set-rate") {

@@ -16,6 +16,7 @@ struct Command {
     Load,
     Send,
     Wait,
+    Advance,
     SetRate,
     SetFont,
     SetNote,
@@ -37,7 +38,8 @@ struct Command {
   // A send: one gesture, spelled as the panel's classifier spells it.
   std::string gesture;
 
-  // A wait, in whole beats of 250 ms: the device time the line asked for, rounded up.
+  // A wait or an advance, in whole beats of 250 ms: the device time the line asked for, rounded up.
+  // The two are the same beats and differ only in whether the frames are kept.
   int beats = 0;
 
   // A set-rate: the model chamber's pull at full duty and its venting rate, in kPa per second.

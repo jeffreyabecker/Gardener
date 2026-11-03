@@ -159,7 +159,7 @@ void CaptureDisplay::flush() {
     }
   }
 
-  if (!capturing_) return;
+  if (!capturing_ || paused_) return;
   keepFrame();
 }
 
@@ -214,15 +214,21 @@ void CaptureDisplay::beginCapture(const Frame& frame, std::vector<Component> com
   components_ = std::move(components);
   capture_.arm(frame_.width, frame_.height);
   capturing_ = true;
+  paused_ = false;
 }
 
 void CaptureDisplay::record() {
-  if (!capturing_) return;
+  if (!capturing_ || paused_) return;
   keepFrame();
 }
 
+void CaptureDisplay::pauseCapture() { paused_ = true; }
+
+void CaptureDisplay::resumeCapture() { paused_ = false; }
+
 void CaptureDisplay::endCapture() {
   capturing_ = false;
+  paused_ = false;
   capture_.disarm();
 }
 

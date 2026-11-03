@@ -153,6 +153,12 @@ void HarnessSession::beat(int count) {
   }
 }
 
+void HarnessSession::advance(int count) {
+  display_.pauseCapture();
+  beat(count);
+  display_.resumeCapture();
+}
+
 size_t HarnessSession::heapBytes() { return heapOf(interpreter_.vm()); }
 
 void HarnessSession::sampleRead(const String& path) {

@@ -102,6 +102,13 @@ class CaptureDisplay : public gfx::DisplayDevice, public GestureQueue {
   // Keeps the picture as one frame now, without a send: a still of what the panel already holds.
   void record();
 
+  // Stops keeping frames without ending the sequence: the flushes in between are still sent to the
+  // glass, so what the page draws is there when the frames start again, but none of them is kept.
+  // The picture and its components are the ones beginCapture() was told, so the frames either side
+  // of the pause are one GIF.
+  void pauseCapture();
+  void resumeCapture();
+
   // Stops recording and discards what was collected.
   void endCapture();
 
@@ -152,6 +159,9 @@ class CaptureDisplay : public gfx::DisplayDevice, public GestureQueue {
 
   Capture capture_;
   bool capturing_ = false;
+  // Whether the flushes of the sequence are kept; a pause leaves the sequence armed and the frames
+  // already collected alone.
+  bool paused_ = false;
   // The picture the sequence is written in, as beginCapture() was told.
   Frame frame_;
   std::vector<Component> components_;
