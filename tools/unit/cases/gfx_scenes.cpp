@@ -527,6 +527,30 @@ TEST_CASE("a settings list passes over a hidden row") {
   CHECK_EQ(std::string(std::any_cast<String>(handed.at("hidden")).c_str()), std::string("20"));
 }
 
+TEST_CASE("a row's pair reaches its editor") {
+  GestureQueue gestures;
+  Ux ux;
+  NumberRow number(gestures, ux, "number", "Number", 15.0f, 1.0f, 0.0f, 100.0f, false);
+  number.limit(10.0f, 20.0f);
+
+  const SettingDeclaration declared = number.declaration();
+  CHECK_EQ(declared.min, 10.0f);
+  CHECK_EQ(declared.max, 20.0f);
+
+  // Up from 19 twice stops at the pair's ceiling, which is what OK hands back.
+  std::unique_ptr<EditorScene> editor = number.scene(std::any(19.0f));
+  REQUIRE(editor != nullptr);
+  std::any settled;
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(editor), [&settled](Scene& scene) { settled = scene.value(); });
+  press(ux, gestures, "up:single", 1000);
+  press(ux, gestures, "up:single", 1010);
+  press(ux, gestures, "ok:single", 1020);
+  REQUIRE(settled.has_value());
+  CHECK_EQ(std::any_cast<float>(settled), 20.0f);
+}
+
 TEST_CASE("a settings list draws its rows") {
   NoGestures gestures;
   Ux ux;

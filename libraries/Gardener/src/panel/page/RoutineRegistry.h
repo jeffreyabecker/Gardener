@@ -32,7 +32,8 @@ struct RoutineRow {
 // document names its alternates as named sections, and each section whose key nothing holds becomes
 // a registration of its own, placed directly behind the record it was copied from. A section may
 // also name the glyph it draws as `routine_icon`, keep a setting off the list as
-// `<key>:hidden=true`, and pin one to a value as `<key>:constant=<value>`.
+// `<key>:hidden=true`, pin one to a value as `<key>:constant=<value>`, and state the floor and
+// ceiling it moves within as `<key>:min=<value>` and `<key>:max=<value>`.
 //
 // The registry is built once, at boot, and used on the panel task only: a page draws its rows, opens
 // a record's settings and launches its page through it, and nothing else reaches it.
@@ -46,8 +47,8 @@ class RoutineRegistry {
   // One routine registered. A key already registered keeps its place; the record it had, its copies
   // included, is replaced by this one. The document is scanned for alternates here: every named
   // section whose key nothing holds becomes a copy of this record, carrying the title, glyph, hidden
-  // settings and pinned values the section names, and a name that is taken is skipped with one line.
-  // False, changing nothing, for a key that is not a plain word.
+  // settings, bounds and pinned values the section names, and a name that is taken is skipped with
+  // one line. False, changing nothing, for a key that is not a plain word.
   bool add(Registration registration);
 
   // Every registered key, in registration order, each copy following the record it was made from.

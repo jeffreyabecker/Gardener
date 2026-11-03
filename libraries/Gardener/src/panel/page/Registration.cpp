@@ -1,6 +1,5 @@
 #include "panel/page/Registration.h"
 
-#include <algorithm>
 #include <any>
 
 #include "storage/RoutineSettingStore.h"
@@ -26,9 +25,11 @@ Registration Registration::copyAs(const String& routineKey,
   for (const std::unique_ptr<SettingsRow>& row : owned_) {
     if (!row) continue;
     rows.push_back(row->clone());
-    if (std::find(overrides.hidden.begin(), overrides.hidden.end(), row->key()) !=
-        overrides.hidden.end()) {
-      rows.back()->hide();
+    SettingsRow* copy = rows.back().get();
+    for (const SettingOverride& stated : overrides.rows) {
+      if (stated.key != copy->key()) continue;
+      if (stated.hidden) copy->hide();
+      copy->limit(stated.min, stated.max);
     }
   }
   Registration copy(routineKey, overrides.title, std::move(rows), factory_,

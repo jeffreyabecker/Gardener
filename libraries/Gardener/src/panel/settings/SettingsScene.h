@@ -77,6 +77,11 @@ class SettingsRow : public SettingKind {
   bool hidden() const { return hidden_; }
   void hide() { hidden_ = true; }
 
+  // The floor and ceiling a section states for this row, in the kind's own units: NAN leaves that
+  // bound as the declaration gave it. A kind that steps no number has none to move, and a pair that
+  // would leave the row no range is ignored whole, so a typo keeps the declaration's.
+  virtual void limit(float min, float max);
+
   // The row's check closed over the declaration and the set in force, which is the form the editor
   // it builds holds; nothing for a row whose declaration gave it no check. The check borrows the
   // row, the declaration and the set, so whoever holds it keeps all three alive.

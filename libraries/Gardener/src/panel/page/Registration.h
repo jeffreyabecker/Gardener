@@ -1,5 +1,6 @@
 #pragma once
 
+#include <math.h>
 #include <stdint.h>
 
 #include <functional>
@@ -22,14 +23,24 @@ struct RoutineActivation {
   SettingValues values;
 };
 
-// What a section of a routine's document says about the record it copies: the title it shows, the
-// glyph it draws in place of the record's, the settings it keeps off the list (`<key>:hidden`) and
-// the values it pins (`<key>:constant`), the latter already read through the rows' kinds. An empty
-// title or glyph leaves the record's own.
+// What a section of a routine's document says about one row of the record it copies: whether the
+// settings list shows it (`<key>:hidden`) and the floor and ceiling it moves within (`<key>:min` and
+// `<key>:max`, in the kind's own units). A bound the section did not name is NAN, which leaves the
+// declaration's in place.
+struct SettingOverride {
+  String key;
+  bool hidden = false;
+  float min = NAN;
+  float max = NAN;
+};
+
+// What a section says about the record it copies: the title it shows, the glyph it draws in place of
+// the record's, the rows it changes, and the values it pins (`<key>:constant`), already read through
+// the rows' kinds. An empty title or glyph leaves the record's own.
 struct SectionOverrides {
   String title;
   String glyph;
-  std::vector<String> hidden;
+  std::vector<SettingOverride> rows;
   SettingValues constants;
 };
 
@@ -62,8 +73,9 @@ class Registration {
   Registration& operator=(Registration&&) = default;
 
   // The record made again for a section of its document: its rows copied, the ones the section names
-  // hidden left out of the settings list, the values it pins carried over whatever a document or a
-  // caller states, and its own title and glyph unless the section gives others.
+  // hidden left out of the settings list, the ones whose bounds it states moving within them, the
+  // values it pins carried over whatever a document or a caller states, and its own title and glyph
+  // unless the section gives others.
   Registration copyAs(const String& routineKey, const SectionOverrides& overrides) const;
 
   const String& routineKey() const { return routineKey_; }

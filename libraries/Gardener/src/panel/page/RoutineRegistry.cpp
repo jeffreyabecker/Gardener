@@ -2,6 +2,7 @@
 
 #include <any>
 #include <cstddef>
+#include <math.h>
 #include <utility>
 
 #include "core/Logger.h"
@@ -12,9 +13,9 @@ namespace gardener {
 namespace {
 
 // What a section says about the record it copies, read beside the settings the section holds: the
-// title it shows, the glyph it draws, the rows it marks hidden, and the rows it pins to a value. A
-// pinned key's text is read by the row's own kind, which is the only thing that knows what it means,
-// and a pinned row is hidden as well because the list would have nothing to edit on it.
+// title it shows, the glyph it draws, and, for each row, what it hides, pins and moves the bounds to.
+// A pinned key's text is read by the row's own kind, which is the only thing that knows what it
+// means, and a pinned row is hidden as well because the list would have nothing to edit on it.
 SectionOverrides overridesOf(const Config& document, const String& section,
                              const Registration& record) {
   SectionOverrides overrides;
@@ -22,18 +23,23 @@ SectionOverrides overridesOf(const Config& document, const String& section,
   overrides.glyph = document.get<String>(section.c_str(), "routine_icon", "");
   for (const SettingsRow* row : record.settings()) {
     if (row == nullptr) continue;
-    const String key = row->key();
-    const String constantKey = key + ":constant";
+    SettingOverride stated;
+    stated.key = row->key();
+    const String constantKey = stated.key + ":constant";
     const String text = document.get<String>(section.c_str(), constantKey.c_str(), "");
     if (!text.isEmpty()) {
-      overrides.constants[key] = row->parse(text);
-      overrides.hidden.push_back(key);
-      continue;
+      overrides.constants[stated.key] = row->parse(text);
+      stated.hidden = true;
     }
-    const String hiddenKey = key + ":hidden";
-    if (document.get<bool>(section.c_str(), hiddenKey.c_str(), false)) {
-      overrides.hidden.push_back(key);
-    }
+    const String hiddenKey = stated.key + ":hidden";
+    if (document.get<bool>(section.c_str(), hiddenKey.c_str(), false)) stated.hidden = true;
+    const String minKey = stated.key + ":min";
+    const String maxKey = stated.key + ":max";
+    const String least = document.get<String>(section.c_str(), minKey.c_str(), "");
+    const String most = document.get<String>(section.c_str(), maxKey.c_str(), "");
+    if (!least.isEmpty()) stated.min = least.toFloat();
+    if (!most.isEmpty()) stated.max = most.toFloat();
+    if (stated.hidden || !isnan(stated.min) || !isnan(stated.max)) overrides.rows.push_back(stated);
   }
   return overrides;
 }

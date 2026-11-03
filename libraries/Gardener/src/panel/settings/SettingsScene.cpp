@@ -53,6 +53,9 @@ const String& SettingsRow::icon() const {
   return none;
 }
 
+// A kind that steps no number — a bool, a choice — has no range for a section to move.
+void SettingsRow::limit(float, float) {}
+
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
                              const std::vector<SettingsRow*>& rows, const SettingValues& values)
     : Scene(gestures), title_(title), ux_(ux), rows_(rows) {

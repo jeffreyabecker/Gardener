@@ -203,6 +203,16 @@ std::unique_ptr<SettingsRow> DurationRow::clone() const {
   return std::make_unique<DurationRow>(*this);
 }
 
+// A section's pair replaces the declaration's, in the whole seconds the kind already holds. A pair
+// with no second between the two is a typo and leaves the declaration's in place.
+void DurationRow::limit(float min, float max) {
+  const int32_t floor = isnan(min) ? min_ : static_cast<int32_t>(lroundf(min));
+  const int32_t ceiling = isnan(max) ? max_ : static_cast<int32_t>(lroundf(max));
+  if (floor > ceiling) return;
+  min_ = floor;
+  max_ = ceiling;
+}
+
 // --- the number -------------------------------------------------------------
 
 NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -268,6 +278,16 @@ bool NumberRow::accept(std::any& value) const { return takeNumber(value, false);
 
 std::unique_ptr<SettingsRow> NumberRow::clone() const { return std::make_unique<NumberRow>(*this); }
 
+// A section's pair replaces the declaration's, and a bound it does not name keeps the one it was
+// declared with. A pair with no number between the two is a typo and leaves the declaration's.
+void NumberRow::limit(float min, float max) {
+  const float floor = isnan(min) ? min_ : min;
+  const float ceiling = isnan(max) ? max_ : max;
+  if (floor > ceiling) return;
+  if (!isnan(min)) min_ = min;
+  if (!isnan(max)) max_ = max;
+}
+
 // --- the pressure -----------------------------------------------------------
 
 PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -293,7 +313,15 @@ SettingDeclaration PressureRow::declaration() const {
 std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, unit_, wholeSteps_,
-                                         nullable_);
+                                         min_, max_, nullable_);
+}
+
+// The machine's shallowest and deepest target are the outermost a pressure may sit at, so a section's
+// pair that reaches past them is held to them before it becomes the row's.
+void PressureRow::limit(float min, float max) {
+  if (!isnan(min) && min < CONTROL_MIN_TARGET_KPA) min = CONTROL_MIN_TARGET_KPA;
+  if (!isnan(max) && max > CONTROL_FLOOR_KPA) max = CONTROL_FLOOR_KPA;
+  NumberRow::limit(min, max);
 }
 
 std::unique_ptr<SettingsRow> PressureRow::clone() const {

@@ -17,6 +17,7 @@
 
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
+#include "machine/Machine.h"
 #include "panel/page/Registration.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/settings/SettingsRows.h"
@@ -27,9 +28,11 @@ namespace {
 using gardener::BoolRow;
 using gardener::ChoiceItem;
 using gardener::ChoiceRow;
+using gardener::DisplayUnit;
 using gardener::DurationRow;
 using gardener::GestureQueue;
 using gardener::NumberRow;
+using gardener::PressureRow;
 using gardener::Registration;
 using gardener::RoutineRegistry;
 using gardener::RoutineSettingStore;
@@ -92,6 +95,34 @@ constexpr const char* PinnedFixture = "initial_pressure=9.0\n"
 // The glyph a record registers with, which a section that names none keeps.
 constexpr const char* RecordGlyph = "08010080000000";
 
+// A document whose sections state the range their settings move within: one narrows, one widens, and
+// one states a pair a duration cannot take.
+constexpr const char* BoundedDocument = "/cfg/routines/bounded.ini";
+constexpr const char* BoundedFixture = "initial_pressure=9.0\n"
+                                       "target_pressure=20.0\n"
+                                       "total_duration=400\n"
+                                       "\n"
+                                       "[narrow]\n"
+                                       "initial_pressure=50.0\n"
+                                       "initial_pressure:min=10\n"
+                                       "initial_pressure:max=12\n"
+                                       "total_duration=400\n"
+                                       "total_duration:min=600\n"
+                                       "total_duration:max=300\n"
+                                       "\n"
+                                       "[wide]\n"
+                                       "initial_pressure=9.0\n"
+                                       "initial_pressure:min=-10\n"
+                                       "initial_pressure:max=200\n";
+
+// A document whose pressure section reaches past what the machine allows.
+constexpr const char* PressureDocument = "/cfg/routines/pressured.ini";
+constexpr const char* PressureFixture = "\n"
+                                        "[outside]\n"
+                                        "target_pressure=20.0\n"
+                                        "target_pressure:min=2\n"
+                                        "target_pressure:max=90\n";
+
 std::vector<ChoiceItem> resumeChoices() {
   return {{"hold", "Hold"}, {"immediately", "Immediately"}};
 }
@@ -124,6 +155,14 @@ std::vector<std::unique_ptr<SettingsRow>> rampedDeclaration(NoPresses& gestures,
                                             100, false));
   out.push_back(std::make_unique<DurationRow>(gestures, ux, "total_duration", "Total", 300, 1, 1,
                                               7200, false));
+  return out;
+}
+
+// The declaration a pressure record owns: the machine's own bounds until a section states others.
+std::vector<std::unique_ptr<SettingsRow>> pressureDeclaration(NoPresses& gestures, Ux& ux) {
+  std::vector<std::unique_ptr<SettingsRow>> out;
+  out.push_back(std::make_unique<PressureRow>(gestures, ux, "target_pressure", "Target", 20.0f,
+                                              DisplayUnit::Kpa, 1.0f));
   return out;
 }
 
@@ -375,6 +414,58 @@ TEST_CASE("a launch cannot move a setting a section pinned") {
   REQUIRE(registry.saveSettings("cold", settled));
   CHECK(library.textAt(PinnedDocument).find("initial_pressure=7.00") != std::string::npos);
   CHECK_EQ(kpaOf(registry.loadSettings("cold"), "initial_pressure"), 7.0f);
+}
+
+TEST_CASE("a section states the bounds a setting moves within") {
+  MemoryLibrary library;
+  library.put(BoundedDocument, BoundedFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+  REQUIRE(registry.add(Registration("bounded", "Bounded", rampedDeclaration(gestures, ux))));
+
+  // The pair a section states is the declaration its alternate reports, and the value the section
+  // holds is read back through that pair.
+  const std::vector<SettingsRow*>& narrow = *registry.settingsRows("narrow");
+  REQUIRE(narrow.size() == 3);
+  const gardener::SettingDeclaration start = narrow[0]->declaration();
+  CHECK_EQ(start.min, 10.0f);
+  CHECK_EQ(start.max, 12.0f);
+  CHECK_EQ(kpaOf(registry.loadSettings("narrow"), "initial_pressure"), 12.0f);
+
+  // A pair that leaves no range is a typo: the duration keeps the pair it was declared with, and the
+  // value the section holds reads as it is.
+  const gardener::SettingDeclaration total = narrow[2]->declaration();
+  CHECK_EQ(total.min, 1.0f);
+  CHECK_EQ(total.max, 7200.0f);
+  CHECK_EQ(secondsOf(registry.loadSettings("narrow"), "total_duration"), 400);
+
+  // A section widens as readily as it narrows, and the record's own declaration never moves.
+  const gardener::SettingDeclaration opened = registry.settingsRows("wide")->at(0)->declaration();
+  CHECK_EQ(opened.min, -10.0f);
+  CHECK_EQ(opened.max, 200.0f);
+  const gardener::SettingDeclaration declared =
+      registry.settingsRows("bounded")->at(0)->declaration();
+  CHECK_EQ(declared.min, 0.0f);
+  CHECK_EQ(declared.max, 100.0f);
+}
+
+TEST_CASE("a section's pressure pair stays inside the machine's") {
+  MemoryLibrary library;
+  library.put(PressureDocument, PressureFixture);
+  RecordingLogger logger;
+  RoutineRegistry registry(library, logger);
+  NoPresses gestures;
+  Ux ux;
+  REQUIRE(registry.add(Registration("pressured", "Pressured", pressureDeclaration(gestures, ux))));
+
+  // 2 and 90 lie outside what the loop accepts, so the row keeps the machine's own pair.
+  const gardener::SettingDeclaration target =
+      registry.settingsRows("outside")->at(0)->declaration();
+  CHECK_EQ(target.min, gardener::CONTROL_MIN_TARGET_KPA);
+  CHECK_EQ(target.max, CONTROL_FLOOR_KPA);
+  CHECK_EQ(kpaOf(registry.loadSettings("outside"), "target_pressure"), 20.0f);
 }
 
 TEST_CASE("a record registered again re-makes its alternates once, in their place") {
