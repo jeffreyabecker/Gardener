@@ -47,6 +47,10 @@ class RowList {
   // holds it.
   const String& selected() const { return selected_; }
 
+  // Seats the list on `value`: the row that holds it is current, and a value no row holds leaves the
+  // list with no current row.
+  void select(const String& value) { selected_ = value; }
+
   // The index of the row holding the selected value, or -1 when no row does.
   int16_t current() const;
 

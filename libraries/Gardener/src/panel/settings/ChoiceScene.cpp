@@ -17,27 +17,22 @@ int16_t choicePitch() {
   return pitch > 0 ? pitch : 1;
 }
 
-// The rows of the list: one per entry, its key as the value the keys select it by and its title as
-// the line drawn across the row.
-std::vector<gfx::RowList::Row> rowsOf(const std::vector<ChoiceItem>& items) {
-  std::vector<gfx::RowList::Row> rows;
-  rows.reserve(items.size());
-  for (const ChoiceItem& item : items)
-    rows.push_back(gfx::RowList::textRow(item.key, item.title));
-  return rows;
-}
-
 }  // namespace
 
 ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
-                         const std::vector<ChoiceItem>& items, bool nullable,
+                         std::vector<gfx::RowList::Row> rows, bool nullable,
                          std::function<void(String& current)> forward)
-    : EditorScene(gestures, ux, label), items_(items), forward_(forward), nullable_(nullable) {
+    : EditorScene(gestures, ux, label), forward_(forward), nullable_(nullable) {
   value_ = current;
   hasValue_ = !nullable_ || !current.isEmpty();
   opened_ = value_;
   hasOpened_ = hasValue_;
-  rebuild();
+  keys_.reserve(rows.size());
+  for (const gfx::RowList::Row& row : rows)
+    keys_.push_back(row.value);
+  // The list is built once, from the rows the caller made: a re-seat moves its selection rather
+  // than rebuilding it.
+  list_ = std::make_unique<gfx::RowList>(choicePitch(), std::move(rows), seat(), true);
 }
 
 void ChoiceScene::activate() { preview(); }
@@ -56,51 +51,40 @@ bool ChoiceScene::handle(const char* gesture) {
 // sits below the first entry, so Down at the first clears it and Up out of nothing enters the
 // first, which is the row a list with no current row moves to.
 void ChoiceScene::nudge(int8_t direction) {
-  if (items_.empty()) return;
-  if (nullable_ && hasValue_ && direction < 0 && value_ == items_.front().key) {
+  if (keys_.empty() || !list_) return;
+  if (nullable_ && hasValue_ && direction < 0 && value_ == keys_.front()) {
     value_ = String();
     hasValue_ = false;
-    rebuild();
+    list_->select(seat());
     preview();
     return;
   }
   if (!hasValue_) {
     if (direction > 0) {
-      value_ = items_.front().key;
+      list_->nudge(1);
+      value_ = list_->selected();
       hasValue_ = true;
-      rebuild();
     }
     preview();
     return;
   }
-  if (list_ && list_->nudge(direction)) value_ = list_->selected();
+  if (list_->nudge(direction)) value_ = list_->selected();
   preview();
 }
 
-void ChoiceScene::rebuild() {
-  pitch_ = choicePitch();
-  list_ = std::make_unique<gfx::RowList>(pitch_, rowsOf(items_), heldKey(), true);
-}
-
-// The key the list is seated on: nothing while the setting holds nothing, the held key when an
-// entry names it, and the first entry's key when none does, which is what makes a key no entry
-// names show the first.
-String ChoiceScene::heldKey() const {
-  if (!hasValue_ || items_.empty()) return String();
-  for (const ChoiceItem& item : items_) {
-    if (item.key == value_) return value_;
+// The value the list is seated on: nothing while the setting holds nothing, the held key when a row
+// names it, and the first row's key when none does, which is what makes a key no row names show the
+// first.
+String ChoiceScene::seat() const {
+  if (!hasValue_ || keys_.empty()) return String();
+  for (const String& key : keys_) {
+    if (key == value_) return value_;
   }
-  return items_.front().key;
+  return keys_.front();
 }
 
 void ChoiceScene::preview() {
   if (forward_ && hasValue_) forward_(value_);
-}
-
-String ChoiceScene::text() const {
-  const int16_t at = index();
-  if (!hasValue_ || at < 0 || at >= static_cast<int16_t>(items_.size())) return "--";
-  return items_[at].title;
 }
 
 std::any ChoiceScene::value() const { return hasValue_ ? std::any(value_) : std::any(); }
@@ -108,7 +92,7 @@ std::any ChoiceScene::value() const { return hasValue_ ? std::any(value_) : std:
 void ChoiceScene::canceled() {
   value_ = opened_;
   hasValue_ = hasOpened_;
-  rebuild();
+  list_->select(seat());
 }
 
 int16_t ChoiceScene::index() const { return list_ ? list_->current() : -1; }
@@ -116,8 +100,7 @@ int16_t ChoiceScene::index() const { return list_ ? list_->current() : -1; }
 // The entries drawn by the list into the value band, centred down it and scrolled to keep the entry
 // showing in view; a band with nothing showing prints the row a first entry would take.
 gfx::PaintNodeRef ChoiceScene::pageContents(gfx::Size) {
-  if (pitch_ != choicePitch()) rebuild();
-  if (!hasValue_ || items_.empty() || !list_) {
+  if (!hasValue_ || keys_.empty() || !list_) {
     return gfx::callable([](gfx::Canvas& canvas) {
       const int16_t pitch = choicePitch();
       const int16_t top =

@@ -122,9 +122,15 @@ String ChoiceRow::text(const std::any& value) const {
   return items_.front().title;
 }
 
+// The editor's rows: each entry's title as the list's own title row, which is the picture the scene
+// hands its model.
 std::unique_ptr<EditorScene> ChoiceRow::scene(const std::any& value) {
   const String current = value.has_value() ? std::any_cast<String>(value) : String();
-  return std::make_unique<ChoiceScene>(gestures_, ux_, label_, current, items_, nullable_,
+  std::vector<gfx::RowList::Row> rows;
+  rows.reserve(items_.size());
+  for (const ChoiceItem& item : items_)
+    rows.push_back(gfx::RowList::textRow(item.key, item.title));
+  return std::make_unique<ChoiceScene>(gestures_, ux_, label_, current, std::move(rows), nullable_,
                                        forward_);
 }
 

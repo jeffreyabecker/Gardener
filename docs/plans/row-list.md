@@ -57,13 +57,15 @@ class RowList {
   RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap);
   bool nudge(int direction);
   const String& selected() const;
+  void select(const String& value);              // seats the list, without a step
   int16_t current() const;                       // the row's index, or -1
 
   void draw(Canvas& canvas, Justify along = Justify::Start) const;
 };
 ```
 
-The rules it holds:
+The list may be seated on a value without moving through it, which is what a scene that puts back the
+key it opened on, or clears a nullable choice, needs. What it holds:
 
 1. A row is selected by its value, compared with `==`; the first row holding it is the current one.
    Values are unique, which is the caller's rule and not checked.
@@ -157,13 +159,15 @@ than the row text the draw writes on every beat today.
 
 ### The choice editor on top of it
 
-`ChoiceScene` keeps its items, its nullable rule and its `--` row, and gives up `windowOf()`,
-`BarWidth`, `BarInset` and the row loop. The items become rows of key and title; `nudge()` keeps the
-nullable ends around `RowList::nudge()` — Down at the first clears a nullable value, Up from nothing
-enters the first; `index()` and `text()` read `current()`; and `pageContents()` answers
+`ChoiceScene` is handed its rows — the choice row builds `textRow(key, title)` for each entry — and
+keeps only their keys for the rules it owns: the value it seats the list on and whether the held key
+is the first. It gives up `windowOf()`, `BarWidth`, `BarInset` and the row loop, builds its list once,
+and re-seats it with `select()` when a nullable value clears or a cancel puts the opened key back.
+`nudge()` keeps the nullable ends around `RowList::nudge()` — Down at the first clears a nullable
+value, Up from nothing enters the first; `index()` reads `current()`; and `pageContents()` answers
 `gfx::callable([this](gfx::Canvas& canvas) { list_.draw(canvas, gfx::Justify::Center); … })` while an
-entry is showing, and draws the `--` row in that same call when none is. A key no entry names selects
-the first entry, as the editor does today.
+entry is showing, and draws the `--` row in that same call when none is. A key no row names seats the
+list on the first row, as the editor does today.
 
 ### The browser on top of it
 

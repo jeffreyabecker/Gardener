@@ -16,6 +16,7 @@
 #include "panel/settings/DurationScene.h"
 #include "panel/settings/EditorScene.h"
 #include "panel/settings/NumberScene.h"
+#include "shapes/RowList.h"
 #include "suite.h"
 
 namespace gardener::gfx::test {
@@ -191,7 +192,15 @@ TEST_CASE("a hint band is a row of marks and words") {
 
 // --- the choice -------------------------------------------------------------
 
-std::vector<ChoiceItem> threeEntries() { return {{"a", "Alpha"}, {"b", "Beta"}, {"c", "Gamma"}}; }
+// The three rows the choice cases step through, each the title row a settings row builds for an
+// entry.
+std::vector<RowList::Row> threeRows() {
+  std::vector<RowList::Row> rows;
+  rows.push_back(RowList::textRow("a", "Alpha"));
+  rows.push_back(RowList::textRow("b", "Beta"));
+  rows.push_back(RowList::textRow("c", "Gamma"));
+  return rows;
+}
 
 // A choice scene with the hooks it answers opened up, so a case can step and draw it.
 class ChoiceProbe : public ChoiceScene {
@@ -208,11 +217,10 @@ TEST_CASE("a choice steps and wraps") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
   CHECK_EQ(choice.nullable(), 0);
   CHECK_EQ(choice.isNull(), 0);
-  CHECK_EQ(std::string(choice.text().c_str()), std::string("Beta"));
   choice.nudge(1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
   choice.nudge(1);
@@ -225,7 +233,7 @@ TEST_CASE("a choice inverts the row showing, not just its words") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents({band.width(), band.height()})->draw(band);
@@ -240,7 +248,7 @@ TEST_CASE("a key no entry names shows the first") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "z", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "z", threeRows(), false);
   choice.nudge(1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
 }
@@ -249,11 +257,10 @@ TEST_CASE("a nullable choice clears below the first") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
+  ChoiceProbe choice(gestures, ux, label, "", threeRows(), true);
   CHECK_EQ(choice.nullable(), 1);
   CHECK_EQ(choice.isNull(), 1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
-  CHECK_EQ(std::string(choice.text().c_str()), std::string("--"));
   choice.nudge(-1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
   choice.nudge(1);
@@ -269,7 +276,7 @@ TEST_CASE("a choice with no entries steps nowhere") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "", std::vector<ChoiceItem>(), false);
+  ChoiceProbe choice(gestures, ux, label, "", {}, false);
   choice.nudge(1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
 }
@@ -278,7 +285,7 @@ TEST_CASE("a choice closes on the key showing") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
   choice.nudge(1);
   CHECK_EQ(choice.press("ok:single"), 1);
   CHECK_EQ(choice.isClosed(), 1);
@@ -289,7 +296,7 @@ TEST_CASE("a choice cancel puts back the key it opened on") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
   choice.nudge(1);
   CHECK_EQ(choice.press("cancel:single"), 1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
@@ -300,7 +307,7 @@ TEST_CASE("a choice forward is the pages work") {
   Ux ux;
   String label("Choice");
   String heard;
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false,
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false,
                      [&heard](String& current) { heard = current; });
   // The entry the editor opens on is previewed before the first draw, each step previews the entry
   // it lands on, and Forward previews the one showing again.
@@ -311,11 +318,11 @@ TEST_CASE("a choice forward is the pages work") {
   CHECK_EQ(choice.press("forward:single"), 1);
   CHECK_EQ(std::string(heard.c_str()), std::string("c"));
 
-  ChoiceProbe none(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe none(gestures, ux, label, "b", threeRows(), false);
   CHECK_EQ(none.press("forward:single"), 0);
 
   int previews = 0;
-  ChoiceProbe empty(gestures, ux, label, "", threeEntries(), true,
+  ChoiceProbe empty(gestures, ux, label, "", threeRows(), true,
                     [&previews](String&) { previews++; });
   empty.activate();
   CHECK_EQ(previews, 0);
@@ -331,7 +338,7 @@ TEST_CASE("a choice band inverts the entry showing") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents({band.width(), band.height()})->draw(band);
@@ -343,7 +350,7 @@ TEST_CASE("a choice band prints every title") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "a", threeEntries(), false);
+  ChoiceProbe choice(gestures, ux, label, "a", threeRows(), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents({band.width(), band.height()})->draw(band);
@@ -356,7 +363,7 @@ TEST_CASE("a choice band prints dashes for nothing") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  ChoiceProbe choice(gestures, ux, label, "", threeEntries(), true);
+  ChoiceProbe choice(gestures, ux, label, "", threeRows(), true);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
   choice.pageContents({band.width(), band.height()})->draw(band);
@@ -371,11 +378,12 @@ TEST_CASE("a choice row is one line of the face the rows are drawn in") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  std::vector<ChoiceItem> one = {{"a", "Alpha"}};
-  ChoiceProbe choice(gestures, ux, label, "a", one, false);
+  std::vector<RowList::Row> one;
+  one.push_back(RowList::textRow("a", "Alpha"));
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
 
-  // Centred in thirty-six rows, the default face's row runs from 14 to 21.
+  // The default face's line box is eight rows, so a row centred in thirty-six runs from 14 to 21.
+  ChoiceProbe choice(gestures, ux, label, "a", std::move(one), false);
   reset();
   choice.pageContents({band.width(), band.height()})->draw(band);
   CHECK(!display.anyInk(0, 13, PageWidth, 1));
@@ -383,11 +391,15 @@ TEST_CASE("a choice row is one line of the face the rows are drawn in") {
   CHECK(display.anyInk(0, 21, PageWidth, 1));
   CHECK(!display.anyInk(0, 22, PageWidth, 1));
 
-  // ttyp0's is two rows taller, so it starts a row higher and ends a row lower.
+  // ttyp0's is two rows taller, and a scene built while it is the face takes that pitch: the row
+  // starts a row higher and ends a row lower.
+  std::vector<RowList::Row> taller;
+  taller.push_back(RowList::textRow("a", "Alpha"));
   setDefaultFamily(findFamily("ttyp0"));
-  reset();
-  choice.pageContents({band.width(), band.height()})->draw(band);
+  ChoiceProbe tall(gestures, ux, label, "a", std::move(taller), false);
   setDefaultFamily(nullptr);
+  reset();
+  tall.pageContents({band.width(), band.height()})->draw(band);
   CHECK(!display.anyInk(0, 12, PageWidth, 1));
   CHECK(display.anyInk(0, 13, PageWidth, 1));
   CHECK(display.anyInk(0, 22, PageWidth, 1));
@@ -465,17 +477,17 @@ TEST_CASE("a choice bar shows where the window is") {
   NoGestures gestures;
   Ux ux;
   String label("Choice");
-  std::vector<ChoiceItem> six;
+  std::vector<RowList::Row> six;
   for (int i = 0; i < 6; i++)
-    six.push_back({String(i), "Row"});
-  ChoiceProbe many(gestures, ux, label, String(5), six, false);
+    six.push_back(RowList::textRow(String(i), "Row"));
+  ChoiceProbe many(gestures, ux, label, String(5), std::move(six), false);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, 36));
   many.pageContents({band.width(), band.height()})->draw(band);
   CHECK(display.anyInk(126, 2, 2, 8));
   CHECK_EQ(display.inkCount(126, 15, 2, 6), 0);
 
-  ChoiceProbe few(gestures, ux, label, "b", threeEntries(), false);
+  ChoiceProbe few(gestures, ux, label, "b", threeRows(), false);
   reset();
   few.pageContents({band.width(), band.height()})->draw(band);
   CHECK_EQ(display.inkCount(126, 2, 2, 4), 0);

@@ -10,7 +10,6 @@
 
 #include "panel/settings/EditorScene.h"
 #include "shapes/RowList.h"
-#include "storage/SettingKind.h"
 
 namespace gardener {
 
@@ -19,8 +18,9 @@ namespace gardener {
 // A nullable setting's nothing sits one entry below the first: Down at the first clears back to
 // nothing, Up from nothing enters the first, and Down at nothing stays.
 //
-// An entry prints its title, centred in the row: the scene places the rows, inverts the one showing
-// and scrolls the window to keep it in view.
+// The rows are the caller's pictures — a title row, built by `RowList::textRow`, or a page's own
+// draw — and the scene keeps only their values: it seats the list on the one the setting holds,
+// inverts the row showing and scrolls the window to keep it in view.
 //
 // Forward is the page's own too: a scene handed a forward function runs it on the key showing — when
 // the editor goes on top, as its entries are stepped, and on Forward — for a page whose entries do
@@ -29,19 +29,16 @@ namespace gardener {
 class ChoiceScene : public EditorScene {
  public:
   // `current` is the key stored now. A nullable setting holding nothing passes an empty one, which
-  // is what the band prints `--` for; a key no entry names shows the first, as a setting that no
+  // is what the band prints `--` for; a key no row names shows the first, as a setting that no
   // longer offers it reads as its default. `forward` is what the page runs on the key showing, when
   // the editor opens, as the entries are stepped and on Forward; nothing for a page that has no work
   // of its own there.
   ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const String& current,
-              const std::vector<ChoiceItem>& items, bool nullable,
+              std::vector<gfx::RowList::Row> rows, bool nullable,
               std::function<void(String& current)> forward = nullptr);
 
   // The editor going on top: the entry it opens on is previewed before the first draw.
   void activate() override;
-
-  // What the entry showing prints: its title, or `--` when the setting holds nothing.
-  String text() const;
 
   // The key the setting stores, in the any the stack hands back; an empty one is a nullable
   // setting with no entry showing.
@@ -55,7 +52,7 @@ class ChoiceScene : public EditorScene {
   gfx::PaintNodeRef pageContents(gfx::Size band) override;
 
   // The key the setting holds, and the one it opened on: a kind that shows the same ring another
-  // way — the bool's switch — reads these rather than the items.
+  // way — the bool's switch — reads these rather than the rows.
   String value_;
   String opened_;
   bool hasValue_ = false;
@@ -63,18 +60,17 @@ class ChoiceScene : public EditorScene {
 
  private:
   int16_t index() const;
-  // The list rebuilt from the items, seated on the key the setting holds now.
-  void rebuild();
-  String heldKey() const;
+  // The value the list is seated on: nothing while the setting holds nothing, the held key when a
+  // row names it, and the first row's key when none does, which is what makes a key no row names
+  // show the first.
+  String seat() const;
   // The page's work on the entry showing, when there is one and the page has work there.
   void preview();
 
-  std::vector<ChoiceItem> items_;
+  // The values the rows carry, in order: what the scene's own rules are about.
+  std::vector<String> keys_;
   std::function<void(String& current)> forward_;
   bool nullable_;
-  // The line height the list was built at, which is the face's shortest line as it stands: a face
-  // the composition changes re-seats the list rather than drawing in the one it was built with.
-  int16_t pitch_ = 0;
   std::unique_ptr<gfx::RowList> list_;
 };
 

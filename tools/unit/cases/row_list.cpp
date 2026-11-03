@@ -106,6 +106,24 @@ TEST_CASE("a row list of one row nudges nothing") {
   CHECK_FALSE(list.nudge(-1));
 }
 
+TEST_CASE("a row list seats on the value it is given") {
+  RowList list(RowHeight, sevenRows(), "r0", true);
+  list.select("r3");
+  CHECK_EQ(list.current(), 3);
+  CHECK_EQ(std::string(list.selected().c_str()), std::string("r3"));
+  CHECK(list.nudge(1));
+  CHECK_EQ(list.current(), 4);
+
+  // A value no row holds leaves no row current, which is what a nullable setting's nothing seats.
+  list.select(String());
+  CHECK_EQ(list.current(), -1);
+  CHECK_EQ(std::string(list.selected().c_str()), std::string(""));
+
+  RowList empty(RowHeight, {}, "gone", true);
+  empty.select("r0");
+  CHECK_EQ(empty.current(), -1);
+}
+
 // --- the drawing ------------------------------------------------------------
 
 TEST_CASE("a row list draws the rows its band holds") {

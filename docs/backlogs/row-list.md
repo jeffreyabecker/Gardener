@@ -49,6 +49,11 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       showing, and draws the `--` row otherwise; a key no entry names shows the first. `windowOf()`,
       `BarWidth` and `BarInset` go. Cases cover the ring, the nullable Up, `--` with nothing
       selected, and the missing key.
+- [x] **Hand the choice scene its rows.** `ChoiceScene` takes the `gfx::RowList::Row`s a row built —
+      `textRow(key, title)` — instead of the `ChoiceItem`s, keeps only their keys, and re-seats its
+      list with the new `RowList::select()` when a nullable value clears or a cancel puts the opened
+      key back. `text()` goes, since the title is the row's paint, and the pitch is the face's as the
+      scene is built.
 - [x] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
       `SystemSettings::rows()`, so it inherits the model with the item above; a case opens it, edits
       a row and reads the rebuilt row and the set `SystemSettings::apply()` is handed. No change to
