@@ -15,13 +15,13 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 1 — the component
 
-- [ ] **The model.** Add `RowList` in `panel/page/RowList.h`/`.cpp` — a plain class a scene holds,
+- [x] **The model.** Add `RowList` in `panel/page/RowList.h`/`.cpp` — a plain class a scene holds,
       not a paint node: `Row { String value; gfx::PaintNodeRef paint; }`, the row height, a selected
       value and a wrap flag; `nudge`, `selected`, `current` and `draw(canvas, along)`, which draws
       the window into the band it is handed. Cases in `tools/unit/cases/row_list.cpp`: the ring in
       both modes, a clamp at either end, a value no row holds, an empty list and a one-row list.
-- [ ] **The drawing.** Cases for what `draw()` puts on the glass: a seven-row list in a four-row band
-      shows rows 0–3 and no bar; the fifth value selected shows rows 1–4 with only that row inverted;
+- [x] **The drawing.** Cases for what `draw()` puts on the glass: a seven-row list in a four-row band
+      shows rows 0–3; the fifth value selected shows rows 1–4 with only that row inverted;
       a three-row list takes the full width and draws no bar; a list that outgrows the band gives its
       rows up four pixels and inks the bar's two-pixel column; a five-pixel band draws one clipped
       row; the rows sit where the caller's justification puts them.
