@@ -67,7 +67,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       a new `list` field, and `DrawTree` answers it with a callable that calls `list->draw(canvas)`.
       `installRowListClass()` runs in `BerryInterpreter` with the modules.
       `python tools/berry/check.py` loads the image.
-- [ ] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
+- [x] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
       rest: `RowList(...)`, `nudge` and `getSelectedValue` agree with the model, a `nil` selection
       answers nil, a row that is not a pair, a title that is not a string, a wrap word that is
       neither `"wrap"` nor `"clamp"`, and an alignment word that names no justification raise, and a
