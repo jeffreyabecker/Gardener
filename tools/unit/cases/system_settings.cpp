@@ -7,7 +7,10 @@
 #include <Arduino.h>
 
 #include <any>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "core/SystemState.h"
 #include "fakes/MemoryLibrary.h"
@@ -15,11 +18,13 @@
 #include "machine/Machine.h"
 #include "panel/GestureQueue.h"
 #include "panel/page/Ux.h"
-#include "panel/settings/SettingsRows.h"
-#include "panel/settings/SystemSettings.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "panel/settings/SettingsRows.h"
+#include "panel/settings/SettingsScene.h"
+#include "panel/settings/SystemSettings.h"
 #include "storage/DeviceSettings.h"
 #include "storage/JingleLibrary.h"
+#include "suite.h"
 
 namespace {
 
@@ -27,7 +32,9 @@ using gardener::BuzzerPlayer;
 using gardener::DeviceSettings;
 using gardener::GestureQueue;
 using gardener::JingleLibrary;
+using gardener::Scene;
 using gardener::SettingsRow;
+using gardener::SettingsScene;
 using gardener::SettingValues;
 using gardener::SystemSettings;
 using gardener::Ux;
@@ -82,6 +89,21 @@ struct Bench {
   GestureQueue gestures;
   Ux ux;
   SystemSettings system{gestures, ux, settings, jingles, buzzer};
+};
+
+// The device's list with the hooks it answers opened up, so a case can press the keys and draw it.
+class SettingsProbe : public gardener::SettingsScene {
+ public:
+  using SettingsScene::drawPage;
+  using SettingsScene::SettingsScene;
+
+  bool press(const char* gesture) { return handle(gesture); }
+};
+
+// What the list is opened over: the list pops back to it, which is what the stack's root rule needs.
+class RootScene : public Scene {
+ public:
+  using Scene::Scene;
 };
 
 }  // namespace
@@ -161,4 +183,59 @@ TEST_CASE("applying the set the list opened on writes nothing") {
   Bench bench;
   CHECK(bench.system.apply(bench.system.values()));
   CHECK_EQ(bench.library.writes(), 0);
+}
+
+TEST_CASE("the device's own list edits a row and hands the set back") {
+  Bench bench;
+  SettingValues handed;
+  bench.ux.reset(std::make_unique<RootScene>(bench.gestures));
+  auto list = std::make_unique<SettingsProbe>(bench.gestures, bench.ux, String("SYSTEM"),
+                                              bench.system.rows(), bench.system.values());
+  SettingsProbe* scene = list.get();
+  bench.ux.push(std::move(list), [&handed](Scene& popped) {
+    handed = static_cast<SettingsScene&>(popped).values();
+  });
+
+  // The unit row is the one the keys open on. Forward opens its choice and Up steps it to the next
+  // unit the device offers.
+  CHECK_EQ(scene->selected(), 0);
+  gardener::gfx::test::reset();
+  scene->drawPage(gardener::gfx::test::canvas);
+  const int before = gardener::gfx::test::display.inkCount(0, 8, gardener::gfx::test::PageWidth, 8);
+
+  scene->press("forward:single");
+  REQUIRE_EQ(bench.ux.depth(), 3);
+  bench.gestures.push("up:single");
+  bench.ux.poll(gardener::gfx::test::canvas, 1000);
+  bench.gestures.push("ok:single");
+  bench.ux.poll(gardener::gfx::test::canvas, 1010);
+  CHECK_EQ(bench.ux.depth(), 2);
+
+  // The row the keys are on kept the highlight through the rebuild, and the set the list holds
+  // carries the new unit.
+  CHECK_EQ(scene->selected(), 0);
+  CHECK_EQ(std::string(textOf(scene->values(), "unit").c_str()), std::string("inhg"));
+
+  // The rebuilt row prints the unit it now holds, and not the one it printed before the edit: it
+  // inks what a list built from the set the scene holds inks.
+  gardener::gfx::test::reset();
+  scene->drawPage(gardener::gfx::test::canvas);
+  const int rebuilt =
+      gardener::gfx::test::display.inkCount(0, 8, gardener::gfx::test::PageWidth, 8);
+  CHECK(rebuilt != before);
+  SettingsProbe fresh(bench.gestures, bench.ux, String("SYSTEM"), bench.system.rows(),
+                      scene->values());
+  gardener::gfx::test::reset();
+  fresh.drawPage(gardener::gfx::test::canvas);
+  CHECK_EQ(gardener::gfx::test::display.inkCount(0, 8, gardener::gfx::test::PageWidth, 8), rebuilt);
+
+  // OK pops the list, which hands the set to the device, and the device writes it back.
+  bench.gestures.push("ok:single");
+  bench.ux.poll(gardener::gfx::test::canvas, 1020);
+  CHECK_EQ(bench.ux.depth(), 1);
+  CHECK_EQ(std::string(textOf(handed, "unit").c_str()), std::string("inhg"));
+  CHECK(bench.system.apply(handed));
+  CHECK_EQ(bench.library.writes(), 1);
+  CHECK(bench.settings.unit() == gardener::DisplayUnit::InHg);
+  CHECK(bench.library.textAt(SettingsPath).find("unit=inhg") != std::string::npos);
 }

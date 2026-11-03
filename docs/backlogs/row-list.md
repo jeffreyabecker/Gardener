@@ -45,7 +45,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       showing, and draws the `--` row otherwise; a key no entry names shows the first. `windowOf()`,
       `BarWidth` and `BarInset` go. Cases cover the ring, the nullable Up, `--` with nothing
       selected, and the missing key.
-- [ ] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
+- [x] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
       `SystemSettings::rows()`, so it inherits the model with the item above; a case opens it, edits
       a row and reads the rebuilt row and the set `SystemSettings::apply()` is handed. No change to
       `SystemSettings` is expected; a hook it turns out to need lands here.
