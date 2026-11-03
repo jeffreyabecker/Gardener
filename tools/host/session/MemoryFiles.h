@@ -36,8 +36,10 @@ class MemoryFiles : public Library {
   // A file, or a folder with everything under it.
   bool remove(const String& path) override;
 
-  // Whether a `key=value` line for `key` changed in `path` since the run began.
-  bool wrote(const std::string& path, const std::string& key) const;
+  // Whether the set of `routine` had `key` written to it since the run began: the global section of
+  // its own document, or the section an alias names in the document it shares with the routine it
+  // was copied from.
+  bool wrote(const std::string& routine, const std::string& key) const;
 
   // How many writes landed since the run began: one `Config::save` of a changed document is one,
   // whatever it names.
@@ -52,8 +54,16 @@ class MemoryFiles : public Library {
  private:
   bool textAt(const std::string& path, std::string& out) const;
 
+  // One `key=value` a write changed: the file, the section it sits in, and the key. The empty
+  // section is the document's global one, which is where a routine's own set lives.
+  struct Written {
+    std::string path;
+    std::string section;
+    std::string key;
+  };
+
   std::map<std::string, std::string> files_;
-  std::vector<std::string> written_;
+  std::vector<Written> written_;
   std::function<void(const String&)> readObserver_;
   int writes_ = 0;
 };

@@ -11,10 +11,12 @@ namespace gardener {
 
 namespace {
 
-// The keys a `key=value` document holds, with comments and blank lines skipped: the one thing the
-// check needs in order to see what a write changed.
-std::map<std::string, std::string> keysOf(const std::string& text) {
-  std::map<std::string, std::string> keys;
+// The keys a `key=value` document holds, by the section each sits in, with comments, blank lines and
+// section headers skipped: the one thing the check needs in order to see what a write changed. A key
+// above the first header is the document's global section, which is the empty name.
+std::map<std::pair<std::string, std::string>, std::string> keysOf(const std::string& text) {
+  std::map<std::pair<std::string, std::string>, std::string> keys;
+  std::string section;
   size_t start = 0;
   while (start <= text.size()) {
     size_t end = text.find('\n', start);
@@ -27,9 +29,14 @@ std::map<std::string, std::string> keysOf(const std::string& text) {
       if (!isspace(static_cast<unsigned char>(value))) trimmed += value;
     }
     if (trimmed.empty() || trimmed.front() == '#' || trimmed.front() == ';') continue;
+    if (trimmed.front() == '[') {
+      const size_t close = trimmed.find(']');
+      section = close == std::string::npos ? std::string() : trimmed.substr(1, close - 1);
+      continue;
+    }
     const size_t equals = trimmed.find('=');
     if (equals == std::string::npos) continue;
-    keys[trimmed.substr(0, equals)] = trimmed.substr(equals + 1);
+    keys[std::make_pair(section, trimmed.substr(0, equals))] = trimmed.substr(equals + 1);
   }
   return keys;
 }
@@ -96,13 +103,13 @@ bool MemoryFiles::write(const String& path, const String& text) {
   textAt(filePath, previous);
   files_[filePath] = text.c_str();
 
-  // What changed, key by key: the driver asks whether the editor persisted this setting, and a
-  // rewritten document is not by itself an answer.
+  // What changed, key by key, and which section it sits in: the driver asks whether the editor
+  // persisted this setting, and a rewritten document is not by itself an answer.
   const auto before = keysOf(previous);
   for (const auto& entry : keysOf(text.c_str())) {
     const auto old = before.find(entry.first);
     if (old != before.end() && old->second == entry.second) continue;
-    written_.push_back(filePath + "|" + entry.first);
+    written_.push_back(Written{filePath, entry.first.first, entry.first.second});
   }
   return true;
 }
@@ -189,9 +196,14 @@ bool MemoryFiles::remove(const String& path) {
   return removed;
 }
 
-bool MemoryFiles::wrote(const std::string& path, const std::string& key) const {
-  const std::string entry = path + "|" + key;
-  return std::find(written_.begin(), written_.end(), entry) != written_.end();
+bool MemoryFiles::wrote(const std::string& routine, const std::string& key) const {
+  const std::string document = "/cfg/routines/" + routine + ".ini";
+  return std::any_of(written_.begin(), written_.end(), [&](const Written& written) {
+    if (written.key != key) return false;
+    // A routine's own set is the global section of its document; an alias's is the section its key
+    // names in the document it shares with the routine it was copied from.
+    return written.section.empty() ? written.path == document : written.section == routine;
+  });
 }
 
 bool MemoryFiles::textAt(const std::string& path, std::string& out) const {
