@@ -296,7 +296,7 @@ int routinesRegister(bvm* vm) {
   requireGlyph(vm, 3);
   requireClass(vm, 5);
   // Every check runs before a row is taken, so a refused registration changes nothing.
-  std::vector<std::unique_ptr<SettingsRow>> rows;
+  std::vector<std::unique_ptr<SettingConfig>> rows;
   if (!be_isnil(vm, 4)) rows = takeSettingsRows(vm, 4);
 
   const String routineKey(argText(vm, 1));
@@ -345,10 +345,10 @@ int routinesSaveSettings(bvm* vm) {
   const int map = be_absindex(vm, -1);
 
   const RoutineRegistry& registry = bindings->registry();
-  const std::vector<SettingsRow*>* rows = registry.settingsRows(routineKey);
+  const std::vector<SettingConfig*>* rows = registry.settingsRows(routineKey);
   SettingValues values;
   if (rows != nullptr) {
-    for (const SettingsRow* row : *rows) {
+    for (const SettingConfig* row : *rows) {
       be_pushstring(vm, row->key().c_str());
       be_getindex(vm, map);
       be_remove(vm, -2);  // the key the read left under the value
@@ -416,14 +416,15 @@ int routinesSettingsCfgs(bvm* vm) {
   if (be_top(vm) < 1 || !be_isstring(vm, 1)) {
     be_raise(vm, "type_error", "routines.settings_cfgs: settings_cfgs(routine_key)");
   }
-  const std::vector<SettingsRow*>* rows = bindings->registry().settingsRows(String(argText(vm, 1)));
+  const std::vector<SettingConfig*>* rows =
+      bindings->registry().settingsRows(String(argText(vm, 1)));
   if (rows == nullptr || rows->empty()) be_return_nil(vm);
 
   // The list class's instance with the raw list it appends to on top of it: the pop below leaves the
   // instance as the answer.
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (SettingsRow* row : *rows) {
+  for (SettingConfig* row : *rows) {
     pushSettingDeclaration(vm, row);
     be_data_push(vm, list);
     be_pop(vm, 1);

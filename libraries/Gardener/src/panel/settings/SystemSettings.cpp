@@ -5,8 +5,8 @@
 
 #include "core/Units.h"
 #include "machine/Machine.h"
-#include "panel/settings/SettingsRows.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "panel/settings/SettingsRows.h"
 #include "storage/DeviceSettings.h"
 #include "storage/JingleLibrary.h"
 
@@ -52,34 +52,32 @@ void SystemSettings::build() {
     const DisplayUnitInfo& info = DisplayUnits[i];
     units.push_back({info.name, info.suffix});
   }
-  owned_.push_back(std::make_unique<ChoiceRow>(gestures_, ux_, UnitKey, UnitLabel,
-                                               displayUnitInfo(DisplayUnit::Kpa).name, units, false,
-                                               UnitMark));
+  owned_.push_back(std::make_unique<ChoiceSettingCfg>(gestures_, ux_, UnitKey, UnitLabel,
+                                                      displayUnitInfo(DisplayUnit::Kpa).name, units,
+                                                      false, UnitMark));
 
   std::vector<ChoiceItem> jingles;
   for (const Jingle& jingle : jingles_.entries()) {
     jingles.push_back({jingle.key, jingle.shortTitle});
   }
-  owned_.push_back(std::make_unique<ChoiceRow>(gestures_, ux_, JingleKey, JingleLabel,
-                                               jingles.empty() ? String() : jingles.front().key,
-                                               jingles, false, JingleMark,
-                                               [this](String& current) {
-                                                 const Jingle* jingle = jingles_.find(current);
-                                                 if (jingle != nullptr)
-                                                   buzzer_.play(jingle->notes.c_str());
-                                               }));
+  owned_.push_back(std::make_unique<ChoiceSettingCfg>(
+      gestures_, ux_, JingleKey, JingleLabel, jingles.empty() ? String() : jingles.front().key,
+      jingles, false, JingleMark, [this](String& current) {
+        const Jingle* jingle = jingles_.find(current);
+        if (jingle != nullptr) buzzer_.play(jingle->notes.c_str());
+      }));
 
-  owned_.push_back(std::make_unique<DurationRow>(gestures_, ux_, MaxDurationKey, MaxDurationLabel,
-                                                 DefaultMaxDurationSeconds, MaxDurationStepSeconds,
-                                                 0, MaxDurationCeilingSeconds, false));
+  owned_.push_back(std::make_unique<DurationSettingCfg>(
+      gestures_, ux_, MaxDurationKey, MaxDurationLabel, DefaultMaxDurationSeconds,
+      MaxDurationStepSeconds, 0, MaxDurationCeilingSeconds, false));
 
   rows_.reserve(owned_.size());
-  for (const std::unique_ptr<SettingsRow>& row : owned_) {
+  for (const std::unique_ptr<SettingConfig>& row : owned_) {
     rows_.push_back(row.get());
   }
 }
 
-const std::vector<SettingsRow*>& SystemSettings::rows() {
+const std::vector<SettingConfig*>& SystemSettings::rows() {
   build();
   return rows_;
 }

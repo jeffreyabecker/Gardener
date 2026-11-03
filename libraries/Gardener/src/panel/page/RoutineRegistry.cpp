@@ -21,7 +21,7 @@ SectionOverrides overridesOf(const Config& document, const String& section,
   SectionOverrides overrides;
   overrides.title = document.get<String>(section.c_str(), "routine_title", "");
   overrides.glyph = document.get<String>(section.c_str(), "routine_icon", "");
-  for (const SettingsRow* row : record.settings()) {
+  for (const SettingConfig* row : record.settings()) {
     if (row == nullptr) continue;
     SettingOverride stated;
     stated.key = row->key();
@@ -148,7 +148,7 @@ const String* RoutineRegistry::icon(const String& routineKey) const {
   return &record->glyph();
 }
 
-const std::vector<SettingsRow*>* RoutineRegistry::settingsRows(const String& routineKey) const {
+const std::vector<SettingConfig*>* RoutineRegistry::settingsRows(const String& routineKey) const {
   const Registration* record = registration(routineKey);
   return record == nullptr ? nullptr : &record->settings();
 }
@@ -174,7 +174,7 @@ std::unique_ptr<Scene> RoutineRegistry::activate(const String& routineKey,
   activation.routineKey = routineKey;
   // The caller states what it launches with; the declaration is what holds a setting to its kind,
   // and one the set leaves out begins at its default, as one its document lacks does.
-  for (SettingsRow* row : record->settings()) {
+  for (SettingConfig* row : record->settings()) {
     std::any value = row->defaultValue();
     const SettingValues::const_iterator held = values.find(row->key());
     if (held != values.end()) {

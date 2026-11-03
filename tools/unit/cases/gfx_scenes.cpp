@@ -357,7 +357,7 @@ class TestEditor : public EditorScene {
 };
 
 // A settings row that prints a String value and builds one of those editors.
-class TestRow : public SettingsRow {
+class TestRow : public SettingConfig {
  public:
   TestRow(GestureQueue& gestures, Ux& ux) : gestures_(gestures), ux_(ux) {}
 
@@ -371,10 +371,6 @@ class TestRow : public SettingsRow {
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return value_; }
 
-  String text(const std::any& value) const override {
-    return value.has_value() ? std::any_cast<String>(value) : String("--");
-  }
-
   String stored(const std::any& value) const override {
     return value.has_value() ? std::any_cast<String>(value) : String();
   }
@@ -387,7 +383,7 @@ class TestRow : public SettingsRow {
     return !value.has_value() || std::any_cast<String>(&value) != nullptr;
   }
 
-  std::unique_ptr<SettingsRow> clone() const override { return std::make_unique<TestRow>(*this); }
+  std::unique_ptr<SettingConfig> clone() const override { return std::make_unique<TestRow>(*this); }
 
   SettingDeclaration declaration() const override { return {"text"}; }
 
@@ -428,7 +424,7 @@ TEST_CASE("a settings list moves and edits") {
   TestRow unit(gestures, ux);
   target.hold("target", "Target", "50");
   unit.hold("unit", "Unit", "kPa");
-  std::vector<SettingsRow*> rows{&target, &unit};
+  std::vector<SettingConfig*> rows{&target, &unit};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
   CHECK_EQ(settings->selected(), 0);
@@ -470,7 +466,7 @@ TEST_CASE("a settings list cancel puts the set back") {
   String title("SETTINGS");
   TestRow target(gestures, ux);
   target.hold("target", "Target", "50");
-  std::vector<SettingsRow*> rows{&target};
+  std::vector<SettingConfig*> rows{&target};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
   SettingValues handed;
@@ -498,7 +494,7 @@ TEST_CASE("a settings list passes over a hidden row") {
   hidden.hold("hidden", "Hidden", "20");
   last.hold("last", "Last", "30");
   hidden.hide();
-  std::vector<SettingsRow*> rows{&first, &hidden, &last};
+  std::vector<SettingConfig*> rows{&first, &hidden, &last};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
   CHECK_EQ(settings->selected(), 0);
@@ -530,7 +526,7 @@ TEST_CASE("a settings list passes over a hidden row") {
 TEST_CASE("a row's pair reaches its editor") {
   GestureQueue gestures;
   Ux ux;
-  NumberRow number(gestures, ux, "number", "Number", 15.0f, 1.0f, 0.0f, 100.0f, false);
+  NumericSettingCfg number(gestures, ux, "number", "Number", 15.0f, 1.0f, 0.0f, 100.0f, false);
   number.limit(10.0f, 20.0f);
 
   const SettingDeclaration declared = number.declaration();
@@ -573,7 +569,7 @@ TEST_CASE("a settings list rebuilds the row an editor changed") {
   String title("SETTINGS");
   TestRow target(gestures, ux);
   target.hold("target", "Target", "50");
-  std::vector<SettingsRow*> rows{&target};
+  std::vector<SettingConfig*> rows{&target};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
   Watched rootWatch;
@@ -593,12 +589,14 @@ TEST_CASE("a settings list rebuilds the row an editor changed") {
   const String edited = std::any_cast<String>(settings->values().at("target"));
   CHECK_EQ(std::string(edited.c_str()), std::string("WIDER"));
 
-  // The rebuilt row prints the edited value: it inks what a list built from the set the scene hands
-  // back inks, and not what the row inked before the edit.
+  // A row prints its label and not the value it holds, so the edited cell inks what it inked
+  // before the edit; the list is rebuilt all the same, and a list built from the set the scene
+  // hands back draws the same picture.
   reset();
   settings->drawPage(canvas);
   const int rebuilt = display.inkCount(0, 8, PageWidth, 8);
-  CHECK(rebuilt != before);
+  CHECK(rebuilt > 0);
+  CHECK_EQ(rebuilt, before);
   SettingsProbe fresh(gestures, ux, title, rows, settings->values());
   reset();
   fresh.drawPage(canvas);
@@ -615,9 +613,11 @@ TEST_CASE("a choice row prints its mark before its label") {
   // Two marks, each one ink pixel in its top-left corner so where it lands is the whole question:
   // an eight-row one that fills its row, and a four-row one that has to be centred in it. The first
   // row carries none and is the one the keys are on.
-  ChoiceRow plain(gestures, ux, "plain", "Plain", "lo", choices(), false);
-  ChoiceRow tall(gestures, ux, "tall", "Tall", "lo", choices(), false, "080800800000000000000000");
-  ChoiceRow shortMark(gestures, ux, "short", "Short", "lo", choices(), false, "08040080000000");
+  ChoiceSettingCfg plain(gestures, ux, "plain", "Plain", "lo", choices(), false);
+  ChoiceSettingCfg tall(gestures, ux, "tall", "Tall", "lo", choices(), false,
+                        "080800800000000000000000");
+  ChoiceSettingCfg shortMark(gestures, ux, "short", "Short", "lo", choices(), false,
+                             "08040080000000");
   SettingsProbe list(gestures, ux, title, {&plain, &tall, &shortMark}, {});
   reset();
   list.drawPage(canvas);
@@ -638,11 +638,11 @@ TEST_CASE("a settings list edits every kind") {
   GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
-  NumberRow target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
-  BoolRow power(gestures, ux, "power", "Power", false);
-  ChoiceRow unit(gestures, ux, "unit", "Unit", "lo", choices(), false);
-  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
-  std::vector<SettingsRow*> rows{&target, &power, &unit, &hold};
+  NumericSettingCfg target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolSettingCfg power(gestures, ux, "power", "Power", false);
+  ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "lo", choices(), false);
+  DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+  std::vector<SettingConfig*> rows{&target, &power, &unit, &hold};
   auto list = std::make_unique<SettingsScene>(gestures, ux, title, rows, SettingValues());
 
   SettingValues handed;
@@ -686,22 +686,16 @@ TEST_CASE("a settings list edits every kind") {
   CHECK_EQ(std::any_cast<int32_t>(handed.at("hold")), 150);
 }
 
-// Each kind's row prints the value the list shows and opens an editor over it, which hands the same
-// kind of value back: the row and its scene agree about what the setting holds.
-TEST_CASE("a row prints its value and opens its editor") {
+// Each kind's row opens an editor over the value it holds, and that editor hands the same kind of
+// value back: the row and its scene agree about what the setting holds.
+TEST_CASE("a row opens an editor over the value it holds") {
   NoGestures gestures;
   Ux ux;
-  NumberRow number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
-  BoolRow power(gestures, ux, "power", "Power", true);
-  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
-  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
-  NumberRow unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
-
-  CHECK_EQ(std::string(number.text(number.defaultValue()).c_str()), std::string("5"));
-  CHECK_EQ(std::string(power.text(power.defaultValue()).c_str()), std::string("ON"));
-  CHECK_EQ(std::string(unit.text(unit.defaultValue()).c_str()), std::string("High"));
-  CHECK_EQ(std::string(hold.text(hold.defaultValue()).c_str()), std::string("1m30s"));
-  CHECK_EQ(std::string(hold.text(std::any()).c_str()), std::string("--"));
+  NumericSettingCfg number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolSettingCfg power(gestures, ux, "power", "Power", true);
+  ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+  NumericSettingCfg unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
 
   CHECK_EQ(std::any_cast<float>(number.scene(number.defaultValue())->value()) == 5.0f, 1);
   CHECK_EQ(std::any_cast<bool>(power.scene(power.defaultValue())->value()), 1);
@@ -710,25 +704,22 @@ TEST_CASE("a row prints its value and opens its editor") {
   CHECK_EQ(std::any_cast<int32_t>(hold.scene(hold.defaultValue())->value()), 90);
 
   CHECK_EQ(unset.defaultValue().has_value(), 0);
-  CHECK_EQ(std::string(unset.text(unset.defaultValue()).c_str()), std::string("--"));
   CHECK_EQ(unset.scene(unset.defaultValue())->isNull(), 1);
 }
 
-// The unit a pressure row prints in and steps by is the device's, read when the list or the editor
-// asks rather than kept from when the row was declared: a unit changed in the device's own list
-// reaches the pressures a routine declared when the image loaded.
+// The unit a pressure row steps by is the device's, read when the list or the editor asks rather
+// than kept from when the row was declared: a unit changed in the device's own list reaches the
+// pressures a routine declared when the image loaded.
 TEST_CASE("a pressure row follows the unit the device shows") {
   NoGestures gestures;
   Ux ux;
   SystemState state;
   state.unit = DisplayUnit::Kpa;
-  PressureRow target(gestures, ux, "target", "Target", state, 20.0f, 1.0f);
+  PressureSettingCfg target(gestures, ux, "target", "Target", state, 20.0f, 1.0f);
 
-  CHECK_EQ(std::string(target.text(std::any(20.0f)).c_str()), std::string("20.0"));
   CHECK_EQ(target.declaration().step == 1.0f, 1);
 
   state.unit = DisplayUnit::InHg;
-  CHECK_EQ(std::string(target.text(std::any(20.0f)).c_str()), std::string("5.9"));
   CHECK_EQ(fabsf(target.declaration().step - 1.0f / 0.29529991f) < 0.001f, 1);
 }
 
@@ -738,10 +729,10 @@ TEST_CASE("a pressure row follows the unit the device shows") {
 TEST_CASE("a row answers the declaration it was built from") {
   NoGestures gestures;
   Ux ux;
-  NumberRow target(gestures, ux, "target", "Target", 5.0f, 2, 1, 9, false);
-  BoolRow power(gestures, ux, "power", "Power", true);
-  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
-  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 30, 3600, false);
+  NumericSettingCfg target(gestures, ux, "target", "Target", 5.0f, 2, 1, 9, false);
+  BoolSettingCfg power(gestures, ux, "power", "Power", true);
+  ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 30, 3600, false);
 
   const SettingDeclaration number = target.declaration();
   CHECK_EQ(std::string(number.kind), std::string("number"));
@@ -779,13 +770,13 @@ TEST_CASE("a settings list seeds from the document") {
   GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
-  BoolRow power(gestures, ux, "power", "Power", true);
-  NumberRow target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
-  NumberRow ceiling(gestures, ux, "ceiling", "Ceiling", 9.0f, 1, 0, 10, true);
+  BoolSettingCfg power(gestures, ux, "power", "Power", true);
+  NumericSettingCfg target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  NumericSettingCfg ceiling(gestures, ux, "ceiling", "Ceiling", 9.0f, 1, 0, 10, true);
   SettingValues held;
   held["power"] = false;
   held["ceiling"] = std::any();
-  std::vector<SettingsRow*> rows{&power, &target, &ceiling};
+  std::vector<SettingConfig*> rows{&power, &target, &ceiling};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, held);
   SettingsProbe* settings = list.get();
 
@@ -813,11 +804,11 @@ TEST_CASE("a settings list seeds from the document") {
 TEST_CASE("a row stores its document form") {
   NoGestures gestures;
   Ux ux;
-  NumberRow number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
-  BoolRow power(gestures, ux, "power", "Power", true);
-  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
-  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
-  NumberRow unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
+  NumericSettingCfg number(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
+  BoolSettingCfg power(gestures, ux, "power", "Power", true);
+  ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 0, 3600, false);
+  NumericSettingCfg unset(gestures, ux, "ceiling", "Ceiling", NAN, 1, 0, 10, true);
 
   CHECK_EQ(std::string(number.stored(std::any(7.5f)).c_str()), std::string("7.50"));
   CHECK_EQ(std::string(power.stored(std::any(true)).c_str()), std::string("on"));
@@ -841,7 +832,7 @@ TEST_CASE("a row stores its document form") {
 // The check 5_ramped_static's declaration gives its total: the profile is the two holds plus a
 // ramp, so the total covers the holds. This is the declaration's form of a check — the declaration,
 // the set in force and the value proposed — which is what a row's constructor is handed.
-std::pair<bool, String> totalCoversHolds(const std::vector<SettingsRow*>&,
+std::pair<bool, String> totalCoversHolds(const std::vector<SettingConfig*>&,
                                          const SettingValues& values, const std::any& proposed) {
   const auto initial = values.find("initial_duration");
   const auto target = values.find("target_duration");
@@ -854,7 +845,7 @@ std::pair<bool, String> totalCoversHolds(const std::vector<SettingsRow*>&,
 
 // The check 2_ramped_interval's declaration gives its final pressure: a ramp ends no lower than it
 // starts.
-std::pair<bool, String> finalUnderStart(const std::vector<SettingsRow*>&,
+std::pair<bool, String> finalUnderStart(const std::vector<SettingConfig*>&,
                                         const SettingValues& values, const std::any& proposed) {
   const auto initial = values.find("initial_pressure");
   const float start = initial == values.end() ? 0.0f : std::any_cast<float>(initial->second);
@@ -868,14 +859,14 @@ std::pair<bool, String> finalUnderStart(const std::vector<SettingsRow*>&,
 TEST_CASE("a rows check refuses what the set cannot use") {
   NoGestures gestures;
   Ux ux;
-  DurationRow initial(gestures, ux, "initial_duration", "Start time", 60, 1, 0, 7200, false);
-  DurationRow target(gestures, ux, "target_duration", "Target time", 60, 1, 0, 7200, false);
-  DurationRow total(gestures, ux, "total_duration", "Total time", 300, 1, 1, 7200, false,
-                    totalCoversHolds);
-  NumberRow start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
-  NumberRow last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr, 2,
-                 finalUnderStart);
-  std::vector<SettingsRow*> rows{&initial, &target, &total, &start, &last};
+  DurationSettingCfg initial(gestures, ux, "initial_duration", "Start time", 60, 1, 0, 7200, false);
+  DurationSettingCfg target(gestures, ux, "target_duration", "Target time", 60, 1, 0, 7200, false);
+  DurationSettingCfg total(gestures, ux, "total_duration", "Total time", 300, 1, 1, 7200, false,
+                           totalCoversHolds);
+  NumericSettingCfg start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  NumericSettingCfg last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr,
+                         2, finalUnderStart);
+  std::vector<SettingConfig*> rows{&initial, &target, &total, &start, &last};
 
   SettingValues values;
   values["initial_duration"] = static_cast<int32_t>(60);
@@ -909,10 +900,10 @@ TEST_CASE("a settings list keeps a refused value out") {
   GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
-  NumberRow start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
-  NumberRow last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr, 2,
-                 finalUnderStart);
-  std::vector<SettingsRow*> rows{&start, &last};
+  NumericSettingCfg start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  NumericSettingCfg last(gestures, ux, "final_pressure", "Final", 5.0f, 1, 0, 100, false, nullptr,
+                         2, finalUnderStart);
+  std::vector<SettingConfig*> rows{&start, &last};
   auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
   SettingsProbe* settings = list.get();
 
@@ -944,9 +935,9 @@ TEST_CASE("a settings list keeps a refused value out") {
 TEST_CASE("a parsed value is held to its row") {
   NoGestures gestures;
   Ux ux;
-  DurationRow hold(gestures, ux, "hold", "Hold", 90, 5, 0, 7200, false);
-  NumberRow target(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
-  ChoiceRow unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
+  DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 0, 7200, false);
+  NumericSettingCfg target(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);
+  ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
 
   CHECK_EQ(std::any_cast<int32_t>(hold.parse(String("99999"))), 7200);
   CHECK_EQ(std::any_cast<int32_t>(hold.parse(String("-5"))), 0);

@@ -13,7 +13,7 @@ class BuzzerPlayer;
 class DeviceSettings;
 class GestureQueue;
 class JingleLibrary;
-class SettingsRow;
+class SettingConfig;
 class Ux;
 
 // The device's own settings as a list: the rows the system page shows — the unit the glass prints,
@@ -32,7 +32,7 @@ class SystemSettings {
   SystemSettings& operator=(const SystemSettings&) = delete;
 
   // The rows the list shows, in order, built once on the first call.
-  const std::vector<SettingsRow*>& rows();
+  const std::vector<SettingConfig*>& rows();
 
   // The set the rows hold now, read from the device: the unit's wire token, the jingle the library
   // holds or its first entry, and the maximum in whole seconds.
@@ -51,8 +51,8 @@ class SystemSettings {
   DeviceSettings& settings_;
   JingleLibrary& jingles_;
   BuzzerPlayer& buzzer_;
-  std::vector<std::unique_ptr<SettingsRow>> owned_;
-  std::vector<SettingsRow*> rows_;
+  std::vector<std::unique_ptr<SettingConfig>> owned_;
+  std::vector<SettingConfig*> rows_;
   bool built_ = false;
 };
 

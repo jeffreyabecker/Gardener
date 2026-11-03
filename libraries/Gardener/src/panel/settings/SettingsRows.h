@@ -17,31 +17,30 @@
 
 namespace gardener {
 
-// The rows a settings list is built from, one class per value kind: each prints the kind's value
-// the way the list prints a row and builds the scene that edits it. A row carries the rules of its
-// kind — a number's step and bounds, a choice's entries — the default it was handed, which the list
-// falls back to for a key the set it is given does not carry, and the check its declaration gave.
-// The key is the setting's: what an editor hands back is written under it.
+// The rows a settings list is built from, one class per value kind: each builds the scene that edits
+// its value. A row carries the rules of its kind — a number's step and bounds, a choice's entries —
+// the default it was handed, which the list falls back to for a key the set it is given does not
+// carry, and the check its declaration gave. The key is the setting's: what an editor hands back is
+// written under it.
 
 // --- the bool ---------------------------------------------------------------
 
-// The row of an on/off setting: OFF or ON as the list prints it, and the switch the bool scene
-// draws to change it. A nullable setting's nothing prints `--` and opens the switch on nothing.
-class BoolRow : public SettingsRow {
+// The row of an on/off setting and the switch the bool scene draws to change it. A nullable
+// setting's nothing opens the switch on nothing.
+class BoolSettingCfg : public SettingConfig {
  public:
-  BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label, bool defaultValue,
-          bool nullable = false, Validator validator = nullptr);
+  BoolSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                 bool defaultValue, bool nullable = false, Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
   SettingDeclaration declaration() const override;
-  String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingsRow> clone() const override;
+  std::unique_ptr<SettingConfig> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -54,30 +53,30 @@ class BoolRow : public SettingsRow {
 
 // --- the choice -------------------------------------------------------------
 
-// The row of a setting that stores a key out of a fixed list: the title of the entry showing as the
-// list prints it, and the choice scene over the entries the row was handed. `icon` is the packed
+// The row of a setting that stores a key out of a fixed list, and the choice scene over the entries
+// the row was handed. `icon` is the packed
 // bitmap printed before the label, in the hex dialect `gfx::Bitmap` reads; a list draws it in the
 // columns the bitmap names, and a row given none prints its label at the left of the row. `forward`
 // is the page's own work on the entry showing — a jingle row is built with one that sounds the
 // entry — and a row given none drops Forward.
-class ChoiceRow : public SettingsRow {
+class ChoiceSettingCfg : public SettingConfig {
  public:
-  ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-            const String& defaultValue, const std::vector<ChoiceItem>& items, bool nullable = false,
-            const char* icon = nullptr, std::function<void(String& current)> forward = nullptr,
-            Validator validator = nullptr);
+  ChoiceSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                   const String& defaultValue, const std::vector<ChoiceItem>& items,
+                   bool nullable = false, const char* icon = nullptr,
+                   std::function<void(String& current)> forward = nullptr,
+                   Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   const String& icon() const override { return icon_; }
   std::any defaultValue() const override { return default_; }
   SettingDeclaration declaration() const override;
-  String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingsRow> clone() const override;
+  std::unique_ptr<SettingConfig> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -93,70 +92,39 @@ class ChoiceRow : public SettingsRow {
 
 // --- the duration -----------------------------------------------------------
 
-// The row of a duration held in whole seconds: its compact text — `1m30s` — as the list prints it,
-// and the two-field scene that steps the minutes and the seconds.
-class DurationRow : public SettingsRow {
- public:
-  DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-              int32_t defaultValue, int32_t step, int32_t min, int32_t max, bool nullable = false,
-              Validator validator = nullptr);
-
-  const String& key() const override { return key_; }
-  const String& label() const override { return label_; }
-  std::any defaultValue() const override { return default_; }
-  SettingDeclaration declaration() const override;
-  String text(const std::any& value) const override;
-  std::unique_ptr<EditorScene> scene(const std::any& value) override;
-  String stored(const std::any& value) const override;
-  std::any parse(const String& stored) const override;
-  bool accept(std::any& value) const override;
-  std::unique_ptr<SettingsRow> clone() const override;
-  void limit(float min, float max) override;
-
- private:
-  GestureQueue& gestures_;
-  Ux& ux_;
-  String key_;
-  String label_;
-  std::any default_;
-  int32_t step_;
-  int32_t min_;
-  int32_t max_;
-  bool nullable_;
-};
-
 // --- the number -------------------------------------------------------------
 
-// The row of a number: the digits as the list prints them, through the setting's own formatter
-// where it reads in its units and as `%g` where it passed none, and the number scene over its step
-// and bounds. A kind that edits this number its own way extends the row and builds its scene from
-// the same rules. A default of nothing is NAN, the number the scene holding none already is, which
-// the row answers as an empty any and prints `--`.
-class NumberRow : public SettingsRow {
+// The row of a number: the number scene over its step and bounds, printing through the setting's own
+// formatter where it reads in its units. A kind that edits this number its own way extends the row
+// and builds its scene from the same rules. A default of nothing is NAN, the number the scene
+// holding none already is, which the row answers as an empty any.
+class NumericSettingCfg : public SettingConfig {
  public:
-  NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-            float defaultValue, float step, float min, float max, bool nullable,
-            NumberFormatter format = nullptr, uint8_t decimals = 2, Validator validator = nullptr);
+  NumericSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                    float defaultValue, float step, float min, float max, bool nullable,
+                    NumberFormatter format = nullptr, uint8_t decimals = 2,
+                    Validator validator = nullptr);
 
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
   SettingDeclaration declaration() const override;
-  String text(const std::any& value) const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingsRow> clone() const override;
-  void limit(float min, float max) override;
+  std::unique_ptr<SettingConfig> clone() const override;
+
+  // The floor and ceiling a section states for this row, in the kind's own units: NAN leaves that
+  // bound as the declaration gave it, and a pair that would leave the row no range is ignored whole,
+  // so a typo keeps the declaration's.
+  virtual void limit(float min, float max);
 
  protected:
-  // The step a keypress makes and the way the number prints, as the list and the editor read them. A
-  // kind whose number is shown in a unit the device can change answers them from the state each time
-  // it is asked, so a row a routine declared when the image loaded still prints in the unit the
-  // panel is showing now.
+  // The step a keypress makes, as the list and the editor read it. A kind whose number is shown in a
+  // unit the device can change answers it from the state each time it is asked, so a row a routine
+  // declared when the image loaded still steps by the unit the panel is showing now.
   virtual float step() const;
-  virtual String formatted(float number) const;
 
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
   // scene over the same step, bounds and formatter.
@@ -175,28 +143,47 @@ class NumberRow : public SettingsRow {
   uint8_t decimals_;
 };
 
+// --- the duration -----------------------------------------------------------
+
+// The row of a duration held in whole seconds, and the two-field scene that steps the minutes and
+// the seconds. It is a number row over the seconds it stores, so the step, the bounds and a
+// section's pair are the number's, answered in the whole seconds the kind holds.
+class DurationSettingCfg : public NumericSettingCfg {
+ public:
+  DurationSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                     int32_t defaultValue, int32_t step, int32_t min, int32_t max,
+                     bool nullable = false, Validator validator = nullptr);
+
+  std::any defaultValue() const override;
+  SettingDeclaration declaration() const override;
+  std::unique_ptr<EditorScene> scene(const std::any& value) override;
+  String stored(const std::any& value) const override;
+  std::any parse(const String& stored) const override;
+  bool accept(std::any& value) const override;
+  std::unique_ptr<SettingConfig> clone() const override;
+  void limit(float min, float max) override;
+};
+
 // --- the pressure -----------------------------------------------------------
 
 // The row of the target pressure: a number row over the depth in the kPa the machine stores, whose
-// editor is the pressure scene — a keypress is one step of the unit the glass shows — and which
-// prints the depth with that unit's decimals. The bounds are the machine's, so a keypress cannot
-// leave the editor on a target the loop would refuse. The unit is read from the device's state
-// rather than kept, so a unit changed in the device's own list reaches a row the image declared at
-// load.
-class PressureRow : public NumberRow {
+// editor is the pressure scene — a keypress is one step of the unit the glass shows. The bounds are
+// the machine's, so a keypress cannot leave the editor on a target the loop would refuse. The unit
+// is read from the device's state rather than kept, so a unit changed in the device's own list
+// reaches a row the image declared at load.
+class PressureSettingCfg : public NumericSettingCfg {
  public:
-  PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-              const SystemState& state, float currentKpa, float wholeSteps, bool nullable = false,
-              Validator validator = nullptr);
+  PressureSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
+                     const SystemState& state, float currentKpa, float wholeSteps,
+                     bool nullable = false, Validator validator = nullptr);
 
   SettingDeclaration declaration() const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
-  std::unique_ptr<SettingsRow> clone() const override;
+  std::unique_ptr<SettingConfig> clone() const override;
   void limit(float min, float max) override;
 
  protected:
   float step() const override;
-  String formatted(float pressureKpa) const override;
 
  private:
   const SystemState& state_;

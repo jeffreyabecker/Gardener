@@ -39,7 +39,7 @@ is row 17, the key block starts at x 13 and its rows at y 19, 27 and 35.
 ## Epic 2 — the setting
 
 - [ ] **Add `TextRow`.** `SettingsRows.h/.cpp`: the kind word `text`, the cap in `max` — 16 unless
-      the row asks otherwise, clamped to 24 — `limit()` narrowing that cap from a section's bound,
+      the row asks otherwise, clamped to 24 — the section's bound narrowing that cap,
       the string printed and written, `parse()` trimming and truncating to the cap, and the scene
       built over the row's rules. A list over the row in `tools/unit/cases/gfx_scenes.cpp` writes the
       string back under its key, and a section's bound narrows a copy's cap.

@@ -15,14 +15,6 @@
 namespace gardener {
 namespace {
 
-// A number as the list prints it: `%g` of it, which is what a number scene prints when the setting
-// handed it no formatter of its own.
-String printedNumber(float number) {
-  char printed[16];
-  snprintf(printed, sizeof(printed), "%g", static_cast<double>(number));
-  return String(printed);
-}
-
 // A value handed in from outside the list is asked for by the type the row holds rather than asked
 // what type it is: the cast to a pointer answers nothing for the wrong one instead of throwing.
 template <typename T> bool isHeldAs(const std::any& value) {
@@ -51,32 +43,28 @@ bool takeNumber(std::any& value, bool whole) {
 
 // --- the bool ---------------------------------------------------------------
 
-BoolRow::BoolRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                 bool defaultValue, bool nullable, Validator validator)
-    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
+BoolSettingCfg::BoolSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
+                               const String& label, bool defaultValue, bool nullable,
+                               Validator validator)
+    : SettingConfig(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
       default_(defaultValue), nullable_(nullable) {}
 
 // The switch declares its kind and nothing else: it has no step, no bound and no entries.
-SettingDeclaration BoolRow::declaration() const { return {"bool"}; }
+SettingDeclaration BoolSettingCfg::declaration() const { return {"bool"}; }
 
-String BoolRow::text(const std::any& value) const {
-  if (!value.has_value()) return "--";
-  return std::any_cast<bool>(value) ? "ON" : "OFF";
-}
-
-std::unique_ptr<EditorScene> BoolRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> BoolSettingCfg::scene(const std::any& value) {
   String current;
   if (value.has_value()) current = std::any_cast<bool>(value) ? "true" : "false";
   return std::make_unique<BoolScene>(gestures_, ux_, label_, current, nullable_);
 }
 
 // The document's word for a switch, and the words a config reads as the same thing.
-String BoolRow::stored(const std::any& value) const {
+String BoolSettingCfg::stored(const std::any& value) const {
   if (!value.has_value()) return String();
   return std::any_cast<bool>(value) ? "on" : "off";
 }
 
-std::any BoolRow::parse(const String& stored) const {
+std::any BoolSettingCfg::parse(const String& stored) const {
   if (stored.equalsIgnoreCase("on") || stored.equalsIgnoreCase("true") ||
       stored.equalsIgnoreCase("1") || stored.equalsIgnoreCase("yes")) {
     return true;
@@ -88,43 +76,35 @@ std::any BoolRow::parse(const String& stored) const {
   return defaultValue();
 }
 
-bool BoolRow::accept(std::any& value) const { return isHeldAs<bool>(value); }
+bool BoolSettingCfg::accept(std::any& value) const { return isHeldAs<bool>(value); }
 
-std::unique_ptr<SettingsRow> BoolRow::clone() const { return std::make_unique<BoolRow>(*this); }
+std::unique_ptr<SettingConfig> BoolSettingCfg::clone() const {
+  return std::make_unique<BoolSettingCfg>(*this);
+}
 
 // --- the choice -------------------------------------------------------------
 
-ChoiceRow::ChoiceRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                     const String& defaultValue, const std::vector<ChoiceItem>& items,
-                     bool nullable, const char* icon, std::function<void(String& current)> forward,
-                     Validator validator)
-    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
+ChoiceSettingCfg::ChoiceSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
+                                   const String& label, const String& defaultValue,
+                                   const std::vector<ChoiceItem>& items, bool nullable,
+                                   const char* icon, std::function<void(String& current)> forward,
+                                   Validator validator)
+    : SettingConfig(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
       default_(defaultValue), items_(items), nullable_(nullable), forward_(std::move(forward)),
       icon_(icon != nullptr ? icon : "") {}
 
 // A choice declares its entries — the keys it offers, which are the titles it prints — and no step
 // or bound, because the keys are the only thing it moves between.
-SettingDeclaration ChoiceRow::declaration() const {
+SettingDeclaration ChoiceSettingCfg::declaration() const {
   SettingDeclaration out;
   out.kind = "choice";
   out.entries = items_;
   return out;
 }
 
-// The title the entry showing prints, which is what the list has room for: a key no entry names
-// reads as the first entry, the way the scene shows it.
-String ChoiceRow::text(const std::any& value) const {
-  if (!value.has_value() || items_.empty()) return "--";
-  const String key = std::any_cast<String>(value);
-  for (const ChoiceItem& item : items_) {
-    if (item.key == key) return item.title;
-  }
-  return items_.front().title;
-}
-
 // The editor's rows: each entry's title as the list's own title row, which is the picture the scene
 // hands its model.
-std::unique_ptr<EditorScene> ChoiceRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> ChoiceSettingCfg::scene(const std::any& value) {
   const String current = value.has_value() ? std::any_cast<String>(value) : String();
   std::vector<gfx::RowList::Row> rows;
   rows.reserve(items_.size());
@@ -135,13 +115,13 @@ std::unique_ptr<EditorScene> ChoiceRow::scene(const std::any& value) {
 }
 
 // The document keeps the key, not the title the list prints.
-String ChoiceRow::stored(const std::any& value) const {
+String ChoiceSettingCfg::stored(const std::any& value) const {
   return value.has_value() ? std::any_cast<String>(value) : String();
 }
 
 // A key the document names that no entry offers is one the row cannot hold, so it answers the row's
 // default instead, as an entry-less row answers it for every key.
-std::any ChoiceRow::parse(const String& stored) const {
+std::any ChoiceSettingCfg::parse(const String& stored) const {
   if (stored.isEmpty()) return defaultValue();
   for (const ChoiceItem& item : items_) {
     if (item.key == stored) return std::any(stored);
@@ -149,71 +129,70 @@ std::any ChoiceRow::parse(const String& stored) const {
   return defaultValue();
 }
 
-bool ChoiceRow::accept(std::any& value) const { return isHeldAs<String>(value); }
+bool ChoiceSettingCfg::accept(std::any& value) const { return isHeldAs<String>(value); }
 
-std::unique_ptr<SettingsRow> ChoiceRow::clone() const { return std::make_unique<ChoiceRow>(*this); }
+std::unique_ptr<SettingConfig> ChoiceSettingCfg::clone() const {
+  return std::make_unique<ChoiceSettingCfg>(*this);
+}
 
 // --- the duration -----------------------------------------------------------
 
-DurationRow::DurationRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                         int32_t defaultValue, int32_t step, int32_t min, int32_t max,
-                         bool nullable, Validator validator)
-    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
-      default_(defaultValue), step_(step), min_(min), max_(max), nullable_(nullable) {}
+DurationSettingCfg::DurationSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
+                                       const String& label, int32_t defaultValue, int32_t step,
+                                       int32_t min, int32_t max, bool nullable, Validator validator)
+    : NumericSettingCfg(gestures, ux, key, label, static_cast<float>(defaultValue),
+                        static_cast<float>(step), static_cast<float>(min), static_cast<float>(max),
+                        nullable, nullptr, 0, std::move(validator)) {}
 
-// The bounds a duration was declared with are whole seconds; a caller reading the declaration back
-// takes them as the numbers they are.
-SettingDeclaration DurationRow::declaration() const {
-  SettingDeclaration out;
+// The kind holds whole seconds, so a default the number keeps as a float is answered as the second it
+// names.
+std::any DurationSettingCfg::defaultValue() const {
+  const std::any held = NumericSettingCfg::defaultValue();
+  return held.has_value() ? std::any(static_cast<int32_t>(std::any_cast<float>(held))) : held;
+}
+
+// The kind a duration states is its own; the step and the bounds are the number's.
+SettingDeclaration DurationSettingCfg::declaration() const {
+  SettingDeclaration out = NumericSettingCfg::declaration();
   out.kind = "duration";
-  out.step = static_cast<float>(step_);
-  out.min = static_cast<float>(min_);
-  out.max = static_cast<float>(max_);
   return out;
 }
 
-String DurationRow::text(const std::any& value) const {
-  char printed[16];
-  gfx::durationText(gfx::DurationFormat::Minutes,
-                    value.has_value() ? std::any_cast<int32_t>(value) : 0, value.has_value(),
-                    printed, sizeof(printed));
-  return String(printed);
-}
-
-std::unique_ptr<EditorScene> DurationRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> DurationSettingCfg::scene(const std::any& value) {
   const float current = value.has_value() ? static_cast<float>(std::any_cast<int32_t>(value)) : NAN;
-  return std::make_unique<DurationScene>(gestures_, ux_, label_, current, static_cast<float>(step_),
-                                         static_cast<float>(min_), static_cast<float>(max_),
+  return std::make_unique<DurationScene>(gestures_, ux_, label_, current, step(), min_, max_,
                                          nullable_);
 }
 
 // The document keeps whole seconds, which is the unit the kind already holds.
-String DurationRow::stored(const std::any& value) const {
+String DurationSettingCfg::stored(const std::any& value) const {
   if (!value.has_value()) return String();
   return String(static_cast<long>(std::any_cast<int32_t>(value)));
 }
 
 // Seconds outside the declared bounds answer the bound: a document cannot put a value in the set
 // that the row's own editor could not reach.
-std::any DurationRow::parse(const String& stored) const {
+std::any DurationSettingCfg::parse(const String& stored) const {
   if (stored.isEmpty()) return defaultValue();
   const int32_t seconds = static_cast<int32_t>(stored.toInt());
-  if (seconds < min_) return min_;
-  if (seconds > max_) return max_;
+  const int32_t floor = static_cast<int32_t>(min_);
+  const int32_t ceiling = static_cast<int32_t>(max_);
+  if (seconds < floor) return floor;
+  if (seconds > ceiling) return ceiling;
   return seconds;
 }
 
-bool DurationRow::accept(std::any& value) const { return takeNumber(value, true); }
+bool DurationSettingCfg::accept(std::any& value) const { return takeNumber(value, true); }
 
-std::unique_ptr<SettingsRow> DurationRow::clone() const {
-  return std::make_unique<DurationRow>(*this);
+std::unique_ptr<SettingConfig> DurationSettingCfg::clone() const {
+  return std::make_unique<DurationSettingCfg>(*this);
 }
 
-// A section's pair replaces the declaration's, in the whole seconds the kind already holds. A pair
+// A section's pair replaces the declaration's, rounded to the whole second the kind holds. A pair
 // with no second between the two is a typo and leaves the declaration's in place.
-void DurationRow::limit(float min, float max) {
-  const int32_t floor = isnan(min) ? min_ : static_cast<int32_t>(lroundf(min));
-  const int32_t ceiling = isnan(max) ? max_ : static_cast<int32_t>(lroundf(max));
+void DurationSettingCfg::limit(float min, float max) {
+  const float floor = isnan(min) ? min_ : roundf(min);
+  const float ceiling = isnan(max) ? max_ : roundf(max);
   if (floor > ceiling) return;
   min_ = floor;
   max_ = ceiling;
@@ -221,22 +200,23 @@ void DurationRow::limit(float min, float max) {
 
 // --- the number -------------------------------------------------------------
 
-NumberRow::NumberRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                     float defaultValue, float step, float min, float max, bool nullable,
-                     NumberFormatter format, uint8_t decimals, Validator validator)
-    : SettingsRow(std::move(validator)), gestures_(gestures), ux_(ux), label_(label), step_(step),
+NumericSettingCfg::NumericSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
+                                     const String& label, float defaultValue, float step, float min,
+                                     float max, bool nullable, NumberFormatter format,
+                                     uint8_t decimals, Validator validator)
+    : SettingConfig(std::move(validator)), gestures_(gestures), ux_(ux), label_(label), step_(step),
       min_(min), max_(max), nullable_(nullable), format_(std::move(format)), key_(key),
       default_(defaultValue), decimals_(decimals) {}
 
 // Nothing is NAN, which is what the number kind holds its nothing as, so the list never carries a
 // NAN where it means `--`.
-std::any NumberRow::defaultValue() const {
+std::any NumericSettingCfg::defaultValue() const {
   return isnan(default_) ? std::any() : std::any(default_);
 }
 
 // The step and bounds the number was declared with, as the number's own units. A kind that edits a
 // number its own way — a pressure — states its kind over these.
-SettingDeclaration NumberRow::declaration() const {
+SettingDeclaration NumericSettingCfg::declaration() const {
   SettingDeclaration out;
   out.kind = "number";
   out.step = step();
@@ -245,20 +225,9 @@ SettingDeclaration NumberRow::declaration() const {
   return out;
 }
 
-float NumberRow::step() const { return step_; }
+float NumericSettingCfg::step() const { return step_; }
 
-String NumberRow::formatted(float number) const {
-  return format_ ? format_(number) : printedNumber(number);
-}
-
-String NumberRow::text(const std::any& value) const {
-  if (!value.has_value()) return "--";
-  const float number = std::any_cast<float>(value);
-  if (isnan(number)) return "--";
-  return formatted(number);
-}
-
-std::unique_ptr<EditorScene> NumberRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> NumericSettingCfg::scene(const std::any& value) {
   const float current = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<NumberScene>(gestures_, ux_, label_, current, step(), min_, max_,
                                        nullable_, format_);
@@ -266,7 +235,7 @@ std::unique_ptr<EditorScene> NumberRow::scene(const std::any& value) {
 
 // The document keeps the number at the row's decimals, which is the precision the setting writes with
 // rather than the units the glass prints it in.
-String NumberRow::stored(const std::any& value) const {
+String NumericSettingCfg::stored(const std::any& value) const {
   if (!value.has_value()) return String();
   const float number = std::any_cast<float>(value);
   if (isnan(number)) return String();
@@ -278,7 +247,7 @@ String NumberRow::stored(const std::any& value) const {
 
 // A number outside the declared bounds answers the bound, as a duration does: the row holds what it
 // is given to the same rules the editor steps within.
-std::any NumberRow::parse(const String& stored) const {
+std::any NumericSettingCfg::parse(const String& stored) const {
   if (stored.isEmpty()) return defaultValue();
   float number = stored.toFloat();
   if (number < min_) number = min_;
@@ -286,13 +255,15 @@ std::any NumberRow::parse(const String& stored) const {
   return std::any(number);
 }
 
-bool NumberRow::accept(std::any& value) const { return takeNumber(value, false); }
+bool NumericSettingCfg::accept(std::any& value) const { return takeNumber(value, false); }
 
-std::unique_ptr<SettingsRow> NumberRow::clone() const { return std::make_unique<NumberRow>(*this); }
+std::unique_ptr<SettingConfig> NumericSettingCfg::clone() const {
+  return std::make_unique<NumericSettingCfg>(*this);
+}
 
 // A section's pair replaces the declaration's, and a bound it does not name keeps the one it was
 // declared with. A pair with no number between the two is a typo and leaves the declaration's.
-void NumberRow::limit(float min, float max) {
+void NumericSettingCfg::limit(float min, float max) {
   const float floor = isnan(min) ? min_ : min;
   const float ceiling = isnan(max) ? max_ : max;
   if (floor > ceiling) return;
@@ -302,37 +273,34 @@ void NumberRow::limit(float min, float max) {
 
 // --- the pressure -----------------------------------------------------------
 
-PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                         const SystemState& state, float currentKpa, float wholeSteps,
-                         bool nullable, Validator validator)
-    : NumberRow(
+PressureSettingCfg::PressureSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
+                                       const String& label, const SystemState& state,
+                                       float currentKpa, float wholeSteps, bool nullable,
+                                       Validator validator)
+    : NumericSettingCfg(
           gestures, ux, key, label, currentKpa,
           wholeSteps * displayUnitInfo(state.unit).wholeStep / displayUnitInfo(state.unit).perKpa,
           CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable, nullptr, 2, std::move(validator)),
       state_(state), wholeSteps_(wholeSteps) {}
 
-// What a keypress is worth and what the row prints are the unit the panel shows, so both are read
-// when the list or the editor asks: a unit changed in the device's own list reaches every pressure
-// the image declared, not only the ones declared after it.
-float PressureRow::step() const {
+// What a keypress is worth is the unit the panel shows, so it is read when the list or the editor
+// asks: a unit changed in the device's own list reaches every pressure the image declared, not only
+// the ones declared after it.
+float PressureSettingCfg::step() const {
   const DisplayUnitInfo& info = displayUnitInfo(state_.unit);
   return wholeSteps_ * info.wholeStep / info.perKpa;
-}
-
-String PressureRow::formatted(float pressureKpa) const {
-  return displayText(pressureKpa, state_.unit);
 }
 
 // The pressure's number row, under the kind its declaration named. The step and bounds are the
 // number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
 // and ceiling — because those are what the editor it builds moves within.
-SettingDeclaration PressureRow::declaration() const {
-  SettingDeclaration out = NumberRow::declaration();
+SettingDeclaration PressureSettingCfg::declaration() const {
+  SettingDeclaration out = NumericSettingCfg::declaration();
   out.kind = "pressure";
   return out;
 }
 
-std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
+std::unique_ptr<EditorScene> PressureSettingCfg::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, state_.unit,
                                          wholeSteps_, min_, max_, nullable_);
@@ -340,14 +308,14 @@ std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
 
 // The machine's shallowest and deepest target are the outermost a pressure may sit at, so a section's
 // pair that reaches past them is held to them before it becomes the row's.
-void PressureRow::limit(float min, float max) {
+void PressureSettingCfg::limit(float min, float max) {
   if (!isnan(min) && min < CONTROL_MIN_TARGET_KPA) min = CONTROL_MIN_TARGET_KPA;
   if (!isnan(max) && max > CONTROL_FLOOR_KPA) max = CONTROL_FLOOR_KPA;
-  NumberRow::limit(min, max);
+  NumericSettingCfg::limit(min, max);
 }
 
-std::unique_ptr<SettingsRow> PressureRow::clone() const {
-  return std::make_unique<PressureRow>(*this);
+std::unique_ptr<SettingConfig> PressureSettingCfg::clone() const {
+  return std::make_unique<PressureSettingCfg>(*this);
 }
 
 }  // namespace gardener

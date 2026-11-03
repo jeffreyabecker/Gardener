@@ -25,19 +25,19 @@
 
 namespace {
 
-using gardener::BoolRow;
+using gardener::BoolSettingCfg;
 using gardener::ChoiceItem;
-using gardener::ChoiceRow;
+using gardener::ChoiceSettingCfg;
 using gardener::DisplayUnit;
-using gardener::DurationRow;
+using gardener::DurationSettingCfg;
 using gardener::GestureQueue;
-using gardener::NumberRow;
-using gardener::PressureRow;
+using gardener::NumericSettingCfg;
+using gardener::PressureSettingCfg;
 using gardener::Registration;
 using gardener::RoutineRegistry;
 using gardener::RoutineSettingStore;
 using gardener::Scene;
-using gardener::SettingsRow;
+using gardener::SettingConfig;
 using gardener::SettingValues;
 using gardener::SystemState;
 using gardener::Ux;
@@ -114,7 +114,9 @@ constexpr const char* BoundedFixture = "initial_pressure=9.0\n"
                                        "[wide]\n"
                                        "initial_pressure=9.0\n"
                                        "initial_pressure:min=-10\n"
-                                       "initial_pressure:max=200\n";
+                                       "initial_pressure:max=200\n"
+                                       "total_duration:min=120\n"
+                                       "total_duration:max=240\n";
 
 // A document whose pressure section reaches past what the machine allows.
 constexpr const char* PressureDocument = "/cfg/routines/pressured.ini";
@@ -129,7 +131,7 @@ std::vector<ChoiceItem> resumeChoices() {
 }
 
 // A row is the document's half and the page's, and the store takes the first.
-std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingsRow*>& rows) {
+std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingConfig*>& rows) {
   return std::vector<const gardener::SettingKind*>(rows.begin(), rows.end());
 }
 
@@ -138,33 +140,34 @@ std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingsRow*
 struct StoreRows {
   NoPresses gestures;
   Ux ux;
-  NumberRow target{gestures, ux, "target_pressure", "Target", NAN, 1, 0, 100, true};
-  DurationRow total{gestures, ux, "total_duration", "Total", 300, 5, 0, 3600, false};
-  ChoiceRow resume{gestures, ux, "resume_behavior", "Resume", "hold", resumeChoices(), false};
-  BoolRow enabled{gestures, ux, "enabled", "Enabled", false};
-  NumberRow empty{gestures, ux, "empty_key", "Empty", 3.0f, 1, 0, 10, false};
-  NumberRow missing{gestures, ux, "missing_key", "Missing", 7.0f, 1, 0, 10, false};
-  std::vector<SettingsRow*> held{&target, &total, &resume, &enabled, &empty, &missing};
+  NumericSettingCfg target{gestures, ux, "target_pressure", "Target", NAN, 1, 0, 100, true};
+  DurationSettingCfg total{gestures, ux, "total_duration", "Total", 300, 5, 0, 3600, false};
+  ChoiceSettingCfg resume{gestures,        ux,   "resume_behavior", "Resume", "hold",
+                          resumeChoices(), false};
+  BoolSettingCfg enabled{gestures, ux, "enabled", "Enabled", false};
+  NumericSettingCfg empty{gestures, ux, "empty_key", "Empty", 3.0f, 1, 0, 10, false};
+  NumericSettingCfg missing{gestures, ux, "missing_key", "Missing", 7.0f, 1, 0, 10, false};
+  std::vector<SettingConfig*> held{&target, &total, &resume, &enabled, &empty, &missing};
 };
 
 // The declaration a registry record owns, taken fresh for each registration.
-std::vector<std::unique_ptr<SettingsRow>> rampedDeclaration(NoPresses& gestures, Ux& ux) {
-  std::vector<std::unique_ptr<SettingsRow>> out;
-  out.push_back(std::make_unique<NumberRow>(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0,
-                                            100, false));
-  out.push_back(std::make_unique<NumberRow>(gestures, ux, "target_pressure", "Target", 20.0f, 1, 0,
-                                            100, false));
-  out.push_back(std::make_unique<DurationRow>(gestures, ux, "total_duration", "Total", 300, 1, 1,
-                                              7200, false));
+std::vector<std::unique_ptr<SettingConfig>> rampedDeclaration(NoPresses& gestures, Ux& ux) {
+  std::vector<std::unique_ptr<SettingConfig>> out;
+  out.push_back(std::make_unique<NumericSettingCfg>(gestures, ux, "initial_pressure", "Start", 5.0f,
+                                                    1, 0, 100, false));
+  out.push_back(std::make_unique<NumericSettingCfg>(gestures, ux, "target_pressure", "Target",
+                                                    20.0f, 1, 0, 100, false));
+  out.push_back(std::make_unique<DurationSettingCfg>(gestures, ux, "total_duration", "Total", 300,
+                                                     1, 1, 7200, false));
   return out;
 }
 
 // The declaration a pressure record owns: the machine's own bounds until a section states others.
-std::vector<std::unique_ptr<SettingsRow>> pressureDeclaration(NoPresses& gestures, Ux& ux,
-                                                              SystemState& state) {
-  std::vector<std::unique_ptr<SettingsRow>> out;
-  out.push_back(
-      std::make_unique<PressureRow>(gestures, ux, "target_pressure", "Target", state, 20.0f, 1.0f));
+std::vector<std::unique_ptr<SettingConfig>> pressureDeclaration(NoPresses& gestures, Ux& ux,
+                                                                SystemState& state) {
+  std::vector<std::unique_ptr<SettingConfig>> out;
+  out.push_back(std::make_unique<PressureSettingCfg>(gestures, ux, "target_pressure", "Target",
+                                                     state, 20.0f, 1.0f));
   return out;
 }
 
@@ -360,12 +363,12 @@ TEST_CASE("a section hides and pins settings and names its own glyph") {
 
   // Both marked rows keep their place in the declaration — only the list leaves them out — and the
   // record's own rows are untouched.
-  const std::vector<SettingsRow*>& cold = *registry.settingsRows("cold");
+  const std::vector<SettingConfig*>& cold = *registry.settingsRows("cold");
   REQUIRE(cold.size() == 3);
   CHECK(cold[0]->hidden());
   CHECK(cold[1]->hidden());
   CHECK_FALSE(cold[2]->hidden());
-  const std::vector<SettingsRow*>& own = *registry.settingsRows("pinned");
+  const std::vector<SettingConfig*>& own = *registry.settingsRows("pinned");
   REQUIRE(own.size() == 3);
   CHECK_FALSE(own[0]->hidden());
   CHECK_FALSE(own[1]->hidden());
@@ -429,7 +432,7 @@ TEST_CASE("a section states the bounds a setting moves within") {
 
   // The pair a section states is the declaration its alternate reports, and the value the section
   // holds is read back through that pair.
-  const std::vector<SettingsRow*>& narrow = *registry.settingsRows("narrow");
+  const std::vector<SettingConfig*>& narrow = *registry.settingsRows("narrow");
   REQUIRE(narrow.size() == 3);
   const gardener::SettingDeclaration start = narrow[0]->declaration();
   CHECK_EQ(start.min, 10.0f);
@@ -447,6 +450,10 @@ TEST_CASE("a section states the bounds a setting moves within") {
   const gardener::SettingDeclaration opened = registry.settingsRows("wide")->at(0)->declaration();
   CHECK_EQ(opened.min, -10.0f);
   CHECK_EQ(opened.max, 200.0f);
+  // A duration is a number row, so its pair is the section's too.
+  const gardener::SettingDeclaration held = registry.settingsRows("wide")->at(2)->declaration();
+  CHECK_EQ(held.min, 120.0f);
+  CHECK_EQ(held.max, 240.0f);
   const gardener::SettingDeclaration declared =
       registry.settingsRows("bounded")->at(0)->declaration();
   CHECK_EQ(declared.min, 0.0f);
@@ -565,10 +572,11 @@ TEST_CASE("a key nobody registered launches nothing") {
 TEST_CASE("a row holds a value of its own kind and refuses another") {
   NoPresses gestures;
   Ux ux;
-  NumberRow pressure{gestures, ux, "target_pressure", "Target", 5.0f, 1, 0, 100, true};
-  DurationRow total{gestures, ux, "total_duration", "Total", 300, 1, 0, 7200, false};
-  ChoiceRow resume{gestures, ux, "resume_behavior", "Resume", "hold", resumeChoices(), false};
-  BoolRow enabled{gestures, ux, "enabled", "Enabled", false};
+  NumericSettingCfg pressure{gestures, ux, "target_pressure", "Target", 5.0f, 1, 0, 100, true};
+  DurationSettingCfg total{gestures, ux, "total_duration", "Total", 300, 1, 0, 7200, false};
+  ChoiceSettingCfg resume{gestures,        ux,   "resume_behavior", "Resume", "hold",
+                          resumeChoices(), false};
+  BoolSettingCfg enabled{gestures, ux, "enabled", "Enabled", false};
 
   std::any nothing;
   CHECK(pressure.accept(nothing));

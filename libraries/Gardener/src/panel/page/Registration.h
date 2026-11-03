@@ -26,7 +26,8 @@ struct RoutineActivation {
 // What a section of a routine's document says about one row of the record it copies: whether the
 // settings list shows it (`<key>:hidden`) and the floor and ceiling it moves within (`<key>:min` and
 // `<key>:max`, in the kind's own units). A bound the section did not name is NAN, which leaves the
-// declaration's in place.
+// declaration's in place, and only a row that steps a number has a range, so a pair stated for any
+// other kind is ignored.
 struct SettingOverride {
   String key;
   bool hidden = false;
@@ -64,7 +65,7 @@ class Registration {
   // the packed bitmap, empty for a record that names none — the browser hands it to `screen.icon`,
   // which reads it when it draws the icon.
   Registration(const String& routineKey, const String& title,
-               std::vector<std::unique_ptr<SettingsRow>> settings, Factory factory = nullptr,
+               std::vector<std::unique_ptr<SettingConfig>> settings, Factory factory = nullptr,
                String glyph = String());
 
   Registration(const Registration&) = delete;
@@ -83,7 +84,7 @@ class Registration {
   // from one.
   const String& documentKey() const { return documentKey_; }
   const String& title() const { return title_; }
-  const std::vector<SettingsRow*>& settings() const { return settings_; }
+  const std::vector<SettingConfig*>& settings() const { return settings_; }
   // The values the section pinned, by setting key: what a launch carries whatever its caller stated.
   const SettingValues& constants() const { return constants_; }
   const Factory& factory() const { return factory_; }
@@ -106,9 +107,9 @@ class Registration {
   String routineKey_;
   String documentKey_;
   String title_;
-  std::vector<std::unique_ptr<SettingsRow>> owned_;
+  std::vector<std::unique_ptr<SettingConfig>> owned_;
   // The declaration as the list and the store take it, over the rows this record owns.
-  std::vector<SettingsRow*> settings_;
+  std::vector<SettingConfig*> settings_;
   // The values a section pinned, by setting key: what the record reads and launches with whatever
   // the document or the caller says.
   SettingValues constants_;

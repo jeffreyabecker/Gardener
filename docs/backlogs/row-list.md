@@ -41,7 +41,9 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       editor hands a value back, with the key the keys are on as the selection; `move()` calls
       `nudge()`, `selected()` answers `current()`, and `drawPage()` calls `list_->draw(band)` under
       the heading. The window arithmetic goes. The existing selection and editor cases stay green,
-      and a case opens an editor, changes the value and reads it in the rebuilt row.
+      and a case opens an editor, changes the value, reads it in the set the list holds and checks
+      the rebuilt row draws the cell it drew before the edit, a row printing its label and not its
+      value.
 - [x] **Move `ChoiceScene` onto it.** The items become rows of key and title; `nudge()` wraps around
       `RowList::nudge()` with the nullable ends kept — Down at the first clears, Up from nothing
       enters the first; `index()` and `text()` read `current()`; `pageContents()` answers a
@@ -56,8 +58,8 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       scene is built.
 - [x] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
       `SystemSettings::rows()`, so it inherits the model with the item above; a case opens it, edits
-      a row and reads the rebuilt row and the set `SystemSettings::apply()` is handed. No change to
-      `SystemSettings` is expected; a hook it turns out to need lands here.
+      a row and reads the value in the set the list holds and the set `SystemSettings::apply()` is
+      handed. No change to `SystemSettings` is expected; a hook it turns out to need lands here.
 
 ## Epic 3 — the Berry bindings
 

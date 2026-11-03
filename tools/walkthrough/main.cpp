@@ -41,7 +41,7 @@ namespace {
 
 using gardener::HarnessSession;
 using gardener::Scene;
-using gardener::SettingsRow;
+using gardener::SettingConfig;
 using gardener::SettingValues;
 using gardener::Ux;
 using gardener::walkthrough::Command;
@@ -98,9 +98,9 @@ void stopMachine(HarnessSession& session) {
 }
 
 // The setting a key names in a record's declaration, or nullptr.
-const SettingsRow* declaredRow(const std::vector<SettingsRow*>& rows, const std::string& key) {
+const SettingConfig* declaredRow(const std::vector<SettingConfig*>& rows, const std::string& key) {
   const String wanted(key.c_str());
-  for (const SettingsRow* row : rows) {
+  for (const SettingConfig* row : rows) {
     if (row->key() == wanted) return row;
   }
   return nullptr;
@@ -141,13 +141,13 @@ bool resolve(const Command& command, HarnessSession& session, Target& target, st
     return false;
   }
 
-  const std::vector<SettingsRow*>* rows = registry.settingsRows(String(target.key.c_str()));
+  const std::vector<SettingConfig*>* rows = registry.settingsRows(String(target.key.c_str()));
   if (rows == nullptr) {
     error = "no routine '" + target.key + "'";
     return false;
   }
   for (const std::pair<std::string, std::string>& setting : command.settings) {
-    const SettingsRow* row = declaredRow(*rows, setting.first);
+    const SettingConfig* row = declaredRow(*rows, setting.first);
     if (row == nullptr) {
       error = "'" + target.key + "' does not declare '" + setting.first + "'";
       return false;

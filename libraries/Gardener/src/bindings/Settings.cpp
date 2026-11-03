@@ -31,7 +31,7 @@ constexpr const char* ChoiceName = "choice";
 
 // The row belongs to the instance: the comobj owns it and the interpreter frees it with the
 // instance.
-using RowOwner = std::unique_ptr<SettingsRow>;
+using RowOwner = std::unique_ptr<SettingConfig>;
 
 int rowRelease(bvm* vm) {
   delete static_cast<RowOwner*>(be_tocomptr(vm, 1));
@@ -55,7 +55,7 @@ const bnfuncinfo SettingFields[] = {
 // The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
 // box is what the interpreter frees, never the row in it.
 struct RowRef {
-  SettingsRow* row;
+  SettingConfig* row;
 };
 
 int rowRefRelease(bvm* vm) {
@@ -156,14 +156,14 @@ bool isDeclaration(bvm* vm, int index) {
 
 // The row a declaration holds, moved out of it: a declaration that has been taken holds nothing, so
 // one setting is one row on one record.
-std::unique_ptr<SettingsRow> takeRow(bvm* vm, int index) {
+std::unique_ptr<SettingConfig> takeRow(bvm* vm, int index) {
   be_getmember(vm, index, ".p");
   RowOwner* owner = static_cast<RowOwner*>(be_tocomptr(vm, -1));
   be_pop(vm, 1);
   return std::move(*owner);
 }
 
-void holdRow(bvm* vm, std::unique_ptr<SettingsRow> row) {
+void holdRow(bvm* vm, std::unique_ptr<SettingConfig> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
@@ -214,7 +214,7 @@ int numberInit(bvm* vm) {
   requireBool(vm, 10, NumberName, "the whole flag");
 
   const uint8_t decimals = be_tobool(vm, 10) ? 0 : 2;
-  holdRow(vm, std::make_unique<NumberRow>(
+  holdRow(vm, std::make_unique<NumericSettingCfg>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
                   (float)be_toreal(vm, 6), (float)be_toreal(vm, 7), (float)be_toreal(vm, 8),
@@ -236,11 +236,11 @@ int pressureInit(bvm* vm) {
   requireNumber(vm, 6, PressureName, "the step");
   requireBool(vm, 7, PressureName, "the nullable flag");
 
-  holdRow(vm,
-          std::make_unique<PressureRow>(bindings->presses(), bindings->ux(), String(argText(vm, 2)),
-                                        String(argText(vm, 4)), bindings->systemState(),
-                                        be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
-                                        (float)be_toreal(vm, 6), be_tobool(vm, 7)));
+  holdRow(vm, std::make_unique<PressureSettingCfg>(bindings->presses(), bindings->ux(),
+                                                   String(argText(vm, 2)), String(argText(vm, 4)),
+                                                   bindings->systemState(),
+                                                   be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
+                                                   (float)be_toreal(vm, 6), be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 
@@ -259,7 +259,7 @@ int durationInit(bvm* vm) {
   requireNumber(vm, 8, DurationName, "the upper bound");
   requireBool(vm, 9, DurationName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<DurationRow>(
+  holdRow(vm, std::make_unique<DurationSettingCfg>(
                   bindings->presses(), bindings->ux(), String(argText(vm, 2)),
                   String(argText(vm, 4)), (int32_t)be_toint(vm, 3), (int32_t)be_toint(vm, 6),
                   (int32_t)be_toint(vm, 7), (int32_t)be_toint(vm, 8), be_tobool(vm, 9)));
@@ -308,9 +308,9 @@ int choiceInit(bvm* vm) {
   }
   be_pop(vm, 1);  // the entries
 
-  holdRow(vm, std::make_unique<ChoiceRow>(bindings->presses(), bindings->ux(),
-                                          String(argText(vm, 2)), String(argText(vm, 4)),
-                                          String(argText(vm, 3)), items, be_tobool(vm, 7)));
+  holdRow(vm, std::make_unique<ChoiceSettingCfg>(bindings->presses(), bindings->ux(),
+                                                 String(argText(vm, 2)), String(argText(vm, 4)),
+                                                 String(argText(vm, 3)), items, be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 
@@ -344,7 +344,7 @@ const bnfuncinfo ChoiceMembers[] = {
 // of one of this module's kinds, and each is consumed, since a row belongs to the record that takes
 // it. The checks run before any row is taken, so a list holding anything else raises and leaves
 // every declaration as it was.
-std::vector<std::unique_ptr<SettingsRow>> takeSettingsRows(bvm* vm, int index) {
+std::vector<std::unique_ptr<SettingConfig>> takeSettingsRows(bvm* vm, int index) {
   if (!pushItems(vm, index)) {
     be_raise(vm, "type_error", "routines.register: settings is a list of declarations");
   }
@@ -362,7 +362,7 @@ std::vector<std::unique_ptr<SettingsRow>> takeSettingsRows(bvm* vm, int index) {
     }
   }
 
-  std::vector<std::unique_ptr<SettingsRow>> rows;
+  std::vector<std::unique_ptr<SettingConfig>> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
@@ -378,7 +378,7 @@ std::vector<std::unique_ptr<SettingsRow>> takeSettingsRows(bvm* vm, int index) {
 // The declaration a record holds, as the record a page reads it back through: the row it names,
 // borrowed, with the key, label, kind and the step, bounds and entries that kind was declared with.
 // Left on the stack for the caller to push onto a list.
-void pushSettingDeclaration(bvm* vm, SettingsRow* row) {
+void pushSettingDeclaration(bvm* vm, SettingConfig* row) {
   const SettingDeclaration declaration = row->declaration();
   const int record = beginRecord(vm, SettingRecord);
 
@@ -409,9 +409,9 @@ bool isDeclarationRecord(bvm* vm, int index) {
 
 // The row a declaration record borrows: it is in the comobj the record's `.p` field carries, and the
 // list is read rather than consumed, so the same declarations open a list again.
-SettingsRow* borrowedRow(bvm* vm, int index) {
+SettingConfig* borrowedRow(bvm* vm, int index) {
   const int base = be_top(vm);
-  SettingsRow* row = nullptr;
+  SettingConfig* row = nullptr;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
     RowRef* held = static_cast<RowRef*>(be_tocomptr(vm, -1));
     if (held != nullptr) row = held->row;
@@ -461,7 +461,7 @@ int settingsEditScene(bvm* vm) {
     }
   }
 
-  std::vector<SettingsRow*> rows;
+  std::vector<SettingConfig*> rows;
   rows.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);

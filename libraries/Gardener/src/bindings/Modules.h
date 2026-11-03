@@ -10,7 +10,7 @@
 
 namespace gardener {
 
-class SettingsRow;
+class SettingConfig;
 
 class BindingContext;
 
@@ -71,11 +71,11 @@ void installSettingsModule(bvm* vm, BindingContext& bindings);
 // The rows a settings list declares, in order, each declaration consumed: a row belongs to the one
 // record that takes it. Raises, leaving every declaration as it was, for a list holding anything
 // else.
-std::vector<std::unique_ptr<SettingsRow>> takeSettingsRows(bvm* vm, int index);
+std::vector<std::unique_ptr<SettingConfig>> takeSettingsRows(bvm* vm, int index);
 // The declaration a row was built from, as the record a page reads it back through: the row, held by
 // pointer, with the key, label, kind and the step, bounds and entries that kind was declared with.
 // Left on the stack for the caller to push onto a list.
-void pushSettingDeclaration(bvm* vm, SettingsRow* row);
+void pushSettingDeclaration(bvm* vm, SettingConfig* row);
 // One value in the type a setting holds it in: nil for nothing, a flag, a whole number, a real or a
 // key. What a scene answers when it pops is read the same way.
 void pushSettingValue(bvm* vm, const std::any& value);

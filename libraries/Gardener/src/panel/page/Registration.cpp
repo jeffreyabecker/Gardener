@@ -7,29 +7,32 @@
 namespace gardener {
 
 Registration::Registration(const String& routineKey, const String& title,
-                           std::vector<std::unique_ptr<SettingsRow>> settings, Factory factory,
+                           std::vector<std::unique_ptr<SettingConfig>> settings, Factory factory,
                            String glyph)
     : routineKey_(routineKey), documentKey_(routineKey),
       title_(title.isEmpty() ? routineKey : title), owned_(std::move(settings)),
       factory_(std::move(factory)), glyph_(std::move(glyph)) {
   settings_.reserve(owned_.size());
-  for (const std::unique_ptr<SettingsRow>& row : owned_) {
+  for (const std::unique_ptr<SettingConfig>& row : owned_) {
     if (row) settings_.push_back(row.get());
   }
 }
 
 Registration Registration::copyAs(const String& routineKey,
                                   const SectionOverrides& overrides) const {
-  std::vector<std::unique_ptr<SettingsRow>> rows;
+  std::vector<std::unique_ptr<SettingConfig>> rows;
   rows.reserve(owned_.size());
-  for (const std::unique_ptr<SettingsRow>& row : owned_) {
+  for (const std::unique_ptr<SettingConfig>& row : owned_) {
     if (!row) continue;
     rows.push_back(row->clone());
-    SettingsRow* copy = rows.back().get();
+    SettingConfig* copy = rows.back().get();
     for (const SettingOverride& stated : overrides.rows) {
       if (stated.key != copy->key()) continue;
       if (stated.hidden) copy->hide();
-      copy->limit(stated.min, stated.max);
+      // Only a row that steps a number has a range for a section to move.
+      if (NumericSettingCfg* numeric = dynamic_cast<NumericSettingCfg*>(copy)) {
+        numeric->limit(stated.min, stated.max);
+      }
     }
   }
   Registration copy(routineKey, overrides.title, std::move(rows), factory_,
@@ -55,7 +58,7 @@ bool Registration::saveSettings(Library& library, SettingValues& values) const {
 
   for (const SettingValues::value_type& pinned : constants_)
     values[pinned.first] = pinned.second;
-  for (const SettingsRow* row : settings_) {
+  for (const SettingConfig* row : settings_) {
     if (values.find(row->key()) == values.end()) values[row->key()] = std::any();
   }
 

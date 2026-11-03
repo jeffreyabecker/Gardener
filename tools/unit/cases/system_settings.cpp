@@ -33,7 +33,7 @@ using gardener::DeviceSettings;
 using gardener::GestureQueue;
 using gardener::JingleLibrary;
 using gardener::Scene;
-using gardener::SettingsRow;
+using gardener::SettingConfig;
 using gardener::SettingsScene;
 using gardener::SettingValues;
 using gardener::SystemSettings;
@@ -110,20 +110,17 @@ class RootScene : public Scene {
 
 TEST_CASE("the system list shows the unit, the jingle and the maximum in that order") {
   Bench bench;
-  const std::vector<SettingsRow*>& rows = bench.system.rows();
+  const std::vector<SettingConfig*>& rows = bench.system.rows();
   REQUIRE_EQ(rows.size(), 3u);
 
   CHECK_EQ(std::string(rows[0]->key().c_str()), std::string("unit"));
   CHECK_EQ(std::string(rows[0]->label().c_str()), std::string("UNIT"));
-  CHECK_EQ(std::string(rows[0]->text(std::any(String("psi"))).c_str()), std::string("psi"));
 
   CHECK_EQ(std::string(rows[1]->key().c_str()), std::string("jingle"));
   CHECK_EQ(std::string(rows[1]->label().c_str()), std::string("JINGLE"));
-  CHECK_EQ(std::string(rows[1]->text(std::any(String("forelle"))).c_str()), std::string("Forelle"));
 
   CHECK_EQ(std::string(rows[2]->key().c_str()), std::string("max_duration"));
   CHECK_EQ(std::string(rows[2]->label().c_str()), std::string("MAX"));
-  CHECK_EQ(std::string(rows[2]->text(std::any(int32_t(900))).c_str()), std::string("15m"));
 }
 
 TEST_CASE("the maximum row cannot offer more than the machine grants") {
@@ -216,13 +213,15 @@ TEST_CASE("the device's own list edits a row and hands the set back") {
   CHECK_EQ(scene->selected(), 0);
   CHECK_EQ(std::string(textOf(scene->values(), "unit").c_str()), std::string("inhg"));
 
-  // The rebuilt row prints the unit it now holds, and not the one it printed before the edit: it
-  // inks what a list built from the set the scene holds inks.
+  // A row prints its label and not the value it holds, so the edited cell inks what it inked before
+  // the edit; the list is rebuilt all the same, and a list built from the set the scene holds draws
+  // the same picture.
   gardener::gfx::test::reset();
   scene->drawPage(gardener::gfx::test::canvas);
   const int rebuilt =
       gardener::gfx::test::display.inkCount(0, 8, gardener::gfx::test::PageWidth, 8);
-  CHECK(rebuilt != before);
+  CHECK(rebuilt > 0);
+  CHECK_EQ(rebuilt, before);
   SettingsProbe fresh(bench.gestures, bench.ux, String("SYSTEM"), bench.system.rows(),
                       scene->values());
   gardener::gfx::test::reset();

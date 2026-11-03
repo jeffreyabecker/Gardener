@@ -70,7 +70,7 @@ class RoutineRegistry {
 
   // The settings a routine can edit, as its registration declares them, in the order the list shows
   // them; nullptr when the key is not registered.
-  const std::vector<SettingsRow*>* settingsRows(const String& routineKey) const;
+  const std::vector<SettingConfig*>* settingsRows(const String& routineKey) const;
 
   // The set a routine begins with, read through its registration. An unregistered key begins with an
   // empty map.

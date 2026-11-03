@@ -21,16 +21,33 @@
 
 namespace gardener {
 
-// The values a list holds and the declaration a row was built from are the document's vocabulary,
-// in `storage/SettingKind.h`; a row is that and the page's half of it.
-class SettingsRow;
+// One entry a choice offers: the key the setting stores and the title it prints.
+struct ChoiceItem {
+  String key;
+  String title;
+};
+
+// The declaration a row was built from, as a page reads it back off a routine's record: the kind the
+// file named, the step and bounds that kind was given and the entries a choice offers. A kind with
+// none of them answers NAN and no entries, which a record carries as nil.
+struct SettingDeclaration {
+  const char* kind = "";
+  float step = NAN;
+  float min = NAN;
+  float max = NAN;
+  std::vector<ChoiceItem> entries;
+};
+
+// The values a list holds are the document's vocabulary, in `storage/SettingKind.h`; a row is that
+// and the page's half of it, which is where the declaration it was built from is read back.
+class SettingConfig;
 
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
 // refuses it. The editor holds the same check closed over the declaration and the set, which is
 // CurriedValidator.
 using Validator =
-    std::function<std::pair<bool, String>(const std::vector<SettingsRow*>& settings,
+    std::function<std::pair<bool, String>(const std::vector<SettingConfig*>& settings,
                                           const SettingValues& values, const std::any& proposed)>;
 
 // One row of a settings list: the key its value is stored under, the label it prints, the default
@@ -41,20 +58,20 @@ using Validator =
 // The value in force is the list's, not the row's: the row answers only what a setting starts as
 // where the set the list is handed carries nothing for it. The check is the row's, but it needs the
 // whole declaration and the set it edits to answer, which is what the list curries it with.
-class SettingsRow : public SettingKind {
+class SettingConfig : public SettingKind {
  public:
-  virtual ~SettingsRow() = default;
+  virtual ~SettingConfig() = default;
 
   virtual const String& label() const = 0;
+
+  // The kind, step, bounds and entries the row was declared with, as the interpreter reads them back
+  // off a routine's record: a kind with nothing to state answers NAN and no entries.
+  virtual SettingDeclaration declaration() const = 0;
 
   // The packed bitmap the row prints before its label, in the hex dialect `gfx::Bitmap` reads, or
   // an empty string for a row that prints none. Only a choice row carries one today, so the answer
   // is empty unless a kind overrides it.
   virtual const String& icon() const;
-
-  // A value of this kind as the row prints it, or `--` when it holds nothing: a bool is ON or OFF,
-  // a number its digits, a duration its compact text.
-  virtual String text(const std::any& value) const = 0;
 
   // The editor that edits `value`, or nullptr for a setting with no editor, where Forward opens
   // nothing. Every value editor is the page EditorScene draws, so the list can hand what a row
@@ -71,28 +88,23 @@ class SettingsRow : public SettingKind {
 
   // This row made again: the same kind, key, label, default, rules and check, owned by whoever asked.
   // A registration copied under another key declares its own rows rather than borrowing another's.
-  virtual std::unique_ptr<SettingsRow> clone() const = 0;
+  virtual std::unique_ptr<SettingConfig> clone() const = 0;
 
   // Whether the settings list shows this row. A row is shown unless the section of the document the
   // registration was copied from marked it hidden, which only a copy's own rows ever are.
   bool hidden() const { return hidden_; }
   void hide() { hidden_ = true; }
 
-  // The floor and ceiling a section states for this row, in the kind's own units: NAN leaves that
-  // bound as the declaration gave it. A kind that steps no number has none to move, and a pair that
-  // would leave the row no range is ignored whole, so a typo keeps the declaration's.
-  virtual void limit(float min, float max);
-
   // The row's check closed over the declaration and the set in force, which is the form the editor
   // it builds holds; nothing for a row whose declaration gave it no check. The check borrows the
   // row, the declaration and the set, so whoever holds it keeps all three alive.
-  CurriedValidator check(const std::vector<SettingsRow*>& settings,
+  CurriedValidator check(const std::vector<SettingConfig*>& settings,
                          const SettingValues& values) const;
 
  protected:
   // The check the row's declaration gave it, which a kind passes up from its constructor. A row
   // given none accepts every value.
-  explicit SettingsRow(Validator validator = nullptr) : validator_(std::move(validator)) {}
+  explicit SettingConfig(Validator validator = nullptr) : validator_(std::move(validator)) {}
 
  private:
   Validator validator_;
@@ -100,7 +112,7 @@ class SettingsRow : public SettingKind {
 };
 
 // The list a routine's settings are edited in, from settings_edit.be: the heading, one row per
-// setting printed as its label and the value it holds now, and the row the keys are on inverted.
+// setting printed as its label, and the row the keys are on inverted.
 // Up and Down move the row, wrapping at the ends; Forward opens the row's editor and takes what it
 // hands back; OK keeps the set it settled on and closes; Back and Cancel put the set back as it was
 // opened and close.
@@ -121,19 +133,19 @@ class SettingsScene : public Scene {
   // and a key it does not falls back to the row's default. The set that goes in is the set the list
   // opened on, which is what Back and Cancel put back.
   SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
-                const std::vector<SettingsRow*>& rows, const SettingValues& values);
+                const std::vector<SettingConfig*>& rows, const SettingValues& values);
 
   // The values the settings hold, keyed by setting key: what the set was handed, what an editor
   // wrote back and what OK hands on.
-  SettingValues& values() { return values_; }
+  SettingValues& values() { return settingsValues_; }
 
   // What the list answers when it pops: the set it settled on. Back and Cancel put the opened set
   // back before closing, so this is never a set the list abandoned.
-  std::any value() const override { return std::any(values_); }
+  std::any value() const override { return std::any(settingsValues_); }
 
   const String& title() const { return title_; }
   // Where the keys are, counted over the rows the list draws rather than over the whole declaration.
-  int16_t selected() const { return list_ ? list_->current() : -1; }
+  int16_t selected() const { return displayListItems_ ? displayListItems_->current() : -1; }
 
  protected:
   bool handle(const char* gesture) override;
@@ -147,12 +159,12 @@ class SettingsScene : public Scene {
 
   String title_;
   Ux& ux_;
-  std::vector<SettingsRow*> rows_;
+  std::vector<SettingConfig*> settingsCfgs_;
   // Where the rows the list draws sit in rows_: the declaration less what a section hid.
   std::vector<int16_t> visible_;
-  SettingValues values_;
+  SettingValues settingsValues_;
   SettingValues opened_;
-  std::unique_ptr<gfx::RowList> list_;
+  std::unique_ptr<gfx::RowList> displayListItems_;
 };
 
 }  // namespace gardener

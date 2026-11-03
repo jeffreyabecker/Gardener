@@ -14,8 +14,8 @@ constexpr int16_t Row = 8;
 
 }  // namespace
 
-CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
-                                    const SettingValues& values) const {
+CurriedValidator SettingConfig::check(const std::vector<SettingConfig*>& settings,
+                                      const SettingValues& values) const {
   if (!validator_) return nullptr;
   return [this, &settings, &values](const std::any& proposed) {
     return validator_(settings, values, proposed);
@@ -24,27 +24,24 @@ CurriedValidator SettingsRow::check(const std::vector<SettingsRow*>& settings,
 
 // The empty answer a kind that prints no mark gives: one String for every such row, so asking costs
 // a reference rather than a copy.
-const String& SettingsRow::icon() const {
+const String& SettingConfig::icon() const {
   static const String none;
   return none;
 }
 
-// A kind that steps no number — a bool, a choice — has no range for a section to move.
-void SettingsRow::limit(float, float) {}
-
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
-                             const std::vector<SettingsRow*>& rows, const SettingValues& values)
-    : Scene(gestures), title_(title), ux_(ux), rows_(rows) {
-  for (size_t i = 0; i < rows_.size(); i++) {
-    const SettingsRow* row = rows_[i];
+                             const std::vector<SettingConfig*>& rows, const SettingValues& values)
+    : Scene(gestures), title_(title), ux_(ux), settingsCfgs_(rows) {
+  for (size_t i = 0; i < settingsCfgs_.size(); i++) {
+    const SettingConfig* row = settingsCfgs_[i];
     if (row == nullptr) continue;
     const auto held = values.find(row->key());
-    values_[row->key()] = held == values.end() ? row->defaultValue() : held->second;
+    settingsValues_[row->key()] = held == values.end() ? row->defaultValue() : held->second;
     if (row->hidden()) continue;
     visible_.push_back(static_cast<int16_t>(i));
   }
-  opened_ = values_;
-  rebuild(visible_.empty() ? String() : rows_[visible_.front()]->key());
+  opened_ = settingsValues_;
+  rebuild(visible_.empty() ? String() : settingsCfgs_[visible_.front()]->key());
 }
 
 // The list the keys move in, built from the values in force: one row per visible setting, its key
@@ -54,13 +51,12 @@ void SettingsScene::rebuild(const String& selected) {
   std::vector<gfx::RowList::Row> rows;
   rows.reserve(visible_.size());
   for (int16_t at : visible_) {
-    SettingsRow* row = rows_[at];
-    const auto held = values_.find(row->key());
-    const std::any value = held == values_.end() ? std::any() : held->second;
-    rows.push_back(
-        gfx::RowList::textRow(row->key(), row->label() + "=" + row->text(value), row->icon()));
+    SettingConfig* row = settingsCfgs_[at];
+    const auto held = settingsValues_.find(row->key());
+    const std::any value = held == settingsValues_.end() ? std::any() : held->second;
+    rows.push_back(gfx::RowList::textRow(row->key(), row->label(), row->icon()));
   }
-  list_ = std::make_unique<gfx::RowList>(Row, std::move(rows), selected, true);
+  displayListItems_ = std::make_unique<gfx::RowList>(Row, std::move(rows), selected, true);
 }
 
 bool SettingsScene::handle(const char* gesture) {
@@ -81,7 +77,7 @@ bool SettingsScene::handle(const char* gesture) {
     return true;
   }
   if (Gestures::isAny(gesture, {Gestures::BackSingle, Gestures::CancelSingle})) {
-    values_ = opened_;
+    settingsValues_ = opened_;
     ux_.pop();
     return true;
   }
@@ -89,7 +85,7 @@ bool SettingsScene::handle(const char* gesture) {
 }
 
 void SettingsScene::move(int8_t direction) {
-  if (list_) list_->nudge(direction);
+  if (displayListItems_) displayListItems_->nudge(direction);
 }
 
 // Forward opens the row's editor with the value the list holds for the row's key, and what that
@@ -99,17 +95,17 @@ void SettingsScene::move(int8_t direction) {
 void SettingsScene::open() {
   const int16_t at = selected();
   if (at < 0 || at >= static_cast<int16_t>(visible_.size())) return;
-  SettingsRow* row = rows_[visible_[at]];
+  SettingConfig* row = settingsCfgs_[visible_[at]];
   if (row == nullptr) return;
-  const auto held = values_.find(row->key());
-  const std::any value = held == values_.end() ? std::any() : held->second;
+  const auto held = settingsValues_.find(row->key());
+  const std::any value = held == settingsValues_.end() ? std::any() : held->second;
   std::unique_ptr<EditorScene> editor = row->scene(value);
   if (!editor) return;
-  editor->setValidator(row->check(rows_, values_));
+  editor->setValidator(row->check(settingsCfgs_, settingsValues_));
   // The edited row is the one the keys are on, so the rebuilt list selects its key and the row the
   // value was written to keeps the highlight.
   ux_.push(std::move(editor), [this, row](Scene& popped) {
-    values_[row->key()] = popped.value();
+    settingsValues_[row->key()] = popped.value();
     rebuild(row->key());
   });
 }
@@ -122,9 +118,9 @@ void SettingsScene::drawPage(gfx::Canvas& canvas) {
   if (heading > 0) {
     gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_, nullptr)->draw(canvas);
   }
-  if (!list_) return;
+  if (!displayListItems_) return;
   gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
-  list_->draw(band);
+  displayListItems_->draw(band);
 }
 
 }  // namespace gardener
