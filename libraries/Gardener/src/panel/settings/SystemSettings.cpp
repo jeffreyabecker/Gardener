@@ -47,21 +47,21 @@ void SystemSettings::build() {
   if (built_) return;
   built_ = true;
 
-  std::vector<ChoiceItem> units;
+  std::vector<gfx::RowList::Row> units;
   for (uint8_t i = 0; i < DisplayUnitCount; i++) {
     const DisplayUnitInfo& info = DisplayUnits[i];
-    units.push_back({info.name, info.suffix});
+    units.push_back(gfx::RowList::textRow(info.name, info.suffix));
   }
   owned_.push_back(std::make_unique<ChoiceSettingCfg>(gestures_, ux_, UnitKey, UnitLabel,
                                                       displayUnitInfo(DisplayUnit::Kpa).name, units,
                                                       false, UnitMark));
 
-  std::vector<ChoiceItem> jingles;
+  std::vector<gfx::RowList::Row> jingles;
   for (const Jingle& jingle : jingles_.entries()) {
-    jingles.push_back({jingle.key, jingle.shortTitle});
+    jingles.push_back(gfx::RowList::textRow(jingle.key, jingle.shortTitle));
   }
   owned_.push_back(std::make_unique<ChoiceSettingCfg>(
-      gestures_, ux_, JingleKey, JingleLabel, jingles.empty() ? String() : jingles.front().key,
+      gestures_, ux_, JingleKey, JingleLabel, jingles.empty() ? String() : jingles.front().value,
       jingles, false, JingleMark, [this](String& current) {
         const Jingle* jingle = jingles_.find(current);
         if (jingle != nullptr) buzzer_.play(jingle->notes.c_str());

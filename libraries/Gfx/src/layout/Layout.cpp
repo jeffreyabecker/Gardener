@@ -117,11 +117,11 @@ int16_t LayoutNode::spanOf(const Child& child, int16_t extent, bool down, int16_
 
 PaintNodeRef layout(Cell cell, Children children, Justification justification,
                     Direction direction) {
-  return std::make_unique<LayoutNode>(cell, std::move(children), justification, direction);
+  return std::make_shared<LayoutNode>(cell, std::move(children), justification, direction);
 }
 
 PaintNodeRef layout(Cell cell, Builder builder, Justification justification, Direction direction) {
-  return std::make_unique<LayoutNode>(cell, Children(), justification, direction,
+  return std::make_shared<LayoutNode>(cell, Children(), justification, direction,
                                       std::move(builder));
 }
 
@@ -150,7 +150,7 @@ Child column(float widthPct, PaintNodeRef paint) {
 }
 
 PaintNodeRef aligned(Sized sized, Justify horizontal, Justify vertical) {
-  return std::make_unique<AlignedNode>(std::move(sized), horizontal, vertical);
+  return std::make_shared<AlignedNode>(std::move(sized), horizontal, vertical);
 }
 
 Sized sized(PaintNodeRef paint, Size ink) { return Sized{ink, std::move(paint)}; }

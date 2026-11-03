@@ -385,8 +385,6 @@ class TestRow : public SettingConfig {
 
   std::unique_ptr<SettingConfig> clone() const override { return std::make_unique<TestRow>(*this); }
 
-  SettingDeclaration declaration() const override { return {"text"}; }
-
   std::unique_ptr<EditorScene> scene(const std::any& value) override {
     return std::make_unique<TestEditor>(gestures_, ux_, label_, value);
   }
@@ -529,9 +527,8 @@ TEST_CASE("a row's pair reaches its editor") {
   NumericSettingCfg number(gestures, ux, "number", "Number", 15.0f, 1.0f, 0.0f, 100.0f, false);
   number.limit(10.0f, 20.0f);
 
-  const SettingDeclaration declared = number.declaration();
-  CHECK_EQ(declared.min, 10.0f);
-  CHECK_EQ(declared.max, 20.0f);
+  CHECK_EQ(number.min(), 10.0f);
+  CHECK_EQ(number.max(), 20.0f);
 
   // Up from 19 twice stops at the pair's ceiling, which is what OK hands back.
   std::unique_ptr<EditorScene> editor = number.scene(std::any(19.0f));
@@ -604,7 +601,9 @@ TEST_CASE("a settings list rebuilds the row an editor changed") {
 }
 
 // The two entries the choice row offers, and the keys they store.
-std::vector<ChoiceItem> choices() { return {{"lo", "Low"}, {"hi", "High"}}; }
+std::vector<gfx::RowList::Row> choices() {
+  return {gfx::RowList::textRow("lo", "Low"), gfx::RowList::textRow("hi", "High")};
+}
 
 TEST_CASE("a choice row prints its mark before its label") {
   NoGestures gestures;
@@ -717,50 +716,34 @@ TEST_CASE("a pressure row follows the unit the device shows") {
   state.unit = DisplayUnit::Kpa;
   PressureSettingCfg target(gestures, ux, "target", "Target", state, 20.0f, 1.0f);
 
-  CHECK_EQ(target.declaration().step == 1.0f, 1);
+  CHECK_EQ(target.step() == 1.0f, 1);
 
   state.unit = DisplayUnit::InHg;
-  CHECK_EQ(fabsf(target.declaration().step - 1.0f / 0.29529991f) < 0.001f, 1);
+  CHECK_EQ(fabsf(target.step() - 1.0f / 0.29529991f) < 0.001f, 1);
 }
 
-// The declaration each row was built from, which is what a routine's record answers a page: the kind
-// its call named, the step and bounds that call gave, and the entries a choice offers. A kind with
-// none of them answers nothing rather than a stand-in, so a record can carry them as nil.
-TEST_CASE("a row answers the declaration it was built from") {
+// The step, the bounds and the entries each row was declared with, which are the rules its editor
+// moves within. What a record names them — the kind word and the nil a kind with none of them
+// answers — is the binding's to say, so that is not read here.
+TEST_CASE("a row answers the step, bounds and entries it was built from") {
   NoGestures gestures;
   Ux ux;
   NumericSettingCfg target(gestures, ux, "target", "Target", 5.0f, 2, 1, 9, false);
-  BoolSettingCfg power(gestures, ux, "power", "Power", true);
   ChoiceSettingCfg unit(gestures, ux, "unit", "Unit", "hi", choices(), false);
   DurationSettingCfg hold(gestures, ux, "hold", "Hold", 90, 5, 30, 3600, false);
 
-  const SettingDeclaration number = target.declaration();
-  CHECK_EQ(std::string(number.kind), std::string("number"));
-  CHECK_EQ(number.step == 2.0f, 1);
-  CHECK_EQ(number.min == 1.0f, 1);
-  CHECK_EQ(number.max == 9.0f, 1);
-  CHECK_EQ(number.entries.size(), 0u);
+  CHECK_EQ(target.step() == 2.0f, 1);
+  CHECK_EQ(target.min() == 1.0f, 1);
+  CHECK_EQ(target.max() == 9.0f, 1);
 
-  const SettingDeclaration shut = power.declaration();
-  CHECK_EQ(std::string(shut.kind), std::string("bool"));
-  CHECK_EQ(isnan(shut.step), 1);
-  CHECK_EQ(isnan(shut.min), 1);
-  CHECK_EQ(isnan(shut.max), 1);
-  CHECK_EQ(shut.entries.size(), 0u);
+  // A choice's entries are the list's own rows, each keyed by the value it stores.
+  const std::vector<gfx::RowList::Row>& entries = unit.entries();
+  CHECK_EQ(entries.size(), choices().size());
+  CHECK_EQ(std::string(entries.front().value.c_str()), std::string("lo"));
 
-  const SettingDeclaration chosen = unit.declaration();
-  CHECK_EQ(std::string(chosen.kind), std::string("choice"));
-  CHECK_EQ(isnan(chosen.step), 1);
-  CHECK_EQ(chosen.entries.size(), choices().size());
-  CHECK_EQ(std::string(chosen.entries.front().key.c_str()), std::string("lo"));
-  CHECK_EQ(std::string(chosen.entries.front().title.c_str()), std::string("Low"));
-
-  const SettingDeclaration timed = hold.declaration();
-  CHECK_EQ(std::string(timed.kind), std::string("duration"));
-  CHECK_EQ(timed.step == 5.0f, 1);
-  CHECK_EQ(timed.min == 30.0f, 1);
-  CHECK_EQ(timed.max == 3600.0f, 1);
-  CHECK_EQ(timed.entries.size(), 0u);
+  CHECK_EQ(hold.step() == 5.0f, 1);
+  CHECK_EQ(hold.min() == 30.0f, 1);
+  CHECK_EQ(hold.max() == 3600.0f, 1);
 }
 
 // The list is seeded from the set the document holds: what the set says for a key it carries, the

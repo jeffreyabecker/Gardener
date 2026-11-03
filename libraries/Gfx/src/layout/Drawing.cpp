@@ -204,7 +204,7 @@ void TurnedNode::draw(Canvas& canvas) const {
 
 PaintNodeRef text(Box box, String value, const Family* family, Justify horizontal,
                   Justify vertical) {
-  return std::make_unique<TextNode>(box, std::move(value), family, horizontal, vertical);
+  return std::make_shared<TextNode>(box, std::move(value), family, horizontal, vertical);
 }
 
 PaintNodeRef text(String value, const Family* family, Justify horizontal, Justify vertical) {
@@ -212,31 +212,31 @@ PaintNodeRef text(String value, const Family* family, Justify horizontal, Justif
 }
 
 PaintNodeRef icon(Box box, const char* bits) {
-  return std::make_unique<IconNode>(box, Bitmap::fromHex(bits));
+  return std::make_shared<IconNode>(box, Bitmap::fromHex(bits));
 }
 
 PaintNodeRef icon(Box box, PaintNodeRef glyph) {
-  return std::make_unique<IconNode>(box, std::move(glyph));
+  return std::make_shared<IconNode>(box, std::move(glyph));
 }
 
 PaintNodeRef progressBar(Box box, float value) {
-  return std::make_unique<ProgressBarNode>(box, value);
+  return std::make_shared<ProgressBarNode>(box, value);
 }
 
 PaintNodeRef scrollbar(Box box, int16_t index, int16_t count, int16_t visible, bool hollow) {
-  return std::make_unique<ScrollbarNode>(box, index, count, visible, hollow);
+  return std::make_shared<ScrollbarNode>(box, index, count, visible, hollow);
 }
 
 PaintNodeRef rectangle(Box box, uint8_t color, bool filled) {
-  return std::make_unique<RectangleNode>(box, color, filled);
+  return std::make_shared<RectangleNode>(box, color, filled);
 }
 
 PaintNodeRef line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
-  return std::make_unique<LineNode>(Line(x0, y0, x1, y1, color));
+  return std::make_shared<LineNode>(Line(x0, y0, x1, y1, color));
 }
 
 PaintNodeRef triangle(Box box, Arrow arrow, uint8_t color, bool filled) {
-  return std::make_unique<TriangleNode>(box, arrow, color, filled);
+  return std::make_shared<TriangleNode>(box, arrow, color, filled);
 }
 
 PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Family* family,
@@ -247,24 +247,24 @@ PaintNodeRef duration(Box box, DurationFormat format, int32_t seconds, const Fam
 }
 
 PaintNodeRef blend(Blend blend, PaintNodeRef child) {
-  return std::make_unique<BlendNode>(blend, std::move(child));
+  return std::make_shared<BlendNode>(blend, std::move(child));
 }
 
 PaintNodeRef underlay(PaintNodeRef child) {
   if (!child) return PaintNodeRef();
-  return std::make_unique<UnderlayNode>(std::move(child));
+  return std::make_shared<UnderlayNode>(std::move(child));
 }
 
 PaintNodeRef turned(Transform transform, PaintNodeRef child) {
   if (!child) return PaintNodeRef();
-  return std::make_unique<TurnedNode>(transform, std::move(child));
+  return std::make_shared<TurnedNode>(transform, std::move(child));
 }
 
 PaintNodeRef callable(std::function<void(Canvas&)> draw) {
-  return std::make_unique<CallableNode>(std::move(draw));
+  return std::make_shared<CallableNode>(std::move(draw));
 }
 
-PaintNodeRef group(Paints paints) { return std::make_unique<GroupNode>(std::move(paints)); }
+PaintNodeRef group(Paints paints) { return std::make_shared<GroupNode>(std::move(paints)); }
 
 PaintNodeRef inverted(PaintNodeRef child) {
   if (!child) return PaintNodeRef();

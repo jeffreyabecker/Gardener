@@ -238,7 +238,7 @@ TEST_CASE("a row list fills the cell of the row it inverts") {
 TEST_CASE("a text row carries its value and draws its title") {
   RowList::Row row = RowList::textRow("key", "A");
   CHECK_EQ(std::string(row.value.c_str()), std::string("key"));
-  REQUIRE(row.paint != nullptr);
+  REQUIRE(row.paint.get() != nullptr);
   reset();
   View view = band(1);
   row.paint->draw(view);

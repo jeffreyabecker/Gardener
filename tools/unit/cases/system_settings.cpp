@@ -125,8 +125,8 @@ TEST_CASE("the system list shows the unit, the jingle and the maximum in that or
 
 TEST_CASE("the maximum row cannot offer more than the machine grants") {
   Bench bench;
-  const gardener::SettingDeclaration declaration = bench.system.rows()[2]->declaration();
-  CHECK_EQ(declaration.max, static_cast<float>(gardener::CONTROL_MAX_RUN_MS / 1000));
+  const auto* maximum = static_cast<const gardener::NumericSettingCfg*>(bench.system.rows()[2]);
+  CHECK_EQ(maximum->max(), static_cast<float>(gardener::CONTROL_MAX_RUN_MS / 1000));
 }
 
 TEST_CASE("the system list reads the document it edits") {

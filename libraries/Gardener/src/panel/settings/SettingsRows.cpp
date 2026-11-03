@@ -49,9 +49,6 @@ BoolSettingCfg::BoolSettingCfg(GestureQueue& gestures, Ux& ux, const String& key
     : SettingConfig(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
       default_(defaultValue), nullable_(nullable) {}
 
-// The switch declares its kind and nothing else: it has no step, no bound and no entries.
-SettingDeclaration BoolSettingCfg::declaration() const { return {"bool"}; }
-
 std::unique_ptr<EditorScene> BoolSettingCfg::scene(const std::any& value) {
   String current;
   if (value.has_value()) current = std::any_cast<bool>(value) ? "true" : "false";
@@ -86,21 +83,12 @@ std::unique_ptr<SettingConfig> BoolSettingCfg::clone() const {
 
 ChoiceSettingCfg::ChoiceSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
                                    const String& label, const String& defaultValue,
-                                   const std::vector<ChoiceItem>& items, bool nullable,
+                                   const std::vector<gfx::RowList::Row>& items, bool nullable,
                                    const char* icon, std::function<void(String& current)> forward,
                                    Validator validator)
     : SettingConfig(std::move(validator)), gestures_(gestures), ux_(ux), key_(key), label_(label),
       default_(defaultValue), items_(items), nullable_(nullable), forward_(std::move(forward)),
       icon_(icon != nullptr ? icon : "") {}
-
-// A choice declares its entries — the keys it offers, which are the titles it prints — and no step
-// or bound, because the keys are the only thing it moves between.
-SettingDeclaration ChoiceSettingCfg::declaration() const {
-  SettingDeclaration out;
-  out.kind = "choice";
-  out.entries = items_;
-  return out;
-}
 
 // The editor's rows: each entry's title as the list's own title row, which is the picture the scene
 // hands its model.
@@ -108,8 +96,8 @@ std::unique_ptr<EditorScene> ChoiceSettingCfg::scene(const std::any& value) {
   const String current = value.has_value() ? std::any_cast<String>(value) : String();
   std::vector<gfx::RowList::Row> rows;
   rows.reserve(items_.size());
-  for (const ChoiceItem& item : items_)
-    rows.push_back(gfx::RowList::textRow(item.key, item.title));
+  for (const gfx::RowList::Row& item : items_)
+    rows.push_back(item);
   return std::make_unique<ChoiceScene>(gestures_, ux_, label_, current, std::move(rows), nullable_,
                                        forward_);
 }
@@ -123,8 +111,8 @@ String ChoiceSettingCfg::stored(const std::any& value) const {
 // default instead, as an entry-less row answers it for every key.
 std::any ChoiceSettingCfg::parse(const String& stored) const {
   if (stored.isEmpty()) return defaultValue();
-  for (const ChoiceItem& item : items_) {
-    if (item.key == stored) return std::any(stored);
+  for (const gfx::RowList::Row& item : items_) {
+    if (item.value == stored) return std::any(stored);
   }
   return defaultValue();
 }
@@ -149,13 +137,6 @@ DurationSettingCfg::DurationSettingCfg(GestureQueue& gestures, Ux& ux, const Str
 std::any DurationSettingCfg::defaultValue() const {
   const std::any held = NumericSettingCfg::defaultValue();
   return held.has_value() ? std::any(static_cast<int32_t>(std::any_cast<float>(held))) : held;
-}
-
-// The kind a duration states is its own; the step and the bounds are the number's.
-SettingDeclaration DurationSettingCfg::declaration() const {
-  SettingDeclaration out = NumericSettingCfg::declaration();
-  out.kind = "duration";
-  return out;
 }
 
 std::unique_ptr<EditorScene> DurationSettingCfg::scene(const std::any& value) {
@@ -212,17 +193,6 @@ NumericSettingCfg::NumericSettingCfg(GestureQueue& gestures, Ux& ux, const Strin
 // NAN where it means `--`.
 std::any NumericSettingCfg::defaultValue() const {
   return isnan(default_) ? std::any() : std::any(default_);
-}
-
-// The step and bounds the number was declared with, as the number's own units. A kind that edits a
-// number its own way — a pressure — states its kind over these.
-SettingDeclaration NumericSettingCfg::declaration() const {
-  SettingDeclaration out;
-  out.kind = "number";
-  out.step = step();
-  out.min = min_;
-  out.max = max_;
-  return out;
 }
 
 float NumericSettingCfg::step() const { return step_; }
@@ -289,15 +259,6 @@ PressureSettingCfg::PressureSettingCfg(GestureQueue& gestures, Ux& ux, const Str
 float PressureSettingCfg::step() const {
   const DisplayUnitInfo& info = displayUnitInfo(state_.unit);
   return wholeSteps_ * info.wholeStep / info.perKpa;
-}
-
-// The pressure's number row, under the kind its declaration named. The step and bounds are the
-// number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
-// and ceiling — because those are what the editor it builds moves within.
-SettingDeclaration PressureSettingCfg::declaration() const {
-  SettingDeclaration out = NumericSettingCfg::declaration();
-  out.kind = "pressure";
-  return out;
 }
 
 std::unique_ptr<EditorScene> PressureSettingCfg::scene(const std::any& value) {

@@ -21,23 +21,6 @@
 
 namespace gardener {
 
-// One entry a choice offers: the key the setting stores and the title it prints.
-struct ChoiceItem {
-  String key;
-  String title;
-};
-
-// The declaration a row was built from, as a page reads it back off a routine's record: the kind the
-// file named, the step and bounds that kind was given and the entries a choice offers. A kind with
-// none of them answers NAN and no entries, which a record carries as nil.
-struct SettingDeclaration {
-  const char* kind = "";
-  float step = NAN;
-  float min = NAN;
-  float max = NAN;
-  std::vector<ChoiceItem> entries;
-};
-
 // The values a list holds are the document's vocabulary, in `storage/SettingKind.h`; a row is that
 // and the page's half of it, which is where the declaration it was built from is read back.
 class SettingConfig;
@@ -63,10 +46,6 @@ class SettingConfig : public SettingKind {
   virtual ~SettingConfig() = default;
 
   virtual const String& label() const = 0;
-
-  // The kind, step, bounds and entries the row was declared with, as the interpreter reads them back
-  // off a routine's record: a kind with nothing to state answers NAN and no entries.
-  virtual SettingDeclaration declaration() const = 0;
 
   // The packed bitmap the row prints before its label, in the hex dialect `gfx::Bitmap` reads, or
   // an empty string for a row that prints none. Only a choice row carries one today, so the answer

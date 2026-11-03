@@ -35,7 +35,7 @@ class BoolSettingCfg : public SettingConfig {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
-  SettingDeclaration declaration() const override;
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
@@ -54,15 +54,14 @@ class BoolSettingCfg : public SettingConfig {
 // --- the choice -------------------------------------------------------------
 
 // The row of a setting that stores a key out of a fixed list, and the choice scene over the entries
-// the row was handed. `icon` is the packed
-// bitmap printed before the label, in the hex dialect `gfx::Bitmap` reads; a list draws it in the
-// columns the bitmap names, and a row given none prints its label at the left of the row. `forward`
-// is the page's own work on the entry showing — a jingle row is built with one that sounds the
-// entry — and a row given none drops Forward.
+// the row was handed. `icon` is the packed bitmap printed before the label, in the hex dialect
+// `gfx::Bitmap` reads; a list draws it in the columns the bitmap names, and a row given none prints
+// its label at the left of the row. `forward` is the page's own work on the entry showing — a jingle
+// row is built with one that sounds the entry — and a row given none drops Forward.
 class ChoiceSettingCfg : public SettingConfig {
  public:
   ChoiceSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                   const String& defaultValue, const std::vector<ChoiceItem>& items,
+                   const String& defaultValue, const std::vector<gfx::RowList::Row>& items,
                    bool nullable = false, const char* icon = nullptr,
                    std::function<void(String& current)> forward = nullptr,
                    Validator validator = nullptr);
@@ -71,7 +70,10 @@ class ChoiceSettingCfg : public SettingConfig {
   const String& label() const override { return label_; }
   const String& icon() const override { return icon_; }
   std::any defaultValue() const override { return default_; }
-  SettingDeclaration declaration() const override;
+
+  // The entries the row offers, each the key it stores and the title the list prints for it.
+  const std::vector<gfx::RowList::Row>& entries() const { return items_; }
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
@@ -84,13 +86,11 @@ class ChoiceSettingCfg : public SettingConfig {
   String key_;
   String label_;
   std::any default_;
-  std::vector<ChoiceItem> items_;
+  std::vector<gfx::RowList::Row> items_;
   bool nullable_;
   std::function<void(String& current)> forward_;
   String icon_;
 };
-
-// --- the duration -----------------------------------------------------------
 
 // --- the number -------------------------------------------------------------
 
@@ -108,12 +108,22 @@ class NumericSettingCfg : public SettingConfig {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
-  SettingDeclaration declaration() const override;
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
   std::unique_ptr<SettingConfig> clone() const override;
+
+  // The step a keypress makes, as the list and the editor read it. A kind whose number is shown in a
+  // unit the device can change answers it from the state each time it is asked, so a row a routine
+  // declared when the image loaded still steps by the unit the panel is showing now.
+  virtual float step() const;
+
+  // The bounds the row was declared with, in the kind's own units, which a section's pair moves
+  // through limit.
+  float min() const { return min_; }
+  float max() const { return max_; }
 
   // The floor and ceiling a section states for this row, in the kind's own units: NAN leaves that
   // bound as the declaration gave it, and a pair that would leave the row no range is ignored whole,
@@ -121,11 +131,6 @@ class NumericSettingCfg : public SettingConfig {
   virtual void limit(float min, float max);
 
  protected:
-  // The step a keypress makes, as the list and the editor read it. A kind whose number is shown in a
-  // unit the device can change answers it from the state each time it is asked, so a row a routine
-  // declared when the image loaded still steps by the unit the panel is showing now.
-  virtual float step() const;
-
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
   // scene over the same step, bounds and formatter.
   GestureQueue& gestures_;
@@ -155,7 +160,7 @@ class DurationSettingCfg : public NumericSettingCfg {
                      bool nullable = false, Validator validator = nullptr);
 
   std::any defaultValue() const override;
-  SettingDeclaration declaration() const override;
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
@@ -177,12 +182,10 @@ class PressureSettingCfg : public NumericSettingCfg {
                      const SystemState& state, float currentKpa, float wholeSteps,
                      bool nullable = false, Validator validator = nullptr);
 
-  SettingDeclaration declaration() const override;
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   std::unique_ptr<SettingConfig> clone() const override;
   void limit(float min, float max) override;
 
- protected:
   float step() const override;
 
  private:

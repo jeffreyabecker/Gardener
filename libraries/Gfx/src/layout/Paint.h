@@ -65,8 +65,9 @@ class PaintNode {
 };
 
 // What a page holds: a node it does not name the kind of. An empty paint is the null a caller reads
-// as nothing to draw. Move-only, so a paint is built and placed rather than copied.
-using PaintNodeRef = std::unique_ptr<PaintNode>;
+// as nothing to draw. Shared, so a picture built once can sit in more than one holder — a row a list
+// places and the row a setting keeps — and a node is still built once and never edited after.
+using PaintNodeRef = std::shared_ptr<PaintNode>;
 
 // --- the run ----------------------------------------------------------------
 

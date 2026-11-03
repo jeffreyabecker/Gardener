@@ -123,7 +123,7 @@ PaintNodeRef Bitmap::fromHex(const char* hexString) {
   if (!isBitmap(hexString)) return PaintNodeRef();
   const std::vector<uint8_t> bytes = hexBytes(hexString);
   const BitmapFormat format = static_cast<BitmapFormat>(bytes[2]);
-  return std::make_unique<Bitmap>(std::vector<uint8_t>(bytes.begin() + 3, bytes.end()), bytes[0],
+  return std::make_shared<Bitmap>(std::vector<uint8_t>(bytes.begin() + 3, bytes.end()), bytes[0],
                                   bytes[1], format);
 }
 

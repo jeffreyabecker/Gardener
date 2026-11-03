@@ -26,7 +26,6 @@
 namespace {
 
 using gardener::BoolSettingCfg;
-using gardener::ChoiceItem;
 using gardener::ChoiceSettingCfg;
 using gardener::DisplayUnit;
 using gardener::DurationSettingCfg;
@@ -126,13 +125,20 @@ constexpr const char* PressureFixture = "\n"
                                         "target_pressure:min=2\n"
                                         "target_pressure:max=90\n";
 
-std::vector<ChoiceItem> resumeChoices() {
-  return {{"hold", "Hold"}, {"immediately", "Immediately"}};
+std::vector<gardener::gfx::RowList::Row> resumeChoices() {
+  return {gardener::gfx::RowList::textRow("hold", "Hold"),
+          gardener::gfx::RowList::textRow("immediately", "Immediately")};
 }
 
 // A row is the document's half and the page's, and the store takes the first.
 std::vector<const gardener::SettingKind*> kindsOf(const std::vector<SettingConfig*>& rows) {
   return std::vector<const gardener::SettingKind*>(rows.begin(), rows.end());
+}
+
+// The bounds a row holds, through the number it is: only a row that steps a number has a pair, and
+// every row a section bounds in these cases is one.
+const NumericSettingCfg& numbered(const SettingConfig* row) {
+  return static_cast<const NumericSettingCfg&>(*row);
 }
 
 // The rows the store cases declare: one of every kind, a key written as nothing and a key the
@@ -434,30 +440,24 @@ TEST_CASE("a section states the bounds a setting moves within") {
   // holds is read back through that pair.
   const std::vector<SettingConfig*>& narrow = *registry.settingsRows("narrow");
   REQUIRE(narrow.size() == 3);
-  const gardener::SettingDeclaration start = narrow[0]->declaration();
-  CHECK_EQ(start.min, 10.0f);
-  CHECK_EQ(start.max, 12.0f);
+  CHECK_EQ(numbered(narrow[0]).min(), 10.0f);
+  CHECK_EQ(numbered(narrow[0]).max(), 12.0f);
   CHECK_EQ(kpaOf(registry.loadSettings("narrow"), "initial_pressure"), 12.0f);
 
   // A pair that leaves no range is a typo: the duration keeps the pair it was declared with, and the
   // value the section holds reads as it is.
-  const gardener::SettingDeclaration total = narrow[2]->declaration();
-  CHECK_EQ(total.min, 1.0f);
-  CHECK_EQ(total.max, 7200.0f);
+  CHECK_EQ(numbered(narrow[2]).min(), 1.0f);
+  CHECK_EQ(numbered(narrow[2]).max(), 7200.0f);
   CHECK_EQ(secondsOf(registry.loadSettings("narrow"), "total_duration"), 400);
 
   // A section widens as readily as it narrows, and the record's own declaration never moves.
-  const gardener::SettingDeclaration opened = registry.settingsRows("wide")->at(0)->declaration();
-  CHECK_EQ(opened.min, -10.0f);
-  CHECK_EQ(opened.max, 200.0f);
+  CHECK_EQ(numbered(registry.settingsRows("wide")->at(0)).min(), -10.0f);
+  CHECK_EQ(numbered(registry.settingsRows("wide")->at(0)).max(), 200.0f);
   // A duration is a number row, so its pair is the section's too.
-  const gardener::SettingDeclaration held = registry.settingsRows("wide")->at(2)->declaration();
-  CHECK_EQ(held.min, 120.0f);
-  CHECK_EQ(held.max, 240.0f);
-  const gardener::SettingDeclaration declared =
-      registry.settingsRows("bounded")->at(0)->declaration();
-  CHECK_EQ(declared.min, 0.0f);
-  CHECK_EQ(declared.max, 100.0f);
+  CHECK_EQ(numbered(registry.settingsRows("wide")->at(2)).min(), 120.0f);
+  CHECK_EQ(numbered(registry.settingsRows("wide")->at(2)).max(), 240.0f);
+  CHECK_EQ(numbered(registry.settingsRows("bounded")->at(0)).min(), 0.0f);
+  CHECK_EQ(numbered(registry.settingsRows("bounded")->at(0)).max(), 100.0f);
 }
 
 TEST_CASE("a section's pressure pair stays inside the machine's") {
@@ -472,10 +472,9 @@ TEST_CASE("a section's pressure pair stays inside the machine's") {
       Registration("pressured", "Pressured", pressureDeclaration(gestures, ux, state))));
 
   // 2 and 90 lie outside what the loop accepts, so the row keeps the machine's own pair.
-  const gardener::SettingDeclaration target =
-      registry.settingsRows("outside")->at(0)->declaration();
-  CHECK_EQ(target.min, gardener::CONTROL_MIN_TARGET_KPA);
-  CHECK_EQ(target.max, CONTROL_FLOOR_KPA);
+  const NumericSettingCfg& target = numbered(registry.settingsRows("outside")->at(0));
+  CHECK_EQ(target.min(), gardener::CONTROL_MIN_TARGET_KPA);
+  CHECK_EQ(target.max(), CONTROL_FLOOR_KPA);
   CHECK_EQ(kpaOf(registry.loadSettings("outside"), "target_pressure"), 20.0f);
 }
 

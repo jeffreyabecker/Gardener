@@ -29,13 +29,65 @@ constexpr const char* PressureName = "pressure";
 constexpr const char* DurationName = "duration";
 constexpr const char* ChoiceName = "choice";
 
-// The row belongs to the instance: the comobj owns it and the interpreter frees it with the
-// instance.
-using RowOwner = std::unique_ptr<SettingConfig>;
+// A bool setting is none of the module's classes — no routine file declares one — but a device row is
+// one, so the declaration a record answers still names it.
+constexpr const char* BoolName = "bool";
+
+// One entry a choice offers: the key the setting stores and the title it prints.
+struct BerryChoiceItem {
+  String key;
+  String title;
+};
+
+// The declaration a row was built from, as a page reads it back off a routine's record: the kind the
+// file named, the step and bounds that kind was given, the entries a choice offers, and the row
+// itself. A kind with none of them answers NAN and no entries, which a record carries as nil. Who
+// owns the row is whoever holds the declaration: an instance's owns it and a record's borrows it.
+struct BerrySettingInfo {
+  const char* kind = "";
+  float step = NAN;
+  float min = NAN;
+  float max = NAN;
+  std::vector<BerryChoiceItem> entries;
+  std::unique_ptr<SettingConfig> cfg;
+};
+
+// The declaration belongs to the instance: the comobj owns the declaration and the declaration owns
+// the row, so the interpreter frees both with the instance.
+using RowOwner = std::unique_ptr<BerrySettingInfo>;
 
 int rowRelease(bvm* vm) {
   delete static_cast<RowOwner*>(be_tocomptr(vm, 1));
   be_return_nil(vm);
+}
+
+// The declaration a row answers: the kind word the file named and the step, bounds and entries that
+// kind was given. The row classes are the panel's and the words are the page's, so this is the one
+// place that knows both, and a row is read by its class rather than carrying the word itself.
+BerrySettingInfo infoFor(const SettingConfig& row) {
+  BerrySettingInfo info;
+  if (const ChoiceSettingCfg* choice = dynamic_cast<const ChoiceSettingCfg*>(&row)) {
+    info.kind = ChoiceName;
+    // The record carries the keys; the title an entry prints is the paint its row draws.
+    for (const gfx::RowList::Row& entry : choice->entries())
+      info.entries.push_back({entry.value, entry.value});
+    return info;
+  }
+  if (const NumericSettingCfg* number = dynamic_cast<const NumericSettingCfg*>(&row)) {
+    if (dynamic_cast<const PressureSettingCfg*>(&row) != nullptr) {
+      info.kind = PressureName;
+    } else if (dynamic_cast<const DurationSettingCfg*>(&row) != nullptr) {
+      info.kind = DurationName;
+    } else {
+      info.kind = NumberName;
+    }
+    info.step = number->step();
+    info.min = number->min();
+    info.max = number->max();
+    return info;
+  }
+  info.kind = BoolName;
+  return info;
 }
 
 // --- the declaration read back ---------------------------------------------
@@ -52,14 +104,12 @@ const bnfuncinfo SettingFields[] = {
     {"entries", nullptr}, {nullptr, nullptr},
 };
 
-// The row a record holds, borrowed: the comobj is what carries a C++ object into the image, and the
-// box is what the interpreter frees, never the row in it.
-struct RowRef {
-  SettingConfig* row;
-};
-
-int rowRefRelease(bvm* vm) {
-  delete static_cast<RowRef*>(be_tocomptr(vm, 1));
+// The row a record holds, borrowed: the comobj carries the declaration and the registration owns
+// the row in it, so the release lets the row go rather than deleting it.
+int borrowedInfoRelease(bvm* vm) {
+  BerrySettingInfo* info = static_cast<BerrySettingInfo*>(be_tocomptr(vm, 1));
+  if (info != nullptr) info->cfg.release();
+  delete info;
   be_return_nil(vm);
 }
 
@@ -160,11 +210,13 @@ std::unique_ptr<SettingConfig> takeRow(bvm* vm, int index) {
   be_getmember(vm, index, ".p");
   RowOwner* owner = static_cast<RowOwner*>(be_tocomptr(vm, -1));
   be_pop(vm, 1);
-  return std::move(*owner);
+  return std::move((*owner)->cfg);
 }
 
 void holdRow(bvm* vm, std::unique_ptr<SettingConfig> row) {
-  be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
+  std::unique_ptr<BerrySettingInfo> info = std::make_unique<BerrySettingInfo>(infoFor(*row));
+  info->cfg = std::move(row);
+  be_newcomobj(vm, new RowOwner(std::move(info)), rowRelease);
   be_setmember(vm, 1, ".p");
   be_pop(vm, 1);
 }
@@ -183,10 +235,10 @@ void setNumberOrNil(bvm* vm, int record, const char* field, float value) {
 
 // The keys a choice offers, as the list class's instance the image iterates over, and an empty one
 // for a kind that offers none. Left on the stack for the caller to set on a record.
-void pushEntries(bvm* vm, const std::vector<ChoiceItem>& entries) {
+void pushEntries(bvm* vm, const std::vector<BerryChoiceItem>& entries) {
   be_newobject(vm, "list");
   const int list = be_absindex(vm, -1);
-  for (const ChoiceItem& entry : entries) {
+  for (const BerryChoiceItem& entry : entries) {
     be_pushstring(vm, entry.key.c_str());
     be_data_push(vm, list);
     be_pop(vm, 1);
@@ -267,7 +319,7 @@ int durationInit(bvm* vm) {
 }
 
 // settings.choice(key, default, label, format, entries, nullable). An entry is one string, carried
-// as the key the document keeps and the title the list prints.
+// as the key the document keeps and the title the list prints for it.
 int choiceInit(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   requirePanel(bindings, vm);
@@ -294,17 +346,15 @@ int choiceInit(bvm* vm) {
     }
   }
 
-  std::vector<ChoiceItem> items;
+  std::vector<gfx::RowList::Row> items;
   items.reserve((size_t)count);
   for (int i = 0; i < count; i++) {
     be_pushint(vm, i);
     be_getindex(vm, entries);
     be_remove(vm, -2);
-    ChoiceItem item;
-    item.key = argText(vm, -1);
-    item.title = item.key;
+    const String text(argText(vm, -1));
     be_pop(vm, 1);
-    items.push_back(std::move(item));
+    items.push_back(gfx::RowList::textRow(text, text));
   }
   be_pop(vm, 1);  // the entries
 
@@ -377,22 +427,25 @@ std::vector<std::unique_ptr<SettingConfig>> takeSettingsRows(bvm* vm, int index)
 
 // The declaration a record holds, as the record a page reads it back through: the row it names,
 // borrowed, with the key, label, kind and the step, bounds and entries that kind was declared with.
-// Left on the stack for the caller to push onto a list.
+// The record's comobj carries the declaration, and its release lets the row go, so reading a
+// record's declarations leaves them where they were. Left on the stack for the caller to push onto a
+// list.
 void pushSettingDeclaration(bvm* vm, SettingConfig* row) {
-  const SettingDeclaration declaration = row->declaration();
+  BerrySettingInfo* info = new BerrySettingInfo(infoFor(*row));
+  info->cfg.reset(row);
   const int record = beginRecord(vm, SettingRecord);
 
-  be_newcomobj(vm, new RowRef{row}, rowRefRelease);
+  be_newcomobj(vm, info, borrowedInfoRelease);
   be_setmember(vm, record, ".p");
   be_pop(vm, 1);
 
-  setText(vm, record, "key", row->key().c_str());
-  setText(vm, record, "label", row->label().c_str());
-  setText(vm, record, "kind", declaration.kind);
-  setNumberOrNil(vm, record, "step", declaration.step);
-  setNumberOrNil(vm, record, "min", declaration.min);
-  setNumberOrNil(vm, record, "max", declaration.max);
-  pushEntries(vm, declaration.entries);
+  setText(vm, record, "key", info->cfg->key().c_str());
+  setText(vm, record, "label", info->cfg->label().c_str());
+  setText(vm, record, "kind", info->kind);
+  setNumberOrNil(vm, record, "step", info->step);
+  setNumberOrNil(vm, record, "min", info->min);
+  setNumberOrNil(vm, record, "max", info->max);
+  pushEntries(vm, info->entries);
   setValue(vm, record, "entries", -1);
   be_pop(vm, 1);
 }
@@ -407,14 +460,14 @@ bool isDeclarationRecord(bvm* vm, int index) {
   return name != nullptr && strcmp(name, SettingRecord) == 0;
 }
 
-// The row a declaration record borrows: it is in the comobj the record's `.p` field carries, and the
-// list is read rather than consumed, so the same declarations open a list again.
+// The row a declaration record borrows: it is the one the record's `.p` carries, and the list is
+// read rather than consumed, so the same declarations open a list again.
 SettingConfig* borrowedRow(bvm* vm, int index) {
   const int base = be_top(vm);
   SettingConfig* row = nullptr;
   if (be_getmember(vm, index, ".p") && be_iscomobj(vm, -1)) {
-    RowRef* held = static_cast<RowRef*>(be_tocomptr(vm, -1));
-    if (held != nullptr) row = held->row;
+    const BerrySettingInfo* held = static_cast<const BerrySettingInfo*>(be_tocomptr(vm, -1));
+    if (held != nullptr) row = held->cfg.get();
   }
   be_pop(vm, be_top(vm) - base);
   return row;
