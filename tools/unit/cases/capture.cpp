@@ -30,6 +30,8 @@ using gardener::CapturePicture;
 using gardener::GestureQueue;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
+using gardener::isButton;
+using gardener::isGesture;
 using gardener::NoteBand;
 using gardener::RenderScale;
 using gardener::Scene;
@@ -277,18 +279,17 @@ TEST_CASE("a beat saved through the display is one GIF frame per send") {
   std::remove("tools/unit/build/capture_display_beat.gif");
 }
 
-TEST_CASE("the gesture a page takes is outlined over the glass on the frame it drew") {
+TEST_CASE("a shown gesture is outlined over the glass on the frame it drew") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
-  display.press("ok:double");
-  strip.show(display.take());
+  strip.show("ok:double");
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
   gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);
   const std::vector<uint8_t>* frame = display.frame(0);
   REQUIRE(frame != nullptr);
-  // The fourth button is cancel and the fifth is OK, which is the one the press named.
+  // The fourth button is cancel and the fifth is OK, which is the one the mark named.
   CHECK_FALSE(outlined(*frame, 3));
   CHECK(outlined(*frame, 4));
   // The glass is inside the border and the bar above it, and holds what the page drew.
@@ -297,41 +298,89 @@ TEST_CASE("the gesture a page takes is outlined over the glass on the frame it d
   // The border is dotted, and its top row is one above the glass.
   CHECK(packedInk(*frame, CapturePicture::Width, 0, CapturePicture::glass().y - 1,
                   CapturePicture::Width, 1));
-  CHECK_EQ(display.gestures().size(), 1);
   display.endCapture();
 }
 
-TEST_CASE("the gesture is marked on the frame it landed on and not after") {
+TEST_CASE("a mark stands on every frame until a clear takes it away") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
-  display.press("ok:single");
-  strip.show(display.take());
-  for (int16_t beat = 0; beat < GestureStrip::Frames + 1; beat++) {
+  strip.show("ok:single");
+  for (int16_t beat = 0; beat < 3; beat++) {
     gardener::gfx::test::canvas.setPixel(static_cast<int16_t>(4 + beat), 20, 255);
     gardener::gfx::test::display.flush();
   }
-  REQUIRE_EQ(display.frameCount(), GestureStrip::Frames + 1);
-  const std::vector<uint8_t>* first = display.frame(0);
-  const std::vector<uint8_t>* held = display.frame(GestureStrip::Frames - 1);
-  const std::vector<uint8_t>* after = display.frame(GestureStrip::Frames);
-  REQUIRE(first != nullptr);
-  REQUIRE(held != nullptr);
+  REQUIRE_EQ(display.frameCount(), 3);
+  for (int16_t index = 0; index < 3; index++) {
+    const std::vector<uint8_t>* held = display.frame(index);
+    REQUIRE(held != nullptr);
+    CHECK(outlined(*held, 4));
+  }
+
+  strip.clear("ok");
+  gardener::gfx::test::canvas.setPixel(8, 20, 255);
+  gardener::gfx::test::display.flush();
+  const std::vector<uint8_t>* after = display.frame(3);
   REQUIRE(after != nullptr);
-  CHECK(outlined(*first, 4));
-  CHECK(outlined(*held, 4));
   CHECK_FALSE(outlined(*after, 4));
   display.endCapture();
 }
 
-TEST_CASE("a press is one outline, a double press two and a hold its seconds") {
+TEST_CASE("a clear takes one button's mark and clearAll takes the rest") {
+  reset();
+  GestureStrip strip;
+  beginStripCapture(strip);
+
+  const auto drawn = [&strip]() {
+    gardener::gfx::test::canvas.setPixel(4, 20, 255);
+    gardener::gfx::test::display.flush();
+    return display.frame(display.frameCount() - 1);
+  };
+
+  strip.show("up:single");
+  strip.show("ok:double");
+  const std::vector<uint8_t>* both = drawn();
+  REQUIRE(both != nullptr);
+  CHECK(outlined(*both, 0));  // up
+  CHECK(outlined(*both, 4));  // ok
+  CHECK(doubleOutlined(*both, 4));
+
+  // One button's clear leaves the other's mark standing.
+  strip.clear("ok");
+  const std::vector<uint8_t>* one = drawn();
+  REQUIRE(one != nullptr);
+  CHECK(outlined(*one, 0));
+  CHECK_FALSE(outlined(*one, 4));
+
+  strip.clearAll();
+  const std::vector<uint8_t>* none = drawn();
+  REQUIRE(none != nullptr);
+  CHECK_FALSE(outlined(*none, 0));
+  CHECK_FALSE(outlined(*none, 4));
+  display.endCapture();
+}
+
+TEST_CASE("a mark names a button the panel has") {
+  CHECK(isButton("up"));
+  CHECK(isButton("cancel"));
+  CHECK_FALSE(isButton("OK"));
+  CHECK_FALSE(isButton(""));
+  CHECK(isGesture("cancel"));
+  CHECK(isGesture("up:single"));
+  CHECK(isGesture("up:single+ok:double"));
+  CHECK_FALSE(isGesture("sideways"));
+  CHECK_FALSE(isGesture("up+"));
+  CHECK_FALSE(isGesture(":single"));
+  CHECK_FALSE(isGesture(""));
+}
+
+TEST_CASE("a shown press is one outline, a double press two and a hold its seconds") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
 
   const auto drawn = [&strip](const char* token) {
-    display.press(token);
-    strip.show(display.take());
+    strip.show(token);
     gardener::gfx::test::canvas.setPixel(4, 20, 255);
     gardener::gfx::test::display.flush();
     return display.frame(display.frameCount() - 1);

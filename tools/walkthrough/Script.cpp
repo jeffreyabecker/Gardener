@@ -157,6 +157,34 @@ bool parseSetNote(const std::string& rest, Command& command, std::string& error)
   return true;
 }
 
+// A show or a clear: the entries the line lists, separated by commas and trimmed. A show needs one,
+// because a line that shows nothing is a line with no command in it; a clear may name none, which is
+// how the file takes every mark away.
+bool parseMarks(const std::string& rest, Command& command, std::string& error) {
+  const bool show = command.verb == Command::Verb::Show;
+  if (rest.empty()) {
+    if (!show) return true;
+    error = "show takes a gesture";
+    return false;
+  }
+
+  size_t start = 0;
+  while (start <= rest.size()) {
+    const size_t comma = rest.find(',', start);
+    const std::string entry =
+        trimmed(rest.substr(start, comma == std::string::npos ? std::string::npos : comma - start));
+    if (entry.empty()) {
+      error = show ? "show takes gestures separated by commas"
+                   : "clear takes buttons separated by commas";
+      return false;
+    }
+    command.marks.push_back(entry);
+    if (comma == std::string::npos) break;
+    start = comma + 1;
+  }
+  return true;
+}
+
 bool parseLine(const std::string& text, int line, Command& command, std::string& error) {
   command = Command();
   command.line = line;
@@ -196,6 +224,14 @@ bool parseLine(const std::string& text, int line, Command& command, std::string&
       return false;
     }
     return true;
+  }
+  if (verb == "show") {
+    command.verb = Command::Verb::Show;
+    return parseMarks(rest, command, error);
+  }
+  if (verb == "clear") {
+    command.verb = Command::Verb::Clear;
+    return parseMarks(rest, command, error);
   }
   if (verb == "emit") {
     command.verb = Command::Verb::Emit;

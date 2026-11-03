@@ -295,9 +295,10 @@ class HarnessSession {
   // The stem the test runner names a per-case GIF from: build/runs.interval.a case.gif.
   void setCaptureStem(const std::string& stem) { captureStem_ = stem; }
   const std::string& captureStem() const { return captureStem_; }
-  // Records a gesture for the buttons across the top of the picture, marked on the next captured
-  // frames. The page takes its presses from routines, so only the picture is told.
-  void pressGesture(const char* gesture);
+  // The marks on the buttons across the top of the picture: what a walk showed and what it cleared,
+  // drawn on every frame captured from now on. A page takes its presses from routines, so only the
+  // picture is told.
+  GestureStrip& gestures() { return gestureStrip_; }
   // Sets the line the band under the glass carries from the next captured frame. Null or empty
   // blanks the band, which is what it is until a walk names one.
   void setNote(const char* text);

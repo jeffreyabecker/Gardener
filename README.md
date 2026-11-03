@@ -95,46 +95,13 @@ python tools/walkthrough/walk.py tools/walkthrough/sample.walk
 python tools/walkthrough/walk.py my.walk --out build/my.gif --delay-cs 20 --scale 3
 ```
 
-The file is one command per line, run top to bottom; a `#` line and a blank line are not commands.
-The whole file is read and every scene resolved before the first frame is drawn, so a misspelt scene
-or a setting key no routine declares fails with a line number rather than a half-written picture.
-
 `sample.walk` is the tour — a run on the home page, the browser over it and a routine launched with a
 set — and the folder holds a walk per subject beside it: `home.walk` for the target stepped, started,
 stopped and resumed; `settings.walk` for the device's own list edited and saved through every row;
 and `settings-cancel.walk` for the same list throwing each change away.
 
-| Command | What it does |
-| --- | --- |
-| `load <scene> [key=value;…]` | the panel back to its root (`home`), the browser, or a routine by key, with settings over the ones its document holds |
-| `send <gesture>` | one gesture, spelled as the panel's classifier spells it — `ok:single`, `up:double`, `cancel:single` |
-| `wait <n> s\|ms` | device time, rounded up to whole 250 ms beats |
-| `set-rate <pull> <vent>` | the model chamber's pull at full duty and its venting rate, in kPa/s |
-| `set-font <design>` | the design every leaf that names no family draws in — `ttyp0`, `profont`, `x11`, `adafruit` |
-| `set-note <text>` | the line a walk writes in the band under the glass, drawn in the built-in face; the rest of the line is the note |
-| `clear-note` | blanks the band again |
-| `emit` | writes the frames as the GIF and ends the walk; it has to be the last line |
-
-The panel's own design is the firmware composition's to set, once on its way up, so a walk that
-wants the device's look names it rather than every page doing so: `set-font ttyp0` is that line, and
-a walk that names no design draws in the library's Adafruit face.
-
-The animation's timing and enlargement are the tool's options, not the file's: `--delay-cs` is how
-long a frame plays — 25, one beat, unless told otherwise, so a walk plays at the speed it was walked
-— and `--scale` how much it is enlarged. `--lead-beats` is how many beats a press is held on the
-picture before the page is handed it: two, half a second, unless told otherwise, so a reader sees the
-button go down and then the panel answer rather than both on one frame; zero lands the press as it is
-marked. `--data` picks the image (default `firmware/data`) and `--ceiling-kpa` the model chamber's
-depth. A `.gif` under `tools/walkthrough/build/` is there for a human to look at, like the check's.
-
-Every frame is the panel's glass inside a dotted border, with the six buttons a panel's user can
-press — up, down, forward, back, OK and cancel — across the top and a band under the glass for a
-note. A press marks the button it names for four frames: one outline for a single, two for a double,
-and the seconds of a hold written under the glyph. A note is the walk's own sentence about the step
-it is drawing, drawn in the built-in face, centred while it fits and clipped at the picture's far
-edge when it is too wide; the band is part of every frame, so clearing a note leaves it empty rather
-than making the picture shorter. The picture is 130 by 100 pixels before `--scale`, and 260 by 200
-at the default of 2.
+[docs/guides/walkthroughs.md](./docs/guides/walkthroughs.md) is the command reference: every verb,
+the gesture spelling, the marks and the note, the picture's layout, and the tool's options.
 
 ## Documentation
 

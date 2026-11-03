@@ -179,8 +179,6 @@ std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
   return costs;
 }
 
-void HarnessSession::pressGesture(const char* gesture) { gestureStrip_.show(gesture); }
-
 void HarnessSession::setNote(const char* text) { noteBand_.set(text); }
 
 int HarnessSession::errorLines() const { return logger_.errors(); }

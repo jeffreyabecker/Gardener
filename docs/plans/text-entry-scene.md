@@ -159,7 +159,10 @@ key is what buys the two rows of letters.
 15. **The cap rides in the declaration's `max`.** `SettingDeclaration` already carries step, min and
     max; a text row puts `min = 0`, `max = cap` — 16 unless the row asks otherwise, and 24 at the
     ceiling, the longest value a setting may hold — so a page reading a routine's record sees the
-    limit without a new record field. The alphabet is the row's own and is not in the declaration.
+    limit without a new record field. The same `max` is what a section narrows through
+    `SettingsRow::limit()`, so an alternate can hold a copy of a routine to fewer characters; the
+    bound is clamped to the ceiling, and a section's `min` has nothing to say to a text row. The
+    alphabet is the row's own and is not in the declaration.
 16. **The scene names its face.** The composition's design is ttyp0 — 10 px line, three lines in the
     band, no fixed advance — so the lattice names the fixed Adafruit face itself, exactly as the hint
     band already does for its marks.
@@ -203,9 +206,9 @@ existing job.
   way. The window the text row shows is worked out as the caret moves, the way a list's visible
   window is (`windowOf` in `ChoiceScene`), so the caret is always on screen.
 - **`panel/settings/SettingsRows.h/.cpp`** — `TextRow : SettingsRow`: `declaration()` names `text`
-  and carries the cap — 16 by default, clamped to 24 — `text()`/`stored()` print and write the
-  string, `parse()` trims and truncates to the cap, `accept()` takes a `String`, `scene()` builds the
-  `TextScene`, `clone()` copies.
+  and carries the cap — 16 by default, clamped to 24 — `limit()` narrows that cap from a section's
+  bound, `text()`/`stored()` print and write the string, `parse()` trims and truncates to the cap,
+  `accept()` takes a `String`, `scene()` builds the `TextScene`, `clone()` copies.
 - **`bindings/Settings.cpp`** — a fifth kind class, `settings.text(key, default, label, limit,
   nullable)`, added to the module's table. The record needs no new field, because the cap is `max`.
 - **`tools/unit/cases/gfx_editors.cpp`** — the scene's cases; **`gfx_scenes.cpp`** — a settings list
@@ -271,8 +274,9 @@ existing job.
   while the ends trim on save; the shifted rows answering the other case; the four arrows moving
   rows and caret; OK typing in the keys and a double there typing twice; OK single and double in
   the text row saving, and `ok:2` saving from a key row; Cancel restoring the opened string; a
-  nullable row answering no value for an empty string; a refused value printing in the hint band and
-  keeping the editor open; and the drawn numbers — 21 columns of 6 px on the text row, 17 in the key
+  section's bound narrowing a copy's cap; a nullable row answering no value for an empty string; a
+  refused value printing in the hint band and keeping the editor open; and the drawn numbers — 21
+  columns of 6 px on the text row, 17 in the key
   block inset 13 px each side, the keys' own boxes at absolute positions (`a` at (13, 19), the space
   at (37, 35) and 36 px wide, `DEL` at (73, 35) and 18 px wide), the rule's ink in row 17, the
   inversion at the caret and at the key cursor, the title's `5/24`.

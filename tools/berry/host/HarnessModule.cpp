@@ -28,7 +28,6 @@ int harnessPress(bvm* vm) {
     be_raise(vm, "type_error", "harness.press(gesture)");
   }
   const char* gesture = be_tostring(vm, 1);
-  session->pressGesture(gesture);
   session->routines().pushPress(gesture);
   be_return_nil(vm);
 }

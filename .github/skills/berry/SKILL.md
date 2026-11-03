@@ -51,16 +51,18 @@ plus `tests/*.test.be` for the named suites.
 `--scene browser` and `--scene system` draw the device's own well-known scenes. The output is an
 animated GIF — one frame per flushed beat, each held a second by `GifDelayCs`, enlarged 2 x by
 `RenderScale` — whose picture is the glass inside a dotted border, with the six buttons a panel's
-user can press across the top: a press leaves one outline for a single, two for a double and the
-seconds of a hold under the glyph, for as many frames as `GestureStrip::Frames` says. The frame, the
-border and the bar are one set of measurements in `CapturePicture`, and the buttons and the border are
+user can press across the top and the band under the glass a note is drawn in. The buttons carry only
+what a walkthrough's `show` line marks: one outline for a single, two for a double and the seconds of
+a hold under the glyph, standing until a `clear` line takes the mark away. The frame, the border and
+the bar are one set of measurements in `CapturePicture`, and the buttons, the border and the band are
 components the harness hands the capture, so what a host draws beside the picture never covers what
 the page drew. A suite's captures hash the overlay instead of drawing the device's status row, so the
 page the case drove reads as the whole picture.
 
 A walk longer than one `--art` runs is scripted instead, as a command file driven by
 [tools/walkthrough](../../../tools/walkthrough): a load, the gestures, the waits, the model
-chamber's rates and an emit, with the GIF's own timing an option. Its verbs are in the README.
+chamber's rates, the notes, the button marks and an emit, with the GIF's own timing an option. Its
+verbs are in the README.
 
 Nothing in a run reads a capture back, and nothing it prints describes one: a `.gif` under
 `tools/berry/build/` or `tools/berry/artifacts/` is there for a human to look at. Do not convert

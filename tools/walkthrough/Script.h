@@ -12,7 +12,18 @@ namespace gardener::walkthrough {
 // walk is the list of them, run top to bottom, so the file says what is drawn and the tool only
 // drives what it says.
 struct Command {
-  enum class Verb : uint8_t { Load, Send, Wait, SetRate, SetFont, SetNote, ClearNote, Emit };
+  enum class Verb : uint8_t {
+    Load,
+    Send,
+    Wait,
+    SetRate,
+    SetFont,
+    SetNote,
+    ClearNote,
+    Show,
+    Clear,
+    Emit
+  };
 
   Verb verb = Verb::Emit;
   // The line it was read from, which every error about it names.
@@ -40,6 +51,10 @@ struct Command {
   // A set-note: the line the band under the glass carries, as the file wrote it. It is the walk's
   // own prose, so it takes no quoting and nothing in it is a key or an argument.
   std::string note;
+
+  // A show or a clear: the gestures or the button names the line lists, each trimmed, in the order
+  // the file wrote them. A clear with none lists nothing, which is every button.
+  std::vector<std::string> marks;
 };
 
 // Reads a whole walkthrough file into its commands, in order. A blank line and a `#` line are not

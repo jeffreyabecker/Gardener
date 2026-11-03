@@ -23,9 +23,11 @@ listing them anywhere is forbidden
 
 ## Guides
 
-User-facing build and parts documentation.
+User-facing build, parts and tool documentation.
 
 - [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy, what it costs and
   how it is wired
+- [Panel walkthroughs](./guides/walkthroughs.md) — a command file that drives the panel on the host
+  and writes it as a GIF
 
 See the [project README](../README.md) for the build and upload flow and the safety notes.

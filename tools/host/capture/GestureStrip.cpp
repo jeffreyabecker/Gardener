@@ -1,7 +1,9 @@
 #include "GestureStrip.h"
 
 #include <cstdio>
+#include <cstring>
 #include <string>
+#include <vector>
 
 #include "Canvas.h"
 #include "CellText.h"
@@ -39,47 +41,64 @@ bool isCount(const std::string& form) {
   return form.find_first_not_of("0123456789") == std::string::npos;
 }
 
-}  // namespace
+// The button a name stands for, or -1 when the panel has none.
+int16_t buttonIndex(const char* name) {
+  if (name == nullptr) return -1;
+  for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
+    if (strcmp(name, Keys[button].name) == 0) return button;
+  }
+  return -1;
+}
 
-void GestureStrip::show(const char* gesture) {
-  for (Mark& mark : marks_)
-    mark = Mark();
-  frames_ = 0;
-  if (gesture == nullptr || gesture[0] == '\0') return;
-
-  // A token is one key:form or several joined with '+', which is how the panel names a chord.
-  const std::string token(gesture);
+// The keys a gesture names: one, or several joined with '+', which is how the panel spells a chord.
+// A '+' with nothing after it names an empty key, which no button answers to.
+std::vector<std::string> gestureKeys(const std::string& gesture) {
+  std::vector<std::string> keys;
   size_t start = 0;
-  while (start < token.size()) {
-    const size_t plus = token.find('+', start);
-    const std::string part =
-        token.substr(start, plus == std::string::npos ? std::string::npos : plus - start);
-    const size_t colon = part.find(':');
-    mark(part.substr(0, colon),
-         colon == std::string::npos ? std::string() : part.substr(colon + 1));
+  for (;;) {
+    const size_t plus = gesture.find('+', start);
+    keys.push_back(
+        gesture.substr(start, plus == std::string::npos ? std::string::npos : plus - start));
     if (plus == std::string::npos) break;
     start = plus + 1;
   }
-  frames_ = Frames;
+  return keys;
 }
 
-void GestureStrip::mark(const std::string& key, const std::string& form) {
-  for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
-    if (key != Keys[button].name) continue;
-    Mark& state = marks_[button];
+}  // namespace
+
+void GestureStrip::show(const char* gesture) {
+  if (gesture == nullptr) return;
+  for (const std::string& key : gestureKeys(gesture)) {
+    const size_t colon = key.find(':');
+    const int16_t button = buttonIndex(key.substr(0, colon).c_str());
+    if (button < 0) continue;
+
+    const std::string form = colon == std::string::npos ? std::string() : key.substr(colon + 1);
+    Mark& mark = marks_[button];
+    mark = Mark();
     if (form == "double") {
-      state.outlines = 2;
+      mark.outlines = 2;
     } else if (isCount(form)) {
       // Two digits of seconds is as much as the columns beside a two-glyph label hold, and a hold
       // longer than that is not what a walkthrough has to show.
       const int seconds = std::stoi(form);
-      state.outlines = 1;
-      state.seconds = static_cast<int8_t>(seconds > 99 ? 99 : seconds);
+      mark.outlines = 1;
+      mark.seconds = static_cast<int8_t>(seconds > 99 ? 99 : seconds);
     } else {
-      state.outlines = 1;
+      mark.outlines = 1;
     }
-    return;
   }
+}
+
+void GestureStrip::clear(const char* button) {
+  const int16_t index = buttonIndex(button);
+  if (index >= 0) marks_[index] = Mark();
+}
+
+void GestureStrip::clearAll() {
+  for (Mark& mark : marks_)
+    mark = Mark();
 }
 
 CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
@@ -88,11 +107,10 @@ CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
 }
 
 void GestureStrip::draw(gfx::Canvas& canvas) {
-  // The buttons are part of the picture whether or not anything is pressed; only the marks a press
-  // leaves are what the frames run out.
-  const Mark noMark;
+  // The buttons are part of the picture whether or not they are marked; a mark stands until a clear
+  // takes it away, so nothing here runs down.
   for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
-    const Mark& mark = frames_ > 0 ? marks_[button] : noMark;
+    const Mark& mark = marks_[button];
     const int16_t left = static_cast<int16_t>(button * CapturePicture::ButtonWidth);
     const Key& key = Keys[button];
     // A hold's number goes under the glyph, so what the button shows sits a row higher when there
@@ -130,8 +148,16 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
                                  static_cast<int16_t>(CapturePicture::ButtonHeight - 4), gfx::Ink));
     }
   }
+}
 
-  if (frames_ > 0) frames_--;
+bool isButton(const char* name) { return buttonIndex(name) >= 0; }
+
+bool isGesture(const char* gesture) {
+  if (gesture == nullptr || gesture[0] == '\0') return false;
+  for (const std::string& key : gestureKeys(gesture)) {
+    if (buttonIndex(key.substr(0, key.find(':')).c_str()) < 0) return false;
+  }
+  return true;
 }
 
 }  // namespace gardener

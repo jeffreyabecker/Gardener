@@ -4,8 +4,8 @@
 // The tool writes no Berry. `load` and `send` are the calls a launch and a press already take — the
 // registry and the stack for a page, the press queue for a gesture — and the verbs that are not the
 // page's are the host's: a wait is beats of the session, a rate is the chamber's model, a font is
-// the design a leaf that names no family draws in, a note is the band under the glass, and an emit
-// is the capture written.
+// the design a leaf that names no family draws in, a note is the band under the glass, a show and a
+// clear are the marks on the buttons, and an emit is the capture written.
 //
 // The whole file is read before anything is drawn, and every load and font is resolved against the
 // image before the first frame is captured, so a misspelled scene, an unknown routine, a setting
@@ -267,19 +267,30 @@ int hostMain(int argc, char** argv) {
   // Every load is resolved before the capture is armed: a scene the image does not hold, a key the
   // registry does not know and a setting nobody declared all fail with nothing on disk. A font is
   // resolved here for the same reason — a design nothing answers for is a line number rather than a
-  // picture drawn in whatever the name fell back to.
+  // picture drawn in whatever the name fell back to — and so is a mark, whose name is a button the
+  // panel either has or has not.
   std::vector<Target> targets(commands.size());
   for (size_t i = 0; i < commands.size(); i++) {
-    if (commands[i].verb == Command::Verb::SetFont) {
-      if (gardener::gfx::findFamily(commands[i].font.c_str()) == nullptr) {
-        printf("[E] line %d: no font '%s'\n", commands[i].line, commands[i].font.c_str());
+    const Command& command = commands[i];
+    if (command.verb == Command::Verb::SetFont) {
+      if (gardener::gfx::findFamily(command.font.c_str()) == nullptr) {
+        printf("[E] line %d: no font '%s'\n", command.line, command.font.c_str());
         return 2;
       }
       continue;
     }
-    if (commands[i].verb != Command::Verb::Load) continue;
-    if (!resolve(commands[i], session, targets[i], error)) {
-      printf("[E] line %d: %s\n", commands[i].line, error.c_str());
+    if (command.verb == Command::Verb::Show || command.verb == Command::Verb::Clear) {
+      const bool show = command.verb == Command::Verb::Show;
+      for (const std::string& mark : command.marks) {
+        if (show ? gardener::isGesture(mark.c_str()) : gardener::isButton(mark.c_str())) continue;
+        printf("[E] line %d: no button '%s'\n", command.line, mark.c_str());
+        return 2;
+      }
+      continue;
+    }
+    if (command.verb != Command::Verb::Load) continue;
+    if (!resolve(command, session, targets[i], error)) {
+      printf("[E] line %d: %s\n", command.line, error.c_str());
       return 2;
     }
   }
@@ -299,10 +310,9 @@ int hostMain(int argc, char** argv) {
         }
         break;
       case Command::Verb::Send:
-        // The picture shows the press first and the page is handed it afterwards: the beats between
-        // them are the frames a reader sees the button held on, and the page has nothing to answer
-        // until the queue takes it.
-        session.pressGesture(command.gesture.c_str());
+        // The press is held on the picture before the page is handed it: the beats between them are
+        // the frames a reader sees the button down, which a show before this line has marked, and
+        // the page has nothing to answer until the queue takes it.
         session.beat(leadBeats);
         session.routines().pushPress(String(command.gesture.c_str()));
         break;
@@ -324,6 +334,20 @@ int hostMain(int argc, char** argv) {
         break;
       case Command::Verb::ClearNote:
         session.setNote(nullptr);
+        break;
+      case Command::Verb::Show:
+        // A mark is state the picture redraws every frame, so it lands on the next frame and stands
+        // there until a clear takes it away.
+        for (const std::string& gesture : command.marks)
+          session.gestures().show(gesture.c_str());
+        break;
+      case Command::Verb::Clear:
+        if (command.marks.empty()) {
+          session.gestures().clearAll();
+          break;
+        }
+        for (const std::string& button : command.marks)
+          session.gestures().clear(button.c_str());
         break;
       case Command::Verb::Emit:
         break;
