@@ -73,7 +73,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       neither `"wrap"` nor `"clamp"`, and an alignment word that names no justification raise, and a
       pushed page that draws the list inks the selected row's whole cell. A `[key, "Title"]` pair and
       a `[key, "Title", icon]` pair draw the title and the mark the helpers build.
-- [ ] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
+- [x] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
       constructs `RowList(8, pairs, key, "wrap")`; `handle()` nudges, `selected_row()` reads
       `getSelectedValue()`, and `draw_page()` answers `self.list.draw()`. `browser_chrome()`,
       `step()`, `first()` and `VISIBLE` go. `browser.test.be` reads the page through the wrapper and

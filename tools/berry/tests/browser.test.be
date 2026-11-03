@@ -1,6 +1,6 @@
-# browser.test.be — the routine browser: the rows it reads from the registry, the window it shows them
-# through, and the three ways a row is used — launched, edited and left. The browser is the only page
-# that launches a routine, so the stack it moves is read here rather than in a page's suite.
+# browser.test.be — the routine browser: the rows it hands the list, the keys that move it, and the
+# three ways a row is used — launched, edited and left. The browser is the only page that launches a
+# routine, so the stack it moves is read here rather than in a page's suite.
 
 suite = "browser"
 
@@ -12,15 +12,10 @@ def opened()
   return ux.top()
 end
 
-# The rows the browser is showing, in the order the window draws them: the list is the chrome's first
-# node and every line of it is a [bounds, draw] pair.
-def shown_rows(browser)
-  var list = child_at(browser.draw_page(), 0)
-  var rows = []
-  for line : list.children
-    rows.push(line[1])
-  end
-  return rows
+# The title a row's draw carries: the last of the cells the row was built from, the icon's if it has
+# one and the title's own otherwise.
+def title_of(row)
+  return child_at(row, row.children.size() - 1).value
 end
 
 def the_rows_are_the_registrys()
@@ -29,48 +24,42 @@ def the_rows_are_the_registrys()
 
   var listed = routines.rows()
   assert_eq(browser.rows.size(), listed.size(), "the browser does not show every row")
+  assert_eq(browser.list.rows.size(), listed.size(), "the list does not hold every row")
   var i = 0
   while i < listed.size()
-    assert_eq(browser.rows[i].value, listed[i].value, "a browser row stands for another routine")
-    assert_eq(browser.rows[i].title, listed[i].title, "a browser row carries another title")
+    var pair = browser.list.rows[i]
+    assert_eq(pair[0], listed[i].value, "a list row stands for another routine")
+    assert_eq(pair[1].kind, "row", "a list row is not drawn as a row")
+    assert_eq(title_of(pair[1]), listed[i].title, "a list row carries another title")
     i += 1
   end
 end
 
 test("the browser shows the rows the registry answers", the_rows_are_the_registrys)
 
-def only_the_selected_row_is_inverted()
+def the_keys_move_the_row_the_list_shows()
   var browser = opened()
+  var first = browser.list.getSelectedValue()
+  assert_eq(first, browser.rows[0].value, "the list did not open on the first row")
+
   harness.press("down:single")
   harness.beat(1)
+  assert_eq(browser.list.getSelectedValue(), browser.rows[1].value,
+            "Down did not move the list to the second row")
+  assert_eq(browser.selected_row().value, browser.rows[1].value,
+            "the row the browser reads is not the one the list shows")
 
-  var rows = shown_rows(browser)
-  var i = 0
-  while i < rows.size()
-    var expected = i == browser.selected ? "inverted" : "row"
-    assert_eq(rows[i].kind, expected, "row " + str(i) + " is drawn " + rows[i].kind)
-    i += 1
-  end
-end
-
-test("the selected row is inverted and no other", only_the_selected_row_is_inverted)
-
-def the_window_carries_its_first_row_past_the_bottom_edge()
-  var browser = opened()
-  # The selection on the first row the window cannot show, which is where the window has to move. It is
-  # set rather than pressed to: the image registers fewer routines than the window is tall.
-  browser.selected = BrowserScene.VISIBLE
+  harness.press("up:single")
   harness.beat(1)
-  assert_eq(browser.first(), 1, "the window did not carry its first row")
+  assert_eq(browser.list.getSelectedValue(), first, "Up did not move the list back")
 
-  var rows = shown_rows(browser)
-  var top = rows[0]
-  var drawn = top.kind == "inverted" ? child_at(top.child, 1) : child_at(top, 1)
-  assert_eq(drawn.value, browser.rows[1].title, "the window's first row is not the second routine")
+  # The page is the list's node, naming the instance the browser builds it with.
+  var tree = browser.draw_page()
+  assert_eq(tree.kind, "row_list", "the browser does not draw a row list")
+  assert_eq(tree.list, browser.list, "the browser draws another list")
 end
 
-test("the window carries its first row past the bottom edge",
-     the_window_carries_its_first_row_past_the_bottom_edge)
+test("the keys move the row the list shows", the_keys_move_the_row_the_list_shows)
 
 def ok_launches_the_row_it_stands_on()
   var browser = opened()
