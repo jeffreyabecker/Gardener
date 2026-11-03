@@ -54,15 +54,21 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 - [ ] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
       comobj that owns the model and `.rows` for the page's pairs; `init(row_height, rows, selected,
-      wrap)` walks each pair's draw through a new `paintFromTree()` export, resolves the selected
-      value and builds the model, and `nudge`, `getSelectedValue` and `draw()` answer through it.
-      `draw()` answers a `row_list` record with the instance in a new `list` field, and `DrawTree`
-      answers it with a callable that calls `list->draw(canvas)`. `installRowListClass()` runs in
-      `BerryInterpreter` with the modules. `python tools/berry/check.py` loads the image.
+      wrap)` resolves the selected value and builds the model, and `nudge`, `getSelectedValue` and
+      `draw()` answer through it. A pair's draw is walked through a new `paintFromTree()` export, or,
+      when it is a string, is the title of a row built by `RowList::textRow(value, title)`, with an
+      optional third element naming a bitmap printed in the columns before it and an optional fourth
+      naming the alignment as `"start"`, `"center"` or `"end"`; an icon that names no bitmap leaves
+      the title alone, as the helper does. `draw()` answers a `row_list` record with the instance in
+      a new `list` field, and `DrawTree` answers it with a callable that calls `list->draw(canvas)`.
+      `installRowListClass()` runs in `BerryInterpreter` with the modules.
+      `python tools/berry/check.py` loads the image.
 - [ ] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
       rest: `RowList(...)`, `nudge` and `getSelectedValue` agree with the model, a `nil` selection
-      answers nil, a row that is not a pair or a wrap word that is neither `"wrap"` nor `"clamp"`
-      raises, and a pushed page that draws the list inks the selected row's whole cell.
+      answers nil, a row that is not a pair, a title that is not a string, a wrap word that is
+      neither `"wrap"` nor `"clamp"`, and an alignment word that names no justification raise, and a
+      pushed page that draws the list inks the selected row's whole cell. A `[key, "Title"]` pair and
+      a `[key, "Title", icon]` pair draw the title and the mark the helpers build.
 - [ ] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
       constructs `RowList(8, pairs, key, "wrap")`; `handle()` nudges, `selected_row()` reads
       `getSelectedValue()`, and `draw_page()` answers `self.list.draw()`. `browser_chrome()`,

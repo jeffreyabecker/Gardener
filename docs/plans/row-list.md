@@ -106,15 +106,19 @@ its one spelling.
 
 | call | what it does |
 | --- | --- |
-| `RowList(row_height, rows, selected, wrap)` | unpacks the four, walks each pair's draw into a paint, resolves `selected`, builds the model in the comobj, keeps `rows` on the instance |
+| `RowList(row_height, rows, selected, wrap)` | unpacks the four, walks each pair's draw into a paint or builds its title row through `textRow`, resolves `selected`, builds the model in the comobj, keeps `rows` on the instance |
 | `nudge(direction)` | calls the model and answers its bool |
 | `getSelectedValue()` | the selected value, or `nil` when no row is current |
 | `draw()` | a `draw` record naming the instance, which the walk draws by calling the list's `draw()` |
 
 `rows` is the ordered list of `[value, draw]` pairs a page builds — the browser hands
-`[routine_key, screen.row(nil, cells)]`. The value is a string, because the keys the pages select by
-are strings; a row that is not a pair, a value that is not a string, a `row_height` below one, and a
-`wrap` that is neither `"wrap"` nor `"clamp"` are refused at the call.
+`[routine_key, screen.row(nil, cells)]`. A pair whose draw is a string is a title row instead, built
+by `RowList::textRow(value, title)`: the pair's third element names a bitmap printed in the columns
+before the title, the fourth the alignment's word — `"start"`, `"center"` or `"end"`. A bitmap that
+names no mark leaves the title alone, which is the helper's own fallback. The value is a string,
+because the keys the pages select by are strings; a row that is not a pair, a value or a title that
+is not a string, a `row_height` below one, a wrap word that is neither `"wrap"` nor `"clamp"`, and an
+alignment word the vocabulary does not hold are refused at the call.
 
 The instance keeps the page's pairs in `.rows` for as long as it lives, so the strings a row's paint
 borrows stay where the interpreter put them. The walk that turns one pair's draw into a paint is the
