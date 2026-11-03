@@ -29,6 +29,14 @@ class RowList {
     gfx::PaintNodeRef paint;
   };
 
+  // The row a title is: the text across the whole cell, placed by `horizontal`.
+  static Row textRow(String value, String title, gfx::Justify horizontal = gfx::Justify::Center);
+
+  // The same with a mark in the columns before the title, centred down the row. A string that names
+  // no bitmap draws the title alone, across the whole cell.
+  static Row textRow(String value, String title, const String& icon,
+                     gfx::Justify horizontal = gfx::Justify::Center);
+
   RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap);
 
   // Moves one row in the direction's sign, -1 up and 1 down, and answers whether the current row

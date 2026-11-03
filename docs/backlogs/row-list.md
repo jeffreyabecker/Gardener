@@ -25,6 +25,11 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       a three-row list takes the full width and draws no bar; a list that outgrows the band gives its
       rows up four pixels and inks the bar's two-pixel column; a five-pixel band draws one clipped
       row; the rows sit where the caller's justification puts them.
+- [x] **The row builders.** `RowList::textRow(value, title, horizontal)` and
+      `textRow(value, title, icon, horizontal)` build the two rows a scene draws: a title placed
+      across the cell, and a mark in its own columns before it, centred down the row, with a string
+      that names no bitmap falling back to the title alone. Cases in
+      `tools/unit/cases/row_list.cpp` read the value, the title's alignment and the mark's columns.
 
 ## Epic 2 — the scenes on it
 

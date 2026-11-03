@@ -2,10 +2,30 @@
 
 #include <utility>
 
+#include "Bitmap.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 
 namespace gardener {
+
+RowList::Row RowList::textRow(String value, String title, gfx::Justify horizontal) {
+  return Row{std::move(value), gfx::text(std::move(title), nullptr, horizontal)};
+}
+
+RowList::Row RowList::textRow(String value, String title, const String& icon,
+                              gfx::Justify horizontal) {
+  const gfx::Size mark = gfx::bitmapSize(icon.c_str());
+  if (mark.width <= 0 || mark.height <= 0) {
+    return textRow(std::move(value), std::move(title), horizontal);
+  }
+  // The mark is placed by the cell's own height rather than by a number the helper would need to be
+  // told, and the title starts where the mark's columns end.
+  return Row{std::move(value),
+             gfx::group(gfx::aligned(gfx::sized(gfx::icon(gfx::Box::whole(), icon.c_str()), mark),
+                                     gfx::Justify::Start, gfx::Justify::Center),
+                        gfx::text(gfx::Box(mark.width, 0, 0, 0, true, true), std::move(title),
+                                  nullptr, horizontal))};
+}
 
 RowList::RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap)
     : rowHeight_(rowHeight), rows_(std::move(rows)), selected_(selected), wrap_(wrap) {}

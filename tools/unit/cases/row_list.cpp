@@ -40,6 +40,9 @@ std::vector<RowList::Row> sevenRows() {
   return inkRows({"r0", "r1", "r2", "r3", "r4", "r5", "r6"});
 }
 
+// A four-by-four bitmap of one ink pixel in its top-left corner, which is the corner a row places.
+const char* CornerMark = "04040080000000";
+
 // A band `lines` rows tall across the panel, which is what a scene hands the list.
 View band(int16_t lines) {
   return canvas.child(Rect(0, 0, PageWidth, static_cast<int16_t>(lines * RowHeight)));
@@ -210,6 +213,75 @@ TEST_CASE("a row list fills the cell of the row it inverts") {
   CHECK(display.inkCount(0, 0, PageWidth, RowHeight) < PageWidth * RowHeight / 4);
   CHECK(display.inkCount(0, RowHeight, PageWidth, RowHeight) > PageWidth * RowHeight * 3 / 4);
   CHECK(display.inkCount(0, 2 * RowHeight, PageWidth, RowHeight) < PageWidth * RowHeight / 4);
+}
+
+// --- the builders -----------------------------------------------------------
+
+TEST_CASE("a text row carries its value and draws its title") {
+  RowList::Row row = RowList::textRow("key", "A");
+  CHECK_EQ(std::string(row.value.c_str()), std::string("key"));
+  REQUIRE(row.paint != nullptr);
+  reset();
+  View view = band(1);
+  row.paint->draw(view);
+  CHECK(display.anyInk(0, 0, PageWidth, RowHeight));
+}
+
+TEST_CASE("a text row places its title by the alignment it is given") {
+  reset();
+  View view = band(1);
+  RowList::Row start = RowList::textRow("key", "A", Justify::Start);
+  start.paint->draw(view);
+  CHECK(display.anyInk(0, 0, 8, RowHeight));
+  CHECK_EQ(display.inkCount(PageWidth / 2, 0, PageWidth / 2, RowHeight), 0);
+
+  reset();
+  RowList::Row centre = RowList::textRow("key", "A");
+  centre.paint->draw(view);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth / 4, RowHeight), 0);
+  CHECK(display.anyInk(PageWidth / 2 - 6, 0, 12, RowHeight));
+
+  reset();
+  RowList::Row end = RowList::textRow("key", "A", Justify::End);
+  end.paint->draw(view);
+  CHECK(display.anyInk(PageWidth - 8, 0, 8, RowHeight));
+  CHECK_EQ(display.inkCount(0, 0, PageWidth / 2, RowHeight), 0);
+}
+
+TEST_CASE("an icon row draws its mark before its title") {
+  RowList::Row row = RowList::textRow("key", "A", CornerMark);
+  CHECK_EQ(std::string(row.value.c_str()), std::string("key"));
+  reset();
+  View view = band(1);
+  row.paint->draw(view);
+
+  // The mark takes the four columns it names, centred down the eight-row cell, and the title inks
+  // the columns after it.
+  CHECK_EQ(display.inkCount(0, 0, 4, RowHeight), 1);
+  CHECK(display.anyInk(0, 2, 1, 1));
+  CHECK(display.anyInk(4, 0, PageWidth - 4, RowHeight));
+}
+
+TEST_CASE("an icon row places its title by the alignment it is given") {
+  RowList::Row left = RowList::textRow("key", "TITLE", CornerMark, Justify::Start);
+  reset();
+  View view = band(1);
+  left.paint->draw(view);
+  CHECK(display.anyInk(4, 0, 8, RowHeight));
+  CHECK_EQ(display.inkCount(PageWidth / 2, 0, PageWidth / 2, RowHeight), 0);
+}
+
+TEST_CASE("an icon that names no bitmap draws the title alone") {
+  RowList::Row plain = RowList::textRow("key", "A");
+  RowList::Row broken = RowList::textRow("key", "A", "not a bitmap");
+  reset();
+  View view = band(1);
+  plain.paint->draw(view);
+  const int plainInk = display.inkCount(0, 0, PageWidth, RowHeight);
+  reset();
+  broken.paint->draw(view);
+  CHECK(plainInk > 0);
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, RowHeight), plainInk);
 }
 
 }  // namespace gardener::gfx::test
