@@ -3,8 +3,8 @@
 A list component for the panel, written in C++ and exposed to the image as a Berry class. It is built
 from a row height, an ordered list of `value:paint` entries, the selected value and a wrap mode, and
 it answers `nudge(direction)` and `getSelectedValue()`. It owns the window a band shows, the inverted
-row and the scrollbar. It is not a scene: a scene keeps the gesture and the values, and the list keeps
-the arithmetic and the drawing.
+row and the scrollbar, and draws them into the canvas a scene hands it. It is not a scene: a scene
+keeps the gesture and the values, and the list keeps the arithmetic and the drawing.
 
 ## What is wrong now, and where
 
@@ -21,16 +21,23 @@ the rows up `gfx::ScrollbarColumn` (four pixels) and draws a hollow bar two pixe
 pixels at the top and bottom. The rows, the window and the inversion agree in the two; the bar does
 not.
 
-So the tree has two implementations of one behaviour in two languages, and the only thing keeping
-them together is that nobody has changed one since. The browser's suite reads through the copy it
-has — `browser.selected`, `browser.first()`, `BrowserScene.VISIBLE` — because there is no boundary to
-read it through.
+The choice editor writes a third. [`ChoiceScene::pageContents()`](../../libraries/Gardener/src/panel/settings/ChoiceScene.cpp)
+computes its own `Window` from the band's height and the face's shortest line, inverts the entry
+showing, centres the block, and builds the bar from its own `BarWidth` and `BarInset`. Its numbers
+agree with the band's — four columns given up, `Box(2, 2, 2, height - 4)`, hollow — and its window is
+the same rule; what differs is the centred block and the `--` row a nullable setting shows while it
+holds nothing.
+
+So the tree has three implementations of one behaviour, and the only thing keeping them together is
+that nobody has changed one since. The browser's suite reads through the copy it has —
+`browser.selected`, `browser.first()`, `BrowserScene.VISIBLE` — because there is no boundary to read
+it through.
 
 ## The shape of the change
 
-One model in C++, reached from a page through a wrapper class. The settings list and the browser then
-use the one arithmetic, and a row's picture stays the caller's: a settings line rebuilt from the
-value it holds, or a page's own `screen` record walked from the image.
+One model in C++, reached from a page through a wrapper class. The settings list, the choice editor
+and the browser then use the one arithmetic, and a row's picture stays the caller's: a settings line
+rebuilt from the value it holds, or a page's own `screen` record walked from the image.
 
 ### The model
 
@@ -52,7 +59,7 @@ class RowList {
   const String& selected() const;
   int16_t current() const;                       // the row's index, or -1
 
-  gfx::PaintNodeRef band(int16_t width, int16_t height) const;
+  void draw(gfx::Canvas& canvas, gfx::Justify along = gfx::Justify::Start) const;
 };
 ```
 
@@ -72,20 +79,22 @@ The rules it holds:
 6. The window's first row is 0 when the current row is in the first `visible`, otherwise
    `current - visible + 1`. It is derived on every draw; nothing remembers a scroll.
 7. Only the current row is drawn through `gfx::inverted`, and it fills the row's cell.
-8. The bar is drawn only when the rows outnumber the window. The rows then give up
-   `gfx::ScrollbarColumn`, and the bar is `gfx::scrollbar(Box(2, 2, 2, height - 4), first, count,
-   visible, true)` — two pixels wide, inset two pixels at both ends, hollow.
-9. A list shorter than its band draws from the top and leaves the rest of the band empty.
-10. The band is one `gfx::row`: the rows column, and the bar as a second child when it shows. The
-    caller draws what it gets into the box it measured.
+8. The bar is drawn only when the rows outnumber the window, with
+   `gfx::drawScrollbar(canvas, first, count, visible)` after the rows: the rows give up
+   `gfx::ScrollbarColumn`, and the bar is hollow, two pixels wide and inset two at both ends.
+9. A list shorter than its band leaves the spare rows where the caller's justification puts them:
+   the browser and the settings list start at the top, the choice editor centres its block.
+10. `draw()` asks the canvas for its size and draws into it: there is no box to pass and no tree to
+    return. The list is not a paint node; a scene holds it and calls it.
 
 A held paint is drawn as often as the band is: `PaintNode::draw()` is const and leaves the node where
 it was, so `std::vector<gfx::PaintNodeRef>` is a fine thing for the model to own. The one operation
 that cannot use a held node is the highlight, because `gfx::inverted()` takes its child by value and
-owns it. The model therefore draws the current row through a borrowed paint:
-`gfx::inverted(gfx::borrowed(*rows_[current_].paint))`. `borrowed()` is the one addition to Gfx — a
-node that draws one it does not own and leaves it alive, the ownership counterpart of `borrowedText`
-— and it has no `screen` call, because a page holds no paints to lend.
+owns it. The model therefore draws the current row into its cell as
+`gfx::inverted(gfx::borrowed(*rows_[current_].paint))->draw(cell)`, and every other row as
+`rows_[at].paint->draw(cell)`. `borrowed()` is the one addition to Gfx — a node that draws one it does
+not own and leaves it alive, the ownership counterpart of `borrowedText` — and it has no `screen`
+call, because a page holds no paints to lend.
 
 ### The class a page uses
 
@@ -100,7 +109,7 @@ node that draws one it does not own and leaves it alive, the ownership counterpa
 | `RowList(row_height, rows, selected, wrap)` | unpacks the four, walks each pair's draw into a paint, resolves `selected`, builds the model in the comobj, keeps `rows` on the instance |
 | `nudge(direction)` | calls the model and answers its bool |
 | `getSelectedValue()` | the selected value, or `nil` when no row is current |
-| `draw(width, height)` | a `draw` record the page places in its tree |
+| `draw()` | a `draw` record naming the instance, which the walk draws by calling the list's `draw()` |
 
 `rows` is the ordered list of `[value, draw]` pairs a page builds — the browser hands
 `[routine_key, screen.row(nil, cells)]`. The value is a string, because the keys the pages select by
@@ -117,31 +126,40 @@ record carries the instance, not a copy of anything.
 
 ### The node the page draws
 
-`draw(width, height)` answers a `draw` record with `kind = "row_list"`, the instance in a new `list`
-field, and `w`/`h` in pixels: `self.list.draw(screen.width(), ux.overlay_start())` is a browser page
-that is its band.
+A page has no canvas to hand a component, so its `draw()` answers a `draw` record with
+`kind = "row_list"` and the instance in a new `list` field. `self.list.draw()` is the browser's whole
+page when the tree gives the node the page.
 
 [`DrawTree`](../../libraries/Gardener/src/bindings/DrawTree.cpp) learns the kind: it reads the handle
-and the two numbers and returns `list->band(width, height)`. The result is the ordinary tree of a
-`row`, a `column`, an `inverted` row and a `scrollbar`, so the panel draws a list with what it
-already knows. A missing handle, or a node whose `w` or `h` is not a number, draws nothing rather
-than raising.
+and returns `gfx::callable([list](gfx::Canvas& canvas) { list->draw(canvas); })`. The node is drawn by
+the same method a C++ scene calls outright — the one paint is the callable the walk makes, not the
+list. A missing handle draws nothing rather than raising.
 
 The kind is a panel factory, like `pressure_readout`: the vocabulary's rule is that a `screen` call
-answers a gfx factory, and this node answers the panel's own list composition. It is the only place
-in the change that the drawing vocabulary grows.
+answers a gfx factory, and this node answers the panel's own list drawing. It is the only place in
+the change that the drawing vocabulary grows.
 
 ### The settings list on top of it
 
 `SettingsScene` keeps its heading, its values and its editors, and gives up the arithmetic: the
 `selected_` index becomes a `RowList` built from the visible rows, `move()` calls `nudge()`,
-`selected()` answers `current()`, and `drawPage()` draws `list_->band(band.width(), band.height())`
-into the band under the heading. `open()` reads `current()`.
+`selected()` answers `current()`, and `drawPage()` draws the band under the heading by calling
+`list_->draw(band)`. `open()` reads `current()`.
 
 The list is built in the constructor and again when an editor hands a value back — the one moment a
 row's text moves — with the key of the row the keys are on as its selection, so the row survives the
 rebuild. A rebuild is a vector of rows and their paints, a few Strings either way, and it costs less
 than the row text the draw writes on every beat today.
+
+### The choice editor on top of it
+
+`ChoiceScene` keeps its items, its nullable rule and its `--` row, and gives up `windowOf()`,
+`BarWidth`, `BarInset` and the row loop. The items become rows of key and title; `nudge()` keeps the
+nullable ends around `RowList::nudge()` — Up at the first clears a nullable value, Down from nothing
+enters the first; `index()` and `text()` read `current()`; and `pageContents()` answers
+`gfx::callable([this](gfx::Canvas& canvas) { list_.draw(canvas, gfx::Justify::Center); … })` while an
+entry is showing, and draws the `--` row in that same call when none is. A key no entry names selects
+the first entry, as the editor does today.
 
 ### The browser on top of it
 
@@ -150,14 +168,20 @@ than the row text the draw writes on every beat today.
 where `key` is the first row's value on the first build and the previous `getSelectedValue()` on a
 rebuild. `selected_row()` finds the registry row whose value is `getSelectedValue()`. `handle()`
 answers up and down with `self.list.nudge(-1)` and `self.list.nudge(1)`. `draw_page()` answers
-`self.list.draw(screen.width(), ux.overlay_start())`. `browser_chrome()`, `step()`, `first()` and
-`VISIBLE` are deleted, along with the chromes case that drove the chrome.
+`self.list.draw()`. `browser_chrome()`, `step()`, `first()` and `VISIBLE` are deleted, along with the
+chromes case that drove the chrome.
 
 ## Alternatives, and why not
 
 - **A Berry class that composes the `screen` tree.** It needs no C++ and no walk change, and it is
   the smaller diff. It leaves the arithmetic in two languages, which is the state this change exists
   to leave, and it cannot be the model the settings list uses.
+- **The list as a `PaintNode`.** A node is a picture the tree owns for one draw; the list is state a
+  scene keeps across beats — its rows, its selection and its wrap. A node would either move that
+  state into the tree or hold a handle to it, which is the callable the walk already makes and
+  nothing more.
+- **`band()` answering a paint.** The scene would place the list's paints in its own tree, which is
+  passing the list's internals up the tree; `draw(canvas)` keeps them in the component.
 - **A row supplier instead of held paints.** The model would own the numbers and the caller each
   row's picture, rebuilt as the band reaches it. It is a second way for a row to exist, and it makes
   the settings list rebuild every row's text on every beat to keep its supplier honest, when the
@@ -166,9 +190,8 @@ answers up and down with `self.list.nudge(-1)` and `self.list.nudge(1)`. `draw_p
   lvalue `PaintNodeRef` would silently stop being consumed. `borrowed()` names the rule it is.
 - **A wrapper that answers the record tree from the model's numbers.** The wrapper would compute
   cells and pick nodes, which is the layout the model is for, on the wrong side of the boundary.
-- **A `screen.list(...)` call a page makes itself.** A `screen` call answers a `draw` record, and the
-  list's answer is a paint; there is no Berry value for one. The node goes through `draw()` and the
-  walk instead.
+- **A `screen.list(...)` call a page makes itself.** A `screen` call answers a `draw` record, and a
+  page has no canvas to draw into; the record the wrapper answers is the way in.
 - **The selection as an index at the boundary.** The browser re-reads the registry when it appears,
   and an index would stand for a different routine after a reordering; the routine key is what the
   scene uses, and it is what lets a rebuilt list keep its row.
@@ -190,7 +213,8 @@ answers up and down with `self.list.nudge(-1)` and `self.list.nudge(1)`. `draw_p
   gains the rule the wrapper depends on: a paint's borrowed text points into the node it was walked
   from, so whoever keeps the paint keeps the node — which is why the instance keeps `.rows`.
 - **The walk.** `row_list` is a new kind in `DrawTree`, and the `list` field is declared in the
-  `screen` module's record beside the kinds that already read it. A node with no handle draws nothing.
+  `screen` module's record beside the kinds that already read it. The kind answers a callable that
+  calls the list's own `draw()`, and a node with no handle draws nothing.
 - **The two checks.** `tools/unit/check.py` compiles Gfx and Gardener and excludes the bindings, so
   it checks the model; `tools/berry/check.py` compiles the interpreter, the walk and the image, so it
   checks the wrapper, the node and the pages. Neither is a substitute for the other.
