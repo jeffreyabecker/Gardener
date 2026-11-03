@@ -3,10 +3,12 @@
 #include <stdint.h>
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 #include <Arduino.h>
 
+#include "panel/page/RowList.h"
 #include "panel/settings/EditorScene.h"
 #include "storage/SettingKind.h"
 
@@ -61,12 +63,19 @@ class ChoiceScene : public EditorScene {
 
  private:
   int16_t index() const;
+  // The list rebuilt from the items, seated on the key the setting holds now.
+  void rebuild();
+  String heldKey() const;
   // The page's work on the entry showing, when there is one and the page has work there.
   void preview();
 
   std::vector<ChoiceItem> items_;
   std::function<void(String& current)> forward_;
   bool nullable_;
+  // The line height the list was built at, which is the face's shortest line as it stands: a face
+  // the composition changes re-seats the list rather than drawing in the one it was built with.
+  int16_t pitch_ = 0;
+  std::unique_ptr<RowList> list_;
 };
 
 }  // namespace gardener
