@@ -38,8 +38,8 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       `nudge()`, `selected()` answers `current()`, and `drawPage()` calls `list_->draw(band)` under
       the heading. The window arithmetic goes. The existing selection and editor cases stay green,
       and a case opens an editor, changes the value and reads it in the rebuilt row.
-- [ ] **Move `ChoiceScene` onto it.** The items become rows of key and title; `nudge()` wraps around
-      `RowList::nudge()` with the nullable ends kept — Up at the first clears, Down from nothing
+- [x] **Move `ChoiceScene` onto it.** The items become rows of key and title; `nudge()` wraps around
+      `RowList::nudge()` with the nullable ends kept — Down at the first clears, Up from nothing
       enters the first; `index()` and `text()` read `current()`; `pageContents()` answers a
       `gfx::callable` that calls `list_.draw(canvas, gfx::Justify::Center)` while an entry is
       showing, and draws the `--` row otherwise; a key no entry names shows the first. `windowOf()`,
