@@ -33,7 +33,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 2 — the scenes on it
 
-- [ ] **Move `SettingsScene` onto it.** The rows are built in the constructor and rebuilt when an
+- [x] **Move `SettingsScene` onto it.** The rows are built in the constructor and rebuilt when an
       editor hands a value back, with the key the keys are on as the selection; `move()` calls
       `nudge()`, `selected()` answers `current()`, and `drawPage()` calls `list_->draw(band)` under
       the heading. The window arithmetic goes. The existing selection and editor cases stay green,

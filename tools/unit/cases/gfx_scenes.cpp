@@ -567,6 +567,44 @@ TEST_CASE("a settings list draws its rows") {
   CHECK(display.inkCount(0, 8, PageWidth, 8) > display.inkCount(0, 16, PageWidth, 8));
 }
 
+TEST_CASE("a settings list rebuilds the row an editor changed") {
+  GestureQueue gestures;
+  Ux ux;
+  String title("SETTINGS");
+  TestRow target(gestures, ux);
+  target.hold("target", "Target", "50");
+  std::vector<SettingsRow*> rows{&target};
+  auto list = std::make_unique<SettingsProbe>(gestures, ux, title, rows, SettingValues());
+  SettingsProbe* settings = list.get();
+  Watched rootWatch;
+  ux.reset(aScene(gestures, rootWatch));
+  ux.push(std::move(list));
+
+  // The row the keys are on, as its cell stands before the edit.
+  reset();
+  settings->drawPage(canvas);
+  const int before = display.inkCount(0, 8, PageWidth, 8);
+
+  press(ux, gestures, "forward:single", 1000);
+  static_cast<TestEditor*>(ux.top())->set(String("WIDER"));
+  ux.pop();
+  CHECK_EQ(ux.depth(), 2);
+  CHECK_EQ(settings->selected(), 0);
+  const String edited = std::any_cast<String>(settings->values().at("target"));
+  CHECK_EQ(std::string(edited.c_str()), std::string("WIDER"));
+
+  // The rebuilt row prints the edited value: it inks what a list built from the set the scene hands
+  // back inks, and not what the row inked before the edit.
+  reset();
+  settings->drawPage(canvas);
+  const int rebuilt = display.inkCount(0, 8, PageWidth, 8);
+  CHECK(rebuilt != before);
+  SettingsProbe fresh(gestures, ux, title, rows, settings->values());
+  reset();
+  fresh.drawPage(canvas);
+  CHECK_EQ(display.inkCount(0, 8, PageWidth, 8), rebuilt);
+}
+
 // The two entries the choice row offers, and the keys they store.
 std::vector<ChoiceItem> choices() { return {{"lo", "Low"}, {"hi", "High"}}; }
 
