@@ -163,10 +163,6 @@ std::unique_ptr<SettingsRow> takeRow(bvm* vm, int index) {
   return std::move(*owner);
 }
 
-// The unit the panel prints pressure in: a declaration is made while the panel runs, so a row is
-// built in the unit showing then.
-DisplayUnit displayUnit(BindingContext* bindings) { return bindings->systemState().unit; }
-
 void holdRow(bvm* vm, std::unique_ptr<SettingsRow> row) {
   be_newcomobj(vm, new RowOwner(std::move(row)), rowRelease);
   be_setmember(vm, 1, ".p");
@@ -240,10 +236,11 @@ int pressureInit(bvm* vm) {
   requireNumber(vm, 6, PressureName, "the step");
   requireBool(vm, 7, PressureName, "the nullable flag");
 
-  holdRow(vm, std::make_unique<PressureRow>(
-                  bindings->presses(), bindings->ux(), String(argText(vm, 2)),
-                  String(argText(vm, 4)), be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
-                  displayUnit(bindings), (float)be_toreal(vm, 6), be_tobool(vm, 7)));
+  holdRow(vm,
+          std::make_unique<PressureRow>(bindings->presses(), bindings->ux(), String(argText(vm, 2)),
+                                        String(argText(vm, 4)), bindings->systemState(),
+                                        be_isnil(vm, 3) ? NAN : (float)be_toreal(vm, 3),
+                                        (float)be_toreal(vm, 6), be_tobool(vm, 7)));
   be_return_nil(vm);
 }
 

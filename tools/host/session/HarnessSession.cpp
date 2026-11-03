@@ -147,6 +147,9 @@ void HarnessSession::beat(int count) {
     publish();
     routines_.poll(millis());
 
+    // A send's mark runs down with the beats, whatever the lines after it turn out to be.
+    gestureStrip_.age();
+
     // The run's high-water mark, sampled where the page has finished its own work for the beat.
     const size_t held = heapBytes();
     if (held > heapPeakBytes_) heapPeakBytes_ = held;

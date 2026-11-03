@@ -13,6 +13,10 @@ namespace {
 // advances.
 constexpr int BeatMs = 250;
 
+// How long a send's mark stays when the line names no time: a second, four beats, which reads as a
+// press without running into the one after it.
+constexpr int DefaultShowMs = 1000;
+
 std::string trimmed(const std::string& text) {
   const char* spaces = " \t\r\n";
   const size_t first = text.find_first_not_of(spaces);
@@ -76,25 +80,13 @@ bool parseLoad(const std::string& rest, Command& command, std::string& error) {
   return parseSettings(settings, command, error);
 }
 
-bool parseSend(const std::string& rest, Command& command, std::string& error) {
-  std::string extra;
-  splitWord(rest, command.gesture, extra);
-  if (command.gesture.empty() || !extra.empty()) {
-    error = "send takes one gesture";
-    return false;
-  }
-  return true;
-}
-
-// The units are the file's, and the beats are the session's: a wait always advances the device at
-// least as far as the line asked, and never more than one beat past it. An advance takes the same
-// measurement and the same rounding, and the two verbs part only at what is recorded.
-bool parseWait(const std::string& rest, Command& command, std::string& error) {
-  const char* verb = command.verb == Command::Verb::Advance ? "advance" : "wait";
-  const std::string text = trimmed(rest);
+// Seconds or milliseconds, rounded up to whole beats: the measurement a wait and an advance take,
+// and the time a send keeps its mark. The verb names itself in what it refuses.
+bool parseBeats(const std::string& text, const char* verb, int& beats, std::string& error) {
+  const std::string stated = trimmed(text);
   char* end = nullptr;
-  const double amount = text.empty() ? 0.0 : strtod(text.c_str(), &end);
-  if (text.empty() || end == text.c_str() || !isfinite(amount) || amount < 0.0) {
+  const double amount = stated.empty() ? 0.0 : strtod(stated.c_str(), &end);
+  if (stated.empty() || end == stated.c_str() || !isfinite(amount) || amount < 0.0) {
     error = std::string(verb) + " takes a number of seconds or milliseconds";
     return false;
   }
@@ -110,9 +102,33 @@ bool parseWait(const std::string& rest, Command& command, std::string& error) {
     return false;
   }
 
-  const int beats = (int)ceil(ms / (double)BeatMs);
-  command.beats = beats < 0 ? 0 : beats;
+  const int rounded = (int)ceil(ms / (double)BeatMs);
+  beats = rounded < 0 ? 0 : rounded;
   return true;
+}
+
+// One gesture, spelled as the panel's classifier spells it, and an optional time for the mark it
+// leaves in the picture: the same units a wait takes, and a second when the line says nothing.
+bool parseSend(const std::string& rest, Command& command, std::string& error) {
+  std::string time;
+  splitWord(rest, command.gesture, time);
+  if (command.gesture.empty()) {
+    error = "send takes one gesture";
+    return false;
+  }
+  if (time.empty()) {
+    command.beats = DefaultShowMs / BeatMs;
+    return true;
+  }
+  return parseBeats(time, "send", command.beats, error);
+}
+
+// The units are the file's, and the beats are the session's: a wait always advances the device at
+// least as far as the line asked, and never more than one beat past it. An advance takes the same
+// measurement and the same rounding, and the two verbs part only at what is recorded.
+bool parseWait(const std::string& rest, Command& command, std::string& error) {
+  const char* verb = command.verb == Command::Verb::Advance ? "advance" : "wait";
+  return parseBeats(rest, verb, command.beats, error);
 }
 
 bool parseSetRate(const std::string& rest, Command& command, std::string& error) {
@@ -159,34 +175,6 @@ bool parseSetNote(const std::string& rest, Command& command, std::string& error)
   return true;
 }
 
-// A show or a clear: the entries the line lists, separated by commas and trimmed. A show needs one,
-// because a line that shows nothing is a line with no command in it; a clear may name none, which is
-// how the file takes every mark away.
-bool parseMarks(const std::string& rest, Command& command, std::string& error) {
-  const bool show = command.verb == Command::Verb::Show;
-  if (rest.empty()) {
-    if (!show) return true;
-    error = "show takes a gesture";
-    return false;
-  }
-
-  size_t start = 0;
-  while (start <= rest.size()) {
-    const size_t comma = rest.find(',', start);
-    const std::string entry =
-        trimmed(rest.substr(start, comma == std::string::npos ? std::string::npos : comma - start));
-    if (entry.empty()) {
-      error = show ? "show takes gestures separated by commas"
-                   : "clear takes buttons separated by commas";
-      return false;
-    }
-    command.marks.push_back(entry);
-    if (comma == std::string::npos) break;
-    start = comma + 1;
-  }
-  return true;
-}
-
 bool parseLine(const std::string& text, int line, Command& command, std::string& error) {
   command = Command();
   command.line = line;
@@ -230,14 +218,6 @@ bool parseLine(const std::string& text, int line, Command& command, std::string&
       return false;
     }
     return true;
-  }
-  if (verb == "show") {
-    command.verb = Command::Verb::Show;
-    return parseMarks(rest, command, error);
-  }
-  if (verb == "clear") {
-    command.verb = Command::Verb::Clear;
-    return parseMarks(rest, command, error);
   }
   if (verb == "emit") {
     command.verb = Command::Verb::Emit;

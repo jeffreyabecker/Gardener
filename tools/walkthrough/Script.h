@@ -21,8 +21,6 @@ struct Command {
     SetFont,
     SetNote,
     ClearNote,
-    Show,
-    Clear,
     Emit
   };
 
@@ -39,7 +37,8 @@ struct Command {
   std::string gesture;
 
   // A wait or an advance, in whole beats of 250 ms: the device time the line asked for, rounded up.
-  // The two are the same beats and differ only in whether the frames are kept.
+  // The two are the same beats and differ only in whether the frames are kept. A send's beats are
+  // the time its mark stays in the picture, which starts at the line.
   int beats = 0;
 
   // A set-rate: the model chamber's pull at full duty and its venting rate, in kPa per second.
@@ -53,10 +52,6 @@ struct Command {
   // A set-note: the line the band under the glass carries, as the file wrote it. It is the walk's
   // own prose, so it takes no quoting and nothing in it is a key or an argument.
   std::string note;
-
-  // A show or a clear: the gestures or the button names the line lists, each trimmed, in the order
-  // the file wrote them. A clear with none lists nothing, which is every button.
-  std::vector<std::string> marks;
 };
 
 // Reads a whole walkthrough file into its commands, in order. A blank line and a `#` line are not

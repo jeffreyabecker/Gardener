@@ -8,8 +8,8 @@
 The tool is the firmware, not a model of it: the interpreter's host side and the panel's registry,
 overlay, settings and control law are compiled here against the vendored VM, with a bitmap for a
 glass and a chamber for a rig, over the same session the Berry check drives. What it runs is the
-command file — a load, a send, a wait, an advance, a set-rate, a set-font, a note, a button mark and
-an emit, one per line — and what it writes is the animated GIF of the frames the beats drew.
+command file — a load, a send, a wait, an advance, a set-rate, a set-font, a note and an emit, one
+per line — and what it writes is the animated GIF of the frames the beats drew.
 
 Nothing in the arguments, the output or the exit code is about the image's files or the routines a
 check drives: no harness, no driver and no suites. The build lands in tools/walkthrough/build/,

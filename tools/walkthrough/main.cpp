@@ -5,8 +5,8 @@
 // registry and the stack for a page, the press queue for a gesture — and the verbs that are not the
 // page's are the host's: a wait is beats of the session, an advance the same beats with the glass
 // unrecorded, a rate is the chamber's model, a font is the design a leaf that names no family draws
-// in, a note is the band under the glass, a show and a clear are the marks on the buttons, and an
-// emit is the capture written.
+// in, a note is the band under the glass, and an emit is the capture written. A send is both: the
+// press the page takes, and the mark the picture carries for the time the line gives it.
 //
 // The whole file is read before anything is drawn, and every load and font is resolved against the
 // image before the first frame is captured, so a misspelled scene, an unknown routine, a setting
@@ -268,8 +268,8 @@ int hostMain(int argc, char** argv) {
   // Every load is resolved before the capture is armed: a scene the image does not hold, a key the
   // registry does not know and a setting nobody declared all fail with nothing on disk. A font is
   // resolved here for the same reason — a design nothing answers for is a line number rather than a
-  // picture drawn in whatever the name fell back to — and so is a mark, whose name is a button the
-  // panel either has or has not.
+  // picture drawn in whatever the name fell back to — and so is a send, whose gesture names a button
+  // the panel either has or has not.
   std::vector<Target> targets(commands.size());
   for (size_t i = 0; i < commands.size(); i++) {
     const Command& command = commands[i];
@@ -280,11 +280,9 @@ int hostMain(int argc, char** argv) {
       }
       continue;
     }
-    if (command.verb == Command::Verb::Show || command.verb == Command::Verb::Clear) {
-      const bool show = command.verb == Command::Verb::Show;
-      for (const std::string& mark : command.marks) {
-        if (show ? gardener::isGesture(mark.c_str()) : gardener::isButton(mark.c_str())) continue;
-        printf("[E] line %d: no button '%s'\n", command.line, mark.c_str());
+    if (command.verb == Command::Verb::Send) {
+      if (!gardener::isGesture(command.gesture.c_str())) {
+        printf("[E] line %d: no button '%s'\n", command.line, command.gesture.c_str());
         return 2;
       }
       continue;
@@ -311,9 +309,10 @@ int hostMain(int argc, char** argv) {
         }
         break;
       case Command::Verb::Send:
-        // The press is held on the picture before the page is handed it: the beats between them are
-        // the frames a reader sees the button down, which a show before this line has marked, and
-        // the page has nothing to answer until the queue takes it.
+        // The picture marks the button for the time the line gave it, from this line: the lead beats
+        // are the frames a reader sees it held before the page answers, and the mark keeps running
+        // down over the beats that follow.
+        session.showGesture(command.gesture.c_str(), command.beats);
         session.beat(leadBeats);
         session.routines().pushPress(String(command.gesture.c_str()));
         break;
@@ -340,20 +339,6 @@ int hostMain(int argc, char** argv) {
         break;
       case Command::Verb::ClearNote:
         session.setNote(nullptr);
-        break;
-      case Command::Verb::Show:
-        // A mark is state the picture redraws every frame, so it lands on the next frame and stands
-        // there until a clear takes it away.
-        for (const std::string& gesture : command.marks)
-          session.gestures().show(gesture.c_str());
-        break;
-      case Command::Verb::Clear:
-        if (command.marks.empty()) {
-          session.gestures().clearAll();
-          break;
-        }
-        for (const std::string& button : command.marks)
-          session.gestures().clear(button.c_str());
         break;
       case Command::Verb::Emit:
         break;

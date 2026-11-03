@@ -1,5 +1,6 @@
 # A walk through the panel: home with a run going, the browser over it, then a routine launched
-# with a set of its own. Every line is a command; a `#` line and a blank one are not.
+# with a set of its own. Every line is a command; a `#` line and a blank one are not, and a press is
+# marked on the picture for the second a send gives it.
 #
 #   python tools/walkthrough/walk.py tools/walkthrough/sample.walk
 

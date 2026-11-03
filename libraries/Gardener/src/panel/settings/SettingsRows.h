@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 
+#include "core/SystemState.h"
 #include "core/Units.h"
 #include "panel/settings/ChoiceScene.h"
 #include "panel/settings/NumberScene.h"
@@ -150,6 +151,13 @@ class NumberRow : public SettingsRow {
   void limit(float min, float max) override;
 
  protected:
+  // The step a keypress makes and the way the number prints, as the list and the editor read them. A
+  // kind whose number is shown in a unit the device can change answers them from the state each time
+  // it is asked, so a row a routine declared when the image loaded still prints in the unit the
+  // panel is showing now.
+  virtual float step() const;
+  virtual String formatted(float number) const;
+
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
   // scene over the same step, bounds and formatter.
   GestureQueue& gestures_;
@@ -172,11 +180,13 @@ class NumberRow : public SettingsRow {
 // The row of the target pressure: a number row over the depth in the kPa the machine stores, whose
 // editor is the pressure scene — a keypress is one step of the unit the glass shows — and which
 // prints the depth with that unit's decimals. The bounds are the machine's, so a keypress cannot
-// leave the editor on a target the loop would refuse.
+// leave the editor on a target the loop would refuse. The unit is read from the device's state
+// rather than kept, so a unit changed in the device's own list reaches a row the image declared at
+// load.
 class PressureRow : public NumberRow {
  public:
   PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-              float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable = false,
+              const SystemState& state, float currentKpa, float wholeSteps, bool nullable = false,
               Validator validator = nullptr);
 
   SettingDeclaration declaration() const override;
@@ -184,8 +194,12 @@ class PressureRow : public NumberRow {
   std::unique_ptr<SettingsRow> clone() const override;
   void limit(float min, float max) override;
 
+ protected:
+  float step() const override;
+  String formatted(float pressureKpa) const override;
+
  private:
-  DisplayUnit unit_;
+  const SystemState& state_;
   float wholeSteps_;
 };
 

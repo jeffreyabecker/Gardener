@@ -17,13 +17,15 @@ The tool needs Python and a C++ compiler — `g++` or `clang++`, with `CC` or `C
 The first run compiles into `tools/walkthrough/build/`, which is ignored; a later run compiles only
 what changed. The GIF goes to `tools/walkthrough/build/<script>.gif` unless `--out` names a path.
 
-Four walks ship beside the tool, and each file's header says what it shows:
+Five walks ship beside the tool, and each file's header says what it shows:
 
 - `sample.walk` — the tour: a run on the home page, the browser over it, and a routine launched with
   settings of its own.
 - `home.walk` — the target stepped, started, left running and resumed.
 - `settings.walk` — the device's settings list edited and saved through every row.
 - `settings-cancel.walk` — the same list with each change thrown away.
+- `units.walk` — a target set in kPa, the display unit changed to inHg from that list, and the home
+  page read back in the new unit.
 
 ## The command file
 
@@ -46,9 +48,7 @@ output path.
 | Command | What it does |
 | --- | --- |
 | `load <scene> [key=value;…]` | Puts a page on top: `home`, `browser`, or a routine by its key |
-| `send <gesture>` | Holds the gesture's button for `--lead-beats`, then hands it to the page |
-| `show <gesture>[, <gesture>…]` | Marks the named buttons and leaves the marks standing |
-| `clear [button[, button]…]` | Takes the marks off the named buttons; with no button named, off every one |
+| `send <gesture> [<n> s\|ms]` | Presses the button, marked on the picture for the time given — a second by default |
 | `wait <n> s\|ms` | Advances device time, rounded up to whole 250 ms beats |
 | `advance <n> s\|ms` | The same device time with no frames kept for it |
 | `set-rate <pull> <vent>` | Sets the model chamber's pull at full duty and its venting rate, in kPa/s |
@@ -76,38 +76,25 @@ no settings.
 ### send
 
 One gesture, spelled as the panel's classifier spells it: `ok:single`, `up:double`,
-`cancel:single`, `forward:double+ok:single`. The press is held on the picture for `--lead-beats`
-beats before the page is handed it.
-
-`send` marks nothing by itself. A walk that wants the button seen writes a `show` before it and a
-`clear` after the wait:
+`cancel:single`, `forward:double+ok:single`. The six buttons are `up`, `down`, `forward`, `back`,
+`ok` and `cancel`, and the form after the colon decides what the mark carries: `single` draws one
+outline, `double` draws two, and a count such as `cancel:7` draws one outline and writes the seconds
+under the glyph. Gestures joined with `+` are one chord, and every button it names is marked.
 
 ```
-show ok:single
-send ok:single
-wait 3 s
-clear ok
+send ok:single            # marked for a second
+send up:double 2 s        # marked for two
+send cancel:single 750 ms # and for three quarters
 ```
 
-### show and clear
+The press is held on the picture for `--lead-beats` beats before the page is handed it, and the mark
+stays for the time the line gives it, which starts at the line — so the frames show the button down,
+then the page's answer, then the buttons bare again. A send with no time marks for a second. Two
+presses closer together than the mark still read as two: the second takes the picture over and its
+own clock starts there.
 
-The six buttons across the top of the picture are `up`, `down`, `forward`, `back`, `ok` and
-`cancel`.
-
-`show` takes gestures and marks each button the gesture names. The form after the colon decides
-what the mark carries: `single` draws one outline, `double` draws two, and a count such as
-`cancel:7` draws one outline and writes the seconds under the glyph. Gestures joined with `+` are
-one chord, and every button it names is marked.
-
-`clear` takes plain button names, since which form was marked does not matter when it is taken
-away. `clear` with nothing else takes every mark away.
-
-A mark is redrawn with every frame, so it lands on the next captured frame and stands until a
-`clear` takes it away. Showing a button again replaces its mark, so `show ok:single` followed by
-`show ok:7` drops the first and leaves the hold.
-
-Both lines are checked against the panel before the capture starts: a button the panel does not
-have is an error with its line number.
+The gesture is checked against the panel before the capture starts: a button the panel does not have
+is an error with its line number.
 
 ### wait
 
@@ -132,10 +119,8 @@ but not recorded. The next frame the walk draws shows the state the advance arri
 left to climb for ten seconds costs one frame rather than forty.
 
 ```
-show ok:single
 send ok:single
 wait 1 s
-clear ok
 advance 10 s
 set-note the reading has arrived
 wait 1 s
@@ -187,8 +172,9 @@ frames writes no picture and exits 1.
 ## The picture
 
 Every frame is the panel's glass inside a dotted border, with the six buttons across the top and a
-band under the glass for a note. The marks on the buttons are the walk's own, so how long a press is
-shown is the script's statement rather than a count of frames the tool chose.
+band under the glass for a note. A press marks its button for the time its send line gives it, so how
+long the picture shows a press is the script's statement rather than a count of frames the tool
+chose.
 
 The picture is 130 by 100 pixels before `--scale`, and 260 by 200 at the default of 2.
 
@@ -198,11 +184,9 @@ The picture is 130 by 100 pixels before `--scale`, and 260 by 200 at the default
 # A press that is seen, a run given time, and a note saying what is happening.
 set-font ttyp0
 load home
-show ok:single
 set-note starting the run
-send ok:single
+send ok:single 2 s
 wait 5 s
-clear ok
 set-note the run is holding
 wait 3 s
 clear-note

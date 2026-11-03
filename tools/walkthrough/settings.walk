@@ -18,9 +18,11 @@ wait 1 s
 # one showing inverted, and each move playing the entry it lands on. An editor steps its value, so
 # Up takes the next entry and Down the one before it.
 send down:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single
+wait 1 s
 send up:single
 wait 1 s
 
@@ -30,6 +32,7 @@ wait 1 s
 
 # Up to the unit, Forward into its four entries, and Up once to psi.
 send up:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single
@@ -40,10 +43,13 @@ wait 1 s
 # Down to the maximum and Forward into the duration editor, which opens on the minute field with the
 # document's fifteen minutes inverted.
 send down:single
+wait 1 s
 send down:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single
+wait 1 s
 send up:single
 wait 1 s
 
@@ -65,6 +71,7 @@ wait 1 s
 
 # Up twice steps the target in that unit — one whole step of psi — and OK runs to it.
 send up:single
+wait 1 s
 send up:single
 wait 1 s
 send ok:single

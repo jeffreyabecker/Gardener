@@ -676,6 +676,24 @@ TEST_CASE("a row prints its value and opens its editor") {
   CHECK_EQ(unset.scene(unset.defaultValue())->isNull(), 1);
 }
 
+// The unit a pressure row prints in and steps by is the device's, read when the list or the editor
+// asks rather than kept from when the row was declared: a unit changed in the device's own list
+// reaches the pressures a routine declared when the image loaded.
+TEST_CASE("a pressure row follows the unit the device shows") {
+  NoGestures gestures;
+  Ux ux;
+  SystemState state;
+  state.unit = DisplayUnit::Kpa;
+  PressureRow target(gestures, ux, "target", "Target", state, 20.0f, 1.0f);
+
+  CHECK_EQ(std::string(target.text(std::any(20.0f)).c_str()), std::string("20.0"));
+  CHECK_EQ(target.declaration().step == 1.0f, 1);
+
+  state.unit = DisplayUnit::InHg;
+  CHECK_EQ(std::string(target.text(std::any(20.0f)).c_str()), std::string("5.9"));
+  CHECK_EQ(fabsf(target.declaration().step - 1.0f / 0.29529991f) < 0.001f, 1);
+}
+
 // The declaration each row was built from, which is what a routine's record answers a page: the kind
 // its call named, the step and bounds that call gave, and the entries a choice offers. A kind with
 // none of them answers nothing rather than a stand-in, so a record can carry them as nil.

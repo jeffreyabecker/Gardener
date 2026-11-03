@@ -1,0 +1,38 @@
+# The display unit changed: a target set on the home page in kPa, the device's own list opened on
+# the unit row, inHg chosen and settled, and the home page read back in the unit just chosen.
+#
+#   python tools/walkthrough/walk.py tools/walkthrough/units.walk
+
+# The panel's design, which the composition sets once on a device: a leaf that names no family draws
+# in it, and the band's height picks the cut.
+set-font profont
+
+# The document's unit is kPa, so the home page's target is stepped in it: the machine works no
+# shallower than five kPa, so the first press from ambient lands there and the one that follows steps
+# above it.
+load home
+send up:single
+wait 1 s
+send up:single
+wait 1 s
+
+# Up held to a double opens the device's own list, which comes up on the unit row reading kPa.
+send up:double
+wait 1 s
+
+# Forward into the unit's choices and Up twice past psi to inHg.
+send forward:single
+wait 1 s
+send up:single
+wait 1 s
+send up:single
+wait 1 s
+
+# OK takes the choice into the row, and OK on the rows settles the list: the device writes the set,
+# and the home page comes back with the target read in the unit just chosen.
+send ok:single
+wait 1 s
+send ok:single
+wait 2 s
+
+emit

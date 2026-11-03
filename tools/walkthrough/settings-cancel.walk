@@ -16,9 +16,11 @@ wait 1 s
 # Down to the jingle, Forward into its choices, and Up twice to the third entry. Cancel hands the
 # list the key it opened on rather than the one showing, so JINGLE reads Poacher again.
 send down:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single
+wait 1 s
 send up:single
 wait 1 s
 send cancel:single
@@ -27,9 +29,11 @@ wait 1 s
 # The same in the unit's choices, stepped two entries to inHg and cancelled: the row still reads
 # kPa.
 send up:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single
+wait 1 s
 send up:single
 wait 1 s
 send cancel:single
@@ -37,7 +41,9 @@ wait 1 s
 
 # The duration editor opened, nudged a minute and cancelled: the row still reads fifteen minutes.
 send down:single
+wait 1 s
 send down:single
+wait 1 s
 send forward:single
 wait 1 s
 send up:single

@@ -233,22 +233,28 @@ std::any NumberRow::defaultValue() const {
 SettingDeclaration NumberRow::declaration() const {
   SettingDeclaration out;
   out.kind = "number";
-  out.step = step_;
+  out.step = step();
   out.min = min_;
   out.max = max_;
   return out;
+}
+
+float NumberRow::step() const { return step_; }
+
+String NumberRow::formatted(float number) const {
+  return format_ ? format_(number) : printedNumber(number);
 }
 
 String NumberRow::text(const std::any& value) const {
   if (!value.has_value()) return "--";
   const float number = std::any_cast<float>(value);
   if (isnan(number)) return "--";
-  return format_ ? format_(number) : printedNumber(number);
+  return formatted(number);
 }
 
 std::unique_ptr<EditorScene> NumberRow::scene(const std::any& value) {
   const float current = value.has_value() ? std::any_cast<float>(value) : NAN;
-  return std::make_unique<NumberScene>(gestures_, ux_, label_, current, step_, min_, max_,
+  return std::make_unique<NumberScene>(gestures_, ux_, label_, current, step(), min_, max_,
                                        nullable_, format_);
 }
 
@@ -291,15 +297,25 @@ void NumberRow::limit(float min, float max) {
 // --- the pressure -----------------------------------------------------------
 
 PressureRow::PressureRow(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
-                         float currentKpa, DisplayUnit unit, float wholeSteps, bool nullable,
-                         Validator validator)
+                         const SystemState& state, float currentKpa, float wholeSteps,
+                         bool nullable, Validator validator)
     : NumberRow(
           gestures, ux, key, label, currentKpa,
-          wholeSteps * displayUnitInfo(unit).wholeStep / displayUnitInfo(unit).perKpa,
-          CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable,
-          [unit](float pressureKpa) { return displayText(pressureKpa, unit); }, 2,
-          std::move(validator)),
-      unit_(unit), wholeSteps_(wholeSteps) {}
+          wholeSteps * displayUnitInfo(state.unit).wholeStep / displayUnitInfo(state.unit).perKpa,
+          CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable, nullptr, 2, std::move(validator)),
+      state_(state), wholeSteps_(wholeSteps) {}
+
+// What a keypress is worth and what the row prints are the unit the panel shows, so both are read
+// when the list or the editor asks: a unit changed in the device's own list reaches every pressure
+// the image declared, not only the ones declared after it.
+float PressureRow::step() const {
+  const DisplayUnitInfo& info = displayUnitInfo(state_.unit);
+  return wholeSteps_ * info.wholeStep / info.perKpa;
+}
+
+String PressureRow::formatted(float pressureKpa) const {
+  return displayText(pressureKpa, state_.unit);
+}
 
 // The pressure's number row, under the kind its declaration named. The step and bounds are the
 // number's own — the step one keypress makes in the unit the setting stores, and the machine's floor
@@ -312,8 +328,8 @@ SettingDeclaration PressureRow::declaration() const {
 
 std::unique_ptr<EditorScene> PressureRow::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
-  return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, unit_, wholeSteps_,
-                                         min_, max_, nullable_);
+  return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, state_.unit,
+                                         wholeSteps_, min_, max_, nullable_);
 }
 
 // The machine's shallowest and deepest target are the outermost a pressure may sit at, so a section's

@@ -98,7 +98,8 @@ python tools/walkthrough/walk.py my.walk --out build/my.gif --delay-cs 20 --scal
 `sample.walk` is the tour — a run on the home page, the browser over it and a routine launched with a
 set — and the folder holds a walk per subject beside it: `home.walk` for the target stepped, started,
 stopped and resumed; `settings.walk` for the device's own list edited and saved through every row;
-and `settings-cancel.walk` for the same list throwing each change away.
+`settings-cancel.walk` for the same list throwing each change away; and `units.walk` for the display
+unit changed from kPa to inHg and the home page read back in it.
 
 [docs/guides/walkthroughs.md](./docs/guides/walkthroughs.md) is the command reference: every verb,
 the gesture spelling, the marks and the note, the picture's layout, and the tool's options.

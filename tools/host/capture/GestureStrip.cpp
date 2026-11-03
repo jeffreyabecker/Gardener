@@ -67,8 +67,9 @@ std::vector<std::string> gestureKeys(const std::string& gesture) {
 
 }  // namespace
 
-void GestureStrip::show(const char* gesture) {
-  if (gesture == nullptr) return;
+void GestureStrip::show(const char* gesture, int beats) {
+  clearAll();
+  if (gesture == nullptr || beats <= 0) return;
   for (const std::string& key : gestureKeys(gesture)) {
     const size_t colon = key.find(':');
     const int16_t button = buttonIndex(key.substr(0, colon).c_str());
@@ -89,16 +90,18 @@ void GestureStrip::show(const char* gesture) {
       mark.outlines = 1;
     }
   }
+  beats_ = beats;
 }
 
-void GestureStrip::clear(const char* button) {
-  const int16_t index = buttonIndex(button);
-  if (index >= 0) marks_[index] = Mark();
+void GestureStrip::age() {
+  if (beats_ <= 0) return;
+  if (--beats_ == 0) clearAll();
 }
 
 void GestureStrip::clearAll() {
   for (Mark& mark : marks_)
     mark = Mark();
+  beats_ = 0;
 }
 
 CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
@@ -107,8 +110,8 @@ CaptureDisplay::Component GestureStrip::component(gfx::Rect box) {
 }
 
 void GestureStrip::draw(gfx::Canvas& canvas) {
-  // The buttons are part of the picture whether or not they are marked; a mark stands until a clear
-  // takes it away, so nothing here runs down.
+  // The buttons are part of the picture whether or not they are marked; a mark's beats are counted
+  // down by age(), so what is left here is what the frame draws.
   for (int16_t button = 0; button < CapturePicture::Buttons; button++) {
     const Mark& mark = marks_[button];
     const int16_t left = static_cast<int16_t>(button * CapturePicture::ButtonWidth);
@@ -149,8 +152,6 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
     }
   }
 }
-
-bool isButton(const char* name) { return buttonIndex(name) >= 0; }
 
 bool isGesture(const char* gesture) {
   if (gesture == nullptr || gesture[0] == '\0') return false;

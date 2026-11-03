@@ -39,6 +39,7 @@ using gardener::RoutineSettingStore;
 using gardener::Scene;
 using gardener::SettingsRow;
 using gardener::SettingValues;
+using gardener::SystemState;
 using gardener::Ux;
 using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
@@ -159,10 +160,11 @@ std::vector<std::unique_ptr<SettingsRow>> rampedDeclaration(NoPresses& gestures,
 }
 
 // The declaration a pressure record owns: the machine's own bounds until a section states others.
-std::vector<std::unique_ptr<SettingsRow>> pressureDeclaration(NoPresses& gestures, Ux& ux) {
+std::vector<std::unique_ptr<SettingsRow>> pressureDeclaration(NoPresses& gestures, Ux& ux,
+                                                              SystemState& state) {
   std::vector<std::unique_ptr<SettingsRow>> out;
-  out.push_back(std::make_unique<PressureRow>(gestures, ux, "target_pressure", "Target", 20.0f,
-                                              DisplayUnit::Kpa, 1.0f));
+  out.push_back(
+      std::make_unique<PressureRow>(gestures, ux, "target_pressure", "Target", state, 20.0f, 1.0f));
   return out;
 }
 
@@ -458,7 +460,9 @@ TEST_CASE("a section's pressure pair stays inside the machine's") {
   RoutineRegistry registry(library, logger);
   NoPresses gestures;
   Ux ux;
-  REQUIRE(registry.add(Registration("pressured", "Pressured", pressureDeclaration(gestures, ux))));
+  SystemState state;
+  REQUIRE(registry.add(
+      Registration("pressured", "Pressured", pressureDeclaration(gestures, ux, state))));
 
   // 2 and 90 lie outside what the loop accepts, so the row keeps the machine's own pair.
   const gardener::SettingDeclaration target =

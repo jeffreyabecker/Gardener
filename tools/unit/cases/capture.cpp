@@ -30,7 +30,6 @@ using gardener::CapturePicture;
 using gardener::GestureQueue;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
-using gardener::isButton;
 using gardener::isGesture;
 using gardener::NoteBand;
 using gardener::RenderScale;
@@ -283,7 +282,7 @@ TEST_CASE("a shown gesture is outlined over the glass on the frame it drew") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
-  strip.show("ok:double");
+  strip.show("ok:double", 4);
   gardener::gfx::test::canvas.setPixel(4, 20, 255);
   gardener::gfx::test::display.flush();
   REQUIRE_EQ(display.frameCount(), 1);
@@ -301,32 +300,33 @@ TEST_CASE("a shown gesture is outlined over the glass on the frame it drew") {
   display.endCapture();
 }
 
-TEST_CASE("a mark stands on every frame until a clear takes it away") {
+TEST_CASE("a mark lasts exactly the beats it was given") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
-  strip.show("ok:single");
+  strip.show("ok:single", 3);
   for (int16_t beat = 0; beat < 3; beat++) {
     gardener::gfx::test::canvas.setPixel(static_cast<int16_t>(4 + beat), 20, 255);
     gardener::gfx::test::display.flush();
+    strip.age();
   }
-  REQUIRE_EQ(display.frameCount(), 3);
+  gardener::gfx::test::canvas.setPixel(8, 20, 255);
+  gardener::gfx::test::display.flush();
+  REQUIRE_EQ(display.frameCount(), 4);
   for (int16_t index = 0; index < 3; index++) {
     const std::vector<uint8_t>* held = display.frame(index);
     REQUIRE(held != nullptr);
     CHECK(outlined(*held, 4));
   }
 
-  strip.clear("ok");
-  gardener::gfx::test::canvas.setPixel(8, 20, 255);
-  gardener::gfx::test::display.flush();
+  // The beat that takes the last one away is already bare.
   const std::vector<uint8_t>* after = display.frame(3);
   REQUIRE(after != nullptr);
   CHECK_FALSE(outlined(*after, 4));
   display.endCapture();
 }
 
-TEST_CASE("a clear takes one button's mark and clearAll takes the rest") {
+TEST_CASE("a press after a press takes the picture over") {
   reset();
   GestureStrip strip;
   beginStripCapture(strip);
@@ -337,26 +337,26 @@ TEST_CASE("a clear takes one button's mark and clearAll takes the rest") {
     return display.frame(display.frameCount() - 1);
   };
 
-  strip.show("up:single");
-  strip.show("ok:double");
-  const std::vector<uint8_t>* both = drawn();
-  REQUIRE(both != nullptr);
-  CHECK(outlined(*both, 0));  // up
-  CHECK(outlined(*both, 4));  // ok
-  CHECK(doubleOutlined(*both, 4));
+  strip.show("up:single", 4);
+  const std::vector<uint8_t>* first = drawn();
+  REQUIRE(first != nullptr);
+  CHECK(outlined(*first, 0));  // up
+  CHECK_FALSE(outlined(*first, 4));
 
-  // One button's clear leaves the other's mark standing.
-  strip.clear("ok");
-  const std::vector<uint8_t>* one = drawn();
-  REQUIRE(one != nullptr);
-  CHECK(outlined(*one, 0));
-  CHECK_FALSE(outlined(*one, 4));
+  // The second press drops the first mark, however much of its time was left.
+  strip.show("ok:double", 4);
+  const std::vector<uint8_t>* second = drawn();
+  REQUIRE(second != nullptr);
+  CHECK_FALSE(outlined(*second, 0));
+  CHECK(outlined(*second, 4));
+  CHECK(doubleOutlined(*second, 4));
 
-  strip.clearAll();
+  // And a time of none leaves the buttons bare.
+  strip.show("cancel:single", 0);
   const std::vector<uint8_t>* none = drawn();
   REQUIRE(none != nullptr);
-  CHECK_FALSE(outlined(*none, 0));
   CHECK_FALSE(outlined(*none, 4));
+  CHECK_FALSE(outlined(*none, 5));
   display.endCapture();
 }
 
@@ -390,11 +390,7 @@ TEST_CASE("a paused capture draws the flushes it does not keep") {
   display.endCapture();
 }
 
-TEST_CASE("a mark names a button the panel has") {
-  CHECK(isButton("up"));
-  CHECK(isButton("cancel"));
-  CHECK_FALSE(isButton("OK"));
-  CHECK_FALSE(isButton(""));
+TEST_CASE("a gesture names a button the panel has") {
   CHECK(isGesture("cancel"));
   CHECK(isGesture("up:single"));
   CHECK(isGesture("up:single+ok:double"));
@@ -410,7 +406,7 @@ TEST_CASE("a shown press is one outline, a double press two and a hold its secon
   beginStripCapture(strip);
 
   const auto drawn = [&strip](const char* token) {
-    strip.show(token);
+    strip.show(token, 4);
     gardener::gfx::test::canvas.setPixel(4, 20, 255);
     gardener::gfx::test::display.flush();
     return display.frame(display.frameCount() - 1);
@@ -582,7 +578,7 @@ TEST_CASE("a scene driven through the display takes its press from it") {
   ux.reset(std::make_unique<OkScene>(display, handled));
   beginStripCapture(strip);
   display.press("ok:single");
-  strip.show("ok:single");
+  strip.show("ok:single", 4);
   CHECK(ux.poll(gardener::gfx::test::canvas, 1));
   gardener::gfx::test::display.flush();
   CHECK_EQ(handled, 1);
