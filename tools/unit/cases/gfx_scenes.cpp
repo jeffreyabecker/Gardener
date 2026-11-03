@@ -666,7 +666,7 @@ TEST_CASE("a settings list edits every kind") {
   // The choice: one step moves from the first entry to the second.
   press(ux, gestures, "down:single", now += 10);
   press(ux, gestures, "forward:single", now += 10);
-  press(ux, gestures, "up:single", now += 10);
+  press(ux, gestures, "down:single", now += 10);
   press(ux, gestures, "ok:single", now += 10);
 
   // The duration: one step in the minutes stage takes 1m30s to 2m30s.

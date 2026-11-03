@@ -13,15 +13,15 @@ load home
 send up:double
 wait 1 s
 
-# Down to the jingle, Forward into its choices, and Up twice to the third entry. Cancel hands the
+# Down to the jingle, Forward into its choices, and Down twice to the third entry. Cancel hands the
 # list the key it opened on rather than the one showing, so JINGLE reads Poacher again.
 send down:single
 wait 1 s
 send forward:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
 send cancel:single
 wait 1 s
@@ -32,9 +32,9 @@ send up:single
 wait 1 s
 send forward:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
 send cancel:single
 wait 1 s

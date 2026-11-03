@@ -193,7 +193,7 @@ TEST_CASE("the device's own list edits a row and hands the set back") {
     handed = static_cast<SettingsScene&>(popped).values();
   });
 
-  // The unit row is the one the keys open on. Forward opens its choice and Up steps it to the next
+  // The unit row is the one the keys open on. Forward opens its choice and Down steps it to the next
   // unit the device offers.
   CHECK_EQ(scene->selected(), 0);
   gardener::gfx::test::reset();
@@ -202,7 +202,7 @@ TEST_CASE("the device's own list edits a row and hands the set back") {
 
   scene->press("forward:single");
   REQUIRE_EQ(bench.ux.depth(), 3);
-  bench.gestures.push("up:single");
+  bench.gestures.push("down:single");
   bench.ux.poll(gardener::gfx::test::canvas, 1000);
   bench.gestures.push("ok:single");
   bench.ux.poll(gardener::gfx::test::canvas, 1010);

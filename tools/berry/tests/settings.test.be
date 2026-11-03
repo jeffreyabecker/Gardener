@@ -108,7 +108,7 @@ def the_jingle_row_auditions_the_entry_it_shows()
   harness.beat(1)
 
   # Down from the unit row to the jingle. Forward opens its entries and previews the one showing;
-  # Up steps to the next entry and previews that one; Forward previews the entry showing again.
+  # Up steps to the entry above it and previews that one; Forward previews the entry showing again.
   harness.press("down:single")
   harness.beat(1)
 

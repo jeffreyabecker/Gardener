@@ -206,7 +206,6 @@ std::vector<RowList::Row> threeRows() {
 class ChoiceProbe : public ChoiceScene {
  public:
   using ChoiceScene::ChoiceScene;
-  using EditorScene::nudge;
   using EditorScene::pageContents;
 
   bool press(const char* gesture) { return handle(gesture); }
@@ -221,12 +220,15 @@ TEST_CASE("a choice steps and wraps") {
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
   CHECK_EQ(choice.nullable(), 0);
   CHECK_EQ(choice.isNull(), 0);
-  choice.nudge(1);
+  // Down is the entry below and Up the one above, and both ring at the ends of the list.
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
-  choice.nudge(1);
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("a"));
-  choice.nudge(-1);
+  choice.press("up:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
+  choice.press("up:single");
+  CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
 }
 
 TEST_CASE("a choice inverts the row showing, not just its words") {
@@ -249,7 +251,8 @@ TEST_CASE("a key no entry names shows the first") {
   Ux ux;
   String label("Choice");
   ChoiceProbe choice(gestures, ux, label, "z", threeRows(), false);
-  choice.nudge(1);
+  // The list shows the first entry, so Down steps on from it to the second.
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
 }
 
@@ -261,14 +264,24 @@ TEST_CASE("a nullable choice clears below the first") {
   CHECK_EQ(choice.nullable(), 1);
   CHECK_EQ(choice.isNull(), 1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
-  choice.nudge(-1);
+  // Down out of nothing stays nothing, and Up enters the first entry.
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
-  choice.nudge(1);
+  choice.press("up:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("a"));
-  choice.nudge(1);
+  // Up rings round to the last entry, and Down steps back down the list.
+  choice.press("up:single");
+  CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
+  choice.press("up:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
-  choice.nudge(-1);
-  choice.nudge(-1);
+  choice.press("down:single");
+  CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
+  // Nothing sits below the first entry, so Down at it clears rather than stepping on.
+  choice.press("up:single");
+  CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
+  choice.press("up:single");
+  CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("a"));
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
 }
 
@@ -277,7 +290,7 @@ TEST_CASE("a choice with no entries steps nowhere") {
   Ux ux;
   String label("Choice");
   ChoiceProbe choice(gestures, ux, label, "", {}, false);
-  choice.nudge(1);
+  choice.press("down:single");
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string(""));
 }
 
@@ -286,7 +299,7 @@ TEST_CASE("a choice closes on the key showing") {
   Ux ux;
   String label("Choice");
   ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
-  choice.nudge(1);
+  choice.press("down:single");
   CHECK_EQ(choice.press("ok:single"), 1);
   CHECK_EQ(choice.isClosed(), 1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("c"));
@@ -297,7 +310,7 @@ TEST_CASE("a choice cancel puts back the key it opened on") {
   Ux ux;
   String label("Choice");
   ChoiceProbe choice(gestures, ux, label, "b", threeRows(), false);
-  choice.nudge(1);
+  choice.press("down:single");
   CHECK_EQ(choice.press("cancel:single"), 1);
   CHECK_EQ(std::string(keyOf(choice).c_str()), std::string("b"));
 }
@@ -313,7 +326,7 @@ TEST_CASE("a choice forward is the pages work") {
   // it lands on, and Forward previews the one showing again.
   choice.activate();
   CHECK_EQ(std::string(heard.c_str()), std::string("b"));
-  choice.nudge(1);
+  choice.press("down:single");
   CHECK_EQ(std::string(heard.c_str()), std::string("c"));
   CHECK_EQ(choice.press("forward:single"), 1);
   CHECK_EQ(std::string(heard.c_str()), std::string("c"));
@@ -326,9 +339,9 @@ TEST_CASE("a choice forward is the pages work") {
                     [&previews](String&) { previews++; });
   empty.activate();
   CHECK_EQ(previews, 0);
-  empty.nudge(1);
+  empty.press("up:single");
   CHECK_EQ(previews, 1);
-  empty.nudge(-1);
+  empty.press("down:single");
   CHECK_EQ(previews, 1);
   CHECK_EQ(empty.press("forward:single"), 0);
   CHECK_EQ(previews, 1);

@@ -20,12 +20,12 @@ wait 1 s
 send up:double
 wait 1 s
 
-# Forward into the unit's choices and Up twice past psi to inHg.
+# Forward into the unit's choices and Down twice past psi to inHg.
 send forward:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
 
 # OK takes the choice into the row, and OK on the rows settles the list: the device writes the set,

@@ -68,7 +68,7 @@ void ChoiceScene::nudge(int8_t direction) {
     preview();
     return;
   }
-  if (list_->nudge(direction)) value_ = list_->selected();
+  if (list_->nudge(direction * -1)) value_ = list_->selected();
   preview();
 }
 

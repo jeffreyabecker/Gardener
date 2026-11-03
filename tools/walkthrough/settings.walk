@@ -16,26 +16,26 @@ wait 1 s
 
 # Down to the jingle and Forward into its choices: the entries the jingle library read at boot, the
 # one showing inverted, and each move playing the entry it lands on. An editor steps its value, so
-# Up takes the next entry and Down the one before it.
+# Down takes the next entry and Up the one before it.
 send down:single
 wait 1 s
 send forward:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
 
 # OK writes the entry into the list and returns to the rows, JINGLE showing the title it settled on.
 send ok:single
 wait 1 s
 
-# Up to the unit, Forward into its four entries, and Up once to psi.
+# Up to the unit, Forward into its four entries, and Down once to psi.
 send up:single
 wait 1 s
 send forward:single
 wait 1 s
-send up:single
+send down:single
 wait 1 s
 send ok:single
 wait 1 s
