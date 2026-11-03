@@ -10,19 +10,14 @@
 # the page goes on the stack, and the browser stays under it. A row carries its routine's key as its
 # value, so the list is the only structure the browser keeps.
 
-# The browser's chrome from the rows and the window they are drawn through: one row per visible
-# routine, the selected one inverted, and the scrollbar beside them. The rows, the window and the
-# page width are handed in, so a case draws the chrome from values rather than from a page.
-def browser_chrome(rows, selected, first, visible, width)
-  var lines = []
-  var line_height = 8
-  var line = 0
-  while line < visible && first + line < rows.size()
-    var at = first + line
-    var row = rows[at]
-    # A routine that registered no glyph has no cell to draw it in: the row keeps the title's share for
-    # itself rather than asking for an icon it does not hold. A row is eight rows tall, which no ttyp0
-    # cut fits, so it names the Adafruit face rather than the panel's design.
+# The browser's rows as the list draws them: one row per registration, its routine's key as the
+# value the keys select it by and its title in the row's own draw. A routine that registered no glyph
+# has no cell to draw it in, so the row keeps the title's share for itself rather than asking for an
+# icon it does not hold. A row is eight rows tall, which no ttyp0 cut fits, so it names the Adafruit
+# face rather than the panel's design. The window, the inversion and the scrollbar are the list's.
+def browser_pairs(rows)
+  var pairs = []
+  for row : rows
     var cells = []
     if row.icon != nil
       cells.push([bounds(0.125, 1), screen.icon(nil, nil, nil, nil, row.icon)])
@@ -30,27 +25,18 @@ def browser_chrome(rows, selected, first, visible, width)
     else
       cells.push([bounds(1, 1), screen.text(nil, nil, nil, nil, row.title, "adafruit")])
     end
-    var line_draw = screen.row(nil, cells)
-    if at == selected
-      line_draw = screen.inverted(line_draw)
-    end
-    lines.push([bounds(1, line_height), line_draw])
-    line += 1
+    pairs.push([row.value, screen.row(nil, cells)])
   end
-  return screen.row(nil, [
-    [bounds(width - 2, 1), screen.column(nil, lines)],
-    [bounds(2, 1), screen.scrollbar(nil, nil, nil, nil, first, rows.size(), visible)]
-  ])
+  return pairs
 end
 
 class BrowserScene
-  static var VISIBLE = 6
   var rows
-  var selected
+  var list
 
   def init()
     self.rows = []
-    self.selected = 0
+    self.list = nil
   end
 
   def activate()
@@ -62,28 +48,44 @@ class BrowserScene
     self.set(routines.rows())
   end
 
+  # The rows the list shows, selected on the row it was on: the first row on the first build, and the
+  # value the list answered last time on a rebuild, so a routine keeps its row across an editor.
   def set(rows)
     self.rows = rows
-    if self.selected >= self.rows.size()
-      self.selected = 0
+    var key = nil
+    if self.list != nil
+      key = self.list.getSelectedValue()
     end
+    if key == nil && rows.size() > 0
+      key = rows[0].value
+    end
+    self.list = RowList(8, browser_pairs(rows), key, "wrap")
   end
 
   def selected_row()
-    if self.selected >= self.rows.size()
+    if self.list == nil
       return nil
     end
-    return self.rows[self.selected]
+    var key = self.list.getSelectedValue()
+    if key == nil
+      return nil
+    end
+    for row : self.rows
+      if row.value == key
+        return row
+      end
+    end
+    return nil
   end
 
   # Up and Down move the selection; OK launches the row, Forward edits its settings first, and Back
   # or Cancel leaves.
   def handle(ev)
     if ev == "up:single"
-      return self.step(-1)
+      return self.list != nil && self.list.nudge(-1)
     end
     if ev == "down:single"
-      return self.step(1)
+      return self.list != nil && self.list.nudge(1)
     end
     if ev == "ok:single"
       return self.choose()
@@ -95,23 +97,6 @@ class BrowserScene
       return self.leave()
     end
     return false
-  end
-
-  def step(delta)
-    var count = self.rows.size()
-    if count == 0
-      return false
-    end
-    self.selected = (self.selected + delta + count) % count
-    return true
-  end
-
-  # The first row the window shows, carried along once the selection would fall off its bottom edge.
-  def first()
-    if self.selected >= BrowserScene.VISIBLE
-      return self.selected - BrowserScene.VISIBLE + 1
-    end
-    return 0
   end
 
   # The row's routine built from its own file: the registry reads the declaration into one clean
@@ -162,10 +147,12 @@ class BrowserScene
     return ux.pop()
   end
 
-  # The drawing: the chrome from the rows and the window they move through.
+  # The drawing: the list of rows, drawn by the list itself.
   def draw_page()
-    return browser_chrome(self.rows, self.selected, self.first(),
-                          BrowserScene.VISIBLE, screen.width())
+    if self.list == nil
+      return screen.column(nil, [])
+    end
+    return self.list.draw()
   end
 end
 

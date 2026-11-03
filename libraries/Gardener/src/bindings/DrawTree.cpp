@@ -140,6 +140,20 @@ Justification justificationOf(bvm* vm, int node) {
 
 gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state);
 
+// The row list a `row_list` node names: the instance in the node's `list` field, whose comobj holds
+// the model. Null for a node that names no such instance, which draws nothing rather than raising.
+const gfx::RowList* rowListOf(bvm* vm, int node) {
+  const int base = be_top(vm);
+  const gfx::RowList* list = nullptr;
+  if (be_getmember(vm, node, "list") && be_isinstance(vm, -1)) {
+    if (be_getmember(vm, -1, ".p") && be_iscomobj(vm, -1)) {
+      list = static_cast<const gfx::RowList*>(be_tocomptr(vm, -1));
+    }
+  }
+  be_pop(vm, be_top(vm) - base);
+  return list;
+}
+
 // The items of a list value, pushed on top: a page's `[...]` is an instance of the list class and the
 // interpreter keeps its items in the instance's `.p`, which is what the data calls read. False when
 // the value is not a list, and then nothing is pushed.
@@ -273,6 +287,14 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
     return gfx::inverted(std::move(child));
   }
 
+  // The draw a page's row list answers: the node names the instance, and the walk asks it for the
+  // model to draw with. A node with no handle draws nothing.
+  if (strcmp(kind, "row_list") == 0) {
+    const gfx::RowList* list = rowListOf(vm, node);
+    if (list == nullptr) return gfx::PaintNodeRef();
+    return gfx::callable([list](gfx::Canvas& canvas) { list->draw(canvas); });
+  }
+
   return gfx::PaintNodeRef();
 }
 
@@ -283,6 +305,10 @@ gfx::PaintNodeRef paintOf(bvm* vm, int node, const SystemState& state) {
 void drawTree(bvm* vm, int node, SystemState state, gfx::Canvas& canvas) {
   const gfx::PaintNodeRef paint = paintOf(vm, be_absindex(vm, node), state);
   if (paint) paint->draw(canvas);
+}
+
+gfx::PaintNodeRef paintFromTree(bvm* vm, int node, SystemState state) {
+  return paintOf(vm, be_absindex(vm, node), state);
 }
 
 }  // namespace gardener

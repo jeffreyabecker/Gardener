@@ -56,7 +56,7 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 3 — the Berry bindings
 
-- [ ] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
+- [x] **The class a page uses.** `bindings/RowList.cpp` declares the global `RowList` with `.p` for the
       comobj that owns the model and `.rows` for the page's pairs; `init(row_height, rows, selected,
       wrap)` resolves the selected value and builds the model, and `nudge`, `getSelectedValue` and
       `draw()` answer through it. A pair's draw is walked through a new `paintFromTree()` export, or,
@@ -67,13 +67,13 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       a new `list` field, and `DrawTree` answers it with a callable that calls `list->draw(canvas)`.
       `installRowListClass()` runs in `BerryInterpreter` with the modules.
       `python tools/berry/check.py` loads the image.
-- [ ] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
+- [x] **Pin the class.** `tools/berry/tests/list.test.be` is the wrapper's suite, auto-globbed like the
       rest: `RowList(...)`, `nudge` and `getSelectedValue` agree with the model, a `nil` selection
       answers nil, a row that is not a pair, a title that is not a string, a wrap word that is
       neither `"wrap"` nor `"clamp"`, and an alignment word that names no justification raise, and a
       pushed page that draws the list inks the selected row's whole cell. A `[key, "Title"]` pair and
       a `[key, "Title", icon]` pair draw the title and the mark the helpers build.
-- [ ] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
+- [x] **Move the browser onto it.** `BrowserScene.set()` builds `[value, screen.row(...)]` pairs and
       constructs `RowList(8, pairs, key, "wrap")`; `handle()` nudges, `selected_row()` reads
       `getSelectedValue()`, and `draw_page()` answers `self.list.draw()`. `browser_chrome()`,
       `step()`, `first()` and `VISIBLE` go. `browser.test.be` reads the page through the wrapper and
