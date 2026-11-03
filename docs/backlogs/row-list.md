@@ -15,10 +15,6 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 1 — the component
 
-- [ ] **Borrow a paint.** Add `gfx::borrowed(const PaintNode&)` to `Drawing.h`/`Drawing.cpp`: a node
-      that draws one it does not own and leaves it alive, the ownership counterpart of
-      `borrowedText`. A case draws the borrowed node twice and reads
-      `inverted(borrowed(paint))` as the cell's ink and paper counted together.
 - [ ] **The model.** Add `RowList` in `panel/page/RowList.h`/`.cpp` — a plain class a scene holds,
       not a paint node: `Row { String value; gfx::PaintNodeRef paint; }`, the row height, a selected
       value and a wrap flag; `nudge`, `selected`, `current` and `draw(canvas, along)`, which draws

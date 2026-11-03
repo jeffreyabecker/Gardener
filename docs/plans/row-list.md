@@ -90,11 +90,11 @@ The rules it holds:
 A held paint is drawn as often as the band is: `PaintNode::draw()` is const and leaves the node where
 it was, so `std::vector<gfx::PaintNodeRef>` is a fine thing for the model to own. The one operation
 that cannot use a held node is the highlight, because `gfx::inverted()` takes its child by value and
-owns it. The model therefore draws the current row into its cell as
-`gfx::inverted(gfx::borrowed(*rows_[current_].paint))->draw(cell)`, and every other row as
-`rows_[at].paint->draw(cell)`. `borrowed()` is the one addition to Gfx — a node that draws one it does
-not own and leaves it alive, the ownership counterpart of `borrowedText` — and it has no `screen`
-call, because a page holds no paints to lend.
+owns it. The current row is drawn as
+`gfx::inverted(gfx::callable([this, at](gfx::Canvas& c) { rows_[at].paint->draw(c); }))->draw(cell)`,
+and every other row as `rows_[at].paint->draw(cell)`. `callable()` lends the held paint to the
+inverting wrapper for the one draw that needs it, so nothing is added to Gfx and the picture keeps
+its one spelling.
 
 ### The class a page uses
 
@@ -187,7 +187,8 @@ chromes case that drove the chrome.
   the settings list rebuild every row's text on every beat to keep its supplier honest, when the
   pictures only change when an editor returns.
 - **An `inverted(const PaintNode&)` overload.** One name with two ownership rules is a trap: an
-  lvalue `PaintNodeRef` would silently stop being consumed. `borrowed()` names the rule it is.
+  lvalue `PaintNodeRef` would silently stop being consumed. `callable()` lends the paint for one draw
+  without a second rule.
 - **A wrapper that answers the record tree from the model's numbers.** The wrapper would compute
   cells and pick nodes, which is the layout the model is for, on the wrong side of the boundary.
 - **A `screen.list(...)` call a page makes itself.** A `screen` call answers a `draw` record, and a
@@ -207,8 +208,6 @@ chromes case that drove the chrome.
 - **The installer.** `installRowListClass()` runs with the modules in `BerryInterpreter`, so the
   class is a global before any image file compiles. No `/system/order` entry is involved: nothing in
   `firmware/data` gains a file.
-- **The borrow.** `gfx::borrowed()` is the one addition to Gfx, in `Drawing.h` and `Drawing.cpp`;
-  nothing else in the drawing changes.
 - **The one-node walk.** `DrawTree` exports `paintFromTree()` beside `drawTree()`, and its comment
   gains the rule the wrapper depends on: a paint's borrowed text points into the node it was walked
   from, so whoever keeps the paint keeps the node — which is why the instance keeps `.rows`.
