@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <type_traits>
+#include <utility>
 
 #include "Rect.h"
 #include "Transform.h"
@@ -9,7 +10,17 @@
 #include "Blend.h"
 
 namespace gardener::gfx {
+class Canvas;
 class View;
+
+// Whether a type draws itself through a `draw` that takes the canvas it is handed: the form
+// Canvas::draw() takes a drawable in, beside a shape's call. It is what keeps the two overloads
+// apart, since a shape is a callable and a drawable is an object with a draw of its own.
+template <typename T, typename = void> struct HasDraw : std::false_type {};
+
+template <typename T>
+struct HasDraw<T, std::void_t<decltype(std::declval<const T&>().draw(std::declval<Canvas&>()))>>
+    : std::true_type {};
 
 // The frame a drawing lands in: one pixel written in the panel's own coordinates, the two numbers
 // that say how big the frame is, and the ask for a canvas over it. A device implements this; a
@@ -43,13 +54,25 @@ class Canvas {
   virtual View child(Rect rect);
 
   // A shape is a callable that takes the canvas and draws through it. It is taken by value, so it
-  // has to be copyable, and it is called once and not kept.
-  template <typename TShape> void draw(TShape shape) {
+  // has to be copyable, and it is called once and not kept. A type that draws itself is the
+  // drawable form below instead, so the two never answer the same call.
+  template <typename TShape, typename = std::enable_if_t<!HasDraw<TShape>::value>>
+  void draw(TShape shape) {
     static_assert(std::is_invocable<TShape&, Canvas&>::value,
                   "a shape is a callable that accepts a Canvas&");
     static_assert(std::is_copy_constructible<TShape>::value,
                   "a shape is copyable: draw takes it by value");
     shape(*this);
+  }
+
+  // A drawable is an object that draws itself on the canvas it is handed, through a `draw` that
+  // takes the canvas by reference. It is taken by reference, so it is drawn where it lives rather
+  // than copied, and the trait keeps it apart from the shape a call answers.
+  template <typename TDrawable, typename = std::enable_if_t<HasDraw<TDrawable>::value>>
+  void draw(const TDrawable& drawable) {
+    static_assert(std::is_same<decltype(drawable.draw(std::declval<Canvas&>())), void>::value,
+                  "a drawable's draw(Canvas&) must return void");
+    drawable.draw(*this);
   }
 };
 

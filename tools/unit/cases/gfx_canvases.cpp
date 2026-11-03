@@ -1,5 +1,6 @@
 // The child canvases: an area of another canvas, its origin, its clipping, the turn it inherits and
-// the flush that sends what it drew.
+// the flush that sends what it drew, and the two forms a canvas takes a drawing in: a shape's call
+// and a drawable's own draw.
 
 #include <doctest.h>
 
@@ -94,6 +95,72 @@ TEST_CASE("a child outside its parent draws nothing") {
   reset();
   plot.setPixel(0, 0, Ink);
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
+// --- what a canvas draws ----------------------------------------------------
+
+// A drawable in the sense Canvas::draw() takes: an object that draws itself on the canvas it is
+// handed, and that records the canvas so a case can see which one it was given.
+struct Dot {
+  int16_t x = 0;
+  int16_t y = 0;
+  mutable const Canvas* drawn = nullptr;
+
+  void draw(Canvas& canvas) const {
+    drawn = &canvas;
+    canvas.setPixel(x, y, Ink);
+  }
+};
+
+// One that cannot be copied, so a case that draws it only compiles while the form takes it by
+// reference.
+struct Uncopyable {
+  Uncopyable() = default;
+  Uncopyable(const Uncopyable&) = delete;
+  Uncopyable& operator=(const Uncopyable&) = delete;
+
+  mutable bool drawn = false;
+
+  void draw(Canvas& canvas) const {
+    drawn = true;
+    canvas.setPixel(0, 0, Ink);
+  }
+};
+
+TEST_CASE("a drawable draws on the canvas it is handed") {
+  reset();
+  View plot = canvas.child(Rect(20, 10, 40, 20));
+  Dot dot{3, 4};
+  plot.draw(dot);
+  CHECK_EQ(display.at(23, 14), Ink);
+  CHECK_EQ(dot.drawn, &plot);
+
+  // A drawable that is no variable at all is drawn just the same.
+  plot.draw(Dot{5, 6});
+  CHECK_EQ(display.at(25, 16), Ink);
+}
+
+TEST_CASE("a drawable is drawn where it lives rather than copied") {
+  reset();
+  Uncopyable widget;
+  canvas.draw(widget);
+  CHECK(widget.drawn);
+  CHECK_EQ(display.at(0, 0), Ink);
+}
+
+TEST_CASE("a drawable is clipped to the space it is handed") {
+  reset();
+  View plot = canvas.child(Rect(20, 10, 4, 4));
+  plot.draw(Dot{10, 10});
+  CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
+}
+
+TEST_CASE("a shape still draws through its call") {
+  reset();
+  canvas.draw(Rectangle(4, 4, 3, 2, Ink, true));
+  canvas.draw([](Canvas& own) { own.setPixel(10, 10, Ink); });
+  CHECK_EQ(display.inkCount(4, 4, 3, 2), 6);
+  CHECK_EQ(display.at(10, 10), Ink);
 }
 
 }  // namespace
