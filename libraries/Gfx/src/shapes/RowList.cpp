@@ -1,30 +1,29 @@
-#include "panel/page/RowList.h"
+#include "RowList.h"
 
 #include <utility>
 
-#include "Bitmap.h"
-#include "layout/Drawing.h"
-#include "layout/Layout.h"
+#include "../Bitmap.h"
+#include "../layout/Drawing.h"
+#include "../layout/Layout.h"
 
-namespace gardener {
+namespace gardener::gfx {
 
-RowList::Row RowList::textRow(String value, String title, gfx::Justify horizontal) {
-  return Row{std::move(value), gfx::text(std::move(title), nullptr, horizontal)};
+RowList::Row RowList::textRow(String value, String title, Justify horizontal) {
+  return Row{std::move(value), text(std::move(title), nullptr, horizontal)};
 }
 
-RowList::Row RowList::textRow(String value, String title, const String& icon,
-                              gfx::Justify horizontal) {
-  const gfx::Size mark = gfx::bitmapSize(icon.c_str());
+RowList::Row RowList::textRow(String value, String title, const String& bitmap,
+                              Justify horizontal) {
+  const Size mark = bitmapSize(bitmap.c_str());
   if (mark.width <= 0 || mark.height <= 0) {
     return textRow(std::move(value), std::move(title), horizontal);
   }
   // The mark is placed by the cell's own height rather than by a number the helper would need to be
   // told, and the title starts where the mark's columns end.
-  return Row{std::move(value),
-             gfx::group(gfx::aligned(gfx::sized(gfx::icon(gfx::Box::whole(), icon.c_str()), mark),
-                                     gfx::Justify::Start, gfx::Justify::Center),
-                        gfx::text(gfx::Box(mark.width, 0, 0, 0, true, true), std::move(title),
-                                  nullptr, horizontal))};
+  return Row{std::move(value), group(aligned(sized(icon(Box::whole(), bitmap.c_str()), mark),
+                                             Justify::Start, Justify::Center),
+                                     text(Box(mark.width, 0, 0, 0, true, true), std::move(title),
+                                          nullptr, horizontal))};
 }
 
 RowList::RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap)
@@ -57,7 +56,7 @@ bool RowList::nudge(int direction) {
   return true;
 }
 
-void RowList::draw(gfx::Canvas& canvas, gfx::Justify along) const {
+void RowList::draw(Canvas& canvas, Justify along) const {
   const int16_t count = static_cast<int16_t>(rows_.size());
   if (count == 0 || rowHeight_ <= 0) return;
 
@@ -74,26 +73,26 @@ void RowList::draw(gfx::Canvas& canvas, gfx::Justify along) const {
   const int16_t first = at >= visible ? static_cast<int16_t>(at - visible + 1) : 0;
   const bool scrolls = count > visible;
   const int16_t rowsWidth =
-      scrolls ? static_cast<int16_t>(canvas.width() - gfx::ScrollbarColumn) : canvas.width();
+      scrolls ? static_cast<int16_t>(canvas.width() - ScrollbarColumn) : canvas.width();
   const int16_t top =
-      gfx::alignedOffset(static_cast<int16_t>(canvas.height() - visible * rowHeight_), along);
+      alignedOffset(static_cast<int16_t>(canvas.height() - visible * rowHeight_), along);
 
   for (int16_t line = 0; line < visible; line++) {
     const int16_t index = static_cast<int16_t>(first + line);
     const int16_t y = static_cast<int16_t>(top + line * rowHeight_);
-    gfx::View cell = canvas.child(gfx::Rect(0, y, rowsWidth, rowHeight_));
+    View cell = canvas.child(Rect(0, y, rowsWidth, rowHeight_));
     if (index != at) {
       if (rows_[index].paint) rows_[index].paint->draw(cell);
       continue;
     }
     // The held paint cannot be handed to inverted(), which owns its child, so the callable lends it
     // for the one draw that needs the highlight.
-    gfx::inverted(gfx::callable([this, index](gfx::Canvas& own) {
+    inverted(callable([this, index](Canvas& own) {
       if (rows_[index].paint) rows_[index].paint->draw(own);
     }))->draw(cell);
   }
 
-  if (scrolls) gfx::drawScrollbar(canvas, first, count, visible);
+  if (scrolls) drawScrollbar(canvas, first, count, visible);
 }
 
-}  // namespace gardener
+}  // namespace gardener::gfx

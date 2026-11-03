@@ -8,8 +8,8 @@
 
 #include <Arduino.h>
 
-#include "panel/page/RowList.h"
 #include "panel/settings/EditorScene.h"
+#include "shapes/RowList.h"
 #include "storage/SettingKind.h"
 
 namespace gardener {
@@ -75,7 +75,7 @@ class ChoiceScene : public EditorScene {
   // The line height the list was built at, which is the face's shortest line as it stands: a face
   // the composition changes re-seats the list rather than drawing in the one it was built with.
   int16_t pitch_ = 0;
-  std::unique_ptr<RowList> list_;
+  std::unique_ptr<gfx::RowList> list_;
 };
 
 }  // namespace gardener

@@ -51,16 +51,16 @@ SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title
 // as the value the keys select it by and the text the row prints for the value it holds now. A
 // rebuild is a few Strings and their paints, and it is what an editor handing a value back costs.
 void SettingsScene::rebuild(const String& selected) {
-  std::vector<RowList::Row> rows;
+  std::vector<gfx::RowList::Row> rows;
   rows.reserve(visible_.size());
   for (int16_t at : visible_) {
     SettingsRow* row = rows_[at];
     const auto held = values_.find(row->key());
     const std::any value = held == values_.end() ? std::any() : held->second;
     rows.push_back(
-        RowList::textRow(row->key(), row->label() + "=" + row->text(value), row->icon()));
+        gfx::RowList::textRow(row->key(), row->label() + "=" + row->text(value), row->icon()));
   }
-  list_ = std::make_unique<RowList>(Row, std::move(rows), selected, true);
+  list_ = std::make_unique<gfx::RowList>(Row, std::move(rows), selected, true);
 }
 
 bool SettingsScene::handle(const char* gesture) {

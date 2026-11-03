@@ -12,11 +12,11 @@
 
 #include <Arduino.h>
 
-#include "panel/page/RowList.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 #include "panel/settings/ChoiceScene.h"
 #include "panel/settings/EditorScene.h"
+#include "shapes/RowList.h"
 #include "storage/SettingKind.h"
 
 namespace gardener {
@@ -152,7 +152,7 @@ class SettingsScene : public Scene {
   std::vector<int16_t> visible_;
   SettingValues values_;
   SettingValues opened_;
-  std::unique_ptr<RowList> list_;
+  std::unique_ptr<gfx::RowList> list_;
 };
 
 }  // namespace gardener

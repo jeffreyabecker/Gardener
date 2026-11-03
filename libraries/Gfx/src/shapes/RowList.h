@@ -6,9 +6,9 @@
 
 #include <Arduino.h>
 
-#include "layout/Paint.h"
+#include "../layout/Paint.h"
 
-namespace gardener {
+namespace gardener::gfx {
 
 // A list of rows drawn in a band: the window the band holds, the row the keys are on inverted and the
 // scrollbar beside it when the rows do not all fit. It is a model a scene holds rather than a paint
@@ -26,16 +26,16 @@ class RowList {
   // built rather than one that reads the machine as it draws.
   struct Row {
     String value;
-    gfx::PaintNodeRef paint;
+    PaintNodeRef paint;
   };
 
   // The row a title is: the text across the whole cell, placed by `horizontal`.
-  static Row textRow(String value, String title, gfx::Justify horizontal = gfx::Justify::Center);
+  static Row textRow(String value, String title, Justify horizontal = Justify::Center);
 
   // The same with a mark in the columns before the title, centred down the row. A string that names
   // no bitmap draws the title alone, across the whole cell.
-  static Row textRow(String value, String title, const String& icon,
-                     gfx::Justify horizontal = gfx::Justify::Center);
+  static Row textRow(String value, String title, const String& bitmap,
+                     Justify horizontal = Justify::Center);
 
   RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap);
 
@@ -53,7 +53,7 @@ class RowList {
   // The window drawn in the band `canvas` is: the rows that fit, scrolled to keep the current row in
   // view, the current row inverted across its cell, and the scrollbar beside the rows when they
   // outnumber the window. Rows that do not fill the band sit at `along`.
-  void draw(gfx::Canvas& canvas, gfx::Justify along = gfx::Justify::Start) const;
+  void draw(Canvas& canvas, Justify along = Justify::Start) const;
 
  private:
   int16_t rowHeight_;
@@ -62,4 +62,4 @@ class RowList {
   bool wrap_;
 };
 
-}  // namespace gardener
+}  // namespace gardener::gfx

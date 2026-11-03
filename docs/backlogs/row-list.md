@@ -15,8 +15,8 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 1 — the component
 
-- [x] **The model.** Add `RowList` in `panel/page/RowList.h`/`.cpp` — a plain class a scene holds,
-      not a paint node: `Row { String value; gfx::PaintNodeRef paint; }`, the row height, a selected
+- [x] **The model.** Add `RowList` in `shapes/RowList.h`/`.cpp` — a plain class a scene holds,
+      not a paint node: `Row { String value; PaintNodeRef paint; }`, the row height, a selected
       value and a wrap flag; `nudge`, `selected`, `current` and `draw(canvas, along)`, which draws
       the window into the band it is handed. Cases in `tools/unit/cases/row_list.cpp`: the ring in
       both modes, a clamp at either end, a value no row holds, an empty list and a one-row list.
@@ -26,10 +26,14 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
       rows up four pixels and inks the bar's two-pixel column; a five-pixel band draws one clipped
       row; the rows sit where the caller's justification puts them.
 - [x] **The row builders.** `RowList::textRow(value, title, horizontal)` and
-      `textRow(value, title, icon, horizontal)` build the two rows a scene draws: a title placed
+      `textRow(value, title, bitmap, horizontal)` build the two rows a scene draws: a title placed
       across the cell, and a mark in its own columns before it, centred down the row, with a string
       that names no bitmap falling back to the title alone. Cases in
       `tools/unit/cases/row_list.cpp` read the value, the title's alignment and the mark's columns.
+- [x] **Move it into the drawing library.** `RowList` moves from the panel to
+      `libraries/Gfx/src/shapes/` as `gfx::RowList`, beside the layout it draws with, so the scenes
+      and the binding reach one model without Gardener owning it; `Gfx.h` includes it, and the two
+      scenes and the case name it `gfx::RowList`.
 
 ## Epic 2 — the scenes on it
 

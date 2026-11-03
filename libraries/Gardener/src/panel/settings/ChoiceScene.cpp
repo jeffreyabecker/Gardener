@@ -19,11 +19,11 @@ int16_t choicePitch() {
 
 // The rows of the list: one per entry, its key as the value the keys select it by and its title as
 // the line drawn across the row.
-std::vector<RowList::Row> rowsOf(const std::vector<ChoiceItem>& items) {
-  std::vector<RowList::Row> rows;
+std::vector<gfx::RowList::Row> rowsOf(const std::vector<ChoiceItem>& items) {
+  std::vector<gfx::RowList::Row> rows;
   rows.reserve(items.size());
   for (const ChoiceItem& item : items)
-    rows.push_back(RowList::textRow(item.key, item.title));
+    rows.push_back(gfx::RowList::textRow(item.key, item.title));
   return rows;
 }
 
@@ -79,7 +79,7 @@ void ChoiceScene::nudge(int8_t direction) {
 
 void ChoiceScene::rebuild() {
   pitch_ = choicePitch();
-  list_ = std::make_unique<RowList>(pitch_, rowsOf(items_), heldKey(), true);
+  list_ = std::make_unique<gfx::RowList>(pitch_, rowsOf(items_), heldKey(), true);
 }
 
 // The key the list is seated on: nothing while the setting holds nothing, the held key when an

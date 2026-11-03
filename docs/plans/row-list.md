@@ -41,9 +41,9 @@ rebuilt from the value it holds, or a page's own `screen` record walked from the
 
 ### The model
 
-`libraries/Gardener/src/panel/page/RowList.h` and `.cpp` hold `RowList`, beside `Overlay` and
-`PressureReadout`. It knows no `bvm` and no `screen` record: a row is a value and the paint that
-draws it, and the list owns both.
+`libraries/Gfx/src/shapes/RowList.h` and `.cpp` hold `gfx::RowList`, in the drawing library beside the
+shapes and the layout it draws with. It knows no `bvm` and no `screen` record: a row is a value and
+the paint that draws it, and the list owns both.
 
 ```cpp
 class RowList {
@@ -51,7 +51,7 @@ class RowList {
   // One row: the key a scene selects it by and the paint that draws it.
   struct Row {
     String value;
-    gfx::PaintNodeRef paint;
+    PaintNodeRef paint;
   };
 
   RowList(int16_t rowHeight, std::vector<Row> rows, const String& selected, bool wrap);
@@ -59,7 +59,7 @@ class RowList {
   const String& selected() const;
   int16_t current() const;                       // the row's index, or -1
 
-  void draw(gfx::Canvas& canvas, gfx::Justify along = gfx::Justify::Start) const;
+  void draw(Canvas& canvas, Justify along = Justify::Start) const;
 };
 ```
 
@@ -113,9 +113,9 @@ its one spelling.
 
 `rows` is the ordered list of `[value, draw]` pairs a page builds — the browser hands
 `[routine_key, screen.row(nil, cells)]`. A pair whose draw is a string is a title row instead, built
-by `RowList::textRow(value, title)`: the pair's third element names a bitmap printed in the columns
-before the title, the fourth the alignment's word — `"start"`, `"center"` or `"end"`. A bitmap that
-names no mark leaves the title alone, which is the helper's own fallback. The value is a string,
+by `gfx::RowList::textRow(value, title)`: the pair's third element names a bitmap printed in the
+columns before the title, the fourth the alignment's word — `"start"`, `"center"` or `"end"`. A bitmap
+that names no mark leaves the title alone, which is the helper's own fallback. The value is a string,
 because the keys the pages select by are strings; a row that is not a pair, a value or a title that
 is not a string, a `row_height` below one, a wrap word that is neither `"wrap"` nor `"clamp"`, and an
 alignment word the vocabulary does not hold are refused at the call.

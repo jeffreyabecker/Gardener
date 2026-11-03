@@ -9,7 +9,7 @@
 
 #include "suite.h"
 
-#include "panel/page/RowList.h"
+#include "shapes/RowList.h"
 
 namespace gardener::gfx::test {
 namespace {

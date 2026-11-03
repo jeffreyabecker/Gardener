@@ -15,5 +15,6 @@
 #include "fonts/AdafruitFont.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include "shapes/RowList.h"
 #include "shapes/Shapes.h"
 #include "shapes/Text.h"
