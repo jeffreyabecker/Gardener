@@ -227,12 +227,12 @@ chromes case that drove the chrome.
 ## How it is known to have worked
 
 `tools/unit/cases/row_list.cpp` is the model's suite, and its cases are the rules above with numbers:
-a seven-row list in a four-row band draws rows 0–3 and no bar; the same list with the fifth value
-selected draws rows 1–4, `current` 4 and only that row inverted; a clamped end answers false and
-stays, while a wrapping one answers true with the first row current; no matching value inverts
-nothing and nudges down to the first row and up to the last; a three-row list in a four-row band
-draws no bar and takes the full width; a five-pixel band draws one row; a one-row list answers false
-either way. The cases build their rows from `gfx::rectangle` and `gfx::text`, and
+a seven-row list in a four-row band draws rows 0–3; the same list with the fifth value selected draws
+rows 1–4, `current` 4 and only that row inverted; a clamped end answers false and stays, while a
+wrapping one answers true with the first row current; no matching value inverts nothing and nudges
+down to the first row and up to the last; a three-row list in a four-row band draws no bar and takes
+the full width; a five-pixel band draws one row; a one-row list answers false either way. The cases
+build their rows from `gfx::rectangle` and `gfx::text`, and
 `display.inkCount()` reads the inverted row as the cell it is; the settings-list cases already in the
 suite prove the adoption.
 
