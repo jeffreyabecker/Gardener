@@ -11,6 +11,7 @@
 #include "CaptureDisplay.h"
 #include "GestureStrip.h"
 #include "MemoryFiles.h"
+#include "NoteBand.h"
 #include "bindings/BindingContext.h"
 #include "core/Battery.h"
 #include "core/Buzzer.h"
@@ -297,6 +298,9 @@ class HarnessSession {
   // Records a gesture for the buttons across the top of the picture, marked on the next captured
   // frames. The page takes its presses from routines, so only the picture is told.
   void pressGesture(const char* gesture);
+  // Sets the line the band under the glass carries from the next captured frame. Null or empty
+  // blanks the band, which is what it is until a walk names one.
+  void setNote(const char* text);
   // Marks the overlay in every frame captured from now on: the suite framework hashes those rows,
   // because the overlay is the panel's own and no case draws it.
   void markOverlay(int16_t top, int16_t rows);
@@ -333,6 +337,7 @@ class HarnessSession {
   VacuumSystem vacuum_;
   CaptureDisplay display_{CaptureDisplay::Width, CaptureDisplay::Height, 1};
   GestureStrip gestureStrip_;
+  NoteBand noteBand_;
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;

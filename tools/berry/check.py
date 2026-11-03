@@ -66,8 +66,10 @@ SHARED_SOURCES = [
     SHARED / "arduino" / "Clock.cpp",
     SHARED / "capture" / "CaptureDisplay.cpp",
     SHARED / "capture" / "CapturePicture.cpp",
+    SHARED / "capture" / "CellText.cpp",
     SHARED / "capture" / "GestureStrip.cpp",
     SHARED / "capture" / "GifWriter.cpp",
+    SHARED / "capture" / "NoteBand.cpp",
 ]
 
 # The parts the panel's pieces are made of here: a chamber and its three parts, a counted piezo, a

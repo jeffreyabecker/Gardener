@@ -4,20 +4,14 @@
 #include <string>
 
 #include "Canvas.h"
+#include "CellText.h"
 #include "Rect.h"
-#include "fonts/AdafruitFont.h"
 #include "layout/Drawing.h"
 #include "shapes/Shapes.h"
-#include "shapes/Text.h"
 
 namespace gardener {
 
 namespace {
-
-// The built-in face's cell: five columns of ink and the blank column its advance leaves, eight rows
-// tall.
-constexpr int16_t CellWidth = 6;
-constexpr int16_t CellHeight = 8;
 
 // The box an arrow fills in its button: centred across, and as tall as the glyph the letters beside
 // it are drawn at, so the six buttons read as one row.
@@ -38,39 +32,6 @@ constexpr Key Keys[] = {{"up", nullptr, &gfx::Triangle::up},
                         {"back", nullptr, &gfx::Triangle::left},
                         {"ok", "OK", nullptr},
                         {"cancel", "X", nullptr}};
-
-int16_t textWidth(const char* text) {
-  int16_t width = 0;
-  for (const char* c = text; *c != '\0'; c++)
-    width = static_cast<int16_t>(width + CellWidth);
-  return width;
-}
-
-// Whether the built-in face has no ink for a code, so a label can fall back rather than print a
-// blank where a glyph is missing. A column of the cell is a byte of the face's bitmap, so a glyph
-// with no bit set in any of its columns has nothing to draw.
-bool glyphBlank(uint8_t c) {
-  const uint8_t* glyph = gfx::AdafruitFont.bitmap;
-  const uint16_t start = static_cast<uint16_t>(c * gfx::AdafruitFont.width);
-  for (uint8_t across = 0; across < gfx::AdafruitFont.width; across++) {
-    if (glyph[start + across] != 0) return false;
-  }
-  return true;
-}
-
-// A label at the built-in face's own cell pitch. The strip is the six buttons as that face draws
-// them — the arrows beside the letters are the same height as its line — so it names the face rather
-// than following the session's default family, which a walk sets to the panel's design.
-void drawText(gfx::Canvas& canvas, int16_t x, int16_t y, const char* text) {
-  for (const char* c = text; *c != '\0'; c++) {
-    const uint8_t code = static_cast<uint8_t>(*c);
-    const char value[] = {static_cast<char>(glyphBlank(code) ? 'x' : code), '\0'};
-    gfx::text(gfx::Box(x, y, 0, gfx::lineHeight(gfx::AdafruitFont), true, false), value,
-              gfx::findFamily("adafruit"), gfx::Justify::Start, gfx::Justify::Start)
-        ->draw(canvas);
-    x = static_cast<int16_t>(x + CellWidth);
-  }
-}
 
 // Whether a form is a count of seconds rather than a name: `cancel:5` is a five-second hold.
 bool isCount(const std::string& form) {
@@ -144,17 +105,19 @@ void GestureStrip::draw(gfx::Canvas& canvas) {
           static_cast<int16_t>(left + (CapturePicture::ButtonWidth - ArrowWidth) / 2);
       canvas.draw(key.arrow(gfx::Rect(arrowLeft, top, ArrowWidth, ArrowHeight), gfx::Ink, true));
     } else {
-      drawText(canvas,
-               static_cast<int16_t>(left + (CapturePicture::ButtonWidth - textWidth(key.text)) / 2),
-               top, key.text);
+      drawCellText(
+          canvas,
+          static_cast<int16_t>(left + (CapturePicture::ButtonWidth - cellTextWidth(key.text)) / 2),
+          top, key.text);
     }
 
     if (held) {
       char seconds[4];
       snprintf(seconds, sizeof(seconds), "%d", static_cast<int>(mark.seconds));
-      drawText(canvas,
-               static_cast<int16_t>(left + CapturePicture::ButtonWidth - 1 - textWidth(seconds)), 9,
-               seconds);
+      drawCellText(
+          canvas,
+          static_cast<int16_t>(left + CapturePicture::ButtonWidth - 1 - cellTextWidth(seconds)), 9,
+          seconds);
     }
 
     if (mark.outlines > 0) {

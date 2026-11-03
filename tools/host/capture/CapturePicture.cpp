@@ -10,8 +10,11 @@ gfx::Rect CapturePicture::bar() {
 }
 
 gfx::Rect CapturePicture::border() {
-  return gfx::Rect(0, static_cast<int16_t>(ButtonHeight + Gap), Width,
-                   static_cast<int16_t>(Height - ButtonHeight - Gap));
+  return gfx::Rect(0, static_cast<int16_t>(ButtonHeight + Gap), Width, GlassHeight);
+}
+
+gfx::Rect CapturePicture::note() {
+  return gfx::Rect(0, static_cast<int16_t>(Height - NoteHeight), Width, NoteHeight);
 }
 
 gfx::Rect CapturePicture::glass() {

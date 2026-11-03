@@ -5,11 +5,12 @@
 
 # The panel's design, which the composition sets once on a device: a leaf that names no family draws
 # in it, and the band's height picks the cut.
-set-font ttyp0
+set-font profont
 
 # The model chamber is left at its own rates, so the target the presses build is a few seconds'
 # climb and the reading can be seen to arrive at it rather than appear there.
 load home
+
 wait 1 s
 
 # Up six times and Down once: a press moves the target by the panel's whole step, which is one kPa

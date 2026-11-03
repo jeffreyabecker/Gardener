@@ -146,6 +146,17 @@ bool parseSetFont(const std::string& rest, Command& command, std::string& error)
   return true;
 }
 
+// The rest of the line, trimmed, is the note: a walk's own sentence about what the step it is
+// drawing is doing, drawn in the band under the glass.
+bool parseSetNote(const std::string& rest, Command& command, std::string& error) {
+  if (rest.empty()) {
+    error = "set-note takes a line of text";
+    return false;
+  }
+  command.note = rest;
+  return true;
+}
+
 bool parseLine(const std::string& text, int line, Command& command, std::string& error) {
   command = Command();
   command.line = line;
@@ -173,6 +184,18 @@ bool parseLine(const std::string& text, int line, Command& command, std::string&
   if (verb == "set-font") {
     command.verb = Command::Verb::SetFont;
     return parseSetFont(rest, command, error);
+  }
+  if (verb == "set-note") {
+    command.verb = Command::Verb::SetNote;
+    return parseSetNote(rest, command, error);
+  }
+  if (verb == "clear-note") {
+    command.verb = Command::Verb::ClearNote;
+    if (!rest.empty()) {
+      error = "clear-note takes nothing";
+      return false;
+    }
+    return true;
   }
   if (verb == "emit") {
     command.verb = Command::Verb::Emit;

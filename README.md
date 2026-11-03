@@ -111,6 +111,8 @@ and `settings-cancel.walk` for the same list throwing each change away.
 | `wait <n> s\|ms` | device time, rounded up to whole 250 ms beats |
 | `set-rate <pull> <vent>` | the model chamber's pull at full duty and its venting rate, in kPa/s |
 | `set-font <design>` | the design every leaf that names no family draws in — `ttyp0`, `profont`, `x11`, `adafruit` |
+| `set-note <text>` | the line a walk writes in the band under the glass, drawn in the built-in face; the rest of the line is the note |
+| `clear-note` | blanks the band again |
 | `emit` | writes the frames as the GIF and ends the walk; it has to be the last line |
 
 The panel's own design is the firmware composition's to set, once on its way up, so a walk that
@@ -126,9 +128,13 @@ marked. `--data` picks the image (default `firmware/data`) and `--ceiling-kpa` t
 depth. A `.gif` under `tools/walkthrough/build/` is there for a human to look at, like the check's.
 
 Every frame is the panel's glass inside a dotted border, with the six buttons a panel's user can
-press — up, down, forward, back, OK and cancel — across the top. A press marks the button it names
-for four frames: one outline for a single, two for a double, and the seconds of a hold written under
-the glyph. The picture is 130 by 86 pixels before `--scale`, and 260 by 172 at the default of 2.
+press — up, down, forward, back, OK and cancel — across the top and a band under the glass for a
+note. A press marks the button it names for four frames: one outline for a single, two for a double,
+and the seconds of a hold written under the glyph. A note is the walk's own sentence about the step
+it is drawing, drawn in the built-in face, centred while it fits and clipped at the picture's far
+edge when it is too wide; the band is part of every frame, so clearing a note leaves it empty rather
+than making the picture shorter. The picture is 130 by 100 pixels before `--scale`, and 260 by 200
+at the default of 2.
 
 ## Documentation
 

@@ -2,7 +2,8 @@
 // the bytes a GIF89a starts with. The frame is packed by hand where the writer is what is under
 // test; a page driven through the suite's own display leaves the packing, the frame it is placed in
 // and the components drawn over it to the capture. A capture of a page carries the gesture the case
-// named as a strip under the glass, and the overlay rows a case did not draw.
+// named as a strip above the glass, the note a walk wrote in a band under it, and the overlay rows a
+// case did not draw.
 
 #include <doctest.h>
 
@@ -16,6 +17,7 @@
 #include "CapturePicture.h"
 #include "GestureStrip.h"
 #include "GifWriter.h"
+#include "NoteBand.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 #include "suite.h"
@@ -28,6 +30,7 @@ using gardener::CapturePicture;
 using gardener::GestureQueue;
 using gardener::GestureStrip;
 using gardener::GifDelayCs;
+using gardener::NoteBand;
 using gardener::RenderScale;
 using gardener::Scene;
 using gardener::Ux;
@@ -358,6 +361,39 @@ TEST_CASE("a press is one outline, a double press two and a hold its seconds") {
   CHECK(outlined(*chord, 4));
   CHECK(doubleOutlined(*chord, 4));
 
+  display.endCapture();
+}
+
+TEST_CASE("a note inks the band under the glass and clearing it blanks the band") {
+  reset();
+  NoteBand band;
+  std::vector<CaptureDisplay::Component> components;
+  components.push_back(band.component(CapturePicture::note()));
+  components.push_back(CapturePicture::borderComponent());
+  display.beginCapture(CapturePicture::frame(), std::move(components));
+
+  const auto drawn = [&band](const char* note) {
+    band.set(note);
+    gardener::gfx::test::canvas.setPixel(4, 20, 255);
+    gardener::gfx::test::display.flush();
+    return display.frame(display.frameCount() - 1);
+  };
+
+  const Rect line = CapturePicture::note();
+  // The gap between the border and the band is clear, and the band under it carries the line, so a
+  // note reads as the picture's foot rather than as part of the glass.
+  const std::vector<uint8_t>* written = drawn("setting the jingle");
+  REQUIRE(written != nullptr);
+  CHECK_FALSE(packedInk(*written, CapturePicture::Width, line.x,
+                        static_cast<int>(line.y) - CapturePicture::Gap, line.width,
+                        CapturePicture::Gap));
+  CHECK(packedInk(*written, CapturePicture::Width, line.x, line.y, line.width, line.height));
+
+  // Cleared, the band is blank and the frame is still the size the band is part of.
+  const std::vector<uint8_t>* blank = drawn(nullptr);
+  REQUIRE(blank != nullptr);
+  CHECK_FALSE(packedInk(*blank, CapturePicture::Width, line.x, line.y, line.width, line.height));
+  CHECK_EQ(blank->size(), Capture::frameBytes(CapturePicture::Width, CapturePicture::Height));
   display.endCapture();
 }
 

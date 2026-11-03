@@ -4,7 +4,8 @@
 // The tool writes no Berry. `load` and `send` are the calls a launch and a press already take — the
 // registry and the stack for a page, the press queue for a gesture — and the verbs that are not the
 // page's are the host's: a wait is beats of the session, a rate is the chamber's model, a font is
-// the design a leaf that names no family draws in, and an emit is the capture written.
+// the design a leaf that names no family draws in, a note is the band under the glass, and an emit
+// is the capture written.
 //
 // The whole file is read before anything is drawn, and every load and font is resolved against the
 // image before the first frame is captured, so a misspelled scene, an unknown routine, a setting
@@ -315,6 +316,14 @@ int hostMain(int argc, char** argv) {
         // The one line a composition sets on a device, set here from the walk instead: the resolver
         // reads it as it fits each leaf, so the next frame is the first drawn in it.
         gardener::gfx::setDefaultFamily(gardener::gfx::findFamily(command.font.c_str()));
+        break;
+      case Command::Verb::SetNote:
+        // The picture's band is redrawn every frame, so the next captured frame is the first that
+        // carries the note and the next after a clear is the first without it.
+        session.setNote(command.note.c_str());
+        break;
+      case Command::Verb::ClearNote:
+        session.setNote(nullptr);
         break;
       case Command::Verb::Emit:
         break;

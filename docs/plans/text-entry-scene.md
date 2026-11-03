@@ -109,6 +109,8 @@ key is what buys the two rows of letters.
    (73, 35, 18, 8). A proportional row of shares would round at every boundary and walk the keys
    off the lattice, and the key cursor has to be one key's own box in any case. The text row is
    placed the same way, a cell box per character, which is what makes the caret's inversion exact.
+   The whole of it is written out, field by field and key by key, in the table at the end of this
+   document.
 2. **The top row is the string, not a preview.** The text row is where the caret lives, so the value
    being edited is never hidden behind the keyboard and there is nothing separate to read. It shows
    21 columns; a longer value is a window that follows the caret, and the count in the title band
@@ -168,10 +170,11 @@ key is what buys the two rows of letters.
  +----------------------------------------------------------+   128 x 52
  |NAME                                                  5/24|   title   8 px
  |hello_world                                               |   text    8 px
- |----------------------------------------------------------|   line    3 px: 1px blank, 1px solid, 1px blank 
+ |----------------------------------------------------------|   line    1 px 
  |      a b c d e f g h i j k l m   7 8 9                   |   keys    8 px
  |      n o p q r s t u v w x y z   4 5 6                   |   keys    8 px
  |    ↑ - . _ [space] [DEL]   [ 0 ] 1 2 3                   |   keys    8 px
+ |----------------------------------------------------------|   line    1 px 
  |                 OK=TYPE HOLD=SAVE                        |   hint    8 px
  +----------------------------------------------------------+
 ```
@@ -281,3 +284,88 @@ existing job.
 The steps that get from here to the tree are `docs/backlogs/text-entry-scene.md` — ordered, one
 commit each, deleted together with this plan when the last item lands. `docs/README.md` is not
 touched: it does not list plans or backlogs.
+
+## The layout, field by field and key by key
+
+Every number is a `gfx::Box` in the page's own coordinates, on a 128 x 52 page — the glass less the
+12-row overlay. The cell is the Adafruit face's 6 px advance by its 8 px line box; the bands are the
+editor's 8 / 36 / 8; the text row's 21 columns are centred with a pixel at each edge; and the key
+block's 17 columns are centred with 13 px at each edge.
+
+**The fields and the lines.**
+
+| field            | x  |  y |  w  | h  | what |
+| ---------------- | -- | -- | --- | -- | --- |
+| page             | 00 | 00 | 128 | 52 | the glass above the strip |
+| title band       | 00 | 00 | 128 | 08 | 0.15 of 52, rounded |
+| title label      | 00 | 00 | 098 | 08 | the row's `NAME`, at the left |
+| title count      | 98 | 00 | 030 | 08 | `24/24` is 30 px, at the right |
+| contents band    | 00 | 08 | 128 | 36 | 0.70 of 52 |
+| text row         | 01 | 08 | 126 | 08 | 21 cells of 6 px, centred |
+| rule, above      | 00 | 16 | 128 | 01 | paper |
+| rule, ink        | 00 | 17 | 128 | 01 | the line itself |
+| rule, below      | 00 | 18 | 128 | 01 | paper |
+| key row 1        | 13 | 19 | 102 | 08 | 17 columns, centred |
+| key row 2        | 13 | 27 | 102 | 08 | |
+| key row 3        | 13 | 35 | 102 | 08 | |
+| spare            | 00 | 43 | 128 | 01 | the band's last pixel |
+| hint band        | 00 | 44 | 128 | 08 | 0.15 of 52 |
+| hint words, keys | 10 | 44 | 108 | 08 | `OK=TYPE HOLD=SAVE`, centred |
+| hint words, text | 43 | 44 | 042 | 08 | `OK=SAVE`, centred |
+
+The rule is `gfx::Line::horizontal(0, 17, 128, gfx::Ink)`; the two paper rows are the band's own
+paper and are named here only so the boxes add up. A text cell is `(1 + 6k, 8, 6, 8)` for screen
+column `k`, and the row shows slots `first` to `first + 20`, where `first` is `0` until the caret
+passes column 20 and `caret - 20` after that. The count is right-aligned in its 30 px and the label
+left-aligned in its 98, so the two never meet.
+
+**The keys.** Every key is 8 px tall, and its box is the one the inverted cursor paints.
+
+| row | key | x | y | w | what it does |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `a` | 13 | 19 | 6 | types `a`, or `A` with shift |
+| 1 | `b` | 19 | 19 | 6 | types `b`, or `B` with shift |
+| 1 | `c` | 25 | 19 | 6 | types `c`, or `C` with shift |
+| 1 | `d` | 31 | 19 | 6 | types `d`, or `D` with shift |
+| 1 | `e` | 37 | 19 | 6 | types `e`, or `E` with shift |
+| 1 | `f` | 43 | 19 | 6 | types `f`, or `F` with shift |
+| 1 | `g` | 49 | 19 | 6 | types `g`, or `G` with shift |
+| 1 | `h` | 55 | 19 | 6 | types `h`, or `H` with shift |
+| 1 | `i` | 61 | 19 | 6 | types `i`, or `I` with shift |
+| 1 | `j` | 67 | 19 | 6 | types `j`, or `J` with shift |
+| 1 | `k` | 73 | 19 | 6 | types `k`, or `K` with shift |
+| 1 | `l` | 79 | 19 | 6 | types `l`, or `L` with shift |
+| 1 | `m` | 85 | 19 | 6 | types `m`, or `M` with shift |
+| 1 | `7` | 97 | 19 | 6 | types `7` |
+| 1 | `8` | 103 | 19 | 6 | types `8` |
+| 1 | `9` | 109 | 19 | 6 | types `9` |
+| 2 | `n` | 13 | 27 | 6 | types `n`, or `N` with shift |
+| 2 | `o` | 19 | 27 | 6 | types `o`, or `O` with shift |
+| 2 | `p` | 25 | 27 | 6 | types `p`, or `P` with shift |
+| 2 | `q` | 31 | 27 | 6 | types `q`, or `Q` with shift |
+| 2 | `r` | 37 | 27 | 6 | types `r`, or `R` with shift |
+| 2 | `s` | 43 | 27 | 6 | types `s`, or `S` with shift |
+| 2 | `t` | 49 | 27 | 6 | types `t`, or `T` with shift |
+| 2 | `u` | 55 | 27 | 6 | types `u`, or `U` with shift |
+| 2 | `v` | 61 | 27 | 6 | types `v`, or `V` with shift |
+| 2 | `w` | 67 | 27 | 6 | types `w`, or `W` with shift |
+| 2 | `x` | 73 | 27 | 6 | types `x`, or `X` with shift |
+| 2 | `y` | 79 | 27 | 6 | types `y`, or `Y` with shift |
+| 2 | `z` | 85 | 27 | 6 | types `z`, or `Z` with shift |
+| 2 | `4` | 97 | 27 | 6 | types `4` |
+| 2 | `5` | 103 | 27 | 6 | types `5` |
+| 2 | `6` | 109 | 27 | 6 | types `6` |
+| 3 | `↑` | 13 | 35 | 6 | latches the case |
+| 3 | `-` | 19 | 35 | 6 | types `-` |
+| 3 | `.` | 25 | 35 | 6 | types `.` |
+| 3 | `_` | 31 | 35 | 6 | types `_` |
+| 3 | `space` | 37 | 35 | 36 | types a space |
+| 3 | `DEL` | 73 | 35 | 18 | removes the character at the caret |
+| 3 | `0` | 91 | 35 | 6 | types `0` |
+| 3 | `1` | 97 | 35 | 6 | types `1` |
+| 3 | `2` | 103 | 35 | 6 | types `2` |
+| 3 | `3` | 109 | 35 | 6 | types `3` |
+
+Column 13 — x 91 — is empty in rows 1 and 2 and holds the zero in row 3, which is what puts the zero
+to the left of the one where a keypad puts it. The block runs from x 13 to x 114 with 13 px of margin
+either side, and no two keys overlap: 42 of them, the last ending where the margin begins.

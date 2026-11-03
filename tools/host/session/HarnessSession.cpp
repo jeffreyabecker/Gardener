@@ -181,6 +181,8 @@ std::vector<std::pair<std::string, size_t>> HarnessSession::fileCosts() const {
 
 void HarnessSession::pressGesture(const char* gesture) { gestureStrip_.show(gesture); }
 
+void HarnessSession::setNote(const char* text) { noteBand_.set(text); }
+
 int HarnessSession::errorLines() const { return logger_.errors(); }
 
 void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
@@ -204,11 +206,13 @@ void HarnessSession::reset() {
 void HarnessSession::beginCapture(const char* path) {
   capturePath_ = path != nullptr ? path : "";
   // The picture a walkthrough capture writes: the buttons a reader could press across the top, a
-  // dotted border round the glass and the glass inside it, so the press a frame carried reads above
-  // the picture rather than over it.
+  // dotted border round the glass, the glass inside it and the band under it a walk's note is drawn
+  // in, so the press a frame carried reads above the picture and the note below it rather than over
+  // it.
   std::vector<CaptureDisplay::Component> components;
   components.push_back(gestureStrip_.component(CapturePicture::bar()));
   components.push_back(CapturePicture::borderComponent());
+  components.push_back(noteBand_.component(CapturePicture::note()));
   display_.beginCapture(CapturePicture::frame(), std::move(components));
 }
 
