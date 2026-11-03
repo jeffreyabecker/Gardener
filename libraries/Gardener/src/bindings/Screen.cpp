@@ -15,16 +15,16 @@ namespace {
 constexpr const char* DrawClass = "draw";
 
 // The fields one node of a page's drawing carries. `kind` names what the node is — text, icon,
-// inverted, bar, scrollbar, duration, pressure_readout, layout, row or column — and the fields that
-// kind uses are set, the rest nil. A leaf names its box in pixels, and a text names the family it
-// prints in and the two justifications that place its line box, nil for the default family and the
-// centre. A layout, a row and a column name the cell they declare as a share of what holds them, nil
-// for the whole side, so a row sets `h` and a column `w`. A layout's `children` is a list of
+// inverted, bar, scrollbar, duration, pressure_readout, row_list, layout, row or column — and the
+// fields that kind uses are set, the rest nil. A leaf names its box in pixels, and a text names the
+// family it prints in and the two justifications that place its line box, nil for the default family
+// and the centre. A layout, a row and a column name the cell they declare as a share of what holds
+// them, nil for the whole side, so a row sets `h` and a column `w`. A layout's `children` is a list of
 // [bounds, draw] pairs — the cell a child declares and the child — and `alignment` is where it puts
-// them, the record below. An `inverted` node holds the draw it flips in `child`, and an `icon` node
-// holds its fixed bitmap in `glyph` as the hex digits that name it: two per byte, the width, the
-// height, then one row per byte-run, most significant bit first and each row padded to a whole byte.
-// The panel reads them when it draws the node.
+// them, the record below. An `inverted` node holds the draw it flips in `child`, an `icon` node holds
+// its fixed bitmap in `glyph` as the hex digits that name it: two per byte, the width, the height,
+// then one row per byte-run, most significant bit first and each row padded to a whole byte, and a
+// `row_list` node holds the list it draws in `list`. The panel reads them when it draws the node.
 const bnfuncinfo DrawFields[] = {
     {"init", recordInit},   {"kind", nullptr},
     {"x", nullptr},         {"y", nullptr},
@@ -37,7 +37,7 @@ const bnfuncinfo DrawFields[] = {
     {"visible", nullptr},   {"hollow", nullptr},
     {"children", nullptr},  {"child", nullptr},
     {"glyph", nullptr},     {"alignment", nullptr},
-    {nullptr, nullptr},
+    {"list", nullptr},      {nullptr, nullptr},
 };
 
 // `bounds(w, h)`, and `bounds()` for the record `screen.measure` fills: a side left out stays nil,
@@ -460,6 +460,13 @@ void installScreenModule(bvm* vm, BindingContext& bindings) {
   installRecord(vm, "bounds", BoundsFields, bindings);
   installRecord(vm, "alignment", AlignmentFields, bindings);
   installModule(vm, "screen", ScreenLibrary, bindings);
+}
+
+// The node a row list draws through: the record naming the instance, which the walk draws by asking
+// the list for the model it holds. Left on the stack for the caller to answer with.
+void pushRowListDraw(bvm* vm, int list) {
+  const int draw = beginDraw(vm, "row_list");
+  setValue(vm, draw, "list", list);
 }
 
 }  // namespace gardener
