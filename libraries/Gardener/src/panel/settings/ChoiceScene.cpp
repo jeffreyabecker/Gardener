@@ -1,5 +1,6 @@
 #include "panel/settings/ChoiceScene.h"
 
+#include <utility>
 #include <vector>
 
 #include "layout/Drawing.h"
@@ -16,25 +17,14 @@ int16_t choicePitch() {
   return pitch > 0 ? pitch : 1;
 }
 
-// The bar a scrolling band carries down its right: two pixels wide, two rows in from the top and the
-// bottom, which is the box the shape form draws beside the settings list.
-constexpr int16_t BarWidth = 2;
-constexpr int16_t BarInset = 2;
-
-// The window a list of `count` rows shows in a band this tall: the rows that fit at this pitch, the
-// one it starts at so the entry showing is in them, and whether the rest are a scrollbar away.
-struct Window {
-  int16_t visible;
-  int16_t first;
-  bool scrolls;
-};
-
-Window windowOf(int16_t count, int16_t selected, int16_t height, int16_t pitch) {
-  int16_t visible = static_cast<int16_t>(height / pitch);
-  if (visible < 1) visible = 1;
-  if (visible > count) visible = count;
-  const int16_t first = selected >= visible ? static_cast<int16_t>(selected - visible + 1) : 0;
-  return {visible, first, count > visible};
+// The rows of the list: one per entry, its key as the value the keys select it by and its title as
+// the line drawn across the row.
+std::vector<RowList::Row> rowsOf(const std::vector<ChoiceItem>& items) {
+  std::vector<RowList::Row> rows;
+  rows.reserve(items.size());
+  for (const ChoiceItem& item : items)
+    rows.push_back(RowList::textRow(item.key, item.title));
+  return rows;
 }
 
 }  // namespace
@@ -47,6 +37,7 @@ ChoiceScene::ChoiceScene(GestureQueue& gestures, Ux& ux, String& label, const St
   hasValue_ = !nullable_ || !current.isEmpty();
   opened_ = value_;
   hasOpened_ = hasValue_;
+  rebuild();
 }
 
 void ChoiceScene::activate() { preview(); }
@@ -61,30 +52,45 @@ bool ChoiceScene::handle(const char* gesture) {
   return EditorScene::handle(gesture);
 }
 
+// Up and Down step the entry showing through the list, which rings; a nullable setting's nothing
+// sits below the first entry, so Down at the first clears it and Up out of nothing enters the
+// first, which is the row a list with no current row moves to.
 void ChoiceScene::nudge(int8_t direction) {
   if (items_.empty()) return;
-  if (nullable_) {
-    if (!hasValue_) {
-      if (direction > 0) {
-        value_ = items_[0].key;
-        hasValue_ = true;
-      }
-      preview();
-      return;
-    }
-    if (direction < 0 && value_ == items_[0].key) {
-      value_ = "";
-      hasValue_ = false;
-      preview();
-      return;
-    }
+  if (nullable_ && hasValue_ && direction < 0 && value_ == items_.front().key) {
+    value_ = String();
+    hasValue_ = false;
+    rebuild();
+    preview();
+    return;
   }
-  const int16_t count = static_cast<int16_t>(items_.size());
-  const int16_t at = index();
-  const int16_t next = static_cast<int16_t>(((at + direction) % count + count) % count);
-  value_ = items_[next].key;
-  hasValue_ = true;
+  if (!hasValue_) {
+    if (direction > 0) {
+      value_ = items_.front().key;
+      hasValue_ = true;
+      rebuild();
+    }
+    preview();
+    return;
+  }
+  if (list_ && list_->nudge(direction)) value_ = list_->selected();
   preview();
+}
+
+void ChoiceScene::rebuild() {
+  pitch_ = choicePitch();
+  list_ = std::make_unique<RowList>(pitch_, rowsOf(items_), heldKey(), true);
+}
+
+// The key the list is seated on: nothing while the setting holds nothing, the held key when an
+// entry names it, and the first entry's key when none does, which is what makes a key no entry
+// names show the first.
+String ChoiceScene::heldKey() const {
+  if (!hasValue_ || items_.empty()) return String();
+  for (const ChoiceItem& item : items_) {
+    if (item.key == value_) return value_;
+  }
+  return items_.front().key;
 }
 
 void ChoiceScene::preview() {
@@ -92,8 +98,9 @@ void ChoiceScene::preview() {
 }
 
 String ChoiceScene::text() const {
-  if (!hasValue_ || items_.empty()) return "--";
-  return items_[index()].title;
+  const int16_t at = index();
+  if (!hasValue_ || at < 0 || at >= static_cast<int16_t>(items_.size())) return "--";
+  return items_[at].title;
 }
 
 std::any ChoiceScene::value() const { return hasValue_ ? std::any(value_) : std::any(); }
@@ -101,54 +108,25 @@ std::any ChoiceScene::value() const { return hasValue_ ? std::any(value_) : std:
 void ChoiceScene::canceled() {
   value_ = opened_;
   hasValue_ = hasOpened_;
+  rebuild();
 }
 
-int16_t ChoiceScene::index() const {
-  for (size_t i = 0; i < items_.size(); i++) {
-    if (items_[i].key == value_) return static_cast<int16_t>(i);
+int16_t ChoiceScene::index() const { return list_ ? list_->current() : -1; }
+
+// The entries drawn by the list into the value band, centred down it and scrolled to keep the entry
+// showing in view; a band with nothing showing prints the row a first entry would take.
+gfx::PaintNodeRef ChoiceScene::pageContents(gfx::Size) {
+  if (pitch_ != choicePitch()) rebuild();
+  if (!hasValue_ || items_.empty() || !list_) {
+    return gfx::callable([](gfx::Canvas& canvas) {
+      const int16_t pitch = choicePitch();
+      const int16_t top =
+          gfx::alignedOffset(static_cast<int16_t>(canvas.height() - pitch), gfx::Justify::Center);
+      gfx::View cell = canvas.child(gfx::Rect(0, top, canvas.width(), pitch));
+      gfx::text("--")->draw(cell);
+    });
   }
-  return 0;
-}
-
-// The entries in the value band as the column of rows a list is: the window the band has room for,
-// the entry showing inverted, the block centred in the band and a bar beside it for the entries that
-// did not fit.
-gfx::PaintNodeRef ChoiceScene::pageContents(gfx::Size band) {
-  const int16_t pitch = choicePitch();
-
-  // A band with nothing to show prints the row a first entry would take.
-  if (!hasValue_ || items_.empty()) {
-    gfx::Child dashes = gfx::row(static_cast<float>(pitch), gfx::text("--"));
-    return gfx::column(1.0f, gfx::children(std::move(dashes)),
-                       gfx::Justification{gfx::Justify::Center, gfx::Justify::Center});
-  }
-
-  const int16_t count = static_cast<int16_t>(items_.size());
-  const int16_t selected = index();
-  const Window window = windowOf(count, selected, band.height, pitch);
-
-  gfx::Children rows;
-  for (int16_t line = 0; line < window.visible; line++) {
-    const int16_t at = static_cast<int16_t>(window.first + line);
-    //items_[at].icon.isEmpty
-    gfx::Child row = gfx::row(static_cast<float>(pitch), gfx::text(items_[at].title.c_str()));
-    if (at == selected) row.paint = gfx::inverted(std::move(row.paint));
-    rows.push_back(std::move(row));
-  }
-
-  // The rows centred down the band, and the bar in the last four columns when not all of them fit.
-  const int16_t rowsWidth =
-      window.scrolls ? static_cast<int16_t>(band.width - gfx::ScrollbarColumn) : band.width;
-  gfx::Child list{gfx::Cell(static_cast<float>(rowsWidth), 1.0f),
-                  gfx::column(1.0f, std::move(rows),
-                              gfx::Justification{gfx::Justify::Center, gfx::Justify::Start})};
-  if (!window.scrolls) return std::move(list.paint);
-  gfx::Child bar = gfx::column(
-      static_cast<float>(gfx::ScrollbarColumn),
-      gfx::scrollbar(gfx::Box(static_cast<int16_t>(gfx::ScrollbarColumn - BarWidth), BarInset,
-                              BarWidth, static_cast<int16_t>(band.height - 2 * BarInset)),
-                     window.first, count, window.visible, true));
-  return gfx::row(1.0f, std::move(list), std::move(bar));
+  return gfx::callable([this](gfx::Canvas& canvas) { list_->draw(canvas, gfx::Justify::Center); });
 }
 
 }  // namespace gardener

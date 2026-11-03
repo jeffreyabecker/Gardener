@@ -33,19 +33,19 @@ gives — 8 px for the settings list and the choice editor's shortest line of th
 
 ## Epic 2 — the scenes on it
 
-- [ ] **Move `SettingsScene` onto it.** The rows are built in the constructor and rebuilt when an
+- [x] **Move `SettingsScene` onto it.** The rows are built in the constructor and rebuilt when an
       editor hands a value back, with the key the keys are on as the selection; `move()` calls
       `nudge()`, `selected()` answers `current()`, and `drawPage()` calls `list_->draw(band)` under
       the heading. The window arithmetic goes. The existing selection and editor cases stay green,
       and a case opens an editor, changes the value and reads it in the rebuilt row.
-- [ ] **Move `ChoiceScene` onto it.** The items become rows of key and title; `nudge()` wraps around
-      `RowList::nudge()` with the nullable ends kept — Up at the first clears, Down from nothing
+- [x] **Move `ChoiceScene` onto it.** The items become rows of key and title; `nudge()` wraps around
+      `RowList::nudge()` with the nullable ends kept — Down at the first clears, Up from nothing
       enters the first; `index()` and `text()` read `current()`; `pageContents()` answers a
       `gfx::callable` that calls `list_.draw(canvas, gfx::Justify::Center)` while an entry is
       showing, and draws the `--` row otherwise; a key no entry names shows the first. `windowOf()`,
       `BarWidth` and `BarInset` go. Cases cover the ring, the nullable Up, `--` with nothing
       selected, and the missing key.
-- [ ] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
+- [x] **Drive the device's own list through it.** `SystemSettingsScene` builds a `SettingsScene` over
       `SystemSettings::rows()`, so it inherits the model with the item above; a case opens it, edits
       a row and reads the rebuilt row and the set `SystemSettings::apply()` is handed. No change to
       `SystemSettings` is expected; a hook it turns out to need lands here.

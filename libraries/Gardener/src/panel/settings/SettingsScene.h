@@ -12,6 +12,7 @@
 
 #include <Arduino.h>
 
+#include "panel/page/RowList.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
 #include "panel/settings/ChoiceScene.h"
@@ -132,7 +133,7 @@ class SettingsScene : public Scene {
 
   const String& title() const { return title_; }
   // Where the keys are, counted over the rows the list draws rather than over the whole declaration.
-  int16_t selected() const { return selected_; }
+  int16_t selected() const { return list_ ? list_->current() : -1; }
 
  protected:
   bool handle(const char* gesture) override;
@@ -141,6 +142,8 @@ class SettingsScene : public Scene {
  private:
   void move(int8_t direction);
   void open();
+  // The list rebuilt from the values in force, with `selected` as the row the keys are on.
+  void rebuild(const String& selected);
 
   String title_;
   Ux& ux_;
@@ -149,7 +152,7 @@ class SettingsScene : public Scene {
   std::vector<int16_t> visible_;
   SettingValues values_;
   SettingValues opened_;
-  int16_t selected_ = 0;
+  std::unique_ptr<RowList> list_;
 };
 
 }  // namespace gardener

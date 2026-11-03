@@ -159,7 +159,7 @@ than the row text the draw writes on every beat today.
 
 `ChoiceScene` keeps its items, its nullable rule and its `--` row, and gives up `windowOf()`,
 `BarWidth`, `BarInset` and the row loop. The items become rows of key and title; `nudge()` keeps the
-nullable ends around `RowList::nudge()` — Up at the first clears a nullable value, Down from nothing
+nullable ends around `RowList::nudge()` — Down at the first clears a nullable value, Up from nothing
 enters the first; `index()` and `text()` read `current()`; and `pageContents()` answers
 `gfx::callable([this](gfx::Canvas& canvas) { list_.draw(canvas, gfx::Justify::Center); … })` while an
 entry is showing, and draws the `--` row in that same call when none is. A key no entry names selects

@@ -1,8 +1,8 @@
 #include "panel/settings/SettingsScene.h"
 
-#include "Bitmap.h"
+#include <utility>
+
 #include "layout/Drawing.h"
-#include "layout/Layout.h"
 
 namespace gardener {
 namespace {
@@ -11,30 +11,6 @@ namespace {
 // are drawn at: a ttyp0 cut's shortest line box is ten rows, so the panel's design cannot be drawn
 // in one.
 constexpr int16_t Row = 8;
-
-// The row as the list prints it: the setting's label, an equals sign and the value it holds now.
-gfx::PaintNodeRef rowText(const SettingsRow& setting, const std::any& value, gfx::Box box) {
-  const String printed = setting.label() + "=" + setting.text(value);
-  return gfx::text(box, printed, nullptr);
-}
-
-// The row as the list draws it: the mark the row answers, in the columns its own header names and
-// centred down the row, then the label and value in what is left. A row with no mark — or one whose
-// string names no bitmap — is the text alone, starting at the left of the row as it always has.
-gfx::PaintNodeRef rowContent(const SettingsRow& setting, const std::any& value) {
-  const String& icon = setting.icon();
-  const gfx::Size mark = gfx::bitmapSize(icon.c_str());
-  if (mark.width <= 0 || mark.height <= 0) {
-    return rowText(setting, value, gfx::Box(0, 0, 0, Row, true, false));
-  }
-  const int16_t top = static_cast<int16_t>((Row - mark.height) / 2);
-  return gfx::row(1.0f,
-                  gfx::children(gfx::Child{gfx::Cell(static_cast<float>(mark.width), 1.0f),
-                                           gfx::icon(gfx::Box(0, top, mark.width, mark.height),
-                                                     icon.c_str())},
-                                gfx::Child{gfx::Cell(gfx::Cell::Whole, 1.0f),
-                                           rowText(setting, value, gfx::Box::whole())}));
-}
 
 }  // namespace
 
@@ -68,6 +44,23 @@ SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title
     visible_.push_back(static_cast<int16_t>(i));
   }
   opened_ = values_;
+  rebuild(visible_.empty() ? String() : rows_[visible_.front()]->key());
+}
+
+// The list the keys move in, built from the values in force: one row per visible setting, its key
+// as the value the keys select it by and the text the row prints for the value it holds now. A
+// rebuild is a few Strings and their paints, and it is what an editor handing a value back costs.
+void SettingsScene::rebuild(const String& selected) {
+  std::vector<RowList::Row> rows;
+  rows.reserve(visible_.size());
+  for (int16_t at : visible_) {
+    SettingsRow* row = rows_[at];
+    const auto held = values_.find(row->key());
+    const std::any value = held == values_.end() ? std::any() : held->second;
+    rows.push_back(
+        RowList::textRow(row->key(), row->label() + "=" + row->text(value), row->icon()));
+  }
+  list_ = std::make_unique<RowList>(Row, std::move(rows), selected, true);
 }
 
 bool SettingsScene::handle(const char* gesture) {
@@ -96,9 +89,7 @@ bool SettingsScene::handle(const char* gesture) {
 }
 
 void SettingsScene::move(int8_t direction) {
-  const int16_t count = static_cast<int16_t>(visible_.size());
-  if (count == 0) return;
-  selected_ = static_cast<int16_t>((selected_ + direction + count) % count);
+  if (list_) list_->nudge(direction);
 }
 
 // Forward opens the row's editor with the value the list holds for the row's key, and what that
@@ -106,47 +97,34 @@ void SettingsScene::move(int8_t direction) {
 // on, and one whose row's check refused a value stays open rather than hand it back, so the write
 // is always a value the row's declaration accepts.
 void SettingsScene::open() {
-  if (selected_ < 0 || selected_ >= static_cast<int16_t>(visible_.size())) return;
-  SettingsRow* row = rows_[visible_[selected_]];
+  const int16_t at = selected();
+  if (at < 0 || at >= static_cast<int16_t>(visible_.size())) return;
+  SettingsRow* row = rows_[visible_[at]];
   if (row == nullptr) return;
   const auto held = values_.find(row->key());
   const std::any value = held == values_.end() ? std::any() : held->second;
   std::unique_ptr<EditorScene> editor = row->scene(value);
   if (!editor) return;
   editor->setValidator(row->check(rows_, values_));
-  ux_.push(std::move(editor), [this, row](Scene& popped) { values_[row->key()] = popped.value(); });
+  // The edited row is the one the keys are on, so the rebuilt list selects its key and the row the
+  // value was written to keeps the highlight.
+  ux_.push(std::move(editor), [this, row](Scene& popped) {
+    values_[row->key()] = popped.value();
+    rebuild(row->key());
+  });
 }
 
-// The heading, when the list has one, and the rows under it one Adafruit row each: the window
-// scrolled to keep the row the keys are on in view, that row inverted across the width, and the
-// scrollbar down the right of the rows when they do not all fit.
+// The heading, when the list has one, and the list's window under it: the rows scrolled to keep the
+// row the keys are on in view, that row inverted across its cell, and the scrollbar down the right
+// when they do not all fit.
 void SettingsScene::drawPage(gfx::Canvas& canvas) {
   const int16_t heading = title_.isEmpty() ? 0 : Row;
   if (heading > 0) {
     gfx::text(gfx::Box(0, 0, 0, Row, true, false), title_, nullptr)->draw(canvas);
   }
-  if (visible_.empty()) return;
+  if (!list_) return;
   gfx::View band = canvas.child(gfx::Rect(0, heading, canvas.width(), canvas.height() - heading));
-  const int16_t count = static_cast<int16_t>(visible_.size());
-  int16_t visible = static_cast<int16_t>(band.height() / Row);
-  if (visible < 1) visible = 1;
-  if (visible > count) visible = count;
-  const int16_t first = selected_ >= visible ? static_cast<int16_t>(selected_ - visible + 1) : 0;
-  const bool scrolls = count > visible;
-  const int16_t rowsWidth =
-      scrolls ? static_cast<int16_t>(band.width() - gfx::ScrollbarColumn) : band.width();
-  for (int16_t line = 0; line < visible; line++) {
-    const int16_t at = static_cast<int16_t>(first + line);
-    SettingsRow* row = rows_[visible_[at]];
-    if (row == nullptr) continue;
-    const auto held = values_.find(row->key());
-    const std::any value = held == values_.end() ? std::any() : held->second;
-    gfx::View cell = band.child(gfx::Rect(0, static_cast<int16_t>(line * Row), rowsWidth, Row));
-    gfx::PaintNodeRef content = rowContent(*row, value);
-    if (at == selected_) content = gfx::inverted(std::move(content));
-    content->draw(cell);
-  }
-  if (scrolls) gfx::drawScrollbar(band, first, count, visible);
+  list_->draw(band);
 }
 
 }  // namespace gardener
