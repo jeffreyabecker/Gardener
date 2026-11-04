@@ -75,12 +75,15 @@ class RoutineRegistry {
   // not put on a stack here: the caller decides where it goes.
   std::unique_ptr<Scene> activate(const String& routineKey, const SettingValues& values) const;
 
+  void registerBerryRoutine(const String& routineKey);
+
  private:
   int16_t indexOf(const String& routineKey) const;
 
   Library& library_;
   Logger& logger_;
   std::vector<Registration> entries_;
+  std::vector<String> availableBerryRoutines_;
 };
 
 }  // namespace gardener
