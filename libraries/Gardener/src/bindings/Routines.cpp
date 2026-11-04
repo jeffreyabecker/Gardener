@@ -367,8 +367,7 @@ int routinesSaveSettings(bvm* vm) {
   be_return(vm);
 }
 
-// routines.rows(): the browser's list, one row per registration in the order they registered, each
-// alternate's row directly behind the record it was copied from.
+// routines.rows(): the browser's list, one row per registration in the order they registered.
 int routinesRows(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
@@ -387,8 +386,8 @@ int routinesRows(bvm* vm) {
   be_return(vm);
 }
 
-// routines.title(routine_key): the label a page draws for a record or an alternate, and nil for a
-// key nobody registered, which is what a page tests before it draws a heading.
+// routines.title(routine_key): the label a page draws for a record, and nil for a key nobody
+// registered, which is what a page tests before it draws a heading.
 int routinesTitle(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {
@@ -459,9 +458,8 @@ int routinesActivate(bvm* vm) {
   be_return(vm);
 }
 
-// routines.keys(): every registered key in registration order, each alternate directly behind the
-// record it was copied from, as the list a driver walks and a summary counts the image by. An empty
-// list, never nil, for an image that registered nothing.
+// routines.keys(): every registered key in registration order, as the list a driver walks and a
+// summary counts the image by. An empty list, never nil, for an image that registered nothing.
 int routinesKeys(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
   if (bindings == nullptr) {

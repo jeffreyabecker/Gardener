@@ -65,15 +65,6 @@ class SettingConfig : public SettingKind {
   // than cast to.
   virtual bool accept(std::any& value) const = 0;
 
-  // This row made again: the same kind, key, label, default, rules and check, owned by whoever asked.
-  // A registration copied under another key declares its own rows rather than borrowing another's.
-  virtual std::unique_ptr<SettingConfig> clone() const = 0;
-
-  // Whether the settings list shows this row. A row is shown unless the section of the document the
-  // registration was copied from marked it hidden, which only a copy's own rows ever are.
-  bool hidden() const { return hidden_; }
-  void hide() { hidden_ = true; }
-
   // The row's check closed over the declaration and the set in force, which is the form the editor
   // it builds holds; nothing for a row whose declaration gave it no check. The check borrows the
   // row, the declaration and the set, so whoever holds it keeps all three alive.
@@ -87,7 +78,6 @@ class SettingConfig : public SettingKind {
 
  private:
   Validator validator_;
-  bool hidden_ = false;
 };
 
 // The list a routine's settings are edited in, from settings_edit.be: the heading, one row per
@@ -95,10 +85,6 @@ class SettingConfig : public SettingKind {
 // Up and Down move the row, wrapping at the ends; Forward opens the row's editor and takes what it
 // hands back; OK keeps the set it settled on and closes; Back and Cancel put the set back as it was
 // opened and close.
-//
-// A row the declaration marks hidden is not drawn and the keys pass over it, which is how a section
-// of a document leaves a setting out of its alternate's list. The row is still declared: its value
-// stays in the set the list settles on, so it is written back as it was.
 //
 // The list is what pops itself, so it holds the stack that pushed it. A row's value is written
 // under the row's key when its editor pops, and an editor that was cancelled hands back the value
@@ -123,7 +109,7 @@ class SettingsScene : public Scene {
   std::any value() const override { return std::any(settingsValues_); }
 
   const String& title() const { return title_; }
-  // Where the keys are, counted over the rows the list draws rather than over the whole declaration.
+  // Where the keys are, counted over the rows the list draws.
   int16_t selected() const { return displayListItems_ ? displayListItems_->current() : -1; }
 
  protected:
@@ -139,8 +125,6 @@ class SettingsScene : public Scene {
   String title_;
   Ux& ux_;
   std::vector<SettingConfig*> settingsCfgs_;
-  // Where the rows the list draws sit in rows_: the declaration less what a section hid.
-  std::vector<int16_t> visible_;
   SettingValues settingsValues_;
   SettingValues opened_;
   std::unique_ptr<gfx::RowList> displayListItems_;

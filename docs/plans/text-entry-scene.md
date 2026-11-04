@@ -159,10 +159,8 @@ key is what buys the two rows of letters.
 15. **The cap rides in the declaration's `max`.** `SettingDeclaration` already carries step, min and
     max; a text row puts `min = 0`, `max = cap` — 16 unless the row asks otherwise, and 24 at the
     ceiling, the longest value a setting may hold — so a page reading a routine's record sees the
-    limit without a new record field. The same `max` is what a section narrows, so an alternate can
-    hold a copy of a routine to fewer characters; the
-    bound is clamped to the ceiling, and a section's `min` has nothing to say to a text row. The
-    alphabet is the row's own and is not in the declaration.
+    limit without a new record field. The bound is clamped to the ceiling. The alphabet is the row's
+    own and is not in the declaration.
 16. **The scene names its face.** The composition's design is ttyp0 — 10 px line, three lines in the
     band, no fixed advance — so the lattice names the fixed Adafruit face itself, exactly as the hint
     band already does for its marks.
@@ -206,9 +204,8 @@ existing job.
   way. The window the text row shows is worked out as the caret moves, the way a list's visible
   window is (`windowOf` in `ChoiceScene`), so the caret is always on screen.
 - **`panel/settings/SettingsRows.h/.cpp`** — `TextRow : SettingsRow`: `declaration()` names `text`
-  and carries the cap — 16 by default, clamped to 24 — `limit()` narrows that cap from a section's
-  bound, `stored()` writes the string, `parse()` trims and truncates to the cap,
-  `accept()` takes a `String`, `scene()` builds the `TextScene`, `clone()` copies.
+  and carries the cap — 16 by default, clamped to 24 — `stored()` writes the string, `parse()` trims
+  and truncates to the cap, `accept()` takes a `String`, and `scene()` builds the `TextScene`.
 - **`bindings/Settings.cpp`** — a fifth kind class, `settings.text(key, default, label, limit,
   nullable)`, added to the module's table. The record needs no new field, because the cap is `max`.
 - **`tools/unit/cases/gfx_editors.cpp`** — the scene's cases; **`gfx_scenes.cpp`** — a settings list

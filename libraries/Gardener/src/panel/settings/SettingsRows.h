@@ -40,7 +40,6 @@ class BoolSettingCfg : public SettingConfig {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingConfig> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -78,7 +77,6 @@ class ChoiceSettingCfg : public SettingConfig {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingConfig> clone() const override;
 
  private:
   GestureQueue& gestures_;
@@ -113,22 +111,15 @@ class NumericSettingCfg : public SettingConfig {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingConfig> clone() const override;
 
   // The step a keypress makes, as the list and the editor read it. A kind whose number is shown in a
   // unit the device can change answers it from the state each time it is asked, so a row a routine
   // declared when the image loaded still steps by the unit the panel is showing now.
   virtual float step() const;
 
-  // The bounds the row was declared with, in the kind's own units, which a section's pair moves
-  // through limit.
+  // The bounds the row was declared with, in the kind's own units.
   float min() const { return min_; }
   float max() const { return max_; }
-
-  // The floor and ceiling a section states for this row, in the kind's own units: NAN leaves that
-  // bound as the declaration gave it, and a pair that would leave the row no range is ignored whole,
-  // so a typo keeps the declaration's.
-  virtual void limit(float min, float max);
 
  protected:
   // What a kind that edits its number its own way reads: the pressure row builds the unit-aware
@@ -151,8 +142,8 @@ class NumericSettingCfg : public SettingConfig {
 // --- the duration -----------------------------------------------------------
 
 // The row of a duration held in whole seconds, and the two-field scene that steps the minutes and
-// the seconds. It is a number row over the seconds it stores, so the step, the bounds and a
-// section's pair are the number's, answered in the whole seconds the kind holds.
+// the seconds. It is a number row over the seconds it stores, so the step and the bounds are the
+// number's, answered in the whole seconds the kind holds.
 class DurationSettingCfg : public NumericSettingCfg {
  public:
   DurationSettingCfg(GestureQueue& gestures, Ux& ux, const String& key, const String& label,
@@ -165,8 +156,6 @@ class DurationSettingCfg : public NumericSettingCfg {
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
   bool accept(std::any& value) const override;
-  std::unique_ptr<SettingConfig> clone() const override;
-  void limit(float min, float max) override;
 };
 
 // --- the pressure -----------------------------------------------------------
@@ -183,8 +172,6 @@ class PressureSettingCfg : public NumericSettingCfg {
                      bool nullable = false, Validator validator = nullptr);
 
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
-  std::unique_ptr<SettingConfig> clone() const override;
-  void limit(float min, float max) override;
 
   float step() const override;
 

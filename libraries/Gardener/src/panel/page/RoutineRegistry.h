@@ -15,8 +15,7 @@ class Library;
 class Logger;
 
 // One row the browser draws: the routine's glyph as the image wrote it, the title the row shows and
-// the key the row stands for. An alternate carries its own title and its own key, and its record's
-// glyph.
+// the key the row stands for.
 struct RoutineRow {
   String glyph;
   String title;
@@ -26,14 +25,7 @@ struct RoutineRow {
 // The routines the panel offers, in the order they registered.
 //
 // The key is a registration's identity — what it is found by and what its settings list edits — and
-// an alternate is a second key that shares its record's declaration and page but carries its own
-// title, its own glyph and its own settings set, which lives in the section the key names of the
-// record's document. The registry makes one by copying the record it has just registered: the
-// document names its alternates as named sections, and each section whose key nothing holds becomes
-// a registration of its own, placed directly behind the record it was copied from. A section may
-// also name the glyph it draws as `routine_icon`, keep a setting off the list as
-// `<key>:hidden=true`, pin one to a value as `<key>:constant=<value>`, and state the floor and
-// ceiling it moves within as `<key>:min=<value>` and `<key>:max=<value>`.
+// the document its values live in, `/cfg/routines/<routine_key>.ini`, is named for it.
 //
 // The registry is built once, at boot, and used on the panel task only: a page draws its rows, opens
 // a record's settings and launches its page through it, and nothing else reaches it.
@@ -44,21 +36,17 @@ class RoutineRegistry {
   RoutineRegistry(const RoutineRegistry&) = delete;
   RoutineRegistry& operator=(const RoutineRegistry&) = delete;
 
-  // One routine registered. A key already registered keeps its place; the record it had, its copies
-  // included, is replaced by this one. The document is scanned for alternates here: every named
-  // section whose key nothing holds becomes a copy of this record, carrying the title, glyph, hidden
-  // settings, bounds and pinned values the section names, and a name that is taken is skipped with
-  // one line. False, changing nothing, for a key that is not a plain word.
+  // One routine registered. A key already registered keeps its place and takes this record in place
+  // of the one it had. False, changing nothing, for a key that is not a plain word.
   bool add(Registration registration);
 
-  // Every registered key, in registration order, each copy following the record it was made from.
+  // Every registered key, in registration order.
   std::vector<String> keys() const;
 
   // The browser's rows: one per registration, in the order keys() lists them.
   std::vector<RoutineRow> rows() const;
 
-  // The registration a key names, or nullptr. Every key names one, an alternate being a registration
-  // of its own, so a lookup serves both.
+  // The registration a key names, or nullptr.
   const Registration* registration(const String& routineKey) const;
 
   // The label the browser draws. Empty for a key that is not registered.
@@ -88,7 +76,6 @@ class RoutineRegistry {
   std::unique_ptr<Scene> activate(const String& routineKey, const SettingValues& values) const;
 
  private:
-  String documentPath(const String& routineKey) const;
   int16_t indexOf(const String& routineKey) const;
 
   Library& library_;

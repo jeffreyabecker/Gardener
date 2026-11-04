@@ -32,28 +32,21 @@ const String& SettingConfig::icon() const {
 SettingsScene::SettingsScene(GestureQueue& gestures, Ux& ux, const String& title,
                              const std::vector<SettingConfig*>& rows, const SettingValues& values)
     : Scene(gestures), title_(title), ux_(ux), settingsCfgs_(rows) {
-  for (size_t i = 0; i < settingsCfgs_.size(); i++) {
-    const SettingConfig* row = settingsCfgs_[i];
-    if (row == nullptr) continue;
+  for (SettingConfig* row : settingsCfgs_) {
     const auto held = values.find(row->key());
     settingsValues_[row->key()] = held == values.end() ? row->defaultValue() : held->second;
-    if (row->hidden()) continue;
-    visible_.push_back(static_cast<int16_t>(i));
   }
   opened_ = settingsValues_;
-  rebuild(visible_.empty() ? String() : settingsCfgs_[visible_.front()]->key());
+  rebuild(settingsCfgs_.empty() ? String() : settingsCfgs_.front()->key());
 }
 
-// The list the keys move in, built from the values in force: one row per visible setting, its key
-// as the value the keys select it by and the text the row prints for the value it holds now. A
-// rebuild is a few Strings and their paints, and it is what an editor handing a value back costs.
+// The list the keys move in, built from the values in force: one row per setting, its key as the
+// value the keys select it by, and the label and mark the row draws. A rebuild is a few Strings and
+// their paints, and it is what an editor handing a value back costs.
 void SettingsScene::rebuild(const String& selected) {
   std::vector<gfx::RowList::Row> rows;
-  rows.reserve(visible_.size());
-  for (int16_t at : visible_) {
-    SettingConfig* row = settingsCfgs_[at];
-    const auto held = settingsValues_.find(row->key());
-    const std::any value = held == settingsValues_.end() ? std::any() : held->second;
+  rows.reserve(settingsCfgs_.size());
+  for (SettingConfig* row : settingsCfgs_) {
     rows.push_back(gfx::RowList::textRow(row->key(), row->label(), row->icon()));
   }
   displayListItems_ = std::make_unique<gfx::RowList>(Row, std::move(rows), selected, true);
@@ -94,9 +87,8 @@ void SettingsScene::move(int8_t direction) {
 // is always a value the row's declaration accepts.
 void SettingsScene::open() {
   const int16_t at = selected();
-  if (at < 0 || at >= static_cast<int16_t>(visible_.size())) return;
-  SettingConfig* row = settingsCfgs_[visible_[at]];
-  if (row == nullptr) return;
+  if (at < 0 || at >= static_cast<int16_t>(settingsCfgs_.size())) return;
+  SettingConfig* row = settingsCfgs_[at];
   const auto held = settingsValues_.find(row->key());
   const std::any value = held == settingsValues_.end() ? std::any() : held->second;
   std::unique_ptr<EditorScene> editor = row->scene(value);

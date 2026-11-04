@@ -14,10 +14,9 @@ namespace gardener {
 // printed with the unit's own decimals, while what the page hands back is the kPa the machine
 // stores.
 //
-// The row's bounds are the machine's unless the section the alternate was copied from narrowed or
-// widened them, and the row has already held them to the machine's, so a keypress cannot leave the
-// editor on a target `vacuum target` would refuse. A nullable setting's nothing sits one step below
-// the shallowest target, where a depth begins.
+// The row's bounds are the machine's, held by the row before it builds this editor, so a keypress
+// cannot leave the editor on a target `vacuum target` would refuse. A nullable setting's nothing sits
+// one step below the shallowest target, where a depth begins.
 class PressureScene : public NumberScene {
  public:
   // `currentKpa` is the target stored now, `wholeSteps` how many whole steps of the panel's unit one

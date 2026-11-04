@@ -75,10 +75,6 @@ std::any BoolSettingCfg::parse(const String& stored) const {
 
 bool BoolSettingCfg::accept(std::any& value) const { return isHeldAs<bool>(value); }
 
-std::unique_ptr<SettingConfig> BoolSettingCfg::clone() const {
-  return std::make_unique<BoolSettingCfg>(*this);
-}
-
 // --- the choice -------------------------------------------------------------
 
 ChoiceSettingCfg::ChoiceSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
@@ -118,10 +114,6 @@ std::any ChoiceSettingCfg::parse(const String& stored) const {
 }
 
 bool ChoiceSettingCfg::accept(std::any& value) const { return isHeldAs<String>(value); }
-
-std::unique_ptr<SettingConfig> ChoiceSettingCfg::clone() const {
-  return std::make_unique<ChoiceSettingCfg>(*this);
-}
 
 // --- the duration -----------------------------------------------------------
 
@@ -164,20 +156,6 @@ std::any DurationSettingCfg::parse(const String& stored) const {
 }
 
 bool DurationSettingCfg::accept(std::any& value) const { return takeNumber(value, true); }
-
-std::unique_ptr<SettingConfig> DurationSettingCfg::clone() const {
-  return std::make_unique<DurationSettingCfg>(*this);
-}
-
-// A section's pair replaces the declaration's, rounded to the whole second the kind holds. A pair
-// with no second between the two is a typo and leaves the declaration's in place.
-void DurationSettingCfg::limit(float min, float max) {
-  const float floor = isnan(min) ? min_ : roundf(min);
-  const float ceiling = isnan(max) ? max_ : roundf(max);
-  if (floor > ceiling) return;
-  min_ = floor;
-  max_ = ceiling;
-}
 
 // --- the number -------------------------------------------------------------
 
@@ -227,20 +205,6 @@ std::any NumericSettingCfg::parse(const String& stored) const {
 
 bool NumericSettingCfg::accept(std::any& value) const { return takeNumber(value, false); }
 
-std::unique_ptr<SettingConfig> NumericSettingCfg::clone() const {
-  return std::make_unique<NumericSettingCfg>(*this);
-}
-
-// A section's pair replaces the declaration's, and a bound it does not name keeps the one it was
-// declared with. A pair with no number between the two is a typo and leaves the declaration's.
-void NumericSettingCfg::limit(float min, float max) {
-  const float floor = isnan(min) ? min_ : min;
-  const float ceiling = isnan(max) ? max_ : max;
-  if (floor > ceiling) return;
-  if (!isnan(min)) min_ = min;
-  if (!isnan(max)) max_ = max;
-}
-
 // --- the pressure -----------------------------------------------------------
 
 PressureSettingCfg::PressureSettingCfg(GestureQueue& gestures, Ux& ux, const String& key,
@@ -265,18 +229,6 @@ std::unique_ptr<EditorScene> PressureSettingCfg::scene(const std::any& value) {
   const float currentKpa = value.has_value() ? std::any_cast<float>(value) : NAN;
   return std::make_unique<PressureScene>(gestures_, ux_, label_, currentKpa, state_.unit,
                                          wholeSteps_, min_, max_, nullable_);
-}
-
-// The machine's shallowest and deepest target are the outermost a pressure may sit at, so a section's
-// pair that reaches past them is held to them before it becomes the row's.
-void PressureSettingCfg::limit(float min, float max) {
-  if (!isnan(min) && min < CONTROL_MIN_TARGET_KPA) min = CONTROL_MIN_TARGET_KPA;
-  if (!isnan(max) && max > CONTROL_FLOOR_KPA) max = CONTROL_FLOOR_KPA;
-  NumericSettingCfg::limit(min, max);
-}
-
-std::unique_ptr<SettingConfig> PressureSettingCfg::clone() const {
-  return std::make_unique<PressureSettingCfg>(*this);
 }
 
 }  // namespace gardener
