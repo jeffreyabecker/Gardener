@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "core/Buzzer.h"
+#include "core/BuzzerPlayer.h"
 
 namespace gardener::runtime {
 
@@ -10,7 +11,7 @@ namespace gardener::runtime {
 // here because it belongs to the drive; what to play is the player's business.
 class PwmBuzzer : public Buzzer {
  public:
-  explicit PwmBuzzer(uint8_t pin) : pin_(pin) {}
+  explicit PwmBuzzer(uint8_t pin) : pin_(pin), player_(*this) {}
 
   bool begin() override;
 
@@ -21,6 +22,7 @@ class PwmBuzzer : public Buzzer {
   uint16_t frequencyHz() const override { return hz_; }
 
  private:
+  BuzzerPlayer player_;
   const uint8_t pin_;
   uint16_t hz_ = 0;
   bool sounding_ = false;

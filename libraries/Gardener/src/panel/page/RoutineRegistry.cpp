@@ -105,6 +105,7 @@ std::unique_ptr<Scene> RoutineRegistry::activate(const String& routineKey,
   }
   return record->factory()(activation);
 }
+
 void RoutineRegistry::registerBerryRoutine(const String& routineKey) {
   if (routineKey.isEmpty() || routineKey.indexOf('/') >= 0 || routineKey.indexOf('\\') >= 0) {
     logger_.warn("registry: berry routine key must be a plain word");
@@ -114,4 +115,6 @@ void RoutineRegistry::registerBerryRoutine(const String& routineKey) {
   if (indexOf(routineKey) < 0) {
     availableBerryRoutines_.push_back(routineKey);
   }
+}
+
 }  // namespace gardener

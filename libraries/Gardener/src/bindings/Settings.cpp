@@ -63,30 +63,30 @@ int rowRelease(bvm* vm) {
 
 // The declaration a row answers: the kind word the file named and the step, bounds and entries that
 // kind was given. The row classes are the panel's and the words are the page's, so this is the one
-// place that knows both, and a row is read by its class rather than carrying the word itself.
+// place that knows both, and a row is asked which kind it is rather than being cast to one — the
+// build has no RTTI.
 BerrySettingInfo infoFor(const SettingConfig& row) {
   BerrySettingInfo info;
-  if (const ChoiceSettingCfg* choice = dynamic_cast<const ChoiceSettingCfg*>(&row)) {
+  const SettingRowKind kind = row.kind();
+  if (kind == SettingRowKind::Choice) {
     info.kind = ChoiceName;
     // The record carries the keys; the title an entry prints is the paint its row draws.
-    for (const gfx::RowList::Row& entry : choice->entries())
+    for (const gfx::RowList::Row& entry : static_cast<const ChoiceSettingCfg&>(row).entries())
       info.entries.push_back({entry.value, entry.value});
     return info;
   }
-  if (const NumericSettingCfg* number = dynamic_cast<const NumericSettingCfg*>(&row)) {
-    if (dynamic_cast<const PressureSettingCfg*>(&row) != nullptr) {
-      info.kind = PressureName;
-    } else if (dynamic_cast<const DurationSettingCfg*>(&row) != nullptr) {
-      info.kind = DurationName;
-    } else {
-      info.kind = NumberName;
-    }
-    info.step = number->step();
-    info.min = number->min();
-    info.max = number->max();
+  if (kind == SettingRowKind::Bool) {
+    info.kind = BoolName;
     return info;
   }
-  info.kind = BoolName;
+  // The three numbers are one row class, so which word answers is all that tells them apart.
+  const NumericSettingCfg& number = static_cast<const NumericSettingCfg&>(row);
+  info.kind = kind == SettingRowKind::Pressure   ? PressureName
+              : kind == SettingRowKind::Duration ? DurationName
+                                                 : NumberName;
+  info.step = number.step();
+  info.min = number.min();
+  info.max = number.max();
   return info;
 }
 

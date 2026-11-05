@@ -371,6 +371,9 @@ class TestRow : public SettingConfig {
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return value_; }
 
+  // The suite never reads a kind; a number is the plainest answer the row contract takes.
+  SettingRowKind kind() const override { return SettingRowKind::Number; }
+
   String stored(const std::any& value) const override {
     return value.has_value() ? std::any_cast<String>(value) : String();
   }

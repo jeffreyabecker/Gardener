@@ -36,6 +36,8 @@ class BoolSettingCfg : public SettingConfig {
   const String& label() const override { return label_; }
   std::any defaultValue() const override { return default_; }
 
+  SettingRowKind kind() const override { return SettingRowKind::Bool; }
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
@@ -69,6 +71,8 @@ class ChoiceSettingCfg : public SettingConfig {
   const String& label() const override { return label_; }
   const String& icon() const override { return icon_; }
   std::any defaultValue() const override { return default_; }
+
+  SettingRowKind kind() const override { return SettingRowKind::Choice; }
 
   // The entries the row offers, each the key it stores and the title the list prints for it.
   const std::vector<gfx::RowList::Row>& entries() const { return items_; }
@@ -106,6 +110,8 @@ class NumericSettingCfg : public SettingConfig {
   const String& key() const override { return key_; }
   const String& label() const override { return label_; }
   std::any defaultValue() const override;
+
+  SettingRowKind kind() const override { return SettingRowKind::Number; }
 
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
@@ -152,6 +158,8 @@ class DurationSettingCfg : public NumericSettingCfg {
 
   std::any defaultValue() const override;
 
+  SettingRowKind kind() const override { return SettingRowKind::Duration; }
+
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
   String stored(const std::any& value) const override;
   std::any parse(const String& stored) const override;
@@ -172,6 +180,8 @@ class PressureSettingCfg : public NumericSettingCfg {
                      bool nullable = false, Validator validator = nullptr);
 
   std::unique_ptr<EditorScene> scene(const std::any& value) override;
+
+  SettingRowKind kind() const override { return SettingRowKind::Pressure; }
 
   float step() const override;
 

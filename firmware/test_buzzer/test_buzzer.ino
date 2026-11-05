@@ -10,7 +10,7 @@
 namespace {
 
 // The piezo. A passive element driven by one LEDC channel, as PwmBuzzer drives the fitted part.
-constexpr uint8_t BuzzerPin = 5;
+constexpr uint8_t BuzzerPin = 12;
 constexpr uint32_t IdleHz = 1000;
 constexpr uint8_t PwmResolution = 10;
 

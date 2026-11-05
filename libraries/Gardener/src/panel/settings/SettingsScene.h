@@ -25,6 +25,12 @@ namespace gardener {
 // and the page's half of it, which is where the declaration it was built from is read back.
 class SettingConfig;
 
+// Which kind of row a declaration is. Each of the four kinds the routines declare is a class of its
+// own, and a reader that has to name one — the interpreter's settings module — asks the row for this
+// rather than asking the compiler: the build has no RTTI, the core compiling every unit with
+// -fno-rtti.
+enum class SettingRowKind : uint8_t { Bool, Choice, Number, Duration, Pressure };
+
 // The check a row's declaration gave it: the declaration, the set in force and the value an editor
 // is about to keep, answering whether that value is accepted and, when it is not, the text that
 // refuses it. The editor holds the same check closed over the declaration and the set, which is
@@ -46,6 +52,9 @@ class SettingConfig : public SettingKind {
   virtual ~SettingConfig() = default;
 
   virtual const String& label() const = 0;
+
+  // The kind of row this is, for the reader that names it from outside the panel.
+  virtual SettingRowKind kind() const = 0;
 
   // The packed bitmap the row prints before its label, in the hex dialect `gfx::Bitmap` reads, or
   // an empty string for a row that prints none. Only a choice row carries one today, so the answer
