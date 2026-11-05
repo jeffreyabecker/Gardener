@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #include "core/Buzzer.h"
-#include "core/BuzzerPlayer.h"
+#include "panel/parts/BuzzerPlayer.h"
 
 namespace gardener::runtime {
 
