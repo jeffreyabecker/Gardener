@@ -17,6 +17,7 @@
 #include "beats/RoutinesTick.h"
 #include "core/Battery.h"
 #include "core/Button.h"
+#include "core/Gestures.h"
 #include "core/Library.h"
 #include "core/Logger.h"
 #include "core/SystemState.h"

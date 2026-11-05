@@ -5,6 +5,10 @@
 
 #include "core/Button.h"
 #include "core/ButtonPanel.h"
+#include "core/Gestures.h"
+
+#include <algorithm>
+#include <vector>
 
 namespace gardener {
 
@@ -22,6 +26,16 @@ class GestureClassifier {
 
   // The gesture this beat detected, or an empty string when it detected none.
   String update();
+  void addOverride(const String& gesture, const String& replacement) {
+    gestureOverrides_.emplace_back(gesture, replacement);
+  }
+  void clearOverrides() { gestureOverrides_.clear(); }
+  void removeOverride(const String& gesture) {
+    gestureOverrides_.erase(
+        std::remove_if(gestureOverrides_.begin(), gestureOverrides_.end(),
+                       [&gesture](const auto& pair) { return pair.first == gesture; }),
+        gestureOverrides_.end());
+  }
 
  private:
   static constexpr uint32_t bitOf(Button button) { return 1u << (uint8_t)button; }
@@ -36,6 +50,17 @@ class GestureClassifier {
   String part_[ButtonCount];
   // The last whole second each held key has issued, so a mark goes out once.
   uint32_t markedSecond_[ButtonCount] = {};
+  std::vector<std::pair<String, String>> gestureOverrides_;
+  String applyOverrides(const String& gesture) {
+    String result = gesture;
+    for (const auto& [gestureToReplace, replacement] : gestureOverrides_) {
+      if (Gestures::is(result.c_str(), gestureToReplace.c_str())) {
+        result = replacement;
+        break;
+      }
+    }
+    return result;
+  }
 };
 
 }  // namespace gardener

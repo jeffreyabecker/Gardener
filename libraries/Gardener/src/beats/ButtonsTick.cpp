@@ -1,5 +1,6 @@
 #include "beats/ButtonsTick.h"
 
+#include "core/Gestures.h"
 #include "core/Logger.h"
 #include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"

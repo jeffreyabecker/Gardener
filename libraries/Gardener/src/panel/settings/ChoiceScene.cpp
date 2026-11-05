@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/Gestures.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 

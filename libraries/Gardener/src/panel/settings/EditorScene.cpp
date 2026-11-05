@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
-#include <utility>
-
+#include "core/Gestures.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
+#include <utility>
 
 namespace gardener {
 namespace {

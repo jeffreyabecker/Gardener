@@ -1,5 +1,9 @@
 #include "panel/parts/GestureClassifier.h"
 
+#include "core/Button.h"
+#include "core/ButtonPanel.h"
+#include "core/Gestures.h"
+
 namespace gardener {
 
 GestureClassifier::GestureClassifier(ButtonPanel& buttons) : buttons_(buttons) {
@@ -22,6 +26,7 @@ String GestureClassifier::update() {
   // for a mark sees it while the key is still down. The marks come first: a key that is still down
   // is seen even when another key's press lands on the same beat, and the press waits a beat in
   // the reader.
+
   String marks;
   for (uint8_t i = 0; i < ButtonCount; i++) {
     const Button button = (Button)i;

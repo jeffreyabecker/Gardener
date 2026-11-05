@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "core/Gestures.h"
 #include "layout/Drawing.h"
 
 namespace gardener {

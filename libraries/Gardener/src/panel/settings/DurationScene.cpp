@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "core/Gestures.h"
 #include "layout/Drawing.h"
 #include "layout/Layout.h"
 #include "shapes/Text.h"
@@ -71,9 +72,7 @@ std::any DurationScene::value() const { return hasValue() ? std::any(whole()) : 
 
 // The minutes stage's words name the field the keys step and say that Forward moves to the seconds;
 // the seconds stage has nowhere left to go, so OK is what it offers.
-const char* DurationScene::hintText() {
-  return stage_ == Stage::Minutes ? "MIN" : "SEC OK=SAVE";
-}
+const char* DurationScene::hintText() { return stage_ == Stage::Minutes ? "MIN" : "SEC OK=SAVE"; }
 
 // The minutes stage says which field the keys step and marks Forward as the way on to the seconds;
 // the seconds stage has nowhere left to go, so it is the page's own band and OK is what it offers.
