@@ -4,7 +4,6 @@
 #include <freertos/task.h>
 
 #include "beats/MachineTick.h"
-#include "ble/BleLink.h"
 #include "core/Logger.h"
 #include "core/SystemState.h"
 #include "machine/Machine.h"
@@ -33,11 +32,10 @@ struct ControlState {
   MachineTick& tick;
 };
 
-// The interface task's own state: the links it polls and the state it publishes their presence into.
+// The interface task's own state: the link it polls and the state it publishes its presence into.
 struct InterfaceState {
   SerialLink* link;
   SystemState& published;
-  BleLink* ble;
 };
 
 }  // namespace
@@ -60,24 +58,22 @@ void interfaceTask(void* arg) {
   for (;;) {
     const uint32_t now = millis();
 
-    // The links answer the wire.
+    // The link answers the wire.
     state.link->poll(now);
-    state.ble->poll(now);
 
     // Connection presence, published for the panel's overlay: a connected link that has not
     // acquired control still counts.
     state.published.serialConnected = state.link->controllerAttached();
-    state.published.bluetoothConnected = state.ble->connected();
 
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link, BleLink* ble,
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
                        SystemState& state) {
   static MachineTick tick{machine.vacuum(), machine.logger(), queue, state};
   static ControlState control{machine, tick};
-  static InterfaceState interface{link, state, ble};
+  static InterfaceState interface{link, state};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

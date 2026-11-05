@@ -49,26 +49,28 @@ void setup() {
   static gardener::PanelRoot root(Board);
 
   // The wire surface is this build's to compose: the serial link serves the machine's and the panel's
-  // commands and the store, and the Bluetooth link serves the machine and the panel as one table.
+  // commands and the store. The Bluetooth link is out of the build for now, so the serial line is the
+  // only way a controller reaches the device.
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, root.logger(), root.commands(),
                                gardener::SerialParts{root.machine(), BoardInfo, root.battery(),
                                                      root.settings(), root.buzzer(), root.files()});
-  gardener::runtime::BleLink* ble = new gardener::runtime::BleLink(root.commands(), root.machine(),
-                                                                   root.settings(), root.battery());
+  // gardener::runtime::BleLink* ble = new gardener::runtime::BleLink(root.commands(),
+  //                                                                  root.machine(), root.settings(),
+  //                                                                  root.battery());
 
   serial->begin();
   // The radio is a bonus transport: a failure is a line here rather than a boot that does not come
   // up. It comes up before the ready line so that line reports the heap the firmware actually runs
   // with.
-  switch (ble->begin()) {
-    case gardener::runtime::BleLink::Start::Advertising:
-      root.logger().info("ble: advertising as gardener");
-      break;
-    case gardener::runtime::BleLink::Start::Failed:
-      root.logger().warn("ble: start failed, serial only");
-      break;
-  }
+  // switch (ble->begin()) {
+  //   case gardener::runtime::BleLink::Start::Advertising:
+  //     root.logger().info("ble: advertising as gardener");
+  //     break;
+  //   case gardener::runtime::BleLink::Start::Failed:
+  //     root.logger().warn("ble: start failed, serial only");
+  //     break;
+  // }
 
   // The parts, then the tasks that drive them. A glass that does not answer is a panic and a reset
   // rather than a device that comes up blind.
@@ -77,7 +79,7 @@ void setup() {
     abort();
   }
 
-  gardener::runtime::spawnMachineTasks(root.machine(), root.commands(), serial, ble, root.state());
+  gardener::runtime::spawnMachineTasks(root.machine(), root.commands(), serial, root.state());
   gardener::runtime::spawnPanelTask(root.buttons(), root.routines().presses(), root.outbox(),
                                     root.logger(), root.battery(), root.buzzer(), root.routines(),
                                     root.machine(), root.state());

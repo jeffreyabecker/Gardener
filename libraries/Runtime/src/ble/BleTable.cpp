@@ -1,3 +1,6 @@
+// The Bluetooth transport is out of the build for now. The whole file is commented out rather than
+// deleted so the way back is one uncomment; see ble/BleLink.h.
+/*
 #include <math.h>
 #include <string.h>
 
@@ -345,3 +348,4 @@ void BleLink::publishOnChange(uint8_t index, float value, float& last, bool forc
 }
 
 }  // namespace gardener::runtime
+*/

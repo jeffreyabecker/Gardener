@@ -1,17 +1,18 @@
 # Gardener
 
 An ESP32-S3 vacuum pump controller. It pulls a chamber to a target depth below ambient, holds it
-for a timer, then vents it — driven over a serial line, Bluetooth, or the panel on the device.
+for a timer, then vents it — driven over a serial line or the panel on the device.
 
-There is no ownership handshake: the serial line, Bluetooth and the panel can all command the
-machine, and the last write wins. What the device owns is what has to happen when nobody is
+There is no ownership handshake: the serial line and the panel can both command the machine, and
+the last write wins. What the device owns is what has to happen when nobody is
 watching: pulling to the target, and venting the chamber through one path on stop, abort, fault or
 the panel's reserved key hold. Pressures are kPa, on the wire and in the firmware.
 
 The device is the machine — pump, sensor and vent valve — with the OLED panel, the keys, the buzzer
 and the battery gauge arranged around it. One sketch, [firmware/gardener](./firmware/gardener),
-composes the libraries for it: what it names is what the device has, over the serial link and the
-Bluetooth link it builds.
+composes the libraries for it: what it names is what the device has, over the serial link it builds.
+The Bluetooth transport is out of the build for now — its sources are commented out, so the serial
+line is the only way a controller reaches the device.
 
 ## Build
 
@@ -35,7 +36,7 @@ without which `Serial` is UART0 and a USB cable sees nothing. The build uses
 the interpreter's host side, the install and the native modules a page is written against — is the
 firmware rather than a sketchbook copy. Beside it a build finds
 [libraries/Runtime](./libraries/Runtime), the board it runs on — the part drivers, the file store,
-the Bluetooth transport, the two composition roots and the tasks that drive them;
+the two composition roots and the tasks that drive them;
 [libraries/Gfx](./libraries/Gfx), the canvas those pages draw on; and
 [libraries/berry](./libraries/berry), the vendored VM itself.
 

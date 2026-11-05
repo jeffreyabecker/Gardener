@@ -1,3 +1,6 @@
+// The Bluetooth transport is out of the build for now. The whole file is commented out rather than
+// deleted so the way back is one uncomment; see ble/BleLink.h.
+/*
 #include "ble/BleLink.h"
 
 #include <stdio.h>
@@ -164,3 +167,4 @@ void BleLink::setUint32(NimBLECharacteristic* characteristic, uint32_t value) {
 }
 
 }  // namespace gardener::runtime
+*/

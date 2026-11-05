@@ -1,3 +1,6 @@
+// The Bluetooth transport is out of the build for now. The whole file is commented out rather than
+// deleted so the way back is one uncomment, and nothing here reaches NimBLE while it is out.
+/*
 #pragma once
 
 #include <Arduino.h>
@@ -159,3 +162,4 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
 };
 
 }  // namespace gardener::runtime
+*/

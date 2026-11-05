@@ -6,9 +6,14 @@
 namespace gardener::runtime {
 namespace {
 
-// The part's own numbers, at its 3.3 V variant. The output spans 0.2 V at -100 kPa to 2.7 V at
-// 0 kPa, which is 0.025 V per kPa.
-constexpr float VoltsPerKpa = 0.025f;
+// The part's own numbers, at its 3.3 V variant: the output spans 0.2 V at -100 kPa to 2.7 V at
+// 0 kPa, which is 40 kPa per volt. Ambient sits at the 0 kPa end, which is where the reference is
+// taken.
+constexpr float MinKpa = -100.0f;
+constexpr float MaxKpa = 0.0f;
+constexpr float VoltsAtMinKpa = 0.2f;
+constexpr float VoltsAtMaxKpa = 2.7f;
+constexpr float KpaPerVolt = (MaxKpa - MinKpa) / (VoltsAtMaxKpa - VoltsAtMinKpa);
 
 // A connected part always sits inside its output span. A pin pulled to ground reads as "no
 // part", and so does one pulled to the rail: both are refused rather than believed. The window
@@ -19,6 +24,15 @@ constexpr float MaxPlausibleVolts = 3.0f;
 constexpr uint8_t Samples = 8;
 constexpr uint32_t PollMs = 20;
 constexpr float FilterAlpha = 0.3f;
+
+// The ambient reference is the mean of this much of the part's output rather than one sample, so a
+// part that is still warming when the firmware boots does not bend every reading after it.
+constexpr uint32_t SettleMs = 10000;
+
+// A reading this far under the reference is the chamber being pulled, not noise about ambient, and
+// so does not join the mean: a run started straight from boot would otherwise drag the reference
+// down with it.
+constexpr float SettleBandVolts = 0.02f;
 
 }  // namespace
 
@@ -35,8 +49,12 @@ bool XgzpSensor::begin() {
   delay(10);  // the part settles well inside its 5 ms T90
   float volts = 0.0f;
   present_ = sample(volts);
-  if (present_) applySample(volts);
-  return present_;
+  const uint32_t nowMs = millis();
+  settleStartMs_ = nowMs;
+  if (!present_) return false;
+  applySample(volts);
+  settleAmbient(volts, nowMs);
+  return true;
 }
 
 bool XgzpSensor::sample(float& outVolts) {
@@ -52,13 +70,20 @@ bool XgzpSensor::sample(float& outVolts) {
 
 void XgzpSensor::applySample(float volts) {
   if (!valid_) {
-    // The first reading after the part comes up is the ambient reference.
-    ambientVolts_ = volts;
     filteredVolts_ = volts;
+    ambientVolts_ = volts;
     valid_ = true;
     return;
   }
   filteredVolts_ += FilterAlpha * (volts - filteredVolts_);
+}
+
+void XgzpSensor::settleAmbient(float volts, uint32_t nowMs) {
+  if (settleSamples_ > 0 && volts < ambientVolts_ - SettleBandVolts) return;
+  settleSumVolts_ += volts;
+  settleSamples_++;
+  ambientVolts_ = settleSumVolts_ / (float)settleSamples_;
+  if (nowMs - settleStartMs_ >= SettleMs) settled_ = true;
 }
 
 void XgzpSensor::update(uint32_t nowMs) {
@@ -68,12 +93,14 @@ void XgzpSensor::update(uint32_t nowMs) {
 
   float volts = 0.0f;
   present_ = sample(volts);
-  if (present_) applySample(volts);
+  if (!present_) return;
+  applySample(volts);
+  if (!settled_) settleAmbient(volts, nowMs);
 }
 
 float XgzpSensor::pressureKpa() const {
   if (!valid_) return 0.0f;
-  const float depth = (ambientVolts_ - filteredVolts_) / VoltsPerKpa;
+  const float depth = (ambientVolts_ - filteredVolts_) * KpaPerVolt;
   return depth > 0.0f ? depth : 0.0f;
 }
 

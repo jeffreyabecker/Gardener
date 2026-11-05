@@ -2,14 +2,16 @@
 
 // Umbrella header for the Runtime library. A build includes this beside Gardener.h: the parts a
 // board supplies — the pump, the sensor, the valve, the gauge, the keys, the piezo and the glass —
-// the file store they read, the two links' transports, and the builder of the machine's three parts,
-// plus the control task that steps the tick, the interface task that polls the links, the panel task
-// that drives the glass, and the queue the links and the panel post into.
+// the file store they read, the serial link's transport, and the builder of the machine's three
+// parts, plus the control task that steps the tick, the interface task that polls the link, the
+// panel task that drives the glass, and the queue the link and the panel post into.
 
 #include "MachineRoot.h"
 #include "MachineTasks.h"
 #include "RtosCommandQueue.h"
-#include "ble/BleLink.h"
+// The Bluetooth transport is out of the build for now: ble/BleLink.h is commented out, nothing
+// builds a link, and the interface task polls the serial one alone.
+// #include "ble/BleLink.h"
 #include "storage/FileLibrary.h"
 
 #include "PanelTasks.h"
