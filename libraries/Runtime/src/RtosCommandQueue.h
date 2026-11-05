@@ -8,8 +8,8 @@
 namespace gardener::runtime {
 
 // The device's queue: one FreeRTOS queue, created when the composition builds it so it exists
-// before either task runs. A post never blocks, so a full queue is a beat of delay in the link's
-// outbox rather than a link waiting on the control tick.
+// before either task runs. A post never blocks, so a full queue refuses the command rather than
+// holding up the task that posted it.
 class RtosCommandQueue : public CommandQueue {
  public:
   RtosCommandQueue();

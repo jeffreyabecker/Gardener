@@ -314,7 +314,7 @@ int hostMain(int argc, char** argv) {
         // down over the beats that follow.
         session.showGesture(command.gesture.c_str(), command.beats);
         session.beat(leadBeats);
-        session.routines().pushPress(String(command.gesture.c_str()));
+        session.routines().pushPress(command.gesture.c_str());
         break;
       case Command::Verb::Wait:
         session.beat(command.beats);

@@ -5,7 +5,7 @@
 namespace gardener {
 class Logger;
 struct SystemState;
-class CommandOutbox;
+class CommandQueue;
 struct MachineCommand;
 class DeviceSettings;
 namespace gfx {
@@ -27,10 +27,10 @@ class Ux;
 class BindingContext {
  public:
   BindingContext(gfx::DisplayDevice& display, SystemState& state, DeviceSettings& settings,
-                 SystemSettings& systemSettings, BuzzerPlayer& buzzer, CommandOutbox& outbox,
+                 SystemSettings& systemSettings, BuzzerPlayer& buzzer, CommandQueue& queue,
                  GestureQueue& presses, Ux& ux, RoutineRegistry& registry, Logger& logger)
       : display_(display), state_(state), settings_(settings), systemSettings_(systemSettings),
-        buzzer_(buzzer), outbox_(outbox), presses_(presses), ux_(ux), registry_(registry),
+        buzzer_(buzzer), queue_(queue), presses_(presses), ux_(ux), registry_(registry),
         logger_(logger) {}
 
   // --- the panel's parts ---------------------------------------------------
@@ -53,7 +53,7 @@ class BindingContext {
   GestureQueue& presses();
   Ux& ux();
   RoutineRegistry& registry();
-  bool takePress(String& gesture);
+  const char* takePress();
 
   // --- the device's log ----------------------------------------------------
   void info(const char* message);
@@ -65,7 +65,7 @@ class BindingContext {
   DeviceSettings& settings_;
   SystemSettings& systemSettings_;
   BuzzerPlayer& buzzer_;
-  CommandOutbox& outbox_;
+  CommandQueue& queue_;
   GestureQueue& presses_;
   Ux& ux_;
   RoutineRegistry& registry_;

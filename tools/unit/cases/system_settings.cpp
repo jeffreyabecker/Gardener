@@ -202,9 +202,9 @@ TEST_CASE("the device's own list edits a row and hands the set back") {
 
   scene->press("forward:single");
   REQUIRE_EQ(bench.ux.depth(), 3);
-  bench.gestures.push("down:single");
+  bench.gestures.post("down:single");
   bench.ux.poll(gardener::gfx::test::canvas, 1000);
-  bench.gestures.push("ok:single");
+  bench.gestures.post("ok:single");
   bench.ux.poll(gardener::gfx::test::canvas, 1010);
   CHECK_EQ(bench.ux.depth(), 2);
 
@@ -229,7 +229,7 @@ TEST_CASE("the device's own list edits a row and hands the set back") {
   CHECK_EQ(gardener::gfx::test::display.inkCount(0, 8, gardener::gfx::test::PageWidth, 8), rebuilt);
 
   // OK pops the list, which hands the set to the device, and the device writes it back.
-  bench.gestures.push("ok:single");
+  bench.gestures.post("ok:single");
   bench.ux.poll(gardener::gfx::test::canvas, 1020);
   CHECK_EQ(bench.ux.depth(), 1);
   CHECK_EQ(std::string(textOf(handed, "unit").c_str()), std::string("inhg"));

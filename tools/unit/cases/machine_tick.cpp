@@ -17,7 +17,6 @@
 
 namespace {
 
-using gardener::CommandOutbox;
 using gardener::CommandQueue;
 using gardener::MachineCommand;
 using gardener::MachineTick;
@@ -153,38 +152,4 @@ TEST_CASE("the run log names a state change once") {
   CHECK_EQ(linesWith(rig.logger, "IDLE -> VENT"), 1);
   rig.tick.tick(50);
   CHECK_EQ(linesWith(rig.logger, "IDLE -> VENT"), 1);
-}
-
-TEST_CASE("the outbox holds what a full queue could not take and flushes in order") {
-  BoundedQueue queue(1);
-  CommandOutbox outbox(queue);
-
-  CHECK(outbox.post(op(Op::ResetFault)));
-  CHECK_FALSE(outbox.post(target(5.0f)));
-  CHECK_FALSE(outbox.post(target(15.0f)));
-
-  MachineCommand taken{Op::ResetFault, 0.0f};
-  REQUIRE(queue.take(taken));
-  outbox.flush();
-  CHECK_EQ(queue.count(), static_cast<size_t>(1));
-
-  MachineCommand first{Op::ResetFault, 0.0f};
-  REQUIRE(queue.take(first));
-  CHECK_EQ(first.op, Op::SetTarget);
-  CHECK_EQ(first.value, 5.0f);
-
-  outbox.flush();
-  MachineCommand second{Op::ResetFault, 0.0f};
-  REQUIRE(queue.take(second));
-  CHECK_EQ(second.op, Op::SetTarget);
-  CHECK_EQ(second.value, 15.0f);
-}
-
-TEST_CASE("the outbox refuses the newest when its own capacity is reached") {
-  BoundedQueue queue(1);
-  CommandOutbox outbox(queue);
-  REQUIRE(outbox.post(op(Op::ResetFault)));
-  for (int i = 0; i < 8; i++)
-    CHECK_FALSE(outbox.post(target(static_cast<float>(i))));
-  CHECK_FALSE(outbox.post(target(99.0f)));
 }

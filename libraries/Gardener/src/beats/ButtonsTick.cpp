@@ -2,6 +2,7 @@
 
 #include "core/Gestures.h"
 #include "core/Logger.h"
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"
 
@@ -14,9 +15,9 @@ constexpr uint32_t ResetHoldSeconds = 5;
 
 }  // namespace
 
-ButtonsTick::ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox,
+ButtonsTick::ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandQueue& queue,
                          Logger& logger)
-    : classifier_(buttons), presses_(presses), outbox_(outbox), logger_(logger) {}
+    : classifier_(buttons), presses_(presses), queue_(queue), logger_(logger) {}
 
 void ButtonsTick::begin() {
   // The classifier answers the seconds a key is held; the panel's two safety holds are named as the
@@ -54,14 +55,14 @@ void ButtonsTick::tick() {
   // show the root.
   if (Gestures::is(gesture.c_str(), Gestures::SystemQuit)) {
     logger_.warn("panel: cancel held, force-quitting");
-    outbox_.post(MachineCommand{MachineCommand::Op::Stop});
+    queue_.post(MachineCommand{MachineCommand::Op::Stop});
     home_ = true;
     return;
   }
 
-  if (!gesture.isEmpty()) deliver(gesture);
+  if (!gesture.isEmpty()) deliver(gesture.c_str());
 }
 
-void ButtonsTick::deliver(const String& gesture) { presses_.push(gesture); }
+void ButtonsTick::deliver(const char* gesture) { presses_.post(gesture); }
 
 }  // namespace gardener

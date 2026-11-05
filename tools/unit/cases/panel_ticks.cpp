@@ -40,7 +40,6 @@ using gardener::Button;
 using gardener::ButtonsTick;
 using gardener::BuzzerPlayer;
 using gardener::CaptureDisplay;
-using gardener::CommandOutbox;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
@@ -73,7 +72,8 @@ using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
 using Op = gardener::MachineCommand::Op;
 
-// The queue the outbox posts into: everything is taken, and a case reads back what arrived.
+// The queue the panel posts its own commands into: everything is taken, and a case reads back what
+// arrived.
 class MemoryQueue : public CommandQueue {
  public:
   bool post(const MachineCommand& command) override {
@@ -174,13 +174,12 @@ struct PageRig {
 
 // The buttons tick and the parts it answers into.
 struct ButtonsRig {
-  explicit ButtonsRig(GestureQueue& presses) : tick(buttons, presses, outbox, logger) {
+  explicit ButtonsRig(GestureQueue& presses) : tick(buttons, presses, queue, logger) {
     tick.begin();
   }
 
   FakeButtonPanel buttons;
   MemoryQueue queue;
-  CommandOutbox outbox{queue};
   RecordingLogger logger;
   ButtonsTick tick;
 };
@@ -228,9 +227,9 @@ TEST_CASE("a gesture reaches the queue the page drains") {
   rig.buttons.classify(Button::Back, Press::Single);
   rig.tick.tick();
 
-  String gesture;
-  REQUIRE(page.routines.takePress(gesture));
-  CHECK_EQ(std::string(gesture.c_str()), std::string("back:single"));
+  const char* gesture = page.routines.takePress();
+  REQUIRE(gesture != nullptr);
+  CHECK_EQ(std::string(gesture), std::string("back:single"));
 }
 
 TEST_CASE("the gesture vocabulary compares a whole gesture and its parts") {

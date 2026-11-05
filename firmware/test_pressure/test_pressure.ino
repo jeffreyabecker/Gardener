@@ -11,6 +11,7 @@
 #include <Runtime.h>
 
 #include "hal/impl/XgzpSensor.h"
+#include "SensorTest.h"
 
 namespace {
 

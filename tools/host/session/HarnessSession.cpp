@@ -194,7 +194,7 @@ int HarnessSession::errorLines() const { return logger_.errors(); }
 
 void HarnessSession::markOverlay(int16_t top, int16_t rows) { display_.markOverlay(top, rows); }
 
-void HarnessSession::backHold() { outbox_.post(MachineCommand{MachineCommand::Op::Stop}); }
+void HarnessSession::backHold() { queue_.post(MachineCommand{MachineCommand::Op::Stop}); }
 
 void HarnessSession::reset() {
   // Leaving the page under test runs default's activate(), which is where the device would be.
@@ -204,7 +204,7 @@ void HarnessSession::reset() {
   // set to cut a run short.
   settings_.setMaxDurationSeconds(bootMaxDurationSeconds_);
 
-  outbox_.post(MachineCommand{MachineCommand::Op::Stop});
+  queue_.post(MachineCommand{MachineCommand::Op::Stop});
   chamber_.reset();
   vacuum_.service(millis());
   publish();

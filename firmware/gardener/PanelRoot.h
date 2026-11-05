@@ -11,7 +11,6 @@
 #include "hal/impl/Buttons.h"
 #include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/Sh1106Device.h"
-#include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/page/Ux.h"
@@ -66,7 +65,6 @@ class PanelRoot {
   CommandQueue& commands() { return commands_; }
   SystemState& state() { return state_; }
   Machine& machine() { return machine_; }
-  CommandOutbox& outbox() { return outbox_; }
   Battery& battery() { return battery_; }
   ButtonPanel& buttons() { return keys_; }
   BuzzerPlayer& buzzer() { return buzzer_; }
@@ -85,7 +83,6 @@ class PanelRoot {
   // The machine over the parts the board wires, and the queue the panel commands it through.
   runtime::MachineParts parts_;
   Machine machine_;
-  CommandOutbox outbox_;
   // The panel's own parts.
   runtime::AdcBattery battery_;
   runtime::Buttons keys_;

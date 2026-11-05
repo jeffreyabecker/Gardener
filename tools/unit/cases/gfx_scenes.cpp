@@ -411,7 +411,7 @@ class SettingsProbe : public SettingsScene {
 // that closes itself pops on this call rather than inside its own handle, which is how the stack is
 // driven.
 void press(Ux& ux, GestureQueue& gestures, const char* gesture, uint32_t nowMs) {
-  gestures.push(gesture);
+  gestures.post(gesture);
   ux.poll(canvas, nowMs);
 }
 

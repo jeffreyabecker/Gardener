@@ -107,8 +107,13 @@ the gesture spelling, the marks and the note, the picture's layout, and the tool
 
 ## Documentation
 
-- [docs/README.md](./docs/README.md) — the index: specs, guides and backlogs
+- [docs/README.md](./docs/README.md) — the index: specs, guides, reference and backlogs
 - [docs/guides/poc-parts.md](./docs/guides/poc-parts.md) — the parts, the wiring and a build
+- [docs/reference/sh1106-i2c.md](./docs/reference/sh1106-i2c.md) — the panel controller's I2C map
+- [docs/reference/ssd1306-i2c.md](./docs/reference/ssd1306-i2c.md) — the other 128x64 controller's
+  map, and where it differs
+- [docs/reference/panel-identification.md](./docs/reference/panel-identification.md) — telling the
+  two controllers apart on the bench, since neither will say which it is
 - [docs/archive/specs-and-plans.zip](./docs/archive/specs-and-plans.zip) — every spec and plan as it
   stood before the panel port, kept for reference and read by nothing
 

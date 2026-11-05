@@ -6,7 +6,7 @@ namespace gardener {
 
 SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
                        SerialParts parts)
-    : outbox_(queue), stream_(stream), port_(stream), present_(present), logger_(logger),
+    : queue_(queue), stream_(stream), port_(stream), present_(present), logger_(logger),
       parts_(parts) {}
 
 void SerialLink::begin() {
@@ -36,10 +36,6 @@ void SerialLink::linkError(const char* code, const String& detail) {
 
 void SerialLink::poll(uint32_t nowMs) {
   (void)nowMs;
-
-  // A command the control task's queue could not take on an earlier pass is retried first, so a
-  // momentarily full queue costs this link a beat rather than the command.
-  outbox_.flush();
 
   // The link reads the domain token and nothing else. Once the token is followed by a space or a
   // tab, the stream belongs to the grammar, which parses the rest of the line (and any body).

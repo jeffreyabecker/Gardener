@@ -1,6 +1,7 @@
 #include "BindingContext.h"
 
 #include "core/Logger.h"
+#include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "panel/GestureQueue.h"
 
@@ -16,7 +17,7 @@ SystemSettings& BindingContext::systemSettings() { return systemSettings_; }
 
 BuzzerPlayer& BindingContext::buzzer() { return buzzer_; }
 
-bool BindingContext::post(const MachineCommand& command) { return outbox_.post(command); }
+bool BindingContext::post(const MachineCommand& command) { return queue_.post(command); }
 
 GestureQueue& BindingContext::presses() { return presses_; }
 
@@ -24,7 +25,7 @@ Ux& BindingContext::ux() { return ux_; }
 
 RoutineRegistry& BindingContext::registry() { return registry_; }
 
-bool BindingContext::takePress(String& gesture) { return presses_.take(gesture); }
+const char* BindingContext::takePress() { return presses_.take(); }
 
 void BindingContext::info(const char* message) { logger_.info(message); }
 

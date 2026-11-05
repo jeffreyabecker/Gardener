@@ -76,8 +76,8 @@ class Routines {
   RoutineRegistry& registry() { return registry_; }
 
   // --- the `device` module's gesture surface ---
-  void pushPress(const String& gesture) { presses_.push(gesture); }
-  bool takePress(String& gesture) { return presses_.take(gesture); }
+  void pushPress(const char* gesture) { presses_.post(gesture); }
+  const char* takePress() { return presses_.take(); }
 
  private:
   size_t loadSystem(size_t& found);

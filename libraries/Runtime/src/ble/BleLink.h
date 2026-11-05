@@ -34,7 +34,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   enum class Start : uint8_t { Advertising, Failed };
 
   BleLink(CommandQueue& queue, Machine& machine, DeviceSettings& settings, Battery& battery)
-      : outbox_(queue), machine_(machine), settings_(settings), battery_(battery) {}
+      : queue_(queue), machine_(machine), settings_(settings), battery_(battery) {}
 
   Start begin();
   void poll(uint32_t nowMs);
@@ -73,8 +73,10 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
 
   static const Spec Specs[Count];
 
+  // todo: this method needs to have a small internal buffer to hold commands if
+  // they overflow the queue
   // The link's queue, for the opcodes and setpoints the table applies.
-  bool post(const MachineCommand& command) { return outbox_.post(command); }
+  bool post(const MachineCommand& command) { return queue_.post(command); }
 
   // --- the table's content -------------------------------------------------
   // A read of slot `index`: set its value.
@@ -113,7 +115,7 @@ class BleLink : private NimBLEServerCallbacks, private NimBLECharacteristicCallb
   static void setUint16(NimBLECharacteristic* characteristic, uint16_t value);
   static void setUint32(NimBLECharacteristic* characteristic, uint32_t value);
 
-  CommandOutbox outbox_;
+  CommandQueue& queue_;
   Machine& machine_;
   DeviceSettings& settings_;
   Battery& battery_;

@@ -66,10 +66,6 @@ bool BleLink::connected() const { return server_ != nullptr && server_->getConne
 void BleLink::poll(uint32_t nowMs) {
   if (server_ == nullptr) return;
 
-  // A command the control task's queue could not take on an earlier pass is retried first, so a
-  // momentarily full queue costs this link a beat rather than the command.
-  outbox_.flush();
-
   // A fresh subscription wants a baseline, and it is consumed by the first pass after it.
   const bool baseline = baseline_;
   baseline_ = false;

@@ -190,7 +190,7 @@ void CaptureDisplay::keepFrame() {
 
 void CaptureDisplay::press(const char* gesture) {
   if (gesture == nullptr || gesture[0] == '\0') return;
-  push(String(gesture));
+  post(gesture);
   gestures_.push_back(gesture);
 }
 

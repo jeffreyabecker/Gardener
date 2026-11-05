@@ -4,8 +4,8 @@
 
 namespace gardener {
 
-void GestureQueue::push(const String& gesture) {
-  if (gesture.isEmpty()) return;
+void GestureQueue::post(const char* gesture) {
+  if (gesture == nullptr || gesture[0] == '\0') return;
 
   if (count_ == Capacity) {
     if (!overflowed_) {
@@ -17,27 +17,22 @@ void GestureQueue::push(const String& gesture) {
   }
 
   const uint8_t tail = (uint8_t)((head_ + count_) % Capacity);
-  presses_[tail] = gesture;
+  presses_[tail] = Gestures::internTable().intern(gesture);
   count_++;
 }
 
-bool GestureQueue::take(String& gesture) {
-  if (count_ == 0) return false;
-  gesture = presses_[head_];
-  presses_[head_] = "";
+const char* GestureQueue::take() {
+  if (count_ == 0) return nullptr;
+  const char* gesture = presses_[head_];
+  presses_[head_] = nullptr;
   head_ = (uint8_t)((head_ + 1) % Capacity);
   count_--;
-  return true;
-}
-
-const char* GestureQueue::take() {
-  if (!take(press_)) return nullptr;
-  return press_.c_str();
+  return gesture;
 }
 
 void GestureQueue::clear() {
-  for (String& press : presses_)
-    press = "";
+  for (const char*& press : presses_)
+    press = nullptr;
   head_ = 0;
   count_ = 0;
   overflowed_ = false;

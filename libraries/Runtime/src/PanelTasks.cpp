@@ -7,7 +7,6 @@
 #include "beats/PartsTick.h"
 #include "beats/RoutinesTick.h"
 #include "core/SystemState.h"
-#include "machine/MachineCommand.h"
 #include "machine/SafeReboot.h"
 
 namespace gardener::runtime {
@@ -21,9 +20,8 @@ constexpr uint32_t PanelStackWords = 8192;
 constexpr UBaseType_t PanelCore = 0;
 constexpr uint32_t PanelBeatMs = 10;
 
-// The panel task's own state: the beats it steps, the outbox it flushes and the machine it reboots.
+// The panel task's own state: the beats it steps and the machine it reboots.
 struct PanelState {
-  CommandOutbox& outbox;
   Machine& machine;
   ButtonsTick& buttons;
   PartsTick& parts;
@@ -40,8 +38,6 @@ void panelTask(void* arg) {
   state.page.begin();
 
   for (;;) {
-    // A command the panel could not hand to the control task on its last beat is retried first.
-    state.outbox.flush();
     state.buttons.tick();
 
     // The reset stops and vents before anything else on this beat draws.
@@ -64,13 +60,13 @@ void panelTask(void* arg) {
   }
 }
 
-void spawnPanelTask(ButtonPanel& buttonsPart, GestureQueue& presses, CommandOutbox& outbox,
+void spawnPanelTask(ButtonPanel& buttonsPart, GestureQueue& presses, CommandQueue& queue,
                     Logger& logger, Battery& battery, BuzzerPlayer& buzzer, Routines& routines,
                     Machine& machine, SystemState& state) {
-  static ButtonsTick buttons{buttonsPart, presses, outbox, logger};
+  static ButtonsTick buttons{buttonsPart, presses, queue, logger};
   static PartsTick parts{battery, buzzer, state};
   static RoutinesTick page{routines};
-  static PanelState panel{outbox, machine, buttons, parts, page};
+  static PanelState panel{machine, buttons, parts, page};
 
   xTaskCreatePinnedToCore(panelTask, "panel", PanelStackWords, &panel, PanelPriority, nullptr,
                           PanelCore);

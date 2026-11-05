@@ -351,13 +351,12 @@ class HarnessSession {
   Ux ux_;
   // The device's own settings rows, which the system list borrows.
   SystemSettings systemSettings_{presses_, ux_, settings_, jingles_, buzzer_};
-  // The queue the machine's commands wait in, and the outbox the app posts them through.
+  // The queue the machine's commands are posted to and wait in.
   HostQueue queue_;
-  CommandOutbox outbox_{queue_};
   // The routines the image registers into, the app the native modules reach, and the VM over them.
   RoutineRegistry registry_{files_, logger_};
   BindingContext bindings_{display_, state_,   settings_, systemSettings_, buzzer_,
-                           outbox_,  presses_, ux_,       registry_,       logger_};
+                           queue_,   presses_, ux_,       registry_,       logger_};
   BerryInterpreter interpreter_{bindings_};
   Routines routines_{interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_};
 };

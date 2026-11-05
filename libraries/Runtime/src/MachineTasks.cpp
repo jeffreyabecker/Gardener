@@ -31,7 +31,6 @@ struct ControlState {
   Machine& machine;
   MachineTick& tick;
 };
-
 // The interface task's own state: the link it polls and the state it publishes its presence into.
 struct InterfaceState {
   SerialLink* link;

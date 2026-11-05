@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <initializer_list>
+#include <vector>
 
 namespace gardener {
 
@@ -55,6 +56,46 @@ inline bool hasPart(const char* gesture, const char* part) {
     at = plus != nullptr ? plus + 1 : nullptr;
   }
   return false;
+}
+
+// One copy of each word the panel answers, made on first sight. A gesture is one of a handful of
+// words rather than something a caller writes, so the table keeps the copy and a caller keeps the
+// copy's address, which stays valid for as long as the panel runs.
+class InternTable {
+ public:
+  ~InternTable() {
+    for (const char* entry : table_)
+      delete[] entry;
+  }
+
+  // The table owns every copy it hands out, so two of them would free the same word twice.
+  InternTable(const InternTable&) = delete;
+  InternTable& operator=(const InternTable&) = delete;
+  InternTable() = default;
+
+  // The one copy of `gesture`, made when the table has not seen the word before.
+  virtual const char* intern(const char* gesture) {
+    for (const char* entry : table_) {
+      if (strcmp(entry, gesture) == 0) return entry;
+    }
+
+    const size_t length = strlen(gesture);
+    char* copy = new char[length + 1];
+    memcpy(copy, gesture, length + 1);
+
+    table_.push_back(copy);
+    return copy;
+  }
+
+ private:
+  std::vector<const char*> table_;
+};
+
+// The table every gesture word is interned in: the words are the panel's rather than one caller's,
+// so there is one table and everyone who keeps a gesture reaches it here.
+inline InternTable& internTable() {
+  static InternTable table;
+  return table;
 }
 
 }  // namespace Gestures

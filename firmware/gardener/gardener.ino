@@ -80,7 +80,7 @@ void setup() {
   }
 
   gardener::runtime::spawnMachineTasks(root.machine(), root.commands(), serial, root.state());
-  gardener::runtime::spawnPanelTask(root.buttons(), root.routines().presses(), root.outbox(),
+  gardener::runtime::spawnPanelTask(root.buttons(), root.routines().presses(), root.commands(),
                                     root.logger(), root.battery(), root.buzzer(), root.routines(),
                                     root.machine(), root.state());
 

@@ -46,7 +46,7 @@ void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
   io.print('\n');
 }
 
-void target(Stream& io, const String& args, CommandOutbox& outbox) {
+void target(Stream& io, const String& args, CommandQueue& queue) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -84,14 +84,14 @@ void target(Stream& io, const String& args, CommandOutbox& outbox) {
   }
 
   const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  outbox.post(set);
+  queue.post(set);
   io.print("ok target=");
   io.print(pressureKpa, 1u);
   io.print('\n');
 }
 
 void start(Stream& io, const String& args, Machine& machine, const DeviceSettings& settings,
-           CommandOutbox& outbox) {
+           CommandQueue& queue) {
   // The optional argument is the hold, in whole seconds. Without one the run gets the device's
   // maximum, which is also its ceiling. A document that names no maximum leaves the machine's own.
   const uint32_t maxSeconds = maxRunSeconds(settings.maxDurationSeconds());
@@ -136,11 +136,11 @@ void start(Stream& io, const String& args, Machine& machine, const DeviceSetting
     return;
   }
   const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
-  outbox.post(start);
+  queue.post(start);
   io.print("ok state=PULL\n");
 }
 
-void stop(Stream& io, const String& args, CommandOutbox& outbox) {
+void stop(Stream& io, const String& args, CommandQueue& queue) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -149,11 +149,11 @@ void stop(Stream& io, const String& args, CommandOutbox& outbox) {
   }
 
   const MachineCommand stop{MachineCommand::Op::Stop};
-  outbox.post(stop);
+  queue.post(stop);
   io.print("ok state=VENT\n");
 }
 
-void reset(Stream& io, const String& args, CommandOutbox& outbox) {
+void reset(Stream& io, const String& args, CommandQueue& queue) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -162,7 +162,7 @@ void reset(Stream& io, const String& args, CommandOutbox& outbox) {
   }
 
   const MachineCommand reset{MachineCommand::Op::ResetFault};
-  outbox.post(reset);
+  queue.post(reset);
   io.print("ok state=IDLE\n");
 }
 
@@ -199,19 +199,19 @@ void SerialLink::executeVacuum(Stream& io) {
     return;
   }
   if (verb == "target") {
-    target(io, args, outbox_);
+    target(io, args, queue_);
     return;
   }
   if (verb == "start") {
-    start(io, args, parts_.machine, parts_.settings, outbox_);
+    start(io, args, parts_.machine, parts_.settings, queue_);
     return;
   }
   if (verb == "stop") {
-    stop(io, args, outbox_);
+    stop(io, args, queue_);
     return;
   }
   if (verb == "reset") {
-    reset(io, args, outbox_);
+    reset(io, args, queue_);
     return;
   }
 

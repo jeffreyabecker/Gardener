@@ -110,9 +110,9 @@ int deviceLog(bvm* vm) {
 // runs while a native call is on the stack.
 int deviceTakeGesture(bvm* vm) {
   BindingContext* bindings = boundContext(vm);
-  String gesture;
-  if (bindings == nullptr || !bindings->takePress(gesture)) be_return_nil(vm);
-  be_pushstring(vm, gesture.c_str());
+  const char* gesture = bindings != nullptr ? bindings->takePress() : nullptr;
+  if (gesture == nullptr) be_return_nil(vm);
+  be_pushstring(vm, gesture);
   be_return(vm);
 }
 

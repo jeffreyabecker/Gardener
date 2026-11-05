@@ -7,7 +7,7 @@
 namespace gardener {
 
 class Logger;
-class CommandOutbox;
+class CommandQueue;
 class GestureQueue;
 
 // The keys' policy on the panel beat: one call to the classifier, the two holds the panel takes for
@@ -22,7 +22,7 @@ class ButtonsTick {
  public:
   // The keys are this beat's: the classifier is the tick's own, built on the reader it is handed,
   // so no other caller settles the same panel between two beats.
-  ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox, Logger& logger);
+  ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandQueue& queue, Logger& logger);
 
   // The beat's start: the panel's two safety holds are named as the commands they are, so the
   // classifier answers `system:reboot` and `system:quit` for them.
@@ -38,12 +38,12 @@ class ButtonsTick {
 
  private:
   // The gesture goes to the queue the page drains. The classifier is its one consumer, so it is
-  // never delivered twice.
-  void deliver(const String& gesture);
+  // never delivered twice. The queue interns the word, so the pointer need only outlive the call.
+  void deliver(const char* gesture);
 
   GestureClassifier classifier_;
   GestureQueue& presses_;
-  CommandOutbox& outbox_;
+  CommandQueue& queue_;
   Logger& logger_;
   bool reset_ = false;
   bool home_ = false;

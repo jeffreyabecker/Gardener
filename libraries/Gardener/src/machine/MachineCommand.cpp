@@ -1,5 +1,4 @@
 #include "machine/MachineCommand.h"
-#include "machine/CommandQueue.h"
 
 #include "machine/Machine.h"
 #include "machine/VacuumSystem.h"
@@ -40,22 +39,6 @@ bool applyMachineCommand(VacuumSystem& vacuum, const MachineCommand& command) {
       return false;
   }
   return false;
-}
-
-bool CommandOutbox::post(const MachineCommand& command) {
-  if (count_ == 0 && queue_.post(command)) return true;
-  if (count_ == Capacity) return false;  // the newest is what a link cannot hold
-  held_[(head_ + count_) % Capacity] = command;
-  count_++;
-  return false;
-}
-
-void CommandOutbox::flush() {
-  while (count_ > 0) {
-    if (!queue_.post(held_[head_])) return;
-    head_ = (head_ + 1) % Capacity;
-    count_--;
-  }
 }
 
 }  // namespace gardener

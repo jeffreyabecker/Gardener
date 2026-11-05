@@ -95,7 +95,7 @@ class SerialLink {
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.
   void linkError(const char* code, const String& detail);
 
-  CommandOutbox outbox_;
+  CommandQueue& queue_;
   Stream& stream_;
   // The stream the grammars read and answer on: `stream_` with the line ending's CR taken off.
   Port port_;

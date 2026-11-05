@@ -133,7 +133,7 @@ void set(Stream& io, const String& args, Machine& machine, DeviceSettings& setti
   io.print('\n');
 }
 
-void reboot(Stream& io, const String& args, CommandOutbox& outbox) {
+void reboot(Stream& io, const String& args, CommandQueue& queue) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -145,7 +145,7 @@ void reboot(Stream& io, const String& args, CommandOutbox& outbox) {
   // command the control task applies on its next tick — the link never blocks on the vent wait.
   io.print("ok\n");
   const MachineCommand reboot{MachineCommand::Op::Reboot};
-  outbox.post(reboot);
+  queue.post(reboot);
 }
 
 }  // namespace
@@ -189,7 +189,7 @@ void SerialLink::executeDevice(Stream& io) {
     return;
   }
   if (verb.equalsIgnoreCase("reboot")) {
-    reboot(io, args, outbox_);
+    reboot(io, args, queue_);
     return;
   }
 

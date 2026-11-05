@@ -6,8 +6,8 @@
 
 namespace gardener {
 
-// How many commands the machine's queue holds, and the size of the batch a tick drains: a link that
-// writes faster than the tick runs is held in its outbox rather than blocking the link.
+// How many commands the machine's queue holds: the depth is what a burst from a link is absorbed
+// into, and a post that finds it full is refused rather than waited on.
 constexpr uint8_t CommandQueueDepth = 8;
 
 // The way into the machine: a writer posts a command and the control tick drains it on its next
@@ -18,8 +18,8 @@ class CommandQueue {
  public:
   virtual ~CommandQueue() = default;
 
-  // False when the queue is full, in which case nothing was queued and the caller keeps the
-  // command.
+  // False when the queue is full, in which case nothing was queued and the command is dropped: a
+  // writer posts and does not wait.
   virtual bool post(const MachineCommand& command) = 0;
 
   // Takes one command, in the order it was posted; false when there is none left.
