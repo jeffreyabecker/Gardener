@@ -35,6 +35,8 @@ struct PanelState {
 void panelTask(void* arg) {
   PanelState& state = *static_cast<PanelState*>(arg);
 
+  state.buttons.begin();
+  state.parts.begin();
   state.page.begin();
 
   for (;;) {

@@ -49,7 +49,7 @@ String GestureClassifier::update() {
     marks += ':';
     marks += seconds;
   }
-  if (!marks.isEmpty()) return marks;
+  if (!marks.isEmpty()) return applyOverrides(marks);
 
   // The keys whose presses belong to the gesture being composed. A key that comes down while
   // another is down joins the same gesture, so a pair is one gesture rather than two.
@@ -92,7 +92,8 @@ String GestureClassifier::update() {
       part_[i] = "";
       done_[i] = false;
       group_ &= ~bitOf(button);
-      return joined;
+      // A press beside a held key is one word, and it is named like any other.
+      return applyOverrides(joined);
     }
   }
 
@@ -114,7 +115,7 @@ String GestureClassifier::update() {
     done_[i] = false;
   }
   group_ = 0;
-  return gesture;
+  return applyOverrides(gesture);
 }
 
 }  // namespace gardener

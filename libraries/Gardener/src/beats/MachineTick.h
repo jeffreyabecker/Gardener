@@ -22,6 +22,10 @@ class MachineTick {
  public:
   MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue, SystemState& state);
 
+  // The beat's start. The machine is brought up by the composition before the task is spawned, so
+  // there is nothing to do here yet; it is here so every beat starts the same way.
+  void begin() {}
+
   // One beat: applies what is queued, then updates the sensor and the pump, services the machine
   // and writes the run log, in that order. The millisecond is the tick's only clock.
   void tick(uint32_t nowMs);

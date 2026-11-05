@@ -24,6 +24,10 @@ class ButtonsTick {
   // so no other caller settles the same panel between two beats.
   ButtonsTick(ButtonPanel& buttons, GestureQueue& presses, CommandOutbox& outbox, Logger& logger);
 
+  // The beat's start: the panel's two safety holds are named as the commands they are, so the
+  // classifier answers `system:reboot` and `system:quit` for them.
+  void begin();
+
   // One call to the classifier, and the policy for what it answers.
   void tick();
 

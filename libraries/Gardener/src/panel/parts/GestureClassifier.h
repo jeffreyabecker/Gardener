@@ -26,6 +26,11 @@ class GestureClassifier {
 
   // The gesture this beat detected, or an empty string when it detected none.
   String update();
+  // A word a page registers stands in for the gesture it names, so the classifier answers
+  // `replacement` where it would have answered `gesture`. Every word it answers goes through here,
+  // hold marks included: the reset a five second hold on Okay and Cancel makes can be named
+  // `system:reboot`. The first registration of a word is the one that answers, and a replacement is
+  // an answer rather than another gesture, so it is not looked up again.
   void addOverride(const String& gesture, const String& replacement) {
     gestureOverrides_.emplace_back(gesture, replacement);
   }

@@ -7,10 +7,11 @@
 
 namespace gardener {
 
-// The standard presses the classifier reports, and the comparisons a page makes against them. A
-// gesture is the whole string the panel answered - one key's press, or its parts joined by '+' in
-// panel order - so a page names a constant here rather than repeating the words the wire log and the
-// Berry pages also use.
+// The standard presses the classifier reports, the words the panel's own holds are named with, and
+// the comparisons a page makes against them. A gesture is the whole string the panel answered - one
+// key's press, or its parts joined by '+' in panel order - so a page names a constant here rather
+// than repeating the words the wire log and the Berry pages also use. The two system: words are not
+// presses: ButtonsTick::begin() registers them as what a safety hold answers for.
 namespace Gestures {
 
 inline constexpr const char* UpSingle = "up:single";
@@ -25,6 +26,8 @@ inline constexpr const char* OkSingle = "ok:single";
 inline constexpr const char* OkDouble = "ok:double";
 inline constexpr const char* CancelSingle = "cancel:single";
 inline constexpr const char* CancelDouble = "cancel:double";
+inline constexpr const char* SystemReboot = "system:reboot";
+inline constexpr const char* SystemQuit = "system:quit";
 
 // True when the whole gesture is `expected`. A chord is not the same gesture as either of its
 // parts, so a page that binds one names the whole word.

@@ -43,6 +43,8 @@ struct InterfaceState {
 void controlTask(void* arg) {
   ControlState& state = *static_cast<ControlState*>(arg);
 
+  state.tick.begin();
+
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     state.tick.tick(millis());

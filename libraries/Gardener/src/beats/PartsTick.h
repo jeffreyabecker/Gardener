@@ -14,6 +14,10 @@ class PartsTick {
  public:
   PartsTick(Battery& battery, BuzzerPlayer& buzzer, SystemState& state);
 
+  // The beat's start. The pack and the piezo are brought up by the composition, so there is nothing
+  // to do here yet; it is here so every beat on the panel task starts the same way.
+  void begin() {}
+
   // One beat for the fitted parts.
   void tick(uint32_t nowMs);
 

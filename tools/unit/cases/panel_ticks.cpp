@@ -28,6 +28,7 @@
 #include "machine/VacuumSystem.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/parts/BuzzerPlayer.h"
+#include "panel/parts/GestureClassifier.h"
 #include "routines/Interpreter.h"
 #include "routines/Routines.h"
 #include "storage/DeviceSettings.h"
@@ -45,6 +46,7 @@ using gardener::DeviceSettings;
 using gardener::DisplayUnit;
 using gardener::GestureQueue;
 namespace Gestures = gardener::Gestures;
+using gardener::GestureClassifier;
 using gardener::Interpreter;
 using gardener::Library;
 using gardener::Logger;
@@ -172,7 +174,9 @@ struct PageRig {
 
 // The buttons tick and the parts it answers into.
 struct ButtonsRig {
-  explicit ButtonsRig(GestureQueue& presses) : tick(buttons, presses, outbox, logger) {}
+  explicit ButtonsRig(GestureQueue& presses) : tick(buttons, presses, outbox, logger) {
+    tick.begin();
+  }
 
   FakeButtonPanel buttons;
   MemoryQueue queue;
@@ -248,6 +252,141 @@ TEST_CASE("the gesture vocabulary compares a whole gesture and its parts") {
   CHECK_FALSE(Gestures::hasPart("ok:single+cancel:5", "ok"));
   CHECK_FALSE(Gestures::hasPart(nullptr, Gestures::OkSingle));
   CHECK_FALSE(Gestures::hasPart(Gestures::OkSingle, ""));
+}
+
+TEST_CASE("an override answers the word a page registered instead of the press") {
+  FakeButtonPanel buttons;
+  GestureClassifier classifier(buttons);
+
+  // One press, as the reader reports it across two beats: the level arrives, then the release is
+  // classified.
+  const auto press = [&](Button button, Press press) {
+    buttons.press(button);
+    classifier.update();
+    buttons.release(button);
+    buttons.classify(button, press);
+    return std::string(classifier.update().c_str());
+  };
+
+  CHECK_EQ(press(Button::Back, Press::Single), std::string(Gestures::BackSingle));
+
+  classifier.addOverride(Gestures::BackSingle, Gestures::CancelSingle);
+  CHECK_EQ(press(Button::Back, Press::Single), std::string(Gestures::CancelSingle));
+  // The press is renamed, not the key: a word nobody registered is answered as it was read.
+  CHECK_EQ(press(Button::Ok, Press::Single), std::string(Gestures::OkSingle));
+  CHECK_EQ(press(Button::Back, Press::Double), std::string(Gestures::BackDouble));
+}
+
+TEST_CASE("an override names a whole gesture rather than its parts") {
+  FakeButtonPanel buttons;
+  GestureClassifier classifier(buttons);
+
+  // Ok and Cancel down together, released together, as one gesture in panel order.
+  const auto chord = [&] {
+    buttons.press(Button::Ok);
+    classifier.update();
+    buttons.press(Button::Cancel);
+    classifier.update();
+    buttons.release(Button::Ok);
+    buttons.release(Button::Cancel);
+    buttons.classify(Button::Ok, Press::Single);
+    buttons.classify(Button::Cancel, Press::Single);
+    return std::string(classifier.update().c_str());
+  };
+
+  CHECK_EQ(chord(), std::string("ok:single+cancel:single"));
+
+  // A part is not rewritten, so overriding one key's press leaves the pair as it was read.
+  classifier.addOverride(Gestures::CancelSingle, "cancel");
+  CHECK_EQ(chord(), std::string("ok:single+cancel:single"));
+
+  // The pair itself can be named, and then it is the whole pair that is replaced.
+  classifier.addOverride("ok:single+cancel:single", "menu");
+  CHECK_EQ(chord(), std::string("menu"));
+
+  // A replacement is an answer and not another gesture, so it is not looked up again: Cancel
+  // answers Back's word, and Back's word is not then turned back by Cancel's.
+  classifier.clearOverrides();
+  classifier.addOverride(Gestures::BackSingle, Gestures::CancelSingle);
+  classifier.addOverride(Gestures::CancelSingle, Gestures::BackSingle);
+  buttons.press(Button::Back);
+  classifier.update();
+  buttons.release(Button::Back);
+  buttons.classify(Button::Back, Press::Single);
+  CHECK_EQ(std::string(classifier.update().c_str()), std::string(Gestures::CancelSingle));
+}
+
+TEST_CASE("an override removed or cleared hands the press back") {
+  FakeButtonPanel buttons;
+  GestureClassifier classifier(buttons);
+  classifier.addOverride(Gestures::BackSingle, "menu");
+
+  const auto pressBack = [&] {
+    buttons.press(Button::Back);
+    classifier.update();
+    buttons.release(Button::Back);
+    buttons.classify(Button::Back, Press::Single);
+    return std::string(classifier.update().c_str());
+  };
+
+  CHECK_EQ(pressBack(), std::string("menu"));
+
+  classifier.removeOverride(Gestures::BackSingle);
+  CHECK_EQ(pressBack(), std::string(Gestures::BackSingle));
+
+  // Registering the same word twice keeps the first answer, which is the one removeOverride took.
+  classifier.addOverride(Gestures::BackSingle, "menu");
+  classifier.addOverride(Gestures::BackSingle, "other");
+  CHECK_EQ(pressBack(), std::string("menu"));
+
+  classifier.clearOverrides();
+  CHECK_EQ(pressBack(), std::string(Gestures::BackSingle));
+}
+
+TEST_CASE("a press beside a held key answers the word a page registered for the pair") {
+  FakeButtonPanel buttons;
+  GestureClassifier classifier(buttons);
+
+  // Ok held past the mark says its seconds; Cancel pressed beside it joins that mark instead of
+  // waiting for both keys to come up.
+  buttons.press(Button::Ok);
+  classifier.update();
+  buttons.hold(Button::Ok, 3000);
+  CHECK_EQ(std::string(classifier.update().c_str()), std::string("ok:3"));
+
+  buttons.press(Button::Cancel);
+  classifier.update();
+  buttons.release(Button::Cancel);
+  buttons.classify(Button::Cancel, Press::Single);
+
+  classifier.addOverride("ok:3+cancel:single", "menu");
+  CHECK_EQ(std::string(classifier.update().c_str()), std::string("menu"));
+}
+
+TEST_CASE("a hold mark answers the word a page registered for it") {
+  // The reset is five seconds on Okay and Cancel together, and a page names it as what it means.
+  FakeButtonPanel buttons;
+  GestureClassifier classifier(buttons);
+  classifier.addOverride("ok:5+cancel:5", "system:reboot");
+
+  buttons.hold(Button::Ok, 4000);
+  buttons.hold(Button::Cancel, 4000);
+  CHECK_EQ(std::string(classifier.update().c_str()), std::string("ok:4+cancel:4"));
+
+  buttons.hold(Button::Ok, 5000);
+  buttons.hold(Button::Cancel, 5000);
+  CHECK_EQ(std::string(classifier.update().c_str()), std::string("system:reboot"));
+
+  // A single key's mark is nameable too, and a mark nobody named is answered as it was read.
+  FakeButtonPanel heldButtons;
+  GestureClassifier held(heldButtons);
+  held.addOverride("cancel:5", "system:stop");
+
+  heldButtons.hold(Button::Ok, 5000);
+  CHECK_EQ(std::string(held.update().c_str()), std::string("ok:5"));
+
+  heldButtons.hold(Button::Cancel, 5000);
+  CHECK_EQ(std::string(held.update().c_str()), std::string("system:stop"));
 }
 
 TEST_CASE("the gauge and the piezo are updated on the same millisecond") {
