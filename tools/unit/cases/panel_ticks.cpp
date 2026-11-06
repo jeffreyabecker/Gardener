@@ -216,6 +216,28 @@ TEST_CASE("the cancel hold stops the machine and asks for home") {
   CHECK(rig.logger.saw("panel: cancel held"));
 }
 
+TEST_CASE("nothing a beat posts is dropped for want of room") {
+  GestureQueue presses;
+  ButtonsRig rig{presses};
+
+  // A key coming down and up is one gesture in two beats, which is the press the loop repeats.
+  const auto press = [&rig] {
+    rig.buttons.press(Button::Back);
+    rig.tick.tick();
+    rig.buttons.release(Button::Back);
+    rig.buttons.classify(Button::Back, Press::Single);
+    rig.tick.tick();
+  };
+
+  // A burst no page has drained yet, filling the buffer: every one of them is still there to take.
+  for (int i = 0; i < GestureQueue::Capacity; i++) press();
+
+  int taken = 0;
+  for (const char* gesture = presses.take(); gesture != nullptr; gesture = presses.take()) taken++;
+  CHECK_EQ(taken, GestureQueue::Capacity);
+  CHECK_EQ(presses.take(), nullptr);
+}
+
 TEST_CASE("a gesture reaches the queue the page drains") {
   PageRig page;
   REQUIRE(page.ok);

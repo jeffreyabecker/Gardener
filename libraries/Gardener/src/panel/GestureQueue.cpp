@@ -1,17 +1,11 @@
 #include "panel/GestureQueue.h"
 
-#include "core/Logger.h"
-
 namespace gardener {
 
 void GestureQueue::post(const char* gesture) {
   if (gesture == nullptr || gesture[0] == '\0') return;
 
   if (count_ == Capacity) {
-    if (!overflowed_) {
-      overflowed_ = true;
-      if (logger_ != nullptr) logger_->warn("vm: button queue full, dropping the oldest");
-    }
     head_ = (uint8_t)((head_ + 1) % Capacity);
     count_--;
   }
@@ -35,7 +29,6 @@ void GestureQueue::clear() {
     press = nullptr;
   head_ = 0;
   count_ = 0;
-  overflowed_ = false;
 }
 
 }  // namespace gardener

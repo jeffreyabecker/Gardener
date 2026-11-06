@@ -68,7 +68,6 @@ bool Routines::begin() {
     logger_.error("vm: no memory, routines off");
     return false;
   }
-  presses_.begin(logger_);
 
   // The system first, in the order `/system/order` states: a scene may construct a class one of
   // those files defines — or answer with a record one of them declares — so they have to have run
