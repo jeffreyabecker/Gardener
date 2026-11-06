@@ -142,5 +142,6 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action="store_true", help="show the compiler commands")
     args, test_args = parser.parse_known_args()
 
+    run([sys.executable, str(TOOLS / "knob.py")])
     build(compiler())
     sys.exit(subprocess.run([str(EXE), *test_args]).returncode)

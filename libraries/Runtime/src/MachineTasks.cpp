@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 
 #include "beats/MachineTick.h"
+#include "core/Knob.h"
 #include "core/Logger.h"
 #include "core/SystemState.h"
 #include "machine/Machine.h"
@@ -17,12 +18,24 @@ namespace {
 
 // Task configuration. The control task runs above the Arduino loop's default priority so the PID is
 // never preempted by a link or the screen.
-constexpr UBaseType_t ControlPriority = 2;
-constexpr UBaseType_t InterfacePriority = 1;
-constexpr uint32_t ControlStackWords = 4096;
-constexpr uint32_t InterfaceStackWords = 4096;
-constexpr UBaseType_t ControlCore = 1;
-constexpr UBaseType_t InterfaceCore = 0;
+GARDENER_KNOB_VALID(UBaseType_t, ControlPriority, GARDENER_CONTROL_TASK_PRIORITY, 2,
+                    GARDENER_CONTROL_TASK_PRIORITY <= 24,
+                    "a task priority below the config ceiling");
+GARDENER_KNOB_VALID(UBaseType_t, InterfacePriority, GARDENER_INTERFACE_TASK_PRIORITY, 1,
+                    GARDENER_INTERFACE_TASK_PRIORITY <= 24,
+                    "a task priority below the config ceiling");
+GARDENER_KNOB_VALID(uint32_t, ControlStackWords, GARDENER_CONTROL_TASK_STACK_WORDS, 4096,
+                    GARDENER_CONTROL_TASK_STACK_WORDS >= 1024 &&
+                        GARDENER_CONTROL_TASK_STACK_WORDS <= 65536,
+                    "the control task's stack, in words");
+GARDENER_KNOB_VALID(uint32_t, InterfaceStackWords, GARDENER_INTERFACE_TASK_STACK_WORDS, 4096,
+                    GARDENER_INTERFACE_TASK_STACK_WORDS >= 1024 &&
+                        GARDENER_INTERFACE_TASK_STACK_WORDS <= 65536,
+                    "the interface task's stack, in words");
+GARDENER_KNOB_VALID(UBaseType_t, ControlCore, GARDENER_CONTROL_TASK_CORE, 1,
+                    GARDENER_CONTROL_TASK_CORE <= 1, "the part has two cores");
+GARDENER_KNOB_VALID(UBaseType_t, InterfaceCore, GARDENER_INTERFACE_TASK_CORE, 0,
+                    GARDENER_INTERFACE_TASK_CORE <= 1, "the part has two cores");
 
 // The control task's own state: the tick it steps, and the machine the tick hands a Reboot back to.
 // Everything a tick decides — the last state logged, the vent's start, the queue it drains — is the
@@ -49,7 +62,7 @@ void controlTask(void* arg) {
     state.tick.tick(millis());
     if (state.tick.takeReboot()) safeReboot(state.machine);
 
-    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(CONTROL_PERIOD_MS));
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(ControlPeriodMs));
   }
 }
 

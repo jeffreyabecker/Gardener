@@ -4,14 +4,18 @@
 #include <type_traits>
 
 #include "core/Buzzer.h"
+#include "core/Knob.h"
 
 namespace gardener::runtime {
 namespace {
 
 // The channel is attached once at a nominal tone; ledcWriteTone() changes the frequency without
 // re-attaching. Ten bits is the same resolution the pump uses and is enough for the audible range.
-constexpr uint32_t IdleHz = 1000;
-constexpr uint8_t PwmResolution = 10;
+GARDENER_KNOB_VALID(uint32_t, IdleHz, GARDENER_BUZZER_IDLE_HZ, 1000, GARDENER_BUZZER_IDLE_HZ > 0,
+                    "the tone the channel is attached at, in hertz");
+GARDENER_KNOB_VALID(uint8_t, PwmResolution, GARDENER_BUZZER_PWM_RESOLUTION, 10,
+                    GARDENER_BUZZER_PWM_RESOLUTION >= 1 && GARDENER_BUZZER_PWM_RESOLUTION <= 16,
+                    "the duty resolution, in bits");
 
 }  // namespace
 

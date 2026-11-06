@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Knob.h"
 #include "core/SystemState.h"
 #include "core/Units.h"
 #include "storage/Config.h"
@@ -19,7 +20,11 @@ namespace gardener {
 
 // The longest run the document grants when it names none: the shipped document's fifteen minutes,
 // so a device that has never opened the settings list runs for the time it always has.
-constexpr int32_t DefaultMaxDurationSeconds = 900;
+GARDENER_KNOB_VALID(int32_t, DefaultMaxDurationSeconds,
+                    GARDENER_SETTINGS_DEFAULT_MAX_DURATION_SECONDS, 900,
+                    GARDENER_SETTINGS_DEFAULT_MAX_DURATION_SECONDS > 0 &&
+                        GARDENER_SETTINGS_DEFAULT_MAX_DURATION_SECONDS <= 86400,
+                    "the default cap on a run, in seconds");
 
 class DeviceSettings {
  public:

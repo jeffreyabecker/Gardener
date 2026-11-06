@@ -50,7 +50,9 @@ deleted one compiles the sources and packs again. `--task archive` repacks them 
 `--task clean` keeps them.
 
 The rig's numbers are written to a generated `firmware/gardener/rig_options.h` rather than passed
-as compiler flags, so retuning a rig recompiles the files that read them and nothing else.
+as compiler flags, so retuning a rig recompiles the files that read them and nothing else. The
+header `core/knob_defaults.h` beside `core/Knob.h` is generated the same way, by `tools/knob.py`
+from the `GARDENER_KNOB_VALID` calls, and both build paths write it before they compile.
 `--task libs` installs the pinned libraries and stages the copies the build compiles against;
 `--task clean` removes the object files, and the data image beside them, by hand.
 

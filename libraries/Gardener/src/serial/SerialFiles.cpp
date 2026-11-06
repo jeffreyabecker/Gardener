@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "core/Knob.h"
 #include "core/Library.h"
 #include "serial/SerialLink.h"
 #include "storage/Config.h"
@@ -12,9 +13,14 @@ namespace {
 
 // The declared body is held whole before the store sees it, so this cap is the heap's rather than
 // the filesystem's: the largest file the image ships is under 10 KiB.
-constexpr uint32_t WriteMaxBytes = 64 * 1024;
+GARDENER_KNOB_VALID(uint32_t, WriteMaxBytes, GARDENER_SERIAL_WRITE_MAX_BYTES, 64 * 1024,
+                    GARDENER_SERIAL_WRITE_MAX_BYTES >= 1024 &&
+                        GARDENER_SERIAL_WRITE_MAX_BYTES <= 1024 * 1024,
+                    "the largest body the link holds whole, in bytes");
 // A body that stops arriving for this long is abandoned.
-constexpr uint32_t WriteIdleMs = 2000;
+GARDENER_KNOB_VALID(uint32_t, WriteIdleMs, GARDENER_SERIAL_WRITE_IDLE_MS, 2000,
+                    GARDENER_SERIAL_WRITE_IDLE_MS > 0,
+                    "how long a stalled body is waited for, in milliseconds");
 
 // The next bare token, and whether there was one. Paths are one token, so nothing here takes the
 // rest of the line.
@@ -321,7 +327,7 @@ void removePath(Stream& io, const String& args, Library& files) {
 void SerialLink::executeFiles(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
+  if (line.length() > CommandLineMax) {
     replyBadArgument(io, "");
     return;
   }

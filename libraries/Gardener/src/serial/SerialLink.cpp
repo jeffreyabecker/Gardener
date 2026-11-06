@@ -55,7 +55,7 @@ void SerialLink::poll(uint32_t nowMs) {
       String token = buffer_;
       buffer_ = "";
       if (token.isEmpty() || token.charAt(0) == '#') continue;
-      if (token.length() > COMMAND_LINE_MAX) {
+      if (token.length() > CommandLineMax) {
         linkError("bad_argument", "");
         continue;
       }
@@ -83,7 +83,7 @@ void SerialLink::poll(uint32_t nowMs) {
       continue;
     }
 
-    if (buffer_.length() > COMMAND_LINE_MAX) {
+    if (buffer_.length() > CommandLineMax) {
       linkError("bad_argument", "");
       buffer_ = "";
       swallowing_ = true;

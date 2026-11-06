@@ -26,7 +26,7 @@ void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
   io.print(vacuum.targetPressureKpa(), 1u);
 
   io.print(" floor=");
-  io.print(CONTROL_FLOOR_KPA, 1u);
+  io.print(ControlFloorKpa, 1u);
   io.print(" duty=");
   io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");
@@ -74,11 +74,11 @@ void target(Stream& io, const String& args, CommandQueue& queue) {
     io.print(" min=0.0\n");
     return;
   }
-  if (pressureKpa > CONTROL_FLOOR_KPA) {
+  if (pressureKpa > ControlFloorKpa) {
     io.print("err out_of_range field=target value=");
     io.print(token);
     io.print(" max=");
-    io.print(CONTROL_FLOOR_KPA, 1u);
+    io.print(ControlFloorKpa, 1u);
     io.print('\n');
     return;
   }
@@ -173,7 +173,7 @@ void reset(Stream& io, const String& args, CommandQueue& queue) {
 void SerialLink::executeVacuum(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
+  if (line.length() > CommandLineMax) {
     io.print("err bad_argument\n");
     return;
   }

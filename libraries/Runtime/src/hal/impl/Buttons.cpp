@@ -1,17 +1,24 @@
 #include "hal/impl/Buttons.h"
 
+#include "core/Knob.h"
+
 namespace gardener::runtime {
 namespace {
 
 // A mechanical key bounces for a few milliseconds, so a level has to hold this long before a read
 // believes it. Short enough that a press still feels immediate, long enough to swallow the edges
 // one press produces.
-constexpr uint32_t DebounceMs = 20;
+GARDENER_KNOB_VALID(uint32_t, DebounceMs, GARDENER_BUTTON_DEBOUNCE_MS, 20,
+                    GARDENER_BUTTON_DEBOUNCE_MS >= 1 && GARDENER_BUTTON_DEBOUNCE_MS <= 100,
+                    "how long a key's level must hold, in milliseconds");
 
 // Two singles with the second starting within this of the first release are one double. The first
 // is held back for the window so it cannot also act as a single. A hold past ExtendedHoldMs is not
 // a press at all, so it never joins a double.
-constexpr uint32_t DoublePressMs = 350;
+GARDENER_KNOB_VALID(uint32_t, DoublePressMs, GARDENER_BUTTON_DOUBLE_PRESS_MS, 350,
+                    GARDENER_BUTTON_DOUBLE_PRESS_MS > GARDENER_BUTTON_DEBOUNCE_MS &&
+                        GARDENER_BUTTON_DOUBLE_PRESS_MS <= 2000,
+                    "the window two presses make one double, in milliseconds");
 
 }  // namespace
 

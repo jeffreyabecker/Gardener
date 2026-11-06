@@ -1,6 +1,7 @@
 #include "RtosGestureQueue.h"
 
 #include "core/Gestures.h"
+#include "core/Knob.h"
 
 namespace gardener::runtime {
 namespace {
@@ -8,12 +9,13 @@ namespace {
 // What the queue holds. A beat drains it and a beat classifies at most one gesture, so the depth is
 // not what a burst needs: it is what a drain that stopped leaves behind, set far past anything a
 // running panel can bring.
-constexpr uint8_t QueueDepth = 64;
+GARDENER_KNOB_VALID(uint8_t, GestureQueueDepth, GARDENER_GESTURE_QUEUE_DEPTH, 64,
+                    GARDENER_GESTURE_QUEUE_DEPTH > 0, "a queue of nothing refuses every gesture");
 
 }  // namespace
 
 RtosGestureQueue::RtosGestureQueue()
-    : handle_(xQueueCreate(QueueDepth, sizeof(const char*))) {}
+    : handle_(xQueueCreate(GestureQueueDepth, sizeof(const char*))) {}
 
 bool RtosGestureQueue::post(const char* gesture) {
   if (handle_ == nullptr || gesture == nullptr || gesture[0] == '\0') return false;

@@ -13,7 +13,8 @@
 `CHAMBER_VOLUME_L`, `CONTROL_FLOOR_KPA`, `PUMP_DUTY_MAX_PERCENT`, `CONTROL_DEADBAND_KPA` and
 `VALVE_NORMALLY_OPEN` default to the reference rig in `libraries/Gardener/src/machine/Machine.h`,
 and a build for a different pump, chamber or valve overrides them here: they are written to the
-sketch's `rig_options.h`, which only Machine.h's includers read.
+sketch's `rig_options.h`, which every `GARDENER_KNOB_VALID` in the tree reads through
+`core/Knob.h`. The name here is the knob's token without its `GARDENER_` prefix.
 
     python scripts/arduino.py --task upload --port COM5
     python scripts/arduino.py --task build --define PUMP_FLOW_LPM=2.0f --define CHAMBER_VOLUME_L=0.25f
@@ -197,13 +198,18 @@ def configuration():
     return _CONFIGURATION
 
 
+def write_knob_defaults():
+    """Write core/knob_defaults.h from the GARDENER_KNOB_VALID calls before anything is compiled."""
+    run([sys.executable, str(ROOT / "tools" / "knob.py")])
+
+
 def write_rig_header():
-    """Write `--define`'s numbers where Machine.h reads them, instead of into the build options.
+    """Write `--define`'s numbers where core/Knob.h reads them, instead of into the build options.
 
     A rig number passed as `build.defines` is part of arduino-cli's options, so every retune made
     arduino-cli throw the whole build path away — NimBLE's 189 objects and Berry's 41 among them,
     for a number neither library can see. The sketch folder is already on the include path of every
-    translation unit, so a header there reaches Machine.h's includers and nothing else.
+    translation unit, so a header there reaches the knobs' includers and nothing else.
 
     The file is only written when its contents change: rewriting it every run would recompile those
     includers every run.
@@ -215,7 +221,8 @@ def write_rig_header():
 
 def _define(symbol):
     name, _, value = symbol.partition("=")
-    return f"#define {name} {value}\n" if value else f"#define {name}\n"
+    token = name if name.startswith("GARDENER_") else "GARDENER_" + name
+    return f"#define {token} {value}\n" if value else f"#define {token}\n"
 
 
 def archive_flags():
@@ -277,6 +284,7 @@ def library_folders():
 
 
 def compile_sketch(*extra):
+    write_knob_defaults()
     write_rig_header()
     drop_stale_archives()
     arguments = ["compile", "--fqbn", FQBN, "--build-property", f"build.defines={BLE_DEFINES}",

@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "core/Knob.h"
+
 // The init sequence and page write below follow Adafruit_SH110X's SH1106 driver.
 //
 // Software License Agreement (BSD License)
@@ -30,7 +32,9 @@ namespace gardener::runtime {
 namespace {
 
 // The SH1106 has 132 columns of RAM for a 128-pixel glass; the panel's first column is RAM column 2.
-constexpr uint8_t PageColumnOffset = 2;
+GARDENER_KNOB_VALID(uint8_t, PageColumnOffset, GARDENER_PANEL_COLUMN_OFFSET, 2,
+                    GARDENER_PANEL_COLUMN_OFFSET <= 4,
+                    "the glass starts this far into the controller's RAM");
 
 }  // namespace
 

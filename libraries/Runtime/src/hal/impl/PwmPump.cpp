@@ -4,16 +4,23 @@
 #include <math.h>
 #include <type_traits>
 
+#include "core/Knob.h"
 #include "core/Math.h"
 
 namespace gardener::runtime {
 namespace {
-constexpr uint32_t MaxStepMs = 250;
+GARDENER_KNOB_VALID(uint32_t, MaxStepMs, GARDENER_PUMP_MAX_STEP_MS, 250,
+                    GARDENER_PUMP_MAX_STEP_MS > 0,
+                    "the longest the ramp waits between duty steps, in milliseconds");
 
 // The LEDC channel's own setup, which is a property of the drive rather than of the loop: a
 // switching frequency above hearing, and ten bits of resolution for the duty.
-constexpr uint32_t PwmFreqHz = 20000;
-constexpr uint8_t PwmResolution = 10;
+GARDENER_KNOB_VALID(uint32_t, PwmFreqHz, GARDENER_PUMP_PWM_FREQ_HZ, 20000,
+                    GARDENER_PUMP_PWM_FREQ_HZ >= 1000 && GARDENER_PUMP_PWM_FREQ_HZ <= 40000,
+                    "the switching frequency, above hearing, in hertz");
+GARDENER_KNOB_VALID(uint8_t, PwmResolution, GARDENER_PUMP_PWM_RESOLUTION, 10,
+                    GARDENER_PUMP_PWM_RESOLUTION >= 1 && GARDENER_PUMP_PWM_RESOLUTION <= 16,
+                    "the duty resolution, in bits");
 }  // namespace
 
 // Nothing else spells the interface out, so a verb added to Pump and not implemented here would

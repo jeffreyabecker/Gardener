@@ -21,7 +21,7 @@ String firstToken(const String& args) {
 // composition's, so they come through the parts; the machine's own fields come from the machine.
 void get(Stream& io, Machine& machine, const SerialParts& parts) {
   io.print("ok proto=");
-  io.print(PROTOCOL_VERSION);
+  io.print(ProtocolVersion);
   io.print(" fw=");
   io.print(FirmwareVersion);
   io.print(" chip=");
@@ -155,7 +155,7 @@ void reboot(Stream& io, const String& args, CommandQueue& queue) {
 void SerialLink::executeDevice(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
+  if (line.length() > CommandLineMax) {
     io.print("err bad_argument\n");
     return;
   }

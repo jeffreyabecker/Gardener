@@ -214,7 +214,7 @@ PressureSettingCfg::PressureSettingCfg(GestureQueue& gestures, Ux& ux, const Str
     : NumericSettingCfg(
           gestures, ux, key, label, currentKpa,
           wholeSteps * displayUnitInfo(state.unit).wholeStep / displayUnitInfo(state.unit).perKpa,
-          CONTROL_MIN_TARGET_KPA, CONTROL_FLOOR_KPA, nullable, nullptr, 2, std::move(validator)),
+          ControlMinTargetKpa, ControlFloorKpa, nullable, nullptr, 2, std::move(validator)),
       state_(state), wholeSteps_(wholeSteps) {}
 
 // What a keypress is worth is the unit the panel shows, so it is read when the list or the editor

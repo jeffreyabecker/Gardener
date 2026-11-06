@@ -32,8 +32,12 @@ constexpr const char* JingleMark = "0808000E0A08080878F870";
 // A minute is the step a run is thought about in, and the ceiling is the machine's own: the list
 // offers exactly the longest hold the machine will grant, so it cannot promise a run the machine
 // would cut short.
-constexpr int32_t MaxDurationStepSeconds = 60;
-constexpr int32_t MaxDurationCeilingSeconds = (int32_t)(CONTROL_MAX_RUN_MS / 1000);
+GARDENER_KNOB_VALID(int32_t, MaxDurationStepSeconds, GARDENER_SETTINGS_MAX_DURATION_STEP_SECONDS,
+                    60,
+                    GARDENER_SETTINGS_MAX_DURATION_STEP_SECONDS >= 1 &&
+                        GARDENER_SETTINGS_MAX_DURATION_STEP_SECONDS <= 600,
+                    "the step a run length is edited in, in seconds");
+constexpr int32_t MaxDurationCeilingSeconds = static_cast<int32_t>(ControlMaxRunMs / 1000);
 
 }  // namespace
 

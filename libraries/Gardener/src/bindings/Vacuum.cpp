@@ -22,7 +22,7 @@ int vacuumSetTargetPressure(bvm* vm) {
   float pressureKpa = (float)argReal(vm, 1);
   // `!(>=)` rather than `<` so a value that is not a number is held with the rest, as ambient is.
   if (!(pressureKpa >= 0.0f)) pressureKpa = 0.0f;
-  if (pressureKpa > CONTROL_FLOOR_KPA) pressureKpa = CONTROL_FLOOR_KPA;
+  if (pressureKpa > ControlFloorKpa) pressureKpa = ControlFloorKpa;
   const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
   bindings->post(set);
   bindings->settings().setTargetKpa(pressureKpa);
@@ -47,21 +47,21 @@ int vacuumGetCurrentPressure(bvm* vm) {
 // restores a target without carrying its own copy of the numbers, and so one bound serves the
 // editor, a stored value and anything else that asks.
 int vacuumGetDeepestPressure(bvm* vm) {
-  be_pushreal(vm, CONTROL_FLOOR_KPA);
+  be_pushreal(vm, ControlFloorKpa);
   be_return(vm);
 }
 
 int vacuumGetShallowestPressure(bvm* vm) {
-  be_pushreal(vm, CONTROL_MIN_TARGET_KPA);
+  be_pushreal(vm, ControlMinTargetKpa);
   be_return(vm);
 }
 
 int vacuumClamp(bvm* vm) {
   float pressureKpa = (float)argReal(vm, 1);
-  if (pressureKpa < CONTROL_MIN_TARGET_KPA) {
-    pressureKpa = CONTROL_MIN_TARGET_KPA;
-  } else if (pressureKpa > CONTROL_FLOOR_KPA) {
-    pressureKpa = CONTROL_FLOOR_KPA;
+  if (pressureKpa < ControlMinTargetKpa) {
+    pressureKpa = ControlMinTargetKpa;
+  } else if (pressureKpa > ControlFloorKpa) {
+    pressureKpa = ControlFloorKpa;
   }
   be_pushreal(vm, pressureKpa);
   be_return(vm);

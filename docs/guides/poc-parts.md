@@ -245,7 +245,10 @@ sensor stays on the MCU's `3V3` net, as in the 5 V build, because its output is 
   new pump or chamber is retuned by the two build symbols `PUMP_FLOW_LPM` and `CHAMBER_VOLUME_L`,
   not by re-deriving gains. The duty cap is `PUMP_DUTY_MAX_PERCENT`; the default 90 % is 10.8 V
   here, keep it unless the pump's datasheet allows continuous 12 V.
-  `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a step.
+  `PUMP_RAMP_PERCENT_PER_SEC` stays: a larger diaphragm still dislikes a step. Every one of these
+  is a knob named without its `GARDENER_` prefix — the preprocessor token behind `--define
+  PUMP_FLOW_LPM` is `GARDENER_PUMP_FLOW_LPM` — so `core/knob_defaults.h` is where a default is
+  read.
 * The MCU's 5V pin is the 12 V → 5 V buck's output. Check the Super Mini for a Schottky between
   USB VBUS and that pin; if it has none, use a cable with VBUS cut or unplug USB while the 12 V is
   on. Two 5 V sources on one pin is not a fault the board protects you from.

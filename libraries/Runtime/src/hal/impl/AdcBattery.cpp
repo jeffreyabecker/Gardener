@@ -2,23 +2,41 @@
 
 #include <Arduino.h>
 
+#include "core/Knob.h"
+
 namespace gardener::runtime {
 namespace {
 
 // A single ADC sample on this part is noisy, and the pack does not move quickly, so one
 // averaged reading every half second is plenty.
-constexpr uint8_t SamplesPerRead = 8;
-constexpr uint32_t SamplePeriodMs = 500;
+GARDENER_KNOB_VALID(uint8_t, SamplesPerRead, GARDENER_BATTERY_SAMPLES_PER_READ, 8,
+                    GARDENER_BATTERY_SAMPLES_PER_READ >= 1 &&
+                        GARDENER_BATTERY_SAMPLES_PER_READ <= 64,
+                    "how many ADC samples one reading averages");
+GARDENER_KNOB_VALID(uint32_t, SamplePeriodMs, GARDENER_BATTERY_SAMPLE_PERIOD_MS, 500,
+                    GARDENER_BATTERY_SAMPLE_PERIOD_MS > 0,
+                    "the period a pack reading is taken at, in milliseconds");
 // Below this the reading is not a pack at all: a mains powered build should say "no
 // battery", not sit at a permanent 0 %.
-constexpr float PresentMinVolts = 1.0f;
+GARDENER_KNOB_VALID(float, PresentMinVolts, GARDENER_BATTERY_PRESENT_MIN_VOLTS, 1.0f,
+                    GARDENER_BATTERY_PRESENT_MIN_VOLTS > 0.0f,
+                    "below this a reading is not a pack, in volts");
 
 // 1S Li-ion: a straight line between empty and full. Calibration trims the divider against a real
 // meter because the ESP32 ADC is not lab grade.
-constexpr float EmptyVolts = 3.2f;
-constexpr float FullVolts = 4.2f;
-constexpr float Calibration = 1.0f;
-constexpr uint8_t LowPercent = 20;
+GARDENER_KNOB_VALID(float, EmptyVolts, GARDENER_BATTERY_EMPTY_VOLTS, 3.2f,
+                    GARDENER_BATTERY_EMPTY_VOLTS > 0.0f &&
+                        GARDENER_BATTERY_EMPTY_VOLTS < GARDENER_BATTERY_FULL_VOLTS,
+                    "the empty end of the pack's curve, in volts");
+GARDENER_KNOB_VALID(float, FullVolts, GARDENER_BATTERY_FULL_VOLTS, 4.2f,
+                    GARDENER_BATTERY_FULL_VOLTS > GARDENER_BATTERY_EMPTY_VOLTS &&
+                        GARDENER_BATTERY_FULL_VOLTS <= 5.0f,
+                    "the full end of the pack's curve, in volts");
+GARDENER_KNOB_VALID(float, Calibration, GARDENER_BATTERY_CALIBRATION, 1.0f,
+                    GARDENER_BATTERY_CALIBRATION > 0.0f, "the divider's trim against a real meter");
+GARDENER_KNOB_VALID(uint8_t, LowPercent, GARDENER_BATTERY_LOW_PERCENT, 20,
+                    GARDENER_BATTERY_LOW_PERCENT <= 100,
+                    "the charge the gauge calls low, in percent");
 
 }  // namespace
 

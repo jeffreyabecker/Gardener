@@ -1,6 +1,7 @@
 #include "beats/ButtonsTick.h"
 
 #include "core/Gestures.h"
+#include "core/Knob.h"
 #include "core/Logger.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
@@ -11,7 +12,10 @@ namespace {
 
 // The holds the panel acts on, as the marks the gesture carries in whole seconds: Okay and Cancel
 // together past it restart the device, and Cancel alone past it force-quits the routine.
-constexpr uint32_t ResetHoldSeconds = 5;
+GARDENER_KNOB_VALID(uint32_t, ResetHoldSeconds, GARDENER_BUTTON_RESET_HOLD_SECONDS, 5,
+                    GARDENER_BUTTON_RESET_HOLD_SECONDS >= 1 &&
+                        GARDENER_BUTTON_RESET_HOLD_SECONDS <= 60,
+                    "the hold that restarts the device, in whole seconds");
 
 }  // namespace
 

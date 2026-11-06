@@ -5,6 +5,7 @@
 
 #include "Fonts.h"
 #include "core/Gestures.h"
+#include "core/Knob.h"
 #include "core/Units.h"
 
 namespace gardener {
@@ -13,9 +14,15 @@ namespace {
 // The fitted panel: a 1.3" 128x64 monochrome SH1106 on the STEMMA QT bus. Its geometry is the part's
 // own, which is why it is named here with the part rather than in the board's pin map — the 128x32
 // alternative is the same wiring with different numbers.
-constexpr uint8_t PanelAddress = 0x3C;
-constexpr int16_t PanelWidth = 128;
-constexpr int16_t PanelHeight = 64;
+GARDENER_KNOB_VALID(uint8_t, PanelAddress, GARDENER_PANEL_ADDRESS, 0x3C,
+                    GARDENER_PANEL_ADDRESS >= 0x08 && GARDENER_PANEL_ADDRESS <= 0x77,
+                    "the panel's address on the STEMMA QT bus");
+GARDENER_KNOB_VALID(int16_t, PanelWidth, GARDENER_PANEL_WIDTH, 128,
+                    GARDENER_PANEL_WIDTH > 0 && GARDENER_PANEL_WIDTH <= 320,
+                    "the glass's width, in pixels");
+GARDENER_KNOB_VALID(int16_t, PanelHeight, GARDENER_PANEL_HEIGHT, 64,
+                    GARDENER_PANEL_HEIGHT > 0 && GARDENER_PANEL_HEIGHT <= 240,
+                    "the glass's height, in pixels");
 
 }  // namespace
 

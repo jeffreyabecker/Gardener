@@ -6,6 +6,7 @@
 
 #include "ble/BleLink.h"
 #include "core/Battery.h"
+#include "core/Knob.h"
 #include "core/Units.h"
 #include "core/firmwareversion.h"
 #include "machine/Machine.h"
@@ -16,12 +17,17 @@
 namespace gardener::runtime {
 namespace {
 
-constexpr uint8_t BleProtocolVersion = 1;
+GARDENER_KNOB_VALID(uint8_t, BleProtocolVersion, GARDENER_BLE_PROTOCOL_VERSION, 1,
+                    GARDENER_BLE_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
 
 // The two rates; everything else is sent on change. 5 Hz is about as fast as
 // a phone screen needs, and the gauge moves far more slowly than that.
-constexpr uint32_t FastRateMs = 200;
-constexpr uint32_t BattRateMs = 10000;
+GARDENER_KNOB_VALID(uint32_t, FastRateMs, GARDENER_BLE_FAST_RATE_MS, 200,
+                    GARDENER_BLE_FAST_RATE_MS > 0 && GARDENER_BLE_FAST_RATE_MS <= 1000,
+                    "the fast notification period, in milliseconds");
+GARDENER_KNOB_VALID(uint32_t, BattRateMs, GARDENER_BLE_BATTERY_RATE_MS, 10000,
+                    GARDENER_BLE_BATTERY_RATE_MS > 0,
+                    "the battery notification period, in milliseconds");
 
 // The opcodes a controller writes to `command`, and the results it is
 // notified. The machine's answers fill the bottom of the range and the
@@ -108,7 +114,7 @@ void BleLink::describe(uint8_t index) {
       setByte(chr, plausibleReading(vacuum) ? 1 : 0);
       break;
     case Floor:
-      setFloat(chr, CONTROL_FLOOR_KPA);
+      setFloat(chr, ControlFloorKpa);
       break;
     case Caps:
       setByte(chr, machine_.capabilities());
@@ -180,7 +186,7 @@ void BleLink::applyPending() {
     const float pressureKpa = targetWrite_.value;
     if (!isfinite(pressureKpa)) {
       refuse(Target, WriteNotANumber);
-    } else if (pressureKpa < 0.0f || pressureKpa > CONTROL_FLOOR_KPA) {
+    } else if (pressureKpa < 0.0f || pressureKpa > ControlFloorKpa) {
       refuse(Target, WriteOutOfRange);
     } else {
       // 0 is the ambient target, which releases the chamber; anything else is a setpoint the
@@ -308,7 +314,7 @@ void BleLink::publish(uint32_t nowMs, bool baseline) {
   publishOnChange(State, static_cast<uint8_t>(vacuum.runState()), lastState_, baseline);
   publishOnChange(Sensor, plausibleReading(vacuum) ? 1 : 0, lastSensor_, baseline);
   publishOnChange(Target, vacuum.targetPressureKpa(), lastTarget_, baseline);
-  publishOnChange(Floor, CONTROL_FLOOR_KPA, lastFloor_, baseline);
+  publishOnChange(Floor, ControlFloorKpa, lastFloor_, baseline);
 
   const uint16_t holdS = vacuum.running() ? static_cast<uint16_t>(vacuum.holdSeconds()) : 0;
   if (baseline || holdS != lastHoldS_) {

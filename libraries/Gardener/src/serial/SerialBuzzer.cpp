@@ -133,7 +133,7 @@ void stop(Stream& io, const String& args, BuzzerPlayer& buzzer) {
 void SerialLink::executeBuzzer(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
-  if (line.length() > COMMAND_LINE_MAX) {
+  if (line.length() > CommandLineMax) {
     io.print("err bad_argument\n");
     return;
   }

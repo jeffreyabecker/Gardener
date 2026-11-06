@@ -56,9 +56,9 @@ bool VacuumSystem::start(uint32_t holdSeconds) {
   lastControlMs_ = millis();
 
   runStartMs_ = lastControlMs_;
-  const uint32_t maxHoldSeconds = CONTROL_MAX_RUN_MS / 1000;
+  const uint32_t maxHoldSeconds = ControlMaxRunMs / 1000;
   if (holdSeconds > maxHoldSeconds) holdSeconds = maxHoldSeconds;
-  holdMs_ = holdSeconds == 0 ? CONTROL_MAX_RUN_MS : holdSeconds * 1000;
+  holdMs_ = holdSeconds == 0 ? ControlMaxRunMs : holdSeconds * 1000;
   deadlineExpired_ = false;
   progressMs_ = runStartMs_;
   bestDepthKpa_ = currentPressureKpa();
@@ -99,7 +99,7 @@ bool VacuumSystem::takeDeadlineExpired() {
 
 bool VacuumSystem::released() const {
   return sensor_->present() && sensor_->readingValid() &&
-         currentPressureKpa() <= VENT_FLOOR_KPA + VENT_MARGIN_KPA;
+         currentPressureKpa() <= VentFloorKpa + VentMarginKpa;
 }
 
 // Stop, then open: the pump never pulls against an open port. The state is VENT either way, and
@@ -132,7 +132,7 @@ void VacuumSystem::closeValve() {
 // a reading shallower than the target opens the valve, and anything else closes it and lets the
 // loop work. Every command ends here, so the vent/start/stop choice is made once.
 void VacuumSystem::converge() {
-  const float deadband = CONTROL_DEADBAND_KPA;
+  const float deadband = ControlDeadbandKpa;
   const float measured = currentPressureKpa();
 
   // Ambient is the release, whichever way it was asked for.
@@ -155,7 +155,7 @@ void VacuumSystem::converge() {
 void VacuumSystem::setTarget(float pressureKpa) {
   // The bounds are the machine's, not the wire's: 0 is ambient, and anything deeper than the
   // fitted floor is a depth the pump cannot reach. A refused value leaves the target unchanged.
-  if (!(pressureKpa >= 0.0f) || pressureKpa > CONTROL_FLOOR_KPA) return;
+  if (!(pressureKpa >= 0.0f) || pressureKpa > ControlFloorKpa) return;
   if (pressureKpa == targetPressureKpa_) return;
   targetPressureKpa_ = pressureKpa;
   pidReset();
@@ -210,9 +210,9 @@ void VacuumSystem::service(uint32_t nowMs) {
   if (state_ == RunState::Venting) {
     if (ventingToTarget_) {
       const float landing =
-          CONTROL_VENT_TO_TARGET ? targetPressureKpa_ + VENT_TARGET_LEAD_KPA : targetPressureKpa_;
+          ControlVentToTarget ? targetPressureKpa_ + VentTargetLeadKpa : targetPressureKpa_;
       const bool arrived = currentPressureKpa() <= landing;
-      const bool timedOut = (nowMs - ventStartMs_) >= VENT_TIMEOUT_MS;
+      const bool timedOut = (nowMs - ventStartMs_) >= VentTimeoutMs;
       if (!arrived && !timedOut) return;
       closeValve();
       setState(RunState::Pulling);
@@ -221,7 +221,7 @@ void VacuumSystem::service(uint32_t nowMs) {
         rest();
         return;
       }
-      if ((nowMs - ventStartMs_) >= VENT_TIMEOUT_MS) fail("vent_timeout");
+      if ((nowMs - ventStartMs_) >= VentTimeoutMs) fail("vent_timeout");
       return;
     }
   }
@@ -232,16 +232,16 @@ void VacuumSystem::service(uint32_t nowMs) {
   // than merely past its near edge: a vent lands a lead deeper than the target, and until the leak
   // brings that back inside the band the run is still travelling rather than holding.
   if (state_ == RunState::Pulling &&
-      fabsf(currentPressureKpa() - targetPressureKpa_) <= CONTROL_DEADBAND_KPA) {
+      fabsf(currentPressureKpa() - targetPressureKpa_) <= ControlDeadbandKpa) {
     setState(RunState::Holding);
   }
   if (state_ == RunState::Pulling || state_ == RunState::Holding) {
     // A reading the overshoot margin past the target is the loop not holding what it was asked to,
     // so the chamber is released rather than pulled further out of range.
     const float measured = currentPressureKpa();
-    if (measured < targetPressureKpa_ + CONTROL_OVERSHOOT_KPA) {
+    if (measured < targetPressureKpa_ + ControlOvershootKpa) {
       overshootReadings_ = 0;
-    } else if (++overshootReadings_ >= CONTROL_OVERSHOOT_READINGS) {
+    } else if (++overshootReadings_ >= ControlOvershootReadings) {
       fail("overshoot");
     }
     if (faulted()) return;
@@ -254,21 +254,21 @@ void VacuumSystem::service(uint32_t nowMs) {
 // keeps a setpoint change from kicking the output. The gains are derived from the build's two rig
 // numbers, so a pump or chamber change retunes it without touching a gain.
 float VacuumSystem::pidUpdate(float dt, float error, float measurementSlew) {
-  const PidGains gains = pidGainsFor(PUMP_FLOW_LPM, CHAMBER_VOLUME_L);
+  const PidGains gains = pidGainsFor(PumpFlowLpm, ChamberVolumeL);
   pidIntegral_ =
       clampf(pidIntegral_ + gains.ki * error * dt, -gains.integralLimit, gains.integralLimit);
   return gains.kp * error + pidIntegral_ - gains.kd * measurementSlew;
 }
 
 void VacuumSystem::regulate(uint32_t nowMs) {
-  if (nowMs - lastControlMs_ < CONTROL_PERIOD_MS) return;
+  if (nowMs - lastControlMs_ < ControlPeriodMs) return;
 
   float dt = (float)(nowMs - lastControlMs_) / 1000.0f;
   lastControlMs_ = nowMs;
   if (dt <= 0.0f) return;
 
-  const float deadband = CONTROL_DEADBAND_KPA;
-  const float maxDuty = PUMP_DUTY_MAX_PERCENT;
+  const float deadband = ControlDeadbandKpa;
+  const float maxDuty = PumpDutyMaxPercent;
 
   // The slew comes off the same reading the error is built from, so the derivative gain is
   // signed against it.
@@ -296,12 +296,12 @@ void VacuumSystem::regulate(uint32_t nowMs) {
   // A pull driven at or above half the duty cap for a whole window without a kilopascal of
   // headway is the pump working against something it cannot move, and no controller has to notice.
   if (state_ == RunState::Pulling) {
-    if (measured >= bestDepthKpa_ + CONTROL_PROGRESS_KPA) {
+    if (measured >= bestDepthKpa_ + ControlProgressKpa) {
       bestDepthKpa_ = measured;
       progressMs_ = nowMs;
-    } else if (output_ < maxDuty * CONTROL_PROGRESS_DUTY_FRACTION) {
+    } else if (output_ < maxDuty * ControlProgressDutyFraction) {
       progressMs_ = nowMs;
-    } else if (nowMs - progressMs_ >= CONTROL_PROGRESS_TIMEOUT_MS) {
+    } else if (nowMs - progressMs_ >= ControlProgressTimeoutMs) {
       fail("no_progress");
     }
   }

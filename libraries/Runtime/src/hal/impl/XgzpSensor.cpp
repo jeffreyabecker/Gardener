@@ -3,36 +3,61 @@
 #include <Arduino.h>
 #include <type_traits>
 
+#include "core/Knob.h"
+
 namespace gardener::runtime {
 namespace {
 
 // The part's own numbers, at its 3.3 V variant: the output spans 0.2 V at -100 kPa to 2.7 V at
 // 0 kPa, which is 40 kPa per volt. Ambient sits at the 0 kPa end, which is where the reference is
 // taken.
-constexpr float MinKpa = -100.0f;
-constexpr float MaxKpa = 0.0f;
-constexpr float VoltsAtMinKpa = 0.2f;
-constexpr float VoltsAtMaxKpa = 2.7f;
+GARDENER_KNOB_VALID(float, MinKpa, GARDENER_SENSOR_MIN_KPA, -100.0f,
+                    GARDENER_SENSOR_MIN_KPA >= -100.0f &&
+                        GARDENER_SENSOR_MIN_KPA < GARDENER_SENSOR_MAX_KPA,
+                    "the deepest end of the part's span, in kPa");
+GARDENER_KNOB_VALID(float, MaxKpa, GARDENER_SENSOR_MAX_KPA, 0.0f, GARDENER_SENSOR_MAX_KPA <= 0.0f,
+                    "ambient is the top of the span, in kPa");
+GARDENER_KNOB_VALID(float, VoltsAtMinKpa, GARDENER_SENSOR_VOLTS_AT_MIN_KPA, 0.2f,
+                    GARDENER_SENSOR_VOLTS_AT_MIN_KPA > 0.0f,
+                    "the output at the deepest end of the span, in volts");
+GARDENER_KNOB_VALID(float, VoltsAtMaxKpa, GARDENER_SENSOR_VOLTS_AT_MAX_KPA, 2.7f,
+                    GARDENER_SENSOR_VOLTS_AT_MAX_KPA > GARDENER_SENSOR_VOLTS_AT_MIN_KPA,
+                    "the output at the top of the span, in volts");
 constexpr float KpaPerVolt = (MaxKpa - MinKpa) / (VoltsAtMaxKpa - VoltsAtMinKpa);
 
 // A connected part always sits inside its output span. A pin pulled to ground reads as "no
 // part", and so does one pulled to the rail: both are refused rather than believed. The window
 // is wider than the span so a part powered from a slightly high rail still reads.
-constexpr float MinPlausibleVolts = 0.1f;
-constexpr float MaxPlausibleVolts = 3.0f;
+GARDENER_KNOB_VALID(float, MinPlausibleVolts, GARDENER_SENSOR_MIN_PLAUSIBLE_VOLTS, 0.1f,
+                    GARDENER_SENSOR_MIN_PLAUSIBLE_VOLTS >= 0.0f &&
+                        GARDENER_SENSOR_MIN_PLAUSIBLE_VOLTS < GARDENER_SENSOR_MAX_PLAUSIBLE_VOLTS,
+                    "below this there is no part, in volts");
+GARDENER_KNOB_VALID(float, MaxPlausibleVolts, GARDENER_SENSOR_MAX_PLAUSIBLE_VOLTS, 3.0f,
+                    GARDENER_SENSOR_MAX_PLAUSIBLE_VOLTS > GARDENER_SENSOR_MIN_PLAUSIBLE_VOLTS &&
+                        GARDENER_SENSOR_MAX_PLAUSIBLE_VOLTS <= 3.3f,
+                    "above this there is no part, in volts");
 
-constexpr uint8_t Samples = 8;
-constexpr uint32_t PollMs = 20;
-constexpr float FilterAlpha = 0.3f;
+GARDENER_KNOB_VALID(uint8_t, Samples, GARDENER_SENSOR_SAMPLES, 8,
+                    GARDENER_SENSOR_SAMPLES >= 1 && GARDENER_SENSOR_SAMPLES <= 64,
+                    "how many samples one reading averages");
+GARDENER_KNOB_VALID(uint32_t, PollMs, GARDENER_SENSOR_POLL_MS, 20, GARDENER_SENSOR_POLL_MS > 0,
+                    "the period the part is read at, in milliseconds");
+GARDENER_KNOB_VALID(float, FilterAlpha, GARDENER_SENSOR_FILTER_ALPHA, 0.3f,
+                    GARDENER_SENSOR_FILTER_ALPHA > 0.0f && GARDENER_SENSOR_FILTER_ALPHA <= 1.0f,
+                    "the filter's weight on the new reading");
 
 // The ambient reference is the mean of this much of the part's output rather than one sample, so a
 // part that is still warming when the firmware boots does not bend every reading after it.
-constexpr uint32_t SettleMs = 10000;
+GARDENER_KNOB_VALID(uint32_t, SettleMs, GARDENER_SENSOR_SETTLE_MS, 10000,
+                    GARDENER_SENSOR_SETTLE_MS > 0,
+                    "how long the ambient reference is gathered for, in milliseconds");
 
 // A reading this far under the reference is the chamber being pulled, not noise about ambient, and
 // so does not join the mean: a run started straight from boot would otherwise drag the reference
 // down with it.
-constexpr float SettleBandVolts = 0.02f;
+GARDENER_KNOB_VALID(float, SettleBandVolts, GARDENER_SENSOR_SETTLE_BAND_VOLTS, 0.02f,
+                    GARDENER_SENSOR_SETTLE_BAND_VOLTS >= 0.0f,
+                    "how far under the reference a sample stops joining it, in volts");
 
 }  // namespace
 

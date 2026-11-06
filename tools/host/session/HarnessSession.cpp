@@ -59,13 +59,13 @@ void ModelPump::update(uint32_t nowMs) {
 
   // The driver ramps toward the request at the part's own limit; the model does the same so a page
   // sees a duty that moves rather than one that jumps.
-  const float step = PUMP_RAMP_PERCENT_PER_SEC * (float)elapsed / 1000.0f;
+  const float step = PumpRampPercentPerSec * (float)elapsed / 1000.0f;
   if (duty_ < requested_) {
     duty_ = requested_ < duty_ + step ? requested_ : duty_ + step;
   } else if (duty_ > requested_) {
     duty_ = requested_ > duty_ - step ? requested_ : duty_ - step;
   }
-  if (duty_ > PUMP_DUTY_MAX_PERCENT) duty_ = PUMP_DUTY_MAX_PERCENT;
+  if (duty_ > PumpDutyMaxPercent) duty_ = PumpDutyMaxPercent;
   if (duty_ < 0.0f) duty_ = 0.0f;
   chamber_.setDuty(duty_);
 }

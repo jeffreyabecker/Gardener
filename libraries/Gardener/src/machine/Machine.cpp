@@ -31,11 +31,11 @@ void Machine::boot() {
 
   // The loop the build describes: the two rig numbers and the gains they derive, one line so a
   // bench read can confirm the loop the device will run.
-  const PidGains gains = pidGainsFor(PUMP_FLOW_LPM, CHAMBER_VOLUME_L);
+  const PidGains gains = pidGainsFor(PumpFlowLpm, ChamberVolumeL);
   String pid = "pid: flow ";
-  pid += String(PUMP_FLOW_LPM, 2u);
+  pid += String(PumpFlowLpm, 2u);
   pid += " lpm, chamber ";
-  pid += String(CHAMBER_VOLUME_L, 3u);
+  pid += String(ChamberVolumeL, 3u);
   pid += " l, kp=";
   pid += String(gains.kp, 2u);
   pid += " ki=";

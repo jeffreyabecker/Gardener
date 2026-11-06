@@ -2,13 +2,15 @@
 
 #include <stdint.h>
 
+#include "core/Knob.h"
 #include "machine/MachineCommand.h"
 
 namespace gardener {
 
 // How many commands the machine's queue holds: the depth is what a burst from a link is absorbed
 // into, and a post that finds it full is refused rather than waited on.
-constexpr uint8_t CommandQueueDepth = 8;
+GARDENER_KNOB_VALID(uint8_t, CommandQueueDepth, GARDENER_COMMAND_QUEUE_DEPTH, 8,
+                    GARDENER_COMMAND_QUEUE_DEPTH > 0, "a queue of nothing drops every command");
 
 // The way into the machine: a writer posts a command and the control tick drains it on its next
 // beat, so a writer never touches the vacuum system from its own thread. It is one type with two

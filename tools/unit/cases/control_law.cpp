@@ -14,18 +14,21 @@
 
 namespace {
 
-using gardener::CONTROL_MAX_RUN_MS;
-using gardener::CONTROL_MIN_TARGET_KPA;
-using gardener::CONTROL_OVERSHOOT_KPA;
-using gardener::CONTROL_OVERSHOOT_READINGS;
-using gardener::CONTROL_PERIOD_MS;
-using gardener::CONTROL_PROGRESS_KPA;
-using gardener::CONTROL_PROGRESS_TIMEOUT_MS;
+using gardener::ControlDeadbandKpa;
+using gardener::ControlFloorKpa;
+using gardener::ControlMaxRunMs;
+using gardener::ControlMinTargetKpa;
+using gardener::ControlOvershootKpa;
+using gardener::ControlOvershootReadings;
+using gardener::ControlPeriodMs;
+using gardener::ControlProgressKpa;
+using gardener::ControlProgressTimeoutMs;
+using gardener::PumpDutyMaxPercent;
 using gardener::RunState;
 using gardener::VacuumSystem;
-using gardener::VENT_FLOOR_KPA;
-using gardener::VENT_MARGIN_KPA;
-using gardener::VENT_TIMEOUT_MS;
+using gardener::VentFloorKpa;
+using gardener::VentMarginKpa;
+using gardener::VentTimeoutMs;
 using gardener::VentValve;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
@@ -36,7 +39,7 @@ using gardener::test::FakeValve;
 struct Rig {
   void beat(int count = 1) {
     for (int i = 0; i < count; i++) {
-      gardener::host::advance(CONTROL_PERIOD_MS);
+      gardener::host::advance(ControlPeriodMs);
       system.service(gardener::host::nowMs());
     }
   }
@@ -44,7 +47,7 @@ struct Rig {
   // Beats until the clock reaches `ms`, so a case can name the time it is asserting at.
   void beatUntil(unsigned long ms) {
     while (gardener::host::nowMs() < ms) {
-      gardener::host::advance(CONTROL_PERIOD_MS);
+      gardener::host::advance(ControlPeriodMs);
       system.service(gardener::host::nowMs());
     }
   }
@@ -103,7 +106,7 @@ TEST_CASE("stop while a release vents does not restart its window") {
   rig.system.stop();
   rig.beatUntil(5000);
   rig.system.stop();
-  rig.beatUntil(VENT_TIMEOUT_MS + 1000);
+  rig.beatUntil(VentTimeoutMs + 1000);
   CHECK_EQ(std::string(rig.system.faultCode()), std::string("vent_timeout"));
 }
 
@@ -111,13 +114,13 @@ TEST_CASE("a start while running keeps the first deadline") {
   Rig rig;
   runFrom(rig, 40.0f, 20.0f);
   rig.system.start(10);
-  CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
+  CHECK_EQ(rig.system.holdSeconds(), ControlMaxRunMs / 1000);
 }
 
 TEST_CASE("a stored maximum is held to the machine's ceiling") {
-  CHECK_EQ(gardener::maxRunSeconds(0), CONTROL_MAX_RUN_MS / 1000);
+  CHECK_EQ(gardener::maxRunSeconds(0), ControlMaxRunMs / 1000);
   CHECK_EQ(gardener::maxRunSeconds(600), static_cast<uint32_t>(600));
-  CHECK_EQ(gardener::maxRunSeconds(CONTROL_MAX_RUN_MS / 1000 + 1), CONTROL_MAX_RUN_MS / 1000);
+  CHECK_EQ(gardener::maxRunSeconds(ControlMaxRunMs / 1000 + 1), ControlMaxRunMs / 1000);
 }
 
 TEST_CASE("a hold of zero asks for the ceiling") {
@@ -126,7 +129,7 @@ TEST_CASE("a hold of zero asks for the ceiling") {
   rig.system.begin();
   rig.system.setTarget(20.0f);
   REQUIRE(rig.system.start(0));
-  CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
+  CHECK_EQ(rig.system.holdSeconds(), ControlMaxRunMs / 1000);
 }
 
 TEST_CASE("a hold past the ceiling asks for the ceiling") {
@@ -134,8 +137,8 @@ TEST_CASE("a hold past the ceiling asks for the ceiling") {
   rig.sensor.read(40.0f);
   rig.system.begin();
   rig.system.setTarget(20.0f);
-  REQUIRE(rig.system.start(CONTROL_MAX_RUN_MS / 1000 + 1));
-  CHECK_EQ(rig.system.holdSeconds(), CONTROL_MAX_RUN_MS / 1000);
+  REQUIRE(rig.system.start(ControlMaxRunMs / 1000 + 1));
+  CHECK_EQ(rig.system.holdSeconds(), ControlMaxRunMs / 1000);
 }
 
 TEST_CASE("a hold inside the ceiling is granted as asked") {
@@ -189,14 +192,14 @@ TEST_CASE("a release that misses the vent floor faults on its timeout") {
   Rig rig;
   runFrom(rig, 20.0f, 20.0f);
   rig.system.stop();
-  rig.beatUntil(VENT_TIMEOUT_MS + CONTROL_PERIOD_MS);
+  rig.beatUntil(VentTimeoutMs + ControlPeriodMs);
   CHECK_EQ(std::string(rig.system.faultCode()), std::string("vent_timeout"));
 }
 
 TEST_CASE("a pull with no headway at high duty faults") {
   Rig rig;
   runFrom(rig, 10.0f, 40.0f);
-  while (gardener::host::nowMs() < CONTROL_PROGRESS_TIMEOUT_MS + CONTROL_PERIOD_MS) {
+  while (gardener::host::nowMs() < ControlProgressTimeoutMs + ControlPeriodMs) {
     rig.sensor.read(10.0f);
     rig.beat();
   }
@@ -206,8 +209,8 @@ TEST_CASE("a pull with no headway at high duty faults") {
 TEST_CASE("readings past the target fault the run") {
   Rig rig;
   runFrom(rig, 20.0f, 20.0f);
-  for (int i = 0; i < CONTROL_OVERSHOOT_READINGS + 1; i++) {
-    rig.sensor.read(20.0f + CONTROL_OVERSHOOT_KPA);
+  for (int i = 0; i < ControlOvershootReadings + 1; i++) {
+    rig.sensor.read(20.0f + ControlOvershootKpa);
     rig.beat();
   }
   CHECK_EQ(std::string(rig.system.faultCode()), std::string("overshoot"));
@@ -215,11 +218,11 @@ TEST_CASE("readings past the target fault the run") {
 
 TEST_CASE("the duty never exceeds the pump's ceiling") {
   Rig rig;
-  runFrom(rig, 90.0f, CONTROL_FLOOR_KPA);
+  runFrom(rig, 90.0f, ControlFloorKpa);
   for (int i = 0; i < 200; i++) {
     rig.sensor.read(90.0f - static_cast<float>(i) * 0.1f);
     rig.beat();
-    CHECK(rig.pump.duty() <= PUMP_DUTY_MAX_PERCENT);
+    CHECK(rig.pump.duty() <= PumpDutyMaxPercent);
   }
 }
 
@@ -237,10 +240,10 @@ TEST_CASE("a release stops the pump before it opens the valve") {
 }
 
 TEST_CASE("the reported floor and deadband are the loop's own numbers") {
-  CHECK_EQ(CONTROL_FLOOR_KPA, 60.0f);
-  CHECK_EQ(CONTROL_DEADBAND_KPA, 0.2f);
-  CHECK_EQ(CONTROL_MIN_TARGET_KPA, 5.0f);
-  CHECK_EQ(VENT_FLOOR_KPA, 1.0f);
-  CHECK_EQ(VENT_MARGIN_KPA, 2.0f);
-  CHECK_EQ(CONTROL_PROGRESS_KPA, 1.0f);
+  CHECK_EQ(ControlFloorKpa, 60.0f);
+  CHECK_EQ(ControlDeadbandKpa, 0.2f);
+  CHECK_EQ(ControlMinTargetKpa, 5.0f);
+  CHECK_EQ(VentFloorKpa, 1.0f);
+  CHECK_EQ(VentMarginKpa, 2.0f);
+  CHECK_EQ(ControlProgressKpa, 1.0f);
 }

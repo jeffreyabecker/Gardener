@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "core/Knob.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "serial/BoardFacts.h"
@@ -17,12 +18,16 @@ class BuzzerPlayer;
 
 // The longest command line a grammar serves: the link refuses a longer one, and so does each grammar
 // handed one. A command body, when a grammar defines one, is not bounded here.
-constexpr uint16_t COMMAND_LINE_MAX = 128;
+GARDENER_KNOB_VALID(uint16_t, CommandLineMax, GARDENER_SERIAL_COMMAND_LINE_MAX, 128,
+                    GARDENER_SERIAL_COMMAND_LINE_MAX >= 32 &&
+                        GARDENER_SERIAL_COMMAND_LINE_MAX <= 1024,
+                    "a line the link can hold, in bytes");
 
 // The wire revision this link serves, reported as `proto` by `device get`. The wire is still
 // unsettled, so the number stays 1 and does not move per revision; a controller must not treat it
 // as a compatibility guarantee.
-constexpr uint32_t PROTOCOL_VERSION = 1;
+GARDENER_KNOB_VALID(uint32_t, ProtocolVersion, GARDENER_SERIAL_PROTOCOL_VERSION, 1,
+                    GARDENER_SERIAL_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
 
 // Everything the wire answers from: the machine, the board's own facts, and the panel's parts — the
 // gauge, the document, the piezo and the store the files ride on. The sketch builds it; the link

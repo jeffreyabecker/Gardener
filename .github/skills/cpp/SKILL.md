@@ -78,6 +78,11 @@ sorts inside each group it is given and never moves a header between them.
 - `enum class` with an explicit underlying type when the value is stored or sent:
   `enum class RunState : uint8_t`.
 - `constexpr` for a value known at compile time, rather than a `const` or a macro.
+- A constant a build may retune is one `GARDENER_KNOB_VALID` line from
+  [Knob.h](../../../libraries/Gardener/src/core/Knob.h): the PascalCase name, a `GARDENER_`
+  SCREAMING_SNAKE_CASE token unique across the tree, the reference default, and the bound the value
+  has to satisfy. Everything else is a plain `constexpr`, and a table or a class's own metric is not
+  a knob.
 - `virtual` on the base, `override` on the override, and `= default` for a trivial destructor.
 - Mark a method `const` when it does not change the object.
 - Delete the copy constructor and the assignment for a type there is one of:

@@ -9,7 +9,7 @@ namespace gardener::runtime {
 namespace {
 
 VentValve* makeValve(uint8_t pin) {
-  if (VALVE_NORMALLY_OPEN) return new NormallyOpenValve(pin);
+  if (ValveNormallyOpen) return new NormallyOpenValve(pin);
   return new NormallyClosedValve(pin);
 }
 
@@ -17,7 +17,7 @@ VentValve* makeValve(uint8_t pin) {
 
 MachineParts buildMachineParts(const MachinePins& pins) {
   MachineParts parts{
-      new PwmPump(pins.pumpPwm, PUMP_DUTY_MAX_PERCENT, PUMP_RAMP_PERCENT_PER_SEC),
+      new PwmPump(pins.pumpPwm, PumpDutyMaxPercent, PumpRampPercentPerSec),
       new XgzpSensor(pins.sensorAdc),
       makeValve(pins.ventValve),
   };
