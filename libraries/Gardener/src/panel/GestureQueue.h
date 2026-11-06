@@ -1,13 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <queue>
 
 namespace gardener {
-
-// How many gestures a queue holds. The panel drains on every beat and the classifier answers at most
-// one gesture a beat, so the depth is not what a burst needs: it is what a drain that stopped leaves
-// behind, set far past anything a running panel can bring.
-constexpr uint8_t GestureQueueDepth = 64;
 
 // The gestures the panel task has accepted and the page has not taken yet: the page's input and the
 // list the device binding pulls from, so a press goes to whichever of the two is reading and is
@@ -17,25 +12,36 @@ constexpr uint8_t GestureQueueDepth = 64;
 // string of its own: a press allocates nothing once the word is known, and the pointer a page is
 // handed stays valid for as long as the panel runs.
 //
-// A post never throws away what is already waiting. A full queue refuses the gesture and answers
-// false, so the loss stays with the caller that can still say so.
+// This is the queue the host tools and the drawing cases use, and the board's is the same three
+// methods over a FreeRTOS queue. A std::queue holds the words and grows as presses arrive, so there
+// is no depth to keep and nothing to refuse; a fixed queue is built by deriving from this rather
+// than beside it.
 //
-// It is an interface rather than a ring because the writers are not one task — the keys, and in
-// time a link — so the board builds a FreeRTOS queue under it and the host tools build the plain
-// one.
+// Overflow is not a case this abstraction answers, and nothing above it guards against one. The
+// device's queue is sized past what a running panel can bring — a beat drains it and a beat
+// classifies at most one gesture — so a refusal there reports a panel that has already stopped
+// rather than a press worth keeping. No caller checks the answer to post, nothing retries, nothing
+// drops the oldest and nothing logs a refusal. This is settled rather than unconsidered: a guard
+// added for a full queue is deleted rather than reviewed, and reopening the question is not a
+// review finding.
 class GestureQueue {
  public:
   virtual ~GestureQueue() = default;
 
-  // Queues `gesture`, or answers false when there is no room for it.
-  virtual bool post(const char* gesture) = 0;
+  // Queues `gesture`. False is an empty word, or a board queue that was never created; a queue that
+  // grows never fills and the board's is sized past anything a running panel can bring, so no
+  // caller checks the answer.
+  virtual bool post(const char* gesture);
 
   // The oldest gesture a page has not taken, or nullptr when there is none. The word is the intern
   // table's, so the pointer outlives the take.
-  virtual const char* take() = 0;
+  virtual const char* take();
 
   // Drops every gesture that has not been taken.
-  virtual void clear() = 0;
+  virtual void clear();
+
+ private:
+  std::queue<const char*> presses_;
 };
 
 }  // namespace gardener

@@ -13,6 +13,7 @@
 #include <string>
 
 #include "Clock.h"
+#include "panel/GestureQueue.h"
 #include "panel/page/Overlay.h"
 #include "panel/page/Scene.h"
 #include "panel/page/Ux.h"
@@ -416,7 +417,7 @@ void press(Ux& ux, GestureQueue& gestures, const char* gesture, uint32_t nowMs) 
 }
 
 TEST_CASE("a settings list moves and edits") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures, ux);
@@ -460,7 +461,7 @@ TEST_CASE("a settings list moves and edits") {
 }
 
 TEST_CASE("a settings list cancel puts the set back") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures, ux);
@@ -499,7 +500,7 @@ TEST_CASE("a settings list draws its rows") {
 }
 
 TEST_CASE("a settings list rebuilds the row an editor changed") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   TestRow target(gestures, ux);
@@ -572,7 +573,7 @@ TEST_CASE("a choice row prints its mark before its label") {
 }
 
 TEST_CASE("a settings list edits every kind") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   NumericSettingCfg target(gestures, ux, "target", "Target", 5.0f, 1, 0, 10, false);
@@ -688,7 +689,7 @@ TEST_CASE("a row answers the step, bounds and entries it was built from") {
 // row's own default for a key it does not, and nothing for a key the set holds nothing for. What
 // goes in is what Back and Cancel put back, so the list opened on it.
 TEST_CASE("a settings list seeds from the document") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   BoolSettingCfg power(gestures, ux, "power", "Power", true);
@@ -818,7 +819,7 @@ TEST_CASE("a rows check refuses what the set cannot use") {
 // The list hands a row's check to the editor it opens, so a refused value keeps that editor on the
 // stack and never reaches the set: the list closes on the value it was opened with.
 TEST_CASE("a settings list keeps a refused value out") {
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   String title("SETTINGS");
   NumericSettingCfg start(gestures, ux, "initial_pressure", "Start", 5.0f, 1, 0, 100, false);

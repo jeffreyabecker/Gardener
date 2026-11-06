@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <vector>
+
 #include <Gfx.h>
 
 namespace gardener::runtime {
@@ -15,7 +17,6 @@ namespace gardener::runtime {
 class Sh1106Device : public gfx::DisplayDevice {
  public:
   Sh1106Device(TwoWire& wire, uint8_t address, int16_t width, int16_t height);
-  ~Sh1106Device() override;
 
   Sh1106Device(const Sh1106Device&) = delete;
   Sh1106Device& operator=(const Sh1106Device&) = delete;
@@ -46,7 +47,7 @@ class Sh1106Device : public gfx::DisplayDevice {
   uint8_t address_;
   int16_t width_;
   int16_t height_;
-  uint8_t* frame_;
+  std::vector<uint8_t> frame_;
   // What has been written since the last flush, in the panel's own coordinates.
   gfx::Rect dirty_{0, 0, 0, 0};
 };

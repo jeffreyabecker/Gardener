@@ -26,6 +26,7 @@
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
+#include "panel/GestureQueue.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/parts/GestureClassifier.h"
@@ -43,9 +44,7 @@ using gardener::CaptureDisplay;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
-using gardener::GestureList;
 using gardener::GestureQueue;
-using gardener::GestureQueueDepth;
 namespace Gestures = gardener::Gestures;
 using gardener::GestureClassifier;
 using gardener::Interpreter;
@@ -136,7 +135,7 @@ class FakeInterpreter : public Interpreter {
 
  private:
   SceneCounter counter_;
-  GestureList gestures_;
+  GestureQueue gestures_;
 };
 
 // The routines a page tick drives: the fake interpreter, an empty order file so no image is read,
@@ -167,7 +166,7 @@ struct PageRig {
   VacuumSystem vacuum;
   FakeBattery battery;
   FakeInterpreter interpreter;
-  GestureList presses;
+  GestureQueue presses;
   gardener::Ux ux;
   RoutineRegistry registry{library, logger};
   Routines routines;
@@ -189,7 +188,7 @@ struct ButtonsRig {
 }  // namespace
 
 TEST_CASE("the reset hold is handed back and posts nothing") {
-  GestureList presses;
+  GestureQueue presses;
   ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Ok, 5000);
@@ -204,7 +203,7 @@ TEST_CASE("the reset hold is handed back and posts nothing") {
 }
 
 TEST_CASE("the cancel hold stops the machine and asks for home") {
-  GestureList presses;
+  GestureQueue presses;
   ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Cancel, 5000);
@@ -218,26 +217,19 @@ TEST_CASE("the cancel hold stops the machine and asks for home") {
   CHECK(rig.logger.saw("panel: cancel held"));
 }
 
-TEST_CASE("a full queue refuses the newest and keeps what it has") {
-  GestureList presses;
-  for (int i = 0; i < GestureQueueDepth; i++)
-    CHECK(presses.post(Gestures::OkSingle));
+TEST_CASE("gestures come back in the order they were posted") {
+  constexpr int Presses = 100;
+  GestureQueue presses;
+  for (int i = 0; i < Presses; i++)
+    CHECK(presses.post(i % 2 == 0 ? Gestures::OkSingle : Gestures::BackSingle));
 
-  // The press that cannot fit is refused rather than taking an older gesture's place.
-  CHECK_FALSE(presses.post(Gestures::BackSingle));
-  CHECK(Gestures::is(presses.take(), Gestures::OkSingle));
-
-  // Room again: the same word is taken now, and it arrives behind everything already waiting.
-  CHECK(presses.post(Gestures::BackSingle));
-  const char* last = nullptr;
+  // The queue grows as presses arrive, so every one of them is waiting in the order it was posted.
   int taken = 0;
   for (const char* gesture = presses.take(); gesture != nullptr; gesture = presses.take()) {
-    last = gesture;
+    CHECK(Gestures::is(gesture, taken % 2 == 0 ? Gestures::OkSingle : Gestures::BackSingle));
     taken++;
   }
-  CHECK_EQ(taken, GestureQueueDepth);
-  REQUIRE(last != nullptr);
-  CHECK(Gestures::is(last, Gestures::BackSingle));
+  CHECK_EQ(taken, Presses);
   CHECK_EQ(presses.take(), nullptr);
 }
 

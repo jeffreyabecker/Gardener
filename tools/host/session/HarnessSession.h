@@ -23,6 +23,7 @@
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
+#include "panel/GestureQueue.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "panel/settings/SystemSettings.h"
@@ -347,7 +348,7 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;
-  GestureList presses_;
+  GestureQueue presses_;
   Ux ux_;
   // The device's own settings rows, which the system list borrows.
   SystemSettings systemSettings_{presses_, ux_, settings_, jingles_, buzzer_};

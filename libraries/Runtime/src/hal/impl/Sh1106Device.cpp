@@ -1,7 +1,6 @@
 #include "hal/impl/Sh1106Device.h"
 
 #include <Arduino.h>
-#include <string.h>
 
 // The init sequence and page write below follow Adafruit_SH110X's SH1106 driver.
 //
@@ -37,11 +36,7 @@ constexpr uint8_t PageColumnOffset = 2;
 
 Sh1106Device::Sh1106Device(TwoWire& wire, uint8_t address, int16_t width, int16_t height)
     : wire_(wire), address_(address), width_(width), height_(height),
-      frame_(new uint8_t[static_cast<size_t>(stride()) * static_cast<size_t>(height)]) {
-  memset(frame_, 0, static_cast<size_t>(stride()) * static_cast<size_t>(height_));
-}
-
-Sh1106Device::~Sh1106Device() { delete[] frame_; }
+      frame_(static_cast<size_t>(stride()) * static_cast<size_t>(height)) {}
 
 bool Sh1106Device::begin() {
   const uint8_t init[] = {

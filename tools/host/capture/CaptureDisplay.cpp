@@ -249,7 +249,7 @@ void CaptureDisplay::clear() {
   endCapture();
   frame_ = Frame{};
   components_.clear();
-  GestureList::clear();
+  GestureQueue::clear();
   gestures_.clear();
   overlayTop_ = -1;
   overlayRows_ = 0;

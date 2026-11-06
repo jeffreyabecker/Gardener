@@ -3,8 +3,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <functional>
 #include <initializer_list>
-#include <vector>
+#include <set>
+#include <string>
 
 namespace gardener {
 
@@ -67,7 +69,8 @@ inline bool hasPart(const char* gesture, const char* part) {
 
 // One copy of each word the panel answers, made on first sight. A gesture is one of a handful of
 // words rather than something a caller writes, so the table keeps the copy and a caller keeps the
-// copy's address, which stays valid for as long as the panel runs.
+// copy's address, which stays valid for as long as the panel runs: the words live in the set's own
+// nodes, which no later insert moves.
 class InternTable {
   // The one table; null until the first instance() makes it or a build sets its own.
   inline static InternTable* instance_ = nullptr;
@@ -89,30 +92,22 @@ class InternTable {
     instance_ = table;
     if (instance_ != nullptr) instance_->seed();
   }
-  // Frees the copies it made, and is virtual so a table a build installs is destroyed through this.
-  virtual ~InternTable() {
-    for (const char* entry : table_)
-      delete[] entry;
-  }
+  // Virtual so a table a build installs is destroyed through this, which is what frees the lock it
+  // holds; the words are the set's own.
+  virtual ~InternTable() = default;
 
-  // Two tables would free the same word twice, so neither is made from another.
+  // A table holds its own words, so neither is made from another.
   InternTable(const InternTable&) = delete;
   InternTable& operator=(const InternTable&) = delete;
   InternTable() = default;
 
   // The one copy of `gesture`, made when the table has not seen the word before. A build whose
-  // callers are not all one task overrides this to hold a lock across the insert.
+  // callers are not all one task overrides this to hold a lock across the insert. The lookup is
+  // transparent, so a word the table already holds is answered without a string being built for it.
   virtual const char* intern(const char* gesture) {
-    for (const char* entry : table_) {
-      if (strcmp(entry, gesture) == 0) return entry;
-    }
-
-    const size_t length = strlen(gesture);
-    char* copy = new char[length + 1];
-    memcpy(copy, gesture, length + 1);
-
-    table_.push_back(copy);
-    return copy;
+    const auto held = table_.find(gesture);
+    if (held != table_.end()) return held->c_str();
+    return table_.insert(gesture).first->c_str();
   }
 
  private:
@@ -123,7 +118,7 @@ class InternTable {
       intern(word);
   }
 
-  std::vector<const char*> table_;
+  std::set<std::string, std::less<>> table_;
 };
 
 }  // namespace Gestures

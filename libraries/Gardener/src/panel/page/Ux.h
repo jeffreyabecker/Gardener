@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "layout/Drawing.h"
 #include "panel/page/Scene.h"
@@ -33,6 +34,10 @@ class Ux {
   // What the pusher runs when its scene pops, handed that scene: it reads the value the scene
   // answers before the stack lets it go.
   using Callback = std::function<void(Scene&)>;
+
+  // The frame the cap is for is room made once, so a push never reallocates inside the beat that
+  // made it.
+  Ux() { frames_.reserve(MaxFrames); }
 
   // The root scene at boot and on the go-home gesture; nullptr empties the stack and leaves the
   // mark. Answers whether a scene is showing.
@@ -80,9 +85,14 @@ class Ux {
   void paintScene(Scene* scene);
   void paintOverlay(gfx::Canvas& canvas);
 
-  std::unique_ptr<Scene> frames_[MaxFrames];
-  Callback callbacks_[MaxFrames];
-  int16_t depth_ = 0;
+  // One frame: the scene showing and what its pusher runs when it pops, held together so the two
+  // cannot come apart.
+  struct Frame {
+    std::unique_ptr<Scene> scene;
+    Callback callback;
+  };
+
+  std::vector<Frame> frames_;
   gfx::PaintNodeRef overlay_;
   int16_t overlayStart_ = 0;
   gfx::Canvas* beat_ = nullptr;

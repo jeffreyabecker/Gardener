@@ -5,18 +5,17 @@
 namespace gardener {
 
 bool Ux::reset(std::unique_ptr<Scene> root) {
-  while (depth_ > 0) {
-    depth_--;
-    if (frames_[depth_]) frames_[depth_]->leave();
-    frames_[depth_] = nullptr;
-    callbacks_[depth_] = nullptr;
+  while (!frames_.empty()) {
+    std::unique_ptr<Scene> leaving = std::move(frames_.back().scene);
+    frames_.pop_back();
+    if (leaving) leaving->leave();
   }
   pending_ = Request::None;
   pendingScene_ = nullptr;
   pendingCallback_ = nullptr;
   if (!root) return false;
   place(std::move(root), nullptr);
-  return depth_ > 0;
+  return !frames_.empty();
 }
 
 bool Ux::push(std::unique_ptr<Scene> scene, Callback callback) {
@@ -46,9 +45,9 @@ bool Ux::popToRoot() {
   return home();
 }
 
-Scene* Ux::top() const { return depth_ > 0 ? frames_[depth_ - 1].get() : nullptr; }
+Scene* Ux::top() const { return frames_.empty() ? nullptr : frames_.back().scene.get(); }
 
-int16_t Ux::depth() const { return depth_; }
+int16_t Ux::depth() const { return static_cast<int16_t>(frames_.size()); }
 
 void Ux::setOverlay(int16_t startY, gfx::PaintNodeRef overlay) {
   overlayStart_ = startY < 0 ? 0 : startY;
@@ -66,7 +65,7 @@ bool Ux::enter(gfx::Canvas& canvas, uint32_t nowMs) {
   polling_ = held;
   apply();
   endBeat();
-  return depth_ > 0;
+  return !frames_.empty();
 }
 
 bool Ux::poll(gfx::Canvas& canvas, uint32_t nowMs) {
@@ -80,7 +79,7 @@ bool Ux::poll(gfx::Canvas& canvas, uint32_t nowMs) {
   polling_ = held;
   apply();
   endBeat();
-  return depth_ > 0;
+  return !frames_.empty();
 }
 
 void Ux::beginBeat(gfx::Canvas& canvas, uint32_t nowMs) {
@@ -92,7 +91,7 @@ void Ux::endBeat() {
   gfx::Canvas* canvas = beat_;
   beat_ = nullptr;
   if (canvas == nullptr) return;
-  if (depth_ > 0) paintOverlay(*canvas);
+  if (!frames_.empty()) paintOverlay(*canvas);
 }
 
 // The canvas the scenes draw in: the beat's own less the rows the overlay takes, so a page never
@@ -125,11 +124,9 @@ void Ux::paintOverlay(gfx::Canvas& canvas) {
 }
 
 bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {
-  if (!scene || depth_ >= MaxFrames) return false;
+  if (!scene || frames_.size() >= static_cast<size_t>(MaxFrames)) return false;
   Scene* showing = scene.get();
-  frames_[depth_] = std::move(scene);
-  callbacks_[depth_] = callback;
-  depth_++;
+  frames_.push_back({std::move(scene), callback});
   const bool held = polling_;
   polling_ = true;
   showing->activate();
@@ -140,12 +137,10 @@ bool Ux::place(std::unique_ptr<Scene> scene, const Callback& callback) {
 
 // The scene that pops is held here until its callback has run, and goes when this returns.
 bool Ux::take() {
-  if (depth_ <= 1) return false;
-  std::unique_ptr<Scene> leaving = std::move(frames_[depth_ - 1]);
-  const Callback callback = callbacks_[depth_ - 1];
-  frames_[depth_ - 1] = nullptr;
-  callbacks_[depth_ - 1] = nullptr;
-  depth_--;
+  if (frames_.size() <= 1) return false;
+  std::unique_ptr<Scene> leaving = std::move(frames_.back().scene);
+  const Callback callback = frames_.back().callback;
+  frames_.pop_back();
   leaving->leave();
   Scene* below = top();
   const bool held = polling_;
@@ -162,13 +157,12 @@ bool Ux::take() {
 
 bool Ux::home() {
   // Nothing showing is nothing to go home to, which is the false a caller reads as no page.
-  if (depth_ <= 0) return false;
-  if (depth_ == 1) return true;
-  while (depth_ > 1) {
-    depth_--;
-    if (frames_[depth_]) frames_[depth_]->leave();
-    frames_[depth_] = nullptr;
-    callbacks_[depth_] = nullptr;
+  if (frames_.empty()) return false;
+  if (frames_.size() == 1) return true;
+  while (frames_.size() > 1) {
+    std::unique_ptr<Scene> leaving = std::move(frames_.back().scene);
+    frames_.pop_back();
+    if (leaving) leaving->leave();
   }
   Scene* scene = top();
   if (scene == nullptr) return false;
@@ -177,7 +171,7 @@ bool Ux::home() {
   scene->activate();
   polling_ = held;
   paintScene(scene);
-  return depth_ > 0;
+  return !frames_.empty();
 }
 
 void Ux::apply() {

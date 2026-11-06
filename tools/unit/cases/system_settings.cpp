@@ -30,7 +30,6 @@ namespace {
 
 using gardener::BuzzerPlayer;
 using gardener::DeviceSettings;
-using gardener::GestureList;
 using gardener::GestureQueue;
 using gardener::JingleLibrary;
 using gardener::Scene;
@@ -87,7 +86,7 @@ struct Bench {
   JingleLibrary jingles{&library, logger};
   FakeBuzzer buzzerPart;
   BuzzerPlayer buzzer{buzzerPart};
-  GestureList gestures;
+  GestureQueue gestures;
   Ux ux;
   SystemSettings system{gestures, ux, settings, jingles, buzzer};
 };
