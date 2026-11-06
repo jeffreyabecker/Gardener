@@ -30,6 +30,13 @@ inline constexpr const char* CancelDouble = "cancel:double";
 inline constexpr const char* SystemReboot = "system:reboot";
 inline constexpr const char* SystemQuit = "system:quit";
 
+// Every word the panel answers under a name of its own. The intern table holds them from boot, so a
+// press of one of them allocates nothing and only a chord or a hold mark is ever a new word.
+inline constexpr const char* Known[] = {
+    UpSingle,   UpDouble, DownSingle, DownDouble,   ForwardSingle, ForwardDouble, BackSingle,
+    BackDouble, OkSingle, OkDouble,   CancelSingle, CancelDouble,  SystemReboot,  SystemQuit,
+};
+
 // True when the whole gesture is `expected`. A chord is not the same gesture as either of its
 // parts, so a page that binds one names the whole word.
 inline bool is(const char* gesture, const char* expected) {
@@ -69,7 +76,10 @@ class InternTable {
   // The table every caller reaches: the panel's own, made on first use unless a build installed
   // one, whose insert takes the lock the panel's callers do not all share.
   static InternTable& instance() {
-    if (instance_ == nullptr) instance_ = new InternTable();
+    if (instance_ == nullptr) {
+      instance_ = new InternTable();
+      instance_->seed();
+    }
     return *instance_;
   }
 
@@ -77,6 +87,7 @@ class InternTable {
   static void setInstance(InternTable* table) {
     if (instance_ != nullptr) delete instance_;
     instance_ = table;
+    if (instance_ != nullptr) instance_->seed();
   }
   // Frees the copies it made, and is virtual so a table a build installs is destroyed through this.
   virtual ~InternTable() {
@@ -105,6 +116,13 @@ class InternTable {
   }
 
  private:
+  // The words `Gestures` names, held before anything is pressed. It goes through the virtual, so a
+  // build's table seeds under its own lock.
+  void seed() {
+    for (const char* word : Known)
+      intern(word);
+  }
+
   std::vector<const char*> table_;
 };
 

@@ -347,7 +347,7 @@ class HarnessSession {
   FixedBattery battery_;
   CountingBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;
-  GestureQueue presses_;
+  GestureList presses_;
   Ux ux_;
   // The device's own settings rows, which the system list borrows.
   SystemSettings systemSettings_{presses_, ux_, settings_, jingles_, buzzer_};

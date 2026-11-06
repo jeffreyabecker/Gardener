@@ -4,6 +4,7 @@
 #include <Wire.h>
 
 #include "Fonts.h"
+#include "core/Gestures.h"
 #include "core/Units.h"
 
 namespace gardener {
@@ -30,7 +31,12 @@ PanelRoot::PanelRoot(const PanelPins& pins)
       bindings_(display_, state_, settings_, systemSettings_, buzzer_, commands_, presses_, ux_,
                 registry_, logger_),
       interpreter_(bindings_),
-      routines_(interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_) {}
+      routines_(interpreter_, display_, state_, presses_, ux_, registry_, logger_, files_) {
+  // The words a gesture is made of are interned from more than one task once a link can press, so the
+  // device installs the table that holds a lock across an insert. It seeds itself with the words
+  // every panel answers, so a press of one of them allocates nothing.
+  Gestures::InternTable::setInstance(new runtime::RtosInternTable());
+}
 
 // The device's bring-up, in the order the parts depend on each other. The store comes first because
 // the image and every routine document are read through it; the bus before the glass because the

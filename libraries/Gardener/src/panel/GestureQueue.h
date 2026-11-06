@@ -2,38 +2,40 @@
 
 #include <stdint.h>
 
-#include "core/Gestures.h"
-
 namespace gardener {
 
-// The gestures the panel task has accepted and the page has not taken yet. Its writer is the panel
-// task; its readers are the device binding's pull and the scene stack, so the two are never the
-// same caller, and nothing here takes a lock. A full queue drops the oldest so the newest gesture
-// still arrives, and the depth is set far past what a beat can bring — the panel drains every
-// beat and the classifier answers at most one gesture a beat, so a drop means the drain stopped
-// rather than that the panel is busy.
+// How many gestures a queue holds. The panel drains on every beat and the classifier answers at most
+// one gesture a beat, so the depth is not what a burst needs: it is what a drain that stopped leaves
+// behind, set far past anything a running panel can bring.
+constexpr uint8_t GestureQueueDepth = 64;
+
+// The gestures the panel task has accepted and the page has not taken yet: the page's input and the
+// list the device binding pulls from, so a press goes to whichever of the two is reading and is
+// never delivered twice.
 //
-// A gesture is one of the words `Gestures` names, so a slot holds the intern table's copy rather
-// than a string of its own: a press allocates nothing once the word is known, and the pointer a
-// page is handed stays valid for as long as the panel runs.
+// A word is interned before it is queued, so a slot holds the intern table's copy rather than a
+// string of its own: a press allocates nothing once the word is known, and the pointer a page is
+// handed stays valid for as long as the panel runs.
 //
-// It is the page's input as well, so a page and the device binding drain one list and no press is
-// delivered twice.
+// A post never throws away what is already waiting. A full queue refuses the gesture and answers
+// false, so the loss stays with the caller that can still say so.
+//
+// It is an interface rather than a ring because the writers are not one task — the keys, and in
+// time a link — so the board builds a FreeRTOS queue under it and the host tools build the plain
+// one.
 class GestureQueue {
  public:
-  static constexpr uint8_t Capacity = 64;
+  virtual ~GestureQueue() = default;
 
-  virtual void post(const char* gesture);
-  virtual void clear();
+  // Queues `gesture`, or answers false when there is no room for it.
+  virtual bool post(const char* gesture) = 0;
 
   // The oldest gesture a page has not taken, or nullptr when there is none. The word is the intern
   // table's, so the pointer outlives the take.
-  const char* take();
+  virtual const char* take() = 0;
 
- private:
-  const char* presses_[Capacity] = {};
-  uint8_t head_ = 0;
-  uint8_t count_ = 0;
+  // Drops every gesture that has not been taken.
+  virtual void clear() = 0;
 };
 
 }  // namespace gardener

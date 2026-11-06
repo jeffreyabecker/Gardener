@@ -43,7 +43,9 @@ using gardener::CaptureDisplay;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
 using gardener::DisplayUnit;
+using gardener::GestureList;
 using gardener::GestureQueue;
+using gardener::GestureQueueDepth;
 namespace Gestures = gardener::Gestures;
 using gardener::GestureClassifier;
 using gardener::Interpreter;
@@ -134,7 +136,7 @@ class FakeInterpreter : public Interpreter {
 
  private:
   SceneCounter counter_;
-  GestureQueue gestures_;
+  GestureList gestures_;
 };
 
 // The routines a page tick drives: the fake interpreter, an empty order file so no image is read,
@@ -165,7 +167,7 @@ struct PageRig {
   VacuumSystem vacuum;
   FakeBattery battery;
   FakeInterpreter interpreter;
-  GestureQueue presses;
+  GestureList presses;
   gardener::Ux ux;
   RoutineRegistry registry{library, logger};
   Routines routines;
@@ -187,7 +189,7 @@ struct ButtonsRig {
 }  // namespace
 
 TEST_CASE("the reset hold is handed back and posts nothing") {
-  GestureQueue presses;
+  GestureList presses;
   ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Ok, 5000);
@@ -202,7 +204,7 @@ TEST_CASE("the reset hold is handed back and posts nothing") {
 }
 
 TEST_CASE("the cancel hold stops the machine and asks for home") {
-  GestureQueue presses;
+  GestureList presses;
   ButtonsRig rig{presses};
 
   rig.buttons.hold(Button::Cancel, 5000);
@@ -216,25 +218,26 @@ TEST_CASE("the cancel hold stops the machine and asks for home") {
   CHECK(rig.logger.saw("panel: cancel held"));
 }
 
-TEST_CASE("nothing a beat posts is dropped for want of room") {
-  GestureQueue presses;
-  ButtonsRig rig{presses};
+TEST_CASE("a full queue refuses the newest and keeps what it has") {
+  GestureList presses;
+  for (int i = 0; i < GestureQueueDepth; i++)
+    CHECK(presses.post(Gestures::OkSingle));
 
-  // A key coming down and up is one gesture in two beats, which is the press the loop repeats.
-  const auto press = [&rig] {
-    rig.buttons.press(Button::Back);
-    rig.tick.tick();
-    rig.buttons.release(Button::Back);
-    rig.buttons.classify(Button::Back, Press::Single);
-    rig.tick.tick();
-  };
+  // The press that cannot fit is refused rather than taking an older gesture's place.
+  CHECK_FALSE(presses.post(Gestures::BackSingle));
+  CHECK(Gestures::is(presses.take(), Gestures::OkSingle));
 
-  // A burst no page has drained yet, filling the buffer: every one of them is still there to take.
-  for (int i = 0; i < GestureQueue::Capacity; i++) press();
-
+  // Room again: the same word is taken now, and it arrives behind everything already waiting.
+  CHECK(presses.post(Gestures::BackSingle));
+  const char* last = nullptr;
   int taken = 0;
-  for (const char* gesture = presses.take(); gesture != nullptr; gesture = presses.take()) taken++;
-  CHECK_EQ(taken, GestureQueue::Capacity);
+  for (const char* gesture = presses.take(); gesture != nullptr; gesture = presses.take()) {
+    last = gesture;
+    taken++;
+  }
+  CHECK_EQ(taken, GestureQueueDepth);
+  REQUIRE(last != nullptr);
+  CHECK(Gestures::is(last, Gestures::BackSingle));
   CHECK_EQ(presses.take(), nullptr);
 }
 

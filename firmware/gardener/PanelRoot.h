@@ -11,7 +11,6 @@
 #include "hal/impl/Buttons.h"
 #include "hal/impl/PwmBuzzer.h"
 #include "hal/impl/Sh1106Device.h"
-#include "panel/GestureQueue.h"
 #include "panel/page/RoutineRegistry.h"
 #include "panel/page/Ux.h"
 #include "panel/parts/BuzzerPlayer.h"
@@ -93,7 +92,7 @@ class PanelRoot {
   // The library the system list chooses a jingle from, read once at boot.
   JingleLibrary jingles_;
   // The queue a gesture goes to and the stack a page is pushed on.
-  GestureQueue presses_;
+  runtime::RtosGestureQueue presses_;
   Ux ux_;
   // The device's own settings rows, held for the life of the device because the list borrows them.
   SystemSettings systemSettings_;

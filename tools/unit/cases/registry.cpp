@@ -15,6 +15,7 @@
 
 #include <Gfx.h>
 
+#include "GestureList.h"
 #include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
 #include "panel/page/Registration.h"
@@ -28,6 +29,7 @@ using gardener::BoolSettingCfg;
 using gardener::ChoiceSettingCfg;
 using gardener::DisplayUnit;
 using gardener::DurationSettingCfg;
+using gardener::GestureList;
 using gardener::GestureQueue;
 using gardener::NumericSettingCfg;
 using gardener::Registration;
@@ -41,7 +43,7 @@ using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
 
 // The queue no case presses: nothing here is drawn, so nothing reads it.
-using NoPresses = GestureQueue;
+using NoPresses = GestureList;
 
 // The page a launch builds: what a case reads a push through is the activation the factory was
 // handed, so the page itself draws nothing.

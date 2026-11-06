@@ -10,6 +10,7 @@
 #include <Gfx.h>
 
 #include "CaptureDisplay.h"
+#include "GestureList.h"
 #include "panel/GestureQueue.h"
 
 namespace gardener::gfx::test {
@@ -28,6 +29,6 @@ void reset();
 
 // The queue a scene drains when nothing is pressed: a case drives a scene through the hooks it
 // answers rather than through the keys, so nothing is ever pushed at this one.
-using NoGestures = GestureQueue;
+using NoGestures = GestureList;
 
 }  // namespace gardener::gfx::test
