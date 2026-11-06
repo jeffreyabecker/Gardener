@@ -17,7 +17,7 @@ void GestureQueue::post(const char* gesture) {
   }
 
   const uint8_t tail = (uint8_t)((head_ + count_) % Capacity);
-  presses_[tail] = Gestures::internTable().intern(gesture);
+  presses_[tail] = Gestures::InternTable::instance().intern(gesture);
   count_++;
 }
 

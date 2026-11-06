@@ -62,18 +62,35 @@ inline bool hasPart(const char* gesture, const char* part) {
 // words rather than something a caller writes, so the table keeps the copy and a caller keeps the
 // copy's address, which stays valid for as long as the panel runs.
 class InternTable {
+  // The one table; null until the first instance() makes it or a build sets its own.
+  inline static InternTable* instance_ = nullptr;
+
  public:
-  ~InternTable() {
+  // The table every caller reaches: the panel's own, made on first use unless a build installed
+  // one, whose insert takes the lock the panel's callers do not all share.
+  static InternTable& instance() {
+    if (instance_ == nullptr) instance_ = new InternTable();
+    return *instance_;
+  }
+
+  // Replaces the table, freeing the one it held, so a build installs its own before anything posts.
+  static void setInstance(InternTable* table) {
+    if (instance_ != nullptr) delete instance_;
+    instance_ = table;
+  }
+  // Frees the copies it made, and is virtual so a table a build installs is destroyed through this.
+  virtual ~InternTable() {
     for (const char* entry : table_)
       delete[] entry;
   }
 
-  // The table owns every copy it hands out, so two of them would free the same word twice.
+  // Two tables would free the same word twice, so neither is made from another.
   InternTable(const InternTable&) = delete;
   InternTable& operator=(const InternTable&) = delete;
   InternTable() = default;
 
-  // The one copy of `gesture`, made when the table has not seen the word before.
+  // The one copy of `gesture`, made when the table has not seen the word before. A build whose
+  // callers are not all one task overrides this to hold a lock across the insert.
   virtual const char* intern(const char* gesture) {
     for (const char* entry : table_) {
       if (strcmp(entry, gesture) == 0) return entry;
@@ -90,13 +107,6 @@ class InternTable {
  private:
   std::vector<const char*> table_;
 };
-
-// The table every gesture word is interned in: the words are the panel's rather than one caller's,
-// so there is one table and everyone who keeps a gesture reaches it here.
-inline InternTable& internTable() {
-  static InternTable table;
-  return table;
-}
 
 }  // namespace Gestures
 
