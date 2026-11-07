@@ -11,8 +11,6 @@ the panel's reserved key hold. Pressures are kPa, on the wire and in the firmwar
 The device is the machine — pump, sensor and vent valve — with the OLED panel, the keys, the buzzer
 and the battery gauge arranged around it. One sketch, [firmware/gardener](./firmware/gardener),
 composes the libraries for it: what it names is what the device has, over the serial link it builds.
-The Bluetooth transport is out of the build for now — its sources are commented out, so the serial
-line is the only way a controller reaches the device.
 
 ## Build
 
@@ -20,7 +18,6 @@ Requires `arduino-cli` with the ESP32 core, and Python 3 for the wrapper.
 
 ```powershell
 arduino-cli core install esp32:esp32
-python scripts/arduino.py --task libs
 python scripts/arduino.py --task build
 python scripts/arduino.py --task upload --port COM5
 python scripts/arduino.py --task monitor --port COM5
@@ -41,19 +38,18 @@ the two composition roots and the tasks that drive them;
 [libraries/berry](./libraries/berry), the vendored VM itself.
 
 A build keeps its object files in `firmware/gardener/build/compile-<hash>`, a path per board and
-define set, so the next one compiles only what changed since, header dependents included. The two
-libraries that never change are not compiled at all after the first build:
-[libraries/berry](./libraries/berry) and the staged NimBLE are packed into an archive beside their
-sources — `src/esp32s3/libberry.a` — which `arduino-cli` links instead, and which is two thirds of
-what a full build used to be. The archives are not committed: a fresh clone, a new toolchain or a
-deleted one compiles the sources and packs again. `--task archive` repacks them on demand, and
-`--task clean` keeps them.
+define set, so the next one compiles only what changed since, header dependents included. The one
+library that never changes is not compiled at all after the first build:
+[libraries/berry](./libraries/berry) is packed into an archive beside its sources —
+`src/esp32s3/libberry.a` — which `arduino-cli` links instead, and which is two thirds of what a
+full build used to be. The archive is not committed: a fresh clone, a new toolchain or a
+deleted one compiles the sources and packs again. `--task archive` repacks it on demand, and
+`--task clean` keeps it.
 
 The rig's numbers are written to a generated `firmware/gardener/rig_options.h` rather than passed
 as compiler flags, so retuning a rig recompiles the files that read them and nothing else. The
 header `core/knob_defaults.h` beside `core/Knob.h` is generated the same way, by `tools/knob.py`
 from the `GARDENER_KNOB_VALID` calls, and both build paths write it before they compile.
-`--task libs` installs the pinned libraries and stages the copies the build compiles against;
 `--task clean` removes the object files, and the data image beside them, by hand.
 
 ## Unit tests

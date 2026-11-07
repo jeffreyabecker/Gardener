@@ -46,17 +46,6 @@
       ],
       "isBackground": true,
       "problemMatcher": []
-    },
-    {
-      "label": "arduino: install libraries",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "${workspaceFolder}/scripts/arduino.py",
-        "--task",
-        "libs"
-      ],
-      "problemMatcher": []
     }
   ]
 }

@@ -40,7 +40,7 @@ EXE = BUILD / ("walkthrough.exe" if os.name == "nt" else "walkthrough")
 # of it a panel build compiles on a host — the sources that name no board header, the interpreter's
 # host side under routines/ among them. The session, the capture and the writer are the host's own
 # library, shared with the Berry check rather than copied.
-PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "<NimBLE", "freertos/",
+PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "freertos/",
                      "<TFT_eSPI", "<WiFi", "<Preferences.h>")
 
 

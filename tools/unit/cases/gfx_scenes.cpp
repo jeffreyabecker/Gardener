@@ -229,21 +229,18 @@ TEST_CASE("a stack showing nothing draws no overlay") {
   CHECK_EQ(display.inkCount(0, 0, PageWidth, PageHeight), 0);
 }
 
-// The strip is the node itself: five columns across the rows it is handed, the unit's suffix in the
+// The strip is the node itself: four columns across the rows it is handed, the unit's suffix in the
 // first and the gauge in the last.
 TEST_CASE("the status strip draws its own cells") {
   SystemState state;
   state.unit = DisplayUnit::Kpa;
   state.batteryPresent = true;
   state.batteryPercent = 80;
-  state.bluetoothConnected = true;
   Overlay overlay(state);
   reset();
   View band = canvas.child(Rect(0, 0, PageWidth, OverlayRows));
   overlay.draw(band);
   CHECK(display.anyInk(0, 0, PageWidth / 4, OverlayRows));
-  // The rune is a bitmap at the top of the links' second column, an eighth of the strip in.
-  CHECK(display.anyInk(static_cast<int16_t>(PageWidth / 4 + PageWidth / 8), 0, 16, 9));
   CHECK(display.anyInk(static_cast<int16_t>(PageWidth * 3 / 4), 0, PageWidth / 4, OverlayRows));
 
   // The marks name the Adafruit face themselves, so they survive a design whose codes start at

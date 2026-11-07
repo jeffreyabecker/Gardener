@@ -20,19 +20,12 @@ constexpr uint8_t IdleGlyph = 0x09;    // WHITE CIRCLE
 constexpr uint8_t PullGlyph = 0x1E;    // BLACK UP-POINTING TRIANGLE
 constexpr uint8_t VentGlyph = 0x1F;    // BLACK DOWN-POINTING TRIANGLE
 
-// The Bluetooth rune, named the way a page names a bitmap: the width, the height, the format, then
-// one bit per pixel, most-significant bit first, two bytes to a row.
-constexpr const char* BluetoothRun = "100900010009400510014000800140051009400100";
-constexpr int16_t RuneWidth = 16;
-constexpr int16_t RuneHeight = 9;
-
 // Every glyph sits two rows down in its cell.
 constexpr int16_t GlyphTop = 2;
 
-// The share of the strip each part takes: the unit, the run state and the gauge a quarter each, and
-// the two links an eighth each of the quarter they share.
+// The share of the strip each part takes: a quarter each, so the four cells fill the rows they are
+// handed.
 constexpr float CellShare = 0.25f;
-constexpr float LinkShare = 0.125f;
 
 // The gauge as it lies across the strip: the face's 8x19 mark turned a quarter, so its nineteen rows
 // are nineteen columns here and its eight columns are eight rows, two rows down.
@@ -77,12 +70,6 @@ gfx::PaintNodeRef unitCell(DisplayUnit unit) {
 gfx::PaintNodeRef serialGlyph(bool connected) {
   if (!connected) return gfx::PaintNodeRef();
   return oneGlyph(SerialGlyph);
-}
-
-// The Bluetooth rune, at the top of its own column.
-gfx::PaintNodeRef bluetoothRune(bool connected) {
-  if (!connected) return gfx::PaintNodeRef();
-  return gfx::icon(gfx::Box(0, 0, RuneWidth, RuneHeight), BluetoothRun);
 }
 
 gfx::PaintNodeRef stateCell(RunState state, uint32_t nowMs) {
@@ -143,11 +130,10 @@ void Overlay::draw(gfx::Canvas& canvas) const {
   const int8_t percent = now.batteryPresent ? static_cast<int8_t>(now.batteryPercent) : -1;
 
   // The strip clears its own rows first: the page canvas stops where the overlay starts, so nothing
-  // else touches them and they keep whatever the last frame left. Five columns across the rows: the
-  // unit, the two links, the run state and the gauge.
+  // else touches them and they keep whatever the last frame left. Four columns across the rows: the
+  // unit, the link, the run state and the gauge.
   gfx::underlay(gfx::row(1.0f, gfx::column(CellShare, unitCell(now.unit)),
-                         gfx::column(LinkShare, serialGlyph(now.serialConnected)),
-                         gfx::column(LinkShare, bluetoothRune(now.bluetoothConnected)),
+                         gfx::column(CellShare, serialGlyph(now.serialConnected)),
                          gfx::column(CellShare, stateCell(now.runState, nowMs)),
                          gfx::column(CellShare, batteryCell(percent, now.batteryLow, nowMs))))
       ->draw(canvas);

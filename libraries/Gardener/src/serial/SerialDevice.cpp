@@ -50,7 +50,7 @@ void get(Stream& io, Machine& machine, const SerialParts& parts) {
   io.print(" unit=");
   io.print(displayUnitInfo(parts.settings.unit()).name);
 
-  // One byte, the same mask the BLE `caps` characteristic reports.
+  // One byte: the mask of the parts this build has.
   io.print(" caps=");
   io.print(machine.capabilities());
   io.print('\n');

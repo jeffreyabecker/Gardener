@@ -52,7 +52,7 @@ A `--task release` that packs [firmware/data](../firmware/data) into the build's
 ## Verify the device on hardware
 
 The machine/panel split has only ever been compiled. Everything the specs now promise still needs a
-device: the serial and Bluetooth surfaces with writes accepted from any link, `device get` reporting
+device: the serial surface with writes accepted from any link, `device get` reporting
 the gauge and the unit beside the machine's fields, the panel's page and routine live whatever else
 is connected, and Back+OK rebooting.
 
@@ -73,16 +73,8 @@ yet — the alpha PCB leaves the divider deferred until a Super Mini variant wit
 ## A local event log
 
 The last N commands, stops, transitions and faults kept in NVS and readable over the serial
-line and the Bluetooth diagnostics, so an incident can be understood after the fact. Blocked by:
+line, so an incident can be understood after the fact. Blocked by:
 nothing decided about where it lives, how it is bounded, or what reads it back.
-
-## Pairing
-
-Just Works is proximity rather than authorization: anyone in radio range of an advertising machine
-can pair and command pressure, and bonds are uncapped. Until a pairing window or passkey replaces
-it, the exposure should be bounded: cap the bonds at four and add a local action that forgets every
-bond. Blocked by: no spare input has been chosen for a window — a jumper read at power-up is the
-only candidate so far.
 
 ## An overlay that adapts to the panel
 
@@ -92,10 +84,10 @@ sized to its own contents.
 
 ## The overlay as cells the panel hands out
 
-`page::Overlay` reads the unit, the links, the run state and the gauge itself and builds the
+`page::Overlay` reads the unit, the link, the run state and the gauge itself and builds the
 overlay's four paints in a fixed order, so what the overlay shows is decided in one paint and a
-device with no gauge or no radio still contributes a cell that draws only the absence. Each cell
-could be an object the panel context returns — the unit, the links, the run state, the gauge —
+device with no gauge still contributes a cell that draws only the absence. Each cell
+could be an object the panel context returns — the unit, the link, the run state, the gauge —
 drawn in the order it is given them, so a fitted part adds its cell and a missing one is not there
 at all. Blocked by: the strip is one paint rather than a set of parts, so the container, the order
 and which side re-reads the machine each frame are all undecided.

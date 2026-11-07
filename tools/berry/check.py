@@ -44,7 +44,7 @@ EXE = BUILD / ("berrycheck.exe" if os.name == "nt" else "berrycheck")
 # is the part of it a panel build compiles on a host — the sources that name no board header, the
 # interpreter's host side under routines/ among them — which is the selection tools/unit/check.py
 # makes in the other direction.
-PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "<NimBLE", "freertos/",
+PLATFORM_INCLUDES = ("<FS.h>", "<SD.h>", "<Wire.h>", "<SPI.h>", "freertos/",
                      "<TFT_eSPI", "<WiFi", "<Preferences.h>")
 
 

@@ -117,9 +117,8 @@ void HarnessSession::publish() {
   state_.batteryPercent = state_.batteryPresent ? battery_.percent() : 0;
   state_.batteryLow = battery_.low();
 
-  // The host models a device with both links up, so the overlay shows both icons.
+  // The host models a device with its link up, so the overlay shows the icon.
   state_.serialConnected = true;
-  state_.bluetoothConnected = true;
 }
 
 void HarnessSession::beat(int count) {

@@ -529,7 +529,7 @@ TEST_CASE("the overlay draws the pack the parts beat publishes") {
   CHECK(fittedFrame != beatFrame(rig));
 }
 
-TEST_CASE("the overlay draws the run state and both links") {
+TEST_CASE("the overlay draws the run state and the link") {
   PageRig rig;
   REQUIRE(rig.ok);
   RoutinesTick page{rig.routines};
@@ -541,6 +541,5 @@ TEST_CASE("the overlay draws the run state and both links") {
 
   rig.state.runState = RunState::Idle;
   rig.state.serialConnected = true;
-  rig.state.bluetoothConnected = true;
   CHECK(idleFrame != beatFrame(rig));
 }

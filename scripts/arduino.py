@@ -5,7 +5,6 @@
 --task upload   compile and upload, auto-detecting the serial port
 --task data     pack the device's data image and write it to the LittleFS partition
 --task monitor  open the serial monitor at 115200 baud
---task libs     install the third party libraries the firmware needs, and stage them for the build
 --task archive  compile with the prebuilt archives set aside, which packs them again
 --task clean    remove the build output
 
@@ -43,8 +42,8 @@ SKETCH = ROOT / "firmware" / "gardener"
 # The image itself: the files the device holds on LittleFS, beside the sketch rather than inside it,
 # because it is the device's contents and not a part of what compiles.
 DATA_DIR = ROOT / "firmware" / "data"
-# The build output. arduino-cli's build path is a subdirectory of it, one per configuration, and the
-# staged third-party libraries another; the data image task keeps littlefs.bin beside them.
+# The build output. arduino-cli's build path is a subdirectory of it, one per configuration; the data
+# image task keeps littlefs.bin beside them.
 BUILD_DIR = SKETCH / "build"
 
 # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial to it,
@@ -56,34 +55,12 @@ BUILD_DIR = SKETCH / "build"
 DEFAULT_FQBN = ("esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,"
                 "FlashSize=4M,PartitionScheme=default")
 
-# The libraries the firmware compiles but never changes: NimBLE is 189 of the build's translation
-# units and Berry 41, and they are most of what a full build spends its minutes on. Each is packed
-# into an archive once and linked from there afterwards; `precompiled=full` in a
-# `library.properties` is what makes arduino-cli look for that archive in `src/{build.mcu}/` and
-# skip the sources when it finds one.
+# The library the firmware compiles but never changes: Berry is 41 of the build's translation units,
+# and it is most of what a full build spends its minutes on. It is packed into an archive once and
+# linked from there afterwards; `precompiled=full` in a `library.properties` is what makes
+# arduino-cli look for that archive in `src/{build.mcu}/` and skip the sources when it finds one.
 #
-# Berry is vendored, so its properties and its archive folder are the repository's. NimBLE is
-# installed into the sketchbook by `--task libs` and staged from there, because the archive has to
-# sit inside a `library.properties` the build answers to rather than inside the user's library.
-NIMBLE = "NimBLE-Arduino"
-NIMBLE_VERSION = "2.5.1"
-STAGED_LIBS = BUILD_DIR / "third_party"
-
-THIRD_PARTY_LIBS = [
-    # The BLE transport's stack. The pin is what makes the NimBLE compile options below meaningful.
-    f"{NIMBLE}@{NIMBLE_VERSION}",
-]
-
-# NimBLE builds only what the contract can use: a peripheral with one connection, no scanning and no
-# client role. These reach every compiled file, including the library's own sources, which is where
-# nimconfig.h would read them if the library name were the variable.
-BLE_DEFINES = " ".join([
-    "-DCONFIG_BT_NIMBLE_ROLE_CENTRAL=0",
-    "-DCONFIG_BT_NIMBLE_ROLE_OBSERVER=0",
-    "-DCONFIG_BT_NIMBLE_ROLE_BROADCASTER=1",
-    "-DCONFIG_BT_NIMBLE_ROLE_PERIPHERAL=1",
-    "-DCONFIG_BT_NIMBLE_MAX_CONNECTIONS=1",
-])
+# Berry is vendored, so its properties and its archive folder are the repository's.
 
 # Where `--define` writes the rig's numbers. It sits in the sketch because that folder is on the
 # include path of every translation unit, and it is generated rather than committed because it is
@@ -207,9 +184,9 @@ def write_rig_header():
     """Write `--define`'s numbers where core/Knob.h reads them, instead of into the build options.
 
     A rig number passed as `build.defines` is part of arduino-cli's options, so every retune made
-    arduino-cli throw the whole build path away — NimBLE's 189 objects and Berry's 41 among them,
-    for a number neither library can see. The sketch folder is already on the include path of every
-    translation unit, so a header there reaches the knobs' includers and nothing else.
+    arduino-cli throw the whole build path away — Berry's 41 objects among them, for a number the
+    library cannot see. The sketch folder is already on the include path of every translation unit,
+    so a header there reaches the knobs' includers and nothing else.
 
     The file is only written when its contents change: rewriting it every run would recompile those
     includers every run.
@@ -226,10 +203,10 @@ def _define(symbol):
 
 
 def archive_flags():
-    """What a compile of the archived libraries is made with, as far as the wrapper can change it:
-    the board, the defines every unit sees, and the core. A rig number is deliberately not in here —
-    that is the point of the header, and why retuning a rig keeps the archives."""
-    return "\n".join([FQBN, BLE_DEFINES, configuration()["core"]])
+    """What a compile of the archived library is made with, as far as the wrapper can change it: the
+    board and the core. A rig number is deliberately not in here — that is the point of the header,
+    and why retuning a rig keeps the archive."""
+    return "\n".join([FQBN, configuration()["core"]])
 
 
 def compile_dir():
@@ -246,7 +223,7 @@ def compile_dir():
 def archived_libraries():
     """The libraries that get an archive, as (name, folder): the archive is `lib{name}.a` inside the
     folder's `src/{mcu}/`."""
-    libraries = [("berry", PROJECT_LIBS / "berry"), (NIMBLE, STAGED_LIBS / NIMBLE)]
+    libraries = [("berry", PROJECT_LIBS / "berry")]
     return [(name, library) for name, library in libraries if library.is_dir()]
 
 
@@ -274,23 +251,12 @@ def pack_archives():
         print(f"packed the {name} archive")
 
 
-def library_folders():
-    """The project's libraries first, then the staged copies. arduino-cli takes `--libraries` more
-    than once, and a header found in an earlier folder's library is the one it resolves."""
-    folders = [PROJECT_LIBS]
-    if STAGED_LIBS.is_dir():
-        folders.append(STAGED_LIBS)
-    return folders
-
-
 def compile_sketch(*extra):
     write_knob_defaults()
     write_rig_header()
     drop_stale_archives()
-    arguments = ["compile", "--fqbn", FQBN, "--build-property", f"build.defines={BLE_DEFINES}",
-                 "--build-path", str(compile_dir())]
-    for folder in library_folders():
-        arguments.extend(["--libraries", str(folder)])
+    arguments = ["compile", "--fqbn", FQBN, "--libraries", str(PROJECT_LIBS), "--build-path",
+                 str(compile_dir())]
     arguments.extend(extra)
     arguments.append(str(SKETCH))
     # arduino-cli prints nothing while it works, so --verbose is what makes a long build show which
@@ -301,56 +267,16 @@ def compile_sketch(*extra):
     pack_archives()
 
 
-def user_libraries():
-    """Where `arduino-cli lib install` puts a library: the sketchbook's `libraries` folder."""
-    completed = subprocess.run(["arduino-cli", "config", "get", "directories.user"],
-                               capture_output=True, text=True)
-    if completed.returncode != 0 or not completed.stdout.strip():
-        sys.exit("arduino-cli does not say where the sketchbook is; check its configuration")
-    return Path(completed.stdout.strip()) / "libraries"
-
-
-def stage(name):
-    """Copy the installed library where the build can own it.
-
-    The archive has to sit inside a `library.properties` that declares `precompiled=full`, and the
-    installed copy is the user's to keep. `src` and the properties are all arduino-cli reads, so the
-    examples and the docs stay behind; the copy is made again from scratch, so a version bump cannot
-    leave the old one's sources or archive in place.
-    """
-    installed = user_libraries() / name
-    if not (installed / "library.properties").is_file():
-        sys.exit(f"{name} is not installed in {installed}; --task libs installs it first")
-    staged = STAGED_LIBS / name
-    shutil.rmtree(staged, ignore_errors=True)
-    staged.mkdir(parents=True)
-    shutil.copytree(installed / "src", staged / "src")
-    properties = installed.joinpath("library.properties").read_text(encoding="utf-8")
-    (staged / "library.properties").write_text(properties.rstrip("\n") + "\nprecompiled=full\n",
-                                               encoding="utf-8")
-    print(f"staged {name} in {staged}")
-
-
-def install_libs():
-    for library in THIRD_PARTY_LIBS:
-        print(f"installing {library}")
-        arduino_cli("lib", "install", library)
-    stage(NIMBLE)
-
-
 def clean():
-    """Remove the build output. The staged libraries stay: they are a copy of an installed library
-    rather than output, and the archive beside one is a rebuild only the sources can pay for."""
+    """Remove the build output: the object files and the data image beside them."""
     if not BUILD_DIR.is_dir():
         return
     for entry in BUILD_DIR.iterdir():
-        if entry == STAGED_LIBS:
-            continue
         if entry.is_dir():
             shutil.rmtree(entry)
         else:
             entry.unlink()
-    print(f"{SKETCH.name} build output removed, the staged libraries kept")
+    print(f"{SKETCH.name} build output removed")
 
 
 def archive_task():
@@ -427,7 +353,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
     parser.add_argument("--task",
-                        choices=["build", "upload", "data", "monitor", "libs", "archive", "clean"],
+                        choices=["build", "upload", "data", "monitor", "archive", "clean"],
                         default="build", help="what to do (default: build)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
@@ -442,9 +368,7 @@ def main():
     VERBOSE = args.verbose
     DEFINES = args.define
 
-    if args.task == "libs":
-        install_libs()
-    elif args.task == "clean":
+    if args.task == "clean":
         clean()
     elif args.task == "build":
         build()

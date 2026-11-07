@@ -22,7 +22,7 @@ from pathlib import Path
 
 MANIFEST = "archive.json"
 
-# What arduino-cli will take from the command line as one `ar` invocation. The 189 NimBLE objects do
+# What arduino-cli will take from the command line as one `ar` invocation. The Berry objects do
 # not fit in a Windows command line, so the members go in batches well inside it.
 BATCH_CHARS = 6000
 

@@ -11,9 +11,6 @@
 #include "RtosCommandQueue.h"
 #include "RtosGestureQueue.h"
 #include "RtosInternTable.h"
-// The Bluetooth transport is out of the build for now: ble/BleLink.h is commented out, nothing
-// builds a link, and the interface task polls the serial one alone.
-// #include "ble/BleLink.h"
 #include "storage/FileLibrary.h"
 
 #include "PanelTasks.h"

@@ -36,9 +36,9 @@ GARDENER = ROOT / "libraries" / "Gardener"
 BUILD = TOOL / "build"
 EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 
-# A source naming any of these needs the interpreter, a filesystem, a radio or an RTOS, and so is not
-# part of what the suite compiles.
-PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "<NimBLE", "freertos/", "<SD.h>")
+# A source naming any of these needs the interpreter, a filesystem or an RTOS, and so is not part of
+# what the suite compiles.
+PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "freertos/", "<SD.h>")
 
 # The interpreter's native modules, which reach the VM through the headers beside them rather than
 # through a `<berry.h>` of their own: the folder is the boundary itself, so none of it is the suite's.

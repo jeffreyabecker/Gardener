@@ -112,7 +112,7 @@ Three things bite when the image loads:
 
 ## What it cannot tell you
 
-The pump, the sensor and Bluetooth are models or counters and the clock is virtual, so timing and
+The pump and the sensor are models or counters and the clock is virtual, so timing and
 the actual vacuum stay the device's. `print` writes nowhere, here as on the device: `vacuum.log()`
 lands in the output as `[I]`. LittleFS is a map, so a write that would fill a filesystem succeeds.
 

@@ -60,11 +60,11 @@ system is its only caller. Don't fold a driver into the class that drives it: th
 and the control law are the two things here least likely to change together.
 
 Those interfaces are not waiting for a second implementation. They are there because a vendor
-header is allowed only where a part is named — `<NimBLEDevice.h>` in `libraries/Runtime/src/ble/`'s
-`BleLink.h`, where the radio is the part — and because the vacuum system reads the same whether the
-part behind it is a sensor or nothing at all. An interface with one implementation earns its place
-exactly when it is a foreign boundary like that; anywhere else it is a second implementation that
-does not exist yet.
+header is allowed only where a part is named — `<Wire.h>` in
+`libraries/Runtime/src/hal/impl/Sh1106Device.h`, where the glass is the part — and because the
+vacuum system reads the same whether the part behind it is a sensor or nothing at all. An interface
+with one implementation earns its place exactly when it is a foreign boundary like that; anywhere
+else it is a second implementation that does not exist yet.
 
 **Reads go through the owner.** New state is a field on the module that owns it, exposed by an
 accessor; the composition builds the parts and the objects it builds expose what they own, and the
@@ -75,9 +75,9 @@ accessor, so one object still serves both halves of the graph.
 **One exception, and it is the panel's view of the device.** `core/SystemState.h` is one object the
 composition owns: a reference is injected into every task that owns a fact, and each writes its own
 slice where the fact changes — the control tick the run and the chamber, the parts tick the pack,
-the interface loop the two links, the device's document the unit and the stored target. A reader
-copies the object and reads the copy, so one draw shows one instant, and accepts that the copy is up
-to the writer's period old: 50 ms for the machine, 10 ms for the pack, 5 ms for the links. A slice
+the interface loop the link, the device's document the unit and the stored target. A reader copies
+the object and reads the copy, so one draw shows one instant, and accepts that the copy is up
+to the writer's period old: 50 ms for the machine, 10 ms for the pack, 5 ms for the link. A slice
 whose writer stops running stops moving. That staleness is the price of not having a fold with five
 parameters and no owner, and it is paid knowingly — which means the state is never read as though it
 were the instant's.
