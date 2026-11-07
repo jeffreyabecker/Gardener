@@ -163,7 +163,7 @@ TEST_CASE("a repeated button is dropped") {
 
 TEST_CASE("a part naming no button is dropped") {
   Bench bench;
-  bench.send("gesture select:single\n");
+  bench.send("gesture menu:single\n");
   CHECK_EQ(bench.reply(), std::string(""));
   CHECK(bench.presses.take() == nullptr);
 }
