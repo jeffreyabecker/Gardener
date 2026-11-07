@@ -11,3 +11,20 @@
 # reachable by its path. What that costs is the firmware's whole build: this sketch compiles
 # everything the device compiles, so it is the slow way to check one part.
 default_fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+
+# The same board again as a profile, which is what carries the library list the command line would
+# otherwise have to name: each `dir:` is one of the firmware's libraries, taken from the repository
+# itself. With this as the default profile, `arduino-cli compile firmware/test_pressure` needs
+# neither `--fqbn` nor `--libraries libraries`. The platform is pinned to the core the bench has
+# installed, so it is the line to bump when the core moves.
+profiles:
+  bench:
+    fqbn: esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,FlashSize=4M,PartitionScheme=default
+    platforms:
+      - platform: esp32:esp32 (3.0.3)
+    libraries:
+      - dir: ../../libraries/Gardener
+      - dir: ../../libraries/Gfx
+      - dir: ../../libraries/Runtime
+      - dir: ../../libraries/berry
+default_profile: bench

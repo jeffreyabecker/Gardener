@@ -22,8 +22,9 @@ GARDENER_KNOB_VALID(uint32_t, DoublePressMs, GARDENER_BUTTON_DOUBLE_PRESS_MS, 35
 
 }  // namespace
 
-Buttons::Buttons(uint8_t latch, uint8_t clock, uint8_t data)
-    : latchPin_(latch), clockPin_(clock), dataPin_(data) {
+ShiftRegisterButtons::ShiftRegisterButtons(uint8_t latch, uint8_t clock, uint8_t data,
+                                           const uint8_t (&buttonMask)[ButtonCount])
+    : latchPin_(latch), clockPin_(clock), dataPin_(data), buttonMask_(buttonMask) {
   // Latch high and clock low is the shift state: a low pulse on the latch loads the parallel
   // inputs, and every clock after it moves the next one out on Q7.
   pinMode(latchPin_, OUTPUT);
@@ -38,12 +39,12 @@ Buttons::Buttons(uint8_t latch, uint8_t clock, uint8_t data)
   pending_ = stable_;
 }
 
-uint32_t Buttons::readKeys() {
+uint32_t ShiftRegisterButtons::readKeys() {
   digitalWrite(latchPin_, LOW);
   digitalWrite(latchPin_, HIGH);
 
-  // The part presents H first and shifts towards A, so the bit read before each clock is the next
-  // key in panel order. The two spare inputs are never read.
+  // One bit per clock, and the part presents its last input first, so bit 0 is the input read
+  // before the first clock. Which key sits on each bit is the mask's to say.
   uint32_t mask = 0;
   for (uint8_t i = 0; i < ButtonCount; i++) {
     if (digitalRead(dataPin_) == LOW) mask |= 1u << i;
@@ -53,7 +54,7 @@ uint32_t Buttons::readKeys() {
   return mask;
 }
 
-uint32_t Buttons::settle() {
+uint32_t ShiftRegisterButtons::settle() {
   uint32_t now = millis();
 
   const uint32_t raw = readKeys();
@@ -67,7 +68,7 @@ uint32_t Buttons::settle() {
     const uint32_t down = pending_ & ~stable_;
     const uint32_t up = stable_ & ~pending_;
     for (uint8_t i = 0; i < ButtonCount; i++) {
-      const uint32_t bit = 1u << i;
+      const uint32_t bit = buttonMask_[i];
       if (down & bit) {
         tracked_ |= bit;
         // The raw edge, not the moment the debounce accepted it, so a hold is measured from when
@@ -103,7 +104,7 @@ uint32_t Buttons::settle() {
   }
 
   for (uint8_t i = 0; i < ButtonCount; i++) {
-    const uint32_t bit = 1u << i;
+    const uint32_t bit = buttonMask_[i];
     // A single is ready once the double window closes without a second press.
     if ((awaitingSecond_ & bit) && now - firstReleaseMs_[i] >= DoublePressMs) {
       awaitingSecond_ &= ~bit;
@@ -117,9 +118,9 @@ uint32_t Buttons::settle() {
   return stable_;
 }
 
-bool Buttons::pressed(Button button) { return (settle() & bitOf(button)) != 0; }
+bool ShiftRegisterButtons::pressed(Button button) { return (settle() & bitOf(button)) != 0; }
 
-Press Buttons::consumePress(Button button) {
+Press ShiftRegisterButtons::consumePress(Button button) {
   settle();
   // The first single of a possible double is not ready until the pair is ruled out.
   if ((awaitingSecond_ | second_) & bitOf(button)) return Press::None;
@@ -131,7 +132,7 @@ Press Buttons::consumePress(Button button) {
 
 // The chord's keys are one gesture, so their presses are dropped rather than delivered: the
 // classified press and the double window it may still be waiting in.
-void Buttons::dropPress(Button button) {
+void ShiftRegisterButtons::dropPress(Button button) {
   const uint8_t index = (uint8_t)button;
   const uint32_t bit = bitOf(button);
   pendingPress_[index] = Press::None;
@@ -139,7 +140,7 @@ void Buttons::dropPress(Button button) {
   second_ &= ~bit;
 }
 
-uint32_t Buttons::heldMs(Button button) {
+uint32_t ShiftRegisterButtons::heldMs(Button button) {
   settle();
   if (!(tracked_ & bitOf(button))) return 0;
   return millis() - pressStartMs_[(uint8_t)button];

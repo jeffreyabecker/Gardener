@@ -26,6 +26,8 @@ constexpr gardener::PanelPins Board{
     .keyLatch = 10,
     .keyClock = 11,
     .keyData = 1,
+    // The panel's keys in the order the register presents them, Up first.
+    .keyMask = {1, 2, 4, 8, 16, 32, 64, 128},
 };
 
 // True while a host has the port open. With CDCOnBoot=cdc this is real USB presence; on a plain

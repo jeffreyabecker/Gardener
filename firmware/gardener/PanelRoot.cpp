@@ -31,7 +31,7 @@ PanelRoot::PanelRoot(const PanelPins& pins)
       parts_(runtime::buildMachineParts(pins.machine)),
       machine_(logger_, parts_.pump, parts_.sensor, parts_.valve),
       battery_(pins.batteryAdc, pins.batteryDivider),
-      keys_(pins.keyLatch, pins.keyClock, pins.keyData), buzzerPart_(pins.buzzerPwm),
+      keys_(pins.keyLatch, pins.keyClock, pins.keyData, pins.keyMask), buzzerPart_(pins.buzzerPwm),
       buzzer_(buzzerPart_), display_(Wire1, PanelAddress, PanelWidth, PanelHeight),
       settings_(&files_, state_), jingles_(&files_, logger_),
       systemSettings_(presses_, ux_, settings_, jingles_, buzzer_), registry_(files_, logger_),

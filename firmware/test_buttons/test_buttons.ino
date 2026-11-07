@@ -8,11 +8,13 @@
 
 namespace {
 
-// The register's three lines: /PL, CP and Q7. These are the panel's wiring in gardener.ino, so the
-// same harness drives both sketches.
-constexpr uint8_t LatchPin = 10;
-constexpr uint8_t ClockPin = 11;
-constexpr uint8_t DataPin = 1;
+// The register's lines by its datasheet's names. Three reach the ESP32 - /load on 10, clk on 11 and
+// qh on 1 - and are the panel's wiring in gardener.ino, so the same harness drives both sketches.
+// ser and clk_inh take no pin: both are tied to ground, ser because the cascade input shifts
+// nothing into a lone register, clk_inh because low is the clock running.
+constexpr uint8_t LoadPin = 10;
+constexpr uint8_t ClkPin = 11;
+constexpr uint8_t QhPin = 1;
 
 constexpr uint8_t ButtonCount = 8;
 
@@ -30,17 +32,17 @@ uint32_t pendingSinceMs = 0;
 uint32_t lastReadMs = 0;
 uint32_t lastFullMs = 0;
 
-// A low on the data pin is a closed switch, so a set bit here is a button held down. The register
-// presents H first and shifts towards A, so bit 0 is input H.
+// A low on qh is a closed switch, so a set bit here is a button held down. The register presents D7
+// first and shifts towards D0, so bit 0 is input D7.
 uint8_t readButtons() {
-  digitalWrite(LatchPin, LOW);
-  digitalWrite(LatchPin, HIGH);
+  digitalWrite(LoadPin, LOW);
+  digitalWrite(LoadPin, HIGH);
 
   uint8_t mask = 0;
   for (uint8_t i = 0; i < ButtonCount; i++) {
-    if (digitalRead(DataPin) == LOW) mask |= (uint8_t)(1u << i);
-    digitalWrite(ClockPin, HIGH);
-    digitalWrite(ClockPin, LOW);
+    if (digitalRead(QhPin) == LOW) mask |= (uint8_t)(1u << i);
+    digitalWrite(ClkPin, HIGH);
+    digitalWrite(ClkPin, LOW);
   }
   return mask;
 }
@@ -95,14 +97,14 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // Latch high and clock low is the shift state: a low pulse on the latch loads the switches, and
-  // each clock after it moves the next one out on Q7.
-  pinMode(LatchPin, OUTPUT);
-  pinMode(ClockPin, OUTPUT);
-  digitalWrite(LatchPin, HIGH);
-  digitalWrite(ClockPin, LOW);
-  // The register drives Q7, so this is a plain input; the switches pull up at the register.
-  pinMode(DataPin, INPUT);
+  // /load high and clk low is the shift state: a low pulse on /load loads the switches, and each
+  // clock after it moves the next one out on qh.
+  pinMode(LoadPin, OUTPUT);
+  pinMode(ClkPin, OUTPUT);
+  digitalWrite(LoadPin, HIGH);
+  digitalWrite(ClkPin, LOW);
+  // The register drives qh, so this is a plain input; the switches pull up at the register.
+  pinMode(QhPin, INPUT);
 
   // A button held at boot is the starting level, not a press.
   stable = readButtons();

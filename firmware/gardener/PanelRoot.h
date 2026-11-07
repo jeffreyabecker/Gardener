@@ -23,8 +23,9 @@
 namespace gardener {
 
 // The board this build is wired to. The machine's three pins come first, then the display bus, the
-// piezo, the gauge and the three lines the key register needs: a board variant is this block and the
-// sketch's constant, and nothing in the libraries names a pin.
+// piezo, the gauge and the three lines the key register needs, with the mask saying which shifted
+// bit carries which key: a board variant is this block and the sketch's constant, and nothing in the
+// libraries names a pin.
 struct PanelPins {
   MachinePins machine;
   uint8_t i2cSda;
@@ -36,6 +37,8 @@ struct PanelPins {
   uint8_t keyLatch;
   uint8_t keyClock;
   uint8_t keyData;
+  // Indexed by Button; the bit is the shift position, 0 being the input read before the first clock.
+  uint8_t keyMask[ButtonCount];
 };
 
 // The device's composition root: every part the device is made of, owned here and handed out by
@@ -84,7 +87,7 @@ class PanelRoot {
   Machine machine_;
   // The panel's own parts.
   runtime::AdcBattery battery_;
-  runtime::Buttons keys_;
+  runtime::ShiftRegisterButtons keys_;
   runtime::PwmBuzzer buzzerPart_;
   BuzzerPlayer buzzer_;
   runtime::Sh1106Device display_;
