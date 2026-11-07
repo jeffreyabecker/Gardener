@@ -13,6 +13,7 @@ class Library;
 class Logger;
 class Machine;
 class DeviceSettings;
+class GestureQueue;
 
 class BuzzerPlayer;
 
@@ -30,8 +31,8 @@ GARDENER_KNOB_VALID(uint32_t, ProtocolVersion, GARDENER_SERIAL_PROTOCOL_VERSION,
                     GARDENER_SERIAL_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
 
 // Everything the wire answers from: the machine, the board's own facts, and the panel's parts — the
-// gauge, the document, the piezo and the store the files ride on. The sketch builds it; the link
-// names no part of its own.
+// gauge, the document, the piezo, the store the files ride on and the queue a gesture goes to. The
+// sketch builds it; the link names no part of its own.
 struct SerialParts {
   Machine& machine;
   const BoardFacts& board;
@@ -39,12 +40,13 @@ struct SerialParts {
   DeviceSettings& settings;
   BuzzerPlayer& buzzer;
   Library& files;
+  GestureQueue& presses;
 };
 
 // The serial interface to the controller. It reads the first token of each line and hands the rest of
-// the line, body included, to that token's grammar: `vacuum`, `device`, `buzzer` and `fs`, one file
-// each beside this one. A token nothing serves is answered as an unknown domain, and the link owns
-// only its own errors and diagnostics.
+// the line, body included, to that token's grammar: `vacuum`, `device`, `buzzer`, `fs` and
+// `gesture`, one file each beside this one. A token nothing serves is answered as an unknown domain,
+// and the link owns only its own errors and diagnostics.
 class SerialLink {
  public:
   // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
@@ -85,7 +87,7 @@ class SerialLink {
 
   // The grammars this link serves, resolved from a line's first token by the one list in
   // `grammarFor`.
-  enum class Grammar : uint8_t { None, Vacuum, Device, Buzzer, Files };
+  enum class Grammar : uint8_t { None, Vacuum, Device, Buzzer, Files, Gesture };
 
   // The grammar `token` names, which must already be lowercase.
   Grammar grammarFor(const String& token) const;
@@ -97,6 +99,7 @@ class SerialLink {
   void executeDevice(Stream& io);
   void executeBuzzer(Stream& io);
   void executeFiles(Stream& io);
+  void executeGesture(Stream& io);
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.
   void linkError(const char* code, const String& detail);
 

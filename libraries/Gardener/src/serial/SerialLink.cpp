@@ -107,6 +107,7 @@ SerialLink::Grammar SerialLink::grammarFor(const String& token) const {
   if (token == "device") return Grammar::Device;
   if (token == "buzzer") return Grammar::Buzzer;
   if (token == "fs") return Grammar::Files;
+  if (token == "gesture") return Grammar::Gesture;
   return Grammar::None;
 }
 
@@ -126,6 +127,9 @@ bool SerialLink::dispatch(const String& token) {
       return true;
     case Grammar::Files:
       executeFiles(port_);
+      return true;
+    case Grammar::Gesture:
+      executeGesture(port_);
       return true;
     case Grammar::None:
       break;

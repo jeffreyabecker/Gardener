@@ -15,6 +15,7 @@
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
+#include "panel/GestureQueue.h"
 #include "panel/parts/BuzzerPlayer.h"
 #include "serial/BoardFacts.h"
 #include "serial/SerialLink.h"
@@ -26,6 +27,7 @@ using gardener::BoardFacts;
 using gardener::BuzzerPlayer;
 using gardener::CommandQueue;
 using gardener::DeviceSettings;
+using gardener::GestureQueue;
 using gardener::Machine;
 using gardener::MachineCommand;
 using gardener::SerialLink;
@@ -55,7 +57,7 @@ struct Bench {
       : valve(energiseWhenOpen, nullptr), machine(logger, &pump, &sensor, &valve),
         settings(&library, state), player(buzzerPart),
         link(io, nullptr, logger, queue,
-             gardener::SerialParts{machine, board, battery, settings, player, library}) {
+             gardener::SerialParts{machine, board, battery, settings, player, library, presses}) {
     machine.boot();
     settings.begin();
     link.begin();
@@ -79,6 +81,7 @@ struct Bench {
   FakeBattery battery;
   SystemState state;
   MemoryLibrary library;
+  GestureQueue presses;
   DeviceSettings settings;
   FakeBuzzer buzzerPart;
   BuzzerPlayer player;

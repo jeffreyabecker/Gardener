@@ -54,7 +54,8 @@ void setup() {
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, root.logger(), root.commands(),
                                gardener::SerialParts{root.machine(), BoardInfo, root.battery(),
-                                                     root.settings(), root.buzzer(), root.files()});
+                                                     root.settings(), root.buzzer(), root.files(),
+                                                     root.routines().presses()});
   // gardener::runtime::BleLink* ble = new gardener::runtime::BleLink(root.commands(),
   //                                                                  root.machine(), root.settings(),
   //                                                                  root.battery());
