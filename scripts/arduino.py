@@ -224,7 +224,8 @@ def archived_libraries():
     """The libraries that get an archive, as (name, folder): the archive is `lib{name}.a` inside the
     folder's `src/{mcu}/`."""
     libraries = [("berry", PROJECT_LIBS / "berry")]
-    return [(name, library) for name, library in libraries if library.is_dir()]
+    return [(name, library) for name, library in libraries
+            if (library / "library.properties").is_file()]
 
 
 def drop_stale_archives():
