@@ -34,13 +34,6 @@ constexpr gardener::PanelPins Board{
 // UART it is always true, so a lost link is never reported.
 bool serialAttached() { return (bool)Serial; }
 
-// The board's own facts, which the `device` reply reports. The heap is read when a controller asks,
-// so a host sees the firmware's figure rather than the one it booted with.
-const gardener::BoardFacts BoardInfo{
-    [] { return ESP.getChipModel(); },
-    [] { return (uint32_t)ESP.getFreeHeap(); },
-};
-
 }  // namespace
 
 void setup() {
@@ -50,13 +43,11 @@ void setup() {
   // The whole device, owned in one place; its constructor builds the graph and begin() brings it up.
   static gardener::PanelRoot root(Board);
 
-  // The wire surface is this build's to compose: the serial link serves the machine's and the panel's
-  // commands and the store, and it is the only way a controller reaches the device.
+  // The wire surface is this build's to compose: the serial link serves the machine's commands, and
+  // it is the only way a controller reaches the device.
   gardener::SerialLink* serial =
       new gardener::SerialLink(Serial, serialAttached, root.logger(), root.commands(),
-                               gardener::SerialParts{root.machine(), BoardInfo, root.battery(),
-                                                     root.settings(), root.buzzer(), root.files(),
-                                                     root.routines().presses()});
+                               gardener::SerialParts{root.machine()});
 
   serial->begin();
 

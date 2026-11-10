@@ -26,11 +26,13 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 - [x] **Rename `vacuum stop` to `vacuum vent`, and keep `vacuum reset`.** `vent` is the one
       release path and `reset` clears the fault latch, which nothing else does. The suite's `stop`
       case becomes `vent`, and `reset` keeps its case.
-- [ ] **Delete the four grammars and shrink `SerialParts`.** `SerialDevice`, `SerialBuzzer`,
+- [x] **Delete the four grammars and shrink `SerialParts`.** `SerialDevice`, `SerialBuzzer`,
       `SerialFiles`, `SerialGesture` and `BoardFacts` are deleted, `SerialParts` holds the machine
       and nothing else, and `Gardener.h` and the sketch stop naming the board's facts. The
       `device`, `buzzer`, `fs` and `gesture` tokens answer the link's unknown-domain error, and
-      `device_commands.cpp`, `fs_commands.cpp` and `gesture_commands.cpp` go.
+      `device_commands.cpp`, `fs_commands.cpp` and `gesture_commands.cpp` go — with the harnesses
+      that built links to those grammars, `tools/berry`, `tools/walkthrough` and
+      `tools/host/session`, which cannot compile once the parts they drive are gone.
 
 ## Epic 2 — the composition and the panel
 
@@ -52,16 +54,17 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 3 — the tree that isn't the firmware
 
-- [ ] **Delete the VM and its harness.** `libraries/berry` and `tools/berry` go; nothing includes
-      `<berry.h>` and nothing runs the image, because both were deleted with the routines.
+- [ ] **Delete the VM and its skill.** `libraries/berry` goes, and with it the `berry` skill under
+      `.github/skills/berry/` and the line in `.github/copilot-instructions.md` that points at its
+      host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
+      with the panel.
 - [ ] **Delete the display library and the cases that drew with it.** `libraries/Gfx`,
-      `tools/host/capture` and `tools/fonts` go, the `gfx_*`, `capture`, `notes` and `surface`
-      cases go, and `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx source, no
-      capture include and no Gfx case.
-- [ ] **Delete the data image, its assets and the harnesses.** `firmware/data`,
-      `firmware/gardener/assets`, `tools/walkthrough`, `tools/panel`, `tools/host/session`,
-      `firmware/test_buttons` and `firmware/test_pressure` go, and nothing reads a `.be`, a `.ini`
-      or a `.bmp`.
+      `tools/host/capture`, `tools/panel` and `tools/fonts` go, the `gfx_*`, `capture`, `notes` and
+      `surface` cases go, and `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx
+      source, no capture include and no Gfx case.
+- [ ] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
+      `firmware/gardener/assets`, `firmware/test_buttons` and `firmware/test_pressure` go, and
+      nothing reads a `.be`, a `.ini` or a `.bmp`.
 
 ## Epic 4 — the build
 

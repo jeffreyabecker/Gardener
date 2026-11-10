@@ -11,40 +11,22 @@
 
 #include "Clock.h"
 #include "TextStream.h"
-#include "core/SystemState.h"
-#include "fakes/MemoryLibrary.h"
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
-#include "panel/GestureQueue.h"
-#include "panel/parts/BuzzerPlayer.h"
-#include "serial/BoardFacts.h"
 #include "serial/SerialLink.h"
-#include "storage/DeviceSettings.h"
 
 namespace {
 
-using gardener::BoardFacts;
-using gardener::BuzzerPlayer;
 using gardener::CommandQueue;
-using gardener::DeviceSettings;
-using gardener::GestureQueue;
 using gardener::Machine;
 using gardener::MachineCommand;
 using gardener::SerialLink;
-using gardener::SystemState;
 using gardener::host::TextStream;
-using gardener::test::FakeBattery;
-using gardener::test::FakeBuzzer;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
 using gardener::test::FakeValve;
-using gardener::test::MemoryLibrary;
 using gardener::test::RecordingLogger;
-
-// The board's facts, as the sketch's own pair answer them.
-const char* chipModel() { return "ESP32-S3"; }
-uint32_t heapFacts() { return 123456; }
 
 // The queue the link posts into: everything fits, so a case reads back what the grammar queued.
 class OpenQueue : public CommandQueue {
@@ -68,15 +50,11 @@ class OpenQueue : public CommandQueue {
   std::vector<MachineCommand> commands_;
 };
 
-// The machine the wire is built over, one per case, with a clock that starts at zero. A case that
-// needs a document's maximum hands one in; without one the device keeps its shipped fifteen minutes.
+// The machine the wire is built over, one per case, with a clock that starts at zero.
 struct Bench {
-  explicit Bench(const char* settingsDocument = nullptr)
-      : machine(logger, &pump, &sensor, &valve), settings(&library, state), player(buzzerPart),
-        link(io, nullptr, logger, queue,
-             gardener::SerialParts{machine, board, battery, settings, player, library, presses}) {
-    if (settingsDocument != nullptr) library.put("/cfg/settings.ini", settingsDocument);
-    settings.begin();
+  Bench()
+      : machine(logger, &pump, &sensor, &valve),
+        link(io, nullptr, logger, queue, gardener::SerialParts{machine}) {
     gardener::host::reset();
     machine.boot();
     link.begin();
@@ -97,14 +75,6 @@ struct Bench {
   OpenQueue queue;
   Machine machine;
   TextStream io;
-  FakeBattery battery;
-  SystemState state;
-  MemoryLibrary library;
-  GestureQueue presses;
-  DeviceSettings settings;
-  FakeBuzzer buzzerPart;
-  BuzzerPlayer player;
-  const BoardFacts board{&chipModel, &heapFacts};
   SerialLink link;
 };
 
@@ -216,8 +186,8 @@ TEST_CASE("a latched fault refuses a set") {
   CHECK_EQ(bench.reply(), std::string("err not_ready latch\n"));
 }
 
-TEST_CASE("a set asks for the machine's ceiling rather than a document's") {
-  Bench bench("[device]\nmax_duration=600\n");
+TEST_CASE("a set asks for the machine's ceiling rather than naming one") {
+  Bench bench;
   bench.sensor.read(12.0f);
 
   bench.send("vacuum set 40\n");
@@ -227,7 +197,7 @@ TEST_CASE("a set asks for the machine's ceiling rather than a document's") {
   REQUIRE(bench.queue.take(command));
   REQUIRE(bench.queue.take(command));
   CHECK(command.op == MachineCommand::Op::Start);
-  // Zero is the machine's own "give me the ceiling"; the document's 600 is not consulted.
+  // Zero is the machine's own "give me the ceiling": the wire never names a hold.
   CHECK_EQ(command.value, 0.0f);
   CHECK(bench.queue.empty());
 }
