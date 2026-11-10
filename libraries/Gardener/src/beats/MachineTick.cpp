@@ -1,14 +1,11 @@
 #include "beats/MachineTick.h"
 
 #include "core/Logger.h"
-#include "core/SystemState.h"
 
 namespace gardener {
 
-MachineTick::MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue,
-                         SystemState& state)
-    : vacuum_(vacuum), logger_(logger), queue_(queue), state_(state),
-      lastState_(vacuum.runState()) {}
+MachineTick::MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue)
+    : vacuum_(vacuum), logger_(logger), queue_(queue), lastState_(vacuum.runState()) {}
 
 void MachineTick::tick(uint32_t nowMs) {
   // Commands first, against the machine as the last tick left it.
@@ -19,30 +16,9 @@ void MachineTick::tick(uint32_t nowMs) {
   vacuum_.pump().update(nowMs);
   vacuum_.service(nowMs);
   logRunChanges(nowMs);
-
-  publish();
 }
 
-// The machine's slice, read once at the end of the beat: the run the panel draws and the answer a
-// page's start gets are the ones this beat produced. A page that asks between two beats is answered
-// from here, so the machine can still refuse the command it posts.
-void MachineTick::publish() {
-  state_.runState = vacuum_.runState();
-  state_.running = vacuum_.running();
-  state_.currentPressureKpa = vacuum_.currentPressureKpa();
-  state_.targetPressureKpa = vacuum_.targetPressureKpa();
-  state_.canStart = vacuum_.startRefusal() == nullptr;
-}
-
-bool MachineTick::takeReboot() {
-  const bool pending = rebootPending_;
-  rebootPending_ = false;
-  return pending;
-}
-
-void MachineTick::apply(const MachineCommand& command) {
-  if (!applyMachineCommand(vacuum_, command)) rebootPending_ = true;
-}
+void MachineTick::apply(const MachineCommand& command) { applyMachineCommand(vacuum_, command); }
 
 void MachineTick::logCollapsed(const MachineCommand& command, const char* reason) {
   String message = "queue: dropped ";

@@ -45,7 +45,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       `RtosInternTable`, `FileLibrary` and the four hal impls, `Runtime.h` trimmed to what is left.
       `tools/host/capture`, `tools/unit/suite.*` and the cases that drove the panel, the store or
       the VM go with them, and `check.py` stops compiling the capture display.
-- [ ] **Remove the published state and the reboot from the machine.** `core/SystemState.h` and
+- [x] **Remove the published state and the reboot from the machine.** `core/SystemState.h` and
       `MachineTick`'s publish go, the interface task stops writing the connection flag,
       `MachineCommand::Reboot`, `takeReboot`, `SafeReboot` and `Machine.h`'s `Capability` byte go,
       and `machine_tick.cpp` loses the three cases that assert them. The machine's control law is
