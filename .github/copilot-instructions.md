@@ -2,23 +2,21 @@
 
 ## Checks
 
-`python tools/unit/check.py` is how the tree's C++ is validated. It compiles `libraries/Gfx` and
-`libraries/Gardener` with the host tools and the cases under doctest and runs them, in seconds and
-with no board, no interpreter and no data image. `--list-test-cases` lists what it holds and
-`--test-case="a name"` runs one case while a change is being made. A change to the machine, the
-wire, the documents or the drawing is checked with it, and that is the check to run.
+`python tools/unit/check.py` is how the tree's C++ is validated. It compiles `libraries/Gardener`
+with the host tools and the cases under doctest and runs them, in seconds and with no board, no
+interpreter and no data image. `--list-test-cases` lists what it holds and `--test-case="a name"`
+runs one case while a change is being made. A change to the machine or the wire is checked with it,
+and that is the check to run.
 
 **The sketch build is not the validation.** `python scripts/arduino.py --task build` cross-compiles
 the sketch for the board, and it is the slower path by minutes. For the C++ the suite compiles it
 says nothing the suite does not already say; it is asked for only what the suite cannot reach —
-the interpreter's host side under `libraries/Gardener/src/routines`, `libraries/Runtime`, the sketch
-itself, and an edit to the build files the script reads. Nothing checks the layer rule either way, so a stray `core/` include that
-reaches upward is a review catch rather than a failure of one.
+`libraries/Runtime`, the sketch itself, and an edit to the build files the script reads. Nothing
+checks the layer rule either way, so a stray `core/` include that reaches upward is a review catch
+rather than a failure of one.
 
-**Run a check when the compiler is the question.** Both compile C++ and nothing else: a document, a
-`.bmp` under `assets/`, or a file in `firmware/data/` — a `.be` routine, a page, an `.ini` — cannot
-change what either says, so editing one is not a reason to run them. The data image is checked on
-the device instead: `--task upload`, then the panel and the `[E]` lines on the serial console.
+**Run a check when the compiler is the question.** Both compile C++ and nothing else: a document
+cannot change what either says, so editing one is not a reason to run them.
 
 **Make the change whole before the compiler sees any of it.** A fix-one-error-and-recompile loop is
 the likeliest way a task spends its budget without moving: finish every file of a refactor, every
@@ -35,13 +33,6 @@ someone asks how much room the firmware has, and don't build a baseline or a del
 **Formatting is not a run to weigh up.** `clang-format -i` over the tracked sources costs seconds and
 compiles nothing, and [.clang-format](.clang-format) is the style the cpp skill describes — so a
 save or a sweep, not a build, is the answer to a line that looks wrong.
-
-**Consider the Berry check before running it.** The check compiles and drives the `.be` files under
-`firmware/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
-VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
-`libraries/berry/` cannot change what it says. Ask what a run would catch that the last one did not;
-when the answer is nothing — no Berry edit since the last check, or a check that already passed on
-this tree — don't run it. One check after a change that can break a routine is the verification.
 
 ## Committing
 
@@ -68,8 +59,7 @@ and no summary, test-plan or checklist sections. End with the history's trailer,
 
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
 `.github/skills/cpp/`; documentation practice — spec, plan, idea document, backlog and parking-lot
-line — is in `.github/skills/project/`; writing the Berry data image is in `.github/skills/berry/`,
-with its host check under `tools/berry/`.
+line — is in `.github/skills/project/`.
 
 ## Where to look
 

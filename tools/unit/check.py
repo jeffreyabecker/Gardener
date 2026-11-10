@@ -7,12 +7,10 @@
     python tools/unit/check.py --no-cache            # rebuild every object
     python tools/unit/check.py --verbose             # print each compiler command
 
-The suite is the firmware's own C++ compiled for the host: libraries/Gfx and libraries/Gardener,
-their cases under this folder, the fakes the cases drive, the recording display, the gesture strip
-and the frame writer the tools share, and doctest. It needs a C++ compiler and Python and nothing
-else -- no interpreter, no data image and no board. A source that names one of those things is not
-one of its inputs, and neither is anything under libraries/berry, tools/berry or firmware/data, or
-the interpreter's host side under libraries/Gardener/src/routines.
+The suite is the firmware's own C++ compiled for the host: libraries/Gardener, its cases under
+this folder, the fakes the cases drive, the host's Arduino core and the small utilities the cases
+share, and doctest. It needs a C++ compiler and Python and nothing else -- no interpreter, no data
+image and no board. A source that names a filesystem or an RTOS is not one of its inputs.
 
 Every argument the script does not recognise is passed to the test binary, so doctest's own filter,
 listing and reporting are the suite's.
@@ -31,18 +29,13 @@ ROOT = TOOLS.parent
 HOST = TOOLS / "host"
 API = HOST / "arduino-core-api"
 DOCTEST = TOOLS / "doctest"
-GFX = ROOT / "libraries" / "Gfx"
 GARDENER = ROOT / "libraries" / "Gardener"
 BUILD = TOOL / "build"
 EXE = BUILD / ("unitcheck.exe" if os.name == "nt" else "unitcheck")
 
-# A source naming any of these needs the interpreter, a filesystem or an RTOS, and so is not part of
-# what the suite compiles.
-PLATFORM_INCLUDES = ("<berry.h>", "<FS.h>", "<Wire.h>", "freertos/", "<SD.h>")
-
-# The interpreter's native modules, which reach the VM through the headers beside them rather than
-# through a `<berry.h>` of their own: the folder is the boundary itself, so none of it is the suite's.
-HOST_MODULES = GARDENER / "src" / "bindings"
+# A source naming any of these needs a filesystem or an RTOS, and so is not part of what the suite
+# compiles.
+PLATFORM_INCLUDES = ("<FS.h>", "<Wire.h>", "freertos/", "<SD.h>")
 
 # The API's own sources, and the two a board's C library would provide.
 API_SOURCES = ("String.cpp", "Print.cpp", "Stream.cpp", "Common.cpp")
@@ -69,32 +62,25 @@ def slug(path):
     return "_".join(Path(path).resolve().parts[-3:])
 
 
-def interpreter_free(source):
+def platform_free(source):
     text = source.read_text(encoding="utf-8", errors="replace")
     return not any(name in text for name in PLATFORM_INCLUDES)
 
 
 def sources():
     found = [
-        *(GFX / "src").rglob("*.cpp"),
         *(HOST / "arduino").glob("*.cpp"),
-        *(HOST / "capture").glob("*.cpp"),
         *((API / "api") / name for name in API_SOURCES),
         *((API / "extras") / name for name in API_EXTRAS),
         *(TOOL.glob("*.cpp")),
-        *(TOOL / "fakes").glob("*.cpp"),
         *(TOOL / "cases").glob("*.cpp"),
     ]
-    found.extend(
-        path
-        for path in (GARDENER / "src").rglob("*.cpp")
-        if HOST_MODULES not in path.parents and interpreter_free(path)
-    )
+    found.extend(path for path in (GARDENER / "src").rglob("*.cpp") if platform_free(path))
     return found
 
 
 def include_dirs():
-    return [TOOL, HOST / "arduino", HOST / "capture", API, DOCTEST, GFX / "src", GARDENER / "src"]
+    return [TOOL, HOST / "arduino", API, DOCTEST, GARDENER / "src"]
 
 
 def build(cxx):
