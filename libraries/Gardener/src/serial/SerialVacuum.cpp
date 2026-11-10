@@ -5,7 +5,6 @@
 #include "machine/MachineCommand.h"
 #include "machine/VacuumSystem.h"
 #include "serial/SerialLink.h"
-#include "storage/DeviceSettings.h"
 
 namespace gardener {
 namespace {
@@ -34,7 +33,9 @@ void get(Stream& io, VacuumSystem& vacuum) {
   io.print('\n');
 }
 
-void target(Stream& io, const String& args, CommandQueue& queue) {
+// A set is a target and a run in one word, so the two refusals are the machine's own: the bounds the
+// loop enforces, and the reason a start would not take. A refused set queues nothing.
+void set(Stream& io, const String& args, Machine& machine, CommandQueue& queue) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -71,51 +72,19 @@ void target(Stream& io, const String& args, CommandQueue& queue) {
     return;
   }
 
-  const MachineCommand set{MachineCommand::Op::SetTarget, pressureKpa};
-  queue.post(set);
-  io.print("ok target=");
-  io.print(pressureKpa, 1u);
-  io.print('\n');
-}
-
-void start(Stream& io, const String& args, Machine& machine, const DeviceSettings& settings,
-           CommandQueue& queue) {
-  // The optional argument is the hold, in whole seconds. Without one the run gets the device's
-  // maximum, which is also its ceiling. A document that names no maximum leaves the machine's own.
-  const uint32_t maxSeconds = maxRunSeconds(settings.maxDurationSeconds());
-  uint32_t holdSeconds = maxSeconds;
-  if (!args.isEmpty()) {
-    const int space = args.indexOf(' ');
-    const String token = space < 0 ? args : args.substring(0, (unsigned int)space);
-    String extra = space < 0 ? String() : args.substring((unsigned int)space + 1);
-    extra.trim();
-    if (!extra.isEmpty()) {
-      io.print("err bad_argument ");
-      io.print(firstToken(extra));
-      io.print('\n');
-      return;
-    }
-
-    const float seconds = token.toFloat();
-    if (seconds > (float)maxSeconds) {
-      io.print("err out_of_range field=hold value=");
-      io.print(token);
-      io.print(" max=");
-      io.print(maxSeconds);
-      io.print('\n');
-      return;
-    }
-    if (!(seconds >= 1.0f) || seconds != (float)(uint32_t)seconds) {
-      io.print("err out_of_range field=hold value=");
-      io.print(token);
-      io.print(" min=1\n");
-      return;
-    }
-    holdSeconds = (uint32_t)seconds;
+  // Aiming at ambient and running it is the vent, and a vent needs no reading: the ambient target
+  // is the release however it was asked for.
+  if (pressureKpa <= 0.0f) {
+    const MachineCommand ambient{MachineCommand::Op::SetTarget, 0.0f};
+    queue.post(ambient);
+    const MachineCommand stop{MachineCommand::Op::Stop};
+    queue.post(stop);
+    io.print("ok target=0.0 state=VENT\n");
+    return;
   }
 
   // The refusal is a pure read of the machine's fault and reading, so it is answered from a dirty
-  // read; a would-succeed start is queued and the reply is optimistic.
+  // read; a would-succeed set is queued and the reply is optimistic.
   const char* refusal = machine.vacuum().startRefusal();
   if (refusal != nullptr) {
     io.print("err not_ready ");
@@ -123,9 +92,16 @@ void start(Stream& io, const String& args, Machine& machine, const DeviceSetting
     io.print('\n');
     return;
   }
-  const MachineCommand start{MachineCommand::Op::Start, (float)holdSeconds};
+
+  // The hold is the machine's own ceiling: a wire that asks for no duration gets the longest run the
+  // machine will grant, and no document is read on either side of it.
+  const MachineCommand target{MachineCommand::Op::SetTarget, pressureKpa};
+  queue.post(target);
+  const MachineCommand start{MachineCommand::Op::Start, 0.0f};
   queue.post(start);
-  io.print("ok state=PULL\n");
+  io.print("ok target=");
+  io.print(pressureKpa, 1u);
+  io.print(" state=PULL\n");
 }
 
 void stop(Stream& io, const String& args, CommandQueue& queue) {
@@ -156,8 +132,7 @@ void reset(Stream& io, const String& args, CommandQueue& queue) {
 
 }  // namespace
 
-// The machine's own commands: what a run is doing, the target it pulls to, and the three the control
-// tick applies.
+// The machine's own commands: a target and the run it asks for, the release, and the latch's reset.
 void SerialLink::executeVacuum(Stream& io) {
   String line = io.readStringUntil('\n');
   line.trim();
@@ -186,12 +161,8 @@ void SerialLink::executeVacuum(Stream& io) {
     get(io, parts_.machine.vacuum());
     return;
   }
-  if (verb == "target") {
-    target(io, args, queue_);
-    return;
-  }
-  if (verb == "start") {
-    start(io, args, parts_.machine, parts_.settings, queue_);
+  if (verb == "set") {
+    set(io, args, parts_.machine, queue_);
     return;
   }
   if (verb == "stop") {

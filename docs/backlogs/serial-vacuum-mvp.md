@@ -18,7 +18,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       `sensor` and `up` fields go, and with `max_run` the document read behind it, so `get` is
       handed the vacuum system rather than the machine and the settings. `tools/unit/cases/
       vacuum_commands.cpp` drops the two cases that assert the removed fields and keeps the rest.
-- [ ] **Collapse `target` and `start` into `vacuum set`.** One verb: refuse a token that is not a
+- [x] **Collapse `target` and `start` into `vacuum set`.** One verb: refuse a token that is not a
       number or past `ControlFloorKpa` with `err out_of_range`, refuse with `startRefusal()`'s
       code as `err not_ready`, and otherwise queue the target and a start whose hold is
       `ControlMaxRunMs` in seconds — no document is read. `vacuum target` and `vacuum start` stop
