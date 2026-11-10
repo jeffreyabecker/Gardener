@@ -3,9 +3,7 @@
 
 --task build    compile the sketch (uses the project local libraries folder)
 --task upload   compile and upload, auto-detecting the serial port
---task data     pack the device's data image and write it to the LittleFS partition
 --task monitor  open the serial monitor at 115200 baud
---task archive  compile with the prebuilt archives set aside, which packs them again
 --task clean    remove the build output
 
 `--define NAME=VALUE` sets one of the rig's own numbers, and repeats. `PUMP_FLOW_LPM`,
@@ -17,21 +15,16 @@ sketch's `rig_options.h`, which every `GARDENER_KNOB_VALID` in the tree reads th
 
     python scripts/arduino.py --task upload --port COM5
     python scripts/arduino.py --task build --define PUMP_FLOW_LPM=2.0f --define CHAMBER_VOLUME_L=0.25f
-    python scripts/arduino.py --task data --port COM5
 """
 
 import argparse
 import functools
 import hashlib
 import json
-import os
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-
-import archive
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT_LIBS = ROOT / "libraries"
@@ -39,28 +32,14 @@ PROJECT_LIBS = ROOT / "libraries"
 # The sketch: the device's own composition root, which compiles the libraries under `libraries/`.
 SKETCH = ROOT / "firmware" / "gardener"
 
-# The image itself: the files the device holds on LittleFS, beside the sketch rather than inside it,
-# because it is the device's contents and not a part of what compiles.
-DATA_DIR = ROOT / "firmware" / "data"
-# The build output. arduino-cli's build path is a subdirectory of it, one per configuration; the data
-# image task keeps littlefs.bin beside them.
+# The build output. arduino-cli's build path is a subdirectory of it, one per configuration.
 BUILD_DIR = SKETCH / "build"
 
 # USBMode=hwcdc puts USB on the chip's USB-Serial-JTAG CDC and CDCOnBoot=cdc maps Serial to it,
 # which is what puts the interface on the USB-C socket while leaving the ROM downloader on the same
 # port. Without CDCOnBoot Serial is UART0 on GPIO43/44 and the interface is invisible to a USB cable.
-#
-# FlashSize and PartitionScheme are pinned because --task data writes the LittleFS partition at the
-# offset the table names: a different scheme would put the image somewhere else.
 DEFAULT_FQBN = ("esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc,"
                 "FlashSize=4M,PartitionScheme=default")
-
-# The library the firmware compiles but never changes: Berry is 41 of the build's translation units,
-# and it is most of what a full build spends its minutes on. It is packed into an archive once and
-# linked from there afterwards; `precompiled=full` in a `library.properties` is what makes
-# arduino-cli look for that archive in `src/{build.mcu}/` and skip the sources when it finds one.
-#
-# Berry is vendored, so its properties and its archive folder are the repository's.
 
 # Where `--define` writes the rig's numbers. It sits in the sketch because that folder is on the
 # include path of every translation unit, and it is generated rather than committed because it is
@@ -72,8 +51,8 @@ PORT = ""
 VERBOSE = False
 # The rig's own build symbols, as `NAME=VALUE` from `--define`. Empty leaves Machine.h's defaults.
 DEFINES = []
-# The board's build properties, asked of arduino-cli once per run: the MCU the archives are named
-# for, the compiler and archiver that make them, the core whose version sets most of the flags.
+# The board's build properties, asked of arduino-cli once per run: the core whose version sets the
+# build path a configuration compiles into.
 _CONFIGURATION = None
 
 
@@ -115,35 +94,6 @@ def device_port():
     return ""
 
 
-def arduino_data():
-    configured = os.environ.get("ARDUINO_DIRECTORIES_DATA")
-    if configured:
-        return Path(configured)
-    local_app_data = os.environ.get("LOCALAPPDATA")
-    if not local_app_data:
-        sys.exit("LOCALAPPDATA is not set; set ARDUINO_DIRECTORIES_DATA to the Arduino data folder")
-    return Path(local_app_data) / "Arduino15"
-
-
-def newest(paths):
-    """The newest copy is the one arduino-cli builds with, and the version is in the path."""
-    return max(paths, key=str, default=None)
-
-
-def find_tool(esp32_tools, folder, name):
-    return newest((esp32_tools / folder).rglob(name))
-
-
-def spiffs_partition(table):
-    """The offset and size come from the table the build pins, so the image lands on the partition
-    the firmware mounts rather than on a number copied into this script."""
-    for line in table.read_text(encoding="utf-8").splitlines():
-        if re.match(r"^\s*spiffs\s*,", line):
-            cells = [cell.strip() for cell in line.split(",")]
-            return f"0x{int(cells[3], 16):x}", int(cells[4], 16)
-    sys.exit(f"no spiffs partition in {table}")
-
-
 @functools.lru_cache(maxsize=None)
 def build_properties(fqbn):
     """The board's own build properties, from the same platform tables the compile reads them from.
@@ -161,17 +111,7 @@ def configuration():
     global _CONFIGURATION
     if _CONFIGURATION is None:
         properties = build_properties(FQBN)
-        compiler = Path(properties["compiler.path"])
-        toolchain = subprocess.run([str(compiler / properties["compiler.c.cmd"]), "-dumpversion"],
-                                   capture_output=True, text=True).stdout.strip()
-        _CONFIGURATION = {
-            "mcu": properties["build.mcu"],
-            # gcc-ar rather than ar: the toolchain's own wrapper is what writes an index the
-            # linker can read.
-            "ar": str(compiler / properties["compiler.ar.cmd"]),
-            "toolchain": toolchain or properties["compiler.path"],
-            "core": Path(properties["runtime.platform.path"]).name,
-        }
+        _CONFIGURATION = {"core": Path(properties["runtime.platform.path"]).name}
     return _CONFIGURATION
 
 
@@ -184,9 +124,9 @@ def write_rig_header():
     """Write `--define`'s numbers where core/Knob.h reads them, instead of into the build options.
 
     A rig number passed as `build.defines` is part of arduino-cli's options, so every retune made
-    arduino-cli throw the whole build path away — Berry's 41 objects among them, for a number the
-    library cannot see. The sketch folder is already on the include path of every translation unit,
-    so a header there reaches the knobs' includers and nothing else.
+    arduino-cli throw the whole build path away — every object in it, for a number the library
+    cannot see. The sketch folder is already on the include path of every translation unit, so a
+    header there reaches the knobs' includers and nothing else.
 
     The file is only written when its contents change: rewriting it every run would recompile those
     includers every run.
@@ -202,10 +142,9 @@ def _define(symbol):
     return f"#define {token} {value}\n" if value else f"#define {token}\n"
 
 
-def archive_flags():
-    """What a compile of the archived library is made with, as far as the wrapper can change it: the
-    board and the core. A rig number is deliberately not in here — that is the point of the header,
-    and why retuning a rig keeps the archive."""
+def build_flags():
+    """What a compile is made with, as far as the wrapper can change it: the board and the core. A
+    rig number is deliberately not in here — that is the point of the header."""
     return "\n".join([FQBN, configuration()["core"]])
 
 
@@ -213,49 +152,16 @@ def compile_dir():
     """One build path per configuration.
 
     arduino-cli deletes its build path when the build options differ, and those carry the FQBN and
-    the defines, so a second board or panel would otherwise cost the first one's objects and a full
-    build. A path apiece keeps both, and `--task clean` is what removes them.
+    the defines, so a second board would otherwise cost the first one's objects and a full build. A
+    path apiece keeps both, and `--task clean` is what removes them.
     """
-    key = hashlib.sha1(archive_flags().encode()).hexdigest()[:8]
+    key = hashlib.sha1(build_flags().encode()).hexdigest()[:8]
     return BUILD_DIR / f"compile-{key}"
-
-
-def archived_libraries():
-    """The libraries that get an archive, as (name, folder): the archive is `lib{name}.a` inside the
-    folder's `src/{mcu}/`."""
-    libraries = [("berry", PROJECT_LIBS / "berry")]
-    return [(name, library) for name, library in libraries
-            if (library / "library.properties").is_file()]
-
-
-def drop_stale_archives():
-    build = configuration()
-    for name, library in archived_libraries():
-        reason = archive.verified(library, name, build["mcu"], build["toolchain"],
-                                  archive_flags())
-        if reason:
-            print(f"dropping the {name} archive: {reason}")
-
-
-def pack_archives():
-    """Pack what this build compiled and has no archive for. The objects are the build's own, made
-    with the flags the archive will be linked with, so the two cannot disagree."""
-    build = configuration()
-    for name, library in archived_libraries():
-        if archive.archive_path(library, name, build["mcu"]).exists():
-            continue
-        objects = compile_dir() / "libraries" / library.name
-        if not objects.is_dir() or not any(objects.rglob("*.o")):
-            continue
-        archive.pack(library, name, build["mcu"], objects, build["ar"], build["toolchain"],
-                     archive_flags())
-        print(f"packed the {name} archive")
 
 
 def compile_sketch(*extra):
     write_knob_defaults()
     write_rig_header()
-    drop_stale_archives()
     arguments = ["compile", "--fqbn", FQBN, "--libraries", str(PROJECT_LIBS), "--build-path",
                  str(compile_dir())]
     arguments.extend(extra)
@@ -265,7 +171,6 @@ def compile_sketch(*extra):
     if VERBOSE:
         arguments.append("--verbose")
     arduino_cli(*arguments)
-    pack_archives()
 
 
 def clean():
@@ -280,14 +185,6 @@ def clean():
     print(f"{SKETCH.name} build output removed")
 
 
-def archive_task():
-    """Pack the archives again from a fresh compile: a build only packs one that is missing, so the
-    ones on disk go first."""
-    for name, library in archived_libraries():
-        archive.drop(library, name, configuration()["mcu"])
-    compile_sketch()
-
-
 def build():
     compile_sketch()
 
@@ -298,44 +195,6 @@ def upload():
         sys.exit("no serial port found, pass --port COMx")
     print(f"uploading {SKETCH.name} to {device}")
     compile_sketch("--upload", "-p", device)
-
-
-def upload_data():
-    device = device_port()
-    if not device:
-        sys.exit("no serial port found, pass --port COMx")
-
-    if not DATA_DIR.is_dir():
-        DATA_DIR.mkdir(parents=True)
-        print(f"created {DATA_DIR}; put the files to upload there")
-
-    # The ESP32 core ships both tools, and the newest copy is the one arduino-cli builds with.
-    data_root = arduino_data()
-    esp32_tools = data_root / "packages" / "esp32" / "tools"
-    mklittlefs = find_tool(esp32_tools, "mklittlefs", "mklittlefs.exe")
-    esptool = find_tool(esp32_tools, "esptool_py", "esptool.exe")
-    if not mklittlefs:
-        sys.exit(f"mklittlefs.exe not found under {esp32_tools}")
-    if not esptool:
-        sys.exit(f"esptool.exe not found under {esp32_tools}")
-
-    core_root = data_root / "packages" / "esp32" / "hardware" / "esp32"
-    cores = [entry for entry in core_root.iterdir() if entry.is_dir()] if core_root.is_dir() else []
-    if not cores:
-        sys.exit(f"no ESP32 core under {core_root}")
-    core = max(cores, key=lambda entry: entry.name)
-    offset, size = spiffs_partition(core / "tools" / "partitions" / "default.csv")
-
-    image = BUILD_DIR / "littlefs.bin"
-    image.parent.mkdir(parents=True, exist_ok=True)
-
-    print(f"packing {DATA_DIR}")
-    run([str(mklittlefs), "-c", str(DATA_DIR), "-b", "4096", "-p", "256", "-s", str(size),
-         str(image)])
-
-    print(f"writing {image} to {device} at {offset}")
-    run([str(esptool), "--chip", "esp32s3", "--port", device, "--baud", "921600",
-         "--before", "default_reset", "--after", "hard_reset", "write_flash", offset, str(image)])
 
 
 def monitor():
@@ -353,8 +212,7 @@ def main():
     global FQBN, PORT, VERBOSE, DEFINES
 
     parser = argparse.ArgumentParser(description="Build, upload and monitor the Gardener firmware.")
-    parser.add_argument("--task",
-                        choices=["build", "upload", "data", "monitor", "archive", "clean"],
+    parser.add_argument("--task", choices=["build", "upload", "monitor", "clean"],
                         default="build", help="what to do (default: build)")
     parser.add_argument("--port", default="", help="the serial port, auto-detected when omitted")
     parser.add_argument("--fqbn", default=DEFAULT_FQBN, help="the board FQBN to compile for")
@@ -375,12 +233,8 @@ def main():
         build()
     elif args.task == "upload":
         upload()
-    elif args.task == "data":
-        upload_data()
     elif args.task == "monitor":
         monitor()
-    elif args.task == "archive":
-        archive_task()
 
 
 if __name__ == "__main__":
