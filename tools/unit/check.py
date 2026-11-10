@@ -78,7 +78,6 @@ def sources():
     found = [
         *(GFX / "src").rglob("*.cpp"),
         *(HOST / "arduino").glob("*.cpp"),
-        *(HOST / "capture").glob("*.cpp"),
         *((API / "api") / name for name in API_SOURCES),
         *((API / "extras") / name for name in API_EXTRAS),
         *(TOOL.glob("*.cpp")),
@@ -94,7 +93,7 @@ def sources():
 
 
 def include_dirs():
-    return [TOOL, HOST / "arduino", HOST / "capture", API, DOCTEST, GFX / "src", GARDENER / "src"]
+    return [TOOL, HOST / "arduino", API, DOCTEST, GFX / "src", GARDENER / "src"]
 
 
 def build(cxx):

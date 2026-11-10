@@ -6,9 +6,7 @@
 #include "beats/MachineTick.h"
 #include "core/Knob.h"
 #include "core/Logger.h"
-#include "core/SystemState.h"
 #include "machine/Machine.h"
-#include "machine/SafeReboot.h"
 #include "machine/VacuumSystem.h"
 #include "serial/SerialLink.h"
 
@@ -37,17 +35,14 @@ GARDENER_KNOB_VALID(UBaseType_t, ControlCore, GARDENER_CONTROL_TASK_CORE, 1,
 GARDENER_KNOB_VALID(UBaseType_t, InterfaceCore, GARDENER_INTERFACE_TASK_CORE, 0,
                     GARDENER_INTERFACE_TASK_CORE <= 1, "the part has two cores");
 
-// The control task's own state: the tick it steps, and the machine the tick hands a Reboot back to.
-// Everything a tick decides — the last state logged, the vent's start, the queue it drains — is the
-// tick's, so this file keeps only the beat.
+// The control task's own state: the tick it steps. Everything a tick decides — the last state
+// logged, the vent's start, the queue it drains — is the tick's, so this file keeps only the beat.
 struct ControlState {
-  Machine& machine;
   MachineTick& tick;
 };
-// The interface task's own state: the link it polls and the state it publishes its presence into.
+// The interface task's own state: the link it polls.
 struct InterfaceState {
   SerialLink* link;
-  SystemState& published;
 };
 
 }  // namespace
@@ -60,7 +55,6 @@ void controlTask(void* arg) {
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     state.tick.tick(millis());
-    if (state.tick.takeReboot()) safeReboot(state.machine);
 
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(ControlPeriodMs));
   }
@@ -70,24 +64,16 @@ void interfaceTask(void* arg) {
   InterfaceState& state = *static_cast<InterfaceState*>(arg);
 
   for (;;) {
-    const uint32_t now = millis();
-
-    // The link answers the wire.
-    state.link->poll(now);
-
-    // Connection presence, published for the panel's overlay: a connected link that has not
-    // acquired control still counts.
-    state.published.serialConnected = state.link->controllerAttached();
+    state.link->poll(millis());
 
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 
-void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link,
-                       SystemState& state) {
-  static MachineTick tick{machine.vacuum(), machine.logger(), queue, state};
-  static ControlState control{machine, tick};
-  static InterfaceState interface{link, state};
+void spawnMachineTasks(Machine& machine, CommandQueue& queue, SerialLink* link) {
+  static MachineTick tick{machine.vacuum(), machine.logger(), queue};
+  static ControlState control{tick};
+  static InterfaceState interface{link};
 
   xTaskCreatePinnedToCore(controlTask, "control", ControlStackWords, &control, ControlPriority,
                           nullptr, ControlCore);

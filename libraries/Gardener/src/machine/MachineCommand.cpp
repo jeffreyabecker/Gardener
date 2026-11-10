@@ -15,30 +15,25 @@ const char* machineCommandName(MachineCommand::Op op) {
       return "reset";
     case MachineCommand::Op::SetTarget:
       return "target";
-    case MachineCommand::Op::Reboot:
-      return "reboot";
   }
   return "?";
 }
 
-bool applyMachineCommand(VacuumSystem& vacuum, const MachineCommand& command) {
+void applyMachineCommand(VacuumSystem& vacuum, const MachineCommand& command) {
   switch (command.op) {
     case MachineCommand::Op::Start:
       vacuum.start((uint32_t)command.value);
-      return true;
+      return;
     case MachineCommand::Op::Stop:
       vacuum.stop();
-      return true;
+      return;
     case MachineCommand::Op::ResetFault:
       vacuum.resetFault();
-      return true;
+      return;
     case MachineCommand::Op::SetTarget:
       vacuum.setTarget(command.value);
-      return true;
-    case MachineCommand::Op::Reboot:
-      return false;
+      return;
   }
-  return false;
 }
 
 }  // namespace gardener
