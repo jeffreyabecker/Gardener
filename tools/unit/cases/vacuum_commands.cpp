@@ -232,9 +232,9 @@ TEST_CASE("a set asks for the machine's ceiling rather than a document's") {
   CHECK(bench.queue.empty());
 }
 
-TEST_CASE("stop answers the release it queues") {
+TEST_CASE("vent answers the release it queues") {
   Bench bench;
-  bench.send("vacuum stop\n");
+  bench.send("vacuum vent\n");
   CHECK_EQ(bench.reply(), std::string("ok state=VENT\n"));
   CHECK_FALSE(bench.queue.empty());
 }
