@@ -53,7 +53,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 3 — the tree that isn't the firmware
 
-- [ ] **Delete the VM and its skill.** `libraries/berry` goes, and with it the `berry` skill under
+- [x] **Delete the VM and its skill.** `libraries/berry` goes, and with it the `berry` skill under
       `.github/skills/berry/` and the line in `.github/copilot-instructions.md` that points at its
       host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
       with the panel.

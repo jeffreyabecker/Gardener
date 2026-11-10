@@ -36,13 +36,6 @@ someone asks how much room the firmware has, and don't build a baseline or a del
 compiles nothing, and [.clang-format](.clang-format) is the style the cpp skill describes — so a
 save or a sweep, not a build, is the answer to a line that looks wrong.
 
-**Consider the Berry check before running it.** The check compiles and drives the `.be` files under
-`firmware/data/`, the `.ini` documents in `cfg/` beside them, the harness, and the vendored
-VM. That is the whole of what reaches it, so a document, an `assets/` image, or C++ outside
-`libraries/berry/` cannot change what it says. Ask what a run would catch that the last one did not;
-when the answer is nothing — no Berry edit since the last check, or a check that already passed on
-this tree — don't run it. One check after a change that can break a routine is the verification.
-
 ## Committing
 
 **Committing means commit.** When you are told to commit, it is `git status --short`, `git add -A`
@@ -68,8 +61,7 @@ and no summary, test-plan or checklist sections. End with the history's trailer,
 
 Firmware design rules are in `.github/skills/firmware/`, with C++ naming and formatting in
 `.github/skills/cpp/`; documentation practice — spec, plan, idea document, backlog and parking-lot
-line — is in `.github/skills/project/`; writing the Berry data image is in `.github/skills/berry/`,
-with its host check under `tools/berry/`.
+line — is in `.github/skills/project/`.
 
 ## Where to look
 
