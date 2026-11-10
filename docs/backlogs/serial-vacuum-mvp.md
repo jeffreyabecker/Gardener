@@ -53,17 +53,16 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 3 — the tree that isn't the firmware
 
-- [ ] **Delete the VM and its skill.** `libraries/berry` goes, and with it the `berry` skill under
+- [x] **Delete the VM and its skill.** `libraries/berry` goes, and with it the `berry` skill under
       `.github/skills/berry/` and the line in `.github/copilot-instructions.md` that points at its
       host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
       with the panel.
-- [ ] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
-      and `tools/fonts` go, the `surface` case goes with the host utilities it shares, and
-      `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx source, no Gfx include and
-      no drawing case.
-- [ ] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
-      `firmware/gardener/assets`, `firmware/test_buttons` and `firmware/test_pressure` go, and
-      nothing reads a `.be`, a `.ini` or a `.bmp`.
+- [x] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
+      and `tools/fonts` go, and `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx
+      source, no Gfx include and no drawing case.
+- [x] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
+      `firmware/gardener/assets`, `scripts/asset.py`, `firmware/test_buttons` and
+      `firmware/test_pressure` go, and nothing reads a `.be`, a `.ini` or a `.bmp`.
 
 ## Epic 4 — the build
 
