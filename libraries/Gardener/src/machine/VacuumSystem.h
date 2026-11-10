@@ -63,6 +63,8 @@ class VacuumSystem {
   RunState runState() const { return state_; }
   float targetPressureKpa() const { return targetPressureKpa_; }
   const char* faultCode() const { return faultCode_; }
+  // The pump's commanded duty, as the loop last left it.
+  float dutyPercent() const { return pump_->dutyPercent(); }
 
   // True while a run is being maintained: pulling, holding, or venting to a shallower target. A
   // release is not a run, so a stopped machine reads false while it vents.

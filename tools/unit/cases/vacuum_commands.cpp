@@ -14,6 +14,7 @@
 #include "fakes/Parts.h"
 #include "machine/CommandQueue.h"
 #include "machine/Machine.h"
+#include "machine/SystemControl.h"
 #include "serial/SerialLink.h"
 
 namespace {
@@ -22,6 +23,7 @@ using gardener::CommandQueue;
 using gardener::Machine;
 using gardener::MachineCommand;
 using gardener::SerialLink;
+using gardener::SystemControl;
 using gardener::host::TextStream;
 using gardener::test::FakePump;
 using gardener::test::FakeSensor;
@@ -53,8 +55,8 @@ class OpenQueue : public CommandQueue {
 // The machine the wire is built over, one per case, with a clock that starts at zero.
 struct Bench {
   Bench()
-      : machine(logger, &pump, &sensor, &valve),
-        link(io, nullptr, logger, queue, gardener::SerialParts{machine}) {
+      : machine(logger, &pump, &sensor, &valve), control(machine.vacuum(), queue),
+        link(io, nullptr, logger, control) {
     gardener::host::reset();
     machine.boot();
     link.begin();
@@ -74,6 +76,7 @@ struct Bench {
   RecordingLogger logger;
   OpenQueue queue;
   Machine machine;
+  SystemControl control;
   TextStream io;
   SerialLink link;
 };

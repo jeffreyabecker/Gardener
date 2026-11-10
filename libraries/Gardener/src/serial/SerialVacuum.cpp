@@ -2,8 +2,7 @@
 #include <stdint.h>
 
 #include "machine/Machine.h"
-#include "machine/MachineCommand.h"
-#include "machine/VacuumSystem.h"
+#include "machine/SystemControl.h"
 #include "serial/SerialLink.h"
 
 namespace gardener {
@@ -14,28 +13,29 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, VacuumSystem& vacuum) {
+void get(Stream& io, const SystemControl& control) {
+  const SystemStatus status = control.status();
   io.print("ok pressure_kpa=");
-  io.print(vacuum.currentPressureKpa(), 2u);
+  io.print(status.pressureKpa, 2u);
 
   // 0 is the ambient target rather than "no target": the machine always has a setpoint, and 0 is
   // the one that holds the chamber released.
   io.print(" target=");
-  io.print(vacuum.targetPressureKpa(), 1u);
+  io.print(status.targetKpa, 1u);
 
   io.print(" state=");
-  io.print(runStateName(vacuum.runState()));
+  io.print(runStateName(status.state));
   io.print(" duty=");
-  io.print(vacuum.pump().dutyPercent(), 1u);
+  io.print(status.dutyPercent, 1u);
   io.print(" fault=");
-  const char* fault = vacuum.faultCode();
-  io.print(fault[0] ? fault : "none");
+  io.print(status.fault[0] ? status.fault : "none");
   io.print('\n');
 }
 
-// A set is a target and a run in one word, so the two refusals are the machine's own: the bounds the
-// loop enforces, and the reason a start would not take. A refused set queues nothing.
-void set(Stream& io, const String& args, Machine& machine, CommandQueue& queue) {
+// The one line the wire adds to a set: which outcome the control reported, and how the wire says
+// it. Every decision behind the answer — the bounds, the ambient target, the refusal — is the
+// control's.
+void set(Stream& io, const String& args, SystemControl& control) {
   if (args.isEmpty()) {
     io.print("err bad_argument\n");
     return;
@@ -56,55 +56,36 @@ void set(Stream& io, const String& args, Machine& machine, CommandQueue& queue) 
   float pressureKpa = 0.0f;
   if (token != "-") pressureKpa = token.toFloat();
 
-  // `!(>=)` rather than `<` so a token `toFloat` reads as NaN is refused with the rest.
-  if (!(pressureKpa >= 0.0f)) {
-    io.print("err out_of_range field=target value=");
-    io.print(token);
-    io.print(" min=0.0\n");
-    return;
+  switch (control.set(pressureKpa)) {
+    case ServeResult::Ok:
+      io.print("ok target=");
+      io.print(pressureKpa, 1u);
+      io.print(" state=PULL\n");
+      return;
+    case ServeResult::Released:
+      io.print("ok target=0.0 state=VENT\n");
+      return;
+    case ServeResult::BelowRange:
+      io.print("err out_of_range field=target value=");
+      io.print(token);
+      io.print(" min=0.0\n");
+      return;
+    case ServeResult::AboveRange:
+      io.print("err out_of_range field=target value=");
+      io.print(token);
+      io.print(" max=");
+      io.print(ControlFloorKpa, 1u);
+      io.print('\n');
+      return;
+    case ServeResult::NotReady:
+      io.print("err not_ready ");
+      io.print(control.refusal());
+      io.print('\n');
+      return;
   }
-  if (pressureKpa > ControlFloorKpa) {
-    io.print("err out_of_range field=target value=");
-    io.print(token);
-    io.print(" max=");
-    io.print(ControlFloorKpa, 1u);
-    io.print('\n');
-    return;
-  }
-
-  // Aiming at ambient and running it is the vent, and a vent needs no reading: the ambient target
-  // is the release however it was asked for.
-  if (pressureKpa <= 0.0f) {
-    const MachineCommand ambient{MachineCommand::Op::SetTarget, 0.0f};
-    queue.post(ambient);
-    const MachineCommand stop{MachineCommand::Op::Stop};
-    queue.post(stop);
-    io.print("ok target=0.0 state=VENT\n");
-    return;
-  }
-
-  // The refusal is a pure read of the machine's fault and reading, so it is answered from a dirty
-  // read; a would-succeed set is queued and the reply is optimistic.
-  const char* refusal = machine.vacuum().startRefusal();
-  if (refusal != nullptr) {
-    io.print("err not_ready ");
-    io.print(refusal);
-    io.print('\n');
-    return;
-  }
-
-  // The hold is the machine's own ceiling: a wire that asks for no duration gets the longest run the
-  // machine will grant, and no document is read on either side of it.
-  const MachineCommand target{MachineCommand::Op::SetTarget, pressureKpa};
-  queue.post(target);
-  const MachineCommand start{MachineCommand::Op::Start, 0.0f};
-  queue.post(start);
-  io.print("ok target=");
-  io.print(pressureKpa, 1u);
-  io.print(" state=PULL\n");
 }
 
-void vent(Stream& io, const String& args, CommandQueue& queue) {
+void vent(Stream& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -112,12 +93,11 @@ void vent(Stream& io, const String& args, CommandQueue& queue) {
     return;
   }
 
-  const MachineCommand stop{MachineCommand::Op::Stop};
-  queue.post(stop);
+  control.vent();
   io.print("ok state=VENT\n");
 }
 
-void reset(Stream& io, const String& args, CommandQueue& queue) {
+void reset(Stream& io, const String& args, SystemControl& control) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -125,8 +105,7 @@ void reset(Stream& io, const String& args, CommandQueue& queue) {
     return;
   }
 
-  const MachineCommand reset{MachineCommand::Op::ResetFault};
-  queue.post(reset);
+  control.reset();
   io.print("ok state=IDLE\n");
 }
 
@@ -158,19 +137,19 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    get(io, parts_.machine.vacuum());
+    get(io, control_);
     return;
   }
   if (verb == "set") {
-    set(io, args, parts_.machine, queue_);
+    set(io, args, control_);
     return;
   }
   if (verb == "vent") {
-    vent(io, args, queue_);
+    vent(io, args, control_);
     return;
   }
   if (verb == "reset") {
-    reset(io, args, queue_);
+    reset(io, args, control_);
     return;
   }
 

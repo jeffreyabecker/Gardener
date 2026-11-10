@@ -30,13 +30,14 @@ void setup() {
   delay(200);
 
   // The device, built in the order it is used: the log and the queue first, because the machine and
-  // the link each hold one; then the parts the board wires, the machine over them, and the link.
+  // the control each hold one; then the parts the board wires, the machine over them, the control
+  // that any front end asks, and the link that asks it.
   static gardener::SerialLogger logger(Serial);
   static gardener::runtime::RtosCommandQueue commands;
   static const gardener::runtime::MachineParts parts = gardener::runtime::buildMachineParts(Board);
   static gardener::Machine machine(logger, parts.pump, parts.sensor, parts.valve);
-  static gardener::SerialLink link(Serial, serialAttached, logger, commands,
-                                   gardener::SerialParts{machine});
+  static gardener::SystemControl control(machine.vacuum(), commands);
+  static gardener::SerialLink link(Serial, serialAttached, logger, control);
 
   machine.boot();
   link.begin();

@@ -4,10 +4,8 @@
 
 namespace gardener {
 
-SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, CommandQueue& queue,
-                       SerialParts parts)
-    : queue_(queue), stream_(stream), port_(stream), present_(present), logger_(logger),
-      parts_(parts) {}
+SerialLink::SerialLink(Stream& stream, PresenceFn present, Logger& logger, SystemControl& control)
+    : stream_(stream), port_(stream), present_(present), logger_(logger), control_(control) {}
 
 void SerialLink::begin() {
   attached_ = controllerAttached();
