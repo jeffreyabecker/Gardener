@@ -15,8 +15,7 @@ String firstToken(const String& args) {
   return space < 0 ? args : args.substring(0, space);
 }
 
-void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
-  VacuumSystem& vacuum = machine.vacuum();
+void get(Stream& io, VacuumSystem& vacuum) {
   io.print("ok pressure_kpa=");
   io.print(vacuum.currentPressureKpa(), 2u);
 
@@ -25,24 +24,13 @@ void get(Stream& io, Machine& machine, const DeviceSettings& settings) {
   io.print(" target=");
   io.print(vacuum.targetPressureKpa(), 1u);
 
-  io.print(" floor=");
-  io.print(ControlFloorKpa, 1u);
-  io.print(" duty=");
-  io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" state=");
   io.print(runStateName(vacuum.runState()));
-  io.print(" sensor=");
-  io.print(vacuum.sensor().present() ? "1" : "0");
+  io.print(" duty=");
+  io.print(vacuum.pump().dutyPercent(), 1u);
   io.print(" fault=");
   const char* fault = vacuum.faultCode();
   io.print(fault[0] ? fault : "none");
-  io.print(" hold=");
-  io.print(vacuum.running() ? vacuum.holdSeconds() : 0u);
-  // The longest run the device allows: its stored maximum, which is what a start is granted.
-  io.print(" max_run=");
-  io.print(maxRunSeconds(settings.maxDurationSeconds()));
-  io.print(" up=");
-  io.print(machine.uptimeMs());
   io.print('\n');
 }
 
@@ -195,7 +183,7 @@ void SerialLink::executeVacuum(Stream& io) {
       io.print('\n');
       return;
     }
-    get(io, parts_.machine, parts_.settings);
+    get(io, parts_.machine.vacuum());
     return;
   }
   if (verb == "target") {

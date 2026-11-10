@@ -13,7 +13,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 1 — the wire
 
-- [ ] **Trim `vacuum get` to the five fields it reports.** `get` answers
+- [x] **Trim `vacuum get` to the five fields it reports.** `get` answers
       `pressure_kpa`, `target`, `state`, `duty` and `fault`; the `hold`, `max_run`, `floor`,
       `sensor` and `up` fields go, and with `max_run` the document read behind it, so `get` is
       handed the vacuum system rather than the machine and the settings. `tools/unit/cases/

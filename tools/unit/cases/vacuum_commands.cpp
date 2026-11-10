@@ -120,26 +120,15 @@ TEST_CASE("get answers the pressure to two decimals and the rest to one") {
   const std::string reply = bench.reply();
   CHECK(contains(reply, "ok pressure_kpa=0.00 "));
   CHECK(contains(reply, " target=0.0 "));
-  CHECK(contains(reply, " floor=60.0 "));
   CHECK(contains(reply, " duty=0.0 "));
 }
 
-TEST_CASE("get answers the state and the parts' health") {
+TEST_CASE("get answers the state and the fault") {
   Bench bench;
   bench.send("vacuum get\n");
   const std::string reply = bench.reply();
   CHECK(contains(reply, " state="));
-  CHECK(contains(reply, " sensor=1 "));
-  CHECK(contains(reply, " fault=none "));
-}
-
-TEST_CASE("get answers the hold, the ceiling and the uptime") {
-  Bench bench;
-  bench.send("vacuum get\n");
-  const std::string reply = bench.reply();
-  CHECK(contains(reply, " hold=0 "));
-  CHECK(contains(reply, " max_run=900 "));
-  CHECK(contains(reply, " up=0\n"));
+  CHECK(contains(reply, " fault=none\n"));
 }
 
 TEST_CASE("a target inside the range queues and answers its depth") {
@@ -240,12 +229,9 @@ TEST_CASE("a hold past the device's maximum is refused with its maximum") {
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=hold value=901 max=900\n"));
 }
 
-TEST_CASE("the document's maximum bounds a start and is what the wire reports") {
+TEST_CASE("the document's maximum bounds a start") {
   Bench bench("[device]\nmax_duration=600\n");
   bench.sensor.read(12.0f);
-
-  bench.send("vacuum get\n");
-  CHECK(contains(bench.reply(), " max_run=600 "));
 
   bench.send("vacuum start 601\n");
   CHECK_EQ(bench.reply(), std::string("err out_of_range field=hold value=601 max=600\n"));
