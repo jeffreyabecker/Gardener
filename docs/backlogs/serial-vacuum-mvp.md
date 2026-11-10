@@ -58,12 +58,11 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
       with the panel.
 - [x] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
-      and `tools/fonts` go, the `surface` case goes with the host utilities it shares, and
-      `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx source, no Gfx include and
-      no drawing case.
-- [ ] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
-      `firmware/gardener/assets`, `firmware/test_buttons` and `firmware/test_pressure` go, and
-      nothing reads a `.be`, a `.ini` or a `.bmp`.
+      and `tools/fonts` go, and `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx
+      source, no Gfx include and no drawing case.
+- [x] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
+      `firmware/gardener/assets`, `scripts/asset.py`, `firmware/test_buttons` and
+      `firmware/test_pressure` go, and nothing reads a `.be`, a `.ini` or a `.bmp`.
 
 ## Epic 4 — the build
 
