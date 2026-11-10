@@ -23,7 +23,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       code as `err not_ready`, and otherwise queue the target and a start whose hold is
       `ControlMaxRunMs` in seconds — no document is read. `vacuum target` and `vacuum start` stop
       being verbs, and the hold argument and its four refusal cases go with them.
-- [ ] **Rename `vacuum stop` to `vacuum vent`, and keep `vacuum reset`.** `vent` is the one
+- [x] **Rename `vacuum stop` to `vacuum vent`, and keep `vacuum reset`.** `vent` is the one
       release path and `reset` clears the fault latch, which nothing else does. The suite's `stop`
       case becomes `vent`, and `reset` keeps its case.
 - [ ] **Delete the four grammars and shrink `SerialParts`.** `SerialDevice`, `SerialBuzzer`,

@@ -104,7 +104,7 @@ void set(Stream& io, const String& args, Machine& machine, CommandQueue& queue) 
   io.print(" state=PULL\n");
 }
 
-void stop(Stream& io, const String& args, CommandQueue& queue) {
+void vent(Stream& io, const String& args, CommandQueue& queue) {
   if (!args.isEmpty()) {
     io.print("err bad_argument ");
     io.print(firstToken(args));
@@ -165,8 +165,8 @@ void SerialLink::executeVacuum(Stream& io) {
     set(io, args, parts_.machine, queue_);
     return;
   }
-  if (verb == "stop") {
-    stop(io, args, queue_);
+  if (verb == "vent") {
+    vent(io, args, queue_);
     return;
   }
   if (verb == "reset") {
