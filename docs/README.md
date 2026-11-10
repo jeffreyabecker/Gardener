@@ -23,24 +23,9 @@ listing them anywhere is forbidden
 
 ## Guides
 
-User-facing build, parts and tool documentation.
+User-facing build and parts documentation.
 
 - [Parts list and build guide](./guides/poc-parts.md) — every part, what to buy, what it costs and
   how it is wired
-- [Panel walkthroughs](./guides/walkthroughs.md) — a command file that drives the panel on the host
-  and writes it as a GIF
 
-## Reference
-
-The controllers the panel is driven through, mapped for someone writing or debugging a driver: bus
-address, control bytes, the command table and its reset values, and the sequence a 128x64 module
-takes.
-
-- [SH1106 I2C map](./reference/sh1106-i2c.md) — the controller on the 1.3" panel: page addressing,
-  the 132-column RAM and its 2-column offset, and the init sequence the driver sends
-- [SSD1306 I2C map](./reference/ssd1306-i2c.md) — the other 128x64 controller: three addressing
-  modes, the charge pump, hardware scrolling, and how it differs from the SH1106
-- [Telling the two panels apart](./reference/panel-identification.md) — why nothing read from the
-  bus identifies either part, and the probes that do, with what each result means
-
-See the [project README](../README.md) for the build and upload flow and the safety notes.
+See the [project README](../README.md) for the build and upload flow, the wire and the safety notes.
