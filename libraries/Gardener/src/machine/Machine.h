@@ -142,13 +142,7 @@ GARDENER_KNOB_VALID(bool, ControlVentToTarget, GARDENER_CONTROL_VENT_TO_TARGET, 
 GARDENER_KNOB_VALID(float, VentTargetLeadKpa, GARDENER_VENT_TARGET_LEAD_KPA, 1.0f,
                     GARDENER_VENT_TARGET_LEAD_KPA >= 0.0f,
                     "how far deeper than the target the valve closes, in kPa");
-// A reset releases the chamber first, but it does not wait out the whole vent: the restart is safe
-// once the pump is off and the valve is open, and this is the margin a near-vented chamber gets.
-GARDENER_KNOB_VALID(uint32_t, RebootVentWaitMs, GARDENER_REBOOT_VENT_WAIT_MS, 2000,
-                    GARDENER_REBOOT_VENT_WAIT_MS >= 0,
-                    "the wait before a reset restarts the machine, in milliseconds");
-
-// --- The loop's own faults ---------------------------------------------------
+// The loop's own faults ---------------------------------------------------
 // A pull driven hard against a blocked hose or a stuck sensor moves nothing, and a depth that runs
 // past its target is the loop not holding what it was asked to. Both are the machine's to notice,
 // because a controller that has stopped talking is exactly when they matter.
@@ -178,21 +172,9 @@ struct MachinePins {
   uint8_t ventValve;
 };
 
-// The optional assemblies a composition root fitted, one byte on both links so a host gets the same
-// answer whichever transport it uses. The sketch ORs the bits it built and the machine holds the
-// byte. There is no bit for stopping when a link leaves: no build does that.
-enum Capability : uint8_t {
-  PanelFitted = 0x01,    // a panel (and with it keys, pages and the VM) is fitted
-  BatteryFitted = 0x02,  // a battery gauge is fitted; a wired-only device has none
-  // The fitted valve fails safe: de-energised means vented, so the chamber cannot hold pressure
-  // through a crash, a cut wire or a dead coil. A normally-closed part inverts that.
-  FailSafeValve = 0x04,
-};
-
-// The machine: the pressure loop and the policy around it, with no panel part named. It commands
-// the three parts it is handed and holds the capability byte, and it reports through the logger it
-// was built with. boot() brings the parts up; the parts themselves, the links and the tasks stay the
-// composition's.
+// The machine: the pressure loop and the policy around it. It commands the three parts it is
+// handed and reports through the logger it was built with. boot() brings the parts up; the parts
+// themselves, the link and the tasks stay the composition's.
 //
 // It is not copyable: there is one machine, and everything that needs it holds a reference.
 class Machine {
@@ -202,21 +184,18 @@ class Machine {
   Machine(const Machine&) = delete;
   Machine& operator=(const Machine&) = delete;
 
-  // The parts come up and say whether they answered. The links and the tasks are the
-  // composition's, so this is the whole of what the machine starts.
+  // The parts come up and say whether they answered. The link and the tasks are the composition's,
+  // so this is the whole of what the machine starts.
   void boot();
 
   VacuumSystem& vacuum() { return vacuum_; }
   const VacuumSystem& vacuum() const { return vacuum_; }
-  uint8_t capabilities() const { return capabilities_; }
-  void setCapabilities(uint8_t capabilities) { capabilities_ = capabilities; }
   Logger& logger() { return logger_; }
   uint32_t uptimeMs() const { return millis(); }
 
  private:
   Logger& logger_;
   VacuumSystem vacuum_;
-  uint8_t capabilities_ = 0;
 };
 
 }  // namespace gardener

@@ -9,8 +9,6 @@
 #include <Gardener.h>
 #include <Runtime.h>
 
-#include "core/SystemState.h"
-
 namespace {
 
 // The rig this build is wired to. The libraries take the pins, so a board variant is this block and
@@ -35,7 +33,6 @@ void setup() {
   // the link each hold one; then the parts the board wires, the machine over them, and the link.
   static gardener::SerialLogger logger(Serial);
   static gardener::runtime::RtosCommandQueue commands;
-  static gardener::SystemState state;
   static const gardener::runtime::MachineParts parts = gardener::runtime::buildMachineParts(Board);
   static gardener::Machine machine(logger, parts.pump, parts.sensor, parts.valve);
   static gardener::SerialLink link(Serial, serialAttached, logger, commands,
@@ -45,7 +42,7 @@ void setup() {
   link.begin();
 
   // The control tick that services the chamber, and the interface task that answers the wire.
-  gardener::runtime::spawnMachineTasks(machine, commands, &link, state);
+  gardener::runtime::spawnMachineTasks(machine, commands, &link);
 
   String ready = "app: ready, heap ";
   ready += String((uint32_t)ESP.getFreeHeap());

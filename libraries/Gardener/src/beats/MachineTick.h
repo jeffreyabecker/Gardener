@@ -8,19 +8,17 @@
 
 namespace gardener {
 class Logger;
-struct SystemState;
 
 // The machine's beat: what a tick applies from the queue and how a burst of commands collapses, the
 // order the parts are updated in, and the run log. A caller steps it with a millisecond, so the
 // sequence a tick runs is reached by a case rather than only by the task that runs it; nothing here
 // needs an RTOS, a clock of its own or a board.
 //
-// The queue is the composition's — the links and the panel post into the same one — and a Reboot is
-// not applied here: it belongs to the machine's composition, so takeReboot() hands it back rather
-// than restarting from inside a tick.
+// The queue is the composition's — the link posts into it — and nothing in a tick restarts the
+// device: the machine is the chamber and the run, and the composition is the board.
 class MachineTick {
  public:
-  MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue, SystemState& state);
+  MachineTick(VacuumSystem& vacuum, Logger& logger, CommandQueue& queue);
 
   // The beat's start. The machine is brought up by the composition before the task is spawned, so
   // there is nothing to do here yet; it is here so every beat starts the same way.
@@ -30,12 +28,8 @@ class MachineTick {
   // and writes the run log, in that order. The millisecond is the tick's only clock.
   void tick(uint32_t nowMs);
 
-  // True once after a queued Reboot arrived on a tick, so the composition can perform it.
-  bool takeReboot();
-
  private:
-  // One queued write. The vacuum system is the machine's own; the reboot is the composition's, so
-  // it is parked for takeReboot().
+  // One queued write, applied to the machine's own vacuum system.
   void apply(const MachineCommand& command);
   // A command the machine never had to apply, named with why, so a burst that collapses leaves the
   // same evidence as one that ran.
@@ -46,17 +40,12 @@ class MachineTick {
   void drainCommands();
   // One line per state change, the time a vent took, the deadline and the fault code.
   void logRunChanges(uint32_t nowMs);
-  // The machine's slice of the published state, once at the end of the beat.
-  void publish();
 
   VacuumSystem& vacuum_;
   Logger& logger_;
   CommandQueue& queue_;
-  // The machine's slice of the published state, written at the end of each beat.
-  SystemState& state_;
   RunState lastState_;
   uint32_t ventStartMs_ = 0;
-  bool rebootPending_ = false;
 };
 
 }  // namespace gardener
