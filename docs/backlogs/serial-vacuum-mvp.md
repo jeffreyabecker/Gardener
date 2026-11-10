@@ -36,16 +36,15 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 2 — the composition and the panel
 
-- [ ] **Compose the device in the sketch.** `gardener.ino` builds the logger, the queue, the
-      state, the parts, the machine and the link itself, and spawns the control and interface
-      tasks; `PanelRoot.h/.cpp` are deleted and the pins block is `MachinePins` alone. Nothing
-      calls `spawnPanelTask`, and the panel's libraries are still present and compiled.
-- [ ] **Delete the panel, its task and its parts.** `panel/`, `bindings/`, `routines/`,
-      `storage/`, the `ButtonsTick`, `RoutinesTick` and `PartsTick` beats, the panel's `core/`
-      parts, `Runtime`'s `PanelTasks`, `RtosGestureQueue`, `RtosInternTable`, `FileLibrary`,
-      `SafeReboot` and the four hal impls go, `Runtime.h` stops naming them, and the cases that
-      drove them (`config`, `device_settings`, `registry`, `row_list`, `system_settings`,
-      `jingle_library`, `panel_ticks`) go with them.
+- [x] **Compose the device in the sketch and delete the panel.** `gardener.ino` builds the logger,
+      the queue, the state, the parts, the machine and the link itself, and spawns the control and
+      interface tasks; `PanelRoot.h/.cpp` are deleted and the pins block is `MachinePins` alone.
+      The panel goes with it, because the C++ include graph will not have it any other way:
+      `panel/`, `bindings/`, `routines/`, `storage/`, the `ButtonsTick`, `RoutinesTick` and
+      `PartsTick` beats, the panel's `core/` parts, `Runtime`'s `PanelTasks`, `RtosGestureQueue`,
+      `RtosInternTable`, `FileLibrary` and the four hal impls, `Runtime.h` trimmed to what is left.
+      `tools/host/capture`, `tools/unit/suite.*` and the cases that drove the panel, the store or
+      the VM go with them, and `check.py` stops compiling the capture display.
 - [ ] **Remove the published state and the reboot from the machine.** `core/SystemState.h` and
       `MachineTick`'s publish go, the interface task stops writing the connection flag,
       `MachineCommand::Reboot`, `takeReboot`, `SafeReboot` and `Machine.h`'s `Capability` byte go,
@@ -58,10 +57,10 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       `.github/skills/berry/` and the line in `.github/copilot-instructions.md` that points at its
       host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
       with the panel.
-- [ ] **Delete the display library and the cases that drew with it.** `libraries/Gfx`,
-      `tools/host/capture`, `tools/panel` and `tools/fonts` go, the `gfx_*`, `capture`, `notes` and
-      `surface` cases go, and `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx
-      source, no capture include and no Gfx case.
+- [ ] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
+      and `tools/fonts` go, the `surface` case goes with the host utilities it shares, and
+      `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx source, no Gfx include and
+      no drawing case.
 - [ ] **Delete the data image, its assets and the rig sketches.** `firmware/data`,
       `firmware/gardener/assets`, `firmware/test_buttons` and `firmware/test_pressure` go, and
       nothing reads a `.be`, a `.ini` or a `.bmp`.
