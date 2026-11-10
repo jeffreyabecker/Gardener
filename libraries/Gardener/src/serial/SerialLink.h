@@ -5,17 +5,10 @@
 #include "core/Knob.h"
 #include "machine/CommandQueue.h"
 #include "machine/MachineCommand.h"
-#include "serial/BoardFacts.h"
 
 namespace gardener {
-class Battery;
-class Library;
 class Logger;
 class Machine;
-class DeviceSettings;
-class GestureQueue;
-
-class BuzzerPlayer;
 
 // The longest command line a grammar serves: the link refuses a longer one, and so does each grammar
 // handed one. A command body, when a grammar defines one, is not bounded here.
@@ -24,29 +17,21 @@ GARDENER_KNOB_VALID(uint16_t, CommandLineMax, GARDENER_SERIAL_COMMAND_LINE_MAX, 
                         GARDENER_SERIAL_COMMAND_LINE_MAX <= 1024,
                     "a line the link can hold, in bytes");
 
-// The wire revision this link serves, reported as `proto` by `device get`. The wire is still
-// unsettled, so the number stays 1 and does not move per revision; a controller must not treat it
-// as a compatibility guarantee.
+// The wire revision this link serves. The wire is still unsettled, so the number stays 1 and does
+// not move per revision; a controller must not treat it as a compatibility guarantee.
 GARDENER_KNOB_VALID(uint32_t, ProtocolVersion, GARDENER_SERIAL_PROTOCOL_VERSION, 1,
                     GARDENER_SERIAL_PROTOCOL_VERSION >= 1, "the wire revision starts at one");
 
-// Everything the wire answers from: the machine, the board's own facts, and the panel's parts — the
-// gauge, the document, the piezo, the store the files ride on and the queue a gesture goes to. The
-// sketch builds it; the link names no part of its own.
+// Everything the wire answers from: the machine and nothing else. The sketch builds it; the link
+// names no part of its own.
 struct SerialParts {
   Machine& machine;
-  const BoardFacts& board;
-  const Battery& battery;
-  DeviceSettings& settings;
-  BuzzerPlayer& buzzer;
-  Library& files;
-  GestureQueue& presses;
 };
 
 // The serial interface to the controller. It reads the first token of each line and hands the rest of
-// the line, body included, to that token's grammar: `vacuum`, `device`, `buzzer`, `fs` and
-// `gesture`, one file each beside this one. A token nothing serves is answered as an unknown domain,
-// and the link owns only its own errors and diagnostics.
+// the line, body included, to that token's grammar — `vacuum`, which is the only domain the device
+// serves. A token nothing serves is answered as an unknown domain, and the link owns only its own
+// errors and diagnostics.
 class SerialLink {
  public:
   // True while a host has the port open. Null means the stream cannot tell (a plain UART), in which
@@ -87,19 +72,15 @@ class SerialLink {
 
   // The grammars this link serves, resolved from a line's first token by the one list in
   // `grammarFor`.
-  enum class Grammar : uint8_t { None, Vacuum, Device, Buzzer, Files, Gesture };
+  enum class Grammar : uint8_t { None, Vacuum };
 
   // The grammar `token` names, which must already be lowercase.
   Grammar grammarFor(const String& token) const;
   // Hands the stream to the grammar named by `token`. False when there is no such grammar, in which
   // case the caller discards the rest of the line.
   bool dispatch(const String& token);
-  // Each grammar: the rest of the line, and any body, is read from the stream it is handed.
+  // The grammar: the rest of the line is read from the stream it is handed.
   void executeVacuum(Stream& io);
-  void executeDevice(Stream& io);
-  void executeBuzzer(Stream& io);
-  void executeFiles(Stream& io);
-  void executeGesture(Stream& io);
   // The dispatcher's own errors: an unknown domain, or a header it could not accept.
   void linkError(const char* code, const String& detail);
 
