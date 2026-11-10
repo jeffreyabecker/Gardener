@@ -14,9 +14,9 @@ namespace gardener::runtime {
 // first ten seconds of samples, which is how the bench check of the part settles it - and
 // pressureKpa() measures below it, which cancels the part's own zero offset. Samples are averaged,
 // then EMA filtered.
-class XgzpSensor : public PressureSensor {
+class AnalogSensor : public PressureSensor {
  public:
-  explicit XgzpSensor(uint8_t pin) : pin_(pin) {}
+  explicit AnalogSensor(uint8_t pin) : pin_(pin) {}
 
   bool begin() override;
   void update(uint32_t nowMs) override;

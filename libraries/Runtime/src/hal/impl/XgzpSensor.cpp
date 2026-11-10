@@ -63,10 +63,10 @@ GARDENER_KNOB_VALID(float, SettleBandVolts, GARDENER_SENSOR_SETTLE_BAND_VOLTS, 0
 
 // Nothing else spells the interface out, so a verb added to PressureSensor and not implemented here
 // would leave this class abstract - silently, until something tried to construct it.
-static_assert(!std::is_abstract<XgzpSensor>::value,
+static_assert(!std::is_abstract<AnalogSensor>::value,
               "XgzpSensor must implement every PressureSensor verb");
 
-bool XgzpSensor::begin() {
+bool AnalogSensor::begin() {
   pinMode(pin_, INPUT);
   analogSetPinAttenuation(pin_, ADC_11db);
   configured_ = true;
@@ -82,7 +82,7 @@ bool XgzpSensor::begin() {
   return true;
 }
 
-bool XgzpSensor::sample(float& outVolts) {
+bool AnalogSensor::sample(float& outVolts) {
   uint32_t totalMilliVolts = 0;
   for (uint8_t i = 0; i < Samples; i++)
     totalMilliVolts += analogReadMilliVolts(pin_);
@@ -93,7 +93,7 @@ bool XgzpSensor::sample(float& outVolts) {
   return true;
 }
 
-void XgzpSensor::applySample(float volts) {
+void AnalogSensor::applySample(float volts) {
   if (!valid_) {
     filteredVolts_ = volts;
     ambientVolts_ = volts;
@@ -103,7 +103,7 @@ void XgzpSensor::applySample(float volts) {
   filteredVolts_ += FilterAlpha * (volts - filteredVolts_);
 }
 
-void XgzpSensor::settleAmbient(float volts, uint32_t nowMs) {
+void AnalogSensor::settleAmbient(float volts, uint32_t nowMs) {
   if (settleSamples_ > 0 && volts < ambientVolts_ - SettleBandVolts) return;
   settleSumVolts_ += volts;
   settleSamples_++;
@@ -111,7 +111,7 @@ void XgzpSensor::settleAmbient(float volts, uint32_t nowMs) {
   if (nowMs - settleStartMs_ >= SettleMs) settled_ = true;
 }
 
-void XgzpSensor::update(uint32_t nowMs) {
+void AnalogSensor::update(uint32_t nowMs) {
   if (!configured_) return;
   if (nowMs - lastPollMs_ < PollMs) return;
   lastPollMs_ = nowMs;
@@ -123,7 +123,7 @@ void XgzpSensor::update(uint32_t nowMs) {
   if (!settled_) settleAmbient(volts, nowMs);
 }
 
-float XgzpSensor::pressureKpa() const {
+float AnalogSensor::pressureKpa() const {
   if (!valid_) return 0.0f;
   const float depth = (ambientVolts_ - filteredVolts_) * KpaPerVolt;
   return depth > 0.0f ? depth : 0.0f;

@@ -18,7 +18,7 @@ VentValve* makeValve(uint8_t pin) {
 MachineParts buildMachineParts(const MachinePins& pins) {
   MachineParts parts{
       new PwmPump(pins.pumpPwm, PumpDutyMaxPercent, PumpRampPercentPerSec),
-      new XgzpSensor(pins.sensorAdc),
+      new AnalogSensor(pins.sensorAdc),
       makeValve(pins.ventValve),
   };
   return parts;
