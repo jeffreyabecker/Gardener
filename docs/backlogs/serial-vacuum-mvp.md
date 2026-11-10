@@ -74,7 +74,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 5 — the documents
 
-- [ ] **Rewrite the README for the serial-only device.** The device described is the machine, the
+- [x] **Rewrite the README for the serial-only device.** The device described is the machine, the
       vent valve and one serial line: the three verbs, the kPa-below-ambient units, the bounded
       run and the fail-safe valve, with the panel, the image, the VM and the data task gone from
       the build and the documentation index.
