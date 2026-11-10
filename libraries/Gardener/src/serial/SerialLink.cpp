@@ -104,10 +104,6 @@ void SerialLink::poll(uint32_t nowMs) {
 // The one list of what the link serves: the dispatcher and the token-only line both read it.
 SerialLink::Grammar SerialLink::grammarFor(const String& token) const {
   if (token == "vacuum") return Grammar::Vacuum;
-  if (token == "device") return Grammar::Device;
-  if (token == "buzzer") return Grammar::Buzzer;
-  if (token == "fs") return Grammar::Files;
-  if (token == "gesture") return Grammar::Gesture;
   return Grammar::None;
 }
 
@@ -118,18 +114,6 @@ bool SerialLink::dispatch(const String& token) {
   switch (grammarFor(name)) {
     case Grammar::Vacuum:
       executeVacuum(port_);
-      return true;
-    case Grammar::Device:
-      executeDevice(port_);
-      return true;
-    case Grammar::Buzzer:
-      executeBuzzer(port_);
-      return true;
-    case Grammar::Files:
-      executeFiles(port_);
-      return true;
-    case Grammar::Gesture:
-      executeGesture(port_);
       return true;
     case Grammar::None:
       break;
