@@ -66,7 +66,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 4 — the build
 
-- [ ] **Trim `scripts/arduino.py` to the four tasks.** The Berry archive handling (`archive.py`,
+- [x] **Trim `scripts/arduino.py` to the four tasks.** The Berry archive handling (`archive.py`,
       `archived_libraries`, `pack_archives`, `drop_stale_archives`) and the `data` and `archive`
       tasks go, with `DATA_DIR`; `build`, `upload`, `monitor` and `clean` stay, and so do
       `write_knob_defaults` and `write_rig_header`, because the machine's knobs are still how a
