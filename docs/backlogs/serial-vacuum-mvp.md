@@ -74,11 +74,11 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
 
 ## Epic 5 — the documents
 
-- [ ] **Rewrite the README for the serial-only device.** The device described is the machine, the
+- [x] **Rewrite the README for the serial-only device.** The device described is the machine, the
       vent valve and one serial line: the three verbs, the kPa-below-ambient units, the bounded
       run and the fail-safe valve, with the panel, the image, the VM and the data task gone from
       the build and the documentation index.
-- [ ] **Delete the documents whose subject is gone.** The `headless-machines`, `redo-berry-drawing`
+- [x] **Delete the documents whose subject is gone.** The `headless-machines`, `redo-berry-drawing`
       and `text-entry-scene` plans, the `text-entry-scene` backlog, the walkthroughs guide and the
       three panel and display references are deleted, and `docs/README.md` loses the sections that
       indexed them. This backlog and its plan are not among them; they go with the last item.
