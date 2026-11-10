@@ -57,7 +57,7 @@ Every item is checked with whatever can see it — `python tools/unit/check.py` 
       `.github/skills/berry/` and the line in `.github/copilot-instructions.md` that points at its
       host check: nothing includes `<berry.h>` and nothing runs the image, because the routines went
       with the panel.
-- [ ] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
+- [x] **Delete the display library and the cases that drew with it.** `libraries/Gfx`, `tools/panel`
       and `tools/fonts` go, the `surface` case goes with the host utilities it shares, and
       `tools/unit/check.py` compiles `libraries/Gardener` alone: no Gfx source, no Gfx include and
       no drawing case.
